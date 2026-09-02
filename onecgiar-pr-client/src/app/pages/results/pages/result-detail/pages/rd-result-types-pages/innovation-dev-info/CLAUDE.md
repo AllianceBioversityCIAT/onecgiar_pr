@@ -1,6 +1,6 @@
 # innovation-dev-info
 
-**Verified:** 2026-09-02 · branch performance-refactor · 739ed5523
+**Verified:** 2026-09-02 · branch performance-refactor · 435d1c9d8
 
 ## What it is
 The "Innovation Development" section of the result detail. It mixes **two sources** that are easy to
@@ -15,8 +15,7 @@ confuse: fields owned by the summary (`InnovationDevInfoBody`) and a **backend-s
   `responsible_innovation_and_scaling`, `intellectual_property_rights`, `innovation_team_diversity`,
   `megatrends`. Server endpoint: `api/results/result-questions` →
   `ResultQuestionsService.findQuestionInnovationDevelopmentV2`.
-- Green check: **not computed here.** `results-validation-module.repository.ts:53` calls the stored
-  procedure `validate_sections_mapped_batch`, which resolves `validation_<section>_<portfolio>`.
+- Green check: **not computed here** — `results-validation-module.repository.ts:53` calls the SP `validate_sections_mapped_batch`, which resolves `validation_<section>_<portfolio>`.
 
 ## Where it is used
 - `innovation-dev-info.component.html` — the only consumer of the children under `components/`.
@@ -33,7 +32,7 @@ confuse: fields owned by the summary (`InnovationDevInfoBody`) and a **backend-s
 | `partners-policies-safeguards/` | questionnaire (q4 up to 2025) | ✅ `isP25()` + `!isInnovationDevFormReduced2026()` — P2-3467 |
 | `intellectual-property-rights/` | questionnaire (q1..q4) | ❌ none |
 | `innovation-team-diversity/` | questionnaire (question 112, 3 levels) | ❌ none |
-| `user-evidence/` | evidences | ✅ `isP25()` |
+| `user-evidence/` | evidences (upload → `SharePointUploadService`) | ✅ `isP25()` |
 | `innovation-links/` | summary (`body.reference_materials`) | ✅ `!isInnovationReferenceMaterialsRemoved2026()` — P2-3550 |
 
 > Line numbers were removed on purpose (went stale twice) — search the selector in the template.
@@ -53,41 +52,42 @@ on the database side, inside `validation_innovation_dev_P25` — reword one, cha
 
 ## Traps (⚠️ = already broke something or will)
 - 🛑 **From 2026 the `q4` KEY DOES NOT EXIST in the payload, and an unmatched stage question comes
-  back `undefined`.** `innovation-dev-info.component.ts` walks q1..q4 and every remaining group in a
-  straight line, so an empty slot used to throw a `TypeError` mid-loop and **silently skip the
-  restore of team diversity, IP rights and Megatrends** — saved answers rendered as blank radios.
-  The guards in `services/innovation-dev-info-utils.service.ts` (`mapBoolean` /
-  `mapRadioButtonBooleans` return early on an empty slot) and the `@if (question)` wrapper in
-  `stage-assessment.component.html` are what hold that up: **do not remove them.** Pinned by
-  `innovation-dev-info.component.spec.ts` ("2026 payload with an empty scaling slot") and by
-  `stage-assessment.component.spec.ts` ("missing slot") — deleting a guard turns those red.
+  back `undefined`.** The component walks q1..q4 and every remaining group in a straight line, so an
+  empty slot threw a `TypeError` mid-loop and **silently skipped the restore of team diversity, IP
+  rights and Megatrends** — saved answers rendered as blank radios. The early returns in
+  `services/innovation-dev-info-utils.service.ts` and the `@if (question)` in
+  `stage-assessment.component.html` hold that up: **do not remove them** (both specs pin it).
 - ⚠️ **`stage-assessment/` shipped inside P2-3467 (`a3b02520b`), not P2-3290** — do not rebuild it.
-- 🛑 **Two endpoints LIE about the phase — never read the phase from them.**
-  `GET /v2/api/results/get/general-information/result/{id}` answers `phase_year: 2025` for a result
-  the screen shows in Reporting 2026 (even with `?phase=36`), and
-  `.../questions/innovation-development/{id}` serves the pre-2026 set for it. A result lives in
-  several phases at once; the truth is the **phase chip in the UI** (verified 27 Aug 2026, 8933/8548).
-- 🛑 **`showScalingStudiesQuestion()` (P2-3265) — off-by-one; never use `id` or the array index.**
+- 🛑 **Two endpoints LIE about the phase — never read it from them.** `.../get/general-information/
+  result/{id}` answers `phase_year: 2025` for a result the screen shows in Reporting 2026 (even with
+  `?phase=36`), and `.../questions/innovation-development/{id}` serves it the pre-2026 set. A result
+  lives in several phases; the truth is the **UI phase chip** (verified 27 Aug 2026, 8933/8548).
+- 🛑 **`showScalingStudiesQuestion()` (P2-3265) — never use `id` or the array index.**
   `readinessLevelsList` (`clarisa/innovation-readiness-levels/get/all`) has an autoincrement `id`
-  (starts at 11) and a string `level` ('0'..'9') which is the real level — compare `level`, never
-  `id` nor `getReadinessLevelIndex()` (incident P2-3359). Rule: phase ≥2026 → the question
-  **disappears at ALL levels (0-9)**; ≤2025 → unchanged, visible from level 6. It gates both the
-  radio (`fieldRef="[innovation-use-form]-has-studies-links"`) and `app-studies-link`.
+  (from 11) and a string `level` ('0'..'9') which is the real level — compare `level`, never `id` nor
+  `getReadinessLevelIndex()` (incident P2-3359). Phase ≥2026 → the question **disappears at ALL
+  levels (0-9)**; ≤2025 → visible from level 6. Gates the radio and `app-studies-link`.
 - 🛑 **P2-3550 — hiding "Innovation reference materials" is HALF the change; the other half is
   OMITTING `reference_materials` from the PATCH.** `saveEvidence`
-  (`onecgiar-pr-server/src/api/results/summary/innovation_dev.service.ts:99`) returns early **only**
-  when the array is `null`/`undefined`; with any other value — `[]` included — it sets `is_active = 0`
-  on every stored evidence of type 4 whose link is not in the payload (`:110-125`). The model seeds
-  the field with `[{ link: '' }]`, so a hidden-but-still-sent block **deletes** the stored links of
-  every 2026 result (AC4 forbids exactly that). `buildSectionPayload()` destructures the key out —
-  never send it empty, and never assert with `toBeUndefined()`: assert the key is ABSENT. The
-  `is_replicated` half of the gate means "not the first version", so a 2026-born result rolled over
-  to 2027 gets the block back — fixing that needs the first version's phase year, unsent today.
+  (`onecgiar-pr-server/.../summary/innovation_dev.service.ts:99`) returns early **only** on
+  `null`/`undefined`; with any other value — `[]` included — it sets `is_active = 0` on every stored
+  type-4 evidence whose link is absent from the payload (`:110-125`), and the model seeds the field
+  with `[{ link: '' }]`. `buildSectionPayload()` destructures the key out — never send it empty, and
+  assert the key is ABSENT, not `toBeUndefined()`. The `is_replicated` half means "not the first
+  version", so a 2026-born result rolled to 2027 gets the block back (needs data we never send).
 - ⚠️ **Orphan data in 2026, unmigrated by design:** `has_scaling_studies` / `scaling_studies_urls`
   are neither cleared nor migrated and still travel in the PATCH — per the PO ("Remove never means
   delete the data"), so the green-check AC depends entirely on the server-side SQL function.
 - ⚠️ **fieldRef `[innovation-use-form]-has-studies-links` is shared by 4 surfaces** (IPSR steps 1 and
   4, here, Innovation Use) — its `required`/`label` config was deliberately left alone.
+- 🛑 **The SharePoint upload does NOT live here any more (P2-3220): it is
+  `shared/services/sharepoint-upload/`.** `uploadPendingFiles()` only passes options, two of them
+  load-bearing. `fallbackToLocalName: true` — `user-evidence` gates the whole uploaded-file row on
+  `sp_file_name`, so a nameless response drops the just-attached file back to the drag-and-drop box;
+  the other two evidence surfaces must **not** get it, hence an option and not a default.
+  `trackProgress: true` — this template renders the percentage and the animated bar. A failed upload
+  **no longer abandons the save**: the alert names the files and the section is still written (the v2
+  endpoint parses only `jsonData`, dropping the multipart `files`, so the file is lost either way).
 - 🛑 **`isP25()` is NOT the phase, it is the PORTFOLIO** (`fields-manager.service.ts:19`). For
   "2026 onwards" the correct gate is a `ReportingDesignYear` threshold over `phase_year` — prtest
   holds **phase-2025 results inside the P25 portfolio**, so a portfolio gate would strip the section

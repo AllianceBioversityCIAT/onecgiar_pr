@@ -1,4 +1,4 @@
-import { Component, computed, effect, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { InnovationDevInfoBody } from './model/innovationDevInfoBody';
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
@@ -8,7 +8,7 @@ import { InnovationDevelopmentLinks } from './model/InnovationDevelopmentLinks.m
 import { EvidencesBody } from '../../../../result-detail/pages/rd-evidences/model/evidencesBody.model';
 import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
-import { firstValueFrom } from 'rxjs';
+import { SharePointUploadService } from '../../../../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
 
 /**
  * Guidance printed under "Innovation Developer" up to the 2025 phase. Kept verbatim — P2-3272 Part 4
@@ -33,6 +33,14 @@ export class InnovationDevInfoComponent {
   innovationDevelopmentLinks: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
 
   evidencesBody: EvidencesBody = new EvidencesBody();
+
+  /**
+   * P2-3220 — the SharePoint upload sequence is NOT owned here any more. This section used to keep
+   * its own copy (its own session loop, its own progress interval, its own `sp_*` assignments) and
+   * it was the only one of the three that called `POST_createUploadSessionP25`, so "every upload
+   * goes through the shared flow" was not something the code could enforce.
+   */
+  private readonly sharePointUploadSE = inject(SharePointUploadService);
 
   /**
    * Drives `[appSectionSkeleton]`. TRUE from construction and NOT from "a request is in flight":
@@ -252,16 +260,18 @@ export class InnovationDevInfoComponent {
       // the spinner off, and nothing on screen. The user pressed Save, saw the spinner stop, and
       // walked away believing the section was stored. The same defect was fixed for the other two
       // evidence surfaces in e014ee987 (P2-3220); this one was left out of that pass.
-      try {
-        await this.uploadPendingFiles();
-      } catch (error) {
-        console.error('[innovation-dev-info] SharePoint upload failed', error);
+      //
+      // P2-3220: the failure is still SHOWN, and now by file name, but it no longer abandons the
+      // save. The file is lost either way — the 2026 endpoint parses only `jsonData` and drops the
+      // multipart `files` (`innovation_dev.controller.ts:45-57`), so the user has to re-attach it —
+      // and throwing away everything else they typed does not bring it back. Same contract as the
+      // other two evidence surfaces: save the section, and name the files that did not make it.
+      const failedUploads = await this.uploadPendingFiles();
+      if (failedUploads.length) {
         this.showSaveError(
-          'Your files could not be stored',
-          'The evidence was not uploaded to SharePoint, so nothing in this section was saved. Please re-attach the files and save again.'
+          `${failedUploads.length} file(s) could not be stored: ${failedUploads.join(', ')}`,
+          'The rest of the section is being saved, but those files are not in SharePoint. Please re-attach them and save again.'
         );
-        this.savingSection = false;
-        return;
       }
 
       this.api.resultsSE.POST_createEvidenceDemandP25(this.evidencesBody).subscribe({
@@ -307,56 +317,33 @@ export class InnovationDevInfoComponent {
     }
   }
 
-  private async uploadPendingFiles(): Promise<void> {
-    if (!Array.isArray(this.evidencesBody.evidences)) {
-      return;
-    }
-
+  /**
+   * P2-3220 — delegates to the single shared upload flow and returns the names of the files that
+   * did not reach SharePoint (empty when all went up). Never throws.
+   *
+   * Why each option is what it is:
+   * - `flow: 'innovation-development'` → the v2 `evidence_demand/createUploadSession` door, the one
+   *   this section has always used. The caller no longer names an endpoint.
+   * - `skipAlreadyUploaded: true` → reproduces the old `if (evidence.file && !evidence.link)`.
+   * - `trackProgress: true` → MEASURED, not assumed: `components/user-evidence/` renders both the
+   *   percentage and the animated bar (`user-evidence.component.html:68-77`).
+   * - `fallbackToLocalName: true` → the old copy did `response?.name || evidence.file.name`, and
+   *   that fallback is load-bearing HERE: the same template gates the whole uploaded-file row on
+   *   `sp_file_name`, so a nameless response would drop the just-attached file back to the
+   *   drag-and-drop box. The two surfaces migrated before this one never had the fallback, hence
+   *   an explicit option rather than a new default for all three.
+   */
+  private async uploadPendingFiles(): Promise<string[]> {
     const resultId = (this.api.dataControlSE?.currentResult as any)?.result_id ?? (this.api.dataControlSE?.currentResult as any)?.id;
-    let count = 0;
 
-    for (const evidence of this.evidencesBody.evidences) {
-      if (evidence.file && !evidence.link) {
-        count++;
-        try {
-          const { response: uploadUrl } = await firstValueFrom(
-            this.api.resultsSE.POST_createUploadSessionP25({
-              resultId,
-              fileName: evidence.file.name,
-              count
-            })
-          );
-
-          const intervalId = setInterval(async () => {
-            try {
-              const response = await this.api.resultsSE.GET_loadFileInUploadSession(uploadUrl);
-              if (response?.nextExpectedRanges?.[0]) {
-                const nextRange = response?.nextExpectedRanges[0];
-                const [startByte, totalBytes] = nextRange.split('-').map(Number);
-                if (totalBytes) {
-                  const progressPercentage = (startByte / totalBytes) * 100;
-                  (evidence as any).percentage = Number.isFinite(progressPercentage) ? progressPercentage.toFixed(0) : (evidence as any).percentage;
-                }
-              }
-            } catch (_) {
-              clearInterval(intervalId);
-              (evidence as any).percentage = 100;
-            }
-          }, 2000);
-
-          const response = await this.api.resultsSE.PUT_loadFileInUploadSession(evidence.file, uploadUrl);
-          clearInterval(intervalId);
-          (evidence as any).percentage = 100;
-          evidence.link = response?.webUrl;
-          (evidence as any).sp_document_id = response?.id;
-          evidence.sp_file_name = response?.name || evidence.file.name;
-          (evidence as any).sp_folder_path = response?.parentReference?.path?.split('root:')?.pop();
-        } catch (error) {
-          console.error('Error uploading evidence file:', error);
-          throw error;
-        }
-      }
-    }
+    return this.sharePointUploadSE.uploadPending(this.evidencesBody.evidences, {
+      resultId,
+      flow: 'innovation-development',
+      skipAlreadyUploaded: true,
+      trackProgress: true,
+      fallbackToLocalName: true,
+      logLabel: 'innovation-dev-info'
+    });
   }
 
   pdfOptions = [

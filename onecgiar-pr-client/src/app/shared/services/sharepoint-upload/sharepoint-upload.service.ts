@@ -33,6 +33,17 @@ export interface SharePointUploadOptions {
   trackProgress?: boolean;
   /** Prefix for the console error, so a failure says which surface it came from. */
   logLabel?: string;
+  /**
+   * When the SharePoint response carries no `name`, write the LOCAL file name into `sp_file_name`.
+   *
+   * Off by default, which is what `rd-evidences` and `bilateral/section-evidence` have always done:
+   * a nameless response leaves `sp_file_name` empty there. `innovation-dev-info` is the surface that
+   * needs it — its `user-evidence` template gates the whole uploaded-file row on
+   * `*ngIf="evidence?.sp_file_name; else uploadfilefield"`, so an empty name makes the just-attached
+   * file disappear from the screen and drop back to the drag-and-drop box. Explicit option rather
+   * than a new default, so migrating the third surface changes nothing for the first two.
+   */
+  fallbackToLocalName?: boolean;
 }
 
 const PROGRESS_POLL_MS = 2000;
@@ -48,9 +59,9 @@ const PROGRESS_POLL_MS = 2000;
  * call neither and nothing would notice.
  *
  * The contract is deliberately narrow: hand it the items and say what they are. It never throws —
- * it returns the names of the files that did not make it, because every caller has to save the
- * section either way (the file also travels in the multipart body) while still telling the user
- * the file is not in SharePoint.
+ * it returns the names of the files that did not make it, so every caller can save the rest of its
+ * section and still tell the user, by name, which file is not in SharePoint. Losing a whole section
+ * of typing because one file failed is the behaviour this replaces.
  */
 @Injectable({ providedIn: 'root' })
 export class SharePointUploadService {
@@ -78,7 +89,7 @@ export class SharePointUploadService {
         const response = await this.api.PUT_loadFileInUploadSession(item.file, uploadUrl);
 
         stopProgress?.();
-        this.applyResponse(item, response);
+        this.applyResponse(item, response, options);
       } catch (error) {
         failed.push(item.file?.name ?? 'file');
         console.error(`[${options.logLabel ?? 'sharepoint-upload'}] SharePoint upload failed for`, item.file?.name, error);
@@ -140,10 +151,11 @@ export class SharePointUploadService {
     item.percentage = ((startByte / totalBytes) * 100).toFixed(0);
   }
 
-  private applyResponse(item: SharePointUploadItem, response: any): void {
+  private applyResponse(item: SharePointUploadItem, response: any, options: SharePointUploadOptions): void {
     item.link = response?.webUrl;
     item.sp_document_id = response?.id;
-    item.sp_file_name = response?.name;
+    // `||`, not `??`: the old `innovation-dev-info` copy fell back on an empty string too.
+    item.sp_file_name = options.fallbackToLocalName ? response?.name || item.file?.name : response?.name;
     item.sp_folder_path = response?.parentReference?.path?.split('root:')?.pop();
   }
 }

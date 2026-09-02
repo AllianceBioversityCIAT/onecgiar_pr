@@ -93,6 +93,55 @@ describe('SharePointUploadService', () => {
       expect(item.sp_folder_path).toBe('/PRMS/2026');
     });
 
+    /**
+     * P2-3220 — the last surface to migrate (`innovation-dev-info`) did
+     * `sp_file_name = response?.name || evidence.file.name`, and the two migrated before it never
+     * did. Its `user-evidence` template gates the whole uploaded-file row on `sp_file_name`
+     * (`*ngIf="evidence?.sp_file_name; else uploadfilefield"`), so a nameless response would make
+     * the just-attached file disappear and fall back to the drag-and-drop box — which is why the
+     * fallback is an OPTION and not a new default: `rd-evidences` and `bilateral/section-evidence`
+     * must keep behaving exactly as they did.
+     */
+    describe('fallbackToLocalName', () => {
+      const nameless = { ...SP_RESPONSE, name: undefined };
+
+      it('is OFF by default — a nameless response leaves sp_file_name empty, as the first two surfaces always did', async () => {
+        api.PUT_loadFileInUploadSession.mockResolvedValue(nameless);
+        const item: any = { file: file('local-name.pdf') };
+
+        await service.uploadPending([item], { resultId: 1 });
+
+        expect(item.sp_file_name).toBeUndefined();
+      });
+
+      it('writes the LOCAL file name when the server answers without one', async () => {
+        api.PUT_loadFileInUploadSession.mockResolvedValue(nameless);
+        const item: any = { file: file('local-name.pdf') };
+
+        await service.uploadPending([item], { resultId: 1, flow: 'innovation-development', fallbackToLocalName: true });
+
+        expect(item.sp_file_name).toBe('local-name.pdf');
+      });
+
+      /** `||`, not `??`: the old copy fell back on an empty string too. */
+      it('falls back on an EMPTY server name as well, which is what the old copy did', async () => {
+        api.PUT_loadFileInUploadSession.mockResolvedValue({ ...SP_RESPONSE, name: '' });
+        const item: any = { file: file('local-name.pdf') };
+
+        await service.uploadPending([item], { resultId: 1, fallbackToLocalName: true });
+
+        expect(item.sp_file_name).toBe('local-name.pdf');
+      });
+
+      it('still prefers the server name when there is one', async () => {
+        const item: any = { file: file('local-name.pdf') };
+
+        await service.uploadPending([item], { resultId: 1, fallbackToLocalName: true });
+
+        expect(item.sp_file_name).toBe('report.pdf');
+      });
+    });
+
     it('counts only the items that carry a file, one-based', async () => {
       await service.uploadPending([{ file: file('1.pdf') }, {}, { file: file('2.pdf') }] as any, { resultId: 1 });
 
