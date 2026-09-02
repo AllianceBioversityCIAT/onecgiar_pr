@@ -1501,12 +1501,12 @@ FROM
     inner join \`version\` v on v.id = r.version_id 
     inner join clarisa_cgiar_entity_types ccet on ccet.code = ci.cgiar_entity_type_id
 WHERE
-    r.id = ${id}
+    r.id = ?
     and r.is_active > 0;
     `;
 
     try {
-      const results: Result[] = await this.query(queryData);
+      const results: Result[] = await this.query(queryData, [id]);
       return results.length ? results[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

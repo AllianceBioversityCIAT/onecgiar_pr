@@ -10,6 +10,7 @@ import {
   Version,
   HttpCode,
   HttpStatus,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ResultsService } from './results.service';
 import { CreateResultDto } from './dto/create-result.dto';
@@ -85,7 +86,7 @@ export class ResultsController {
   })
   @ApiParam({ name: 'id', type: Number, required: true })
   @ApiOkResponse({ description: 'Result found.' })
-  findResultById(@Param('id') id: number) {
+  findResultById(@Param('id', ParseIntPipe) id: number) {
     return this.resultsService.findResultById(id);
   }
 

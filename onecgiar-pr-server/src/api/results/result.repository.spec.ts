@@ -455,3 +455,71 @@ describe('ResultRepository (unit)', () => {
     });
   });
 });
+
+/**
+ * P2-3498 — `getResultById` concatenated the path segment straight into the SQL
+ * (`r.id = ${id}`) and ran it through `this.query(queryData)` with no parameter list, so whatever
+ * arrived in the URL became part of the statement. The rest of this repository already binds
+ * (lines 206, 219, 435, 1353 …); this one method did not.
+ *
+ * Reached from `results.controller.ts` — `GET results/get/:id` → `results.service.ts`
+ * `findResultById` → here. Only this proved path is fixed; the ticket is explicit about not
+ * turning it into a sweep.
+ */
+describe('ResultRepository — getResultById binds the id (P2-3498)', () => {
+  let repo: ResultRepository;
+  let queryMock: jest.Mock;
+
+  const mockDataSource = {
+    createEntityManager: jest.fn(() => ({}) as any),
+  } as unknown as DataSource;
+
+  const mockHandlersError = {
+    returnErrorRepository: jest.fn(({ error }: any) => ({
+      response: { error: true },
+      message: `${error}`,
+      status: HttpStatus.INTERNAL_SERVER_ERROR,
+    })),
+  } as any;
+
+  /** What a path segment can carry when nothing parses it. */
+  const INJECTED = '1 OR 1=1 UNION SELECT 1 -- ' as unknown as number;
+
+  beforeEach(() => {
+    repo = new ResultRepository(mockDataSource, mockHandlersError);
+    queryMock = jest.fn().mockResolvedValue([]);
+    (repo as any).query = queryMock;
+  });
+
+  it('keeps the id out of the SQL text and hands it over as a bound parameter', async () => {
+    await repo.getResultById(INJECTED);
+
+    const [sql, params] = queryMock.mock.calls[0];
+
+    // The placeholder replaces the interpolation.
+    expect(sql).toContain('r.id = ?');
+    expect(sql).not.toContain('r.id = 1 OR');
+    // Nothing the caller sent may appear in the statement itself.
+    expect(sql).not.toContain('UNION SELECT');
+    expect(sql).not.toContain('1 OR 1=1');
+    // …it travels in the parameter list instead, where the driver escapes it.
+    expect(params).toEqual([INJECTED]);
+  });
+
+  it('always passes a parameter list, never a lone statement', async () => {
+    await repo.getResultById(1234);
+
+    expect(queryMock).toHaveBeenCalledTimes(1);
+    expect(queryMock).toHaveBeenCalledWith(expect.any(String), [1234]);
+    // The unbound call took a single argument; that is what regressing would look like.
+    expect(queryMock.mock.calls[0]).toHaveLength(2);
+  });
+
+  it('still returns the first row, and undefined when there is none', async () => {
+    queryMock.mockResolvedValueOnce([{ result_id: 7 }, { result_id: 8 }]);
+    await expect(repo.getResultById(7)).resolves.toEqual({ result_id: 7 });
+
+    queryMock.mockResolvedValueOnce([]);
+    await expect(repo.getResultById(9)).resolves.toBeUndefined();
+  });
+});
