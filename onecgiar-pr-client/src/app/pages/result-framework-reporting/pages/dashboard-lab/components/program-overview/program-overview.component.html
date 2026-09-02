@@ -385,11 +385,18 @@
        segmented-bar anatomy.
        @akili-spec changes/overview-aow-progress-hero -->
   <section
-    class="col-span-12 flex overflow-hidden rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] max-[1024px]:flex-col">
+    class="col-span-12 overflow-hidden rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)]">
 
-    <!-- Summary rail — the section's one tinted surface (program-band violet, the accepted
-         exception to "content surfaces are neutral", UI-RULES §2/§7). -->
-    <div class="flex w-[300px] flex-none flex-col gap-[18px] border-r border-[var(--pr-border)] bg-[var(--pr-surface-band)] p-[20px] max-[1024px]:w-full max-[1024px]:border-b max-[1024px]:border-r-0">
+    <!-- @akili-spec changes/aow-row-gesture-split (RGS-T-3, RGS-DD-7): disclosure header — ALWAYS
+         visible, so a collapsed section still announces what it is and offers a way back in.
+         Reuses the house collapse mechanism from `reporting-aow-table` (`grid-template-rows:
+         0fr → 1fr`, now the shared `.pr-collapse` in `src/styles/collapse.scss` rather than a
+         second local copy) but does NOT reuse its defect: the source pattern collapses its rows to
+         zero height with `aria-hidden="true"` and no `inert`, leaving ~20 buttons tabbable while
+         AT is told to ignore them. Here the collapsed body below is marked `inert` instead —
+         `aria-hidden` is never added (RGS-R-8). Default EXPANDED (RGS-R-7 DoD's stated default;
+         this card is the Overview hero, not a panel that should start closed). -->
+    <div class="flex items-start justify-between gap-[16px] border-b border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
       <div>
         <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
           Progress by area of work
@@ -398,6 +405,24 @@
           Completion progress against planned Key Performance Indicators (KPIs) per Area of Work
         </p>
       </div>
+      <button
+        type="button"
+        (click)="toggleAowSection()"
+        [attr.aria-expanded]="aowSectionExpanded()"
+        aria-controls="aow-progress-panel"
+        class="flex h-[32px] w-[32px] shrink-0 cursor-pointer items-center justify-center rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-text-heading)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
+        <span class="material-icons-round text-[18px]" aria-hidden="true">{{ aowSectionExpanded() ? 'expand_less' : 'expand_more' }}</span>
+        <span class="sr-only">{{ aowSectionExpanded() ? 'Collapse' : 'Expand' }} progress by area of work</span>
+      </button>
+    </div>
+
+    <div id="aow-progress-panel" class="pr-collapse" [class.is-open]="aowSectionExpanded()">
+      <div class="pr-collapse-inner">
+        <div data-testid="aow-section-inert-container" [attr.inert]="aowSectionExpanded() ? null : ''" class="flex max-[1024px]:flex-col">
+
+    <!-- Summary rail — the section's one tinted surface (program-band violet, the accepted
+         exception to "content surfaces are neutral", UI-RULES §2/§7). -->
+    <div class="flex w-[300px] flex-none flex-col gap-[18px] border-r border-[var(--pr-border)] bg-[var(--pr-surface-band)] p-[20px] max-[1024px]:w-full max-[1024px]:border-b max-[1024px]:border-r-0">
 
       @if (richLoading()) {
         <!-- OAH-R-1 BUT / OAH-R-6: no figure paints while any AoW ToC is still loading. -->
@@ -857,6 +882,11 @@
           </span>
         </div>
       }
+    </div>
+        <!-- @akili-spec changes/aow-row-gesture-split: closes the inert wrapper / .pr-collapse-inner
+             / .pr-collapse opened above the rail, RGS-T-3 -->
+        </div>
+      </div>
     </div>
   </section>
   }

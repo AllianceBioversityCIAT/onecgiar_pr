@@ -1122,3 +1122,129 @@ describe('ProgramOverviewComponent — AoW row gestures split, and the selected 
     expect(rowEl().classList.contains('border-transparent')).toBe(false);
   });
 });
+
+// `RGS-T-3` (`changes/aow-row-gesture-split`) — the AoW progress section becomes a collapsible
+// disclosure, reusing `reporting-aow-table`'s `.pr-collapse` mechanism (moved to the shared
+// `src/styles/collapse.scss`, `RGS-DD-7`) WITHOUT its defect: the source pattern collapses its rows
+// to zero height with `aria-hidden="true"` and no `inert`, leaving them tabbable while AT is told to
+// ignore them. Here the collapsed body gets `inert` instead, and `aria-hidden` is never added.
+// Covers `RGS-R-7`, `RGS-R-8`, `RGS-AC-6`, `RGS-AC-7` (attribute half only — see the note below).
+describe('ProgramOverviewComponent — AoW progress section is collapsible, without the house defect (RGS-T-3, RGS-DD-7)', () => {
+  let fixture: ComponentFixture<ProgramOverviewComponent>;
+  let component: ProgramOverviewComponent;
+
+  const row: OverviewAowProgressRowRich = {
+    code: 'AOW02',
+    name: 'Accelerated Breeding',
+    complete: 1,
+    inProgress: 2,
+    notStarted: 3,
+    zeroTarget: 0,
+    reported: 3,
+    total: 6,
+    remaining: 3
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ProgramOverviewComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ProgramOverviewComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('richRows', [row]);
+    fixture.detectChanges();
+  });
+
+  function trigger(): HTMLButtonElement {
+    return fixture.nativeElement.querySelector('button[aria-controls="aow-progress-panel"]') as HTMLButtonElement;
+  }
+
+  function collapseEl(): HTMLElement {
+    return fixture.nativeElement.querySelector('#aow-progress-panel') as HTMLElement;
+  }
+
+  /** The single element that carries `inert` while collapsed — wraps BOTH the summary rail
+   *  (`Continue reporting`) and the row list (name button, `Report`, `→`, achievement glyph).
+   *  `RGS-R-8` covers the whole section, not just the rows. Selected by `data-testid`, not
+   *  positionally (`.pr-collapse-inner > div`) — a future sibling inside the inner wrapper would
+   *  otherwise silently re-point every assertion below, including the `aria-hidden` negative. */
+  function inertContainer(): HTMLElement {
+    return fixture.nativeElement.querySelector('[data-testid="aow-section-inert-container"]') as HTMLElement;
+  }
+
+  it('defaults to EXPANDED (RGS-R-7 DoD stated default) — aria-expanded="true", .is-open present, no inert', () => {
+    expect(trigger().getAttribute('aria-expanded')).toBe('true');
+    expect(collapseEl().classList.contains('pr-collapse')).toBe(true);
+    expect(collapseEl().classList.contains('is-open')).toBe(true);
+    expect(inertContainer().hasAttribute('inert')).toBe(false);
+  });
+
+  it('is a real <button>, not a div — keyboard-reachable and operable by construction', () => {
+    const btn = trigger();
+    expect(btn.tagName).toBe('BUTTON');
+    expect(btn.getAttribute('type')).toBe('button');
+    expect(btn.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('carries the visible-focus CLASS CONTRACT: focus-visible:shadow-[var(--pr-focus-ring)], never the box-shadow-blind ring-[var(--pr-focus-ring)]', () => {
+    // jsdom loads no Tailwind CSS, so this proves the CLASS is present, never that it paints — the
+    // same limit RGS-T-1's identical assertion records for the identity button. The computed
+    // box-shadow under a real :focus-visible is RGS-T-4's browser gate (D5).
+    const btn = trigger();
+    expect(btn.className).toContain('focus-visible:shadow-[var(--pr-focus-ring)]');
+    expect(btn.className).not.toContain('ring-[var(--pr-focus-ring)]');
+  });
+
+  it('the inert container actually holds the focusable controls — not an empty wrapper (RGS-R-8 covers the whole section)', () => {
+    const container = inertContainer();
+    expect(container.querySelector('button')).toBeTruthy();
+    expect(container.textContent).toContain('Continue reporting');
+    expect(container.textContent).toContain('Report');
+  });
+
+  it('activating the trigger flips aria-expanded to false, turns .is-open off, and marks the container inert (RGS-AC-6)', () => {
+    // jsdom does not implement `inert` (no tab-order exclusion, no accessibility-tree removal) and
+    // cannot walk a real tab order, so this proves ATTRIBUTE PRESENCE only — never that a collapsed
+    // row button is actually unreachable by Tab or invisible to AT. That behavioural proof is
+    // `RGS-T-4`'s browser gate (requirements.md §9, D7); recorded here per this task's own DoD
+    // ("record that limit in the test file rather than letting a green run imply more than it
+    // checked").
+    trigger().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(trigger().getAttribute('aria-expanded')).toBe('false');
+    expect(collapseEl().classList.contains('is-open')).toBe(false);
+    expect(inertContainer().hasAttribute('inert')).toBe(true);
+  });
+
+  it('the collapsed container drops aria-hidden rather than layering it over inert (RGS-DD-7 — the exact defect the house pattern carries, and this task exists partly to not inherit)', () => {
+    trigger().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(inertContainer().hasAttribute('inert')).toBe(true);
+    expect(inertContainer().hasAttribute('aria-hidden')).toBe(false);
+  });
+
+  it('expanding again removes inert, restoring the section a keyboard user can re-enter', () => {
+    trigger().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+    expect(inertContainer().hasAttribute('inert')).toBe(true);
+
+    trigger().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(trigger().getAttribute('aria-expanded')).toBe('true');
+    expect(collapseEl().classList.contains('is-open')).toBe(true);
+    expect(inertContainer().hasAttribute('inert')).toBe(false);
+  });
+
+  it('Enter and Space are native <button> activation (jsdom performs no keydown→click translation for buttons, verified — a dispatched click IS the click a real Enter/Space activation produces; the physical key press itself stays RGS-T-4\'s browser gate, same precedent as RGS-T-1\'s identity-button test)', () => {
+    const btn = trigger();
+    expect(btn.tabIndex).not.toBe(-1);
+
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+    btn.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+    fixture.detectChanges();
+
+    expect(trigger().getAttribute('aria-expanded')).toBe('false');
+  });
+});

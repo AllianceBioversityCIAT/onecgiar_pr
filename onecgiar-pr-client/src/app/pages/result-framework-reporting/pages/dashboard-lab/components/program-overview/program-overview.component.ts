@@ -844,6 +844,28 @@ export class ProgramOverviewComponent {
    */
   readonly heroNoPlan = computed(() => this.isFiltered() && this.richStats().total === 0);
 
+  /**
+   * `RGS-R-7`/`RGS-DD-7`: whether the AoW progress section (summary rail + row list) is expanded.
+   * Default EXPANDED, stated per the task's DoD — this card is the Overview hero (promoted to that
+   * position by `changes/overview-aow-progress-hero`), not a housekeeping panel that should start
+   * closed.
+   * @akili-spec changes/aow-row-gesture-split
+   */
+  readonly aowSectionExpanded = signal(true);
+
+  /**
+   * `RGS-DD-7`: flips the disclosure. The template marks the collapsed body `inert` (never
+   * `aria-hidden` layered over it) so it drops out of BOTH the tab order and the accessibility
+   * tree — the exact gap the house pattern (`reporting-aow-table`'s `.pr-collapse`) leaves open:
+   * it collapses its rows to zero height with `aria-hidden="true"` and no `inert`, so a keyboard
+   * user still tabs into 20 invisible buttons. `RGS-R-8` exists so this section does not inherit
+   * that defect.
+   * @akili-spec changes/aow-row-gesture-split
+   */
+  toggleAowSection(): void {
+    this.aowSectionExpanded.update(expanded => !expanded);
+  }
+
   private static readonly SCOPE_GROUP_LABEL: Record<OverviewScopeOption['kind'], string> = {
     aow: 'Areas of work',
     outcome: 'Strategic outcomes',

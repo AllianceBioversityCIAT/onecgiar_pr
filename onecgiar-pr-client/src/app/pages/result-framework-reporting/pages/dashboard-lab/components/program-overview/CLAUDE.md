@@ -1,6 +1,6 @@
 # program-overview
 
-**Verified:** 2026-09-02 · branch qa-development-2026 · 0ef09a17b
+**Verified:** 2026-09-02 · branch qa-development-2026 · 167cd2244
 
 **What this owns:** the **Overview** tab of the programme shell — the six cards under
 `entity-details/:entityId/overview`. Purely presentational: every figure arrives as a signal input.
@@ -115,5 +115,6 @@ Every input is a `computed()` on the parent (`dashboard-lab.component.ts`):
   far) are gone with their geometry. `reportingPhases` in the parent is now written-but-never-read
   and is flagged there for removal.
 - The disabled review-status sub-list is P2-3407. This folder's story is P2-3406, detail in P2-3409.
-- Note the convention drift: `docs/COMPONENT-DOCS.md` §5 says the `Verified:` stamp goes last, but
-  every file in this shell puts it on line 3. Line 3 wins here, for consistency.
+- Convention drift: `docs/COMPONENT-DOCS.md` §5 puts `Verified:` last; every file in this shell puts it on line 3 instead — line 3 wins here, for consistency.
+- **Card 2 is collapsible** (`RGS-T-3`). Header (`h2`+subtitle+trigger, default expanded) sits
+  OUTSIDE the `.pr-collapse` body; that body is `[attr.inert]` while closed, never `aria-hidden`.

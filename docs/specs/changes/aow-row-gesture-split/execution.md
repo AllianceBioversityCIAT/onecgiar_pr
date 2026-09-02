@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | Spec Path | `changes/aow-row-gesture-split` · Prefix `RGS` |
-| Depth | Standard · **Approval Mode:** `gated` |
+| Depth | Standard · **Approval Mode:** `gated` → **`pre-approved`** from `RGS-T-3` (§6) |
 | Started | 2026-09-02 |
 | Leader | Opus 5 (T1) · Implementer Sonnet (T2) · Reviewer Opus (T3) — author ≠ auditor held |
 | Budget (design.md §8) | 4 tasks · ~230 LOC (≈130 prod / ≈100 tests) · **1 review round** |
@@ -180,6 +180,14 @@ Editing a file another session is actively rewriting, in order to relocate the v
 
 **Resume condition:** `reporting-aow-table` is committed and the working tree is clean. Then `/akili-resume` or `/akili-execute changes/aow-row-gesture-split` continues at `RGS-T-3`.
 
+**Correction, 2026-09-02 (resume attempt) — the blocker was overstated by the Leader and the decision was revisited.** On resuming, the recorded condition was still unmet (that session's edit had *grown* to 85 insertions, and `dashboard-lab.component.html` had joined it). But re-checking the actual conflict surface showed the original assessment was wrong:
+
+- `.pr-collapse` lives in `reporting-aow-table.component.**scss**`, which is **clean**. The other session is editing only `.html` files.
+- `RGS-T-3`'s file set — `program-overview.component.{html,ts}`, `reporting-aow-table.component.scss`, and a shared home under `onecgiar-pr-client/src/styles/` (already a registered global stylesheet directory in `angular.json`) — has **zero overlap** with what that session holds.
+- Their spec asserts `.pr-collapse` **class presence**, and jsdom loads no global CSS, so relocating the rule cannot break their suite either way.
+
+The Leader had conflated "the component" with "the specific file". Residual risk is real but smaller and different in kind: pulling the rule out of their component's stylesheet mid-rewrite makes any visual surprise on their side harder to attribute. Presented to the owner with that correction; **owner elected to start `RGS-T-3` now.** The resume condition above is superseded, not silently ignored.
+
 ### 5.2 `D8` added to `RGS-T-4` — owner-approved scope, not an advisory promoted by the Leader
 
 `RGS-T-2`'s Reviewer found that `RGS-DD-4` makes the *unselected* row's border `transparent`, leaving an unselected row's separation from the card resting entirely on `--pr-surface-ground` vs `--pr-surface-card` — and that **no defect class in `requirements.md` §9 covers "resting affordance lost"**, because D4 measures only the selected indicator.
@@ -200,3 +208,93 @@ Per the Advisory-Never-Becomes-A-Task rule the Leader **did not** add this to `R
 **`RGS-T-4`'s pre-flight remains unticked:** it needs a runnable app against a real Science Program, and it is the only gate for D4/D5/D6/D7 (+D8). `tasks.md` §6 is explicit — if that is unavailable, report BLOCKED rather than closing on jest alone, because jest is blind to four of this spec's seven defect classes.
 
 All agents for `RGS-T-1`/`RGS-T-2` were shut down at this gate; `RGS-T-3` starts with fresh Implementer and Reviewer.
+
+
+---
+
+## 6. Run mode switched to `pre-approved` — `RGS-T-3` onward
+
+Owner asked why the run was slow. Recorded because the causes are the useful part, and one of them is the Leader's.
+
+**Not the method's fault — scope grew twice before any code was written.** `proposal.md` scoped this `Lite`. Specify discovered the row was a bare `<div>` (not the `<button>` the proposal assumed), pulling in keyboard semantics, accessible naming and a selected state. The owner then added the collapsible section at the design gate. Budget went ~160 → ~230 LOC; actuals are ~443. "Should have been quick" was true of the original ask, not of what it became.
+
+**The Leader's own overhead, which is the fixable part:**
+
+- **One wholly wasted rework round** on `RGS-T-1`: the Leader relayed a Reviewer `ADVISORY` into a rework brief without examining it, and only one of its two claims was correct. Cost a full Implementer + Reviewer cycle. Already recorded at §2 `RGS-T-1` attempt 2; repeated here because it is the single largest avoidable cost in the run.
+- **Briefs written as anthologies, not pointers.** `RGS-T-3`'s brief ran ~1000 words. The command's own §2.2 rule is *"a pointer brief, not an anthology"* — content the Leader inlines is **output**, the most expensive tokens in the loop. The Leader over-copied.
+- **Verification run at maximum on every attempt**: full `dashboard-lab` jest + `ng lint` + `npm run build:dev`, where a targeted `npx jest <path>` would have served most attempts.
+- **A gate stop after every task**, per the spec's `gated` mode.
+
+**The mismatch:** the owner's standing preference (recorded in the Leader's memory, from `changes/reporting-entry-hub`, 2026-08-28) is `pre-approved`, at most one Reviewer round per task, and targeted jest only — never the full client suite. This spec was written `gated` with full verification, so it ran the slow way by the book.
+
+**Switched, from `RGS-T-3` onward:**
+
+| Setting | Was | Now |
+|---|---|---|
+| Approval Mode | `gated` | **`pre-approved`** — no routine gate stops; HALT/Pivot/budget/FATAL_FAIL still stop, per the mode's own carve-out |
+| Briefs | full context copied | pointer briefs |
+| Verification | full `dashboard-lab` + lint + `build:dev` | targeted `npx jest <path>`; `build:dev` only where a change can break the build (e.g. `RGS-T-3`'s global stylesheet move — kept for that one) |
+| Reviewer rounds | up to 3 | **max 1**; a second FAIL escalates rather than looping |
+
+**What was explicitly NOT dropped: the Implementer → Reviewer gate.** The owner was offered removing it and declined. It is `author ≠ auditor`, not self-verification, and on this spec it caught both `RGS-T-1` defects — including a WCAG 2.5.3 regression introduced *by* the accessibility task. Both would have shipped without it.
+
+---
+
+### `RGS-T-3` — Make the AoW section collapsible, without inheriting the pattern's defect — **PASS**
+
+| Field | Value |
+|---|---|
+| Date | 2026-09-02 |
+| Status | **PASS** (Reviewer, attempt 2) · first task run under `pre-approved` fast mode (§6) |
+| Implementer attempts | **2** (one-round rework cap — a second FAIL would have escalated, not looped) |
+| Skills | `angular-developer`, `ui-ux-pro-max` · Effort `high` |
+| Requirements covered | `RGS-R-7`, `RGS-R-8`, `RGS-R-6` · Design `RGS-DD-7` · `RGS-AC-6`, `RGS-AC-7` |
+| Files changed | **NEW** `onecgiar-pr-client/src/styles/collapse.scss` · `angular.json` (+1) · `program-overview.component.html` (+38) · `.component.ts` (+22) · `.scope.spec.ts` (+125) · `reporting-aow-table.component.scss` (−34) · both component `CLAUDE.md`s |
+| Tests | 213 → **221** |
+
+#### What was built
+
+Card 2 ("Progress by area of work") is now collapsible. The `h2`, subtitle and a real `<button>` trigger (`aria-expanded`, `aowSectionExpanded` signal, **default expanded**) sit **outside** the collapse so a collapsed section still names itself and offers the way back in. The body — summary rail + AoW rows + outcomes footer — is wrapped in `.pr-collapse > .pr-collapse-inner > [attr.inert]`.
+
+**The defect the task existed to avoid was avoided.** The source pattern (`reporting-aow-table`) collapses ~20 buttons to zero height with `aria-hidden="true"` and **no** `inert`, leaving them tabbable while telling screen readers to ignore them. Here the container carries `[attr.inert]` while closed and **no `aria-hidden` at all** — dropped, not layered. The Reviewer confirmed absence rather than mere non-assertion: no `aria-hidden` on the panel, on `.pr-collapse-inner`, or on the inert wrapper, plus an explicit negative assertion in the tests. The only `aria-hidden` in the region is on the decorative chevron, which is correct.
+
+`.pr-collapse` was **moved**, not copied: a new `src/styles/collapse.scss`, registered globally in `angular.json`, with the rule deleted from `reporting-aow-table.component.scss` and replaced by a pointer comment. The Implementer chose a dedicated file over `transitions.scss` on the grounds that the latter is a grab-bag of legacy jQuery-era keyframes — a poor topical home for a grid-driven disclosure primitive. Sound.
+
+#### Attempt 1 — Reviewer `FAIL` (2 issues)
+
+1. **Violet tint on a content surface.** The new header row painted `bg-[var(--pr-surface-band)]` — the program-band tint — giving the card **two** tinted surfaces, falsifying a comment three lines below that calls the rail "the section's **one** tinted surface", and diverging from the very pattern `RGS-DD-7` says to reuse (`reporting-aow-table`'s disclosure header is `--pr-surface-card`). Violated `onecgiar-pr-client/CLAUDE.md` §5 Hard UI rules — Color §4.7: *"Content surfaces are neutral… A PR that breaks one does not merge"*, corroborated by the token's own declaration at `colors.scss:183`.
+2. **`program-overview/CLAUDE.md` hit 123 lines** against `onecgiar-pr-client/docs/COMPONENT-DOCS.md` §4's hard cap of **120**.
+
+#### Attempt 2 — Reviewer `PASS`
+
+Header → `bg-[var(--pr-surface-card)]` (border retained; the trigger's own border keeps it legible). Guide compressed to **exactly 120**. Plus one advisory applied in the same pass: `data-testid="aow-section-inert-container"` added and `inertContainer()` repointed off it, replacing a positional `.pr-collapse-inner > div` selector that a future sibling could have silently re-pointed — including the `aria-hidden` negative assertion.
+
+**Leader check on the line-count fix:** trimming to 120 required compressing a *pre-existing* bullet, which is exactly how a cosmetic fix quietly costs real content. Flagged for the Reviewer, which verified all four facts of the `Verified:`-stamp convention-drift note survive; only the leading word "Note" was dropped.
+
+**Verification:** `npx jest …/components/program-overview` → **221/221**. `npx ng lint --quiet` clean.
+
+**`npm run build:dev` — INCONCLUSIVE, and correctly reported as such.** Six `TS2339: Property 'achievement' does not exist…` errors, all in `dashboard-lab.component.html:1671-1690` — a concurrent session's in-flight file, explicitly off-limits to the Implementer, which reported inconclusive rather than claiming a pass and did **not** work around it by stashing another session's work. Correct behaviour under the disqualifying-evidence clause.
+
+Because the build could not prove the stylesheet move, the **Leader ran three substitute checks** and the Reviewer ruled them sufficient:
+
+| Check | Result |
+|---|---|
+| `angular.json` parses; `src/styles/collapse.scss` registered after `transitions.scss` | ✅ |
+| `npx sass src/styles/collapse.scss` compiles standalone | ✅ |
+| `grep '^\.pr-collapse\s*{'` repo-wide | **exactly one** definition — a genuine move, no duplicate |
+
+**Still owed:** re-run `npm run build:dev` once the other session's `dashboard-lab.component.ts` typing is fixed, for the real end-to-end signal that the global stylesheet resolves at build time.
+
+#### Adjudications the Reviewer was asked to make
+
+- **`inert` scope — section-wide upheld.** The Implementer wrapped the whole section including the rail's `Continue reporting` CTA. Three clauses support it: `RGS-R-8` "**the section's contents**", the scenario "focus **never enters the section**", and `RGS-T-4` D7 "confirm focus **never enters it**". `RGS-AC-7`'s enumeration of row controls is the negative illustration of the worst offenders, **not** the scope limit — a rail-excluded collapse would fail the scenario's own wording.
+- **The unmockup'd layout change — in scope.** Moving `h2`+subtitle out of the tinted rail into a header above the collapse is a reasonable reading of `RGS-DD-7` + `RGS-R-7` (a collapsed section must still name itself). Only its *colour* broke a rule, and that became Issue 1.
+- **The disqualifier — cleanly avoided.** *"Asserting `inert` is present and calling keyboard-unreachability proven"* is explicitly disqualified; jsdom implements no `inert` and cannot walk a tab order. The tests assert the **attribute** and name that limit in the file, citing `requirements.md` §9 D7 and deferring behaviour to `RGS-T-4` — the precedent `RGS-T-1` set with its focus-ring class contract.
+- **Re-nesting verified clean.** ~470 lines were re-nested without reindenting (deliberate, to keep the diff reviewable). The HTML has exactly two hunks, the rail's class string is re-emitted byte-identical, and `flex max-[1024px]:flex-col` moved verbatim onto the new inner wrapper. The responsive ladder and all `RGS-T-1`/`T-2` work sit in the untouched region.
+
+#### `ADVISORY` findings (recorded, non-gating)
+
+- **RISK — product-visible, owner-surfaced.** Section-wide `inert` means **collapsing hides the rail's `Continue reporting` CTA**, the Overview's primary reporting entry point. Default-expanded and user-initiated make it acceptable, but no mockup covers it. Raised with the owner at this gate.
+- **RELIABILITY — `RGS-AC-6`'s keyboard half is browser-only.** `RGS-T-4` has no bullet exercising the disclosure with a physical Enter/Space. The jest test is honest (native `<button>` by construction; dispatched keydowns are documented no-ops in jsdom) and matches `RGS-T-1`'s accepted precedent, so it does not gate. Adding it to `RGS-T-4` would require owner approval, as `D8` did — **not minted unilaterally**.
+- **RELIABILITY — popover clip.** `.pr-collapse-inner` adds a second `overflow: hidden` inside a `<section>` that already clips. No regression expected (the two are co-extensive), but `reporting-aow-table/CLAUDE.md` records that exact clip once eating an ⓘ popover to a 6px sliver. Cheap to eyeball the achievement-glyph popover during the `RGS-T-4` browser pass.
+- **READABILITY** — the positional `inertContainer()` selector; applied in attempt 2.

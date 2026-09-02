@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-09-01 · branch qa-development-2026 · 3366453bc (merged with performance-refactor · 181caa352 — disclosure-default contract P2-3251/P2-3252, ToC achievement Progress column P2-3296)
+**Verified:** 2026-09-02 · branch qa-development-2026 · 167cd2244 (merged with performance-refactor · 181caa352 — disclosure-default contract P2-3251/P2-3252, ToC achievement Progress column P2-3296)
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjetas colapsables por Area
@@ -63,6 +63,11 @@ ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio
   Category llegaba idéntica a un AoW sin nada planeado, y el estado vacío afirmaba *"this area of work
   has no planned indicators yet"* sobre una tarjeta llena (P2-3405). Si añades un sexto filtro,
   actualiza `dashboard-lab.reportingFiltersActive()`.
+- ⚠️ **`.pr-collapse`/`.pr-collapse-inner` moved OUT of this file's `.scss`** (`changes/aow-row-gesture-split`,
+  `RGS-T-3`): now shared at `src/styles/collapse.scss`, reused by `program-overview`'s AoW hero.
+  Don't re-add a local copy here. That spec also logs (not fixed here) that THIS card's collapse
+  has zero `inert` — 20 buttons stay tabbable-but-`aria-hidden` while closed; `program-overview`'s
+  NEW collapse does not copy that gap.
 - ⚠️ **La tarjeta NO lleva `overflow-hidden`.** Lo llevaba, y recortaba el popover de la ⓘ a una tira
   de 6px. El clip de la animación lo hace `.pr-collapse-inner`; las esquinas inferiores las redondea
   `.pr-collapse--card > .pr-collapse-inner`. No devuelvas el `overflow` a la `<section>`.

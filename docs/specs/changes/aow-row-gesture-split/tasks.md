@@ -7,7 +7,7 @@
 | Field | Value |
 |---|---|
 | Spec Path | `changes/aow-row-gesture-split` · Prefix `RGS` |
-| Depth | Standard · **Approval Mode:** `gated` |
+| Depth | Standard · **Approval Mode:** `pre-approved` (switched 2026-09-02 at owner request — see `execution.md` §6) |
 | Files | `program-overview.component.{html,ts}` · `program-overview.scope.spec.ts` · `program-overview.oah-hero.spec.ts` · a shared home for `.pr-collapse` |
 | Parallel-safe | **no** — `changes/progress-by-aow-w3` touches the same markup |
 
@@ -58,19 +58,19 @@
 
 ---
 
-### `RGS-T-3` — Make the AoW section collapsible, without inheriting the pattern's defect [ ]
+### `RGS-T-3` — Make the AoW section collapsible, without inheriting the pattern's defect [x]
 
 - **Type:** `client` · **Size:** `M` · **Depends on:** — · **Blocks:** —
 - **Implements:** `RGS-R-7`, `RGS-R-8`, `RGS-R-6` · **Design ref:** `RGS-DD-7`
 - **Skills:** `angular-developer`, `ui-ux-pro-max` · **Effort:** `high`
 - **Scope:** a disclosure control on the AoW progress section, reusing `reporting-aow-table`'s `.pr-collapse` CSS from a shared home.
 - **Definition of done:**
-  - [ ] `<button>` trigger with `aria-expanded`, keyboard-operable, visible focus ring (`shadow-[…]`, not `ring-[…]`).
-  - [ ] `.pr-collapse` reused — `grid-template-rows: 0fr → 1fr`, `overflow:hidden` on `.pr-collapse-inner`, `prefers-reduced-motion` honoured. **AND IT MUST** be moved to a shared home rather than copy-pasted.
-  - [ ] **`inert` on the container while collapsed.** **BUT it must NOT** rely on `aria-hidden` over focusable content — the source pattern collapses 20 buttons with zero `inert`, leaving them tabbable while telling screen readers to ignore them. That is an explicit ARIA violation and this task exists partly to not inherit it.
-  - [ ] `aria-hidden` dropped rather than layered on top of `inert`.
-  - [ ] Expanding restores full keyboard access.
-  - [ ] Default state chosen and stated (expanded, unless the owner says otherwise).
+  - [x] `<button>` trigger with `aria-expanded`, keyboard-operable, visible focus ring (`shadow-[…]`, not `ring-[…]`).
+  - [x] `.pr-collapse` reused — `grid-template-rows: 0fr → 1fr`, `overflow:hidden` on `.pr-collapse-inner`, `prefers-reduced-motion` honoured. **AND IT MUST** be moved to a shared home rather than copy-pasted.
+  - [x] **`inert` on the container while collapsed.** **BUT it must NOT** rely on `aria-hidden` over focusable content — the source pattern collapses 20 buttons with zero `inert`, leaving them tabbable while telling screen readers to ignore them. That is an explicit ARIA violation and this task exists partly to not inherit it.
+  - [x] `aria-hidden` dropped rather than layered on top of `inert`.
+  - [x] Expanding restores full keyboard access.
+  - [x] Default state chosen and stated (expanded, unless the owner says otherwise).
 - **Verification:** `npx jest … dashboard-lab` — assert `aria-expanded` flips, `inert` is present when collapsed and absent when expanded, and the trigger responds to Enter and Space.
 - **What disqualifies the evidence:** asserting `inert` is present and calling keyboard-unreachability proven. **jsdom does not implement `inert` and cannot walk a real tab order** — the attribute is presence, the behaviour is `RGS-T-4`. Record that limit in the test file rather than letting a green run imply more than it checked.
 - **Input that would make it fail:** drop `inert` → the attribute assertion fails. Swap the trigger to a `<div>` → the keyboard assertions fail.
