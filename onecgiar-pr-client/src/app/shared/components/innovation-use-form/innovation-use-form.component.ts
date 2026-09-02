@@ -372,16 +372,54 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
    * kept local here rather than added to the shared `ReportingDesignYear` enum/service because
    * this ticket's file scope is `innovation-use-form/**` only.
    *
-   * Fails OPEN (returns false, i.e. "don't hide") when `phase_year` isn't resolved yet — an
-   * in-flight load must never hide a question by mistake; it just keeps whatever the pre-existing
-   * `getUseLevelIndex() >= 5` gate already decided. Same fail-open on the IPSR branch while the
-   * use level is still unresolved.
+   * Fails towards the LEGACY form (returns `false`, i.e. "don't hide") whenever the open result's
+   * own `phase_year` is not reliably known — an in-flight load must never hide a question by
+   * mistake; it just keeps whatever the pre-existing `getUseLevelIndex() >= 5` gate already decided.
+   * That guarantee is enforced by {@link currentResultPhaseYear}, NOT by this method. Same fail-open
+   * on the IPSR branch while the use level is still unresolved.
    */
   private static readonly SCALING_STUDIES_QUESTION_HIDE_YEAR = 2026;
 
+  /**
+   * The reporting phase year of the OPEN RESULT, or `null` when it is not reliably known.
+   *
+   * 🛑 There is deliberately NO fallback to `dataControlSE.reportingCurrentPhase.phaseYear`
+   * (P2-3558). That is the OPEN phase of the reporting module (`data-control.service.ts:125`, today
+   * 2026) — a different thing from the phase of the result being viewed. The gate above asks "is
+   * THIS result a 2026+ result?", so falling back to the open phase answered a different question,
+   * and answered it wrongly in the one direction that hurts: it HID the scaling-studies question on
+   * a legacy result. The docblock above used to claim this "fails OPEN (returns false)" while the
+   * code did the opposite for the only value the open phase actually carries in production.
+   * Measured on 2 Sep 2026: prtest holds 1516 results in the 2025 phase against 353 in 2026, so
+   * failing towards the new form failed towards the wrong side in most cases.
+   *
+   * The window is real, not theoretical: `result-detail.component.ts:69` and
+   * `current-result.service.ts:26` reset `currentResultSignal` to `{}` at the start of every load,
+   * and any non-404 failure of `GET_resultById` (`current-result.service.ts:65-69`) leaves it at
+   * `{}` PERMANENTLY, with the form on screen.
+   *
+   * Same shape and same decision as the reference resolver
+   * `FieldsManagerService.currentResultPhaseYear` / `isPhaseYearAtLeast` (commit `8afb574f3`, which
+   * fixed the eight sibling gates). Kept local here rather than delegated to the service because
+   * this threshold is a question-retirement year, not one of the shared `ReportingDesignYear`
+   * UI-redesign thresholds.
+   *
+   * The `typeof === 'number'` guard is part of the same decision: a year arriving as a string is a
+   * bad payload, and a bad payload gets the legacy form.
+   */
+  private currentResultPhaseYear(): number | null {
+    const year = this.api?.dataControlSE?.currentResultSignal?.()?.phase_year;
+    return typeof year === 'number' ? year : null;
+  }
+
+  /** A phase gate is only ever `true` on a reliably known year — unknown means the legacy form. */
+  private isPhaseYearAtLeast(threshold: number): boolean {
+    const year = this.currentResultPhaseYear();
+    return year !== null && year >= threshold;
+  }
+
   isScalingStudiesQuestionHidden(): boolean {
-    const phaseYear = this.api?.dataControlSE?.currentResultSignal?.()?.phase_year ?? this.api?.dataControlSE?.reportingCurrentPhase?.phaseYear;
-    if (typeof phaseYear !== 'number' || phaseYear < InnovationUseFormComponent.SCALING_STUDIES_QUESTION_HIDE_YEAR) {
+    if (!this.isPhaseYearAtLeast(InnovationUseFormComponent.SCALING_STUDIES_QUESTION_HIDE_YEAR)) {
       return false;
     }
     if (!this.isIpsr) return true;
