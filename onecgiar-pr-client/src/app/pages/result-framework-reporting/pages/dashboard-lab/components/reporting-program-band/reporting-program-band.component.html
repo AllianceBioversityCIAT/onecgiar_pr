@@ -192,26 +192,49 @@
          here appears in both. -->
 
     @if (bandCollapsed()) {
-      <div class="ml-auto flex items-center gap-[8px] self-center">
+      <!-- `min-w-0` here is the OSF-T-10 fix: this group had no automatic-minimum override of its
+           own, so as a nested flex item it kept a min-content width equal to the sum of its
+           children (Back button + CTA) even while `ml-auto` let it shrink visually — at 768px that
+           sum (~400px) still overflowed the page by 47px despite the CTA already carrying
+           OSF-DD-15's `min-w-0`/`truncate` chain. `min-w-0` on THIS ancestor is what lets that
+           existing truncation actually take effect (verified at all five widths, both tabs — see
+           execution.md). At 900px specifically the CTA truncates all the way down to its 24px icon
+           and the group is STILL over budget — the Back button (193px, was `shrink-0`) is what
+           remains rigid there. OSF-T-15 gives it the same truncation chain as the CTA below,
+           mirrored exactly. -->
+      <div class="ml-auto flex min-w-0 items-center gap-[8px] self-center">
+        <!-- `shrink-0` here was the OSF-T-15 defect at 900px: with the CTA already truncated to its
+             24px icon (OSF-T-10), this button — the group's only other child — became the binding
+             constraint at 193px. It now carries the identical OSF-DD-15 chain as the CTA: `min-w-0`
+             on the button, `shrink-0` on the icon, label in its own `min-w-0 truncate` span. -->
         <button
           type="button"
-          class="pr-band-fade flex h-[32px] shrink-0 cursor-pointer items-center gap-[5px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12.5px] font-semibold text-[var(--pr-text-heading)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-app)] hover:text-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+          class="pr-band-fade flex h-[32px] min-w-0 cursor-pointer items-center gap-[5px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12.5px] font-semibold text-[var(--pr-text-heading)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-app)] hover:text-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
           [attr.aria-label]="backLabel()"
           data-testid="program-band-back-btn-collapsed"
           (click)="goBack()">
-          <ng-icon name="lucideArrowLeft" class="text-[14px]" />
-          <span>{{ backLabel() }}</span>
+          <ng-icon name="lucideArrowLeft" class="shrink-0 text-[14px]" />
+          <span class="min-w-0 truncate">{{ backLabel() }}</span>
         </button>
 
         @if (canReport()) {
           <!-- The 36px CTA of the identity block is clipped away with it, so the collapsed bar
                carries its own 32px copy (reference :396-399). Same action, same label, same tooltip. -->
+          <!-- `shrink-0` on this button (and the plain text node) was the OSF-DD-15 defect: the
+               action group's box shrinks correctly under the nav's squeeze, but a non-shrinking
+               child can't follow it and overflows the group — and the page — to the right. This CTA
+               truncates first (OSF-DD-15 option 2 — option 1, `shrink-0` on the group, was rejected:
+               the tab labels and the collapsed program name are single unbreakable tokens with no
+               truncation of their own, so they can't absorb the squeeze that would free up). The
+               icon stays `shrink-0` so it never gets clipped. At 900px this alone is not enough —
+               once this CTA is down to its icon, the Back button carries the identical chain too
+               (OSF-T-15). -->
           <button
             type="button"
-            class="pr-band-fade group relative flex h-[32px] shrink-0 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[12px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
+            class="pr-band-fade group relative flex h-[32px] min-w-0 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[12px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
             (click)="reportEmerging.emit()">
-            <ng-icon name="lucideZap" class="text-[16px]" />
-            Report emerging result
+            <ng-icon name="lucideZap" class="shrink-0 text-[16px]" />
+            <span class="min-w-0 truncate">Report emerging result</span>
             <span
               class="pointer-events-none absolute right-0 top-full z-[30] mt-[8px] w-[220px] rounded-[8px] bg-[var(--pr-color-secondary-400)] px-[12px] py-[8px] text-[12px] font-normal leading-[1.4] text-white opacity-0 shadow-lg transition-opacity delay-150 group-hover:opacity-100">
               Report achievements that were not originally included in the 2026 Theory of Change, but emerged as valuable results during the year.

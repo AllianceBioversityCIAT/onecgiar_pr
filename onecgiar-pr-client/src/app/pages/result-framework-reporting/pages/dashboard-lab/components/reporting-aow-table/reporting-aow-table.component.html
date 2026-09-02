@@ -383,7 +383,7 @@
                grows for a longer ratio rather than wrapping. Without it the bar's left edge moved
                between 1155 and 1171px depending on how long the text was, giving seven stacked
                rows a ragged edge. -->
-          <span class="flex shrink-0 items-center gap-[12px]" [attr.title]="ratioTitle(group) || null">
+          <span class="flex shrink-0 items-center gap-[12px]" [attr.title]="rowTitle(group) || null">
             <span class="h-[8px] w-[120px] shrink-0 overflow-hidden rounded-[4px] bg-[var(--pr-border)]">
               <span
                 class="block h-[8px] rounded-[4px] bg-[var(--pr-color-primary-300)]"
@@ -405,10 +405,19 @@
               never instead of it: "how much of the plan has been touched" and "how far it got"
               are different questions. Indicators with no usable target are excluded from the
               average, and the coverage line underneath says how many made it in.
+
+              OSF-T-16 (900px overflow, OSF-DD-8's ladder — sheds the achievement block first):
+              `max-[1100px]:sr-only`, NOT `max-[1100px]:hidden`. `sr-only` (position:absolute,
+              1x1px, clipped) removes the block from the row's flex width — the fix — while
+              keeping it in the accessibility tree, which `OSF-R-8` forbids removing it from.
+              `hidden` would strip it from assistive tech with nothing else naming these figures.
+              The sighted-hover fallback (the row tooltip `OSF-DD-8` promises) moves to the
+              group's own `title` (`rowTitle`, above) since this block is unreachable by a
+              pointer once it is 1x1px.
             -->
             @if (group.achievement) {
               <span
-                class="flex w-[168px] shrink-0 flex-col items-end border-l border-[var(--pr-border)] pl-[12px] leading-tight"
+                class="flex w-[168px] shrink-0 flex-col items-end border-l border-[var(--pr-border)] pl-[12px] leading-tight max-[1100px]:sr-only"
                 [prTooltip]="achievementTooltip(group.achievement)"
                 prTooltipPosition="top">
                 <span class="flex items-baseline gap-[10px] whitespace-nowrap">
@@ -439,15 +448,20 @@
                button (same recipe). Real AoWs only: buckets have no By-AOW view. Nested-control
                pattern, like the ⓘ above: emitAndStop keeps the click from toggling the card. -->
           @if (!isBucket(group)) {
+            <!-- <900px: the header row has no more width to give (name is already min-w-0/truncate
+                 and fully squeezed to 0 there; every sibling is shrink-0). Collapse to icon-only
+                 rather than overflow the card — aria-label keeps the accessible name, so nothing is
+                 lost, only the visible label (measured: closes the 768px 798→750 overflow exactly). -->
             <span
               role="button"
               tabindex="0"
-              class="inline-flex h-[30px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+              class="inline-flex h-[30px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] max-[900px]:w-[30px] max-[900px]:justify-center max-[900px]:px-0"
               aria-label="Open this Area of Work in the By-AOW view"
+              title="By AOW"
               (click)="emitAndStop(openAow, group.aow.code, $event)"
               (keydown.enter)="emitAndStop(openAow, group.aow.code, $event)">
               <span class="material-icons-round text-[16px]" aria-hidden="true">folder_open</span>
-              By AOW
+              <span class="max-[900px]:hidden">By AOW</span>
             </span>
           }
         </button>
