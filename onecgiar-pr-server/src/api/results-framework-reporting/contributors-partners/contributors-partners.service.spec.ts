@@ -20,6 +20,7 @@ import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 
 describe('ContributorsPartnersService', () => {
   let service: ContributorsPartnersService;
+  let consistencyService: { check: jest.Mock };
   let resultRepository: jest.Mocked<ResultRepository>;
   let resultByInitiativesRepository: jest.Mocked<ResultByInitiativesRepository>;
   let resultByInstitutionsRepository: jest.Mocked<ResultByIntitutionsRepository>;
@@ -139,6 +140,7 @@ describe('ContributorsPartnersService', () => {
     }).compile();
 
     service = module.get(ContributorsPartnersService);
+    consistencyService = module.get(ContributionConsistencyService);
     resultRepository = module.get(
       ResultRepository,
     ) as jest.Mocked<ResultRepository>;
@@ -793,6 +795,92 @@ describe('ContributorsPartnersService', () => {
         has_innovation_link: false,
         last_updated_by: user.id,
       });
+    });
+  });
+
+  /**
+   * P2-2932 — the extraction, not the comparison. `contributionBoxesOf` walks node → indicators[]
+   * → targets[] and must carry each indicator's own category through, or the mixed-type rule has
+   * nothing to act on. A mutation removing that one line passed every other test in this repo.
+   */
+  describe('P2-2932 — the boxes handed to the consistency check', () => {
+    const tocWithMixedIndicators = {
+      contributing_initiatives: {
+        accepted_contributing_initiatives: [],
+        pending_contributing_initiatives: [],
+      },
+      contributing_and_primary_initiative: [],
+      result_toc_result: {
+        indicators: [
+          {
+            indicator_result_type_id: 5,
+            targets: [{ contributing_indicator: 120 }],
+          },
+          {
+            indicator_result_type_id: 7,
+            targets: [{ contributing_indicator: 999 }],
+          },
+          // No recognised category — must arrive as undefined, not as null or 0.
+          {
+            indicator_result_type_id: null,
+            targets: [{ contributing_indicator: 50 }],
+          },
+        ],
+      },
+      contributors_result_toc_result: [],
+      impacts: null,
+      impactsTarge: null,
+      sdgTargets: null,
+    };
+
+    it("carries each indicator's own type onto every one of its boxes", async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 10,
+        result_code: 900,
+        title: 't',
+        result_level_id: 3,
+        result_type_id: 5,
+      } as any);
+      resultByInitiativesRepository.getOwnerInitiativeByResult.mockResolvedValue(
+        { id: 1 } as any,
+      );
+      resultsTocResultsService.getTocByResultV2.mockResolvedValue({
+        response: tocWithMixedIndicators,
+      } as any);
+
+      await service.getContributorsPartnersByResultId(10);
+
+      const boxes = consistencyService.check.mock.calls.at(-1)?.[2];
+
+      expect(boxes).toEqual([
+        { contributingIndicator: 120, indicatorResultTypeId: 5 },
+        { contributingIndicator: 999, indicatorResultTypeId: 7 },
+        { contributingIndicator: 50, indicatorResultTypeId: undefined },
+      ]);
+    });
+
+    it("passes the result's own type, not the indicator's", async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 10,
+        result_code: 900,
+        title: 't',
+        result_level_id: 3,
+        result_type_id: 5,
+      } as any);
+      resultByInitiativesRepository.getOwnerInitiativeByResult.mockResolvedValue(
+        { id: 1 } as any,
+      );
+      resultsTocResultsService.getTocByResultV2.mockResolvedValue({
+        response: tocWithMixedIndicators,
+      } as any);
+
+      await service.getContributorsPartnersByResultId(10);
+
+      expect(consistencyService.check).toHaveBeenCalledWith(
+        10,
+        5,
+        expect.any(Array),
+      );
     });
   });
 });

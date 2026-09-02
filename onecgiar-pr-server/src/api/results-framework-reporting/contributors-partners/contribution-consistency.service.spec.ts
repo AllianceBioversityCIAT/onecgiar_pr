@@ -121,4 +121,56 @@ describe('ContributionConsistencyService (P2-2932)', () => {
       where: { result_id: 1, is_active: true },
     });
   });
+
+  /**
+   * P2-2932 — the mixed-type rule, now that `getRTRPrimaryV2` joins the indicator's own category.
+   * Section 4 holds only the data for the type the result was created as.
+   */
+  describe('the mixed-type rule', () => {
+    beforeEach(() => {
+      capDevRepo.findOne.mockResolvedValue({
+        female_using: 120,
+        male_using: 80,
+      });
+    });
+
+    it('ignores a box whose indicator belongs to another type', async () => {
+      const result = await service.check(
+        1,
+        ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+        [
+          {
+            contributingIndicator: 200,
+            indicatorResultTypeId:
+              ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+          },
+          {
+            contributingIndicator: 999,
+            indicatorResultTypeId: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+          },
+        ],
+      );
+
+      expect(result.status).toBe('MATCH');
+      expect(result.reported).toBe(200);
+      expect(result.boxesOfAnotherType).toBe(1);
+    });
+
+    /**
+     * An indicator whose `type_value` matches no known pattern comes back null and is passed as
+     * undefined. "Cannot tell" must be compared, not dropped — dropping it would hide a real
+     * disagreement behind an unrecognised label.
+     */
+    it('compares a box whose indicator type could not be identified', async () => {
+      const result = await service.check(
+        1,
+        ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+        [{ contributingIndicator: 150, indicatorResultTypeId: undefined }],
+      );
+
+      expect(result.status).toBe('DIFFERS');
+      expect(result.reported).toBe(150);
+      expect(result.boxesOfAnotherType).toBe(0);
+    });
+  });
 });

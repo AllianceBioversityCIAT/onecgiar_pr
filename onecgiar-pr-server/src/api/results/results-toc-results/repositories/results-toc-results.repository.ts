@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { env } from 'node:process';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
+import { indicatorResultTypeCaseSql } from '../../../../shared/constants/indicator-type-mapping.constant';
 import { ResultsTocResult } from '../entities/results-toc-result.entity';
 import {
   ReplicableConfigInterface,
@@ -409,7 +410,11 @@ export class ResultsTocResultRepository
         rit.contributing_indicator,
         rit.target_date,
         rit.target_progress_narrative,
-        rit.indicator_question
+        rit.indicator_question,
+        -- P2-2932: the indicator's own result type, so the consistency check can tell a box that
+        -- belongs to the result's type from one that does not. Section 4 only holds data for the
+        -- type the result was created as, so an indicator of another type has no counterpart there.
+        ${indicatorResultTypeCaseSql('toc_tri.type_value')} AS indicator_result_type_id
       FROM results_toc_result rtr
       LEFT JOIN clarisa_initiatives ci
         ON ci.id = rtr.initiative_id
@@ -420,6 +425,18 @@ export class ResultsTocResultRepository
       LEFT JOIN result_indicators_targets rit
         ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
         AND rit.is_active = 1
+      -- P2-2932. Matched on either key on purpose: \`toc_results_indicator_id\` is a text column
+      -- holding the ToC node's \`related_node_id\` for some rows and the numeric \`id\` for others.
+      -- The same two-way match already exists at \`result.repository.ts:1024-1025\`; narrowing it to
+      -- one key would silently drop the type for whichever half does not use it.
+      LEFT JOIN ${env.DB_TOC}.toc_results_indicators toc_tri
+        ON toc_tri.is_active = 1
+        AND (
+          CONVERT(toc_tri.related_node_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            = CONVERT(rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+          OR CONVERT(CAST(toc_tri.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            = CONVERT(rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+        )
       WHERE
         rtr.results_id = ?
         AND rtr.is_active = 1
