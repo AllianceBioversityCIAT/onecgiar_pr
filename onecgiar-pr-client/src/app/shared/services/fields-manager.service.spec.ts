@@ -258,6 +258,48 @@ describe('FieldsManagerService', () => {
   });
 
   /**
+   * P2-3550 (epic P2-3243). "Innovation reference materials" — the last block of Innovation
+   * Development — is dropped from the 2026 form, but the ticket's own rule keeps it for 2026 results
+   * that were created with the 2025 form (`is_replicated`).
+   *
+   * 🛑 The gate is the reporting phase YEAR, never the portfolio: the P25 portfolio starts in 2025,
+   * so `isP25()` would also strip the block from phase-2025 results, which the epic protects.
+   */
+  describe('isInnovationReferenceMaterialsRemoved2026', () => {
+    it('is true for a 2026-phase result created with the 2026 form', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026, is_replicated: 0 } as any);
+      expect(service.isInnovationReferenceMaterialsRemoved2026()).toBe(true);
+    });
+
+    it('is false for a 2026-phase result created with the 2025 form — it keeps its structure', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026, is_replicated: 1 } as any);
+      expect(service.isInnovationReferenceMaterialsRemoved2026()).toBe(false);
+    });
+
+    it('is false for a 2025-phase result even inside the P25 portfolio — the case a portfolio gate would break', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025, is_replicated: 0 } as any);
+      expect(service.isP25()).toBe(true);
+      expect(service.isInnovationReferenceMaterialsRemoved2026()).toBe(false);
+    });
+
+    it('is true for a 2026-phase P22 result — the removal follows the phase, not the portfolio', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P22', phase_year: 2026, is_replicated: 0 } as any);
+      expect(service.isInnovationReferenceMaterialsRemoved2026()).toBe(true);
+    });
+
+    it("is false when phase_year arrives as a string, since '2026' >= 2026 would be a coercion", () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: '2026', is_replicated: 0 } as any);
+      expect(service.isInnovationReferenceMaterialsRemoved2026()).toBe(false);
+    });
+
+    it('is false when neither the result nor the open phase carries a year', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
+      dataControlSE.reportingCurrentPhase = undefined as any;
+      expect(service.isInnovationReferenceMaterialsRemoved2026()).toBe(false);
+    });
+  });
+
+  /**
    * P2-3295 (epic P2-3243). The Innovation Use 2030 block is renamed "2030 Use Projection" and gains the
    * projection tooltip from 2026 on. The gate is the reporting phase YEAR, not the portfolio: the test
    * environment holds 2025-phase results inside the P25 portfolio, which a portfolio gate would rename too.

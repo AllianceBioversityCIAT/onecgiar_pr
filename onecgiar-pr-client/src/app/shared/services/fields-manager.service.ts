@@ -68,6 +68,31 @@ export class FieldsManagerService {
     return typeof year === 'number' && year >= ReportingDesignYear.InnovationDeveloperAutoFill;
   });
   /**
+   * True when the open result must NOT be asked for "Innovation reference materials" — the last
+   * block of the Innovation Development form (P2-3550, epic P2-3243).
+   *
+   * Two conditions, both from the ticket's own rule:
+   * 1. the reporting phase is 2026+ — the YEAR, never `isP25()`: the P25 portfolio starts in 2025,
+   *    so a portfolio gate would also strip the block from phase-2025 results, and
+   * 2. the result was NOT created with the 2025 form. `is_replicated` is the only marker the server
+   *    sends for that: it is 0 for the first version of a result code and 1 for every roll-over, so
+   *    in the 2026 phase "replicated" means "born under an earlier form" (verified in prtest on
+   *    2 Sep 2026: result 11033 = 2026 + `is_replicated` 0, result 11034 = 2026 + `is_replicated` 1).
+   *
+   * ⚠️ Condition 2 is only equivalent to "created with the 2025 form" while 2026 is the newest
+   * phase. A result born in 2026 and rolled over to 2027 will also be flagged replicated and would
+   * get the block back. Telling those apart needs the phase year of the result's FIRST version,
+   * which the server can compute but does not send today.
+   * Threshold is centralized in {@link ReportingDesignYear}.
+   */
+  isInnovationReferenceMaterialsRemoved2026 = computed(() => {
+    const currentResult = this.dataControlSE.currentResultSignal();
+    const year = currentResult?.phase_year ?? this.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return (
+      typeof year === 'number' && year >= ReportingDesignYear.InnovationReferenceMaterialsRemoval && !currentResult?.is_replicated
+    );
+  });
+  /**
    * True when the open result's reporting phase is 2026+ → new Geographic location
    * "location of benefit" wording (P2-3036 AC9) for P25 Innovation results. 2025 keeps the legacy wording.
    * Threshold is centralized in {@link ReportingDesignYear}.

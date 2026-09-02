@@ -216,6 +216,27 @@ export class InnovationDevInfoComponent {
     });
   }
 
+  /**
+   * P2-3550 AC4 — "Stored reference materials are not deleted, cleared or migrated".
+   *
+   * Hiding the block is not enough, and doing only that would DELETE data. The server's
+   * `InnovationDevService.saveEvidence` returns early **only** when the array is `null`/`undefined`
+   * (`onecgiar-pr-server/src/api/results/summary/innovation_dev.service.ts:99-101`); with any other
+   * value it walks every stored evidence of type 4 and sets `is_active = 0` on the ones whose link
+   * is not in the payload (`:110-125`). Since `InnovationDevInfoBody` seeds `reference_materials`
+   * with `[{ link: '' }]`, a hidden-but-still-sent field would wipe the references of every 2026
+   * result on the next save (real case in prtest: result 11082, phase 2026, `is_replicated` 0,
+   * evidence 12818 = `link.com`).
+   *
+   * So the key is **omitted**, never sent empty — the same undefined-vs-value contract as the
+   * MELIA-study fix. Destructuring (instead of `delete`) is what guarantees the key is absent from
+   * the JSON rather than present with `undefined`.
+   */
+  private buildSectionPayload(): Record<string, any> {
+    const { reference_materials, ...rest } = { ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions } as Record<string, any>;
+    return this.fieldsManagerSE.isInnovationReferenceMaterialsRemoved2026() ? rest : { ...rest, reference_materials };
+  }
+
   async onSaveSection() {
     this.savingSection = true;
     this.convertOrganizationsTosave();
@@ -245,7 +266,7 @@ export class InnovationDevInfoComponent {
 
       this.api.resultsSE.POST_createEvidenceDemandP25(this.evidencesBody).subscribe({
         next: () => {
-          this.api.resultsSE.PATCH_innovationDevP25({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions }).subscribe({
+          this.api.resultsSE.PATCH_innovationDevP25(this.buildSectionPayload()).subscribe({
             next: () => {
               this.getSectionInformationp25();
               this.savingSection = false;
@@ -273,7 +294,7 @@ export class InnovationDevInfoComponent {
         }
       });
     } else {
-      this.api.resultsSE.PATCH_innovationDev({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions }).subscribe({
+      this.api.resultsSE.PATCH_innovationDev(this.buildSectionPayload()).subscribe({
         next: ({ response }) => {
           this.getSectionInformation();
           this.savingSection = false;

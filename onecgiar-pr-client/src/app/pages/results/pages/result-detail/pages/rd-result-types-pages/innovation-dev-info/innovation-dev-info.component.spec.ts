@@ -355,6 +355,9 @@ describe('InnovationDevInfoComponent', () => {
       isInnovationDevFormReduced2026: jest.fn(() => false),
       // P2-3272 Part 4: same default — the pre-2026 form keeps the guidance note and pre-fills nothing.
       isInnovationDeveloperAutoFilled2026: jest.fn(() => false),
+      // P2-3550: same default — the pre-2026 form still asks for "Innovation reference materials",
+      // and `buildSectionPayload()` reads this on every save.
+      isInnovationReferenceMaterialsRemoved2026: jest.fn(() => false),
       // `pr-input` / `pr-radio-button` resolve their label and required flag through this when a
       // `fieldRef` is set. An empty map is enough: no field in this section uses one.
       fields: jest.fn(() => ({}))
@@ -1287,7 +1290,8 @@ describe('InnovationDevInfoComponent', () => {
   describe('P2-3218 — a failed save has to reach the user, not just the console', () => {
     beforeEach(() => {
       jest.spyOn(console, 'error').mockImplementation(() => undefined);
-      (component as any).fieldsManagerSE = { isP25: () => true };
+      // `buildSectionPayload()` also reads the P2-3550 gate, so the stub has to carry it.
+      (component as any).fieldsManagerSE = { isP25: () => true, isInnovationReferenceMaterialsRemoved2026: () => false };
       (component as any).api.dataControlSE.currentResult = { id: 1 };
       (component as any).innovationDevInfoBody = { innovation_nature_id: 1, innovatonUse: { organization: [] } };
       (component as any).evidencesBody = { evidences: [] };
@@ -1348,6 +1352,96 @@ describe('InnovationDevInfoComponent', () => {
       await component.onSaveSection();
 
       expect(mockApiService.alertsFe.show).not.toHaveBeenCalled();
+    });
+  });
+  /**
+   * P2-3550 (epic P2-3243). The "Innovation reference materials" block leaves the 2026 form, and
+   * AC4 says the stored links must survive. Those two are in tension: the server's `saveEvidence`
+   * only leaves stored evidence alone when the array is absent — with `[]` (or the model's default
+   * `[{ link: '' }]`) it de-activates every stored link of type 4. So the payload assertions below
+   * are the real subject of this ticket, not the render ones.
+   */
+  describe('P2-3550 — reference materials leave the 2026 form without deleting what is stored', () => {
+    const gate = (on: boolean) =>
+      jest.spyOn(component.fieldsManagerSE, 'isInnovationReferenceMaterialsRemoved2026').mockReturnValue(on as any);
+
+    describe('the rendered form', () => {
+      it('renders the block on a pre-2026 phase', () => {
+        gate(false);
+        fixture.detectChanges();
+        expect((fixture.nativeElement as HTMLElement).querySelector('app-innovation-links')).toBeTruthy();
+      });
+
+      it('drops the block, and with it its help text, from the 2026 form', () => {
+        gate(true);
+        fixture.detectChanges();
+        const el = fixture.nativeElement as HTMLElement;
+        expect(el.querySelector('app-innovation-links')).toBeNull();
+        expect(el.textContent).not.toMatch(/Innovation reference materials/i);
+        expect(el.textContent).not.toMatch(/Provide reference material\(s\) that describe the innovation/i);
+      });
+
+      it('leaves the neighbouring blocks untouched', () => {
+        gate(true);
+        fixture.detectChanges();
+        const el = fixture.nativeElement as HTMLElement;
+        expect(el.querySelector('app-estimates')).toBeTruthy();
+        expect(el.querySelector('app-innovation-team-diversity')).toBeTruthy();
+      });
+    });
+
+    describe('the save payload (AC4 — stored materials are not deleted, cleared or migrated)', () => {
+      beforeEach(() => {
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        (component as any).innovationDevInfoBody = {
+          innovation_nature_id: 1,
+          innovatonUse: { organization: [] },
+          reference_materials: [{ link: 'https://stored-material.org' }]
+        };
+        (component as any).evidencesBody = { evidences: [] };
+        jest.spyOn(component as any, 'getSectionInformation').mockImplementation(() => undefined);
+        jest.spyOn(component as any, 'getSectionInformationp25').mockImplementation(() => undefined);
+        jest.spyOn(component as any, 'uploadPendingFiles').mockResolvedValue(undefined);
+      });
+
+      const capture = async (isP25: boolean): Promise<Record<string, any>> => {
+        jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(isP25 as any);
+        const method = isP25 ? 'PATCH_innovationDevP25' : 'PATCH_innovationDev';
+        const spy = jest.spyOn(mockApiService.resultsSE, method).mockReturnValue(of({}));
+        await component.onSaveSection();
+        expect(spy).toHaveBeenCalledTimes(1);
+        return spy.mock.calls[0][0];
+      };
+
+      /**
+       * The load-bearing assertion of the whole ticket: `in`, not `toBeUndefined()`. A key present
+       * with `undefined` serialises out of the JSON body too, but the previous code sent the array
+       * itself — this is the case that turns red if the omission is reverted.
+       */
+      it('OMITS the key on the 2026 form — sending it empty would de-activate every stored link', async () => {
+        gate(true);
+        const payload = await capture(true);
+        expect('reference_materials' in payload).toBe(false);
+      });
+
+      it('omits it on the legacy PATCH route too, which shares the same server guard', async () => {
+        gate(true);
+        const payload = await capture(false);
+        expect('reference_materials' in payload).toBe(false);
+      });
+
+      it('still sends the stored links on a pre-2026 phase, where the block is edited as before', async () => {
+        gate(false);
+        const payload = await capture(true);
+        expect(payload['reference_materials']).toEqual([{ link: 'https://stored-material.org' }]);
+      });
+
+      it('drops nothing else from the payload when the block is hidden', async () => {
+        gate(true);
+        const payload = await capture(true);
+        expect(payload['innovation_nature_id']).toBe(1);
+        expect(payload).toHaveProperty('innovatonUse');
+      });
     });
   });
 });
