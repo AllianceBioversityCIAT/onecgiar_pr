@@ -298,3 +298,124 @@ Because the build could not prove the stylesheet move, the **Leader ran three su
 - **RELIABILITY — `RGS-AC-6`'s keyboard half is browser-only.** `RGS-T-4` has no bullet exercising the disclosure with a physical Enter/Space. The jest test is honest (native `<button>` by construction; dispatched keydowns are documented no-ops in jsdom) and matches `RGS-T-1`'s accepted precedent, so it does not gate. Adding it to `RGS-T-4` would require owner approval, as `D8` did — **not minted unilaterally**.
 - **RELIABILITY — popover clip.** `.pr-collapse-inner` adds a second `overflow: hidden` inside a `<section>` that already clips. No regression expected (the two are co-extensive), but `reporting-aow-table/CLAUDE.md` records that exact clip once eating an ⓘ popover to a 6px sliver. Cheap to eyeball the achievement-glyph popover during the `RGS-T-4` browser pass.
 - **READABILITY** — the positional `inertContainer()` selector; applied in attempt 2.
+
+---
+
+### `RGS-T-4` — Browser verification pass — **PASS**
+
+| Field | Value |
+|---|---|
+| Date | 2026-09-02 |
+| Status | **PASS** (Reviewer, attempt 1) — including a **measured D6 failure**, correctly attributed and carried out |
+| Implementer attempts | **1** |
+| Skills | `orca-cli` · Effort `high` · Files: `execution.md` only (no production code) |
+| Environment | Orca built-in browser v1.4.192 → `http://qa-development-2026.orca.localhost:50196/result-framework-reporting/entity-details/SP04/overview` (real Science Program SP04) |
+| Pre-flight | Met and Leader-verified before dispatch: 5 real AoW rows, **0 skeletons**, `[data-testid="aow-section-inert-container"]` present — i.e. the running app served `RGS-T-1..T-3` |
+
+#### Results
+
+| Gate | Reading | Conditions | Verdict |
+|---|---|---|---|
+| **D5** focus ring | `outline: none`; `boxShadow: rgba(107,70,229,0.28) 0px 0px 0px 3px` on **both** the AoW name button and the disclosure trigger, under genuine `:focus-visible` reached by real Tab (`.focus()` not used) | innerWidth 1599, scope off, expanded, skeletons 0 / rows 5 | ✅ **PASS — the ring paints** |
+| **D4** selected contrast | Border `rgb(107,70,229)`; row fill `rgb(239,238,243)`; card `rgb(255,255,255)` → **5.01:1** vs fill, **5.78:1** vs card | scope=AOW01 active, `aria-pressed="true"`, innerWidth 1599, skeletons 0 | ✅ **PASS — both ≥3:1** |
+| **D7** collapsed unreachable | `aria-expanded="false"`, `inert` present, `aria-hidden` **null**. **8 real Tab presses walked: 0/8 entered** the inert container — focus jumped trigger → donut legend → "View results" → "By Scope" chips. Expanded: `inert` removed, order restored exactly (Continue reporting → "Filter by Area of Work AOW01…" → Report) | innerWidth 1599, scope off, skeletons 0 / rows 5 | ✅ **PASS** |
+| **D8** resting affordance *(owner-approved at the `RGS-T-2` gate; recorded, never a gate)* | All 5 rows `border-color: rgba(0,0,0,0)`. Ground `rgb(239,238,243)` vs card `rgb(255,255,255)` → **1.15:1** | scope off, expanded, skeletons 0 / rows 5 | 📋 **Recorded.** Rows do read as separate objects — but carried by rounded-rect shape and vertical gap, **not** by colour, which at 1.15:1 is near-imperceptible in isolation |
+| **A** `RGS-AC-6` Enter/Space *(owner-approved at this gate)* | 4/4 presses, focus confirmed on trigger before each: Enter true→false, Enter false→true, Space true→false, Space false→true. `inert` tracked `aria-expanded` both directions | innerWidth 1599, scope off, skeletons 0 / rows 5 | ✅ **PASS — both keys, not Enter-only** |
+| **B** ⓘ popover clip *(owner-approved at this gate)* | `.pr-tooltip` **340×110px identical at 1600 and 1100**, opacity 1, direct child of `<body>`, `body`/`html` both `overflow:visible` | expanded, scope off, skeletons 0 / rows 5, fresh `goto` per width | ✅ **PASS — no clip.** This component CDK-portals its tooltip to `<body>`, outside the double `overflow:hidden`; structurally immune to `reporting-aow-table`'s 6px-clip defect |
+| **D6** layout | `scrollWidth === clientWidth` **holds at every width** (no scrollbar anywhere). Identity track: 1600 → 303.6px ✅ · **1280 → 0px** · **1100 → 0px** · **900 → 27.2px** · 768 → 481.2px ✅ | fresh `goto` per width×scope (10 combos), gated on skeletons 0 **and** rows > 0, double-read, calibrated widths verified against `innerWidth` | ❌ **FAIL at 1280/1100/900, both scope states — real, reproducible, visually confirmed** |
+
+**A measured failure is a success of this task, not a failure of it.** D6 is the class `requirements.md` §9 says has *no automated gate*; jest, `ng lint` and `ng build` were all green while this shipped.
+
+#### D6 attribution — five experiments, and a structural argument that outranks them
+
+The Implementer suspected `RGS-T-2`'s 2px border. The Leader tested rather than accepted:
+
+| # | Experiment | Result |
+|---|---|---|
+| a | Revert `RGS-T-2`'s `border-2` → `1px` live on all rows | track **byte-identical**, 3.72px |
+| b | Neutralise `RGS-T-3`'s `.pr-collapse`/`-inner` (`display:block`) | track **byte-identical**, 3.72px |
+| c | Diff the ladder vs base `ca39bcf32` | **byte-identical** — same `grid-cols` strings; same counts of `max-[900px]` (25), `max-[1101px]` (10), `max-[1280px]` (5), `minmax(0,1fr)` (12) |
+| d | Neutralise `RGS-T-1`'s `truncate` button (`display:contents` + `overflow:visible`) | track **byte-identical**, 0px at 1100px |
+| e | Same, measuring the **code chip's** geometry and page overflow | **identical in both states**: chip 50px wide, right edge 681px, ~46px outside a 4px cell; `scrollWidth === clientWidth` both ways |
+
+Experiment (d) exists **because the Reviewer found a hole in the Leader's first three**: `RGS-T-1` did add a clipping ancestor (`truncate` = `overflow:hidden`) around the code chip, and (a)–(c) would not have caught a width effect from it. That is `author ≠ auditor` doing its job on the Leader's own reasoning, not just on a worker's diff.
+
+**The structural argument is decisive and outranks all five.** The identity track is `minmax(0,1fr)` in **all three** ladder branches. An explicit `minmax(0,…)` *replaces* the automatic minimum: bare `1fr` means `minmax(auto,1fr)`, where a descendant's min-content contribution raises the floor and a `min-w-0 truncate` wrapper genuinely would move the track — but with the floor pinned at `0`, **no descendant's content can lift it, in either direction, at any branch.** Everything inside the identity cell is irrelevant to the track's width by construction.
+
+**Conclusion: pre-existing. `KZ-OAH-1`, fourth recurrence.** Carried whole to **`changes/aow-identity-column-starvation`** with all five experiments. `RGS-R-5` ("MUST NOT alter the ladder or reintroduce horizontal overflow") is **met**.
+
+#### A Reviewer refinement, tested and rejected on measurement
+
+The Reviewer argued the *collapse* is pre-existing but the *silence* is partly `RGS-T-1`'s — that its `truncate` turns a visible overlap into silent clipping, and that `RGS-R-5` holds only because of it. Plausible, and it named a reading not yet taken, so it was taken (experiment e). **It does not hold**: with the button neutralised — faithfully reconstructing the pre-`RGS-T-1` markup, where the chip was a direct flex child of the cell — chip geometry and page overflow are *identical* in both states. `RGS-T-1` changed neither the clipping nor the overflow. `requirements.md` §8 was corrected to the measured facts rather than to the hypothesis.
+
+**A false negative was caught in the process:** the first run of (e) targeted `cell.querySelector('span')`, which returns the `.sr-only` span `RGS-T-1` added as the button's first child — not the code chip. It returned a clean-looking "chip does not paint outside" and was wrong. Recorded because it is exactly the *measuring the wrong signal* trap §9 exists to guard against, committed by the Leader.
+
+#### Methodology disclosed by the Implementer, and adjudicated
+
+1. **~1.2× CSS scale in this environment** (`orca viewport --width W` → `innerWidth ≈ 1.2W`). Calibrated by five probes (1333→1599, 1067→1280, 917→1100, 750→900, 640→768), each verified against the resulting `innerWidth`. Reviewer: *"a calibration, not an assumption."*
+2. **A flake was caught and discarded**: an early D6 pass using `goto`→`viewport` on an already-loaded page gave spurious overflow readings at 768/900/1100, which vanished once `wait --load networkidle` followed the resize. Reviewer: **correct, and for a better reason than given** — that method is banned by the first disqualifier *independent of reproducibility*, so the readings were inadmissible before they were irreproducible. Discarding was safe only because it was paired with **replacement** by a compliant measurement; discarding and stopping would have been wrong.
+3. **Screenshots render the chip as "AOW0"** while the DOM says `AOW01`. Treated as a rasterisation quirk, DOM as ground truth. Reviewer: right call, incomplete reasoning — `overflow:visible` was read on the *chip*, which does not exclude an ancestor clip. What actually closes it: a **one-glyph** shortfall matches no measured clip width (0px renders nothing; 27.2px gives ≈"AOW"; 303.6px clips nothing).
+4. **Tooltip position at 1100** flagged as an oddity: **not a defect.** Tooltip 340 wide at x=477 → centre 647; trigger ~14–16px at x=640 → centre ≈647–648 (**centred within a pixel**), and 1104+110 = 1214 vs trigger top 1226 (**clean 12px gap**). Textbook CDK connected positioning flipped to the `above` fallback. The aside is **retracted**, and B's PASS is strengthened. Dispatched `mouseenter`/`focus` reach the same CDK handlers as trusted events, so the synthetic dispatch is not a weakness for this claim.
+5. **`border-width` computed 1.8px, not 2px** — attributed to ~0.83 zoom. Reviewer: right disposition, **wrong stated cause** (0.83 predicts 1.667, not 1.8). Recorded as *sub-pixel/zoom rounding in the harness, mechanism unconfirmed, not a gate quantity* — an unexplained number labelled as explained is how a real signal gets filed away. **Leader then took the reading the Reviewer suggested, and it proves more than the disposition needed:** unselected rows **1.8px / `rgba(0,0,0,0)`** (×5) and the selected row **1.8px / `rgb(107,70,229)`** — *identical width, colour alone changes.* That is `RGS-T-2`'s DoD-4 invariant ("`border-2` in **both** branches so rows do not shift") proven in a real browser, where jest could only assert it as a class contract.
+
+#### Recording obligations discharged (Reviewer-mandated, no re-measurement)
+
+- **D6 collapse state**: every D6 reading was taken on a fresh `goto`, i.e. at `RGS-T-3`'s default — **expanded**; the 303.6px track at 1600 self-evidences it. Now written rather than merely recoverable.
+- **D4's own conditions**: scope=AOW01 active, `aria-pressed="true"`, innerWidth 1599, skeletons 0 — stated above rather than inherited from D5's block.
+- **The 1100 → 0px vs 900 → 27.2px non-monotonicity**: real, and caused by the shell/sidebar rail differing between the two (the task's own "900 is the squeeze band" note). **It is the single strongest evidence the sweep is genuine** — no inference and no fabricated dataset yields a *narrower* viewport with *more* identity space, which is precisely why "900 inferred from 768" is a disqualifier.
+
+**Reviewer summary:** *"All six gate readings meet `RGS-T-4`'s own evidence standard — D4's ratios reproduce independently at 5.009:1 and 5.781:1 from the RGB triples under a correct WCAG formula, D5/D7/A are real-browser behavioural proofs of exactly the properties jsdom cannot evaluate, and D6's failure is measured under compliant conditions and correctly carried out as `KZ-OAH-1`'s fourth recurrence. The attribution holds on both structural and empirical grounds… Do not reopen."*
+
+---
+
+## 7. Summary — all tasks complete
+
+| Task | Attempts | Verdict | Commit |
+|---|---|---|---|
+| `RGS-T-1` The AoW code+name becomes a real control | 3 | PASS | `4537bd3ba` |
+| `RGS-T-2` Split the gestures, render the selected state | 1 | PASS | `66c6e3b50` |
+| `RGS-T-3` Collapsible section, without the pattern's defect | 2 | PASS | `f384278e6` |
+| `RGS-T-4` Browser verification pass | 1 | PASS (with a measured, carried-out D6 failure) | this commit |
+
+**Requirements:** `RGS-R-1`…`RGS-R-8` all met. `RGS-AC-1`…`AC-4`, `AC-6`, `AC-7` met; `RGS-AC-5` first clause met and measured, second clause **retired** as unsatisfiable within the spec's own declared scope (`requirements.md` §8 note).
+
+### What the browser gate caught that nothing else could
+
+`jest` (221 program-overview specs), `ng lint` and `ng build` were **all green** while D6 was failing at three of five widths. That is `requirements.md` §9's thesis — *a gate blind to the defect class the work produces is not a gate* — reproducing exactly as written. The defect also produces **no horizontal overflow**, so every previous overflow-shaped gate in this component reported clean; that observation is carried into the new proposal as `OQ-3`, because it explains how three prior fixes shipped with it still latent.
+
+### What the Reviewer caught that the Leader missed
+
+The Leader attributed D6 to pre-existing causes on three experiments. The Reviewer identified that **`RGS-T-1` had in fact added a clipping ancestor** those three would not have caught, prompting experiments (d) and (e) and a structural argument stronger than any of them. The conclusion held, but it had been resting on incomplete evidence. Separately, the Reviewer's own follow-on hypothesis was **tested and rejected on measurement** — and in taking that measurement the Leader first targeted the wrong element (`RGS-T-1`'s `.sr-only` span rather than the code chip) and got a clean-looking false negative. Both are recorded at `RGS-T-4` rather than smoothed away.
+
+### Defects found and fixed during the run
+
+| Where | Defect | Caught by |
+|---|---|---|
+| `RGS-T-1` | `[attr.aria-label]` replacing the button's content, silently dropping "N KPIs remaining" from the accessible name (**WCAG 2.5.3**) — an accessibility defect introduced by an accessibility task | Reviewer |
+| `RGS-T-1` | A pre-existing ladder assertion (`hidden`) dropped in a tautology fold the **Leader** relayed unexamined | Reviewer, correcting its own advisory |
+| `RGS-T-3` | Violet `--pr-surface-band` on a content surface — two tinted surfaces in one card, breaking a hard UI rule | Reviewer |
+| `RGS-T-3` | Component guide pushed to 123 lines against a hard 120 cap | Reviewer |
+
+All four would have shipped without the `author ≠ auditor` gate; the owner was offered its removal for speed at the mode switch (§6) and declined.
+
+### Budget, honestly
+
+| Signal | Budget | Actual |
+|---|---|---|
+| Tasks | 4 | 4 |
+| LOC | ~230 | **~640** (~278%) |
+| Review rounds | 1 | 7 across 4 tasks |
+
+`RGS-T-2` and `RGS-T-4` passed first time; `RGS-T-3` took one round; `RGS-T-1` took three, **one of which was Leader-inflicted**. The overrun is dominated by **sizing**, not churn: scope grew twice before any code was written (the `<div>` discovery at specify, the collapsible section at the design gate), and `design.md` §8 was never re-baselined after the second. Correct §8 at archive rather than recording this as an execution failure.
+
+### Carried out of this spec
+
+1. **`changes/aow-identity-column-starvation`** — proposal written, `KZ-OAH-1`'s fourth recurrence, with all five experiments and four open questions. Not absorbed here: fixing it would contradict `requirements.md` §3 and `design.md` `RGS-DD-3`.
+2. **`reporting-aow-table`'s own collapse** still leaves ~20 focusable buttons tabbable while collapsed and `aria-hidden` — same fix (`inert`), different file, for the default-branch apply pass.
+3. **Constitution & graph sync** (§4): `program-overview/CLAUDE.md` line refs stale; CodeGraph re-index pending.
+
+### Next step
+
+```text
+/akili-archive changes/aow-row-gesture-split
+```

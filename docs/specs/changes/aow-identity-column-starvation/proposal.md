@@ -47,6 +47,11 @@ Three independent experiments, run by the Leader at the `RGS-T-4` gate:
 | Revert `RGS-T-2`'s `border-2` → `1px` live in-browser | identity track **byte-identical** (3.72px) |
 | Neutralise `RGS-T-3`'s `.pr-collapse` wrapper (`display:block`) | identity track **byte-identical** (3.72px) |
 | Diff the responsive ladder against base `ca39bcf32` | **byte-identical** — same `grid-cols` strings; same counts of `max-[900px]` (25), `max-[1101px]` (10), `max-[1280px]` (5), `minmax(0,1fr)` (12) |
+| Neutralise `RGS-T-1`'s identity `<button>` (`display:contents`, `overflow:visible`) — it carries `truncate`, i.e. `overflow:hidden`, and is the one clipping ancestor this spec *did* add | identity track **byte-identical** (0px at 1100px, 5 rows) |
+
+The fourth experiment was added at the Reviewer's prompting: it correctly observed that `RGS-T-1` introduced a clipping ancestor around the code chip, and that the first three experiments would not have caught a width effect from it. It has none.
+
+**The structural argument is stronger than all four measurements, and it is why no change inside the cell could ever have caused or prevented this:** the track is `minmax(0,1fr)`. A minimum of `0` means the track is *explicitly permitted* to collapse to zero regardless of what it contains — content cannot widen a track whose floor is zero. Every experiment above is therefore a confirmation of something the CSS already guarantees.
 
 `RGS-R-5` ("MUST NOT alter the ladder or reintroduce horizontal overflow") is **met**. This defect predates that spec.
 
