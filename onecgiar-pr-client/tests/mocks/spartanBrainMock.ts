@@ -311,4 +311,48 @@ export const BrnTabsImports = [
   BrnTabsContentLazy
 ] as const;
 
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// Popover primitives (@spartan-ng/brain/popover) — added for the program-overview scope control
+// (`changes/overview-aow-cross-filter`, `OSF-T-6`).
+//
+// ⚠️ STUBS, same caveat as the dialog/command stubs above: real CDK-overlay positioning, outside-
+// click/backdrop dismiss and focus restore are NOT reproduced here — browser-verified only
+// (`OSF-T-8`). `BrnPopoverContent` renders its template INLINE, same trick as `BrnDialogContent`
+// above (no real overlay under Jest), so the listbox markup and its OWN keydown handling — the part
+// this spec's component actually owns — stay assertable.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+@Directive({ selector: '[brnPopover],brn-popover', standalone: true })
+export class BrnPopover {
+  // `HlmPopover` forwards these declaratively (`hlm-popover.ts`); without them Angular raises NG0303
+  // on `<hlm-popover [state]="…">`, the same shape as the `BrnDialog` stub above.
+  @Input() state: 'open' | 'closed' | null | undefined;
+  @Input() align: string | undefined;
+  @Input() sideOffset: number | string | undefined;
+  @Input() offsetX: number | string | undefined;
+  @Input() attachTo: unknown;
+  @Input() autoFocus: boolean | string | undefined;
+  @Input() closeOnOutsidePointerEvents: boolean | string | undefined;
+  @Output() readonly stateChanged = new EventEmitter<'open' | 'closed'>();
+  @Output() readonly closed = new EventEmitter<unknown>();
+}
+
+@Directive({ selector: 'button[brnPopoverTrigger],button[brnPopoverTriggerFor]', standalone: true })
+export class BrnPopoverTrigger {}
+
+@Directive({ selector: '[brnPopoverContent]', standalone: true })
+export class BrnPopoverContent {
+  @Input('class') className: string | null | undefined;
+  @Input() context: Record<string, unknown> | undefined;
+
+  private readonly _template = inject(TemplateRef, { optional: true });
+  private readonly _viewContainer = inject(ViewContainerRef);
+
+  constructor() {
+    if (this._template) {
+      this._viewContainer.createEmbeddedView(this._template, { $implicit: {} });
+    }
+  }
+}
+
 

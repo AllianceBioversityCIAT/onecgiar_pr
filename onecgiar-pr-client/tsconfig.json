@@ -36,7 +36,8 @@
       "@spartan/textarea": ["./src/app/spartan/textarea/src/index.ts"],
       "@spartan/kbd": ["./src/app/spartan/kbd/src/index.ts"],
       "@spartan/command": ["./src/app/spartan/command/src/index.ts"],
-      "@spartan/native-select": ["./src/app/spartan/native-select/src/index.ts"]
+      "@spartan/native-select": ["./src/app/spartan/native-select/src/index.ts"],
+      "@spartan/popover": ["./src/app/spartan/popover/src/index.ts"]
     }
   },
   "angularCompilerOptions": {
