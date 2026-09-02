@@ -615,71 +615,89 @@
                   <button
                     [id]="'hlo-group-' + hlo.key"
                     type="button"
-                    class="flex h-[40px] w-full items-center gap-[8px] border-t border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] py-0 pl-[32px] pr-[20px] text-left hover:bg-[var(--pr-surface-subtle-hover)] cursor-pointer transition-colors"
+                    class="group/hlo flex min-h-[46px] w-full items-center gap-[10px] sm:gap-[12px] border-t border-[var(--pr-border-divider)] border-l-[3px] py-[7px] pl-[16px] sm:pl-[28px] pr-[12px] sm:pr-[20px] text-left cursor-pointer transition-all duration-150"
+                    [class.border-l-[var(--pr-color-primary-400)]]="isOpen(hlo.key, defaultOpen)"
+                    [class.bg-[var(--pr-color-primary-25)]]="isOpen(hlo.key, defaultOpen)"
+                    [class.border-l-transparent]="!isOpen(hlo.key, defaultOpen)"
+                    [class.bg-[var(--pr-surface-subtle)]]="!isOpen(hlo.key, defaultOpen)"
+                    [class.hover:bg-[var(--pr-surface-subtle-hover)]]="!isOpen(hlo.key, defaultOpen)"
                     [attr.aria-expanded]="isOpen(hlo.key, defaultOpen)"
                     (click)="toggle(hlo.key, defaultOpen)">
                     <span
-                      class="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[6px] text-[var(--pr-text-secondary)]">
+                      class="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[6px] border transition-all duration-200"
+                      [class.border-[var(--pr-color-primary-200)]]="isOpen(hlo.key, defaultOpen)"
+                      [class.bg-white]="isOpen(hlo.key, defaultOpen)"
+                      [class.text-[var(--pr-color-primary-600)]]="isOpen(hlo.key, defaultOpen)"
+                      [class.shadow-xs]="isOpen(hlo.key, defaultOpen)"
+                      [class.border-[var(--pr-border)]]="!isOpen(hlo.key, defaultOpen)"
+                      [class.bg-[var(--pr-surface-card)]]="!isOpen(hlo.key, defaultOpen)"
+                      [class.text-[var(--pr-text-secondary)]]="!isOpen(hlo.key, defaultOpen)"
+                      [class.group-hover/hlo:border-[var(--pr-color-primary-200)]]="!isOpen(hlo.key, defaultOpen)"
+                      [class.group-hover/hlo:text-[var(--pr-color-primary-600)]]="!isOpen(hlo.key, defaultOpen)">
                       <ng-icon
                         name="lucideChevronDown"
-                        class="text-[15px] transition-transform duration-200"
+                        class="text-[14px] transition-transform duration-200"
                         [class.rotate-180]="isOpen(hlo.key, defaultOpen)" />
                     </span>
 
-                    <!-- Group name -->
+                    <!-- Group name: prominent 14.5px font-bold, distinct above 13.5px indicator text -->
                     <span
-                      class="min-w-0 max-w-[620px] flex-1 truncate text-[12.5px] font-semibold text-[var(--pr-text-heading)]"
+                      class="min-w-0 flex-1 truncate text-[14px] sm:text-[14.5px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)] group-hover/hlo:text-[var(--pr-color-primary-600)] transition-colors"
                       [title]="hlo.name">
                       {{ hlo.name }}
                     </span>
 
-                    <div class="flex items-center gap-[12px] shrink-0">
-                      <span class="text-[11px] text-[var(--pr-text-secondary)]">
-                        <span class="font-semibold uppercase tracking-wider text-[9.5px] text-slate-400">Target:</span>
-                        <span class="ml-1 font-bold tabular-nums text-[var(--pr-text-heading)]">{{ hloTargetSum(hlo) }}</span>
-                      </span>
-                      <span class="text-[11px] text-[var(--pr-text-secondary)]">
-                        <span class="font-semibold uppercase tracking-wider text-[9.5px] text-slate-400">Achieved:</span>
-                        <span class="ml-1 font-bold tabular-nums text-emerald-700">{{ hloAchievedSum(hlo) }}</span>
-                      </span>
-                      <span class="rounded-full bg-[var(--pr-surface-card)] px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-text-secondary)] border border-[var(--pr-border)] tabular-nums">
-                        {{ countLabel(hlo.rows.length) }}
-                      </span>
-                    </div>
+                    <!-- Right-aligned metrics container -->
+                    <div class="ml-auto flex shrink-0 items-center gap-[10px] sm:gap-[14px]">
+                      <div class="flex items-center gap-[8px] sm:gap-[12px]">
+                        <span class="text-[11px] text-[var(--pr-text-secondary)]">
+                          <span class="font-semibold uppercase tracking-wider text-[9.5px] text-slate-400">Target:</span>
+                          <span class="ml-1 font-bold tabular-nums text-[var(--pr-text-heading)]">{{ hloTargetSum(hlo) }}</span>
+                        </span>
+                        <span class="text-[11px] text-[var(--pr-text-secondary)]">
+                          <span class="font-semibold uppercase tracking-wider text-[9.5px] text-slate-400">Achieved:</span>
+                          <span class="ml-1 font-bold tabular-nums text-emerald-700">{{ hloAchievedSum(hlo) }}</span>
+                        </span>
+                        <span
+                          class="rounded-full px-[8px] py-[2px] text-[11px] tabular-nums border transition-colors"
+                          [class.bg-white]="isOpen(hlo.key, defaultOpen)"
+                          [class.text-[var(--pr-color-primary-600)]]="isOpen(hlo.key, defaultOpen)"
+                          [class.border-[var(--pr-color-primary-200)]]="isOpen(hlo.key, defaultOpen)"
+                          [class.font-bold]="isOpen(hlo.key, defaultOpen)"
+                          [class.shadow-xs]="isOpen(hlo.key, defaultOpen)"
+                          [class.bg-[var(--pr-surface-card)]]="!isOpen(hlo.key, defaultOpen)"
+                          [class.text-[var(--pr-text-secondary)]]="!isOpen(hlo.key, defaultOpen)"
+                          [class.border-[var(--pr-border)]]="!isOpen(hlo.key, defaultOpen)"
+                          [class.font-semibold]="!isOpen(hlo.key, defaultOpen)">
+                          {{ countLabel(hlo.rows.length) }}
+                        </span>
+                      </div>
 
-                    <!--
-                      P2-3296 AC2 — this ToC node's achievement, averaged over its own indicators.
-                      `ml-auto` parks it at the END of the header, after the Target/Achieved sums
-                      and the KPI count, behind its own divider — the achievement figure is a
-                      different question from the counts to its left (OAH note: "one says how much
-                      of the plan has been touched, the other how far it got").
-                      Label before value throughout ("QA 80%", not "80% QA") — the other way round
-                      reads as one number spilling into the next.
-                    -->
-                    @if (hlo.achievement) {
-                      <span
-                        class="ml-auto flex shrink-0 items-baseline gap-[10px] whitespace-nowrap border-l border-[var(--pr-border)] pl-[14px]"
-                        [prTooltip]="achievementTooltip(hlo.achievement, 'indicators')"
-                        prTooltipPosition="top">
-                        <span class="flex items-baseline gap-[4px]">
-                          <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
-                          <span class="text-[13px] font-bold tabular-nums text-[var(--pr-text-heading)]">
-                            {{ achievementLabel(hlo.achievement) }}
+                      @if (hlo.achievement) {
+                        <span
+                          class="hidden sm:flex shrink-0 items-baseline gap-[10px] whitespace-nowrap border-l border-[var(--pr-border)] pl-[10px] sm:pl-[14px]"
+                          [prTooltip]="achievementTooltip(hlo.achievement, 'indicators')"
+                          prTooltipPosition="top">
+                          <span class="flex items-baseline gap-[4px]">
+                            <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
+                            <span class="text-[13px] font-bold tabular-nums text-[var(--pr-text-heading)]">
+                              {{ achievementLabel(hlo.achievement) }}
+                            </span>
                           </span>
+                          <span class="flex items-baseline gap-[4px]">
+                            <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
+                            <span class="text-[13px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+                              {{ preliminaryAchievementLabel(hlo.achievement) }}
+                            </span>
+                          </span>
+                          @if (achievementCoverage(hlo.achievement)) {
+                            <span class="hidden xl:inline-block min-w-[70px] xl:min-w-[104px] text-right text-[10.5px] font-medium text-[var(--pr-text-muted)]">
+                              {{ achievementCoverage(hlo.achievement) }}
+                            </span>
+                          }
                         </span>
-                        <span class="flex items-baseline gap-[4px]">
-                          <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
-                          <span class="text-[13px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
-                            {{ preliminaryAchievementLabel(hlo.achievement) }}
-                          </span>
-                        </span>
-                        @if (achievementCoverage(hlo.achievement)) {
-                          <span class="min-w-[104px] text-right text-[10.5px] font-medium text-[var(--pr-text-muted)]">
-                            {{ achievementCoverage(hlo.achievement) }}
-                          </span>
-                        }
-                      </span>
-                    }
+                      }
+                    </div>
                   </button>
 
                   <div
@@ -687,22 +705,24 @@
                     [class.is-open]="isOpen(hlo.key, defaultOpen)"
                     [attr.aria-hidden]="!isOpen(hlo.key, defaultOpen)">
                     <div class="pr-collapse-inner">
-                      @if (hlo.rows.length) {
-                        <div class="pr-hlo-head" aria-hidden="true">
-                          <span></span>
-                          <span>Indicator</span>
-                          <span class="text-center">Target</span>
-                          <span class="text-center">Achieved</span>
-                          <span class="text-center">Status</span>
-                          <span class="text-center">Progress</span>
-                          <span class="text-center">Action</span>
-                          <span></span>
-                        </div>
-                      }
-                      @for (row of hlo.rows; track row.indicator_id + '::' + (row.center_id ?? '')) {
-                        <ng-container
-                          *ngTemplateOutlet="indicatorRow; context: { $implicit: row, showAow: false, bucketKind: group.kind }" />
-                      }
+                      <div class="overflow-x-auto">
+                        @if (hlo.rows.length) {
+                          <div class="pr-hlo-head" aria-hidden="true">
+                            <span></span>
+                            <span>Indicator</span>
+                            <span class="text-center">Target</span>
+                            <span class="text-center">Achieved</span>
+                            <span class="text-center">Status</span>
+                            <span class="text-center">Progress</span>
+                            <span class="text-center">Action</span>
+                            <span></span>
+                          </div>
+                        }
+                        @for (row of hlo.rows; track row.indicator_id + '::' + (row.center_id ?? '')) {
+                          <ng-container
+                            *ngTemplateOutlet="indicatorRow; context: { $implicit: row, showAow: false, bucketKind: group.kind }" />
+                        }
+                      </div>
                     </div>
                   </div>
                 }

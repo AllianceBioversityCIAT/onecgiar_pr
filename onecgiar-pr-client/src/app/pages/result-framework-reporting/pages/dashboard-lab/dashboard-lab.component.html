@@ -1377,6 +1377,34 @@
                         {{ banner.name }}
                       </h3>
                     </div>
+
+                    @if (banner.achievement) {
+                      <div
+                        class="flex shrink-0 flex-col items-end border-l border-[var(--pr-border)] pl-[14px] leading-tight max-[768px]:sr-only"
+                        [prTooltip]="achievementTooltip(banner.achievement)"
+                        prTooltipPosition="top">
+                        <div class="flex items-baseline gap-[10px] whitespace-nowrap">
+                          <span class="flex items-baseline gap-[4px]">
+                            <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
+                            <span class="text-[14px] font-bold tabular-nums text-[var(--pr-text-heading)]">
+                              {{ achievementLabel(banner.achievement) }}
+                            </span>
+                          </span>
+                          <span class="flex items-baseline gap-[4px]">
+                            <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
+                            <span class="text-[14px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+                              {{ preliminaryAchievementLabel(banner.achievement) }}
+                            </span>
+                          </span>
+                        </div>
+                        @if (achievementCoverage(banner.achievement)) {
+                          <span class="whitespace-nowrap text-[10.5px] font-medium text-[var(--pr-text-muted)]">
+                            {{ achievementCoverage(banner.achievement) }}
+                          </span>
+                        }
+                      </div>
+                    }
+
                     <div class="flex shrink-0 items-center gap-[8px]">
                       <!-- @akili-spec changes/mass-reporting-flow — MRF-R-8: double-gated. When
                            either gate is off the control is ABSENT here, never rendered disabled. -->
@@ -1575,43 +1603,97 @@
                   }
                 </div>
                 @for (hlo of sec.groups; track hlo.title) {
-                  <section class="overflow-hidden rounded-xl border border-[rgba(30,32,47,0.07)] bg-white">
+                  <section class="overflow-hidden rounded-xl border border-[var(--pr-border)] bg-white shadow-xs transition-shadow hover:shadow-sm">
                     <button
                       type="button"
                       (click)="togglePlannedHlo(hlo.title)"
                       [attr.aria-expanded]="isPlannedHloExpanded(hlo.title)"
-                      class="flex w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-[var(--pr-color-accents-1)] transition-colors cursor-pointer">
+                      class="group/hlo flex min-h-[46px] w-full items-center gap-[10px] sm:gap-[12px] border-l-[3px] py-[7px] px-3 sm:px-4 text-left cursor-pointer transition-all duration-150"
+                      [class.border-l-[var(--pr-color-primary-400)]]="isPlannedHloExpanded(hlo.title)"
+                      [class.bg-[var(--pr-color-primary-25)]]="isPlannedHloExpanded(hlo.title)"
+                      [class.border-l-transparent]="!isPlannedHloExpanded(hlo.title)"
+                      [class.bg-white]="!isPlannedHloExpanded(hlo.title)"
+                      [class.hover:bg-[var(--pr-surface-subtle)]]="!isPlannedHloExpanded(hlo.title)">
                       <span
-                        class="material-icons-round text-[18px] text-[var(--pr-color-accents-4)] transition-transform"
-                        [class.rotate-90]="isPlannedHloExpanded(hlo.title)"
-                        aria-hidden="true"
-                        >chevron_right</span
-                      >
-                      <span class="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+                        class="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[6px] border transition-all duration-200"
+                        [class.border-[var(--pr-color-primary-200)]]="isPlannedHloExpanded(hlo.title)"
+                        [class.bg-white]="isPlannedHloExpanded(hlo.title)"
+                        [class.text-[var(--pr-color-primary-600)]]="isPlannedHloExpanded(hlo.title)"
+                        [class.shadow-xs]="isPlannedHloExpanded(hlo.title)"
+                        [class.border-[var(--pr-border)]]="!isPlannedHloExpanded(hlo.title)"
+                        [class.bg-[var(--pr-surface-card)]]="!isPlannedHloExpanded(hlo.title)"
+                        [class.text-[var(--pr-text-secondary)]]="!isPlannedHloExpanded(hlo.title)"
+                        [class.group-hover/hlo:border-[var(--pr-color-primary-200)]]="!isPlannedHloExpanded(hlo.title)"
+                        [class.group-hover/hlo:text-[var(--pr-color-primary-600)]]="!isPlannedHloExpanded(hlo.title)">
+                        <span
+                          class="material-icons-round text-[18px] transition-transform duration-200"
+                          [class.rotate-180]="isPlannedHloExpanded(hlo.title)"
+                          aria-hidden="true"
+                          >expand_more</span
+                        >
+                      </span>
+                      <span class="min-w-0 flex-1 truncate text-[14px] sm:text-[14.5px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)] group-hover/hlo:text-[var(--pr-color-primary-600)] transition-colors">
                         @if (hlo.split.code) {
-                          <span class="font-extrabold text-[var(--pr-color-primary-400)]" [innerHTML]="hlo.split.code | highlightSearch: plannedSearch()"></span>
+                          <span class="font-extrabold text-[var(--pr-color-primary-500)]" [innerHTML]="hlo.split.code | highlightSearch: plannedSearch()"></span>
                           <span class="mx-1 font-normal text-[var(--pr-color-accents-3)]">·</span>
                           <span [innerHTML]="hlo.split.name | highlightSearch: plannedSearch()"></span>
                         } @else {
                           <span [innerHTML]="hlo.split.name | highlightSearch: plannedSearch()"></span>
                         }
                       </span>
-                      <div class="flex items-center gap-3 shrink-0">
-                        <span class="text-[11px] text-[var(--pr-text-secondary)]">
-                          <span class="font-semibold uppercase tracking-wider text-[9.5px] text-slate-400">Target:</span>
-                          <span class="ml-1 font-bold tabular-nums text-[var(--pr-text-heading)]">{{ hloTargetSum(hlo) }}</span>
-                        </span>
-                        <span class="text-[11px] text-[var(--pr-text-secondary)]">
-                          <span class="font-semibold uppercase tracking-wider text-[9.5px] text-slate-400">Achieved:</span>
-                          <span class="ml-1 font-bold tabular-nums text-emerald-700">{{ hloAchievedSum(hlo) }}</span>
-                        </span>
-                        <span class="shrink-0 rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--pr-text-secondary)] tabular-nums">
-                          {{ hlo.count }} KPI{{ hlo.count === 1 ? '' : 's' }}
-                        </span>
+                      <div class="ml-auto flex items-center gap-[10px] sm:gap-[14px] shrink-0">
+                        <div class="flex items-center gap-[8px] sm:gap-[12px]">
+                          <span class="text-[11px] text-[var(--pr-text-secondary)]">
+                            <span class="font-semibold uppercase tracking-wider text-[9.5px] text-slate-400">Target:</span>
+                            <span class="ml-1 font-bold tabular-nums text-[var(--pr-text-heading)]">{{ hloTargetSum(hlo) }}</span>
+                          </span>
+                          <span class="text-[11px] text-[var(--pr-text-secondary)]">
+                            <span class="font-semibold uppercase tracking-wider text-[9.5px] text-slate-400">Achieved:</span>
+                            <span class="ml-1 font-bold tabular-nums text-emerald-700">{{ hloAchievedSum(hlo) }}</span>
+                          </span>
+                          <span
+                            class="rounded-full px-[8px] py-[2px] text-[11px] tabular-nums border transition-colors"
+                            [class.bg-white]="isPlannedHloExpanded(hlo.title)"
+                            [class.text-[var(--pr-color-primary-600)]]="isPlannedHloExpanded(hlo.title)"
+                            [class.border-[var(--pr-color-primary-200)]]="isPlannedHloExpanded(hlo.title)"
+                            [class.font-bold]="isPlannedHloExpanded(hlo.title)"
+                            [class.shadow-xs]="isPlannedHloExpanded(hlo.title)"
+                            [class.bg-[var(--pr-surface-card)]]="!isPlannedHloExpanded(hlo.title)"
+                            [class.text-[var(--pr-text-secondary)]]="!isPlannedHloExpanded(hlo.title)"
+                            [class.border-[var(--pr-border)]]="!isPlannedHloExpanded(hlo.title)"
+                            [class.font-semibold]="!isPlannedHloExpanded(hlo.title)">
+                            {{ hlo.count }} KPI{{ hlo.count === 1 ? '' : 's' }}
+                          </span>
+                        </div>
+
+                        @if (hlo.achievement) {
+                          <span
+                            class="hidden sm:flex shrink-0 items-baseline gap-[10px] whitespace-nowrap border-l border-[var(--pr-border)] pl-[10px] sm:pl-[14px]"
+                            [prTooltip]="achievementTooltip(hlo.achievement, 'indicators')"
+                            prTooltipPosition="top">
+                            <span class="flex items-baseline gap-[4px]">
+                              <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
+                              <span class="text-[13px] font-bold tabular-nums text-[var(--pr-text-heading)]">
+                                {{ achievementLabel(hlo.achievement) }}
+                              </span>
+                            </span>
+                            <span class="flex items-baseline gap-[4px]">
+                              <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
+                              <span class="text-[13px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+                                {{ preliminaryAchievementLabel(hlo.achievement) }}
+                              </span>
+                            </span>
+                            @if (achievementCoverage(hlo.achievement)) {
+                              <span class="hidden xl:inline-block min-w-[70px] xl:min-w-[104px] text-right text-[10.5px] font-medium text-[var(--pr-text-muted)]">
+                                {{ achievementCoverage(hlo.achievement) }}
+                              </span>
+                            }
+                          </span>
+                        }
                       </div>
                     </button>
                     @if (isPlannedHloExpanded(hlo.title)) {
-                      <div class="border-t border-[rgba(30,32,47,0.06)] px-2.5 py-2">
+                      <div class="border-t border-[var(--pr-border-divider)] px-2.5 py-2">
                         @if (plannedLayout() === 'table') {
                           <div class="overflow-x-auto rounded-xl border border-[rgba(30,32,47,0.07)]">
                             <table class="w-full border-collapse text-left text-[12px]">

@@ -2770,8 +2770,44 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (!code) return null;
     const name = this.aows().find(a => a.code === code)?.name ?? '';
     const inds = this.indicatorsForAow(code)?.indicators ?? [];
-    return { code, name, ...buildAowBannerStats(inds) };
+    return {
+      code,
+      name,
+      ...buildAowBannerStats(inds),
+      achievement: this.achievementByAowCode()[code] ?? null
+    };
   });
+
+  /** P2-3296 — achievement helpers for By-AOW view */
+  achievementLabel(achievement: TocAchievement | null | undefined): string {
+    return achievement?.progress_percentage ?? '—';
+  }
+
+  preliminaryAchievementLabel(achievement: TocAchievement | null | undefined): string {
+    return achievement?.preliminary_progress_percentage ?? '—';
+  }
+
+  achievementCoverage(achievement: TocAchievement | null | undefined): string {
+    const counted = achievement?.indicators_counted;
+    const total = achievement?.indicators_total;
+    if (!Number.isFinite(counted) || !Number.isFinite(total) || !total) return '';
+    return counted === total ? `${total} indicators` : `${counted} of ${total} indicators`;
+  }
+
+  achievementTooltip(achievement: TocAchievement | null | undefined, childNoun = 'Intermediate Outcomes'): string {
+    if (!achievement || !achievement.total) return 'Nothing has been planned here yet.';
+    const { counted, total, indicators_counted: withTarget, indicators_total: allIndicators } = achievement;
+    if (!counted) {
+      return `None of the ${allIndicators} indicators has a target set, so no achievement percentage can be calculated.`;
+    }
+    const excluded = allIndicators - withTarget;
+    const base =
+      `QA ${this.achievementLabel(achievement)} and Preliminary ${this.preliminaryAchievementLabel(achievement)}, ` +
+      `averaged over ${counted} of ${total} ${childNoun}, covering ${withTarget} of ${allIndicators} indicators.`;
+    return excluded > 0
+      ? `${base} ${excluded} indicator${excluded === 1 ? ' is' : 's are'} excluded for having no target set.`
+      : base;
+  }
 
   /** Per-indicator meta for the By-AOW cards (labelled progress + state). @akili-spec changes/reporting-entry-hub */
   indicatorCardMeta(ind: { actual_achieved_value_sum?: unknown; target_value_sum?: unknown }) {
@@ -3722,10 +3758,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * Keep groups that match (phrase / unordered tokens / fuzzy).
    * Order: 1 exact phrase → 2 split words → 3 average similarity (typos).
    */
-  private rankPlannedHloGroups(
-    groups: { title: string; indicators: any[]; split: { code: string | null; name: string } }[],
+  private rankPlannedHloGroups<
+    G extends { title: string; indicators: any[]; split: { code: string | null; name: string }; achievement?: TocAchievement | null }
+  >(
+    groups: G[],
     parsed: ReturnType<typeof parsePlannedSearch>
-  ) {
+  ): (G & { count: number; eval?: PlannedSearchEvaluation })[] {
     if (!parsed.phrase) {
       return groups.map(g => ({ ...g, count: g.indicators.length }));
     }
@@ -3753,14 +3791,19 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   /** Group one AoW's indicators by HLO for the expanded Areas-of-Work cards. */
-  groupIndicatorsByHlo(indicators: any[] | null | undefined): { title: string; indicators: any[]; split: { code: string | null; name: string } }[] {
+  groupIndicatorsByHlo(indicators: any[] | null | undefined): { title: string; indicators: any[]; split: { code: string | null; name: string }; achievement?: TocAchievement | null }[] {
     const map = new Map<string, any[]>();
     for (const ind of indicators ?? []) {
       const key = (ind.__hlo as string) || 'Other';
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(ind);
     }
-    return [...map.entries()].map(([title, inds]) => ({ title, indicators: inds, split: this.splitGroupTitle(title) }));
+    return [...map.entries()].map(([title, inds]) => ({
+      title,
+      indicators: inds,
+      split: this.splitGroupTitle(title),
+      achievement: (inds[0] as any)?.__hloNode?.progress ?? null
+    }));
   }
 
   isPlannedHloExpanded(title: string): boolean {
