@@ -117,10 +117,16 @@ export class RdAnnualUpdatingComponent implements OnInit {
   /**
    * Innovation Development + phase year >= 2026.
    *
-   * `phase_year` falls back to the open reporting phase for the rare payload that omits it, and the
-   * `typeof === 'number'` guard is deliberate: a year arriving as a string is a bad payload, and the
-   * safe answer to a bad payload is the legacy form, never the new one. Same shape and same reasoning
-   * as the sibling gates in `FieldsManagerService` (`isInnovationDevFormReduced2026`, …).
+   * The `typeof === 'number'` guard is deliberate: a year arriving as a string is a bad payload, and
+   * the safe answer to a bad payload is the legacy form, never the new one.
+   *
+   * ⚠️ This still falls back to the open reporting phase when `phase_year` is absent, and the sibling
+   * gates in `FieldsManagerService` NO LONGER DO (P2-3558): that fallback resolved to the OPEN phase
+   * (2026), so an unknown year yielded the NEW wording over a legacy result. It reads
+   * `dataControlSE.currentResult` — the plain object, a different source from the signal the service
+   * uses — and its own reachability was not measured under this ticket, so it was left as-is on
+   * purpose rather than changed unverified. Do not cite it as the reference shape; the reference is
+   * `FieldsManagerService.isPhaseYearAtLeast`.
    */
   private resolveStatusTriggerWording(): boolean {
     const currentResult = this.api.dataControlSE.currentResult;

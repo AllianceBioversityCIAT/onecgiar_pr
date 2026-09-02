@@ -1,6 +1,6 @@
 # rd-annual-updating
 
-**Verified:** 2026-09-02 · branch performance-refactor · 1fef02f2a
+**Verified:** 2026-09-02 · branch performance-refactor · c8de9ed81
 
 ## What it is
 The "Annual updating" block at the very top of General Information. It asks whether the innovation
@@ -46,6 +46,14 @@ render exactly as they always did.
   rule that earlier phases render exactly as they do today. `resolveStatusTriggerWording()` compares
   `currentResult.phase_year` (falling back to the open phase) against a **local** 2025/2026 constant
   — deliberately not added to `ReportingDesignYear`.
+- ⚠️ **The open-phase fallback here now DIVERGES from `FieldsManagerService` (P2-3558).** The eight
+  `*2026` gates in that service dropped their `?? reportingCurrentPhase?.phaseYear` fallback, because
+  it resolves to the OPEN phase (2026) and therefore rendered the NEW form over a result whose own
+  year had not arrived — 1516 phase-2025 results against 353 phase-2026 in prtest. This component
+  still has the fallback: it reads `dataControlSE.currentResult` (the plain object, a different
+  source from the signal) and its own reachability was not measured under P2-3558, so it was left
+  unchanged rather than changed unverified. **Do not copy this shape into a new gate** — the
+  reference is `FieldsManagerService.isPhaseYearAtLeast`.
 - A `phase_year` arriving as a string is treated as a bad payload and falls back to the legacy
   wording (`typeof === 'number'` guard). Do not "fix" that with `Number()`.
 - `usesStatusTriggerWording` is a field, not a getter: a test must seed
