@@ -72,6 +72,44 @@ export class CPMultipleWPsContentComponent implements OnChanges {
 
   indicatorHelp = computed(() => (this.isCP2026() ? 'Maps to TOC: [KPI Statement – deliverable short name and indicator description]' : ''));
 
+  /**
+   * P2-2932 — the Section 2 vs Section 4 consistency check, computed server-side and returned on
+   * the Contributors & Partners payload.
+   *
+   * 🛑 Advisory only. The value stays the user's: this never rewrites the field and never blocks
+   * saving. The single exception the PO carved out is a Knowledge Product outside 0/1, which AC1
+   * says must be rejected — `contributionIsRejected` marks it, and AC6 rules everything else.
+   */
+  private contributionCheck = () => this.rdPartnersSE?.partnersBody?.contribution_consistency ?? null;
+
+  /** True only for a real disagreement. A match, a documented exception, or an empty box stay silent. */
+  contributionDiffers = () => this.contributionCheck()?.status === 'DIFFERS';
+
+  contributionIsRejected = () => this.contributionCheck()?.status === 'REJECTED';
+
+  showContributionCheck = () =>
+    this.contributionDiffers() || this.contributionIsRejected();
+
+  /**
+   * Says what the two numbers are and where the other one comes from, rather than "these do not
+   * match" — the user has to know which figure to go and change.
+   */
+  contributionCheckMessage = (): string => {
+    const check = this.contributionCheck();
+    if (!check) return '';
+
+    if (check.status === 'REJECTED') {
+      return `A Knowledge Product counts as a single unit, so this field only accepts <strong>1</strong>, or <strong>0</strong> when the product does not count on its own toward the yearly target. You entered <strong>${check.reported}</strong>.`;
+    }
+
+    const boxes =
+      check.boxesCounted > 1
+        ? ` across ${check.boxesCounted} indicators`
+        : '';
+
+    return `Your contribution${boxes} adds up to <strong>${check.reported}</strong>, but the details you reported for this result add up to <strong>${check.expected}</strong>. Check which of the two is right — nothing is blocked either way.`;
+  };
+
   contributionTargetNote = computed(() =>
     this.isCP2026()
       ? 'Indicate the numerical value that this result contributes toward the 2026 indicator target, using the same unit of measurement as the indicator itself.<br><br><strong>Examples:</strong> If the indicator measures number of farmers, enter the number of farmers reached or benefiting from this result. If the indicator measures USD invested or leveraged, enter the corresponding monetary value. If the indicator measures number of workshops, trainings, or events, enter the number delivered. Apply the same logic for any other unit of measurement specified by the indicator.<br><br>If you are reporting a Knowledge Product and have mapped it to a TOC KPI/indicator, enter <strong>1</strong> as the contribution to target. If the KP does not count independently toward the yearly target — for example, because it serves as a complementary result supporting the achievement of another result that carries the count — enter <strong>0</strong>.<br><br>Values entered here will be aggregated across results at the end of the reporting cycle to assess progress toward the planned 2026 KPIs and indicator targets.'
