@@ -218,3 +218,209 @@ de consola. Solo base de comparación: el arreglo del bilateral **no está despl
 
 🥇 **Seis falsos positivos, todos cerrados mirando el CUERPO y no el código de estado**, o comparando
 contra un segundo instrumento. Es la misma lección del 1-sep, y sigue siendo la que más tiempo ahorra.
+
+----------
+
+## 🔴 10. El defecto grande de la noche: el bilateral borraba respuestas guardadas (P2-3556)
+
+Salió **de rebote**, verificando el punto 5: el agente de P2-3550 avisó de que el bilateral manda
+siempre `reference_materials: []`. Al medirlo apareció una cadena mucho peor.
+
+**La cadena, medida:**
+1. `loadData()` de los formularios bilaterales **no tenía handler de error**.
+2. Ese GET responde **500** real ante una excepción del servidor, y el interceptor **relanza**
+   (`general-interceptor.service.ts:81-83`) → el `next` nunca corre.
+3. `body` se queda en el `{}` del constructor. **El formulario se pinta vacío sin ningún aviso.**
+4. La persona escribe → el autoguardado (debounce 800 ms) manda todas las claves con `?? null` / `?? []`
+   → **blanquea en base de datos** lo que había.
+5. Ventana secundaria: una edición que aterriza antes de que resuelva el GET. Latencias medidas
+   0,24 s / 0,24 s / 0,62 s contra un debounce de 800 ms.
+
+**Tres commits:** `f013c157b` (omitir la clave de lista) · `6e88e275b` (estado de carga + guarda del
+guardado en Innovation Dev) · `1fef02f2a` (la misma guarda en **Policy Change** y **Capacity Sharing**).
+
+### 🥇 Lo que aprendimos y no sabíamos: omitir la clave NO siempre protege
+
+En Innovation Dev sí: `innovation_dev.service.ts:99-101` hace `if (evidences == null) return`, o sea
+ausente = no tocar. **Pero en Policy Change y Capacity Sharing no existe ese escape:**
+
+| Clave | Qué pasa si no se manda | Dónde |
+|---|---|---|
+| `institutions` | **Desactiva TODAS las organizaciones** del resultado — ausente y `[]` son idénticos | `summary.service.ts:1021,1048-1054` (policy) y `:433,460-467` (capdev) → `upDateAllInactiveRBI` |
+| `amount` (policy) | `amount \|\| null` → se borra | `summary.service.ts:996` |
+| contadores (capdev) | se guardan como **0** | `summary.service.ts:405-408, 420-424` |
+| `optionsWithAnswers` | no-op | `:1057` |
+
+⇒ **Para esas dos secciones la guarda de carga es la ÚNICA defensa posible.** Y omitir por simetría
+habría roto el borrado legítimo del último elemento.
+
+### 🛑 Y la casi-regresión que se evitó
+
+`getPolicyChanges` **devuelve 404** cuando el resultado no tiene fila todavía
+(`summary.service.ts:1104-1110`, y `Return-data.interceptor.ts:46` lo copia al status HTTP real).
+Un `loaded=false` ingenuo ante cualquier error **habría deshabilitado Save para siempre en todo policy
+change nuevo**. El 404 cuenta como "cargado y vacío". Capacity Sharing, en cambio, responde
+`200` con nulos, así que ahí todo error sí es real. **Dos secciones que parecen gemelas y no lo son.**
+
+### ⚠️ Los specs pasaban por la razón equivocada
+
+Los tres specs no ejecutaban `fixture.detectChanges()` en su `build()`, así que `ngOnInit` **nunca
+corría**: las aserciones de guardado pasaban porque el componente no se había inicializado, no porque
+el guardado estuviera bien. Corregido en los tres. Es la misma familia de error que la regla
+"si el test pasa a la primera contra el código roto, está mal escrito".
+
+### Lo que queda abierto y por qué
+- 🧊 **`type-innovation-use` tiene el mismo hueco y NO se tocó** — congelado por Ángel (31-ago).
+  Cuando se descongele, necesita la guarda idéntica. **Es pérdida de datos, no una mejora.**
+- `type-knowledge-product` no se auditó.
+- El segundo GET de Policy Change sigue sin handler: puede perder **una edición**, no datos guardados.
+
+----------
+
+## 🧩 11. P2-3292 partido y construido a medias, como manda la regla 16
+
+**Lo primero que salió, y es lo que más vale:** las **tres `Open Questions` que Ángel escribió el
+17-ago** al final de la descripción **ya las contestó él mismo el 28-ago** reescribiendo la
+descripción (bloque *"Resolved Clarifications (business-validated, 2026-08-28)"*, tras consultar a
+Marc Schut) y movió el ticket a `Ready To Develop`. **Están cerradas: nadie tiene que perseguirlas.**
+
+🥇 **La que sigue abierta es NUESTRA** — la publicó Yeck el **31-ago 08:27** en formato A/B: *"una vez
+que alguien confirma que su innovación ya no está activa, ¿puede reabrirse, y quién?"*. Recomendación
+**B** (que un administrador pueda), porque **P2-2923 existe justamente porque la gente se quedaba
+atrapada al cerrar por error**; la opción A desharía eso a propósito.
+🛑 **Y llevaba cinco días invisible**: el ticket estaba `In Progress` **a nombre de Yeck**, así que a
+Ángel no le aparecía en su cola. **Movido a `To Be Clarified` y asignado a Ángel esta noche.** Es
+exactamente el fallo que describe la regla 11 — el estado decía "en curso" y la pelota no era nuestra.
+
+**El corte, decidido por dependencia real:** se construyó el **Step 2** (la pregunta encima de la
+lista de razones), commit `3e87d5e60`. El **Step 4** (auto-lock) **sí** depende de la respuesta: con A
+hay que quitar la marcha atrás de P2-2923 y con B hace falta una ruta de reapertura para admin que hoy
+no existe. Se rehaería entero → espera.
+
+⚠️ **Y había un motivo positivo para hacerlo ya: el hueco lo abrió nuestra propia entrega.** El Step 1
+(`06b82b22d`) sustituyó la segunda etiqueta del radio —que hasta 2025 llevaba el arranque
+*"…investment was discontinued, because:"*— por un **"No" pelado**, dejando la lista de razones de
+2026 **sin ninguna pregunta encima**. Esto lo cierra sin tocar nada bloqueado.
+
+**Lo que queda es de Juan David** (esquema): los 7 textos de razones como **filas nuevas** del
+catálogo `investment_discontinued_option` —jamás un `UPDATE` ni `is_active = 0`, porque el front
+reconstruye la lista desde el catálogo activo y desactivar una fila **borraría de pantalla una razón ya
+reportada en 2025**—, el filtro por fase del endpoint, los vínculos merge/split (`linked_result` no
+tiene discriminador de tipo) y la regla de green check.
+
+----------
+
+## 🔴🔴 12. El hallazgo más grave: la sección Innovation Development NO SE PUEDE GUARDAR (P2-3557)
+
+Salió **probando el DoD de la subida** en la superficie que faltaba (`innovation-dev-info`, ya migrada
+al servicio compartido en `573cbcb80`, desplegado en **v20**). Resultado **8563** / id 11031, fase 2026,
+*Editing*:
+
+```
+200  /v2/api/innovation-development/evidence_demand/createUploadSession
+200  /v2/api/innovation-development/evidence_demand/create/11031
+500  /v2/api/innovation-development/innovation-dev/create/result/11031
+```
+
+✅ **La subida funciona por la puerta P25 correcta** → P2-3220 verificado también en la tercera
+superficie. Y el aviso en pantalla es exactamente el que debe salir:
+*"This section was not saved — Your evidence was stored, but the rest of the section could not be
+saved."* Eso prueba que el arreglo de no-tragarse-el-error (P2-3218 / P2-3220) **funciona**.
+
+🔴 **Pero el guardado de la sección devuelve 500 y no guarda nada.** Cuerpo:
+`Cannot read properties of undefined (reading 'radioButtonValue')`.
+
+**Causa raíz, medida:** `innovation_dev.service.ts` (results-framework-reporting, ~:136-185) lee ocho
+rutas fijas `dto?.<grupo>.q1..q4.radioButtonValue`. El `?.` **protege solo el DTO**, no las claves
+internas. Y el catálogo de preguntas ya no trae la cuarta:
+
+```
+GET /v2/api/results/questions/innovation-development/11031  -> 200
+  responsible_innovation_and_scaling : [ … q1, q2, q3 ]      ← SOLO TRES
+  intellectual_property_rights       : [ … q1, q2, q3, q4 ]
+```
+Igual en 11028. El cliente reenvía lo que recibe, el servicio sigue pidiendo cuatro → revienta.
+
+### 🥇 Y la parte del método que importa: cómo se descartó que fuera nuestra regresión
+Tres mediciones, en este orden, porque las dos primeras me dieron **falsos positivos**:
+1. Primer volcado del payload cortado a **900 caracteres** → parecía que el cliente no mandaba las
+   preguntas. **Falso**: el spread las pone al final y el corte las tapaba.
+2. Sospecha de que `buildSectionPayload()` (P2-3550) las hubiera perdido al hacer destructuring.
+   **Falso**: hace `{...innovationDevInfoBody, ...innovationDevelopmentQuestions}` y omite solo su
+   propia clave. Leído en el código.
+3. Volcado **completo** (21.864 bytes): las **34 claves** están, `responsible_innovation_and_scaling`
+   **presente**… y sin `q4` dentro. Ahí se cerró.
+
+⇒ **No es regresión de esta noche.** Es un desajuste de servidor anterior, probablemente de cuando se
+quitó *Megatrends* y se añadieron las dos preguntas nuevas de GESI/riesgo (**P2-3465** y **P2-3467**),
+que cambiaron el catálogo sin actualizar este servicio. Está en manos de un agente.
+
+## ✅ 13. Knowledge Product bilateral: medido, y NO se arregló porque no hacía falta
+
+Cuarta y última sección bilateral. **Veredicto: el defecto de pérdida de datos no es alcanzable ahí**, y
+por una razón concreta: su template **no pinta el formulario** mientras la carga está en vuelo o ha
+fallado (`type-knowledge-product.component.html:2,7,19`) y **retira la fila de acciones entera**
+(`:244`), así que no hay ni campo donde escribir ni Save que pulsar.
+
+🛑 **Pero omitir la clave ahí protegería MENOS que en ningún otro sitio**: en `upsert`
+(`results-knowledge-products.service.ts:1898-2031`) una clave ausente **nula cinco columnas** de MELIA
+en un solo guardado. La única con contrato de tres estados es `tocMeliaStudyId` (`:1961`, `:1982`), y
+es intencional para el formulario P22.
+
+⚠️ **Y la trampa corre al revés que en Policy Change:** aquí el **404 sí es una anomalía real** (un KP
+bilateral no puede existir sin su fila: si `populateKPFromCGSpace` falla, el resultado se desactiva y
+la creación aborta, `bilateral-center.service.ts:189-204`), así que tratarlo como fallo es lo correcto.
+En Policy Change era justo lo contrario. **Dos secciones que parecen gemelas y no lo son.**
+
+Se añadieron **3 tests candado** (`348ba9f84`) porque esa propiedad no tenía ninguno y está a una
+edición de template de perderse — precisamente la edición que las tres hermanas acaban de hacer.
+
+### 12-bis · Alcance real del bloqueo: el 100%, y el culpable con fecha
+
+Medido con solo-GET sobre el catálogo de preguntas:
+
+| Muestra | Grupos que trae | Veredicto |
+|---|---|---|
+| **13 de 13** ids de fase 2026 (uno cada diez de la lista completa) | `RIS=[q1,q2,q3]` · `IPR=[q1,q2,q3,q4]` | 🔴 **todos fallan** |
+| 4 ids de fase 2025 (`11020, 11000, 10000, 9142`) | `RIS=[q1,q2,q3,q4]` | ✅ correctos |
+
+⇒ **No es "algunos": es el 100% de Innovation Development de fase 2026 — 128 resultados en prtest.**
+El eje es la **fase**, no el dato. (294 de fase 2025 están bien.)
+
+**La cadena, con fecha y autor:**
+
+| Commit | Fecha | Quién | Qué |
+|---|---|---|---|
+| `39953c33f` | 26-ago 15:10 | Yeck | Ancló los slots por `result_question_id` (q4 → 137). Un id ausente deja el slot `undefined`, y `JSON.stringify` **borra la clave**. |
+| `a3b02520b` | 27-ago 10:09 | Juan D. Guzmán | Filtro por año de fase; retira 78/79/137 para 2026 (P2-3467). |
+| 🔴 **`b9b46642b`** | **27-ago 10:16** | Juan D. Guzmán | **El merge de los dos.** Ahí nace `resolveScalingSlotsForPhase` (`result-questions.service.ts:513-532`), que para fase ≥2026 devuelve **tres** slots. Su propio comentario lo dice: *"137 has no replacement, so q4 is left empty"*. El servicio de guardado nunca se actualizó. |
+
+🥇 **La hipótesis inicial (P2-3465 + P2-3467) era correcta en el origen pero no en el punto de rotura:
+lo rompió el MERGE que los unió, no ninguno de los dos por separado.** Es la clase de causa que solo
+aparece mirando el histórico, no el diff.
+
+**Y se perdía más de lo que decía el aviso:** el 500 mataba el `try` entero, así que además de las
+respuestas **tampoco se guardaban la inversión esperada ni el presupuesto**. El texto en pantalla no
+mentía, pero enumeraba menos de lo que se caía.
+
+**El arreglo (`0f849b61d`) recorre las claves `qN` presentes** en vez de nombrar cuatro. Y la decisión
+clave: **pregunta ausente = NO llamar a `saveOptionsAndSubOptions`**, porque esa rutina fuerza
+`answer_boolean = false` en las opciones no seleccionadas (`:527-537`) y desactiva respuestas
+(`:581`, `:594`) — llamarla por una pregunta que el usuario nunca vio **habría borrado respuestas
+que sí tiene**. Server: 206 suites / **1971** tests, 4 de 5 casos nuevos fallan contra el código viejo.
+
+⚠️ **Deuda declarada, no tapada:** `TopLevelQuestionsV2` sigue declarando `q1..q4` como obligatorios y
+eso ya es falso. Hacerlo opcional rompe la asignabilidad con el DTO v1 que usan
+`saveInitiativeInvestment` / `savePartnerInvestment` (legacy compartido). Queda escrito en la interfaz.
+
+----------
+
+## 🧾 Cierre — lo que hay que saber mañana en tres líneas
+
+1. 🔴 **P2-3557 es lo urgente**: nadie podía guardar Innovation Development en 2026. Arreglado, pero
+   **es de server y necesita despliegue del backend** para poder comprobarlo (el sello del cliente no
+   sirve ni para descartar).
+2. 🔴 **P2-3555 y P2-3556** son los otros dos de pérdida/bloqueo de datos. El primero ya está
+   desplegado y verificado en pantalla; el segundo espera el build.
+3. 🧊 **Innovation Use sigue congelado y con el mismo defecto de pérdida de datos** que se arregló en
+   sus cuatro hermanas. Es lo primero que hay que descongelar, y es decisión de Yeck.
