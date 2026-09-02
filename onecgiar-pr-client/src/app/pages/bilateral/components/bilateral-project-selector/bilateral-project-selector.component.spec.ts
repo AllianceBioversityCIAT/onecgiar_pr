@@ -17,6 +17,7 @@ describe('BilateralProjectSelectorComponent', () => {
       isLoadingProjects: signal(false),
       getProjects: jest.fn(),
       selectProject: jest.fn(),
+      setLeadProject: jest.fn(),
     };
 
     ctxService = {
@@ -70,5 +71,50 @@ describe('BilateralProjectSelectorComponent', () => {
     component.selectProject(project);
     expect(creationService.selectProject).toHaveBeenCalledWith(project);
     expect(emitSpy).toHaveBeenCalledWith(project);
+  });
+  /**
+   * P2-3518 — the same picker is embedded in the Section 0 card of an existing result, where the
+   * card already renders the label and the summary/description block and where the Science Program
+   * must NOT be cleared.
+   */
+  describe('inline variant (P2-3518)', () => {
+    const project = { id: 77, shortName: 'NEWPROJ', fullName: 'New project', summary: 'S', description: 'D', leadCenter: null, sciencePrograms: [] };
+
+    beforeEach(() => {
+      fixture.componentRef.setInput('variant', 'inline');
+      creationService.projects.set([project]);
+      fixture.detectChanges();
+    });
+
+    it('drops the label and the summary/description block the host card already renders', () => {
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('.bps-label')).toBeNull();
+      expect(el.querySelector('.bps-project-info')).toBeNull();
+      // The field itself is the whole point of the variant — it must still be there.
+      expect(el.querySelector('.bps-field')).not.toBeNull();
+    });
+
+    // ⚠️ `selectProject()` clears `selectedPrimarySp` / `selectedSecondarySps`. On an existing
+    // result that would blank the Science Program it already reports against, and what a project
+    // change should do to the Science Program is an open requirement question.
+    it('re-points the lead project instead of running the wizard selection', () => {
+      const emitSpy = jest.spyOn(component.projectSelected, 'emit');
+
+      component.selectProject(project as any);
+
+      expect(creationService.setLeadProject).toHaveBeenCalledWith(project);
+      expect(creationService.selectProject).not.toHaveBeenCalled();
+      expect(emitSpy).toHaveBeenCalledWith(project);
+    });
+
+    it('keeps the label and the info block in the default wizard variant', () => {
+      fixture.componentRef.setInput('variant', 'wizard');
+      creationService.selectedProject.set(project);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('.bps-label')).not.toBeNull();
+      expect(el.querySelector('.bps-project-info')).not.toBeNull();
+    });
   });
 });
