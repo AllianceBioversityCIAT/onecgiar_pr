@@ -3,6 +3,7 @@ import { InstitutionsInterface, PartnersBody, UnmappedMQAPInstitutionDto } from 
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionMapped } from '../../../../../../shared/interfaces/institutions.interface';
 import { CenterDto } from '../../../../../../shared/interfaces/center.dto';
+import { Subscription } from 'rxjs';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 
@@ -56,31 +57,47 @@ export class RdPartnersService implements OnDestroy {
    */
   readonly sectionLoading = signal(true);
 
+  /** Our own subscriptions to the shared catalogue emitters. See `ngOnDestroy`. */
+  private readonly catalogueSubs = new Subscription();
+
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,
     public centersSE: CentersService
   ) {
-    this.institutionsSE?.loadedInstitutions?.subscribe(loaded => {
-      if (loaded) {
-        this.setPossibleLeadPartners(true);
-        this.setLeadPartnerOnLoad(true);
-      }
-    });
-    this.centersSE.loadedCenters.subscribe(loaded => {
-      if (loaded) {
-        this.nppCenters = this.centersSE.centersList?.map(center => {
-          return { ...center, selected: false, disabled: false };
-        });
-        this.setPossibleLeadCenters(true);
-        this.setLeadCenterOnLoad(true);
-      }
-    });
+    this.catalogueSubs.add(
+      this.institutionsSE?.loadedInstitutions?.subscribe(loaded => {
+        if (loaded) {
+          this.setPossibleLeadPartners(true);
+          this.setLeadPartnerOnLoad(true);
+        }
+      })
+    );
+    this.catalogueSubs.add(
+      this.centersSE.loadedCenters.subscribe(loaded => {
+        if (loaded) {
+          this.nppCenters = this.centersSE.centersList?.map(center => {
+            return { ...center, selected: false, disabled: false };
+          });
+          this.setPossibleLeadCenters(true);
+          this.setLeadCenterOnLoad(true);
+        }
+      })
+    );
   }
 
+  /**
+   * P2-3554: unsubscribe OUR subscriptions, never the emitters themselves.
+   *
+   * This used to call `unsubscribe()` on `loadedInstitutions` and `loadedCenters` directly. Those are
+   * `EventEmitter`s owned by two root singletons (`institutions.service.ts:32`, `centers.service.ts:28`), so
+   * that closed the SHARED emitter for every other subscriber for the rest of the session instead of
+   * detaching this service. It is not reachable today — this service is `providedIn: 'root'`, so `ngOnDestroy`
+   * only runs when the root injector goes down — but it becomes a live bug the moment anyone provides it at
+   * component level, and the correct form costs nothing.
+   */
   ngOnDestroy(): void {
-    this.institutionsSE?.loadedInstitutions?.unsubscribe();
-    this.centersSE.loadedCenters.unsubscribe();
+    this.catalogueSubs.unsubscribe();
   }
 
   validateDeliverySelection(deliveries, deliveryId: number) {
