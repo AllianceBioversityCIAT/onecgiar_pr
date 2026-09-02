@@ -246,7 +246,13 @@ export class LabReportFormComponent {
   readonly dropdown1Options = computed(() => [...this.tocCenters(), this.otherCentersSentinel]);
   readonly otherCentersList = computed(() => {
     const tocCodes = new Set(this.tocCenters().map((c: any) => c.code));
-    return this.centersSE.centersList.filter((c: any) => !tocCodes.has(c.code));
+    // P2-3554: read the catalogue through `centers()` (signal), NOT `centersList` (plain array). A plain array
+    // is not a reactive dependency, so this `computed` cached whatever the catalogue held on its first
+    // evaluation — `[]`, since CLARISA resolves after the view is built — and only recovered by accident when
+    // `tocCenters()` happened to change. On a node that contributes no ToC centers it never changes, so the
+    // dropdown stayed on "No information found" for the whole session. Same fix as P2-3190 in Contributors
+    // & partners (`733575421`).
+    return this.centersSE.centers().filter((c: any) => !tocCodes.has(c.code));
   });
 
   // ---- Contributing Science Programs: same split --------------------------

@@ -39,8 +39,11 @@ const mockInitiativesService = {
   ])
 };
 
+const CENTERS_CATALOGUE = [{ code: 'CIMMYT', name: 'CIMMYT', acronym: 'CIMMYT' }];
+// P2-3554: `centers` (signal) is what the component reads; the service writes both together.
 const mockCentersService = {
-  centersList: [{ code: 'CIMMYT', name: 'CIMMYT', acronym: 'CIMMYT' }]
+  centersList: CENTERS_CATALOGUE,
+  centers: signal<any[]>(CENTERS_CATALOGUE)
 };
 
 const mockGetRolesService = {
@@ -788,6 +791,22 @@ describe('ManageUserModalComponent', () => {
         expect(component.loadingRoleAssignment()).toBe(true);
         done();
       }, 10);
+    });
+  });
+
+  describe('P2-3554: the centers list when the CLARISA catalogue resolves LATE', () => {
+    // `centers` used to read `centersService.centersList`, a plain array. Nothing else in that `computed` was
+    // reactive, so unlike the Contributors & partners case there was not even an accidental recovery: an empty
+    // catalogue at first evaluation meant an empty centers list for the rest of the session.
+    it('rebuilds the list when the catalogue lands after the view was built', () => {
+      const previous = mockCentersService.centers();
+      mockCentersService.centers.set([]);
+
+      expect(component.centers()).toEqual([]);
+
+      mockCentersService.centers.set(previous);
+
+      expect(component.centers().map((x: any) => x.code)).toEqual(['CIMMYT']);
     });
   });
 });

@@ -427,12 +427,16 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       }
     };
 
+    const centersCatalogue = [
+      { code: 'ABC', name: 'Alliance of Bioversity and CIAT', acronym: 'ABC', institutionId: 100 },
+      { code: 'CIP', name: 'International Potato Center', acronym: 'CIP', institutionId: 101 }
+    ];
     mockCentersService = {
       getData: jest.fn().mockResolvedValue([]),
-      centersList: [
-        { code: 'ABC', name: 'Alliance of Bioversity and CIAT', acronym: 'ABC', institutionId: 100 },
-        { code: 'CIP', name: 'International Potato Center', acronym: 'CIP', institutionId: 101 }
-      ]
+      centersList: centersCatalogue,
+      // P2-3554: the component reads the SIGNAL. Keeping `centersList` here as well mirrors the service, which
+      // writes both together — a mock with only the plain array is what hid the bug in the first place.
+      centers: signal(centersCatalogue)
     };
 
     await TestBed.configureTestingModule({
@@ -918,6 +922,40 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       const body = mockApiService.resultsSE.POST_createResult.mock.calls.at(-1)[0];
       expect(body.result).not.toHaveProperty('has_innovation_link');
       expect(body.result).not.toHaveProperty('linked_results');
+    });
+  });
+
+  describe('P2-3554: the centers dropdown when the CLARISA catalogue resolves LATE', () => {
+    /**
+     * The regression this covers, and why every existing test in this file was blind to it: the mock hands the
+     * catalogue over already resolved and synchronously, so `otherCentersList` evaluates once with the final
+     * value and is right by construction. In the app the catalogue arrives after the view is built, and
+     * `centersList` (a plain array) is not a reactive dependency — the `computed` cached `[]` and only
+     * recovered when `tocCenters()` changed. On a node that contributes no ToC centers it never changes, so
+     * the dropdown stayed on "No information found" for the whole session (P2-3554 on results 8961 and 8988).
+     *
+     * This asserts the recompute rather than the rendered options: the dropdown is behind the title-input
+     * gate and a real `pr-multi-select` needs browser layout (`:focus-within`, CDK virtual scroll) that jsdom
+     * does not do — that contract is covered by the Cypress CT specs. The cache invalidation IS the defect.
+     */
+    it('rebuilds the list when the catalogue lands after the view was built', () => {
+      const catalogue = mockCentersService.centers();
+      mockCentersService.centers.set([]);
+      component.tocCenters.set([]);
+      fixture.detectChanges();
+
+      expect(component.otherCentersList()).toEqual([]);
+
+      mockCentersService.centers.set(catalogue);
+
+      expect(component.otherCentersList()).toHaveLength(2);
+      expect(component.otherCentersList().map((c: any) => c.code)).toEqual(['ABC', 'CIP']);
+    });
+
+    it('still subtracts the ToC-derived centers once the catalogue is there', () => {
+      component.tocCenters.set([{ code: 'ABC', name: 'Alliance of Bioversity and CIAT', acronym: 'ABC', institutionId: 100 }]);
+
+      expect(component.otherCentersList().map((c: any) => c.code)).toEqual(['CIP']);
     });
   });
 
