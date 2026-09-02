@@ -10,7 +10,7 @@
 | Prefix | `RGS` |
 | Type | **Change** |
 | Depth | **Standard** — raised from the proposal's `Lite` by a specify-phase discovery (§2) |
-| Approval Mode | `gated` |
+| Approval Mode | `gated` → **`pre-approved`** from `RGS-T-3` (owner request; `execution.md` §6) |
 | Date | 2026-09-02 |
 | Depends on | none · **Parallel-safe: no** (shares `program-overview.component.html` with `changes/progress-by-aow-w3`) |
 | Source | `proposal.md`; owner request 2026-09-02 |
@@ -90,9 +90,19 @@ Re-pointing its click without fixing that would ship a second inaccessible contr
 | `RGS-AC-2` | Same | The user clicks `Report` or `→` | Navigation happens as today; **BUT it must NOT** change the scope or leave the page filtered |
 | `RGS-AC-3` | Keyboard focus on the page | The user Tabs to a row and presses Enter, then Space | Both activate the filter; **AND IT MUST** show a visible focus indicator on the row |
 | `RGS-AC-4` | A scope is active | The matching row renders | It is visibly and programmatically marked selected; **AND IT MUST** reach ≥3:1 against its adjacent surface |
-| `RGS-AC-5` | The Overview at 1600 / 1280 / 1100 / 900 / 768, scope on and off | The page renders | `scrollWidth === clientWidth` at every width; the AoW name never collapses |
+| `RGS-AC-5` | The Overview at 1600 / 1280 / 1100 / 900 / 768, scope on and off | The page renders | `scrollWidth === clientWidth` at every width — **met, measured** (`RGS-T-4`). ~~the AoW name never collapses~~ **RETIRED 2026-09-02** — see the note below |
 | `RGS-AC-6` | The AoW section is expanded | The user activates the disclosure control | The section collapses and the control reports `aria-expanded="false"`; **AND IT MUST** be operable by keyboard |
 | `RGS-AC-7` | The AoW section is collapsed | The user Tabs through the page | Focus **skips every control inside the section**; **BUT it must NOT** land on an invisible row button, name button, `Report` or `→` |
+
+> **`RGS-AC-5`, second clause — retired at the `RGS-T-4` gate, owner-approved.**
+>
+> The clause "the AoW name never collapses" asserted a property this spec **explicitly declined to own**: §3 puts "the AoW row's responsive ladder (`max-[900px]` / `max-[1101px]` / `max-[1280px]`) — preserved, not revisited" **out of scope**, and `design.md` `RGS-DD-3` says "nothing in the responsive ladder is touched". An AC cannot require a fix the same document forbids; the clause was unsatisfiable within its own spec from the moment it was written.
+>
+> `RGS-T-4` measured it and it **fails at 1280 / 1100 / 900** in both scope states: the identity track collapses to ~0–27px and the code+name disappear. The Leader then proved the failure is **pre-existing, not introduced here**, by three independent experiments (recorded in `execution.md` `RGS-T-4`): reverting `RGS-T-2`'s 2px border in-browser leaves the track byte-identical; neutralising `RGS-T-3`'s collapse wrapper leaves it byte-identical; and the responsive ladder is byte-identical to base commit `ca39bcf32` — same `grid-cols` strings, same counts of every breakpoint class and of `minmax(0,1fr)`.
+>
+> Root cause: the identity track's four `max-content`/fixed siblings consume ~531px of a ~539px content box, so `minmax(0,1fr)` resolves to ~0. This is **`KZ-OAH-1`, fourth recurrence** — the starvation this spec's own `RGS-DD-3` names as "already recurred three times in this component". Notably it produces **no horizontal overflow** (`scrollWidth === clientWidth` holds at every width), so it passes a naive overflow check while failing visibly — which is why the first clause of `RGS-AC-5` is met and the second is not.
+>
+> **Carried out of this spec as its own proposal**, not absorbed here: fixing it would contradict two approved decisions (§3, `RGS-DD-3`) and grow a spec already at ~192% of its LOC budget. `RGS-R-5` ("MUST NOT alter the ladder or reintroduce horizontal overflow") is **met** — nothing was altered and no overflow was introduced.
 
 ### Scenarios
 
@@ -174,7 +184,7 @@ D4–D6 have **no automated gate** and are covered by browser measurement at nam
 | `RGS-R-2` | Actions navigate only | `RGS-AC-2` |
 | `RGS-R-3` | Row is a real keyboard control | `RGS-AC-3` |
 | `RGS-R-4` | Visible + programmatic selected state | `RGS-AC-4` |
-| `RGS-R-5` | No layout regression | `RGS-AC-5` |
+| `RGS-R-5` | No layout regression | `RGS-AC-5` (first clause; second clause retired — see §8 note) |
 | `RGS-R-6` | Both row sites consistent | design-level; task-owned |
 | `RGS-R-7` | Section is collapsible | `RGS-AC-6` |
 | `RGS-R-8` | Collapsed content unreachable | `RGS-AC-7` |

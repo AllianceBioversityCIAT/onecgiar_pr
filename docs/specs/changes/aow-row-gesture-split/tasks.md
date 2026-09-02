@@ -15,7 +15,7 @@
 
 - [x] `proposal.md`, `requirements.md`, `design.md` written; reversion challenge run (`design.md` §7)
 - [x] Root cause of the enlarged scope verified: the row is a `<div>`, zero `role="button"` in the file
-- [ ] **A runnable app with a real Science Program** — `RGS-T-4` cannot run without it, and it is the only gate for D4/D5/D6/D7
+- [x] **A runnable app with a real Science Program** — met 2026-09-02: Orca built-in browser on `http://qa-development-2026.orca.localhost:50196/result-framework-reporting/entity-details/SP04/overview`, verified serving `RGS-T-1..T-3` (5 real AoW rows, 0 skeletons, `data-testid="aow-section-inert-container"` present)
 
 ## 3. Task List
 
@@ -88,7 +88,7 @@
   - [ ] **D5 — focus ring:** focus the name button so `matches(':focus-visible')` is true, read computed `outline` and `boxShadow`. A non-`none` box-shadow carrying the ring is the pass.
   - [ ] **D4 — selected-state contrast:** sample computed colours, compute ratios by the WCAG relative-luminance formula, against **both** adjacent surfaces (the row fill and the card), each ≥3:1.
   - [ ] **D7 — collapsed section is genuinely unreachable:** with the section collapsed, walk the real tab order and confirm focus **never enters it**; expand and confirm access returns.
-  - [ ] **D6 — layout:** at 1600 / 1280 / 1100 / 900 / 768, scope on and off, `scrollWidth === clientWidth`, and the AoW name column never collapses. Record widths as numbers. **Treat 900 and 768 as a re-measure, not a formality:** `RGS-T-2` took the row's border from 1px to 2px in *both* branches, adding 2px to its rendered box at every breakpoint, and this component has already spent three tasks on overflow (`OSF-AC-9`/`AC-10`).
+  - [x] **D6 — layout:** at 1600 / 1280 / 1100 / 900 / 768, scope on and off, `scrollWidth === clientWidth` — **measured, holds at every width**. ~~and the AoW name column never collapses~~ — **this half is retired with `RGS-AC-5`'s second clause** (`requirements.md` §8 note): measured, **fails at 1280/1100/900**, proven pre-existing (`KZ-OAH-1`, 4th recurrence) and out of this spec's scope per §3 + `RGS-DD-3`. Record widths as numbers. **Treat 900 and 768 as a re-measure, not a formality:** `RGS-T-2` took the row's border from 1px to 2px in *both* branches, adding 2px to its rendered box at every breakpoint, and this component has already spent three tasks on overflow (`OSF-AC-9`/`AC-10`).
   - [ ] **D8 — resting affordance (added 2026-09-02, owner-approved at the `RGS-T-2` gate).** `RGS-DD-4` makes the *unselected* row's border `transparent`, so an unselected row's separation from the card now rests entirely on `--pr-surface-ground` vs `--pr-surface-card`. D4 measures only the **selected** indicator, so nothing in `requirements.md` §9 covered this. Sample both surface colours and record the ratio as a number, in the same pass as D4. **This is not a pass/fail gate** — there is no WCAG threshold for a resting container edge (1.4.11 governs the selected *indicator*, which D4 already owns). Record the number and one deliberate visual judgement of whether rows still read as separate objects.
   - [ ] Every reading states **viewport, scope state, collapse state, and that loading finished**.
 - **Verification:** the recorded numbers are the verification.
