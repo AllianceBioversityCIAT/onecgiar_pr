@@ -526,8 +526,19 @@
                  row 2) rather than a flex spacer hack. See the real row for the full rationale. -->
             <div class="grid grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content_max-content] items-center gap-[16px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[16px] py-[12px] min-[900px]:max-[1101px]:grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content] max-[900px]:grid-cols-[minmax(0,1fr)_max-content] max-[900px]:gap-y-[8px]">
               <div class="flex items-center gap-[10px] max-[900px]:[grid-column:1] max-[900px]:[grid-row:1]">
-                <span class="h-[24px] w-[58px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
-                <span class="h-[16px] w-[190px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+                <!-- @akili-spec changes/aow-row-gesture-split: mirrors the real row's new identity
+                     button below (RGS-DD-5 parity — the skeleton never promises a control the real
+                     row doesn't also carry). `disabled`, not `aria-hidden`: this whole list is
+                     already `aria-hidden="true"` (above), and a disabled native button drops out of
+                     the tab order on its own, so nothing here becomes focusable-but-invisible while
+                     loading (the exact ARIA violation `RGS-DD-7` calls out elsewhere in this spec). -->
+                <button
+                  type="button"
+                  disabled
+                  class="flex min-w-0 items-center gap-[10px] truncate rounded-[6px] border-0 bg-transparent p-0 cursor-default">
+                  <span class="h-[24px] w-[58px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
+                  <span class="h-[16px] w-[190px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+                </button>
               </div>
               <span class="h-[12px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)] max-[900px]:[grid-column:1] max-[900px]:[grid-row:2]"></span>
               <span class="h-[16px] w-[76px] animate-pulse justify-self-end rounded-[4px] bg-[var(--pr-surface-ground)] max-[900px]:[grid-column:2] max-[900px]:[grid-row:2]"></span>
@@ -623,24 +634,43 @@
 
               <!-- Identity: AoW code chip + name + "N KPIs remaining" subline -->
               <div class="flex min-w-0 items-center gap-[10px] max-[900px]:[grid-column:1] max-[900px]:[grid-row:1]">
-                <span class="inline-flex shrink-0 items-center justify-center rounded-[6px] bg-purple-100/80 px-[8px] py-[2px] font-mono text-[11px] font-bold text-purple-800 border border-purple-200/70 group-hover:bg-purple-200/80 transition-colors">
-                  {{ row.code }}
-                </span>
-                <div class="flex min-w-0 flex-col">
-                  <span
-                    class="min-w-0 truncate text-[14.5px] font-bold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors"
-                    [prTooltip]="row.name">
-                    {{ row.name }}
+                <!-- @akili-spec changes/aow-row-gesture-split (`RGS-T-1`, `RGS-DD-1`): the code+name
+                     becomes a real, keyboard-operable control — a native `<button>`, never
+                     `role="button"` (children-presentational; would risk hiding the achievement
+                     glyph/`Report`/`→` below from AT). The row stays a plain `<div>` with no ARIA
+                     role so those three buttons stay independently reachable. `min-w-0` (no fixed
+                     width) so the identity column keeps the starvation protection `OSF-DD-8` already
+                     gives it (`KZ-OAH-1` has recurred three times here). The click→`selectScope`
+                     wiring and `aria-pressed` are `RGS-T-2`'s scope, not added here.
+
+                     Rework (attempt 2, Reviewer finding): the accessible name is a `.sr-only` span
+                     that COMPOSES with the button's own visible content — NEVER `[attr.aria-label]`,
+                     which would REPLACE that content and silently drop the "N KPIs remaining" subline
+                     from the accessible name (WCAG 2.5.3 name-in-name). Same house pattern already
+                     established at `:291` for the scope trigger. -->
+                <button
+                  type="button"
+                  class="flex min-w-0 items-center gap-[10px] truncate rounded-[6px] border-0 bg-transparent p-0 text-left cursor-pointer transition-colors focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
+                  <span class="sr-only">{{ aowFilterVerb }}</span>
+                  <span class="inline-flex shrink-0 items-center justify-center rounded-[6px] bg-purple-100/80 px-[8px] py-[2px] font-mono text-[11px] font-bold text-purple-800 border border-purple-200/70 group-hover:bg-purple-200/80 transition-colors">
+                    {{ row.code }}
                   </span>
-                  @if (isRowComplete(row)) {
-                    <span class="inline-flex items-center gap-[5px] text-[11.5px] font-semibold text-emerald-700">
-                      <span class="material-icons-round text-[12px]" aria-hidden="true">check</span>
-                      {{ rowSubline(row) }}
+                  <div class="flex min-w-0 flex-col">
+                    <span
+                      class="min-w-0 truncate text-[14.5px] font-bold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors"
+                      [prTooltip]="row.name">
+                      {{ row.name }}
                     </span>
-                  } @else {
-                    <span class="text-[11.5px] text-[var(--pr-text-muted)]">{{ rowSubline(row) }}</span>
-                  }
-                </div>
+                    @if (isRowComplete(row)) {
+                      <span class="inline-flex items-center gap-[5px] text-[11.5px] font-semibold text-emerald-700">
+                        <span class="material-icons-round text-[12px]" aria-hidden="true">check</span>
+                        {{ rowSubline(row) }}
+                      </span>
+                    } @else {
+                      <span class="text-[11.5px] text-[var(--pr-text-muted)]">{{ rowSubline(row) }}</span>
+                    }
+                  </div>
+                </button>
                 @if (row.achievement) {
                   <!-- Row-tooltip fallback for the achievement cell hidden at/below 1100px (see
                        the ladder comment above). `hidden`/`max-[1101px]:inline-flex` are the

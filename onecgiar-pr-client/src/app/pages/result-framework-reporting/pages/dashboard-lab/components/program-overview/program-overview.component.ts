@@ -415,6 +415,19 @@ export class ProgramOverviewComponent {
   }
 
   /**
+   * Accessible-name PREFIX for the AoW identity button (`RGS-R-3`, `RGS-T-1`), rendered as a
+   * `.sr-only` span that COMPOSES with the button's own visible content (code + name + subline) —
+   * deliberately NOT `[attr.aria-label]`, which would REPLACE that content and silently drop the
+   * "N KPIs remaining" subline from the accessible name (WCAG 2.5.3 name-in-name; Reviewer finding,
+   * rework attempt 2). Same house pattern already established at `:291` for the scope trigger.
+   * Describes FILTERING — deliberately never "open", which is what the separate `→` action already
+   * announces (`aria-label="Open this Area of Work"` a few lines down). The click→`selectScope`
+   * wiring itself is `RGS-T-2`'s scope; this is structural/a11y only.
+   * @akili-spec changes/aow-row-gesture-split
+   */
+  readonly aowFilterVerb = 'Filter by Area of Work';
+
+  /**
    * The row's open icon + (once complete) "View results" button: same single navigation path as
    * `onReportAowRow` (`openAow`, OAH-R-4/DD-6) but with NO permission gate — `canReportW1W2` only
    * fences the reporting action, never plain navigation. Stops propagation so the row's own
