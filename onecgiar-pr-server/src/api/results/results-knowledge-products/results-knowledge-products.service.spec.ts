@@ -279,3 +279,171 @@ describe('ResultsKnowledgeProductsService — upsert clears the ToC MELIA study'
     expect(written(update).toc_melia_study_id).toBe('a-study-uuid');
   });
 });
+
+/**
+ * P2-3437 item 2 — creating a knowledge product as an admin answered 500 with
+ * "Cannot read properties of null (reading 'online_year')".
+ *
+ * `create` read `metadataCG.online_year` with no guard while the mapper hands back
+ * `metadataCG = null` whenever the product carries no metadata rows
+ * (`results-knowledge-products.mapper.ts` — `metadata.length ? {...} : null`), and the client
+ * spreads a `mqapJson` that starts life as `{}` (`result-creator.component.ts:36,309`), so the key
+ * can also be absent altogether.
+ *
+ * This is NOT the defect fixed by `ea750474f` (P2-3534): that one was `rawUrl.length` inside
+ * `extractHandleIdentifier`/`findOnCGSpace`, a handle with no document behind it. Different
+ * property, different method, different entry point.
+ *
+ * Same hand-built construction as the blocks above — five of the 26 collaborators are on this path.
+ */
+describe('ResultsKnowledgeProductsService — create with no CGSpace metadata (P2-3437)', () => {
+  const user: TokenDto = {
+    id: 42,
+    email: 'admin@cgiar.org',
+    first_name: 'Admin',
+    last_name: 'User',
+  };
+
+  const HANDLERS_ERROR = 1;
+  const RESULT_SERVICE = 3;
+  const ROLE_BY_USER = 12;
+  const VERSIONING = 17;
+  const GLOBAL_PARAMETER = 25;
+
+  /** The active phase, plus one earlier phase so the year-walk has somewhere to go. */
+  const ACTIVE_PHASE = {
+    id: 9,
+    cgspace_year: 2026,
+    previous_phase: 8,
+  };
+  const EARLIER_PHASE = {
+    id: 8,
+    cgspace_year: 2025,
+    previous_phase: null,
+  };
+
+  const build = ({ isAdmin }: { isAdmin: boolean }) => {
+    const deps: any[] = new Array(26).fill(null);
+
+    deps[HANDLERS_ERROR] = {
+      returnErrorRes: ({ error }: any) => ({
+        response: error?.response ?? { error: true },
+        message: error?.message ?? 'INTERNAL_SERVER_ERROR',
+        status: error?.status ?? HttpStatus.INTERNAL_SERVER_ERROR,
+      }),
+    };
+    // Stops the flow right after the phase decision: everything past it needs repositories this
+    // test does not build. The rejection message is the marker that the guard was cleared.
+    const createOwnerResult = jest
+      .fn()
+      .mockRejectedValue(new Error('reached createOwnerResult'));
+    deps[RESULT_SERVICE] = { createOwnerResult };
+    deps[ROLE_BY_USER] = { isUserAdmin: jest.fn().mockResolvedValue(isAdmin) };
+    deps[VERSIONING] = {
+      $_findActivePhase: jest.fn().mockResolvedValue(ACTIVE_PHASE),
+      $_findPhase: jest.fn().mockResolvedValue(EARLIER_PHASE),
+    };
+    deps[GLOBAL_PARAMETER] = {
+      findOne: jest.fn().mockResolvedValue({ value: '80' }),
+    };
+
+    const service = new (ResultsKnowledgeProductsService as any)(
+      ...deps,
+    ) as ResultsKnowledgeProductsService;
+
+    return { service, createOwnerResult };
+  };
+
+  /** The phase id `create` decided to file the new result under. */
+  const versionIdHandedOver = (createOwnerResult: jest.Mock) =>
+    createOwnerResult.mock.calls[0][3];
+
+  it('does not answer a JavaScript error when metadataCG is null', async () => {
+    const { service, createOwnerResult } = build({ isAdmin: true });
+
+    // Exactly what the mapper produces for a product with no metadata rows.
+    const res: any = await service.create(
+      { result_data: { result_type_id: 6 }, metadataCG: null } as any,
+      user,
+    );
+
+    expect(res.message).not.toContain('Cannot read properties');
+    expect(res.message).toBe('reached createOwnerResult');
+    expect(createOwnerResult).toHaveBeenCalled();
+  });
+
+  it('does not answer a JavaScript error when the payload has no metadataCG key at all', async () => {
+    const { service, createOwnerResult } = build({ isAdmin: true });
+
+    const res: any = await service.create(
+      { result_data: { result_type_id: 6 } } as any,
+      user,
+    );
+
+    expect(res.message).not.toContain('Cannot read properties');
+    expect(res.message).toBe('reached createOwnerResult');
+    expect(createOwnerResult).toHaveBeenCalled();
+  });
+
+  it('files it in the current phase — the same resolution a non-admin gets — when there is no publication year to align to', async () => {
+    const { service, createOwnerResult } = build({ isAdmin: true });
+
+    await service.create(
+      { result_data: { result_type_id: 6 }, metadataCG: null } as any,
+      user,
+    );
+    const adminVersionId = versionIdHandedOver(createOwnerResult);
+
+    const nonAdmin = build({ isAdmin: false });
+    await nonAdmin.service.create(
+      { result_data: { result_type_id: 6 }, metadataCG: null } as any,
+      user,
+    );
+
+    // Null means "no phase override": `createOwnerResult` resolves the active phase itself.
+    expect(adminVersionId).toBeNull();
+    expect(adminVersionId).toBe(
+      versionIdHandedOver(nonAdmin.createOwnerResult),
+    );
+  });
+
+  it('still aligns an admin to the phase matching the publication year', async () => {
+    const { service, createOwnerResult } = build({ isAdmin: true });
+
+    await service.create(
+      {
+        result_data: { result_type_id: 6 },
+        metadataCG: { online_year: 2026, issue_year: 2024 },
+      } as any,
+      user,
+    );
+
+    expect(versionIdHandedOver(createOwnerResult)).toBe(ACTIVE_PHASE.id);
+  });
+
+  it('still walks back to an earlier phase, and still refuses a year no phase has', async () => {
+    const walked = build({ isAdmin: true });
+    await walked.service.create(
+      {
+        result_data: { result_type_id: 6 },
+        metadataCG: { online_year: null, issue_year: 2025 },
+      } as any,
+      user,
+    );
+    expect(versionIdHandedOver(walked.createOwnerResult)).toBe(
+      EARLIER_PHASE.id,
+    );
+
+    const unmatched = build({ isAdmin: true });
+    const res: any = await unmatched.service.create(
+      {
+        result_data: { result_type_id: 6 },
+        metadataCG: { online_year: 1999, issue_year: 1999 },
+      } as any,
+      user,
+    );
+    expect(res.status).toBe(HttpStatus.UNPROCESSABLE_ENTITY);
+    expect(res.message).toContain('A phase with a cgspace year of 1999');
+    expect(unmatched.createOwnerResult).not.toHaveBeenCalled();
+  });
+});

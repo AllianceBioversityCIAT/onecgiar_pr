@@ -899,7 +899,18 @@ export class ResultsKnowledgeProductsService {
       if (!resultsKnowledgeProductDto.id) {
         let versionId: number = null;
         const is_admin = await this._roleByUseRepository.isUserAdmin(user.id);
-        if (is_admin != undefined && Boolean(is_admin)) {
+        // Admins get the knowledge product filed in the phase whose cgspace year matches the
+        // publication year. That alignment needs CGSpace metadata: `metadataCG` is null whenever
+        // the knowledge product carries no metadata rows (`results-knowledge-products.mapper.ts`
+        // — `metadata.length ? {...} : null`), and it is simply absent when the payload never
+        // went through an MQAP lookup. With no publication year there is nothing to align to, so
+        // the alignment is skipped and `versionId` stays null — the same phase resolution a
+        // non-admin gets — instead of dereferencing null and answering 500.
+        if (
+          is_admin != undefined &&
+          Boolean(is_admin) &&
+          resultsKnowledgeProductDto.metadataCG
+        ) {
           let kpVersion = currentVersion;
 
           const cgspaceKPYear =
