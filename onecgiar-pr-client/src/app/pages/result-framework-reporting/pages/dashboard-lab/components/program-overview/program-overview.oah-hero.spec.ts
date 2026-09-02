@@ -376,10 +376,19 @@ describe('ProgramOverviewComponent — OAH hero rows (segmented bar + figures + 
     expect(emitted).toEqual(['AOW01']);
   });
 
-  it('openAow receives the row code from the row click, the Report button, and the open icon — exactly one emission each (OAH-R-4 single output)', () => {
+  it('openAow still receives the row code from the Report button and the open icon — exactly one emission each, and never ALSO scopeChange (OAH-R-4 single output; row click reverted by RGS-T-2)', () => {
     fixture.componentRef.setInput('richRows', [honestAt1Percent]);
     fixture.detectChanges();
 
+    // REWRITTEN (`RGS-T-2`, `docs/specs/changes/aow-row-gesture-split`, tasks.md DoD bullet named
+    // this file+line explicitly): this test used to assert `rowEl.click()` emits `openAow` — that
+    // premise is DELIBERATELY REVERTED (execution.md §7 reversion challenge: the row body now
+    // filters via `selectScope`, not `openAow`; see `program-overview.scope.spec.ts`, describe
+    // "AoW row gestures split, and the selected state (RGS-T-2)" for the row's new coverage). The
+    // coverage this test owns is re-pointed, not deleted: `Report` and `→` still emit `openAow`,
+    // and — now that the row body emits a DIFFERENT output — the disqualifying case worth guarding
+    // is that neither of them ALSO emits `scopeChange`.
+    //
     // Deliberate edit (T-6 live finding, 2026-09-01): the fixed `1fr 260px 120px 170px` tracks
     // starved the row's identity column in the real layout — replaced with responsive tracks that
     // protect the name first (program-overview.component.html row grid). Selected by `.group.grid`
@@ -393,26 +402,35 @@ describe('ProgramOverviewComponent — OAH hero rows (segmented bar + figures + 
     expect(reportButton).toBeTruthy();
     expect(iconButton).toBeTruthy();
 
-    // Row click.
-    let emitted: string[] = [];
-    let sub = component.openAow.subscribe(code => emitted.push(code));
-    rowEl.click();
-    expect(emitted).toEqual(['AOW02']);
-    sub.unsubscribe();
-
-    // Report button — must not ALSO trigger the row's own click (stopPropagation).
-    emitted = [];
-    sub = component.openAow.subscribe(code => emitted.push(code));
+    // Report button — must not ALSO trigger the row's own click (stopPropagation, RGS-R-2), and
+    // must not ALSO change the scope.
+    let openEmitted: string[] = [];
+    let scopeEmitted: (string | null)[] = [];
+    let openSub = component.openAow.subscribe(code => openEmitted.push(code));
+    let scopeSub = component.scopeChange.subscribe(key => scopeEmitted.push(key));
     reportButton!.nativeElement.click();
-    expect(emitted).toEqual(['AOW02']);
-    sub.unsubscribe();
+    expect(openEmitted).toEqual(['AOW02']);
+    expect(scopeEmitted).toEqual([]);
+    openSub.unsubscribe();
+    scopeSub.unsubscribe();
 
-    // Open icon — same single path.
-    emitted = [];
-    sub = component.openAow.subscribe(code => emitted.push(code));
+    // Open icon — same single path, same guard.
+    openEmitted = [];
+    scopeEmitted = [];
+    openSub = component.openAow.subscribe(code => openEmitted.push(code));
+    scopeSub = component.scopeChange.subscribe(key => scopeEmitted.push(key));
     iconButton!.nativeElement.click();
-    expect(emitted).toEqual(['AOW02']);
-    sub.unsubscribe();
+    expect(openEmitted).toEqual(['AOW02']);
+    expect(scopeEmitted).toEqual([]);
+    openSub.unsubscribe();
+    scopeSub.unsubscribe();
+
+    // Row body — reverted premise: clicking it no longer emits openAow at all.
+    openEmitted = [];
+    openSub = component.openAow.subscribe(code => openEmitted.push(code));
+    rowEl.click();
+    expect(openEmitted).toEqual([]);
+    openSub.unsubscribe();
   });
 
   it('canReportW1W2=false disables the rebuilt Report button with aria-disabled and the exact tooltip, while keeping it keyboard-reachable (REH-R-8, pinned contract)', () => {

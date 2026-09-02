@@ -422,16 +422,34 @@ export class ProgramOverviewComponent {
    * rework attempt 2). Same house pattern already established at `:291` for the scope trigger.
    * Describes FILTERING — deliberately never "open", which is what the separate `→` action already
    * announces (`aria-label="Open this Area of Work"` a few lines down). The click→`selectScope`
-   * wiring itself is `RGS-T-2`'s scope; this is structural/a11y only.
+   * wiring lives in `onSelectAowRow` below (`RGS-T-2`); this constant is structural/a11y only.
    * @akili-spec changes/aow-row-gesture-split
    */
   readonly aowFilterVerb = 'Filter by Area of Work';
 
   /**
+   * `RGS-T-2` (`RGS-DD-1`, `RGS-DD-2`, `RGS-R-1`): the identity button's own gesture — the SAME
+   * `selectScope`/`scopeChange` path the row-level mouse convenience below it also calls, so the
+   * filter is reachable identically by mouse or keyboard (`RGS-R-3`). Stops propagation so a click
+   * here does not ALSO bubble into the row's own `(click)` and double-fire `selectScope` —
+   * harmless either way per `RGS-DD-2` (re-emitting the same key is idempotent, and `selectScope`
+   * is never a toggle, so this is also how `RGS-DD-6`'s "already-selected row does nothing" holds),
+   * but there is no reason to rely on that. Never touches `PROGRAMME_RESULTS_QUERY_PARAM_MAP` /
+   * `OverviewLink` / the `?scope=` value shape — `selectScope` already owns that contract,
+   * untouched by this task.
+   * @akili-spec changes/aow-row-gesture-split
+   */
+  onSelectAowRow(row: { code: string }, event: Event): void {
+    event.stopPropagation();
+    if (row.code) this.selectScope(row.code);
+  }
+
+  /**
    * The row's open icon + (once complete) "View results" button: same single navigation path as
    * `onReportAowRow` (`openAow`, OAH-R-4/DD-6) but with NO permission gate — `canReportW1W2` only
    * fences the reporting action, never plain navigation. Stops propagation so the row's own
-   * `(click)="openAow.emit(row.code)"` does not ALSO fire.
+   * `(click)="selectScope(row.code)"` (`RGS-T-2`) does not ALSO fire — this action must navigate,
+   * and ONLY navigate (`RGS-R-2`).
    * @akili-spec changes/overview-aow-progress-hero
    */
   onOpenAowRowAction(row: { code: string }, event: Event): void {
@@ -644,7 +662,8 @@ export class ProgramOverviewComponent {
 
   /**
    * `REH-R-7`/`REH-AC-15`: the row's inline Report button. Stops propagation so the row's own
-   * `(click)="openAow.emit(row.code)"` does not ALSO fire — otherwise every click emits twice.
+   * `(click)="selectScope(row.code)"` (`RGS-T-2`) does not ALSO fire — otherwise every click would
+   * both navigate AND change the scope, violating `RGS-R-2`.
    * Typed to the minimal shape both `AowProgressRow` and `OverviewAowProgressRowRich` satisfy
    * (`changes/overview-aow-progress-hero` OAH-T-3: the hero row now iterates `richRows`).
    */

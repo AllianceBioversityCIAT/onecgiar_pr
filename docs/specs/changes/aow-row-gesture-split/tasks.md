@@ -38,20 +38,20 @@
 
 ---
 
-### `RGS-T-2` — Split the gestures, and render the selected state [ ]
+### `RGS-T-2` — Split the gestures, and render the selected state [x]
 
 - **Type:** `client` · **Size:** `M` · **Depends on:** `RGS-T-1` · **Blocks:** —
 - **Implements:** `RGS-R-1`, `RGS-R-2`, `RGS-R-4` · **Design ref:** `RGS-DD-2`, `RGS-DD-4`, `RGS-DD-6`
 - **Skills:** `angular-developer` · **Effort:** `high`
 - **Scope:** the row body and the name button both call the scope selection; `Report` and `→` keep navigating. The active row renders its selected state.
 - **Definition of done:**
-  - [ ] Row body click → scope selection via the existing `selectScope` / `scopeChange` path. **BUT it must NOT** touch `PROGRAMME_RESULTS_QUERY_PARAM_MAP`, `OverviewLink`, or the `?scope=` value shape.
-  - [ ] `Report` and `→` navigate and **do not** change the scope — the existing `stopPropagation()` guards are preserved, not rewritten.
-  - [ ] Clicking the **already-selected** row does nothing (`RGS-DD-6`) — not a toggle.
-  - [ ] Selected state: `border-2` toggling `--pr-color-primary-300` ↔ `transparent`. **AND IT MUST** carry `border-2` in **both** branches so rows do not shift as the selection moves.
-  - [ ] `aria-pressed` on the name button reflects the active scope.
-  - [ ] **`program-overview.oah-hero.spec.ts:379-401` REWRITTEN.** It currently asserts `rowEl.click()` emits `openAow`; that premise is deliberately reverted. This is a named obligation from the reversion challenge, not a discovery for the Implementer. **AND IT MUST** still assert that `Report` and `→` *do* emit `openAow` — do not delete the coverage, re-point it.
-  - [ ] `component.spec.ts:932` reviewed: its premise ("the row's own click must not ALSO fire") is now vacuous. Update or remove it with a one-line note saying which surviving assertion carries the invariant (`KZ-OAH-3`).
+  - [x] Row body click → scope selection via the existing `selectScope` / `scopeChange` path. **BUT it must NOT** touch `PROGRAMME_RESULTS_QUERY_PARAM_MAP`, `OverviewLink`, or the `?scope=` value shape.
+  - [x] `Report` and `→` navigate and **do not** change the scope — the existing `stopPropagation()` guards are preserved, not rewritten.
+  - [x] Clicking the **already-selected** row does nothing (`RGS-DD-6`) — not a toggle.
+  - [x] Selected state: `border-2` toggling `--pr-color-primary-300` ↔ `transparent`. **AND IT MUST** carry `border-2` in **both** branches so rows do not shift as the selection moves.
+  - [x] `aria-pressed` on the name button reflects the active scope.
+  - [x] **`program-overview.oah-hero.spec.ts:379-401` REWRITTEN.** It currently asserts `rowEl.click()` emits `openAow`; that premise is deliberately reverted. This is a named obligation from the reversion challenge, not a discovery for the Implementer. **AND IT MUST** still assert that `Report` and `→` *do* emit `openAow` — do not delete the coverage, re-point it.
+  - [x] `component.spec.ts:932` reviewed: its premise ("the row's own click must not ALSO fire") is now vacuous. Update or remove it with a one-line note saying which surviving assertion carries the invariant (`KZ-OAH-3`).
 - **Verification:** `npx jest … dashboard-lab`. Dispatch a click on the row, on `Report`, and on `→`; assert exactly one of `scopeChange` / `openAow` fires each time and never both.
 - **What disqualifies the evidence:** a green suite whose row-click test was deleted rather than re-pointed. The test count must be explained, never absorbed.
 - **Input that would make it fail:** remove `stopPropagation` from `onOpenAowRowAction` → the "never both" assertion fails.

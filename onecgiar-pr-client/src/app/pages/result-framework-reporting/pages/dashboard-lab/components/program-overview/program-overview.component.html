@@ -523,8 +523,15 @@
                  real row's comment); below 900px (`max-[900px]`, exclusive — tiles exactly
                  against `min-[900px]` with no gap) the row becomes a 2-col/2-row grid via
                  explicit [grid-column]/[grid-row] placement (identity+actions row 1, bar+figures
-                 row 2) rather than a flex spacer hack. See the real row for the full rationale. -->
-            <div class="grid grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content_max-content] items-center gap-[16px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[16px] py-[12px] min-[900px]:max-[1101px]:grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content] max-[900px]:grid-cols-[minmax(0,1fr)_max-content] max-[900px]:gap-y-[8px]">
+                 row 2) rather than a flex spacer hack. See the real row for the full rationale.
+
+                 `RGS-T-2` parity note: the real row's border became `border-2` (selected-state
+                 toggle, RGS-DD-4). Matched here as `border-2 border-[var(--pr-border)]` — same
+                 visible neutral outline as before, just the WIDTH kept in step with the real row —
+                 so the skeleton→content swap doesn't also shift by the 1px the two border widths
+                 would otherwise disagree on (the exact class of shift `KZ-OAH-1` keeps recurring
+                 on). Colour is untouched: this is a loading skeleton, never a selected state. -->
+            <div class="grid grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content_max-content] items-center gap-[16px] rounded-[10px] border-2 border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[16px] py-[12px] min-[900px]:max-[1101px]:grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content] max-[900px]:grid-cols-[minmax(0,1fr)_max-content] max-[900px]:gap-y-[8px]">
               <div class="flex items-center gap-[10px] max-[900px]:[grid-column:1] max-[900px]:[grid-row:1]">
                 <!-- @akili-spec changes/aow-row-gesture-split: mirrors the real row's new identity
                      button below (RGS-DD-5 parity — the skeleton never promises a control the real
@@ -627,9 +634,17 @@
                      each cell (identity+actions row 1, bar+figures row 2) instead of a flex
                      spacer hack — no shared 5-column grid, no horizontal scroll (§346), `Report`
                      stays a labelled button (never icon-only). -->
+            <!-- @akili-spec changes/aow-row-gesture-split (`RGS-T-2`, `RGS-DD-2`, `RGS-DD-6`): the
+                 row-level click is now a MOUSE CONVENIENCE that calls the SAME `selectScope` path
+                 as the identity button below — not a toggle, so re-clicking the already-selected
+                 row just re-emits the same key (idempotent, harmless — `RGS-DD-6`). It reverts
+                 `openAow.emit(row.code)`, deliberately (`execution.md` §7 reversion challenge):
+                 `Report` and `→` keep that output untouched (`onOpenAowRowAction`/`onReportAowRow`,
+                 `RGS-R-2`), via their own pre-existing `stopPropagation()` guards, unchanged. -->
             <div
-              (click)="row.code ? openAow.emit(row.code) : null"
-              class="group grid grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content_max-content] items-center gap-[16px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[16px] py-[12px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs min-[900px]:max-[1101px]:grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content] max-[900px]:grid-cols-[minmax(0,1fr)_max-content] max-[900px]:gap-y-[8px]"
+              (click)="row.code ? selectScope(row.code) : null"
+              class="group grid grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content_max-content] items-center gap-[16px] rounded-[10px] bg-[var(--pr-surface-ground)] px-[16px] py-[12px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs min-[900px]:max-[1101px]:grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content] max-[900px]:grid-cols-[minmax(0,1fr)_max-content] max-[900px]:gap-y-[8px]"
+              [class]="selectedScope() === row.code ? 'border-2 border-[var(--pr-color-primary-300)]' : 'border-2 border-transparent'"
               [class.cursor-pointer]="!!row.code">
 
               <!-- Identity: AoW code chip + name + "N KPIs remaining" subline -->
@@ -640,8 +655,14 @@
                      glyph/`Report`/`→` below from AT). The row stays a plain `<div>` with no ARIA
                      role so those three buttons stay independently reachable. `min-w-0` (no fixed
                      width) so the identity column keeps the starvation protection `OSF-DD-8` already
-                     gives it (`KZ-OAH-1` has recurred three times here). The click→`selectScope`
-                     wiring and `aria-pressed` are `RGS-T-2`'s scope, not added here.
+                     gives it (`KZ-OAH-1` has recurred three times here).
+
+                     `RGS-T-2` (`RGS-DD-1`, `RGS-DD-2`, `RGS-R-1`, `RGS-R-4`): `(click)` calls
+                     `onSelectAowRow`, the SAME `selectScope` path as the row's own mouse-convenience
+                     click above, and stops propagation for cleanliness (re-emitting the same key
+                     twice is harmless, DD-2, but there is no reason to rely on that).
+                     `aria-pressed` reflects whether THIS row's AoW is the active scope — the honest
+                     mapping for a filter control that behaves like a toggle-on-select (`RGS-DD-4`).
 
                      Rework (attempt 2, Reviewer finding): the accessible name is a `.sr-only` span
                      that COMPOSES with the button's own visible content — NEVER `[attr.aria-label]`,
@@ -650,6 +671,8 @@
                      established at `:291` for the scope trigger. -->
                 <button
                   type="button"
+                  (click)="onSelectAowRow(row, $event)"
+                  [attr.aria-pressed]="selectedScope() === row.code"
                   class="flex min-w-0 items-center gap-[10px] truncate rounded-[6px] border-0 bg-transparent p-0 text-left cursor-pointer transition-colors focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
                   <span class="sr-only">{{ aowFilterVerb }}</span>
                   <span class="inline-flex shrink-0 items-center justify-center rounded-[6px] bg-purple-100/80 px-[8px] py-[2px] font-mono text-[11px] font-bold text-purple-800 border border-purple-200/70 group-hover:bg-purple-200/80 transition-colors">

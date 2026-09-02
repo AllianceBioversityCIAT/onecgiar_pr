@@ -21,6 +21,7 @@ Consequences, recorded because they change what the evidence in this log means:
 - Verification for `RGS-T-1` was therefore run **scoped** to `…/components/program-overview` (206/206). The Reviewer independently ruled the scoped run sufficient for this task: the three touched files are confined to `program-overview/`, the component is purely presentational, and the diff changes no input/output surface, so the host binding at `dashboard-lab.component.html:1163` cannot be affected.
 - Every diff handed to the Reviewer was **path-scoped** to `program-overview/`, so no foreign change entered the audit.
 - **Any commit for this spec must stage its three paths explicitly.** A bare `git commit -a` here would sweep up the other session's work.
+- **The scoped run is a temporary concession, not a standing excuse.** Recorded at the `RGS-T-1` Reviewer's own insistence: scoping was defensible *only* because this component is purely presentational and no host binding changed. **The full `dashboard-lab` suite must be green again before `RGS-T-4` and before archive** — the other session's `link.origin: 'W1/W2'` failures are to be re-checked once that session lands, never carried forward as permanently excused. If a later task narrows its verification the same way, it must re-earn the concession rather than inherit it.
 
 ## 2. Task Execution History
 
@@ -88,12 +89,79 @@ Surfaced by the Reviewer during `RGS-T-1`. **These are obligations, not advisori
 
 | Signal | Budget (design.md §8) | Actual after 1 of 4 tasks | Status |
 |---|---|---|---|
-| Review rounds | **1** | **3** (2 reworks) | ❌ **exceeded** |
-| LOC | ~230 total (≈130 prod / ≈100 tests) | 196 insertions / 21 deletions — tests alone **138 vs ~100 budgeted for the whole spec** | ⚠️ 85% consumed, 3 tasks remain |
-| Tasks | 4 | 1 complete | on track |
+| Review rounds | **1** | **3** on `RGS-T-1`, **1** on `RGS-T-2` | ❌ **exceeded on `T-1`; `T-2` was clean** |
+| LOC | ~230 total (≈130 prod / ≈100 tests) | **~443 insertions / 60 deletions** after 2 of 4 tasks | ❌ **~192% of budget, `RGS-T-3` (largest remaining) unstarted** |
+| Tasks | 4 | 2 complete | on track |
 
 **Cause, honestly attributed:** round 2 was a real defect the budget should have anticipated (an a11y task tripping an a11y rule the same file already documents). Round 3 was **process-inflicted** — a Leader-relayed advisory that had not been examined. Only round 2 is evidence the spec was mis-sized.
 
 On LOC: this component's house style is densely commented and the Reviewer treated the rationale comments as required, not padding; a meaningful share of the 196 is comment and test, not production logic. Production insertions are ~79, of which roughly half are comments.
 
-**Escalated to the user at the `RGS-T-1` gate rather than absorbed.**
+**Escalated to the user at the `RGS-T-1` gate rather than absorbed; the owner elected to continue.** Re-confirmed at the `RGS-T-2` gate as a second data point: `RGS-T-2` itself was clean (1 attempt, 0 reworks), so the overrun is **size, not rework churn**. The LOC estimate, not the execution, is what was wrong — and `RGS-T-3` is the largest remaining task.
+
+---
+
+### `RGS-T-2` — Split the gestures, and render the selected state — **PASS**
+
+| Field | Value |
+|---|---|
+| Date | 2026-09-02 |
+| Status | **PASS** (Reviewer, attempt 1 — no rework) |
+| Implementer attempts | **1** |
+| Skills assigned | `angular-developer` |
+| Effort | `high` |
+| Requirements covered | `RGS-R-1`, `RGS-R-2`, `RGS-R-4` · Design `RGS-DD-2`, `RGS-DD-4`, `RGS-DD-6` · `RGS-AC-1`, `RGS-AC-2`, `RGS-AC-4` |
+| Files changed | `program-overview.component.html` (+35/−4) · `.component.ts` (+25/−7) · `.scope.spec.ts` (+158/−?) · `.oah-hero.spec.ts` (+56/−21) · `.component.spec.ts` (+12/−1) — **+247/−39** |
+| Tests | 206 → **213** |
+
+#### What was built
+
+Row body `(click)` reverted from `openAow.emit(row.code)` to `selectScope(row.code)`; the identity button gained its own `(click)="onSelectAowRow(row, $event)"` and `[attr.aria-pressed]`. Selected state is a `[class]` toggle carrying `border-2` in **both** branches (`--pr-color-primary-300` ↔ `transparent`). One new method, `onSelectAowRow` — `stopPropagation()` then `selectScope`.
+
+**Leader pre-check before the audit:** diffed `.component.ts` with comments filtered out. The only logic addition is `onSelectAowRow`; `onOpenAowRowAction` and `onReportAowRow` bodies are untouched, so DoD 2's "guards preserved, not rewritten" holds literally. The Reviewer independently confirmed at `:455-458` and `:671-675`.
+
+#### The disqualifier, discharged
+
+`RGS-T-2`'s named disqualifier is *"a green suite whose row-click test was deleted rather than re-pointed — the test count must be explained, never absorbed."* The Reviewer verified the arithmetic **independently** rather than accepting the report: `rg '^\s*it\('` across the four spec files returns 57 + 16 + 60 + 80 = **213**, against a 206 baseline; the new `RGS-T-2` describe contributes exactly **7**; every removed `it(` line has a matching added one — three renames, **zero deletions**.
+
+Three row-click tests re-pointed, each with a **real negative half** (not merely asserting the new behaviour, but that the old one no longer fires):
+
+| Test | Old premise | New premise |
+|---|---|---|
+| `oah-hero.spec.ts:379` | row click → `openAow(['AOW02'])` | row block asserts `openAow === []`; Report and `→` still assert `openAow === ['AOW02']`, each now also `scopeEmitted === []`. Net **+3 assertions, −1** (the deliberately reverted premise) |
+| `scope.spec.ts` `RGS-T-1` Enter/Space | click bubbles to row → `openAow` | `scopeChange === ['AOW02']` **and** `openAow === []`, on a `detail: 0` MouseEvent |
+| `component.spec.ts:932` | claimed a row-click guard | title/comment updated, premise flagged vacuous, `KZ-OAH-3` note names the surviving assertion (`expect(emitted).toEqual(['AOW02'])`); logic byte-identical |
+
+**Both forward pointers from `RGS-T-1` discharged** — obligation 8 (the third row-click test re-pointed, not deleted) and obligation 9 (Enter/Space residue closed: `button.click()` now proves the wired handler a real Enter/Space would reach, and the test title says so). This is the mechanism working as intended: a pointer filed three tasks ago is carried by the brief or by nobody.
+
+#### Risks the Leader flagged for audit, adjudicated
+
+- **`[class]` clobbering the static class list** (`RGS-DD-3`'s ladder at stake) — **not a hazard, and not a novel technique.** Lines `:328`/`:347` of the same template already use the identical `[class]` pattern over a static list (the scope listbox options). Ladder survival proven *behaviourally*, not by inspection: `realRow()` selects by attribute-substring match on the serialized class list and the ladder tests at `:769-795` pass. Only `border border-[var(--pr-border)]` moved out — the intended toggle.
+- **Lost resting `--pr-border` outline** — **spec-mandated, not a regression.** `RGS-DD-4` says "`border-2` toggling `--pr-color-primary-300` ↔ **transparent**, exactly as the listbox option does". Keeping `--pr-border` unselected would have been the deviation. See the standing advisory below.
+- **Skeleton `border` → `border-2`** (declared judgment call, unnamed in the DoD) — **in scope, serves `RGS-DD-5`.** The colour mismatch at rest is forced by DD-4 regardless; width was the only part still fixable, and leaving it would have re-created the 1px skeleton→content shift `KZ-OAH-1` has recurred on three times.
+- `RGS-DD-6` holds **in effect, not merely in emission**: the host binds `(scopeChange)="overviewScope.set($event)"`, and a signal `.set()` with an equal primitive is a no-op, so re-selecting the same key genuinely does nothing downstream. The test proves it never emits `null`.
+
+**Verification:** scoped `…/components/program-overview` → **213/213**. Wider `…/dashboard-lab` → **749/749, fully green**. `npx ng lint --quiet` clean. `npm run build:dev` clean.
+
+**Reviewer summary:** *"`RGS-T-2` conforms — the row body and identity button both call the existing `selectScope`/`scopeChange` path, `Report` and `→` navigate and only navigate through their preserved `stopPropagation()` guards, the selected state carries `border-2` in both branches. The 206 → 213 count is arithmetically explained: three row-click tests re-pointed with real negative halves, none deleted, seven added."*
+
+#### `ADVISORY` findings (4R lens — recorded, non-gating)
+
+- **READABILITY** — `program-overview.scope.spec.ts:834` is now stale: *"…does not ALSO **navigate** the row"*, with a `rowNavigated` variable. The assertion remains true and valuable (propagation is stopped), but the row no longer navigates. The one row-behaviour comment `RGS-T-2` did not update. One-line fix when `RGS-T-3` next opens this file.
+- **READABILITY** — the rewritten Enter/Space test title is ~700 characters: honest and load-bearing, but jest output for this suite is now hard to scan. The reasoning would read better as the leading comment (where it is already duplicated) with a short title.
+- **RISK / D6** — the row's border went 1px → 2px in *both* branches, adding 2px to its rendered box at every breakpoint. Given this component's overflow history (`OSF-AC-9`/`AC-10`, three tasks spent on it), **`RGS-T-4`'s 900px and 768px readings must be treated as a re-measure, not a formality.**
+- **RISK — a genuine gap in `requirements.md` §9, not a task.** With the unselected border transparent, an unselected row's separation from the card rests entirely on `--pr-surface-ground` vs `--pr-surface-card`. `RGS-T-4` measures the *selected* indicator at ≥3:1 (D4); **no defect class covers "resting affordance lost"**. Per the Advisory-Never-Becomes-A-Task rule this is *not* being minted into `RGS-T-4`'s DoD — it is escalated to the owner as a possible spec gap at the `RGS-T-2` gate.
+- **BUDGET** — second data point; see §3.
+
+#### Standing condition discharged
+
+§1 recorded that the full `dashboard-lab` suite had to be green again before `RGS-T-4`/archive. It is: **749/749** on this run. The concurrent session's `link.origin` failures are gone — that session's state moved on. No later task inherits the scoped-run concession.
+
+## 4. Constitution Impact: `RGS-T-1`, `RGS-T-2`
+
+No module created, no boundary moved, no new package. The component's **behavioural** public surface did change (an AoW row click now filters rather than navigates), but `…/components/program-overview/CLAUDE.md` never documented the row's click semantics, so it is **not actively misleading** and the sync defers to `/akili-archive` rather than being forced into this task's commit.
+
+Pending for the archive sync:
+- `program-overview/CLAUDE.md` — add the gesture split (row + identity button filter; `Report`/`→` navigate) and the `aria-pressed`/`border-2` selected state. Its line references `:510`/`:588` for the skeleton and real row are now stale.
+- **CodeGraph re-index pending** — `program-overview.component.{html,ts}` changed substantially across both tasks.
+- Carried from `design.md` §8, still not this spec's scope: `reporting-aow-table`'s collapse leaves 20 focusable buttons tabbable while collapsed and `aria-hidden`. Same fix (`inert`), different file — for the default-branch apply pass.

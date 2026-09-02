@@ -929,10 +929,20 @@ describe('ProgramOverviewComponent', () => {
       expect(component.activeSection()).toBe('bilateral');
     });
 
-    it('(b) clicking a row\'s Report button yields exactly one openAow("AOW02") emission — the row\'s own click must not ALSO fire', () => {
+    it('(b) clicking a row\'s Report button yields exactly one openAow("AOW02") emission (its own stopPropagation guard, preserved verbatim)', () => {
       // @akili-spec changes/overview-aow-progress-hero — OAH-T-3 deliberate edit: the hero row is
       // now fed by `richRows` (design DD-4), not the thin `aowProgress` input, which stays wired
       // only to KPI card 4 / the section badge / `aowStats` and no longer drives this row.
+      //
+      // `KZ-OAH-3` note (`RGS-T-2`, `docs/specs/changes/aow-row-gesture-split`): this title's
+      // original premise — "the row's own click must not ALSO fire [openAow]" — is now VACUOUS.
+      // `RGS-T-2` reverted the row's own click from `openAow.emit` to `selectScope`, so the row no
+      // longer emits `openAow` at all; there is nothing left for `Report`'s click to duplicate on
+      // THIS output. What still holds, and what this test still proves, is narrower: `Report`'s
+      // own `stopPropagation()` guard is untouched, so its click never double-fires `openAow` on
+      // itself. The broader cross-output invariant this test used to also carry — "exactly one of
+      // scopeChange/openAow fires, never both" — now lives in `program-overview.scope.spec.ts`,
+      // describe "AoW row gestures split, and the selected state (RGS-T-2)".
       fixture.componentRef.setInput('richRows', [
         { code: 'AOW02', name: 'Genetic Innovation', complete: 0, inProgress: 1, notStarted: 3, zeroTarget: 0, reported: 1, total: 4, remaining: 3 }
       ]);

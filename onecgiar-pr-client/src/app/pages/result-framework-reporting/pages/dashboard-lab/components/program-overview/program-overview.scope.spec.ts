@@ -9,6 +9,7 @@
 // never enter the keyboard order, arrow-key movement (including the group-boundary case), Enter/
 // Escape, and the emitted `scopeChange`.
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ProgramOverviewComponent, HeatmapModel, TocAchievement, overviewScopeDisplayCode } from './program-overview.component';
 import type { OverviewScopeOption, OverviewScopeBreakdown, OverviewAowProgressRowRich } from '../../dashboard-lab.component';
 
@@ -870,7 +871,8 @@ describe('ProgramOverviewComponent — AoW row responsive ladder (OSF-T-2b)', ()
 
 // `RGS-T-1` (`changes/aow-row-gesture-split`) — the AoW code+name becomes a real, native
 // keyboard-operable control. Covers `RGS-R-3`, `RGS-R-6`, `RGS-DD-1`, `RGS-DD-3`. Split from the
-// gesture wiring itself (`selectScope`/`aria-pressed`), which is `RGS-T-2`'s scope — not present yet.
+// gesture wiring itself (`selectScope`/`aria-pressed`), which is `RGS-T-2`'s scope — see the
+// "AoW row gestures split, and the selected state (RGS-T-2)" describe block below.
 describe('ProgramOverviewComponent — AoW identity button is a real control (RGS-T-1)', () => {
   let fixture: ComponentFixture<ProgramOverviewComponent>;
   let component: ProgramOverviewComponent;
@@ -962,7 +964,7 @@ describe('ProgramOverviewComponent — AoW identity button is a real control (RG
     expect(button.className).not.toMatch(/\bw-\[/); // no fixed-width utility (min-w-0 alone doesn't match this)
   });
 
-  it('Enter and Space are native <button> activation — jsdom does not simulate the browser\'s keydown/keyup→click translation for buttons (verified: dispatching keydown does not fire click), so a real physical key press is RGS-T-4\'s browser gate; what this proves is that the click a real Enter/Space produces is NOT swallowed by the new button (no premature stopPropagation, not disabled)', () => {
+  it('Enter and Space are native <button> activation, and the click they produce now reaches the button\'s OWN handler (RGS-T-2 closes the RGS-T-1 residue, execution.md forward pointer 2): jsdom performs no keydown→click translation for buttons (verified: dispatching keydown alone does not fire click), so a real PHYSICAL key press stays RGS-T-4\'s browser gate — but `button.click()`/a dispatched MouseEvent IS the click a real Enter/Space activation PRODUCES, and since `RGS-T-2` wires this button\'s own `(click)`, that dispatch now proves the handler a real Enter/Space would reach: it fires `scopeChange`, and — because `onSelectAowRow` stops propagation — it no longer also bubbles into the row and fires `openAow` the way it did before this button had its own click', () => {
     const button = identityButton();
     expect(button.hasAttribute('disabled')).toBe(false);
     expect(button.tabIndex).not.toBe(-1);
@@ -971,16 +973,152 @@ describe('ProgramOverviewComponent — AoW identity button is a real control (RG
     button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     button.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
 
-    // The click a real browser's Enter/Space activation PRODUCES: since `RGS-T-2` has not yet wired
-    // this button's own (click), the click bubbles to the row's existing handler — proving the new
-    // button does not block or swallow it. `MouseEvent.detail === 0` is how a real browser marks a
-    // keyboard-originated click (vs. a mouse click), reproduced here for fidelity.
+    // The click a real browser's Enter/Space activation PRODUCES. `MouseEvent.detail === 0` is how
+    // a real browser marks a keyboard-originated click (vs. a mouse click), reproduced here for
+    // fidelity.
+    //
+    // REVERTED PREMISE (`RGS-T-2`, forward pointer 1 in execution.md — "a third row-click test now
+    // exists... `RGS-T-2` reverts that premise"): `RGS-T-1` left this button's own `(click)`
+    // unwired, so this SAME dispatch used to bubble to the row's `openAow` handler — proving only
+    // that the new button didn't block it. Now the button owns `(click)` itself (`onSelectAowRow`,
+    // `RGS-DD-1`/`RGS-DD-2`) and stops propagation, so the dispatch must emit `scopeChange('AOW02')`
+    // and must NOT reach `openAow` at all.
     const realRow = fixture.nativeElement.querySelector('div.group.grid') as HTMLElement;
-    const emitted: string[] = [];
-    const sub = component.openAow.subscribe(code => emitted.push(code));
+    const openAowEmitted: string[] = [];
+    const scopeChangeEmitted: (string | null)[] = [];
+    const openAowSub = component.openAow.subscribe(code => openAowEmitted.push(code));
+    const scopeChangeSub = component.scopeChange.subscribe(key => scopeChangeEmitted.push(key));
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
-    expect(emitted).toEqual(['AOW02']);
-    sub.unsubscribe();
+    expect(scopeChangeEmitted).toEqual(['AOW02']);
+    expect(openAowEmitted).toEqual([]);
+    openAowSub.unsubscribe();
+    scopeChangeSub.unsubscribe();
     expect(realRow).toBeTruthy();
+  });
+});
+
+// `RGS-T-2` (`changes/aow-row-gesture-split`) — the row body and the identity button both call the
+// scope selection; `Report` and `→` keep navigating and never touch the scope; the active row
+// renders its selected state. Covers `RGS-R-1`, `RGS-R-2`, `RGS-R-4`, `RGS-DD-2`, `RGS-DD-4`,
+// `RGS-DD-6`. Split from `RGS-T-1`'s structural/a11y-only coverage above.
+describe('ProgramOverviewComponent — AoW row gestures split, and the selected state (RGS-T-2)', () => {
+  let fixture: ComponentFixture<ProgramOverviewComponent>;
+  let component: ProgramOverviewComponent;
+
+  const row: OverviewAowProgressRowRich = {
+    code: 'AOW02',
+    name: 'Accelerated Breeding',
+    complete: 1,
+    inProgress: 2,
+    notStarted: 3,
+    zeroTarget: 0,
+    reported: 3,
+    total: 6,
+    remaining: 3
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ProgramOverviewComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ProgramOverviewComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('richRows', [row]);
+    fixture.detectChanges();
+  });
+
+  function rowEl(): HTMLElement {
+    return fixture.nativeElement.querySelector('div.group.grid') as HTMLElement;
+  }
+
+  function identityButton(): HTMLButtonElement {
+    const identityCell = rowEl().querySelector('.flex.min-w-0.items-center.gap-\\[10px\\]') as HTMLElement;
+    return identityCell.querySelector('button') as HTMLButtonElement;
+  }
+
+  function findButtonByText(text: string): HTMLButtonElement {
+    return fixture.debugElement.queryAll(By.css('button')).find(b => b.nativeElement.textContent.trim() === text)!
+      .nativeElement;
+  }
+
+  function openIconButton(): HTMLButtonElement {
+    return fixture.debugElement
+      .queryAll(By.css('button'))
+      .find(b => b.nativeElement.getAttribute('aria-label') === 'Open this Area of Work')!.nativeElement;
+  }
+
+  /** Dispatches a click and records which of the two outputs fired — the DoD's own "exactly one of
+   *  scopeChange / openAow fires each time and never both" (tasks.md, `RGS-T-2` verification). */
+  function clickAndRecord(el: HTMLElement): { scope: (string | null)[]; open: string[] } {
+    const scope: (string | null)[] = [];
+    const open: string[] = [];
+    const s1 = component.scopeChange.subscribe(k => scope.push(k));
+    const s2 = component.openAow.subscribe(c => open.push(c));
+    el.click();
+    s1.unsubscribe();
+    s2.unsubscribe();
+    return { scope, open };
+  }
+
+  it('row body click selects the scope via the existing selectScope/scopeChange path, and does NOT navigate (RGS-R-1, RGS-AC-1)', () => {
+    const { scope, open } = clickAndRecord(rowEl());
+    expect(scope).toEqual(['AOW02']);
+    expect(open).toEqual([]);
+  });
+
+  it('the identity button click ALSO selects the scope via the same path, and does NOT navigate (RGS-DD-1, RGS-DD-2)', () => {
+    const { scope, open } = clickAndRecord(identityButton());
+    expect(scope).toEqual(['AOW02']);
+    expect(open).toEqual([]);
+  });
+
+  it('Report navigates and does NOT change the scope, even when the row is already the selected scope (RGS-R-2, AC-2 "keep working when already selected")', () => {
+    fixture.componentRef.setInput('selectedScope', 'AOW02');
+    fixture.detectChanges();
+    const { scope, open } = clickAndRecord(findButtonByText('Report'));
+    expect(open).toEqual(['AOW02']);
+    expect(scope).toEqual([]);
+  });
+
+  it('→ navigates and does NOT change the scope (RGS-R-2, RGS-AC-2)', () => {
+    const { scope, open } = clickAndRecord(openIconButton());
+    expect(open).toEqual(['AOW02']);
+    expect(scope).toEqual([]);
+  });
+
+  it('clicking the already-selected row is NOT a toggle (RGS-DD-6) — it re-selects the SAME key, idempotently (RGS-DD-2), never clears it', () => {
+    fixture.componentRef.setInput('selectedScope', 'AOW02');
+    fixture.detectChanges();
+    const { scope, open } = clickAndRecord(rowEl());
+    expect(scope).toEqual(['AOW02']); // re-emits the SAME key, never `null` — a toggle would clear it
+    expect(open).toEqual([]);
+  });
+
+  it('aria-pressed on the identity button reflects the active scope (RGS-R-4)', () => {
+    expect(identityButton().getAttribute('aria-pressed')).toBe('false');
+
+    fixture.componentRef.setInput('selectedScope', 'AOW02');
+    fixture.detectChanges();
+    expect(identityButton().getAttribute('aria-pressed')).toBe('true');
+
+    fixture.componentRef.setInput('selectedScope', 'AOW01');
+    fixture.detectChanges();
+    expect(identityButton().getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('the selected-state border carries border-2 in BOTH branches, only the COLOR toggles, so the row does not shift as the selection moves (RGS-DD-4)', () => {
+    // jsdom proves the class is present, never that it paints at ≥3:1 — that is D4, RGS-T-4's
+    // browser gate (requirements.md §9). This asserts the structural half: the WIDTH utility never
+    // changes between the two branches, only the color utility. `classList.contains` (exact token
+    // match), not a substring check on `className` — the row's static `hover:border-[var(--pr-
+    // color-primary-300)]` utility ALSO contains the plain selected-color class as a substring, so
+    // `.toContain(...)` on the raw string would false-positive on the unselected branch too.
+    expect(rowEl().classList.contains('border-2')).toBe(true);
+    expect(rowEl().classList.contains('border-transparent')).toBe(true);
+    expect(rowEl().classList.contains('border-[var(--pr-color-primary-300)]')).toBe(false);
+
+    fixture.componentRef.setInput('selectedScope', 'AOW02');
+    fixture.detectChanges();
+    expect(rowEl().classList.contains('border-2')).toBe(true);
+    expect(rowEl().classList.contains('border-[var(--pr-color-primary-300)]')).toBe(true);
+    expect(rowEl().classList.contains('border-transparent')).toBe(false);
   });
 });
