@@ -9,7 +9,7 @@
 | Depth | Standard |
 | Approval Mode | gated |
 | Started | 2026-09-02 |
-| Status | in progress — RSBL-T-1 PASS; RSBL-T-2 pending |
+| Status | in progress — RSBL-T-1 PASS; RSBL-T-2 Reviewer PASS on code; HITL (R-7/AC-7) outstanding |
 
 ## 2. Task Execution History
 
@@ -46,3 +46,41 @@ None.
 #### Final verification
 
 Red regression is in place. RSBL-T-2 may now paint the strip and turn these cases green.
+
+### RSBL-T-2 — Paint Submitter, turn the cases green, HITL wrap
+
+| Field | Value |
+|---|---|
+| Final status | **[~] blocked on HITL** — Reviewer PASS on template/getters/Jest; RSBL-R-7 / AC-7 wrap not verified |
+| Date | 2026-09-02 |
+| Attempts | 1 |
+| Requirements | RSBL-R-1..R-6, R-10, AC-1..AC-6 (code + Jest). R-7 / AC-7 unpaid |
+| Design | RSBL-DD-1, DD-2, DD-3 (Jest half) |
+
+#### Attempt 1
+
+- **Files changed:**
+  - `onecgiar-pr-client/src/app/pages/results/pages/result-detail/components/result-header/result-header.component.html`
+  - `onecgiar-pr-client/src/app/pages/results/pages/result-detail/components/result-header/result-header.component.ts`
+  - `onecgiar-pr-client/src/app/pages/results/pages/result-detail/components/result-header/result-header.component.spec.ts`
+- **Implementer** (`claude-sonnet-5-thinking-high`): identity-strip item after funding / before status — muted “Submitter” sibling + primary `routerLink` to `['/result-framework-reporting/entity-details', officialCode]`. Getters `officialCode` (trim, no normalize) and `submitterValue` (`{code} - {name}` or code alone). `@if (officialCode)`. `data-testid` and `aria-label="Submitter: {value}"` on the anchor. T-1 cases kept; added missing / empty / whitespace-only / code-only / `SGP-02`. No `LabReportFormComponent` edit.
+- **Verification:** `cd onecgiar-pr-client && npm run test -- --testPathPattern="result-header.component.spec"`
+  - `Test Suites: 1 passed, 1 total` · `Tests: 32 passed, 32 total`
+  - Lint: `npx ng lint --quiet` — All files pass linting
+- **HITL:** **not done.** Implementer `Not Done / Assumptions` (verbatim): “HITL for RSBL-R-7/AC-7 (900px + ~1100px wrap/overlap, Tab order, focus ring, click-through) is **not verified** — needs a human or a session with credentials to check against `visual/current-header-no-submitter.jpg`.” Also: label is a muted sibling span so the anchor text is the value only.
+- **Reviewer** (`gpt-5.6-sol-medium`, author ≠ auditor): `STATUS: PASS` — template, getters, and scoped Jest conform to R-1..R-6, R-10, AC-1..AC-6, DD-1/DD-2/DD-3 Jest half. R-7/AC-7 left Leader-owned.
+- **ADVISORY:** none.
+
+#### Decisions
+
+- Skills kept as specified: `angular-developer`, `ui-ux-pro-max`. Effort `medium`.
+- Task stays `[~]` until HITL. A Reviewer PASS does not close a task with an outstanding `Not Done` gap.
+- Code committed so HITL can run against the working tree; checkbox waits.
+
+#### Issues
+
+HITL (R-7 / AC-7) unpaid — no authenticated session in the agent loop.
+
+#### Final verification
+
+Jest green (32). Do not mark `[x]` until the user confirms wrap at 900px and ~1100px, Tab/focus ring, and click to program home.

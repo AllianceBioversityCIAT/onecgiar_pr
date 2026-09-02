@@ -75,6 +75,21 @@ export class ResultHeaderComponent {
     return this.dataControlSE.currentResult?.source_name ?? '';
   }
 
+  /** Stored `initiative_official_code`, trimmed. Never normalized (`SGP-02` stays `SGP-02`). */
+  get officialCode(): string {
+    return (this.dataControlSE.currentResult?.initiative_official_code ?? '').trim();
+  }
+
+  /**
+   * Submitter value for the identity-strip link: `{code} - {name}`, or the code alone when the
+   * result carries no name. Never fabricates a name.
+   * @akili-spec changes/result-submitter-back-link
+   */
+  get submitterValue(): string {
+    const name = (this.dataControlSE.currentResult?.initiative_name ?? '').trim();
+    return name ? `${this.officialCode} - ${name}` : this.officialCode;
+  }
+
   get statusLabel(): string {
     return this.dataControlSE.currentResult?.status_name ?? '';
   }

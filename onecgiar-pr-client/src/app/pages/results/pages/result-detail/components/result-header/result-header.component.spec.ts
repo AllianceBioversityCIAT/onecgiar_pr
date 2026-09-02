@@ -156,6 +156,45 @@ describe('ResultHeaderComponent', () => {
       expect(ariaLabel).toContain('Submitter');
       expect(ariaLabel).toContain('SP04');
     });
+
+    it('renders no Submitter node when the official code is missing', async () => {
+      delete dataControlMock.currentResult.initiative_official_code;
+      await build();
+
+      expect(q('[data-testid="result-header-submitter"]')).toBeNull();
+      expect(html().innerHTML).not.toContain('entity-details/undefined');
+    });
+
+    it('renders no Submitter node when the official code is an empty string', async () => {
+      dataControlMock.currentResult.initiative_official_code = '';
+      await build();
+
+      expect(q('[data-testid="result-header-submitter"]')).toBeNull();
+    });
+
+    it('renders no Submitter node when the official code is whitespace-only', async () => {
+      dataControlMock.currentResult.initiative_official_code = '   ';
+      await build();
+
+      expect(q('[data-testid="result-header-submitter"]')).toBeNull();
+    });
+
+    it('shows the code alone, without a fabricated name, when the result has no initiative name', async () => {
+      dataControlMock.currentResult.initiative_name = '';
+      await build();
+
+      expect(q('[data-testid="result-header-submitter"]').textContent.trim()).toBe('SP04');
+    });
+
+    it('keeps the stored code spelling in both the value and the link path (SGP-02 stays SGP-02)', async () => {
+      dataControlMock.currentResult.initiative_official_code = 'SGP-02';
+      dataControlMock.currentResult.initiative_name = '';
+      await build();
+      const link = q('[data-testid="result-header-submitter"]');
+
+      expect(link.textContent.trim()).toBe('SGP-02');
+      expect(link.getAttribute('href')).toBe('/result-framework-reporting/entity-details/SGP-02');
+    });
   });
 
   describe('metadata popover', () => {

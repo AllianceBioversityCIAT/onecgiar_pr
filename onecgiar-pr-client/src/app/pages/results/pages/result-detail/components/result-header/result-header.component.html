@@ -168,6 +168,17 @@
       <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
       <span>{{ funding }}</span>
     }
+    @if (officialCode) {
+      <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
+      <span class="text-[var(--pr-text-secondary)]">Submitter</span>
+      <a
+        [routerLink]="['/result-framework-reporting/entity-details', officialCode]"
+        class="cursor-pointer font-medium text-[var(--pr-color-primary-300)] hover:opacity-80"
+        [attr.aria-label]="'Submitter: ' + submitterValue"
+        data-testid="result-header-submitter">
+        {{ submitterValue }}
+      </a>
+    }
     @if (statusLabel) {
       <span
         class="rounded-full px-[9px] py-[2px] text-[12px] font-medium"

@@ -5,7 +5,7 @@
 - **Module / feature:** `results` Result Detail chrome (`app-result-header`)
 - **Linked spec:** `docs/specs/changes/result-submitter-back-link/requirements.md` + `design.md`
 - **Depth:** Standard (budget still 2 tasks · ~80 LOC · 1 review — `design.md` §14)
-- **Status:** in progress — RSBL-T-1 done; RSBL-T-2 pending
+- **Status:** in progress — RSBL-T-1 done; RSBL-T-2 Reviewer PASS, HITL outstanding
 - **Judgment:** Fix only applied; no re-judge (`judgment.md`)
 - **Pre-flight:** OQ-1/2/4 locked; OQ-3 no Jira; no other active spec edits `result-header`
 
@@ -34,11 +34,11 @@
   - Input that would FAIL this check: current `result-header.component.html` with no Submitter node — the new cases must fail on that input. If they pass, they are not exercising the strip.
 - **Done criteria:** failing cases committed; production header untouched; no secrets in fixtures.
 
-### RSBL-T-2 — Paint Submitter, turn the cases green, HITL wrap `[ ]`
+### RSBL-T-2 — Paint Submitter, turn the cases green, HITL wrap `[~]`
 
 - **Type:** `client | tests`
 - **Size:** S
-- **Status:** not-started
+- **Status:** in-progress
 - **Depends on:** RSBL-T-1
 - **Blocks:** none
 - **Skills:** `angular-developer`, `ui-ux-pro-max`
