@@ -9,7 +9,7 @@
 | Depth | Lite (Bug Mode) |
 | Approval Mode | gated |
 | Started | 2026-09-02 |
-| Status | in progress — FOVL-T-1 PASS; FOVL-T-2 `[~]` (Jest PASS, HITL outstanding) |
+| Status | complete — FOVL-T-1 PASS; FOVL-T-2 PASS (HITL confirmed by user 2026-09-02) |
 
 ## 2. Task Execution History
 
@@ -50,10 +50,10 @@ Red regression is in place. FOVL-T-2 may now remove the allow-list entry and tur
 
 | Field | Value |
 |---|---|
-| Final status | **[~] blocked on HITL** — code Reviewer PASS; FOVL-AC-2 not closed |
+| Final status | **PASS** |
 | Date | 2026-09-02 |
 | Attempts | 1 |
-| Requirements | FOVL-R-1, FOVL-R-3, FOVL-AC-1, FOVL-AC-3 closed by Jest. FOVL-R-2 / FOVL-AC-2 still owed |
+| Requirements | FOVL-R-1, FOVL-R-2, FOVL-R-3, FOVL-AC-1, FOVL-AC-2, FOVL-AC-3 |
 | Design | FOVL-DD-1, FOVL-DD-2 |
 
 #### Attempt 1
@@ -67,12 +67,12 @@ Red regression is in place. FOVL-T-2 may now remove the allow-list entry and tur
 #### Decisions
 
 - Skills kept: `angular-developer`, `ui-ux-pro-max`. Effort `medium`.
-- Task stays `[~]` until HITL closes FOVL-R-2. A Reviewer PASS does not waive an outstanding Not Done gap.
+- Task stayed `[~]` until the user confirmed HITL (2026-09-02). FOVL-AC-2 closed by that confirmation, not by Jest.
 
 #### Issues
 
-HITL not run — no authenticated Result Detail session available in this environment.
+HITL was not runnable in the agent environment (no client on :4200 / no login). User confirmed the browser check (900px and ~1100px; Back / Next / Sync / Save draft unobstructed).
 
 ## 3. Summary
 
-FOVL-T-1 complete. FOVL-T-2 code is in and Jest-green; FOVL-AC-2 (tablet unobstructed strip) still needs a browser check at 900px and ~1100px.
+Both tasks PASS. Result Detail no longer mounts the floating site footer. Jest locks the allow-list (FOVL-R-1 / R-3). User HITL locks the unobstructed strip (FOVL-R-2).
