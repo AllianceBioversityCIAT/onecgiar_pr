@@ -5,7 +5,7 @@
 - **Module / feature:** `results` Result Detail chrome (`app-result-header`)
 - **Linked spec:** `docs/specs/changes/result-submitter-back-link/requirements.md` + `design.md`
 - **Depth:** Standard (budget still 2 tasks · ~80 LOC · 1 review — `design.md` §14)
-- **Status:** in progress — RSBL-T-1 done; RSBL-T-2 Reviewer PASS, HITL outstanding
+- **Status:** done — RSBL-T-1 and RSBL-T-2 `[x]`
 - **Judgment:** Fix only applied; no re-judge (`judgment.md`)
 - **Pre-flight:** OQ-1/2/4 locked; OQ-3 no Jira; no other active spec edits `result-header`
 
@@ -34,11 +34,11 @@
   - Input that would FAIL this check: current `result-header.component.html` with no Submitter node — the new cases must fail on that input. If they pass, they are not exercising the strip.
 - **Done criteria:** failing cases committed; production header untouched; no secrets in fixtures.
 
-### RSBL-T-2 — Paint Submitter, turn the cases green, HITL wrap `[~]`
+### RSBL-T-2 — Paint Submitter, turn the cases green, HITL wrap `[x]`
 
 - **Type:** `client | tests`
 - **Size:** S
-- **Status:** in-progress
+- **Status:** done
 - **Depends on:** RSBL-T-1
 - **Blocks:** none
 - **Skills:** `angular-developer`, `ui-ux-pro-max`
@@ -107,14 +107,14 @@ Scoped command only: `cd onecgiar-pr-client && npm run test -- --testPathPattern
 
 ## 6. Rollout & verification
 
-- [ ] PR / commit: `✨ feat(result-header): show clickable submitter SP`
-- [ ] Scoped Jest green; lint on touched files
-- [ ] HITL note in `execution.md` for R-7
-- [ ] No migration, no bilateral changelog
+- [x] PR / commit: `✨ feat(result-header): show clickable submitter SP` (`63d749989`)
+- [x] Scoped Jest green; lint on touched files
+- [x] HITL note in `execution.md` for R-7 (owner-closed 2026-09-02)
+- [x] No migration, no bilateral changelog
 
 ## 7. Cleanup & follow-ups
 
-- [ ] Spec → shipped on archive
+- [x] Spec → shipped on archive
 - [ ] Deferred: Option C (exact AOW), Center-as-submitter, i18n if header later leaves hardcoded English
 
 ## 8. Roll-back plan
