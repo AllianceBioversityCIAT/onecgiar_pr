@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { signal } from '@angular/core';
 
 import { TypeKnowledgeProductComponent } from './type-knowledge-product.component';
@@ -273,6 +273,63 @@ describe('TypeKnowledgeProductComponent', () => {
 
       expect(bilateralApi.GET_knowledgeProduct).not.toHaveBeenCalled();
       expect(fixture.componentInstance.loadFailed()).toBe(true);
+    });
+  });
+
+  /**
+   * P2-3556 — the load gate, pinned.
+   *
+   * The three sibling sections lost data through the same chain: the GET failed, the interceptor
+   * rethrew it (`shared/interceptors/general-interceptor.service.ts:81-83`), the form painted blank
+   * anyway, and the first keystroke autosaved that emptiness over the stored record. This section is
+   * NOT vulnerable, and the only reason is the template: `type-knowledge-product.component.html:2,7,19`
+   * replaces the whole field list with a loading line or an error box, and `:244` withholds the entire
+   * actions row, so on a failed or in-flight load there is no control to type in and no Save to press.
+   * `queueSave()` therefore has no gate of its own and does not need one.
+   *
+   * That makes the gate load-bearing rather than cosmetic, and until now nothing tested it. The stakes
+   * if it is ever loosened — say by swapping the full-block hide for an inline alert, the way the three
+   * siblings now render theirs: `melia` is a field initializer of five nulls, and
+   * `results-knowledge-products.service.ts:1937-1946,1966-1984` reads `isMeliaProduct: null` as
+   * "not a MELIA product" and writes `melia_previous_submitted`, `melia_type_id`, `ost_melia_study_id`
+   * and `toc_melia_study_id` all to NULL alongside `is_melia`. Five columns, in one autosave.
+   */
+  describe('Load gate (P2-3556)', () => {
+    const saveButton = () => fixture.nativeElement.querySelector('.tsf-actions button');
+    const failLoad = () => bilateralApi.GET_knowledgeProduct.mockReturnValue(throwError(() => new Error('HTTP 500')));
+    const create = () => {
+      fixture = TestBed.createComponent(TypeKnowledgeProductComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+    };
+
+    it('offers nothing to type in and nothing to press when the fetch failed', () => {
+      failLoad();
+      create();
+
+      expect(component.loadFailed()).toBe(true);
+      expect(yesNoLabels()).toEqual([]);
+      expect(selectLabels()).toEqual([]);
+      expect(saveButton()).toBeNull();
+      expect(fixture.nativeElement.querySelector('.tsf-load-error')).toBeTruthy();
+    });
+
+    it('offers nothing to type in and nothing to press while the fetch is still in flight', () => {
+      bilateralApi.GET_knowledgeProduct.mockReturnValue(new Subject<any>().asObservable());
+      create();
+
+      expect(component.loading()).toBe(true);
+      expect(yesNoLabels()).toEqual([]);
+      expect(selectLabels()).toEqual([]);
+      expect(saveButton()).toBeNull();
+    });
+
+    // The happy path must still be fully usable — the gate is about the other two states only.
+    it('offers the first question and the Save button once the body is in hand', () => {
+      build();
+
+      expect(yesNoLabels()).toHaveLength(1);
+      expect(saveButton()).toBeTruthy();
     });
   });
 
