@@ -582,4 +582,153 @@ describe('InnovationDevService', () => {
       );
     });
   });
+
+  describe('getInnovationDev', () => {
+    /**
+     * P2-3556 — the `results_innovations_dev` row only exists once the section has been
+     * saved at least once, so `InnovationDevExists` legitimately returns `undefined` for a
+     * result nobody has filled in yet. The v2 GET used to dereference that `undefined`
+     * while gating the scaling studies, answering 500 and leaving the form blank with no
+     * message on screen.
+     */
+    const wireGetDependencies = (overrides: Record<string, any> = {}) => {
+      const scalingStudyUrlsRepo = { find: jest.fn().mockResolvedValue([]) };
+      const deps = {
+        _evidenceRepository: { find: jest.fn().mockResolvedValue([]) },
+        _resultRepository: {
+          ...mockResultRepository,
+          getResultById: jest.fn().mockResolvedValue({ id: 11028 }),
+        },
+        _resultActorRepository: { find: jest.fn().mockResolvedValue([]) },
+        _resultIpMeasureRepository: { find: jest.fn().mockResolvedValue([]) },
+        _resultByIntitutionsTypeRepository: {
+          find: jest.fn().mockResolvedValue([]),
+        },
+        _resultByInitiativeRepository: {
+          find: jest.fn().mockResolvedValue([]),
+        },
+        _resultInitiativesBudgetRepository: {
+          find: jest.fn().mockResolvedValue([]),
+        },
+        _resultBilateralBudgetRepository: {
+          find: jest.fn().mockResolvedValue([]),
+        },
+        _resultByIntitutionsRepository: {
+          find: jest.fn().mockResolvedValue([]),
+        },
+        _resultInstitutionsBudgetRepository: {
+          find: jest.fn().mockResolvedValue([]),
+        },
+        _resultScalingStudyUrlsRepository: scalingStudyUrlsRepo,
+        _resultsByCentersRepository: {
+          findOne: jest.fn().mockResolvedValue(null),
+        },
+        ...overrides,
+      };
+      Object.assign(service as any, deps);
+      (
+        mockResultsInnovationsDevRepository.findOne as jest.Mock
+      ).mockResolvedValue(null);
+      return deps;
+    };
+
+    it('answers 200 with a usable, all-null section when the result has no innovation-dev row', async () => {
+      const deps = wireGetDependencies();
+      (
+        mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
+      ).mockResolvedValueOnce(undefined);
+
+      const res = await service.getInnovationDev(11028);
+
+      expect(res.status).toBe(HttpStatus.OK);
+      expect(mockHandlersError.returnErrorRes).not.toHaveBeenCalled();
+      // The keys the form binds to must be present (null), not missing.
+      expect(res.response).toEqual(
+        expect.objectContaining({
+          result_innovation_dev_id: null,
+          results_id: 11028,
+          short_title: null,
+          innovation_characterization_id: null,
+          innovation_nature_id: null,
+          innovation_readiness_level_id: null,
+          is_new_variety: null,
+          number_of_varieties: null,
+          innovation_developers: null,
+          innovation_collaborators: null,
+          evidences_justification: null,
+          has_scaling_studies: null,
+          innovation_acknowledgement: null,
+          innovation_pdf: null,
+          innovation_user_to_be_determined: null,
+          previous_irl: null,
+          scaling_studies_urls: [],
+        }),
+      );
+      // Everything that lives outside that row still has to be delivered.
+      expect(res.response).toHaveProperty('innovatonUse');
+      expect(res.response).toHaveProperty('pictures');
+      expect(res.response).toHaveProperty('reference_materials');
+      expect(res.response).toHaveProperty('initiative_expected_investment');
+      expect(res.response).toHaveProperty('has_lead_center', false);
+      expect(res.response).toHaveProperty('ip_support_center_id', null);
+      // No row means no PK to look scaling studies up by.
+      expect(
+        deps._resultScalingStudyUrlsRepository.find,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('still returns the saved section and its scaling studies when the row exists', async () => {
+      const deps = wireGetDependencies();
+      deps._resultScalingStudyUrlsRepository.find.mockResolvedValueOnce([
+        { study_url: 'https://example.org/study-1' },
+      ]);
+      (
+        mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
+      ).mockResolvedValueOnce({
+        result_innovation_dev_id: 2097,
+        results_id: 11031,
+        short_title: 'Short name',
+        is_new_variety: 1,
+        innovation_readiness_level_id: 17, // Level_6
+      });
+
+      const res = await service.getInnovationDev(11031);
+
+      expect(res.status).toBe(HttpStatus.OK);
+      expect(res.response).toEqual(
+        expect.objectContaining({
+          result_innovation_dev_id: 2097,
+          short_title: 'Short name',
+          is_new_variety: true,
+          innovation_readiness_level_id: 17,
+          scaling_studies_urls: ['https://example.org/study-1'],
+        }),
+      );
+      expect(deps._resultScalingStudyUrlsRepository.find).toHaveBeenCalledWith({
+        where: { result_innov_dev_id: 2097, is_active: true },
+      });
+    });
+
+    it('does not look for scaling studies when the saved row is below readiness level 6', async () => {
+      const deps = wireGetDependencies();
+      (
+        mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
+      ).mockResolvedValueOnce({
+        result_innovation_dev_id: 2100,
+        results_id: 11030,
+        is_new_variety: null,
+        innovation_readiness_level_id: 12, // Level_1
+      });
+
+      const res = await service.getInnovationDev(11030);
+
+      expect(res.status).toBe(HttpStatus.OK);
+      expect(res.response).toEqual(
+        expect.objectContaining({ scaling_studies_urls: [] }),
+      );
+      expect(
+        deps._resultScalingStudyUrlsRepository.find,
+      ).not.toHaveBeenCalled();
+    });
+  });
 });

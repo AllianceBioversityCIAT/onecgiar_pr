@@ -389,7 +389,7 @@ export class InnovationDevService {
 
       let scaling_studies_urls: string[] = [];
       if (
-        innDevExists.innovation_readiness_level_id >=
+        Number(innDevExists?.innovation_readiness_level_id) >=
         InnovationReadinessLevelByLevel.Level_6
       ) {
         const urls = await this._resultScalingStudyUrlsRepository.find({
@@ -426,7 +426,9 @@ export class InnovationDevService {
 
       return {
         response: {
-          ...this._normalizeInnovationDevRecord(innDevExists),
+          ...this._normalizeInnovationDevRecord(
+            innDevExists ?? this._emptyInnovationDevRecord(resultId),
+          ),
           pictures,
           innovatonUse,
           initiative_expected_investment,
@@ -873,6 +875,45 @@ export class InnovationDevService {
     return Object.fromEntries(
       Object.entries(fields).filter(([, value]) => value !== undefined),
     ) as Partial<T>;
+  }
+
+  /**
+   * The `results_innovations_dev` row is only created the first time the section is SAVED
+   * (see `saveInnovationDev`), so a result whose Innovation Development section was never
+   * filled in has no row at all and `InnovationDevExists` returns `undefined`.
+   *
+   * ⚠️ Returning nothing for the section is not an option: everything else in the payload
+   * (evidences, budgets, anticipated users, lead center) lives in its own tables and does
+   * exist, and the client replaces its whole form model with `response`. So the empty case
+   * answers with the same key set, all null — the form renders blank but usable, and
+   * `result_innovation_dev_id: null` tells the client (and `saveInnovationDev`) that the
+   * row still has to be created.
+   */
+  private _emptyInnovationDevRecord(resultId: number) {
+    return {
+      result_innovation_dev_id: null,
+      short_title: null,
+      is_new_variety: null,
+      number_of_varieties: null,
+      innovation_developers: null,
+      innovation_collaborators: null,
+      readiness_level: null,
+      evidences_justification: null,
+      is_active: null,
+      created_date: null,
+      last_updated_date: null,
+      results_id: Number(resultId),
+      created_by: null,
+      last_updated_by: null,
+      innovation_characterization_id: null,
+      innovation_nature_id: null,
+      innovation_readiness_level_id: null,
+      innovation_acknowledgement: null,
+      innovation_pdf: null,
+      innovation_user_to_be_determined: null,
+      has_scaling_studies: null,
+      previous_irl: null,
+    };
   }
 
   private _normalizeInnovationDevRecord<T extends { is_new_variety?: unknown }>(
