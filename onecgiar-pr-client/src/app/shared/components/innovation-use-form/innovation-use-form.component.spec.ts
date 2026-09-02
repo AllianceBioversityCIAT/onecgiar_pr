@@ -679,7 +679,16 @@ describe('InnovationUseFormComponent', () => {
 
     it('should handle men < men_youth', fakeAsync(() => {
       component.body.innovatonUse.actors = [
-        { women: 10, women_youth: 5, men: 3, men_youth: 10, men_non_youth: 0, sex_and_age_disaggregation: false, previousWomen: 3, previousWomen_youth: 10 } as Actor
+        {
+          women: 10,
+          women_youth: 5,
+          men: 3,
+          men_youth: 10,
+          men_non_youth: 0,
+          sex_and_age_disaggregation: false,
+          previousWomen: 3,
+          previousWomen_youth: 10
+        } as Actor
       ];
       const actorItem = component.body.innovatonUse.actors[0];
       component.validateYouth(0, false, actorItem);
@@ -982,6 +991,139 @@ describe('InnovationUseFormComponent', () => {
 
       expect(radio).toBeTruthy();
       expect(radio.nativeElement.tooltip).toBe('');
+    });
+  });
+});
+
+/**
+ * P2-3295 §3 — reviewing a 2030 projection inherited from the previous reporting phase.
+ *
+ * Built off the prototype, with no TestBed: every path below is a getter over `body` and the Yes/No
+ * answer, and rendering the 2030 block (~270 lines of repeated field groups) would test the DOM
+ * instead of the rule that decides the behaviour — which values differ from the previous phase.
+ */
+describe('InnovationUseFormComponent — 2030 projection review (P2-3295 §3)', () => {
+  const actor = (over: Record<string, unknown> = {}) => ({
+    actor_type_id: 4,
+    women: 10,
+    women_youth: 2,
+    men: 8,
+    men_youth: 1,
+    how_many: null,
+    is_active: true,
+    ...over
+  });
+
+  function makeComponent(body: any) {
+    const instance: any = Object.create(InnovationUseFormComponent.prototype);
+    instance.body = body;
+    instance.reviewing2030Projection = false;
+    return instance;
+  }
+
+  const withoutPreviousPhase = () => makeComponent({ innovation_use_2030: { actors: [], organization: [], measures: [] } });
+
+  const withPreviousPhase = () =>
+    makeComponent({
+      innovation_use_2030: { actors: [actor()], organization: [], measures: [] },
+      innovation_use_2030_previous: {
+        result_id: 8090,
+        actors: [actor()],
+        organization: [],
+        measures: []
+      }
+    });
+
+  describe('Scenario A — first-time reporting', () => {
+    it('is not in review mode and never locks the fields', () => {
+      const component = withoutPreviousPhase();
+
+      expect(component.has2030PreviousProjection).toBe(false);
+      expect(component.projection2030Locked).toBe(false);
+      expect(component.projection2030Changed).toBe(false);
+      expect(component.projection2030JustificationRequired).toBe(false);
+    });
+  });
+
+  describe('Scenario B — the projection came from the previous phase', () => {
+    it('starts locked, because the default answer is No', () => {
+      const component = withPreviousPhase();
+
+      expect(component.has2030PreviousProjection).toBe(true);
+      expect(component.reviewing2030Projection).toBe(false);
+      expect(component.projection2030Locked).toBe(true);
+    });
+
+    it('unlocks when the reporter answers Yes', () => {
+      const component = withPreviousPhase();
+      component.reviewing2030Projection = true;
+
+      expect(component.projection2030Locked).toBe(false);
+    });
+
+    it('asks for no justification while the values still match what was reported', () => {
+      const component = withPreviousPhase();
+      component.reviewing2030Projection = true;
+
+      expect(component.projection2030Changed).toBe(false);
+      expect(component.projection2030JustificationRequired).toBe(false);
+    });
+
+    it('asks for a justification once an inherited value is changed', () => {
+      const component = withPreviousPhase();
+      component.reviewing2030Projection = true;
+      component.body.innovation_use_2030.actors[0].women = 40;
+
+      expect(component.projection2030Changed).toBe(true);
+      expect(component.projection2030JustificationRequired).toBe(true);
+    });
+
+    it('stops asking when the change is undone', () => {
+      const component = withPreviousPhase();
+      component.reviewing2030Projection = true;
+      component.body.innovation_use_2030.actors[0].women = 40;
+      expect(component.projection2030JustificationRequired).toBe(true);
+
+      component.body.innovation_use_2030.actors[0].women = 10;
+
+      expect(component.projection2030JustificationRequired).toBe(false);
+    });
+
+    it('sees an added row as a change', () => {
+      const component = withPreviousPhase();
+      component.reviewing2030Projection = true;
+      component.body.innovation_use_2030.actors.push(actor({ actor_type_id: 7 }));
+
+      expect(component.projection2030Changed).toBe(true);
+    });
+
+    it('sees a row the reporter removed as a change', () => {
+      const component = withPreviousPhase();
+      component.reviewing2030Projection = true;
+      component.body.innovation_use_2030.actors[0].is_active = false;
+
+      expect(component.projection2030Changed).toBe(true);
+    });
+
+    /** Ids and audit fields differ between two phases by construction — they are not user changes. */
+    it('does not report a change for ids or audit fields that differ between phases', () => {
+      const component = withPreviousPhase();
+      component.reviewing2030Projection = true;
+      component.body.innovation_use_2030.actors[0] = actor({
+        result_actors_id: 999,
+        created_date: '2026-09-02',
+        last_updated_by: 77
+      });
+
+      expect(component.projection2030Changed).toBe(false);
+    });
+
+    it('never asks for a justification while the projection is still locked', () => {
+      const component = withPreviousPhase();
+      component.body.innovation_use_2030.actors[0].women = 40;
+
+      expect(component.projection2030Changed).toBe(true);
+      expect(component.projection2030JustificationRequired).toBe(false);
     });
   });
 });

@@ -162,6 +162,9 @@ export class InnovationUseInfoComponent {
       scaling_studies_urls: this.innovationUseInfoBody.scaling_studies_urls,
       innov_use_to_be_determined: this.innovationUseInfoBody.innov_use_to_be_determined,
       innov_use_2030_to_be_determined: this.innovationUseInfoBody.innov_use_2030_to_be_determined,
+      // P2-3295 §3. This payload is built key by key, so a field the form collects and this object
+      // does not name is typed by the reporter and thrown away on save, with no error to show it.
+      innov_use_2030_justification: (this.innovationUseInfoBody as any).innov_use_2030_justification ?? null,
       investment_programs,
       investment_bilateral,
       investment_partners,

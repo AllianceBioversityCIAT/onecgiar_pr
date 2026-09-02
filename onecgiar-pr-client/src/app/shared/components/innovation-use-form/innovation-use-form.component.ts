@@ -174,6 +174,74 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     this.body.innovatonUse.measures.push(new Measure());
   }
 
+  /**
+   * ── P2-3295 §3 — reviewing a 2030 projection inherited from the previous reporting phase ──────
+   *
+   * Scenario A (no previous phase): `innovation_use_2030_previous` arrives as null, nothing below
+   * fires, and the four sub-fields stay blank and editable — the behaviour that existed before.
+   *
+   * Scenario B: the inherited projection is shown LOCKED. Answering "Yes" unlocks it, and a
+   * justification is asked for only once a value has actually changed.
+   *
+   * ⚠️ The wording of the Yes/No question is NOT in the story — the story only gives the table of
+   * behaviours for "Yes" and "No". Written here so the flow can exist, and flagged in the ticket as
+   * copy to confirm with business; the two behaviours it drives are the specified part.
+   */
+  reviewing2030Projection = false;
+
+  readonly projection2030ReviseQuestion = 'Do you need to revise the 2030 projection reported in the previous phase?';
+
+  readonly projection2030JustificationLabel = 'Please justify the change to the 2030 projection';
+
+  readonly projection2030PreviousNote =
+    'These values are the 2030 projection reported for this result in the previous reporting phase. They stay as they were reported unless you choose to revise them.';
+
+  /** Scenario B is on only when the server actually sent a previous-phase projection. */
+  get has2030PreviousProjection(): boolean {
+    return !!(this.body as any)?.innovation_use_2030_previous;
+  }
+
+  /** Locked = inherited and not being revised. Never locked in Scenario A. */
+  get projection2030Locked(): boolean {
+    return this.has2030PreviousProjection && !this.reviewing2030Projection;
+  }
+
+  /**
+   * A change against what the previous phase reported — not "the user typed something", which would
+   * ask for a justification after a change that was undone.
+   */
+  get projection2030Changed(): boolean {
+    if (!this.has2030PreviousProjection) return false;
+    const previous = (this.body as any).innovation_use_2030_previous;
+    return this.projection2030Signature(this.body?.innovation_use_2030) !== this.projection2030Signature(previous);
+  }
+
+  get projection2030JustificationRequired(): boolean {
+    return this.reviewing2030Projection && this.projection2030Changed;
+  }
+
+  /**
+   * Only the values a reporter can edit, in a stable order: ids, timestamps and `is_active` differ
+   * between two phases by construction and would report a change nobody made.
+   */
+  private projection2030Signature(projection: any): string {
+    const actors = (projection?.actors ?? [])
+      .filter((a: any) => a?.is_active !== false)
+      .map((a: any) =>
+        [a?.actor_type_id, a?.other_actor_type, a?.women, a?.women_youth, a?.men, a?.men_youth, a?.how_many, a?.sex_and_age_disaggregation].join('~')
+      )
+      .sort();
+    const organizations = (projection?.organization ?? [])
+      .filter((o: any) => o?.is_active !== false)
+      .map((o: any) => [o?.institution_types_id, o?.other_institution, o?.how_many, o?.graduate_students].join('~'))
+      .sort();
+    const measures = (projection?.measures ?? [])
+      .filter((m: any) => m?.is_active !== false)
+      .map((m: any) => [m?.unit_of_measure, m?.quantity].join('~'))
+      .sort();
+    return JSON.stringify({ actors, organizations, measures });
+  }
+
   /** Verbatim from P2-3295 §2 — QA reads the question back word for word, do not paraphrase. */
 
   readonly innovationUse2030ProjectionQuestion = 'What is the projected innovation use by end of 2030?';
