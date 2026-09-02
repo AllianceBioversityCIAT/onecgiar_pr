@@ -424,3 +424,44 @@ eso ya es falso. Hacerlo opcional rompe la asignabilidad con el DTO v1 que usan
    desplegado y verificado en pantalla; el segundo espera el build.
 3. 🧊 **Innovation Use sigue congelado y con el mismo defecto de pérdida de datos** que se arregló en
    sus cuatro hermanas. Es lo primero que hay que descongelar, y es decisión de Yeck.
+
+----------
+
+## ✅ 14. Verificado en pantalla sobre v21 (build de las 03:20)
+
+| Qué | Resultado |
+|---|---|
+| 🥇 **P2-3557 — el guardado bloqueado** | `8563`, fase 2026: Save responde **201** con el registro guardado (antes **500** y nada). **Positivo concluyente**: el código anterior no podía producir un guardado correcto ahí, así que prueba el despliegue y el arreglo a la vez — y eso importa porque **el server no tiene sello de versión**. |
+| ✅ **P2-3220 / P2-3221 — DoD en la 3ª superficie** | Adjuntar en `innovation-dev-info` → guardar → **recargar** → persiste como `result-8563-Document-202609020943-499.pdf`, en `sites/OneCGIARPRMSRepository/Testing/Reporting 2026/Result 8563/`. Las tres superficies quedan ejercidas de punta a punta. |
+
+**Lo que NO se pudo verificar, y por qué (declarado, no omitido):**
+- **P2-3556 (bilateral)**: la sección de tipo específico no llega a montarse en el resultado de
+  pruebas (`8861` está en *Pending review*). Y provocar el fallo de carga a propósito exigiría romper
+  la carga de un resultado con respuestas guardadas — arriesgar datos para demostrar la pérdida.
+- **P2-3292 Step 2**: la pregunta solo aparece **una vez marcada la innovación como inactiva**, que es
+  un cambio de estado de negocio, no un dato de prueba inocuo. No se forzó.
+- **Abrir el fichero subido** (4º paso del DoD): necesita sesión iniciada en SharePoint.
+
+## ⚠️ 15. Un aviso más, de una línea y sin ticket (regla 6)
+
+El **Tickets Dashboard** del Admin Module pinta su texto pero **el panel viene vacío**: su iframe
+externo `https://bi.prms.cgiar.org/bi/IBD-ticket-tracking?...` responde **404**. Es servicio/config
+externo, no código nuestro. Nadie lo ha pedido; queda dicho por si alguien lo usa.
+
+## 📊 Resumen de la noche
+
+**5 defectos encontrados y arreglados**, tres de ellos de pérdida o bloqueo de datos:
+`P2-3555` (sección en blanco, 50%) · `P2-3557` (guardado imposible, **100% de 2026**) ·
+`P2-3556` (el bilateral borraba respuestas, 4 secciones) · la colisión de nombres de ficheros
+(dentro de P2-3220) · y el contador "0/0 campos" de Policy Change.
+
+**1 defecto refutado:** el auto-relleno del Innovation Developer (`P2-3272`) **no existía**.
+
+**6 falsos positivos cerrados** antes de reportarlos, todos mirando el cuerpo y no el código de estado.
+
+**Actividades en `Ready For UAT` a nombre de Yeck, ninguna a Cami:** P2-3555, P2-3556, P2-3557,
+P2-3550, P2-3272, P2-3220, P2-3221, P2-3519, P2-3385, P2-3169, P2-3241, P2-3251.
+**A Ángel:** P2-3292 en `To Be Clarified` con su pregunta ya visible.
+
+**Cinco pushes agrupados**, sellos v19 → v20 → v21. Suites verdes en cada uno
+(server **206 / 1971** · cliente **505 / 7845**). Nada tocó `dev`.
