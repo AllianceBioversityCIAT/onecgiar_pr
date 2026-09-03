@@ -154,6 +154,15 @@ describe('InnovationDevelopmentBilateralHandler', () => {
     expect(repoStub.save).toHaveBeenCalled();
   });
 
+  // NOST-456 QA finding 01: the record used to be seeded with `short_title = title`, so a 14-word
+  // result title became a Short title over its 10-word ceiling. Short title is full metadata, not MDS.
+  it('leaves short_title empty instead of copying the result title into it', async () => {
+    await handler.afterCreate(baseContext);
+
+    const payload = repoStub.create.mock.calls[0][0];
+    expect(payload).not.toHaveProperty('short_title');
+  });
+
   it('creates repository entry using readiness level by name', async () => {
     await handler.afterCreate({
       ...baseContext,

@@ -57,11 +57,12 @@ describe('SectionEvidenceComponent', () => {
     };
 
     autoSave = {
-      manualSave$: new Subject<void>(),
+      manualSave$: new Subject<any>(),
       runImmediate: jest.fn().mockImplementation((_key: string, factory: () => any) => {
         factory().subscribe({ error: () => {} });
       }),
-      fieldStatus: signal<Record<string, string>>({})
+      fieldStatus: signal<Record<string, string>>({}),
+      markDirty: jest.fn()
     };
 
     (window as any).alert = jest.fn();
@@ -619,14 +620,14 @@ describe('SectionEvidenceComponent', () => {
       expect(component.evidences.length).toBe(0);
     });
 
-    it('prepends a new evidence and trims the link', async () => {
+    it('prepends a new evidence, trims the link, and stages it for Save draft', () => {
       build();
       component.draftItem.set({ is_sharepoint: false, link: '  https://example.org  ' });
       component.confirmDraft();
       expect(component.evidences[0].link).toBe('https://example.org');
       expect(component.showDraft()).toBe(false);
-      await new Promise(resolve => setTimeout(resolve, 0));
-      expect(bilateralApi.POST_evidences).toHaveBeenCalled();
+      expect(bilateralApi.POST_evidences).not.toHaveBeenCalled();
+      expect(autoSave.markDirty).toHaveBeenCalledWith('evidence');
     });
 
     it('replaces the edited evidence', () => {
@@ -648,13 +649,13 @@ describe('SectionEvidenceComponent', () => {
       expect(component.evidences).toEqual([{ id: 3, link: 'https://old.org' }]);
     });
 
-    it('keeps a draft without link untouched in file mode', async () => {
+    it('keeps a draft without link untouched in file mode until Save draft', () => {
       build();
       component.draftItem.set({ is_sharepoint: true, file: makeFile('a.pdf') });
       component.confirmDraft();
       expect(component.evidences.length).toBe(1);
-      await new Promise(resolve => setTimeout(resolve, 0));
-      expect(api.resultsSE.POST_createUploadSession).toHaveBeenCalled();
+      expect(api.resultsSE.POST_createUploadSession).not.toHaveBeenCalled();
+      expect(autoSave.markDirty).toHaveBeenCalledWith('evidence');
     });
   });
 
@@ -670,7 +671,7 @@ describe('SectionEvidenceComponent', () => {
       expect(component.evidences.length).toBe(1);
     });
 
-    it('removes the evidence when delete is executed', async () => {
+    it('removes the evidence locally and stages the deletion', () => {
       build();
       const item = { id: 1, link: 'https://a.com' };
       component.evidenceBody.update(b => ({ ...b, evidences: [item] }));
@@ -678,8 +679,8 @@ describe('SectionEvidenceComponent', () => {
       component.executeDelete();
       expect(component.evidences.length).toBe(0);
       expect(component.deleteTarget()).toBeNull();
-      await new Promise(resolve => setTimeout(resolve, 0));
-      expect(bilateralApi.POST_evidences).toHaveBeenCalled();
+      expect(bilateralApi.POST_evidences).not.toHaveBeenCalled();
+      expect(autoSave.markDirty).toHaveBeenCalledWith('evidence');
     });
   });
 

@@ -4,12 +4,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService, MdsStatus } from '../../services/bilateral-mds-tracker.service';
-import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
+import { BilateralAutoSaveService, BilateralEditorSection } from '../../services/bilateral-auto-save.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralAiUploadComponent } from '../../components/bilateral-ai-upload/bilateral-ai-upload.component';
 import { SectionZeroDashboardComponent } from '../../components/section-zero-dashboard/section-zero-dashboard.component';
-import { BilateralAccordionComponent } from '../../components/bilateral-accordion/bilateral-accordion.component';
 import { BilateralProjectSelectorComponent } from '../../components/bilateral-project-selector/bilateral-project-selector.component';
 import { BilateralSpSelectorComponent } from '../../components/bilateral-sp-selector/bilateral-sp-selector.component';
 import { BilateralResultLevelSelectorComponent } from '../../components/bilateral-result-level-selector/bilateral-result-level-selector.component';
@@ -20,7 +19,6 @@ import { SectionGeographyComponent } from '../../components/section-geography/se
 import { SectionEvidenceComponent } from '../../components/section-evidence/section-evidence.component';
 import { SectionTypeSpecificComponent } from '../../components/section-type-specific/section-type-specific.component';
 import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
-import { BilateralProgressAsideComponent } from '../../components/bilateral-progress-aside/bilateral-progress-aside.component';
 import { FormSkeletonComponent } from '../../components/form-skeleton/form-skeleton.component';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 import { PhaseSwitcherModule } from '../../../../shared/components/phase-switcher/phase-switcher.module';
@@ -44,7 +42,6 @@ const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
   imports: [
     PhaseSwitcherModule,
     SectionZeroDashboardComponent,
-    BilateralAccordionComponent,
     BilateralProjectSelectorComponent,
     BilateralSpSelectorComponent,
     BilateralResultLevelSelectorComponent,
@@ -55,13 +52,16 @@ const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
     SectionGeographyComponent,
     SectionEvidenceComponent,
     SectionTypeSpecificComponent,
-    BilateralProgressAsideComponent,
     BilateralPageHeaderComponent,
     FormSkeletonComponent
   ],
   templateUrl: './bilateral-result-creator.component.html',
   styleUrl: './bilateral-result-creator.component.scss',
-  providers: [BilateralAutoSaveService, BilateralMdsTrackerService]
+  providers: [BilateralAutoSaveService, BilateralMdsTrackerService],
+  // The editor pins itself to the page slot so its two rails can scroll on their own and the
+  // footer sits on the floor (see `.bcr-host--editor` in the stylesheet). The wizard keeps the
+  // document flow, so the class follows the mode instead of being on `:host` unconditionally.
+  host: { '[class.bcr-host--editor]': '!isCreating()' }
 })
 export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
@@ -78,7 +78,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   resultLevelId = signal<number | null>(null);
   resultTypeId = signal<number | null>(null);
   isCreatingResult = signal(false);
-  openSectionName = signal<string | null>('general-info');
+  openSectionName = signal<BilateralEditorSection>('general-info');
   isSubmitting = signal(false);
   isManualSaving = signal(false);
   selectedReportingWay = signal<'manual' | 'ai' | 'bulk' | null>(null);
@@ -126,6 +126,82 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     const typeId = this.creationService.resultTypeId();
     return typeId !== 4 && typeId !== 8;
   });
+
+  readonly sectionNavigation = computed(() => {
+    const sections: { name: BilateralEditorSection; label: string; icon: string }[] = [
+      { name: 'section-zero', label: 'Overview', icon: 'dashboard' },
+      { name: 'general-info', label: 'General information', icon: 'description' },
+      { name: 'contributors', label: 'Contributors & partners', icon: 'people' },
+      { name: 'geography', label: 'Geographic location', icon: 'map' },
+      { name: 'evidence', label: 'Evidence', icon: 'attachment' },
+    ];
+    if (this.hasTypeSpecificSection()) {
+      sections.push({ name: 'type-specific', label: 'Type-specific details', icon: 'category' });
+    }
+    return sections;
+  });
+
+  /**
+   * Sections the MDS tracker has registered — the same set `overallPercentage()` is computed over,
+   * so the rail's "N of M sections complete" can never disagree with the Overview's ring. Overview
+   * itself registers nothing and so is not counted.
+   */
+  readonly trackedSections = computed(() => {
+    const known = new Set(this.mdsTracker.sectionStatus().map(section => section.sectionName));
+    return this.sectionNavigation().filter(section => known.has(section.name));
+  });
+
+  readonly doneSectionCount = computed(
+    () => this.trackedSections().filter(section => this.getSectionMdsStatus(section.name) === 'complete').length
+  );
+  readonly totalSectionCount = computed(() => this.trackedSections().length);
+  readonly progressLabel = computed(() => `${this.doneSectionCount()} of ${this.totalSectionCount()} sections complete`);
+  readonly progressWidth = computed(() => {
+    const total = this.totalSectionCount();
+    return total ? `${Math.round((this.doneSectionCount() / total) * 100)}%` : '0%';
+  });
+
+  /** 0-based index of the open section in `sectionNavigation()`; drives the number pill and the footer counter. */
+  readonly currentSectionIndex = computed(() => this.sectionNavigation().findIndex(section => section.name === this.openSectionName()));
+  readonly currentSectionLabel = computed(() => this.sectionNavigation()[this.currentSectionIndex()]?.label ?? '');
+  readonly currentSectionComplete = computed(() => this.getSectionMdsStatus(this.openSectionName()) === 'complete');
+
+  /**
+   * Labels of the open section's MDS fields still empty. Read off `sectionStatus()` (not
+   * `getSectionFields`) so the footer reacts when a section registers its checklist. Drives the
+   * "N fields missing" control and the Save draft messages: "Save failed" told a QA user nothing
+   * when the real problem was three empty required fields.
+   */
+  readonly missingFields = computed(() => [...this.missingFieldsFor(this.openSectionName()), ...this.invalidFieldsFor(this.openSectionName())]);
+  readonly missingLabel = computed(() => {
+    const count = this.missingFields().length;
+    const onlyEmpty = this.invalidFieldsFor(this.openSectionName()).length === 0;
+    return `${count} ${count === 1 ? 'field' : 'fields'} ${onlyEmpty ? 'missing' : 'to fix'}`;
+  });
+  pendingOpen = signal(false);
+
+  private missingFieldsFor(section: BilateralEditorSection): string[] {
+    const fields = this.mdsTracker.sectionStatus().find(s => s.sectionName === section)?.fields ?? [];
+    return fields.filter(field => !field.filled).map(field => field.label);
+  }
+
+  /**
+   * P2-3340 items: answered but over a ceiling (a 14-word Short title). `pr-input` only paints them
+   * red and Save draft persists them — as on W1/W2 — so the footer and the Save message have to
+   * name them, or the user reads "Success" over a value Submit will later refuse.
+   */
+  private invalidFieldsFor(section: BilateralEditorSection): string[] {
+    const fields = this.mdsTracker.sectionStatus().find(s => s.sectionName === section)?.fields ?? [];
+    return fields.filter(field => field.invalid).map(field => `${field.label} (${field.invalidReason})`);
+  }
+
+  togglePending(): void {
+    this.pendingOpen.update(open => !open);
+  }
+
+  closePending(): void {
+    this.pendingOpen.set(false);
+  }
 
   // Mirrors report-result-form.component.ts's GET_mqapValidation() regex — keep both in sync.
   private readonly KP_HANDLE_REGEX =
@@ -424,12 +500,48 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     return this.mdsTracker.sectionStatus().find(s => s.sectionName === sectionName)?.status ?? 'empty';
   }
 
+  /** Whether the MDS tracker knows this section — Overview never does, so it gets no completion ring. */
+  isTrackedSection(sectionName: string): boolean {
+    return this.mdsTracker.sectionStatus().some(s => s.sectionName === sectionName);
+  }
+
   getSectionFilled(sectionName: string): number {
     return this.mdsTracker.sectionStatus().find(s => s.sectionName === sectionName)?.filledFields ?? 0;
   }
 
   getSectionTotal(sectionName: string): number {
     return this.mdsTracker.sectionStatus().find(s => s.sectionName === sectionName)?.totalFields ?? 0;
+  }
+
+  isActiveSection(section: BilateralEditorSection): boolean {
+    return this.openSectionName() === section;
+  }
+
+  selectSection(section: BilateralEditorSection): void {
+    const current = this.openSectionName();
+    if (current === section) return;
+    if (this.autoSaveService.hasPendingFor(current)) {
+      const shouldContinue = window.confirm('This section has unsaved changes. Keep them in this session and continue?');
+      if (!shouldContinue) return;
+    }
+    this.pendingOpen.set(false);
+    this.openSectionName.set(section);
+  }
+
+  moveSection(direction: -1 | 1): void {
+    const sections = this.sectionNavigation();
+    const currentIndex = sections.findIndex(section => section.name === this.openSectionName());
+    const target = sections[currentIndex + direction];
+    if (target) this.selectSection(target.name);
+  }
+
+  isFirstSection(): boolean {
+    return this.sectionNavigation()[0]?.name === this.openSectionName();
+  }
+
+  isLastSection(): boolean {
+    const sections = this.sectionNavigation();
+    return sections[sections.length - 1]?.name === this.openSectionName();
   }
 
   private scrollToSection(id: string): void {
@@ -454,6 +566,20 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     // P2-3520: greying out the button is the UI; this guard is what stops a second submission of a
     // result that already left the centre's hands.
     if (this.isFormReadOnly()) return;
+
+    const unsaved = this.sectionNavigation()
+      .filter(section => this.autoSaveService.hasPendingFor(section.name))
+      .map(section => section.label);
+    if (unsaved.length) {
+      this.api.alertsFe.show({
+        id: 'bilateralSubmitUnsavedSections',
+        title: 'Save your changes before submitting',
+        description: `Save draft in: ${unsaved.join(', ')}.`,
+        status: 'warning',
+        closeIn: 8000,
+      });
+      return;
+    }
 
     // P2-3340: word ceilings are painted red by pr-input but have never blocked anything anywhere in
     // PRMS, so an over-limit Short title used to submit unchanged. Refuse here and name the offending
@@ -491,22 +617,55 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   async triggerManualSave(): Promise<void> {
     if (this.isManualSaving()) return;
     this.isManualSaving.set(true);
+    const activeSection = this.openSectionName();
+    // Read before flushing: flush() empties the staged fields, so afterwards nothing distinguishes
+    // "saved" from "there was nothing to save".
+    const hadChanges = this.autoSaveService.hasPendingFor(activeSection);
     try {
-      // The success alert used to fire before flush() resolved and before the dispatched
-      // PATCHes came back, so it claimed "All changes saved" while requests were still in
-      // flight. Await the flush, let the sections push their payloads, then wait for the
-      // queue to drain before reporting anything.
-      await this.autoSaveService.flush();
-      this.autoSaveService.manualSave$.next();
-      await this.waitForPendingSaves();
+      // Explicit section save: unrelated staged payloads remain in the editor session and are
+      // never persisted by navigation, Save draft, destroy, or browser lifecycle hooks.
+      await this.autoSaveService.flush(this.autoSaveService.getEndpointKeys(activeSection));
+      this.autoSaveService.manualSave$.next(activeSection);
+      await this.waitForSectionSave(activeSection);
 
-      const failed = this.autoSaveService.globalSaveState() === 'error';
+      if (this.autoSaveService.hasErrorFor(activeSection)) {
+        this.api.alertsFe.show({
+          id: 'bilateralManualSave',
+          title: 'Save failed',
+          description: 'This section could not be saved. Please try again.',
+          status: 'error',
+          closeIn: 5000
+        });
+        return;
+      }
+
+      // Save draft saves a partial draft, as on W1/W2 — but it must say what is still missing.
+      // Before this, an untouched section with three empty required fields reported "Success".
+      const missing = this.missingFieldsFor(activeSection);
+      const invalid = this.invalidFieldsFor(activeSection);
+      const pendingText = [
+        missing.length ? `Still missing: ${missing.join(', ')}.` : '',
+        invalid.length ? `Fix before submitting: ${invalid.join(', ')}.` : ''
+      ]
+        .filter(Boolean)
+        .join(' ');
+      const attention = missing.length + invalid.length > 0;
+      if (!hadChanges) {
+        this.api.alertsFe.show({
+          id: 'bilateralManualSave',
+          title: attention ? 'Nothing to save yet' : 'Up to date',
+          description: attention ? pendingText : 'This section has no unsaved changes.',
+          status: attention ? 'warning' : 'success',
+          closeIn: attention ? 8000 : 2000
+        });
+        return;
+      }
       this.api.alertsFe.show({
         id: 'bilateralManualSave',
-        title: failed ? 'Save failed' : 'Success',
-        description: failed ? 'Some changes could not be saved. Please try again.' : 'All changes saved successfully.',
-        status: failed ? 'error' : 'success',
-        closeIn: failed ? 5000 : 2000
+        title: attention ? 'Draft saved' : 'Success',
+        description: attention ? `Saved. ${pendingText}` : 'Section saved successfully.',
+        status: attention ? 'warning' : 'success',
+        closeIn: attention ? 8000 : 2000
       });
     } catch {
       this.api.alertsFe.show({
@@ -521,9 +680,19 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async waitForPendingSaves(): Promise<void> {
+  /**
+   * Waits for the section's requests to settle. A failed request leaves its fields in `'error'`,
+   * which `hasPendingFor` counts as pending (the data is still unsaved) — so without the
+   * `hasErrorFor` exit a 400 kept the button on "Saving…" for the whole 15s timeout before the
+   * failure was reported.
+   */
+  private async waitForSectionSave(section: BilateralEditorSection): Promise<void> {
     const start = Date.now();
-    while (this.autoSaveService.hasPendingSaves() && Date.now() - start < BilateralResultCreatorComponent.MANUAL_SAVE_TIMEOUT_MS) {
+    while (
+      this.autoSaveService.hasPendingFor(section) &&
+      !this.autoSaveService.hasErrorFor(section) &&
+      Date.now() - start < BilateralResultCreatorComponent.MANUAL_SAVE_TIMEOUT_MS
+    ) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
@@ -533,16 +702,21 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
    * cancelled. Do not start a new async flush during that lifecycle; it can
    * surface a misleading save error even when the last autosave succeeded.
    */
-  @HostListener('window:beforeunload')
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.autoSaveService.hasPendingSaves()) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+    this.isPageUnloading = true;
+  }
+
   @HostListener('window:pagehide')
   onPageExit(): void {
     this.isPageUnloading = true;
   }
 
   ngOnDestroy(): void {
-    if (!this.isPageUnloading && this.resultId()) {
-      void this.autoSaveService.flush();
-    }
     this.autoSaveService.reset();
     this.mdsTracker.reset();
     // Always clear wizard + legacy LS so the next create visit starts empty.

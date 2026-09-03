@@ -155,7 +155,8 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadEvidences();
-    this.manualSaveSub = this.autoSave.manualSave$.subscribe(() => {
+    this.manualSaveSub = this.autoSave.manualSave$.subscribe(section => {
+      if (section !== 'evidence') return;
       if (this.evidences.length > 0 || this.showDraft()) {
         void this.saveSection();
       }
@@ -453,7 +454,7 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
     return failed.length;
   }
 
-  // ── Confirm draft (add to local list, then persist) ─────────────────
+  // ── Confirm draft (add to local list; persistence belongs to Save draft) ─────────────────
 
   confirmDraft(): void {
     if (!this.isDraftValid) return;
@@ -479,7 +480,7 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
 
     this.cancelDraft();
     this.updateTracker();
-    void this.saveSection();
+    this.autoSave.markDirty('evidence');
   }
 
   // ── Delete ──────────────────────────────────────────────────────────
@@ -502,7 +503,7 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
     }));
     this.deleteTarget.set(null);
     this.updateTracker();
-    void this.saveSection();
+    this.autoSave.markDirty('evidence');
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────

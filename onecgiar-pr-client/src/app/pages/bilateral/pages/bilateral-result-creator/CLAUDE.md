@@ -1,6 +1,6 @@
 # bilateral-result-creator
 
-**Verified:** 2026-08-28 · branch performance-refactor · 596ef6842
+**Verified:** 2026-09-03 · branch feat/bilateral-w1w2-form-revamp · working tree
 
 ## Qué es
 La página que hace de wizard de creación **y** de editor de un resultado W3/Bilateral. `isCreating()`
@@ -15,8 +15,25 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
   el `id` interno, y es `null` hasta que responde el GET de detalle.
 - `resultId` (signal local) = espejo de `currentResultId()`, y es la puerta que monta las secciones
   (`.component.html:131`) y la que ata el autosave (`autoSaveService.setResultId`).
-- Autosave y MDS tracker se proveen **por componente** (`providers:` del `@Component`), así que cada
-  visita arranca limpia.
+- El coordinador de guardado y MDS tracker se proveen **por componente** (`providers:` del
+  `@Component`), así que cada visita arranca limpia. Los cambios se mantienen en memoria y sólo se
+  persisten con **Save draft** de la sección activa; navegar o destruir el editor nunca escribe.
+- **Dos marcos, uno por modo.** El wizard (`isCreating()`) conserva el header de banda y la columna
+  centrada de 1100px (`.bilateral-creator`). El editor dibuja su propio marco a lo ancho: riel de
+  secciones de 240px (`.bcr-rail`, checks + "N of M sections complete"), columna con scroll propio
+  (`.bcr-scroll`: header `variant="detail"`, phase switcher, card con pastilla numérica) y footer
+  fijo al piso (`.bcr-editor-footer`: Back · **Next** primario · "Section X of Y" · estado ·
+  Save draft secundario). Misma geometría que `pages/results/.../result-detail`, reconstruida aquí.
+- El marco del editor se ancla al slot de la página (`:host.bcr-host--editor { position:absolute;
+  inset:0 }`, clase ligada a `!isCreating()`), no con una cadena de `height:100%`: `main` es sólo
+  `min-h-svh`, así que en un formulario largo la cadena resuelve a la altura del contenido y el
+  footer se va fuera de pantalla. El bloque contenedor es el slot `relative` de
+  `app.component.html`. `app-bilateral-progress-aside` ya no se renderiza y nada reserva su sitio.
+- **Save draft dice la verdad.** Guarda parcial (como W1/W2), pero el aviso nombra los campos MDS
+  vacíos de la sección (`missingFieldsFor`, leídos de `sectionStatus().fields`): sin cambios
+  stageados y con faltantes → "Nothing to save yet"; guardado con faltantes → "Draft saved, still
+  missing…". El footer muestra "N fields missing" con la lista. `waitForSectionSave` sale al primer
+  `hasErrorFor`: `'error'` cuenta como pendiente y antes un 400 dejaba "Saving…" los 15s del timeout.
 - **Solo lectura (P2-3520):** `isFormReadOnly()` = `!creationService.isEditableByCenterUser()`. Es la
   única puerta: las cinco secciones exponen su propio `readOnly` computado igual, el botón Submit lo
   recibe por input, y un `effect` del constructor llama `autoSaveService.setReadOnly()` con él.
@@ -46,10 +63,12 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
 - `hasTypeSpecificSection` lee `creationService.resultTypeId()`, no el signal local: el local solo lo
   escribe el wizard y en el editor siempre es `null`.
 - ⚠️ **El candado de solo lectura son DOS mitades y hacen falta las dos.** Deshabilitar los controles
-  es la visible; `autoSaveService.setReadOnly()` es la que impide que el cambio llegue a la base. Con
-  solo la primera, cualquier control que se quede interactivo (una plantilla nueva, una sección que
-  guarde desde un `effect`) vuelve a escribir mientras el Science Program revisa — que es el fallo
-  que P2-3520 arregló. Y con solo la segunda, el usuario teclea y nada se guarda, sin saber por qué.
+  es la visible; `autoSaveService.setReadOnly()` es la que impide que Save draft llegue a la base.
+  Con solo la primera, cualquier control que se quede interactivo podría persistir mientras el
+  Science Program revisa — que es el fallo que P2-3520 arregló.
+- ⚠️ El shell W1/W2 es propiedad de Bilateral. No importar componentes de `pages/results/`: esa
+  superficie tiene servicios, rutas y green checks de W1/W2. Sólo se pueden reutilizar primitivas
+  compartidas y tokens visuales.
 - ⚠️ Ese `effect` **no** puede vivir dentro de `submitResult()`: un resultado que ya llega fuera de
   `Editing` al cargar la página tiene que quedar bloqueado sin que nadie pulse Submit.
 

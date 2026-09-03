@@ -246,4 +246,47 @@ describe('BilateralPageHeaderComponent', () => {
       expect(backBtn.nativeElement.textContent).toContain('Back to Custom Destination');
     });
   });
+
+  // The result editor's header: in flow, way back on top, title, identity strip — the W1/W2 shape.
+  describe('detail variant (result editor)', () => {
+    const q = (selector: string) => fixture.nativeElement.querySelector(selector);
+
+    beforeEach(() => {
+      ctx.setCenter('ABC', 'Alliance of Bioversity International and CIAT');
+      fixture.componentRef.setInput('variant', 'detail');
+      fixture.componentRef.setInput('pageTitle', 'Test JD');
+      fixture.componentRef.setInput('resultCode', 8976);
+      fixture.componentRef.setInput('resultTypeName', 'Innovation use');
+      fixture.componentRef.setInput('isW3Bilateral', true);
+      fixture.componentRef.setInput('statusId', 1);
+      fixture.detectChanges();
+    });
+
+    it('renders the title with the way back above it and no breadcrumb band', () => {
+      expect(q('[data-testid="bilateral-detail-header"]')).not.toBeNull();
+      expect(q('h1')?.textContent.trim()).toBe('Test JD');
+      expect(q('nav[aria-label="Breadcrumb"]')).toBeNull();
+      expect(q('.bg-\\[var\\(--pr-surface-band\\)\\]')).toBeNull();
+      const back = q('[data-testid="bilateral-header-back-btn"]');
+      expect(back).not.toBeNull();
+      expect(back.textContent).toContain(component.backLabel());
+    });
+
+    it('spends the one pill on the status and lists the funding tag as text', () => {
+      const text = fixture.nativeElement.textContent;
+      expect(text).toContain('8976');
+      expect(text).toContain('Innovation use');
+      expect(text).toContain('W3/Bilateral');
+      expect(q('[data-testid="bilateral-status-badge"]')?.textContent.trim()).toBe('Editing');
+      const pills = fixture.nativeElement.querySelectorAll('.rounded-full');
+      expect(pills.length).toBe(1);
+    });
+
+    it('keeps the band for every other page', () => {
+      fixture.componentRef.setInput('variant', 'band');
+      fixture.detectChanges();
+      expect(q('[data-testid="bilateral-detail-header"]')).toBeNull();
+      expect(q('nav[aria-label="Breadcrumb"]')).not.toBeNull();
+    });
+  });
 });
