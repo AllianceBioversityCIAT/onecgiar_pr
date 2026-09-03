@@ -49,12 +49,12 @@ describe('ReportingProgramBandComponent', () => {
 
   // ── P14 · Reporting toolbar heading ───────────────────────────────────────
   describe('reporting heading', () => {
-    it('renders above the toolbar with the year of the CURRENT cycle', async () => {
+    it('does not render the redundant section heading for Reporting', async () => {
       await build({ showToolbar: true, cycleYear: 2026 });
 
-      const heading = root().querySelector('h2') as HTMLElement;
-      expect(heading).toBeTruthy();
-      expect(heading.textContent?.trim()).toBe("Report results linked to the program's 2026 ToC");
+      const heading = root().querySelector('h2');
+      expect(heading).toBeNull();
+      expect(text()).not.toContain('Report results linked');
     });
 
     it('follows the cycle instead of hardcoding a year', async () => {
@@ -62,8 +62,9 @@ describe('ReportingProgramBandComponent', () => {
       fixture.componentRef.setInput('cycleYear', '2027');
       fixture.detectChanges();
 
-      expect(root().querySelector('h2')?.textContent).toContain("program's 2027 ToC");
+      expect(component.reportingHeading()).toContain("program's 2027 ToC");
       expect(text()).not.toContain('2026 ToC');
+      expect(text()).not.toContain('2027 ToC');
     });
 
     it('drops the year rather than leaving a gap when no cycle is loaded', async () => {
@@ -157,8 +158,8 @@ describe('ReportingProgramBandComponent', () => {
       // One strip serves both shapes, so the third tab has to survive the collapse.
       expect(nav.textContent).toContain('Results');
       expect(nav.textContent).toContain('Where to report');
-      // dot + name row, the back button, and the 32px CTA — all fade in.
-      expect(collapsedParts().length).toBe(3);
+      // dot + name row and the 32px CTA fade in (Back is gone).
+      expect(collapsedParts().length).toBe(2);
     });
 
     it('condenses on Overview too, where the toolbar is hidden', async () => {
@@ -265,8 +266,8 @@ describe('ReportingProgramBandComponent', () => {
       scrollTo(200);
 
       expect(text()).not.toContain('Report emerging result');
-      // The dot + name row and the right actions container (holding the back button) fade in.
-      expect(collapsedParts().length).toBe(2);
+      // Only the collapsed identity (dot + name) fades in — the action group is gone with canReport false.
+      expect(collapsedParts().length).toBe(1);
     });
   });
 
@@ -321,7 +322,7 @@ describe('ReportingProgramBandComponent', () => {
   // `min-w-0`/`truncate` chain (OSF-T-2c) already being correctly composed.
   describe('collapsed action group must allow its own box to shrink (OSF-T-10)', () => {
     const collapsedGroup = () =>
-      root().querySelector('[data-testid="program-band-back-btn-collapsed"]')?.parentElement as HTMLElement;
+      root().querySelector('[data-testid="program-band-collapsed-actions"]') as HTMLElement;
     const collapsedCta = () =>
       Array.from(root().querySelectorAll('button')).find(
         b => b.className.includes('pr-band-fade') && b.textContent?.includes('Where to report')
@@ -345,52 +346,7 @@ describe('ReportingProgramBandComponent', () => {
     });
   });
 
-  // ── OSF-T-15 · at 900px the CTA is already truncated to its icon, so the Back button (193px,
-  // was `shrink-0`) becomes the binding constraint. It now carries the identical OSF-DD-15 chain
-  // as the CTA: `min-w-0` on the button, `shrink-0` on the icon, label in its own `min-w-0
-  // truncate` span. jsdom performs no layout — the real gate is the 900px element-level browser
-  // sweep in execution.md; this only guards the structural chain from regressing silently.
-  describe('collapsed Back button truncates its own label (OSF-T-15)', () => {
-    const collapsedBackBtn = () =>
-      root().querySelector('[data-testid="program-band-back-btn-collapsed"]') as HTMLButtonElement;
-
-    it('does not pin the Back button at its intrinsic width — it can shrink like the CTA', async () => {
-      await build({ showToolbar: true });
-      scrollTo(200);
-
-      const btn = collapsedBackBtn();
-      expect(btn.className).not.toContain('shrink-0');
-      expect(btn.className).toContain('min-w-0');
-    });
-
-    it('truncates the label in its own min-w-0 span instead of overflowing', async () => {
-      await build({ showToolbar: true });
-      scrollTo(200);
-
-      const label = collapsedBackBtn().querySelector('span') as HTMLElement;
-      expect(label.className).toContain('truncate');
-      expect(label.className).toContain('min-w-0');
-      expect(label.textContent).toBe(component.backLabel());
-    });
-
-    it('keeps the arrow icon fixed-size so it never gets clipped by the truncating label', async () => {
-      await build({ showToolbar: true });
-      scrollTo(200);
-
-      const icon = collapsedBackBtn().querySelector('ng-icon') as HTMLElement;
-      expect(icon.className).toContain('shrink-0');
-    });
-
-    it('still fires goBack() once the label can truncate', async () => {
-      await build({ showToolbar: true });
-      const spy = jest.spyOn(component, 'goBack');
-      scrollTo(200);
-
-      collapsedBackBtn().click();
-
-      expect(spy).toHaveBeenCalledTimes(1);
-    });
-  });
+  // OSF-T-15 (collapsed Back truncation) is gone with the Back control.
 
   // ── P2-3252 · global Expand all / Collapse all ────────────────────────────
   describe('expand all / collapse all', () => {
@@ -667,43 +623,19 @@ describe('ReportingProgramBandComponent', () => {
     });
   });
 
-  // ── Smart Back Button ──────────────────────────────────────────────────
-  describe('smart back button', () => {
-    it('renders the smart back button with dynamic label in expanded view', async () => {
+  describe('program-band back button removed', () => {
+    it('does not render Back in expanded or collapsed views', async () => {
       await build({ showToolbar: true, programCode: 'SP02' });
 
-      const backBtn = root().querySelector('[data-testid="program-band-back-btn"]') as HTMLButtonElement;
-      expect(backBtn).toBeTruthy();
-      expect(backBtn.textContent).toContain('Back to Science programs');
-    });
+      expect(root().querySelector('[data-testid="program-band-back-btn"]')).toBeNull();
+      expect(root().querySelector('[data-testid="program-band-back-btn-collapsed"]')).toBeNull();
+      expect(text()).not.toContain('Back to Science programs');
 
-    it('calls goBack() on click in expanded view', async () => {
-      await build({ showToolbar: true, programCode: 'SP02' });
-      const spy = jest.spyOn(component, 'goBack');
-
-      const backBtn = root().querySelector('[data-testid="program-band-back-btn"]') as HTMLButtonElement;
-      backBtn.click();
-
-      expect(spy).toHaveBeenCalledTimes(1);
-    });
-
-    it('renders the back button in collapsed view and triggers navigation on click', async () => {
-      await build({ showToolbar: true, programCode: 'SP02' });
-      const spy = jest.spyOn(component, 'goBack');
       scrollTo(200);
 
-      const collapsedBackBtn = root().querySelector('[data-testid="program-band-back-btn-collapsed"]') as HTMLButtonElement;
-      expect(collapsedBackBtn).toBeTruthy();
-      collapsedBackBtn.click();
-
-      expect(spy).toHaveBeenCalledTimes(1);
-    });
-
-    it('respects backLabelOverride when provided', async () => {
-      await build({ showToolbar: true, backLabelOverride: 'Back to Custom Page' });
-
-      const backBtn = root().querySelector('[data-testid="program-band-back-btn"]') as HTMLButtonElement;
-      expect(backBtn.textContent).toContain('Back to Custom Page');
+      expect(root().querySelector('[data-testid="program-band-back-btn"]')).toBeNull();
+      expect(root().querySelector('[data-testid="program-band-back-btn-collapsed"]')).toBeNull();
+      expect(text()).not.toContain('Back to');
     });
   });
 

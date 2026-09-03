@@ -89,5 +89,11 @@ None. No `Not Done / Assumptions`.
 
 ## Summary
 
-All tasks in `bugfix/smart-back-button` are `[x]` with matching PASS evidence. Shell Back skips sibling `/entity-details/` URLs and `back()` does not restack the left page. Optional HITL remains: paint the band on Overview after a sidebar hop and confirm **Back to Science programs**.
+All tasks in `bugfix/smart-back-button` are `[x]` with matching PASS evidence. Shell Back skips sibling `/entity-details/` URLs and `back()` does not restack the left page.
+
+## Post-completion product decision (2026-09-03)
+
+HITL after T-2: the band Back always read **Back to Science programs** and did not return Overview → Reporting (same-program tabs are `/entity-details/` and are skipped). The user asked to **remove the button** rather than restore tab-to-tab Back.
+
+Removed from `app-reporting-program-band` (expanded + collapsed). `SmartNavigationService` and the bilateral header Back are unchanged. Scoped band Jest: 57 passed.
 

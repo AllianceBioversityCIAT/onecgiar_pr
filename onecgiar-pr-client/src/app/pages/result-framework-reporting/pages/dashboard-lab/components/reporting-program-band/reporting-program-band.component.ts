@@ -13,10 +13,9 @@ import {
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideArrowLeft, lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap } from '@ng-icons/lucide';
+import { lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap } from '@ng-icons/lucide';
 import { PrFilterMultiselectModule } from '../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { PrFilterSelectComponent } from '../../../../../../shared/components/pr-filter-select/pr-filter-select.component';
-import { SmartNavigationService } from '../../../../../../shared/services/smart-navigation.service';
 
 export interface BandFilterOption {
   value: string;
@@ -104,12 +103,11 @@ export const SCIENCE_PROGRAM_DESCRIPTIONS: Record<string, string> = {
   templateUrl: './reporting-program-band.component.html',
   styleUrls: ['./reporting-program-band.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [provideIcons({ lucideArrowLeft, lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap })]
+  providers: [provideIcons({ lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap })]
 })
 export class ReportingProgramBandComponent {
   private readonly zone = inject(NgZone);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly navSE = inject(SmartNavigationService);
 
   readonly programCode = input<string>('');
   readonly programName = input<string>('');
@@ -244,21 +242,6 @@ export class ReportingProgramBandComponent {
    * emerging result has always happened.
    */
   readonly emergingPath = '/result-framework-reporting/emerging';
-
-  /** Optional explicit override for the back button label. */
-  readonly backLabelOverride = input<string>('');
-
-  /** Dynamic context-aware back button label derived from navigation history. */
-  readonly backLabel = computed(() => {
-    const override = this.backLabelOverride()?.trim();
-    if (override) return override;
-    return this.navSE.getBackTarget(undefined, this.programCode()).label;
-  });
-
-  /** Navigates back intelligently to the previous surface or logical parent. */
-  goBack(): void {
-    this.navSE.back(undefined, this.programCode());
-  }
 
   /** ⓘ popover open state — click toggles, Escape / outside click close (reference :348). */
   readonly infoOpen = signal(false);
