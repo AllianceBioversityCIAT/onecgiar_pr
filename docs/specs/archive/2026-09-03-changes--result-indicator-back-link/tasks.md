@@ -113,15 +113,15 @@ Scoped command only: `cd onecgiar-pr-client && npm run test -- --testPathPattern
 
 ## 6. Rollout & verification
 
-- [ ] PR / commit: `✨ feat(result-header): link Area of Work to By AOW`
-- [ ] Scoped Jest green; lint on touched files
+- [x] PR / commit: `002d9de5c` paint; `9dfcb8775` catalog fallback
+- [x] Scoped Jest green (61/61); lint on touched files
 - [x] HITL note in `execution.md` for R-7 (owner close on 8989; wrap via existing `flex-wrap` row)
-- [ ] No migration, no bilateral changelog
-- [ ] Submitter href still program home
+- [x] No migration, no bilateral changelog
+- [x] Submitter href still program home
 
 ## 7. Cleanup & follow-ups
 
-- [ ] Spec → shipped on archive
+- [x] Spec → shipped on archive
 - [ ] Deferred: filter restore; scroll without `kpi`; Center-contributor ToC; i18n if the header leaves hardcoded English
 
 ## 8. Roll-back plan
