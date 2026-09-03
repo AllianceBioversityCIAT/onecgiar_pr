@@ -1,6 +1,6 @@
 # rd-annual-updating
 
-**Verified:** 2026-09-02 · branch performance-refactor · c8de9ed81
+**Verified:** 2026-09-03 · branch performance-refactor
 
 ## What it is
 The "Annual updating" block at the very top of General Information. It asks whether the innovation
@@ -28,6 +28,33 @@ render exactly as they always did.
 - `rd-general-information.component.html:1` — rendered only when `generalInfoBody.is_replicated`
   is known, which is what makes the construction-time resolution safe.
 - Declared in `rd-general-information.module.ts:22` (the component itself is standalone).
+
+## The reason checklist is ONE phase generation (P2-3292 Step 2)
+
+`investment_discontinued_option` has no phase column beyond `phase_year_from`, which marks the phase
+a reason was introduced for. The six original rows carry `NULL` (the base generation); the seven
+2026 ones carry `2026`. The endpoint serves exactly one generation — the newest at or below the
+result's phase year — so the checklist never mixes the two.
+
+- The year travels on `GET_investmentDiscontinuedOptions(result_type_id, phase_year)` from
+  `rd-general-information.component.ts`. 🛑 It comes from `FieldsManagerService.phaseYear`, **not**
+  from the general-information payload that call sits inside: that endpoint answers
+  `phase_year: 2025` for a result the screen shows in Reporting 2026. An unknown year sends nothing,
+  which asks for the legacy catalogue.
+- ⚠️ **`needsDescription()` replaced the hardcoded `investment_discontinued_option_id == 6`.** The
+  2026 "Other" row is a new row with an AUTO_INCREMENT id, so under the old rule its free-text box
+  would never have rendered and the reason could not have been typed at all. A row that declares
+  `requires_description` wins; only a row that says nothing falls back to the id, which is how the
+  legacy "Other" keeps working **without being rewritten** — flagging it would have meant an UPDATE
+  on a catalogue row a 2025-phase result still renders.
+- ⚠️ **The green check still only knows the legacy "Other".** `validation_innovation_dev_P22`
+  requires `description` when `investment_discontinued_option_id = 6`; the 2026 "Other" row is a
+  different id and nothing demands its text. That branch is in the MySQL validation function, not
+  here.
+- 🛑 **Steps 3 and 4 of the story are NOT built.** Merge / split has nowhere to store the link
+  (`linked_result` carries no link-type discriminator), so the two reasons record *that* the
+  innovation merged or split but not *with what*. The auto-lock of Step 4 is waiting on the A/B
+  question published on the ticket on 31 Aug 2026.
 
 ## Traps (⚠️ = already broke something)
 - ⚠️ **The 2026 label is a question, so it must pass `[useColon]="false"`.** `app-pr-field-header`
