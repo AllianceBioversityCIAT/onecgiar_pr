@@ -234,3 +234,59 @@ ADVISORY (recorded, never gates):
 - READABILITY: `el.className.split` would throw on an SVG child; `String(el.getAttribute('class') ?? '')` is the cheap future-proofing. Not applied (advisory).
 
 **Requirements covered:** `AIS-R-5` (string half), `AIS-AC-3` (jsdom half); `AIS-DD-4`. **Gate:** auto-approved (pre-approved mode; user re-confirmed continuation after the budget trip) — continue to `AIS-T-5` (`AIS-T-4` running in parallel).
+
+### `AIS-T-4` — Measure `reporting-aow-table` under the same sweep (report only)
+
+**Status:** **DONE (report only, no template change)**, 2026-09-03. **HEAD at run time:** `f1ee867dd`. **Dirty state at run time** (another session actively editing this component; measured against the working tree as-is, per the Leader's brief):
+```
+ M onecgiar-pr-client/.../reporting-aow-table/reporting-aow-table.component.html
+ M onecgiar-pr-client/.../reporting-aow-table/reporting-aow-table.component.scss
+ M onecgiar-pr-client/.../reporting-aow-table/reporting-aow-table.component.spec.ts
+ M onecgiar-pr-client/.../reporting-aow-table/reporting-aow-table.component.ts
+?? onecgiar-pr-table/.../reporting-aow-table.row-layout.cy.ts   (this task's own new file)
+```
+**Files:** `reporting-aow-table.row-layout.cy.ts` (new, 139 LOC).
+
+**Row measured:** `.pr-reporting-row` (`reporting-aow-table.component.scss:42-71`) — the indicator row inside an open AoW card / HLO sub-group, **not** an AoW-level summary row (this component has none; the AoW card header is a plain flex bar, no grid). Its identity/name track is `minmax(280px, 1fr)`, unlike `program-overview`'s `minmax(0,1fr)` — a hard 280px floor already 3.5× above the 80px bar `AIS-AC-1` uses, and the grid carries **zero** `@container`/viewport variants (verified in `.scss`: no `max-[`/`min-[` on `.pr-reporting-row` at all — it never sheds a track at any width).
+
+**Fixture:** one `ReportingAowGroup` (`AOW01`), 3 `ReportingIndicator` rows, names 86–101 chars (≥ 60 required), one row `999/999` (100%), realistic Target/Achieved/Progress figures; `expandAll: true` so both the AoW card and its HLO sub-group render open at mount (no click needed — `isDefaultOpenAow()`/`isDefaultOpenHlo()` both read `expandAll()`). Mounted `cy.mount(ReportingAowTableComponent, { componentProperties: { groups: FIXTURE_GROUPS, expandAll: true } })` — no Router/Http import needed (component injects neither). Swept the `<section>` card's inline `width` 336→1000 step 8 (84 steps, same absolute-floor rounding as `AIS-T-1`/`design.md` `AIS-DD-5`), reading each of the 3 rows via `.pr-collapse.is-open .pr-collapse.is-open .pr-reporting-row` (the same nested-collapse selector `reporting-aow-table.component.spec.ts`'s `rows()` helper uses).
+
+**Result — every one of the 252 measured points (84 steps × 3 rows) is IDENTICAL in shape** (only `row.clientWidth` moves, tracking `Q − 5`):
+
+| Field | Value, constant across Q=336..1000 |
+|---|---|
+| `gridTemplateColumns` | `28px 280px 80px 80px 112px 132px 136px 36px` (identity resolves to the literal **280px** floor at every step — never negotiates) |
+| `name.clientWidth` | **280px**, always (never < 80px) |
+| `name.scrollWidth > name.clientWidth` (literal brief metric) | **false**, always — this component 2-line-**clamps** (`.pr-clamp-2`, `-webkit-line-clamp:2`) rather than 1-line-truncates like `program-overview`'s name span, so a block paragraph's horizontal `scrollWidth` never exceeds its `clientWidth` (it wraps, it doesn't scroll). The literal metric the brief asked for reads "never truncated" at every step — **true but not informative** for this row shape. |
+| `name.scrollHeight > name.clientHeight` (the real clamp signal) | **true**, always — with these long names the 2-line clamp is visually cutting text off at every tested width, but this is a property of the fixed 280px column, independent of `Q`; it is not a starvation signal. |
+| `row.scrollWidth` | **1028px**, constant (the row's own intrinsic minimum content width: 280+80+80+112+132+136+36 tracks + 7×16 gaps = 996, +52px padding, +3px border-left ≈ 1051; measured 1028, close enough given rounding/scrollbar) |
+| `.overflow-x-auto` ancestor `scrollWidth > clientWidth` | **true**, always across the ENTIRE 336–1000 range — the row never fits inside its scroll wrapper at any tested width |
+
+**Verdict: `reporting-aow-table`'s row does NOT starve down to Q=336** — the name column never drops below its 280px floor at any point in the sweep (well clear of the 80px bar). `AIS-OQ-4` is closed: no name-starvation fix needed here, `AIS-DD-6`'s "if not, the question is closed" branch applies.
+
+**BUT a second, more severe finding surfaced (not asked for, not fixed, flagged for the owner):** because this row's grid has **zero container/viewport awareness** (no `@container`, no `@min-/@max-[N]:` anywhere), it overflows its horizontal scroll wrapper at **every single width in the tested range**, including `Q=1000` — its own intrinsic minimum width (~1028px) exceeds the sweep's own ceiling. Given `program-overview/CLAUDE.md`'s own note that this Reporting tab's available width is typically well under 1000px query-width beside the 300px rail at common viewports, this row likely shows a horizontal scrollbar in production nearly always. This is a **different defect shape** than `program-overview`'s pre-fix identity starvation (there, the track shrank to near-zero with no floor; here, the floor holds but the row's fixed tracks simply never contract, so the ROW spills instead) — **candidate proposal slug if the owner wants it chased: `changes/reporting-aow-table-row-overflow`** (distinct from the `…-name-starvation` slug `AIS-DD-6` anticipated, since starvation is not what happened).
+
+**Raw evidence:** full 252-row CSV-shaped table at `onecgiar-pr-client/cypress/results/ais-t4-reporting-aow-table.txt` (untracked test-run artifact, not committed — left for the Leader/Reviewer to inspect or discard).
+
+**Verification:**
+| Check | Command | Result |
+|---|---|---|
+| CT spec (report only, no assertion on a measured value — only harness guards `rows===0`/`rows!==3`/step-count) | `cd onecgiar-pr-client && CT_DEV_SERVER_PORT=8091 ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--max-old-space-size=2048 npx cypress run --component --spec ".../reporting-aow-table.row-layout.cy.ts"` | `Tests: 1, Passing: 1, Failing: 0`, exit 0. Known noise present (pre-flagged in `tasks.md` §2, not blockers): `primeicons` font-resolve webpack errors, `ct-utils.ts:54` `TS2322`. |
+| Lint | `npx ng lint --quiet` | `All files pass linting.` |
+
+**Not Done / Assumptions:**
+- **Sweep floor discrepancy:** `tasks.md`'s own `AIS-T-4` prose says "sweep its row container **320**→1000 step 8"; the Leader's dispatch message said "**336**→1000 step 8" (matching `AIS-T-1`/`design.md AIS-DD-5`'s rounded absolute floor). Followed the Leader's literal instruction (336, 84 steps) — flagged here since it diverges from the task file's own text, per the Implementer contract's "pointer briefs are read verbatim, not from memory" rule; the 16px gap (320–336) is below this row's floor either way and would not change the verdict.
+- **Selector, not a `data-testid`:** brief forbids any template change, so rows are located via the pre-existing `.pr-collapse.is-open .pr-collapse.is-open .pr-reporting-row` selector (same one the component's own Jest spec's `rows()` helper uses) rather than a test hook. Robust today; would need updating if the disclosure DOM nesting changes.
+- **Font gate not reused:** `AIS-T-1`'s `beforeEach` Material-Icons-Round `FontFace` gate was NOT copied — this row's only Material-icon ligatures (`arrow_downward`/`check_circle`/`link`) sit in FIXED-px grid tracks (not `max-content`), and the two that could render (`link`, always shown; the other two gated behind `lastReported`, unset in this fixture) sit in fixed-size 30×30 buttons, so a font-fallback glyph cannot inflate a grid track the way it did in `program-overview`'s `max-content` actions cell. Judgment call, not verified by disabling the font to confirm zero effect — low risk given the structural argument above.
+- Did not commit.
+
+**`AIS-T-4` — Reviewer verdict (opus, fresh context): `STATUS: PASS` on attempt 1.** "Report-only sweep executed to `AIS-T-4`'s letter; the 252-point table supports 'does not starve', `AIS-OQ-4` closes on `AIS-DD-6`'s 'question is closed' branch, and the overflow finding is properly deferred to a proposal." Checks: only harness guards can throw; `ais-t4-reporting-aow-table.txt` = header + 84×3 rows, `name.clientWidth = 280` at Q=336 and Q=1000; SCSS confirms `grid-template-columns: 28px minmax(280px,1fr) …` with no `@container`/viewport variants; font-gate skip acceptable (zero `max-content`/`auto` tracks); scope clean.
+
+ADVISORY (recorded, never gates):
+- RELIABILITY: `rowEl.children[1].querySelector('p')` is index-positional — a cell reorder null-derefs rather than mis-measures; acceptable.
+- READABILITY: the entry said "111 LOC" (file is 139 — **corrected by the Leader**) and its "sweep floor discrepancy" note cites a `tasks.md` value of 320 that the Leader had already corrected to 336 (`tasks.md` typo, fixed 2026-09-03; the note is left as the Implementer's contemporaneous record).
+- RISK: "shows a horizontal scrollbar in production nearly always" extrapolates past the sweep's 1000px ceiling; the follow-up proposal must re-measure at ≥ 1028px before asserting frequency.
+
+**Secondary finding → candidate proposal (not this spec):** `changes/reporting-aow-table-row-overflow` — `.pr-reporting-row`'s intrinsic min-width (~1028px) exceeds its container at every swept width including above `md`, so the `.overflow-x-auto` wrapper scrolls horizontally almost always; distinct from the starvation shape (a floor that never contracts vs. a floor of zero). Note: another session is editing this component right now (`reporting-aow-jira-hierarchy`); measure again after it lands.
+
+**Requirements covered:** `AIS-R-10`, `AIS-AC-7`; `AIS-OQ-4` resolved: **no starvation, no fix**. Raw evidence: `onecgiar-pr-client/cypress/results/ais-t4-reporting-aow-table.txt` (left untracked — `cypress/results/` is not a committed path in this repo; the compressed table above is the record). **Gate:** auto-approved (pre-approved mode).

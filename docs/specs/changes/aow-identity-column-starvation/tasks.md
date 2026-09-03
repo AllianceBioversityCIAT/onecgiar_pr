@@ -79,8 +79,9 @@
 
 ### `AIS-T-4` — Measure `reporting-aow-table` under the same sweep (report only)
 
+- [x] **Status:** done — PASS on attempt 1, 2026-09-03; verdict: does not starve (evidence: `execution.md` §2 `AIS-T-4`)
 - **Type:** `tests` (report-only)
-- **Description:** Copy the sweep pattern from `AIS-T-1` into `reporting-aow-table.row-layout.cy.ts`, mount `ReportingAowTableComponent` with a fixture of ≥ 3 rows (long names), sweep its row container 320→1000 step 8, and **log** (never assert) the name-column width, `scrollWidth`/`clientWidth` and `gridTemplateColumns` per step. Write the verdict to `execution.md`: *starves below Npx / does not starve*, with the table. No template change.
+- **Description:** Copy the sweep pattern from `AIS-T-1` into `reporting-aow-table.row-layout.cy.ts`, mount `ReportingAowTableComponent` with a fixture of ≥ 3 rows (long names), sweep its row container 336→1000 step 8 (same floor-rounded start as `AIS-T-1`; corrected from 320 on 2026-09-03), and **log** (never assert) the name-column width, `scrollWidth`/`clientWidth` and `gridTemplateColumns` per step. Write the verdict to `execution.md`: *starves below Npx / does not starve*, with the table. No template change.
 - **Implements:** `AIS-R-10`, `AIS-AC-7`; resolves `AIS-OQ-4`; `AIS-DD-6`.
 - **Files (expected):** `…/components/reporting-aow-table/reporting-aow-table.row-layout.cy.ts` (new, ≈60 LOC); `execution.md`.
 - **Depends on:** `AIS-T-1` (pattern) · **Blocks:** — (parallel-safe with `AIS-T-2`/`T-3`)
