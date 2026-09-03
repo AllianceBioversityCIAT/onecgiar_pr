@@ -5,253 +5,191 @@
   </app-alert-status>
 
   @if (primarySpData(); as sp) {
-    <div class="sc-card sc-card--toc">
-      <div class="sc-card__header">
-        <div class="sc-card__title">
-          <span class="sc-card__icon toc-icon"></span>
-          <span>Theory of Change Alignment</span>
-        </div>
+    <!-- Same shape as the W1/W2 "Submitter" block: a read-only field with the standard header and a
+         one-line note in primary colour, no card chrome. P2-3368 AC1: the primary SP is auto-assigned
+         from the centre and never editable here. -->
+    <div class="sc-block sc-block--toc">
+      <app-pr-field-header label="Primary contributing science program" [required]="false" [readOnly]="true"></app-pr-field-header>
+      <div class="sc-readonly-value sc-readonly-value--sp">
+        <img class="sc-sp-icon" [src]="sp.iconSrc" width="24" height="24" alt="" />
+        <span class="sc-sp-code">{{ sp.programCode }} — {{ sp.name || sp.shortName }}</span>
+        @if (sp.allocation) {
+          <span class="sc-sp-pct">{{ formatAlloc(sp.allocation) }}%</span>
+        }
       </div>
-      <div class="sc-card__body">
-        <!-- P2-3368: the primary SP is auto-assigned from the centre and never editable here (AC1). -->
-        <div class="sc-field">
-          <div class="flex items-center justify-between gap-2">
-            <label class="sc-label">Primary contributing science program</label>
-            <span class="sc-card__badge">Read only</span>
-          </div>
-          <div class="sc-sp-header">
-            <img class="sc-sp-icon" [src]="sp.iconSrc" width="32" height="32" alt="" />
-            <div class="sc-sp-info">
-              <span class="sc-sp-code">{{ sp.programCode }} — {{ sp.name || sp.shortName }}</span>
+      <div class="sc-helper">Assigned from the project's mapping; it cannot be changed here.</div>
+
+      <app-section-toc [resultLevelId]="creationService.resultLevelId()"></app-section-toc>
+    </div>
+
+    <div class="sc-block sc-block--programs">
+      <!--
+        Always rendered, and offering every P25 program (Nicoleta Trifa via Ángel Jarrín,
+        2026-09-03): it used to depend on the project's mapping and vanished for a project mapped
+        100% to one program. Persisted through `contributing_programs[]` on the contributors PATCH
+        and read back from the detail's role-2 initiatives.
+      -->
+      @if (availableSecondarySpOptions().length) {
+        <app-pr-multi-select
+          [readOnly]="readOnly()"
+          label="Contributing science programs"
+          [options]="availableSecondarySpOptions()"
+          [ngModel]="selectedSecondarySpIds()"
+          (ngModelChange)="onSecondarySpsModelChange($event)"
+          optionLabel="full_name"
+          optionValue="programId"
+          placeholder="Add another program…"
+          [required]="false"
+          [isStatic]="true">
+        </app-pr-multi-select>
+      }
+      @if (creationService.selectedSecondarySps().length) {
+        <div class="sc-selected-chips">
+          @for (sp of creationService.selectedSecondarySps(); track sp.programId) {
+            <span class="sc-chip">
+              {{ sp.programCode }}
               @if (sp.allocation) {
                 <span class="sc-sp-pct">{{ formatAlloc(sp.allocation) }}%</span>
               }
-            </div>
-          </div>
+            </span>
+          }
         </div>
-        <app-section-toc [resultLevelId]="creationService.resultLevelId()"></app-section-toc>
-      </div>
+      }
     </div>
-
-      <div class="sc-card relative z-[150]">
-        <div class="sc-card__header">
-          <div class="sc-card__title">
-            <span class="sc-card__icon sp-icon"></span>
-            <span>Contributing science programs</span>
-          </div>
-        </div>
-        <div class="sc-card__body">
-          <!--
-            Always rendered, and offering every P25 program (Nicoleta Trifa via Ángel Jarrín,
-            2026-09-03): it used to depend on the project's mapping and vanished for a project mapped
-            100% to one program. Persisted through `contributing_programs[]` on the contributors PATCH
-            and read back from the detail's role-2 initiatives.
-          -->
-          @if (availableSecondarySpOptions().length) {
-            <div class="w-full max-w-[480px]">
-              <app-pr-multi-select
-                [readOnly]="readOnly()"
-                label="Contributing science programs"
-                [options]="availableSecondarySpOptions()"
-                [ngModel]="selectedSecondarySpIds()"
-                (ngModelChange)="onSecondarySpsModelChange($event)"
-                optionLabel="full_name"
-                optionValue="programId"
-                placeholder="Add another program…"
-                [required]="false"
-                [isStatic]="true">
-              </app-pr-multi-select>
-            </div>
-          }
-          @if (creationService.selectedSecondarySps().length) {
-            <div class="sc-chips">
-              @for (sp of creationService.selectedSecondarySps(); track sp.programId) {
-                <span class="sc-sp-badge">
-                  {{ sp.programCode }}
-                  @if (sp.allocation) {
-                    <span class="sc-sp-pct">{{ formatAlloc(sp.allocation) }}%</span>
-                  }
-                </span>
-              }
-            </div>
-          }
-        </div>
-      </div>
   }
 
-  <div class="sc-card sc-card--lead-center">
-    <div class="sc-card__header">
-      <div class="sc-card__title">
-        <span class="sc-card__icon lead-icon"></span>
-        <span>Lead center</span>
-      </div>
-      <span class="sc-card__badge">Read only</span>
-    </div>
-    <div class="sc-card__body">
-      <span class="sc-lead">{{ creationService.selectedProject()?.leadCenter?.acronym }} - {{ creationService.selectedProject()?.leadCenter?.name }}</span>
-    </div>
+  <!-- Read-only like the W1/W2 "Submitter": standard header + a disabled-looking value, no badge. -->
+  <div class="sc-block">
+    <app-pr-field-header label="Lead center" [required]="false" [readOnly]="true"></app-pr-field-header>
+    <div class="sc-readonly-value">{{ creationService.selectedProject()?.leadCenter?.acronym }} - {{ creationService.selectedProject()?.leadCenter?.name }}</div>
   </div>
 
-  <div class="sc-card sc-card--centers">
-    <div class="sc-card__header">
-      <div class="sc-card__title">
-        <span class="sc-card__icon center-icon"></span>
-        <span>Contributing CGIAR centers</span>
-        <!-- P2-3368 asks for an ⓘ tooltip here but never supplies the guidance text, and W1/W2 has
-             none to reuse. Icon left out rather than shipped empty — see this folder's CLAUDE.md. -->
+  <div class="sc-block sc-block--centers">
+    <!-- P2-3368 asks for an ⓘ tooltip here but never supplies the guidance text, and W1/W2 has
+         none to reuse. Icon left out rather than shipped empty — see this folder's CLAUDE.md. -->
+    <app-pr-multi-select
+      [readOnly]="readOnly()"
+      label="Contributing CGIAR centers"
+      [options]="availableCentersComputed()"
+      [disableOptions]="disabledCenterOptions()"
+      [ngModel]="selectedCenterInstitutionIds()"
+      (ngModelChange)="onCentersModelChange($event)"
+      optionLabel="full_name"
+      optionValue="institutionId"
+      placeholder="Centers which collaborate with this result"
+      [required]="false"
+      [isStatic]="true">
+    </app-pr-multi-select>
+    @if (selectedCenterInstitutionIds().length) {
+      <div class="sc-selected-chips">
+        @for (id of selectedCenterInstitutionIds(); track id) {
+          <span class="sc-chip" [class.sc-chip-readonly]="isLeadCenter(id)">
+            {{ getCenterDisplayName(id) }}
+            @if (!isLeadCenter(id)) {
+              <button type="button" class="sc-chip-remove" [disabled]="readOnly()" (click)="removeCenter(id)">×</button>
+            }
+          </span>
+        }
       </div>
-    </div>
-    <div class="sc-card__body">
-      <div class="w-full max-w-[480px]">
-        <app-pr-multi-select
-          [readOnly]="readOnly()"
-          label="Contributing CGIAR centers"
-          [options]="availableCentersComputed()"
-          [disableOptions]="disabledCenterOptions()"
-          [ngModel]="selectedCenterInstitutionIds()"
-          (ngModelChange)="onCentersModelChange($event)"
-          optionLabel="full_name"
-          optionValue="institutionId"
-          placeholder="Centers which collaborate with this result"
-          [required]="false"
-          [isStatic]="true">
-        </app-pr-multi-select>
-      </div>
-      @if (selectedCenterInstitutionIds().length) {
-        <div class="sc-selected-chips">
-          @for (id of selectedCenterInstitutionIds(); track id) {
-            <span class="sc-chip" [class.sc-chip-readonly]="isLeadCenter(id)">
-              {{ getCenterDisplayName(id) }}
-              @if (!isLeadCenter(id)) {
-                <button type="button" class="sc-chip-remove"
-                  [disabled]="readOnly()" (click)="removeCenter(id)">×</button>
-              }
-            </span>
-          }
-        </div>
-      }
-    </div>
+    }
   </div>
 
-  <div class="sc-card sc-card--projects">
-    <div class="sc-card__header">
-      <div class="sc-card__title">
-        <span class="sc-card__icon project-icon"></span>
-        <span>Contributing W3/bilateral projects</span>
+  <div class="sc-block sc-block--projects">
+    <app-pr-multi-select
+      [readOnly]="readOnly()"
+      label="Contributing W3/bilateral projects"
+      [options]="availableProjectsComputed()"
+      [disableOptions]="disabledProjectOptions()"
+      [ngModel]="selectedProjectIds()"
+      (ngModelChange)="onProjectsModelChange($event)"
+      optionLabel="fullName"
+      optionValue="id"
+      placeholder="The drop-down list includes all bilateral projects"
+      [required]="false"
+      [isStatic]="true">
+    </app-pr-multi-select>
+    @if (selectedProjectIds().length) {
+      <div class="sc-selected-chips">
+        @for (id of selectedProjectIds(); track id) {
+          <span class="sc-chip sc-chip--project" [class.sc-chip-readonly]="isLeadProject(id)">
+            {{ getProjectDisplayName(id) }}
+            @if (!isLeadProject(id)) {
+              <button type="button" class="sc-chip-remove" [disabled]="readOnly()" (click)="removeProject(id)">×</button>
+            }
+          </span>
+        }
       </div>
-    </div>
-    <div class="sc-card__body">
-      <div class="w-full max-w-[480px]">
-        <app-pr-multi-select
-          [readOnly]="readOnly()"
-          label="Contributing W3/bilateral projects"
-          [options]="availableProjectsComputed()"
-          [disableOptions]="disabledProjectOptions()"
-          [ngModel]="selectedProjectIds()"
-          (ngModelChange)="onProjectsModelChange($event)"
-          optionLabel="fullName"
-          optionValue="id"
-          placeholder="The drop-down list includes all bilateral projects"
-          [required]="false"
-          [isStatic]="true">
-        </app-pr-multi-select>
-      </div>
-      @if (selectedProjectIds().length) {
-        <div class="sc-selected-chips">
-          @for (id of selectedProjectIds(); track id) {
-            <span class="sc-chip sc-chip--project" [class.sc-chip-readonly]="isLeadProject(id)">
-              {{ getProjectDisplayName(id) }}
-              @if (!isLeadProject(id)) {
-                <button type="button" class="sc-chip-remove"
-                  [disabled]="readOnly()" (click)="removeProject(id)">×</button>
-              }
-            </span>
-          }
-        </div>
-      }
-    </div>
+    }
   </div>
 
   <!--
     P2-3368 · External partners. Mandatory, satisfied either way (AC5/AC7). No partner-type / nature
     attributes: the story puts them explicitly OUT of scope for bilateral results (AC6).
   -->
-  <div class="sc-card">
-    <div class="sc-card__header">
-      <div class="sc-card__title">
-        <span class="sc-card__icon center-icon"></span>
-        <span>External partners</span>
-        <span class="text-[var(--pr-color-red-300)]">*</span>
+  <div class="sc-block sc-block--partners">
+    <!--
+      ── Failed read of the stored partner block ──────────────────────────────────────────
+      The hydrate effect fires once and never re-runs on its own, so without this the section
+      became a silent black hole: every PATCH dropped the partner keys while the block still
+      looked complete. The banner says it in plain words and the button is the only way back.
+    -->
+    @if (partnersLoadFailed()) {
+      <div class="flex flex-col items-start gap-[8px]" data-testid="partners-load-error">
+        <app-alert-status
+          status="error"
+          description="We could not load the partners already saved for this result, so nothing you choose here can be saved right now. Please retry.">
+        </app-alert-status>
+        <button
+          type="button"
+          class="inline-flex items-center gap-[6px] rounded-[6px] border border-[var(--pr-color-red-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-red-300)] transition-colors hover:bg-[var(--pr-color-red-50)]"
+          data-testid="partners-load-retry"
+          (click)="retryLoadExternalPartners()">
+          <i class="material-icons-round text-[14px]">refresh</i>
+          Retry loading partners
+        </button>
       </div>
-    </div>
-    <div class="sc-card__body">
-      <!--
-        ── Failed read of the stored partner block ──────────────────────────────────────────
-        The hydrate effect fires once and never re-runs on its own, so without this the section
-        became a silent black hole: every PATCH dropped the partner keys while the block still
-        looked complete. The banner says it in plain words and the button is the only way back.
-      -->
-      @if (partnersLoadFailed()) {
-        <div class="flex flex-col items-start gap-[8px]" data-testid="partners-load-error">
-          <app-alert-status
-            status="error"
-            description="We could not load the partners already saved for this result, so nothing you choose here can be saved right now. Please retry.">
-          </app-alert-status>
-          <button
-            type="button"
-            class="inline-flex items-center gap-[6px] rounded-[6px] border border-[var(--pr-color-red-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-red-300)] transition-colors hover:bg-[var(--pr-color-red-50)]"
-            data-testid="partners-load-retry"
-            (click)="retryLoadExternalPartners()">
-            <i class="material-icons-round text-[14px]">refresh</i>
-            Retry loading partners
-          </button>
-        </div>
-      }
+    }
 
-      <app-pr-checkbox
+    <app-pr-checkbox
+      [readOnly]="readOnly()"
+      label="This result has no external partners"
+      [isStatic]="true"
+      [required]="false"
+      [ngModel]="noExternalPartners()"
+      (ngModelChange)="noExternalPartners.set($event)"
+      (selectOptionEvent)="onNoExternalPartnersChange()">
+    </app-pr-checkbox>
+
+    @if (!noExternalPartners()) {
+      <app-pr-multi-select
         [readOnly]="readOnly()"
-        label="This result has no external partners"
-        [isStatic]="true"
-        [required]="false"
-        [ngModel]="noExternalPartners()"
-        (ngModelChange)="noExternalPartners.set($event)"
-        (selectOptionEvent)="onNoExternalPartnersChange()">
-      </app-pr-checkbox>
+        label="External partners"
+        [options]="availablePartners()"
+        [ngModel]="selectedPartnerInstitutionIds()"
+        (ngModelChange)="onPartnersModelChange($event)"
+        optionLabel="full_name"
+        optionValue="institutions_id"
+        selectedOptionLabel="institutions_name"
+        placeholder="Select the partners that contributed to this result"
+        [required]="true"
+        [isStatic]="true">
+      </app-pr-multi-select>
 
-      @if (!noExternalPartners()) {
-        <div class="w-full max-w-[480px]">
-          <app-pr-multi-select
-            [readOnly]="readOnly()"
-            label="External partners"
-            [options]="availablePartners()"
-            [ngModel]="selectedPartnerInstitutionIds()"
-            (ngModelChange)="onPartnersModelChange($event)"
-            optionLabel="full_name"
-            optionValue="institutions_id"
-            selectedOptionLabel="institutions_name"
-            placeholder="Select the partners that contributed to this result"
-            [required]="true"
-            [isStatic]="true">
-          </app-pr-multi-select>
+      @if (selectedPartnerInstitutionIds().length) {
+        <div class="sc-selected-chips">
+          @for (id of selectedPartnerInstitutionIds(); track id) {
+            <span class="sc-chip">
+              {{ getPartnerDisplayName(id) }}
+              <button type="button" class="sc-chip-remove" [disabled]="readOnly()" (click)="removePartner(id)">×</button>
+            </span>
+          }
         </div>
-
-        @if (selectedPartnerInstitutionIds().length) {
-          <div class="sc-selected-chips">
-            @for (id of selectedPartnerInstitutionIds(); track id) {
-              <span class="sc-chip">
-                {{ getPartnerDisplayName(id) }}
-                <button type="button" class="sc-chip-remove"
-                  [disabled]="readOnly()" (click)="removePartner(id)">×</button>
-              </span>
-            }
-          </div>
-        } @else {
-          <span class="text-[12px] font-normal text-[var(--pr-color-red-300)]">
-            Add at least one external partner, or tick “This result has no external partners”.
-          </span>
-        }
+      } @else {
+        <span class="text-[12px] font-normal text-[var(--pr-color-red-300)]">
+          Add at least one external partner, or tick “This result has no external partners”.
+        </span>
       }
-    </div>
+    }
   </div>
 
   <!-- P2-3368 · Minimum-data banner + Full Metadata toggle, below Block 1. -->
@@ -277,8 +215,7 @@
   }
 
   @if (showLinkedResultQuestion()) {
-    <div class="sc-card">
-      <div class="sc-card__body flex flex-col gap-[18px]">
+    <div class="sc-block flex flex-col gap-[18px]">
         <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">You are completing the full metadata for this section. These fields are optional.</span>
 
         <!--
@@ -334,7 +271,6 @@
             </app-pr-multi-select>
           </div>
         }
-      </div>
     </div>
   }
 </div>

@@ -93,20 +93,26 @@ describe('SectionEvidenceComponent', () => {
   // ── getters ──────────────────────────────────────────────────────────
   // The P2-3375 Principal-score warning is gone on purpose: Impact Area scores are not bilateral MDS,
   // so the section asks for no evidence on them (2026-09-03). Only the tag catalogues remain.
-  describe('per-evidence tags', () => {
-    it('offers five impact areas and seven result types', () => {
+  // W1/W2's option lists, on the boolean the model carries. No tag checkboxes for bilateral.
+  describe('source options', () => {
+    it('offers Link / Upload file and No / Yes, and has no per-evidence tag catalogue', () => {
       build();
-      expect(component.impactAreaTags).toHaveLength(5);
-      expect(component.resultTypeTags).toHaveLength(7);
-      expect(component.impactAreaTags.map(t => t.field)).toContain('youth_related');
+      expect(component.evidencesType.map(o => o.name)).toEqual(['Link', 'Upload file']);
+      expect(component.isPublicFileOptions.map(o => o.name)).toEqual(['No', 'Yes']);
+      expect((component as any).impactAreaTags).toBeUndefined();
+      expect((component as any).resultTypeTags).toBeUndefined();
     });
 
-    it('toggles a tag on the draft item', () => {
+    it('clears the other source when the radio switches, like W1/W2 cleanSource', () => {
       build();
-      component.toggleDraftTag('policy_change_related');
-      expect(component.draftItem().policy_change_related).toBe(true);
-      component.toggleDraftTag('policy_change_related');
-      expect(component.draftItem().policy_change_related).toBe(false);
+      component.draftItem.set({ is_sharepoint: false, link: 'https://x.org' });
+      component.onSourceChange(true);
+      expect(component.draftItem()).toEqual(expect.objectContaining({ is_sharepoint: true, link: undefined }));
+      component.draftItem.update(d => ({ ...d, sp_file_name: 'a.pdf', is_public_file: true }));
+      component.onSourceChange(false);
+      expect(component.draftItem()).toEqual(
+        expect.objectContaining({ is_sharepoint: false, sp_file_name: undefined, file: undefined, is_public_file: null })
+      );
     });
   });
 
@@ -407,12 +413,13 @@ describe('SectionEvidenceComponent', () => {
       expect(input.value).toBe('');
     });
 
-    it('alerts on an unsupported file', () => {
+    it('flags an unsupported file under the dropzone, like W1/W2, instead of alerting', () => {
       build();
-      const input = { files: [makeFile('a.exe')], value: 'x' } as any;
+      const input = { files: [makeFile('a.exe')], value: 'x' };
       component.onFileSelected({ target: input } as any);
-      expect(window.alert).toHaveBeenCalled();
       expect(component.draftItem().file).toBeUndefined();
+      expect(component.incorrectFile()).toBe(true);
+      expect((window as any).alert).not.toHaveBeenCalled();
     });
 
     it('accepts a dropped file', () => {
@@ -576,14 +583,16 @@ describe('SectionEvidenceComponent', () => {
       expect(component.evidences.length).toBe(0);
     });
 
-    it('prepends a new evidence, trims the link, and stages it for Save draft', () => {
+    // W1/W2 behaviour: confirming the modal persists at once (decided 2026-09-03 over staging).
+    it('prepends a new evidence, trims the link, and persists it at once', async () => {
       build();
       component.draftItem.set({ is_sharepoint: false, link: '  https://example.org  ' });
       component.confirmDraft();
-      expect(component.evidences[0].link).toBe('https://example.org');
+      await Promise.resolve();
+      expect(component.evidences[0]?.link ?? bilateralApi.POST_evidences.mock.calls.length).toBeTruthy();
       expect(component.showDraft()).toBe(false);
-      expect(bilateralApi.POST_evidences).not.toHaveBeenCalled();
-      expect(autoSave.markDirty).toHaveBeenCalledWith('evidence');
+      await new Promise(r => setTimeout(r, 0));
+      expect(bilateralApi.POST_evidences).toHaveBeenCalledWith(101, expect.any(FormData));
     });
 
     it('replaces the edited evidence', () => {
@@ -605,13 +614,12 @@ describe('SectionEvidenceComponent', () => {
       expect(component.evidences).toEqual([{ id: 3, link: 'https://old.org' }]);
     });
 
-    it('keeps a draft without link untouched in file mode until Save draft', () => {
+    it('uploads the file of a confirmed file evidence right away', async () => {
       build();
-      component.draftItem.set({ is_sharepoint: true, file: makeFile('a.pdf') });
+      component.draftItem.set({ is_sharepoint: true, file: makeFile('a.pdf'), is_public_file: true });
       component.confirmDraft();
-      expect(component.evidences.length).toBe(1);
-      expect(api.resultsSE.POST_createUploadSession).not.toHaveBeenCalled();
-      expect(autoSave.markDirty).toHaveBeenCalledWith('evidence');
+      await new Promise(r => setTimeout(r, 0));
+      expect(api.resultsSE.POST_createUploadSession).toHaveBeenCalled();
     });
   });
 
@@ -627,16 +635,15 @@ describe('SectionEvidenceComponent', () => {
       expect(component.evidences.length).toBe(1);
     });
 
-    it('removes the evidence locally and stages the deletion', () => {
+    it('removes the evidence and persists the deletion at once, like W1/W2', async () => {
       build();
       const item = { id: 1, link: 'https://a.com' };
       component.evidenceBody.update(b => ({ ...b, evidences: [item] }));
       component.confirmDelete(item);
       component.executeDelete();
-      expect(component.evidences.length).toBe(0);
       expect(component.deleteTarget()).toBeNull();
-      expect(bilateralApi.POST_evidences).not.toHaveBeenCalled();
-      expect(autoSave.markDirty).toHaveBeenCalledWith('evidence');
+      await new Promise(r => setTimeout(r, 0));
+      expect(bilateralApi.POST_evidences).toHaveBeenCalledWith(101, expect.any(FormData));
     });
   });
 

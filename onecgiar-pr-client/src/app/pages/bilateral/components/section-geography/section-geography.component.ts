@@ -102,6 +102,26 @@ export class SectionGeographyComponent {
   readonly yesNoOptions = YES_NO_OPTIONS;
 
   /**
+   * Same helper texts the W1/W2 section shows under its selects (geoscope-management
+   * `thereAnyText`) and under the focus radios (`geographic_focus_description`). UI only.
+   */
+  readonly REGIONS_STANDARD_NOTE =
+    `The list of regions below follows the <a href='https://unstats.un.org/unsd/methodology/m49/' class="open_route" target='_blank'>UN (M.49)</a> standard`;
+  readonly COUNTRIES_STANDARD_NOTE =
+    `The list of countries below follows the <a href='https://www.iso.org/iso-3166-country-codes.html' class="open_route" target='_blank'>ISO 3166</a> standard`;
+
+  focusDescription(scopeId: number | null | undefined): string {
+    switch (Number(scopeId)) {
+      case 2:
+        return 'For region, multiple regions can be selected, unless the selection adds up to every region, in which case global should be selected.';
+      case 3:
+        return 'For country, multiple countries can be selected, unless the selection adds up to a specific region, or set of regions, or global, in which case, region or global should be selected.';
+      default:
+        return '';
+    }
+  }
+
+  /**
    * P2-3504 — Innovation results must ask the geographic-impact question with the wording business
    * approved, not the legacy "regions ... for this Output?" one. The classic form already switched
    * (FieldsManagerService gates `[geoscope-management]-has_extra_geo_scope` on

@@ -243,10 +243,8 @@
 
 @if (!loading() && !loadFailed()) {
   <div class="tsf-actions">
-    <button class="tsf-save-btn" type="button" [disabled]="saving()" (click)="onSave()">
-      <i class="material-icons-round">{{ saving() ? 'hourglass_empty' : 'save' }}</i>
-      {{ saving() ? 'Saving...' : 'Save' }}
-    </button>
+    <!-- No in-section Save (explicit-save model, 2026-09-03): the footer's Save draft persists the
+         section. Sync stays — it is not a save. -->
     @if (canSync()) {
       <button class="tsf-sync-btn" type="button" (click)="onSync()">
         <i class="material-icons-round">sync</i>
