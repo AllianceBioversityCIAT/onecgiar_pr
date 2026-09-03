@@ -10,7 +10,7 @@
 | Approval Mode | gated |
 | Budget | 2 tasks · ~120 LOC · 1 review (`design.md` §14) |
 | Started | 2026-09-03 |
-| Status | in progress — RIBL-T-1 PASS; RIBL-T-2 `[~]` (Jest PASS, HITL outstanding) |
+| Status | in progress — RIBL-T-1 PASS; RIBL-T-2 `[~]` (Jest PASS; HITL found missing AOW — Pivot) |
 
 ## 2. Task Execution History
 
@@ -117,3 +117,32 @@ HITL outstanding. Budget exceeded (reviews + LOC).
 #### Final verification
 
 Scoped Jest 54/54 green. Lint clean on the touched files (attempt 1). Submitter href unchanged. R-7 not evidenced.
+
+#### HITL 2026-09-03 — result 8989 (owner screenshot)
+
+- **URL:** `/result/result-detail/8989/general-information?phase=36` (`visual/hitl-8989-submitter-no-aow.jpg`)
+- **Viewport:** desktop with sidebar open (wider than 1100px). Not a 900px wrap check.
+- **Observed:** **Back to results** present. **Submitter:** `SP04 - Multifunctional Landscapes` (primary link). Status **Submitted**. **No Area of Work node** on the identity strip.
+- **Expected (RIBL-R-1):** this result’s Contributors HLO is **AOW01** / OP 1.2.6 (`visual/result-toc-hlo-aow01.jpg`).
+- **Cause (code + live payload, not a guess):** `GET /v2/api/contributors-partners/:id` → `getTocByResultV2` serializes each `result_toc_results[]` row as `toc_result_id` (numeric), `toc_level_id`, `indicators[]`. It does **not** emit `work_package_code`, `aow_code`, or a string `work_package_id`. Parent `result_toc_result.official_code` is the **Science Program** (`SP04`), not the AOW. `mapAowFromContributorsPartners` therefore returns `null` and the control hides — which is what `design.md` §13 said to do until HITL found a planned AOW01 result with no link. This is that finding.
+- **R-7 wrap:** not evaluated; the control is absent.
+
+## Pivot Record: RIBL-T-2
+
+| Field | Value |
+|---|---|
+| Trigger | HITL on result 8989: planned HLO AOW01 is visible in Contributors; header hides Area of Work |
+| Spec that is wrong | `design.md` §5 WP field order assumes the Contributors GET row carries `work_package_code` / `aow_code` / code-like `work_package_id`. Live V2 ToC mapping does not. |
+| Not a mapping typo | Inventing AOW from the HLO title string is still forbidden (RIBL-R-1). |
+
+**Alternatives**
+
+| | Direction | Cost |
+|---|---|---|
+| **P1** | After the GET, resolve `toc_result_id` through an **existing** ToC / work-package catalog the Contributors form already uses (`GET_tocLevelsByconfig` / output list `extraInformation` / `title` that already paints **AOW01**). Keep hide if the catalog has no AOW-shaped code. No new endpoint. | One extra existing GET, keyed by result + initiative. Spec §5 field order gains `toc_result_id → catalog code`. |
+| **P2** | Enrich `GET_ContributorsPartners` / `getTocByResultV2` to include `work_package_code` on each row. | Server + payload. Out of this slice’s original Non-Goals unless the owner widens. |
+| **P3** | Accept hide on 8989 and close R-7 as “no AOW node to wrap.” | Honest to §13 as written; fails the user’s intent and RIBL-R-1 on the live result they reported from. |
+
+**Recommended:** **P1** — still no new endpoint; still no title-guess; still fail-soft. Requires owner approval, then a two-direction spec sweep and a T-2 rework (effort `high`).
+
+Stopped. No production change until the pivot is approved.
