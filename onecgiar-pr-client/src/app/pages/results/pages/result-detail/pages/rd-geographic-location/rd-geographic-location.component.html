@@ -45,7 +45,7 @@
       <div
         appFeedbackValidation
         [labelText]="extraGeoScopeHeader()"
-        [isComplete]="this.extraGeographicLocationBody.has_extra_geo_scope !== undefined"></div>
+        [isComplete]="hasExtraGeoScopeAnswered()"></div>
     }
 
     @if (this.extraGeographicLocationBody.has_extra_geo_scope) {
