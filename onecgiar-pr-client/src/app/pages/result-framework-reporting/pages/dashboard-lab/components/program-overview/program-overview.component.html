@@ -534,7 +534,7 @@
     <!-- AoW rows + outcomes footer -->
     <div class="flex min-w-0 flex-1 flex-col">
       @if (richLoading()) {
-        <div class="flex flex-col gap-[8px] p-[20px]" aria-hidden="true">
+        <div class="flex flex-col gap-[8px] p-[20px]" aria-hidden="true" data-testid="aow-rows-skeleton">
           @for (i of skeletonRowPlaceholders; track i) {
             <!-- T-6 live finding (2026-09-01, field measurement at 1398px viewport): the fixed
                  `1fr 260px 120px 170px` tracks starved the identity column to ~99px / the AoW
@@ -617,7 +617,7 @@
              adds a fifth `max-content` track (achievement) between figures and actions — see the
              `@if (row.achievement)` block below. -->
         <!-- @akili-spec changes/overview-aow-progress-hero -->
-        <div class="flex flex-col gap-[8px] p-[20px]">
+        <div class="flex flex-col gap-[8px] p-[20px]" data-testid="aow-rows">
           @for (row of richRows(); track row.code) {
             <!-- `OSF-DD-8` ladder (changes/overview-aow-cross-filter, OSF-T-2b, design.md §8.2):
                  the identity track is ALREADY `minmax(0,1fr)` — that is not the bug, it is the
