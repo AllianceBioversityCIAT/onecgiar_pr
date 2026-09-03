@@ -156,6 +156,80 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     actorItem.men_youth = null;
     actorItem.men_non_youth = null;
     actorItem.how_many = null;
+    // P2-3537: "sex and age" switches BOTH off, so the age-only fallback has no meaning
+    // while it is ticked. Leaving it set would send a contradiction to the server.
+    actorItem.age_disaggregation_not_available = null;
+    actorItem.youth_split_applied_by_system = null;
+  }
+
+  /**
+   * P2-3537 section 7 — the age-only fallback.
+   *
+   * Shown from the 2026 phase, per actor row, and only while "Sex and age disaggregation
+   * does not apply" is NOT ticked: that one already switches both off, so offering an
+   * age-only option next to it would be two answers to the same question.
+   *
+   * 🛑 Not offered inside IPSR. This template is shared with Innovation Package step 1,
+   * and the story scopes itself to Innovation Use results. Gating IPSR out explicitly
+   * rather than by omission is the lesson P2-3295 left on this same component.
+   */
+  showAgeFallback(actorItem): boolean {
+    return this.fieldsManagerSE.isInnovationUseAgeFallback2026() && !this.isIpsr && !actorItem?.sex_and_age_disaggregation;
+  }
+
+  /** True when the youth figures on this row were computed rather than typed. */
+  isYouthSplitBySystem(actorItem): boolean {
+    return !!actorItem?.youth_split_applied_by_system;
+  }
+
+  /**
+   * Applies — or undoes — the 50/50 split when the reporter ticks the age-only fallback.
+   *
+   * Half of Women goes to youth and the remainder to non-youth; same for Men. Rounding
+   * cannot break the arithmetic because Non-youth is always derived as the difference, so
+   * the two halves add up to the total whatever the parity.
+   *
+   * 🥇 It stamps `youth_split_applied_by_system`, which is what lets any later report tell
+   * an estimate from a reported figure — the story asks for that explicitly. Unticking
+   * clears the youth values as well as the stamp: leaving the computed halves behind
+   * would turn a system estimate into what looks like the reporter's own answer, which is
+   * the exact confusion the stamp exists to prevent.
+   */
+  applyAgeDisaggregationFallback(actorItem): void {
+    if (!actorItem?.age_disaggregation_not_available) {
+      actorItem.women_youth = null;
+      actorItem.men_youth = null;
+      actorItem.women_non_youth = null;
+      actorItem.men_non_youth = null;
+      actorItem.youth_split_applied_by_system = null;
+      this.calculateTotalField(actorItem);
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const half = (total: any) => {
+      const n = Number(total);
+      return Number.isFinite(n) && n > 0 ? Math.round(n / 2) : 0;
+    };
+
+    actorItem.women_youth = half(actorItem.women);
+    actorItem.men_youth = half(actorItem.men);
+    actorItem.women_non_youth = (Number(actorItem.women) || 0) - actorItem.women_youth;
+    actorItem.men_non_youth = (Number(actorItem.men) || 0) - actorItem.men_youth;
+    actorItem.youth_split_applied_by_system = true;
+
+    this.calculateTotalField(actorItem);
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Re-runs the split when Women or Men change while the fallback is on — otherwise the
+   * halves would go stale and stop matching the total the reporter just typed.
+   */
+  recalculateAgeFallback(actorItem): void {
+    if (actorItem?.age_disaggregation_not_available) {
+      this.applyAgeDisaggregationFallback(actorItem);
+    }
   }
 
   reloadSelect(organizationItem) {

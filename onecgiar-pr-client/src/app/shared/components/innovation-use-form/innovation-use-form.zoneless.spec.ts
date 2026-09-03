@@ -74,7 +74,12 @@ describe('InnovationUseFormComponent (zoneless change detection) — validateYou
         provideZonelessChangeDetection(),
         { provide: ApiService, useValue: apiMock },
         { provide: TerminologyService, useValue: { t: () => 'term' } },
-        { provide: FieldsManagerService, useValue: { isP25: () => false, isInnovationUse2030Projection2026: () => false } },
+        {
+          provide: FieldsManagerService,
+          // P2-3537 §7: the template calls the age-fallback gate on every render, so a mock
+          // without it throws before any assertion runs.
+          useValue: { isP25: () => false, isInnovationUse2030Projection2026: () => false, isInnovationUseAgeFallback2026: () => false }
+        },
         { provide: InnovationControlListService, useValue: { readinessLevelsList: [] } }
       ],
       schemas: [NO_ERRORS_SCHEMA]

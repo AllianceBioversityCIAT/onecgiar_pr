@@ -92,6 +92,15 @@ export class FieldsManagerService {
    */
   isInnovationUse2030Projection2026 = computed(() => this.isPhaseYearAtLeast(ReportingDesignYear.InnovationUse2030Projection));
   /**
+   * True when the open result's reporting phase is 2026+ → the Innovation Use "Current use"
+   * block offers the age-only disaggregation fallback and the system-applied 50/50 split
+   * (P2-3537 section 7). 2025 and earlier keep the single combined "Sex and age
+   * disaggregation does not apply" tick and nothing else.
+   */
+  isInnovationUseAgeFallback2026 = computed(() =>
+    this.isPhaseYearAtLeast(ReportingDesignYear.InnovationUseAgeDisaggregationFallback)
+  );
+  /**
    * Tooltip shown next to the "2030 Use Projection" title (P2-3295). Empty for phases <= 2025, which
    * never showed it — `app-field-card` only paints the ⓘ button when it receives a non-empty string.
    * Lives here, not in `fields()`, because `preventFieldRender()` only mirrors label/description/required.

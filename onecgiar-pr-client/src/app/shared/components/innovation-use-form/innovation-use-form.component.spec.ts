@@ -54,7 +54,9 @@ describe('InnovationUseFormComponent', () => {
       isP25: jest.fn().mockReturnValue(false),
       // P2-3295 §2: the projection question is gated on the same 2026 phase threshold as the rename.
       isInnovationUse2030Projection2026: jest.fn().mockReturnValue(true),
-      innovationUse2030ProjectionTooltip: jest.fn().mockReturnValue('')
+      innovationUse2030ProjectionTooltip: jest.fn().mockReturnValue(''),
+      // P2-3537 §7: the age-only fallback rides on its own 2026 phase threshold.
+      isInnovationUseAgeFallback2026: jest.fn().mockReturnValue(true)
     };
 
     innovationControlListServiceMock = {
@@ -135,7 +137,12 @@ describe('InnovationUseFormComponent', () => {
       men: null,
       men_youth: null,
       men_non_youth: null,
-      how_many: null
+      how_many: null,
+      // P2-3537 §7: "sex and age does not apply" switches both off, so the age-only answer
+      // and the system-split stamp have no meaning here. Leaving them set would send the
+      // server a contradiction: "age cannot be disaggregated" alongside "neither applies".
+      age_disaggregation_not_available: null,
+      youth_split_applied_by_system: null
     });
   });
 
@@ -991,6 +998,118 @@ describe('InnovationUseFormComponent', () => {
 
       expect(radio).toBeTruthy();
       expect(radio.nativeElement.tooltip).toBe('');
+    });
+  });
+  /**
+   * P2-3537 section 7 — the age-only fallback and the system-applied 50/50 split.
+   *
+   * What this pins is the part the story cares about most: that a computed figure is
+   * never mistaken for a reported one. Every case below is one that would either lose
+   * that distinction or leave the arithmetic inconsistent.
+   */
+  describe('section 7 — age-only fallback (P2-3537)', () => {
+    const actorWith = (over: any = {}) => Object.assign(new Actor(), { women: 10, men: 7, ...over });
+
+    beforeEach(() => {
+      component.body = new IpsrStep1Body();
+      component.body.innovatonUse.actors = [actorWith()];
+    });
+
+    it('is offered from the 2026 phase, on a row that still disaggregates by sex', () => {
+      expect(component.showAgeFallback(component.body.innovatonUse.actors[0])).toBe(true);
+    });
+
+    it('is NOT offered before the 2026 phase', () => {
+      fieldsManagerServiceMock.isInnovationUseAgeFallback2026.mockReturnValue(false);
+      expect(component.showAgeFallback(component.body.innovatonUse.actors[0])).toBe(false);
+    });
+
+    it('is NOT offered inside IPSR, which shares this template', () => {
+      // Gated out explicitly rather than by omission — the lesson P2-3295 left here.
+      component.isIpsr = true;
+      expect(component.showAgeFallback(component.body.innovatonUse.actors[0])).toBe(false);
+    });
+
+    it('is NOT offered while "sex and age" is ticked, which already switches both off', () => {
+      const actor = actorWith({ sex_and_age_disaggregation: true });
+      expect(component.showAgeFallback(actor)).toBe(false);
+    });
+
+    it('splits youth 50/50 and stamps that the SYSTEM did it', () => {
+      const actor = actorWith({ age_disaggregation_not_available: true });
+      component.applyAgeDisaggregationFallback(actor);
+
+      expect(actor.women_youth).toBe(5);
+      expect(actor.women_non_youth).toBe(5);
+      expect(actor.men_youth).toBe(4);
+      expect(actor.men_non_youth).toBe(3);
+      // The whole point of the story: this is what tells an estimate from a report.
+      expect(actor.youth_split_applied_by_system).toBe(true);
+    });
+
+    it('keeps youth + non-youth equal to the total on an odd number', () => {
+      // 7 men -> 4 + 3. Rounding can never break it because non-youth is the remainder.
+      const actor = actorWith({ men: 7, women: 3, age_disaggregation_not_available: true });
+      component.applyAgeDisaggregationFallback(actor);
+
+      expect(actor.men_youth + actor.men_non_youth).toBe(7);
+      expect(actor.women_youth + actor.women_non_youth).toBe(3);
+    });
+
+    it('recalculates when the total changes, so the halves never go stale', () => {
+      const actor = actorWith({ age_disaggregation_not_available: true });
+      component.applyAgeDisaggregationFallback(actor);
+      actor.women = 20;
+      component.recalculateAgeFallback(actor);
+
+      expect(actor.women_youth).toBe(10);
+      expect(actor.women_non_youth).toBe(10);
+    });
+
+    it('does not touch a row whose fallback is off', () => {
+      const actor = actorWith({ women_youth: 3 });
+      component.recalculateAgeFallback(actor);
+
+      expect(actor.women_youth).toBe(3);
+      expect(actor.youth_split_applied_by_system).toBeUndefined();
+    });
+
+    it('unticking clears the computed halves AND the stamp', () => {
+      // Leaving the halves behind would turn a system estimate into what reads as the
+      // reporter's own answer — the exact confusion the stamp exists to prevent.
+      const actor = actorWith({ age_disaggregation_not_available: true });
+      component.applyAgeDisaggregationFallback(actor);
+      actor.age_disaggregation_not_available = false;
+      component.applyAgeDisaggregationFallback(actor);
+
+      expect(actor.women_youth).toBeNull();
+      expect(actor.men_youth).toBeNull();
+      expect(actor.youth_split_applied_by_system).toBeNull();
+    });
+
+    it('ticking "sex and age" wipes the age-only answer, so no contradiction is sent', () => {
+      const actor = actorWith({ age_disaggregation_not_available: true });
+      component.applyAgeDisaggregationFallback(actor);
+      component.cleanActor(actor);
+
+      expect(actor.age_disaggregation_not_available).toBeNull();
+      expect(actor.youth_split_applied_by_system).toBeNull();
+    });
+
+    it('treats an empty or zero total as zero, without producing NaN', () => {
+      const actor = actorWith({ women: null, men: 0, age_disaggregation_not_available: true });
+      component.applyAgeDisaggregationFallback(actor);
+
+      expect(actor.women_youth).toBe(0);
+      expect(actor.men_youth).toBe(0);
+      expect(Number.isNaN(actor.women_non_youth)).toBe(false);
+    });
+
+    it('reports the split as system-applied only while the stamp is set', () => {
+      const actor = actorWith();
+      expect(component.isYouthSplitBySystem(actor)).toBe(false);
+      actor.youth_split_applied_by_system = true;
+      expect(component.isYouthSplitBySystem(actor)).toBe(true);
     });
   });
 });

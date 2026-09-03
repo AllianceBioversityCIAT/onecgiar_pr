@@ -149,6 +149,25 @@ export class Actor {
   previousWomen_youth: any;
   other_actor_type: any;
   sex_and_age_disaggregation: boolean;
+  /**
+   * P2-3537 section 7 — the reporter cannot disaggregate THIS row by age, although they
+   * can by sex. Distinct from `sex_and_age_disaggregation`, which switches both off.
+   * Three states: `null` means not answered, which is not the same as `false`.
+   *
+   * 🛑 Declared here even though the fallback is NOT offered inside IPSR, and that is not
+   * a contradiction: `app-innovation-use-form` is shared, and its `@Input() body` is typed
+   * `IpsrStep1Body`, so THIS is the `Actor` its template checks against. A binding the
+   * model does not declare compiles under `tsc --noEmit` and under Jest, and fails
+   * `npm run build` — the TS2339 that turned into two red Jenkins builds on 2 Sep 2026,
+   * in this very file.
+   */
+  age_disaggregation_not_available: boolean | null;
+  /**
+   * P2-3537 section 7 — the youth / non-youth figures on this row were split 50/50 by the
+   * system, not reported. Persisted so any later report can tell an estimate from a
+   * reported figure. See the note above on why it lives here.
+   */
+  youth_split_applied_by_system: boolean | null;
   how_many: any;
   result_actors_id: number;
 }
