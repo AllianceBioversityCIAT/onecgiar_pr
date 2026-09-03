@@ -63,6 +63,7 @@
 
 ### `AIS-T-3` — Pin skeleton ↔ row parity in Jest
 
+- [x] **Status:** done — PASS on attempt 1, 2026-09-03 (evidence: `execution.md` §2 `AIS-T-3`)
 - **Type:** `tests`
 - **Description:** In `program-overview.component.spec.ts` add one test that renders once with `richLoading = true` and once with rows, reads the `class` attribute of the skeleton row root and the real row root, extracts the responsive token set (regex over `grid-cols-\[…\]`, `@min-\[…\]:…`, `@max-\[…\]:…`, `\[grid-column:…\]`, `\[grid-row:…\]`, `gap-y-…`) from each root **and its direct cells**, and asserts set equality with a diff message naming any token present on one side only.
 - **Implements:** `AIS-R-5` (string half), `AIS-AC-3` (jsdom half); `AIS-DD-4`.

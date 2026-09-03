@@ -1008,4 +1008,63 @@ describe('ProgramOverviewComponent', () => {
       }
     });
   });
+
+  describe('AoW row skeleton ↔ real-row token parity (AIS-DD-4, AIS-R-5 string half, AIS-AC-3 jsdom half)', () => {
+    /** `grid-cols-[…]` (with or without a leading `@min-[…]:`/`@max-[…]:` container-variant prefix),
+     *  a bare `@min-[…]:…`/`@max-[…]:…` token (any utility), `[grid-column:…]`, `[grid-row:…]`, or
+     *  `gap-y-…` — the exact category list `tasks.md` `AIS-T-3` names. A token matching more than one
+     *  category (e.g. `@max-[630px]:hidden` is both an `@max-[…]:` token and hides a track) is still
+     *  ONE set entry — this is a set of token STRINGS, not a tally per category. */
+    const RESPONSIVE_TOKEN = /^(grid-cols-\[|@min-\[|@max-\[|\[grid-column:|\[grid-row:|gap-y-)/;
+
+    /** The token set of `el` AND its direct children only — never grandchildren (the achievement
+     *  cell's own inner QA/Prel restack span, or the ⓘ fallback button nested inside the identity
+     *  cell, are both one level too deep and deliberately excluded, same as the row's own `AIS-DD-4`
+     *  scope: "root and its direct cells"). Deliberately NOT `min-w-0` or any other non-responsive
+     *  token — the Reviewer noted the real identity cell carries `min-w-0` and the skeleton's
+     *  disabled-button identity wrapper does not; that is a pre-existing, unrelated difference
+     *  outside this set's definition. */
+    function responsiveTokens(root: Element): Set<string> {
+      const tokens = new Set<string>();
+      const collect = (el: Element) =>
+        el.className
+          .split(/\s+/)
+          .filter(token => RESPONSIVE_TOKEN.test(token))
+          .forEach(token => tokens.add(token));
+      collect(root);
+      Array.from(root.children).forEach(collect);
+      return tokens;
+    }
+
+    function diffSets(a: Set<string>, b: Set<string>, aLabel: string, bLabel: string): string {
+      const onlyA = [...a].filter(t => !b.has(t));
+      const onlyB = [...b].filter(t => !a.has(t));
+      return [...onlyA.map(t => `only in ${aLabel}: ${t}`), ...onlyB.map(t => `only in ${bLabel}: ${t}`)].join('\n');
+    }
+
+    it('the skeleton row root + direct cells carry the SAME responsive token set as the real row root + direct cells', () => {
+      // Real row first — needs at least one row so the `@for` renders a row root to read.
+      fixture.componentRef.setInput('richLoading', false);
+      fixture.componentRef.setInput('richRows', [{ code: 'AOW01', name: 'Market Intelligence', complete: 1, inProgress: 2, notStarted: 3, zeroTarget: 0, reported: 3, total: 6, remaining: 3 }]);
+      fixture.detectChanges();
+      const realRoot = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="aow-rows"] > div');
+      if (!realRoot) throw new Error('real row root not found — [data-testid="aow-rows"] > div');
+      const realTokens = responsiveTokens(realRoot);
+
+      // Skeleton — same fixture instance, flip `richLoading` and re-run change detection.
+      fixture.componentRef.setInput('richLoading', true);
+      fixture.detectChanges();
+      const skeletonRoot = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="aow-rows-skeleton"] > div');
+      if (!skeletonRoot) throw new Error('skeleton row root not found — [data-testid="aow-rows-skeleton"] > div');
+      const skeletonTokens = responsiveTokens(skeletonRoot);
+
+      // Disqualifier guard (`tasks.md` AIS-T-3): a set the regex missed everything on is a vacuous
+      // pass, not evidence of parity.
+      expect(realTokens.size).toBeGreaterThanOrEqual(6);
+      expect(skeletonTokens.size).toBeGreaterThanOrEqual(6);
+
+      const diff = diffSets(realTokens, skeletonTokens, 'real row', 'skeleton');
+      expect(diff).toBe('');
+    });
+  });
 });

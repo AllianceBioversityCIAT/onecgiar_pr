@@ -210,3 +210,27 @@ ADVISORY (recorded, never gates):
 | Verification | targeted | targeted only (plus one `pr-button.cy.ts` smoke) | no |
 
 Cause: the CT sweep spec (346 LOC) and the two rewritten ladder comment blocks were under-estimated at specify (≈120 and ≈30); the harness correction (vendored font + config, 64 LOC + a binary) was not in the design at all. None of it is scope creep in behaviour — the row fix itself is ≈80 lines of class changes — but the number is the number. Remaining work: `AIS-T-3` (Jest parity, ≈30 LOC), `AIS-T-4` (report-only CT, ≈60 LOC, currently blocked on another session editing `reporting-aow-table`), `AIS-T-5` (docs ≈30 LOC + real-page pass). Decision requested from the user: continue to T-3..T-5 at the projected ≈750 total, or stop here.
+
+**User decision (2026-09-03, "termina y cierra los agentes que no estás usando"):** continue `AIS-T-3..T-5` at the projected ≈750 LOC; the overrun is accepted as measurement/harness cost, not scope creep. Idle agents (two judges, two reviewers) shut down. `AIS-T-3` and `AIS-T-4` dispatched in parallel (disjoint files; Jest vs CT, no shared dev server).
+
+### `AIS-T-3` — Pin skeleton ↔ row parity in Jest
+
+**Status:** **PASS** on attempt 1 (2026-09-03) · attempts: 1 · Reviewer rounds: 1 · **Files:** `program-overview.component.spec.ts` (+59 LOC, one new `describe` appended after "KPI card loading skeletons", reusing the file's general fixture).
+
+**Implementation:** one `it` renders real rows (`richLoading=false`), reads `[data-testid="aow-rows"] > div` + direct children, extracts the responsive token set with `/^(grid-cols-\[|@min-\[|@max-\[|\[grid-column:|\[grid-row:|gap-y-)/`; flips `richLoading=true` on the same fixture, reads `[data-testid="aow-rows-skeleton"] > div` + children the same way; asserts ≥ 6 tokens per side (vacuous-pass guard) and set equality with a diff message naming one-sided tokens. Grandchildren (achievement restack span, ⓘ button) and non-responsive tokens (`min-w-0`) excluded by design (`tasks.md`: "root and its direct cells").
+
+**Verification:** `npx jest src/app/pages/result-framework-reporting/pages/dashboard-lab/components/program-overview --silent` → `Test Suites: 4 passed, 4 total. Tests: 236 passed, 236 total.` Delta **+1** (235 → 236) = this test (`KZ-OAH-3` explained). **Mutation proof** (skeleton `@max-[560px]:gap-y-[8px]` → `@max-[550px]:gap-y-[8px]`, skeleton only, then reverted):
+```
+Expected: ""
+Received: "only in real row: @max-[560px]:gap-y-[8px]
+only in skeleton: @max-[550px]:gap-y-[8px]"
+```
+Template clean after revert (`git diff --stat` = spec file only). `npx ng lint --quiet` clean.
+
+**Reviewer verdict (opus, fresh context): `STATUS: PASS`** — "Implements `AIS-T-3` to the letter — direct-cell token-set equality both ways with a naming diff and a live ≥6 guard — and the presence-assertion limit is the one `tasks.md` itself declares." Fixture flip confirmed sound (signal inputs + `detectChanges` re-render the `@if (richLoading())` arms; `richRows.total = 6` keeps the `@else if` arm reachable).
+
+ADVISORY (recorded, never gates):
+- RELIABILITY: the parity net is blind to the restack tokens one level down (achievement cell `@max-[700px]:*`, ⓘ `@max-[630px]:inline-flex`) and the fixture has no `row.achievement`, so a skeleton/row drift inside the achievement cell is caught only by `AIS-T-1`'s loading sweep — **recorded as `AIS-T-1`'s exclusive coverage**.
+- READABILITY: `el.className.split` would throw on an SVG child; `String(el.getAttribute('class') ?? '')` is the cheap future-proofing. Not applied (advisory).
+
+**Requirements covered:** `AIS-R-5` (string half), `AIS-AC-3` (jsdom half); `AIS-DD-4`. **Gate:** auto-approved (pre-approved mode; user re-confirmed continuation after the budget trip) — continue to `AIS-T-5` (`AIS-T-4` running in parallel).
