@@ -1248,3 +1248,203 @@ describe('ProgramOverviewComponent — AoW progress section is collapsible, with
     expect(trigger().getAttribute('aria-expanded')).toBe('false');
   });
 });
+
+// `changes/clear-filters`, `CF-T-1` — the "Clear filters" control: a single button, visible only
+// while at least one of the two filter axes (section, scope) is active, that resets both in one
+// activation and hands focus to the "All Sections" tab so a keyboard user never loses their place
+// when the control removes itself mid-interaction (CF-AC-4).
+//
+// jsdom limits, stated per the task's own disqualifier: jsdom loads no Tailwind CSS, so the
+// focus-ring assertions below prove the CLASS is present/absent, never that it PAINTS — that is the
+// closing browser check (D4, requirements.md §8). jsdom also performs no layout, so no overflow/
+// width assertion is made here — that is the browser check's D5. And jsdom performs no keydown→click
+// translation for native <button> elements (verified against this same codebase's own RGS-T-1/RGS-T-3
+// precedent) — a dispatched click is the click a real Enter/Space activation PRODUCES.
+describe('ProgramOverviewComponent — Clear filters control (CF-T-1)', () => {
+  let fixture: ComponentFixture<ProgramOverviewComponent>;
+  let component: ProgramOverviewComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ProgramOverviewComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ProgramOverviewComponent);
+    component = fixture.componentInstance;
+  });
+
+  function detect(): void {
+    fixture.detectChanges();
+  }
+
+  function clearButton(): HTMLButtonElement | null {
+    return (
+      (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(
+        b => b.textContent?.trim() === 'Clear filters'
+      ) ?? null
+    );
+  }
+
+  function allSectionsTab(): HTMLButtonElement {
+    return fixture.debugElement
+      .queryAll(By.css('[role="tab"]'))
+      .find(t => t.nativeElement.textContent.trim() === 'All Sections')!.nativeElement;
+  }
+
+  // D2 — the visibility rule has FOUR states, and the single-axis ones are where it breaks (the
+  // task's own disqualifier: testing only "both active" would miss exactly this).
+  describe('Presence rule across all four state combinations (CF-R-2, CF-AC-2, D2)', () => {
+    it('is ABSENT when neither axis is filtered', () => {
+      detect();
+      expect(clearButton()).toBeNull();
+    });
+
+    it('is PRESENT when only the section is filtered', () => {
+      component.activeSection.set('w1w2');
+      detect();
+      expect(clearButton()).not.toBeNull();
+    });
+
+    it('is PRESENT when only the scope is filtered', () => {
+      fixture.componentRef.setInput('selectedScope', 'AOW01');
+      detect();
+      expect(clearButton()).not.toBeNull();
+    });
+
+    it('is PRESENT when both axes are filtered', () => {
+      component.activeSection.set('aow');
+      fixture.componentRef.setInput('selectedScope', 'AOW01');
+      detect();
+      expect(clearButton()).not.toBeNull();
+    });
+
+    it('the unfiltered state removes the control from the DOM entirely — never invisible-but-focusable (CF-AC-2 negative clause, the RGS-T-3 defect this repeats avoiding)', () => {
+      detect();
+      const allButtonTexts = (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).map(
+        b => b.textContent?.trim()
+      );
+      expect(allButtonTexts).not.toContain('Clear filters');
+      expect(component.showClearFilters()).toBe(false);
+    });
+  });
+
+  it('is a native <button type="button">, not disabled, not removed from the tab order, with an accessible name describing clearing (CF-R-3, D3)', () => {
+    component.activeSection.set('w1w2');
+    detect();
+
+    const btn = clearButton()!;
+    expect(btn.tagName).toBe('BUTTON');
+    expect(btn.getAttribute('type')).toBe('button');
+    expect(btn.hasAttribute('disabled')).toBe(false);
+    expect(btn.tabIndex).not.toBe(-1);
+    expect(btn.textContent?.trim().toLowerCase()).toContain('clear');
+  });
+
+  it('carries the focus-visible shadow-ring utility, never the box-shadow-blind ring-[…] utility that painted nothing and cost a rework round on RGS-T-1 (CF-DD-3)', () => {
+    component.activeSection.set('w1w2');
+    detect();
+
+    const btn = clearButton()!;
+    expect(btn.className).toContain('focus-visible:shadow-[var(--pr-focus-ring)]');
+    expect(btn.className).not.toContain('ring-[var(--pr-focus-ring)]');
+    expect(btn.className).not.toContain('ring-2');
+  });
+
+  it('introduces no fixed width and no new grid/flex track in the bar (CF-DD-4)', () => {
+    component.activeSection.set('w1w2');
+    detect();
+
+    const btn = clearButton()!;
+    expect(btn.className).not.toMatch(/\bw-\[/);
+    expect(btn.className).not.toContain('basis-');
+    expect(btn.className).not.toContain('grid-cols');
+  });
+
+  it('activating it resets BOTH axes in one activation: activeSection -> "all" AND scopeChange emits null — and nothing else fires (CF-AC-1, D1)', () => {
+    component.activeSection.set('w1w2');
+    fixture.componentRef.setInput('selectedScope', 'AOW01');
+    detect();
+
+    const scopeEmitted: (string | null)[] = [];
+    const openResultsEmitted: unknown[] = [];
+    const openAowEmitted: string[] = [];
+    component.scopeChange.subscribe(v => scopeEmitted.push(v));
+    component.openResults.subscribe(v => openResultsEmitted.push(v));
+    component.openAow.subscribe(v => openAowEmitted.push(v));
+
+    clearButton()!.click();
+
+    expect(component.activeSection()).toBe('all');
+    expect(scopeEmitted).toEqual([null]);
+    // CF-AC-1's BUT clause: it must not navigate or change anything else.
+    expect(openResultsEmitted).toEqual([]);
+    expect(openAowEmitted).toEqual([]);
+  });
+
+  it('resets the section by setting the signal DIRECTLY, never through setActiveSection() — that method carries toggle logic irrelevant to clearing (CF-DD-2)', () => {
+    const spy = jest.spyOn(component, 'setActiveSection');
+    component.activeSection.set('bilateral');
+    detect();
+
+    clearButton()!.click();
+
+    expect(component.activeSection()).toBe('all');
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('Enter and Space both activate the control — a dispatched click is the click a real keyboard activation produces (CF-AC-3, CF-R-3)', () => {
+    component.activeSection.set('w1w2');
+    detect();
+
+    const btn = clearButton()!;
+    expect(btn.tabIndex).not.toBe(-1);
+
+    const scopeEmitted: (string | null)[] = [];
+    component.scopeChange.subscribe(v => scopeEmitted.push(v));
+
+    // Documents intent — jsdom performs no default action for these on their own.
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+    // The click a real browser's Enter/Space activation PRODUCES (detail: 0 marks it keyboard-origin).
+    btn.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+
+    expect(component.activeSection()).toBe('all');
+    expect(scopeEmitted).toEqual([null]);
+  });
+
+  // The single most likely thing to be missed (task's own disqualifier): asserting the clear worked
+  // without asserting WHERE focus went.
+  it('on a successful clear, focus moves to the "All Sections" tab — never lost to <body> (CF-AC-4, D6)', () => {
+    component.activeSection.set('aow');
+    fixture.componentRef.setInput('selectedScope', 'AOW01');
+    detect();
+
+    clearButton()!.click();
+    detect();
+
+    expect(document.activeElement).toBe(allSectionsTab());
+    expect(document.activeElement).not.toBe(document.body);
+  });
+
+  it('does not alter re-click behaviour on the pre-existing controls (OQ-3): sections still toggle off on re-click, scope selection is still never a toggle', () => {
+    detect();
+
+    // Section toggling is `setActiveSection`'s own pre-existing behaviour, untouched by this task.
+    component.setActiveSection('w1w2');
+    expect(component.activeSection()).toBe('w1w2');
+    component.setActiveSection('w1w2');
+    expect(component.activeSection()).toBe('all');
+
+    // Scope selection never toggles — re-selecting the same key re-emits it, it does not clear.
+    const emitted: (string | null)[] = [];
+    component.scopeChange.subscribe(v => emitted.push(v));
+    component.selectScope('AOW01');
+    component.selectScope('AOW01');
+    expect(emitted).toEqual(['AOW01', 'AOW01']);
+  });
+
+  it('the "All Sections" tab keeps working exactly as before — unaffected by the new focus-target reference', () => {
+    component.activeSection.set('bilateral');
+    detect();
+
+    allSectionsTab().click();
+    expect(component.activeSection()).toBe('all');
+  });
+});

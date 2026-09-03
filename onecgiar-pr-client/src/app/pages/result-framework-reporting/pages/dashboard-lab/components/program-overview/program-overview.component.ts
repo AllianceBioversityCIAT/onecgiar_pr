@@ -984,6 +984,44 @@ export class ProgramOverviewComponent {
     this.closeScopePopover();
   }
 
+  // ── Clear filters control (`changes/clear-filters`, `CF-T-1`) ──────────────────────────────────
+  //
+  // One button that resets BOTH axes in a single activation (`CF-R-1`), reusing the two mechanisms
+  // above rather than adding a new one. `OQ-2`: it coexists with "All Sections" and the scope
+  // dropdown — neither existing control is removed or altered by this section.
+
+  /**
+   * `CF-DD-1`: visible only while at least one axis is filtered — section ≠ `'all'` OR scope ≠
+   * `null`. Gates an `@if` (removal from the DOM, never `hidden`/opacity) so the control can never
+   * be invisible-but-focusable (`CF-AC-2`'s negative clause — the exact defect `RGS-T-3` spent a
+   * whole task avoiding in the collapse above).
+   * @akili-spec changes/clear-filters
+   */
+  readonly showClearFilters = computed(() => this.activeSection() !== 'all' || this.selectedScope() !== null);
+
+  /**
+   * `CF-DD-5` focus target: the "All Sections" tab is never conditionally rendered, so moving focus
+   * there works synchronously even on the same tick the Clear filters button removes itself.
+   */
+  private readonly allSectionsTabRef = viewChild<ElementRef<HTMLButtonElement>>('allSectionsTab');
+
+  /**
+   * `CF-DD-2`: resets both axes through their EXISTING paths — `activeSection` set DIRECTLY (never
+   * `setActiveSection('all')`, which carries toggle logic that is a no-op for `'all'` today but
+   * would couple clearing to an unrelated future change to toggling) and `scopeChange` emitted
+   * `null` through the same output the host already binds to `overviewScope.set($event)` — no host
+   * change (`CF-R-1`, design.md §3).
+   * `CF-DD-5`: focus moves to the "All Sections" tab BEFORE `showClearFilters()` flips false and the
+   * `@if` removes this button from the DOM, so a keyboard user's focus is never dropped to `<body>`
+   * (`CF-AC-4`) — the tab is always in the DOM, so this `.focus()` call needs no `queueMicrotask`.
+   * @akili-spec changes/clear-filters
+   */
+  clearFilters(): void {
+    this.activeSection.set('all');
+    this.scopeChange.emit(null);
+    this.allSectionsTabRef()?.nativeElement.focus();
+  }
+
   /** `Enter`/`Space`/`↓` open the popover when it is closed (`OSF-DD-13` Keys row). */
   onScopeTriggerKeydown(event: KeyboardEvent): void {
     if (this.scopeOpen()) return;

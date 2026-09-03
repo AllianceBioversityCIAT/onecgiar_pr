@@ -197,6 +197,7 @@
   <div class="col-span-12 flex flex-wrap items-center gap-[12px] pt-1">
     <div class="inline-flex rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] p-[3px]" role="tablist" aria-label="Section filter">
       <button
+        #allSectionsTab
         type="button"
         role="tab"
         [attr.aria-selected]="activeSection() === 'all'"
@@ -366,6 +367,24 @@
         (click)="setActiveSection('all')"
         class="ml-auto cursor-pointer border-0 bg-transparent text-[12.5px] font-medium text-[var(--pr-color-primary-500)] hover:underline max-[899px]:order-2">
         Show all sections
+      </button>
+    }
+
+    <!--
+      Clear filters (`changes/clear-filters`, `CF-T-1`) — resets BOTH axes in one activation
+      (`CF-R-1`), present only while at least one is filtered (`CF-R-2`/`CF-DD-1`). `ml-auto` only
+      when "Show all sections" above is NOT also rendering (`activeSection() === 'all'`, i.e. only
+      the scope axis is filtered) — when both render, this sits right after "Show all sections",
+      which already carries the row's own `ml-auto`, so the pair group at the right edge without a
+      second competing auto-margin splitting the row.
+    -->
+    @if (showClearFilters()) {
+      <button
+        type="button"
+        (click)="clearFilters()"
+        [class.ml-auto]="activeSection() === 'all'"
+        class="flex h-[30px] cursor-pointer items-center rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12.5px] font-semibold text-[var(--pr-text-secondary)] outline-none transition-colors duration-150 hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-text-heading)] focus-visible:shadow-[var(--pr-focus-ring)]">
+        Clear filters
       </button>
     }
   </div>
