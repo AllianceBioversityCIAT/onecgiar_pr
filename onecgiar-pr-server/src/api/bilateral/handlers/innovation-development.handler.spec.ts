@@ -83,19 +83,49 @@ describe('InnovationDevelopmentBilateralHandler', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('throws when innovation_developers is missing', async () => {
-    await expect(
-      handler.afterCreate({
-        ...baseContext,
-        bilateralDto: {
-          ...baseDto,
-          innovation_development: {
-            innovation_typology: { code: 12 },
-            innovation_readiness_level: { level: 3 },
-          },
-        },
-      }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+  const withoutDevelopers = (innovation: Record<string, unknown>) =>
+    Object.fromEntries(
+      Object.entries(innovation).filter(
+        ([key]) => key !== 'innovation_developers',
+      ),
+    );
+
+  // Since 2026-09-03 the Innovation Developer is the Lead contact person: the field is optional and
+  // the handler falls back to the contact's name instead of rejecting the payload.
+  it('stores the lead contact person as the innovation developer when the field is omitted', async () => {
+    const rest = withoutDevelopers(
+      baseContext.bilateralDto.innovation_development,
+    );
+    await handler.afterCreate({
+      ...baseContext,
+      bilateralDto: {
+        ...baseContext.bilateralDto,
+        lead_contact_person: { email: 'j.smith@cgiar.org', name: 'Jane Smith' },
+        innovation_development: rest,
+      } as any,
+    });
+
+    expect(repoStub.create).toHaveBeenCalledWith(
+      expect.objectContaining({ innovation_developers: 'Jane Smith' }),
+    );
+  });
+
+  it('leaves the innovation developer null when neither the field nor a lead contact is given', async () => {
+    const rest = withoutDevelopers(
+      baseContext.bilateralDto.innovation_development,
+    );
+    await handler.afterCreate({
+      ...baseContext,
+      bilateralDto: {
+        ...baseContext.bilateralDto,
+        lead_contact_person: undefined,
+        innovation_development: rest,
+      } as any,
+    });
+
+    expect(repoStub.create).toHaveBeenCalledWith(
+      expect.objectContaining({ innovation_developers: null }),
+    );
   });
 
   it('throws when readiness level by level number is invalid', async () => {

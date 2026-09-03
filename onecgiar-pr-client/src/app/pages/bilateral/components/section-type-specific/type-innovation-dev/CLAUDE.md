@@ -3,7 +3,7 @@
 **Verified:** 2026-09-02 · branch performance-refactor · f013c157b
 
 ## What it is
-Section 5 of the bilateral form: Innovation Development. Shows the **MDS** (3 mandatory fields) and
+Section 5 of the bilateral form: Innovation Development. Shows the **MDS** (2 mandatory fields since 2026-09-03: typology + readiness — the Innovation Developer is the Lead contact person of Section 1) and
 hides the rest of the pooled-funding form behind the **Complete full metadata** button (P2-3391,
 QA-verified via P2-3327).
 
@@ -15,8 +15,11 @@ QA-verified via P2-3327).
   `BilateralAutoSaveService.schedulePayload('typeSpecific', …, { statusKey: 'type-specific' })`.
 - Load flag: `loaded = signal<boolean | null>(null)` — `null` in flight, `true` loaded, `false` failed.
   **Every write is gated on `=== true`** at the single choke point `queueTypeSave()`.
-- Green check: `BilateralMdsTrackerService.setSectionFields('type-specific', …)`. **Three items only**:
-  `nature`, `developers`, `readiness`. Everything else is full metadata and does not count.
+- Green check: `BilateralMdsTrackerService.setSectionFields('type-specific', …)`. **Two items only**:
+  `nature`, `readiness`. Everything else is full metadata and does not count. The Innovation
+  Developer field is gone (Nicoleta Trifa via Ángel, 2026-09-03): `buildPayload()` fills
+  `innovation_developers` with `creationService.resultLeadContact()` (else the stored value) so the
+  API summary keeps a value.
 - Toggle: `BilateralExpandableStateService.get/setShowAllFields(resultId, 'type-specific')` — the
   open/closed state survives navigation between sections.
 - Catalogues: `InnovationControlListService` (`typeList`, `characteristicsList`,

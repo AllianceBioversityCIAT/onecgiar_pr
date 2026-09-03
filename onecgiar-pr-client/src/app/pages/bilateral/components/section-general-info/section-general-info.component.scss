@@ -159,3 +159,14 @@
     }
   }
 }
+
+.sgi-lead-contact-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -6px 0 16px;
+  font-size: 12px;
+  color: var(--pr-text-secondary);
+
+  .material-icons-round { font-size: 15px; color: var(--pr-text-muted); }
+}
