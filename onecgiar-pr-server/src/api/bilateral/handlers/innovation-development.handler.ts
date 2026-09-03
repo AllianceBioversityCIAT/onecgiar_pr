@@ -83,7 +83,11 @@ export class InnovationDevelopmentBilateralHandler
       result_object: { id: resultId } as any,
       created_by: userId,
       is_active: true,
-      short_title: bilateralDto.title,
+      // `short_title` is deliberately NOT seeded from the result title. Short title is full
+      // metadata, not MDS (P2-3122 AC1/AC2, P2-3391 AC8): neither the ingest DTO nor the AI
+      // extraction carries one, and a 30-word result title is never a valid 10-word short name.
+      // Copying it produced results that looked complete and failed the ceiling on Submit
+      // (NOST-456 QA, result 9005). It stays null until a user writes it.
       innovation_nature: { code: innovationNatureId } as any,
       innovation_developers: innovation.innovation_developers,
       innovation_readiness_level: { id: readinessLevelId } as any,
