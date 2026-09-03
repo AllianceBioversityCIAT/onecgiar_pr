@@ -1,0 +1,93 @@
+<app-pr-dialog
+  [(visible)]="visible"
+  [modal]="true"
+  [closeOnEscape]="true"
+  header="Report a bug or adjustment"
+  styleClass="report-feedback-dialog"
+  (onHide)="visibleChange.emit(false)">
+
+  @if (createdIssueKey() === null) {
+    <!-- FORM -->
+    <div class="rf-body">
+      <p class="rf-intro">
+        Tell us what went wrong or what should be adjusted. Your current screen and browser are
+        attached automatically to help the team reproduce it.
+      </p>
+
+      <!-- Type -->
+      <div class="rf-field">
+        <span class="rf-label">Type</span>
+        <div class="rf-segment" role="radiogroup" aria-label="Report type">
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="type() === 'bug'"
+            class="rf-segment__btn"
+            [class.rf-segment__btn--active]="type() === 'bug'"
+            (click)="type.set('bug')">
+            <i class="material-icons-round">bug_report</i> Bug
+          </button>
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="type() === 'adjustment'"
+            class="rf-segment__btn"
+            [class.rf-segment__btn--active]="type() === 'adjustment'"
+            (click)="type.set('adjustment')">
+            <i class="material-icons-round">tune</i> Adjustment
+          </button>
+        </div>
+      </div>
+
+      <!-- Title -->
+      <div class="rf-field">
+        <label class="rf-label" for="rf-title">Title</label>
+        <input
+          id="rf-title"
+          type="text"
+          class="rf-input"
+          [maxlength]="maxTitle"
+          placeholder="Short summary of the issue"
+          [ngModel]="title()"
+          (ngModelChange)="title.set($event)" />
+      </div>
+
+      <!-- Description -->
+      <div class="rf-field">
+        <label class="rf-label" for="rf-desc">Description</label>
+        <textarea
+          id="rf-desc"
+          class="rf-textarea"
+          rows="5"
+          placeholder="What happened? What did you expect instead? Steps to reproduce…"
+          [ngModel]="description()"
+          (ngModelChange)="description.set($event)"></textarea>
+      </div>
+
+      @if (errorMsg()) {
+        <p class="rf-error" role="alert">{{ errorMsg() }}</p>
+      }
+    </div>
+  } @else {
+    <!-- SUCCESS -->
+    <div class="rf-success">
+      <i class="material-icons-round rf-success__icon">check_circle</i>
+      <p class="rf-success__title">Thanks! Your report was submitted.</p>
+      @if (createdIssueKey()) {
+        <p class="rf-success__ref">Reference: <strong>{{ createdIssueKey() }}</strong></p>
+      }
+    </div>
+  }
+
+  <!-- Single footer node so [pr-dialog-footer] projects into the right slot (NG8011). -->
+  <div pr-dialog-footer class="rf-footer">
+    @if (createdIssueKey() === null) {
+      <button type="button" class="rf-btn rf-btn--ghost" (click)="close()">Cancel</button>
+      <button type="button" class="rf-btn rf-btn--primary" [disabled]="!canSubmit" (click)="submit()">
+        {{ submitting() ? 'Sending…' : 'Submit report' }}
+      </button>
+    } @else {
+      <button type="button" class="rf-btn rf-btn--primary" (click)="close()">Done</button>
+    }
+  </div>
+</app-pr-dialog>

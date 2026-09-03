@@ -5,7 +5,7 @@ import { Component, ElementRef, HostListener, inject, signal, viewChild } from '
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideBell, lucidePanelLeft, lucideSearch } from '@ng-icons/lucide';
+import { lucideBell, lucideBug, lucidePanelLeft, lucideSearch } from '@ng-icons/lucide';
 import { HlmSidebarService } from '@spartan/sidebar';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { environment } from '../../../../environments/environment';
@@ -13,6 +13,7 @@ import { ApiService } from '../../services/api/api.service';
 import { DataControlService } from '../../services/data-control.service';
 import { PopUpNotificationItemComponent } from '../header-panel/components/pop-up-notification-item/pop-up-notification-item.component';
 import { GlobalSearchPaletteComponent } from '../global-search-palette/global-search-palette.component';
+import { ReportFeedbackDialogComponent } from '../report-feedback-dialog/report-feedback-dialog.component';
 
 /**
  * CURRENT shell topbar (PRMS-Shell.dc.html header):
@@ -30,9 +31,10 @@ import { GlobalSearchPaletteComponent } from '../global-search-palette/global-se
     A11yModule,
     NgIcon,
     PopUpNotificationItemComponent,
-    GlobalSearchPaletteComponent
+    GlobalSearchPaletteComponent,
+    ReportFeedbackDialogComponent
   ],
-  providers: [provideIcons({ lucidePanelLeft, lucideSearch, lucideBell })],
+  providers: [provideIcons({ lucidePanelLeft, lucideSearch, lucideBell, lucideBug })],
   templateUrl: './shell-topbar.component.html',
   styleUrls: ['./shell-topbar.component.scss']
 })
@@ -48,6 +50,7 @@ export class ShellTopbarComponent {
 
   inLocal = (environment as any)?.inLocal;
   userMenuOpen = signal(false);
+  reportFeedbackOpen = signal(false);
 
   /** Shown on the trigger. Mac reports `macOS`/`MacIntel`; everything else gets Ctrl. */
   readonly shortcutHint = /mac/i.test(navigator?.platform ?? navigator?.userAgent ?? '') ? '⌘K' : 'Ctrl K';

@@ -20,8 +20,17 @@
       <kbd class="pr-topbar-search__kbd" aria-hidden="true">{{ shortcutHint }}</kbd>
     </button>
 
-    <!-- Right cluster: notifications + user (phase deferred) -->
+    <!-- Right cluster: report bug + notifications + user (phase deferred) -->
     <div class="pr-topbar-right">
+      <button
+        type="button"
+        class="pr-topbar-icon-btn"
+        aria-label="Report a bug or adjustment"
+        title="Report a bug or adjustment"
+        (click)="reportFeedbackOpen.set(true)">
+        <ng-icon name="lucideBug" class="text-[20px]" />
+      </button>
+
       <button
         type="button"
         class="pr-topbar-icon-btn"
@@ -164,4 +173,9 @@
   <!-- The palette itself: mounted here so the trigger and the overlay share one component, which
        is what makes CDK's focus restore land back on the button above. -->
   <app-global-search-palette />
+
+  <!-- Global "Report a bug / adjustment" modal, opened by the bug button above. -->
+  <app-report-feedback-dialog
+    [visible]="reportFeedbackOpen()"
+    (visibleChange)="reportFeedbackOpen.set($event)" />
 }
