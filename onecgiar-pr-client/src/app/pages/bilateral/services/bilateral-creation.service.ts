@@ -121,6 +121,7 @@ export class BilateralCreationService {
     this.resultProjectId.set(null);
     this.resultContributingProjectIds.set([]);
     this.resultContributingProjects.set([]);
+    this.selectedSecondarySps.set([]);
   }
 
   /**
@@ -201,7 +202,16 @@ export class BilateralCreationService {
           }
           this.resultDacSubScores.set(subs);
         }
-        const primaryInit = response?.contributingInitiatives?.contributing_and_primary_initiative?.[0];
+        // Role 1 is the primary program; role 2 rows are the contributing programs the Contributors
+        // section persists (results_by_inititiative, same rows W1/W2 keeps). The query does not order
+        // by role, so `[0]` was only right by luck once a contributing program existed.
+        const initiatives: any[] = response?.contributingInitiatives?.contributing_and_primary_initiative ?? [];
+        const primaryInit = initiatives.find((i: any) => Number(i?.initiative_role_id) === 1) ?? initiatives[0];
+        this.selectedSecondarySps.set(
+          initiatives
+            .filter((i: any) => i?.id && Number(i.initiative_role_id) === 2)
+            .map((i: any) => ({ programId: Number(i.id), programCode: i.official_code, allocation: '' }))
+        );
         if (primaryInit?.id) {
           this.resultInitiativeId.set(primaryInit.id);
           this.selectedPrimarySp.set({

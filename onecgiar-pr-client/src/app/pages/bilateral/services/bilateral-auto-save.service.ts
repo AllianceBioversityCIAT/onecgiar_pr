@@ -520,6 +520,10 @@ export class BilateralAutoSaveService {
   saveContributors(contributorsData: {
     contributing_center?: { institution_id: number }[];
     contributing_bilateral_projects?: { project_id: number; is_lead?: boolean }[];
+    contributing_programs?: { science_program_id: string }[];
+    institutions?: { institutions_id: number }[];
+    no_external_partners?: boolean;
+    is_lead_by_partner?: boolean;
   }): void {
     this.schedulePayload('contributors', contributorsData as Record<string, unknown>, {
       debounceMs: 0,

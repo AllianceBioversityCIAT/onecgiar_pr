@@ -33,35 +33,22 @@
       </div>
     </div>
 
-    @if (availableSecondarySpOptions().length || creationService.selectedSecondarySps().length) {
       <div class="sc-card relative z-[150]">
         <div class="sc-card__header">
           <div class="sc-card__title">
             <span class="sc-card__icon sp-icon"></span>
             <span>Contributing science programs</span>
-            @if (unpersistedFieldsComingSoon) {
-              <span
-                class="rounded-full bg-[var(--pr-surface-app)] px-[8px] py-[2px] text-[11px] font-medium text-[var(--pr-text-muted)]"
-                data-testid="secondary-sps-coming-soon"
-                >Coming soon</span
-              >
-            }
           </div>
         </div>
         <div class="sc-card__body">
           <!--
-            Rendered only when the project's science programs are known. An existing result loads with
-            `sciencePrograms: []` (bilateral-creation.service.ts:170), so on a saved result the chips
-            below are the whole story — see the note on availableSecondarySpOptions().
-
-            ── Visible but DISABLED, `Coming soon` ────────────────────────────────────────────
-            There is no field for this on SaveBilateralContributorsDto: the pick used to live in a
-            component signal and vanish on reload. The control stays on screen because it is part
-            of the designed flow; the tag is what stops it reading as broken. Unblocked by a BACK
-            ticket that adds the field — then flip `unpersistedFieldsComingSoon`.
+            Always rendered, and offering every P25 program (Nicoleta Trifa via Ángel Jarrín,
+            2026-09-03): it used to depend on the project's mapping and vanished for a project mapped
+            100% to one program. Persisted through `contributing_programs[]` on the contributors PATCH
+            and read back from the detail's role-2 initiatives.
           -->
           @if (availableSecondarySpOptions().length) {
-            <div class="w-full max-w-[480px]" [ngClass]="{ globalDisabled: unpersistedFieldsComingSoon }">
+            <div class="w-full max-w-[480px]">
               <app-pr-multi-select
                 [readOnly]="readOnly()"
                 label="Contributing science programs"
@@ -90,7 +77,6 @@
           }
         </div>
       </div>
-    }
   }
 
   <div class="sc-card sc-card--lead-center">
