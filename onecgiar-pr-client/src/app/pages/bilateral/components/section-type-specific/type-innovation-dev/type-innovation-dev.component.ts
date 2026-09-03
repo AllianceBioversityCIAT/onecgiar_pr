@@ -259,7 +259,9 @@ export class TypeInnovationDevComponent implements OnInit {
       short_title: this.body.short_title ?? null,
       innovation_characterization_id: this.body.innovation_characterization_id ?? null,
       innovation_nature_id: this.body.innovation_nature_id ?? null,
-      innovation_developers: this.body.innovation_developers ?? null,
+      // The Lead contact person is the innovation developer (2026-09-03): the field left the form, but
+      // the column keeps a value for the API summary — the contact's name, else whatever was stored.
+      innovation_developers: this.creationService.resultLeadContact()?.trim() || this.body.innovation_developers || null,
       innovation_readiness_level_id: this.body.innovation_readiness_level_id ?? null,
       is_new_variety: this.body.is_new_variety ?? null,
       number_of_varieties: this.body.number_of_varieties ?? null,
@@ -277,9 +279,10 @@ export class TypeInnovationDevComponent implements OnInit {
   }
 
   /**
-   * P2-3391 AC9/AC10: the green check is the three MDS fields the story names — typology, innovation
-   * developer, readiness level — and nothing else. Short title moved to full metadata (AC8: strictly
-   * optional), so it can no longer hold the section back.
+   * P2-3391 AC9/AC10 named three MDS fields — typology, innovation developer, readiness level. Since
+   * 2026-09-03 the innovation developer is the Lead contact person (Section 1, already mandatory), so
+   * the green check here is typology + readiness level and nothing else. Short title is full metadata
+   * (AC8: strictly optional) and cannot hold the section back.
    *
    * P2-3340 still applies though: the 10-word ceiling on the short title is only painted red by
    * `pr-input`, so it is reported here as an INVALID item — but only while it is actually over the
@@ -293,11 +296,6 @@ export class TypeInnovationDevComponent implements OnInit {
         key: 'nature',
         label: 'Innovation typology (nature)',
         filled: this.body.innovation_nature_id != null
-      },
-      {
-        key: 'developers',
-        label: 'Innovation developer',
-        filled: !!this.body.innovation_developers?.trim()
       },
       {
         key: 'readiness',

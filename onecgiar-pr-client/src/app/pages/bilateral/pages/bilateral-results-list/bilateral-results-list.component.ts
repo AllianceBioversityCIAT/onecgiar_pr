@@ -23,6 +23,8 @@ import { PhasesService } from '../../../../shared/services/global/phases.service
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { RolesService } from '../../../../shared/services/global/roles.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
+import { ApiService } from '../../../../shared/services/api/api.service';
+import { ChangePhaseModalModule } from '../../../../shared/components/change-phase-modal/change-phase-modal.module';
 import {
   PrTableComponent,
   PrSortIconComponent,
@@ -111,6 +113,7 @@ function defaultColumnVisibility(): Record<string, boolean> {
     PrTableBodyDirective,
     PrTableEmptyDirective,
     PrTableLoadingDirective,
+    ChangePhaseModalModule,
   ],
   templateUrl: './bilateral-results-list.component.html',
   styleUrl: './bilateral-results-list.component.scss',
@@ -124,6 +127,7 @@ export class BilateralResultsListComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly rolesService = inject(RolesService);
   private readonly resultsApiService = inject(ResultsApiService);
+  readonly api = inject(ApiService);
   readonly ctx = inject(BilateralContextService);
 
   readonly phases = signal<Phases[]>([]);
@@ -393,6 +397,37 @@ export class BilateralResultsListComponent implements OnInit {
   editResult(result: BilateralCenterResult, event: Event): void {
     event.stopPropagation();
     this.openResult(result);
+  }
+
+  /**
+   * P2-3229 offered "Update result" for an approved bilateral result of a previous phase — but only
+   * from the Results Center row menu. From this list, the centre's own, there was no way to carry a
+   * 2025 result into the open phase (Nicoleta Trifa via Ángel Jarrín, 2026-09-03: "not sure where I
+   * should go to proceed with the update"). Same rule as the Results Center (`ApiService.
+   * canUpdateBilateral`): past phase, Approved, user of the lead centre or admin. The row carries no
+   * `lead_center`/`phase_year`, so both are derived here: this list IS the centre's, and the phase
+   * year comes from the phase the row belongs to.
+   */
+  canUpdateResult(result: BilateralCenterResult): boolean {
+    if (result.source !== 'API') return false;
+    return this.api.canUpdateBilateral(this.asCurrentResult(result), this.api.dataControlSE.reportingCurrentPhase);
+  }
+
+  updateResult(result: BilateralCenterResult, event: Event): void {
+    event.stopPropagation();
+    this.api.dataControlSE.currentResult = this.asCurrentResult(result);
+    this.api.dataControlSE.chagePhaseModal = true;
+  }
+
+  /** The shape `ApiService.canUpdateBilateral` and `app-change-phase-modal` read from `currentResult`. */
+  private asCurrentResult(result: BilateralCenterResult): any {
+    const phaseYear = this.phases().find(phase => phase.id === result.version_id)?.phase_year ?? null;
+    return {
+      ...result,
+      source_name: 'W3/Bilaterals',
+      lead_center: this.ctx.centerAcronym(),
+      phase_year: phaseYear,
+    };
   }
 
   requestDelete(result: BilateralCenterResult, event: Event): void {

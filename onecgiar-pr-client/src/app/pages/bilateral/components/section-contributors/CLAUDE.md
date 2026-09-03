@@ -110,10 +110,35 @@ centros CGIAR contribuyentes, proyectos W3/bilaterales, programas científicos, 
 |---|---|---|
 | ToC KPI read-only para researcher (AC2) | Vive en `../section-toc/section-toc.component.html:3`, **fuera de esta carpeta**, y no acepta input de solo-lectura. Además **no existe el rol "SP staff"** en el cliente. | Producto (definir el rol) + ticket que toque `section-toc` |
 | Tooltip ⓘ en centros y en proyectos W3 | P2-3368 pide el icono pero **no da el texto**, y W1/W2 no tiene ninguno que reutilizar. | Producto (redactar el copy) |
-| Guardado de contributing science programs (control `Coming soon`) | Sin campo en el DTO; P2-3443 no lo pidió. | Ticket nuevo (BACK) |
+| ~~Guardado de contributing science programs~~ | **Hecho 2026-09-03:** `contributing_programs[]` en el DTO, filas rol 2 en `results_by_inititiative`, catálogo P25 completo (`clarisa/initiatives/p25`). Ver nota al final. | — |
 | Guardado de enlazado/agrupado + linked results (controles `Coming soon`) | Sin campo en el DTO ni en el GET de detalle; P2-3443 no lo pidió. | Ticket nuevo (BACK) |
 | Green check de partners en bilateral | La función MySQL exige un delivery type por socio y bilateral no los captura (AC6). | Producto + BACK |
 
 ## Tests
 `section-contributors.component.spec.ts` — 104 casos. El template se sobreescribe con
 `<div></div>`: **no hay assertions de DOM**, todo va por signals/computeds.
+
+## 2026-09-03 — Contributing science programs ya se guardan y salen siempre
+
+Pedido de Nicoleta Trifa vía Ángel: "the Contributing P/A question is missing… regardless of the
+mapping %, this option needs to be available". Antes las opciones eran los SPs **del proyecto** menos
+el primario: con un proyecto mapeado 100% a un programa la lista quedaba vacía y la card no se
+renderizaba; en un resultado guardado tampoco (`sciencePrograms: []` al cargar). Y el control estaba
+`Coming soon` porque el DTO no tenía campo.
+
+- **Opciones:** `sciencePrograms` (signal) cargado en `ngOnInit` con `api.resultsSE.GET_AllInitiatives('p25')`
+  → `clarisa/initiatives/p25` (tipos de entidad 22/23/24 = programas y aceleradores P25). Menos el
+  primario. Los SPs del proyecto quedan como fallback mientras carga el catálogo.
+- **Card siempre visible** (se quitó el `@if` exterior y el tag `Coming soon` del bloque de SPs).
+  `unpersistedFieldsComingSoon` sigue existiendo pero ya sólo cubre enlazado/agrupado.
+- **Guardado:** `buildContributorsPayload()` manda `contributing_programs: [{ science_program_id: programCode }]`
+  cuando `contributorsHydrated()`; `onSecondarySpsModelChange` llama `persistContributors()`. El server
+  (`bilateral-center.service.ts` → `syncContributingPrograms`) escribe filas rol 2 en
+  `results_by_inititiative`, desactiva las que ya no estén y nunca toca el rol 1.
+- **Lectura:** `BilateralCreationService.loadResult` hidrata `selectedSecondarySps` con las filas
+  `initiative_role_id === 2` de `contributing_and_primary_initiative`, y el primario ahora se busca por
+  rol 1 (antes era `[0]`, correcto sólo por suerte).
+- ⚠️ El ingest (`POST /create`) sigue guardando los programas contribuyentes como
+  `share_result_request` con status 4, no como rol 2: un resultado creado por API no muestra sus
+  programas en el formulario hasta que alguien los guarde desde aquí. Anotado en el change log del
+  contrato.

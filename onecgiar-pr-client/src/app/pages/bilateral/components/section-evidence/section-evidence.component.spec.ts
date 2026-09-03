@@ -91,53 +91,9 @@ describe('SectionEvidenceComponent', () => {
   });
 
   // ── getters ──────────────────────────────────────────────────────────
-  // P2-3375: ported from W1/W2 (rd-evidences.component.ts:277-305) with the same field names, because
-  // this section posts to the same endpoint. Note two things the port had to preserve exactly:
-  // Principal is tag level '3' (the catalogue id, not the score 2 in its label), and the Climate row
-  // binds `youth_related`.
-  describe('per-evidence tags and the Principal warning (P2-3375)', () => {
-    it('lists a Principal impact area that has no evidence tagged for it', () => {
-      build();
-      component.evidenceBody.set({ evidences: [{ link: 'https://a.com' }], gender_tag_level: '3' } as any);
-      expect(component.principalTagsWithoutEvidence).toEqual(['Gender equality, youth and social inclusion']);
-      expect(component.principalWarningHtml).toContain('A principal contribution score (2) has been recorded');
-    });
-
-    it('says nothing once an evidence carries that tag', () => {
-      build();
-      component.evidenceBody.set({
-        evidences: [{ link: 'https://a.com', gender_related: true }],
-        gender_tag_level: '3',
-      } as any);
-      expect(component.principalTagsWithoutEvidence).toEqual([]);
-      expect(component.principalWarningHtml).toBe('');
-    });
-
-    it('ignores impact areas that are not Principal', () => {
-      build();
-      component.evidenceBody.set({ evidences: [{ link: 'https://a.com' }], gender_tag_level: '2' } as any);
-      expect(component.principalTagsWithoutEvidence).toEqual([]);
-    });
-
-    it('reads the Climate tag from youth_related, as W1/W2 does', () => {
-      build();
-      component.evidenceBody.set({ evidences: [{ link: 'https://a.com' }], climate_change_tag_level: '3' } as any);
-      expect(component.principalTagsWithoutEvidence).toEqual(['Climate adaptation and mitigation']);
-
-      component.evidenceBody.update((b: any) => ({ ...b, evidences: [{ link: 'https://a.com', youth_related: true }] }));
-      expect(component.principalTagsWithoutEvidence).toEqual([]);
-    });
-
-    it('lists every uncovered Principal area, not just the first', () => {
-      build();
-      component.evidenceBody.set({
-        evidences: [{ link: 'https://a.com' }],
-        gender_tag_level: '3',
-        poverty_tag_level: '3',
-      } as any);
-      expect(component.principalTagsWithoutEvidence).toHaveLength(2);
-    });
-
+  // The P2-3375 Principal-score warning is gone on purpose: Impact Area scores are not bilateral MDS,
+  // so the section asks for no evidence on them (2026-09-03). Only the tag catalogues remain.
+  describe('per-evidence tags', () => {
     it('offers five impact areas and seven result types', () => {
       build();
       expect(component.impactAreaTags).toHaveLength(5);

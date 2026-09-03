@@ -46,7 +46,12 @@ describe('TypeInnovationDevComponent', () => {
     };
     // `showScalingStudies` reads `reportingYear()`; without the key every test in this file fails
     // as "is not a function". Default 2025 so the pre-2026 behaviour is what the legacy tests assert.
-    creation = { currentResultId: signal<number | null>(123), reportingYear: signal<number | null>(2025) };
+    creation = {
+      currentResultId: signal<number | null>(123),
+      reportingYear: signal<number | null>(2025),
+      // The Lead contact person doubles as the innovation developer since 2026-09-03.
+      resultLeadContact: signal<string>('')
+    };
     expandableState = {
       getShowAllFields: jest.fn().mockReturnValue(false),
       setShowAllFields: jest.fn()
@@ -94,7 +99,6 @@ describe('TypeInnovationDevComponent', () => {
       expect(component.body.short_title).toBe('T');
       expect(mdsTracker.setSectionFields).toHaveBeenCalledWith('type-specific', [
         { key: 'nature', label: 'Innovation typology (nature)', filled: true },
-        { key: 'developers', label: 'Innovation developer', filled: true },
         { key: 'readiness', label: 'Readiness level', filled: true }
       ]);
     });
@@ -190,11 +194,11 @@ describe('TypeInnovationDevComponent', () => {
 
       // Same reason as the sibling section (P2-3355): publishing no checklist at all leaves the
       // section at "0/0 fields", which reads as "nothing required here" instead of as incomplete.
-      it('still publishes the three unfilled MDS items, so the section stays honestly incomplete', () => {
+      it('still publishes the two unfilled MDS items, so the section stays honestly incomplete', () => {
         failLoad();
         build();
         const fields = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
-        expect(fields.map((f: any) => f.key)).toEqual(['nature', 'developers', 'readiness']);
+        expect(fields.map((f: any) => f.key)).toEqual(['nature', 'readiness']);
         expect(fields.every((f: any) => f.filled === false)).toBe(true);
       });
     });
@@ -228,7 +232,7 @@ describe('TypeInnovationDevComponent', () => {
   describe('updateMds', () => {
     const trackedKeys = () => mdsTracker.setSectionFields.mock.calls.at(-1)[1].map((f: any) => f.key);
 
-    it('tracks only the three MDS fields, never the full metadata ones', () => {
+    it('tracks only the two MDS fields, never the full metadata ones', () => {
       build();
       component.body = {
         short_title: 'T',
@@ -243,21 +247,20 @@ describe('TypeInnovationDevComponent', () => {
         has_scaling_studies: true
       };
       component.updateMds();
-      expect(trackedKeys()).toEqual(['nature', 'developers', 'readiness']);
+      expect(trackedKeys()).toEqual(['nature', 'readiness']);
     });
 
-    it('reaches 100% on the three MDS fields alone, with no short title at all', () => {
+    it('reaches 100% on the two MDS fields alone, with no short title and no developer', () => {
       build();
-      component.body = { innovation_nature_id: 12, innovation_developers: 'D', innovation_readiness_level_id: 17 };
+      component.body = { innovation_nature_id: 12, innovation_readiness_level_id: 17 };
       component.updateMds();
       const fields = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
       expect(fields.every((f: any) => f.filled)).toBe(true);
     });
 
     it.each([
-      ['nature', { innovation_developers: 'D', innovation_readiness_level_id: 17 }],
-      ['developers', { innovation_nature_id: 12, innovation_readiness_level_id: 17 }],
-      ['readiness', { innovation_nature_id: 12, innovation_developers: 'D' }]
+      ['nature', { innovation_readiness_level_id: 17 }],
+      ['readiness', { innovation_nature_id: 12 }]
     ])('leaves %s unfilled when it is missing, so the section cannot go green', (key, body) => {
       build();
       component.body = body;
@@ -266,12 +269,28 @@ describe('TypeInnovationDevComponent', () => {
       expect(fields.find((f: any) => f.key === key).filled).toBe(false);
     });
 
-    it('treats a whitespace-only innovation developer as unfilled', () => {
+    // Nicoleta Trifa via Ángel Jarrín, 2026-09-03: the Innovation Developer is the Lead contact person.
+    it('sends the lead contact person as the innovation developer', () => {
+      creation.resultLeadContact.set('Jane Smith');
       build();
-      component.body = { innovation_developers: '   ' };
-      component.updateMds();
-      const fields = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
-      expect(fields.find((f: any) => f.key === 'developers').filled).toBe(false);
+      component.body = { innovation_nature_id: 12, innovation_developers: 'old free text' };
+      component.onFieldChange();
+      expect(autoSave.schedulePayload).toHaveBeenCalledWith(
+        'typeSpecific',
+        expect.objectContaining({ innovation_developers: 'Jane Smith' }),
+        expect.anything()
+      );
+    });
+
+    it('keeps the stored developer when the result has no lead contact yet', () => {
+      build();
+      component.body = { innovation_developers: 'stored' };
+      component.onFieldChange();
+      expect(autoSave.schedulePayload).toHaveBeenCalledWith(
+        'typeSpecific',
+        expect.objectContaining({ innovation_developers: 'stored' }),
+        expect.anything()
+      );
     });
 
     // P2-3340 still holds even though the short title moved to full metadata: it is reported only
@@ -294,7 +313,7 @@ describe('TypeInnovationDevComponent', () => {
       build();
       component.body = { short_title: 'one two three four five six seven eight nine ten' };
       component.updateMds();
-      expect(trackedKeys()).toEqual(['nature', 'developers', 'readiness']);
+      expect(trackedKeys()).toEqual(['nature', 'readiness']);
     });
   });
 
@@ -641,9 +660,10 @@ describe('TypeInnovationDevComponent', () => {
       expect(toggleButton().textContent.trim()).toBe('Hide full metadata');
     });
 
-    it('shows the three MDS fields without expanding anything, and marks all three required', () => {
+    // No "Innovation Developer" field since 2026-09-03: the Lead contact person (Section 1) is the developer.
+    it('shows the two MDS fields without expanding anything, and marks them required', () => {
       render();
-      expect(labels()).toEqual(['Which of the below typologies best fits the nature of the innovation?', 'Innovation Developer']);
+      expect(labels()).toEqual(['Which of the below typologies best fits the nature of the innovation?']);
       expect(allFields().every(f => f.required)).toBe(true);
       // The readiness level is an `app-pr-range-level`, headed by its own field header.
       expect(fixture.debugElement.query(By.css('app-pr-range-level'))).toBeTruthy();
