@@ -108,6 +108,31 @@ describe('IntellectualPropertyConsiderationsComponent', () => {
     expect(component.notificationDisclosure).not.toMatch(/immediately/i);
   });
 
+  it('shows the Intellectual Property definition link on Yes, and not on No', () => {
+    // Info Point 1. The story gives this URL with an "exact URL to be confirmed" note; if it ever
+    // changes, it changes in one constant and this test says so.
+    select('Yes');
+    const link = fixture.nativeElement.querySelector('a[target="_blank"]');
+    expect(link).not.toBeNull();
+    expect(link.getAttribute('href')).toBe('https://www.wipo.int/about-ip/en/');
+    expect(link.textContent.trim()).toBe('What is Intellectual Property?');
+
+    select('No');
+    expect(fixture.nativeElement.querySelector('a[target="_blank"]')).toBeNull();
+  });
+
+  it('opens the definition link safely', () => {
+    // `target="_blank"` without `rel="noopener"` hands the opened page a handle on this one.
+    select('Not sure');
+    const link = fixture.nativeElement.querySelector('a[target="_blank"]');
+    expect(link.getAttribute('rel')).toContain('noopener');
+  });
+
+  it('shows BOTH info points together, which is what the acceptance criterion asks', () => {
+    select('Yes');
+    expect(fixture.nativeElement.querySelectorAll('.message').length).toBe(2);
+  });
+
   it('marks the section complete as soon as any option is picked', () => {
     expect(component.isComplete).toBe(false);
     select('No');

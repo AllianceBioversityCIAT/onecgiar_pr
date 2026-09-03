@@ -64,10 +64,13 @@ template, and the spec pins that neither ever renders alongside the other.
   (`resolveIprSlotsForPhase`). Before `1788441000000-AddConsolidatedIprQuestionP25` runs, the slot is
   `undefined` — hence the `@if (question)` guard. Removing it takes the whole section down, the same
   incident `stage-assessment` already paid for.
-- ⚠️ **Info Point 1 is deliberately NOT built.** The story asks for a "What is Intellectual Property?"
-  definition and link, and says the URL is "to be confirmed with Nicoleta Trifa". Neither arrived.
-  Info Point 2 (the notification notice) is built and worded for SUBMISSION, which is the PO's
-  Option B and what the server actually does.
+- ⚠️ **Both info points are built, but Info Point 1 ships on an unconfirmed URL.** The story gives
+  `wipo.int/about-ip/en/` with an explicit "exact URL to be confirmed with Nicoleta Trifa" note, and
+  the definition TEXT it also asks for was never provided — so the link goes out with the story's own
+  label and nothing invented around it. It lives in **one constant** (`ipDefinitionUrl`); if Nicoleta
+  names another, that is the only edit. Info Point 2 is worded for SUBMISSION, which is the PO's
+  Option B and what the server actually does — a spec pins that the copy never drifts back to
+  "immediately".
 - 🥇 **The email trigger moved with the question.** Up to 2025 it is option id 110 of question 103;
   from 2026 it is the "Yes" / "Not sure" option of the consolidated question, resolved by text under
   its parent (`result.repository.ts`, `getResultInnovationDevelopmentByResultId`). Branching on the

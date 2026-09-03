@@ -45,6 +45,20 @@ export class IntellectualPropertyConsiderationsComponent {
   readonly notificationDisclosure =
     "Answering Yes or Not sure will trigger an automatic email to the lead Center's IP focal point when you submit this result. They will contact you directly.";
 
+  /**
+   * Info Point 1 of the story: the link to the Intellectual Property definition.
+   *
+   * ⚠️ The story carries this URL with the note "exact URL to be confirmed with
+   * Nicoleta Trifa", and the definition TEXT it also asks for was never provided.
+   * So the link ships with the label the story itself uses and nothing invented
+   * around it — better a working pointer to WIPO than an acceptance criterion left
+   * unmet over a URL nobody has objected to. If Nicoleta names a different one, it
+   * is this one constant.
+   */
+  readonly ipDefinitionUrl = 'https://www.wipo.int/about-ip/en/';
+
+  readonly ipDefinitionLabel = 'What is Intellectual Property?';
+
   constructor(public innovationDevInfoUtilsSE: InnovationDevInfoUtilsService) {}
 
   get question() {

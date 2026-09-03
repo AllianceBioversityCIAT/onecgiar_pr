@@ -21,12 +21,22 @@
     </app-pr-radio-button>
 
     <!--
-      Info Point 2 of the story. Info Point 1 (the "What is Intellectual Property?" definition and
-      its link) is NOT here on purpose: neither the definition text nor the URL has been provided,
-      and the story itself says the link is "to be confirmed with Nicoleta Trifa". Painting a
-      placeholder link would be worse than not painting it.
+      The two info points of the story, shown only for Yes / Not sure.
+
+      Info Point 1 carries the URL the story gives, which the story itself marks as "to be
+      confirmed with Nicoleta Trifa". The definition TEXT it also asks for was never provided, so
+      the link goes out with the label the story uses and nothing invented around it.
+      Info Point 2 is worded for SUBMISSION time — the timing the PO confirmed — and not for the
+      moment the answer is picked, which is what the first draft of the story said.
     -->
     @if (isTriggerSelected) {
+      <div class="message">
+        <i class="pi pi-info-circle" style="font-size: 14px; margin-top: 2px; color: var(--pr-color-blue-600)"></i>
+        <div class="message--text">
+          <a [href]="ipDefinitionUrl" target="_blank" rel="noopener noreferrer">{{ ipDefinitionLabel }}</a>
+        </div>
+      </div>
+
       <div class="message">
         <i class="pi pi-info-circle" style="font-size: 14px; margin-top: 2px; color: var(--pr-color-blue-600)"></i>
         <div class="message--text">{{ notificationDisclosure }}</div>
