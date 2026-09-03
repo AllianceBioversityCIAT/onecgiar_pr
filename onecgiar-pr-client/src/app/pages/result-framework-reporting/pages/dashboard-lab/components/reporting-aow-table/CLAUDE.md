@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-09-01 · branch qa-development-2026 · 3366453bc (merged with performance-refactor · 181caa352 — disclosure-default contract P2-3251/P2-3252, ToC achievement Progress column P2-3296)
+**Verified:** 2026-09-03 · branch performance-refactor · d5cf496be (cherry-picked from qa-development-2026-ss · RTA-T-1 sticky pin + RTA-T-2 CT regression)
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjetas colapsables por Area
@@ -42,22 +42,8 @@ ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio
   so dropping the header's `(click)` binding left the whole suite green — verified 2026-09-01.
 
 ## Trampas (⚠️ = ya rompió algo)
-- ⚠️ **El botón "By AOW" (`:441-455`) colapsa a solo-icono bajo 900px** (`max-[900px]:w-[30px]` +
-  `title="By AOW"`) — ya rompió algo: desbordó la página 48px a 768px (798≠750) sin que dos pases de
-  verificación lo notaran. No faltaba ningún `min-w-0`: el nombre (`:313`) ya estaba en 0px y cada
-  hermano restante es `shrink-0`. El `aria-label` queda INCONDICIONAL a propósito — es lo que hace
-  defendible ocultar solo la etiqueta visible; no lo condiciones al breakpoint. Tailwind v4:
-  `max-[900px]:` compila a `width < 900` (exclusivo), encajando exacto con `min-[900px]` — ya mordió a
-  `OSF-T-2b` en un componente hermano.
-- ⚠️ **El bloque de achievement (`:409-434`, `w-[168px] shrink-0`) va `max-[1100px]:sr-only`, NUNCA
-  `max-[1100px]:hidden`** (`OSF-T-16`) — a exactamente 900px desbordaba 177px, idéntico banda
-  colapsada/expandida (no era la banda; era el grupo ratio+achievement de 444px que `OSF-T-12` ya
-  había señalado). `hidden` sacaría las cifras QA/Prel/coverage del árbol de accesibilidad sin que
-  nada más las nombre (viola `OSF-R-8`); `sr-only` las deja leíbles por lector de pantalla y solo les
-  quita su hueco en el flex. `1100`, no `900`: a 900px exacto `max-[900px]` no aplica (ver arriba), y
-  `1100` es el límite que el propio ladder de `OSF-DD-8` usa para soltar este mismo bloque. El
-  fallback sighted-hover vive en el `title` del `<span>` que lo envuelve (`rowTitle()`), no en el
-  bloque — a 1px es inalcanzable con el puntero.
+- ⚠️ **El botón "By AOW" (`:441-455`) colapsa a solo-icono bajo 900px** (`max-[900px]:w-[30px]` + `title="By AOW"`) — ya rompió algo: desbordó la página 48px a 768px (798≠750) sin que dos pases de verificación lo notaran. No faltaba ningún `min-w-0`: el nombre (`:313`) ya estaba en 0px y cada hermano restante es `shrink-0`. El `aria-label` queda INCONDICIONAL a propósito — es lo que hace defendible ocultar solo la etiqueta visible; no lo condiciones al breakpoint. Tailwind v4: `max-[900px]:` compila a `width < 900` (exclusivo), encajando exacto con `min-[900px]` — ya mordió a `OSF-T-2b` en un componente hermano.
+- ⚠️ **El bloque de achievement (`:409-434`, `w-[168px] shrink-0`) va `max-[1100px]:sr-only`, NUNCA `max-[1100px]:hidden`** (`OSF-T-16`) — a exactamente 900px desbordaba 177px, idéntico banda colapsada/expandida (no era la banda; era el grupo ratio+achievement de 444px que `OSF-T-12` ya había señalado). `hidden` sacaría las cifras QA/Prel/coverage del árbol de accesibilidad sin que nada más las nombre (viola `OSF-R-8`); `sr-only` las deja leíbles por lector de pantalla y solo les quita su hueco en el flex. `1100`, no `900`: a 900px exacto `max-[900px]` no aplica (ver arriba), y `1100` es el límite que el propio ladder de `OSF-DD-8` usa para soltar este mismo bloque. El fallback sighted-hover vive en el `title` del `<span>` que lo envuelve (`rowTitle()`), no en el bloque — a 1px es inalcanzable con el puntero.
 - ⚠️ **`filtersActive` NO se puede deducir aquí.** Solo llegan `search` y `statusFilter`; los filtros
   **Section / Type / Category** los aplica el host al construir `groups`. Una tarjeta vaciada por
   Category llegaba idéntica a un AoW sin nada planeado, y el estado vacío afirmaba *"this area of work
@@ -76,6 +62,7 @@ ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio
   debajo. Las celdas fijas van a `left: 0` / `right: 0`.
 - ⚠️ **No pongas un segundo scroller.** `app-pr-table` ya renderiza `.pr-table-wrap` con
   `overflow-x: auto`; envolverlo en otro daba dos barras para un solo eje.
+- **RTA-T-1 (2026-09-01, sticky pivot + gutter/height rework):** `.pr-collapse--rows > .pr-collapse-inner` sigue scrolleando SOLO 1-6 (`min-width: 1048px` en ambas). Pistas 7-8 `position: sticky` + `align-self: stretch` (una celda vacía —AoW sin copy-link ni action label— ya no da altura 0); `.pr-pin-actions` `right: 56px` y `.pr-pin-menu` `right: 0`, cada una con `padding-right`/`margin-right` negativo igual para pintar el gap de 16px y el padding de 20px de la fila (RTA-R-4/R-11 intactos). Fondo cubre `:hover` Y `.pr-row-highlighted` (Next-pending) — antes solo el primero.
 - ⚠️ **`app-pr-table` ordena con `<`/`>` sobre el valor crudo y no acepta comparador.** Por eso
   `flatTableRows()` precalcula `__sortTarget` / `__sortAchieved` / `__sortStatus`:
   `target_value_sum` llega como STRING y ordenaba `"9" > "100"`. "Nada reportado" es
