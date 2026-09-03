@@ -56,6 +56,35 @@ result's phase year — so the checklist never mixes the two.
   innovation merged or split but not *with what*. The auto-lock of Step 4 is waiting on the A/B
   question published on the ticket on 31 Aug 2026.
 
+## Step 4 — the auto-lock, and why it has an escape (P2-3292)
+
+From the 2026 phase, an Innovation Development result **stored** as inactive locks this block: the
+answer, the reason checklist and the "Other" text all go read-only. An administrator does not lock,
+and sees a **Reopen this innovation** button that sets the answer back to active and clears every
+ticked reason (the parent still owns the save).
+
+- 🛑 **The administrator escape is load-bearing, not a nicety.** `P2-2923` was raised by QA precisely
+  because people who closed an innovation by mistake were trapped with no way back — which is why
+  `is_discontinued` deliberately does NOT lock result types 7 and 2 in `CurrentResultService`.
+  Locking with no way out puts that trap back on purpose. Decision: Yeck, 3 Sep 2026.
+- 🥇 **`lockedByDiscontinuation` reads the STORED flag** (`dataControlSE.currentResult.is_discontinued`),
+  never `generalInfoBody.is_discontinued`, which is the value being edited. Reading the form would
+  lock the block the instant somebody picked "No" — before confirming — and they could never tick a
+  single reason. A spec pins that case.
+- 🛑 **The lock has to close TWO doors.** `[isStatic]` is the escape hatch that forces editability
+  despite the global read-only, so `[disabled]` alone does nothing while `annualUpdatingEditable` is
+  true. Both are wired, and a spec pins that the hatch closes.
+- **Nobody is left in front of a dead form**: a locked reporter gets a notice naming who to ask. The
+  notice is hidden from the administrator, who has the button instead.
+- ⚠️ **It is a UI lock only.** The server applies no guard to the section-save endpoints (verified
+  3 Sep 2026: `results.controller.ts` carries no `@UseGuards`, and `saveGeneralInformation` never
+  reads `status_id`, `is_discontinued` or the phase), so a crafted PATCH still goes through. Making
+  it a real lock is server work and is not in this story.
+- 🛑 **Do NOT implement this as one more write to `rolesSE.readOnly` inside `CurrentResultService`.**
+  That switch is followed by the async continuation of `validateReadOnly`, whose last write sets
+  `readOnly = false` for any member of the result's initiative — so a lock assigned there can be
+  silently overwritten. This is a derived getter for that reason (same shape as `showAiReview`).
+
 ## Traps (⚠️ = already broke something)
 - ⚠️ **The 2026 label is a question, so it must pass `[useColon]="false"`.** `app-pr-field-header`
   appends `':'` to every label unless told otherwise (`pr-field-header.component.html:8`, and

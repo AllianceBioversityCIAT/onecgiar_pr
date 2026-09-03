@@ -101,7 +101,82 @@ export class RdAnnualUpdatingComponent implements OnInit {
 
   /** When true, pr-radio / pr-checkbox treat the field as editable despite global read-only (see P2-2923). */
   get annualUpdatingEditable(): boolean {
-    return this.isPhaseOpen && !!this.api.rolesSE.access?.canDdit;
+    return this.isPhaseOpen && !!this.api.rolesSE.access?.canDdit && !this.lockedByDiscontinuation;
+  }
+
+  /**
+   * P2-3292 Step 4 — the auto-lock, and its way out.
+   *
+   * From the 2026 phase, once an Innovation Development result is **stored** as inactive the block
+   * turns read-only: the person who reported it can no longer set it back to active, nor retick the
+   * reasons, on their own. An administrator still can.
+   *
+   * 🛑 The administrator escape is not a nicety, it is what stops this from reinstating a bug that
+   * was already reported and fixed. `P2-2923` exists precisely because people who closed an
+   * innovation by mistake were trapped with no way back; that is why `is_discontinued` deliberately
+   * does NOT lock result types 7 and 2 in `CurrentResultService`. Locking without the escape would
+   * put that trap back on purpose (decision: Yeck, 3 Sep 2026).
+   *
+   * 🥇 It reads the **stored** flag (`dataControlSE.currentResult.is_discontinued`), never
+   * `generalInfoBody.is_discontinued`, which is the value being edited right now: reading the form
+   * would lock the block the instant somebody picked "No", before confirming, and they could never
+   * tick a single reason.
+   *
+   * Scoped by `usesStatusTriggerWording`, so it is Innovation Development and phase >= 2026 only —
+   * every earlier phase and Innovation Use keep behaving exactly as they do today.
+   *
+   * ⚠️ This is a UI lock. The server applies no guard to the section-save endpoints (verified
+   * 3 Sep 2026: `results.controller.ts` carries no `@UseGuards`, and `saveGeneralInformation` never
+   * reads `status_id`, `is_discontinued` or phase), so a crafted PATCH still goes through. Making it
+   * a real lock is server work and is not in this story.
+   */
+  get lockedByDiscontinuation(): boolean {
+    if (!this.usesStatusTriggerWording) {
+      return false;
+    }
+
+    if (this.api.rolesSE.isAdmin) {
+      return false;
+    }
+
+    return this.api.dataControlSE.currentResult?.is_discontinued === true;
+  }
+
+  /**
+   * True when the block is locked and the current user is the one who cannot undo it — i.e. when the
+   * "ask an administrator" notice has to be shown. Kept separate from the lock itself so the notice
+   * never appears to the administrator, who does have the button.
+   */
+  get showDiscontinuationLockNotice(): boolean {
+    return this.lockedByDiscontinuation;
+  }
+
+  /**
+   * True when the current user can lift the lock: an administrator looking at a result already
+   * stored as inactive, in the 2026 phase or later.
+   */
+  get canReopenDiscontinuation(): boolean {
+    return (
+      this.usesStatusTriggerWording &&
+      this.api.rolesSE.isAdmin &&
+      this.api.dataControlSE.currentResult?.is_discontinued === true
+    );
+  }
+
+  /**
+   * Reopens a discontinued innovation: sets the answer back to active and clears the reasons that
+   * were ticked, leaving the block editable so the administrator can save the correction.
+   *
+   * It does not persist by itself — the parent owns the save, exactly as with every other field of
+   * this block. Clearing the reasons matters: a stored reason left ticked under an "active" answer
+   * is a contradiction, and `discontinuedOptionsToIds()` in the parent would send it anyway.
+   */
+  reopenDiscontinuation(): void {
+    this.generalInfoBody.is_discontinued = false;
+    (this.generalInfoBody.discontinued_options ?? []).forEach(option => {
+      option.value = false;
+      option.description = null;
+    });
   }
 
   getAlertNarrative(): void {

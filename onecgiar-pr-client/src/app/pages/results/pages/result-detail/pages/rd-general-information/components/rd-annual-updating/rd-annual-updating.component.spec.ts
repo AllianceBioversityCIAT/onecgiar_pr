@@ -340,4 +340,105 @@ describe('RdAnnualUpdatingComponent', () => {
       expect(rendered.nativeElement.querySelectorAll('.discontinued_option app-pr-input').length).toBe(1);
     });
   });
+  /**
+   * P2-3292 Step 4 — the auto-lock and the administrator's way out.
+   *
+   * The story asks for the record to lock the moment the reporter confirms the innovation is no
+   * longer active. Taken literally that reinstates `P2-2923`, a bug QA raised and that was closed
+   * as fixed, where whoever closed an innovation by mistake was trapped with no way back. Yeck's
+   * decision on 3 Sep 2026: it locks, and an administrator can reopen it.
+   *
+   * Every case below is pinned because each one, on its own, would either put that trap back or
+   * make the lock useless.
+   */
+  describe('Step 4 — auto-lock on discontinuation (P2-3292)', () => {
+    const seed = (over: any = {}) =>
+      buildFor({ result_type_id: INNOVATION_DEVELOPMENT, phase_year: 2026, portfolio: 'P25', is_discontinued: true, ...over });
+
+    const asAdmin = (c: RdAnnualUpdatingComponent, isAdmin: boolean) => {
+      Object.defineProperty(c.api.rolesSE, 'isAdmin', { get: () => isAdmin, configurable: true });
+      return c;
+    };
+
+    it('locks the block on a 2026 result already stored as inactive', () => {
+      const c = asAdmin(seed(), false);
+
+      expect(c.lockedByDiscontinuation).toBe(true);
+    });
+
+    it('does NOT lock while the answer is only being edited, not stored', () => {
+      // The reporter just picked "No" and has not confirmed. Reading the form instead of the stored
+      // flag would lock the block that same instant and they could never tick a single reason.
+      const c = asAdmin(seed({ is_discontinued: false }), false);
+      c.generalInfoBody.is_discontinued = true;
+
+      expect(c.lockedByDiscontinuation).toBe(false);
+    });
+
+    it('never locks a phase-2025 result', () => {
+      const c = asAdmin(seed({ phase_year: 2025 }), false);
+
+      expect(c.lockedByDiscontinuation).toBe(false);
+    });
+
+    it('never locks Innovation Use, not even in 2026', () => {
+      const c = asAdmin(seed({ result_type_id: INNOVATION_USE }), false);
+
+      expect(c.lockedByDiscontinuation).toBe(false);
+    });
+
+    it('leaves an administrator free to edit', () => {
+      const c = asAdmin(seed(), true);
+
+      expect(c.lockedByDiscontinuation).toBe(false);
+      expect(c.canReopenDiscontinuation).toBe(true);
+    });
+
+    it('shows the reopen button to nobody but an administrator', () => {
+      expect(asAdmin(seed(), false).canReopenDiscontinuation).toBe(false);
+    });
+
+    it('offers no reopen button on a result that is not stored as inactive', () => {
+      expect(asAdmin(seed({ is_discontinued: false }), true).canReopenDiscontinuation).toBe(false);
+    });
+
+    it('tells the locked-out reporter who to ask, instead of showing a dead form', () => {
+      expect(asAdmin(seed(), false).showDiscontinuationLockNotice).toBe(true);
+      expect(asAdmin(seed(), true).showDiscontinuationLockNotice).toBe(false);
+    });
+
+    it('closes the editable escape hatch while locked', () => {
+      // `annualUpdatingEditable` forces editability despite the global read-only (P2-2923), so the
+      // lock is only real if it closes that too.
+      const c = asAdmin(seed(), false);
+      c.isPhaseOpen = true;
+      Object.defineProperty(c.api.rolesSE, 'access', { get: () => ({ canDdit: true }), configurable: true });
+
+      expect(c.annualUpdatingEditable).toBe(false);
+    });
+
+    it('reopening sets the innovation back to active and clears every ticked reason', () => {
+      const c = asAdmin(seed(), true);
+      c.generalInfoBody.is_discontinued = true;
+      c.generalInfoBody.discontinued_options = [
+        { investment_discontinued_option_id: 40, value: true, description: null },
+        { investment_discontinued_option_id: 46, value: true, description: 'typed by mistake' }
+      ];
+
+      c.reopenDiscontinuation();
+
+      expect(c.generalInfoBody.is_discontinued).toBe(false);
+      // A reason left ticked under an "active" answer is a contradiction the parent would still send.
+      expect(c.generalInfoBody.discontinued_options.every((o: any) => o.value === false)).toBe(true);
+      expect(c.generalInfoBody.discontinued_options.every((o: any) => o.description === null)).toBe(true);
+    });
+
+    it('reopening does not throw when there are no reasons stored', () => {
+      const c = asAdmin(seed(), true);
+      c.generalInfoBody.discontinued_options = undefined as any;
+
+      expect(() => c.reopenDiscontinuation()).not.toThrow();
+      expect(c.generalInfoBody.is_discontinued).toBe(false);
+    });
+  });
 });
