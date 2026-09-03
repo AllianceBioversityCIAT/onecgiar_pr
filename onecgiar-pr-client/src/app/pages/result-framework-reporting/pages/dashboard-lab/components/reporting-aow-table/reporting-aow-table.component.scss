@@ -40,6 +40,15 @@
   }
 }
 
+/* RTA-DD-1: the HLO-level collapse's fixed-width row grid (see `.pr-reporting-row` below) clips its
+   rightmost action controls under ~1048px. Split the axes instead of removing the clip outright —
+   `overflow-y: hidden` stays so the 0fr→1fr grid-template-rows collapse animation above still works;
+   only the x axis opens, mirroring the existing `.pr-flat-scroll` pattern in this same file. */
+.pr-collapse--rows > .pr-collapse-inner {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pr-collapse {
     transition: none;
@@ -50,6 +59,7 @@
 .pr-hlo-head {
   display: grid;
   grid-template-columns: 28px minmax(280px, 1fr) 80px 80px 112px 132px 136px 36px;
+  min-width: 1048px;
   align-items: center;
   gap: 16px;
   height: 30px;
@@ -75,6 +85,7 @@
      stays 136px (MRF-R-3.1/R-5: copy-link icon + Report, with "Next pending" wrapping above it) —
      narrowing it back to 96px would clip that control now that Progress sits beside it. */
   grid-template-columns: 28px minmax(280px, 1fr) 80px 80px 112px 132px 136px 36px;
+  min-width: 1048px;
   align-items: center;
   gap: 16px;
   min-height: 58px;
@@ -94,6 +105,107 @@
     outline: 2px solid var(--pr-color-primary-300);
     outline-offset: -2px;
   }
+}
+
+/* RTA-DD-2: tracks 7 (actions) and 8 ("···") stop scrolling with tracks 1-6. `position: sticky`,
+   right-anchored against `.pr-collapse-inner` (the scroll container `.pr-collapse--rows` sets up
+   above) — offsets are measured from THAT ancestor, not the row.
+
+   RTA-T-1 rework (2026-09-01, round 2) fixes two Reviewer-found defects:
+
+   1. Full-height coverage. `align-items: center` on `.pr-reporting-row` / `.pr-hlo-head` sizes grid
+      items to CONTENT height, centred in the track — an empty `.pr-pin-actions` (no copy-link, no
+      Report/Continue: every Intermediate/2030-Outcomes bucket row, or an `achieved`/`overachieved`
+      row) has height 0 and paints nothing at all, so track 6 (Progress bars) shows through the
+      whole column as it scrolls past. `align-self: stretch` makes each pinned cell fill the
+      row/header track regardless of content; the `.pr-hlo-*` cells are `<span>`s, so blockifying a
+      stretched span still top-aligns its text unless it becomes a flex container itself.
+
+   2. Gutter coverage. The two pinned cells only ever covered their own 136px/36px track boxes —
+      nothing covered the 16px grid `gap` between them or the row's own 20px right padding outboard
+      of the "···" cell, so Progress bars/labels scrolled visibly THROUGH those two slots (see this
+      folder's CLAUDE.md, "El gutter horizontal vive en las pistas..." — the same defect class,
+      recurring). Each cell now absorbs its own trailing gutter with `padding-right` + an equal
+      negative `margin-right`: grid's `stretch` alignment (the default `justify-items`) keeps the
+      item's MARGIN box pinned to the track width, so `marginBox = trackWidth` ⇒
+      `borderBox = trackWidth − marginRight` — a negative right margin inflates the border box by
+      that amount on the right, and the matching `padding-right` reclaims the same amount as
+      padding, so the flex content (`justify-end` on actions, centered on menu) still renders at
+      its ORIGINAL position — only the paint area grows. Track 8 (menu) now sits flush at
+      `right: 0` (its 56px box = 36px content + 20px absorbed row padding); track 7 (actions) sits
+      at `right: 56px` — flush against track 8's now-widened box — and its 152px box (136px content
+      + 16px absorbed gap) covers the gap between them. Together the two boxes paint one
+      contiguous 208px region (136 + 16 + 36 + 20) with no gap, from the action cell's left edge to
+      the row's true right edge.
+
+   No `z-index` needed: a sticky cell already paints above the row's non-positioned data tracks in
+   DOM order, and `.pr-row-menu`'s existing z-index: 30 already outranks every row's pinned cells,
+   so an open menu is never occluded by the next row's pin. */
+.pr-pin-actions,
+.pr-hlo-pin-actions,
+.pr-pin-menu,
+.pr-hlo-pin-menu {
+  align-self: stretch; // RTA-R-4 rework: fill the track's full height, not just content height
+}
+
+.pr-hlo-pin-actions,
+.pr-hlo-pin-menu {
+  display: flex; // a stretched <span> still top-aligns text; make it a flex container to centre
+  align-items: center;
+}
+
+.pr-hlo-pin-actions {
+  justify-content: center; // supersedes the template's `text-center` (text-align is inert on flex)
+}
+
+.pr-pin-actions,
+.pr-hlo-pin-actions {
+  position: sticky;
+  right: 56px; // = 20 (row padding, absorbed by track 8 below) + 36 (track 8's content width)
+  padding-right: 16px; // absorbs the 16px grid gap to track 8
+  margin-right: -16px; // …without shifting the `justify-end` content (see comment above)
+  box-shadow: 1px 0 0 var(--pr-border-divider) inset; // RTA-R-11: left-edge pinned separator
+}
+
+.pr-pin-menu,
+.pr-hlo-pin-menu {
+  position: sticky;
+  right: 0;
+  padding-right: 20px; // absorbs the row's own 20px right padding
+  margin-right: -20px; // …without shifting the centered "···" button (see comment above)
+}
+
+// RTA-R-12 rework fix: `.pr-pin-menu`'s `padding-right: 20px` above moved its padding-box right
+// edge 20px inboard of its border-box edge. `.pr-row-menu` is absolutely positioned and resolves
+// `right` against that padding box, so without this it would sit 20px off its production position.
+// Re-anchor it to the border-box edge (the "···" track edge), matching production.
+.pr-pin-menu .pr-row-menu {
+  right: 20px;
+}
+
+.pr-pin-actions,
+.pr-pin-menu {
+  background: var(--pr-surface-card); // RTA-R-4: opaque, or track 6 (Progress) bleeds through
+}
+
+.pr-hlo-pin-actions,
+.pr-hlo-pin-menu {
+  background: var(--pr-surface-subtle); // matches `.pr-hlo-head`'s own background
+}
+
+.pr-reporting-row:hover .pr-pin-actions,
+.pr-reporting-row:hover .pr-pin-menu {
+  background: var(--pr-surface-ground); // RTA-R-4: the row swaps bg on :hover, pins must follow
+}
+
+/* RTA-T-1 rework: the Next-pending highlight (template `[class]` binding on `.pr-reporting-row`)
+   swaps the row to `--pr-color-primary-50` via a Tailwind utility; the pinned cells must follow or
+   they read as a light patch on a highlighted row. Lower specificity than the `:hover` rule above
+   (2 classes vs. class+pseudo+class) so hovering a highlighted row still shows the hover
+   background — matching how the row's own background already resolves that overlap. */
+.pr-row-highlighted .pr-pin-actions,
+.pr-row-highlighted .pr-pin-menu {
+  background: var(--pr-color-primary-50);
 }
 
 /* ── Status mark — the design's concentric bullseye (archery target), 18×18, always violet.

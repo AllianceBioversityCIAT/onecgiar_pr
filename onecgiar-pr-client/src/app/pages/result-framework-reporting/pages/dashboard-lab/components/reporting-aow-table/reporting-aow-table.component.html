@@ -683,7 +683,7 @@
                   </button>
 
                   <div
-                    class="pr-collapse"
+                    class="pr-collapse pr-collapse--rows"
                     [class.is-open]="isOpen(hlo.key, defaultOpen)"
                     [attr.aria-hidden]="!isOpen(hlo.key, defaultOpen)">
                     <div class="pr-collapse-inner">
@@ -695,8 +695,8 @@
                           <span class="text-center">Achieved</span>
                           <span class="text-center">Status</span>
                           <span class="text-center">Progress</span>
-                          <span class="text-center">Action</span>
-                          <span></span>
+                          <span class="pr-hlo-pin-actions text-center">Action</span>
+                          <span class="pr-hlo-pin-menu"></span>
                         </div>
                       }
                       @for (row of hlo.rows; track row.indicator_id + '::' + (row.center_id ?? '')) {
@@ -737,7 +737,7 @@
     role="button"
     tabindex="0"
     [attr.data-row-key]="rowKey(row)"
-    [class]="highlightedRowKey() === rowKey(row) ? 'ring-2 ring-inset ring-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)]' : ''"
+    [class]="highlightedRowKey() === rowKey(row) ? 'pr-row-highlighted ring-2 ring-inset ring-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)]' : ''"
     [attr.aria-label]="row.indicator_description"
     (click)="openRow.emit(row)"
     (keydown.enter)="openRow.emit(row)"
@@ -907,7 +907,7 @@
     </div>
 
     <!-- 7 — Report / Continue (+ Copy link icon; Next pending wraps above on the one row that has it) -->
-    <div class="flex flex-wrap items-center justify-end gap-[6px]">
+    <div class="pr-pin-actions flex flex-wrap items-center justify-end gap-[6px]">
       @if (isLastReportedRow(row)) {
         @if (nextPendingRow(); as next) {
           <button
@@ -945,7 +945,7 @@
     </div>
 
     <!-- 7 — overflow ··· -->
-    <div class="relative flex items-center justify-center">
+    <div class="pr-pin-menu flex items-center justify-center">
       <button
         type="button"
         class="flex h-[32px] w-[32px] items-center justify-center rounded-[7px] border border-transparent text-[var(--pr-text-muted)] hover:border-[var(--pr-border)] hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)] cursor-pointer transition-colors"
