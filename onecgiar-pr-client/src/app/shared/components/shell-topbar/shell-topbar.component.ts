@@ -14,6 +14,8 @@ import { DataControlService } from '../../services/data-control.service';
 import { PopUpNotificationItemComponent } from '../header-panel/components/pop-up-notification-item/pop-up-notification-item.component';
 import { GlobalSearchPaletteComponent } from '../global-search-palette/global-search-palette.component';
 import { ReportFeedbackDialogComponent } from '../report-feedback-dialog/report-feedback-dialog.component';
+import { ScreenshotService } from '../../services/screenshot.service';
+import { ConsoleCaptureService } from '../../services/console-capture.service';
 
 /**
  * CURRENT shell topbar (PRMS-Shell.dc.html header):
@@ -51,6 +53,30 @@ export class ShellTopbarComponent {
   inLocal = (environment as any)?.inLocal;
   userMenuOpen = signal(false);
   reportFeedbackOpen = signal(false);
+  /** Screen as it looked BEFORE the modal covered it. */
+  reportFeedbackShot = signal<string | null>(null);
+
+  private readonly screenshotSE = inject(ScreenshotService);
+  // Injected here, not used directly: the topbar mounts with the app, and
+  // instantiating the service is what installs the console hooks, so errors
+  // are already being collected by the time anybody reports one.
+  private readonly consoleCaptureSE = inject(ConsoleCaptureService);
+
+  /**
+   * Opens the modal at once and lets the picture land afterwards.
+   *
+   * Measured on 3-sep-2026: a capture of the results list takes ~2.3s, so
+   * awaiting it before opening made the button feel stuck. Capturing late is
+   * safe because ScreenshotService filters out `.pr-dialog-mask`, so the modal
+   * itself never ends up in the photograph — only the screen behind it.
+   * A failed or slow capture just leaves the shot null and the report goes out
+   * without an image.
+   */
+  openReportFeedback(): void {
+    this.reportFeedbackShot.set(null);
+    this.reportFeedbackOpen.set(true);
+    void this.screenshotSE.capture(6000).then(shot => this.reportFeedbackShot.set(shot));
+  }
 
   /** Shown on the trigger. Mac reports `macOS`/`MacIntel`; everything else gets Ctrl. */
   readonly shortcutHint = /mac/i.test(navigator?.platform ?? navigator?.userAgent ?? '') ? '⌘K' : 'Ctrl K';

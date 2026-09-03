@@ -27,7 +27,7 @@
         class="pr-topbar-icon-btn"
         aria-label="Report a bug or adjustment"
         title="Report a bug or adjustment"
-        (click)="reportFeedbackOpen.set(true)">
+        (click)="openReportFeedback()">
         <ng-icon name="lucideBug" class="text-[20px]" />
       </button>
 
@@ -177,5 +177,6 @@
   <!-- Global "Report a bug / adjustment" modal, opened by the bug button above. -->
   <app-report-feedback-dialog
     [visible]="reportFeedbackOpen()"
+    [autoScreenshot]="reportFeedbackShot()"
     (visibleChange)="reportFeedbackOpen.set($event)" />
 }
