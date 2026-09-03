@@ -47,6 +47,36 @@ function resolveAowRowCode(row: any): string {
   return '';
 }
 
+/** Catalog `wp_short_name` (work-package acronym). Never title / extraInformation (RIBL-R-1). */
+function resolveAowCatalogCode(node: any): string {
+  if (looksLikeAowCode(node?.wp_short_name)) return String(node.wp_short_name).trim();
+  if (typeof node?.work_package_code === 'string' && node.work_package_code.trim()) return node.work_package_code.trim();
+  return '';
+}
+
+function uniqueIndicatorIds(row: any): Set<string> {
+  return new Set<string>(
+    (row?.indicators ?? [])
+      .map((indicator: any) => indicator?.toc_results_indicator_id ?? indicator?.related_node_id)
+      .filter((id: unknown) => id !== null && id !== undefined)
+      .map((id: unknown) => String(id))
+  );
+}
+
+function toAowMapping(code: string, name: string, ids: Set<string>): AowMapping | null {
+  if (!code || AOW_SENTINEL_CODES.has(code.toLowerCase())) return null;
+  return { code, name, kpi: ids.size === 1 ? [...ids][0] : null };
+}
+
+/** Keys needed to resolve a V2 row that has `toc_result_id` but no WP code (Pivot P1). */
+interface AowCatalogLookup {
+  tocResultId: string;
+  tocLevelId: number;
+  initiativeId: number;
+  name: string;
+  ids: Set<string>;
+}
+
 /**
  * Maps a `GET_ContributorsPartners` response to the owning Area of Work for the primary / first
  * planned **submitter** mapping (`result_toc_result.result_toc_results[]`) — never
@@ -64,18 +94,42 @@ function mapAowFromContributorsPartners(resp: any): AowMapping | null {
   if (!row) return null;
 
   const code = resolveAowRowCode(row);
-  if (AOW_SENTINEL_CODES.has(code.toLowerCase())) return null;
-
   const name = String(row?.work_package_name ?? row?.aow_name ?? '').trim();
+  return toAowMapping(code, name, uniqueIndicatorIds(row));
+}
 
-  const ids = new Set<string>(
-    (row?.indicators ?? [])
-      .map((indicator: any) => indicator?.toc_results_indicator_id ?? indicator?.related_node_id)
-      .filter((id: unknown) => id !== null && id !== undefined)
-      .map((id: unknown) => String(id))
-  );
+/**
+ * When no submitter row has a WP field, pick the first planned row with a `toc_result_id` so the
+ * header can resolve the AOW through `GET_tocLevelsByconfig` (Pivot P1 / result 8989).
+ */
+function catalogLookupFromContributorsPartners(resp: any): AowCatalogLookup | null {
+  const tocResult = resp?.response?.result_toc_result;
+  if (!tocResult || tocResult.planned_result === false) return null;
 
-  return { code, name, kpi: ids.size === 1 ? [...ids][0] : null };
+  const initiativeId = Number(tocResult.initiative_id);
+  if (!Number.isFinite(initiativeId) || initiativeId <= 0) return null;
+
+  const rows: any[] = Array.isArray(tocResult.result_toc_results) ? tocResult.result_toc_results : [];
+  const row = rows.find(r => r?.toc_result_id !== null && r?.toc_result_id !== undefined && `${r.toc_result_id}`.trim() !== '');
+  if (!row) return null;
+
+  const tocLevelId = Number(row.toc_level_id);
+  if (!Number.isFinite(tocLevelId) || tocLevelId <= 0) return null;
+
+  return {
+    tocResultId: String(row.toc_result_id),
+    tocLevelId,
+    initiativeId,
+    name: String(row?.work_package_name ?? row?.aow_name ?? '').trim(),
+    ids: uniqueIndicatorIds(row)
+  };
+}
+
+function mapAowFromCatalog(lookup: AowCatalogLookup, catalogResp: any): AowMapping | null {
+  const nodes: any[] = Array.isArray(catalogResp?.response) ? catalogResp.response : [];
+  const node = nodes.find(item => String(item?.toc_result_id) === lookup.tocResultId);
+  if (!node) return null;
+  return toAowMapping(resolveAowCatalogCode(node), lookup.name, lookup.ids);
 }
 
 /** Palette per `status_id`, from the status token pairs in `styles/colors.scss`. */
@@ -260,7 +314,23 @@ export class ResultHeaderComponent implements DoCheck {
     if (this.aowMappingLoadedFor === resultId) return;
     this.aowMappingLoadedFor = resultId;
     this.api.resultsSE.GET_ContributorsPartners().subscribe({
-      next: (resp: any) => this.aowMapping.set(mapAowFromContributorsPartners(resp)),
+      next: (resp: any) => {
+        const mapped = mapAowFromContributorsPartners(resp);
+        if (mapped) {
+          this.aowMapping.set(mapped);
+          return;
+        }
+        const lookup = catalogLookupFromContributorsPartners(resp);
+        if (!lookup) {
+          this.aowMapping.set(null);
+          return;
+        }
+        const isP25 = String(this.dataControlSE.currentResult?.portfolio ?? '').toUpperCase() === 'P25';
+        this.api.tocApiSE.GET_tocLevelsByconfig(resultId, lookup.initiativeId, lookup.tocLevelId, isP25, true).subscribe({
+          next: (catalogResp: any) => this.aowMapping.set(mapAowFromCatalog(lookup, catalogResp)),
+          error: () => this.aowMapping.set(null)
+        });
+      },
       // Fail-soft (RIBL-DD-1 / design.md §7): hide the control, no toast, no log.
       error: () => this.aowMapping.set(null)
     });

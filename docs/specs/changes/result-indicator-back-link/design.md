@@ -6,7 +6,7 @@ Links: `requirements.md` (RIBL-R-1..R-7, R-10, R-11). Proposal Option A. Baselin
 
 ## 1. Summary
 
-Submitter already paints the Science Program and opens program home. This design paints the owning Area of Work next to it and opens the existing By AOW query (`tocView=byAow&tocAow=` + optional `kpi=`). Trade-off: one extra existing GET on Result Detail (mapping is not on `GET_resultById`). **Submitter** and **Back to results** stay as shipped.
+Submitter already paints the Science Program and opens program home. This design paints the owning Area of Work next to it and opens the existing By AOW query (`tocView=byAow&tocAow=` + optional `kpi=`). Trade-off: one extra existing GET on Result Detail (mapping is not on `GET_resultById`), plus a second **existing** ToC catalog GET when that mapping row has a `toc_result_id` but no WP code (live V2 — Pivot P1). **Submitter** and **Back to results** stay as shipped.
 
 ## 2. Architecture Overview
 
@@ -25,7 +25,11 @@ Result Detail loads
   ├── GET result → currentResult (official code — already on the page)
   └── official code present
         └── GET_ContributorsPartners (existing)
-              ├── planned mapping + WP code → identity strip “Area of Work” + link
+              ├── planned mapping + WP code on the row → identity strip “Area of Work” + link
+              ├── planned mapping + toc_result_id, no WP code
+              │     └── GET_tocLevelsByconfig (existing; same catalog Contributors already uses)
+              │           ├── catalog node wp_short_name is AOW-shaped → strip + link
+              │           └── no matching node / no AOW-shaped code / GET fail → hide
               └── missing / unmapped / program-level bucket / GET fail → no Area of Work node
                     └── user activates the value
                           └── router → entity-details/{official_code}?tocView=byAow&tocAow={aow}
@@ -46,13 +50,16 @@ None.
 
 ### 3.3 CLARISA / external-data implications
 
-None. AOW code is already on the ToC mapping the Contributors GET returns.
+None. AOW code is either on the Contributors GET row (WP fields) or on the existing ToC catalog node (`wp_short_name` = work-package acronym) keyed by that row’s `toc_result_id`.
 
 ## 4. API Surface
 
 ### 4.1 New / changed endpoints
 
-None. Reuse `ResultsApiService.GET_ContributorsPartners()` → `GET /v2/api/contributors-partners/{currentResultId}`.
+None. Reuse:
+
+1. `ResultsApiService.GET_ContributorsPartners()` → `GET /v2/api/contributors-partners/{currentResultId}`.
+2. When that response has a planned submitter row with `toc_result_id` + `toc_level_id` but no WP code, `TocApiService.GET_tocLevelsByconfig(resultId, initiativeId, tocLevelId, isP25, planned)` — the same catalog call Contributors already uses to paint **AOW01** in the HLO dropdown (`wp_short_name` / `extraInformation`). Do **not** invent a new endpoint. Do **not** parse the HLO `title` / `extraInformation` HTML for a code.
 
 ### 4.2 Bilateral / platform-report impact
 
@@ -74,9 +81,11 @@ None on the server. Client display rules:
 | Zero or 2+ indicator ids | Href omits `kpi` |
 | Code spelling | Use the stored string; do not normalize |
 
-**Mapping (submitter SP only):** read `result_toc_result.result_toc_results[]`. Ignore `contributors_result_toc_result`. First planned row whose WP field is non-empty wins.
+**Mapping (submitter SP only):** read `result_toc_result.result_toc_results[]`. Ignore `contributors_result_toc_result`. First planned row whose WP field is non-empty wins. If **no** row has a WP field, take the first planned row that has a `toc_result_id` and resolve it through the catalog (Pivot P1). Do not skip a first row that failed catalog lookup to a later row.
 
-**WP field order on that row (or its selected output node):** `work_package_code`, then `aow_code`, then `work_package_id` when that value looks like an AOW official code (starts with `AOW` / `SGP` / similar stored program unit code — not a raw numeric ToC id). If none qualify, hide.
+**WP field order on that row:** `work_package_code`, then `aow_code`, then `work_package_id` when that value looks like an AOW official code (starts with `AOW` / `SGP` / similar stored program unit code — not a raw numeric ToC id).
+
+**Catalog fallback (only when no row qualifies above):** `GET_tocLevelsByconfig` for `result_toc_result.initiative_id` + the row’s `toc_level_id` (P25 flag from `currentResult.portfolio === 'P25'`, `planned=true`). Match `toc_result_id`. Code = catalog `wp_short_name` when it looks like an AOW official code (same `looksLikeAowCode` rule). Do **not** read `title` or `extraInformation`. If initiative id, level id, match, or AOW-shaped `wp_short_name` is missing — or the catalog GET fails — hide.
 
 **KPI field:** unique non-null `toc_results_indicator_id` or `related_node_id` on that row’s `indicators[]`. Size 1 → `kpi`. Else omit.
 
@@ -91,7 +100,7 @@ No router-table change. Consume `entity-details/:entityId` with query `tocView=b
 | Piece | Change |
 |---|---|
 | `result-header.component.html` | One identity-strip item **after Submitter, before status**: muted “Area of Work” + primary `routerLink` + `queryParams`. `@if` on a non-empty owning AOW. `data-testid="result-header-aow"`. |
-| `result-header.component.ts` | Keep Default CD for `currentResult`. Add a signal (or equivalent assigned field) for the async mapping. When `officialCode` is non-empty, call `GET_ContributorsPartners` once per result id; map per §5; fail-soft (hide). Getters for value, `queryParams`, `aria-label="Area of Work: {value}"`. |
+| `result-header.component.ts` | Keep Default CD for `currentResult`. Add a signal (or equivalent assigned field) for the async mapping. When `officialCode` is non-empty, call `GET_ContributorsPartners` once per result id; map per §5; if the row needs catalog fallback, call `GET_tocLevelsByconfig` once for that result id (same key); fail-soft (hide). Getters for value, `queryParams`, `aria-label="Area of Work: {value}"`. Do not inject `FieldsManagerService` — read `portfolio` from `currentResult` (same object Submitter already uses; the signal can still be empty on first paint). |
 | `result-header.component.spec.ts` | Mock `GET_ContributorsPartners`. Cases for AC-1..AC-8. Fixture lock: SP04 + AOW01. |
 | `RdContributorsAndPartnersService` | **Do not** call `getSectionInformation` from the header (that mutates the form body). Header owns its own subscribe. |
 | `LabReportFormComponent` | No change. |
@@ -121,7 +130,7 @@ Not applicable.
 
 ## 8. Performance & Capacity
 
-One extra existing GET when official code is present. Do not refetch on every CD cycle — key by `currentResultId`. No new bundle deps.
+One extra existing GET (`GET_ContributorsPartners`) when official code is present. A second existing GET (`GET_tocLevelsByconfig`) only when that mapping has `toc_result_id` but no WP code. Do not refetch on every CD cycle — key both by `currentResultId`. No new bundle deps.
 
 ## 9. Observability
 
@@ -179,7 +188,7 @@ A green Jest run is **not** evidence for RIBL-R-7.
 ## 13. Open Gaps & Follow-ups
 
 - Filter restore and exact scroll without `kpi=` deferred.
-- If the live GET row lacks a WP code the §5 field order cannot see, hide (do not guess from HLO title). Follow-up only if HITL finds planned AOW01 results with no link.
+- Live V2 GET row has no WP code (HITL result 8989). Closed by Pivot P1: resolve `toc_result_id` via `GET_tocLevelsByconfig` `wp_short_name`. Still do not guess a code from the HLO title.
 - Center-contributor ToC ignored this slice.
 - Focus-ring paint is HITL.
 

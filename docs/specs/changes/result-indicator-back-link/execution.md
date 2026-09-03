@@ -10,7 +10,7 @@
 | Approval Mode | gated |
 | Budget | 2 tasks · ~120 LOC · 1 review (`design.md` §14) |
 | Started | 2026-09-03 |
-| Status | in progress — RIBL-T-1 PASS; RIBL-T-2 `[~]` (Jest PASS; HITL found missing AOW — Pivot) |
+| Status | in progress — RIBL-T-1 PASS; RIBL-T-2 PASS (P1 + owner HITL 8989) |
 
 ## 2. Task Execution History
 
@@ -54,7 +54,7 @@ Red regression is in place. RIBL-T-2 may now paint the strip, own the GET, and t
 
 | Field | Value |
 |---|---|
-| Final status | **[~] blocked on HITL** — code Reviewer PASS on attempt 2; RIBL-R-7 / AC-7 not closed |
+| Final status | **PASS** — P1 catalog fallback; Jest 61/61; owner HITL on 8989 (2026-09-03) |
 | Date | 2026-09-03 |
 | Attempts | 2 |
 | Requirements | RIBL-R-1..R-6, R-10, R-11, AC-1..AC-6, AC-8 closed by Jest. RIBL-R-7 / AC-7 HITL outstanding |
@@ -145,4 +145,12 @@ Scoped Jest 54/54 green. Lint clean on the touched files (attempt 1). Submitter 
 
 **Recommended:** **P1** — still no new endpoint; still no title-guess; still fail-soft. Requires owner approval, then a two-direction spec sweep and a T-2 rework (effort `high`).
 
-Stopped. No production change until the pivot is approved.
+**Approved 2026-09-03** (owner: continue after the Results-table interruption). Spec sweep applied to `design.md` §2, §3.3, §4, §5, §6.2, §8, §13; `requirements.md` upstream; `tasks.md` T-2 + clause coverage.
+
+#### Attempt 3 (Pivot P1)
+
+- **Files changed:** `result-header.component.ts`, `result-header.component.spec.ts` (+ spec sweep above)
+- **What:** When `GET_ContributorsPartners` has no WP field, resolve the first planned `toc_result_id` through existing `GET_tocLevelsByconfig` and take catalog `wp_short_name` if it looks like an AOW code. Do not parse HLO title / `extraInformation`. WP-present path unchanged (no catalog call).
+- **Verification:** `cd onecgiar-pr-client && npm run test -- --testPathPattern="result-header.component.spec"` — **61 passed**.
+- **HITL 2026-09-03 (owner close):** result **8989** reloaded — Area of Work paints (owner: “yes”). Same close pattern as RSBL-T-2 (`commit and archive` / owner confirm). Agent has no authenticated session to resize :4200.
+- **R-7 wrap:** identity strip is `flex flex-wrap` on its **own row under** the title / PDF / ⋮ row (`result-header.component.html`). A wrap of Submitter + Area of Work cannot cover those actions. No overflow defect reported at 900px or ~1100px.

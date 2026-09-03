@@ -52,6 +52,9 @@ describe('ResultHeaderComponent', () => {
         // RIBL-T-1: default is an unmapped result (no owning AOW). Individual "area of work"
         // cases below swap this for a mapping that carries a WP code.
         GET_ContributorsPartners: jest.fn().mockReturnValue(of({ response: {} }))
+      },
+      tocApiSE: {
+        GET_tocLevelsByconfig: jest.fn().mockReturnValue(of({ response: [] }))
       }
     };
     dataControlMock = {
@@ -225,11 +228,22 @@ describe('ResultHeaderComponent', () => {
       response: {
         result_toc_result: {
           planned_result: plannedResult,
+          initiative_id: 42,
           result_toc_results: Array.isArray(rows) ? rows : [rows]
         },
         ...(contributorsRows ? { contributors_result_toc_result: contributorsRows } : {})
       }
     });
+
+    const liveV2Row = (overrides: Record<string, unknown> = {}) => ({
+      toc_result_id: 501,
+      toc_level_id: 1,
+      ...overrides
+    });
+
+    const mockCatalog = (nodes: any[] = [{ toc_result_id: 501, wp_short_name: 'AOW01' }]) => {
+      apiMock.tocApiSE.GET_tocLevelsByconfig = jest.fn().mockReturnValue(of({ response: nodes }));
+    };
 
     const mockAowMapping = (rows?: any, plannedResult?: boolean, contributorsRows?: any[]) => {
       apiMock.resultsSE.GET_ContributorsPartners = jest.fn().mockReturnValue(of(plannedAowMapping(rows, plannedResult, contributorsRows)));
@@ -437,6 +451,78 @@ describe('ResultHeaderComponent', () => {
       const href = q('[data-testid="result-header-aow"]').getAttribute('routerLink') ?? q('[data-testid="result-header-aow"]').getAttribute('href');
 
       expect(href).not.toContain('kpi=');
+    });
+
+    // Pivot P1 — live V2 GET row is { toc_result_id, toc_level_id, indicators[] } with no WP code.
+    // AOW01 comes from GET_tocLevelsByconfig wp_short_name (same catalog Contributors already uses).
+    it('does not call the ToC catalog when the Contributors row already has a WP code', async () => {
+      mockAowMapping();
+      await build();
+
+      expect(q('[data-testid="result-header-aow"]').textContent.trim()).toBe('AOW01');
+      expect(apiMock.tocApiSE.GET_tocLevelsByconfig).not.toHaveBeenCalled();
+    });
+
+    it('resolves AOW01 from the ToC catalog when the live V2 row has only toc_result_id', async () => {
+      mockAowMapping(liveV2Row());
+      mockCatalog();
+      await build();
+      const href = q('[data-testid="result-header-aow"]').getAttribute('routerLink') ?? q('[data-testid="result-header-aow"]').getAttribute('href');
+
+      expect(q('[data-testid="result-header-aow"]')).toBeTruthy();
+      expect(q('[data-testid="result-header-aow"]').textContent.trim()).toBe('AOW01');
+      expect(href).toContain('tocView=byAow');
+      expect(href).toContain('tocAow=AOW01');
+      expect(apiMock.tocApiSE.GET_tocLevelsByconfig).toHaveBeenCalledWith(1234, 42, 1, true, true);
+    });
+
+    it('uses the first planned toc_result_id when several live V2 rows exist', async () => {
+      mockAowMapping([liveV2Row(), liveV2Row({ toc_result_id: 509, toc_level_id: 1 })]);
+      mockCatalog([
+        { toc_result_id: 501, wp_short_name: 'AOW01' },
+        { toc_result_id: 509, wp_short_name: 'AOW09' }
+      ]);
+      await build();
+      const href = q('[data-testid="result-header-aow"]').getAttribute('routerLink') ?? q('[data-testid="result-header-aow"]').getAttribute('href');
+
+      expect(q('[data-testid="result-header-aow"]').textContent.trim()).toBe('AOW01');
+      expect(href).toContain('tocAow=AOW01');
+      expect(href).not.toContain('AOW09');
+    });
+
+    it('includes kpi=42 from the V2 row when the catalog supplies the AOW code', async () => {
+      mockAowMapping(liveV2Row({ indicators: [{ toc_results_indicator_id: 42 }] }));
+      mockCatalog();
+      await build();
+      const href = q('[data-testid="result-header-aow"]').getAttribute('routerLink') ?? q('[data-testid="result-header-aow"]').getAttribute('href');
+
+      expect(href).toContain('kpi=42');
+      expect(href).toContain('tocAow=AOW01');
+    });
+
+    it('renders no Area of Work node when the catalog has no matching toc_result_id', async () => {
+      mockAowMapping(liveV2Row());
+      mockCatalog([{ toc_result_id: 999, wp_short_name: 'AOW01' }]);
+      await build();
+
+      expect(q('[data-testid="result-header-aow"]')).toBeNull();
+    });
+
+    it('renders no Area of Work node when the catalog node has only an HLO title (no wp_short_name)', async () => {
+      mockAowMapping(liveV2Row());
+      mockCatalog([{ toc_result_id: 501, title: 'AOW01 / OP 1.2.6', extraInformation: '<strong>AOW01</strong>', wp_short_name: '' }]);
+      await build();
+
+      expect(q('[data-testid="result-header-aow"]')).toBeNull();
+    });
+
+    it('renders no Area of Work node when the catalog GET errors', async () => {
+      mockAowMapping(liveV2Row());
+      apiMock.tocApiSE.GET_tocLevelsByconfig = jest.fn().mockReturnValue(throwError(() => new Error('catalog')));
+      await build();
+
+      expect(q('[data-testid="result-header-aow"]')).toBeNull();
+      expect(html().innerHTML).not.toContain('tocAow=undefined');
     });
   });
 

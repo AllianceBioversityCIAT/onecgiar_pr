@@ -209,7 +209,7 @@ A green Jest run is not evidence for RIBL-R-7.
 ### Upstream
 
 - Result Detail already loads the primary official code (Submitter).
-- The result’s ToC mapping already stores an owning AOW for planned mappings (Contributors HLO). Specify/design MUST name the existing read; this spec MUST NOT invent an endpoint.
+- The result’s ToC mapping already stores an owning AOW for planned mappings (Contributors HLO). The V2 Contributors GET stores that as `toc_result_id` on the row; the AOW code lives on the existing ToC catalog (`GET_tocLevelsByconfig` → `wp_short_name`). Specify/design MUST name those existing reads; this spec MUST NOT invent an endpoint.
 - By AOW query `tocView=byAow` + `tocAow` (+ optional `kpi`) already exists on entity-details.
 
 ### Downstream

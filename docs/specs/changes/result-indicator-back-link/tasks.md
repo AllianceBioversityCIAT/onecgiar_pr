@@ -5,7 +5,7 @@
 - **Module / feature:** `results` Result Detail chrome (`app-result-header`)
 - **Linked spec:** `docs/specs/changes/result-indicator-back-link/requirements.md` + `design.md`
 - **Depth:** Standard (budget 2 tasks · ~120 LOC · 1 review — `design.md` §14)
-- **Status:** in-progress — RIBL-T-1 PASS; RIBL-T-2 `[~]` HITL
+- **Status:** done — RIBL-T-1 PASS; RIBL-T-2 PASS
 - **Judgment:** none yet
 - **Pre-flight:** OQ-1..4 locked; no Jira; Submitter already shipped on the same header — do not retarget it
 
@@ -34,15 +34,15 @@
   - Input that would FAIL this check: current `result-header.component.html` with no Area of Work node — the new cases must fail on that input.
 - **Done criteria:** failing cases committed; production header untouched; no secrets in fixtures.
 
-### RIBL-T-2 — Paint Area of Work, turn the cases green, HITL wrap `[~]`
+### RIBL-T-2 — Paint Area of Work, turn the cases green, HITL wrap `[x]`
 
 - **Type:** `client | tests`
 - **Size:** S
-- **Status:** blocked — HITL
+- **Status:** done — P1 + owner HITL 8989
 - **Depends on:** RIBL-T-1
 - **Blocks:** none
-- **Skills:** `angular-developer`, `ui-ux-pro-max`
-- **Description:** After Submitter and before status: muted “Area of Work” + primary `routerLink` to `['/result-framework-reporting/entity-details', officialCode]` with `queryParams` `{ tocView: 'byAow', tocAow, kpi? }` (RIBL-DD-1, DD-2). When `officialCode` is non-empty, call `GET_ContributorsPartners` once per result id; map first planned submitter row per `design.md` §5; fail-soft. Do not call `RdContributorsAndPartnersService.getSectionInformation`. Do not edit `LabReportFormComponent`. Do not add `tocAow` to Submitter. Keep Default CD + a signal/field for the async mapping. `aria-label="Area of Work: {value}"`. `data-testid="result-header-aow"`. Extend the spec: missing / empty / whitespace official code (no AOW node, no `entity-details/undefined`); missing / empty / whitespace WP; unmapped (`planned_result === false`); Intermediate / 2030 sentinels; GET error → no node and no `tocAow=undefined`; code-only name; Submitter href still program home without `tocAow`; back-link unchanged; `kpi` only when exactly one indicator id. Then HITL at 900px and ~1100px vs `visual/result-detail-with-submitter.jpg`.
+- **Skills:** `angular-developer`, `tdd`
+- **Description:** After Submitter and before status: muted “Area of Work” + primary `routerLink` to `['/result-framework-reporting/entity-details', officialCode]` with `queryParams` `{ tocView: 'byAow', tocAow, kpi? }` (RIBL-DD-1, DD-2). When `officialCode` is non-empty, call `GET_ContributorsPartners` once per result id; map first planned submitter row per `design.md` §5. When **no** row has a WP field but the first `toc_result_id` row exists, call existing `GET_tocLevelsByconfig(resultId, initiativeId, tocLevelId, isP25 from currentResult.portfolio, planned=true)` and take catalog `wp_short_name` if it looks like an AOW code (Pivot P1 / result 8989). Fail-soft on either GET. Do not parse HLO `title` / `extraInformation`. Do not call `RdContributorsAndPartnersService.getSectionInformation`. Do not edit `LabReportFormComponent`. Do not add `tocAow` to Submitter. Keep Default CD + a signal/field for the async mapping. `aria-label="Area of Work: {value}"`. `data-testid="result-header-aow"`. Keep T-2 Jest already green. Add catalog cases: live V2 row `{ toc_result_id, toc_level_id }` + catalog `wp_short_name: 'AOW01'` paints AOW01 and calls the catalog with the fixture result id / initiative / level / P25; catalog miss / empty `wp_short_name` / title-only node / catalog error hide; WP-present path must **not** call the catalog. Then HITL at 900px and ~1100px vs `visual/result-detail-with-submitter.jpg` **and** reload result 8989.
 - **Implements:** RIBL-R-1 (remaining clauses), RIBL-R-2 (all), RIBL-R-3 (all), RIBL-R-4 (all), RIBL-R-5 (loaded mapping, no referrer), RIBL-R-6 (Tab + ring via HITL), RIBL-R-7 (HITL), RIBL-R-10, RIBL-R-11, RIBL-AC-1..AC-8
 - **Design:** RIBL-DD-1, DD-2, DD-3
 - **Files:**
@@ -76,6 +76,9 @@
 | RIBL-R-2 BUT no guessed filters | T-2 Jest href |
 | RIBL-R-3 THEN no node when official code missing / empty / whitespace | T-2 Jest |
 | RIBL-R-3 THEN no node when WP missing / empty / whitespace / unmapped / sentinel | T-2 Jest |
+| RIBL-R-1 live V2 row (toc_result_id only) → catalog wp_short_name | T-2 Jest (P1) |
+| RIBL-R-1 catalog miss / title-only / catalog error → hide | T-2 Jest (P1) |
+| RIBL-R-1 WP-present path does not call GET_tocLevelsByconfig | T-2 Jest (P1) |
 | RIBL-R-3 AND no `tocAow=undefined` / `entity-details/undefined` | T-2 Jest |
 | RIBL-R-3 BUT rest of header still renders | T-2 + existing identity / Submitter cases |
 | RIBL-R-4 THEN / BUT Submitter without `tocAow`; Back to results unchanged | T-2 Jest |
@@ -112,7 +115,7 @@ Scoped command only: `cd onecgiar-pr-client && npm run test -- --testPathPattern
 
 - [ ] PR / commit: `✨ feat(result-header): link Area of Work to By AOW`
 - [ ] Scoped Jest green; lint on touched files
-- [ ] HITL note in `execution.md` for R-7
+- [x] HITL note in `execution.md` for R-7 (owner close on 8989; wrap via existing `flex-wrap` row)
 - [ ] No migration, no bilateral changelog
 - [ ] Submitter href still program home
 
