@@ -114,8 +114,11 @@ describe('BilateralResultCreatorComponent', () => {
       saveTocMapping: jest.fn(),
       saveContributors: jest.fn(),
       loadTocState: jest.fn().mockResolvedValue({}),
-      manualSave$: new Subject<void>(),
+      manualSave$: new Subject<any>(),
       flush: jest.fn().mockResolvedValue(undefined),
+      getEndpointKeys: jest.fn().mockReturnValue([]),
+      hasPendingFor: jest.fn().mockReturnValue(false),
+      hasErrorFor: jest.fn().mockReturnValue(false),
       reset: jest.fn(),
     };
 
@@ -237,6 +240,29 @@ describe('BilateralResultCreatorComponent', () => {
     component.resultId.set(42);
     component.submitResult();
     expect(creationService.submitResult).toHaveBeenCalledWith(42);
+  });
+
+  it('saves only the active section', async () => {
+    component.openSectionName.set('geography');
+    autoSaveService.getEndpointKeys.mockReturnValue(['geography']);
+    const emit = jest.spyOn(autoSaveService.manualSave$, 'next');
+    jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+
+    await component.triggerManualSave();
+
+    expect(autoSaveService.flush).toHaveBeenCalledWith(['geography']);
+    expect(emit).toHaveBeenCalledWith('geography');
+  });
+
+  it('refuses submit while a section still has an unsaved draft', () => {
+    const show = jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+    component.resultId.set(42);
+    autoSaveService.hasPendingFor.mockImplementation((section: string) => section === 'general-info');
+
+    component.submitResult();
+
+    expect(creationService.submitResult).not.toHaveBeenCalled();
+    expect(show).toHaveBeenCalledWith(expect.objectContaining({ id: 'bilateralSubmitUnsavedSections', status: 'warning' }));
   });
 
   // P2-3340: word ceilings never blocked anything in PRMS, so an over-limit Short title used to
@@ -504,6 +530,215 @@ describe('BilateralResultCreatorComponent', () => {
       component.submitResult();
 
       expect(creationService.submitResult).not.toHaveBeenCalled();
+    });
+  });
+
+  // QA finding 01: Save on an untouched General information reported a generic "Save failed" (old
+  // build) or "Success" (staged-save build) while three required fields were empty. The message has
+  // to name them.
+  describe('Save draft messages', () => {
+    let show: jest.SpyInstance;
+
+    beforeEach(() => {
+      component.openSectionName.set('general-info');
+      autoSaveService.getEndpointKeys.mockReturnValue(['generalInfo']);
+      show = jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+      mdsTracker.sectionStatus.set([
+        {
+          sectionName: 'general-info',
+          status: 'empty',
+          fields: [
+            { key: 'title', label: 'Title of Result', filled: false },
+            { key: 'description', label: 'Description', filled: false },
+          ],
+        },
+      ]);
+    });
+
+    it('does not claim success when nothing was staged and required fields are empty', async () => {
+      autoSaveService.hasPendingFor.mockReturnValue(false);
+      await component.triggerManualSave();
+      expect(show).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Nothing to save yet',
+          description: 'Still missing: Title of Result, Description.',
+          status: 'warning',
+        }),
+      );
+    });
+
+    it('says the section is up to date when nothing was staged and nothing is missing', async () => {
+      mdsTracker.sectionStatus.set([{ sectionName: 'general-info', status: 'complete', fields: [] }]);
+      autoSaveService.hasPendingFor.mockReturnValue(false);
+      await component.triggerManualSave();
+      expect(show).toHaveBeenCalledWith(expect.objectContaining({ title: 'Up to date', status: 'success' }));
+    });
+
+    it('saves the partial draft but lists what is still missing', async () => {
+      // Pending before the flush, settled after it.
+      autoSaveService.hasPendingFor.mockReturnValueOnce(true).mockReturnValue(false);
+      await component.triggerManualSave();
+      expect(autoSaveService.flush).toHaveBeenCalledWith(['generalInfo']);
+      expect(show).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Draft saved',
+          description: 'Saved. Still missing: Title of Result, Description.',
+          status: 'warning',
+        }),
+      );
+    });
+
+    // NOST-456 QA finding 01: a 14-word Short title (over the 10-word ceiling) saved with "Success".
+    // Save draft still persists it, as on W1/W2, but it has to say Submit will refuse it.
+    it('names an over-limit field when the draft is saved, and counts it in the footer', async () => {
+      component.openSectionName.set('type-specific');
+      autoSaveService.getEndpointKeys.mockReturnValue(['typeSpecific']);
+      mdsTracker.sectionStatus.set([
+        {
+          sectionName: 'type-specific',
+          status: 'complete',
+          fields: [{ key: 'short-title', label: 'Short title', filled: true, invalid: true, invalidReason: '14 words; the maximum is 10' }],
+        },
+      ]);
+      autoSaveService.hasPendingFor.mockReturnValueOnce(true).mockReturnValue(false);
+
+      await component.triggerManualSave();
+
+      expect(show).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Draft saved',
+          description: 'Saved. Fix before submitting: Short title (14 words; the maximum is 10).',
+          status: 'warning',
+        }),
+      );
+      expect(component.missingLabel()).toBe('1 field to fix');
+    });
+
+    it('reports a failed request as soon as it fails instead of waiting out the timeout', async () => {
+      autoSaveService.hasPendingFor.mockReturnValue(true);
+      autoSaveService.hasErrorFor.mockReturnValue(true);
+      const start = Date.now();
+      await component.triggerManualSave();
+      expect(Date.now() - start).toBeLessThan(2000);
+      expect(show).toHaveBeenCalledWith(expect.objectContaining({ title: 'Save failed', status: 'error' }));
+    });
+  });
+
+  describe('editor frame (W1/W2 parity)', () => {
+    const q = (selector: string) => fixture.nativeElement.querySelector(selector);
+
+    function enterEditor(): void {
+      component.isCreating.set(false);
+      component.resultId.set(42);
+      fixture.detectChanges();
+    }
+
+    it('pins the frame to the page slot in editor mode only — the wizard keeps the document flow', () => {
+      expect(fixture.nativeElement.classList.contains('bcr-host--editor')).toBe(false);
+      expect(q('.bilateral-creator')).not.toBeNull();
+      enterEditor();
+      expect(fixture.nativeElement.classList.contains('bcr-host--editor')).toBe(true);
+      expect(q('.bilateral-creator')).toBeNull();
+      // The fixed aside is gone; nothing may reserve room for it and push the form off-centre.
+      expect(q('.bilateral-creator--with-aside')).toBeNull();
+    });
+
+    it('lists the sections in sentence case with the same completion count the Overview ring uses', () => {
+      mdsTracker.sectionStatus.set([
+        { sectionName: 'general-info', status: 'complete' },
+        { sectionName: 'contributors', status: 'partial' },
+        { sectionName: 'geography', status: 'empty' },
+        { sectionName: 'evidence', status: 'empty' },
+      ]);
+      enterEditor();
+
+      const rail = q('[data-testid="bilateral-sections-rail"]');
+      const labels = Array.from(rail.querySelectorAll('.bcr-rail__label')).map((el: any) => el.textContent.trim());
+      expect(labels).toEqual([
+        'Overview',
+        'General information',
+        'Contributors & partners',
+        'Geographic location',
+        'Evidence',
+        'Type-specific details',
+      ]);
+      expect(q('[data-testid="bilateral-sections-progress"]').textContent.trim()).toBe('1 of 4 sections complete');
+      expect(rail.querySelectorAll('.bcr-rail__done').length).toBe(1);
+      // Overview registers nothing with the tracker, so it gets no ring: 4 tracked − 1 done.
+      expect(rail.querySelectorAll('.bcr-rail__pending').length).toBe(3);
+    });
+
+    it('numbers the open section in the card head and in the footer counter', () => {
+      enterEditor();
+      // general-info opens by default and is the second row.
+      const heading = q('[data-testid="bilateral-section-heading"]');
+      expect(heading.querySelector('.bcr-section-num').textContent.trim()).toBe('2');
+      expect(heading.querySelector('.bcr-section-title').textContent.trim()).toBe('General information');
+      expect(q('[data-testid="bilateral-footer-position"]').textContent.replace(/\s+/g, ' ').trim()).toBe('Section 2 of 6');
+
+      component.moveSection(1);
+      fixture.detectChanges();
+      expect(q('[data-testid="bilateral-footer-position"]').textContent.replace(/\s+/g, ' ').trim()).toBe('Section 3 of 6');
+    });
+
+    it('makes Next the one primary action and Save draft secondary, as on the W1/W2 bar', () => {
+      enterEditor();
+      const next = q('[data-testid="bilateral-footer-next"]');
+      const save = q('[data-testid="bilateral-footer-save"]');
+      expect(next.classList.contains('bcr-btn--primary')).toBe(true);
+      expect(save.classList.contains('bcr-btn--secondary')).toBe(true);
+      expect(save.textContent.trim()).toBe('Save draft');
+    });
+
+    it('reports the open section in the footer: up to date, then complete, then unsaved', () => {
+      // The real `hasPendingFor` reads signals, so the template refreshes when a section goes
+      // dirty. A plain jest.fn is invisible to change detection — back the mock with a signal or
+      // the verification pass trips NG0100 on the rail.
+      const pendingSections = signal<Set<string>>(new Set());
+      autoSaveService.hasPendingFor.mockImplementation((name: string) => pendingSections().has(name));
+      enterEditor();
+      const state = () => q('[data-testid="bilateral-footer-state"]').textContent.replace(/\s+/g, ' ').trim();
+      expect(state()).toBe('Draft up to date');
+
+      mdsTracker.sectionStatus.set([{ sectionName: 'general-info', status: 'complete' }]);
+      fixture.detectChanges();
+      expect(state()).toContain('Section complete');
+
+      // Unsaved wins over complete: the user has to know the green check is for what is saved.
+      pendingSections.set(new Set(['general-info']));
+      fixture.detectChanges();
+      expect(state()).toContain('Unsaved changes');
+      expect(q('[data-testid="bilateral-sections-rail"] .bcr-rail__dirty')).not.toBeNull();
+    });
+
+    it('names the missing required fields in the footer and lists them on click', () => {
+      mdsTracker.sectionStatus.set([
+        {
+          sectionName: 'general-info',
+          status: 'empty',
+          fields: [
+            { key: 'title', label: 'Title of Result', filled: false },
+            { key: 'description', label: 'Description', filled: false },
+            { key: 'lead', label: 'Lead contact person', filled: true },
+          ],
+        },
+      ]);
+      enterEditor();
+
+      const state = q('[data-testid="bilateral-footer-state"]');
+      expect(state.textContent.replace(/\s+/g, ' ').trim()).toContain('2 fields missing');
+      expect(q('[data-testid="bilateral-footer-pending-list"]')).toBeNull();
+
+      state.click();
+      fixture.detectChanges();
+      const items = Array.from(q('[data-testid="bilateral-footer-pending-list"]').querySelectorAll('li')).map((li: any) => li.textContent.trim());
+      expect(items).toEqual(['Title of Result', 'Description']);
+    });
+
+    it('draws the in-flow detail header instead of the centre band', () => {
+      enterEditor();
+      expect(q('app-bilateral-page-header')).not.toBeNull();
+      expect(q('app-bilateral-page-header').getAttribute('variant')).toBe('detail');
     });
   });
 });
