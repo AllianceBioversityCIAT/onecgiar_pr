@@ -1,6 +1,6 @@
 # program-overview
 
-**Verified:** 2026-09-02 · branch qa-development-2026 · 167cd2244
+**Verified:** 2026-09-03 · branch qa-development-2026 · e227ce935
 
 **What this owns:** the **Overview** tab of the programme shell — the six cards under
 `entity-details/:entityId/overview`. Purely presentational: every figure arrives as a signal input.
@@ -60,19 +60,19 @@
 - Bar widths normalise against the **series maximum**, and each card has its own denominator
   (`categoriesMax` / `bilateralCategoriesMax`). The largest bar is always 100%, so the two cards are
   two independent scales — never compare a bar in one against a bar in the other.
-- **AoW row responsive ladder (`changes/overview-aow-cross-filter`, `OSF-T-2b`, design.md `OSF-DD-8`
-  §8.2).** The identity column's `minmax(0,1fr)` track collapses to near-zero at narrow widths not
-  because it's broken but because three sibling `max-content` tracks are rigid by definition — the
-  fix removes tracks at narrow widths, never raises the identity minimum (that trades a collapsed
-  name for page overflow, `OSF-AC-9`/`OSF-AC-10`'s exact trade-off this spec spent three tasks
-  removing). **The skeleton row (`:510`) and the real row (`:588`) MUST move in lockstep** — same
-  breakpoints, same cell placements — or the skeleton→content swap visibly jumps. ⚠️ **Tailwind's
-  `max-[Npx]:` variant is EXCLUSIVE** (`@media (width < Npx)`, confirmed against the generated
-  CSSOM), not `<= Npx` the way plain CSS `max-width` reads — `max-[899px]` and `min-[900px]` do
-  **not** tile (width=899 matches neither). Use the SAME boundary value on both sides
-  (`max-[900px]`/`min-[900px]`) to tile with no gap. The pre-existing `max-[899px]` at `:267`/`:352`
-  (scope trigger, `OSF-DD-7`/`OSF-T-6`) has this same property and was left as-is — out of this
-  task's scope, logged for the owner.
+- **AoW row responsive ladder (`changes/aow-identity-column-starvation`, `AIS-DD-1/2/3`, `AIS-DD-7`).**
+  MEASURED floor: **143px** (5-track) / **167px** (ⓘ shares cell) — chip **51.1px measured**, not
+  ~50px, +10px gap +≥80px name. `@container` on both wrappers; `@max-[N]:` is EXCLUSIVE
+  (`width < N`), `@min-[N]:` inclusive — same boundary both sides to tile.
+
+  | Threshold | `Q` | Below it |
+  |---|---|---|
+  | `T_restack` | 700 | achievement narrows |
+  | `T_full` | 630 | track dropped; ⓘ shown |
+  | `T_stack` | 560 | 2×2 grid |
+
+  Formula `:665`: `Σ(track minimums)+gaps+36px chrome`, rounded to 10px, per-column for 2×2.
+  **Skeleton `:571`/row `:713` MUST lockstep** — Jest `program-overview.component.spec.ts`, CT gate `program-overview.row-layout.cy.ts`; scope trigger `max-[899px]` (`:253`/`:353`) unrelated.
 
 ## Data flow
 

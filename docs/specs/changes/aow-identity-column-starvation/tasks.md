@@ -95,6 +95,7 @@
 
 ### `AIS-T-5` — Document the pattern and verify on the real page
 
+- [~] **Status:** part (1) docs done (PASS, attempt 3, 2026-09-03) · part (2) real-page pass **BLOCKED (environment)** — run `ais-t5-measure.js` (same folder) at the five widths and paste the tables into `execution.md` to close
 - **Type:** `docs` + `tests` (manual)
 - **Description:** (1) Rewrite `program-overview/CLAUDE.md`'s "AoW row responsive ladder" paragraph per `AIS-DD-7`, re-stamping its stale line refs (`:510`/`:588` → the post-fix lines of the skeleton and real rows) (floor, `@container`, derived thresholds with the formula, exclusive `@max-[N]`, skeleton lockstep, pointer to the CT spec as the gate). (2) On the running app (`localhost:4200`, `/result-framework-reporting/entity-details/SP04/overview`) at 1600 / 1280 / 1100 / 900 / 768 × scope off/on, with `skeletons === 0 && rows > 0` double-read: record every AoW row's `gridTemplateColumns`, the identity width, `document.documentElement.scrollWidth === clientWidth`, and a screenshot at 1280 — `AIS-AC-5`. If no authenticated browser is reachable (Claude-in-Chrome down, no `cypress.env.js`), **report `BLOCKED (environment)`** with the ready-to-run measurement script and hand it to the owner; do not mark the task done and do not let the archive proceed on `AIS-T-1..4` alone.
 - **Implements:** `AIS-R-11`, `AIS-AC-5`; `AIS-DD-7`.
