@@ -56,6 +56,22 @@ La ventana de caída (09:15 → 09:16:38) fue **el final del despliegue del buil
 backend. Antes de diagnosticar: mirar Jenkins. Documentado en
 `~/Desktop/reporting/.claude-rules/reglas-detalle.md`, sección de diagnosticar un servicio caído.
 
+## 🛑 Cómo acabó esto en prtest sin que nadie lo autorizara
+
+Yeck pidió **probar**, no desplegar. El commit `2439fe6e3` se hizo en local para no dejar el
+cherry-pick flotando entre turnos; la **sesión vecina pusheó a las 09:19** por otro motivo y **se
+llevó ese commit dentro**, porque comparten checkout y rama. El build `#2125` lo desplegó, y el botón
+quedó **visible en prtest para todo el equipo**.
+
+Y no es cosmético: al primer clic de cualquiera, el módulo **crea un ticket real** en el Jira del
+proyecto, bajo `P2-3472` y con reporter Ángel.
+
+**La lección, y por qué el worktree existía:** `P2-3472` vivía aislado en
+`~/Desktop/reporting/onecgiar_pr-P2-3472` **a propósito** (Yeck, 3-sep-2026: *"eso habíamos dado
+claridad y era worktree"*). En este repo un commit en `performance-refactor` **es de hecho un
+despliegue**, aunque no lo pushee yo. Para probar no hace falta commitear: el cliente local corre con
+los archivos sucios. Regla completa en `~/Desktop/reporting/.claude-rules/reglas-detalle.md`, regla 2.
+
 ## Gate
 
 `npm run build:dev` exit 0 · **8118 tests en 511 suites**, verde. Corrido **dos veces**: la segunda
