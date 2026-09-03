@@ -1,18 +1,14 @@
-<app-bilateral-page-header
-  [pageTitle]="headerTitle()"
-  [resultCode]="creationService.resultCode()"
-  [resultTypeName]="creationService.resultTypeName()"
-  [isW3Bilateral]="creationService.isW3Bilateral()"
-  [statusId]="creationService.resultStatusId()" />
-
-<!-- P2-3229 AC5. The phases this result exists in, so a versioned result can be navigated
-     between years. The component builds its links from the current route, so here they stay
-     inside the bilateral module. Only rendered once there is a result to have phases. -->
-@if (!isCreating() && resultId()) {
-  <app-phase-switcher></app-phase-switcher>
+<!-- Two frames, one per mode.
+     · Wizard (`isCreating()`): the centre band header + a centred 1100px column, unchanged.
+     · Editor: a full-width two-column frame — sections rail + scrolling content + footer — built
+       to the same geometry as the W1/W2 result detail. Rebuilt here rather than imported:
+       `pages/results/` owns W1/W2 services, routes and green checks (see CLAUDE.md). -->
+@if (isCreating()) {
+  <app-bilateral-page-header [pageTitle]="headerTitle()" />
 }
 
-<div class="bilateral-creator" [class.bilateral-creator--with-aside]="!isCreating() && resultId()">
+@if (isCreating()) {
+<div class="bilateral-creator">
   @if (isCreating()) {
     <div [class.bcr-step--locked]="isAiProcessing()">
       <app-bilateral-project-selector (projectSelected)="onProjectSelected($event)"></app-bilateral-project-selector>
@@ -126,154 +122,228 @@
       }
     </div>
   }
+</div>
+}
 
-  <!-- The sections mount only once loadResult publishes the internal result id, so the editor needs
-       a placeholder for that window instead of a blank page. -->
-  @if (!isCreating() && !resultId() && creationService.isLoadingResult()) {
-    <div class="px-[32px] py-[24px]" aria-busy="true">
-      <app-form-skeleton [rows]="3" [hasLabel]="true" [hasExtra]="true" [extraRows]="4" />
-    </div>
-  }
+@if (!isCreating()) {
+  <div class="bcr-layout" data-testid="bilateral-editor-layout">
+    <!-- Sections rail: 240px, white, own scroll, right rule to the floor. -->
+    <aside class="bcr-rail pr-light-scroll" data-testid="bilateral-sections-rail">
+      <p class="bcr-rail__eyebrow">Sections</p>
 
-  <!-- Error twin of the skeleton above: the sections never mount without the internal id, so a
-       failed detail request would otherwise leave the editor blank and silent. -->
-  @if (!isCreating() && !resultId() && !creationService.isLoadingResult() && creationService.loadFailed()) {
-    <div class="px-[32px] py-[24px]">
-      <div
-        role="alert"
-        class="flex flex-col items-center gap-[12px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-subtle)] px-[24px] py-[32px] text-center">
-        <i class="material-icons-round text-[32px] text-[var(--pr-text-subtle)]">error_outline</i>
-        <p class="m-0 text-[15px] font-semibold text-[var(--pr-text-heading)]">We couldn't load this result</p>
-        <p class="m-0 text-[14px] text-[var(--pr-text-subtle)]">
-          Check the result code and your connection, then try again.
-        </p>
-        <button class="bcr-create-btn bcr-create-btn--inline" type="button" (click)="retryLoadResult()">Try again</button>
-      </div>
-    </div>
-  }
-
-  @if (!isCreating() && resultId()) {
-    <app-bilateral-progress-aside [(openSectionName)]="openSectionName"></app-bilateral-progress-aside>
-
-    <div class="bcr-floating-save-wrapper">
-      <div
-        class="bcr-floating-save"
-        [class.bcr-floating-save--saving]="autoSaveService.globalSaveState() === 'saving'"
-        [class.bcr-floating-save--saved]="autoSaveService.globalSaveState() === 'saved'"
-        [class.bcr-floating-save--error]="autoSaveService.globalSaveState() === 'error'">
-        <i class="material-icons-round bcr-floating-save-icon">
-          @switch (autoSaveService.globalSaveState()) {
-            @case ('saving') {
-              sync
-            }
-            @case ('saved') {
-              cloud_done
-            }
-            @case ('error') {
-              error_outline
-            }
-            @default {
-              cloud
-            }
+      <nav class="bcr-rail__nav" aria-label="Result sections">
+        @if (resultId()) {
+          @for (section of sectionNavigation(); track section.name) {
+            <button
+              type="button"
+              class="bcr-rail__item"
+              [class.bcr-rail__item--active]="isActiveSection(section.name)"
+              [attr.aria-current]="isActiveSection(section.name) ? 'page' : null"
+              (click)="selectSection(section.name)">
+              <span class="bcr-rail__label">{{ section.label }}</span>
+              @if (autoSaveService.hasPendingFor(section.name)) {
+                <span class="bcr-rail__dirty" role="img" aria-label="Unsaved changes"></span>
+              } @else if (getSectionMdsStatus(section.name) === 'complete') {
+                <span class="bcr-rail__done" role="img" aria-label="Section complete">
+                  <i class="material-icons-round" aria-hidden="true">check</i>
+                </span>
+              } @else if (isTrackedSection(section.name)) {
+                <span class="bcr-rail__pending" role="img" aria-label="Section incomplete"></span>
+              }
+            </button>
           }
-        </i>
-        <span class="bcr-floating-save-text">
-          @switch (autoSaveService.globalSaveState()) {
-            @case ('saving') {
-              Saving&hellip;
-            }
-            @case ('saved') {
-              All changes saved
-            }
-            @case ('error') {
-              Save failed
-            }
-            @default {
-              Ready
-            }
+        } @else {
+          @for (line of [0, 1, 2, 3, 4]; track line) {
+            <div class="bcr-rail__item" aria-hidden="true">
+              <div class="pr-skeleton" style="height: 12px; flex: 1"></div>
+              <div class="pr-skeleton" style="height: 14px; width: 14px; border-radius: 50%"></div>
+            </div>
           }
-        </span>
+        }
+      </nav>
+
+      @if (resultId()) {
+        <div class="bcr-rail__progress">
+          <div
+            class="bcr-rail__bar"
+            role="progressbar"
+            [attr.aria-valuenow]="doneSectionCount()"
+            aria-valuemin="0"
+            [attr.aria-valuemax]="totalSectionCount()"
+            [attr.aria-label]="progressLabel()">
+            <div class="bcr-rail__fill" [style.width]="progressWidth()"></div>
+          </div>
+          <span class="bcr-rail__progress-label" data-testid="bilateral-sections-progress">{{ progressLabel() }}</span>
+        </div>
+      }
+    </aside>
+
+    <div class="bcr-content">
+      <!-- The scrolling half: header and phase switcher scroll WITH the form; only the rail and
+           the footer stay put. -->
+      <div class="bcr-scroll pr-light-scroll">
+        <app-bilateral-page-header
+          variant="detail"
+          [pageTitle]="headerTitle()"
+          [resultCode]="creationService.resultCode()"
+          [resultTypeName]="creationService.resultTypeName()"
+          [isW3Bilateral]="creationService.isW3Bilateral()"
+          [statusId]="creationService.resultStatusId()" />
+
+        @if (resultId()) {
+          <!-- P2-3229 AC5. The phases this result exists in, so a versioned result can be navigated
+               between years. The component builds its links from the current route, so here they
+               stay inside the bilateral module. -->
+          <div class="bcr-phase-switcher">
+            <app-phase-switcher></app-phase-switcher>
+          </div>
+
+          <div class="bcr-editor-card">
+            <div class="bcr-section-head" data-testid="bilateral-section-heading">
+              <span class="bcr-section-num" aria-hidden="true">{{ currentSectionIndex() + 1 }}</span>
+              <h2 class="bcr-section-title">{{ currentSectionLabel() }}</h2>
+              @if (currentSectionComplete()) {
+                <i class="material-icons-round bcr-section-done" role="img" aria-label="Section complete">check_circle</i>
+              }
+            </div>
+
+            <section class="bcr-section-body" data-section="section-zero" [hidden]="!isActiveSection('section-zero')">
+              <app-section-zero-dashboard
+                [isSubmitting]="isSubmitting()"
+                [readOnly]="isFormReadOnly()"
+                (submitRequested)="submitResult()"></app-section-zero-dashboard>
+            </section>
+
+            <section class="bcr-section-body" data-section="general-info" [hidden]="!isActiveSection('general-info')">
+              <app-section-general-info></app-section-general-info>
+            </section>
+
+            <section class="bcr-section-body" data-section="contributors" [hidden]="!isActiveSection('contributors')">
+              <app-section-contributors></app-section-contributors>
+            </section>
+
+            <section class="bcr-section-body" data-section="geography" [hidden]="!isActiveSection('geography')">
+              <app-section-geography></app-section-geography>
+            </section>
+
+            <section class="bcr-section-body" data-section="evidence" [hidden]="!isActiveSection('evidence')">
+              <app-section-evidence></app-section-evidence>
+            </section>
+
+            @if (hasTypeSpecificSection()) {
+              <section class="bcr-section-body" data-section="type-specific" [hidden]="!isActiveSection('type-specific')">
+                <app-section-type-specific></app-section-type-specific>
+              </section>
+            }
+          </div>
+        } @else if (creationService.isLoadingResult()) {
+          <!-- The sections mount only once loadResult publishes the internal result id, so the
+               editor needs a placeholder for that window instead of a blank page. -->
+          <div class="bcr-editor-card bcr-section-body" aria-busy="true">
+            <app-form-skeleton [rows]="3" [hasLabel]="true" [hasExtra]="true" [extraRows]="4" />
+          </div>
+        } @else if (creationService.loadFailed()) {
+          <!-- Error twin of the skeleton above: the sections never mount without the internal id,
+               so a failed detail request would otherwise leave the editor blank and silent. -->
+          <div
+            role="alert"
+            class="flex flex-col items-center gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[24px] py-[32px] text-center">
+            <i class="material-icons-round text-[32px] text-[var(--pr-text-subtle)]">error_outline</i>
+            <p class="m-0 text-[15px] font-semibold text-[var(--pr-text-heading)]">We couldn't load this result</p>
+            <p class="m-0 text-[14px] text-[var(--pr-text-subtle)]">Check the result code and your connection, then try again.</p>
+            <button class="bcr-create-btn bcr-create-btn--inline" type="button" (click)="retryLoadResult()">Try again</button>
+          </div>
+        }
       </div>
-      <button
-        type="button"
-        class="bcr-floating-btn-save disabled:cursor-wait disabled:opacity-60"
-        [disabled]="isManualSaving()"
-        [attr.aria-busy]="isManualSaving()"
-        (click)="triggerManualSave()">
-        <i class="material-icons-round" [class.animate-spin]="isManualSaving()">{{ isManualSaving() ? 'progress_activity' : 'save' }}</i>
-        {{ isManualSaving() ? 'Saving…' : 'Save' }}
-      </button>
-    </div>
 
-    <div id="bcr-accordions">
-      <div id="bcr-section-zero">
-        <app-section-zero-dashboard
-          [isSubmitting]="isSubmitting()"
-          [readOnly]="isFormReadOnly()"
-          (submitRequested)="submitResult()"></app-section-zero-dashboard>
-      </div>
+      @if (resultId()) {
+        <!-- Floor of the content column, outside the scroll. Two boxes: the outer strip carries
+             the top rule edge to edge; the inner one keeps the controls at the column's 40px
+             padding so Back and Save line up with the card. Next is the one primary action of the
+             strip; Save draft is secondary, exactly as on the W1/W2 bar. -->
+        <footer class="bcr-editor-footer" aria-label="Section actions" data-testid="bilateral-section-footer">
+          <div class="bcr-editor-footer__inner">
+            <div class="bcr-editor-footer__group">
+              <button
+                type="button"
+                class="bcr-btn bcr-btn--secondary"
+                [disabled]="isFirstSection()"
+                (click)="moveSection(-1)"
+                data-testid="bilateral-footer-back">
+                <span aria-hidden="true">&#8592;</span> Back
+              </button>
+              <button
+                type="button"
+                class="bcr-btn bcr-btn--primary"
+                [disabled]="isLastSection()"
+                (click)="moveSection(1)"
+                data-testid="bilateral-footer-next">
+                Next <span aria-hidden="true">&#8594;</span>
+              </button>
+              <span class="bcr-editor-footer__divider" aria-hidden="true"></span>
+              <span class="bcr-editor-footer__position" data-testid="bilateral-footer-position">
+                Section {{ currentSectionIndex() + 1 }} of {{ sectionNavigation().length }}
+              </span>
+            </div>
 
-      <app-bilateral-accordion
-        sectionName="general-info"
-        sectionLabel="General Information"
-        sectionIcon="description"
-        [totalFields]="getSectionTotal('general-info')"
-        [filledFields]="getSectionFilled('general-info')"
-        [mdsStatus]="getSectionMdsStatus('general-info')"
-        [resultId]="resultId()"
-        [(openSectionName)]="openSectionName">
-        <app-section-general-info></app-section-general-info>
-      </app-bilateral-accordion>
+            <div class="bcr-editor-footer__group">
+              @if (autoSaveService.hasPendingFor(openSectionName())) {
+                <span class="bcr-editor-footer__state bcr-editor-footer__state--dirty" data-testid="bilateral-footer-state">
+                  <i class="material-icons-round" aria-hidden="true">error_outline</i>
+                  Unsaved changes
+                </span>
+              } @else if (currentSectionComplete()) {
+                <span class="bcr-editor-footer__state bcr-editor-footer__state--done" data-testid="bilateral-footer-state">
+                  <i class="material-icons-round" aria-hidden="true">check</i>
+                  Section complete
+                </span>
+              } @else if (missingFields().length) {
+                <!-- Names what is missing instead of only saying the draft is saved — the W1/W2 bar's
+                     "N fields missing" control. -->
+                <div class="bcr-editor-footer__pending">
+                  <button
+                    type="button"
+                    class="bcr-editor-footer__state bcr-editor-footer__state--missing"
+                    [attr.aria-expanded]="pendingOpen()"
+                    aria-controls="bcr-pending-list"
+                    (click)="togglePending()"
+                    data-testid="bilateral-footer-state">
+                    <i class="material-icons-round" aria-hidden="true">error_outline</i>
+                    {{ missingLabel() }}
+                  </button>
+                  @if (pendingOpen()) {
+                    <div class="bcr-pending-list" id="bcr-pending-list" role="dialog" aria-label="Fields still missing" data-testid="bilateral-footer-pending-list">
+                      <div class="bcr-pending-list__head">
+                        <span>Still missing</span>
+                        <button type="button" class="bcr-pending-list__close" (click)="closePending()" aria-label="Close">
+                          <i class="material-icons-round" aria-hidden="true">close</i>
+                        </button>
+                      </div>
+                      <ul class="bcr-pending-list__items">
+                        @for (field of missingFields(); track field) {
+                          <li>{{ field }}</li>
+                        }
+                      </ul>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <span class="bcr-editor-footer__state" data-testid="bilateral-footer-state">Draft up to date</span>
+              }
 
-      <app-bilateral-accordion
-        sectionName="contributors"
-        sectionLabel="Contributors & Partners"
-        sectionIcon="people"
-        [totalFields]="getSectionTotal('contributors')"
-        [filledFields]="getSectionFilled('contributors')"
-        [mdsStatus]="getSectionMdsStatus('contributors')"
-        [resultId]="resultId()"
-        [(openSectionName)]="openSectionName">
-        <app-section-contributors></app-section-contributors>
-      </app-bilateral-accordion>
-
-      <app-bilateral-accordion
-        sectionName="geography"
-        sectionLabel="Geographic Location"
-        sectionIcon="map"
-        [totalFields]="getSectionTotal('geography')"
-        [filledFields]="getSectionFilled('geography')"
-        [mdsStatus]="getSectionMdsStatus('geography')"
-        [resultId]="resultId()"
-        [(openSectionName)]="openSectionName">
-        <app-section-geography></app-section-geography>
-      </app-bilateral-accordion>
-
-      <app-bilateral-accordion
-        sectionName="evidence"
-        sectionLabel="Evidence"
-        sectionIcon="attachment"
-        [totalFields]="getSectionTotal('evidence')"
-        [filledFields]="getSectionFilled('evidence')"
-        [mdsStatus]="getSectionMdsStatus('evidence')"
-        [resultId]="resultId()"
-        [(openSectionName)]="openSectionName">
-        <app-section-evidence></app-section-evidence>
-      </app-bilateral-accordion>
-
-      @if (hasTypeSpecificSection()) {
-        <app-bilateral-accordion
-          sectionName="type-specific"
-          sectionLabel="Type-Specific Details"
-          sectionIcon="category"
-          [totalFields]="getSectionTotal('type-specific')"
-          [filledFields]="getSectionFilled('type-specific')"
-          [mdsStatus]="getSectionMdsStatus('type-specific')"
-          [resultId]="resultId()"
-          [(openSectionName)]="openSectionName">
-          <app-section-type-specific></app-section-type-specific>
-        </app-bilateral-accordion>
+              <button
+                type="button"
+                class="bcr-btn bcr-btn--secondary"
+                [disabled]="isManualSaving() || isFormReadOnly()"
+                [attr.aria-busy]="isManualSaving()"
+                (click)="triggerManualSave()"
+                data-testid="bilateral-footer-save">
+                {{ isManualSaving() ? 'Saving…' : 'Save draft' }}
+              </button>
+            </div>
+          </div>
+        </footer>
       }
     </div>
-  }
-</div>
+  </div>
+}

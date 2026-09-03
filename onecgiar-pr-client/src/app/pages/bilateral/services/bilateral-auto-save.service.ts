@@ -1,9 +1,9 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Observable, debounceTime, Subject } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
 
 export type FieldType = 'text' | 'select' | 'checkbox';
-export type FieldStatus = 'idle' | 'saving' | 'saved' | 'error';
+export type FieldStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
 export type GlobalSaveState = 'idle' | 'saving' | 'saved' | 'error';
 export type EndpointKey =
   | 'generalInfo'
@@ -14,6 +14,27 @@ export type EndpointKey =
   | 'typeSpecific';
 
 export type PayloadExecutor = (resultId: number, body: Record<string, unknown>) => Observable<unknown>;
+
+/**
+ * Editor-owned save boundaries. These deliberately describe the existing HTTP contract rather than
+ * inventing a new API: each group is flushed only by the Bilateral editor's explicit Save draft action.
+ */
+export type BilateralEditorSection =
+  | 'section-zero'
+  | 'general-info'
+  | 'contributors'
+  | 'geography'
+  | 'evidence'
+  | 'type-specific';
+
+const SECTION_ENDPOINT_KEYS: Record<BilateralEditorSection, EndpointKey[]> = {
+  'section-zero': ['contributors'],
+  'general-info': ['generalInfo'],
+  contributors: ['plannedResult', 'tocMapping', 'contributors'],
+  geography: ['geography'],
+  evidence: [],
+  'type-specific': ['typeSpecific'],
+};
 
 const FIELD_ENDPOINT_KEYS: Record<string, EndpointKey> = {
   title: 'generalInfo',
@@ -52,8 +73,6 @@ export class BilateralAutoSaveService {
   private readonly bilateralApi = inject(BilateralApiService);
 
   private readonly _pendingFields = new Map<string, { fieldPath: string; value: unknown; fieldType: FieldType }>();
-  private readonly _debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  private readonly _payloadDebounceTimers = new Map<EndpointKey, ReturnType<typeof setTimeout>>();
   private readonly _pendingPayloads = new Map<EndpointKey, Record<string, unknown>>();
   private readonly _payloadStatusKeys = new Map<EndpointKey, string[]>();
   private readonly _payloadExecutors = new Map<EndpointKey, PayloadExecutor>();
@@ -62,7 +81,6 @@ export class BilateralAutoSaveService {
     EndpointKey,
     { body: Record<string, unknown>; statusKeys: string[]; executor?: PayloadExecutor }
   >();
-  private readonly _blurSubject = new Subject<{ fieldPath: string; value: unknown }>();
   private _generation = 0;
   /**
    * True only once a request has actually come back OK. `registerField` seeds every field as
@@ -71,7 +89,8 @@ export class BilateralAutoSaveService {
    */
   private readonly _hasSavedOnce = signal(false);
 
-  readonly manualSave$ = new Subject<void>();
+  /** Evidence has its own multipart persistence; it listens only when its section is explicitly saved. */
+  readonly manualSave$ = new Subject<BilateralEditorSection>();
 
   fieldStatus = signal<Record<string, FieldStatus>>({});
   hasPendingSaves = signal(false);
@@ -102,45 +121,24 @@ export class BilateralAutoSaveService {
     return 'idle';
   });
 
-  constructor() {
-    this._blurSubject.pipe(debounceTime(50)).subscribe(({ fieldPath, value }) => {
-      this.flushField(fieldPath, value);
-    });
-  }
-
   registerField(fieldPath: string, fieldType: FieldType): void {
     this.fieldStatus.update(s => ({ ...s, [fieldPath]: 'idle' }));
   }
 
   updateField(fieldPath: string, value: unknown, fieldType: FieldType = 'text'): void {
     if (this.isReadOnly()) return;
-
-    this.fieldStatus.update(s => ({ ...s, [fieldPath]: 'saving' }));
-
-    if (fieldType === 'text') {
-      const existing = this._debounceTimers.get(fieldPath);
-      if (existing) clearTimeout(existing);
-      this._debounceTimers.set(
-        fieldPath,
-        setTimeout(() => this.flushField(fieldPath, value), 800)
-      );
-    } else {
-      this.flushField(fieldPath, value);
-    }
+    this.stageField(fieldPath, value, fieldType);
   }
 
   notifyBlur(fieldPath: string, value: unknown): void {
     if (this.isReadOnly()) return;
-
-    const existing = this._debounceTimers.get(fieldPath);
-    if (existing) clearTimeout(existing);
-    this._blurSubject.next({ fieldPath, value });
+    this.stageField(fieldPath, value, 'text');
   }
 
   /**
-   * Schedule a structured payload save (geo, toc, contributors, type-specific) with optional debounce.
-   * Coalesces while in-flight: only the latest body is sent after the current request finishes.
-   * Optional `executor` overrides the default BilateralApiService PATCH for that endpoint.
+   * Stages a structured payload (geo, ToC, contributors, type-specific). Despite its historic
+   * method name, this method never makes an HTTP request: explicit section Save draft owns that.
+   * `debounceMs` remains accepted to preserve all existing section call sites and payload contracts.
    */
   schedulePayload(
     endpointKey: EndpointKey,
@@ -150,9 +148,7 @@ export class BilateralAutoSaveService {
     if (this.isReadOnly()) return;
 
     const statusKeys = this.normalizeStatusKeys(endpointKey, options?.statusKey);
-    const debounceMs = options?.debounceMs ?? 0;
-
-    this.setFieldStatuses(statusKeys, 'saving');
+    this.setFieldStatuses(statusKeys, 'dirty');
     this._pendingPayloads.set(endpointKey, body);
     this._payloadStatusKeys.set(endpointKey, statusKeys);
     if (options?.executor) {
@@ -160,17 +156,6 @@ export class BilateralAutoSaveService {
     }
     this.hasPendingSaves.set(true);
 
-    const existing = this._payloadDebounceTimers.get(endpointKey);
-    if (existing) clearTimeout(existing);
-
-    if (debounceMs > 0) {
-      this._payloadDebounceTimers.set(
-        endpointKey,
-        setTimeout(() => this.dispatchPendingPayload(endpointKey), debounceMs)
-      );
-    } else {
-      this.dispatchPendingPayload(endpointKey);
-    }
   }
 
   /**
@@ -195,19 +180,18 @@ export class BilateralAutoSaveService {
     });
   }
 
-  async flush(): Promise<void> {
+  async flush(endpointKeys?: readonly EndpointKey[]): Promise<void> {
     if (this.isReadOnly()) return;
-
-    this._debounceTimers.forEach(t => clearTimeout(t));
-    this._debounceTimers.clear();
-    this._payloadDebounceTimers.forEach(t => clearTimeout(t));
-    this._payloadDebounceTimers.clear();
 
     const resultId = this._currentResultId();
     if (!resultId) return;
 
-    const pendingFields = Array.from(this._pendingFields.entries());
-    this._pendingFields.clear();
+    const selected = endpointKeys ? new Set(endpointKeys) : null;
+    const pendingFields = Array.from(this._pendingFields.entries()).filter(([, entry]) => {
+      const endpoint = FIELD_ENDPOINT_KEYS[entry.fieldPath];
+      return !!endpoint && (!selected || selected.has(endpoint));
+    });
+    for (const [key] of pendingFields) this._pendingFields.delete(key);
 
     const byEndpoint = new Map<EndpointKey, { fields: string[]; body: Record<string, unknown> }>();
     for (const [_key, entry] of pendingFields) {
@@ -227,6 +211,7 @@ export class BilateralAutoSaveService {
     }
 
     for (const endpointKey of Array.from(this._pendingPayloads.keys())) {
+      if (selected && !selected.has(endpointKey)) continue;
       this.dispatchPendingPayload(endpointKey);
     }
 
@@ -237,20 +222,51 @@ export class BilateralAutoSaveService {
     if (this.isReadOnly()) return;
 
     for (const [fieldPath, value] of Object.entries(updates)) {
-      this.fieldStatus.update(s => ({ ...s, [fieldPath]: 'saving' }));
+      this.fieldStatus.update(s => ({ ...s, [fieldPath]: 'dirty' }));
       this._pendingFields.set(fieldPath, { fieldPath, value, fieldType: 'select' });
     }
     this.hasPendingSaves.set(true);
-    void this.flush();
+  }
+
+  getEndpointKeys(section: BilateralEditorSection): readonly EndpointKey[] {
+    return SECTION_ENDPOINT_KEYS[section];
+  }
+
+  hasPendingFor(section: BilateralEditorSection): boolean {
+    const keys = new Set(this.getEndpointKeys(section));
+    if (section === 'evidence') {
+      const status = this.fieldStatus()['evidence'];
+      return status === 'dirty' || status === 'saving' || status === 'error';
+    }
+    return (
+      Array.from(this._pendingFields.values()).some(field => keys.has(FIELD_ENDPOINT_KEYS[field.fieldPath])) ||
+      Array.from(this._pendingPayloads.keys()).some(key => keys.has(key)) ||
+      Array.from(this._queuedPayloads.keys()).some(key => keys.has(key)) ||
+      Array.from(this._inFlight.entries()).some(([key, active]) => active && keys.has(key)) ||
+      Object.entries(this.fieldStatus()).some(([field, status]) => {
+        const endpoint = FIELD_ENDPOINT_KEYS[field] ?? this.endpointForStatusKey(field);
+        return !!endpoint && (status === 'dirty' || status === 'saving' || status === 'error') && keys.has(endpoint);
+      })
+    );
+  }
+
+  hasErrorFor(section: BilateralEditorSection): boolean {
+    const keys = new Set(this.getEndpointKeys(section));
+    return Object.entries(this.fieldStatus()).some(([field, status]) => {
+      const endpoint = FIELD_ENDPOINT_KEYS[field] ?? this.endpointForStatusKey(field);
+      return status === 'error' && (section === 'evidence' ? field === 'evidence' : !!endpoint && keys.has(endpoint));
+    });
+  }
+
+  markDirty(statusKey: string): void {
+    if (this.isReadOnly()) return;
+    this.setFieldStatuses([statusKey], 'dirty');
+    this.hasPendingSaves.set(true);
   }
 
   reset(): void {
     this._generation += 1;
     this._pendingFields.clear();
-    this._debounceTimers.forEach(t => clearTimeout(t));
-    this._debounceTimers.clear();
-    this._payloadDebounceTimers.forEach(t => clearTimeout(t));
-    this._payloadDebounceTimers.clear();
     this._pendingPayloads.clear();
     this._payloadStatusKeys.clear();
     this._payloadExecutors.clear();
@@ -271,16 +287,20 @@ export class BilateralAutoSaveService {
     this._currentResultId.set(id);
   }
 
-  private flushField(fieldPath: string, value: unknown): void {
-    this._pendingFields.set(fieldPath, { fieldPath, value, fieldType: 'text' });
+  private stageField(fieldPath: string, value: unknown, fieldType: FieldType): void {
+    this.fieldStatus.update(s => ({ ...s, [fieldPath]: 'dirty' }));
+    this._pendingFields.set(fieldPath, { fieldPath, value, fieldType });
     this.hasPendingSaves.set(true);
-    void this.flush();
   }
 
   private normalizeStatusKeys(endpointKey: EndpointKey, statusKey?: string | string[]): string[] {
     if (Array.isArray(statusKey) && statusKey.length) return statusKey;
     if (typeof statusKey === 'string' && statusKey) return [statusKey];
     return [ENDPOINT_STATUS_KEY[endpointKey]];
+  }
+
+  private endpointForStatusKey(statusKey: string): EndpointKey | undefined {
+    return (Object.keys(ENDPOINT_STATUS_KEY) as EndpointKey[]).find(key => ENDPOINT_STATUS_KEY[key] === statusKey);
   }
 
   private dispatchPendingPayload(endpointKey: EndpointKey): void {
