@@ -759,24 +759,27 @@ describe('ProgramOverviewComponent — AoW row responsive ladder (OSF-T-2b)', ()
     fixture.detectChanges();
   });
 
-  /** The real (non-skeleton) AoW row — the `@for (row of richRows())` grid container. */
+  /** The real (non-skeleton) AoW row — the `@for (row of richRows())` grid container.
+   *  `AIS-T-2` (changes/aow-identity-column-starvation): identity floor is `143px` (measured chip
+   *  width 51.1px, not the ~50px estimate — `execution.md` §2 `AIS-T-2`), not the old `0` starve
+   *  permission. */
   function realRow(): HTMLElement {
     return fixture.nativeElement.querySelector(
-      'div.group.grid[class*="grid-cols-\\[minmax\\(0\\,1fr\\)_minmax\\(120px\\,240px\\)_max-content_max-content_max-content\\]"]'
+      'div.group.grid[class*="grid-cols-\\[minmax\\(143px\\,1fr\\)_minmax\\(120px\\,240px\\)_max-content_max-content_max-content\\]"]'
     ) as HTMLElement;
   }
 
-  it('the real row carries the drop-achievement-track and two-line-stack grid overrides, tiled with NO gap at 900px', () => {
+  it('the real row carries the drop-achievement-track and two-line-stack grid overrides, tiled with NO gap at Q=560/630 (AIS-T-2 container thresholds T_stack/T_full)', () => {
     const row = realRow();
     expect(row).toBeTruthy();
-    // `max-[…]:` is exclusive (`width < N`) — `max-[900px]` and `min-[900px]` must use the SAME
-    // boundary value to tile with no gap at exactly 900px (rework: `max-[899px]` left width=899
-    // matching neither band; caught by Reviewer).
-    expect(row.className).toContain('min-[900px]:max-[1101px]:grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content]');
-    expect(row.className).toContain('max-[900px]:grid-cols-[minmax(0,1fr)_max-content]');
+    // `@max-[…]:` is exclusive (`width < N`) — `@max-[560px]` and `@min-[560px]` must use the SAME
+    // boundary value to tile with no gap at exactly Q=560 (the same off-by-one trap the old viewport
+    // variant had — `onecgiar-pr-client/CLAUDE.md` §5).
+    expect(row.className).toContain('@min-[560px]:@max-[630px]:grid-cols-[minmax(167px,1fr)_minmax(120px,240px)_max-content_max-content]');
+    expect(row.className).toContain('@max-[560px]:grid-cols-[minmax(167px,1fr)_max-content]');
   });
 
-  it('every real-row cell that must move for the <900px stack carries its explicit grid placement', () => {
+  it('every real-row cell that must move for the Q<560 stack carries its explicit grid placement (AIS-T-2 T_stack)', () => {
     const row = realRow();
     // identity, bar, figures, and BOTH action-variant wrappers (only one renders per row state).
     const identity = row.querySelector('.flex.min-w-0.items-center.gap-\\[10px\\]') as HTMLElement;
@@ -784,26 +787,26 @@ describe('ProgramOverviewComponent — AoW row responsive ladder (OSF-T-2b)', ()
     const figures = row.querySelector('.flex.flex-col.items-end:not(.leading-tight)') as HTMLElement;
     const actions = row.querySelector('.flex.justify-end') as HTMLElement;
 
-    expect(identity.className).toContain('max-[900px]:[grid-column:1]');
-    expect(identity.className).toContain('max-[900px]:[grid-row:1]');
-    expect(bar.className).toContain('max-[900px]:[grid-column:1]');
-    expect(bar.className).toContain('max-[900px]:[grid-row:2]');
-    expect(figures.className).toContain('max-[900px]:[grid-column:2]');
-    expect(figures.className).toContain('max-[900px]:[grid-row:2]');
-    expect(actions.className).toContain('max-[900px]:[grid-column:2]');
-    expect(actions.className).toContain('max-[900px]:[grid-row:1]');
+    expect(identity.className).toContain('@max-[560px]:[grid-column:1]');
+    expect(identity.className).toContain('@max-[560px]:[grid-row:1]');
+    expect(bar.className).toContain('@max-[560px]:[grid-column:1]');
+    expect(bar.className).toContain('@max-[560px]:[grid-row:2]');
+    expect(figures.className).toContain('@max-[560px]:[grid-column:2]');
+    expect(figures.className).toContain('@max-[560px]:[grid-row:2]');
+    expect(actions.className).toContain('@max-[560px]:[grid-column:2]');
+    expect(actions.className).toContain('@max-[560px]:[grid-row:1]');
   });
 
-  it('the achievement cell narrows below 1280px (tiled with the >=1280 base) and drops entirely at/below 1100px', () => {
+  it('the achievement cell narrows below Q=700 (AIS-T-2 T_restack) and drops entirely below Q=630 (T_full)', () => {
     const row = realRow();
     const achievementCell = row.querySelector('.leading-tight') as HTMLElement;
-    expect(achievementCell.className).toContain('max-[1101px]:hidden');
+    expect(achievementCell.className).toContain('@max-[630px]:hidden');
 
     const qaPrelRow = row.querySelector('.leading-tight .items-baseline.whitespace-nowrap') as HTMLElement;
-    expect(qaPrelRow.className).toContain('max-[1280px]:flex-col');
+    expect(qaPrelRow.className).toContain('@max-[700px]:flex-col');
 
     const coverageLine = row.querySelector('.leading-tight span.text-\\[10px\\].text-\\[var\\(--pr-text-muted\\)\\]') as HTMLElement;
-    expect(coverageLine.className).toContain('max-[1280px]:hidden');
+    expect(coverageLine.className).toContain('@max-[700px]:hidden');
   });
 
   it('the row-tooltip fallback is a focusable, keyboard-and-touch-reachable BUTTON whose accessible name carries the real figures — not a generic label', () => {
@@ -812,9 +815,10 @@ describe('ProgramOverviewComponent — AoW row responsive ladder (OSF-T-2b)', ()
     // (hover-only, sighted-pointer) tooltip host a few lines down in the same row.
     // `RGS-T-1`: the identity block now ALSO holds the code+name filter button (DOM-first), so the
     // achievement fallback is picked out by its own distinguishing class, not `querySelector('button')`
-    // (which would now match the filter button instead).
+    // (which would now match the filter button instead). `AIS-T-2`: `[class*="…"]` sidesteps escaping
+    // the `@`/`[`/`]`/`:` characters a dot-selector on the container variant would need.
     const identityBlock = row.querySelector('.flex.min-w-0.items-center.gap-\\[10px\\]') as HTMLElement;
-    const fallback = identityBlock.querySelector('button.max-\\[1101px\\]\\:inline-flex') as HTMLButtonElement;
+    const fallback = identityBlock.querySelector('button[class*="@max-[630px]:inline-flex"]') as HTMLButtonElement;
 
     expect(fallback).toBeTruthy();
     expect(fallback.tagName).toBe('BUTTON'); // focusable — a <span> is not (Reviewer finding)
@@ -824,9 +828,9 @@ describe('ProgramOverviewComponent — AoW row responsive ladder (OSF-T-2b)', ()
     expect(fallback.getAttribute('aria-label')).toContain('Preliminary');
     expect(fallback.getAttribute('aria-label')).not.toBe('Achievement against targets');
     // width-gating: mutually exclusive with the achievement cell's own tooltip (test above).
-    // `max-[1101px]:inline-flex` is not re-asserted — the selector above already required it
+    // `@max-[630px]:inline-flex` is not re-asserted — the selector above already required it
     // (Reviewer advisory, tautology fold). `hidden` IS asserted: it is an independent class the
-    // selector does not require, and without it the glyph renders at ≥1101px too, duplicating
+    // selector does not require, and without it the glyph renders at Q≥630 too, duplicating
     // the achievement cell's own tooltip host.
     expect(fallback.className).toContain('hidden');
   });
@@ -834,7 +838,7 @@ describe('ProgramOverviewComponent — AoW row responsive ladder (OSF-T-2b)', ()
   it('the row-tooltip fallback stops click propagation so tapping it does not ALSO navigate the row', () => {
     const row = realRow();
     const identityBlock = row.querySelector('.flex.min-w-0.items-center.gap-\\[10px\\]') as HTMLElement;
-    const fallback = identityBlock.querySelector('button.max-\\[1101px\\]\\:inline-flex') as HTMLButtonElement;
+    const fallback = identityBlock.querySelector('button[class*="@max-[630px]:inline-flex"]') as HTMLButtonElement;
 
     let rowNavigated = false;
     row.addEventListener('click', () => (rowNavigated = true));
@@ -848,15 +852,15 @@ describe('ProgramOverviewComponent — AoW row responsive ladder (OSF-T-2b)', ()
     fixture.detectChanges();
 
     const skeletonRow = fixture.nativeElement.querySelector(
-      'div.grid[class*="grid-cols-\\[minmax\\(0\\,1fr\\)_minmax\\(120px\\,240px\\)_max-content_max-content_max-content\\]"]'
+      'div.grid[class*="grid-cols-\\[minmax\\(143px\\,1fr\\)_minmax\\(120px\\,240px\\)_max-content_max-content_max-content\\]"]'
     ) as HTMLElement;
     expect(skeletonRow).toBeTruthy();
-    expect(skeletonRow.className).toContain('min-[900px]:max-[1101px]:grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content]');
-    expect(skeletonRow.className).toContain('max-[900px]:grid-cols-[minmax(0,1fr)_max-content]');
+    expect(skeletonRow.className).toContain('@min-[560px]:@max-[630px]:grid-cols-[minmax(167px,1fr)_minmax(120px,240px)_max-content_max-content]');
+    expect(skeletonRow.className).toContain('@max-[560px]:grid-cols-[minmax(167px,1fr)_max-content]');
 
-    // The 4th placeholder (achievement track) is the one hidden at/below 1100px, same as the real row.
+    // The 4th placeholder (achievement track) is the one hidden below Q=630, same as the real row.
     const placeholders = Array.from(skeletonRow.children) as HTMLElement[];
-    expect(placeholders[3].className).toContain('max-[1101px]:hidden');
+    expect(placeholders[3].className).toContain('@max-[630px]:hidden');
 
     // `RGS-T-1` extension (RGS-DD-5 parity, NOT a replacement guard): the skeleton's identity cell
     // (1st placeholder) must ALSO wrap its code+name placeholders in a native <button>, same as the
@@ -932,7 +936,10 @@ describe('ProgramOverviewComponent — AoW identity button is a real control (RG
     // Achievement glyph is a SIBLING of the identity button inside the identity cell, not nested in it.
     const identityCell = realRow.querySelector('.flex.min-w-0.items-center.gap-\\[10px\\]') as HTMLElement;
     const nameButton = identityButton();
-    const achievementButton = identityCell.querySelector('button.max-\\[1101px\\]\\:inline-flex');
+    // `AIS-T-2` (changes/aow-identity-column-starvation): the viewport variant `max-[1101px]:inline-flex`
+    // became the container variant `@max-[630px]:inline-flex` (`T_full`) — `[class*="…"]` sidesteps
+    // escaping the `@`/`[`/`]`/`:` characters in a dot-selector.
+    const achievementButton = identityCell.querySelector('button[class*="@max-[630px]:inline-flex"]');
     expect(achievementButton).toBeTruthy();
     expect(nameButton.contains(achievementButton)).toBe(false);
     expect(achievementButton!.parentElement).toBe(identityCell);

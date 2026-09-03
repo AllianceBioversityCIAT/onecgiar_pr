@@ -156,7 +156,49 @@ function measureRow(rowEl: HTMLElement): RowMeasurement {
 }
 
 describe('ProgramOverviewComponent — AoW row container-width sweep (AIS-T-1, Bug-Mode red gate)', () => {
-  beforeEach(() => cy.viewport(1500, 900));
+  // `AIS-T-2` harness correction (Leader finding, 2026-09-03): `src/index.html:9-10` loads
+  // `Material Icons Round` from Google Fonts; without it, the `arrow_forward` ligature (the 32px
+  // icon button, `:850-858`) rendered as literal text, inflating the actions cell's content width in
+  // every prior measurement. This CT Chromium process has no network route to Google Fonts (`curl`
+  // from the Bash tool reaches it; the spawned browser subprocess does not — a sandbox difference
+  // specific to this environment), so the font is self-hosted instead: real woff2 bytes under
+  // `cypress/support/assets/`, served via `cypress.config.js`'s `webpackConfig` → `devServer.static`
+  // hook, loaded through a local `@font-face` in `component-index.html`. Wait for
+  // `document.fonts.ready` and hard-fail (not "not measurable") if the font still cannot load — never
+  // measure against a silently-wrong harness.
+  beforeEach(() => {
+    cy.viewport(1500, 900);
+    cy.window().then(win =>
+      // `document.fonts.ready`/`.check()` proved unreliable in this Electron/Chromium build: a
+      // FontFace whose OWN `.load()` resolves with `.status === 'loaded'` (verified: real 173,620-byte
+      // woff2, no rejection) still made `document.fonts.check(...)` report `false`. So this loads the
+      // matching FontFace DIRECTLY and reads ITS OWN `.status` — the primitive that was actually
+      // proven to reflect reality — rather than trusting the higher-level check API.
+      Promise.resolve().then(async () => {
+        const materialFace: any = Array.from(win.document.fonts as any).find((f: any) => f.family === 'Material Icons Round');
+        if (!materialFace) {
+          throw new Error(
+            'Harness precondition failed: no "Material Icons Round" @font-face is registered in ' +
+              'document.fonts — check the <style> block in component-index.html.'
+          );
+        }
+        try {
+          await materialFace.load();
+        } catch (e: any) {
+          throw new Error(
+            `Harness precondition failed: "Material Icons Round" failed to load (${e?.name}: ${e?.message}) — ` +
+              'the arrow_forward ligature would render as literal text and inflate the actions cell. Check ' +
+              'cypress/support/assets/material-icons-round.woff2 exists and cypress.config.js\'s webpackConfig ' +
+              'devServer.static hook is still wired up. Stopping rather than measuring against a known-wrong ' +
+              'harness; do not fake it.'
+          );
+        }
+        if (materialFace.status !== 'loaded') {
+          throw new Error(`Harness precondition failed: "Material Icons Round" status is "${materialFace.status}" after load() — expected "loaded".`);
+        }
+      })
+    );
+  });
 
   it('AIS-AC-1/2/6: name ≥ 80px, chip never spills, ellipsis on overflow, row never overflows, exactly one of {achievement, ⓘ} — richLoading=false', () => {
     cy.mount(ProgramOverviewComponent, {
@@ -260,7 +302,7 @@ describe('ProgramOverviewComponent — AoW row container-width sweep (AIS-T-1, B
     });
   });
 
-  it('[log only, never fails] max-content maxima at Q=1000 (A_wide, A_narrow) + overflow-locator on the row that actually overflows — inputs to AIS-T-2 / AIS-DD-3 thresholds (attempt 2, Reviewer remediation)', () => {
+  it('[log only, fails only on harness assumptions] max-content maxima at Q=1000 (A_wide, A_narrow) + overflow-locator on the row that actually overflows — inputs to AIS-T-2 / AIS-DD-3 thresholds', () => {
     // --- figures / actions / A_wide, and the overflow-locator: viewport 1500 (today's ladder never
     // sheds here — see the describe-level docblock), same fixture/mount as the other two `it`s. ---
     cy.mount(ProgramOverviewComponent, {
@@ -314,30 +356,29 @@ describe('ProgramOverviewComponent — AoW row container-width sweep (AIS-T-1, B
       );
     });
 
-    // --- A_narrow: the achievement cell's RESTACKED max-content. Reachable at a viewport that keeps
-    // the cell VISIBLE (`max-[1101px]:hidden` needs viewport < 1101 — must stay ≥ 1101) but RESTACKS
-    // its inner QA/Prel span (`max-[1280px]:flex-col` needs viewport < 1280) — i.e. 1101 ≤ viewport <
-    // 1280. Remounts fresh at viewport 1200 rather than reusing the mount above (attempt 2, Reviewer
-    // remediation — was recorded "not measurable pre-fix" in attempt 1; that was wrong, it is
-    // reachable this way). ---
-    cy.viewport(1200, 900);
+    // --- A_narrow: the achievement cell's RESTACKED max-content. Post-`AIS-T-2` the restack is
+    // CONTAINER-keyed (`@max-[700px]:flex-col` on the achievement cell's inner span, `T_restack`),
+    // not viewport-keyed — Q=1000 (above `T_restack`) never restacks any more, so this reads Q=660
+    // instead, inside the `[T_full=630, T_restack=700)` band where the cell is visible AND restacked.
+    // (Pre-`AIS-T-2` this was `cy.viewport(1200, 900)` at Q=1000, because the restack rule was still
+    // `max-[1280px]` — a viewport variant. Updated in lockstep with the ladder it measures.) ---
     cy.mount(ProgramOverviewComponent, {
       ...MOUNT_CONFIG,
       componentProperties: { richRows: FIXTURE_ROWS, richLoading: false }
     });
     cy.get('[data-testid="aow-rows"]').then($wrapper => {
       const wrapperEl = $wrapper[0] as HTMLElement;
-      wrapperEl.style.width = `${1000 + WRAPPER_PAD}px`; // Q = 1000
+      wrapperEl.style.width = `${660 + WRAPPER_PAD}px`; // Q = 660, inside [T_full, T_restack)
       const rows = Array.from(wrapperEl.children) as HTMLElement[];
       const achievementCells = rows.map(r => r.children[3] as HTMLElement);
 
-      // Guard: confirm the restack actually fired (viewport-gated `max-[1280px]:flex-col` on the
+      // Guard: confirm the restack actually fired (container-gated `@max-[700px]:flex-col` on the
       // achievement cell's own first child) — else "A_narrow" would silently just be A_wide again.
       const restacked = achievementCells.every(cell => getComputedStyle(cell.children[0] as Element).flexDirection === 'column');
-      if (!restacked) throw new Error('A_narrow guard: achievement cell did not restack at viewport 1200 — harness assumption wrong');
+      if (!restacked) throw new Error('A_narrow guard: achievement cell did not restack at Q=660 — harness assumption wrong');
 
       const achievementNarrowMax = Math.max(...achievementCells.map(c => c.getBoundingClientRect().width));
-      cy.log(`AIS-DD-3 input — achievement A_narrow max-content @ viewport 1200, Q=1000 = ${achievementNarrowMax.toFixed(1)}px`);
+      cy.log(`AIS-DD-3 input — achievement A_narrow max-content @ Q=660 = ${achievementNarrowMax.toFixed(1)}px`);
 
       // Never an assertion that can fail on measured content — this test's job is the log lines above.
       expect(rows.length, 'fixture rows present').to.be.greaterThan(0);

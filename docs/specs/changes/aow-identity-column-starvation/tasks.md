@@ -41,10 +41,11 @@
   - [ ] Red run recorded in `execution.md` with the failing-width table and the three measured `max-content` maxima.
   - [ ] `npx ng lint --quiet` clean for the new file.
 
-### `AIS-T-2` — Fix the row: 140px floor + container-keyed ladder on both sites
+### `AIS-T-2` — Fix the row: identity floor + container-keyed ladder on both sites
 
+- [x] **Status:** done — PASS on attempt 1, 2026-09-03 (evidence: `execution.md` §2 `AIS-T-2`)
 - **Type:** `client`
-- **Description:** In `program-overview.component.html`: (1) add `@container` to **both** list wrappers — skeleton `:537` and real `:620` (identical classes; the skeleton branch needs its own containment context or `AIS-AC-3` is unreachable); (2) on **both** the skeleton row (≈`:564`) and the real row (≈`:676`) replace `minmax(0,1fr)` with `minmax(140px,1fr)` in the 5-track branches and `minmax(164px,1fr)` in the 4-track and 2×2 branches (the ⓘ fallback shares the identity cell there — `AIS-DD-2`); (3) replace every viewport variant on the row root and its cells with the container equivalent — inventory per site: `min-[900px]:max-[1101px]:grid-cols-…` ×1, `max-[900px]:grid-cols-…` ×1, `max-[900px]:gap-y-[8px]` ×1, `max-[900px]:[grid-column/row:…]` ×8 (skeleton) / ×10 (row), `max-[1101px]:hidden` / `:inline-flex` ×2 (row) / ×1 (skeleton), `max-[1280px]:flex-col|items-end|gap-[2px]|hidden` ×4 inside the achievement cell — mapping `1101→@max-[T_full]`, `900→@max-[T_stack]`, `1280→@max-[T_restack]` (the restack step stays a **distinct** threshold above `T_full`, preserving `OSF-DD-8`'s restack → shed → stack order). (4) Compute `T_restack`, `T_full` and `T_stack` from `AIS-T-1`'s measured maxima with `design.md` `AIS-DD-3`'s formula (**+36px row chrome**, per-column minimum for the 2×2 branch), round up to 10px, and write the arithmetic in the ladder comment (`KZ-OAH-1` standardization). (5) Rewrite **both** existing ladder comment blocks — the skeleton's (≈`:548–:563`) and the row's (≈`:635–:665`) — to describe the container ladder and the exclusive `@max-[N]` boundary; delete the sentence forbidding a raised minimum; **the comment prose must also lose the old `max-[…]` syntax** (it currently quotes `` `max-[1101px]:hidden` `` at ≈`:649`), or the verification grep below false-positives. Leave the `[prTooltip]` binding on the name span untouched (the tooltip clause of `AIS-R-1`).
+- **Description:** In `program-overview.component.html`: (1) add `@container` to **both** list wrappers — skeleton `:537` and real `:620` (identical classes; the skeleton branch needs its own containment context or `AIS-AC-3` is unreachable); (2) on **both** the skeleton row (≈`:564`) and the real row (≈`:676`) replace `minmax(0,1fr)` with a floor of chip + 10 + 80 in the 5-track branches and +24 in the 4-track and 2×2 branches (estimated 140/164; **143/167 with the measured 51.1px chip** — `AIS-T-1` output governs) (the ⓘ fallback shares the identity cell there — `AIS-DD-2`); (3) replace every viewport variant on the row root and its cells with the container equivalent — inventory per site: `min-[900px]:max-[1101px]:grid-cols-…` ×1, `max-[900px]:grid-cols-…` ×1, `max-[900px]:gap-y-[8px]` ×1, `max-[900px]:[grid-column/row:…]` ×8 (skeleton) / ×10 (row), `max-[1101px]:hidden` / `:inline-flex` ×2 (row) / ×1 (skeleton), `max-[1280px]:flex-col|items-end|gap-[2px]|hidden` ×4 inside the achievement cell — mapping `1101→@max-[T_full]`, `900→@max-[T_stack]`, `1280→@max-[T_restack]` (the restack step stays a **distinct** threshold above `T_full`, preserving `OSF-DD-8`'s restack → shed → stack order). (4) Compute `T_restack`, `T_full` and `T_stack` from `AIS-T-1`'s measured maxima with `design.md` `AIS-DD-3`'s formula (**+36px row chrome**, per-column minimum for the 2×2 branch), round up to 10px, and write the arithmetic in the ladder comment (`KZ-OAH-1` standardization). (5) Rewrite **both** existing ladder comment blocks — the skeleton's (≈`:548–:563`) and the row's (≈`:635–:665`) — to describe the container ladder and the exclusive `@max-[N]` boundary; delete the sentence forbidding a raised minimum; **the comment prose must also lose the old `max-[…]` syntax** (it currently quotes `` `max-[1101px]:hidden` `` at ≈`:649`), or the verification grep below false-positives. Leave the `[prTooltip]` binding on the name span untouched (the tooltip clause of `AIS-R-1`).
 - **Implements:** `AIS-R-1` (floor clause, chip-never-clipped clause), `AIS-R-2` (all four clauses), `AIS-R-3` (both clauses incl. "BUT no viewport variant on the row"), `AIS-R-4` (shed order, `Report` label, no scroll), `AIS-R-5` (structure half), `AIS-AC-1`, `AIS-AC-2`, `AIS-AC-3`, `AIS-AC-6`; `AIS-DD-1`, `AIS-DD-2`, `AIS-DD-3`.
 - **Files (expected):** `program-overview.component.html` (≈50 changed lines, two sites + comment).
 - **Depends on:** `AIS-T-1` · **Blocks:** `AIS-T-3`, `AIS-T-5`
@@ -58,7 +59,7 @@
   - [ ] Both sites token-identical (`AIS-T-3` will pin it; eyeball now).
   - [ ] Thresholds carry their arithmetic in the comment; comment block rewritten.
   - [ ] CT sweep green both states; Jest dir green; lint clean.
-  - [ ] Commit `🔧 fix(program-overview) [SPEC:changes/aow-identity-column-starvation]: 140px identity floor + container-keyed AoW row ladder`.
+  - [x] Commit `[SPEC:changes/aow-identity-column-starvation] 🔧 fix(program-overview): 143/167px identity floor + container-keyed AoW row ladder` (plus a separate harness commit for the vendored icon font).
 
 ### `AIS-T-3` — Pin skeleton ↔ row parity in Jest
 
@@ -99,8 +100,8 @@
 - **Depends on:** `AIS-T-2`, `AIS-T-3` · **Blocks:** archive
 - **Estimate:** S
 - **Skills:** `cognitive-doc-design` (the CLAUDE.md paragraph), `claude-in-chrome` or `playwright-cli` for the pass (T6 visual review of the 1280 screenshot).
-- **Verification:** the five-width table in `execution.md` with identity ≥ 140px on every row and `OSF-AC-9` clean; screenshot attached. Docs: the old sentence "never raises the identity minimum" no longer appears (`grep -c "never raises the identity minimum" CLAUDE.md` = 0) **and** the new paragraph names the CT spec file.
-- **Input that makes it fail:** a real-page row at 1280 whose identity < 140px (a shell width the CT harness did not model — e.g. the section's `p-[20px]` was not the container the ladder reads). That is the one defect only this task can see.
+- **Verification:** the five-width table in `execution.md` with identity ≥ 143/167px (per branch) and name ≥ 80px on every row and `OSF-AC-9` clean; screenshot attached. Docs: the old sentence "never raises the identity minimum" no longer appears (`grep -c "never raises the identity minimum" CLAUDE.md` = 0) **and** the new paragraph names the CT spec file.
+- **Input that makes it fail:** a real-page row at 1280 whose name span < 80px (a shell width the CT harness did not model — e.g. the section's `p-[20px]` was not the container the ladder reads). That is the one defect only this task can see.
 - **Disqualifiers:** a reading taken while a skeleton is present; a single read (must be double-read); a screenshot at any width other than 1280 standing in for 1280.
 - **Presence-assertion note:** the docs `grep` is a presence check on prose; the behavioural proof of this task is the five-width table.
 - **Definition of done:** paragraph rewritten; five-width table + screenshot in `execution.md`, or an explicit `BLOCKED (environment)` with the script.
@@ -119,7 +120,7 @@ AIS-T-1 (red gate + measurement)
 
 | Requirement · clause | Task |
 |---|---|
-| `AIS-R-1` name ≥ 80px (identity ≥ 140/164 per branch) · chip never clipped · name truncates with ellipsis · tooltip kept | `AIS-T-2` (name ≥ 80, chip, ellipsis: asserted by `AIS-T-1`'s sweep; tooltip binding: `AIS-T-2` grep on `[prTooltip]`) |
+| `AIS-R-1` name ≥ 80px (identity ≥ 143/167 per branch, measured chip) · chip never clipped · name truncates with ellipsis · tooltip kept | `AIS-T-2` (name ≥ 80, chip, ellipsis: asserted by `AIS-T-1`'s sweep; tooltip binding: `AIS-T-2` grep on `[prTooltip]`) |
 | `AIS-R-2` row `scrollWidth===clientWidth` · no list scroller · page `OSF-AC-9` | `AIS-T-2` (row + list: `AIS-T-1` sweep; page: `AIS-T-5`) |
 | `AIS-R-3` same width ⇒ same structure · BUT no viewport variant on row/cells | `AIS-T-2` (`grep = 0` + sweep) |
 | `AIS-R-4` achievement shed first · `Report` never icon-only · never scrolls | `AIS-T-2` (`AIS-T-1` asserts ⓘ/cell exclusivity and overflow; `Report` label asserted by existing Jest spec + `AIS-T-5` screenshot) |

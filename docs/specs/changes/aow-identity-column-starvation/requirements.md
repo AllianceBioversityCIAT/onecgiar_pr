@@ -64,7 +64,7 @@ PRD alignment: `docs/prd.md` G2 (reporting visibility) / US-PMU (program lead ov
 
 ### Required (MUST)
 
-- **`AIS-R-1` — Identity floor.** At every width the row can be given, the AoW **name** MUST keep **at least 80px** of visible width beside a fully visible code chip (≈50px) — and beside the ⓘ fallback button (≈24px incl. gap) in the branches where it is shown. Expressed as a track floor: identity ≥ **140px** in the full branch (50 chip + 10 gap + 80 name), ≥ **164px** in the shed/stacked branches (+24 for ⓘ). The name truncates with an ellipsis and keeps its full value available (existing tooltip binding untouched); the chip is never clipped.
+- **`AIS-R-1` — Identity floor.** At every width the row can be given, the AoW **name** MUST keep **at least 80px** of visible width beside a fully visible code chip (≈50px) — and beside the ⓘ fallback button (≈24px incl. gap) in the branches where it is shown. Expressed as a track floor: identity ≥ **143px** in the full branch (51.1px chip measured by `AIS-T-1` + 10 gap + 80 name, rounded up), ≥ **167px** in the shed/stacked branches (+24 for ⓘ). *(Amended 2026-09-03 from the 140/164 estimate after measurement — the ≥ 80px name invariant is the requirement; the track numbers are its derivation.)* The name truncates with an ellipsis and keeps its full value available (existing tooltip binding untouched); the chip is never clipped.
 - **`AIS-R-2` — No overflow trade.** The fix MUST NOT convert starvation into overflow: at every width, the row's `scrollWidth` MUST equal its `clientWidth`, the AoW list MUST NOT gain a horizontal scroller, and `document.documentElement.scrollWidth === clientWidth` (`OSF-AC-9`) MUST still hold.
 - **`AIS-R-3` — Container-relative degradation.** The row's degradation MUST be a function of the width available to the row itself, not of the viewport: two rows given the same width MUST render with the same track structure regardless of sidebar state, rail fold or viewport. *(This is the requirement that ends the recurrence.)*
 - **`AIS-R-4` — Degradation order preserved.** The shedding order approved in `OSF-DD-8` stands: the achievement figure is shed first; then the bar and figures stack under identity + actions. `Report` MUST never become icon-only; the row MUST never scroll horizontally.
@@ -99,7 +99,7 @@ PRD alignment: `docs/prd.md` G2 (reporting visibility) / US-PMU (program lead ov
 | `AIS-AC-2` | Same sweep | Each step lays out | Row `scrollWidth === clientWidth` at every step; no ancestor scroller appears |
 | `AIS-AC-3` | Same sweep, `richLoading = true` (skeleton) | Each step lays out | The skeleton row's `grid-template-columns` track count equals the real row's at the same width |
 | `AIS-AC-4` | The current (unfixed) template | The sweep test runs | It **fails** (red) with the starving widths listed — this is the Bug-Mode proof |
-| `AIS-AC-5` | The real Overview page at 1600 / 1280 / 1100 / 900 / 768, scope off and on | The page renders (`skeletons === 0`, `rows > 0`, double-read) | `grid-template-columns` of every AoW row shows identity ≥ 140px; `OSF-AC-9` clean; screenshot at 1280 shows code + name on every row |
+| `AIS-AC-5` | The real Overview page at 1600 / 1280 / 1100 / 900 / 768, scope off and on | The page renders (`skeletons === 0`, `rows > 0`, double-read) | `grid-template-columns` of every AoW row shows identity ≥ 143px (full branch) / ≥ 167px (shed or stacked branch) and the name span ≥ 80px; `OSF-AC-9` clean; screenshot at 1280 shows code + name on every row |
 | `AIS-AC-6` | Any width where a track is shed | The row renders | The achievement figure is the first thing shed, the info-button fallback appears exactly when it is shed (never both, never neither), `Report` keeps its label |
 | `AIS-AC-7` | `reporting-aow-table` rows under the sweep | Each step lays out | A verdict with numbers is recorded; no code change in this spec |
 
@@ -122,7 +122,7 @@ PRD alignment: `docs/prd.md` G2 (reporting visibility) / US-PMU (program lead ov
 #### `AIS-R-6` — The gate sees the defect
 - GIVEN the sweep test and the unfixed template
 - WHEN the test runs
-- THEN it fails and names the widths where identity < 140px
+- THEN it fails and names the widths where the name span < 80px
 - AND IT MUST pass on the fixed template with zero failing steps
 - BUT it must NOT be satisfied by any assertion on class names, `scrollWidth` alone, or jsdom
 
@@ -151,7 +151,7 @@ Accepted blind spot: a visual defect that is neither a width nor a visibility (e
 ## 10. Open Questions
 
 - `AIS-OQ-1` *(from proposal OQ-1)* Raise the floor **and** re-key the ladder on the container — **resolved:** both; a floor without a container ladder overflows at ~382px, a ladder without a floor starves. See `design.md` `AIS-DD-1/2`.
-- `AIS-OQ-2` *(OQ-2)* Minimum useful identity width — **resolved as a name invariant:** ≥ 80px of name ⇒ identity ≥ 140px (full branch) / ≥ 164px (branches showing ⓘ); `AIS-R-20` allows tuning after measurement.
+- `AIS-OQ-2` *(OQ-2)* Minimum useful identity width — **resolved as a name invariant:** ≥ 80px of name ⇒ identity ≥ 143px (full branch) / ≥ 167px (branches showing ⓘ), from the measured 51.1px chip; `AIS-R-20` allows tuning after measurement.
 - `AIS-OQ-3` *(OQ-3)* Layout assertion instead of overflow assertion — **resolved:** yes, `AIS-R-6`.
 - `AIS-OQ-4` *(OQ-4)* Does `reporting-aow-table` starve — **deferred to measurement** (`AIS-R-10`, `AIS-AC-7`); no fix here.
 
