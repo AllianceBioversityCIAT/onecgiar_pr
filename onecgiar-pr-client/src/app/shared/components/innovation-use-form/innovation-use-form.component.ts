@@ -177,6 +177,118 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     return this.fieldsManagerSE.isInnovationUseAgeFallback2026() && !this.isIpsr && !actorItem?.sex_and_age_disaggregation;
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // P2-3537 §4 — the Current Use Update block
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /** Hard limit on the expansion narrative, per the story. */
+  readonly maxNarrativeWords = 100;
+
+  /**
+   * True when the Current Use Update block is rendered at all.
+   *
+   * Three conditions, and every one of them is a way this would have gone wrong:
+   *
+   * - From the 2026 phase only. Earlier rounds keep the section exactly as it is today.
+   * - Not inside IPSR: this template is shared with Innovation Package step 1, which the story
+   *   does not cover.
+   * - 🥇 Only when the previous phase actually reported actors (`current_use_previous`). The server
+   *   returns `null` both for a first report and for a previous phase that reported organisations
+   *   but no actors — and in both cases the block must be ABSENT, not merely empty. Yeck's decision
+   *   of 3 Sep 2026: reconciling against zero actors is an error the reporter could never resolve,
+   *   so they would never be able to submit.
+   */
+  showCurrentUseUpdate(): boolean {
+    return (
+      this.fieldsManagerSE.isInnovationUseAgeFallback2026() &&
+      !this.isIpsr &&
+      !!this.body?.current_use_previous
+    );
+  }
+
+  /** The figure reported in the previous phase, as a number. */
+  previousReportedUse(): number {
+    return Number(this.body?.current_use_previous?.total_actors) || 0;
+  }
+
+  /** The round that figure comes from, for the "(FY2025)" label. `null` when unknown. */
+  previousUsePhaseYear(): number | null {
+    const year = Number(this.body?.current_use_previous?.phase_year);
+    return Number.isFinite(year) && year > 0 ? year : null;
+  }
+
+  /**
+   * Total cumulative use to date = previous + new. Never typed by anyone, which is why the control
+   * is read-only: the story makes it field 3, auto-calculated from fields 1 and 2.
+   */
+  totalCumulativeUse(): number {
+    return this.previousReportedUse() + (Number(this.body?.new_users_added) || 0);
+  }
+
+  /**
+   * The sum of the actor rows, which is what has to match the cumulative total (§4.1).
+   *
+   * ⚠️ Counts ACTORS only — not organisations, not other measures. Yeck's decision (Q4): the total
+   * means PEOPLE, so that next year's "previous use" stays a number whose meaning can be read
+   * instead of "523 users" made of people, organisations and hectares.
+   *
+   * Reads `how_many`, which the form keeps as `women + men` on disaggregated rows and as the typed
+   * value where disaggregation does not apply — summing the gender columns would drop the second kind.
+   */
+  actorsTotal(): number {
+    return (this.body?.innovatonUse?.actors || [])
+      .filter((a: any) => a?.is_active !== false)
+      .reduce((sum: number, a: any) => sum + (Number(a?.how_many) || 0), 0);
+  }
+
+  /** The gap between what the actor rows add up to and the cumulative total. 0 means reconciled. */
+  currentUseDifference(): number {
+    return this.actorsTotal() - this.totalCumulativeUse();
+  }
+
+  /**
+   * True while the actor rows do not add up to the cumulative total.
+   *
+   * §4.1 requires submission to be blocked with an error naming the difference, and §5 requires the
+   * error to appear as soon as the figures diverge — not only on submit. Rendering it off this
+   * getter is what gives the "immediately" part for free.
+   */
+  hasCurrentUseMismatch(): boolean {
+    return this.showCurrentUseUpdate() && this.currentUseDifference() !== 0;
+  }
+
+  /** The message §6.1 asks for: names the figures and states the exact gap. */
+  currentUseMismatchMessage(): string {
+    const diff = this.currentUseDifference();
+    const direction = diff > 0 ? 'more than' : 'fewer than';
+    return `The user categories add up to ${this.actorsTotal()}, which is ${Math.abs(diff)} ${direction} the total cumulative use of ${this.totalCumulativeUse()} (${this.previousReportedUse()} previously reported + ${Number(this.body?.new_users_added) || 0} added this period). Adjust the categories or the number of new users.`;
+  }
+
+  /**
+   * Completion rule for the block, fed to the mandatory-field scan.
+   *
+   * §5: "New users added = 0" is allowed and still requires the narrative — the reporter is stating
+   * that use was verified and did not grow, and that statement needs its explanation. So the test is
+   * "answered", not "greater than zero".
+   */
+  isCurrentUseUpdateComplete(): boolean {
+    if (!this.showCurrentUseUpdate()) return true;
+    const answered =
+      this.body?.new_users_added !== null && this.body?.new_users_added !== undefined;
+    const narrated = !!String(this.body?.use_expansion_narrative || '').trim();
+    return answered && narrated && !this.hasCurrentUseMismatch();
+  }
+
+  /** Keeps the derived figures fresh while the reporter types the increment. */
+  onNewUsersAddedChange(): void {
+    if (Number(this.body?.new_users_added) < 0) {
+      // §5: a negative increment is not permitted by the input. Use cannot decrease through this
+      // field; a downward correction is explicitly out of scope for this story.
+      this.body.new_users_added = 0;
+    }
+    this.cdr.markForCheck();
+  }
+
   /** True when the youth figures on this row were computed rather than typed. */
   isYouthSplitBySystem(actorItem): boolean {
     return !!actorItem?.youth_split_applied_by_system;
