@@ -1,0 +1,21 @@
+// Same notice styling as the "Annual updating" block, so the two info points of the
+// Innovation Development form read as one thing.
+.message {
+  background-color: var(--pr-color-primary-25);
+  border: none;
+  color: var(--pr-color-blue-600);
+  width: 100%;
+  margin-top: 12px;
+  margin-bottom: 8px;
+  align-items: flex-start;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+
+  &--text {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+}

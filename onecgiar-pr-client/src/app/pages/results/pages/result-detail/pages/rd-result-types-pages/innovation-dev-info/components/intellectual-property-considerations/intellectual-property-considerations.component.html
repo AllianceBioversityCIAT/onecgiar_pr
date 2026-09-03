@@ -1,0 +1,38 @@
+<!--
+  P2-3272 / P2-3513. The server resolves this question BY TEXT and leaves the slot `undefined` when
+  it cannot match it (`resolveIprSlotsForPhase`), which is the state of any environment where
+  1788441000000-AddConsolidatedIprQuestionP25 has not run yet. Without this guard an unmatched slot
+  throws on `question['radioButtonValue']` and takes the whole Innovation Development form down —
+  the incident the same guard prevents in `app-stage-assessment`.
+-->
+@if (question) {
+  <app-pr-field-header label="Intellectual property rights" [useColon]="false"></app-pr-field-header>
+
+  <div class="pl-[20px]">
+    <app-pr-radio-button
+      (selectOptionEvent)="handleSelectionChange()"
+      [label]="question?.question_text"
+      [description]="question?.question_description"
+      [options]="question?.options"
+      optionLabel="question_text"
+      optionValue="result_question_id"
+      [verticalAlignment]="true"
+      [(ngModel)]="question['radioButtonValue']">
+    </app-pr-radio-button>
+
+    <!--
+      Info Point 2 of the story. Info Point 1 (the "What is Intellectual Property?" definition and
+      its link) is NOT here on purpose: neither the definition text nor the URL has been provided,
+      and the story itself says the link is "to be confirmed with Nicoleta Trifa". Painting a
+      placeholder link would be worse than not painting it.
+    -->
+    @if (isTriggerSelected) {
+      <div class="message">
+        <i class="pi pi-info-circle" style="font-size: 14px; margin-top: 2px; color: var(--pr-color-blue-600)"></i>
+        <div class="message--text">{{ notificationDisclosure }}</div>
+      </div>
+    }
+
+    <div appFeedbackValidation [labelText]="question?.question_text" [isComplete]="isComplete"></div>
+  </div>
+}
