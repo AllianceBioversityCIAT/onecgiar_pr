@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { of } from 'rxjs';
 import { Router, provideRouter } from '@angular/router';
 import { ResultHeaderComponent } from './result-header.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
@@ -42,7 +43,14 @@ describe('ResultHeaderComponent', () => {
   };
 
   beforeEach(() => {
-    apiMock = { resultsSE: { currentResultCode: 8871 } };
+    apiMock = {
+      resultsSE: {
+        currentResultCode: 8871,
+        // RIBL-T-1: default is an unmapped result (no owning AOW). Individual "area of work"
+        // cases below swap this for a mapping that carries a WP code.
+        GET_ContributorsPartners: jest.fn().mockReturnValue(of({ response: {} }))
+      }
+    };
     dataControlMock = {
       currentResult: {
         title: 'Genetic basis of yield and striga resistance in infested maize hybrids',
@@ -194,6 +202,55 @@ describe('ResultHeaderComponent', () => {
 
       expect(link.textContent.trim()).toBe('SGP-02');
       expect(link.getAttribute('href')).toBe('/result-framework-reporting/entity-details/SGP-02');
+    });
+  });
+
+  // RIBL-R-1, RIBL-R-2, RIBL-R-6 / RIBL-AC-1, RIBL-AC-2, RIBL-AC-6. Official code fixture stays
+  // 'SP04' (same as Submitter above); the owning AOW comes from a mocked GET_ContributorsPartners
+  // planned submitter mapping whose first result_toc_results row carries WP code 'AOW01'
+  // (design.md §5: read `result_toc_result.result_toc_results[]`, `planned_result`,
+  // `work_package_code` first; ignore `contributors_result_toc_result`). These cases are RED on
+  // current HEAD — `result-header.component.html` has no Area of Work node yet.
+  describe('area of work', () => {
+    const plannedAowMapping = () => ({
+      response: {
+        result_toc_result: {
+          planned_result: true,
+          result_toc_results: [{ work_package_code: 'AOW01' }]
+        }
+      }
+    });
+
+    const mockAowMapping = () => {
+      apiMock.resultsSE.GET_ContributorsPartners = jest.fn().mockReturnValue(of(plannedAowMapping()));
+    };
+
+    it('shows the owning Area of Work code from the planned submitter mapping', async () => {
+      mockAowMapping();
+      await build();
+
+      expect(q('[data-testid="result-header-aow"]').textContent.trim()).toBe('AOW01');
+    });
+
+    it('links the Area of Work value to By AOW for that official code, in the same tab', async () => {
+      mockAowMapping();
+      await build();
+      const link = q('[data-testid="result-header-aow"]');
+      const href = link.getAttribute('routerLink') ?? link.getAttribute('href');
+
+      expect(href).toContain('/result-framework-reporting/entity-details/SP04');
+      expect(href).toContain('tocView=byAow');
+      expect(href).toContain('tocAow=AOW01');
+      expect(link.getAttribute('target')).toBeNull();
+    });
+
+    it('gives the Area of Work link an accessible name that includes "Area of Work" and the AOW code', async () => {
+      mockAowMapping();
+      await build();
+      const ariaLabel = q('[data-testid="result-header-aow"]').getAttribute('aria-label');
+
+      expect(ariaLabel).toContain('Area of Work');
+      expect(ariaLabel).toContain('AOW01');
     });
   });
 
