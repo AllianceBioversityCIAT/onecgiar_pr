@@ -10,7 +10,7 @@
 | Approval Mode | gated |
 | Budget | 2 tasks · ~120 LOC · 1 review (`design.md` §14) |
 | Started | 2026-09-03 |
-| Status | in progress — RIBL-T-1 PASS; RIBL-T-2 pending |
+| Status | in progress — RIBL-T-1 PASS; RIBL-T-2 `[~]` (Jest PASS, HITL outstanding) |
 
 ## 2. Task Execution History
 
@@ -49,3 +49,71 @@ None.
 #### Final verification
 
 Red regression is in place. RIBL-T-2 may now paint the strip, own the GET, and turn these cases green.
+
+### RIBL-T-2 — Paint Area of Work, turn the cases green, HITL wrap
+
+| Field | Value |
+|---|---|
+| Final status | **[~] blocked on HITL** — code Reviewer PASS on attempt 2; RIBL-R-7 / AC-7 not closed |
+| Date | 2026-09-03 |
+| Attempts | 2 |
+| Requirements | RIBL-R-1..R-6, R-10, R-11, AC-1..AC-6, AC-8 closed by Jest. RIBL-R-7 / AC-7 HITL outstanding |
+| Design | RIBL-DD-1, DD-2, DD-3 (Jest half) |
+
+#### Attempt 1
+
+- **Files changed:** `result-header.component.{html,ts,spec.ts}`
+- **Implementer** (`claude-sonnet-5-thinking-high`): strip item after Submitter; `GET_ContributorsPartners` via `ngDoCheck` keyed by `currentResultId`; `mapAowFromContributorsPartners` per §5; 51 Jest green. HITL Not Done.
+- **Verification:** `Tests: 51 passed, 51 total`. Lint clean.
+- **Reviewer** (`claude-opus-5-thinking-high`): `STATUS: FAIL`
+
+**FAIL issues (verbatim):**
+
+1. **Discovered Issue:** No test exercises the multi-row / multi-HLO path. The spec helper `plannedAowMapping` builds `result_toc_results: [row]` — a single-element array — in every one of the 19 cases, so nothing proves that the first planned row wins when several exist, and nothing proves a `contributors_result_toc_result` array is ignored. The production code does implement both (`rows.find(r => resolveAowRowCode(r))`, and `contributors_result_toc_result` is never dereferenced), but the behaviour is ungated: swapping `.find` for `.at(-1)`, or adding a `contributors_result_toc_result` fallback, leaves all 51 cases green.
+    *   **Violated Rule:** `docs/specs/changes/result-indicator-back-link/tasks.md` §3 Clause coverage — `| RIBL-R-1 multi-HLO → first planned submitter row | T-2 Jest (two rows; first wins; contributor array ignored) |`, plus the closing line "A gap may not be closed by citing a different requirement." Source requirement: `requirements.md` RIBL-R-1 — "When several planned mappings exist, it MUST use the primary / first planned mapping of the submitter Science Program — not a Center-contributor mapping", and `design.md` §5 — "**Mapping (submitter SP only):** read `result_toc_result.result_toc_results[]`. Ignore `contributors_result_toc_result`. First planned row whose WP field is non-empty wins."
+    *   **Remediation Suggestion:** Add two cases to the `area of work` describe. (a) Mock `result_toc_results: [{ work_package_code: 'AOW01' }, { work_package_code: 'AOW09' }]` and assert the rendered value and `tocAow` are `AOW01`, not `AOW09`. (b) Mock a response carrying both `result_toc_result.result_toc_results: [{ work_package_code: 'AOW01' }]` and a `contributors_result_toc_result` array whose row has a different code (e.g. `AOW07`), and assert the href still says `tocAow=AOW01` and never `AOW07`. Widen `plannedAowMapping` to accept a row array (or add a sibling helper) rather than reshaping the existing single-row calls.
+
+2. **Discovered Issue:** The `{code} - {name}` display rule has no test. Every mock omits the name field, so `aowValue` is only ever exercised on the code-only branch; the name-present branch — and the `work_package_name ?? aow_name` field guess behind it — is dead as far as the gate is concerned. The Implementer recorded the field-name guess as an assumption, but the *rendering* rule is a stated design rule that jsdom can absolutely evaluate.
+    *   **Violated Rule:** `design.md` §5 display-rules table — `| WP code present, short name present | {code} - {name} |` and `| WP code present, name missing | {code} only |`. Also `requirements.md` RIBL-R-1 THEN — "shows `AOW01` (or `AOW01 - {name}` if a short name is already on the mapping)".
+    *   **Remediation Suggestion:** Add one case mocking `{ work_package_code: 'AOW01', work_package_name: 'Multifunctional Landscapes' }` and assert the testid text is `AOW01 - Multifunctional Landscapes` while `tocAow` stays the bare `AOW01` (the name must not leak into the query). Keep the existing code-only case as the "no fabricated name" counterpart. The field-name guess itself is a live-shape question — leave it as the recorded `execution.md` note for HITL, since Jest cannot settle it either way.
+
+- **ADVISORY** (does not gate): kpi case should also assert `tocAow=AOW01`; `looksLikeAowCode` is broader than the §5 docstring.
+
+#### Attempt 2
+
+- **Files changed:** `result-header.component.spec.ts` only (production unchanged)
+- **Implementer** (`claude-sonnet-5-thinking-high`, effort `high`): added three discriminating cases — multi-HLO first-wins (`AOW01` vs `AOW09`), ignore `contributors_result_toc_result` (`AOW07`), `{code} - {name}` display without leaking the name into `tocAow`. Also added advisory `tocAow=AOW01` on the `kpi=42` case. Mutation-checked each new case then restored production.
+- **Verification:** `Tests: 54 passed, 54 total`
+- **Reviewer** (`claude-opus-5-thinking-high`, author ≠ auditor): `STATUS: PASS` — the three attempt-1 gaps are gated by exact-value assertions a plausible mapping mutation would break. Production still matches §5 / R-1 / R-2 / R-11. R-7 remains Leader-owned HITL.
+- **ADVISORY** (does not gate, does not mint a task): the name-leak negative `not.toContain('tocAow=AOW01 - Multifunctional Landscapes')` is weak against URL-encoding; parse `searchParams` if tightening later.
+
+#### HITL probe (RIBL-R-7)
+
+- Assumption tested: “HITL cannot run because there is no authenticated Result Detail session.”
+- Probe: `:4200` is listening; `GET /` returns the PRMS SPA shell (200). `playwright-cli` is not installed in this session. No logged-in Result Detail URL was available to this agent.
+- Result: **blocker confirmed**. Jest green is not wrap proof. Same class as RSBL-T-2.
+
+#### Budget tripwire
+
+| Signal | Budget | Actual |
+|---|---|---|
+| Tasks | 2 | 2 |
+| LOC | ~120 (tripwire ~240) | **+318 / −9** on the three header files (most of the overrun is Jest) |
+| Review rounds | 1 | **2** (attempt 1 FAIL + attempt 2 PASS) |
+
+Exceeded review-round and LOC tripwires. Cause: attempt 1 omitted the clause-coverage Jest that `tasks.md` §3 already named. No third task minted.
+
+#### Decisions
+
+- Skills kept as specified: `angular-developer`, `ui-ux-pro-max` (attempt 1); `tdd` + `angular-developer` on rework. Effort `medium` then `high`.
+- T-1 forward pointer applied: `currentResultId: 1234` on `apiMock.resultsSE`.
+- Task stays `[~]` until HITL at 900px and ~1100px vs `visual/result-detail-with-submitter.jpg`, or the owner closes the gate the same way as RSBL-T-2.
+- Name-field guess (`work_package_name ?? aow_name`) remains a live-GET question — hide if the row has no WP field §5 can see; do not invent from the HLO title.
+
+#### Issues
+
+HITL outstanding. Budget exceeded (reviews + LOC).
+
+#### Final verification
+
+Scoped Jest 54/54 green. Lint clean on the touched files (attempt 1). Submitter href unchanged. R-7 not evidenced.

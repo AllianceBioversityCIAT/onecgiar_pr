@@ -5,7 +5,7 @@
 - **Module / feature:** `results` Result Detail chrome (`app-result-header`)
 - **Linked spec:** `docs/specs/changes/result-indicator-back-link/requirements.md` + `design.md`
 - **Depth:** Standard (budget 2 tasks · ~120 LOC · 1 review — `design.md` §14)
-- **Status:** in-progress — RIBL-T-1 PASS
+- **Status:** in-progress — RIBL-T-1 PASS; RIBL-T-2 `[~]` HITL
 - **Judgment:** none yet
 - **Pre-flight:** OQ-1..4 locked; no Jira; Submitter already shipped on the same header — do not retarget it
 
@@ -34,11 +34,11 @@
   - Input that would FAIL this check: current `result-header.component.html` with no Area of Work node — the new cases must fail on that input.
 - **Done criteria:** failing cases committed; production header untouched; no secrets in fixtures.
 
-### RIBL-T-2 — Paint Area of Work, turn the cases green, HITL wrap `[ ]`
+### RIBL-T-2 — Paint Area of Work, turn the cases green, HITL wrap `[~]`
 
 - **Type:** `client | tests`
 - **Size:** S
-- **Status:** not-started
+- **Status:** blocked — HITL
 - **Depends on:** RIBL-T-1
 - **Blocks:** none
 - **Skills:** `angular-developer`, `ui-ux-pro-max`

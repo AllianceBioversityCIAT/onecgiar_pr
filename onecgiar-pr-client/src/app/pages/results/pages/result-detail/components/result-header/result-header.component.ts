@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DoCheck, ElementRef, HostListener, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs/operators';
@@ -13,6 +13,69 @@ interface MetaRow {
   value: string;
   /** Sin dato disponible todavía: la fila se muestra con la etiqueta `Coming soon`. */
   pending?: boolean;
+}
+
+/** Owning Area of Work resolved from the primary / first planned submitter ToC mapping. */
+interface AowMapping {
+  code: string;
+  name: string;
+  /** Set only when exactly one contributing indicator id is known for that row (RIBL-R-10). */
+  kpi: string | null;
+}
+
+/**
+ * Program-level ToC buckets — never a real Area of Work. Mirrors `INTERMEDIATE_OUTCOMES_CODE` /
+ * `OUTCOMES_2030_CODE` in `dashboard-lab.component.ts` (duplicated, not imported, to avoid a
+ * cross-feature dependency for two string literals).
+ * @akili-spec changes/result-indicator-back-link
+ */
+const AOW_SENTINEL_CODES = new Set(['intermediate-outcomes', '2030-outcomes', 'intermediate outcomes', '2030 outcomes']);
+
+/** `work_package_id` only counts as a WP field when it looks like a stored program-unit code
+ *  (e.g. `AOW01`, `SGP-02`) — not a raw numeric ToC id (design.md §5). */
+function looksLikeAowCode(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  return !!trimmed && !/^\d+$/.test(trimmed);
+}
+
+/** First non-empty WP field on a `result_toc_results[]` row, per design.md §5 field order. */
+function resolveAowRowCode(row: any): string {
+  if (typeof row?.work_package_code === 'string' && row.work_package_code.trim()) return row.work_package_code.trim();
+  if (typeof row?.aow_code === 'string' && row.aow_code.trim()) return row.aow_code.trim();
+  if (looksLikeAowCode(row?.work_package_id)) return String(row.work_package_id).trim();
+  return '';
+}
+
+/**
+ * Maps a `GET_ContributorsPartners` response to the owning Area of Work for the primary / first
+ * planned **submitter** mapping (`result_toc_result.result_toc_results[]`) — never
+ * `contributors_result_toc_result` (Center-contributor mappings, RIBL-R-1). Fail-soft: any
+ * unexpected shape returns `null` (hide the control) rather than throwing or guessing a code from
+ * the HLO title.
+ * @akili-spec changes/result-indicator-back-link
+ */
+function mapAowFromContributorsPartners(resp: any): AowMapping | null {
+  const tocResult = resp?.response?.result_toc_result;
+  if (!tocResult || tocResult.planned_result === false) return null;
+
+  const rows: any[] = Array.isArray(tocResult.result_toc_results) ? tocResult.result_toc_results : [];
+  const row = rows.find(r => resolveAowRowCode(r));
+  if (!row) return null;
+
+  const code = resolveAowRowCode(row);
+  if (AOW_SENTINEL_CODES.has(code.toLowerCase())) return null;
+
+  const name = String(row?.work_package_name ?? row?.aow_name ?? '').trim();
+
+  const ids = new Set<string>(
+    (row?.indicators ?? [])
+      .map((indicator: any) => indicator?.toc_results_indicator_id ?? indicator?.related_node_id)
+      .filter((id: unknown) => id !== null && id !== undefined)
+      .map((id: unknown) => String(id))
+  );
+
+  return { code, name, kpi: ids.size === 1 ? [...ids][0] : null };
 }
 
 /** Palette per `status_id`, from the status token pairs in `styles/colors.scss`. */
@@ -43,7 +106,7 @@ const STATUS_TOKENS: Record<string, { fg: string; bg: string }> = {
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.Default
 })
-export class ResultHeaderComponent {
+export class ResultHeaderComponent implements DoCheck {
   readonly pdfSE = inject(PdfExportService);
   readonly metadataPanelSE = inject(ResultMetadataPanelService);
   private readonly api = inject(ApiService);
@@ -54,6 +117,11 @@ export class ResultHeaderComponent {
 
   readonly metaOpen = signal(false);
   readonly actionsOpen = signal(false);
+
+  /** Async owning-AOW mapping (RIBL-DD-1). `null` = not resolved / hidden. */
+  private readonly aowMapping = signal<AowMapping | null>(null);
+  /** Result id the mapping was fetched for — guards the "once per result id" GET (design.md §8). */
+  private aowMappingLoadedFor: number | string | null = null;
 
   get title(): string {
     return this.dataControlSE.currentResult?.title ?? '';
@@ -88,6 +156,27 @@ export class ResultHeaderComponent {
   get submitterValue(): string {
     const name = (this.dataControlSE.currentResult?.initiative_name ?? '').trim();
     return name ? `${this.officialCode} - ${name}` : this.officialCode;
+  }
+
+  /**
+   * Area of Work value for the identity-strip link: `{code} - {name}`, or the code alone when the
+   * mapping carries no name. Empty when official code or owning AOW is missing / empty /
+   * whitespace, unmapped, a program-level bucket, or the GET failed (RIBL-R-1, R-3).
+   * @akili-spec changes/result-indicator-back-link
+   */
+  get aowValue(): string {
+    const mapping = this.aowMapping();
+    if (!mapping) return '';
+    return mapping.name ? `${mapping.code} - ${mapping.name}` : mapping.code;
+  }
+
+  /** By AOW query params for the Area of Work link. `kpi` only when exactly one id is known. */
+  get aowQueryParams(): Record<string, string> | null {
+    const mapping = this.aowMapping();
+    if (!mapping) return null;
+    const params: Record<string, string> = { tocView: 'byAow', tocAow: mapping.code };
+    if (mapping.kpi) params['kpi'] = mapping.kpi;
+    return params;
   }
 
   get statusLabel(): string {
@@ -153,6 +242,28 @@ export class ResultHeaderComponent {
 
   private sectionFromUrl(): string {
     return this.router.url.split('?')[0].split('/').filter(Boolean).pop() ?? '';
+  }
+
+  /**
+   * Keeps the Area of Work mapping in sync with the loaded result. `dataControlSE.currentResult`
+   * and `api.resultsSE.currentResultId` are plain fields (same reason this component runs Default
+   * CD, not OnPush), so `ngDoCheck` — not an `effect()` — is what notices a result switch.
+   * @akili-spec changes/result-indicator-back-link
+   */
+  ngDoCheck(): void {
+    const resultId = this.api.resultsSE.currentResultId;
+    if (!this.officialCode || resultId === null || resultId === undefined) {
+      if (this.aowMapping() !== null) this.aowMapping.set(null);
+      this.aowMappingLoadedFor = null;
+      return;
+    }
+    if (this.aowMappingLoadedFor === resultId) return;
+    this.aowMappingLoadedFor = resultId;
+    this.api.resultsSE.GET_ContributorsPartners().subscribe({
+      next: (resp: any) => this.aowMapping.set(mapAowFromContributorsPartners(resp)),
+      // Fail-soft (RIBL-DD-1 / design.md §7): hide the control, no toast, no log.
+      error: () => this.aowMapping.set(null)
+    });
   }
 
   openChangeResultType(): void {

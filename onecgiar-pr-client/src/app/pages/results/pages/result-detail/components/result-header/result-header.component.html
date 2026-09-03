@@ -179,6 +179,18 @@
         {{ submitterValue }}
       </a>
     }
+    @if (aowValue) {
+      <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
+      <span class="text-[var(--pr-text-secondary)]">Area of Work</span>
+      <a
+        [routerLink]="['/result-framework-reporting/entity-details', officialCode]"
+        [queryParams]="aowQueryParams"
+        class="cursor-pointer font-medium text-[var(--pr-color-primary-300)] hover:opacity-80"
+        [attr.aria-label]="'Area of Work: ' + aowValue"
+        data-testid="result-header-aow">
+        {{ aowValue }}
+      </a>
+    }
     @if (statusLabel) {
       <span
         class="rounded-full px-[9px] py-[2px] text-[12px] font-medium"
