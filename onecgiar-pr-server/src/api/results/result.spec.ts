@@ -37,6 +37,7 @@ import { ResultsKnowledgeProductFairScoreRepository } from './results-knowledge-
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
 import { VersioningService } from '../versioning/versioning.service';
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
+import { ResultInnovationMergeSplitRepository } from './result-innovation-merge-split/result-innovation-merge-split.repository';
 import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
 import { ResultsCenterRepository } from './results-centers/results-centers.repository';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
@@ -351,6 +352,15 @@ describe('ResultsService (unit, pure mocks)', () => {
     })),
   } as any;
 
+  /**
+   * P2-3292 Step 3. `replaceForResult` rides the discontinuation save, so every general-information
+   * test reaches it; `findActiveByResult` is on the read path. Both resolve empty — the assertions
+   * that matter about this repository live in its own spec.
+   */
+  const mockInnovationMergeSplitRepo = {
+    replaceForResult: jest.fn().mockResolvedValue(undefined),
+    findActiveByResult: jest.fn().mockResolvedValue([]),
+  };
   const mockInvestmentDiscontinuedRepo = {
     inactiveData: jest.fn().mockResolvedValue(undefined),
     find: jest.fn().mockResolvedValue([]),
@@ -649,6 +659,10 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: ResultsInvestmentDiscontinuedOptionRepository,
           useValue: mockInvestmentDiscontinuedRepo,
+        },
+        {
+          provide: ResultInnovationMergeSplitRepository,
+          useValue: mockInnovationMergeSplitRepo,
         },
         {
           provide: ResultInitiativeBudgetRepository,

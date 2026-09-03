@@ -76,6 +76,7 @@ import { ResultAnswerRepository } from './result-questions/repository/result-ans
 import { InvestmentDiscontinuedOptionsModule } from './investment-discontinued-options/investment-discontinued-options.module';
 import { ResultsInvestmentDiscontinuedOptionsModule } from './results-investment-discontinued-options/results-investment-discontinued-options.module';
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
+import { ResultInnovationMergeSplitRepository } from './result-innovation-merge-split/result-innovation-merge-split.repository';
 import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
 import { NonPooledProjectBudgetRepository } from './result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultFoldersModule } from './result-folders/result-folders.module';
@@ -202,6 +203,7 @@ import { WebhookOutboxModule } from './webhook/webhook-outbox.module';
     ResultQuestionsRepository,
     ResultAnswerRepository,
     ResultsInvestmentDiscontinuedOptionRepository,
+    ResultInnovationMergeSplitRepository,
     ResultInitiativeBudgetRepository,
     NonPooledProjectBudgetRepository,
     InitiativeEntityMapRepository,

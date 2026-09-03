@@ -86,6 +86,7 @@ import { AppModuleIdEnum, RoleEnum } from 'src/shared/constants/role-type.enum';
 import { InstitutionRoleEnum } from './results_by_institutions/entities/institution_role.enum';
 import { ResultsKnowledgeProductFairScoreRepository } from './results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
+import { ResultInnovationMergeSplitRepository } from './result-innovation-merge-split/result-innovation-merge-split.repository';
 import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
 import { ResultsCenterRepository } from './results-centers/results-centers.repository';
 import { GeneralInformationDto } from './dto/general-information.dto';
@@ -188,6 +189,7 @@ export class ResultsService {
     private readonly _versioningService: VersioningService,
     private readonly _returnResponse: ReturnResponse,
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
+    private readonly _resultInnovationMergeSplitRepository: ResultInnovationMergeSplitRepository,
     private readonly _resultsByInstitutionsService: ResultsByInstitutionsService,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
@@ -844,10 +846,27 @@ export class ResultsService {
             });
           }
         }
+
+        // P2-3292 Step 3: where this innovation continued. It rides the discontinuation save on
+        // purpose — the statement only exists while the result is discontinued, so the same
+        // answer that creates it is the one that must retire it.
+        await this._resultInnovationMergeSplitRepository.replaceForResult(
+          result.id,
+          resultGeneralInformation.merge_split_targets ?? [],
+          user.id,
+        );
       } else if (result.result_type_id == 7 || result.result_type_id == 2) {
         await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
           [],
           result.id,
+          user.id,
+        );
+
+        // No longer discontinued: the merge/split statement goes with it. Passing an empty set
+        // deactivates the rows, it does not delete them, so re-answering "yes" brings them back.
+        await this._resultInnovationMergeSplitRepository.replaceForResult(
+          result.id,
+          [],
           user.id,
         );
       }
@@ -2180,6 +2199,13 @@ export class ResultsService {
           },
         });
 
+      // P2-3292 Step 3. Served always, not only for innovations: the screen decides whether to
+      // paint it, and an empty array is the honest answer for every other type.
+      const merge_split_targets =
+        await this._resultInnovationMergeSplitRepository.findActiveByResult(
+          result.id,
+        );
+
       const resultImpactAreaScores =
         await this._resultImpactAreaScoresService.find(result.id, undefined, {
           impact_area_score: true,
@@ -2263,6 +2289,7 @@ export class ResultsService {
           phase_year: result['phase_year'],
           is_discontinued: result['is_discontinued'],
           discontinued_options: discontinued_options,
+          merge_split_targets: merge_split_targets ?? [],
         },
         message: 'Successful response',
         status: HttpStatus.OK,

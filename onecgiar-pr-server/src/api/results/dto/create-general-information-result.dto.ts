@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ADUser } from '../../../auth/services/active-directory.service';
 import { ResultsInvestmentDiscontinuedOption } from '../results-investment-discontinued-options/entities/results-investment-discontinued-option.entity';
+import { InnovationTransitionType } from '../result-innovation-merge-split/entities/result-innovation-merge-split.entity';
 
 export class InstitutionDto {
   @ApiProperty({
@@ -14,6 +15,21 @@ export class InstitutionTypeDto {
     description: 'Identifier for the institution type linked to the result.',
   })
   institutions_type_id: number;
+}
+
+export class InnovationTransitionDto {
+  @ApiProperty({
+    description:
+      'Identifier of the innovation this one merged into, or one of the innovations it split into.',
+  })
+  target_result_id: number;
+
+  @ApiProperty({
+    description:
+      'Whether the innovation merged into the target or split into it.',
+    enum: InnovationTransitionType,
+  })
+  transition_type: InnovationTransitionType;
 }
 
 export class CreateGeneralInformationResultDto {
@@ -134,4 +150,13 @@ export class CreateGeneralInformationResultDto {
     type: () => [ResultsInvestmentDiscontinuedOption],
   })
   public discontinued_options!: ResultsInvestmentDiscontinuedOption[];
+
+  @ApiPropertyOptional({
+    description:
+      'P2-3292: where the discontinued innovation continued — the innovations it merged into ' +
+      'or was split into. One entry per target, so a split into three carries three entries. ' +
+      'Only read when `is_discontinued` is true and the result is an innovation.',
+    type: () => [InnovationTransitionDto],
+  })
+  public merge_split_targets?: InnovationTransitionDto[];
 }
