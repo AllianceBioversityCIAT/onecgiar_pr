@@ -730,6 +730,67 @@ export class InnovationUseService {
     }
   }
 
+  /**
+   * P2-3537 §4 — the "Previous reported use" the Current Use Update block shows.
+   *
+   * A READ of history, never a copy stored on this result. The story is explicit about it, and the
+   * reason is concrete: if the previous round's report is later amended, this figure has to follow.
+   * It also has to, because the phase rollover does not copy these rows at all —
+   * `ResultsInnovationsUseRepository.createQueries` only carries `male_using` / `female_using`.
+   *
+   * The figure is the **sum of the actors** of the previous phase's current-use section. That is
+   * Yeck's decision of 3 Sep 2026 (Q4): the total counts PEOPLE, not organisations or hectares, so
+   * that next year's "previous use" is a number whose meaning can still be read.
+   *
+   * ⚠️ `how_many` is authoritative here because `getActorsData` recomputes it as `women + men` for
+   * every disaggregated row, and leaves the typed value on rows where disaggregation does not
+   * apply. Summing the gender columns instead would drop the second kind.
+   *
+   * Returns `null` for Scenario A — no previous phase, or a previous phase with no current-use
+   * actors. `null` is what tells the screen not to render the block at all, which is the other half
+   * of Yeck's decision: a reporter with organisations and no actors must not be shown a
+   * reconciliation they can never satisfy.
+   *
+   * Fails soft, same as the 2030 sibling: an unreadable previous phase must not cost the reporter
+   * the section they came to fill in.
+   */
+  private async getPreviousPhaseCurrentUse(
+    previousResultId: unknown,
+    previousPhaseYear: unknown,
+  ) {
+    const previousId = Number(previousResultId);
+    if (!Number.isFinite(previousId) || previousId <= 0) return null;
+
+    try {
+      const actors = await this.getActorsData(previousId);
+      const currentUseActors = actors.filter(
+        (row: any) => Number(row.section_id) === 1,
+      );
+
+      if (!currentUseActors.length) return null;
+
+      const total = currentUseActors.reduce(
+        (sum: number, row: any) => sum + (Number(row.how_many) || 0),
+        0,
+      );
+
+      const year = Number(previousPhaseYear);
+
+      return {
+        result_id: previousId,
+        phase_year: Number.isFinite(year) ? year : null,
+        total_actors: total,
+        actors: currentUseActors,
+      };
+    } catch (error) {
+      this.logger.error(
+        `P2-3537: could not read the previous-phase current use from result ${previousId}`,
+        error,
+      );
+      return null;
+    }
+  }
+
   async getInnovationUse(resultId: number) {
     try {
       const innDevExists =
@@ -780,6 +841,14 @@ export class InnovationUseService {
           (innDevExists as any).previous_result_id,
         );
 
+      // P2-3537 §4 — the current use this result inherited from the previous reporting phase.
+      // `null` is Scenario A (first report, or no actors last round): the screen does not render
+      // the Current Use Update block at all.
+      const current_use_previous = await this.getPreviousPhaseCurrentUse(
+        (innDevExists as any).previous_result_id,
+        (innDevExists as any).previous_phase_year,
+      );
+
       const discontinued_options =
         await this._resultsInvestmentDiscontinuedOptionRepository.find({
           where: { result_id: resultId, is_active: true },
@@ -801,6 +870,7 @@ export class InnovationUseService {
         measures: measures_current,
         innovation_use_2030,
         innovation_use_2030_previous,
+        current_use_previous,
         investment_programs,
         investment_partners,
         investment_bilateral,
