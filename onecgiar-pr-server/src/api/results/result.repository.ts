@@ -1510,6 +1510,7 @@ WHERE
     r.environmental_biodiversity_tag_level_id,
     r.poverty_tag_level_id,
     r.version_id,
+    v.phase_year,
     r.result_type_id,
     IF(r.source = 'Result', 'W1/W2', 'W3/Bilaterals') as source_name,
     r.status,
