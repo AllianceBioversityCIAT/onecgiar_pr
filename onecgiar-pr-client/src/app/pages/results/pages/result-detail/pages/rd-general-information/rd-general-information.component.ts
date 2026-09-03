@@ -274,8 +274,18 @@ export class RdGeneralInformationComponent implements OnInit {
     return value;
   }
 
+  /**
+   * P2-3292 Step 2 — the reason checklist is one phase generation, so the phase year travels with
+   * the request: the 2026 set from the 2026 phase on, the six original reasons before that.
+   *
+   * 🛑 The year comes from `FieldsManagerService.phaseYear` (the result signal), never from the
+   * general-information payload this method is called from — that endpoint answers `phase_year:
+   * 2025` for a result the screen shows in Reporting 2026. An unknown year sends nothing, which
+   * asks for the legacy catalogue: the same fail-to-legacy every other phase gate uses.
+   */
   GET_investmentDiscontinuedOptions(result_type_id) {
-    this.api.resultsSE.GET_investmentDiscontinuedOptions(result_type_id).subscribe(({ response }) => {
+    const phaseYear = this.fieldsManagerSE.phaseYear() ?? undefined;
+    this.api.resultsSE.GET_investmentDiscontinuedOptions(result_type_id, phaseYear).subscribe(({ response }) => {
       this.convertChecklistToDiscontinuedOptions(response);
     });
   }

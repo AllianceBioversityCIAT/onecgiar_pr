@@ -286,4 +286,58 @@ describe('RdAnnualUpdatingComponent', () => {
       expect(promptOf(root)).toBeNull();
     });
   });
+
+  /**
+   * P2-3292 Step 2 — which reason owns the free-text box.
+   *
+   * The template used to hardcode `investment_discontinued_option_id == 6`. The 2026 "Other" row is
+   * a NEW row with an AUTO_INCREMENT id, so under the old rule its box would simply never have
+   * rendered and the reporter could not have typed the reason at all. The catalogue now says so
+   * itself; the id is kept only for the legacy row, which was deliberately not flagged (that would
+   * have been an UPDATE on a row a 2025-phase result still renders).
+   */
+  describe('needsDescription()', () => {
+    it('trusts the catalogue flag when the row declares it', () => {
+      expect(component.needsDescription({ investment_discontinued_option_id: 46, requires_description: true })).toBe(true);
+    });
+
+    it('hides the box on a 2026 row that declares it does not need one', () => {
+      expect(component.needsDescription({ investment_discontinued_option_id: 44, requires_description: false })).toBe(false);
+    });
+
+    it('still recognises the legacy "Other" row by its id', () => {
+      // Row 6 of the base generation. It carries no flag on purpose.
+      expect(component.needsDescription({ investment_discontinued_option_id: 6 })).toBe(true);
+    });
+
+    it('hides the box on every other legacy row', () => {
+      for (const id of [1, 2, 3, 4, 5]) {
+        expect(component.needsDescription({ investment_discontinued_option_id: id })).toBe(false);
+      }
+    });
+
+    it('lets the flag override the legacy id in both directions', () => {
+      expect(component.needsDescription({ investment_discontinued_option_id: 6, requires_description: false })).toBe(false);
+    });
+
+    it('does not throw on a missing row', () => {
+      expect(component.needsDescription(undefined)).toBe(false);
+      expect(component.needsDescription(null)).toBe(false);
+    });
+
+    it('renders the box for the 2026 "Other" row and for nothing else', () => {
+      fixture.destroy();
+      dataControlSE.currentResult = { result_type_id: INNOVATION_DEVELOPMENT, phase_year: 2026, portfolio: 'P25' };
+      const rendered = TestBed.createComponent(RdAnnualUpdatingComponent);
+      jest.spyOn(rendered.componentInstance.api.resultsSE, 'GET_globalNarratives').mockReturnValue(of({ response: { value: '' } }));
+      rendered.componentInstance.generalInfoBody.is_discontinued = true;
+      rendered.componentInstance.generalInfoBody.discontinued_options = [
+        { investment_discontinued_option_id: 40, option: 'Discontinued: limited design / testing / validation progress', requires_description: false, value: false },
+        { investment_discontinued_option_id: 46, option: 'Other (please specify)', requires_description: true, value: false }
+      ];
+      rendered.detectChanges();
+
+      expect(rendered.nativeElement.querySelectorAll('.discontinued_option app-pr-input').length).toBe(1);
+    });
+  });
 });

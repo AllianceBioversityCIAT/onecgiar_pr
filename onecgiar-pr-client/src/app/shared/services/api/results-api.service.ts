@@ -1215,8 +1215,16 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.baseApiBaseUrlV2}results/questions/innovation-development/${this.currentResultId}`);
   }
 
-  GET_investmentDiscontinuedOptions(result_type_id) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results/investment-discontinued-options/${result_type_id}`);
+  /**
+   * P2-3292 — `phase_year` picks the reason generation: the 2026 set from the 2026 phase on, the
+   * six original ones before that. Omitting it answers the pre-P2-3292 catalogue, so callers that
+   * do not know about phases (IPSR) keep working unchanged.
+   */
+  GET_investmentDiscontinuedOptions(result_type_id, phase_year?: number) {
+    const phaseYearParam = typeof phase_year === 'number' ? `?phaseYear=${phase_year}` : '';
+    return this.http.get<any>(
+      `${environment.apiBaseUrl}api/results/investment-discontinued-options/${result_type_id}${phaseYearParam}`
+    );
   }
 
   GET_versioningResult() {

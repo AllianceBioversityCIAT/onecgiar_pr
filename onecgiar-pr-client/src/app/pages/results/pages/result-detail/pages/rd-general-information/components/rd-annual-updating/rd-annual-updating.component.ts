@@ -114,6 +114,26 @@ export class RdAnnualUpdatingComponent implements OnInit {
     return this.generalInfoBody.is_discontinued ? this.generalInfoBody.discontinued_options.some(option => option.value) : true;
   }
 
+  /** The legacy "Other" row, recognised by id because the catalogue never flagged it (P2-3292). */
+  static readonly LEGACY_OTHER_OPTION_ID = 6;
+
+  /**
+   * True when this reason owns the free-text box.
+   *
+   * P2-3292 Step 2 — the catalogue now says so itself through `requires_description`, because the
+   * 2026 "Other" row is a new row with an AUTO_INCREMENT id and would never have matched the
+   * hardcoded 6. The legacy row is still matched by that id: setting the flag on it would have
+   * meant an UPDATE on a catalogue row a 2025-phase result still renders, which epic P2-3243
+   * forbids. A row that declares the flag wins; only a row that says nothing falls back to the id.
+   */
+  needsDescription(discontinuedOption: any): boolean {
+    if (discontinuedOption?.requires_description != null) {
+      return !!discontinuedOption.requires_description;
+    }
+
+    return discontinuedOption?.investment_discontinued_option_id == RdAnnualUpdatingComponent.LEGACY_OTHER_OPTION_ID;
+  }
+
   /**
    * Innovation Development + phase year >= 2026.
    *

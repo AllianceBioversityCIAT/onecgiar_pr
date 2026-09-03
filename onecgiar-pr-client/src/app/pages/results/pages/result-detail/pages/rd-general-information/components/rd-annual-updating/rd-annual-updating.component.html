@@ -46,8 +46,13 @@
         <div class="discontinued_option">
           <app-pr-checkbox [label]="discontinuedOption?.option" [(ngModel)]="discontinuedOption.value" [isStatic]="annualUpdatingEditable">
           </app-pr-checkbox>
+          <!-- P2-3292 Step 2: which reason owns the free-text box is now the catalogue's call
+               (`requires_description`), because the 2026 "Other" row gets whatever id the
+               AUTO_INCREMENT hands it and would never have matched the literal 6. The legacy row
+               keeps being recognised by its id: flagging it would have meant an UPDATE on a live
+               catalogue row, and rewriting those is exactly what epic P2-3243 forbids. -->
           <app-pr-input
-            *ngIf="discontinuedOption?.investment_discontinued_option_id == 6"
+            *ngIf="needsDescription(discontinuedOption)"
             placeholder="Enter text"
             type="text"
             [required]="false"
