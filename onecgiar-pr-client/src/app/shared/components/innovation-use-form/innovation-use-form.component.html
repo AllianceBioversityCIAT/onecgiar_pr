@@ -35,9 +35,11 @@
 
       <div class="current_use_update__figure">
         Previous reported use:
-        <strong>{{ previousReportedUse() }}</strong>
-        @if (previousUsePhaseYear()) {
-          <span class="current_use_update__phase">(FY{{ previousUsePhaseYear() }})</span>
+        <strong>{{ previousReportedUse() }}</strong
+        >@if (previousUsePhaseYear()) {
+          <!-- The space lives inside the span: Angular collapses whitespace between elements, so
+               without it the line renders as "500(FY2025)". Seen on prtest, 3 Sep 2026. -->
+          <span class="current_use_update__phase">&nbsp;(FY{{ previousUsePhaseYear() }})</span>
         }
       </div>
 
