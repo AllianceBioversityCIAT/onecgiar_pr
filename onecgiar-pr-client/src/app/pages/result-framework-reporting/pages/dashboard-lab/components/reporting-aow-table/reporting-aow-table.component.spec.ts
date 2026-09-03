@@ -1341,8 +1341,37 @@ describe('ReportingAowTableComponent', () => {
       expect(el.querySelector('.pr-flat-head')).toBeTruthy();
       const heads = Array.from(el.querySelectorAll('.pr-flat-head .pr-flat-cell')).map(h => h.textContent?.trim());
       expect(heads.join('|')).toContain('Indicator');
+      expect(heads.join('|')).toContain('AoW');
+      expect(heads.join('|')).toContain('Target');
       expect(heads.join('|')).toContain('Achieved');
-      expect(heads.join('|')).toContain('Status');
+      expect(heads.join('|')).toContain('Progress');
+      expect(heads.join('|')).toContain('Actions');
+      expect(heads.join('|')).not.toContain('Status');
+    });
+
+    it('sorts Progress numerically by QA percentage, falling back to -1 for no target', async () => {
+      await build([
+        group([
+          row({ indicator_id: 1, progress_percentage: 100, target_value_sum: '10' }),
+          row({ indicator_id: 2, progress_percentage: 25, target_value_sum: '10' }),
+          row({ indicator_id: 3, progress_percentage: undefined, target_value_sum: undefined })
+        ])
+      ], { viewMode: 'flat' });
+      expect(component.flatTableRows().map(r => r.__sortProgress)).toEqual([100, 25, -1]);
+    });
+
+    it('omits the Next pending button from the flat table row actions', async () => {
+      await flat();
+      const el = fixture.nativeElement as HTMLElement;
+      const nextPendingBtn = el.querySelector('.pr-flat-body button[aria-label="Go to the next pending KPI"]');
+      expect(nextPendingBtn).toBeNull();
+    });
+
+    it('renders Type and Center as subtitle chips in the Indicator column', async () => {
+      await flat();
+      const el = fixture.nativeElement as HTMLElement;
+      const firstRow = el.querySelector('.pr-flat-body .pr-flat-cell');
+      expect(firstRow?.textContent).toContain('CIAT');
     });
 
     it('sorts Target numerically, not as the API strings it sends', async () => {

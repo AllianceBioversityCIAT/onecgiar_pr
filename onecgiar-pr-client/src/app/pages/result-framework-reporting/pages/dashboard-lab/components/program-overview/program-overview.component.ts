@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, input, output, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, input, model, output, signal, viewChild } from '@angular/core';
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import { NgClass } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -38,6 +38,7 @@ import type { OverviewAowProgressRowRich, OverviewScopeOption, OverviewScopeBrea
 import type { ECElementEvent } from 'echarts/core';
 // @akili-spec changes/reporting-entry-hub — reuse the hub's centralised copy for the Report button's tooltip text.
 import { HUB_COPY } from '../reporting-entry-hub/hub-copy';
+import { SCIENCE_PROGRAM_DESCRIPTIONS } from '../reporting-program-band/reporting-program-band.component';
 
 /** A matrix card's view mode: default 'vertical-bar', then 'horizontal-bar', then 'heatmap'. */
 export type ChartViewMode = 'vertical-bar' | 'horizontal-bar' | 'heatmap';
@@ -174,8 +175,6 @@ export interface HeatmapModel {
  *
  * ⚠️ px only — `html` is 12px (UI-RULES §1.3).
  */
-import { PrTabIntroComponent } from '../../../../../../shared/components/pr-tab-intro/pr-tab-intro.component';
-
 @Component({
   selector: 'app-program-overview',
   standalone: true,
@@ -183,7 +182,6 @@ import { PrTabIntroComponent } from '../../../../../../shared/components/pr-tab-
     NgClass,
     PrVizChartComponent,
     PrTooltipDirectiveModule,
-    PrTabIntroComponent,
     NgIcon,
     HlmPopover,
     HlmPopoverContent,
@@ -195,6 +193,7 @@ import { PrTabIntroComponent } from '../../../../../../shared/components/pr-tab-
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProgramOverviewComponent {
+  readonly programCode = input<string>('');
   readonly programName = input<string>('');
   /** Long About copy. Empty → short stand-in using the program name. */
   readonly programDescription = input<string>('');
@@ -317,8 +316,11 @@ export class ProgramOverviewComponent {
     if (link) this.openResults.emit(link);
   }
 
+  /** When true, the inline filter bar is omitted because filters are handled in the top bar. */
+  readonly hideInlineFilters = input<boolean>(false);
+
   /** Active section filter: 'all' | 'w1w2' | 'bilateral' | 'aow' */
-  readonly activeSection = signal<OverviewSection>('all');
+  readonly activeSection = model<OverviewSection>('all');
 
   setActiveSection(section: OverviewSection): void {
     this.activeSection.set(this.activeSection() === section && section !== 'all' ? 'all' : section);
@@ -580,14 +582,23 @@ export class ProgramOverviewComponent {
   readonly description = computed(() => {
     const explicit = this.programDescription()?.trim();
     if (explicit) return explicit;
-    const name = this.programName()?.trim() || 'This program';
+    const code = this.programCode()?.trim().toUpperCase();
+    if (code && SCIENCE_PROGRAM_DESCRIPTIONS[code]) {
+      return SCIENCE_PROGRAM_DESCRIPTIONS[code];
+    }
+    const name = this.programName()?.trim();
+    if (name) {
+      const normalized = name.toLowerCase();
+      for (const [, desc] of Object.entries(SCIENCE_PROGRAM_DESCRIPTIONS)) {
+        if (desc.toLowerCase().startsWith(normalized)) {
+          return desc;
+        }
+      }
+      return `${name} is a CGIAR research program delivering science, innovations, and partnerships to advance food, land, and water systems transformation and contribute to CGIAR 2030 targets.`;
+    }
     return (
-      `${name} modernizes CGIAR and national breeding programs so that farmers get climate-resilient, ` +
-      `market-preferred varieties faster. The program connects market intelligence, breeding pipelines, ` +
-      `trait discovery, genetic innovation and seed systems into one delivery chain, and works with national ` +
-      `agricultural research systems and private seed partners across South Asia, sub-Saharan Africa and ` +
-      `Latin America. Reporting covers products delivered to partners, the outcomes those products enable, ` +
-      `and progress toward the 2030 outcomes agreed with donors.`
+      'This program works with partners across the CGIAR portfolio to deliver research, innovations, ' +
+      'and outcomes contributing to the 2030 targets.'
     );
   });
 

@@ -17,10 +17,10 @@ describe('PrTabIntroComponent', () => {
     componentRef = fixture.componentRef;
   });
 
-  it('should create with default inputs and open by default (STEP-R-1)', () => {
+  it('should create with default inputs and closed by default (STEP-R-1)', () => {
     fixture.detectChanges();
     expect(component).toBeTruthy();
-    expect(component.isOpen()).toBe(true);
+    expect(component.isOpen()).toBe(false);
     expect(component.title()).toBe('What does this tab show?');
     expect(component.icon()).toBe('info');
     const compiled = fixture.nativeElement as HTMLElement;
@@ -34,7 +34,8 @@ describe('PrTabIntroComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Overview Guide');
-    expect(compiled.textContent).toContain('This is a description of the overview tab.');
+    // Initially closed, description is not rendered
+    expect(compiled.textContent).not.toContain('This is a description of the overview tab.');
   });
 
   it('should toggle collapse state when header or button is clicked (STEP-R-2)', () => {
@@ -42,28 +43,29 @@ describe('PrTabIntroComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
+    expect(component.isOpen()).toBe(false);
+    expect(compiled.textContent).not.toContain('Collapsible content description');
+
+    // Click toggle header to open
+    const header = compiled.querySelector('[role="button"]') as HTMLElement;
+    header.click();
+    fixture.detectChanges();
+
     expect(component.isOpen()).toBe(true);
     expect(compiled.textContent).toContain('Collapsible content description');
 
-    // Click toggle header
-    const header = compiled.querySelector('[role="button"]') as HTMLElement;
+    // Click toggle header again to close
     header.click();
     fixture.detectChanges();
 
     expect(component.isOpen()).toBe(false);
     expect(compiled.textContent).not.toContain('Collapsible content description');
-
-    // Click toggle header again
-    header.click();
-    fixture.detectChanges();
-
-    expect(component.isOpen()).toBe(true);
-    expect(compiled.textContent).toContain('Collapsible content description');
   });
 
-  it('should respect defaultOpen input if false (STEP-R-3)', () => {
-    componentRef.setInput('defaultOpen', false);
+  it('should respect defaultOpen input if true (STEP-R-3)', () => {
+    componentRef.setInput('defaultOpen', true);
+    component.ngOnInit();
     fixture.detectChanges();
-    expect(component.isOpen()).toBe(false);
+    expect(component.isOpen()).toBe(true);
   });
 });

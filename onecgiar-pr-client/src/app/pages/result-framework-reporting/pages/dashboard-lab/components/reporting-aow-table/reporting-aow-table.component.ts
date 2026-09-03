@@ -115,6 +115,7 @@ export type RowStatus = 'not-started' | 'in-progress' | 'achieved' | 'overachiev
 export interface ReportingFlatRow extends ReportingIndicator {
   __sortTarget: number;
   __sortAchieved: number;
+  __sortProgress: number;
   __sortStatus: number;
   __statusKey: RowStatus;
   __statusText: string;
@@ -1002,6 +1003,7 @@ export class ReportingAowTableComponent {
         __aowCode: aow ?? undefined,
         __sortTarget: this.sortNumber(row.target_value_sum),
         __sortAchieved: this.sortNumber(row.actual_achieved_value_sum),
+        __sortProgress: this.hasUsableTarget(row) ? this.progressOf(row) : -1,
         __sortStatus: ReportingAowTableComponent.STATUS_RANK[status],
         __statusKey: status,
         __statusText: this.statusLabel(row),

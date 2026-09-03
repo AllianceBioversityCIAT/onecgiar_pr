@@ -26,22 +26,6 @@
 -->
 
 <div class="grid grid-cols-12 content-start gap-[16px] p-[32px]">
-  <div class="col-span-12">
-    <app-pr-tab-intro
-      title="What does this tab show?"
-      description="A summary of your Science Program: how many results you have planned and reported, which CGIAR Centers are contributing, the Areas of Work involved, and other summary figures. Use it to see the overall picture of your Science Program at a glance." />
-  </div>
-
-  <!-- 1 · About this program · span 12 -->
-  <section class="col-span-12 rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
-    <h2 class="m-0 mb-[20px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
-      About this program
-    </h2>
-    <p class="m-0 text-[14px] font-normal leading-[1.6] text-[var(--pr-text)] [text-wrap:pretty]">
-      {{ description() }}
-    </p>
-  </section>
-
   <!-- KPI Summary Cards: Totals and key health metrics -->
   <div class="col-span-12 grid grid-cols-12 gap-[16px]">
     <!-- KPI 1: W1/W2 Results (Hero Highlight Card with diffused purple gradient) -->
@@ -194,6 +178,7 @@
     `min-[…]:max-[…]:` bands on the trigger below); its OWN full-width row beneath the tabs below
     900px, via `order`/`w-full` on the SAME control instance — never a second, duplicate instance.
   -->
+  @if (!hideInlineFilters()) {
   <div class="col-span-12 flex flex-wrap items-center gap-[12px] pt-1">
     <div class="inline-flex rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] p-[3px]" role="tablist" aria-label="Section filter">
       <button
@@ -202,7 +187,7 @@
         role="tab"
         [attr.aria-selected]="activeSection() === 'all'"
         (click)="setActiveSection('all')"
-        class="cursor-pointer rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none"
+        class="cursor-pointer rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
         [class]="activeSection() === 'all'
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
@@ -213,7 +198,7 @@
         role="tab"
         [attr.aria-selected]="activeSection() === 'w1w2'"
         (click)="setActiveSection('w1w2')"
-        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none"
+        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
         [class]="activeSection() === 'w1w2'
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-color-primary-600)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
@@ -229,7 +214,7 @@
         role="tab"
         [attr.aria-selected]="activeSection() === 'bilateral'"
         (click)="setActiveSection('bilateral')"
-        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none"
+        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
         [class]="activeSection() === 'bilateral'
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-color-primary-600)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
@@ -245,7 +230,7 @@
         role="tab"
         [attr.aria-selected]="activeSection() === 'aow'"
         (click)="setActiveSection('aow')"
-        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none"
+        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
         [class]="activeSection() === 'aow'
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-color-primary-600)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
@@ -383,11 +368,12 @@
         type="button"
         (click)="clearFilters()"
         [class.ml-auto]="activeSection() === 'all'"
-        class="flex h-[30px] cursor-pointer items-center rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12.5px] font-semibold text-[var(--pr-text-secondary)] outline-none transition-colors duration-150 hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-text-heading)] focus-visible:shadow-[var(--pr-focus-ring)]">
+        class="flex h-[30px] cursor-pointer items-center rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12.5px] font-semibold text-[var(--pr-text-secondary)] outline-none transition-colors duration-150 hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-text-heading)] focus-visible:shadow-[var(--pr-focus-ring)] max-[899px]:order-2">
         Clear filters
       </button>
     }
   </div>
+  }
 
   @if (activeSection() === 'all' || activeSection() === 'aow') {
   <!-- 2 · Progress by area of work · span 12 — promoted to the HERO position by

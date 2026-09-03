@@ -24,7 +24,7 @@
   <!-- No `overflow-x-auto` here: `app-pr-table` already renders its own `.pr-table-wrap` scroller,
        and nesting a second one gives the user two scrollbars for one axis. This div only draws the
        card (border + radius); the horizontal scrolling belongs to `.pr-flat-table` below. -->
-  <div class="pr-flat-scroll rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)]">
+  <div class="pr-flat-scroll rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] overflow-hidden">
     <app-pr-table [value]="flatTableRows()" styleClass="pr-flat-table">
       <ng-template prTableHeader>
         <tr class="pr-flat-row pr-flat-head">
@@ -38,16 +38,6 @@
               AoW <pr-sort-icon field="__aowCode" />
             </span>
           </th>
-          <th class="pr-flat-cell text-center" scope="col" prSortableColumn="__typeLabel">
-            <span class="inline-flex items-center justify-center gap-[4px] w-full cursor-pointer">
-              Type <pr-sort-icon field="__typeLabel" />
-            </span>
-          </th>
-          <th class="pr-flat-cell text-center" scope="col" prSortableColumn="__centerLabel">
-            <span class="inline-flex items-center justify-center gap-[4px] w-full cursor-pointer">
-              Center <pr-sort-icon field="__centerLabel" />
-            </span>
-          </th>
           <th class="pr-flat-cell text-center" scope="col" prSortableColumn="__sortTarget">
             <span class="inline-flex items-center justify-center gap-[4px] w-full cursor-pointer">
               Target <pr-sort-icon field="__sortTarget" />
@@ -58,9 +48,9 @@
               Achieved <pr-sort-icon field="__sortAchieved" />
             </span>
           </th>
-          <th class="pr-flat-cell text-center" scope="col" prSortableColumn="__sortStatus">
+          <th class="pr-flat-cell text-center" scope="col" prSortableColumn="__sortProgress">
             <span class="inline-flex items-center justify-center gap-[4px] w-full cursor-pointer">
-              Status <pr-sort-icon field="__sortStatus" />
+              Progress <pr-sort-icon field="__sortProgress" />
             </span>
           </th>
           <th class="pr-flat-cell text-center" scope="col" aria-hidden="true">
@@ -96,11 +86,22 @@
                   {{ isTitleExpanded(row.indicator_id) ? 'Show less' : 'Show more' }}
                 </button>
               }
-              <span
-                class="pr-clamp-1 mt-[4px] text-[12px] font-normal leading-[16px] text-[var(--pr-text-secondary)]"
-                [title]="indicatorNameOf(row)">
-                {{ indicatorNameOf(row) }}
-              </span>
+              <div class="mt-[4px] flex flex-wrap items-center gap-[6px]">
+                @if (row.__typeLabel) {
+                  <span
+                    class="inline-block max-w-[160px] truncate rounded-full bg-[#6b46e51f] px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-400)]"
+                    [title]="row.__typeLabel">
+                    {{ row.__typeLabel }}
+                  </span>
+                }
+                @if (row.__centerLabel && row.__centerLabel !== '—') {
+                  <span
+                    class="inline-flex items-center justify-center rounded-[5px] bg-slate-100 px-[6px] py-[2px] text-[11px] font-medium text-slate-700 border border-slate-200"
+                    [title]="row.__centerLabel">
+                    {{ row.__centerLabel }}
+                  </span>
+                }
+              </div>
             </div>
           </td>
 
@@ -116,29 +117,7 @@
             }
           </td>
 
-          <!-- 3 — category chip -->
-          <td class="pr-flat-cell flex items-center justify-center min-w-0">
-            <span
-              class="inline-block max-w-[130px] truncate rounded-full bg-[#6b46e51f] px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-400)]"
-              [title]="row.__typeLabel">
-              {{ row.__typeLabel }}
-            </span>
-          </td>
-
-          <!-- 4 — centre -->
-          <td class="pr-flat-cell flex items-center justify-center min-w-0">
-            @if (row.__centerLabel && row.__centerLabel !== '—') {
-              <span
-                class="inline-flex items-center justify-center rounded-[5px] bg-slate-100 px-[6px] py-[2px] text-[11px] font-medium text-slate-700 border border-slate-200"
-                [title]="row.__centerLabel">
-                {{ row.__centerLabel }}
-              </span>
-            } @else {
-              <span class="text-[13px] text-[var(--pr-text-subtle)]">—</span>
-            }
-          </td>
-
-          <!-- 5 — Target -->
+          <!-- 3 — Target -->
           <td class="pr-flat-cell flex items-center justify-center">
             <button
               type="button"
@@ -152,7 +131,7 @@
             </button>
           </td>
 
-          <!-- 6 — Achieved -->
+          <!-- 4 — Achieved -->
           <td class="pr-flat-cell flex items-center justify-center">
             <button
               type="button"
@@ -168,37 +147,31 @@
             </button>
           </td>
 
-          <!-- 7 — status pill (semáforo) -->
-          <td class="pr-flat-cell flex items-center justify-center">
-            <span
-              class="inline-flex items-center gap-[5px] whitespace-nowrap rounded-full px-[8px] py-[2px] text-[11px] font-medium"
-              [class]="statusPillClass(row.__statusKey)"
-              [prTooltip]="row.__statusText">
-              <span class="h-[6px] w-[6px] rounded-full bg-current"></span>
-              {{ row.__statusText }}
-            </span>
+          <!-- 5 — Progress -->
+          <td class="pr-flat-cell flex items-center justify-center min-w-0">
+            @if (!hasUsableTarget(row)) {
+              <span
+                class="block text-[11.5px] font-medium italic text-[var(--pr-text-subtle)] text-center"
+                [prTooltip]="isOverachievedWithoutTarget(row) ? 'No target was set for this indicator, so a percentage cannot be calculated. Results were still reported against it. It is excluded from the averages above.' : 'No target was set for this indicator, so a percentage cannot be calculated. It is excluded from the averages above.'">
+                {{ isOverachievedWithoutTarget(row) ? 'Overachieved' : 'No target set' }}
+              </span>
+            } @else {
+              <div
+                class="flex flex-col items-center justify-center text-center leading-tight"
+                [prTooltip]="progressTracksTooltip(row)"
+                prTooltipPosition="top">
+                <span class="text-[12.5px] font-bold tabular-nums text-[var(--pr-text-heading)] whitespace-nowrap">
+                  <span class="text-[10px] font-medium uppercase text-[var(--pr-text-subtle)] mr-[2px]">QA</span>{{ row.progress_percentage || '0%' }}
+                </span>
+                <span class="text-[11px] font-semibold tabular-nums text-[var(--pr-text-secondary)] whitespace-nowrap">
+                  <span class="text-[9.5px] font-medium uppercase text-[var(--pr-text-subtle)] mr-[2px]">Prel.</span>{{ row.preliminary_progress_percentage || '0%' }}
+                </span>
+              </div>
+            }
           </td>
 
-          <!-- 8 — Actions: Report + Menu -->
-          <td class="pr-flat-cell flex flex-wrap items-center justify-center gap-[4px]">
-            @if (isLastReportedRow(row)) {
-              @if (nextPendingRow(); as next) {
-                <button
-                  type="button"
-                  class="inline-flex h-[28px] shrink-0 cursor-pointer appearance-none items-center gap-[4px] rounded-[8px] border border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] px-[8px] text-[11px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-100)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
-                  [prTooltip]="next.indicator_description"
-                  aria-label="Go to the next pending KPI"
-                  (click)="goToNextPending($event)">
-                  <span class="material-icons-round text-[13px]" aria-hidden="true">arrow_downward</span> Next pending
-                </button>
-              } @else {
-                <span
-                  class="inline-flex h-[28px] shrink-0 items-center rounded-[8px] bg-emerald-50 px-[6px] text-[10.5px] font-semibold text-emerald-700"
-                  title="All pending KPIs reported">
-                  <span class="material-icons-round text-[13px]" aria-hidden="true">check_circle</span>
-                </span>
-              }
-            }
+          <!-- 6 — Actions -->
+          <td class="pr-flat-cell flex items-center justify-end gap-[6px]">
             @if (canCopyLink(row)) {
               <button
                 type="button"

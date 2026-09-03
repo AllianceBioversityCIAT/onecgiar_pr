@@ -21,6 +21,7 @@ describe('ReportingProgramBandComponent', () => {
     component = fixture.componentInstance;
     fixture.componentRef.setInput('programCode', 'SP01');
     fixture.componentRef.setInput('programName', 'Breeding for Tomorrow');
+    fixture.componentRef.setInput('collapsible', true);
     Object.entries(inputs).forEach(([k, v]) => fixture.componentRef.setInput(k, v));
     fixture.detectChanges();
   };
@@ -88,28 +89,44 @@ describe('ReportingProgramBandComponent', () => {
   });
 
   // ── P4 · compact band on scroll ───────────────────────────────────────────
-  describe('compact band', () => {
-    it('starts expanded: identity block at 88px, nothing collapsed rendered', async () => {
-      await build({ showToolbar: true });
+  describe('fixed header (default)', () => {
+    it('stays expanded and fixed at all scroll offsets by default', async () => {
+      await build({ showToolbar: true, collapsible: false });
 
       expect(component.bandCollapsed()).toBe(false);
-      expect(identity().className).toContain('h-[88px]');
+      expect(identity().className).toContain('h-[64px]');
+
+      scrollTo(200);
+
+      expect(component.bandCollapsed()).toBe(false);
+      expect(identity().className).toContain('h-[64px]');
+      expect(collapsedParts().length).toBe(0);
+      expect(component.isScrolled()).toBe(true);
+    });
+  });
+
+  describe('compact band (collapsible: true)', () => {
+    it('starts expanded: identity block at 64px, nothing collapsed rendered', async () => {
+      await build({ showToolbar: true, collapsible: true });
+
+      expect(component.bandCollapsed()).toBe(false);
+      expect(identity().className).toContain('h-[64px]');
       expect(collapsedParts().length).toBe(0);
     });
 
-    it('stays expanded up to and including the 88px identity block', async () => {
-      await build({ showToolbar: true });
+    it('stays expanded up to and including the 64px identity block', async () => {
+      await build({ showToolbar: true, collapsible: true });
 
-      scrollTo(88);
+      scrollTo(64);
 
       expect(component.bandCollapsed()).toBe(false);
-      expect(identity().className).toContain('h-[88px]');
+      expect(identity().className).toContain('h-[64px]');
     });
 
     it('condenses once scrolled past the identity block', async () => {
-      await build({ showToolbar: true });
+      await build({ showToolbar: true, collapsible: true });
 
-      scrollTo(89);
+      scrollTo(65);
 
       expect(component.bandCollapsed()).toBe(true);
       // Height animates to 0, the block is clipped, and `inert` pulls its CTA/ⓘ out of the tab
@@ -120,7 +137,7 @@ describe('ReportingProgramBandComponent', () => {
     });
 
     it('puts the identity block back in the tab order when it expands', async () => {
-      await build({ showToolbar: true });
+      await build({ showToolbar: true, collapsible: true });
       scrollTo(200);
 
       scrollTo(0);
@@ -129,7 +146,7 @@ describe('ReportingProgramBandComponent', () => {
     });
 
     it('keeps the programme name, the tabs and the CTA in the condensed bar', async () => {
-      await build({ showToolbar: true });
+      await build({ showToolbar: true, collapsible: true });
 
       scrollTo(200);
 
@@ -139,13 +156,13 @@ describe('ReportingProgramBandComponent', () => {
       expect(nav.textContent).toContain('Reporting');
       // One strip serves both shapes, so the third tab has to survive the collapse.
       expect(nav.textContent).toContain('Results');
-      expect(nav.textContent).toContain('Report emerging result');
+      expect(nav.textContent).toContain('Where to report');
       // dot + name row, the back button, and the 32px CTA — all fade in.
       expect(collapsedParts().length).toBe(3);
     });
 
     it('condenses on Overview too, where the toolbar is hidden', async () => {
-      await build({ showToolbar: false });
+      await build({ showToolbar: false, collapsible: true });
 
       scrollTo(200);
 
@@ -154,18 +171,18 @@ describe('ReportingProgramBandComponent', () => {
     });
 
     it('expands again when the page scrolls back to the top', async () => {
-      await build({ showToolbar: true });
+      await build({ showToolbar: true, collapsible: true });
       scrollTo(200);
 
       scrollTo(0);
 
       expect(component.bandCollapsed()).toBe(false);
       expect(collapsedParts().length).toBe(0);
-      expect(identity().className).toContain('h-[88px]');
+      expect(identity().className).toContain('h-[64px]');
     });
 
     it('closes the ⓘ popover when the band changes shape — it is anchored to what collapses', async () => {
-      await build({ showToolbar: true });
+      await build({ showToolbar: true, collapsible: true });
       component.toggleInfo(new MouseEvent('click'));
       fixture.detectChanges();
       expect(root().querySelector('#pr-band-info-popover')).toBeTruthy();
@@ -177,18 +194,18 @@ describe('ReportingProgramBandComponent', () => {
     });
 
     it('ignores scroll events that do not cross the threshold', async () => {
-      await build({ showToolbar: true });
+      await build({ showToolbar: true, collapsible: true });
       const spy = jest.spyOn(component.bandCollapsed, 'set');
 
       scrollTo(10);
       scrollTo(40);
-      scrollTo(88);
+      scrollTo(64);
 
       expect(spy).not.toHaveBeenCalled();
     });
 
     it('stops listening once destroyed', async () => {
-      await build({ showToolbar: true });
+      await build({ showToolbar: true, collapsible: true });
       fixture.destroy();
 
       Object.defineProperty(window, 'scrollY', { configurable: true, value: 500 });
@@ -202,22 +219,27 @@ describe('ReportingProgramBandComponent', () => {
   describe('report emerging result', () => {
     /** Both copies of the CTA carry the same label; index 0 is the identity block's. */
     const ctas = () =>
-      Array.from(root().querySelectorAll('button')).filter(b => b.textContent?.includes('Report emerging result'));
+      Array.from(root().querySelectorAll('button')).filter(b => b.textContent?.includes('Where to report'));
 
     it('emits instead of navigating when the expanded CTA is clicked', async () => {
       await build({ showToolbar: true });
       const emitted = jest.fn();
+      const whereEmitted = jest.fn();
       component.reportEmerging.subscribe(emitted);
+      component.whereToReport.subscribe(whereEmitted);
 
       ctas()[0].click();
 
       expect(emitted).toHaveBeenCalledTimes(1);
+      expect(whereEmitted).toHaveBeenCalledTimes(1);
     });
 
     it('emits from the condensed bar copy too — one behaviour, two renders', async () => {
       await build({ showToolbar: true });
       const emitted = jest.fn();
+      const whereEmitted = jest.fn();
       component.reportEmerging.subscribe(emitted);
+      component.whereToReport.subscribe(whereEmitted);
       scrollTo(200);
 
       // Only the condensed copy is left once the identity block collapses away.
@@ -225,6 +247,7 @@ describe('ReportingProgramBandComponent', () => {
       condensed.click();
 
       expect(emitted).toHaveBeenCalledTimes(1);
+      expect(whereEmitted).toHaveBeenCalledTimes(1);
     });
 
     it('is not a link — the /emerging route is no longer the entry point', async () => {
@@ -253,7 +276,7 @@ describe('ReportingProgramBandComponent', () => {
   describe('collapsed action group overflow guard (OSF-T-2c)', () => {
     const collapsedCta = () =>
       Array.from(root().querySelectorAll('button')).find(
-        b => b.className.includes('pr-band-fade') && b.textContent?.includes('Report emerging result')
+        b => b.className.includes('pr-band-fade') && b.textContent?.includes('Where to report')
       ) as HTMLButtonElement;
 
     it("does not pin the CTA at its intrinsic width — the label truncates instead of forcing overflow", async () => {
@@ -264,8 +287,8 @@ describe('ReportingProgramBandComponent', () => {
       expect(cta.className).not.toContain('shrink-0');
       expect(cta.className).toContain('min-w-0');
 
-      const label = cta.querySelector('span:not(.pointer-events-none)') as HTMLElement;
-      expect(label.textContent?.trim()).toBe('Report emerging result');
+      const label = cta.querySelector('span:not(.pointer-events-none):not(.material-icons-round)') as HTMLElement;
+      expect(label.textContent?.trim()).toBe('Where to report');
       expect(label.className).toContain('truncate');
       expect(label.className).toContain('min-w-0');
     });
@@ -274,7 +297,7 @@ describe('ReportingProgramBandComponent', () => {
       await build({ showToolbar: true });
       scrollTo(200);
 
-      const icon = collapsedCta().querySelector('ng-icon') as HTMLElement;
+      const icon = collapsedCta().querySelector('.material-icons-round') as HTMLElement;
       expect(icon.className).toContain('shrink-0');
     });
 
@@ -285,7 +308,7 @@ describe('ReportingProgramBandComponent', () => {
       const tooltip = collapsedCta().querySelector('.pointer-events-none') as HTMLElement;
       expect(tooltip).toBeTruthy();
       expect(tooltip.className).toContain('w-[220px]');
-      expect(tooltip.textContent).toContain('Report achievements');
+      expect(tooltip.textContent).toContain('Find the right reporting pathway');
     });
   });
 
@@ -301,7 +324,7 @@ describe('ReportingProgramBandComponent', () => {
       root().querySelector('[data-testid="program-band-back-btn-collapsed"]')?.parentElement as HTMLElement;
     const collapsedCta = () =>
       Array.from(root().querySelectorAll('button')).find(
-        b => b.className.includes('pr-band-fade') && b.textContent?.includes('Report emerging result')
+        b => b.className.includes('pr-band-fade') && b.textContent?.includes('Where to report')
       ) as HTMLButtonElement;
 
     it('carries min-w-0 on the ml-auto action group so the CTA truncation chain can take effect', async () => {
@@ -431,12 +454,13 @@ describe('ReportingProgramBandComponent', () => {
   describe('tab strip', () => {
     /** Only the tabs are anchors inside the nav; the CTA is a button. */
     const tabs = () => Array.from((root().querySelector('nav') as HTMLElement).querySelectorAll('a'));
-    const tab = (label: string) => tabs().find(a => a.textContent?.trim() === label) as HTMLAnchorElement;
+    const tabText = (a: HTMLAnchorElement) => a.querySelector('.pr-tab-label')?.textContent?.trim() || a.textContent?.trim();
+    const tab = (label: string) => tabs().find(a => tabText(a) === label) as HTMLAnchorElement;
 
     it('renders the three programme tabs in the order the design shows', async () => {
       await build({ showToolbar: true });
 
-      expect(tabs().map(a => a.textContent?.trim())).toEqual(['Overview', 'Reporting', 'Results']);
+      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results']);
     });
 
     it('points Results at the `/results` route under the programme', async () => {
@@ -491,7 +515,7 @@ describe('ReportingProgramBandComponent', () => {
 
       scrollTo(200);
 
-      expect(tabs().map(a => a.textContent?.trim())).toEqual(['Overview', 'Reporting', 'Results']);
+      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results']);
       expect(tab('Results').getAttribute('aria-current')).toBe('page');
     });
 
@@ -700,7 +724,29 @@ describe('ReportingProgramBandComponent', () => {
       expect(text).toContain('Areas of Work');
       expect(text).toContain('Total KPIs');
       expect(text).toContain('KPIs with Evidence');
-      expect(text).toContain('0 of 41');
+    });
+  });
+
+  describe('program description popover (resolvedDescription)', () => {
+    it('resolves SP04 description for Multifunctional Landscapes', async () => {
+      await build({ programCode: 'SP04', programName: 'Multifunctional Landscapes' });
+      expect(component.resolvedDescription()).toContain('Multifunctional Landscapes advances systemic, landscape-scale solutions');
+      expect(component.resolvedDescription()).not.toContain('Breeding for Tomorrow');
+    });
+
+    it('resolves SP01 description for Breeding for Tomorrow', async () => {
+      await build({ programCode: 'SP01', programName: 'Breeding for Tomorrow' });
+      expect(component.resolvedDescription()).toContain('Breeding for Tomorrow modernizes CGIAR');
+    });
+
+    it('prioritizes explicit programDescription input if provided', async () => {
+      await build({ programCode: 'SP04', programDescription: 'Custom explicit program description.' });
+      expect(component.resolvedDescription()).toBe('Custom explicit program description.');
+    });
+
+    it('falls back to contextual description for unknown program codes', async () => {
+      await build({ programCode: 'SP99', programName: 'Special Pioneer Initiative' });
+      expect(component.resolvedDescription()).toContain('Special Pioneer Initiative is a CGIAR research program delivering science');
     });
   });
 });

@@ -48,12 +48,59 @@ export interface ReportingSummaryStats {
  * Info popover (`ⓘ` next to the title): reference :345-358 — click (not hover), "About this
  * program", body = program description, footer = "N areas of work · M planned results".
  */
-import { PrTabIntroComponent } from '../../../../../../shared/components/pr-tab-intro/pr-tab-intro.component';
+export const SCIENCE_PROGRAM_DESCRIPTIONS: Record<string, string> = {
+  SP01:
+    'Breeding for Tomorrow modernizes CGIAR and national breeding programs so that farmers get ' +
+    'climate-resilient, market-preferred varieties faster. The program connects market intelligence, ' +
+    'breeding pipelines, trait discovery, genetic innovation and seed systems into one delivery chain, ' +
+    'and works with national agricultural research systems and private seed partners across South Asia, ' +
+    'sub-Saharan Africa and Latin America. Reporting covers products delivered to partners, the outcomes ' +
+    'those products enable, and progress toward the 2030 outcomes agreed with donors.',
+  SP02:
+    'Sustainable Farming accelerates the transition to resilient, productive, and sustainable agricultural systems. ' +
+    'The program integrates agronomic best practices, digital advisory services, and soil and water management solutions ' +
+    'to improve yields, optimize input use, and enhance ecosystem services for farming communities.',
+  SP03:
+    'Climate Action provides science-based innovations, policy analyses, and investment roadmaps to foster climate ' +
+    'resilience and low-emission development. The program focuses on climate-smart agricultural technologies, early warning ' +
+    'and disaster risk management systems, and climate finance alignment across vulnerable agri-food regions.',
+  SP04:
+    'Multifunctional Landscapes advances systemic, landscape-scale solutions to reconcile agricultural production ' +
+    'with biodiversity conservation, land restoration, and climate resilience. The program works with communities, ' +
+    'national authorities, and private partners across living landscapes to co-design and implement sustainable resource ' +
+    'management plans, agroecological innovations, and inclusive governance models that deliver shared ecological and ' +
+    'livelihood benefits.',
+  SP05:
+    'Sustainable Animal & Aquatic Foods advances innovations across livestock and aquaculture value chains. ' +
+    'The program develops improved feeds, animal health diagnostics, and sustainable production technologies that ' +
+    'enhance productivity, support livelihoods, and reduce environmental footprints.',
+  SP06:
+    'Better Diets and Nutrition focuses on transforming food environments and consumption patterns to improve nutrition ' +
+    'and public health. The program leverages biofortified crops, dietary diversity interventions, and supply chain ' +
+    'improvements to make safe, healthy, and affordable diets accessible to vulnerable populations.',
+  SP07:
+    'Policy Innovations delivers data-driven economic research, policy analysis, and foresight modeling to support national ' +
+    'and regional policymakers. The program helps design and evaluate policy incentives, social protection schemes, and ' +
+    'agricultural trade strategies for equitable rural growth.',
+  SP08:
+    'Food Frontiers and Security anticipates and navigates emerging systemic disruptions in global and regional food systems. ' +
+    'The program investigates next-generation agricultural technologies, frontier food solutions, and resilience mechanisms ' +
+    'to protect long-term food security.',
+  SP09:
+    'Scaling for Impact bridges research and practice by accelerating the adoption of proven CGIAR innovations through ' +
+    'robust partnerships with public, private, and development sector actors.',
+  'SGP-02':
+    'Accelerating Varietal Improvement in Seed Systems in Africa works with regional and national partners to modernize ' +
+    'seed systems and expand access to high-performing, climate-adapted seed varieties.',
+  SGP02:
+    'Accelerating Varietal Improvement in Seed Systems in Africa works with regional and national partners to modernize ' +
+    'seed systems and expand access to high-performing, climate-adapted seed varieties.'
+};
 
 @Component({
   selector: 'app-reporting-program-band',
   standalone: true,
-  imports: [RouterLink, NgIcon, FormsModule, PrFilterMultiselectModule, PrFilterSelectComponent, PrTabIntroComponent],
+  imports: [RouterLink, NgIcon, FormsModule, PrFilterMultiselectModule, PrFilterSelectComponent],
   templateUrl: './reporting-program-band.component.html',
   styleUrls: ['./reporting-program-band.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -164,11 +211,13 @@ export class ReportingProgramBandComponent {
   readonly aowSwitch = output<string>();
   /** Expand all / Collapse all was pressed. The host flips the switch; the band stays stateless. */
   readonly toggleExpandAll = output<void>();
-  /**
-   * The emerging pathway is a MODAL owned by the host, not a page. The band only announces the
-   * intent so both CTA copies (expanded + condensed) stay a single behaviour.
-   */
+  readonly whereToReport = output<void>();
   readonly reportEmerging = output<void>();
+
+  onWhereToReportClick(): void {
+    this.whereToReport.emit();
+    this.reportEmerging.emit();
+  }
 
   /**
    * Overview is its OWN surface now (`/overview`), not the retired bento at `/home` — sending the
@@ -216,18 +265,21 @@ export class ReportingProgramBandComponent {
   /** Guards the document click that fires in the same tick as the open toggle. */
   private skipNextDocumentClick = false;
 
+  /** Allows callers/tests to opt into collapsing behavior. Default is false (band stays fixed/expanded). */
+  readonly collapsible = input<boolean>(false);
+  /** Indicates whether document is scrolled down from top (for subtle elevation shadow). */
+  readonly isScrolled = signal(false);
+
   /**
-   * Scroll offset at which the band condenses. 88px is the exact height of the identity block
-   * (reference :329) — the moment it would have scrolled away is the moment the reference swaps to
-   * its `bandCollapsed` bar (:383): dot + programme name + tabs + `Report emerging result`, 48px.
+   * Scroll offset at which the band condenses. 64px is the height of the compact identity block.
    */
-  private static readonly COLLAPSE_THRESHOLD_PX = 88;
+  private static readonly COLLAPSE_THRESHOLD_PX = 64;
 
   /** True while the page is scrolled past the identity block. Drives the compact band. */
   readonly bandCollapsed = signal(false);
 
   constructor() {
-    // The DOCUMENT is the scroller here (the band is `sticky top-[56px]`, not inside an overflow
+    // The DOCUMENT is the scroller here (the band is `sticky`, not inside an overflow
     // box), so the offset comes from `window`. The listener is registered OUTSIDE Angular and only
     // re-enters the zone on the single frame where the threshold is crossed: a zone-bound
     // `@HostListener('window:scroll')` would tick change detection on EVERY scroll frame to
@@ -245,6 +297,18 @@ export class ReportingProgramBandComponent {
   /** Cheap: one `scrollY` read + a compare. Nothing happens unless the threshold is crossed. */
   private syncBandCollapsed(): void {
     const offset = window.scrollY || document.documentElement?.scrollTop || 0;
+    const isScrolled = offset > 10;
+    if (isScrolled !== this.isScrolled()) {
+      this.zone.run(() => this.isScrolled.set(isScrolled));
+    }
+
+    if (!this.collapsible()) {
+      if (this.bandCollapsed()) {
+        this.zone.run(() => this.bandCollapsed.set(false));
+      }
+      return;
+    }
+
     const collapsed = offset > ReportingProgramBandComponent.COLLAPSE_THRESHOLD_PX;
     if (collapsed === this.bandCollapsed()) return;
     this.zone.run(() => {
@@ -284,20 +348,32 @@ export class ReportingProgramBandComponent {
   });
 
   /**
-   * Body copy for the popover. Prefer the explicit description; otherwise the SP01 mock from the
-   * reference (:1677) so the surface matches the design until the SP payload carries a real field.
+   * Body copy for the popover. Prefer explicit description; otherwise look up from the
+   * Science Program catalogue by program code/name, falling back to a contextual statement.
    */
   readonly resolvedDescription = computed(() => {
     const explicit = this.programDescription()?.trim();
     if (explicit) return explicit;
-    // Verbatim from PRMS-Shell.dc.html:1677 — placeholder until NEEDS-BACKEND description lands.
+
+    const code = this.programCode()?.trim().toUpperCase();
+    if (code && SCIENCE_PROGRAM_DESCRIPTIONS[code]) {
+      return SCIENCE_PROGRAM_DESCRIPTIONS[code];
+    }
+
+    const name = this.programName()?.trim();
+    if (name) {
+      const normalizedName = name.toLowerCase();
+      for (const [spCode, desc] of Object.entries(SCIENCE_PROGRAM_DESCRIPTIONS)) {
+        if (desc.toLowerCase().startsWith(normalizedName)) {
+          return desc;
+        }
+      }
+      return `${name} is a CGIAR research program delivering science, innovations, and partnerships to advance food, land, and water systems transformation and contribute to CGIAR 2030 targets.`;
+    }
+
     return (
-      'Breeding for Tomorrow modernizes CGIAR and national breeding programs so that farmers get ' +
-      'climate-resilient, market-preferred varieties faster. The program connects market intelligence, ' +
-      'breeding pipelines, trait discovery, genetic innovation and seed systems into one delivery chain, ' +
-      'and works with national agricultural research systems and private seed partners across South Asia, ' +
-      'sub-Saharan Africa and Latin America. Reporting covers products delivered to partners, the outcomes ' +
-      'those products enable, and progress toward the 2030 outcomes agreed with donors.'
+      'This program works with partners across the CGIAR portfolio to deliver research, innovations, ' +
+      'and outcomes contributing to the 2030 targets.'
     );
   });
 
@@ -308,6 +384,30 @@ export class ReportingProgramBandComponent {
     const aowLabel = aows === 1 ? '1 area of work' : `${aows} areas of work`;
     const resultLabel = results === 1 ? '1 planned result' : `${results} planned results`;
     return `${aowLabel} · ${resultLabel}`;
+  });
+
+  readonly activeTabInfo = computed(() => {
+    switch (this.activeTab()) {
+      case 'overview':
+        return {
+          title: 'Overview',
+          description:
+            'Displays the overall progress of results reporting for this Science Program or Accelerator across funding types (W1/W2 and W3/Bilateral), reporting status, and geographic areas of work.'
+        };
+      case 'results':
+        return {
+          title: 'Results',
+          description:
+            'View and manage all reported results linked to this Science Program or Accelerator. Use the filters to explore results by status, type, or contributing centers.'
+        };
+      case 'reporting':
+      default:
+        return {
+          title: 'Theory of Change Reporting',
+          description:
+            'The Theory of Change reporting framework for your Science Program. Browse planned Indicators and High-Level Outputs by Area of Work, track progress against targets, and submit new or continuing result reports for the current cycle.'
+        };
+    }
   });
 
   /**
@@ -338,6 +438,86 @@ export class ReportingProgramBandComponent {
     { value: 'outcome_2030', label: '2030 outcome' }
   ];
 
+  // ── Reporting JIRA-style Top-Bar Filter State ──
+  readonly filterPopoverOpen = signal(false);
+
+  toggleFilterPopover(event: Event): void {
+    event.stopPropagation();
+    this.filterPopoverOpen.update(v => !v);
+  }
+
+  closeFilterPopover(): void {
+    this.filterPopoverOpen.set(false);
+  }
+
+  readonly activeFilterCount = computed(() => {
+    let count = 0;
+    if (this.aowValue() && this.aowValue().length > 0) count += this.aowValue().length;
+    if (this.typeValue() && this.typeValue() !== 'all') count++;
+    if (this.typologyValue() && this.typologyValue() !== 'all') count++;
+    if (this.statusValue() && this.statusValue() !== 'all') count++;
+    if (this.onlyPending()) count++;
+    return count;
+  });
+
+  readonly hasActiveFilters = computed(() => this.activeFilterCount() > 0 || !!this.search());
+
+  readonly activeAowChips = computed(() => {
+    const vals = this.aowValue() || [];
+    if (!vals.length) return [];
+    const groups = this.aowOptions() || [];
+    const map = new Map<string, string>();
+    for (const g of groups) {
+      for (const item of g.items || []) {
+        map.set(item.value, item.label);
+      }
+    }
+    return vals.map(v => ({ value: v, label: map.get(v) || v }));
+  });
+
+  readonly activeTypeLabel = computed(() => {
+    const val = this.typeValue();
+    if (!val || val === 'all') return '';
+    return this.typeOptions.find(o => o.value === val)?.label || val;
+  });
+
+  readonly activeTypologyLabel = computed(() => {
+    const val = this.typologyValue();
+    if (!val || val === 'all') return '';
+    return this.typologyOptions().find(o => o.value === val)?.label || val;
+  });
+
+  readonly activeStatusLabel = computed(() => {
+    const val = this.statusValue();
+    if (!val || val === 'all') return '';
+    return this.statusOptions.find(o => o.value === val)?.label || val;
+  });
+
+  removeAowChip(code: string): void {
+    const next = (this.aowValue() || []).filter(v => v !== code);
+    this.aowChange.emit(next);
+  }
+
+  removeTypeChip(): void {
+    this.typeChange.emit('all');
+  }
+
+  removeTypologyChip(): void {
+    this.typologyChange.emit('all');
+  }
+
+  removeStatusChip(): void {
+    this.statusChange.emit('all');
+  }
+
+  removeOnlyPendingChip(): void {
+    this.onlyPendingChange.emit(false);
+  }
+
+  evidencePercentage(stats: ReportingSummaryStats): number {
+    return stats.totalKpis > 0 ? Math.round((stats.reportedKpis / stats.totalKpis) * 100) : 0;
+  }
+
   toggleInfo(event: Event): void {
     event.stopPropagation();
     this.skipNextDocumentClick = true;
@@ -348,18 +528,30 @@ export class ReportingProgramBandComponent {
     this.infoOpen.set(false);
   }
 
-  @HostListener('document:click')
-  onDocumentClick(): void {
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event?: MouseEvent): void {
     if (this.skipNextDocumentClick) {
       this.skipNextDocumentClick = false;
       return;
     }
     if (this.infoOpen()) this.infoOpen.set(false);
+
+    const target = event?.target as HTMLElement | null;
+    if (
+      target?.closest('.pr-reporting-filter-container') ||
+      target?.closest('.p-multiselect-panel') ||
+      target?.closest('.p-dropdown-panel')
+    ) {
+      return;
+    }
+    if (this.filterPopoverOpen()) {
+      this.filterPopoverOpen.set(false);
+    }
   }
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
     if (this.infoOpen()) this.infoOpen.set(false);
+    if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
   }
-
 }

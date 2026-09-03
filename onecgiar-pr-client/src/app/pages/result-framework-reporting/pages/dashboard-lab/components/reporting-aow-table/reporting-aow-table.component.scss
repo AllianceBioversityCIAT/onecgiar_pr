@@ -268,14 +268,13 @@
 
 /* ── ALL INDICATORS table.
    Header row and body rows are ONE grid built from the same track list.
-   Tracks: [indicator minmax] [aow] [type] [center] [target] [achieved] [status] [actions] ── */
-$pr-flat-tracks: minmax(240px, 1fr) 56px 130px 68px 60px 60px 92px 140px;
-$pr-flat-gap: 12px;
+   Tracks: [indicator minmax] [aow] [target] [achieved] [progress] [actions] ── */
+$pr-flat-tracks: minmax(240px, 1fr) 72px 80px 84px 104px 150px;
 
 .pr-flat-scroll {
   width: 100%;
   max-width: 100%;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: hidden;
 }
 
@@ -298,40 +297,66 @@ $pr-flat-gap: 12px;
 .pr-flat-row {
   display: grid;
   grid-template-columns: $pr-flat-tracks;
-  gap: $pr-flat-gap;
-  align-items: center;
+  gap: 0;
+  align-items: stretch;
   width: 100%;
-  min-width: 820px;
-  padding: 0 20px 0 28px;
+  padding: 0;
   box-sizing: border-box;
+
+  @media (min-width: 1200px) {
+    grid-template-columns: minmax(300px, 1fr) 96px 116px 124px 150px 176px;
+  }
+
+  @media (min-width: 1500px) {
+    grid-template-columns: minmax(360px, 1fr) 110px 130px 140px 170px 190px;
+  }
 }
 
 .pr-flat-head {
   position: sticky;
   top: 0;
   z-index: 12;
-  height: 42px;
+  height: 38px;
   background: var(--pr-surface-subtle);
   border-bottom: 1px solid var(--pr-border);
-  padding: 0 20px 0 28px;
+  padding: 0;
   box-sizing: border-box;
 
   .pr-flat-cell {
-    padding: 0;
+    border-right: 1px solid var(--pr-border);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    height: 100%;
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
     color: var(--pr-text-secondary);
     text-transform: uppercase;
     white-space: nowrap;
-    background: var(--pr-surface-subtle);
-    border: 0;
+    background: transparent;
+    border-top: 0;
+    border-left: 0;
+    border-bottom: 0;
     cursor: pointer;
     user-select: none;
-    transition: color 150ms ease;
+    box-sizing: border-box;
+    transition: color 150ms ease, background 150ms ease;
 
-    &:hover {
+    &:first-child {
+      padding-left: 20px;
+      padding-right: 12px;
+    }
+
+    &:last-child {
+      border-right: none;
+      padding-right: 16px;
+      cursor: default;
+    }
+
+    &:hover:not(:last-child) {
       color: var(--pr-color-primary-500);
+      background: rgba(0, 0, 0, 0.025);
 
       ::ng-deep .pr-sort-icon {
         color: var(--pr-color-primary-500);
@@ -346,13 +371,17 @@ $pr-flat-gap: 12px;
 }
 
 .pr-flat-body {
-  min-height: 58px;
-  padding: 12px 20px 12px 28px;
+  min-height: 54px;
+  padding: 0;
   box-sizing: border-box;
   cursor: pointer;
   background: var(--pr-surface-card);
-  border-top: 1px solid var(--pr-border-divider);
+  border-top: 1px solid var(--pr-border);
   transition: background 150ms ease;
+
+  &:first-child {
+    border-top: none;
+  }
 
   &:hover {
     background: var(--pr-surface-ground);
@@ -362,22 +391,36 @@ $pr-flat-gap: 12px;
     outline: 2px solid var(--pr-color-primary-300);
     outline-offset: -2px;
   }
+
+  .pr-flat-cell {
+    border-right: 1px solid var(--pr-border);
+    padding: 10px 10px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: 100%;
+    background: transparent;
+
+    &:first-child {
+      padding-left: 20px;
+      padding-right: 14px;
+      align-items: flex-start;
+    }
+
+    &:last-child {
+      border-right: none;
+      padding-right: 16px;
+      padding-left: 8px;
+    }
+  }
 }
 
 .pr-flat-cell {
   min-width: 0;
   display: block;
-  padding: 0;
   text-align: left;
-  border: 0;
 
   &.text-center {
     text-align: center;
   }
-}
-
-.pr-flat-body .pr-flat-cell {
-  padding: 0;
-  background: transparent;
-  border: 0;
 }

@@ -242,12 +242,25 @@ describe('ProgrammeResultsComponent', () => {
   });
 
   it('renders the design literals of the toolbar and the counts row', () => {
-    expect(text()).toContain('Results');
+    expect(text()).toContain('Filter');
     expect(text()).toContain('Columns');
     expect(text()).toContain('Export CSV');
     expect(text()).toContain('3 results');
     const search = fixture.debugElement.query(By.css('input[type="text"]')).nativeElement as HTMLInputElement;
     expect(search.placeholder).toBe('Search results or indicators…');
+  });
+
+  it('opens and closes the JIRA-style Filter popover, and outside click closes it', () => {
+    expect(component.filterPopoverOpen()).toBe(false);
+    const filterBtn = fixture.debugElement.query(By.css('button[aria-label="Filter results"]')).nativeElement as HTMLButtonElement;
+    filterBtn.click();
+    fixture.detectChanges();
+    expect(component.filterPopoverOpen()).toBe(true);
+
+    // Outside click closes it
+    document.dispatchEvent(new MouseEvent('click'));
+    fixture.detectChanges();
+    expect(component.filterPopoverOpen()).toBe(false);
   });
 
   // ── filtering ─────────────────────────────────────────────────────────────────────────────
@@ -572,12 +585,10 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.sortColor(table(), 'code')).toBe('var(--pr-text-secondary)');
   });
 
-  it('does not offer sorting on the Section column, which has no data behind it', () => {
+  it('does not render the Section column in the table', () => {
     const sectionHeader = fixture.debugElement.query(By.css('th.pgr-th--soon'));
-    expect(sectionHeader).toBeTruthy();
-    expect((sectionHeader.nativeElement as HTMLElement).getAttribute('aria-disabled')).toBe('true');
-    // Not a sort button at all, so `prSortableColumn` never puts aria-sort on it.
-    expect((sectionHeader.nativeElement as HTMLElement).getAttribute('aria-sort')).toBeNull();
+    expect(sectionHeader).toBeNull();
+    expect(component.visibleColumns().map(column => column.key)).not.toContain('section');
   });
 
   // ── columns picker ────────────────────────────────────────────────────────────────────────
@@ -585,10 +596,8 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.optionalColumns.map(column => column.key)).toEqual(['createdBy', 'created', 'origin', 'center']);
     for (const column of component.optionalColumns) expect(component.isColumnVisible(column.key)).toBe(false);
     expect(component.visibleColumns().map(column => column.key)).toEqual([
-      'select',
       'code',
       'title',
-      'section',
       'category',
       'status',
       'updated'
@@ -639,13 +648,9 @@ describe('ProgrammeResultsComponent', () => {
   });
 
   // ── coming-soon controls ──────────────────────────────────────────────────────────────────
-  it('ships the row selection checkbox visible but DISABLED (P2-3397)', () => {
-    const checkbox = fixture.debugElement.query(By.css('button[aria-label="Select result"]')).nativeElement as HTMLButtonElement;
-    expect(checkbox).toBeTruthy();
-    expect(checkbox.disabled).toBe(true);
-    expect(checkbox.getAttribute('aria-disabled')).toBe('true');
-    expect(checkbox.className).toContain('cursor-not-allowed');
-    expect(checkbox.getAttribute('title')).toContain('Coming soon');
+  it('does not render a row-selection checkbox (P2-3397 has no bulk action)', () => {
+    expect(fixture.debugElement.query(By.css('button[aria-label="Select result"]'))).toBeNull();
+    expect(component.visibleColumns().map(column => column.key)).not.toContain('select');
   });
 
   it('ships the Section filter visible but DISABLED, with its grouped options wired (P2-3398)', () => {
@@ -660,19 +665,18 @@ describe('ProgrammeResultsComponent', () => {
     expect((wrapper.parentElement as HTMLElement).textContent).toContain('Coming soon');
   });
 
-  it('ships the indicator subtitle and the Section column with the design geometry and no value (P2-3399)', () => {
+  it('ships the indicator subtitle with the design geometry and no value (P2-3399)', () => {
     // Line 2 of the RESULT cell exists on every row, tagged, empty.
     const subtitles = fixture.debugElement.queryAll(By.css('td span[title^="The indicator this result reports against"]'));
     expect(subtitles.length).toBe(3);
     // The subtitle renders EMPTY, with no per-row tag: printing "Coming soon" once per row put it
-    // on screen 476 times on SP01 and drowned the titles. The absence is announced once, on the
-    // SECTION header, which is empty for the same missing payload (P2-3398 / P2-3399).
+    // on screen 476 times on SP01 and drowned the titles.
     expect(subtitles[0].nativeElement.textContent.trim()).toBe('');
     expect(subtitles[0].nativeElement.getAttribute('title')).toContain('not in the results feed yet');
     expect(component.data.rows().every(row => row.indicator === '')).toBe(true);
 
-    // The SECTION column keeps its track; the value is empty on every row.
-    expect(component.visibleColumns().map(column => column.key)).toContain('section');
+    // The SECTION column is omitted from the table; the value in data rows remains empty.
+    expect(component.visibleColumns().map(column => column.key)).not.toContain('section');
     expect(component.data.rows().every(row => row.section === '')).toBe(true);
     expect(component.cellText(component.data.rows()[0], 'section')).toBe('');
   });

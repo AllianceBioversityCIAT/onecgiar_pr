@@ -322,4 +322,21 @@
       margin: 0 !important;
     }
   }
+
+  .where-to-report-dialog {
+    width: 85vw !important;
+    max-width: 1140px !important;
+    max-height: 90vh !important;
+    border-radius: 16px !important;
+
+    @media screen and (max-width: 1100px) {
+      width: 95vw !important;
+      max-width: none !important;
+    }
+
+    .pr-dialog__body {
+      padding: 0 !important;
+      overflow-y: hidden;
+    }
+  }
 }

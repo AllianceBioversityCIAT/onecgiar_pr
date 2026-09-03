@@ -11,7 +11,8 @@ import {
   lucideInfo,
   lucidePlus,
   lucideSearch,
-  lucideX
+  lucideX,
+  lucideZap
 } from '@ng-icons/lucide';
 import { HUB_COPY } from './hub-copy';
 
@@ -106,7 +107,7 @@ const COLLAPSE_STORAGE_KEY = 'pr.hub.collapsed';
   styleUrl: './reporting-entry-hub.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
-    provideIcons({ lucideArrowRight, lucideChevronDown, lucideChevronUp, lucideInfo, lucidePlus, lucideSearch, lucideX })
+    provideIcons({ lucideArrowRight, lucideChevronDown, lucideChevronUp, lucideInfo, lucidePlus, lucideSearch, lucideX, lucideZap })
   ]
 })
 export class ReportingEntryHubComponent {
@@ -123,6 +124,7 @@ export class ReportingEntryHubComponent {
   readonly canReportW1W2 = input<boolean>(true);
   readonly w3State = input<HubW3State>({ status: 'loading' });
   readonly myCentersCount = input<number>(0);
+  readonly isModal = input<boolean>(false);
 
   /** Header CTA gate mirrored here — false renders the footer mention as plain text. @akili-spec changes/reporting-entry-hub */
   readonly canReportEmerging = input<boolean>(true);
@@ -139,7 +141,7 @@ export class ReportingEntryHubComponent {
   /** Default collapsed for all users by default for now. */
   private readonly defaultCollapsed = computed(() => true);
 
-  readonly collapsed = computed(() => this.userCollapsed() ?? this.defaultCollapsed());
+  readonly collapsed = computed(() => (this.isModal() ? false : (this.userCollapsed() ?? this.defaultCollapsed())));
 
   readonly searchQuery = signal('');
   private readonly manualExpanded = signal<ReadonlyMap<string, boolean>>(new Map());

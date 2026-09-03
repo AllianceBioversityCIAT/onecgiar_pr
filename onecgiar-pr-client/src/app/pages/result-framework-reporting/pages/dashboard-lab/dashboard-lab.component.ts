@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, OnInit, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, HostListener, inject, OnDestroy, OnInit, signal, untracked } from '@angular/core';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {DecimalPipe, NgClass } from '@angular/common';
@@ -34,13 +34,15 @@ import { PrToastService } from '../../../../shared/components/pr-toast';
 import { isAvisaInitiative } from '../../../../shared/utils/avisa-initiative.util';
 import {
   ProgramOverviewComponent,
+  OverviewSection,
   StatusSegment as OverviewStatusSegment,
   AowProgressRow as OverviewAowProgressRow,
   TocAchievement,
   CategoryBar as OverviewCategoryBar,
   OverviewCenterBar,
   OverviewLink,
-  HeatmapModel
+  HeatmapModel,
+  overviewScopeDisplayCode
 } from './components/program-overview/program-overview.component';
 import { buildTocMapModel, TocMapModel } from './dashboard-lab.toc-map';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from '../programme-results/services/programme-results-query-params';
@@ -317,8 +319,6 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
  * at runtime from each program's icon (dominant vibrant color). Consumes the
  * REAL Science Programs API through the existing home service — no new endpoints.
  */
-import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/pr-tab-intro.component';
-
 @Component({
   selector: 'app-dashboard-lab',
   standalone: true,
@@ -337,7 +337,6 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
     NarrativePanelComponent,
     PrTooltipDirectiveModule,
     HlmButton,
-    PrTabIntroComponent,
     // Legacy reporting surfaces reused VERBATIM — the drawer/guided copies stay in the tree but are
     // no longer the ones users reach (see `openLegacyReportModal` / `openReportModal`).
     AowHloCreateModalComponent,
@@ -1100,7 +1099,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // phase switch, which does not change the W3 lane per REH-DD-2) — `retryW3()` bypasses it.
     effect(() => {
       const code = this.selected()?.initiativeCode;
-      if (this.rfrView() !== 'overview' || !code || this.w3Code === code) return;
+      if (!code || this.w3Code === code) return;
       this.w3Code = code;
       setTimeout(() => this.fetchW3Projects(code), 0);
     });
@@ -2123,19 +2122,131 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     );
   }
 
+  readonly showWhereToReportModal = signal<boolean>(false);
+
+  openWhereToReportModal(): void {
+    const code = this.selected()?.initiativeCode;
+    if (code && (this.w3Code !== code || this.w3State().status === 'error')) {
+      this.w3Code = code;
+      this.fetchW3Projects(code);
+    }
+    this.showWhereToReportModal.set(true);
+  }
+
+  closeWhereToReportModal(): void {
+    this.showWhereToReportModal.set(false);
+    if (this.route?.snapshot?.queryParamMap?.get('whereToReport') === 'true') {
+      const returnTab = this.route.snapshot.queryParamMap.get('returnTab');
+      if (returnTab === 'results') {
+        this.router.navigate(['/result-framework-reporting', 'entity-details', this.selected()?.initiativeCode, 'results']);
+      } else {
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { whereToReport: null, returnTab: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        });
+      }
+    }
+  }
+
   /**
-   * `REH-R-7`/`REH-R-8`: `program-overview`'s KPI cards 2/3 emit `focusHub('w3')` — scrolls the
-   * reporting-entry-hub's W3 lane heading (`#reporting-entry-hub-w3`, rendered with
-   * `tabindex="-1"` by `ReportingEntryHubComponent`) into view and moves focus to it. Expanding a
-   * collapsed hub is out of scope here (REH-T-5) — this only scrolls/focuses what's rendered.
+   * `REH-R-7`/`REH-R-8`: `program-overview`'s KPI cards 2/3 emit `focusHub('w3')` — opens the
+   * reporting-entry-hub dialog and scrolls the W3 lane heading (`#reporting-entry-hub-w3`) into view.
    */
   // @akili-spec changes/reporting-entry-hub
   onFocusHub(_target: 'w3'): void {
-    const heading = document.getElementById('reporting-entry-hub-w3');
-    if (!heading) return;
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    heading.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
-    heading.focus({ preventScroll: true });
+    this.openWhereToReportModal();
+    setTimeout(() => {
+      const heading = document.getElementById('reporting-entry-hub-w3');
+      if (!heading) return;
+      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      heading.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+      heading.focus({ preventScroll: true });
+    }, 100);
+  }
+
+  // ── Overview JIRA-style Top-Bar Filter State ──────────────────────────────────
+  readonly overviewSection = signal<OverviewSection>('all');
+  readonly overviewFilterOpen = signal<boolean>(false);
+
+  readonly overviewStatusTotal = computed(() =>
+    this.overviewStatusSegments().reduce((sum, s) => sum + s.count, 0)
+  );
+
+  readonly overviewBilateralTotal = computed(() =>
+    this.overviewBilateralStatusSegments().reduce((sum, s) => sum + s.count, 0)
+  );
+
+  readonly hasActiveOverviewFilters = computed(() =>
+    this.overviewSection() !== 'all' || this.overviewScope() !== null
+  );
+
+  readonly activeOverviewFilterCount = computed(() => {
+    let count = 0;
+    if (this.overviewSection() !== 'all') count++;
+    if (this.overviewScope() !== null) count++;
+    return count;
+  });
+
+  readonly overviewSectionLabel = computed(() => {
+    switch (this.overviewSection()) {
+      case 'w1w2': return 'W1/W2';
+      case 'bilateral': return 'W3/Bilateral';
+      case 'aow': return 'Areas of Work';
+      default: return 'All Sections';
+    }
+  });
+
+  readonly activeScopeLabel = computed(() => {
+    const scopeKey = this.overviewScope();
+    if (!scopeKey) return '';
+    const opt = this.scopeOptions().find(o => o.key === scopeKey);
+    if (!opt) return scopeKey;
+    const code = overviewScopeDisplayCode(opt);
+    return code && code !== '—' ? `${code} · ${opt.name}` : opt.name;
+  });
+
+  readonly overviewScopeDisplayCode = overviewScopeDisplayCode;
+
+  toggleOverviewFilterPopover(event: Event): void {
+    event.stopPropagation();
+    this.overviewFilterOpen.update(v => !v);
+  }
+
+  closeOverviewFilterPopover(): void {
+    this.overviewFilterOpen.set(false);
+  }
+
+  setOverviewSection(section: OverviewSection): void {
+    this.overviewSection.set(section);
+  }
+
+  setOverviewScope(scopeKey: string | null): void {
+    this.overviewScope.set(scopeKey);
+  }
+
+  clearOverviewFilters(): void {
+    this.overviewSection.set('all');
+    this.overviewScope.set(null);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.pr-overview-filter-container')) {
+      return;
+    }
+    if (this.overviewFilterOpen()) {
+      this.overviewFilterOpen.set(false);
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onDocumentEscape(): void {
+    if (this.overviewFilterOpen()) {
+      this.overviewFilterOpen.set(false);
+    }
   }
 
   /**
@@ -2446,6 +2557,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         this.selectedId.set(id);
         this.scope.set('program');
       }
+      if (qp.get('whereToReport') === 'true') {
+        this.openWhereToReportModal();
+      }
       // Browser back/forward on Planned ToC browse mode.
       if (this.rfrView() === 'planned') {
         const view = parsePlannedBrowseView(qp.get('tocView')) ?? 'aows';
@@ -2518,6 +2632,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // ToC-scope filter (`OSF-DD-12`): read once here, resolved by the constructor effect once
     // this program's `scopeOptions()` are known.
     this.pendingOverviewScope = qp.get('scope') || null;
+    if (qp.get('whereToReport') === 'true') {
+      this.openWhereToReportModal();
+    }
     this.restorePlannedBrowseFromQuery(qp);
   }
 

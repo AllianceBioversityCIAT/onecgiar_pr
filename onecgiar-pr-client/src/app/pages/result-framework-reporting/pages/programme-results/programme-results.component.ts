@@ -75,14 +75,13 @@ export interface PgrColumnDef {
 
 /**
  * Column catalog, in design order:
- * select · CODE · RESULT · SECTION · CATEGORY · STATUS · (CREATED BY · CREATED · ORIGIN · CENTER) ·
- * UPDATED, plus the sticky actions track appended by `grid()`.
+ * CODE · RESULT · CATEGORY · STATUS · (CREATED BY · CREATED · ORIGIN · CENTER) · UPDATED,
+ * plus the sticky actions track appended by `grid()`.
+ * No select-checkbox track — P2-3397 has no bulk action, so the empty column is omitted.
  */
 export const PGR_COLUMNS: readonly PgrColumnDef[] = [
-  { key: 'select', label: '', sortField: '', track: '16px', minPx: 16, optional: false },
   { key: 'code', label: 'Code', sortField: 'code', track: '92px', minPx: 92, optional: false },
   { key: 'title', label: 'Result', sortField: 'title', track: 'minmax(240px,2fr)', minPx: 240, optional: false },
-  { key: 'section', label: 'Section', sortField: '', track: 'minmax(200px,1.4fr)', minPx: 200, optional: false },
   { key: 'category', label: 'Category', sortField: 'category', track: 'minmax(140px,1fr)', minPx: 140, optional: false },
   { key: 'status', label: 'Status', sortField: 'statusName', track: '120px', minPx: 120, optional: false },
   { key: 'createdBy', label: 'Created by', sortField: 'createdBy', track: 'minmax(140px,1fr)', minPx: 140, optional: true },
@@ -140,8 +139,6 @@ function formatDate(value: string): string {
  * ⚠️ `html` is 12px, so rem-based Tailwind type/size utilities land 25% short of the mockup —
  * every measurement in the template is an arbitrary px value (client `CLAUDE.md` §5, UI-RULES §1.3).
  */
-import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/pr-tab-intro.component';
-
 @Component({
   selector: 'app-programme-results',
   standalone: true,
@@ -159,8 +156,7 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
     PrSortableColumnDirective,
     PrFilterSelectComponent,
     PrFilterMultiselectModule,
-    ChangePhaseModalModule,
-    PrTabIntroComponent
+    ChangePhaseModalModule
   ],
   providers: [
     ProgrammeResultsService,
@@ -378,13 +374,13 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
 
       :host ::ng-deep .pgr-table .pr-table tr.pgr-row {
         display: grid;
-        gap: 12px;
-        align-items: center;
+        gap: 0;
+        align-items: stretch;
       }
 
       :host ::ng-deep .pgr-table .pr-table tr.pgr-head {
         height: 40px;
-        padding: 0 20px;
+        padding: 0;
         background: var(--pr-surface-app);
         border-bottom: 1px solid var(--pr-border);
         /* 11px, not 12px: it nests inside the shell's 1px border. */
@@ -394,7 +390,7 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
       :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row {
         /* min-height, not height — the two-line RESULT cell has to be able to grow. */
         min-height: 52px;
-        padding: 8px 20px;
+        padding: 0;
         /* Lighter than the header's border, per the design. */
         border-bottom: 1px solid var(--pr-border-divider);
         cursor: pointer;
@@ -423,12 +419,16 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
       /* Strip pr-table's navy header skin and its padded cells. */
       :host ::ng-deep .pgr-table .pr-table thead th.pgr-th {
         min-width: 0;
-        padding: 0;
+        padding: 0 12px;
         border: none;
+        border-right: 1px solid var(--pr-border);
         border-radius: 0;
         background: none;
         text-align: left;
-        vertical-align: middle;
+        display: flex;
+        align-items: center;
+        height: 100%;
+        box-sizing: border-box;
         font-size: 11px;
         font-weight: 600;
         line-height: 1.2;
@@ -440,8 +440,19 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
         text-overflow: ellipsis;
       }
 
+      :host ::ng-deep .pgr-table .pr-table thead th.pgr-th:first-child {
+        padding: 0;
+        justify-content: center;
+      }
+
       :host ::ng-deep .pgr-table .pr-table thead th.pgr-th--sortable {
         cursor: pointer;
+        user-select: none;
+        transition: color 150ms ease, background 150ms ease;
+      }
+
+      :host ::ng-deep .pgr-table .pr-table thead th.pgr-th--sortable:hover {
+        background: rgba(0, 0, 0, 0.025);
       }
 
       :host ::ng-deep .pgr-table .pr-table thead th.pgr-th--soon {
@@ -454,10 +465,20 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
 
       :host ::ng-deep .pgr-table .pr-table tbody td.pgr-td {
         min-width: 0;
-        padding: 0;
+        padding: 8px 12px;
         border: none;
-        vertical-align: middle;
+        border-right: 1px solid var(--pr-border-divider);
+        display: flex;
+        align-items: center;
+        min-height: 52px;
+        height: 100%;
         color: inherit;
+        box-sizing: border-box;
+      }
+
+      :host ::ng-deep .pgr-table .pr-table tbody td.pgr-td:first-child {
+        padding: 0;
+        justify-content: center;
       }
 
       /* Sticky right: the header's empty spacer paints the header grey so content scrolls behind
@@ -480,7 +501,8 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
         align-self: stretch;
         display: flex;
         align-items: center;
-        justify-content: flex-end;
+        justify-content: center;
+        padding: 0 8px;
         background: inherit;
       }
 
@@ -524,10 +546,26 @@ export class ProgrammeResultsComponent {
 
   // ── Toolbar / popover state ─────────────────────────────────────────────────────────────
   readonly columnsOpen = signal(false);
+  readonly filterPopoverOpen = signal(false);
   /** Which row's kebab menu is open — one at a time (design: `r.menuOpen` is per row). */
   readonly openMenuKey = signal<string | null>(null);
   /** Undebounced mirror of the search box, so typing does not fight the 300ms debounce. */
   readonly searchDraft = signal('');
+
+  toggleFilterPopover(event: Event): void {
+    event.stopPropagation();
+    this.columnsOpen.set(false);
+    this.openMenuKey.set(null);
+    this.filterPopoverOpen.update(v => !v);
+  }
+
+  closeFilterPopover(): void {
+    this.filterPopoverOpen.set(false);
+  }
+
+  readonly activeFilterCount = computed(() => {
+    return this.filter.activeChips().length;
+  });
 
   private readonly searchInput = new Subject<string>();
 
@@ -633,6 +671,12 @@ export class ProgrammeResultsComponent {
   /** The design draws a BUTTON here (`onClick={{ tabReporting.go }}`), not a link. */
   goToReporting(): void {
     this.router.navigateByUrl(this.reportingPath());
+  }
+
+  openWhereToReport(): void {
+    this.router.navigate(['/result-framework-reporting', 'entity-details', this.programmeCode()], {
+      queryParams: { whereToReport: 'true', returnTab: 'results' }
+    });
   }
 
   get cycleYear(): string | number | null {
@@ -1087,7 +1131,7 @@ export class ProgrammeResultsComponent {
    * would hand the user a spreadsheet under a CSV label.
    */
   exportCsv(): void {
-    const columns = this.visibleColumns().filter(column => column.key !== 'select');
+    const columns = this.visibleColumns();
     const rows = this.filteredRows();
     if (!rows.length) return;
 
@@ -1106,16 +1150,31 @@ export class ProgrammeResultsComponent {
   }
 
   // ── Dismissal ───────────────────────────────────────────────────────────────────────────
-  /** Outside click closes the Columns popover and any open row menu (the mockup draws neither). */
-  @HostListener('document:click')
-  onDocumentClick(): void {
+  /** Outside click closes the Columns popover, Filter popover and any open row menu. */
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event?: MouseEvent): void {
     if (this.columnsOpen()) this.columnsOpen.set(false);
     if (this.openMenuKey()) this.openMenuKey.set(null);
+
+    const target = event?.target as HTMLElement | null;
+    if (typeof target?.closest === 'function') {
+      if (
+        target.closest('.pr-results-filter-container') ||
+        target.closest('.p-multiselect-panel') ||
+        target.closest('.p-dropdown-panel')
+      ) {
+        return;
+      }
+    }
+    if (this.filterPopoverOpen()) {
+      this.filterPopoverOpen.set(false);
+    }
   }
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
     this.onDocumentClick();
+    if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
   }
 }
 

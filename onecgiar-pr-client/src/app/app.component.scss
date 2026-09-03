@@ -26,6 +26,10 @@
   }
 }
 
+:root {
+  --pr-shell-header-height: 56px;
+}
+
 // Keep the banner and navbar together while scrolling. The wrapper is sticky,
 // while both children remain in normal flow so neither one overlaps the other.
 .app-shell-header {

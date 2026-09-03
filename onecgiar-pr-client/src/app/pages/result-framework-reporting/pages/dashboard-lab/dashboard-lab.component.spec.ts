@@ -644,6 +644,46 @@ describe('DashboardLabComponent — overview heatmap matrices (OVW-T-3)', () => 
     expect(heatmap.rows.length).toBe(2);
     expect(heatmap.shownOf).toBeUndefined();
   });
+
+  describe('Overview JIRA-style Top-Bar Filter', () => {
+    it('manages filter open state, sections, scope, and counts', async () => {
+      const component = await createComponent();
+
+      expect(component.overviewSection()).toBe('all');
+      expect(component.overviewScope()).toBeNull();
+      expect(component.hasActiveOverviewFilters()).toBe(false);
+      expect(component.activeOverviewFilterCount()).toBe(0);
+
+      // Section selection
+      component.setOverviewSection('w1w2');
+      expect(component.overviewSection()).toBe('w1w2');
+      expect(component.overviewSectionLabel()).toBe('W1/W2');
+      expect(component.hasActiveOverviewFilters()).toBe(true);
+      expect(component.activeOverviewFilterCount()).toBe(1);
+
+      // Scope selection
+      component.setOverviewScope('AOW01');
+      expect(component.overviewScope()).toBe('AOW01');
+      expect(component.activeOverviewFilterCount()).toBe(2);
+
+      // Clear filters
+      component.clearOverviewFilters();
+      expect(component.overviewSection()).toBe('all');
+      expect(component.overviewScope()).toBeNull();
+      expect(component.hasActiveOverviewFilters()).toBe(false);
+      expect(component.activeOverviewFilterCount()).toBe(0);
+
+      // Popover toggling
+      expect(component.overviewFilterOpen()).toBe(false);
+      const fakeEvent = { stopPropagation: jest.fn() } as unknown as Event;
+      component.toggleOverviewFilterPopover(fakeEvent);
+      expect(fakeEvent.stopPropagation).toHaveBeenCalled();
+      expect(component.overviewFilterOpen()).toBe(true);
+
+      component.closeOverviewFilterPopover();
+      expect(component.overviewFilterOpen()).toBe(false);
+    });
+  });
 });
 
 /**

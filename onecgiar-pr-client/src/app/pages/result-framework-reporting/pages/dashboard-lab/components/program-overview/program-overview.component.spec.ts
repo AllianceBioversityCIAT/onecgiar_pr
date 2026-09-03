@@ -153,7 +153,6 @@ describe('ProgramOverviewComponent', () => {
     // "Progress by area of work" promoted to the hero position, directly after "About this
     // program" — above the W1/W2 and W3/Bilateral status groups. ToC map remains last.
     expect(headings).toEqual([
-      'About this program',
       'Progress by area of work',
       'W1/W2 Reporting Status',
       'W1/W2 results by category and status',
@@ -685,9 +684,9 @@ describe('ProgramOverviewComponent', () => {
     });
 
     /** FAIL input: a separator promoted to a real heading turns this red (breaks the pinned pin). */
-    it('adds no screen-reader noise and does not touch the pinned 8-heading assertion (TCM-R-1)', () => {
+    it('adds no screen-reader noise and does not touch the pinned 7-heading assertion (TCM-R-1)', () => {
       const headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
-      expect(headings.length).toBe(8);
+      expect(headings.length).toBe(7);
       expect(headings).not.toContain('W1/W2');
       expect(headings).not.toContain('W3/Bilateral');
     });
@@ -880,14 +879,14 @@ describe('ProgramOverviewComponent', () => {
       headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
       // TCM-R-1: the ToC map card shares the AoW filter's gate — it appears alongside
       // "Progress by area of work", directly below it.
-      expect(headings).toEqual(['About this program', 'Progress by area of work', 'Theory of Change map']);
+      expect(headings).toEqual(['Progress by area of work', 'Theory of Change map']);
 
       // Reset to all
       component.setActiveSection('all');
       fixture.detectChanges();
       expect(component.activeSection()).toBe('all');
       headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
-      expect(headings.length).toBe(8);
+      expect(headings.length).toBe(7);
     });
 
     it('toggles section to "all" when clicking the currently active section', () => {

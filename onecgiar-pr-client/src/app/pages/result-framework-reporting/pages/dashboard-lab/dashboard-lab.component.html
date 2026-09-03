@@ -1157,7 +1157,8 @@
           [programDotColor]="accentTheme().solid"
           activeTab="overview"
           [canReport]="canReportEmerging()"
-          (reportEmerging)="openReportModal()"
+          (whereToReport)="openWhereToReportModal()"
+          (reportEmerging)="openWhereToReportModal()"
           [showToolbar]="false" />
 
         <!-- ═══ PHASE SELECTOR — Overview-only (changes/overview-phase-filter, OPF-R-1, design.md
@@ -1168,55 +1169,214 @@
              selected by default (`effectiveVersionId()` resolves it); picking any row writes a
              concrete `versionId` into `selectedVersionId` via `onPhaseOptionSelected`. ═══ -->
         <div
-          class="flex flex-wrap items-center gap-[10px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[32px] py-[12px]"
+          class="flex flex-wrap items-center justify-between gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[32px] py-[10px]"
           role="group"
-          aria-label="Reporting phase">
-          <span class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">Phase</span>
-          <div class="opf-phase-select w-[210px] max-[620px]:w-full">
-            <app-pr-select
-              [options]="phaseSelectorOptions()"
-              optionLabel="label"
-              optionValue="versionId"
-              optionBadgeLabel="phaseTagLabel"
-              optionBadgeTone="phaseTagTone"
-              placeholder="Select phase"
-              [editable]="true"
-              [required]="false"
-              [truncateSelectionText]="true"
-              [ngModel]="effectiveVersionId()"
-              [ngModelOptions]="{ standalone: true }"
-              (selectOptionEvent)="onPhaseOptionSelected($event)">
-            </app-pr-select>
+          aria-label="Overview controls">
+          <div class="flex flex-wrap items-center gap-[10px]">
+            <!-- Phase selector -->
+            <div class="flex items-center gap-[8px]">
+              <span class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">Phase</span>
+              <div class="opf-phase-select w-[210px] max-[620px]:w-full">
+                <app-pr-select
+                  [options]="phaseSelectorOptions()"
+                  optionLabel="label"
+                  optionValue="versionId"
+                  optionBadgeLabel="phaseTagLabel"
+                  optionBadgeTone="phaseTagTone"
+                  placeholder="Select phase"
+                  [editable]="true"
+                  [required]="false"
+                  [truncateSelectionText]="true"
+                  [ngModel]="effectiveVersionId()"
+                  [ngModelOptions]="{ standalone: true }"
+                  (selectOptionEvent)="onPhaseOptionSelected($event)">
+                </app-pr-select>
+              </div>
+              @if (loadingMeter()) {
+                <span class="material-icons-round animate-spin text-[14px] text-[var(--pr-text-subtle)]" aria-hidden="true">progress_activity</span>
+                <span class="sr-only">Loading phase data…</span>
+              }
+            </div>
+
+            <!-- Divider -->
+            <div class="h-[22px] w-[1px] bg-[var(--pr-border-divider)] mx-[2px] hidden sm:block"></div>
+
+            <!-- JIRA-style Filter Button & Popover -->
+            <div class="relative pr-overview-filter-container">
+              <button
+                type="button"
+                (click)="toggleOverviewFilterPopover($event)"
+                class="inline-flex h-[34px] cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+                [class]="hasActiveOverviewFilters()
+                  ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] font-semibold'
+                  : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] font-medium hover:border-slate-400 hover:bg-slate-50'"
+                aria-label="Filter overview"
+                [attr.aria-expanded]="overviewFilterOpen()">
+                <span class="material-icons-round text-[18px]" [class.text-[var(--pr-color-primary-600)]]="hasActiveOverviewFilters()" [class.text-slate-500]="!hasActiveOverviewFilters()">filter_list</span>
+                <span>Filter</span>
+                @if (activeOverviewFilterCount() > 0) {
+                  <span class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums">
+                    {{ activeOverviewFilterCount() }}
+                  </span>
+                }
+              </button>
+
+              @if (overviewFilterOpen()) {
+                <div
+                  class="absolute left-0 top-[40px] z-30 w-[360px] max-w-[90vw] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+                  (click)="$event.stopPropagation()">
+                  <!-- Header -->
+                  <div class="mb-[12px] flex items-center justify-between">
+                    <span class="text-[13.5px] font-bold text-[var(--pr-text-heading)]">Filters</span>
+                    <div class="flex items-center gap-[10px]">
+                      @if (hasActiveOverviewFilters()) {
+                        <button
+                          type="button"
+                          (click)="clearOverviewFilters()"
+                          class="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:underline">
+                          Clear all
+                        </button>
+                      }
+                      <button
+                        type="button"
+                        (click)="closeOverviewFilterPopover()"
+                        class="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[5px] border-0 bg-transparent p-0 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                        aria-label="Close filters">
+                        <span class="material-icons-round text-[16px]">close</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Section filter -->
+                  <div class="mb-[14px]">
+                    <span class="mb-[6px] block text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">
+                      Section
+                    </span>
+                    <div class="grid grid-cols-2 gap-[6px]">
+                      <button
+                        type="button"
+                        (click)="setOverviewSection('all')"
+                        class="cursor-pointer rounded-[7px] border px-[10px] py-[6px] text-left text-[12px] transition-all"
+                        [class]="overviewSection() === 'all'
+                          ? 'border-[var(--pr-color-primary-500)] bg-[var(--pr-color-primary-50)] font-bold text-[var(--pr-color-primary-700)] shadow-2xs'
+                          : 'border-[var(--pr-border)] bg-[var(--pr-surface-ground)] font-medium text-[var(--pr-text-secondary)] hover:bg-white'">
+                        All Sections
+                      </button>
+                      <button
+                        type="button"
+                        (click)="setOverviewSection('w1w2')"
+                        class="flex cursor-pointer items-center justify-between rounded-[7px] border px-[10px] py-[6px] text-[12px] transition-all"
+                        [class]="overviewSection() === 'w1w2'
+                          ? 'border-[var(--pr-color-primary-500)] bg-[var(--pr-color-primary-50)] font-bold text-[var(--pr-color-primary-700)] shadow-2xs'
+                          : 'border-[var(--pr-border)] bg-[var(--pr-surface-ground)] font-medium text-[var(--pr-text-secondary)] hover:bg-white'">
+                        <span>W1/W2</span>
+                        @if (overviewStatusTotal() > 0) {
+                          <span class="rounded-full bg-purple-100 px-[6px] py-[1px] text-[10.5px] font-bold text-purple-700 tabular-nums">
+                            {{ overviewStatusTotal() }}
+                          </span>
+                        }
+                      </button>
+                      <button
+                        type="button"
+                        (click)="setOverviewSection('bilateral')"
+                        class="flex cursor-pointer items-center justify-between rounded-[7px] border px-[10px] py-[6px] text-[12px] transition-all"
+                        [class]="overviewSection() === 'bilateral'
+                          ? 'border-[var(--pr-color-primary-500)] bg-[var(--pr-color-primary-50)] font-bold text-[var(--pr-color-primary-700)] shadow-2xs'
+                          : 'border-[var(--pr-border)] bg-[var(--pr-surface-ground)] font-medium text-[var(--pr-text-secondary)] hover:bg-white'">
+                        <span>W3 / Bilateral</span>
+                        @if (overviewBilateralTotal() > 0) {
+                          <span class="rounded-full bg-blue-100 px-[6px] py-[1px] text-[10.5px] font-bold text-blue-700 tabular-nums">
+                            {{ overviewBilateralTotal() }}
+                          </span>
+                        }
+                      </button>
+                      <button
+                        type="button"
+                        (click)="setOverviewSection('aow')"
+                        class="flex cursor-pointer items-center justify-between rounded-[7px] border px-[10px] py-[6px] text-[12px] transition-all"
+                        [class]="overviewSection() === 'aow'
+                          ? 'border-[var(--pr-color-primary-500)] bg-[var(--pr-color-primary-50)] font-bold text-[var(--pr-color-primary-700)] shadow-2xs'
+                          : 'border-[var(--pr-border)] bg-[var(--pr-surface-ground)] font-medium text-[var(--pr-text-secondary)] hover:bg-white'">
+                        <span>Areas of Work</span>
+                        @if (overviewAowProgress().length > 0) {
+                          <span class="rounded-full bg-slate-200 px-[6px] py-[1px] text-[10.5px] font-bold text-slate-700 tabular-nums">
+                            {{ overviewAowProgress().length }}
+                          </span>
+                        }
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Scope filter -->
+                  <div>
+                    <span class="mb-[6px] block text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">
+                      Scope
+                    </span>
+                    <div class="max-h-[180px] overflow-y-auto rounded-[8px] border border-[var(--pr-border)] p-[4px] flex flex-col gap-[2px]">
+                      <button
+                        type="button"
+                        (click)="setOverviewScope(null)"
+                        class="cursor-pointer rounded-[6px] px-[8px] py-[5px] text-left text-[12px] transition-colors"
+                        [class]="overviewScope() === null
+                          ? 'bg-[var(--pr-color-primary-50)] font-bold text-[var(--pr-color-primary-700)]'
+                          : 'text-[var(--pr-text)] hover:bg-slate-50 font-normal'">
+                        All areas and outcomes
+                      </button>
+                      @for (opt of scopeOptions(); track opt.key) {
+                        <button
+                          type="button"
+                          (click)="setOverviewScope(opt.key)"
+                          class="flex cursor-pointer items-center gap-[6px] rounded-[6px] px-[8px] py-[5px] text-left text-[12px] transition-colors"
+                          [class]="overviewScope() === opt.key
+                            ? 'bg-[var(--pr-color-primary-50)] font-bold text-[var(--pr-color-primary-700)]'
+                            : 'text-[var(--pr-text)] hover:bg-slate-50 font-normal'">
+                          @if (overviewScopeDisplayCode(opt) !== '—') {
+                            <span class="shrink-0 rounded-[4px] bg-slate-100 px-[5px] py-[1px] font-mono text-[10.5px] font-medium text-slate-700">
+                              {{ overviewScopeDisplayCode(opt) }}
+                            </span>
+                          }
+                          <span class="truncate" [title]="opt.name">{{ opt.name }}</span>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Active filter chips (JIRA style with quick clear) -->
+            @if (overviewSection() !== 'all') {
+              <div class="inline-flex items-center gap-[5px] rounded-full border border-purple-200 bg-purple-50 py-[2px] pl-[10px] pr-[6px] text-[12px] font-semibold text-purple-800">
+                <span>Section: {{ overviewSectionLabel() }}</span>
+                <button
+                  type="button"
+                  (click)="setOverviewSection('all')"
+                  class="flex h-[16px] w-[16px] cursor-pointer items-center justify-center rounded-full hover:bg-purple-200 text-purple-700"
+                  aria-label="Clear section filter">
+                  <span class="material-icons-round text-[13px]">close</span>
+                </button>
+              </div>
+            }
+            @if (overviewScope() !== null) {
+              <div class="inline-flex items-center gap-[5px] rounded-full border border-purple-200 bg-purple-50 py-[2px] pl-[10px] pr-[6px] text-[12px] font-semibold text-purple-800">
+                <span class="max-w-[180px] truncate">Scope: {{ activeScopeLabel() }}</span>
+                <button
+                  type="button"
+                  (click)="setOverviewScope(null)"
+                  class="flex h-[16px] w-[16px] cursor-pointer items-center justify-center rounded-full hover:bg-purple-200 text-purple-700"
+                  aria-label="Clear scope filter">
+                  <span class="material-icons-round text-[13px]">close</span>
+                </button>
+              </div>
+            }
           </div>
-          @if (loadingMeter()) {
-            <span class="material-icons-round animate-spin text-[14px] text-[var(--pr-text-subtle)]" aria-hidden="true">progress_activity</span>
-            <span class="sr-only">Loading phase data…</span>
-          }
         </div>
 
-        <!-- Reporting Entry Hub (`changes/reporting-entry-hub`, REH-R-1) — mounted BEFORE
-             `app-program-overview`, design.md §6.1. -->
-        <app-reporting-entry-hub
-          id="reporting-entry-hub"
-          [programCode]="selected()?.initiativeCode || ''"
-          [phaseLabel]="phaseLabel()"
-          [isActivePhase]="hubIsActivePhase()"
-          [activeYear]="hubActiveYear()"
-          [aowRows]="overviewAowProgress()"
-          [w1w2Loading]="loadingAows()"
-          [programLevelRows]="hubProgramLevelRows()"
-          [canReportW1W2]="entityAowService.canReportResults()"
-          [w3State]="w3State()"
-          [myCentersCount]="myCenters().length"
-          [canReportEmerging]="canReportEmerging()"
-          (reportEmerging)="openReportModal()"
-          (reportAow)="onOpenAow($event)"
-          (reportProgramLevel)="onReportProgramLevel($event)"
-          (createResult)="onHubCreateResult($event)"
-          (retryW3)="retryW3()" />
-
         <app-program-overview
+          [programCode]="selected()?.initiativeCode || ''"
           [programName]="selected()?.initiativeShortName || selected()?.initiativeName || ''"
+          [(activeSection)]="overviewSection"
+          [hideInlineFilters]="true"
           [statusSegments]="overviewStatusSegments()"
           [bilateralStatusSegments]="overviewBilateralStatusSegments()"
           [aowProgress]="overviewAowProgress()"
@@ -1270,7 +1430,8 @@
             [programDotColor]="accentTheme().solid"
             activeTab="reporting"
             [canReport]="canReportEmerging()"
-            (reportEmerging)="openReportModal()"
+            (whereToReport)="openWhereToReportModal()"
+            (reportEmerging)="openWhereToReportModal()"
             [search]="plannedSearch()"
             [statusValue]="reportingStatusFilter()"
             [aowOptions]="reportingSectionOptions()"
@@ -2090,5 +2251,60 @@
       [disableInitiativeSelect]="true"
       (resultCreated)="closeReportModal()">
     </app-report-result-form>
+  </app-pr-dialog>
+}
+
+<!-- ==================== "Where to report" MODAL ==================== -->
+@if (showWhereToReportModal()) {
+  <app-pr-dialog
+    [visible]="showWhereToReportModal()"
+    [modal]="true"
+    [closeOnEscape]="true"
+    [showHeader]="false"
+    [dismissableMask]="true"
+    styleClass="where-to-report-dialog"
+    (onHide)="closeWhereToReportModal()">
+    <div class="flex items-center justify-between border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[24px] py-[16px]">
+      <div class="flex items-center gap-[10px]">
+        <span class="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[8px] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]">
+          <span class="material-icons-round text-[20px]">explore</span>
+        </span>
+        <div>
+          <h2 class="m-0 text-[16px] font-bold text-[var(--pr-text-heading)]">Where to report</h2>
+          <p class="m-0 mt-[1px] text-[12px] text-[var(--pr-text-muted)]">
+            Two funding paths, two entry points. Pick the one that matches the result you are reporting.
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        (click)="closeWhereToReportModal()"
+        aria-label="Close modal"
+        class="flex h-[32px] w-[32px] cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)] transition-colors">
+        <i class="material-icons-round text-[20px]">close</i>
+      </button>
+    </div>
+
+    <div class="p-[20px] max-h-[82vh] overflow-y-auto bg-[var(--pr-surface-ground)]">
+      <app-reporting-entry-hub
+        id="reporting-entry-hub"
+        [isModal]="true"
+        [programCode]="selected()?.initiativeCode || ''"
+        [phaseLabel]="phaseLabel()"
+        [isActivePhase]="hubIsActivePhase()"
+        [activeYear]="hubActiveYear()"
+        [aowRows]="overviewAowProgress()"
+        [w1w2Loading]="loadingAows()"
+        [programLevelRows]="hubProgramLevelRows()"
+        [canReportW1W2]="entityAowService.canReportResults()"
+        [w3State]="w3State()"
+        [myCentersCount]="myCenters().length"
+        [canReportEmerging]="canReportEmerging()"
+        (reportEmerging)="closeWhereToReportModal(); openReportModal()"
+        (reportAow)="closeWhereToReportModal(); onOpenAow($event)"
+        (reportProgramLevel)="closeWhereToReportModal(); onReportProgramLevel($event)"
+        (createResult)="closeWhereToReportModal(); onHubCreateResult($event)"
+        (retryW3)="retryW3()" />
+    </div>
   </app-pr-dialog>
 }

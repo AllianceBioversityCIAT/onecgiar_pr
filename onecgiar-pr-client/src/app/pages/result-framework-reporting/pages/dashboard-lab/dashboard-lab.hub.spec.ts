@@ -826,5 +826,37 @@ describe('By-AoW section collapse/expand', () => {
     expect(component.hloTargetSum(hlo)).toBe('12.5');
     expect(component.hloAchievedSum(hlo)).toBe('12.5');
   });
+
+  it('manages the Where to report modal visibility', async () => {
+    const { component } = await createComponent(apiMock());
+    expect(component.showWhereToReportModal()).toBe(false);
+
+    component.openWhereToReportModal();
+    expect(component.showWhereToReportModal()).toBe(true);
+
+    component.closeWhereToReportModal();
+    expect(component.showWhereToReportModal()).toBe(false);
+  });
+
+  it('opens the Where to report modal on onFocusHub', async () => {
+    const { component } = await createComponent(apiMock());
+    expect(component.showWhereToReportModal()).toBe(false);
+
+    component.onFocusHub('w3');
+    expect(component.showWhereToReportModal()).toBe(true);
+  });
+
+  it('fetches W3 projects when openWhereToReportModal is called even if on another tab', async () => {
+    const getProjects = jest
+      .fn()
+      .mockReturnValue(of({ response: { programCode: 'SP02', activeYear: 2026, truncated: false, centers: [CENTER] } }));
+    const api = apiMock({ GET_reportingEntryHubProjects: getProjects });
+    const { component } = await createComponent(api);
+
+    component.openWhereToReportModal();
+    expect(component.showWhereToReportModal()).toBe(true);
+    expect(component.w3State().status).toBe('ready');
+    expect(getProjects).toHaveBeenCalledWith('SP02');
+  });
 });
 });
