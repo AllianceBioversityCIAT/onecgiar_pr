@@ -1001,6 +1001,145 @@ describe('InnovationUseFormComponent', () => {
     });
   });
   /**
+   * P2-3537 §4 — the Current Use Update block, and the reconciliation that governs it.
+   *
+   * The case that matters most is the one that is NOT here as an error: a result whose previous
+   * phase reported no actors must not see the block at all. Yeck's decision of 3 Sep 2026 — showing
+   * it would mean reconciling against zero actors, an error the reporter can never resolve, so they
+   * could never submit. Every other test guards the arithmetic or the "0 is a valid answer" rule.
+   */
+  describe('§4 — Current Use Update block (P2-3537)', () => {
+    const previous = (total: number, year: number | null = 2025) => ({
+      result_id: 40,
+      phase_year: year,
+      total_actors: total,
+      actors: [],
+    });
+
+    const withActors = (...amounts: number[]) =>
+      amounts.map(n => Object.assign(new Actor(), { how_many: n, is_active: true }));
+
+    beforeEach(() => {
+      component.body = new IpsrStep1Body();
+      component.body.current_use_previous = previous(500);
+      component.body.innovatonUse.actors = withActors(500);
+      component.body.new_users_added = null;
+      component.body.use_expansion_narrative = null;
+    });
+
+    it('renders the block when the previous phase reported actors', () => {
+      expect(component.showCurrentUseUpdate()).toBe(true);
+    });
+
+    it('does NOT render it on a first report', () => {
+      component.body.current_use_previous = null;
+      expect(component.showCurrentUseUpdate()).toBe(false);
+    });
+
+    it('does NOT render it when the previous phase had organisations but no actors', () => {
+      // The server sends null for that case too. Rendering the block would show a permanent
+      // mismatch against zero actors that nothing the reporter does can fix.
+      component.body.current_use_previous = null;
+      expect(component.showCurrentUseUpdate()).toBe(false);
+      expect(component.hasCurrentUseMismatch()).toBe(false);
+    });
+
+    it('does NOT render it before the 2026 phase', () => {
+      fieldsManagerServiceMock.isInnovationUseAgeFallback2026.mockReturnValue(false);
+      expect(component.showCurrentUseUpdate()).toBe(false);
+    });
+
+    it('does NOT render it inside IPSR, which shares this template', () => {
+      component.isIpsr = true;
+      expect(component.showCurrentUseUpdate()).toBe(false);
+    });
+
+    it('calculates the cumulative total as previous + new, never typed', () => {
+      component.body.new_users_added = 120;
+      expect(component.totalCumulativeUse()).toBe(620);
+    });
+
+    it('treats an unanswered increment as zero for the arithmetic, without NaN', () => {
+      expect(component.totalCumulativeUse()).toBe(500);
+      expect(Number.isNaN(component.totalCumulativeUse())).toBe(false);
+    });
+
+    it('reconciles when the user categories match the cumulative total', () => {
+      component.body.new_users_added = 120;
+      component.body.innovatonUse.actors = withActors(400, 220);
+      expect(component.actorsTotal()).toBe(620);
+      expect(component.hasCurrentUseMismatch()).toBe(false);
+    });
+
+    it('flags a mismatch naming the exact difference', () => {
+      component.body.new_users_added = 120;
+      component.body.innovatonUse.actors = withActors(600);
+
+      expect(component.hasCurrentUseMismatch()).toBe(true);
+      expect(component.currentUseDifference()).toBe(-20);
+      const msg = component.currentUseMismatchMessage();
+      expect(msg).toContain('600');
+      expect(msg).toContain('620');
+      expect(msg).toContain('20');
+    });
+
+    it('ignores actor rows the reporter deleted', () => {
+      component.body.new_users_added = 0;
+      const actors = withActors(500, 999);
+      actors[1].is_active = false;
+      component.body.innovatonUse.actors = actors;
+
+      expect(component.actorsTotal()).toBe(500);
+      expect(component.hasCurrentUseMismatch()).toBe(false);
+    });
+
+    it('accepts a reported ZERO and still demands the narrative', () => {
+      // §5: use verified and did not grow. Allowed, but it has to be explained.
+      component.body.new_users_added = 0;
+      expect(component.isCurrentUseUpdateComplete()).toBe(false);
+
+      component.body.use_expansion_narrative = 'Verified with the cooperative; no new users.';
+      expect(component.isCurrentUseUpdateComplete()).toBe(true);
+    });
+
+    it('is incomplete while the increment has not been answered at all', () => {
+      component.body.use_expansion_narrative = 'Something happened.';
+      expect(component.isCurrentUseUpdateComplete()).toBe(false);
+    });
+
+    it('is incomplete while the figures do not reconcile, even with both fields filled', () => {
+      component.body.new_users_added = 120;
+      component.body.use_expansion_narrative = 'A distribution agreement.';
+      component.body.innovatonUse.actors = withActors(1);
+
+      expect(component.isCurrentUseUpdateComplete()).toBe(false);
+    });
+
+    it('refuses a negative increment: use cannot decrease through this field', () => {
+      component.body.new_users_added = -5;
+      component.onNewUsersAddedChange();
+      expect(component.body.new_users_added).toBe(0);
+    });
+
+    it('omits the round label rather than guessing it', () => {
+      component.body.current_use_previous = previous(500, null);
+      expect(component.previousUsePhaseYear()).toBeNull();
+      expect(component.previousReportedUse()).toBe(500);
+    });
+
+    it('counts nothing but actors — organisations never enter the total', () => {
+      // Yeck's Q4 decision. If this ever changes, next year's "previous use" becomes a figure
+      // nobody can decompose.
+      component.body.new_users_added = 0;
+      component.body.innovatonUse.organization = [{ how_many: 12 } as any];
+      component.body.innovatonUse.actors = withActors(500);
+
+      expect(component.actorsTotal()).toBe(500);
+      expect(component.hasCurrentUseMismatch()).toBe(false);
+    });
+  });
+
+  /**
    * P2-3537 section 7 — the age-only fallback and the system-applied 50/50 split.
    *
    * What this pins is the part the story cares about most: that a computed figure is

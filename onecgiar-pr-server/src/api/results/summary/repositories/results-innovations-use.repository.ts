@@ -185,6 +185,11 @@ export class ResultsInnovationsUseRepository
         -- and never read back, which reaches the screen as an empty field after a reload with no
         -- error anywhere (that is exactly what happened to Policy Change's actors_influenced).
         riu.innov_use_2030_justification,
+        -- P2-3537 §4. Same 🛑 as above: this SELECT lists columns one by one, so a column missing
+        -- here is written and never read back — the reporter fills the box, saves, returns and
+        -- finds it empty, with no error in any log.
+        riu.new_users_added,
+        riu.use_expansion_narrative,
         ciul.level AS level,
         r.is_discontinued,
         -- The joins below were already here and unused. This alias is what lets the read side offer

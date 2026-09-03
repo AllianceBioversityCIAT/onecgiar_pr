@@ -90,6 +90,8 @@ export class InnovationUseService {
         scaling_studies_urls,
         innov_use_2030_to_be_determined,
         innov_use_2030_justification,
+        new_users_added,
+        use_expansion_narrative,
         innov_use_to_be_determined,
         is_discontinued,
         discontinued_options,
@@ -185,6 +187,10 @@ export class InnovationUseService {
         // justification", and neither must wipe a value the other surface just wrote.
         resultExist.innov_use_2030_justification =
           innov_use_2030_justification ?? null;
+        // P2-3537 §4. `?? null` and never `|| null`: with `||`, a reported 0 ("use was verified and
+        // did not grow", which §5 allows explicitly) would be stored as "not answered".
+        resultExist.new_users_added = new_users_added ?? null;
+        resultExist.use_expansion_narrative = use_expansion_narrative ?? null;
 
         if (innovation_use_level >= InnovationUseLevel.Level_6) {
           resultExist.readiness_level_explanation =
@@ -222,6 +228,8 @@ export class InnovationUseService {
           innov_use_2030_to_be_determined;
         newInnUse.innov_use_2030_justification =
           innov_use_2030_justification ?? null;
+        newInnUse.new_users_added = new_users_added ?? null;
+        newInnUse.use_expansion_narrative = use_expansion_narrative ?? null;
 
         if (innovation_use_level >= InnovationUseLevel.Level_6) {
           newInnUse.readiness_level_explanation =

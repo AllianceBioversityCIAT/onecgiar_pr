@@ -19,6 +19,68 @@
   body.innov_use_to_be_determined === null ||
   body.innov_use_to_be_determined === undefined
 ) {
+  <!-- P2-3537 §4 — Current Use Update. Rendered immediately above the actor-type fields, inside the
+       Current use section, exactly where the story places it.
+       🥇 ABSENT, not empty, when the previous phase reported no actors: reconciling against zero
+       actors is an error the reporter could never resolve, so they would never be able to submit
+       (Yeck, 3 Sep 2026). `showCurrentUseUpdate()` carries that condition. -->
+  @if (showCurrentUseUpdate()) {
+    <div class="current_use_update">
+      <app-pr-field-header
+        label="Current Use Update"
+        [useColon]="false"
+        description="This innovation was already reported before, so only the change since then is asked for here. The user categories below hold the cumulative total."
+        [showDescriptionLabel]="false">
+      </app-pr-field-header>
+
+      <div class="current_use_update__figure">
+        Previous reported use:
+        <strong>{{ previousReportedUse() }}</strong
+        >@if (previousUsePhaseYear()) {
+          <!-- The space lives inside the span: Angular collapses whitespace between elements, so
+               without it the line renders as "500(FY2025)". Seen on prtest, 3 Sep 2026. -->
+          <span class="current_use_update__phase">&nbsp;(FY{{ previousUsePhaseYear() }})</span>
+        }
+      </div>
+
+      <app-pr-input
+        label="New users added during this reporting period"
+        type="number"
+        placeholder="Write some..."
+        [required]="true"
+        [disabled]="saving"
+        [(ngModel)]="body.new_users_added"
+        (ngModelChange)="onNewUsersAddedChange()">
+      </app-pr-input>
+
+      <!-- Field 3 of the story: never typed, always previous + new. -->
+      <div class="current_use_update__figure">
+        Total cumulative current use to date:
+        <strong>{{ totalCumulativeUse() }}</strong>
+      </div>
+
+      <app-pr-textarea
+        label="Brief narrative on how the use expanded"
+        placeholder="Write some..."
+        [required]="true"
+        [disabled]="saving"
+        [maxWords]="maxNarrativeWords"
+        [(ngModel)]="body.use_expansion_narrative">
+      </app-pr-textarea>
+
+      <!-- §4.1 + §5: the error names the exact difference and appears as soon as the figures
+           diverge, not only on submit. Driven off a getter, so "immediately" comes for free. -->
+      @if (hasCurrentUseMismatch()) {
+        <div class="current_use_update__mismatch">
+          <i class="pi pi-exclamation-triangle" style="font-size: 14px; margin-top: 2px"></i>
+          <div>{{ currentUseMismatchMessage() }}</div>
+        </div>
+      }
+
+      <div appFeedbackValidation labelText="Current Use Update" [isComplete]="isCurrentUseUpdateComplete()"></div>
+    </div>
+  }
+
   <app-pr-field-header [required]="false" label="Actors" description="{{ narrativeActors() }}"></app-pr-field-header>
   <input type="text" id="removeFocus" style="position: absolute; opacity: 0" />
   <div class="fields_list" *ngIf="this.body.innovatonUse.actors?.length">

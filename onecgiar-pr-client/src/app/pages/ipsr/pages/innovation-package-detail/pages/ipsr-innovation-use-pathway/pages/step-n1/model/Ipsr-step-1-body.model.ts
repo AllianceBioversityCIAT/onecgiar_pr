@@ -15,6 +15,26 @@ export class IpsrStep1Body {
   innov_use_2030_justification: string = null;
   /** P2-3295 §3 — the projection reported in the previous phase, or null on first-time reporting. */
   innovation_use_2030_previous: any = null;
+  /**
+   * P2-3537 §4 — users added during THIS reporting period. Not the cumulative total: the actor rows
+   * hold that. `null` means not answered, which is NOT the same as a reported 0 ("use was verified
+   * and did not grow", which §5 allows explicitly).
+   *
+   * 🛑 Declared here for the same reason as the field above: `app-innovation-use-form` types its
+   * `@Input() body` as `IpsrStep1Body`, so THIS is the model its template is checked against. A
+   * binding missing here passes `tsc --noEmit` and Jest and fails `npm run build` with TS2339 —
+   * twice already, in this very file.
+   */
+  new_users_added: number = null;
+  /** P2-3537 §4 — how the use expanded this period. Capped at 100 words on screen. */
+  use_expansion_narrative: string = null;
+  /**
+   * P2-3537 §4 — the current use reported in the previous phase: `{ total_actors, phase_year }`,
+   * or `null`. 🥇 `null` is what tells the screen NOT to render the Current Use Update block at all
+   * — first-time reporting, or a previous phase with no actors. Yeck's decision of 3 Sep 2026: a
+   * result with organisations and no actors must not face a reconciliation it can never satisfy.
+   */
+  current_use_previous: any = null;
   evidences_justification: string = '';
   readiness_level_explanation: string = '';
   is_discontinued: boolean = null;

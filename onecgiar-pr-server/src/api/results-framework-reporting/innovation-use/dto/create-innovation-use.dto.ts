@@ -118,6 +118,21 @@ export class CreateInnovationUseDto {
   })
   innov_use_2030_justification?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'P2-3537 §4 — users added during this reporting period. Integer, minimum 0. Absent means the question was not answered, which is not the same as zero.',
+    example: 120,
+  })
+  new_users_added?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'P2-3537 §4 — how the use expanded during this reporting period. Capped at 100 words on screen.',
+    example:
+      'A distribution agreement with two cooperatives put the variety in front of 120 new farmers.',
+  })
+  use_expansion_narrative?: string;
+
   @ApiProperty({
     description: 'Indicates whether there are associated scaling studies',
     example: true,
