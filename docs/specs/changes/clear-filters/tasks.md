@@ -19,7 +19,7 @@
 
 ## 3. Task List
 
-### `CF-T-1` — Add the Clear filters control [ ]
+### `CF-T-1` — Add the Clear filters control [x]
 
 - **Type:** `client` · **Size:** `S` · **Depends on:** — · **Blocks:** —
 - **Implements:** `CF-R-1`…`CF-R-4`, `CF-AC-1`…`CF-AC-5` · **Design ref:** `CF-DD-1`…`CF-DD-5`
@@ -27,15 +27,15 @@
 - **Scope:** one `<button>` in the filter bar of `program-overview.component.html`, a `computed()` visibility predicate, and one handler that resets both axes.
 
 - **Definition of done:**
-  - [ ] A `computed()` predicate is true when section ≠ `'all'` **or** scope ≠ `null`, and gates an `@if`. The control is **removed from the DOM**, not hidden — **it must NOT** be invisible-but-focusable (`CF-AC-2`'s negative clause; the exact defect `RGS-T-3` existed to avoid).
-  - [ ] Activating it sets `activeSection` to `'all'` **and** emits `scopeChange` with `null`.
-  - [ ] The section reset sets the signal **directly**, **NOT** via `setActiveSection('all')` — that method carries toggle logic which is a no-op today but couples clearing to an unrelated future change (`CF-DD-2`).
-  - [ ] **It must NOT** touch `PROGRAMME_RESULTS_QUERY_PARAM_MAP`, `OverviewLink`, the `?scope=` value shape, or the host. If a host change appears necessary, **stop and report** — that contradicts the design's reading of the clearing contract and is a discovery, not a detail.
-  - [ ] "All Sections" and the scope dropdown keep working exactly as they do today. Re-click behaviour on both axes is **unchanged** (`OQ-3`) — **it must NOT** make scope toggle, and **must NOT** stop sections toggling.
-  - [ ] Native `<button type="button">`, accessible name describing clearing, keyboard-operable.
-  - [ ] `focus-visible:shadow-[var(--pr-focus-ring)]`. **It must NOT** use `ring-[var(--pr-focus-ring)]` — a box-shadow value that paints nothing; this cost a rework round on `RGS-T-1`.
-  - [ ] **On successful clear, focus moves to the "All Sections" tab** (`CF-DD-5`). **It must NOT** be allowed to fall to `<body>` — the control removes itself mid-interaction.
-  - [ ] No fixed width and no new grid/flex track in the bar (`CF-DD-4`).
+  - [x] A `computed()` predicate is true when section ≠ `'all'` **or** scope ≠ `null`, and gates an `@if`. The control is **removed from the DOM**, not hidden — **it must NOT** be invisible-but-focusable (`CF-AC-2`'s negative clause; the exact defect `RGS-T-3` existed to avoid).
+  - [x] Activating it sets `activeSection` to `'all'` **and** emits `scopeChange` with `null`.
+  - [x] The section reset sets the signal **directly**, **NOT** via `setActiveSection('all')` — that method carries toggle logic which is a no-op today but couples clearing to an unrelated future change (`CF-DD-2`).
+  - [x] **It must NOT** touch `PROGRAMME_RESULTS_QUERY_PARAM_MAP`, `OverviewLink`, the `?scope=` value shape, or the host. If a host change appears necessary, **stop and report** — that contradicts the design's reading of the clearing contract and is a discovery, not a detail.
+  - [x] "All Sections" and the scope dropdown keep working exactly as they do today. Re-click behaviour on both axes is **unchanged** (`OQ-3`) — **it must NOT** make scope toggle, and **must NOT** stop sections toggling.
+  - [x] Native `<button type="button">`, accessible name describing clearing, keyboard-operable.
+  - [x] `focus-visible:shadow-[var(--pr-focus-ring)]`. **It must NOT** use `ring-[var(--pr-focus-ring)]` — a box-shadow value that paints nothing; this cost a rework round on `RGS-T-1`.
+  - [x] **On successful clear, focus moves to the "All Sections" tab** (`CF-DD-5`). **It must NOT** be allowed to fall to `<body>` — the control removes itself mid-interaction.
+  - [x] No fixed width and no new grid/flex track in the bar (`CF-DD-4`).
 
 - **Verification:** `npx jest src/app/pages/result-framework-reporting/pages/dashboard-lab/components/program-overview --silent --reporters=summary --no-coverage` and `npx ng lint --quiet`, both from `onecgiar-pr-client/`. *(Targeted path only — not the full `dashboard-lab` directory. There is no flat ESLint config; `npx eslint <path>` fails.)*
   Assert: presence/absence across **all four** state combinations (neither / section only / scope only / both); a clear emits `null` **and** sets `'all'`; Enter and Space both activate; `document.activeElement` after a clear is the "All Sections" tab, **not** `<body>`; the focus-ring class contract including the negative `not.toContain('ring-[var(--pr-focus-ring)]')`.
