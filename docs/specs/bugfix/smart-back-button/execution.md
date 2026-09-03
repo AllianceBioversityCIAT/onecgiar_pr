@@ -48,3 +48,46 @@ None. No `Not Done / Assumptions` that leave scope owed.
 #### Final verification
 
 Red-on-current-code for SBB-TEST-1 and SBB-TEST-2. Production service unchanged.
+
+### SBB-T-2 — Fix shell resolver and `back()` history
+
+| Field | Value |
+|---|---|
+| Final status | PASS |
+| Date | 2026-09-03 |
+| Attempts | 1 |
+| Requirements | SBB-R-1, SBB-R-2, SBB-R-3 (all green) |
+| Skills | `angular-developer`, `tdd` (as tasked; no deviation) |
+| Effort | medium |
+| Continue gate | user said `continue` (gated) |
+
+#### Attempt 1
+
+- **Files changed:** `onecgiar-pr-client/src/app/shared/services/smart-navigation.service.ts` only. Spec file untouched (T-1 expectations unchanged).
+  - Shell branch (section 4): `isSameProgram` → `isEntityDetails` (`prev.includes('/entity-details/')`); skip all siblings, then existing catalog ladder or home.
+  - `back()`: after `getBackTarget()`, `lastIndexOf` + `splice` the sanitized current URL, then `navigateByUrl`. `fallbackUrl` early return unchanged (bilateral header path).
+- **Implementer verification:** `cd onecgiar-pr-client && npm run test -- --testPathPattern="smart-navigation.service.spec"` → 16 passed, 16 total.
+  - SBB-TEST-1 PASS (was FAIL)
+  - SBB-TEST-2 PASS (was FAIL)
+  - SBB-TEST-3 PASS
+  - 13 existing catalog / drill-down / tab / fallback PASS
+- **Reviewer:** `STATUS: PASS` — SBB-DD-1 and SBB-DD-2 implemented in the shell branch and `back()` only; resolve-before-splice keeps the first destination; drill-down / center / bilateral-header paths intact; T-1 assertions unmodified so the green run is a real gate.
+- **ADVISORY:** none from this Reviewer.
+
+#### Decisions
+
+- Drop current URL via `splice` rather than ignoring NavigationEnd (both allowed by SBB-DD-2). `getBackTarget()` runs first so the first click still uses the pre-pop history.
+- No band / bilateral-header change (SBB-DD-3). No stale-label escalation.
+
+#### Issues
+
+None. No `Not Done / Assumptions`.
+
+#### Final verification
+
+16/16 green on the scoped Jest file. Budget: 2 tasks, ~20 LOC in the service + T-1 tests already committed; under the ~40–80 / 2-task tripwire.
+
+## Summary
+
+All tasks in `bugfix/smart-back-button` are `[x]` with matching PASS evidence. Shell Back skips sibling `/entity-details/` URLs and `back()` does not restack the left page. Optional HITL remains: paint the band on Overview after a sidebar hop and confirm **Back to Science programs**.
+

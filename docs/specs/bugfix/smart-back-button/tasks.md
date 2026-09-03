@@ -8,7 +8,7 @@ Baseline: `US-S1` (`docs/prd.md`); `docs/ux-ui/design.md` §2; `W1` (`docs/trd/t
 - **Module / feature:** Result Framework Reporting — program-shell Smart Back
 - **Linked spec:** `docs/specs/bugfix/smart-back-button/requirements.md` + `design.md`
 - **Owner / driver:** Implementer (T2) then Reviewer (T3, different model)
-- **Status:** `in-progress`
+- **Status:** `done`
 - **Budget:** 2 tasks · ~40–80 LOC · 1 review round (`design.md` Step 2.4)
 
 ## 2. Pre-flight checklist
@@ -76,7 +76,7 @@ cd onecgiar-pr-client && npm run test -- --testPathPattern="smart-navigation.ser
 ### SBB-T-2 — Fix shell resolver and `back()` history
 
 - **Type:** `client`
-- **Status:** `pending`
+- **Status:** `[x] done`
 - **Size:** `S`
 - **Description:** In the Science Program **shell** branch only, skip every `/entity-details/` sibling, then take the last catalog or home (SBB-DD-1). Make `back()` drop the current URL (or ignore its own NavigationEnd) so the next resolve cannot retarget the left shell (SBB-DD-2). Do not change band markup, bilateral section 2–3, or routes (SBB-DD-3).
 - **Implements:** SBB-R-1, SBB-R-2, SBB-R-3 (all scenarios turn green); SBB-R-2 AND IT MUST drill-down unchanged; SBB-R-3 same-program tabs unchanged
@@ -89,11 +89,11 @@ cd onecgiar-pr-client && npm run test -- --testPathPattern="smart-navigation.ser
 
 **Definition of done**
 
-- [ ] Sibling hop resolves to Science programs home (or the real entry catalog)
-- [ ] After `back()`, next resolve is not SP01
-- [ ] Center → SP still **Back to Bilateral results**
-- [ ] Existing catalog / tab / By-AOW specs still green
-- [ ] Band / bilateral header files untouched unless a proven stale-label failure appears (then stop and escalate; do not expand silently)
+- [x] Sibling hop resolves to Science programs home (or the real entry catalog)
+- [x] After `back()`, next resolve is not SP01
+- [x] Center → SP still **Back to Bilateral results**
+- [x] Existing catalog / tab / By-AOW specs still green
+- [x] Band / bilateral header files untouched unless a proven stale-label failure appears (then stop and escalate; do not expand silently)
 
 **Verification**
 
