@@ -316,6 +316,25 @@ ADVISORY (recorded, never gates):
 | `AIS-T-2` floor + container ladder (+ CT icon-font harness) | PASS | 1 / 1 | `14996fcc7`, `917e7128d` |
 | `AIS-T-3` Jest skeleton/row parity | PASS | 1 / 1 | `f1ee867dd` |
 | `AIS-T-4` `reporting-aow-table` sweep (report only) | PASS — no starvation | 1 / 1 | `83337e132` |
-| `AIS-T-5` docs + real-page pass | `[~]` docs PASS (3 / 3), real-page BLOCKED (env) | — | this commit |
+| `AIS-T-5` docs + real-page pass | PASS — docs (3 / 3) + real-page table, 10/10 combinations clean | — | `ada2abc1f`, this commit |
 
 Behavioural outcome: the AoW row's identity column can no longer collapse — measured floor 143/167px, container-keyed ladder, CT gate green at 84×2 steps. Budget: ≈780 insertions vs ≈240 planned (trip recorded §3, user-approved continuation). Follow-ups for `/akili-archive`: promote the container-ladder pattern to `docs/ux-ui/design.md` §9; amend `KZ-OAH-1` standardization #1 (a `0` floor permits collapse); registry Skill Map entry "Tailwind not mapped" is stale; one-off `npm run test:ct` on the default branch for the four icon-using CT specs not re-run; candidate proposals `changes/reporting-aow-table-row-overflow` and the section-level rail fold (`AIS-DD-1` alt. c).
+
+**Part (2) real-page pass — DONE 2026-09-03 via the Orca embedded browser (`orca goto` / `orca exec "set viewport W H"` / `orca eval`), logged-in session, `/result-framework-reporting/entity-details/SP04/overview`, scope off and `?scope=AOW01`.** The earlier "BLOCKED (environment)" stands corrected: the user pointed at the Orca browser (`orca-cli` skill), which the Leader had not tried. Method: navigate, wait for `[data-testid="aow-rows"]` + `networkidle`, **then** `set viewport` (it does not survive a `goto`), wait, read twice (both reads compared on `gridTemplateColumns`), refuse while a skeleton is present. Raw readings: `ais-t5-real-page.jsonl`; screenshot: `ais-t5-1280.png` (all five rows show code chip + name with ellipsis, bar, figures, achievement, `Report` + arrow).
+
+| set viewport | scope | innerWidth¹ | media query | Q (px) | branch | rows | row 1 tracks | min identity / name px (row) | row / page overflow | achv ⊕ ⓘ | double-read stable | violations |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1600 | off | 1920 | ≥1600 | 1237 | full | 5 | `624|240|54|107|112` | 624 / 267 (AOW01) | no / no | ok | yes | **0** |
+| 1600 | on | 1920 | ≥1600 | 1237 | full | 1 | `624|240|54|107|112` | 624 / 267 (AOW01) | no / no | ok | yes | **0** |
+| 1280 | off | 1536 | ≥1280 | 853 | full | 5 | `240|240|54|107|112` | 240 / 180 (AOW01) | no / no | ok | yes | **0** |
+| 1280 | on | 1536 | ≥1280 | 853 | full | 1 | `240|240|54|107|112` | 240 / 180 (AOW01) | no / no | ok | yes | **0** |
+| 1100 | off | 1320 | ≥1280 | 637 | full (restacked) | 5 | `143|167|54|62|112` | 143 / 83 (AOW01) | no / no | ok | yes | **0** |
+| 1100 | on | 1320 | ≥1280 | 637 | full (restacked) | 1 | `143|167|54|62|112` | 143 / 83 (AOW01) | no / no | ok | yes | **0** |
+| 900 | off | 1080 | ≥1024 | 397 | stacked 2×2 | 5 | `233|112` | 233 / 150 (AOW01) | no / no | ok | yes | **0** |
+| 900 | on | 1080 | ≥1024 | 397 | stacked 2×2 | 1 | `233|112` | 233 / 150 (AOW01) | no / no | ok | yes | **0** |
+| 768 | off | 921 | ≥900 | 538 | stacked 2×2 | 5 | `375|112` | 375 / 267 (AOW01) | no / no | ok | yes | **0** |
+| 768 | on | 921 | ≥900 | 538 | stacked 2×2 | 1 | `375|112` | 375 / 267 (AOW01) | no / no | ok | yes | **0** |
+
+¹ `innerWidth` is reported in CSS px under the app's root `zoom` (design.md DD-11): a 1280-wide window reads as 1536, i.e. ×1.2; media queries and `Q` are in the same zoomed space, so the branch each width lands in is exactly what the user sees. Consequences disclosed in `AIS-DD-3`/`requirements.md` §9 were estimated in unzoomed px; the zoom makes the shell roomier than estimated (1280 → full branch, 1100 → full-restacked, 900/768 → stacked 2×2 because the rail folds under and Q = 397/538 < 560). No violation anywhere: name ≥ 83px at the tightest point (1100, `AOW01`), chip always inside, no row or page overflow, exclusivity holds, both reads identical.
+
+**`AIS-T-5` status: `[x]` — PASS** (part 1 Reviewer PASS on attempt 3; part 2 measured by the Leader — a measurement, not code, so no Reviewer round; the raw jsonl is the audit artefact). `AIS-AC-5` green. `ais-t5-measure.js` kept as the owner-runnable equivalent.
