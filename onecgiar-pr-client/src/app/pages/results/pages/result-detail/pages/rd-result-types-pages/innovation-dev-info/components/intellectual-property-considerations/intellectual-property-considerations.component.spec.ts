@@ -133,6 +133,32 @@ describe('IntellectualPropertyConsiderationsComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.message').length).toBe(2);
   });
 
+  it('leaves only the chosen option marked, never the previous one', () => {
+    // The one test that must NOT use the stub: what is under test is precisely the
+    // interaction between the component and the real `mapBoolean`. With the stub in place
+    // no flag is ever written, so the assertion would pass on an empty array and prove
+    // nothing — which is exactly what it did on the first run.
+    const real = new InnovationDevInfoUtilsService();
+    mockUtils.mapBoolean.mockImplementation((body: any) => real.mapBoolean(body));
+
+    // If a previous answer kept `answer_boolean: true`, submitting would fire the IP
+    // focal-point email even after the reporter changed their mind to "No" — the server
+    // trigger looks for a Yes/Not sure option with that flag set. On prtest the state
+    // looked wrong on 3 Sep 2026, but that was the probe: clicking the native input skips
+    // the component's own `selectOptionEvent`, which emits AFTER the model updates. This
+    // pins the real sequence so the doubt never has to be re-litigated in a browser.
+    select('Not sure');
+    expect(
+      component.question.options.filter((o: any) => o.answer_boolean === true).map((o: any) => o.question_text)
+    ).toEqual(['Not sure']);
+
+    select('No');
+    expect(
+      component.question.options.filter((o: any) => o.answer_boolean === true).map((o: any) => o.question_text)
+    ).toEqual(['No']);
+    expect(component.isTriggerSelected).toBe(false);
+  });
+
   it('marks the section complete as soon as any option is picked', () => {
     expect(component.isComplete).toBe(false);
     select('No');
