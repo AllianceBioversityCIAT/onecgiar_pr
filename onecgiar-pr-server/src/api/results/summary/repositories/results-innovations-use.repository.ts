@@ -204,7 +204,15 @@ export class ResultsInnovationsUseRepository
       JOIN results_innovations_use riu
         ON riu.results_id = r.id
       AND riu.is_active = 1
-      JOIN clarisa_innovation_use_levels ciul
+      -- 🛑 LEFT, and it has to stay LEFT. An INNER here took the whole section down after every
+      -- phase change: createQueries replicates results_innovations_use copying only male_using
+      -- and female_using, so the new phase's row carries a NULL innovation_use_level_id. With an
+      -- INNER JOIN the catalogue matched nothing, this query returned no row, getInnovationUse
+      -- threw 404 "Innovation Use not found", and the client -- which reaches this through
+      -- GET_innovationUseP25 for every P25 result -- swallowed the error into console and painted
+      -- an EMPTY form. The reporter saw everything they filed last year as gone.
+      -- Found 3 Sep 2026 by phase-changing result 8694 into 11496 in prtest.
+      LEFT JOIN clarisa_innovation_use_levels ciul
         ON ciul.id = riu.innovation_use_level_id
       LEFT JOIN version v
         ON v.id = r.version_id
