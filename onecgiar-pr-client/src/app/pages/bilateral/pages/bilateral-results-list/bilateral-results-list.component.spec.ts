@@ -207,4 +207,45 @@ describe('BilateralResultsListComponent', () => {
       expect(component.filteredResults().map(r => r.id).sort()).toEqual([1, 2]);
     });
   });
+
+  // Nicoleta Trifa via Ángel Jarrín, 2026-09-03: "Update result" existed only in the Results Center
+  // row menu (P2-3229); from the centre's own list a 2025 result could not be carried into 2026.
+  describe('Update result (P2-3229 from the centre list)', () => {
+    beforeEach(() => {
+      component.api.dataControlSE.reportingCurrentPhase = { phaseYear: 2026, phaseName: 'Reporting 2026', phaseId: 36, portfolioAcronym: 'P25', portfolioId: 3 } as any;
+      component.phases.set([
+        { id: 35, phase_year: 2025 } as any,
+        { id: 36, phase_year: 2026 } as any,
+      ]);
+    });
+
+    it('offers it on an approved W3 result of a previous phase', () => {
+      expect(component.canUpdateResult(result({ status_name: 'Approved', version_id: 35 }))).toBe(true);
+    });
+
+    it('withholds it while the result is still in the open phase, not approved, or not a W3 result', () => {
+      expect(component.canUpdateResult(result({ status_name: 'Approved', version_id: 36 }))).toBe(false);
+      expect(component.canUpdateResult(result({ status_name: 'Editing', version_id: 35 }))).toBe(false);
+      expect(component.canUpdateResult(result({ status_name: 'Approved', version_id: 35, source: 'Result' }))).toBe(false);
+    });
+
+    it('hands the row to the shared phase modal as a W3/Bilaterals result of this centre', () => {
+      const row = result({ status_name: 'Approved', version_id: 35 });
+      const event = { stopPropagation: jest.fn() } as unknown as Event;
+
+      component.updateResult(row, event);
+
+      expect(event.stopPropagation).toHaveBeenCalled();
+      expect(component.api.dataControlSE.chagePhaseModal).toBe(true);
+      expect(component.api.dataControlSE.currentResult).toEqual(
+        expect.objectContaining({
+          id: 1,
+          result_code: '8706',
+          source_name: 'W3/Bilaterals',
+          lead_center: 'Bioversity (Alliance)',
+          phase_year: 2025,
+        }),
+      );
+    });
+  });
 });

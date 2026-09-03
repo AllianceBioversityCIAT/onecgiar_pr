@@ -4,10 +4,6 @@
     description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting.">
   </app-alert-status>
 
-  @if (principalTagsWithoutEvidence.length) {
-    <app-alert-status status="warning" [description]="principalWarningHtml"></app-alert-status>
-  }
-
   @if (isLoading()) {
     <app-form-skeleton [rows]="2" [hasLabel]="true" [hasExtra]="true" [extraRows]="3" />
   } @else {

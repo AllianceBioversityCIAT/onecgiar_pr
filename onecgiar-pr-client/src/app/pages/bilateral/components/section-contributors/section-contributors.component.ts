@@ -102,25 +102,34 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   // P2-3368 · Contributing science programs (optional, multi)
   // ─────────────────────────────────────────────────────────────────────────
   /**
-   * Options come from the project's own science programs, minus the primary one (the story excludes
-   * SP01 because it is already shown as "Primary contributing science program").
+   * Every P25 Science Program / Accelerator (`clarisa/initiatives/p25`), minus the primary one — it
+   * is already shown as "Primary contributing science program". Nicoleta Trifa via Ángel Jarrín,
+   * 2026-09-03: the question must be there "regardless of the mapping %". It used to offer only the
+   * project's own programs, so a project mapped 100% to one program showed nothing at all, and an
+   * existing result (loaded with `sciencePrograms: []`) never showed the control either.
    *
-   * ⚠️ `BilateralCreationService.selectedProject().sciencePrograms` is set to `[]` when an EXISTING
-   * result is loaded (`bilateral-creation.service.ts:170`) — only the creation wizard fills it. So on
-   * a saved result this list is empty and the dropdown is not rendered at all; the chips below it
-   * remain the read-only view of whatever was chosen at creation time. Do not "fix" that by rendering
-   * an empty dropdown: a control with nothing in it reads as a bug to the user.
+   * The project's programs remain the fallback while the catalogue is still loading.
    */
+  readonly sciencePrograms = signal<{ programId: number; programCode: string; name: string }[]>([]);
+
   readonly availableSecondarySpOptions = computed(() => {
     const primaryId = this.creationService.selectedPrimarySp()?.programId;
-    const sps = (this.creationService.selectedProject()?.sciencePrograms ?? []) as any[];
-    return sps
-      .filter(sp => sp?.programId != null && sp.programId !== primaryId)
+    const catalogue = this.sciencePrograms();
+    const source: { programId: number; programCode: string; name: string; allocation?: string }[] = catalogue.length
+      ? catalogue
+      : ((this.creationService.selectedProject()?.sciencePrograms ?? []) as any[]).map(sp => ({
+          programId: Number(sp.programId),
+          programCode: sp.programCode,
+          name: sp.spName || sp.spShortName || '',
+          allocation: sp.allocation ?? ''
+        }));
+    return source
+      .filter(sp => sp?.programId != null && Number(sp.programId) !== Number(primaryId))
       .map(sp => ({
         programId: Number(sp.programId),
         programCode: sp.programCode,
         allocation: sp.allocation ?? '',
-        full_name: `${sp.programCode}${sp.spName || sp.spShortName ? ' - ' + (sp.spName || sp.spShortName) : ''}`
+        full_name: `${sp.programCode}${sp.name ? ' - ' + sp.name : ''}`
       }));
   });
 
@@ -130,11 +139,12 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    * 🛑 HOUSE RULE — a control whose value cannot be stored ships VISIBLE BUT DISABLED with a
    * `Coming soon` tag, and never tells the user it will be saved.
    *
-   * Three controls are in that state here: **Contributing science programs**, the
-   * **linked/bundled question** and the **results dropdown** it unlocks. None of them has a field
-   * on `SaveBilateralContributorsDto` nor a home in the bilateral detail payload, so answering
-   * them wrote to a component signal and nothing else — the answer was gone on the next reload.
-   * Same markup as `result-ai-item.component.html` (`globalDisabled` + the tag span).
+   * Two controls are in that state here: the **linked/bundled question** and the **results
+   * dropdown** it unlocks. Neither has a field on `SaveBilateralContributorsDto` nor a home in the
+   * bilateral detail payload, so answering them wrote to a component signal and nothing else — the
+   * answer was gone on the next reload. Same markup as `result-ai-item.component.html`
+   * (`globalDisabled` + the tag span). Contributing science programs left this list on 2026-09-03:
+   * the DTO now accepts `contributing_programs[]` and the detail payload returns them (role 2).
    *
    * The flag is a named member rather than a literal in the template because the spec overrides
    * the template: an inline `[ngClass]="{ globalDisabled: true }"` would be untestable. Flip it to
@@ -269,6 +279,20 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadCenters();
     this.loadProjects();
+    this.loadSciencePrograms();
+  }
+
+  private loadSciencePrograms(): void {
+    this.api.resultsSE.GET_AllInitiatives('p25').subscribe({
+      next: ({ response }: any) => {
+        this.sciencePrograms.set(
+          (response ?? [])
+            .filter((i: any) => i?.id != null && i?.official_code)
+            .map((i: any) => ({ programId: Number(i.id), programCode: i.official_code, name: i.name ?? i.short_name ?? '' }))
+        );
+      },
+      error: () => this.sciencePrograms.set([])
+    });
   }
 
   private loadProjects(): void {
@@ -357,6 +381,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   private buildContributorsPayload(): {
     contributing_center?: { institution_id: number }[];
     contributing_bilateral_projects?: { project_id: number; is_lead?: boolean }[];
+    contributing_programs?: { science_program_id: string }[];
     institutions?: { institutions_id: number }[];
     no_external_partners?: boolean;
     is_lead_by_partner?: boolean;
@@ -384,6 +409,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     const payload: {
       contributing_center?: { institution_id: number }[];
       contributing_bilateral_projects?: { project_id: number; is_lead?: boolean }[];
+      contributing_programs?: { science_program_id: string }[];
       institutions?: { institutions_id: number }[];
       no_external_partners?: boolean;
       is_lead_by_partner?: boolean;
@@ -395,6 +421,12 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     if (this.contributorsHydrated()) {
       payload.contributing_center = selectedCenters;
       payload.contributing_bilateral_projects = selectedProjects;
+      // Same hydration guard: the stored programs arrive with the detail (role-2 rows), and an
+      // empty array means "remove them all" on the server.
+      payload.contributing_programs = this.creationService
+        .selectedSecondarySps()
+        .filter(sp => !!sp.programCode)
+        .map(sp => ({ science_program_id: sp.programCode }));
     }
 
     // P2-3443. The partner keys only travel once the stored block is on screen — see
@@ -474,11 +506,10 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       .map(id => options.find(o => o.programId === id))
       .filter(Boolean)
       .map(o => ({ programId: o!.programId, programCode: o!.programCode, allocation: o!.allocation }));
-    // ⚠️ UNREACHABLE from the UI while `unpersistedFieldsComingSoon` is true: the multi-select is
-    // rendered disabled with a `Coming soon` tag precisely because nothing persists this —
-    // SaveBilateralContributorsDto has no field for it and the selection lives in
-    // BilateralCreationService only. Kept so the wiring is one flag away from working.
     this.creationService.selectedSecondarySps.set(next);
+    // Persisted since 2026-09-03 (`contributing_programs[]` on SaveBilateralContributorsDto); staged
+    // like every other contributor change and written by Save draft.
+    this.persistContributors();
   }
 
   // ───────────────────────── P2-3368 · external partners ─────────────────────────

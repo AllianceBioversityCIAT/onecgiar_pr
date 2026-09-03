@@ -82,6 +82,17 @@ export class PartnerInstitutionDto {
   is_leading_result?: boolean;
 }
 
+export class ContributingScienceProgramDto {
+  @ApiProperty({
+    description:
+      'Official code of a contributing Science Program or Accelerator (P25), e.g. SP06. Same key the ingest payload uses in `contributing_programs[]`.',
+    example: 'SP06',
+  })
+  @IsString()
+  @IsNotEmpty()
+  science_program_id: string;
+}
+
 export class SaveBilateralContributorsDto {
   @ApiPropertyOptional({
     description: 'List of contributing CGIAR centers',
@@ -131,4 +142,15 @@ export class SaveBilateralContributorsDto {
   @IsBoolean()
   @IsOptional()
   is_lead_by_partner?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Contributing Science Programs / Accelerators, by official code. Any P25 program can be listed, whatever the project maps to (Nicoleta Trifa, 2026-09-03). Sending the key replaces the whole set — stored as `results_by_inititiative` rows with role 2, the same rows W1/W2 keeps for contributing programs; omitting it leaves them untouched. The primary program (role 1) is never touched from here.',
+    type: [ContributingScienceProgramDto],
+  })
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => ContributingScienceProgramDto)
+  contributing_programs?: ContributingScienceProgramDto[];
 }

@@ -96,34 +96,10 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
     this.draftItem.update(d => ({ ...d, [field]: !d[field] }));
   }
 
-  /**
-   * P2-3375: an impact area scored Principal must have at least one evidence tagged for it. Ported
-   * from W1/W2 (rd-evidences.component.ts:277-305): the tag level arrives as a STRING and Principal
-   * is level '3' — the catalogue id, not the score. `2 - Principal` is the label; 3 is its id.
-   *
-   * Returns the uncovered tag names so the template can list them. Empty means covered.
-   */
-  /** Same sentence W1/W2 uses (rd-evidences.component.ts:291), one line per uncovered tag. */
-  get principalWarningHtml(): string {
-    const items = this.principalTagsWithoutEvidence
-      .map(tag => `<li>A principal contribution score (2) has been recorded for ${tag} tag. Please provide evidence to support this claim.</li>`)
-      .join('');
-    return items ? `<ul>${items}</ul>` : '';
-  }
-
-  get principalTagsWithoutEvidence(): string[] {
-    const body = this.evidenceBody();
-    const levels: { label: string; level: unknown; field: keyof BilateralEvidenceItem }[] = [
-      { label: 'Gender equality, youth and social inclusion', level: body?.gender_tag_level, field: 'gender_related' },
-      { label: 'Climate adaptation and mitigation', level: body?.climate_change_tag_level, field: 'youth_related' },
-      { label: 'Nutrition, health and food security', level: body?.nutrition_tag_level, field: 'nutrition_related' },
-      { label: 'Environmental health and biodiversity', level: body?.environmental_biodiversity_tag_level, field: 'environmental_biodiversity_related' },
-      { label: 'Poverty reduction, livelihoods and jobs', level: body?.poverty_tag_level, field: 'poverty_related' }
-    ];
-    const covered = (field: keyof BilateralEvidenceItem) => this.evidences.some(e => e[field]);
-    return levels.filter(({ level, field }) => String(level) === '3' && !covered(field)).map(({ label }) => label);
-  }
-
+  // The W1/W2 "Principal score needs evidence" warning (P2-3375) is deliberately NOT ported here any
+  // more: Impact Area scores are not part of the bilateral MDS, so no evidence is asked for them
+  // (Nicoleta Trifa via Ángel Jarrín, 2026-09-03). The per-evidence impact-area tags stay: they are
+  // optional metadata on the same endpoint.
 
   get evidences(): BilateralEvidenceItem[] {
     return this.evidenceBody().evidences ?? [];

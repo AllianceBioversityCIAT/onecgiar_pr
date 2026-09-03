@@ -896,3 +896,12 @@ $contrib-color-border:#bae6fd;
     background: var(--pr-color-accents-1);
   }
 }
+
+// "Update result" (P2-3229 from the centre's own list): same neutral-violet treatment as Edit.
+.brl_action_btn--update {
+  background: #f0f4ff;
+  color: var(--pr-color-primary-300);
+  border-color: #dde5ff;
+
+  &:hover { background: #dde5ff; }
+}
