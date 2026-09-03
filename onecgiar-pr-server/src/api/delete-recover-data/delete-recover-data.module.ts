@@ -60,6 +60,7 @@ import { EvidencesRepository } from '../results/evidences/evidences.repository';
 import { ResultsKnowledgeProductFairScoreRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import { ResultsService } from '../results/results.service';
+import { ResultInnovationMergeSplitModule } from '../results/result-innovation-merge-split/result-innovation-merge-split.module';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultTypesService } from '../results/result_types/result_types.service';
 import { VersionsService } from '../results/versions/versions.service';
@@ -201,6 +202,7 @@ import { ResultDeletionAuditModule } from '../results/result-deletion-audit/resu
   ],
   imports: [
     HttpModule,
+    ResultInnovationMergeSplitModule,
     BilateralVersioningRulesModule,
     PrmsTablesTypesModule,
     SharePointModule,
