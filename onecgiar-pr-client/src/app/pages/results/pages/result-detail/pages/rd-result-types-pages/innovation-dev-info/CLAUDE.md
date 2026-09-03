@@ -50,6 +50,33 @@ The two new questions are resolved **by text, not by id** (P25 ids came from AUT
 differ across environments). The texts live in `innovation-dev-questions.const.ts` on the server and,
 on the database side, inside `validation_innovation_dev_P25` — reword one, change both.
 
+## The IPR group is ALSO phase-resolved (P2-3272 / P2-3513)
+
+| Phase | What renders | Component |
+|---|---|---|
+| ≤ 2025 | the four questions 101 / 102 / 103 / 138, with their stored answers | `app-intellectual-property-rights` |
+| ≥ 2026 | one question, Yes / Not sure / No | `app-intellectual-property-considerations` |
+
+The two are mutually exclusive branches of one `@if (isInnovationDevFormReduced2026())` in the parent
+template, and the spec pins that neither ever renders alongside the other.
+
+- 🛑 **The consolidated question arrives on the `q1` slot and is matched BY TEXT on the server**
+  (`resolveIprSlotsForPhase`). Before `1788441000000-AddConsolidatedIprQuestionP25` runs, the slot is
+  `undefined` — hence the `@if (question)` guard. Removing it takes the whole section down, the same
+  incident `stage-assessment` already paid for.
+- ⚠️ **Both info points are built, but Info Point 1 ships on an unconfirmed URL.** The story gives
+  `wipo.int/about-ip/en/` with an explicit "exact URL to be confirmed with Nicoleta Trifa" note, and
+  the definition TEXT it also asks for was never provided — so the link goes out with the story's own
+  label and nothing invented around it. It lives in **one constant** (`ipDefinitionUrl`); if Nicoleta
+  names another, that is the only edit. Info Point 2 is worded for SUBMISSION, which is the PO's
+  Option B and what the server actually does — a spec pins that the copy never drifts back to
+  "immediately".
+- 🥇 **The email trigger moved with the question.** Up to 2025 it is option id 110 of question 103;
+  from 2026 it is the "Yes" / "Not sure" option of the consolidated question, resolved by text under
+  its parent (`result.repository.ts`, `getResultInnovationDevelopmentByResultId`). Branching on the
+  phase and not OR-ing both matters: a 2026 result that inherited an answer on 110 would otherwise
+  email the focal point with nobody having answered the question the form shows.
+
 ## Traps (⚠️ = already broke something or will)
 - 🛑 **From 2026 the `q4` KEY DOES NOT EXIST in the payload, and an unmatched stage question comes
   back `undefined`.** The component walks q1..q4 and every remaining group in a straight line, so an

@@ -64,6 +64,27 @@
             (selectOptionEvent)="cleanActor(actorItem)"
             [(ngModel)]="actorItem.sex_and_age_disaggregation">
           </app-pr-checkbox>
+
+          <!-- P2-3537 section 7: the AGE-ONLY fallback, per actor row. Offered only while the
+               combined tick above is off — that one already switches both off — and never inside
+               IPSR, which shares this template but is out of the story's scope. -->
+          @if (showAgeFallback(actorItem)) {
+            <app-pr-checkbox
+              [readOnly]="saving"
+              label="Age disaggregation not available"
+              (selectOptionEvent)="applyAgeDisaggregationFallback(actorItem)"
+              [(ngModel)]="actorItem.age_disaggregation_not_available">
+            </app-pr-checkbox>
+
+            <!-- Never applied silently: the story requires the reporter to SEE that the split
+                 was made for them, so the figure is not mistaken for one they reported. -->
+            @if (isYouthSplitBySystem(actorItem)) {
+              <div class="explanation_message">
+                Youth and Non-youth were split 50/50 by the system because age disaggregation is not available. Change Women or Men and
+                the split is recalculated.
+              </div>
+            }
+          }
           <div class="right_content" *ngIf="!actorItem.sex_and_age_disaggregation">
             <div class="explanation_message" *ngIf="actorItem['showWomenExplanationwomen']">
               Remember that the value of Youth cannot be greater than total of Women
@@ -75,7 +96,7 @@
               type="number"
               [required]="!!actorItem?.result_actors_id"
               [(ngModel)]="actorItem.women"
-              (ngModelChange)="validateYouth(i, true, actorItem)">
+              (ngModelChange)="validateYouth(i, true, actorItem); recalculateAgeFallback(actorItem)">
             </app-pr-input>
             <app-pr-input
               [disabled]="saving"
@@ -83,6 +104,7 @@
               label="Youth"
               type="number"
               [required]="!!actorItem?.result_actors_id"
+              [readOnly]="isYouthSplitBySystem(actorItem)"
               [(ngModel)]="actorItem.women_youth"
               (ngModelChange)="validateYouth(i, true, actorItem)">
             </app-pr-input>
@@ -108,7 +130,7 @@
               type="number"
               [required]="!!actorItem?.result_actors_id"
               [(ngModel)]="actorItem.men"
-              (ngModelChange)="validateYouth(i, false, actorItem)">
+              (ngModelChange)="validateYouth(i, false, actorItem); recalculateAgeFallback(actorItem)">
             </app-pr-input>
             <app-pr-input
               [disabled]="saving"
@@ -116,6 +138,7 @@
               label="Youth"
               type="number"
               [required]="!!actorItem?.result_actors_id"
+              [readOnly]="isYouthSplitBySystem(actorItem)"
               [(ngModel)]="actorItem.men_youth"
               (ngModelChange)="validateYouth(i, false, actorItem)">
             </app-pr-input>

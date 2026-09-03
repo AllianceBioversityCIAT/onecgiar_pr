@@ -634,6 +634,15 @@ export class InnovationUseService {
       created_by: user,
       result_id: resultId,
       sex_and_age_disaggregation: el?.sex_and_age_disaggregation === true,
+      // P2-3537 section 7. `isNullData` and not `=== true` on purpose: for these two,
+      // "not answered" and "answered no" are different facts, and a default `false`
+      // would claim the reporter said age data is available.
+      age_disaggregation_not_available: this.isNullData(
+        el?.age_disaggregation_not_available,
+      ),
+      youth_split_applied_by_system: this.isNullData(
+        el?.youth_split_applied_by_system,
+      ),
       how_many: el?.how_many,
       addressing_demands: this.isNullData(el?.addressing_demands),
     };

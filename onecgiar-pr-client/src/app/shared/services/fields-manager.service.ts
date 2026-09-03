@@ -56,6 +56,16 @@ export class FieldsManagerService {
     const year = this.dataControlSE.currentResultSignal()?.phase_year;
     return typeof year === 'number' ? year : null;
   });
+  /**
+   * The open result's reporting phase year, or `null` when it is not reliably known.
+   *
+   * Exposed for the callers that need the YEAR and not a boolean gate — P2-3292 asks the
+   * discontinuation-reason catalogue for one phase generation. 🛑 Read it from here and never from
+   * `GET .../get/general-information/result/{id}`, which answers `phase_year: 2025` for a result
+   * the screen shows in Reporting 2026 (verified 27 Aug 2026 on 8933 / 8548).
+   */
+  readonly phaseYear = this.currentResultPhaseYear;
+
   /** A phase gate is only ever `true` on a reliably known year — unknown means the legacy form. */
   private isPhaseYearAtLeast(threshold: number): boolean {
     const year = this.currentResultPhaseYear();
@@ -81,6 +91,15 @@ export class FieldsManagerService {
    * Threshold is centralized in {@link ReportingDesignYear}.
    */
   isInnovationUse2030Projection2026 = computed(() => this.isPhaseYearAtLeast(ReportingDesignYear.InnovationUse2030Projection));
+  /**
+   * True when the open result's reporting phase is 2026+ → the Innovation Use "Current use"
+   * block offers the age-only disaggregation fallback and the system-applied 50/50 split
+   * (P2-3537 section 7). 2025 and earlier keep the single combined "Sex and age
+   * disaggregation does not apply" tick and nothing else.
+   */
+  isInnovationUseAgeFallback2026 = computed(() =>
+    this.isPhaseYearAtLeast(ReportingDesignYear.InnovationUseAgeDisaggregationFallback)
+  );
   /**
    * Tooltip shown next to the "2030 Use Projection" title (P2-3295). Empty for phases <= 2025, which
    * never showed it — `app-field-card` only paints the ⓘ button when it receives a non-empty string.

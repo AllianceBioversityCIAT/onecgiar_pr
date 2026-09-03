@@ -1,6 +1,6 @@
 # result-questions
 
-**Verified:** 2026-08-28 · branch performance-refactor · ccdc8b597
+**Verified:** 2026-09-03 · branch performance-refactor
 
 ## Qué es
 Motor de cuestionarios guardado en base de datos (`result_questions` / `result_answers`). Sirve dos
@@ -31,11 +31,19 @@ No hay pantalla de administración: **cada pregunta se crea, edita o borra por m
 
 ## Trampas (⚠️ = ya rompió algo o va a romper)
 - ✅ **`intellectualPropertyRightsV2` ya NO mapea por posición** (P2-3272, 28-ago-2026). Los slots
-  se fijan por id en `INTELLECTUAL_PROPERTY_RIGHTS_P25_SLOTS` (`:67-74`: q1→101, q2→102, q3→103,
-  q4→138) y se aplican con `assignQuestionSlotsById` (`:637-640`). Añadir o quitar un hijo de la
-  pregunta 100 ya no desplaza los slots, que es el requisito previo para consolidar las cuatro
-  preguntas de IPR en una (P2-3513, Juanda). `responsibleInnovationAndScalingV2` usa el mismo
-  patrón desde P2-3465.
+  se fijan por id en `INTELLECTUAL_PROPERTY_RIGHTS_P25_SLOTS` (q1→101, q2→102, q3→103, q4→138) y se
+  aplican con `assignQuestionSlotsById`. Añadir o quitar un hijo de la pregunta 100 ya no desplaza
+  los slots. `responsibleInnovationAndScalingV2` usa el mismo patrón desde P2-3465.
+- ✅ **Y desde el 3-sep-2026 el grupo de IPR también tiene eje de FASE** (P2-3272 / P2-3513):
+  `resolveIprSlotsForPhase` devuelve los cuatro ids hasta la fase 2025 y **solo `q1`** desde 2026,
+  con la pregunta consolidada *"Do you have any Intellectual Property considerations for this
+  innovation?"* resuelta **por TEXTO** (`CONSOLIDATED_IPR_QUESTION_TEXT` en
+  `innovation-dev-questions.const.ts`). Su fila la inserta
+  `1788441000000-AddConsolidatedIprQuestionP25` — aditiva, idempotente y sin tocar 101/102/103/138.
+  🛑 **El texto vive en DOS sitios**: esa constante y el cuerpo de `validation_innovation_dev_P25`.
+  Cambiar uno sin el otro deja la pregunta sin reconocer en un lado.
+  🥇 Si la migración no ha corrido, el slot vuelve `undefined` y el grupo se sirve **sin hijos** —
+  el cliente lo aguanta con `@if (question)` en `app-intellectual-property-considerations`.
 - ⚠️ **Las dos funciones P22 (`:363`, `:478`) SIGUEN mapeando por posición.** No se tocaron a
   propósito: P22 es retrocompatibilidad pura y no recibe preguntas nuevas. Si algún día se añade
   un hijo allí, el cliente pintará la pregunta equivocada.
