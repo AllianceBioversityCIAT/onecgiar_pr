@@ -39,6 +39,42 @@ export const RISK_STAGE_QUESTION_TEXT =
  */
 
 /**
+ * P2-3272 / P2-3513 — the single Intellectual Property question that replaces the
+ * four IPR ones (101, 102, 103, 138) from the 2026 phase on.
+ *
+ * Inserted by 1788441000000-AddConsolidatedIprQuestionP25 with options
+ * Yes / Not sure / No. Matched by text, not by id, for the reason at the top of
+ * this file.
+ */
+export const CONSOLIDATED_IPR_QUESTION_TEXT =
+  'Do you have any Intellectual Property considerations for this innovation?';
+
+/**
+ * The options of the consolidated question that mean "the reporter wants IP support",
+ * i.e. the ones that trigger the notification flow of P2-3272 Part 3 on submission.
+ *
+ * Up to the 2025 phase the trigger is option 110 ("Yes, please contact me") of
+ * question 103; from 2026 it is either of these two.
+ */
+export const CONSOLIDATED_IPR_TRIGGER_OPTION_TEXTS = ['Yes', 'Not sure'];
+
+/**
+ * Option 110, "Yes, please contact me", of question 103 — the pre-2026 trigger of
+ * the IP focal-point notification.
+ *
+ * An id and not a text on purpose: this row predates the P25 clone and is the same
+ * in every environment, and the phases it serves are closed to new questions.
+ */
+export const LEGACY_IP_EXPERT_SUPPORT_OPTION_ID = 110;
+
+/*
+ * P2-3272 — questions 101, 102, 103 and 138 are served up to the 2025 phase only,
+ * by the same slot-table mechanism described above. Their rows and every stored
+ * answer stay untouched: the epic's PO note requires a 2025-phase result to keep
+ * rendering its four original questions with the answers already given.
+ */
+
+/**
  * Normalises a question text for comparison: trims, collapses runs of whitespace
  * (the stored texts are multi-line in places) and lowercases.
  */
@@ -54,6 +90,27 @@ export function isGesiStageQuestion(text: string | null | undefined): boolean {
 
 export function isRiskStageQuestion(text: string | null | undefined): boolean {
   return normalizeQuestionText(text) === RISK_STAGE_KEY;
+}
+
+const CONSOLIDATED_IPR_KEY = normalizeQuestionText(
+  CONSOLIDATED_IPR_QUESTION_TEXT,
+);
+
+export function isConsolidatedIprQuestion(
+  text: string | null | undefined,
+): boolean {
+  return normalizeQuestionText(text) === CONSOLIDATED_IPR_KEY;
+}
+
+const CONSOLIDATED_IPR_TRIGGER_KEYS = new Set(
+  CONSOLIDATED_IPR_TRIGGER_OPTION_TEXTS.map(normalizeQuestionText),
+);
+
+/** True for the "Yes" / "Not sure" options of the consolidated IPR question. */
+export function isConsolidatedIprTriggerOption(
+  text: string | null | undefined,
+): boolean {
+  return CONSOLIDATED_IPR_TRIGGER_KEYS.has(normalizeQuestionText(text));
 }
 
 /** True when the result's phase must be served the reduced 2026 form. */

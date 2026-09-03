@@ -291,4 +291,104 @@ describe('ResultQuestionsService — intellectualPropertyRightsV2 slot mapping',
     expect(section.q3.result_question_id).toBe('103');
     expect(section.q4).toBeUndefined();
   });
+
+  /**
+   * P2-3272 / P2-3513 — from the 2026 phase the four questions are replaced by the
+   * single consolidated one. Phase 2025 keeps its four, which is the whole point of
+   * gating on the phase year and not on the portfolio: the P25 portfolio holds both.
+   */
+  describe('2026 phase — consolidated question (P2-3513)', () => {
+    /** The service reads the reporting phase year off the repository connection. */
+    const wirePhaseYear = (year: number | null) => {
+      questionRepo.query.mockResolvedValue([{ phase_year: year }]);
+    };
+
+    const consolidated = (id: number) => ({
+      result_question_id: String(id),
+      question_text:
+        'Do you have any Intellectual Property considerations for this innovation?',
+      question_level: '2',
+      parent_question_id: '100',
+      version: 'P25',
+    });
+
+    it('serves only the consolidated question, resolved by text', async () => {
+      wirePhaseYear(2026);
+      wireRepository([
+        child(101),
+        child(102),
+        child(103),
+        child(138),
+        consolidated(207),
+      ]);
+
+      const [section] = (await service.intellectualPropertyRightsV2(
+        1,
+      )) as any[];
+
+      expect(section.q1.result_question_id).toBe('207');
+      expect(section.q2).toBeUndefined();
+      expect(section.q3).toBeUndefined();
+      expect(section.q4).toBeUndefined();
+    });
+
+    it('matches the consolidated question whatever id the AUTO_INCREMENT gave it', async () => {
+      wirePhaseYear(2026);
+      wireRepository([child(101), consolidated(9051)]);
+
+      const [section] = (await service.intellectualPropertyRightsV2(
+        1,
+      )) as any[];
+
+      expect(section.q1.result_question_id).toBe('9051');
+    });
+
+    it('serves the group with no children when the migration has not run yet', async () => {
+      // Code deployed before 1788441000000: the row does not exist, so no slot can be
+      // filled. The group must come back empty rather than fall back to the four.
+      wirePhaseYear(2026);
+      wireRepository([child(101), child(102), child(103), child(138)]);
+
+      const [section] = (await service.intellectualPropertyRightsV2(
+        1,
+      )) as any[];
+
+      expect(section.q1).toBeUndefined();
+      expect(section.q2).toBeUndefined();
+      expect(section.q3).toBeUndefined();
+      expect(section.q4).toBeUndefined();
+    });
+
+    it('keeps the four questions on a 2025-phase result even once the new row exists', async () => {
+      wirePhaseYear(2025);
+      wireRepository([
+        child(101),
+        child(102),
+        child(103),
+        child(138),
+        consolidated(207),
+      ]);
+
+      const [section] = (await service.intellectualPropertyRightsV2(
+        1,
+      )) as any[];
+
+      expect(section.q1.result_question_id).toBe('101');
+      expect(section.q2.result_question_id).toBe('102');
+      expect(section.q3.result_question_id).toBe('103');
+      expect(section.q4.result_question_id).toBe('138');
+    });
+
+    it('falls back to the four when the phase year cannot be resolved', async () => {
+      wirePhaseYear(null);
+      wireRepository([child(101), child(102), child(103), child(138)]);
+
+      const [section] = (await service.intellectualPropertyRightsV2(
+        1,
+      )) as any[];
+
+      expect(section.q1.result_question_id).toBe('101');
+      expect(section.q4.result_question_id).toBe('138');
+    });
+  });
 });
