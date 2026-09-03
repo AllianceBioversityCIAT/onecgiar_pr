@@ -66,7 +66,15 @@ export class ReportFeedbackDialogComponent {
   readonly title = signal('');
   readonly description = signal('');
   readonly priority = signal<FeedbackPriorityId>('3');
-  readonly includeScreenshot = signal(true);
+  /**
+   * OFF by default, deliberately (Yeck, 3-sep-2026: "espero que no subas nada
+   * personal mio"). The picture carries whatever was on screen — other centres'
+   * results, names, figures — so attaching it has to be a decision the user
+   * takes, not a default they never saw.
+   */
+  readonly includeScreenshot = signal(false);
+  /** Whether the preview is shown at full width, so the user can read it. */
+  readonly shotExpanded = signal(false);
   readonly userFiles = signal<FeedbackAttachment[]>([]);
   readonly fileError = signal<string | null>(null);
 
@@ -270,7 +278,8 @@ export class ReportFeedbackDialogComponent {
     this.title.set('');
     this.description.set('');
     this.priority.set('3');
-    this.includeScreenshot.set(true);
+    this.includeScreenshot.set(false);
+    this.shotExpanded.set(false);
     this.userFiles.set([]);
     this.fileError.set(null);
     this.submitting.set(false);

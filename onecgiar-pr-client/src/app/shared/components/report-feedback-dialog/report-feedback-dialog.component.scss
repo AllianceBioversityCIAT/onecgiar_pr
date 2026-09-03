@@ -404,3 +404,62 @@
   text-align: left;
   line-height: 1.4;
 }
+
+/* Preview of the automatic capture. Always rendered when a capture exists, even
+   with the box unticked: the user has to be able to see what they would attach
+   before deciding (Yeck, 3-sep-2026 — nothing personal should go up unnoticed). */
+.rf-preview {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--pr-color-accents-3, #d7dbe2);
+  border-radius: 8px;
+  background: var(--pr-color-accents-1, #fafafa);
+  cursor: zoom-in;
+  overflow: hidden;
+
+  img {
+    display: block;
+    width: 100%;
+    /* Collapsed: a legible strip rather than a full page of pixels. */
+    max-height: 110px;
+    object-fit: cover;
+    object-position: top left;
+  }
+
+  &__hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px;
+    @include fonts.pr-typography('body-3');
+    font-weight: 600;
+    color: var(--pr-color-accents-5, #5b6472);
+    background: var(--pr-color-white, #fff);
+    border-top: 1px solid var(--pr-color-accents-3, #d7dbe2);
+
+    i {
+      font-size: 14px;
+    }
+  }
+
+  &--expanded {
+    cursor: zoom-out;
+
+    img {
+      max-height: 420px;
+      object-fit: contain;
+    }
+  }
+
+  &:hover {
+    border-color: var(--pr-color-primary-300, #6b46e5);
+  }
+
+  &__warn {
+    @include fonts.pr-typography('body-3');
+    color: var(--pr-color-accents-5, #5b6472);
+  }
+}

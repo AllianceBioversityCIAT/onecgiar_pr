@@ -135,6 +135,25 @@
               <i class="material-icons-round">{{ includeScreenshot() ? 'check_box' : 'check_box_outline_blank' }}</i>
               Attach the screen as it looked when you opened this form
             </button>
+
+            <!-- Shown whether or not the box is ticked: the point is that nobody
+                 attaches a picture of their screen without having seen it. -->
+            <button
+              type="button"
+              class="rf-preview"
+              [class.rf-preview--expanded]="shotExpanded()"
+              [attr.aria-label]="shotExpanded() ? 'Shrink the preview' : 'Enlarge the preview'"
+              (click)="shotExpanded.set(!shotExpanded())">
+              <img [src]="autoScreenshot()" alt="Preview of the screen that would be attached" />
+              <span class="rf-preview__hint">
+                <i class="material-icons-round">{{ shotExpanded() ? 'zoom_out' : 'zoom_in' }}</i>
+                {{ shotExpanded() ? 'Click to shrink' : 'Click to see what would be attached' }}
+              </span>
+            </button>
+            <span class="rf-preview__warn">
+              Everything visible on your screen goes with the image. Leave it unticked if it shows
+              anything you would rather not share.
+            </span>
           }
 
           <label class="rf-file">

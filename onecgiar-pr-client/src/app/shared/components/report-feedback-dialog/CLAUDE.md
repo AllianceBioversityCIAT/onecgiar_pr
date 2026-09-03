@@ -17,6 +17,15 @@ Modal global detrás del botón 🐛 del topbar, con **dos modos** (Yeck, 3-sep-
 - API: `FeedbackApiService` → `POST feedback`, `GET feedback/my-reports`,
   `GET feedback/similar?q=`, `POST feedback/me-too`.
 
+## Privacidad de la captura — decidido, no accidental
+🛑 **La casilla de adjuntar la captura va DESMARCADA por defecto** (Yeck, 3-sep-2026: *"espero que
+no subas nada personal mío"*). La foto lleva **todo lo que hubiera en pantalla** — resultados de
+otros centros, nombres, cifras — así que adjuntarla tiene que ser una decisión, no un default que
+nadie vio. Hay test-candado: *"does NOT attach the screenshot unless the user ticks the box"*.
+
+Y la **miniatura se muestra siempre** que exista captura, marcada o no, ampliable al clic: nadie
+debería adjuntar una foto de su pantalla sin haberla visto antes.
+
 ## Nada se guarda en base de datos
 La lista de "My reports" se resuelve **en vivo contra Jira** en cada apertura, filtrando por el
 correo del usuario (va en la descripción del issue y en un label `fb-<local-part>`). Decisión de

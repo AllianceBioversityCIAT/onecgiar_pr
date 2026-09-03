@@ -77,18 +77,28 @@ describe('ReportFeedbackDialogComponent', () => {
     expect(component.createdIssueKey()).toBe('P2-9');
   });
 
-  it('attaches the automatic screenshot only while the toggle is on', () => {
+  it('does NOT attach the screenshot unless the user ticks the box', () => {
+    // The guard for "espero que no subas nada personal mio" (Yeck, 3-sep-2026):
+    // a capture exists, but an untouched form must not ship it.
     fixture.componentRef.setInput('autoScreenshot', 'data:image/png;base64,AAA');
     component.title.set('t');
     component.description.set('d');
 
+    expect(component.includeScreenshot()).toBe(false);
     component.submit();
-    expect(api.POST_reportFeedback.mock.calls[0][0].attachments).toHaveLength(1);
+    expect(api.POST_reportFeedback.mock.calls[0][0].attachments).toHaveLength(0);
+  });
 
-    component.createdIssueKey.set(null);
-    component.includeScreenshot.set(false);
+  it('attaches it once the user ticks the box', () => {
+    fixture.componentRef.setInput('autoScreenshot', 'data:image/png;base64,AAA');
+    component.title.set('t');
+    component.description.set('d');
+    component.includeScreenshot.set(true);
     component.submit();
-    expect(api.POST_reportFeedback.mock.calls[1][0].attachments).toHaveLength(0);
+
+    const sent = api.POST_reportFeedback.mock.calls[0][0].attachments;
+    expect(sent).toHaveLength(1);
+    expect(sent![0].name).toBe('screen-at-report-time.png');
   });
 
   it('surfaces a message when the report fails, and stops spinning', () => {
@@ -170,6 +180,8 @@ describe('ReportFeedbackDialogComponent', () => {
     component.title.set('old');
     component.description.set('old');
     component.priority.set('1');
+    component.includeScreenshot.set(true);
+    component.shotExpanded.set(true);
     component.createdIssueKey.set('P2-9');
     component.setMode('view');
 
@@ -182,5 +194,7 @@ describe('ReportFeedbackDialogComponent', () => {
     expect(component.priority()).toBe('3');
     expect(component.createdIssueKey()).toBeNull();
     expect(component.similar()).toEqual([]);
+    expect(component.includeScreenshot()).toBe(false);
+    expect(component.shotExpanded()).toBe(false);
   });
 });
