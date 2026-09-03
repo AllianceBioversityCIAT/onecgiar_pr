@@ -210,15 +210,47 @@
 .evidence_modal {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  // Tightened from 24px alongside the `.evidence_fields` gap (bugfix/evidence-modal-sticky-actions
+  // follow-up, 2026-09-03) — less fixed overhead between header/body/footer leaves more of the
+  // capped height for actual form content, reducing how often `.modal_body` needs to scroll.
+  gap: 20px;
   padding: 32px 40px;
-  max-height: 85vh;
-  overflow-y: auto;
+  // EVM-R-1 (attempt 3): `.pr-dialog-mask` centers the dialog against the FULL viewport, but
+  // the app shell's own sticky header (search bar + the test-environment banner, up to ~108px
+  // together) can render visually above a deeply-nested `position:fixed` dialog regardless of
+  // z-index — a Chromium compositing quirk with `position:sticky` ancestors that a z-index bump
+  // does not fix (verified empirically: raising `.pr-dialog-mask`'s z-index to 999999 changed
+  // nothing). The fix that DOES work: never let the popup grow tall enough for its centered top
+  // edge to reach into that region in the first place, so there is nothing to occlude. `100vh -
+  // 260px` keeps ≥120px of clearance above the mask's centered top edge — still comfortably
+  // above the measured 108px worst-case shell-header height, trimmed from an earlier, more
+  // conservative 300px buffer to free up extra body height on short screens (`85vh` remains the
+  // cap on generously-tall viewports where this buffer isn't the binding constraint).
+  max-height: min(85vh, calc(100vh - 260px));
+  // EVM-DD-2: `.evidence_modal` is a size cap only — it must NOT be a scrolling ancestor.
+  // The outer `.pr-dialog` also caps at max-height:90vh/overflow:auto; stacking two
+  // independently-scrolling ancestors is what broke `position: sticky` in attempt 1 (see
+  // rd-evidences/CLAUDE.md). `.modal_body` below is now the ONLY scrolling element in the
+  // popup subtree, so there is exactly one scrolling ancestor and nothing to anchor against
+  // incorrectly.
+  overflow-y: hidden;
 
+  // EVM-R-1: keep the title/close ✕ pinned in view — plain, non-scrolling flex child; nothing
+  // behind it scrolls independently, so no sticky/z-index trick is needed
+  // (rd-evidences/CLAUDE.md, docs/specs/bugfix/evidence-modal-sticky-actions).
   .modal_header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    background: var(--pr-color-white);
+  }
+
+  // EVM-DD-2: the only scrolling element inside the popup. Fills the space between the
+  // fixed header and footer inside `.evidence_modal`'s own 85vh cap.
+  .modal_body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .modal_title {
@@ -246,11 +278,14 @@
     }
   }
 
+  // EVM-R-2: keep Cancel / Add evidence / Save changes pinned in view — plain, non-scrolling
+  // flex child (see .modal_header above).
   .buttons {
     display: flex;
     justify-content: flex-end;
     gap: 16px;
     margin-top: 8px;
+    background: var(--pr-color-white);
 
     app-pr-button:first-child ::ng-deep {
       .pr_button {
