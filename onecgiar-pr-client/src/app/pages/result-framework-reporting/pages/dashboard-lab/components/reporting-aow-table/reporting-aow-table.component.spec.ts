@@ -351,6 +351,219 @@ describe('ReportingAowTableComponent', () => {
     });
   });
 
+  // ── RAJ-T-2: HLO headers, tabular metrics & quick filters ─────────────────
+  describe('RAJ-T-2 — HLO headers, tabular metrics & quick filters', () => {
+    it('cleanHloCode extracts clean badge token from raw codes and strings (RAJ-DD-2)', async () => {
+      await build([group([row()])]);
+      expect(component.cleanHloCode('HLO4.AOW1.IO1 Foster motivations')).toBe('HLO4');
+      expect(component.cleanHloCode('HLO-04 Some Title')).toBe('HLO-04');
+      expect(component.cleanHloCode('IO2.1 Intermediate')).toBe('IO2');
+      expect(component.cleanHloCode('EOI3.1 Early outcome')).toBe('EOI3');
+      expect(component.cleanHloCode('Foster motivations')).toBe('');
+      expect(component.cleanHloCode({ code: 'HLO4', name: 'Foster motivations' })).toBe('HLO4');
+    });
+
+    it('HLO header renders standardized pr-hlo-code badge and clean name (RAJ-R-1, RAJ-AC-1.1)', async () => {
+      const g = group([row({ __hlo: 'HLO4.AOW1.IO1 Foster motivations' })]);
+      await build([g]);
+      openAow();
+
+      const badge = (fixture.nativeElement as HTMLElement).querySelector('.pr-hlo-code');
+      expect(badge).toBeTruthy();
+      expect(badge!.textContent?.trim()).toBe('HLO4');
+
+      const titleEl = (fixture.nativeElement as HTMLElement).querySelector('span[title="Foster motivations"]');
+      expect(titleEl).toBeTruthy();
+      expect(titleEl!.textContent).toContain('Foster motivations');
+    });
+
+    it('HLO header displays tabular metrics cluster with clean count badge and green achieved value (RAJ-R-2, RAJ-AC-2.1)', async () => {
+      const g = group([
+        row({ indicator_id: 1, target_value_sum: '2', actual_achieved_value_sum: 0, progress_percentage: 0 }),
+        row({ indicator_id: 2, target_value_sum: '3', actual_achieved_value_sum: 1, progress_percentage: 33 })
+      ]);
+      await build([g]);
+      openAow();
+
+      const hloBtn = (fixture.nativeElement as HTMLElement).querySelector('button[id^="hlo-group-"]');
+      expect(hloBtn).toBeTruthy();
+
+      // Achieved text uses --pr-color-green-500
+      const achievedVal = hloBtn!.querySelector('.text-\\[var\\(--pr-color-green-500\\)\\]');
+      expect(achievedVal).toBeTruthy();
+      expect(achievedVal!.textContent?.trim()).toBe('1');
+
+      // Count badge is a clean numeric pill '2', not '2 KPIs'
+      const countPill = hloBtn!.querySelector('.rounded-full.tabular-nums');
+      expect(countPill).toBeTruthy();
+      expect(countPill!.textContent?.trim()).toBe('2');
+    });
+
+    it('eliminates redundant duplicate "N indicators" text when all indicators are counted (RAJ-R-2, RAJ-DD-3)', async () => {
+      const r1 = row({
+        indicator_id: 1,
+        __hloNode: { progress: achievement({ indicators_counted: 1, indicators_total: 1 }) }
+      });
+      await build([group([r1])]);
+      openAow();
+
+      const hloBtn = (fixture.nativeElement as HTMLElement).querySelector('button[id^="hlo-group-"]');
+      expect(hloBtn).toBeTruthy();
+      // Redundant '1 indicators' text must NOT be rendered in the HLO header
+      expect(hloBtn!.textContent).not.toContain('1 indicators');
+    });
+
+    it('renders in-card quick filters as a sleek single-line horizontal bar (h-[32px]) (RAJ-R-4, RAJ-AC-4.1, RAJ-DD-5)', async () => {
+      const g = group([
+        row({ indicator_id: 1, center_acronym: 'CIAT', result_type_name: 'Knowledge product' }),
+        row({ indicator_id: 2, center_acronym: 'IITA', result_type_name: 'Innovation use' })
+      ]);
+      await build([g]);
+      openAow();
+
+      const filterBar = (fixture.nativeElement as HTMLElement).querySelector('.h-\\[32px\\].min-h-\\[32px\\]');
+      expect(filterBar).toBeTruthy();
+      expect(filterBar!.className).toContain('overflow-x-auto');
+
+      // Centers & Types are displayed in the quick bar
+      expect(filterBar!.textContent).toContain('Centers:');
+      expect(filterBar!.textContent).toContain('CIAT');
+      expect(filterBar!.textContent).toContain('IITA');
+      expect(filterBar!.textContent).toContain('Types:');
+      expect(filterBar!.textContent).toContain('Knowledge product');
+      expect(filterBar!.textContent).toContain('Innovation use');
+
+      // Active button has bg-[var(--pr-color-primary-500)]
+      const activeBtns = filterBar!.querySelectorAll('.bg-\\[var\\(--pr-color-primary-500\\)\\]');
+      expect(activeBtns.length).toBeGreaterThanOrEqual(2); // "All" for Center and "All Types" for Type
+    });
+
+    it('collapses QA/Prel percentages to sr-only on narrow viewports (RAJ-R-6)', async () => {
+      const r = row({
+        __hloNode: { progress: achievement({ progress_percentage: '50%', preliminary_progress_percentage: '60%' }) }
+      });
+      await build([group([r])]);
+      openAow();
+
+      const srOnlyEl = (fixture.nativeElement as HTMLElement).querySelector('.max-\\[899px\\]\\:sr-only');
+      expect(srOnlyEl).toBeTruthy();
+      expect(srOnlyEl!.textContent).toContain('QA');
+      expect(srOnlyEl!.textContent).toContain('Prel.');
+    });
+  });
+
+  // ── RAJ-T-3: Indicator Row JIRA Status Stripes & Event Preservation ────────
+  describe('RAJ-T-3 — Indicator Row JIRA Status Stripes & Event Preservation', () => {
+    it('renders border-l-[var(--pr-color-green-500)] when status is achieved (RAJ-R-3, RAJ-AC-3.1)', async () => {
+      const g = group([row({ indicator_id: 1, progress_percentage: 100 })]);
+      await build([g]);
+      openAow();
+
+      const rowEl = (fixture.nativeElement as HTMLElement).querySelector('.pr-reporting-row');
+      expect(rowEl).toBeTruthy();
+      expect(rowEl!.classList).toContain('border-l-[3px]');
+      expect(rowEl!.classList).toContain('border-l-[var(--pr-color-green-500)]');
+    });
+
+    it('renders border-l-[var(--pr-color-primary-500)] when status is in-progress (RAJ-R-3, RAJ-AC-3.2)', async () => {
+      const g = group([row({ indicator_id: 1, progress_percentage: 50 })]);
+      await build([g]);
+      openAow();
+
+      const rowEl = (fixture.nativeElement as HTMLElement).querySelector('.pr-reporting-row');
+      expect(rowEl).toBeTruthy();
+      expect(rowEl!.classList).toContain('border-l-[3px]');
+      expect(rowEl!.classList).toContain('border-l-[var(--pr-color-primary-500)]');
+    });
+
+    it('renders border-l-purple-500 when status is overachieved (RAJ-R-3)', async () => {
+      const g = group([row({ indicator_id: 1, progress_percentage: 150 })]);
+      await build([g]);
+      openAow();
+
+      const rowEl = (fixture.nativeElement as HTMLElement).querySelector('.pr-reporting-row');
+      expect(rowEl).toBeTruthy();
+      expect(rowEl!.classList).toContain('border-l-[3px]');
+      expect(rowEl!.classList).toContain('border-l-purple-500');
+    });
+
+    it('renders border-l-[var(--pr-border-strong)] when status is not-started (RAJ-R-3)', async () => {
+      const g = group([row({ indicator_id: 1, progress_percentage: 0 })]);
+      await build([g]);
+      openAow();
+
+      const rowEl = (fixture.nativeElement as HTMLElement).querySelector('.pr-reporting-row');
+      expect(rowEl).toBeTruthy();
+      expect(rowEl!.classList).toContain('border-l-[3px]');
+      expect(rowEl!.classList).toContain('border-l-[var(--pr-border-strong)]');
+    });
+
+    it('renders dropdown chevron icon on status badges', async () => {
+      const g = group([row({ indicator_id: 1, progress_percentage: 100 })]);
+      await build([g]);
+      openAow();
+
+      const badge = (fixture.nativeElement as HTMLElement).querySelector('.pr-reporting-row ng-icon[name="lucideChevronDown"]');
+      expect(badge).toBeTruthy();
+    });
+
+    it('emits all 5 event outputs on their respective triggers (RAJ-AC-5.1)', async () => {
+      const testRow = row({
+        indicator_id: 101,
+        progress_percentage: 0,
+        target_value_sum: '5',
+        actual_achieved_value_sum: 0,
+        __aowCode: 'AOW01'
+      });
+      const g = group([testRow]);
+      await build([g], { canReport: true });
+      openAow();
+
+      const openRowSpy = jest.fn();
+      const reportRowSpy = jest.fn();
+      const openTargetSpy = jest.fn();
+      const openAchievedSpy = jest.fn();
+      const copyLinkSpy = jest.fn();
+
+      component.openRow.subscribe(openRowSpy);
+      component.reportRow.subscribe(reportRowSpy);
+      component.openTarget.subscribe(openTargetSpy);
+      component.openAchieved.subscribe(openAchievedSpy);
+      component.copyLink.subscribe(copyLinkSpy);
+
+      const rowEl = (fixture.nativeElement as HTMLElement).querySelector('.pr-reporting-row') as HTMLElement;
+      expect(rowEl).toBeTruthy();
+
+      // 1. openRow on row container click
+      rowEl.click();
+      expect(openRowSpy).toHaveBeenCalledWith(testRow);
+
+      // 2. reportRow on Report button click
+      const reportBtn = rowEl.querySelector('.pr-row-action') as HTMLElement;
+      expect(reportBtn).toBeTruthy();
+      reportBtn.click();
+      expect(reportRowSpy).toHaveBeenCalledWith(testRow);
+
+      // 3. openTarget on Target button click
+      const targetBtn = rowEl.querySelector('.group\\/target') as HTMLElement;
+      expect(targetBtn).toBeTruthy();
+      targetBtn.click();
+      expect(openTargetSpy).toHaveBeenCalledWith(testRow);
+
+      // 4. openAchieved on Achieved button click
+      const achievedBtn = rowEl.querySelector('.group\\/achieved') as HTMLElement;
+      expect(achievedBtn).toBeTruthy();
+      achievedBtn.click();
+      expect(openAchievedSpy).toHaveBeenCalledWith(testRow);
+
+      // 5. copyLink on Copy Link button click
+      const copyLinkBtn = rowEl.querySelector('button[aria-label="Copy link to this KPI"]') as HTMLElement;
+      expect(copyLinkBtn).toBeTruthy();
+      copyLinkBtn.click();
+      expect(copyLinkSpy).toHaveBeenCalledWith(testRow);
+    });
+  });
+
   // ── ratio ─────────────────────────────────────────────────────────────────
   describe('AoW ratio', () => {
     it('counts REPORTED over total, not completed', async () => {

@@ -580,131 +580,131 @@
 
   <!-- 2. Summary Statistics — 4 Separate Cards Grid (matching Overview design) -->
   @if (summaryStats(); as stats) {
-    <div class="px-[32px] pt-[24px]">
-      <div class="grid grid-cols-4 gap-[16px] max-lg:grid-cols-2 max-sm:grid-cols-1">
+    <div class="px-[32px] pt-[14px] pb-[16px]">
+      <div class="grid grid-cols-4 gap-[14px] max-lg:grid-cols-2 max-sm:grid-cols-1">
         <!-- Card 1: Programs / Accelerators -->
-        <div class="flex flex-col justify-between gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs">
+        <div class="flex flex-col justify-between gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px] px-[16px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-[6px]">
-              <span class="material-icons-round text-[16px] text-purple-600" aria-hidden="true">account_tree</span>
+              <span class="material-icons-round text-[15px] text-purple-600" aria-hidden="true">account_tree</span>
               <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                 Programs/Accelerators
               </span>
             </div>
-            <span class="inline-flex h-[24px] items-center rounded-full bg-purple-50 px-[8px] text-[11px] font-semibold text-purple-700">
+            <span class="inline-flex h-[22px] items-center rounded-full bg-purple-50 px-[7px] text-[10.5px] font-semibold text-purple-700">
               Scope
             </span>
           </div>
           @if (statsLoading()) {
             <div class="flex items-baseline gap-[8px]" aria-hidden="true">
-              <span class="h-[32px] w-[48px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
+              <span class="h-[26px] w-[48px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
             </div>
-            <div class="h-[14px] w-[120px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
+            <div class="h-[12px] w-[120px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
           } @else {
             <div class="flex items-baseline gap-[8px]">
-              <span class="pr-figure text-[32px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
+              <span class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
                 {{ stats.programsCount }}
               </span>
-              <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">active</span>
+              <span class="text-[12px] font-medium text-[var(--pr-text-muted)]">active</span>
             </div>
-            <div class="flex items-center gap-[6px] text-[12px] text-[var(--pr-text-secondary)]">
-              <span class="h-[7px] w-[7px] rounded-full bg-purple-500"></span>
+            <div class="flex items-center gap-[6px] text-[11.5px] text-[var(--pr-text-secondary)]">
+              <span class="h-[6px] w-[6px] rounded-full bg-purple-500"></span>
               <span class="truncate">Primary reporting entity</span>
             </div>
           }
         </div>
 
         <!-- Card 2: Areas of Work -->
-        <div class="flex flex-col justify-between gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs">
+        <div class="flex flex-col justify-between gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px] px-[16px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-[6px]">
-              <span class="material-icons-round text-[16px] text-emerald-600" aria-hidden="true">layers</span>
+              <span class="material-icons-round text-[15px] text-emerald-600" aria-hidden="true">layers</span>
               <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                 Areas of Work
               </span>
             </div>
-            <span class="inline-flex h-[24px] items-center rounded-full bg-emerald-50 px-[8px] text-[11px] font-semibold text-emerald-700">
+            <span class="inline-flex h-[22px] items-center rounded-full bg-emerald-50 px-[7px] text-[10.5px] font-semibold text-emerald-700">
               AoWs
             </span>
           </div>
           @if (statsLoading()) {
             <div class="flex items-baseline gap-[8px]" aria-hidden="true">
-              <span class="h-[32px] w-[48px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
+              <span class="h-[26px] w-[48px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
             </div>
-            <div class="h-[14px] w-[130px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
+            <div class="h-[12px] w-[130px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
           } @else {
             <div class="flex items-baseline gap-[8px]">
-              <span class="pr-figure text-[32px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
+              <span class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
                 {{ stats.aowsCount }}
               </span>
-              <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">areas</span>
+              <span class="text-[12px] font-medium text-[var(--pr-text-muted)]">areas</span>
             </div>
-            <div class="flex items-center gap-[6px] text-[12px] text-[var(--pr-text-secondary)]">
-              <span class="h-[7px] w-[7px] rounded-full bg-emerald-500"></span>
+            <div class="flex items-center gap-[6px] text-[11.5px] text-[var(--pr-text-secondary)]">
+              <span class="h-[6px] w-[6px] rounded-full bg-emerald-500"></span>
               <span class="truncate">Contributing work packages</span>
             </div>
           }
         </div>
 
         <!-- Card 3: Total KPIs -->
-        <div class="flex flex-col justify-between gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs">
+        <div class="flex flex-col justify-between gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px] px-[16px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-[6px]">
-              <span class="material-icons-round text-[16px] text-blue-600" aria-hidden="true">checklist</span>
+              <span class="material-icons-round text-[15px] text-blue-600" aria-hidden="true">checklist</span>
               <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                 Total KPIs
               </span>
             </div>
-            <span class="inline-flex h-[24px] items-center rounded-full bg-blue-50 px-[8px] text-[11px] font-semibold text-blue-700">
+            <span class="inline-flex h-[22px] items-center rounded-full bg-blue-50 px-[7px] text-[10.5px] font-semibold text-blue-700">
               Targets
             </span>
           </div>
           @if (statsLoading()) {
             <div class="flex items-baseline gap-[8px]" aria-hidden="true">
-              <span class="h-[32px] w-[64px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
+              <span class="h-[26px] w-[64px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
             </div>
-            <div class="h-[14px] w-[140px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
+            <div class="h-[12px] w-[140px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
           } @else {
             <div class="flex items-baseline gap-[8px]">
-              <span class="pr-figure text-[32px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
+              <span class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
                 {{ stats.totalKpis }}
               </span>
-              <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">indicators</span>
+              <span class="text-[12px] font-medium text-[var(--pr-text-muted)]">indicators</span>
             </div>
-            <div class="flex items-center gap-[6px] text-[12px] text-[var(--pr-text-secondary)]">
-              <span class="h-[7px] w-[7px] rounded-full bg-blue-500"></span>
+            <div class="flex items-center gap-[6px] text-[11.5px] text-[var(--pr-text-secondary)]">
+              <span class="h-[6px] w-[6px] rounded-full bg-blue-500"></span>
               <span class="truncate">Planned ToC targets</span>
             </div>
           }
         </div>
 
         <!-- Card 4: KPIs with Evidence -->
-        <div class="flex flex-col justify-between gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs">
+        <div class="flex flex-col justify-between gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px] px-[16px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-[6px]">
-              <span class="material-icons-round text-[16px] text-teal-600" aria-hidden="true">assignment_turned_in</span>
+              <span class="material-icons-round text-[15px] text-teal-600" aria-hidden="true">assignment_turned_in</span>
               <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                 KPIs with Evidence
               </span>
             </div>
-            <span class="inline-flex h-[24px] items-center rounded-full bg-teal-50 px-[8px] text-[11px] font-semibold text-teal-700">
+            <span class="inline-flex h-[22px] items-center rounded-full bg-teal-50 px-[7px] text-[10.5px] font-semibold text-teal-700">
               Evidence
             </span>
           </div>
           @if (statsLoading()) {
             <div class="flex items-baseline gap-[8px]" aria-hidden="true">
-              <span class="h-[32px] w-[80px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
+              <span class="h-[26px] w-[80px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
             </div>
-            <div class="h-[14px] w-[150px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
+            <div class="h-[12px] w-[150px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
           } @else {
             <div class="flex items-baseline gap-[8px]">
-              <span class="pr-figure text-[32px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
+              <span class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
                 {{ stats.reportedKpis }}
               </span>
-              <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">of {{ stats.totalKpis }}</span>
+              <span class="text-[12px] font-medium text-[var(--pr-text-muted)]">of {{ stats.totalKpis }}</span>
             </div>
-            <div class="flex items-center gap-[6px] text-[12px] text-[var(--pr-text-secondary)]">
-              <span class="h-[7px] w-[7px] rounded-full" [class]="stats.reportedKpis > 0 ? 'bg-emerald-500' : 'bg-slate-300'"></span>
+            <div class="flex items-center gap-[6px] text-[11.5px] text-[var(--pr-text-secondary)]">
+              <span class="h-[6px] w-[6px] rounded-full" [class]="stats.reportedKpis > 0 ? 'bg-emerald-500' : 'bg-slate-300'"></span>
               <span class="truncate">
                 {{ evidencePercentage(stats) }}% with reported results
               </span>

@@ -126,6 +126,8 @@ export interface ReportingFlatRow extends ReportingIndicator {
 /** Collapsible group under a band (or bare under Intermediate / 2030). */
 interface HloGroup {
   key: string;
+  /** Clean HLO code badge token (e.g. HLO4, IO1, EOI2), extracted from the leading code. (RAJ-R-1, RAJ-DD-2) */
+  code?: string;
   /** Display title — the design shows the full ToC name only (no HLO + code chrome). */
   name: string;
   rows: ReportingIndicator[];
@@ -496,21 +498,40 @@ export class ReportingAowTableComponent {
   }
 
   /**
+   * Helper to extract a clean HLO code token (e.g. 'HLO4', 'IO1', 'EOI2') from an HLO group
+   * or raw string. (RAJ-R-1, RAJ-DD-2)
+   */
+  cleanHloCode(hloOrRaw: { code?: string; key?: string; name?: string } | string | null | undefined): string {
+    if (!hloOrRaw) return '';
+    if (typeof hloOrRaw === 'object' && hloOrRaw.code) return hloOrRaw.code;
+    const raw = typeof hloOrRaw === 'string' ? hloOrRaw : (hloOrRaw.name || hloOrRaw.key || '');
+    const match = /^((?:HLO|HL|IO|EOI)[\w.\-]*)/i.exec(raw.trim());
+    if (!match) return '';
+    const rawCode = match[1];
+    const codeMatch = /^(HLO\d+|IO\d+|EOI\d+|HL\d+)/i.exec(rawCode);
+    return codeMatch ? codeMatch[1].toUpperCase() : rawCode.split('.')[0].toUpperCase();
+  }
+
+  /**
    * Cluster indicators by ToC title. Display name is the full descriptive title, as the design shows it.
-   * Leading codes like `HL04.AOW1.I01` are stripped when present so the row reads as a sentence.
+   * Leading codes like `HL04.AOW1.I01` are stripped when present so the row reads as a sentence,
+   * while the standardized badge code (e.g. `HLO4`) is extracted for the header badge. (RAJ-R-1, RAJ-DD-2)
    */
   private clusterByTitle(rows: ReportingIndicator[], keyPrefix: string): HloGroup[] {
     const byKey = new Map<string, HloGroup>();
     for (const row of rows) {
       const raw = row.__hlo?.trim() || 'Unassigned';
-      const match = /^((?:HLO|HL|IO|EOI)[\w.\-]*)\s+(.*)$/i.exec(raw);
+      const match = /^((?:HLO|HL|IO|EOI)[\w.\-]*)\s*(.*)$/i.exec(raw);
       const name = (match?.[2] || raw).trim() || raw;
+      const rawCode = match?.[1] || '';
+      const codeMatch = /^(HLO\d+|IO\d+|EOI\d+|HL\d+)/i.exec(rawCode);
+      const code = codeMatch ? codeMatch[1].toUpperCase() : (rawCode ? rawCode.split('.')[0].toUpperCase() : undefined);
       const key = `${keyPrefix}::${raw}`;
       if (!byKey.has(key)) {
         // Every row of a group comes from the same ToC node, so the first one carries the group's
         // roll-up. Grouping is by TITLE, so two nodes sharing a title would collapse into one
         // group — that is pre-existing behaviour, and the first node's figure is used.
-        byKey.set(key, { key, name, rows: [], achievement: row.__hloNode?.progress ?? null });
+        byKey.set(key, { key, code, name, rows: [], achievement: row.__hloNode?.progress ?? null });
       }
       byKey.get(key)!.rows.push(row);
     }
@@ -1173,6 +1194,10 @@ export class ReportingAowTableComponent {
     const key = group.aow.code;
     this.openMenuKey.set(null);
     this.openInfoKey.update(current => (current === key ? null : key));
+  }
+
+  infoBlurb(_group: ReportingAowGroup): string {
+    return 'No description available yet for this Area of Work. Coming soon.';
   }
 
   /**

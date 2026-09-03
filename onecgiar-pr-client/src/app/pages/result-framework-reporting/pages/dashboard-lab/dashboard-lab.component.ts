@@ -3959,6 +3959,16 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Helper to extract a clean HLO code token (e.g. 'HLO4', 'IO1', 'EOI2') for By-AOW HLO headers (RAJ-R-1, RAJ-DD-2). */
+  cleanHloCode(raw: string | undefined): string {
+    if (!raw) return '';
+    const match = /^((?:HLO|HL|IO|EOI)[\w.\-]*)/i.exec(raw.trim());
+    if (!match) return '';
+    const rawCode = match[1];
+    const codeMatch = /^(HLO\d+|IO\d+|EOI\d+|HL\d+)/i.exec(rawCode);
+    return codeMatch ? codeMatch[1].toUpperCase() : rawCode.split('.')[0].toUpperCase();
+  }
+
   /** Sum of target values across an HLO's indicators. */
   hloTargetSum(hlo: { indicators?: any[] }): string {
     const sum = (hlo.indicators ?? []).reduce((acc, ind) => acc + (parseFloat(String(ind?.target_value_sum ?? 0)) || 0), 0);
@@ -4394,7 +4404,12 @@ export function splitIndicatorsByTier<T extends { __tier?: unknown }>(inds: T[])
 export function buildIndicatorCardMeta(
   achievedRaw: unknown,
   targetRaw: unknown
-): { achieved: number; target: number; pct: number; state: 'complete' | 'in-progress' | 'not-started' } {
+): {
+  achieved: number;
+  target: number;
+  pct: number;
+  state: 'complete' | 'in-progress' | 'not-started' | 'overachieved' | 'in_progress' | 'not_started';
+} {
   const achieved = Number(achievedRaw ?? 0) || 0;
   const target = Number(targetRaw ?? 0) || 0;
   const pct = target > 0 ? Math.min(100, Math.round((achieved / target) * 100)) : achieved > 0 ? 100 : 0;

@@ -424,3 +424,8 @@ $pr-flat-tracks: minmax(240px, 1fr) 72px 80px 84px 104px 150px;
     text-align: center;
   }
 }
+
+/* ── Clean HLO badge (RAJ-R-1, RAJ-DD-2) ── */
+.pr-hlo-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}

@@ -1639,85 +1639,58 @@
                 @let selType = byAowSelectedType();
 
                 @if (centers.length > 1 || types.length > 1) {
-                  <div class="flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[20px] py-[8px] shadow-xs">
-                    <!-- Collapsible toggle header -->
-                    <button
-                      type="button"
-                      class="flex h-[32px] w-full items-center justify-between bg-transparent border-0 p-0 text-left cursor-pointer hover:text-[var(--pr-color-primary-600)] transition-colors group/bhead"
-                      [attr.aria-expanded]="byAowBreakdownOpen()"
-                      (click)="toggleByAowBreakdown()">
-                      <div class="flex items-center gap-[6px]">
-                        <span
-                          class="material-icons-round text-[18px] text-[var(--pr-text-secondary)] transition-transform duration-200 group-hover/bhead:text-[var(--pr-color-primary-600)]"
-                          [class.rotate-180]="byAowBreakdownOpen()"
-                          aria-hidden="true"
-                          >expand_more</span
-                        >
-                        <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)] group-hover/bhead:text-[var(--pr-color-primary-600)]">
-                          Filters by Center & Type
+                  <div
+                    class="flex h-[32px] min-h-[32px] items-center gap-[12px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-subtle)] px-[14px] sm:px-[20px] overflow-x-auto no-scrollbar shadow-xs">
+                    <!-- Centers Section -->
+                    @if (centers.length > 1) {
+                      <div class="flex shrink-0 items-center gap-[5px]">
+                        <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[2px]">
+                          Centers:
                         </span>
-                        @if (selCenter || selType) {
-                          <span class="ml-[4px] inline-flex items-center gap-[4px] rounded-full bg-[var(--pr-color-primary-100)] px-[8px] py-[1px] text-[10.5px] font-semibold text-[var(--pr-color-primary-700)]">
-                            {{ selCenter ? selCenter : '' }}{{ selCenter && selType ? ' · ' : '' }}{{ selType ? selType : '' }}
-                          </span>
+                        <button
+                          type="button"
+                          class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                          [class]="!selCenter ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                          (click)="setByAowCenterFilter(null)">
+                          All <span class="opacity-75 tabular-nums">({{ banner.total }})</span>
+                        </button>
+                        @for (c of centers; track c.center) {
+                          <button
+                            type="button"
+                            class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                            [class]="selCenter === c.center ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                            (click)="setByAowCenterFilter(c.center)">
+                            {{ c.center }} <span class="opacity-75 tabular-nums">({{ c.count }})</span>
+                          </button>
                         }
                       </div>
-                      <span class="text-[11px] font-medium text-[var(--pr-text-subtle)] group-hover/bhead:text-[var(--pr-color-primary-600)]">
-                        {{ byAowBreakdownOpen() ? 'Hide filters' : 'Show filters' }}
-                      </span>
-                    </button>
+                    }
 
-                    <!-- Filter Pills Content -->
-                    @if (byAowBreakdownOpen()) {
-                      <div class="flex flex-col gap-[8px] pb-[6px] pt-[6px] border-t border-[var(--pr-border-divider)] mt-[4px]">
-                        <!-- Centers Row -->
-                        @if (centers.length > 1) {
-                          <div class="flex flex-wrap items-center gap-[5px]">
-                            <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[4px]">
-                              Centers:
-                            </span>
-                            <button
-                              type="button"
-                              class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                              [class]="!selCenter ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
-                              (click)="setByAowCenterFilter(null)">
-                              All <span class="opacity-75 tabular-nums">({{ banner.total }})</span>
-                            </button>
-                            @for (c of centers; track c.center) {
-                              <button
-                                type="button"
-                                class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                                [class]="selCenter === c.center ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
-                                (click)="setByAowCenterFilter(c.center)">
-                                {{ c.center }} <span class="opacity-75 tabular-nums">({{ c.count }})</span>
-                              </button>
-                            }
-                          </div>
-                        }
+                    @if (centers.length > 1 && types.length > 1) {
+                      <div class="h-[14px] w-px shrink-0 bg-[var(--pr-border-divider)]" aria-hidden="true"></div>
+                    }
 
-                        <!-- Types Row -->
-                        @if (types.length > 1) {
-                          <div class="flex flex-wrap items-center gap-[5px]">
-                            <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[4px]">
-                              Types:
-                            </span>
-                            <button
-                              type="button"
-                              class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                              [class]="!selType ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
-                              (click)="setByAowTypeFilter(null)">
-                              All Types
-                            </button>
-                            @for (t of types; track t.type) {
-                              <button
-                                type="button"
-                                class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                                [class]="selType === t.type ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
-                                (click)="setByAowTypeFilter(t.type)">
-                                {{ t.type }} <span class="opacity-75 tabular-nums">({{ t.count }})</span>
-                              </button>
-                            }
-                          </div>
+                    <!-- Types Section -->
+                    @if (types.length > 1) {
+                      <div class="flex shrink-0 items-center gap-[5px]">
+                        <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[2px]">
+                          Types:
+                        </span>
+                        <button
+                          type="button"
+                          class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                          [class]="!selType ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                          (click)="setByAowTypeFilter(null)">
+                          All Types
+                        </button>
+                        @for (t of types; track t.type) {
+                          <button
+                            type="button"
+                            class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                            [class]="selType === t.type ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                            (click)="setByAowTypeFilter(t.type)">
+                            {{ t.type }} <span class="opacity-75 tabular-nums">({{ t.count }})</span>
+                          </button>
                         }
                       </div>
                     }
@@ -1794,7 +1767,13 @@
                         >
                       </span>
                       <span class="min-w-0 flex-1 truncate text-[14px] sm:text-[14.5px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)] group-hover/hlo:text-[var(--pr-color-primary-600)] transition-colors">
-                        @if (hlo.split.code) {
+                        @if (cleanHloCode(hlo.split.code || hlo.title)) {
+                          <span
+                            class="pr-hlo-code inline-flex shrink-0 items-center justify-center rounded-[5px] border border-purple-200/70 bg-purple-100/80 px-[6px] py-[1px] font-mono text-[11px] font-bold text-purple-800 mr-[4px]">
+                            {{ cleanHloCode(hlo.split.code || hlo.title) }}
+                          </span>
+                        }
+                        @if (hlo.split.code && !cleanHloCode(hlo.split.code || hlo.title)) {
                           <span class="font-extrabold text-[var(--pr-color-primary-500)]" [innerHTML]="hlo.split.code | highlightSearch: plannedSearch()"></span>
                           <span class="mx-1 font-normal text-[var(--pr-color-accents-3)]">·</span>
                           <span [innerHTML]="hlo.split.name | highlightSearch: plannedSearch()"></span>
@@ -1810,7 +1789,7 @@
                           </span>
                           <span class="text-[11px] text-[var(--pr-text-secondary)]">
                             <span class="font-semibold uppercase tracking-wider text-[9.5px] text-slate-400">Achieved:</span>
-                            <span class="ml-1 font-bold tabular-nums text-emerald-700">{{ hloAchievedSum(hlo) }}</span>
+                            <span class="ml-1 font-bold tabular-nums text-[var(--pr-color-green-500)]">{{ hloAchievedSum(hlo) }}</span>
                           </span>
                           <span
                             class="rounded-full px-[8px] py-[2px] text-[11px] tabular-nums border transition-colors"
@@ -1823,7 +1802,7 @@
                             [class.text-[var(--pr-text-secondary)]]="!isPlannedHloExpanded(hlo.title)"
                             [class.border-[var(--pr-border)]]="!isPlannedHloExpanded(hlo.title)"
                             [class.font-semibold]="!isPlannedHloExpanded(hlo.title)">
-                            {{ hlo.count }} KPI{{ hlo.count === 1 ? '' : 's' }}
+                            {{ hlo.count }}
                           </span>
                         </div>
 
@@ -1844,7 +1823,7 @@
                                 {{ preliminaryAchievementLabel(hlo.achievement) }}
                               </span>
                             </span>
-                            @if (achievementCoverage(hlo.achievement)) {
+                            @if (achievementCoverage(hlo.achievement) && !achievementCoverage(hlo.achievement).includes(hlo.count + ' indicators')) {
                               <span class="hidden xl:inline-block min-w-[70px] xl:min-w-[104px] text-right text-[10.5px] font-medium text-[var(--pr-text-muted)]">
                                 {{ achievementCoverage(hlo.achievement) }}
                               </span>
@@ -1897,7 +1876,11 @@
                                   [ngClass]="{
                                     'outline outline-2 outline-offset-2 outline-[var(--pr-color-primary-300)]': highlightedKpiId() === kpiKey(ind)
                                   }"
-                                  class="flex flex-wrap items-center justify-between gap-[12px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[14px] py-[10px] transition-colors hover:border-[var(--pr-color-primary-200)]">
+                                  class="flex flex-wrap items-center justify-between gap-[12px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[14px] py-[10px] transition-colors hover:border-[var(--pr-color-primary-200)] border-l-[3px]"
+                                  [class.border-l-[var(--pr-color-green-500)]]="meta.state === 'complete'"
+                                  [class.border-l-purple-500]="meta.state === 'overachieved'"
+                                  [class.border-l-[var(--pr-color-primary-500)]]="meta.state === 'in_progress' || meta.state === 'in-progress'"
+                                  [class.border-l-[var(--pr-border-strong)]]="meta.state === 'not_started' || meta.state === 'not-started'">
                                   <div class="flex min-w-0 flex-1 flex-col gap-[6px]">
                                     <p
                                       class="m-0 text-[12.5px] font-semibold leading-snug text-[var(--pr-text-heading)]"

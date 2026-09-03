@@ -1640,4 +1640,17 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
     // Every press is a real change for the table, even when the boolean repeats.
     expect(component.reportingExpandNonce()).toBe(1);
   });
+
+  describe('cleanHloCode (RAJ-R-1, RAJ-DD-2)', () => {
+    it('extracts clean badge token from raw codes and strings in dashboard-lab', async () => {
+      const component = await createComponent();
+      expect(component.cleanHloCode('HLO4.AOW1.IO1 Foster motivations')).toBe('HLO4');
+      expect(component.cleanHloCode('HLO-04 Some Title')).toBe('HLO-04');
+      expect(component.cleanHloCode('IO2.1 Intermediate')).toBe('IO2');
+      expect(component.cleanHloCode('EOI3.1 Early outcome')).toBe('EOI3');
+      expect(component.cleanHloCode('Foster motivations')).toBe('');
+      expect(component.cleanHloCode('')).toBe('');
+      expect(component.cleanHloCode(undefined)).toBe('');
+    });
+  });
 });
