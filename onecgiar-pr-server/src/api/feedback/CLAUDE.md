@@ -30,6 +30,14 @@ Sin credenciales → responde 503 (no revienta el arranque).
   (reporter, URL, navegador) se arma como bulletList.
 - ⚠️ NUNCA loguear el token: el catch solo registra `errorMessages`/`errors` de Jira.
 
+## Verificado en prtest (3-sep-2026)
+Extremo a extremo desde la interfaz, con el server ya con salida a Atlassian:
+**`P2-3561`** (Bug) y **`P2-3562`** (Adjustment → Enhancement), ambos hijos de `P2-3472`,
+reporter Ángel, creator JC, con el bloque de contexto auto tomando al usuario del token.
+Las env `JIRA_*` **están configuradas en prtest** (no da 503).
+⚠️ Un `blocked by CORS` al probar esto suele ser el ambiente caído, no CORS:
+el preflight recibe el 503 de Apache. Con el ambiente vivo, `OPTIONS` → `204` + `Allow-Origin: *`.
+
 ## Tests
 - `feedback.service.spec.ts` — 9 casos (mapeo de tipos, parent/reporter, ADF+contexto,
   truncado, validaciones, 503 sin credenciales, error sin filtrar token). Mock de HttpService.
