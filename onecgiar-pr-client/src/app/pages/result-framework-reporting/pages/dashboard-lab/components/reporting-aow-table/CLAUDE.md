@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-09-01 · branch qa-development-2026 · 3366453bc (merged with performance-refactor · 181caa352 — disclosure-default contract P2-3251/P2-3252, ToC achievement Progress column P2-3296)
+**Verified:** 2026-09-03 · branch qa-development-2026-ss · 9b9c032ba (RTA-T-1 sticky pin + RTA-T-2 CT regression, landed)
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjetas colapsables por Area
@@ -60,6 +60,9 @@ ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio
   debajo. Las celdas fijas van a `left: 0` / `right: 0`.
 - ⚠️ **No pongas un segundo scroller.** `app-pr-table` ya renderiza `.pr-table-wrap` con
   `overflow-x: auto`; envolverlo en otro daba dos barras para un solo eje.
+- **RTA-T-1 (2026-09-01, sticky pivot + gutter/height rework):** `.pr-collapse--rows > .pr-collapse-inner` sigue scrolleando SOLO 1-6 (`min-width: 1048px` en ambas).
+  Pistas 7-8 `position: sticky` + `align-self: stretch` (una celda vacía —AoW sin copy-link ni action label— ya no da altura 0); `.pr-pin-actions` `right: 56px` y `.pr-pin-menu` `right: 0`, cada una con `padding-right`/`margin-right` negativo igual para pintar el gap de 16px y el padding de 20px de la fila (RTA-R-4/R-11 intactos).
+  Fondo cubre `:hover` Y `.pr-row-highlighted` (Next-pending) — antes solo el primero.
 - ⚠️ **`app-pr-table` ordena con `<`/`>` sobre el valor crudo y no acepta comparador.** Por eso
   `flatTableRows()` precalcula `__sortTarget` / `__sortAchieved` / `__sortStatus`:
   `target_value_sum` llega como STRING y ordenaba `"9" > "100"`. "Nada reportado" es
