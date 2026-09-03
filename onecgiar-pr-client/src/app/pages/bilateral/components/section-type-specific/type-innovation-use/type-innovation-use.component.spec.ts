@@ -303,8 +303,9 @@ describe('TypeInnovationUseComponent', () => {
         expect(note).toContain('reported earlier has not been changed');
       });
 
-      it('disables Save while the section is not loaded', () => {
-        expect(html()).toContain('[disabled]="saving() || loaded() !== true"');
+      // Explicit-save model (2026-09-03): no in-section Save; the footer's Save draft persists it.
+      it('renders no in-section Save button', () => {
+        expect(html()).not.toContain('(click)="onSave()"');
       });
     });
 
