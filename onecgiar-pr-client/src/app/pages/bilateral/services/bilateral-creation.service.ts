@@ -207,18 +207,30 @@ export class BilateralCreationService {
         // by role, so `[0]` was only right by luck once a contributing program existed.
         const initiatives: any[] = response?.contributingInitiatives?.contributing_and_primary_initiative ?? [];
         const primaryInit = initiatives.find((i: any) => Number(i?.initiative_role_id) === 1) ?? initiatives[0];
-        this.selectedSecondarySps.set(
-          initiatives
-            .filter((i: any) => i?.id && Number(i.initiative_role_id) === 2)
-            // The chips render "CODE - Name", like the dropdown options — a bare code reads as a
-            // different program than the option the user just picked.
-            .map((i: any) => ({
-              programId: Number(i.id),
-              programCode: i.official_code,
-              allocation: '',
-              name: i.initiative_name || i.short_name || ''
-            }))
-        );
+        // The chips render "CODE - Name", like the dropdown options — a bare code reads as a
+        // different program than the option the user just picked.
+        const acceptedSps = initiatives
+          .filter((i: any) => i?.id && Number(i.initiative_role_id) === 2)
+          .map((i: any) => ({
+            programId: Number(i.id),
+            programCode: i.official_code,
+            allocation: '',
+            name: i.initiative_name || i.short_name || ''
+          }));
+        // Programs the centre listed but the SP has not accepted yet travel as share-request rows
+        // (drafts while the centre edits, pending once the primary SP approves), not as role-2
+        // initiatives — the consent workflow (P2-3187) is what turns them into role 2. Without this
+        // union a saved-but-not-yet-accepted program vanished from the form on reload.
+        const acceptedIds = new Set(acceptedSps.map(sp => sp.programId));
+        const requestedSps = ((response?.contributingInitiatives?.pending_contributing_initiatives ?? []) as any[])
+          .filter((i: any) => i?.id && !acceptedIds.has(Number(i.id)))
+          .map((i: any) => ({
+            programId: Number(i.id),
+            programCode: i.official_code,
+            allocation: '',
+            name: i.initiative_name || i.short_name || ''
+          }));
+        this.selectedSecondarySps.set([...acceptedSps, ...requestedSps]);
         if (primaryInit?.id) {
           this.resultInitiativeId.set(primaryInit.id);
           this.selectedPrimarySp.set({

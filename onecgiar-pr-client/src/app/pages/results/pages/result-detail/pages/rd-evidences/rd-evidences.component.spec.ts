@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RdEvidencesComponent } from './rd-evidences.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
 import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
@@ -756,6 +758,178 @@ describe('RdEvidencesComponent', () => {
       component.evidencesBody.evidences = [];
       const result = component.validateHasInnoReadinessLevelEvidence();
       expect(result).toBe(false);
+    });
+  });
+
+  // EVM — bugfix/evidence-modal-sticky-actions, attempt 2 (DD-2 fallback). Attempt 1 used
+  // `position: sticky` anchored against `.evidence_modal`'s own `overflow-y: auto`; it passed
+  // review and a tiny-viewport check but broke at a real desktop width because the OUTER
+  // `.pr-dialog` (its own independent max-height:90vh + overflow:auto) turned out to be the
+  // scrolling ancestor that actually moved, not `.evidence_modal` — two independently-capped
+  // scroll containers stacked is inherently ambiguous (see rd-evidences/CLAUDE.md). DD-2 fixes
+  // this structurally: `.evidence_modal` is now a non-scrolling size cap only (`overflow-y:
+  // hidden`), `.modal_body` (new wrapper around `<app-evidence-item>`) is the ONE scrolling
+  // element in the popup subtree, and `.modal_header`/`.buttons` are plain flex children with
+  // no `position: sticky`. jsdom has no layout engine — it cannot compute a real
+  // `scrollHeight`/`clientHeight` from `max-height`/`overflow`, nor apply the component's SCSS
+  // via `getComputedStyle` (verified empirically: TestBed renders zero `<style>` tags for this
+  // component in this repo's Jest setup — styleUrls are not compiled for tests). So this suite
+  // proves the CSS/structure *contract* two ways instead of a live rendered outcome:
+  //   1. it parses the actual `.evidence_modal` block out of the real `.scss` source, so the
+  //      assertions read the file under test rather than a hardcoded expectation — this suite
+  //      fails against attempt 1's sticky-based source (which has `overflow-y: auto` on
+  //      `.evidence_modal` and `position: sticky` on `.modal_header`/`.buttons`, and no
+  //      `.modal_body` block at all) and passes once the DD-2 structure lands;
+  //   2. it simulates the GIVEN "constrained popup height forces the form to scroll" precondition
+  //      by defining `scrollHeight`/`clientHeight` on the rendered `.modal_body` node — the only
+  //      way to represent that precondition in a layout-less DOM, and now targeted at
+  //      `.modal_body` since that is the actual scroll container under DD-2.
+  describe('EVM — evidence modal DD-2 structural fix (bugfix/evidence-modal-sticky-actions, attempt 2)', () => {
+    const scssSource = fs.readFileSync(path.join(__dirname, 'rd-evidences.component.scss'), 'utf8');
+
+    /** Extracts the brace-balanced body of the first `<selector> {` block found in `source`. `selector` is a literal (e.g. `.modal_header`), not a regex. */
+    const extractBlock = (source: string, selector: string): string => {
+      const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const startMatch = source.match(new RegExp(`${escaped}\\s*\\{`));
+      if (!startMatch || startMatch.index === undefined) {
+        throw new Error(`Selector "${selector}" not found in stylesheet`);
+      }
+      let depth = 1;
+      let i = startMatch.index + startMatch[0].length;
+      const body: string[] = [];
+      while (depth > 0 && i < source.length) {
+        const ch = source[i];
+        if (ch === '{') depth++;
+        if (ch === '}') {
+          depth--;
+          if (depth === 0) break;
+        }
+        body.push(ch);
+        i++;
+      }
+      return body.join('');
+    };
+
+    /** Strips nested `<selector> { ... }` blocks out of a block's body, leaving only the
+     * declarations that belong directly to the block itself — needed so a check on
+     * `.evidence_modal`'s own `overflow-y` isn't fooled by `.modal_body`'s nested `overflow-y: auto`. */
+    const ownDeclarations = (blockBody: string): string => {
+      let depth = 0;
+      let out = '';
+      for (const ch of blockBody) {
+        if (ch === '{') {
+          depth++;
+          continue;
+        }
+        if (ch === '}') {
+          depth--;
+          continue;
+        }
+        if (depth === 0) out += ch;
+      }
+      return out;
+    };
+
+    const evidenceModalBlock = extractBlock(scssSource, '.evidence_modal');
+    const evidenceModalOwn = ownDeclarations(evidenceModalBlock);
+    const modalHeaderBlock = extractBlock(evidenceModalBlock, '.modal_header');
+    const modalBodyBlock = extractBlock(evidenceModalBlock, '.modal_body');
+    const buttonsBlock = extractBlock(evidenceModalBlock, '.buttons');
+
+    describe('EVM-R-3 — `.evidence_modal` is a size cap only, no longer a scrolling ancestor', () => {
+      it('does NOT have overflow-y: auto on its own declarations (the structural ambiguity attempt 1 hit)', () => {
+        expect(evidenceModalOwn).not.toMatch(/overflow-y:\s*auto/);
+      });
+
+      it('is overflow-y: hidden — a size cap, not a scroll container', () => {
+        expect(evidenceModalOwn).toMatch(/overflow-y:\s*hidden/);
+      });
+
+      it('keeps its max-height cap (still under the outer .pr-dialog 90vh cap, plus a fixed-px buffer for the app shell header — attempt 3)', () => {
+        // EVM-R-1 (attempt 3): a plain `85vh` cap let the dialog grow tall enough that its
+        // viewport-centered top edge could land behind the app shell's sticky header
+        // (search bar + test-environment banner, up to ~108px) — a real user-reported
+        // regression, confirmed live: raising `.pr-dialog-mask`'s z-index did NOT fix it
+        // (Chromium paints the sticky ancestor above a deeply-nested `position:fixed`
+        // descendant regardless of z-index), but capping the dialog's height so it can
+        // never reach that region does. `min(85vh, calc(100vh - 260px))` keeps ≥120px of
+        // clearance above the mask's centered top edge on any viewport.
+        expect(evidenceModalOwn).toMatch(/max-height:\s*min\(85vh,\s*calc\(100vh\s*-\s*260px\)\)/);
+      });
+    });
+
+    describe('EVM-R-3 — `.modal_body` is the single scrolling element in the popup', () => {
+      it('has overflow-y: auto', () => {
+        expect(modalBodyBlock).toMatch(/overflow-y:\s*auto/);
+      });
+
+      it('has flex: 1 so it fills the space between header and footer', () => {
+        expect(modalBodyBlock).toMatch(/flex:\s*1/);
+      });
+
+      it('has min-height: 0 so the flex item can actually shrink and scroll instead of overflowing its flex parent', () => {
+        expect(modalBodyBlock).toMatch(/min-height:\s*0/);
+      });
+    });
+
+    describe('EVM-R-1 — `.modal_header` (title + close ✕) is a plain, non-scrolling flex child', () => {
+      it('does NOT use position: sticky (no scrolling ancestor to anchor against anymore)', () => {
+        expect(modalHeaderBlock).not.toMatch(/position:\s*sticky/);
+      });
+    });
+
+    describe('EVM-R-2 — `.buttons` (Cancel / Add evidence / Save changes) is a plain, non-scrolling flex child', () => {
+      it('does NOT use position: sticky (no scrolling ancestor to anchor against anymore)', () => {
+        expect(buttonsBlock).not.toMatch(/position:\s*sticky/);
+      });
+    });
+
+    describe('EVM-AC-1 — constrained popup height precondition (GIVEN clause)', () => {
+      it('renders `.modal_body` as the element that would need to scroll once its content exceeds the available height', () => {
+        component.showCreateModal = true;
+        fixture.detectChanges();
+
+        const modalBody = fixture.nativeElement.querySelector('.modal_body') as HTMLElement;
+        expect(modalBody).toBeTruthy();
+
+        // jsdom has no layout engine, so `scrollHeight`/`clientHeight` are always 0 on a real
+        // render. Define them here to represent the scenario's GIVEN clause — a popup whose full
+        // content (header + form + footer) exceeds the space a constrained laptop viewport gives
+        // it — which is the only way to express that precondition without a real browser. Under
+        // DD-2 it is `.modal_body`, not `.evidence_modal`, that actually scrolls.
+        Object.defineProperty(modalBody, 'scrollHeight', { value: 1200, configurable: true });
+        Object.defineProperty(modalBody, 'clientHeight', { value: 480, configurable: true });
+
+        expect(modalBody.scrollHeight).toBeGreaterThan(modalBody.clientHeight);
+      });
+
+      it('keeps `.modal_header`, `.modal_body`, `.buttons` as direct children of `.evidence_modal`, in that order', () => {
+        component.showCreateModal = true;
+        fixture.detectChanges();
+
+        const evidenceModal = fixture.nativeElement.querySelector('.evidence_modal') as HTMLElement;
+        const directChildren = Array.from(evidenceModal.children).map(el => el.className);
+
+        expect(directChildren).toEqual(['modal_header', 'modal_body', 'buttons']);
+      });
+    });
+
+    describe('EVM-AC-2 — no regression at the pre-fix baseline (unconstrained) size', () => {
+      it('still renders the header title, close ✕ and both footer buttons unchanged when no scroll is needed', () => {
+        component.showCreateModal = true;
+        fixture.detectChanges();
+
+        const modalBody = fixture.nativeElement.querySelector('.modal_body') as HTMLElement;
+        const evidenceModal = fixture.nativeElement.querySelector('.evidence_modal') as HTMLElement;
+        // Baseline case: content fits, no scroll forced.
+        Object.defineProperty(modalBody, 'scrollHeight', { value: 400, configurable: true });
+        Object.defineProperty(modalBody, 'clientHeight', { value: 400, configurable: true });
+
+        expect(evidenceModal.querySelector('.modal_title')).toBeTruthy();
+        expect(evidenceModal.querySelector('.modal_close')).toBeTruthy();
+        expect(evidenceModal.querySelectorAll('.buttons app-pr-button').length).toBe(2);
+        expect(modalBody.scrollHeight).toBe(modalBody.clientHeight);
+      });
     });
   });
 

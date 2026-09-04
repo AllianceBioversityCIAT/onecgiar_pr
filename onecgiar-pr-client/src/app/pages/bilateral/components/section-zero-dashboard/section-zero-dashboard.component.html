@@ -123,32 +123,7 @@
     }
   </div>
 
-  <div class="bp-dashboard-card bp-dashboard-card--actions">
-    <h3 class="bp-card-title">Actions</h3>
-    <button class="bp-action-btn" disabled type="button" aria-label="Generate Narrative - Coming soon">
-      <i class="material-icons-round">sparkles</i>
-      <span>Generate Narrative</span>
-      <span class="bp-action-status">Coming soon</span>
-    </button>
-    <button class="bp-action-btn" disabled type="button" aria-label="Download PDF - Coming soon">
-      <i class="material-icons-round">picture_as_pdf</i>
-      <span>Download PDF</span>
-      <span class="bp-action-status">Coming soon</span>
-    </button>
-    <button class="bp-action-btn" disabled type="button" aria-label="AI Review - Coming soon">
-      <i class="material-icons-round">search_check</i>
-      <span>AI Review</span>
-      <span class="bp-action-status">Coming soon</span>
-    </button>
-    <button
-      class="bp-action-btn bp-action-btn--primary bp-action-btn--submit"
-      [disabled]="overallStatus() !== 'complete' || isSubmitting() || readOnly()"
-      [attr.aria-busy]="isSubmitting()"
-      type="button"
-      (click)="onSubmit()">
-      <i class="material-icons-round" [class.animate-spin]="isSubmitting()">{{ isSubmitting() ? 'progress_activity' : 'send' }}</i>
-      <span>{{ isSubmitting() ? 'Submitting…' : 'Submit for Review' }}</span>
-      <span class="bp-action-status">In progress</span>
-    </button>
-  </div>
+  <!-- The Actions card is gone (feedback 2026-09-04): Submit for review lives in the editor's
+       sections rail, and a column of disabled Coming-soon buttons earned no screen space. Bring the
+       card back only when one of those actions actually ships. -->
 </div>

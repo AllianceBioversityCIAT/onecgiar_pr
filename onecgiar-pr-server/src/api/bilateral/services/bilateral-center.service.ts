@@ -36,6 +36,7 @@ import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institut
 import { ResultCreationMethod } from '../../../shared/constants/result-creation-method.enum';
 import { ResultsKnowledgeProductsService } from '../../results/results-knowledge-products/results-knowledge-products.service';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
+import { ShareResultRequestRepository } from '../../results/share-result-request/share-result-request.repository';
 import {
   ResultReviewHistory,
   ReviewActionEnum,
@@ -69,6 +70,7 @@ export class BilateralCenterService {
     private readonly roleByUserRepository: RoleByUserRepository,
     private readonly resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
+    private readonly shareResultRequestRepository: ShareResultRequestRepository,
   ) {}
 
   async getProjects(centerId: number) {
@@ -547,19 +549,32 @@ export class BilateralCenterService {
     }
   }
 
+  /** Contribution requests the centre form manages: 4 = draft (pre-approval), 1 = pending accept. */
+  private static readonly CONTRIBUTION_REQUEST_STATUSES = [1, 4];
+  private static readonly CONTRIBUTION_DRAFT_STATUS = 4;
+
   /**
    * Contributing Science Programs / Accelerators of the bilateral Contributors section (Nicoleta
    * Trifa via Ángel Jarrín, 2026-09-03: the question must be available whatever the project's
-   * mapping, and it must persist — it used to live in a component signal and vanish on reload).
+   * mapping, and it must persist).
    *
-   * Stored as `results_by_inititiative` rows with `initiative_role_id = 2`: the same rows W1/W2
-   * keeps for an accepted contributing program, and what the bilateral detail endpoint already
-   * reads back as `contributing_and_primary_initiative` / `accepted_contributing_initiatives`. The
-   * ingest path (`POST /create`) records the same intent as `share_result_request` rows with
-   * status 4 — deliberately not mirrored here, because nothing reads those back into the form.
+   * Stored as `share_result_request` DRAFTS (`request_status_id = 4`) — the exact rows the ingest
+   * path (`POST /create`) writes — NOT as `results_by_inititiative` role-2 rows. The distinction is
+   * the whole contribution workflow (2026-09-04, P2-3187/P2-3484 follow-up):
    *
-   * Sending the key replaces the set: rows for programs no longer listed are deactivated. The
-   * primary program (role 1) is excluded from the list and never deactivated from here.
+   * - A role-2 row means "this program already ACCEPTED the contribution". Writing it from the
+   *   centre form skipped the contributor's consent, blocked `createShareResultRequests` from ever
+   *   creating a request (`initExist?.is_active` short-circuit), and — worse — the approval's
+   *   `_updateTocMapping → updateResultByInitiative` DEACTIVATED any role-2 row not backed by an
+   *   accepted/pending request, so the form-added program was silently wiped on approve.
+   * - A draft (4) survives the whole edit cycle invisible to the SP, and on approval
+   *   `reviewBilateralResult → _updateTocMapping → resultRequest` converts it in place into a
+   *   PENDING request (status 1): the contributor programme gets the email + the in-app request
+   *   card and accepts or declines it (P2-3187). Acceptance is what creates the role-2 row.
+   *
+   * Sending the key replaces the set: drafts/pending requests for programs no longer listed are
+   * cancelled, and an already-accepted contribution (active role-2 row) is deactivated exactly as
+   * before. The primary program (role 1) is excluded and never touched from here.
    */
   private async syncContributingPrograms(
     resultId: number,
@@ -594,10 +609,15 @@ export class BilateralCenterService {
       wanted.set(Number(init.id), code);
     }
 
-    const current = await this.resultByInitiativesRepository.find({
+    // Already-accepted contributions (role 2). Kept when still listed; deactivated when removed —
+    // the same removal semantics the previous implementation had.
+    const acceptedRows = await this.resultByInitiativesRepository.find({
       where: { result_id: resultId, initiative_role_id: 2, is_active: true },
     });
-    for (const row of current ?? []) {
+    const acceptedIds = new Set(
+      (acceptedRows ?? []).map((row) => Number(row.initiative_id)),
+    );
+    for (const row of acceptedRows ?? []) {
       if (wanted.has(Number(row.initiative_id))) continue;
       await this.resultByInitiativesRepository.update(
         { id: row.id },
@@ -610,31 +630,66 @@ export class BilateralCenterService {
       result.deactivatedPrograms.push(Number(row.initiative_id));
     }
 
+    // Requests this form manages: drafts (4) and pending (1), never W1/W2-style ToC requests.
+    const activeRequests = await this.shareResultRequestRepository.find({
+      where: {
+        result_id: resultId,
+        is_active: true,
+        request_status_id: In(
+          BilateralCenterService.CONTRIBUTION_REQUEST_STATUSES,
+        ),
+        is_map_to_toc: false,
+      },
+    });
+
+    // Cancel the request (draft or still-unanswered pending) of any program no longer listed.
+    for (const request of activeRequests ?? []) {
+      const sharedId = Number(request.shared_inititiative_id);
+      if (wanted.has(sharedId)) continue;
+      await this.shareResultRequestRepository.update(
+        { share_result_request_id: request.share_result_request_id },
+        { is_active: false },
+      );
+      result.deactivatedPrograms.push(sharedId);
+    }
+
     for (const [initiativeId, code] of wanted) {
-      const existing = await this.resultByInitiativesRepository.findOne({
-        where: { result_id: resultId, initiative_id: initiativeId },
+      // Already accepted, or already has a live draft/pending request — nothing to write.
+      if (acceptedIds.has(initiativeId)) {
+        result.savedPrograms.push(code);
+        continue;
+      }
+      const liveRequest = (activeRequests ?? []).find(
+        (request) => Number(request.shared_inititiative_id) === initiativeId,
+      );
+      if (liveRequest) {
+        result.savedPrograms.push(code);
+        continue;
+      }
+
+      // Reactivate a dormant draft (e.g. removed and re-added, or cancelled by a rejection)
+      // instead of piling up rows; otherwise create it exactly as the ingest path does.
+      const dormantDraft = await this.shareResultRequestRepository.findOne({
+        where: {
+          result_id: resultId,
+          shared_inititiative_id: initiativeId,
+          request_status_id: BilateralCenterService.CONTRIBUTION_DRAFT_STATUS,
+        },
       });
-      if (existing) {
-        if (Number(existing.initiative_role_id) === 1 && existing.is_active) {
-          continue;
-        }
-        await this.resultByInitiativesRepository.update(
-          { id: existing.id },
-          {
-            initiative_role_id: 2,
-            is_active: true,
-            last_updated_by: user.id,
-            last_updated_date: new Date(),
-          },
+      if (dormantDraft) {
+        await this.shareResultRequestRepository.update(
+          { share_result_request_id: dormantDraft.share_result_request_id },
+          { is_active: true, requested_by: user.id },
         );
       } else {
-        await this.resultByInitiativesRepository.save({
+        await this.shareResultRequestRepository.save({
           result_id: resultId,
-          initiative_id: initiativeId,
-          initiative_role_id: 2,
+          owner_initiative_id: ownerId,
+          shared_inititiative_id: initiativeId,
+          approving_inititiative_id: initiativeId,
+          request_status_id: BilateralCenterService.CONTRIBUTION_DRAFT_STATUS,
+          requested_by: user.id,
           is_active: true,
-          created_by: user.id,
-          last_updated_by: user.id,
         });
       }
       result.savedPrograms.push(code);

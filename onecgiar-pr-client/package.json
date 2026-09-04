@@ -157,6 +157,7 @@
       "^@spartan/separator$": "<rootDir>/src/app/spartan/separator/src/index.ts",
       "^@spartan/skeleton$": "<rootDir>/src/app/spartan/skeleton/src/index.ts",
       "^@spartan/popover$": "<rootDir>/src/app/spartan/popover/src/index.ts",
+      "^@spartan/tabs$": "<rootDir>/src/app/spartan/tabs/src/index.ts",
       "^src/(.*)$": "<rootDir>/src/$1"
     },
     "coverageThreshold": {

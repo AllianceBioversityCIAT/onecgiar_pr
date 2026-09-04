@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, booleanAttribute, inject, input, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, booleanAttribute, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PrDialogComponent } from '../pr-dialog/pr-dialog.component';
 import {
@@ -53,13 +53,6 @@ export class ReportFeedbackDialogComponent {
   }
   @Output() visibleChange = new EventEmitter<boolean>();
 
-  /**
-   * PNG data URL of the screen behind the modal. A signal input on purpose: the
-   * host opens the dialog first and the capture lands ~2s later, so a plain
-   * @Input would not repaint the checkbox under zoneless change detection.
-   */
-  readonly autoScreenshot = input<string | null>(null);
-
   readonly mode = signal<DialogMode>('report');
 
   readonly type = signal<FeedbackType>('bug');
@@ -67,14 +60,10 @@ export class ReportFeedbackDialogComponent {
   readonly description = signal('');
   readonly priority = signal<FeedbackPriorityId>('3');
   /**
-   * OFF by default, deliberately (Yeck, 3-sep-2026: "espero que no subas nada
-   * personal mio"). The picture carries whatever was on screen — other centres'
-   * results, names, figures — so attaching it has to be a decision the user
-   * takes, not a default they never saw.
+   * Images the user attached themselves. 🛑 There is no automatic capture of
+   * the screen any more — removed 4-sep-2026 (Yeck): painting the viewport to
+   * a canvas froze the reporters' machines. Only files the user picks.
    */
-  readonly includeScreenshot = signal(false);
-  /** Whether the preview is shown at full width, so the user can read it. */
-  readonly shotExpanded = signal(false);
   readonly userFiles = signal<FeedbackAttachment[]>([]);
   readonly fileError = signal<string | null>(null);
 
@@ -206,16 +195,8 @@ export class ReportFeedbackDialogComponent {
     this.submitting.set(true);
     this.errorMsg.set(null);
 
-    const attachments: FeedbackAttachment[] = [];
-    const shot = this.autoScreenshot();
-    if (this.includeScreenshot() && shot) {
-      attachments.push({
-        name: 'screen-at-report-time.png',
-        mimeType: 'image/png',
-        dataBase64: shot
-      });
-    }
-    attachments.push(...this.userFiles().filter(f => f.dataBase64));
+    // Only what the user attached themselves — nothing is captured for them.
+    const attachments = this.userFiles().filter(f => f.dataBase64);
 
     this.feedbackApi
       .POST_reportFeedback({
@@ -278,8 +259,6 @@ export class ReportFeedbackDialogComponent {
     this.title.set('');
     this.description.set('');
     this.priority.set('3');
-    this.includeScreenshot.set(false);
-    this.shotExpanded.set(false);
     this.userFiles.set([]);
     this.fileError.set(null);
     this.submitting.set(false);

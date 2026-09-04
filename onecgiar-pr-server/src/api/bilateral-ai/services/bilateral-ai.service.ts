@@ -295,7 +295,16 @@ export class BilateralAiService {
     await this.draftRepository.update(draft.id, { is_discarded: true });
 
     return {
-      response: { resultId: draft.result_id },
+      // resultCode + versionId let the client land on the canonical editor URL
+      // (/bilateral/:center/result/:result_code?phase=:versionId) — the same shape the results
+      // list opens, where `:id` is a result_code resolved together with the phase. Navigating with
+      // the bare internal id worked only through the no-phase fallback and produced a URL that
+      // cannot be shared across phases.
+      response: {
+        resultId: draft.result_id,
+        resultCode: result.result_code,
+        versionId: result.version_id,
+      },
       message: 'Draft promoted to bilateral result',
       status: 200,
     };

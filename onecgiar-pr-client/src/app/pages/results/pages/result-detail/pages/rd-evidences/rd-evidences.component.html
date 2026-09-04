@@ -125,7 +125,9 @@
         <i class="material-icons-round">close</i>
       </button>
     </div>
-    <app-evidence-item *ngIf="showCreateModal" [evidence]="draftEvidence" [embedded]="true" [isOptional]="isOptional"></app-evidence-item>
+    <div class="modal_body">
+      <app-evidence-item *ngIf="showCreateModal" [evidence]="draftEvidence" [embedded]="true" [isOptional]="isOptional"></app-evidence-item>
+    </div>
     <div class="buttons">
       <app-pr-button padding="medium" text="Cancel" colorType="secondary" (click)="cancelCreateEvidence()"></app-pr-button>
       <app-pr-button

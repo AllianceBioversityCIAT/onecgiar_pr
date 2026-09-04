@@ -72,23 +72,20 @@ describe('SectionZeroDashboardComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should emit submitRequested on submit', () => {
-    const emitSpy = jest.spyOn(component.submitRequested, 'emit');
-    component.onSubmit();
-    expect(emitSpy).toHaveBeenCalled();
-  });
-
   it('should show empty project hint when no project selected', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Select a project');
   });
 
-  it('should label unavailable actions and keep submit status visible', () => {
+  // The Actions card is gone (feedback 2026-09-04): Submit for review lives in the editor's
+  // sections rail, and a column of disabled Coming-soon buttons earned no screen space.
+  it('renders NO Actions card — no submit, no Coming-soon buttons, no stale badge', () => {
     const el = fixture.nativeElement as HTMLElement;
-    const statuses = Array.from(el.querySelectorAll('.bp-action-status'))
-      .map(status => status.textContent?.trim());
 
-    expect(statuses).toEqual(['Coming soon', 'Coming soon', 'Coming soon', 'In progress']);
+    expect(el.querySelector('.bp-dashboard-card--actions')).toBeNull();
+    expect(el.querySelectorAll('.bp-action-btn').length).toBe(0);
+    expect(el.textContent).not.toContain('Coming soon');
+    expect(el.textContent).not.toContain('In progress');
   });
 
   it('should show the AI Result badge when the result was generated with AI', () => {

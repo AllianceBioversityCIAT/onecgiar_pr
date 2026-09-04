@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-09-04 · branch qa-development-2026 · merge of origin/performance-refactor 8f616567a (RTA sticky-pin rules and `actions-scroll.cy.ts` NOT carried — superseded by this branch's tabular redesign; see the merge note in the scss)
+**Verified:** 2026-09-04 · branch qa-development-2026-ss · merge of origin/performance-refactor 85fdfc8c3 into 9b9c032ba (RTA-T-1's sticky-pin grid was superseded by this branch's tabular redesign — see the RTA-T-1 note below)
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjetas colapsables por Area
@@ -67,7 +67,7 @@ ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio
   debajo. Las celdas fijas van a `left: 0` / `right: 0`.
 - ⚠️ **No pongas un segundo scroller.** `app-pr-table` ya renderiza `.pr-table-wrap` con
   `overflow-x: auto`; envolverlo en otro daba dos barras para un solo eje.
-- **RTA-T-1 (sticky pins, `bugfix/reporting-table-actions-clipped`) — superseded on this branch.** The merge of 2026-09-04 dropped `.pr-pin-*` / `.pr-hlo-pin-*`, `.pr-collapse--rows` and `min-width: 1048px`: the tabular redesign (`$pr-reporting-tracks`, AFP-R-4 removal of *Next pending*, in-card popovers) has no pinned tracks. If clipping under ~1000px reappears here, re-derive the fix against this grid; do not restore the RTA rules verbatim.
+- ⚠️ **RTA-T-1 (sticky pins, `bugfix/reporting-table-actions-clipped`) — superseded, confirmed on disk after the 2026-09-04 merge.** The `.scss`'s own merge note (top of the file) confirms `.pr-pin-actions` / `.pr-pin-menu` / `.pr-hlo-pin-*`, `.pr-collapse--rows` and `min-width: 1048px` were NOT carried over: the tabular redesign (`$pr-reporting-tracks`, no *Next pending* button, in-card popovers) is what's live. If clipping under ~1000px reappears, re-derive the fix against this grid — do not restore the RTA rules verbatim.
 - ⚠️ **`app-pr-table` ordena con `<`/`>` sobre el valor crudo y no acepta comparador.** Por eso
   `flatTableRows()` precalcula `__sortTarget` / `__sortAchieved` / `__sortStatus`:
   `target_value_sum` llega como STRING y ordenaba `"9" > "100"`. "Nada reportado" es

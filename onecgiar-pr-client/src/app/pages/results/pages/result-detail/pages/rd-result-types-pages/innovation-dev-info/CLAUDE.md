@@ -1,6 +1,6 @@
 # innovation-dev-info
 
-**Verified:** 2026-09-03 · branch performance-refactor · `innovation-team-diversity/` now has completeness tracking (`isComplete` getter + `appFeedbackValidation` marker, matching its siblings) — see `docs/specs/bugfix/innovation-team-diversity-missing-alert/`.
+**Verified:** 2026-09-03 · branch qa-development-2026-ss · `innovation-team-diversity/` now has completeness tracking (`isComplete` getter + `appFeedbackValidation` marker, matching its siblings) — see `docs/specs/bugfix/innovation-team-diversity-missing-alert/`.
 
 ## What it is
 The "Innovation Development" section of the result detail. It mixes **two sources** that are easy to

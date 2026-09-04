@@ -958,24 +958,42 @@ background-attachment: fixed;
 .pr-dialog-footer {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 10px;
+  padding-top: 4px;
+
+  // hlmBtn sizes itself with rem utilities, and this app's root is 12px — the root-font trap:
+  // the buttons rendered a quarter smaller than designed. Explicit px, matching the bilateral
+  // editor's .bcr-btn geometry (38px / radius 8 / 14px semibold). Scoped to Helm buttons on
+  // purpose: some footers (bilateral-ai-draft-detail) bring their own .badd-btn styling.
+  button[hlmbtn] {
+    height: 38px;
+    padding: 0 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+  }
 }
 
 .pr-dialog--promote {
   border-top: 3px solid #059669 !important;
   border-radius: 14px !important;
 
-  .p-dialog-footer .p-button:not(.p-button-secondary) {
-    background: #059669 !important;
-    border-color: #059669 !important;
+  // The confirm action follows the dialog's promote identity (green header icon + top border).
+  // The old override targeted PrimeNG's .p-button and died with the migration — these footers
+  // render Helm buttons now: the primary is the bare hlmBtn (no variant attribute).
+  .pr-dialog-footer button[hlmbtn]:not([variant]) {
+    background: #059669;
+    border-color: #059669;
+    color: #fff;
 
     &:hover {
-      background: #047857 !important;
-      border-color: #047857 !important;
+      background: #047857;
+      border-color: #047857;
     }
 
     &:focus-visible {
-      box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.25) !important;
+      box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.25);
     }
   }
 }
