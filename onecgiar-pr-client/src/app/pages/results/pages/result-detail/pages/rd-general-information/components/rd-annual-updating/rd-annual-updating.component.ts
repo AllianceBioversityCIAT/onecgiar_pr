@@ -121,6 +121,14 @@ export class RdAnnualUpdatingComponent implements OnInit {
   ngOnInit(): void {
     this.getAlertNarrative();
     this.generalInfoBody.merge_split_targets ??= [];
+
+    // 🛑 Eager ONLY when a transition reason arrives already ticked — which is the reload case, and
+    // the one that matters: `selectedTargets` resolves stored ids against the catalogue, so with an
+    // empty catalogue a saved selection would paint as nothing and the reporter would believe their
+    // answer was lost. Its own guard returns immediately when neither dropdown is shown, leaving
+    // `mergeSplitCatalogueRequested` false, so the lazy `(click)` path is untouched for everyone
+    // else — which is the whole reason the catalogue was lazy to begin with.
+    this.ensureMergeSplitCatalogue();
   }
 
   /**
@@ -190,28 +198,66 @@ export class RdAnnualUpdatingComponent implements OnInit {
    * verifying on screen — **the 19 unit tests passed then and still pass**: they call these methods
    * directly and never run change detection against the real component, so no automated gate in
    * this repo could have caught it.
+   *
+   * ⚠️ AND THIS CACHE ALONE WAS NOT THE FIX. Deployed on its own (build #2150) NG0103 SURVIVED a
+   * cache-busted reload, because the new reference was being created INSIDE the shared component,
+   * after our code — see `selectedTargets` for the half that actually closes the loop. The cache is
+   * still necessary: without it we hand over a new array every pass and we are back to square one.
    */
-  private readonly selectionCache: Record<'merge' | 'split', number[]> = {
+  private readonly selectionCache: Record<'merge' | 'split', any[]> = {
     merge: [],
     split: []
   };
 
   /**
-   * The ids currently declared for one transition type, for the multi-select to bind to.
+   * The catalogue OPTIONS currently declared for one transition type, for the multi-select to bind to.
+   *
+   * 🛑 IT HANDS OVER OBJECTS, NOT RAW IDS, AND THAT IS THE FIX — not a style choice.
+   * `PrMultiSelectComponent.writeValue` (`custom-fields/pr-multi-select/pr-multi-select.component.ts`)
+   * tests `value.some(v => typeof v !== 'object' || v === null)` and, when ANY entry is a raw id,
+   * REMAPS the array to option objects — building a brand-new array, setting its signal and marking
+   * the view dirty on every single call. Its own comment states the contract:
+   *
+   *     "Only remap when some entries are raw IDs (chips need objects). When every entry is already
+   *      an object, keep the EXACT array reference ... without re-triggering writeValue."
+   *
+   * We were binding `result_code` numbers, so `needsMapping` was ALWAYS true and the loop lived
+   * inside the shared component, past the end of our code. Hence NG0103 surviving the first fix.
+   *
+   * 🛑 Do not "simplify" this back to `.map(t => Number(t.target_result_id))`. It reads cleaner, it
+   * type-checks, all the unit tests stay green — and it reinstates the infinite loop, which only
+   * shows up on screen.
    *
    * The two dropdowns share one stored collection, told apart by `transition_type`, because the
    * server keeps them in one table with that discriminator. `merge_split_targets` stays the single
    * source of truth — the cache above only guarantees the REFERENCE is stable while the content is
-   * unchanged, which is what change detection needs. It also means the parent replacing the whole
-   * `generalInfoBody` after the API responds is picked up on the next pass, with no setter needed.
+   * unchanged. It also means the parent replacing the whole `generalInfoBody` after the API responds
+   * is picked up on the next pass, with no setter needed.
+   *
+   * ⚠️ An id with no option in the catalogue is dropped from what the dropdown SHOWS, never from
+   * what is stored: `onTargetsChange` is the only writer, so a catalogue that failed to load cannot
+   * erase a saved answer — it can only fail to display it, which is why `ngOnInit` loads it eagerly
+   * when a transition reason arrives already ticked.
    */
-  selectedTargets(type: 'merge' | 'split'): number[] {
-    const wanted = (this.generalInfoBody.merge_split_targets ?? [])
-      .filter(target => target.transition_type === type)
-      .map(target => Number(target.target_result_id));
+  /**
+   * The ids STORED for one transition type — the truth, independent of the catalogue.
+   *
+   * 🛑 Kept apart from `selectedTargets` on purpose. `selectedTargets` can only return what the
+   * catalogue can resolve, so anything that asks *"did the reporter answer this?"* must read here
+   * instead: a catalogue still in flight (or one that failed to load) would otherwise make a saved
+   * answer look absent, and the completeness indicator would go red on a form that is complete.
+   */
+  private storedTargets(type: 'merge' | 'split'): any[] {
+    return (this.generalInfoBody.merge_split_targets ?? []).filter(target => target.transition_type === type);
+  }
+
+  selectedTargets(type: 'merge' | 'split'): any[] {
+    const wanted = this.storedTargets(type)
+      .map(target => this.mergeSplitCatalogue.find(option => Number(option?.result_code) === Number(target.target_result_id)))
+      .filter(option => !!option);
 
     const cached = this.selectionCache[type];
-    if (cached.length === wanted.length && cached.every((id, i) => id === wanted[i])) {
+    if (cached.length === wanted.length && cached.every((option, i) => option === wanted[i])) {
       return cached;
     }
 
@@ -225,10 +271,17 @@ export class RdAnnualUpdatingComponent implements OnInit {
    * 🛑 Rebuilding the whole array from one dropdown would wipe the other's answers: a reporter who
    * ticked both "merging" and "splitting" would lose whichever they filled first.
    */
-  onTargetsChange(type: 'merge' | 'split', ids: number[]): void {
+  onTargetsChange(type: 'merge' | 'split', selection: any[]): void {
     const others = (this.generalInfoBody.merge_split_targets ?? []).filter(target => target.transition_type !== type);
 
-    this.generalInfoBody.merge_split_targets = [...others, ...(ids ?? []).map(id => ({ target_result_id: Number(id), transition_type: type }))];
+    // The dropdown now hands back catalogue OBJECTS (see `selectedTargets`), while what we store is
+    // the id. A raw id is still accepted on purpose: `optionValue` is a template detail, and a caller
+    // that passes ids must not end up storing `NaN` silently.
+    const codes = (selection ?? [])
+      .map(entry => Number(entry && typeof entry === 'object' ? entry.result_code : entry))
+      .filter(code => Number.isFinite(code) && code > 0);
+
+    this.generalInfoBody.merge_split_targets = [...others, ...codes.map(code => ({ target_result_id: code, transition_type: type }))];
   }
 
   /**
@@ -238,8 +291,10 @@ export class RdAnnualUpdatingComponent implements OnInit {
    * possible, so it reports through the same completeness channel as the reasons above.
    */
   get mergeSplitIsComplete(): boolean {
-    if (this.showsMergeTargets && this.selectedTargets('merge').length === 0) return false;
-    if (this.showsSplitTargets && this.selectedTargets('split').length === 0) return false;
+    // Reads what is STORED, never `selectedTargets`: see `storedTargets`. A form with two saved
+    // merge targets and a catalogue that has not arrived yet is complete, and must read as complete.
+    if (this.showsMergeTargets && this.storedTargets('merge').length === 0) return false;
+    if (this.showsSplitTargets && this.storedTargets('split').length === 0) return false;
     return true;
   }
 
