@@ -63,3 +63,22 @@
 
 **Gate:** auto-approved (pre-approved mode) → continue to KCR-T-3.
 
+### `KCR-T-3` — Disclosure titles: band, chips, hub rows + DOM tests — **PASS** (2026-09-03, 1 attempt)
+
+| Field | Value |
+|---|---|
+| Implementer | `akili-implementer` wrapper, model override `opus`, effort medium-high, skills `angular-developer` + `tdd` |
+| Reviewer | `akili-reviewer` wrapper (`opus`), lens checklist mode |
+| Files (+414/−10, 11 files) | `reporting-program-band.component.ts` (`ReportingSummaryStats.plannedKpis?/zeroTargetKpis?`, `totalKpisTitle(stats)`, private `countLabel`) + `.html` (`[attr.title]` on the Total KPIs figure) + `.spec.ts` (+4 DOM tests) · `program-overview.component.ts` (`chipZeroTargetTitle(row)`) + `.html` (chip `<button>` `[attr.title]`) + `program-overview.oah-hero.spec.ts` (+2) · `reporting-entry-hub.component.ts` (`HubAowRow.zeroTarget?`, `HubProgramLevelRow.zeroTarget?`, `zeroTargetTitle(row)`) + `.html` (both figure spans) + `dashboard-lab.hub.spec.ts` (+4) · `reporting-aow-table.component.spec.ts` (+3 AC-5 DOM tests, no prod change) · **Leader-accepted out-of-list edit:** `dashboard-lab.component.ts` `hubProgramLevelRows` threads `zeroTarget: row.zeroTarget` (+ explicit return annotation replacing `satisfies`, fixes TS2677) — required by design §6.3 |
+| Verification | brief command (reconciliation + band + oah-hero + aow-table + hub) → `6 suites passed · 279 tests passed` (baseline 266; +13, 0 regressions). TDD red→green quoted per suite. Package run 5 failed / 2040 passed — the 5 are the T-4 fixtures (`toc-map` ×4, `oah-rows` ×1), proven pre-existing by revert/re-run. `tsc -p tsconfig.app.json` clean; `ng build --configuration development` OK; `npx ng lint --quiet` clean. Mutation check: reverting `ratioBase()` cross-cut filter makes the AC-5 header test fail |
+| Titles asserted | band `11 planned · excludes 2 zero-target KPIs` / `11 planned` (no `excludes`) / `11 planned · excludes 1 zero-target KPI` / attribute absent without `plannedKpis`; chip Intermediate `excludes 1 zero-target KPI`, 2030 absent, plural `excludes 3 zero-target KPIs`; hub AoW `excludes 4 zero-target KPIs`, singular, absent at 0; program-level Intermediate `excludes 1 zero-target KPI`, 2030 absent. AC-5: header `4 KPIs` + `0 of 3`; Outcomes-band rows exactly IO-1/IO-2 with tooltip `This target is not exclusive to that AoW.`; HLO rows `''` |
+| Requirements covered | KCR-R-2.1, R-6 (title), R-7; KCR-AC-2, AC-5 |
+
+**Decisions (Reviewer agreed):** chip `title` on the chip `<button>` (design says "chip `title`"; figure is its only child; computes as accessible description, no a11y regression). No shared `excludes …` helper extracted (precedent: `ratioTitle`, `bannerZeroTargetTitle`).
+
+**Reviewer PASS summary:** all three disclosures built by component methods with exact KCR-R-2.1 wording and pluralisation, asserted as full strings; AC-5 pins tooltip text, not presence; host edit confined to the two lines §6.3 requires.
+
+**ADVISORY (4R — recorded, no rework):** *Readability:* the `excludes N zero-target KPI(s)` sentence now has four homes (band, chip, hub, table) — kaizen candidate. *Reliability (pre-existing, out of scope):* `program-overview.zeroTargetTitle` (rail) and `rowBarTitle` hardcode `zero-target KPIs`, reading `excludes 1 zero-target KPIs` at n = 1 — contradicts KCR-R-2.1 on a surface the requirement lists as "(already)". **Surfaced to the user as a follow-up candidate; not minted as a task.** *Readability:* new hub `describe` indented two spaces deeper than siblings.
+
+**Gate:** auto-approved (pre-approved mode) → continue to KCR-T-4.
+

@@ -50,7 +50,7 @@
   - *Input that fails the check:* fixture with Category filter active → `plannedReportingSummaryStats.totalKpis` must not move (KCR-AC-3); today's code moves it.
 - **Done:** all consumers listed in design §6.2/6.3 read the partition; no consumer derives a denominator from `reportingGroups()` or `__tier` directly (grep `__tier !== 'outcome'` in the rewired computeds returns 0 hits outside `indicatorsByAow`/`reportingGroups` tier selection); the ToC map fixture with both IO sources yields no `kind: 'program'` branch.
 
-### `KCR-T-3` — Disclosure titles: band, chips, hub rows + DOM tests
+### `KCR-T-3` — Disclosure titles: band, chips, hub rows + DOM tests `[x]`
 - **Type:** `client`
 - **Description:** `ReportingSummaryStats` gains `plannedKpis?`, `zeroTargetKpis?` and the band's Total KPIs figure gets a `title` via a component method (`11 planned · excludes 2 zero-target KPIs` / `… 1 zero-target KPI` / `11 planned`, pluralised like `countLabel`); program-overview chip and hub AoW/program-level rows get `title` `excludes N zero-target KPI(s)` from the row's `zeroTarget` when > 0 (`AowProgressRow`, `HubAowRow` gain the field). Add DOM tests for the three titles' **full text** and for KCR-AC-5 (cross-cut rows still rendered in A's Outcomes band with the RES-R-3 tooltip; A header `4 KPIs · 0 of 3`).
 - **Implements:** `KCR-R-2.1`, `KCR-R-7`, `KCR-AC-2`, `KCR-AC-5`; scenario *Chips apply the zero-target rule* (`title` AND clause), *Cross-cut IOs counted once* (`AND IT MUST still render` clause).
