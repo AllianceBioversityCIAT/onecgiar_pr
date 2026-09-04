@@ -654,12 +654,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   /** The indicator being managed, with the HLO it belongs to for context. */
   readonly managed = signal<{ indicator: any; groupTitle: string; node: any } | null>(null);
   /** Which tab the drawer should land on — chosen by the card button that opened it. */
-  readonly manageTab = signal<'report' | 'info'>('report');
+  // @akili-spec changes/indicator-reported-results — `results` = the Reported results table (IRR-R-1)
+  readonly manageTab = signal<'report' | 'info' | 'results'>('report');
   /** Room reserved on the right so the manage panel never covers the list. Matches
    *  the drawer's default width so the report form opens two-column from the start. */
   readonly managePanelWidth = signal(740);
 
-  manageIndicator(indicator: any, groupTitle: string, tab: 'report' | 'info' = 'report', node?: unknown): void {
+  manageIndicator(indicator: any, groupTitle: string, tab: 'report' | 'info' | 'results' = 'report', node?: unknown): void {
     // The group carries the ToC node id the existing-results endpoint needs; the
     // indicator row does not, so it is folded in here. Planned browse may pass
     // `__hloNode` / `toc_result_id` when no AoW detail is open.
@@ -3593,7 +3594,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   onReportingOpenAchieved(row: ReportingIndicator): void {
-    this.manageIndicator(row, row.__hlo ?? '', 'report');
+    // @akili-spec changes/indicator-reported-results
+    // IRR-R-1 / IRR-AC-1 — "View reported results" asks WHAT was reported; `'report'` answered with
+    // the blank create form. The Reported results table is the answer.
+    this.manageIndicator(row, row.__hlo ?? '', 'results');
   }
 
   /**

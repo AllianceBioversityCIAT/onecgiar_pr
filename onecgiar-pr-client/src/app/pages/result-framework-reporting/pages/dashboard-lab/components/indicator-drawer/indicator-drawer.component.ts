@@ -2,8 +2,57 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, ou
 import { DecimalPipe } from '@angular/common';
 import { LabReportFormComponent } from '../lab-report-form/lab-report-form.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 
-type DrawerTab = 'report' | 'info';
+// @akili-spec changes/indicator-reported-results
+// IRR-R-1 / IRR-DD-1 — a third tab inside the drawer (never a second surface): the reported
+// results move off the `info` card stack onto their own table.
+export type DrawerTab = 'report' | 'info' | 'results';
+
+/** One contributing result, shaped for the Reported results table (IRR-R-2). */
+export interface ReportedResultRow {
+  id: number | string | null;
+  code: string;
+  title: string;
+  category: string;
+  statusId: number | null;
+  statusName: string;
+  contribution: number | null;
+  versionId: number | string | null;
+  phaseName: string;
+  raw: any;
+}
+
+/** Em dash — the single placeholder for "the server did not send it" across every cell. */
+const EMPTY_CELL = '\u2014';
+
+/**
+ * Contributor DTO → table row (IRR-R-2.2, IRR-R-2.3, IRR-R-2.4; IRR-DD-3).
+ *
+ * Pure on purpose: the two fallbacks are the whole risk surface and both are silent when wrong.
+ *  - Category is the server's `result_type_name`. When it is missing the cell shows an em dash,
+ *    NEVER `result_type_id` — a bare `6` in a Category column reads as data, not as a gap.
+ *  - Phase is resolved client-side against `PhasesService.phases.reporting`; an id the list does
+ *    not know still prints its digits rather than `undefined`.
+ */
+export function toReportedResultRow(dto: any, phases: any[]): ReportedResultRow {
+  const versionId = dto?.version_id ?? null;
+  const phase = (phases ?? []).find(p => p?.id === versionId);
+  const rawContribution = dto?.contributing_indicator;
+  const contribution = rawContribution == null || Number.isNaN(Number(rawContribution)) ? null : Number(rawContribution);
+  return {
+    id: dto?.result_id ?? null,
+    code: dto?.result_code == null ? '' : String(dto.result_code),
+    title: dto?.result_title || dto?.title || 'Untitled result',
+    category: dto?.result_type_name || EMPTY_CELL,
+    statusId: dto?.status_id ?? null,
+    statusName: dto?.status_name || EMPTY_CELL,
+    contribution,
+    versionId,
+    phaseName: phase?.phase_name ?? (versionId == null ? EMPTY_CELL : String(versionId)),
+    raw: dto
+  };
+}
 
 /**
  * INDICATOR DRAWER — the manage surface for one planned indicator.
@@ -29,6 +78,10 @@ type DrawerTab = 'report' | 'info';
 })
 export class IndicatorDrawerComponent {
   private readonly api = inject(ApiService);
+  // @akili-spec changes/indicator-reported-results
+  // IRR-DD-3 — the phase NAME is client-side data: the payload carries only `version_id`, and the
+  // shell has already loaded the reporting phases by the time this drawer can open.
+  private readonly phasesSE = inject(PhasesService);
 
   /** The indicator being managed, plus the context it lives in. */
   readonly indicator = input.required<any>();
@@ -124,12 +177,42 @@ export class IndicatorDrawerComponent {
 
   /** Which drawer this is — set once by the card button, no in-drawer tab switching. */
   readonly tab = signal<DrawerTab>('report');
+
+  // @akili-spec changes/indicator-reported-results
+  // IRR-R-10 — title and icon are a MAP, not a ternary: a third tab turned the old
+  // `tab() === 'report' ? a : b` pair into a silent mislabel for anything that is not `report`.
+  private static readonly TAB_CHROME: Record<DrawerTab, { title: string; icon: string }> = {
+    report: { title: 'Report result', icon: 'edit_note' },
+    info: { title: 'Indicator information', icon: 'info' },
+    results: { title: 'Reported results', icon: 'fact_check' }
+  };
+  readonly tabTitle = computed(() => IndicatorDrawerComponent.TAB_CHROME[this.tab()].title);
+  readonly tabIcon = computed(() => IndicatorDrawerComponent.TAB_CHROME[this.tab()].icon);
   /** True once the mode is fixed, so the smart default stops overriding. */
   private tabTouched = false;
 
   // ---- existing results (View results tab) --------------------------------
   readonly existing = signal<any[] | null>(null);
   readonly loadingExisting = signal(false);
+  // @akili-spec changes/indicator-reported-results
+  // IRR-R-7 — a 404 means "nothing reported here yet" (the server's contract for a virgin
+  // indicator) and stays an empty list. Anything else is a FAILURE and must say so: rendering an
+  // empty state for a 500 tells the user the indicator has no results, which is a lie.
+  readonly loadError = signal<string | null>(null);
+
+  /** Contributing results as table rows, in the default order: contribution desc, then code (IRR-R-6). */
+  readonly reportedRows = computed<ReportedResultRow[]>(() => {
+    const phases = this.phasesSE?.phases?.reporting ?? [];
+    return (this.existing() ?? [])
+      .map(dto => toReportedResultRow(dto, phases))
+      .sort((a, b) => {
+        // Rows without a contribution sort last rather than as zero — "not reported" is not "0".
+        const av = a.contribution ?? Number.NEGATIVE_INFINITY;
+        const bv = b.contribution ?? Number.NEGATIVE_INFINITY;
+        if (av !== bv) return bv - av;
+        return a.code.localeCompare(b.code, undefined, { numeric: true });
+      });
+  });
 
   /** Target split per Center and year, straight off the indicator payload. */
   readonly targetsByCenter = computed<any[]>(() => this.indicator()?.targets_by_center?.targets ?? []);
@@ -143,6 +226,7 @@ export class IndicatorDrawerComponent {
       this.tab.set(this.initialTab());
       this.tabTouched = true;
       this.existing.set(null);
+      this.loadError.set(null);
       this.formDirty.set(false);
       if (ind) this.loadExisting(ind);
     });
@@ -178,19 +262,29 @@ export class IndicatorDrawerComponent {
       return;
     }
     this.loadingExisting.set(true);
-    this.api.resultsSE.GET_ExistingResultsContributors(tocResultId, indicatorId).subscribe({
+    this.loadError.set(null);
+    // @akili-spec changes/indicator-reported-results
+    // `'all'` (IRR-R-3): ONE request per indicator open serves both the Report-tab preview and the
+    // Reported results table (IRR-R-3.2), so the wider population is asked for here, once.
+    this.api.resultsSE.GET_ExistingResultsContributors(tocResultId, indicatorId, 'all').subscribe({
       next: (res: { response?: { contributors?: any[] } }) => {
         const list = res?.response?.contributors ?? [];
         this.existing.set(list);
         this.loadingExisting.set(false);
         // Smart default: if something is already reported here, someone opening the
-        // drawer is likely coming to look — land on Information, not the blank form.
-        // Never override a tab the user already picked by hand.
-        if (list.length && !this.tabTouched) this.tab.set('info');
+        // drawer is likely coming to look — land on the Reported results table, not the
+        // blank form. Never override a tab the user already picked by hand.
+        //
+        // DORMANT since the per-indicator reset effect sets `tabTouched = true` before this
+        // resolves (the host's `initialTab` is authoritative — IRR-R-1). Retargeted anyway so a
+        // future revival can never land on `info`, which no longer holds the list.
+        if (list.length && !this.tabTouched) this.tab.set('results');
       },
-      error: () => {
+      error: (err: { status?: number }) => {
         this.existing.set([]);
         this.loadingExisting.set(false);
+        // 404 = virgin indicator, the documented contract. Every other status is a real failure.
+        if (err?.status !== 404) this.loadError.set('Could not load reported results');
       }
     });
   }

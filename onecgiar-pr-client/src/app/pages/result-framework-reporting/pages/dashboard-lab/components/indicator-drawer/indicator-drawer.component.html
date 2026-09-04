@@ -22,10 +22,9 @@
   <!-- Top bar: Drawer title & Close button -->
   <div class="flex shrink-0 items-center justify-between border-b border-[rgba(30,32,47,0.08)] px-6 py-3.5 bg-white">
     <div class="flex items-center gap-2">
-      <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">{{ tab() === 'report' ? 'edit_note' : 'info' }}</span>
-      <h3 class="m-0 text-[15px] font-bold text-gray-900">
-        {{ tab() === 'report' ? 'Report result' : 'Indicator information' }}
-      </h3>
+      <!-- @akili-spec changes/indicator-reported-results — title/icon come from the tab map (IRR-R-10) -->
+      <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">{{ tabIcon() }}</span>
+      <h3 class="m-0 text-[15px] font-bold text-gray-900">{{ tabTitle() }}</h3>
     </div>
     <button
       type="button"
@@ -119,7 +118,7 @@
             </ul>
             <button
               type="button"
-              (click)="setTab('info')"
+              (click)="setTab('results')"
               class="mt-2 appearance-none border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-300)] underline">
               See them in detail
             </button>
@@ -141,41 +140,38 @@
           (created)="close()" />
       }
 
-      @case ('info') {
-        <!-- ---- Reported results ---- -->
-        <p class="m-0 mb-3 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">
-          <span class="material-icons-round text-[16px]">fact_check</span> Reported results
-        </p>
+      <!-- @akili-spec changes/indicator-reported-results
+           IRR-R-9 / IRR-DD-6 — the reported results left `info` for their own tab. `info` keeps
+           exactly what it is for: Target, Achieved so far and the per-Center split.
+           IRR-R-2..R-8 (table, strip, sorting, row actions, width floor) land in T-3; this body is
+           the data path made visible, deliberately unstyled. -->
+      @case ('results') {
         @if (loadingExisting()) {
           <div class="flex flex-col gap-2">
             @for (s of [1, 2, 3]; track s) {
-              <div class="h-[62px] animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
+              <div class="h-[44px] animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
             }
           </div>
-        } @else if (existing()?.length) {
-          <p class="m-0 mb-2 text-[12px] text-[var(--pr-color-accents-5)]">
-            {{ existing()!.length }} result{{ existing()!.length === 1 ? '' : 's' }} already reported here.
-          </p>
-          <div class="flex flex-col gap-2">
-            @for (r of existing()!; track $index) {
-              <div class="rounded-xl border border-[rgba(30,32,47,0.08)] bg-white p-3.5">
-                <p class="m-0 text-[13px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]">
-                  {{ r?.result_title || r?.title || 'Untitled result' }}
-                </p>
+        } @else if (loadError()) {
+          <div class="rounded-xl border border-dashed border-[rgba(30,32,47,0.14)] bg-white px-5 py-8 text-center">
+            <span class="material-icons-round text-[24px] text-[var(--pr-color-red-300)]">error_outline</span>
+            <p class="m-0 mt-1.5 text-[13px] text-[var(--pr-color-accents-5)]">{{ loadError() }}</p>
+          </div>
+        } @else if (reportedRows().length) {
+          <ul class="m-0 list-none space-y-2 p-0">
+            @for (row of reportedRows(); track row.code) {
+              <li class="rounded-xl border border-[rgba(30,32,47,0.08)] bg-white p-3.5">
+                <p class="m-0 text-[13px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]">{{ row.title }}</p>
                 <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px] text-[var(--pr-color-accents-5)]">
-                  @if (r?.result_code) {
-                    <span class="rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 font-semibold">{{ r.result_code }}</span>
-                  }
-                  @if (r?.official_code) {
-                    <span>{{ r.official_code }}</span>
-                  }
-                  @if (r?.contributing_indicator != null) {
-                    <span>contribution <b class="text-[var(--pr-color-secondary-400)]">{{ r.contributing_indicator }}</b></span>
-                  }
+                  <span class="rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 font-semibold">{{ row.code }}</span>
+                  <span>{{ row.category }}</span>
+                  <span>{{ row.statusName }}</span>
+                  <span class="tabular-nums">{{ row.contribution ?? '\u2014' }}</span>
+                  <span>{{ row.phaseName }}</span>
                 </div>
-              </div>
+              </li>
             }
-          </div>
+          </ul>
         } @else {
           <div class="rounded-xl border border-dashed border-[rgba(30,32,47,0.14)] bg-white px-5 py-8 text-center">
             <span class="material-icons-round text-[24px] text-[var(--pr-color-accents-3)]">inbox</span>
@@ -188,9 +184,11 @@
             </button>
           </div>
         }
+      }
 
+      @case ('info') {
         <!-- ---- Target ---- -->
-        <p class="m-0 mb-3 mt-7 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">
+        <p class="m-0 mb-3 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">
           <span class="material-icons-round text-[16px]">flag</span> Target
         </p>
         <div class="rounded-xl border border-[rgba(30,32,47,0.08)] bg-white p-4">
