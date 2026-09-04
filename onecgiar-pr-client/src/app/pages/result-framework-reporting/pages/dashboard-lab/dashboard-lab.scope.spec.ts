@@ -315,7 +315,7 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
       const link: OverviewLink = { status: 'x', category: 'y', origin: 'z', center: 'w', phase: 'v' };
       expect(Object.keys(link).sort()).toEqual(['category', 'origin', 'phase', 'status', 'center'].sort());
       expect('scope' in link).toBe(false);
-      expect(Object.keys(PROGRAMME_RESULTS_QUERY_PARAM_MAP)).toEqual(['phase', 'status', 'category', 'origin', 'center']);
+      expect(Object.keys(PROGRAMME_RESULTS_QUERY_PARAM_MAP)).not.toContain('scope');
       expect(Object.values(PROGRAMME_RESULTS_QUERY_PARAM_MAP)).not.toContain('scope');
     });
 

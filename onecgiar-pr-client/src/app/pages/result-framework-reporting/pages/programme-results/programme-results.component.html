@@ -167,18 +167,32 @@
                 </div>
               </div>
 
-              <!-- Row 3: Center -->
-              <div class="pgr-filter" aria-label="Filter by center">
-                <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
-                  Contributing Center
-                </label>
-                <app-pr-filter-select
-                  [options]="centerSelectOptions()"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="Center"
-                  [ngModel]="selectValue(filter.selectedCenter())"
-                  (changed)="onCenterChange($event)"></app-pr-filter-select>
+              <!-- Row 3: Center & Created by -->
+              <div class="grid grid-cols-2 gap-[10px]">
+                <div class="pgr-filter" aria-label="Filter by center">
+                  <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                    Contributing Center
+                  </label>
+                  <app-pr-filter-select
+                    [options]="centerSelectOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Center"
+                    [ngModel]="selectValue(filter.selectedCenter())"
+                    (changed)="onCenterChange($event)"></app-pr-filter-select>
+                </div>
+                <div class="pgr-filter" aria-label="Filter by created by">
+                  <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                    Created by
+                  </label>
+                  <app-pr-filter-select
+                    [options]="createdBySelectOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Created by"
+                    [ngModel]="selectValue(filter.selectedCreatedBy())"
+                    (changed)="onCreatedByChange($event)"></app-pr-filter-select>
+                </div>
               </div>
 
               <!-- Row 4: Section (Coming soon) -->

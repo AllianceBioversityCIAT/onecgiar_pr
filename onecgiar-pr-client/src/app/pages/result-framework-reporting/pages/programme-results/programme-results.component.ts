@@ -685,6 +685,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
   readonly categorySelectOptions = computed(() => buildCategoryFilterOptions(this.data.categoryOptions(), this.filter.selectedCategory()));
   readonly originSelectOptions = computed(() => this.data.originOptions().map(value => ({ value, label: value })));
   readonly centerSelectOptions = computed(() => this.data.centerOptions().map(value => ({ value, label: value })));
+  readonly createdBySelectOptions = computed(() => this.data.createdByOptions().map(value => ({ value, label: value })));
 
   /**
    * Section options, grouped "Areas of work" / "Programme-level" exactly like
@@ -820,12 +821,14 @@ export class ProgrammeResultsComponent implements OnDestroy {
         const category = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.category);
         const origin = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin);
         const center = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.center);
+        const createdBy = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy);
 
         if (phase !== this.filter.selectedPhase()) this.filter.selectedPhase.set(phase);
         if (status !== this.filter.selectedStatus()) this.filter.selectedStatus.set(status);
         if (category !== this.filter.selectedCategory()) this.filter.selectedCategory.set(category);
         if (origin !== this.filter.selectedOrigin()) this.filter.selectedOrigin.set(origin);
         if (center !== this.filter.selectedCenter()) this.filter.selectedCenter.set(center);
+        if (createdBy !== this.filter.selectedCreatedBy()) this.filter.selectedCreatedBy.set(createdBy);
       });
     });
 
@@ -841,6 +844,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
       const category = this.filter.selectedCategory();
       const origin = this.filter.selectedOrigin();
       const center = this.filter.selectedCenter();
+      const createdBy = this.filter.selectedCreatedBy();
 
       untracked(() => {
         const current = this.route.snapshot.queryParamMap;
@@ -849,7 +853,8 @@ export class ProgrammeResultsComponent implements OnDestroy {
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.status]: status,
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.category]: category,
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin]: origin,
-          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.center]: center
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.center]: center,
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy]: createdBy
         };
         const changed = Object.entries(next).some(([key, value]) => (current.get(key) ?? null) !== (value ?? null));
         if (!changed) return;
@@ -913,6 +918,11 @@ export class ProgrammeResultsComponent implements OnDestroy {
 
   onCenterChange(value: unknown): void {
     this.filter.selectedCenter.set(this.toFilterValue(value));
+  }
+
+  // @akili-spec result-framework-reporting/programme-results-created-by-filter
+  onCreatedByChange(value: unknown): void {
+    this.filter.selectedCreatedBy.set(this.toFilterValue(value));
   }
 
   // ── Status counters ─────────────────────────────────────────────────────────────────────

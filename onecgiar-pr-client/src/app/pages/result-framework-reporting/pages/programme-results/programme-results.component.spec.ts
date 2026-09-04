@@ -486,7 +486,14 @@ describe('ProgrammeResultsComponent', () => {
     expect(commands).toEqual([]);
     expect(extras.queryParamsHandling).toBe('merge');
     expect(extras.replaceUrl).toBe(true);
-    expect(extras.queryParams).toEqual({ phase: 'Reporting 2026', status: null, category: 'Policy change', origin: null, center: null });
+    expect(extras.queryParams).toEqual({
+      phase: 'Reporting 2026',
+      status: null,
+      category: 'Policy change',
+      origin: null,
+      center: null,
+      createdBy: null
+    });
   });
 
   it('(e) Clear all mirrors all other params back to null and retains the active phase', () => {
@@ -498,7 +505,14 @@ describe('ProgrammeResultsComponent', () => {
 
     expect(router.navigate).toHaveBeenCalledTimes(1);
     const [, extras] = (router.navigate as jest.Mock).mock.calls[0];
-    expect(extras.queryParams).toEqual({ phase: 'Reporting 2026', status: null, category: null, origin: null, center: null });
+    expect(extras.queryParams).toEqual({
+      phase: 'Reporting 2026',
+      status: null,
+      category: null,
+      origin: null,
+      center: null,
+      createdBy: null
+    });
   });
 
   it('(f) a param pushed through the route updates state and does NOT trigger a mirror navigate (anti-loop)', () => {
@@ -547,6 +561,227 @@ describe('ProgrammeResultsComponent', () => {
     expect(filterService().selectedPhase()).toBe('Reporting 2024');
     expect(component.filteredRows().map(r => r.code)).toEqual(['5004']);
     expect(filterService().activeChips().map(c => c.label)).toEqual(['Phase: Reporting 2024']);
+  });
+
+  // ── Created by popover + URL (CBF-T-2 / CBF-R-1…R-3) ─────────────────────────────────────
+  // Two-author fixture: Angel (Editing + Submitted), Santiago (Submitted), one blank name.
+  // Phase is the default so the table starts unfiltered except for the phase chip.
+  const CBF_ITEMS: Record<string, unknown>[] = [
+    {
+      ...RAW_ITEMS[0],
+      id: 10,
+      result_code: '6010',
+      title: 'Angel editing result',
+      status_id: '1',
+      status_name: 'Editing',
+      create_first_name: 'Angel',
+      create_last_name: 'Jarrin',
+      lead_center: 'CIAT'
+    },
+    {
+      ...RAW_ITEMS[0],
+      id: 11,
+      result_code: '6011',
+      title: 'Angel submitted result',
+      status_id: '3',
+      status_name: 'Submitted',
+      create_first_name: 'Angel',
+      create_last_name: 'Jarrin',
+      lead_center: 'CIAT'
+    },
+    {
+      ...RAW_ITEMS[0],
+      id: 12,
+      result_code: '6012',
+      title: 'Santiago submitted result',
+      status_id: '3',
+      status_name: 'Submitted',
+      create_first_name: 'Santiago',
+      create_last_name: 'Sanchez',
+      lead_center: 'IITA'
+    },
+    {
+      ...RAW_ITEMS[0],
+      id: 13,
+      result_code: '6013',
+      title: 'Blank author result',
+      status_id: '1',
+      status_name: 'Editing',
+      create_first_name: '',
+      create_last_name: '',
+      lead_center: 'ILRI'
+    }
+  ];
+
+  it('onCreatedByChange(Angel Jarrin) keeps only those rows, the chip, and increments the badge', () => {
+    setup(CBF_ITEMS);
+    const badgeBefore = component.activeFilterCount();
+    expect(badgeBefore).toBe(filterService().activeChips().length);
+
+    component.onCreatedByChange('Angel Jarrin');
+    fixture.detectChanges();
+
+    expect(component.filteredRows().map(row => row.code)).toEqual(['6010', '6011']);
+    expect(component.filteredRows().some(row => row.createdBy === 'Santiago Sanchez')).toBe(false);
+    expect(component.filteredRows().some(row => !row.createdBy)).toBe(false);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual([
+      'Phase: Reporting 2026',
+      'Created by: Angel Jarrin'
+    ]);
+    expect(component.activeFilterCount()).toBe(badgeBefore + 1);
+    expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
+    // Status pills recount over the Created-by subset (ignore the status dimension itself).
+    expect(component.statusCounts()).toEqual([
+      { statusId: 1, statusName: 'Editing', count: 1 },
+      { statusId: 3, statusName: 'Submitted', count: 1 }
+    ]);
+    expect(component.createdBySelectOptions().map(option => option.value)).toEqual(['Angel Jarrin', 'Santiago Sanchez']);
+  });
+
+  it('Created by + Status intersects the table and keeps both chips', () => {
+    setup(CBF_ITEMS);
+    component.onCreatedByChange('Angel Jarrin');
+    component.onStatusChange('Submitted');
+    fixture.detectChanges();
+
+    expect(component.filteredRows().map(row => row.code)).toEqual(['6011']);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual([
+      'Phase: Reporting 2026',
+      'Status: Submitted',
+      'Created by: Angel Jarrin'
+    ]);
+    expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
+  });
+
+  it('hydrates createdBy=Angel Jarrin onto the Created by signal and chip without navigating', () => {
+    setup(CBF_ITEMS, { phase: 'Reporting 2026', createdBy: 'Angel Jarrin' });
+
+    expect(filterService().selectedCreatedBy()).toBe('Angel Jarrin');
+    expect(filterService().selectedCenter()).toBeNull();
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual([
+      'Phase: Reporting 2026',
+      'Created by: Angel Jarrin'
+    ]);
+    expect(component.filteredRows().map(row => row.code)).toEqual(['6010', '6011']);
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('hydrates createdBy=Nobody as-is: chip + filtered-empty copy, no throw', () => {
+    expect(() => setup(CBF_ITEMS, { createdBy: 'Nobody' })).not.toThrow();
+
+    expect(filterService().selectedCreatedBy()).toBe('Nobody');
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual([
+      'Phase: Reporting 2026',
+      'Created by: Nobody'
+    ]);
+    expect(component.isFilteredEmpty()).toBe(true);
+    expect(text()).toContain('No results match these filters.');
+  });
+
+  it('no createdBy param leaves Created by null and today\'s chips unchanged', () => {
+    setup(CBF_ITEMS, {});
+
+    expect(filterService().selectedCreatedBy()).toBeNull();
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026']);
+  });
+
+  it('a createdBy param pushed through the route hydrates without a mirror navigate (anti-loop)', () => {
+    setup(CBF_ITEMS, {});
+    (router.navigate as jest.Mock).mockClear();
+
+    pushQueryParams({ phase: 'Reporting 2026', createdBy: 'Angel Jarrin' });
+    fixture.detectChanges();
+
+    expect(filterService().selectedCreatedBy()).toBe('Angel Jarrin');
+    expect(filterService().activeChips().map(chip => chip.label)).toContain('Created by: Angel Jarrin');
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('onCreatedByChange mirrors createdBy with replaceUrl + merge and preserves sibling keys', () => {
+    setup(CBF_ITEMS, { phase: 'Reporting 2026', status: 'Submitted', center: 'CIAT' });
+    (router.navigate as jest.Mock).mockClear();
+
+    component.onCreatedByChange('Angel Jarrin');
+    fixture.detectChanges();
+
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    const [commands, extras] = (router.navigate as jest.Mock).mock.calls[0];
+    expect(commands).toEqual([]);
+    expect(extras.queryParamsHandling).toBe('merge');
+    expect(extras.replaceUrl).toBe(true);
+    expect(extras.queryParams).toEqual({
+      phase: 'Reporting 2026',
+      status: 'Submitted',
+      category: null,
+      origin: null,
+      center: 'CIAT',
+      createdBy: 'Angel Jarrin'
+    });
+  });
+
+  it('clearing Created by navigates once with createdBy null and leaves other keys', () => {
+    setup(CBF_ITEMS, { phase: 'Reporting 2026', status: 'Submitted', createdBy: 'Angel Jarrin' });
+    (router.navigate as jest.Mock).mockClear();
+
+    component.onCreatedByChange('all');
+    fixture.detectChanges();
+
+    expect(filterService().selectedCreatedBy()).toBeNull();
+    expect(filterService().selectedStatus()).toBe('Submitted');
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    const [, extras] = (router.navigate as jest.Mock).mock.calls[0];
+    expect(extras.queryParamsHandling).toBe('merge');
+    expect(extras.replaceUrl).toBe(true);
+    expect(extras.queryParams).toEqual({
+      phase: 'Reporting 2026',
+      status: 'Submitted',
+      category: null,
+      origin: null,
+      center: null,
+      createdBy: null
+    });
+    expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
+  });
+
+  it('clearAll writes createdBy null, restores defaultPhase, and keeps badge === chip count', () => {
+    setup(CBF_ITEMS, { createdBy: 'Angel Jarrin', status: 'Submitted' });
+    (router.navigate as jest.Mock).mockClear();
+
+    component.clearAll();
+    fixture.detectChanges();
+
+    expect(filterService().selectedCreatedBy()).toBeNull();
+    expect(filterService().selectedStatus()).toBeNull();
+    expect(filterService().selectedPhase()).toBe(component.defaultPhase());
+    expect(filterService().selectedPhase()).toBe('Reporting 2026');
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026']);
+    expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    const [, extras] = (router.navigate as jest.Mock).mock.calls[0];
+    expect(extras.queryParams).toEqual({
+      phase: 'Reporting 2026',
+      status: null,
+      category: null,
+      origin: null,
+      center: null,
+      createdBy: null
+    });
+    expect(extras.replaceUrl).toBe(true);
+    expect(extras.queryParamsHandling).toBe('merge');
+  });
+
+  it('Filter popover row 3 names Created by and is keyboard-labelled', () => {
+    setup(CBF_ITEMS);
+    const filterBtn = fixture.debugElement.query(By.css('button[aria-label="Filter results"]')).nativeElement as HTMLButtonElement;
+    filterBtn.click();
+    fixture.detectChanges();
+
+    const createdByFilter = fixture.debugElement.query(By.css('[aria-label="Filter by created by"]'));
+    expect(createdByFilter).toBeTruthy();
+    expect((createdByFilter.nativeElement as HTMLElement).textContent).toContain('Created by');
+    const centerFilter = fixture.debugElement.query(By.css('[aria-label="Filter by center"]'));
+    expect(centerFilter).toBeTruthy();
+    expect(createdByFilter.nativeElement.parentElement).toBe(centerFilter.nativeElement.parentElement);
   });
 
   it('labels the origin column and filter as Funding source', () => {

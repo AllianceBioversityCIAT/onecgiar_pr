@@ -5,7 +5,7 @@
 - **Module / feature:** `programme-results` — Created by filter dimension (client only)
 - **Linked spec:** `./requirements.md` (`CBF-R-1`…`R-3`, `CBF-AC-1`…`AC-4`) · `./design.md` (`CBF-DD-1`…`DD-4`)
 - **Owner / driver:** session implementer
-- **Status:** `approved` (Phase 3, 2026-09-03) · execution `not-started`
+- **Status:** `approved` (Phase 3, 2026-09-03) · execution `complete`
 - **Depth:** Lite · **Budget:** 2 tasks / ~160 LOC / 1 review round (`design.md` §1)
 
 ## 2. Pre-flight checklist
@@ -60,7 +60,7 @@
   - [x] No template / URL / `package.json` edits
   - [x] No secrets in logs (`.cursorrules`)
 
-### `CBF-T-2` — Popover control + URL hydrate/mirror
+### `CBF-T-2` — Popover control + URL hydrate/mirror `[x]`
 
 - **Type:** `client`
 - **Description:** Wire Created by into the Filter popover (Center | Created by two-column row) and into the existing hydrate/mirror effects. Param name `createdBy` (`CBF-DD-3`). Same equality + `untracked` + `replaceUrl` + `merge` guards as Center (`RFD-DD-4/5`).
@@ -103,10 +103,10 @@
   - Live Orca tab, Filter open: Center | Created by share one row; no overflow at ~1280px; keyboard can open and pick a name; badge matches chips.
   - **What HITL proves that Jest cannot:** popover layout and the mandatory-field false-positive. **What Jest still must prove:** filter math and URL args.
 - **Definition of done:**
-  - [ ] Scoped Jest command above green
-  - [ ] HITL notes recorded in `execution.md` when executed
-  - [ ] No `package.json` / server / i18n-module edits
-  - [ ] No secrets in logs
+  - [x] Scoped Jest command above green
+  - [x] HITL notes recorded in `execution.md` when executed
+  - [x] No `package.json` / server / i18n-module edits
+  - [x] No secrets in logs
 
 ## 4. Dependency graph
 
