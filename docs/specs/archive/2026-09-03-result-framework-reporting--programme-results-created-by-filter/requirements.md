@@ -10,7 +10,7 @@
 | Type | **Change** · Depth **Lite** |
 | Approval Mode | `gated` (no `proposal.md`; each phase waits) |
 | Date | 2026-09-03 |
-| Status | `approved` (Phases 1–3, 2026-09-03) |
+| Status | `shipped` (archived 2026-09-03) |
 | Ticket(s) | none |
 | Depends on | none · Parallel-safe: yes |
 

@@ -153,7 +153,7 @@ Coverage matrix (clause → task). A gap may not be discharged by citing a diffe
 
 ## 7. Cleanup & follow-ups
 
-- [ ] Spec status → `shipped` at archive
+- [x] Spec status → `shipped` at archive
 - [ ] `programme-results/CLAUDE.md` “seven dimensions” → “eight” (pending on spec branch; apply on default branch per write discipline)
 - [ ] Multi-select / Created by me remain deferred (`design.md` §13)
 

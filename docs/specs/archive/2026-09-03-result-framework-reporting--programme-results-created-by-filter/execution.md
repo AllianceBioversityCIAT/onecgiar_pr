@@ -46,7 +46,7 @@
 
 ## Task `CBF-T-2` — Popover control + URL hydrate/mirror
 
-- **Status:** in progress · **Date:** 2026-09-03 · **Attempts so far:** 1 (FAIL)
+- **Status:** PASS · **Date:** 2026-09-03 · **Attempts:** 2
 - **Implementer:** `akili-implementer` · attempt 1 effort `medium` · skills `angular-developer`, `tdd` (Leader added `tdd` for hydrate/mirror proofs; dropped `ui-ux-pro-max` — copy Center, do not invent tokens)
 - **Reviewer:** `akili-reviewer` · lens checklist (medium)
 
