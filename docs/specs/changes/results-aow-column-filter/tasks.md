@@ -18,7 +18,7 @@
 
 ## 1. Scope of this task list
 - **Module / feature:** `result-framework-reporting` / Results tab Area of Work column, Section filter, Overview scope deep link.
-- **Status:** `in-progress` (T-1..T-4 done; T-5 live check + docs pending).
+- **Status:** `complete` (T-1..T-5 done 2026-09-04; see execution.md §3).
 
 ## 2. Pre-flight checklist
 - ✅ `requirements.md` approved (auto-approved, pre-approved mode).
@@ -73,7 +73,7 @@
   - *Input that fails:* `overviewScope = 'UNTAGGED'` must propagate as `section: 'UNTAGGED'` (fixed keys are scopes too).
 - **Done:** all listed `it`s green; lint clean.
 
-### `RAC-T-5` — Live reconciliation on SP01 / SP12, latency, docs
+### `RAC-T-5` — Live reconciliation on SP01 / SP12, latency, docs — [x]
 - **Type:** `docs` + manual verification
 - **Description:** In the authenticated Orca browser (`orca-cli`; capture and restore the tab): on SP01 Overview read the scope-breakdown totals per key; open Results with `?section=<key>&origin=W1/W2` for each key (A-3) and read `N results`; for any key where the two differ, pull the `results-scope` payload and list the result ids present in the bucket but absent from the Results rows — contributor-only results (A-5) are reported as a delta with ids, anything else is a FAIL; repeat on SP12 (the user's screenshot program); read three `results-scope` request durations from the network (or `performance.getEntriesByName`); confirm the Area of Work column shows codes/labels and that `AOW02` in the search box finds rows. Update `pages/programme-results/CLAUDE.md` (remove the Section-filter "Coming soon" row and the `section: ''` gotcha; document the join and the vocabulary; re-stamp `Verified:`) and `dashboard-lab/CLAUDE.md` if it mentions the deep-link deferral. Record the table in `execution.md`.
 - **Implements:** `RAC-R-5`, `RAC-AC-7`; defect class *fixture-shaped blindness*; confirms A-1..A-3.

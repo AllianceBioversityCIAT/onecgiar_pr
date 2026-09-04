@@ -60,8 +60,9 @@
   Overview breakdown row's *View results* button or a scope-active chart click lands here already
   filtered (`RAC-R-4`, see `pages/dashboard-lab/CLAUDE.md`'s `onOverviewLink`). Hydrates like every
   other param — chip, filter, badge — without rewriting the URL (anti-loop rule, `RAC-R-4.1`).
-- **R-7 (SHOULD), fail-soft:** `loadUnitNames()` fetches `clarisa-global-units` to append the AoW name
-  beside its code in `sectionOptions()` (`AOW01 · Market Intelligence`). Token-guarded like
+- **R-7 (SHOULD), fail-soft:** `ProgrammeResultsService.loadUnits(programId)`
+  (`programme-results.service.ts:500`) fetches `clarisa-global-units` to append the AoW name beside
+  its code in `sectionOptions()` (`AOW01 · Market Intelligence`). Token-guarded like
   `load()`/`loadScope()` but NOT the same failure contract — an empty/failed response just leaves
   `unitNames` at `{}` and every option label falls back to the bare code. Never treat a missing name
   as an error state the way `scopeError` does.
