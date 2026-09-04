@@ -59,35 +59,70 @@
     </div>
 
     @if (contextCollapsed()) {
-      <p class="m-0 truncate text-[12.5px] font-semibold text-gray-700">{{ indicator()?.indicator_description }}</p>
+      <div class="flex items-center gap-2 min-w-0">
+        <p class="m-0 truncate text-[12.5px] font-medium text-gray-700 min-w-0 flex-1" [title]="indicator()?.indicator_description">
+          {{ indicator()?.indicator_description }}
+        </p>
+        <span class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-violet-50 border border-violet-200 text-[11.5px] font-semibold text-[var(--pr-color-primary-300)]">
+          Target: {{ indicator()?.target_value_sum ?? 0 }}
+        </span>
+        @if (indicator()?.center_acronym) {
+          <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded bg-gray-50 border border-gray-200 text-[11.5px] font-medium text-gray-600">
+            {{ indicator()?.center_acronym }}
+          </span>
+        }
+      </div>
     } @else {
       <div id="drawer-context-details">
-        <h2 class="m-0 text-[15.5px] font-bold leading-snug text-gray-900 tracking-tight">{{ indicator()?.indicator_description }}</h2>
+        <div class="flex flex-col">
+          <h2
+            class="m-0 text-[13.5px] font-semibold leading-snug text-gray-900 tracking-tight"
+            [class.line-clamp-2]="!descriptionExpanded()"
+            [class.max-h-[180px]]="descriptionExpanded()"
+            [class.overflow-y-auto]="descriptionExpanded()"
+            [class.custom_scroll]="descriptionExpanded()"
+            [class.pr-1.5]="descriptionExpanded()"
+            [title]="!descriptionExpanded() ? (indicator()?.indicator_description ?? '') : ''">
+            {{ indicator()?.indicator_description }}
+          </h2>
+          @if (needsDescriptionMore()) {
+            <button
+              type="button"
+              (click)="toggleDescription()"
+              [attr.aria-expanded]="descriptionExpanded()"
+              class="mt-1 self-start inline-flex items-center gap-0.5 border-0 bg-transparent p-0 text-[12px] font-medium text-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)] hover:underline cursor-pointer">
+              <span>{{ descriptionExpanded() ? 'Show less' : 'Show more' }}</span>
+              <span class="material-icons-round text-[14px]">
+                {{ descriptionExpanded() ? 'expand_less' : 'expand_more' }}
+              </span>
+            </button>
+          }
+        </div>
 
-    <div class="mt-3.5 flex flex-wrap items-center gap-2 pt-2.5 border-t border-gray-100">
-      @if (indicator()?.type_name) {
-        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-[13px]">
-          <span class="font-medium text-gray-500">Indicator type:</span>
-          <span class="font-bold text-gray-900">{{ indicator()?.type_name }}</span>
+        <div class="mt-2.5 flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100">
+          @if (indicator()?.type_name) {
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-50 border border-gray-200 text-[12px]">
+              <span class="font-medium text-gray-500">Indicator type:</span>
+              <span class="font-bold text-gray-800">{{ indicator()?.type_name }}</span>
+            </div>
+          }
+          @if (indicator()?.unit_messurament) {
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-50 border border-gray-200 text-[12px]">
+              <span class="font-medium text-gray-500">Unit:</span>
+              <span class="font-bold text-gray-800">{{ indicator()?.unit_messurament }}</span>
+            </div>
+          }
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-violet-50/80 border border-violet-200 text-[12px]">
+            <span class="font-medium text-violet-700">2026 Target:</span>
+            <span class="font-bold text-[var(--pr-color-primary-300)] tabular-nums">{{ indicator()?.target_value_sum ?? 0 }}</span>
+          </div>
+          @if (indicator()?.center_acronym) {
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-50 border border-gray-200 text-[12px]">
+              <span class="font-medium text-gray-500">Center:</span>
+              <span class="font-bold text-gray-800">{{ indicator()?.center_acronym }}</span>
+            </div>
+          }
         </div>
-      }
-      @if (indicator()?.unit_messurament) {
-        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-[13px]">
-          <span class="font-medium text-gray-500">Unit:</span>
-          <span class="font-bold text-gray-900">{{ indicator()?.unit_messurament }}</span>
-        </div>
-      }
-      <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50/70 border border-violet-200 text-[13px]">
-        <span class="font-medium text-violet-700">2026 Target:</span>
-        <span class="font-bold text-[var(--pr-color-primary-300)] tabular-nums">{{ indicator()?.target_value_sum ?? 0 }}</span>
-      </div>
-      @if (indicator()?.center_acronym) {
-        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-[13px]">
-          <span class="font-medium text-gray-500">Center:</span>
-          <span class="font-bold text-gray-900">{{ indicator()?.center_acronym }}</span>
-        </div>
-      }
-    </div>
       </div>
     }
   </header>

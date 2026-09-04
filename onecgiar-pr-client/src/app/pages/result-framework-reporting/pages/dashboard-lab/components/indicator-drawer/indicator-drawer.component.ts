@@ -226,6 +226,22 @@ export class IndicatorDrawerComponent {
     this.contextCollapsed.update(v => !v);
   }
 
+  /** Whether the indicator description in the context header is expanded past the 2-line clamp. */
+  readonly descriptionExpanded = signal(false);
+
+  toggleDescription(): void {
+    this.descriptionExpanded.update(v => !v);
+  }
+
+  /**
+   * "Show more" only when the indicator description actually overflows the 2-line clamp (~120 chars).
+   * Short titles fit in two lines and never need the extra control.
+   */
+  readonly needsDescriptionMore = computed(() => {
+    const desc = this.indicator()?.indicator_description;
+    return typeof desc === 'string' && desc.trim().length > 120;
+  });
+
   /** Unsaved work in the form; closing or switching indicator must warn first. */
   readonly formDirty = signal(false);
   readonly confirmingExit = signal<null | 'close'>(null);
@@ -355,6 +371,7 @@ export class IndicatorDrawerComponent {
       this.existing.set(null);
       this.loadError.set(null);
       this.formDirty.set(false);
+      this.descriptionExpanded.set(false);
       // @akili-spec changes/indicator-reported-results
       // Folder-guide trap: state added here MUST be reset here, or it leaks between indicators —
       // a search typed against indicator A would silently hide indicator B's rows.

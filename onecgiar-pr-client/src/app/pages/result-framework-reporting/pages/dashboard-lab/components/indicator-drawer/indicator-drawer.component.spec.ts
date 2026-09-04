@@ -304,6 +304,43 @@ describe('IndicatorDrawerComponent', () => {
       expect(component.contextCollapsed()).toBe(false);
     });
 
+    it('indicator description clamp: starts unexpanded and toggles with toggleDescription', async () => {
+      await setup({ toc_result_id: 'toc-1', related_node_id: 'IND-55', indicator_description: 'A very long indicator description' });
+      expect(component.descriptionExpanded()).toBe(false);
+      component.toggleDescription();
+      expect(component.descriptionExpanded()).toBe(true);
+      component.toggleDescription();
+      expect(component.descriptionExpanded()).toBe(false);
+    });
+
+    it('needsDescriptionMore is false for short descriptions and true for descriptions over 120 chars', async () => {
+      await setup({ toc_result_id: 'toc-1', related_node_id: 'IND-55', indicator_description: 'Short indicator' });
+      expect(component.needsDescriptionMore()).toBe(false);
+
+      const longText = 'A'.repeat(125);
+      fixture.componentRef.setInput('indicator', { toc_result_id: 'toc-1', related_node_id: 'IND-55', indicator_description: longText });
+      fixture.detectChanges();
+      expect(component.needsDescriptionMore()).toBe(true);
+    });
+
+    it('resets descriptionExpanded to false when indicator input changes', async () => {
+      await setup({ toc_result_id: 'toc-1', related_node_id: 'IND-55', indicator_description: 'A'.repeat(150) });
+      component.toggleDescription();
+      expect(component.descriptionExpanded()).toBe(true);
+
+      fixture.componentRef.setInput('indicator', { toc_result_id: 'toc-2', related_node_id: 'IND-56', indicator_description: 'Another indicator' });
+      fixture.detectChanges();
+      expect(component.descriptionExpanded()).toBe(false);
+    });
+
+    it('template declares clamped heading and Show more toggle for long descriptions', () => {
+      const fs = require('fs');
+      const tpl = fs.readFileSync(require('path').join(__dirname, 'indicator-drawer.component.html'), 'utf8');
+      expect(tpl).toContain('line-clamp-2');
+      expect(tpl).toContain('Show more');
+      expect(tpl).toContain('Show less');
+    });
+
     // The suite renders with template:'' (shallow), so the stacking fix is asserted on the
     // template source itself. Presence-level only: it proves the overlay declares a higher
     // z-index (z-60) than the sticky form footer (z-30) and that the old z-[5] is gone —
