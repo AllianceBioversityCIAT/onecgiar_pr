@@ -1478,9 +1478,12 @@ export class ResultsApiService {
     return this.http.post<any>(`${environment.apiBaseUrl}api/results-framework-reporting/create`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
 
-  GET_ExistingResultsContributors(resultTocResultId: string, tocResultIndicatorId: string) {
+  // @akili-spec changes/indicator-reported-results
+  // `scope` is OPT-IN (IRR-R-3 / IRR-DD-2): the server defaults to today's reviewed-only population,
+  // so the param is appended only when a caller asks for it and every existing URL stays byte-identical.
+  GET_ExistingResultsContributors(resultTocResultId: string, tocResultIndicatorId: string, scope?: 'reviewed' | 'all') {
     return this.http.get<any>(
-      `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=${resultTocResultId}&tocResultIndicatorId=${tocResultIndicatorId}`
+      `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=${resultTocResultId}&tocResultIndicatorId=${tocResultIndicatorId}${scope ? `&scope=${scope}` : ''}`
     );
   }
   // /api/results-framework-reporting/dashboard

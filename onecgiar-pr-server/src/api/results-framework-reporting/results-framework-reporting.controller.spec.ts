@@ -272,7 +272,25 @@ describe('ResultsFrameworkReportingController', () => {
 
       expect(
         reportingService.getExistingResultContributorsToIndicators,
-      ).toHaveBeenCalledWith({ id: 1 }, 55, 'IND-7');
+      ).toHaveBeenCalledWith({ id: 1 }, 55, 'IND-7', undefined);
+    });
+
+    // @akili-spec changes/indicator-reported-results (IRR-R-3)
+    it('should forward the scope query param to the reporting service', () => {
+      reportingService.getExistingResultContributorsToIndicators.mockResolvedValueOnce(
+        {} as any,
+      );
+
+      controller.getExistingResultContributorsAndPartners(
+        { id: 1 } as any,
+        55,
+        'IND-7',
+        'all',
+      );
+
+      expect(
+        reportingService.getExistingResultContributorsToIndicators,
+      ).toHaveBeenCalledWith({ id: 1 }, 55, 'IND-7', 'all');
     });
   });
 

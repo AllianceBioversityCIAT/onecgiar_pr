@@ -4,7 +4,7 @@ jest.mock('driver.js/dist/driver.css', () => ({}), { virtual: true });
 jest.mock('driver.js', () => ({ driver: jest.fn() }));
 
 import { driver } from 'driver.js';
-import { GuideContext, ReportingGuideService, TutorialId } from './reporting-guide.service';
+import { GuideContext, ReportingGuideService, SP_TOUR_STORAGE_KEY, SpTourOptions, TutorialId } from './reporting-guide.service';
 
 const driverMock = driver as unknown as jest.Mock;
 
@@ -12,6 +12,8 @@ interface FakeInstance {
   drive: jest.Mock;
   destroy: jest.Mock;
   config: any;
+  getActiveIndex?: jest.Mock;
+  isLastStep?: jest.Mock;
 }
 
 let instances: FakeInstance[] = [];
@@ -49,7 +51,16 @@ describe('ReportingGuideService', () => {
     instances = [];
     driverMock.mockReset();
     driverMock.mockImplementation((config: any) => {
-      const instance: FakeInstance = { drive: jest.fn(), destroy: jest.fn(), config };
+      let activeIndex = 0;
+      const instance: FakeInstance = {
+        drive: jest.fn((idx?: number) => {
+          if (idx !== undefined) activeIndex = idx;
+        }),
+        destroy: jest.fn(),
+        getActiveIndex: jest.fn(() => activeIndex),
+        isLastStep: jest.fn(() => activeIndex >= (config.steps?.length ?? 1) - 1),
+        config
+      };
       instances.push(instance);
       return instance;
     });
@@ -312,6 +323,269 @@ describe('ReportingGuideService', () => {
       service.notify('program-selected', ctx({ hasMyPrograms: true }));
       expect(instances).toHaveLength(2);
       expect(instances[0].destroy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('SP Guided Tour', () => {
+    beforeEach(() => {
+      localStorage.clear();
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      localStorage.clear();
+    });
+
+    describe('isSpTourCompleted and resetSpTourState', () => {
+      it('returns false initially when no tour flag is stored', () => {
+        expect(service.isSpTourCompleted()).toBe(false);
+      });
+
+      it('returns true when SP_TOUR_STORAGE_KEY is set to "true"', () => {
+        localStorage.setItem(SP_TOUR_STORAGE_KEY, 'true');
+        expect(service.isSpTourCompleted()).toBe(true);
+      });
+
+      it('returns false when SP_TOUR_STORAGE_KEY has any other value', () => {
+        localStorage.setItem(SP_TOUR_STORAGE_KEY, 'false');
+        expect(service.isSpTourCompleted()).toBe(false);
+      });
+
+      it('resets tour state by removing key from storage', () => {
+        localStorage.setItem(SP_TOUR_STORAGE_KEY, 'true');
+        service.resetSpTourState();
+        expect(localStorage.getItem(SP_TOUR_STORAGE_KEY)).toBeNull();
+        expect(service.isSpTourCompleted()).toBe(false);
+      });
+    });
+
+    describe('startSpTour', () => {
+      it('initializes driver with 6 canonical steps and starts tour', () => {
+        service.startSpTour({ programName: 'Breeding Resources', cycleYear: 2026 });
+
+        expect(driverMock).toHaveBeenCalledTimes(1);
+        expect(lastInstance().drive).toHaveBeenCalled();
+
+        const steps = lastSteps();
+        expect(steps).toHaveLength(6);
+
+        // Step 0: Identity
+        expect(steps[0].element).toBe('[data-guide="sp-identity"]');
+        expect(steps[0].popover.title).toBe('Breeding Resources (2026)');
+        expect(steps[0].popover.side).toBe('bottom');
+        expect(steps[0].popover.align).toBe('start');
+
+        // Step 1: Tabs
+        expect(steps[1].element).toBe('[data-guide="sp-tabs"]');
+        expect(steps[1].popover.title).toBe('Main Navigation Tabs');
+        expect(steps[1].popover.side).toBe('bottom');
+        expect(steps[1].popover.align).toBe('center');
+
+        // Step 2: Overview
+        expect(steps[2].element).toBe('[data-guide="tab-overview-view"]');
+        expect(steps[2].popover.title).toBe('Overview & Burndown');
+        expect(steps[2].popover.side).toBe('bottom');
+        expect(steps[2].popover.align).toBe('start');
+
+        // Step 3: Reporting
+        expect(steps[3].element).toBe('[data-guide="tab-reporting-view"]');
+        expect(steps[3].popover.title).toBe('Reporting by Area of Work');
+        expect(steps[3].popover.side).toBe('top');
+        expect(steps[3].popover.align).toBe('start');
+
+        // Step 4: Results
+        expect(steps[4].element).toBe('[data-guide="tab-results-view"]');
+        expect(steps[4].popover.title).toBe('Results Registry');
+        expect(steps[4].popover.side).toBe('top');
+        expect(steps[4].popover.align).toBe('start');
+
+        // Step 5: Actions
+        expect(steps[5].element).toBe('[data-guide="sp-actions-toolbar"]');
+        expect(steps[5].popover.title).toBe('Filters & Quick Actions');
+        expect(steps[5].popover.side).toBe('bottom');
+        expect(steps[5].popover.align).toBe('end');
+      });
+
+      it('falls back gracefully for missing programName and cycleYear', () => {
+        service.startSpTour();
+        const steps = lastSteps();
+        expect(steps[0].popover.title).toBe('Science Program');
+
+        service.startSpTour({ programName: 'SP01' });
+        expect(lastSteps()[0].popover.title).toBe('SP01');
+
+        service.startSpTour({ cycleYear: 2026 });
+        expect(lastSteps()[0].popover.title).toBe('Science Program (2026)');
+      });
+
+      it('configures driver with required styling, progress and overlay options', () => {
+        service.startSpTour();
+        const config = lastInstance().config;
+
+        expect(config.showProgress).toBe(true);
+        expect(config.progressText).toBe('Step {{current}} of {{total}}');
+        expect(config.nextBtnText).toBe('Next');
+        expect(config.prevBtnText).toBe('Back');
+        expect(config.doneBtnText).toBe('Got it');
+        expect(config.overlayColor).toBe('#1e202f');
+        expect(config.overlayOpacity).toBe(0.65);
+        expect(config.stagePadding).toBe(6);
+        expect(config.stageRadius).toBe(10);
+        expect(config.popoverClass).toBe('pr-guide');
+        expect(config.allowClose).toBe(true);
+      });
+
+      it('persists completion flag to localStorage upon onDestroyed', () => {
+        service.startSpTour();
+        expect(service.isSpTourCompleted()).toBe(false);
+
+        lastInstance().config.onDestroyed();
+        expect(service.isSpTourCompleted()).toBe(true);
+        expect(localStorage.getItem(SP_TOUR_STORAGE_KEY)).toBe('true');
+      });
+
+      describe('onNextClick navigation pipeline', () => {
+        it('advances within the same tab without invoking onTabNavigate', () => {
+          const onTabNavigate = jest.fn();
+          service.startSpTour({ onTabNavigate });
+
+          const inst = lastInstance();
+          // Step 0 -> Step 1 (both overview)
+          inst.drive(0);
+          inst.config.onNextClick(undefined, inst.config.steps[0], { driver: inst as any, index: 0 });
+
+          expect(onTabNavigate).not.toHaveBeenCalled();
+          expect(inst.drive).toHaveBeenCalledWith(1);
+        });
+
+        it('triggers onTabNavigate and waits 100ms when crossing from overview (step 2) to reporting (step 3)', () => {
+          const onTabNavigate = jest.fn();
+          service.startSpTour({ onTabNavigate });
+
+          const inst = lastInstance();
+          inst.drive(2);
+          inst.config.onNextClick(undefined, inst.config.steps[2], { driver: inst as any, index: 2 });
+
+          expect(onTabNavigate).toHaveBeenCalledWith('reporting');
+          expect(inst.drive).not.toHaveBeenCalledWith(3);
+
+          jest.advanceTimersByTime(100);
+          expect(inst.drive).toHaveBeenCalledWith(3);
+        });
+
+        it('triggers onTabNavigate and waits 100ms when crossing from reporting (step 3) to results (step 4)', () => {
+          const onTabNavigate = jest.fn();
+          service.startSpTour({ onTabNavigate });
+
+          const inst = lastInstance();
+          inst.drive(3);
+          inst.config.onNextClick(undefined, inst.config.steps[3], { driver: inst as any, index: 3 });
+
+          expect(onTabNavigate).toHaveBeenCalledWith('results');
+          jest.advanceTimersByTime(100);
+          expect(inst.drive).toHaveBeenCalledWith(4);
+        });
+
+        it('triggers onTabNavigate and waits 100ms when crossing from results (step 4) to reporting (step 5)', () => {
+          const onTabNavigate = jest.fn();
+          service.startSpTour({ onTabNavigate });
+
+          const inst = lastInstance();
+          inst.drive(4);
+          inst.config.onNextClick(undefined, inst.config.steps[4], { driver: inst as any, index: 4 });
+
+          expect(onTabNavigate).toHaveBeenCalledWith('reporting');
+          jest.advanceTimersByTime(100);
+          expect(inst.drive).toHaveBeenCalledWith(5);
+        });
+
+        it('calls driver.destroy() when finishing the last step (step 5)', () => {
+          const onTabNavigate = jest.fn();
+          service.startSpTour({ onTabNavigate });
+
+          const inst = lastInstance();
+          inst.drive(5);
+          inst.config.onNextClick(undefined, inst.config.steps[5], { driver: inst as any, index: 5 });
+
+          expect(inst.destroy).toHaveBeenCalled();
+          expect(onTabNavigate).not.toHaveBeenCalled();
+        });
+
+        it('handles asynchronous Promise from onTabNavigate correctly', async () => {
+          const onTabNavigate = jest.fn().mockResolvedValue(undefined);
+          service.startSpTour({ onTabNavigate });
+
+          const inst = lastInstance();
+          inst.drive(2);
+          inst.config.onNextClick(undefined, inst.config.steps[2], { driver: inst as any, index: 2 });
+
+          expect(onTabNavigate).toHaveBeenCalledWith('reporting');
+          await Promise.resolve();
+          jest.advanceTimersByTime(100);
+          expect(inst.drive).toHaveBeenCalledWith(3);
+        });
+      });
+
+      describe('onPrevClick navigation pipeline', () => {
+        it('navigates back within same tab without onTabNavigate', () => {
+          const onTabNavigate = jest.fn();
+          service.startSpTour({ onTabNavigate });
+
+          const inst = lastInstance();
+          inst.drive(1);
+          inst.config.onPrevClick(undefined, inst.config.steps[1], { driver: inst as any, index: 1 });
+
+          expect(onTabNavigate).not.toHaveBeenCalled();
+          expect(inst.drive).toHaveBeenCalledWith(0);
+        });
+
+        it('triggers onTabNavigate when stepping back across tabs (step 5 reporting -> step 4 results)', () => {
+          const onTabNavigate = jest.fn();
+          service.startSpTour({ onTabNavigate });
+
+          const inst = lastInstance();
+          inst.drive(5);
+          inst.config.onPrevClick(undefined, inst.config.steps[5], { driver: inst as any, index: 5 });
+
+          expect(onTabNavigate).toHaveBeenCalledWith('results');
+          jest.advanceTimersByTime(100);
+          expect(inst.drive).toHaveBeenCalledWith(4);
+        });
+
+        it('triggers onTabNavigate when stepping back from step 3 reporting to step 2 overview', () => {
+          const onTabNavigate = jest.fn();
+          service.startSpTour({ onTabNavigate });
+
+          const inst = lastInstance();
+          inst.drive(3);
+          inst.config.onPrevClick(undefined, inst.config.steps[3], { driver: inst as any, index: 3 });
+
+          expect(onTabNavigate).toHaveBeenCalledWith('overview');
+          jest.advanceTimersByTime(100);
+          expect(inst.drive).toHaveBeenCalledWith(2);
+        });
+
+        it('does nothing when already on the first step (step 0)', () => {
+          const onTabNavigate = jest.fn();
+          service.startSpTour({ onTabNavigate });
+
+          const inst = lastInstance();
+          inst.drive(0);
+          const callCount = inst.drive.mock.calls.length;
+          inst.config.onPrevClick(undefined, inst.config.steps[0], { driver: inst as any, index: 0 });
+
+          expect(onTabNavigate).not.toHaveBeenCalled();
+          expect(inst.drive).toHaveBeenCalledTimes(callCount);
+        });
+      });
+
+      it('calls destroy on onDoneClick', () => {
+        service.startSpTour();
+        const inst = lastInstance();
+        inst.config.onDoneClick(undefined, inst.config.steps[5], { driver: inst as any, index: 5 });
+        expect(inst.destroy).toHaveBeenCalled();
+      });
     });
   });
 });

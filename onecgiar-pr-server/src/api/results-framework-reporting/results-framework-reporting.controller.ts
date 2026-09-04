@@ -408,6 +408,14 @@ export class ResultsFrameworkReportingController {
     description:
       'The ID of the ToC result indicator to fetch contributors and partners for.',
   })
+  // @akili-spec changes/indicator-reported-results (IRR-R-3, IRR-R-3.1)
+  @ApiQuery({
+    name: 'scope',
+    enum: ['reviewed', 'all'],
+    required: false,
+    description:
+      'Population scope: "reviewed" (default; Quality Assessed/Approved) or "all" (adds Editing, Submitted, Pending Review). Any other value is treated as "reviewed".',
+  })
   @ApiOkResponse({
     description: 'Contributors and partners fetched successfully.',
   })
@@ -415,11 +423,14 @@ export class ResultsFrameworkReportingController {
     @UserToken() user: TokenDto,
     @Query('resultTocResultId') resultTocResultId: number,
     @Query('tocResultIndicatorId') tocResultIndicatorId: string,
+    // @akili-spec changes/indicator-reported-results
+    @Query('scope') scope?: string,
   ) {
     return this.resultsFrameworkReportingService.getExistingResultContributorsToIndicators(
       user,
       resultTocResultId,
       tocResultIndicatorId,
+      scope,
     );
   }
 

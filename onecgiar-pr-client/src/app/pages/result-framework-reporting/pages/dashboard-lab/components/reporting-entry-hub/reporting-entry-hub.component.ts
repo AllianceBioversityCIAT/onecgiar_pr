@@ -11,7 +11,8 @@ import {
   lucideInfo,
   lucidePlus,
   lucideSearch,
-  lucideX
+  lucideX,
+  lucideZap
 } from '@ng-icons/lucide';
 import { HUB_COPY } from './hub-copy';
 
@@ -21,6 +22,13 @@ export interface HubAowRow {
   name: string;
   done: number;
   total: number;
+  /**
+   * How many planned KPIs the zero-target rule (`MRF-R-7`) removed from `total` on this row — the
+   * number `zeroTargetTitle` discloses (`KCR-R-2.1`). Optional and additive: a caller with nothing
+   * to disclose omits it, and `0`/absent renders no `title` at all.
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  zeroTarget?: number;
 }
 
 export type HubProgramLevelKind = 'intermediate' | '2030';
@@ -31,6 +39,13 @@ export interface HubProgramLevelRow {
   name: string;
   done: number;
   total: number;
+  /**
+   * How many planned KPIs the zero-target rule (`MRF-R-7`) removed from `total` on this row — the
+   * number `zeroTargetTitle` discloses (`KCR-R-2.1`). Optional and additive: a caller with nothing
+   * to disclose omits it, and `0`/absent renders no `title` at all.
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  zeroTarget?: number;
 }
 
 /**
@@ -106,7 +121,7 @@ const COLLAPSE_STORAGE_KEY = 'pr.hub.collapsed';
   styleUrl: './reporting-entry-hub.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
-    provideIcons({ lucideArrowRight, lucideChevronDown, lucideChevronUp, lucideInfo, lucidePlus, lucideSearch, lucideX })
+    provideIcons({ lucideArrowRight, lucideChevronDown, lucideChevronUp, lucideInfo, lucidePlus, lucideSearch, lucideX, lucideZap })
   ]
 })
 export class ReportingEntryHubComponent {
@@ -123,6 +138,7 @@ export class ReportingEntryHubComponent {
   readonly canReportW1W2 = input<boolean>(true);
   readonly w3State = input<HubW3State>({ status: 'loading' });
   readonly myCentersCount = input<number>(0);
+  readonly isModal = input<boolean>(false);
 
   /** Header CTA gate mirrored here — false renders the footer mention as plain text. @akili-spec changes/reporting-entry-hub */
   readonly canReportEmerging = input<boolean>(true);
@@ -139,7 +155,7 @@ export class ReportingEntryHubComponent {
   /** Default collapsed for all users by default for now. */
   private readonly defaultCollapsed = computed(() => true);
 
-  readonly collapsed = computed(() => this.userCollapsed() ?? this.defaultCollapsed());
+  readonly collapsed = computed(() => (this.isModal() ? false : (this.userCollapsed() ?? this.defaultCollapsed())));
 
   readonly searchQuery = signal('');
   private readonly manualExpanded = signal<ReadonlyMap<string, boolean>>(new Map());
@@ -236,6 +252,19 @@ export class ReportingEntryHubComponent {
   visibleProjectsFor(center: HubCenterProjects): HubProject[] {
     const projects = this.matchingProjectsFor(center);
     return this.isCenterShowAll(center) ? projects : projects.slice(0, 3);
+  }
+
+  /**
+   * `title` for a lane row's `done/total` figure (`KCR-R-2.1`, `KCR-R-6`). The figure is *Counted*,
+   * so a row whose bucket lost KPIs to the zero-target rule says how many — the SAME sentence the
+   * Overview chips carry, pluralised exactly as `reporting-aow-table.countLabel` does, because the
+   * hub row and the chip are two readings of one number (`KCR-R-3`). `null` (not `''`) so
+   * `[attr.title]` drops the attribute rather than rendering an empty tooltip.
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  zeroTargetTitle(row: HubAowRow | HubProgramLevelRow): string | null {
+    const n = row.zeroTarget ?? 0;
+    return n > 0 ? `excludes ${n} zero-target KPI${n === 1 ? '' : 's'}` : null;
   }
 
   percentOf(row: HubAowRow | HubProgramLevelRow): number {

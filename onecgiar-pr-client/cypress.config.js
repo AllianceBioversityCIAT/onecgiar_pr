@@ -98,6 +98,24 @@ module.exports = defineConfig({
        * test runs. Override per session with CT_DEV_SERVER_PORT.
        */
       port: Number(process.env.CT_DEV_SERVER_PORT || 8080),
+      // AIS-T-2 harness correction: Angular's `assets` array (below) DOES get the vendored icon font
+      // copied into the build output (`webpack ... asset assets/material-icons-round.woff2 ... [copied]`),
+      // but that copy lands on the OUTPUT filesystem, not webpack-dev-server's in-memory bundle —
+      // without a `devServer.static` entry pointing at it, requests 404 (`Cannot GET /assets/...`,
+      // confirmed empirically). `webpackConfig` (`DevServerConfigOptions` for `framework: 'angular'`)
+      // is the documented Cypress escape hatch: `@cypress/webpack-dev-server`'s `makeWebpackConfig`
+      // calls it with ZERO arguments (`await userWebpackConfig()`) and `webpack-merge`s the RETURNED
+      // partial config into the framework's generated one — it is not a config-mutation callback.
+      // Its `devServer` key is later spread verbatim into the real `WebpackDevServer` options
+      // (`createWebpackDevServer.js`), which is what actually makes this static directory servable.
+      webpackConfig: () => {
+        const path = require('path');
+        return {
+          devServer: {
+            static: [{ directory: path.join(__dirname, 'cypress/support/assets'), publicPath: '/assets' }]
+          }
+        };
+      },
       // This app builds with the esbuild `@angular/build:application` builder, but
       // Cypress' Angular preset drives the legacy webpack `browser` builder. Reading
       // the real build target as-is crashes (e.g. `outputPath` is an object, `browser`
@@ -116,7 +134,13 @@ module.exports = defineConfig({
             tsConfig: 'tsconfig.ct.json',
             inlineStyleLanguage: 'scss',
             outputPath: 'dist/cypress-ct',
-            assets: [],
+            // AIS-T-2 harness correction (`changes/aow-identity-column-starvation`): serves the
+            // self-hosted `Material Icons Round` woff2 (`cypress/support/assets/`) at `/assets/*` so
+            // `component-index.html`'s local `@font-face` resolves without a network call — this CT
+            // Chromium process has no route to fonts.googleapis.com/fonts.gstatic.com. One small,
+            // static folder; does not reintroduce the "whole app" bloat the empty array above guards
+            // against.
+            assets: [{ glob: '**/*', input: 'cypress/support/assets', output: 'assets' }],
             // Global stylesheets the custom-fields rely on (mirrors angular.json > styles[]).
             // Loaded through the Angular webpack pipeline so global SCSS compiles correctly.
             styles: [

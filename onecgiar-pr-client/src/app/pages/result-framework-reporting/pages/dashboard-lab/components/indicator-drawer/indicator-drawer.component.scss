@@ -40,3 +40,228 @@
     animation-duration: 1ms;
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// @akili-spec changes/indicator-reported-results — Reported results table (IRR-R-2, §6.3)
+//
+// `::ng-deep` is required, not decorative: the header and body rows are TEMPLATES declared here
+// but instantiated inside `app-pr-table`, and that component skins `thead th` / `tbody td` through
+// its own `:host ::ng-deep`. Without piercing back, the drawer's table would inherit the navy
+// "chrome" header the Reporting tables use — which is the sibling Results tab's exact problem and
+// exact fix (`programme-results.component.ts` styles).
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Header and data rows are ONE grid: the tracks live in a single place so a column can never be
+// added to the header without shifting every cell under it.
+:host ::ng-deep .irr-table .pr-table tr.irr-row {
+  display: grid;
+  grid-template-columns: 84px minmax(180px, 1fr) 128px 118px 96px 110px 36px;
+  gap: 0;
+  align-items: stretch;
+}
+
+:host ::ng-deep .irr-table .pr-table tr.irr-head {
+  height: 34px;
+  background: var(--pr-color-accents-1);
+  border-bottom: 1px solid rgba(30, 32, 47, 0.08);
+  border-radius: 11px 11px 0 0;
+}
+
+:host ::ng-deep .irr-table .pr-table thead th.irr-th {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  min-width: 0;
+  padding: 0 8px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--pr-color-accents-5);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:host ::ng-deep .irr-table .pr-table thead th.irr-th--num {
+  justify-content: flex-end;
+}
+
+:host ::ng-deep .irr-table .pr-table thead th.irr-th--sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+:host ::ng-deep .irr-table .pr-table thead th.irr-th--sortable:hover {
+  background: rgba(0, 0, 0, 0.025);
+}
+
+:host ::ng-deep .irr-table .pr-table thead th.irr-th--sortable:focus-visible {
+  outline: 2px solid var(--pr-color-primary-300);
+  outline-offset: -2px;
+}
+
+// 44px min-height, not height: the two-line RESULT cell has to be able to grow.
+:host ::ng-deep .irr-table .pr-table tr.irr-data-row {
+  min-height: 44px;
+  padding: 0;
+  border-bottom: 1px solid rgba(30, 32, 47, 0.06);
+  background: var(--pr-color-white);
+  cursor: pointer;
+  transition: background 0.2s ease-out;
+}
+
+:host ::ng-deep .irr-table .pr-table tr.irr-data-row:hover {
+  background: var(--pr-surface-subtle);
+}
+
+:host ::ng-deep .irr-table .pr-table tr.irr-data-row:focus-visible {
+  outline: 2px solid var(--pr-color-primary-300);
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host ::ng-deep .irr-table .pr-table tr.irr-data-row {
+    transition: none;
+  }
+}
+
+:host ::ng-deep .irr-table .pr-table tbody td.irr-td {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+  min-height: 44px;
+  padding: 6px 8px;
+  box-sizing: border-box;
+  border: none;
+  color: inherit;
+}
+
+:host ::ng-deep .irr-table .pr-table tbody td.irr-td--num {
+  justify-content: flex-end;
+}
+
+// IRR-R-2.5 — two lines, then ellipsis; the full string stays in the cell's `title`.
+:host ::ng-deep .irr-table .irr-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.35;
+}
+
+// The actions cell is the menu's positioning context.
+:host ::ng-deep .irr-table .pr-table tbody td.irr-actions {
+  position: relative;
+  justify-content: center;
+  padding: 0 2px;
+  overflow: visible;
+}
+
+// Every actions cell shares one stacking context, so among equals DOM order decides and the rows
+// BELOW paint their own background over an open menu. Elevate the CELL — the popup's own z-index
+// only ranks inside it (Results-tab gotcha, `programme-results/CLAUDE.md`).
+:host ::ng-deep .irr-table .pr-table tbody td.irr-actions.irr-actions--open {
+  z-index: 10;
+}
+
+// ── Row menu ────────────────────────────────────────────────────────────────
+// COPIED from `reporting-aow-table.component.scss:204-260` — those rules are component-scoped, not
+// global, so a reference is not enough. Promote to `shared/` when a third copy appears.
+:host ::ng-deep .pr-row-menu {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  width: 200px;
+  padding: 6px;
+  cursor: default;
+  background: var(--pr-surface-card);
+  border: 1px solid var(--pr-border);
+  border-radius: 12px;
+  box-shadow: var(--pr-shadow-2);
+  animation: prPop 120ms ease-out;
+}
+
+:host ::ng-deep .pr-row-menu_item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--pr-text);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+
+  &:hover:not(:disabled) {
+    background: var(--pr-color-primary-50);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: -2px;
+  }
+}
+
+@keyframes prPop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host ::ng-deep .pr-row-menu {
+    animation: none;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// @akili-spec changes/indicator-reported-results — narrow fallback (IRR-R-8.1, IRR-T-4)
+//
+// Under 640 px the row IS the card, so it has to carry the row's affordances: the same pointer,
+// the same hover wash and — the part that is not decoration — the same visible focus ring, or the
+// keyboard path the table rows have (`tabindex="0"` + Enter/Space) becomes invisible below the
+// breakpoint. No `::ng-deep` here: unlike the table's templates, this markup is instantiated in
+// the drawer's OWN view, so the emulated-encapsulation attribute already matches.
+// ─────────────────────────────────────────────────────────────────────────────
+:host .irr-card {
+  cursor: pointer;
+  transition: background 0.2s ease-out;
+}
+
+:host .irr-card:hover {
+  background: var(--pr-surface-subtle);
+}
+
+:host .irr-card:focus-visible {
+  outline: 2px solid var(--pr-color-primary-300);
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host .irr-card {
+    transition: none;
+  }
+}

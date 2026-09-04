@@ -363,6 +363,24 @@ describe('ReportingNavSidebarComponent', () => {
       component.toggleGroup('other');
       expect(component.isGroupOpen('other')).toBe(false);
     });
+
+    it('auto-expands other science programs by default when user has no science programs of their own', async () => {
+      homeMock.mySPsList.set([]);
+      homeMock.otherSPsList.set([{ initiativeId: 1, initiativeCode: 'SP01', initiativeName: 'Breeding' }]);
+      await build();
+      fixture.detectChanges();
+      expect(component.isGroupOpen('mine')).toBe(true);
+      expect(component.isGroupOpen('other')).toBe(true);
+    });
+
+    it('keeps other science programs collapsed by default when user has their own science programs', async () => {
+      homeMock.mySPsList.set([{ initiativeId: 1, initiativeCode: 'SP01', initiativeName: 'Breeding' }]);
+      homeMock.otherSPsList.set([{ initiativeId: 2, initiativeCode: 'SP02', initiativeName: 'Climate' }]);
+      await build();
+      fixture.detectChanges();
+      expect(component.isGroupOpen('mine')).toBe(true);
+      expect(component.isGroupOpen('other')).toBe(false);
+    });
   });
 
   // ------------------------------------------------------------- active helpers

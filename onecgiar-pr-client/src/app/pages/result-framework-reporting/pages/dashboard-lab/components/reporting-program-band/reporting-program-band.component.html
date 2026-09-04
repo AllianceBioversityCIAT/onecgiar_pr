@@ -15,8 +15,9 @@
 <!-- ═══ BAND — #F7F4FD. Hairline lives on the TABS row so the active 2px underline
      can sit flush on it (mb-[-1px] covers the 1px edge — no double-line step). ═══ -->
 <div
-  class="sticky top-[56px] z-20 flex-none bg-[var(--pr-surface-band)] transition-shadow duration-[180ms] ease-out"
-  [class]="bandCollapsed() ? 'shadow-[0_1px_2px_rgba(25,21,36,0.06)]' : 'shadow-none'">
+  class="sticky z-20 flex-none bg-[var(--pr-surface-band)] transition-shadow duration-[180ms] ease-out"
+  style="top: var(--pr-shell-header-height, 56px);"
+  [class]="isScrolled() || bandCollapsed() ? 'shadow-[0_2px_8px_rgba(25,21,36,0.08)]' : 'shadow-none'">
   <!-- ── Identity: 88px, pad 0 32px, gap 6px (reference :329).
        Scrolled past (bandCollapsed) it animates to 0 and the band is just the 48px tabs row —
        the reference's `bandCollapsed` variant (:383). Height is animated instead of swapping
@@ -26,12 +27,12 @@
        clipped they must leave the a11y tree AND the tab order, or keyboard focus lands on an
        invisible link. `aria-hidden` alone would hide them while keeping them tabbable. ── -->
   <div
-    class="relative flex flex-col justify-center gap-[6px] px-[32px] transition-[height,opacity] duration-[180ms] ease-out"
-    [class]="bandCollapsed() ? 'h-0 overflow-hidden opacity-0' : 'h-[88px] opacity-100'"
+    class="relative flex flex-col justify-center gap-[4px] px-[32px] transition-[height,opacity] duration-[180ms] ease-out"
+    [class]="bandCollapsed() ? 'h-0 overflow-hidden opacity-0' : 'h-[64px] opacity-100'"
     [attr.inert]="bandCollapsed() ? '' : null">
     <!-- Eyebrow: dot + SP01 · REPORTING CYCLE 2026 · P25 -->
     <div class="flex items-center gap-[7px]">
-      <span class="h-[8px] w-[8px] shrink-0 rounded-full" [style.background]="programDotColor()"></span>
+      <span class="h-[7px] w-[7px] shrink-0 rounded-full" [style.background]="programDotColor()"></span>
       @if (programCode()) {
         <!-- `font-mono` (not the global `.pr-code`): that class is UNLAYERED SCSS, so its 12px/500
              beat the layered Tailwind utilities next to it and the code rendered a notch bigger and
@@ -50,83 +51,107 @@
     </div>
 
     <!-- Title row + ⓘ popover (reference :343-358). Click, not hover. -->
-    <div class="relative flex min-w-0 items-center gap-[8px] pr-[420px]">
+    <div class="relative flex min-w-0 items-center gap-[8px] pr-[420px]" data-guide="sp-identity">
       <h1
-        class="m-0 min-w-0 truncate text-[30px] font-extrabold leading-[1.35] tracking-[-0.02em] text-[var(--pr-text-heading)]">
+        class="m-0 min-w-0 truncate text-[21px] font-bold leading-[1.25] tracking-[-0.015em] text-[var(--pr-text-heading)]">
         {{ programName() }}
       </h1>
 
       <button
         type="button"
-        class="flex h-[20px] w-[20px] shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] transition-colors hover:text-[var(--pr-color-primary-300)]"
-        aria-label="About this program"
+        class="flex h-[22px] w-[22px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] transition-all hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+        aria-label="About this program and view"
         [attr.aria-expanded]="infoOpen()"
         [attr.aria-controls]="'pr-band-info-popover'"
         (click)="toggleInfo($event)">
-        <ng-icon name="lucideInfo" class="text-[16px]" />
+        <ng-icon name="lucideInfo" class="text-[13px]" />
       </button>
 
       @if (infoOpen()) {
         <!--
-          420×auto, radius 12, border #E3E3E8, shadow, pad 16.
-          left:0 top:34 under the title row (reference :349).
+          460×auto, radius 14, border #E3E3E8, shadow, pad 18.
+          left:0 top:32 under the title row.
           stopPropagation so document:click does not close it mid-interaction.
         -->
         <div
           id="pr-band-info-popover"
           role="dialog"
-          aria-label="About this program"
-          class="absolute left-0 top-[34px] z-30 w-[420px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_8px_24px_rgba(25,21,36,0.10)]"
+          aria-label="About this program and view"
+          class="absolute left-0 top-[32px] z-30 w-[460px] max-w-[90vw] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
           (click)="$event.stopPropagation()">
-          <div class="mb-[8px] flex items-center gap-[8px]">
-            <span class="min-w-0 flex-1 text-[14px] font-semibold text-[var(--pr-text-heading)]">
-              About this program
-            </span>
+          <div class="mb-[12px] flex items-center justify-between gap-[8px]">
+            <div class="flex items-center gap-[8px] min-w-0">
+              <span class="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[6px] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]">
+                <ng-icon name="lucideInfo" class="text-[14px]" />
+              </span>
+              <span class="min-w-0 truncate text-[14.5px] font-bold text-[var(--pr-text-heading)]">
+                {{ programName() }}
+              </span>
+            </div>
             <button
               type="button"
-              class="flex h-[24px] w-[24px] shrink-0 cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--pr-text-secondary)] transition-colors hover:bg-[var(--pr-surface-app)]"
+              class="flex h-[24px] w-[24px] shrink-0 cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--pr-text-secondary)] transition-colors hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)]"
               aria-label="Close"
               (click)="closeInfo()">
               <ng-icon name="lucideX" class="text-[14px]" />
             </button>
           </div>
 
-          <div
-            class="max-h-[132px] overflow-y-auto text-[14px] font-normal leading-[1.55] text-[var(--pr-text)] [text-wrap:pretty]">
-            {{ resolvedDescription() }}
+          <!-- Active view context -->
+          <div class="mb-[14px] rounded-[10px] bg-[var(--pr-color-primary-25)] border border-[var(--pr-color-primary-100)] p-[12px]">
+            <div class="mb-[4px] flex items-center gap-[6px]">
+              <span class="inline-block rounded-full bg-[var(--pr-color-primary-100)] px-[8px] py-[2px] text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-color-primary-700)]">
+                {{ activeTabInfo().title }}
+              </span>
+              <span class="text-[11.5px] font-medium text-[var(--pr-text-subtle)]">Active view</span>
+            </div>
+            <p class="m-0 text-[12.5px] font-normal leading-[1.5] text-[var(--pr-text-secondary)]">
+              {{ activeTabInfo().description }}
+            </p>
+          </div>
+
+          <!-- Program overview -->
+          <div>
+            <span class="block mb-[4px] text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">
+              Program overview
+            </span>
+            <div
+              class="max-h-[140px] overflow-y-auto text-[13px] font-normal leading-[1.55] text-[var(--pr-text)] [text-wrap:pretty]">
+              {{ resolvedDescription() }}
+            </div>
           </div>
 
           <div
-            class="mt-[12px] border-t border-[var(--pr-border-divider)] pt-[12px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
-            {{ programMeta() }}
+            class="mt-[14px] border-t border-[var(--pr-border-divider)] pt-[10px] text-[12px] font-medium text-[var(--pr-text-secondary)] flex items-center justify-between">
+            <span>{{ programMeta() }}</span>
+            <span class="font-mono text-[11px] text-[var(--pr-text-subtle)]">{{ programCode() }}</span>
           </div>
         </div>
       }
     </div>
 
-    <!-- Top-right actions: Smart Back Button + Report emerging result CTA -->
-    <div class="absolute right-[32px] top-[68px] z-[22] flex -translate-y-1/2 items-center gap-[10px]">
+    <!-- Top-right action: Where to report. Smart Back was removed — after sibling-skip
+         it always read “Back to Science programs” and did not return Overview ↔ Reporting. -->
+    <!-- Top-right actions: Guided Tour + Where to report -->
+    <div class="absolute right-[32px] top-1/2 z-[22] flex -translate-y-1/2 items-center gap-[10px]">
       <button
         type="button"
-        class="flex h-[36px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[13px] text-[13px] font-semibold text-[var(--pr-text-heading)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-app)] hover:text-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
-        [attr.aria-label]="backLabel()"
-        data-testid="program-band-back-btn"
-        (click)="goBack()">
-        <ng-icon name="lucideArrowLeft" class="text-[15px]" />
-        <span>{{ backLabel() }}</span>
+        class="flex h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] text-[13px] font-semibold text-[var(--pr-text-secondary)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+        (click)="startSpTour()"
+        data-guide="sp-tour-trigger"
+        aria-label="Start guided tour">
+        <span class="material-icons-round text-[16px] text-[var(--pr-color-primary-500)]">explore</span>
+        <span>Tour</span>
       </button>
 
       @if (canReport()) {
         <button
           type="button"
-          class="group relative flex h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[14px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
-          (click)="reportEmerging.emit()">
-          <ng-icon name="lucideZap" class="text-[16px]" />
-          Report emerging result
-          <span
-            class="pointer-events-none absolute right-0 top-full z-[30] mt-[8px] w-[220px] rounded-[8px] bg-[var(--pr-color-secondary-400)] px-[12px] py-[8px] text-[12px] font-normal leading-[1.4] text-white opacity-0 shadow-lg transition-opacity delay-150 group-hover:opacity-100">
-            Report achievements that were not originally included in the 2026 Theory of Change, but emerged as valuable results during the year.
-          </span>
+          class="flex h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[14px] text-[13.5px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+          (click)="onWhereToReportClick()"
+          data-testid="program-band-where-to-report-btn">
+          <span class="material-icons-round text-[18px]">explore</span>
+          <span>Where to report</span>
         </button>
       }
     </div>
@@ -136,7 +161,8 @@
        overlaps the hairline (mb-[-1px]) so you never see grey under the violet. ── -->
   <nav
     class="flex h-[48px] items-stretch gap-[24px] border-b border-[var(--pr-border-band)] px-[32px]"
-    aria-label="Program sections">
+    aria-label="Program sections"
+    data-guide="sp-tabs">
     @if (bandCollapsed()) {
       <!-- Collapsed identity — reference :384-386: dot + name at 15px/600, then 24px to the tabs
            (16px gap + the 8px the reference puts on the tab strip). Lives INSIDE the tabs row so the
@@ -149,7 +175,7 @@
       </div>
     }
     <a
-      class="mb-[-1px] flex items-center border-b-2 text-[14px] no-underline transition-colors"
+      class="mb-[-1px] flex items-center gap-[6px] border-b-2 px-[4px] text-[14px] no-underline transition-colors group"
       [class]="
         activeTab() === 'overview'
           ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
@@ -158,10 +184,16 @@
       [attr.aria-current]="activeTab() === 'overview' ? 'page' : null"
       [routerLink]="overviewPath()"
       queryParamsHandling="preserve">
-      Overview
+      <span
+        class="material-icons-round text-[18px] transition-colors"
+        [class]="activeTab() === 'overview' ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
+        aria-hidden="true">
+        space_dashboard
+      </span>
+      <span class="pr-tab-label">Overview</span>
     </a>
     <a
-      class="mb-[-1px] flex items-center border-b-2 text-[14px] no-underline transition-colors"
+      class="mb-[-1px] flex items-center gap-[6px] border-b-2 px-[4px] text-[14px] no-underline transition-colors group"
       [class]="
         activeTab() === 'reporting'
           ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
@@ -170,10 +202,16 @@
       [attr.aria-current]="activeTab() === 'reporting' ? 'page' : null"
       [routerLink]="reportingPath()"
       queryParamsHandling="preserve">
-      Reporting
+      <span
+        class="material-icons-round text-[18px] transition-colors"
+        [class]="activeTab() === 'reporting' ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
+        aria-hidden="true">
+        track_changes
+      </span>
+      <span class="pr-tab-label">Reporting</span>
     </a>
     <a
-      class="mb-[-1px] flex items-center border-b-2 text-[14px] no-underline transition-colors"
+      class="mb-[-1px] flex items-center gap-[6px] border-b-2 px-[4px] text-[14px] no-underline transition-colors group"
       [class]="
         activeTab() === 'results'
           ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
@@ -182,7 +220,13 @@
       [attr.aria-current]="activeTab() === 'results' ? 'page' : null"
       [routerLink]="resultsPath()"
       queryParamsHandling="preserve">
-      Results
+      <span
+        class="material-icons-round text-[18px] transition-colors"
+        [class]="activeTab() === 'results' ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
+        aria-hidden="true">
+        table_chart
+      </span>
+      <span class="pr-tab-label">Results</span>
     </a>
     <!-- ⚠️ The design's FOURTH tab, `Drafts` (PRMS-Reporting.dc.html:420 / :443), sits inside an
          `sc-if` on `centerMode` — it is a CENTER-view tab, not a programme-view one, so it is
@@ -191,53 +235,36 @@
          variant (:439-443), this nav is shared by the expanded and condensed band, so a tab added
          here appears in both. -->
 
-    @if (bandCollapsed()) {
+    @if (bandCollapsed() && canReport()) {
       <!-- `min-w-0` here is the OSF-T-10 fix: this group had no automatic-minimum override of its
            own, so as a nested flex item it kept a min-content width equal to the sum of its
-           children (Back button + CTA) even while `ml-auto` let it shrink visually — at 768px that
-           sum (~400px) still overflowed the page by 47px despite the CTA already carrying
-           OSF-DD-15's `min-w-0`/`truncate` chain. `min-w-0` on THIS ancestor is what lets that
-           existing truncation actually take effect (verified at all five widths, both tabs — see
-           execution.md). At 900px specifically the CTA truncates all the way down to its 24px icon
-           and the group is STILL over budget — the Back button (193px, was `shrink-0`) is what
-           remains rigid there. OSF-T-15 gives it the same truncation chain as the CTA below,
-           mirrored exactly. -->
-      <div class="ml-auto flex min-w-0 items-center gap-[8px] self-center">
-        <!-- `shrink-0` here was the OSF-T-15 defect at 900px: with the CTA already truncated to its
-             24px icon (OSF-T-10), this button — the group's only other child — became the binding
-             constraint at 193px. It now carries the identical OSF-DD-15 chain as the CTA: `min-w-0`
-             on the button, `shrink-0` on the icon, label in its own `min-w-0 truncate` span. -->
+           children even while `ml-auto` let it shrink visually. Smart Back was removed from this
+           group (it no longer shared the 900px budget with the CTA). -->
+      <div
+        class="ml-auto flex min-w-0 items-center gap-[8px] self-center"
+        data-testid="program-band-collapsed-actions">
         <button
           type="button"
-          class="pr-band-fade flex h-[32px] min-w-0 cursor-pointer items-center gap-[5px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12.5px] font-semibold text-[var(--pr-text-heading)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-app)] hover:text-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
-          [attr.aria-label]="backLabel()"
-          data-testid="program-band-back-btn-collapsed"
-          (click)="goBack()">
-          <ng-icon name="lucideArrowLeft" class="shrink-0 text-[14px]" />
-          <span class="min-w-0 truncate">{{ backLabel() }}</span>
+          class="group relative flex h-[32px] min-w-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12px] font-semibold text-[var(--pr-text-secondary)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+          (click)="startSpTour()"
+          aria-label="Start guided tour">
+          <span class="material-icons-round shrink-0 text-[15px] text-[var(--pr-color-primary-500)]">explore</span>
+          <span class="min-w-0 truncate">Tour</span>
         </button>
 
         @if (canReport()) {
           <!-- The 36px CTA of the identity block is clipped away with it, so the collapsed bar
                carries its own 32px copy (reference :396-399). Same action, same label, same tooltip. -->
-          <!-- `shrink-0` on this button (and the plain text node) was the OSF-DD-15 defect: the
-               action group's box shrinks correctly under the nav's squeeze, but a non-shrinking
-               child can't follow it and overflows the group — and the page — to the right. This CTA
-               truncates first (OSF-DD-15 option 2 — option 1, `shrink-0` on the group, was rejected:
-               the tab labels and the collapsed program name are single unbreakable tokens with no
-               truncation of their own, so they can't absorb the squeeze that would free up). The
-               icon stays `shrink-0` so it never gets clipped. At 900px this alone is not enough —
-               once this CTA is down to its icon, the Back button carries the identical chain too
-               (OSF-T-15). -->
           <button
             type="button"
-            class="pr-band-fade group relative flex h-[32px] min-w-0 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[12px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
-            (click)="reportEmerging.emit()">
-            <ng-icon name="lucideZap" class="shrink-0 text-[16px]" />
-            <span class="min-w-0 truncate">Report emerging result</span>
+            class="pr-band-fade group relative flex h-[32px] min-w-0 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[12px] text-[13px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] shadow-2xs"
+            (click)="onWhereToReportClick()"
+            data-testid="program-band-where-to-report-btn-condensed">
+            <span class="material-icons-round shrink-0 text-[16px]">explore</span>
+            <span class="min-w-0 truncate">Where to report</span>
             <span
               class="pointer-events-none absolute right-0 top-full z-[30] mt-[8px] w-[220px] rounded-[8px] bg-[var(--pr-color-secondary-400)] px-[12px] py-[8px] text-[12px] font-normal leading-[1.4] text-white opacity-0 shadow-lg transition-opacity delay-150 group-hover:opacity-100">
-              Report achievements that were not originally included in the 2026 Theory of Change, but emerged as valuable results during the year.
+              Find the right reporting pathway or report achievements that emerged during the year.
             </span>
           </button>
         }
@@ -246,295 +273,551 @@
   </nav>
 </div>
 
-<!-- ═══ TOOLBAR — first thing in the 32px content pad (CURRENT :895-1002) ═══
-     Search · Section · Type · Category · Status  ……  Grouped | All indicators  -->
+<!-- ═══ REPORTING CONTROLS & CONTENT ═══ -->
 @if (showToolbar()) {
-  <div class="px-[32px] pt-[24px] flex flex-col gap-[20px]">
-    <app-pr-tab-intro
-      title="What does this tab show?"
-      description="The Theory of Change reporting framework for your Science Program. Browse planned Indicators and High-Level Outputs by Area of Work, track progress against targets, and submit new or continuing result reports for the current cycle." />
-
-    @if (summaryStats(); as stats) {
-      <!-- Top Page Statistics Summary Card -->
-      <div class="rounded-2xl border border-[rgba(30,32,47,0.09)] bg-white px-8 py-5 shadow-xs">
-        <div class="grid grid-cols-4 gap-8 max-lg:grid-cols-2 max-sm:grid-cols-1">
-          <!-- Programs/Accelerators -->
-          <div class="flex flex-col gap-1">
-            <div class="flex items-center gap-2">
-              <span class="material-icons-round text-[16px] text-emerald-600" aria-hidden="true">account_tree</span>
-              <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Programs/Accelerators</span>
-            </div>
-            @if (statsLoading()) {
-              <span class="mt-1 inline-block h-[28px] w-[72px] animate-pulse rounded-[8px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
-            } @else {
-              <span class="pr-figure mt-1 text-[28px] font-extrabold leading-none text-emerald-800 tabular-nums">
-                {{ stats.programsCount }}
-              </span>
-            }
-          </div>
-
-          <!-- Areas of Work -->
-          <div class="flex flex-col gap-1">
-            <div class="flex items-center gap-2">
-              <span class="material-icons-round text-[16px] text-emerald-600" aria-hidden="true">layers</span>
-              <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Areas of Work</span>
-            </div>
-            @if (statsLoading()) {
-              <span class="mt-1 inline-block h-[28px] w-[72px] animate-pulse rounded-[8px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
-            } @else {
-              <span class="pr-figure mt-1 text-[28px] font-extrabold leading-none text-emerald-800 tabular-nums">
-                {{ stats.aowsCount }}
-              </span>
-            }
-          </div>
-
-          <!-- Total KPIs -->
-          <div class="flex flex-col gap-1">
-            <div class="flex items-center gap-2">
-              <span class="material-icons-round text-[16px] text-emerald-600" aria-hidden="true">checklist</span>
-              <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Total KPIs</span>
-            </div>
-            @if (statsLoading()) {
-              <span class="mt-1 inline-block h-[28px] w-[72px] animate-pulse rounded-[8px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
-            } @else {
-              <span class="pr-figure mt-1 text-[28px] font-extrabold leading-none text-emerald-800 tabular-nums">
-                {{ stats.totalKpis }}
-              </span>
-            }
-          </div>
-
-          <!-- KPIs with Evidence -->
-          <div class="flex flex-col gap-1">
-            <div class="flex items-center gap-2">
-              <span class="material-icons-round text-[16px] text-emerald-600" aria-hidden="true">assignment_turned_in</span>
-              <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">KPIs with Evidence</span>
-            </div>
-            @if (statsLoading()) {
-              <span class="mt-1 inline-block h-[28px] w-[72px] animate-pulse rounded-[8px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
-            } @else {
-              <span class="pr-figure mt-1 text-[28px] font-extrabold leading-none text-emerald-800 tabular-nums">
-                {{ stats.reportedKpis }} of {{ stats.totalKpis }}
-              </span>
-            }
-          </div>
-        </div>
-      </div>
-    }
-  </div>
-
-  <!--
-    Section heading — reference :1102, 20px/700, tracking -.01em (= -0.2px at 20px), 16px under it.
-    `<h2>`, not the reference's `<h1>`: the band already owns the page `<h1>` (the programme name),
-    and two h1s on one document is a real a11y regression for a purely visual match.
-    Padding, not margin: `:host { display: contents }` puts this next to the page column, where a
-    top margin would collapse. 32px above = the same content pad the toolbar used to carry.
-  -->
-  <h2
-    class="m-0 px-[32px] pb-[16px] text-[20px] font-bold leading-[1.35] tracking-[-0.01em] text-[var(--pr-text-heading)]"
-    [class.pt-[24px]]="summaryStats()"
-    [class.pt-[32px]]="!summaryStats()">
-    {{ reportingHeading() }}
-  </h2>
-
+  <!-- 1. Top Controls Bar — consistent with Overview top bar -->
   <div
-    class="relative z-20 flex flex-wrap items-center gap-[12px] px-[32px] pb-[24px]"
+    class="flex flex-wrap items-center justify-between gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[32px] py-[10px]"
     role="search"
-    aria-label="Reporting filters">
-    <!-- Search: 320×36 -->
-    <!-- 320px is the reference width, but it is a MAX here: search is the only elastic item in the
-         row, so it absorbs the leftover instead of pushing `Grouped | All indicators` onto a second
-         line. At 1440 the row still lands at the reference widths. -->
-    <div class="relative h-[36px] min-w-[220px] max-w-[320px] flex-1">
-      <span
-        class="pointer-events-none absolute left-[12px] top-1/2 flex -translate-y-1/2 text-[var(--pr-text-subtle)]">
-        <ng-icon name="lucideSearch" class="text-[16px]" />
-      </span>
-      <input
-        type="text"
-        class="h-[36px] w-full rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] pl-[36px] pr-[12px] text-[14px] text-[var(--pr-text-heading)] outline-none transition-colors placeholder:text-[var(--pr-text-subtle)] focus-visible:border-[var(--pr-color-primary-300)]"
-        placeholder="Search indicators"
-        aria-label="Search indicators"
-        [value]="search()"
-        (input)="searchChange.emit($any($event.target).value)" />
-    </div>
-
-    <!-- Section (AoW + Intermediate + 2030) — MULTI, grouped into "Areas of work" /
-         "Programme-level" exactly like the reference `selSection`. -->
-    @if (compactFilters()) {
-      <!-- By-AOW: exactly one AoW renders, so Section is a single-select AoW switcher (never writes the grouped view's filter). -->
-      <div class="pr-band-filter w-[230px]" aria-label="Switch Area of Work">
-        <app-pr-filter-select
-          [options]="aowSingleOptions()"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Area of Work"
-          [ngModel]="activeAowCode()"
-          (changed)="aowSwitch.emit($event)"></app-pr-filter-select>
+    aria-label="Reporting controls"
+    data-guide="sp-actions-toolbar">
+    <div class="flex flex-wrap items-center gap-[10px]">
+      <!-- Search Input -->
+      <div class="relative h-[34px] w-[220px] max-sm:w-full">
+        <span class="pointer-events-none absolute left-[10px] top-1/2 flex -translate-y-1/2 text-[var(--pr-text-subtle)]">
+          <ng-icon name="lucideSearch" class="text-[15px]" />
+        </span>
+        <input
+          type="text"
+          class="h-[34px] w-full rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-app)] pl-[32px] pr-[28px] text-[13px] text-[var(--pr-text-heading)] outline-none transition-colors placeholder:text-[var(--pr-text-subtle)] focus-visible:border-[var(--pr-color-primary-300)] focus-visible:bg-[var(--pr-surface-card)]"
+          placeholder="Search indicators"
+          aria-label="Search indicators"
+          [value]="search()"
+          (input)="searchChange.emit($any($event.target).value)" />
+        @if (search()) {
+          <button
+            type="button"
+            (click)="searchChange.emit('')"
+            class="absolute right-[8px] top-1/2 -translate-y-1/2 flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:text-slate-700"
+            aria-label="Clear search">
+            <span class="material-icons-round text-[14px]">close</span>
+          </button>
+        }
       </div>
-    } @else {
-    <div class="pr-band-filter w-[170px]" aria-label="Filter by section">
-      <app-pr-filter-multiselect
-        [options]="aowOptions()"
-        [group]="true"
-        optionGroupLabel="label"
-        optionGroupChildren="items"
-        optionLabel="label"
-        optionValue="value"
-        placeholder="Section"
-        countLabel="sections"
-        [ngModel]="aowValue()"
-        (changed)="aowChange.emit($event)"></app-pr-filter-multiselect>
-    </div>
-    }
 
-    <!-- Type (HLO / Outcome / Intermediate / 2030) — CURRENT selType -->
-    @if (!compactFilters()) {
-    <div class="pr-band-filter w-[130px]" aria-label="Filter by type">
-      <app-pr-filter-select
-        [options]="typeOptions"
-        optionLabel="label"
-        optionValue="value"
-        placeholder="Type"
-        [ngModel]="typeValue()"
-        (changed)="typeChange.emit($event)"></app-pr-filter-select>
-    </div>
+      <!-- Divider -->
+      <div class="h-[22px] w-[1px] bg-[var(--pr-border-divider)] mx-[2px] hidden sm:block"></div>
 
-    <!-- Category (result type name) — always visible -->
-    <div class="pr-band-filter w-[170px]" aria-label="Filter by category">
-      <app-pr-filter-select
-        [options]="typologyOptions()"
-        optionLabel="label"
-        optionValue="value"
-        placeholder="Category"
-        [ngModel]="typologyValue()"
-        (changed)="typologyChange.emit($event)"></app-pr-filter-select>
-    </div>
+      <!-- Compact By-AOW Switcher when compactFilters is active -->
+      @if (compactFilters()) {
+        <div class="pr-band-filter w-[230px]" aria-label="Switch Area of Work">
+          <app-pr-filter-select
+            [options]="aowSingleOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Area of Work"
+            [ngModel]="activeAowCode()"
+            (changed)="aowSwitch.emit($event)"></app-pr-filter-select>
+        </div>
+      }
 
-    <!-- Status -->
-    <div class="pr-band-filter w-[130px]" aria-label="Filter by status">
-      <app-pr-filter-select
-        [options]="statusOptions"
-        optionLabel="label"
-        optionValue="value"
-        placeholder="Status"
-        [ngModel]="statusValue()"
-        (changed)="statusChange.emit($event)"></app-pr-filter-select>
-    </div>
-    }
-
-    <!-- Only pending + Sort — band controls (MRF-R-1/R-2). Visible in BOTH reporting modes
-         (grouped table + By-AOW), unlike Type/Category/Status above, so rendered outside the
-         `compactFilters` gate. @akili-spec changes/mass-reporting-flow -->
-    <button
-      type="button"
-      role="switch"
-      [attr.aria-checked]="onlyPending()"
-      class="flex h-[36px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[14px] font-medium transition-colors"
-      [class]="
-        onlyPending()
-          ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
-          : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]'
-      "
-      (click)="onlyPendingChange.emit(!onlyPending())">
-      Only pending
-    </button>
-
-    <div
-      role="tablist"
-      aria-label="Sort"
-      class="flex h-[36px] shrink-0 items-center gap-[2px] rounded-[8px] bg-[var(--pr-border-divider)] p-[3px]">
-      <button
-        type="button"
-        role="tab"
-        class="h-[30px] rounded-[6px] border-0 px-[12px] text-[14px] font-medium transition-colors"
-        [class]="
-          burndownSort() === 'catalogue'
-            ? 'bg-[var(--pr-surface-card)] font-semibold text-[var(--pr-color-primary-400)]'
-            : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
-        "
-        [attr.aria-selected]="burndownSort() === 'catalogue'"
-        (click)="burndownSortChange.emit('catalogue')">
-        Catalogue
-      </button>
-      <button
-        type="button"
-        role="tab"
-        class="h-[30px] rounded-[6px] border-0 px-[12px] text-[14px] font-medium transition-colors"
-        [class]="
-          burndownSort() === 'remaining'
-            ? 'bg-[var(--pr-surface-card)] font-semibold text-[var(--pr-color-primary-400)]'
-            : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
-        "
-        [attr.aria-selected]="burndownSort() === 'remaining'"
-        (click)="burndownSortChange.emit('remaining')">
-        Remaining work
-      </button>
-    </div>
-
-    <!-- Clear filters — visible only while something is filtering. @akili-spec changes/reporting-entry-hub -->
-    @if (filtersActive()) {
-      <button
-        type="button"
-        (click)="clearAllFilters.emit()"
-        class="flex h-[36px] shrink-0 cursor-pointer items-center gap-[4px] rounded-[8px] border-0 bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
-        <span class="material-icons-round text-[15px]" aria-hidden="true">filter_alt_off</span>
-        Clear filters
-      </button>
-    }
-
-    <!-- Right-hand controls. The auto margin lives on the wrapper so the Expand all button and the
-         segmented switch stay glued together at the end of the row (two `ml-auto` siblings would
-         split the leftover space between them and drift apart). -->
-    <div class="ml-auto flex shrink-0 items-center gap-[12px]">
-      <!-- Expand all / Collapse all — global disclosure for the grouped table (P2-3252). Hidden in
-           `All indicators`, which is a flat list with nothing to open. -->
-      @if (viewMode() === 'grouped' && canExpandAll()) {
-        <!-- The changing label IS the state (`Expand all` ⇄ `Collapse all`), so there is no
-             `aria-pressed`: a toggle that also renames itself announces "Collapse all, pressed",
-             which reads as two contradictory facts. -->
+      <!-- JIRA-style Filter Button & Popover -->
+      <div class="relative pr-reporting-filter-container">
         <button
           type="button"
-          class="flex h-[36px] shrink-0 items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] text-[14px] font-medium text-[var(--pr-text-secondary)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]"
+          (click)="toggleFilterPopover($event)"
+          class="inline-flex h-[34px] cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+          [class]="hasActiveFilters()
+            ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] font-semibold'
+            : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] font-medium hover:border-slate-400 hover:bg-slate-50'"
+          aria-label="Filter indicators"
+          [attr.aria-expanded]="filterPopoverOpen()">
+          <span class="material-icons-round text-[18px]" [class.text-[var(--pr-color-primary-600)]]="hasActiveFilters()" [class.text-slate-500]="!hasActiveFilters()">filter_list</span>
+          <span>Filter</span>
+          @if (activeFilterCount() > 0) {
+            <span class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums">
+              {{ activeFilterCount() }}
+            </span>
+          }
+        </button>
+
+        <div
+          class="absolute left-0 top-[40px] z-30 w-[360px] max-w-[90vw] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+          [class.hidden]="!filterPopoverOpen()"
+          (click)="$event.stopPropagation()">
+          <!-- Popover Header -->
+          <div class="mb-[14px] flex items-center justify-between border-b border-[var(--pr-border-divider)] pb-[10px]">
+            <span class="text-[13.5px] font-bold text-[var(--pr-text-heading)]">Filters</span>
+            <div class="flex items-center gap-[10px]">
+              @if (hasActiveFilters()) {
+                <button
+                  type="button"
+                  (click)="clearAllFilters.emit()"
+                  class="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:underline">
+                  Clear all
+                </button>
+              }
+              <button
+                type="button"
+                (click)="closeFilterPopover()"
+                class="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[5px] border-0 bg-transparent p-0 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close filters">
+                <span class="material-icons-round text-[16px]">close</span>
+              </button>
+            </div>
+          </div>
+
+          @if (compactFilters()) {
+            <!-- Center -->
+            @if (centerOptions().length > 0) {
+              <div class="pr-band-filter mb-[12px]" aria-label="Filter by center">
+                <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                  Center
+                </label>
+                <app-pr-filter-select
+                  [options]="centerOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="All centers"
+                  emptyValue="all"
+                  [ngModel]="centerValue() || 'all'"
+                  (changed)="centerChange.emit($event === 'all' ? null : $event)"></app-pr-filter-select>
+              </div>
+            }
+
+            <!-- Result Type & Status in 2 columns -->
+            <div class="mb-[12px] grid grid-cols-2 gap-[10px]">
+              <div class="pr-band-filter" aria-label="Filter by result type">
+                <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                  Result Type
+                </label>
+                <app-pr-filter-select
+                  [options]="byAowTypeOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="All types"
+                  emptyValue="all"
+                  [ngModel]="byAowTypeValue() || 'all'"
+                  (changed)="byAowTypeChange.emit($event === 'all' ? null : $event)"></app-pr-filter-select>
+              </div>
+              <div class="pr-band-filter" aria-label="Filter by status">
+                <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                  Status
+                </label>
+                <app-pr-filter-select
+                  [options]="statusOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="All statuses"
+                  emptyValue="all"
+                  [ngModel]="statusValue()"
+                  (changed)="statusChange.emit($event)"></app-pr-filter-select>
+              </div>
+            </div>
+          } @else {
+            <!-- Section (AoW) -->
+            <div class="pr-band-filter mb-[12px]" aria-label="Filter by section">
+              <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                Section / Area of Work
+              </label>
+              <app-pr-filter-multiselect
+                [options]="aowOptions()"
+                [group]="true"
+                optionGroupLabel="label"
+                optionGroupChildren="items"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select sections"
+                countLabel="sections"
+                [ngModel]="aowValue()"
+                (changed)="aowChange.emit($event)"></app-pr-filter-multiselect>
+            </div>
+
+            <!-- Type & Category in 2 columns -->
+            <div class="mb-[12px] grid grid-cols-2 gap-[10px]">
+              <div class="pr-band-filter" aria-label="Filter by type">
+                <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                  Type
+                </label>
+                <app-pr-filter-select
+                  [options]="typeOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="All types"
+                  [ngModel]="typeValue()"
+                  (changed)="typeChange.emit($event)"></app-pr-filter-select>
+              </div>
+              <div class="pr-band-filter" aria-label="Filter by category">
+                <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                  Category
+                </label>
+                <app-pr-filter-select
+                  [options]="typologyOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="All categories"
+                  [ngModel]="typologyValue()"
+                  (changed)="typologyChange.emit($event)"></app-pr-filter-select>
+              </div>
+            </div>
+
+            <!-- Status -->
+            <div class="pr-band-filter mb-[12px]" aria-label="Filter by status">
+              <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                Status
+              </label>
+              <app-pr-filter-select
+                [options]="statusOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="All statuses"
+                [ngModel]="statusValue()"
+                (changed)="statusChange.emit($event)"></app-pr-filter-select>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Active Filter Chips -->
+      @if (compactFilters()) {
+        @if (activeCenterLabel(); as centerLbl) {
+          <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+            <span class="text-slate-500 font-normal">Center:</span>
+            <span class="font-semibold max-w-[140px] truncate" [title]="centerLbl">{{ centerLbl }}</span>
+            <button
+              type="button"
+              (click)="removeCenterChip()"
+              class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Remove center filter">
+              <span class="material-icons-round text-[13px]">close</span>
+            </button>
+          </span>
+        }
+        @if (activeByAowTypeLabel(); as aowTypeLbl) {
+          <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+            <span class="text-slate-500 font-normal">Type:</span>
+            <span class="font-semibold max-w-[140px] truncate" [title]="aowTypeLbl">{{ aowTypeLbl }}</span>
+            <button
+              type="button"
+              (click)="removeByAowTypeChip()"
+              class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Remove type filter">
+              <span class="material-icons-round text-[13px]">close</span>
+            </button>
+          </span>
+        }
+      } @else {
+        @for (chip of activeAowChips(); track chip.value) {
+          <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+            <span class="text-slate-500 font-normal">Section:</span>
+            <span class="font-semibold max-w-[140px] truncate" [title]="chip.label">{{ chip.label }}</span>
+            <button
+              type="button"
+              (click)="removeAowChip(chip.value)"
+              class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Remove section filter">
+              <span class="material-icons-round text-[13px]">close</span>
+            </button>
+          </span>
+        }
+
+        @if (activeTypeLabel(); as typeLbl) {
+          <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+            <span class="text-slate-500 font-normal">Type:</span>
+            <span class="font-semibold max-w-[120px] truncate">{{ typeLbl }}</span>
+            <button
+              type="button"
+              (click)="removeTypeChip()"
+              class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Remove type filter">
+              <span class="material-icons-round text-[13px]">close</span>
+            </button>
+          </span>
+        }
+
+        @if (activeTypologyLabel(); as typLbl) {
+          <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+            <span class="text-slate-500 font-normal">Category:</span>
+            <span class="font-semibold max-w-[140px] truncate">{{ typLbl }}</span>
+            <button
+              type="button"
+              (click)="removeTypologyChip()"
+              class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Remove category filter">
+              <span class="material-icons-round text-[13px]">close</span>
+            </button>
+          </span>
+        }
+      }
+
+      @if (activeStatusLabel(); as statLbl) {
+        <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+          <span class="text-slate-500 font-normal">Status:</span>
+          <span class="font-semibold">{{ statLbl }}</span>
+          <button
+            type="button"
+            (click)="removeStatusChip()"
+            class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+            aria-label="Remove status filter">
+            <span class="material-icons-round text-[13px]">close</span>
+          </button>
+        </span>
+      }
+
+      <!-- Only pending button switch directly in top bar -->
+      <button
+        type="button"
+        role="switch"
+        [attr.aria-checked]="onlyPending()"
+        class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] font-medium transition-colors"
+        [class]="
+          onlyPending()
+            ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
+            : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]'
+        "
+        (click)="onlyPendingChange.emit(!onlyPending())">
+        Only pending
+      </button>
+
+      <!-- Sort tablist directly in top bar -->
+      <div
+        role="tablist"
+        aria-label="Sort"
+        class="flex h-[34px] shrink-0 items-center gap-[2px] rounded-[8px] bg-slate-100 p-[2px] border border-slate-200">
+        <button
+          type="button"
+          role="tab"
+          class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors cursor-pointer"
+          [class]="
+            burndownSort() === 'catalogue'
+              ? 'bg-white font-semibold text-[var(--pr-color-primary-600)] shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          [attr.aria-selected]="burndownSort() === 'catalogue'"
+          (click)="burndownSortChange.emit('catalogue')">
+          Catalogue
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors cursor-pointer"
+          [class]="
+            burndownSort() === 'remaining'
+              ? 'bg-white font-semibold text-[var(--pr-color-primary-600)] shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          [attr.aria-selected]="burndownSort() === 'remaining'"
+          (click)="burndownSortChange.emit('remaining')">
+          Remaining work
+        </button>
+      </div>
+
+      <!-- Clear filters button -->
+      @if (filtersActive() || hasActiveFilters()) {
+        <button
+          type="button"
+          (click)="clearAllFilters.emit()"
+          class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[4px] rounded-[8px] border-0 bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+          <span class="material-icons-round text-[15px]" aria-hidden="true">filter_alt_off</span>
+          Clear filters
+        </button>
+      }
+    </div>
+
+
+    <!-- Right side controls: Expand all + Segmented view switch -->
+    <div class="ml-auto flex items-center gap-[10px]">
+      @if (compactFilters()) {
+        <button
+          type="button"
+          (click)="allAowsClick.emit()"
+          class="inline-flex h-[32px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs transition-colors">
+          <span class="material-icons-round text-[16px]" aria-hidden="true">grid_view</span>
+          All Areas of Work
+        </button>
+      }
+
+      @if (viewMode() === 'grouped' && canExpandAll()) {
+        <button
+          type="button"
+          class="flex h-[32px] shrink-0 items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12.5px] font-medium text-[var(--pr-text-secondary)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)] shadow-2xs"
           (click)="toggleExpandAll.emit()">
-          <ng-icon [name]="allExpanded() ? 'lucideChevronsDownUp' : 'lucideChevronsUpDown'" class="text-[16px]" />
+          <ng-icon [name]="allExpanded() ? 'lucideChevronsDownUp' : 'lucideChevronsUpDown'" class="text-[15px]" />
           {{ allExpanded() ? 'Collapse all' : 'Expand all' }}
         </button>
       }
 
-      <!-- Segmented: Grouped | All indicators (CURRENT :1001) -->
       @if (!compactFilters()) {
-      <div
-        role="tablist"
-        aria-label="Grouping"
-        class="flex h-[36px] shrink-0 items-center gap-[2px] rounded-[8px] bg-[var(--pr-border-divider)] p-[3px]">
-        <button
-          type="button"
-          role="tab"
-          class="h-[30px] rounded-[6px] border-0 px-[12px] text-[14px] font-medium transition-colors"
-          [class]="
-            viewMode() === 'grouped'
-              ? 'bg-[var(--pr-surface-card)] font-semibold text-[var(--pr-color-primary-400)]'
-              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
-          "
-          [attr.aria-selected]="viewMode() === 'grouped'"
-          (click)="viewModeChange.emit('grouped')">
-          Grouped
-        </button>
-        <button
-          type="button"
-          role="tab"
-          class="h-[30px] rounded-[6px] border-0 px-[12px] text-[14px] font-medium transition-colors"
-          [class]="
-            viewMode() === 'flat'
-              ? 'bg-[var(--pr-surface-card)] font-semibold text-[var(--pr-color-primary-400)]'
-              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
-          "
-          [attr.aria-selected]="viewMode() === 'flat'"
-          (click)="viewModeChange.emit('flat')">
-          All indicators
-        </button>
-      </div>
+        <div
+          role="tablist"
+          aria-label="Grouping"
+          class="flex h-[32px] shrink-0 items-center gap-[2px] rounded-[8px] bg-slate-100 p-[2px] border border-slate-200">
+          <button
+            type="button"
+            role="tab"
+            class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors"
+            [class]="viewMode() === 'grouped'
+              ? 'bg-white font-semibold text-[var(--pr-color-primary-700)] shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'"
+            [attr.aria-selected]="viewMode() === 'grouped'"
+            (click)="viewModeChange.emit('grouped')">
+            Grouped
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors"
+            [class]="viewMode() === 'flat'
+              ? 'bg-white font-semibold text-[var(--pr-color-primary-700)] shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'"
+            [attr.aria-selected]="viewMode() === 'flat'"
+            (click)="viewModeChange.emit('flat')">
+            All indicators
+          </button>
+        </div>
       }
     </div>
   </div>
+
+  <!-- 2. Summary Statistics — 4 Separate Cards Grid (matching Overview design) -->
+  @if (summaryStats(); as stats) {
+    <div class="px-[32px] pt-[14px] pb-[16px]">
+      <div class="grid grid-cols-4 gap-[14px] max-lg:grid-cols-2 max-sm:grid-cols-1">
+        <!-- Card 1: Programs / Accelerators -->
+        <div class="flex flex-col justify-between gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px] px-[16px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-[6px]">
+              <span class="material-icons-round text-[15px] text-purple-600" aria-hidden="true">account_tree</span>
+              <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                Programs/Accelerators
+              </span>
+            </div>
+            <span class="inline-flex h-[22px] items-center rounded-full bg-purple-50 px-[7px] text-[10.5px] font-semibold text-purple-700">
+              Scope
+            </span>
+          </div>
+          @if (statsLoading()) {
+            <div class="flex items-baseline gap-[8px]" aria-hidden="true">
+              <span class="h-[26px] w-[48px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
+            </div>
+            <div class="h-[12px] w-[120px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
+          } @else {
+            <div class="flex items-baseline gap-[8px]">
+              <span class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
+                {{ stats.programsCount }}
+              </span>
+              <span class="text-[12px] font-medium text-[var(--pr-text-muted)]">active</span>
+            </div>
+            <div class="flex items-center gap-[6px] text-[11.5px] text-[var(--pr-text-secondary)]">
+              <span class="h-[6px] w-[6px] rounded-full bg-purple-500"></span>
+              <span class="truncate">Primary reporting entity</span>
+            </div>
+          }
+        </div>
+
+        <!-- Card 2: Areas of Work -->
+        <div class="flex flex-col justify-between gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px] px-[16px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-[6px]">
+              <span class="material-icons-round text-[15px] text-emerald-600" aria-hidden="true">layers</span>
+              <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                Areas of Work
+              </span>
+            </div>
+            <span class="inline-flex h-[22px] items-center rounded-full bg-emerald-50 px-[7px] text-[10.5px] font-semibold text-emerald-700">
+              AoWs
+            </span>
+          </div>
+          @if (statsLoading()) {
+            <div class="flex items-baseline gap-[8px]" aria-hidden="true">
+              <span class="h-[26px] w-[48px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
+            </div>
+            <div class="h-[12px] w-[130px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
+          } @else {
+            <div class="flex items-baseline gap-[8px]">
+              <span class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
+                {{ stats.aowsCount }}
+              </span>
+              <span class="text-[12px] font-medium text-[var(--pr-text-muted)]">areas</span>
+            </div>
+            <div class="flex items-center gap-[6px] text-[11.5px] text-[var(--pr-text-secondary)]">
+              <span class="h-[6px] w-[6px] rounded-full bg-emerald-500"></span>
+              <span class="truncate">Contributing work packages</span>
+            </div>
+          }
+        </div>
+
+        <!-- Card 3: Total KPIs -->
+        <div class="flex flex-col justify-between gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px] px-[16px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-[6px]">
+              <span class="material-icons-round text-[15px] text-blue-600" aria-hidden="true">checklist</span>
+              <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                Total KPIs
+              </span>
+            </div>
+            <span class="inline-flex h-[22px] items-center rounded-full bg-blue-50 px-[7px] text-[10.5px] font-semibold text-blue-700">
+              Targets
+            </span>
+          </div>
+          @if (statsLoading()) {
+            <div class="flex items-baseline gap-[8px]" aria-hidden="true">
+              <span class="h-[26px] w-[64px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
+            </div>
+            <div class="h-[12px] w-[140px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
+          } @else {
+            <div class="flex items-baseline gap-[8px]">
+              <!-- @akili-spec bugfix/kpi-count-reconciliation — KCR-R-2.1: the figure is *Counted*,
+                   so it discloses the Planned count and the zero-target exclusion behind it. -->
+              <span
+                class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums"
+                [attr.title]="totalKpisTitle(stats)">
+                {{ stats.totalKpis }}
+              </span>
+              <span class="text-[12px] font-medium text-[var(--pr-text-muted)]">indicators</span>
+            </div>
+            <div class="flex items-center gap-[6px] text-[11.5px] text-[var(--pr-text-secondary)]">
+              <span class="h-[6px] w-[6px] rounded-full bg-blue-500"></span>
+              <span class="truncate">Planned ToC targets</span>
+            </div>
+          }
+        </div>
+
+        <!-- Card 4: KPIs with Evidence -->
+        <div class="flex flex-col justify-between gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px] px-[16px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-[6px]">
+              <span class="material-icons-round text-[15px] text-teal-600" aria-hidden="true">assignment_turned_in</span>
+              <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                KPIs with Evidence
+              </span>
+            </div>
+            <span class="inline-flex h-[22px] items-center rounded-full bg-teal-50 px-[7px] text-[10.5px] font-semibold text-teal-700">
+              Evidence
+            </span>
+          </div>
+          @if (statsLoading()) {
+            <div class="flex items-baseline gap-[8px]" aria-hidden="true">
+              <span class="h-[26px] w-[80px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
+            </div>
+            <div class="h-[12px] w-[150px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
+          } @else {
+            <div class="flex items-baseline gap-[8px]">
+              <span class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
+                {{ stats.reportedKpis }}
+              </span>
+              <span class="text-[12px] font-medium text-[var(--pr-text-muted)]">of {{ stats.totalKpis }}</span>
+            </div>
+            <div class="flex items-center gap-[6px] text-[11.5px] text-[var(--pr-text-secondary)]">
+              <span class="h-[6px] w-[6px] rounded-full" [class]="stats.reportedKpis > 0 ? 'bg-emerald-500' : 'bg-slate-300'"></span>
+              <span class="truncate">
+                {{ evidencePercentage(stats) }}% with reported results
+              </span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
 }
+

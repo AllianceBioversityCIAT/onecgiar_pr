@@ -1,11 +1,17 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, signal } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { ActivatedRoute, ParamMap, Router, convertToParamMap } from '@angular/router';
 import { BehaviorSubject, of } from 'rxjs';
 
-import { PGR_COLUMN_STORAGE_KEY, ProgrammeResultsComponent } from './programme-results.component';
+import {
+  PGR_COLUMN_STORAGE_KEY,
+  PGR_COLUMN_WIDTHS_STORAGE_KEY,
+  ProgrammeResultsComponent,
+  readStoredColumnWidths,
+  writeStoredColumnWidths
+} from './programme-results.component';
 import { PROGRAMME_RESULTS_OTHER_CATEGORY, ProgrammeResultsFilterService } from './services/programme-results-filter.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
@@ -78,6 +84,23 @@ const RAW_ITEMS: Record<string, unknown>[] = [
     create_last_name: 'Turing',
     created_date: '2026-03-01T00:00:00.000Z',
     // Bilateral, not AVISA, not Approved → opens in the review drawer, not Result Detail.
+    source_name: 'W3/Bilaterals',
+    lead_center: 'ILRI',
+    version_id: '11',
+    phase_name: 'Reporting 2026',
+    phase_year: 2026,
+    submitter: 'SP01'
+  },
+  {
+    id: 4,
+    result_code: '5004',
+    title: 'Historic capacity workshop',
+    result_type: 'Capacity sharing for development',
+    status_id: '3',
+    status_name: 'Submitted',
+    create_first_name: 'Alan',
+    create_last_name: 'Turing',
+    created_date: '2024-03-01T00:00:00.000Z',
     source_name: 'W3/Bilaterals',
     lead_center: 'ILRI',
     version_id: '12',
@@ -172,14 +195,20 @@ describe('ProgrammeResultsComponent', () => {
         },
         {
           provide: DataControlService,
-          useValue: { reportingCurrentPhase: { phaseYear: 2026, portfolioAcronym: 'P26' } }
+          useValue: {
+            reportingCurrentPhase: { phaseYear: 2026, phaseName: 'Reporting 2026', portfolioAcronym: 'P26' },
+            reportingPhaseVersion: signal(0)
+          }
         },
         {
           provide: ResultFrameworkReportingHomeService,
           useValue: {
             mySPsList: () => [{ initiativeCode: 'SP01', initiativeShortName: 'Multifunctional Landscapes', initiativeName: 'SP01 long' }],
             otherSPsList: () => [],
-            otherProjectsList: () => []
+            otherProjectsList: () => [],
+            overviewSelectedPhase: signal<string | null>(null),
+            overviewSelectedProgram: signal<string | null>(null),
+            overviewSelectedVersionId: signal<number | null>(null)
           }
         },
         {
@@ -214,17 +243,30 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.programmeCode()).toBe('SP01');
     // submitter_id is the numeric initiative id resolved from the official code.
     expect(getAllResults).toHaveBeenCalledWith(2, expect.objectContaining({ submitter_id: '50', page: 1 }));
-    expect(component.data.rows().length).toBe(3);
+    expect(component.data.rows().length).toBe(4);
     expect(dataRows().length).toBe(3);
   });
 
   it('renders the design literals of the toolbar and the counts row', () => {
-    expect(text()).toContain('Results');
+    expect(text()).toContain('Filter');
     expect(text()).toContain('Columns');
     expect(text()).toContain('Export CSV');
     expect(text()).toContain('3 results');
     const search = fixture.debugElement.query(By.css('input[type="text"]')).nativeElement as HTMLInputElement;
     expect(search.placeholder).toBe('Search results or indicators…');
+  });
+
+  it('opens and closes the JIRA-style Filter popover, and outside click closes it', () => {
+    expect(component.filterPopoverOpen()).toBe(false);
+    const filterBtn = fixture.debugElement.query(By.css('button[aria-label="Filter results"]')).nativeElement as HTMLButtonElement;
+    filterBtn.click();
+    fixture.detectChanges();
+    expect(component.filterPopoverOpen()).toBe(true);
+
+    // Outside click closes it
+    document.dispatchEvent(new MouseEvent('click'));
+    fixture.detectChanges();
+    expect(component.filterPopoverOpen()).toBe(false);
   });
 
   // ── filtering ─────────────────────────────────────────────────────────────────────────────
@@ -317,21 +359,21 @@ describe('ProgrammeResultsComponent', () => {
     fixture.detectChanges();
 
     const labels = filterService().activeChips().map(chip => chip.label);
-    expect(labels).toEqual(['Search: bean', 'Status: Submitted']);
+    expect(labels).toEqual(['Search: bean', 'Phase: Reporting 2026', 'Status: Submitted']);
     expect(text()).toContain('Search: bean');
     expect(text()).toContain('Clear all');
 
     component.clearChip(filterService().activeChips()[0]);
     tick(300);
     expect(component.searchDraft()).toBe('');
-    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Status: Submitted']);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026', 'Status: Submitted']);
   }));
 
   it('renders a Center chip when the center filter is set', () => {
     component.onCenterChange('IITA');
     fixture.detectChanges();
 
-    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Center: IITA']);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026', 'Center: IITA']);
     expect(text()).toContain('Center: IITA');
   });
 
@@ -347,8 +389,11 @@ describe('ProgrammeResultsComponent', () => {
     tick(300);
 
     expect(component.searchDraft()).toBe('');
-    expect(filterService().hasActiveFilters()).toBe(false);
     expect(filterService().selectedCenter()).toBeNull();
+    expect(filterService().selectedStatus()).toBeNull();
+    expect(filterService().selectedCategory()).toBeNull();
+    expect(filterService().selectedOrigin()).toBeNull();
+    expect(filterService().selectedPhase()).toBe('Reporting 2026');
     expect(component.filteredRows().length).toBe(3);
   }));
 
@@ -396,12 +441,17 @@ describe('ProgrammeResultsComponent', () => {
 
   // ── URL ↔ filter bridge (RFD-R-1 / RFD-R-2) ──────────────────────────────────────────────
   it('(a) hydrates several params into filter state and chips, without rewriting the URL', () => {
-    setup(RAW_ITEMS, { category: 'Policy change', status: 'Submitted', center: 'IITA' });
+    setup(RAW_ITEMS, { phase: 'Reporting 2026', category: 'Policy change', status: 'Submitted', center: 'IITA' });
 
     expect(filterService().state()).toEqual(
       expect.objectContaining({ selectedStatus: 'Submitted', selectedCategory: 'Policy change', selectedCenter: 'IITA' })
     );
-    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Status: Submitted', 'Category: Policy change', 'Center: IITA']);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual([
+      'Phase: Reporting 2026',
+      'Status: Submitted',
+      'Category: Policy change',
+      'Center: IITA'
+    ]);
     // Same result as picking the three values manually — matches the one row that has all three.
     expect(component.filteredRows().map(row => row.code)).toEqual(['5002']);
     expect(dataRows().length).toBe(1);
@@ -411,17 +461,17 @@ describe('ProgrammeResultsComponent', () => {
   it('(b) a value matching no row shows its chip and the filtered-empty state, without throwing', () => {
     expect(() => setup(RAW_ITEMS, { status: 'Foo' })).not.toThrow();
 
-    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Status: Foo']);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026', 'Status: Foo']);
     expect(component.isFilteredEmpty()).toBe(true);
     expect(text()).toContain('No results match these filters.');
   });
 
-  it('(c) no query params leaves the filters untouched and never rewrites the URL', () => {
+  it('(c) no query params defaults to the active phase and mirrors it to the URL', () => {
     setup(RAW_ITEMS, {});
 
-    expect(filterService().activeChips().length).toBe(0);
-    expect(filterService().hasActiveFilters()).toBe(false);
-    expect(router.navigate).not.toHaveBeenCalled();
+    expect(filterService().selectedPhase()).toBe('Reporting 2026');
+    expect(filterService().activeChips().map(c => c.label)).toEqual(['Phase: Reporting 2026']);
+    expect(filterService().hasActiveFilters()).toBe(true);
   });
 
   it('(d) a dropdown change mirrors into the URL with merge + replaceUrl', () => {
@@ -436,10 +486,17 @@ describe('ProgrammeResultsComponent', () => {
     expect(commands).toEqual([]);
     expect(extras.queryParamsHandling).toBe('merge');
     expect(extras.replaceUrl).toBe(true);
-    expect(extras.queryParams).toEqual({ phase: null, status: null, category: 'Policy change', origin: null, center: null });
+    expect(extras.queryParams).toEqual({
+      phase: 'Reporting 2026',
+      status: null,
+      category: 'Policy change',
+      origin: null,
+      center: null,
+      createdBy: null
+    });
   });
 
-  it('(e) Clear all mirrors all five params back to null', () => {
+  it('(e) Clear all mirrors all other params back to null and retains the active phase', () => {
     setup(RAW_ITEMS, { category: 'Policy change', status: 'Submitted', center: 'IITA' });
     (router.navigate as jest.Mock).mockClear();
 
@@ -448,14 +505,21 @@ describe('ProgrammeResultsComponent', () => {
 
     expect(router.navigate).toHaveBeenCalledTimes(1);
     const [, extras] = (router.navigate as jest.Mock).mock.calls[0];
-    expect(extras.queryParams).toEqual({ phase: null, status: null, category: null, origin: null, center: null });
+    expect(extras.queryParams).toEqual({
+      phase: 'Reporting 2026',
+      status: null,
+      category: null,
+      origin: null,
+      center: null,
+      createdBy: null
+    });
   });
 
   it('(f) a param pushed through the route updates state and does NOT trigger a mirror navigate (anti-loop)', () => {
     setup(RAW_ITEMS, {});
     (router.navigate as jest.Mock).mockClear();
 
-    pushQueryParams({ status: 'Submitted' });
+    pushQueryParams({ phase: 'Reporting 2026', status: 'Submitted' });
     fixture.detectChanges();
 
     expect(filterService().selectedStatus()).toBe('Submitted');
@@ -466,7 +530,7 @@ describe('ProgrammeResultsComponent', () => {
     setup(RAW_ITEMS, { status: 'submitted' });
 
     expect(component.filteredRows().map(row => row.code)).toEqual(['5002', '5003']);
-    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Status: submitted']);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026', 'Status: submitted']);
     expect(text()).toContain('Status: submitted');
   });
 
@@ -474,17 +538,260 @@ describe('ProgrammeResultsComponent', () => {
     setup(RAW_ITEMS, {});
     (router.navigate as jest.Mock).mockClear();
 
-    component.onPhaseChange('Reporting 2026');
+    component.onPhaseChange('Reporting 2024');
     fixture.detectChanges();
 
-    expect(filterService().selectedPhase()).toBe('Reporting 2026');
-    expect(component.filteredRows().map(r => r.code)).toEqual(['5001', '5002']);
-    expect(filterService().activeChips().map(c => c.label)).toEqual(['Phase: Reporting 2026']);
+    expect(filterService().selectedPhase()).toBe('Reporting 2024');
+    expect(component.filteredRows().map(r => r.code)).toEqual(['5004']);
+    expect(filterService().activeChips().map(c => c.label)).toEqual(['Phase: Reporting 2024']);
     expect(router.navigate).toHaveBeenCalledWith([], expect.objectContaining({
-      queryParams: expect.objectContaining({ phase: 'Reporting 2026' }),
+      queryParams: expect.objectContaining({ phase: 'Reporting 2024' }),
       queryParamsHandling: 'merge',
       replaceUrl: true
     }));
+  });
+
+  it('(i) uses the phase selected in Overview when available for this program', () => {
+    setup(RAW_ITEMS, {});
+    const homeSE = TestBed.inject(ResultFrameworkReportingHomeService);
+    homeSE.overviewSelectedProgram.set('SP01');
+    homeSE.overviewSelectedPhase.set('Reporting 2024');
+    fixture.detectChanges();
+
+    expect(filterService().selectedPhase()).toBe('Reporting 2024');
+    expect(component.filteredRows().map(r => r.code)).toEqual(['5004']);
+    expect(filterService().activeChips().map(c => c.label)).toEqual(['Phase: Reporting 2024']);
+  });
+
+  // ── Created by popover + URL (CBF-T-2 / CBF-R-1…R-3) ─────────────────────────────────────
+  // Two-author fixture: Angel (Editing + Submitted), Santiago (Submitted), one blank name.
+  // Phase is the default so the table starts unfiltered except for the phase chip.
+  const CBF_ITEMS: Record<string, unknown>[] = [
+    {
+      ...RAW_ITEMS[0],
+      id: 10,
+      result_code: '6010',
+      title: 'Angel editing result',
+      status_id: '1',
+      status_name: 'Editing',
+      create_first_name: 'Angel',
+      create_last_name: 'Jarrin',
+      lead_center: 'CIAT'
+    },
+    {
+      ...RAW_ITEMS[0],
+      id: 11,
+      result_code: '6011',
+      title: 'Angel submitted result',
+      status_id: '3',
+      status_name: 'Submitted',
+      create_first_name: 'Angel',
+      create_last_name: 'Jarrin',
+      lead_center: 'CIAT'
+    },
+    {
+      ...RAW_ITEMS[0],
+      id: 12,
+      result_code: '6012',
+      title: 'Santiago submitted result',
+      status_id: '3',
+      status_name: 'Submitted',
+      create_first_name: 'Santiago',
+      create_last_name: 'Sanchez',
+      lead_center: 'IITA'
+    },
+    {
+      ...RAW_ITEMS[0],
+      id: 13,
+      result_code: '6013',
+      title: 'Blank author result',
+      status_id: '1',
+      status_name: 'Editing',
+      create_first_name: '',
+      create_last_name: '',
+      lead_center: 'ILRI'
+    }
+  ];
+
+  it('onCreatedByChange(Angel Jarrin) keeps only those rows, the chip, and increments the badge', () => {
+    setup(CBF_ITEMS);
+    const badgeBefore = component.activeFilterCount();
+    expect(badgeBefore).toBe(filterService().activeChips().length);
+
+    component.onCreatedByChange('Angel Jarrin');
+    fixture.detectChanges();
+
+    expect(component.filteredRows().map(row => row.code)).toEqual(['6010', '6011']);
+    expect(component.filteredRows().some(row => row.createdBy === 'Santiago Sanchez')).toBe(false);
+    expect(component.filteredRows().some(row => !row.createdBy)).toBe(false);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual([
+      'Phase: Reporting 2026',
+      'Created by: Angel Jarrin'
+    ]);
+    expect(component.activeFilterCount()).toBe(badgeBefore + 1);
+    expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
+    // Status pills recount over the Created-by subset (ignore the status dimension itself).
+    expect(component.statusCounts()).toEqual([
+      { statusId: 1, statusName: 'Editing', count: 1 },
+      { statusId: 3, statusName: 'Submitted', count: 1 }
+    ]);
+    expect(component.createdBySelectOptions().map(option => option.value)).toEqual(['Angel Jarrin', 'Santiago Sanchez']);
+  });
+
+  it('Created by + Status intersects the table and keeps both chips', () => {
+    setup(CBF_ITEMS);
+    component.onCreatedByChange('Angel Jarrin');
+    component.onStatusChange('Submitted');
+    fixture.detectChanges();
+
+    expect(component.filteredRows().map(row => row.code)).toEqual(['6011']);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual([
+      'Phase: Reporting 2026',
+      'Status: Submitted',
+      'Created by: Angel Jarrin'
+    ]);
+    expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
+  });
+
+  it('hydrates createdBy=Angel Jarrin onto the Created by signal and chip without navigating', () => {
+    setup(CBF_ITEMS, { phase: 'Reporting 2026', createdBy: 'Angel Jarrin' });
+
+    expect(filterService().selectedCreatedBy()).toBe('Angel Jarrin');
+    expect(filterService().selectedCenter()).toBeNull();
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual([
+      'Phase: Reporting 2026',
+      'Created by: Angel Jarrin'
+    ]);
+    expect(component.filteredRows().map(row => row.code)).toEqual(['6010', '6011']);
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('hydrates createdBy=Nobody as-is: chip + filtered-empty copy, no throw', () => {
+    expect(() => setup(CBF_ITEMS, { createdBy: 'Nobody' })).not.toThrow();
+
+    expect(filterService().selectedCreatedBy()).toBe('Nobody');
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual([
+      'Phase: Reporting 2026',
+      'Created by: Nobody'
+    ]);
+    expect(component.isFilteredEmpty()).toBe(true);
+    expect(text()).toContain('No results match these filters.');
+  });
+
+  it('no createdBy param leaves Created by null and today\'s chips unchanged', () => {
+    setup(CBF_ITEMS, {});
+
+    expect(filterService().selectedCreatedBy()).toBeNull();
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026']);
+  });
+
+  it('a createdBy param pushed through the route hydrates without a mirror navigate (anti-loop)', () => {
+    setup(CBF_ITEMS, {});
+    (router.navigate as jest.Mock).mockClear();
+
+    pushQueryParams({ phase: 'Reporting 2026', createdBy: 'Angel Jarrin' });
+    fixture.detectChanges();
+
+    expect(filterService().selectedCreatedBy()).toBe('Angel Jarrin');
+    expect(filterService().activeChips().map(chip => chip.label)).toContain('Created by: Angel Jarrin');
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('onCreatedByChange mirrors createdBy with replaceUrl + merge and preserves sibling keys', () => {
+    setup(CBF_ITEMS, { phase: 'Reporting 2026', status: 'Submitted', center: 'CIAT' });
+    (router.navigate as jest.Mock).mockClear();
+
+    component.onCreatedByChange('Angel Jarrin');
+    fixture.detectChanges();
+
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    const [commands, extras] = (router.navigate as jest.Mock).mock.calls[0];
+    expect(commands).toEqual([]);
+    expect(extras.queryParamsHandling).toBe('merge');
+    expect(extras.replaceUrl).toBe(true);
+    expect(extras.queryParams).toEqual({
+      phase: 'Reporting 2026',
+      status: 'Submitted',
+      category: null,
+      origin: null,
+      center: 'CIAT',
+      createdBy: 'Angel Jarrin'
+    });
+  });
+
+  it('clearing Created by navigates once with createdBy null and leaves other keys', () => {
+    setup(CBF_ITEMS, { phase: 'Reporting 2026', status: 'Submitted', createdBy: 'Angel Jarrin' });
+    (router.navigate as jest.Mock).mockClear();
+
+    component.onCreatedByChange('all');
+    fixture.detectChanges();
+
+    expect(filterService().selectedCreatedBy()).toBeNull();
+    expect(filterService().selectedStatus()).toBe('Submitted');
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    const [, extras] = (router.navigate as jest.Mock).mock.calls[0];
+    expect(extras.queryParamsHandling).toBe('merge');
+    expect(extras.replaceUrl).toBe(true);
+    expect(extras.queryParams).toEqual({
+      phase: 'Reporting 2026',
+      status: 'Submitted',
+      category: null,
+      origin: null,
+      center: null,
+      createdBy: null
+    });
+    expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
+  });
+
+  it('clearAll writes createdBy null, restores defaultPhase, and keeps badge === chip count', () => {
+    setup(CBF_ITEMS, { createdBy: 'Angel Jarrin', status: 'Submitted' });
+    (router.navigate as jest.Mock).mockClear();
+
+    component.clearAll();
+    fixture.detectChanges();
+
+    expect(filterService().selectedCreatedBy()).toBeNull();
+    expect(filterService().selectedStatus()).toBeNull();
+    expect(filterService().selectedPhase()).toBe(component.defaultPhase());
+    expect(filterService().selectedPhase()).toBe('Reporting 2026');
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026']);
+    expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    const [, extras] = (router.navigate as jest.Mock).mock.calls[0];
+    expect(extras.queryParams).toEqual({
+      phase: 'Reporting 2026',
+      status: null,
+      category: null,
+      origin: null,
+      center: null,
+      createdBy: null
+    });
+    expect(extras.replaceUrl).toBe(true);
+    expect(extras.queryParamsHandling).toBe('merge');
+  });
+
+  it('Filter popover row 3 names Created by and is keyboard-labelled', () => {
+    setup(CBF_ITEMS);
+    const filterBtn = fixture.debugElement.query(By.css('button[aria-label="Filter results"]')).nativeElement as HTMLButtonElement;
+    filterBtn.click();
+    fixture.detectChanges();
+
+    const createdByFilter = fixture.debugElement.query(By.css('[aria-label="Filter by created by"]'));
+    expect(createdByFilter).toBeTruthy();
+    expect((createdByFilter.nativeElement as HTMLElement).textContent).toContain('Created by');
+    const centerFilter = fixture.debugElement.query(By.css('[aria-label="Filter by center"]'));
+    expect(centerFilter).toBeTruthy();
+    expect(createdByFilter.nativeElement.parentElement).toBe(centerFilter.nativeElement.parentElement);
+  });
+
+  it('labels the origin column and filter as Funding source', () => {
+    const originCol = component.optionalColumns.find(c => c.key === 'origin');
+    expect(originCol?.label).toBe('Funding source');
+
+    component.onOriginChange('W1/W2');
+    fixture.detectChanges();
+
+    expect(filterService().activeChips().map(c => c.label)).toContain('Funding source: W1/W2');
   });
 
   it('maps status ids to the fixed --pr-status-* token PAIRS, never a recombination', () => {
@@ -519,12 +826,10 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.sortColor(table(), 'code')).toBe('var(--pr-text-secondary)');
   });
 
-  it('does not offer sorting on the Section column, which has no data behind it', () => {
+  it('does not render the Section column in the table', () => {
     const sectionHeader = fixture.debugElement.query(By.css('th.pgr-th--soon'));
-    expect(sectionHeader).toBeTruthy();
-    expect((sectionHeader.nativeElement as HTMLElement).getAttribute('aria-disabled')).toBe('true');
-    // Not a sort button at all, so `prSortableColumn` never puts aria-sort on it.
-    expect((sectionHeader.nativeElement as HTMLElement).getAttribute('aria-sort')).toBeNull();
+    expect(sectionHeader).toBeNull();
+    expect(component.visibleColumns().map(column => column.key)).not.toContain('section');
   });
 
   // ── columns picker ────────────────────────────────────────────────────────────────────────
@@ -532,10 +837,8 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.optionalColumns.map(column => column.key)).toEqual(['createdBy', 'created', 'origin', 'center']);
     for (const column of component.optionalColumns) expect(component.isColumnVisible(column.key)).toBe(false);
     expect(component.visibleColumns().map(column => column.key)).toEqual([
-      'select',
       'code',
       'title',
-      'section',
       'category',
       'status',
       'updated'
@@ -586,13 +889,9 @@ describe('ProgrammeResultsComponent', () => {
   });
 
   // ── coming-soon controls ──────────────────────────────────────────────────────────────────
-  it('ships the row selection checkbox visible but DISABLED (P2-3397)', () => {
-    const checkbox = fixture.debugElement.query(By.css('button[aria-label="Select result"]')).nativeElement as HTMLButtonElement;
-    expect(checkbox).toBeTruthy();
-    expect(checkbox.disabled).toBe(true);
-    expect(checkbox.getAttribute('aria-disabled')).toBe('true');
-    expect(checkbox.className).toContain('cursor-not-allowed');
-    expect(checkbox.getAttribute('title')).toContain('Coming soon');
+  it('does not render a row-selection checkbox (P2-3397 has no bulk action)', () => {
+    expect(fixture.debugElement.query(By.css('button[aria-label="Select result"]'))).toBeNull();
+    expect(component.visibleColumns().map(column => column.key)).not.toContain('select');
   });
 
   it('ships the Section filter visible but DISABLED, with its grouped options wired (P2-3398)', () => {
@@ -607,19 +906,18 @@ describe('ProgrammeResultsComponent', () => {
     expect((wrapper.parentElement as HTMLElement).textContent).toContain('Coming soon');
   });
 
-  it('ships the indicator subtitle and the Section column with the design geometry and no value (P2-3399)', () => {
+  it('ships the indicator subtitle with the design geometry and no value (P2-3399)', () => {
     // Line 2 of the RESULT cell exists on every row, tagged, empty.
     const subtitles = fixture.debugElement.queryAll(By.css('td span[title^="The indicator this result reports against"]'));
     expect(subtitles.length).toBe(3);
     // The subtitle renders EMPTY, with no per-row tag: printing "Coming soon" once per row put it
-    // on screen 476 times on SP01 and drowned the titles. The absence is announced once, on the
-    // SECTION header, which is empty for the same missing payload (P2-3398 / P2-3399).
+    // on screen 476 times on SP01 and drowned the titles.
     expect(subtitles[0].nativeElement.textContent.trim()).toBe('');
     expect(subtitles[0].nativeElement.getAttribute('title')).toContain('not in the results feed yet');
     expect(component.data.rows().every(row => row.indicator === '')).toBe(true);
 
-    // The SECTION column keeps its track; the value is empty on every row.
-    expect(component.visibleColumns().map(column => column.key)).toContain('section');
+    // The SECTION column is omitted from the table; the value in data rows remains empty.
+    expect(component.visibleColumns().map(column => column.key)).not.toContain('section');
     expect(component.data.rows().every(row => row.section === '')).toBe(true);
     expect(component.cellText(component.data.rows()[0], 'section')).toBe('');
   });
@@ -995,5 +1293,123 @@ describe('ProgrammeResultsComponent', () => {
     component.data.totalReported.set(476);
     component.data.isPartial.set(true);
     expect(component.totalLabel()).toBe('0 of 476 results');
+  });
+
+  // ── column resizing (TRC-R-1..4) ────────────────────────────────────────────────────────
+  describe('column resizing (TRC-R-1..4)', () => {
+    afterEach(() => {
+      localStorage.removeItem(PGR_COLUMN_WIDTHS_STORAGE_KEY);
+    });
+
+    it('computes grid() and minWidth() with custom widths when set', () => {
+      component.customWidths.set({ title: 500, status: 160 });
+      expect(component.hasCustomWidths()).toBe(true);
+
+      const grid = component.grid();
+      expect(grid).toContain('500px');
+      expect(grid).toContain('160px');
+      // Verify other columns keep their default tracks
+      expect(grid).toContain('92px'); // code
+      expect(grid).toContain('minmax(140px,1fr)'); // category
+
+      const minWidthNum = parseInt(component.minWidth(), 10);
+      // Custom widths increase minWidth accordingly
+      expect(minWidthNum).toBeGreaterThan(900);
+    });
+
+    it('safely reads and writes to localStorage', () => {
+      writeStoredColumnWidths({ code: 120, title: 400 });
+      const read = readStoredColumnWidths();
+      expect(read).toEqual({ code: 120, title: 400 });
+
+      // Corrupted JSON fallback
+      localStorage.setItem(PGR_COLUMN_WIDTHS_STORAGE_KEY, 'invalid json{');
+      expect(readStoredColumnWidths()).toEqual({});
+    });
+
+    it('clamps column width to column.minPx on drag', () => {
+      const titleCol = component.visibleColumns().find(c => c.key === 'title')!;
+      const fakeTh = document.createElement('th');
+      Object.defineProperty(fakeTh, 'getBoundingClientRect', {
+        value: () => ({ width: 300 })
+      });
+
+      const mousedownEvent = new MouseEvent('mousedown', { clientX: 300 });
+      jest.spyOn(mousedownEvent, 'preventDefault');
+      jest.spyOn(mousedownEvent, 'stopPropagation');
+
+      component.onResizeStart(mousedownEvent, titleCol, fakeTh);
+      expect(mousedownEvent.preventDefault).toHaveBeenCalled();
+      expect(mousedownEvent.stopPropagation).toHaveBeenCalled();
+      expect(component.isResizing()).toBe(true);
+
+      // Drag left by 200px (300 - 200 = 100, which is below minPx of 240)
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 100 }));
+      expect(component.customWidths()['title']).toBe(titleCol.minPx); // clamped at 240px
+
+      // Drag right by 150px (300 + 150 = 450)
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 450 }));
+      expect(component.customWidths()['title']).toBe(450);
+
+      // Release mouse
+      window.dispatchEvent(new MouseEvent('mouseup'));
+      expect(component.isResizing()).toBe(false);
+      expect(readStoredColumnWidths()['title']).toBe(450);
+    });
+
+    it('resets an individual column width on double-click', () => {
+      component.customWidths.set({ code: 150, title: 500 });
+      const dblClickEvent = new MouseEvent('dblclick');
+      jest.spyOn(dblClickEvent, 'preventDefault');
+      jest.spyOn(dblClickEvent, 'stopPropagation');
+
+      const titleCol = component.visibleColumns().find(c => c.key === 'title')!;
+      component.onResizeReset(titleCol, dblClickEvent);
+
+      expect(component.customWidths()['title']).toBeUndefined();
+      expect(component.customWidths()['code']).toBe(150);
+      expect(readStoredColumnWidths()['title']).toBeUndefined();
+    });
+
+    it('resets all custom column widths and clears storage', () => {
+      component.customWidths.set({ code: 150, title: 500 });
+      expect(component.hasCustomWidths()).toBe(true);
+
+      component.resetAllColumnWidths();
+      expect(component.customWidths()).toEqual({});
+      expect(component.hasCustomWidths()).toBe(false);
+      expect(readStoredColumnWidths()).toEqual({});
+    });
+
+    it('renders the reset button in Columns popover only when custom widths exist', () => {
+      component.columnsOpen.set(true);
+      component.customWidths.set({});
+      fixture.detectChanges();
+
+      let resetBtn = fixture.debugElement.query(By.css('.pgr-pop button:has(span.material-icons-round)'));
+      expect(resetBtn).toBeNull();
+
+      component.customWidths.set({ title: 600 });
+      fixture.detectChanges();
+
+      resetBtn = fixture.debugElement.query(By.css('.pgr-pop button:has(span.material-icons-round)'));
+      expect(resetBtn).toBeTruthy();
+      expect(resetBtn.nativeElement.textContent).toContain('Reset column widths');
+
+      resetBtn.nativeElement.click();
+      fixture.detectChanges();
+      expect(component.customWidths()).toEqual({});
+    });
+
+    it('does not trigger sorting when clicking the resizer handle', () => {
+      const resizerEl = fixture.debugElement.query(By.css('th .pgr-col-resizer'));
+      expect(resizerEl).toBeTruthy();
+
+      const sortSpy = jest.spyOn(table(), 'sort');
+      resizerEl.nativeElement.click();
+      fixture.detectChanges();
+
+      expect(sortSpy).not.toHaveBeenCalled();
+    });
   });
 });

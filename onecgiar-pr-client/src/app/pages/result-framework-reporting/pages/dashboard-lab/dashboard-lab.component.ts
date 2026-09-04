@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, OnInit, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, HostListener, inject, OnDestroy, OnInit, signal, untracked } from '@angular/core';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {DecimalPipe, NgClass } from '@angular/common';
@@ -24,7 +24,7 @@ import { GuidedCreationComponent } from './components/guided-creation/guided-cre
 import { IndicatorDrawerComponent } from './components/indicator-drawer/indicator-drawer.component';
 import { ReportingAowTableComponent, ReportingAowGroup, ReportingIndicator } from './components/reporting-aow-table/reporting-aow-table.component';
 import { buildReportModalNode } from './components/reporting-aow-table/report-modal-context.util';
-import { ReportingProgramBandComponent } from './components/reporting-program-band/reporting-program-band.component';
+import { ReportingProgramBandComponent, BandFilterOption } from './components/reporting-program-band/reporting-program-band.component';
 import { AowHloCreateModalComponent } from '../entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/aow-hlo-create-modal.component';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
@@ -34,13 +34,15 @@ import { PrToastService } from '../../../../shared/components/pr-toast';
 import { isAvisaInitiative } from '../../../../shared/utils/avisa-initiative.util';
 import {
   ProgramOverviewComponent,
+  OverviewSection,
   StatusSegment as OverviewStatusSegment,
   AowProgressRow as OverviewAowProgressRow,
   TocAchievement,
   CategoryBar as OverviewCategoryBar,
   OverviewCenterBar,
   OverviewLink,
-  HeatmapModel
+  HeatmapModel,
+  overviewScopeDisplayCode
 } from './components/program-overview/program-overview.component';
 import { buildTocMapModel, TocMapModel } from './dashboard-lab.toc-map';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from '../programme-results/services/programme-results-query-params';
@@ -60,7 +62,18 @@ import {
 } from './components/reporting-entry-hub/reporting-entry-hub.component';
 import { BilateralCreationService } from '../../../bilateral/services/bilateral-creation.service';
 import { BilateralProject } from '../../../bilateral/services/bilateral-creation.interfaces';
-import { applyZeroTargetRule, buildRatio, countNewlyReported, groupPendingCount, nextPendingAfter, pendingOf, sortRemainingFirst, stateOf } from './reporting-burndown';
+import {
+  applyZeroTargetRule,
+  buildRatio,
+  countNewlyReported,
+  groupPendingCount,
+  nextPendingAfter,
+  partitionProgramKpis,
+  pendingOf,
+  sortRemainingFirst,
+  stateOf,
+  summarisePartition
+} from './reporting-burndown';
 // @akili-spec changes/overview-aow-cross-filter
 import { filterRowsByScope } from './overview-scope-filter';
 // @akili-spec changes/mass-reporting-flow
@@ -317,8 +330,6 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
  * at runtime from each program's icon (dominant vibrant color). Consumes the
  * REAL Science Programs API through the existing home service — no new endpoints.
  */
-import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/pr-tab-intro.component';
-
 @Component({
   selector: 'app-dashboard-lab',
   standalone: true,
@@ -337,7 +348,6 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
     NarrativePanelComponent,
     PrTooltipDirectiveModule,
     HlmButton,
-    PrTabIntroComponent,
     // Legacy reporting surfaces reused VERBATIM — the drawer/guided copies stay in the tree but are
     // no longer the ones users reach (see `openLegacyReportModal` / `openReportModal`).
     AowHloCreateModalComponent,
@@ -644,12 +654,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   /** The indicator being managed, with the HLO it belongs to for context. */
   readonly managed = signal<{ indicator: any; groupTitle: string; node: any } | null>(null);
   /** Which tab the drawer should land on — chosen by the card button that opened it. */
-  readonly manageTab = signal<'report' | 'info'>('report');
+  // @akili-spec changes/indicator-reported-results — `results` = the Reported results table (IRR-R-1)
+  readonly manageTab = signal<'report' | 'info' | 'results'>('report');
   /** Room reserved on the right so the manage panel never covers the list. Matches
    *  the drawer's default width so the report form opens two-column from the start. */
   readonly managePanelWidth = signal(740);
 
-  manageIndicator(indicator: any, groupTitle: string, tab: 'report' | 'info' = 'report', node?: unknown): void {
+  manageIndicator(indicator: any, groupTitle: string, tab: 'report' | 'info' | 'results' = 'report', node?: unknown): void {
     // The group carries the ToC node id the existing-results endpoint needs; the
     // indicator row does not, so it is folded in here. Planned browse may pass
     // `__hloNode` / `toc_result_id` when no AoW detail is open.
@@ -926,13 +937,16 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         // Every programme opens with its Areas of Work EXPANDED, at QA's request on P2-3251
         // (28 Aug 2026). The switch is per programme, not a preference that follows the user from
         // the last SP they browsed.
-        this.reportingAllExpanded.set(true);
-        this.reportingAllOpen.set(true);
+        this.reportingAllExpanded.set(false);
+        this.reportingAllOpen.set(false);
         this.reportingExpandNonce.set(0);
         // Overview phase selector (design.md DD-5): a program switch always lands back on that
         // program's Open phase — a phase picked for the PREVIOUS program is not a valid selection
         // for this one.
         this.selectedVersionId.set(null);
+        this.homeSE?.overviewSelectedPhase?.set(null);
+        this.homeSE?.overviewSelectedProgram?.set(null);
+        this.homeSE?.overviewSelectedVersionId?.set(null);
         // ToC-scope filter (`changes/overview-aow-cross-filter`, `OSF-DD-5`): a scope picked for
         // the PREVIOUS program is not a valid selection for this one — reset beside the Reporting
         // filters' own per-program reset above, not on every `selected()` identity churn.
@@ -1097,7 +1111,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // phase switch, which does not change the W3 lane per REH-DD-2) — `retryW3()` bypasses it.
     effect(() => {
       const code = this.selected()?.initiativeCode;
-      if (this.rfrView() !== 'overview' || !code || this.w3Code === code) return;
+      if (!code || this.w3Code === code) return;
       this.w3Code = code;
       setTimeout(() => this.fetchW3Projects(code), 0);
     });
@@ -1324,7 +1338,20 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   /** Wires the Overview phase selector's `(selectOptionEvent)` to `selectedVersionId` (design.md DD-1). */
   onPhaseOptionSelected(option: { versionId: number } | null): void {
-    if (option?.versionId != null) this.selectedVersionId.set(option.versionId);
+    if (option?.versionId != null) {
+      this.selectedVersionId.set(option.versionId);
+      const sp = this.selected();
+      this.homeSE?.overviewSelectedProgram?.set(sp?.initiativeCode ?? null);
+      this.homeSE?.overviewSelectedVersionId?.set(option.versionId);
+      const phaseObj = this.reportingPhases().find(p => Number(p.id) === Number(option.versionId));
+      const phaseName = phaseObj?.phase_name || (phaseObj?.phase_year ? `Phase ${phaseObj.phase_year}` : String(option.versionId));
+      this.homeSE?.overviewSelectedPhase?.set(phaseName);
+    } else {
+      this.selectedVersionId.set(null);
+      this.homeSE?.overviewSelectedProgram?.set(null);
+      this.homeSE?.overviewSelectedVersionId?.set(null);
+      this.homeSE?.overviewSelectedPhase?.set(null);
+    }
   }
 
   /**
@@ -1399,10 +1426,14 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * Footer meta for the program-band ⓘ popover: "M planned results".
    * Prefer the sum of ToC indicators across AoWs + Intermediate + 2030 once loaded;
    * fall back to this phase's result total so the line is never empty on first paint.
+   *
+   * @akili-spec bugfix/kpi-count-reconciliation — the figure is the partition's *Planned* (every
+   * KPI counted once, zero-target INCLUDED; the band's big figure is *Counted* — KCR-R-8/KCR-DD-4).
+   * The two later fallbacks are the unchanged pre-ToC chain.
    */
   readonly bandPlannedResultsCount = computed(() => {
-    const fromReporting = this.reportingGroups().reduce((sum, g) => sum + (g.count || 0), 0);
-    if (fromReporting > 0) return fromReporting;
+    const { planned } = summarisePartition(this.programKpiPartition());
+    if (planned > 0) return planned;
     const fromToc = this.indicatorsByAow().reduce((sum, b) => sum + (b.count || 0), 0);
     return fromToc > 0 ? fromToc : this.selectedTotal();
   });
@@ -1472,7 +1503,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * stays byte-identical to before this spec (`OSF-AC-1`).
    */
   private buildOverviewStatusSegments(countOf: (statusId: number) => number, statusNameOf: (statusId: number) => string): OverviewStatusSegment[] {
-    const linkOf = (statusId: number, count: number): OverviewLink | null => (count > 0 ? { status: statusNameOf(statusId) } : null);
+    const linkOf = (statusId: number, count: number): OverviewLink | null =>
+      count > 0 ? { origin: 'W1/W2', status: statusNameOf(statusId) } : null;
     const segments: OverviewStatusSegment[] = OVERVIEW_STATUS_SLOTS.map(slot => {
       const count = countOf(slot.statusId);
       return {
@@ -1543,18 +1575,27 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly programAchievement = signal<TocAchievement | null>(null);
   readonly achievementByAowCode = signal<Record<string, TocAchievement>>({});
 
+  /**
+   * @akili-spec bugfix/kpi-count-reconciliation — basis is the AoW-**own** set from
+   * `programKpiPartition()` (outputs + `is_aow: true` outcomes, cross-cut IOs excluded — KCR-R-5,
+   * KCR-DD-2, superseding OAH DD-3's output-tier-only rule) and the ratio goes through `buildRatio`,
+   * so the zero-target rule applies here exactly as it does on every other surface (KCR-R-2).
+   * Intended consequence (KCR-DD-2, supersedes OAH DD-4's "their numbers do not move"): KPI card 4,
+   * the section-tab badge (`program-overview.aowStats`) and the hub rows all move with this row.
+   * Sort and the loading filter are unchanged.
+   */
   readonly overviewAowProgress = computed<OverviewAowProgressRow[]>(() => {
-    return this.indicatorsByAow()
-      .map(b => {
-        const inds = (b.indicators ?? []).filter(i => i?.__tier !== 'outcome');
-        const done = inds.filter(i => Number(i?.actual_achieved_value_sum ?? 0) > 0).length;
+    return this.programKpiPartition()
+      .aows.map(slice => {
+        const { done, total, zeroTarget } = buildRatio(slice.own);
         return {
-          code: b.aow.code,
-          name: b.aow.name,
+          code: slice.code,
+          name: slice.name,
           done,
-          total: inds.length,
+          total,
+          zeroTarget,
           // P2-3296 AC3 — beside the reported-KPI count, never instead of it.
-          achievement: this.achievementByAowCode()[b.aow.code] ?? null
+          achievement: this.achievementByAowCode()[slice.code] ?? null
         };
       })
       .filter(r => r.total > 0 || !this.loadingAows())
@@ -1565,24 +1606,37 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       });
   });
 
-  /** Intermediate + 2030 as cross-cutting rows under Progress by AoW (CURRENT xcutProgress). */
+  /**
+   * Intermediate + 2030 as cross-cutting rows under Progress by AoW (CURRENT xcutProgress).
+   *
+   * @akili-spec bugfix/kpi-count-reconciliation — read straight from the partition's two buckets
+   * instead of the Section/Type-filtered `reportingGroups()`, and through `buildRatio`, so the chip
+   * denominator is *Counted* like every other one (KCR-R-2, KCR-R-6). A bucket keeps its row iff it
+   * has ≥ 1 **planned** KPI — a bucket whose every KPI is zero-target still shows `0/0` rather than
+   * vanishing, because "planned but not countable" is not the same as "not planned" (KCR-R-6).
+   */
   readonly overviewXcutProgress = computed<OverviewAowProgressRow[]>(() => {
-    return this.reportingGroups()
-      .filter(g => g.kind === 'intermediate' || g.kind === '2030')
-      .map(g => {
-        const inds = g.indicators ?? [];
-        const done = inds.filter(i => Number(i?.actual_achieved_value_sum ?? 0) > 0).length;
+    const partition = this.programKpiPartition();
+    return [
+      { code: INTERMEDIATE_OUTCOMES_CODE, name: 'Intermediate outcomes', indicators: partition.intermediate.indicators },
+      { code: OUTCOMES_2030_CODE, name: '2030 outcomes', indicators: partition.outcomes2030.indicators }
+    ]
+      .filter(bucket => bucket.indicators.length > 0)
+      .map(bucket => {
+        const { done, total, zeroTarget } = buildRatio(bucket.indicators);
         // Sentence case per the reference ("Intermediate outcomes" / "2030 outcomes"). Only the
         // Overview row is relabelled — the Reporting table keeps the group's own name.
-        return { code: g.aow.code, name: sentenceCaseOutcomes(g.aow.name), done, total: g.count || inds.length };
-      })
-      .filter(r => r.total > 0);
+        return { code: bucket.code, name: sentenceCaseOutcomes(bucket.name), done, total, zeroTarget };
+      });
   });
 
   /**
    * Rich per-AoW rows for the Overview hero section (OAH-R-1 coherence, OAH-R-3 sort/segments).
-   * Row basis = output tier only (`__tier !== 'outcome'`, design DD-3 — same filter as
-   * `overviewAowProgress` above). Splits delegate to `reporting-burndown`'s `stateOf` +
+   * Row basis = the AoW-**own** set from `programKpiPartition()` (outputs + `is_aow: true` outcomes;
+   * cross-cut IOs belong to the Intermediate bucket) — `bugfix/kpi-count-reconciliation` KCR-R-5 /
+   * KCR-DD-2, superseding OAH DD-3's output-tier-only basis, so this row, the thin row, the hub
+   * row, the grouped-table header and the By-AOW banner are one number. Splits delegate to
+   * `reporting-burndown`'s `stateOf` +
    * `applyZeroTargetRule` — NEVER recomputed locally (OAH-R-3 BUT, single-home rule: the glossary
    * partition IS that helper's own `stateOf`) — so this section's numbers can never drift from the
    * Reporting-tab surfaces that already call the same functions. `target = 0 && achieved > 0` is
@@ -1596,10 +1650,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * @akili-spec changes/overview-aow-progress-hero
    */
   readonly overviewAowProgressRich = computed<OverviewAowProgressRowRich[]>(() => {
-    const rows = this.indicatorsByAow()
-      .map(b => {
-        const inds = (b.indicators ?? []).filter(i => i?.__tier !== 'outcome');
-        const { counted, zeroTarget } = applyZeroTargetRule(inds);
+    const rows = this.programKpiPartition()
+      .aows.map(slice => {
+        const { counted, zeroTarget } = applyZeroTargetRule(slice.own);
         let complete = 0;
         let inProgress = 0;
         let notStarted = 0;
@@ -1612,8 +1665,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         const total = counted.length;
         const reported = complete + inProgress;
         return {
-          code: b.aow.code,
-          name: b.aow.name,
+          code: slice.code,
+          name: slice.name,
           complete,
           inProgress,
           notStarted,
@@ -1623,7 +1676,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           remaining: total - reported,
           // P2-3296 AC3 — beside the reported-KPI count, never instead of it (same source as the
           // thin `overviewAowProgress` above).
-          achievement: this.achievementByAowCode()[b.aow.code] ?? null
+          achievement: this.achievementByAowCode()[slice.code] ?? null
         };
       })
       .filter(r => r.total > 0 || !this.loadingAows())
@@ -1659,13 +1712,20 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   // empty on a cold load; the server derives centre membership from the token). Deferred with
   // `setTimeout(0)` so it never blocks first paint (design.md §6.2 `DashboardLabComponent` row).
 
-  /** `HubProgramLevelRow[]` — `overviewXcutProgress()` mapped code → kind (REH-R-2.1). */
+  /**
+   * `HubProgramLevelRow[]` — `overviewXcutProgress()` mapped code → kind (REH-R-2.1).
+   *
+   * @akili-spec bugfix/kpi-count-reconciliation — the chip row's `zeroTarget` travels with it
+   * (design §6.3, "Program-level rows reuse the chip row's `zeroTarget`"): the hub row and the
+   * Overview chip are two readings of ONE number, so they must carry one disclosure (KCR-R-2.1,
+   * KCR-R-6). Recomputing it here would be a second derivation of the same denominator.
+   */
   readonly hubProgramLevelRows = computed<HubProgramLevelRow[]>(() =>
     this.overviewXcutProgress()
-      .map(row => {
+      .map((row): HubProgramLevelRow | null => {
         const kind: HubProgramLevelKind | null =
           row.code === OUTCOMES_2030_CODE ? '2030' : row.code === INTERMEDIATE_OUTCOMES_CODE ? 'intermediate' : null;
-        return kind ? ({ kind, name: row.name, done: row.done, total: row.total } satisfies HubProgramLevelRow) : null;
+        return kind ? { kind, name: row.name, done: row.done, total: row.total, zeroTarget: row.zeroTarget } : null;
       })
       .filter((row): row is HubProgramLevelRow => row !== null)
   );
@@ -1957,7 +2017,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           c,
           value,
           // 'Other' (c === 3) aggregates statuses 4–8 and cannot be expressed as one `status`.
-          link: c === 3 ? null : { category: item.resultTypeName, status: cols[c] }
+          link: c === 3 ? null : { origin: 'W1/W2', category: item.resultTypeName, status: cols[c] }
         });
       });
     }
@@ -2106,19 +2166,137 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     );
   }
 
+  readonly showWhereToReportModal = signal<boolean>(false);
+
+  openWhereToReportModal(): void {
+    const code = this.selected()?.initiativeCode;
+    if (code && (this.w3Code !== code || this.w3State().status === 'error')) {
+      this.w3Code = code;
+      this.fetchW3Projects(code);
+    }
+    this.showWhereToReportModal.set(true);
+  }
+
+  closeWhereToReportModal(): void {
+    this.showWhereToReportModal.set(false);
+    if (this.route?.snapshot?.queryParamMap?.get('whereToReport') === 'true') {
+      const returnTab = this.route.snapshot.queryParamMap.get('returnTab');
+      if (returnTab === 'results') {
+        this.router.navigate(['/result-framework-reporting', 'entity-details', this.selected()?.initiativeCode, 'results']);
+      } else {
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { whereToReport: null, returnTab: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        });
+      }
+    }
+  }
+
   /**
-   * `REH-R-7`/`REH-R-8`: `program-overview`'s KPI cards 2/3 emit `focusHub('w3')` — scrolls the
-   * reporting-entry-hub's W3 lane heading (`#reporting-entry-hub-w3`, rendered with
-   * `tabindex="-1"` by `ReportingEntryHubComponent`) into view and moves focus to it. Expanding a
-   * collapsed hub is out of scope here (REH-T-5) — this only scrolls/focuses what's rendered.
+   * `REH-R-7`/`REH-R-8`: `program-overview`'s KPI cards 2/3 emit `focusHub('w3')` — opens the
+   * reporting-entry-hub dialog and scrolls the W3 lane heading (`#reporting-entry-hub-w3`) into view.
    */
   // @akili-spec changes/reporting-entry-hub
   onFocusHub(_target: 'w3'): void {
-    const heading = document.getElementById('reporting-entry-hub-w3');
-    if (!heading) return;
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    heading.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
-    heading.focus({ preventScroll: true });
+    this.openWhereToReportModal();
+    setTimeout(() => {
+      const heading = document.getElementById('reporting-entry-hub-w3');
+      if (!heading) return;
+      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      heading.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+      heading.focus({ preventScroll: true });
+    }, 100);
+  }
+
+  // ── Overview JIRA-style Top-Bar Filter State ──────────────────────────────────
+  readonly overviewSection = signal<OverviewSection>('all');
+  readonly overviewFilterOpen = signal<boolean>(false);
+
+  readonly overviewStatusTotal = computed(() =>
+    this.overviewStatusSegments().reduce((sum, s) => sum + s.count, 0)
+  );
+
+  readonly overviewBilateralTotal = computed(() =>
+    this.overviewBilateralStatusSegments().reduce((sum, s) => sum + s.count, 0)
+  );
+
+  readonly hasActiveOverviewFilters = computed(() =>
+    this.overviewSection() !== 'all' || this.overviewScope() !== null
+  );
+
+  readonly activeOverviewFilterCount = computed(() => {
+    let count = 0;
+    if (this.overviewSection() !== 'all') count++;
+    if (this.overviewScope() !== null) count++;
+    return count;
+  });
+
+  readonly overviewSectionLabel = computed(() => {
+    switch (this.overviewSection()) {
+      case 'w1w2': return 'W1/W2';
+      case 'bilateral': return 'W3/Bilateral';
+      case 'aow': return 'Areas of Work';
+      default: return 'All Sections';
+    }
+  });
+
+  readonly activeScopeLabel = computed(() => {
+    const scopeKey = this.overviewScope();
+    if (!scopeKey) return '';
+    const opt = this.scopeOptions().find(o => o.key === scopeKey);
+    if (!opt) return scopeKey;
+    const code = overviewScopeDisplayCode(opt);
+    return code && code !== '—' ? `${code} · ${opt.name}` : opt.name;
+  });
+
+  readonly overviewScopeDisplayCode = overviewScopeDisplayCode;
+
+  toggleOverviewFilterPopover(event: Event): void {
+    event.stopPropagation();
+    this.overviewFilterOpen.update(v => !v);
+  }
+
+  closeOverviewFilterPopover(): void {
+    this.overviewFilterOpen.set(false);
+  }
+
+  setOverviewSection(section: OverviewSection): void {
+    this.overviewSection.set(section);
+  }
+
+  setOverviewScope(scopeKey: string | null): void {
+    this.overviewScope.set(scopeKey);
+  }
+
+  clearOverviewFilters(): void {
+    this.overviewSection.set('all');
+    this.overviewScope.set(null);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.pr-overview-filter-container')) {
+      return;
+    }
+    if (this.overviewFilterOpen()) {
+      this.overviewFilterOpen.set(false);
+    }
+    if (!target?.closest('.pr-by-aow-filter-container') && this.byAowFilterPopoverOpen()) {
+      this.byAowFilterPopoverOpen.set(false);
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onDocumentEscape(): void {
+    if (this.overviewFilterOpen()) {
+      this.overviewFilterOpen.set(false);
+    }
+    if (this.byAowFilterPopoverOpen()) {
+      this.byAowFilterPopoverOpen.set(false);
+    }
   }
 
   /**
@@ -2179,6 +2357,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * `program-overview` emits a typed `OverviewLink` (`OVW-R-5`); this parent owns the actual
    * navigation. Fresh history entry — no `queryParamsHandling: 'merge'` — because Overview → Results
    * is real navigation, not a mirror of this page's own `aow/typ/st/q` filters (`OVW-DD-7`).
+   *
+   * Automatically propagates the effective Overview phase (`ODF-R-3`, `ODF-DD-2`) if not explicitly
+   * specified in the emitted link.
    */
   onOverviewLink(link: OverviewLink): void {
     const code = this.selected()?.initiativeCode;
@@ -2190,6 +2371,16 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         queryParams[PROGRAMME_RESULTS_QUERY_PARAM_MAP[dimension]] = value;
       }
     });
+    if (!queryParams[PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase]) {
+      const effectivePhase =
+        this.homeSE?.overviewSelectedPhase?.() ||
+        this.latestVersion(this.selected())?.phaseName ||
+        (this.latestVersion(this.selected())?.phaseYear ? `Phase ${this.latestVersion(this.selected())?.phaseYear}` : '') ||
+        this.dataControlSE?.reportingCurrentPhase?.phaseName;
+      if (effectivePhase) {
+        queryParams[PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase] = effectivePhase;
+      }
+    }
     this.router.navigate(['/result-framework-reporting/entity-details', code, 'results'], { queryParams });
   }
 
@@ -2218,24 +2409,38 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * True while the AoW list or any group's ToC is still loading — the stats card and the group
    * headers show skeletons instead of partial sums that jump as ToCs stream in (field, 2026-08-31).
    */
-  readonly plannedReportingStatsLoading = computed(() => this.loadingAows() || this.reportingGroups().some(g => g.loading));
+  // @akili-spec bugfix/kpi-count-reconciliation — read the partition's own per-AoW / per-bucket
+  // `loading` flags, never `reportingGroups()`: those cards are Section/Type-filtered, so the
+  // skeleton used to appear and disappear with the toolbar. Semantics are otherwise unchanged.
+  readonly plannedReportingStatsLoading = computed(() => {
+    const partition = this.programKpiPartition();
+    return (
+      this.loadingAows() ||
+      partition.aows.some(slice => slice.loading) ||
+      partition.intermediate.loading ||
+      partition.outcomes2030.loading
+    );
+  });
 
-  /** Summary stats for the top reporting overview card (PROGRAMS, AOWs, TOTAL KPIs, KPIs WITH EVIDENCE). */
+  /**
+   * Summary stats for the top reporting overview card (PROGRAMS, AOWs, TOTAL KPIs, KPIs WITH EVIDENCE).
+   *
+   * @akili-spec bugfix/kpi-count-reconciliation — every figure comes from `summarisePartition`
+   * over the unfiltered `programKpiPartition()`, so a cross-cutting Intermediate Outcome is counted
+   * ONCE (KCR-R-1) and the band never moves under a filter (KCR-R-4). `totalKpis` is *Counted*
+   * (zero-target excluded, KCR-R-2/R-8); `plannedKpis` / `zeroTargetKpis` carry the disclosure the
+   * band's `title` states. The old `progress_percentage > 0` clause is gone (KCR-R-9): it read a
+   * `'1500%'` string and never decided anything `achieved > 0` had not already decided.
+   */
   readonly plannedReportingSummaryStats = computed(() => {
-    const aowsCount = this.aows().length;
-    const groups = this.reportingGroups();
-    const allIndicators = groups.flatMap(g => g.indicators ?? []);
-    const totalKpis = allIndicators.length;
-    const reportedKpis = allIndicators.filter(i => {
-      const pct = Number(i.progress_percentage ?? 0);
-      const achieved = Number(i.actual_achieved_value_sum ?? 0);
-      return pct > 0 || achieved > 0;
-    }).length;
+    const { planned, zeroTarget, counted, reported } = summarisePartition(this.programKpiPartition());
     return {
       programsCount: this.selected() ? 1 : 0,
-      aowsCount,
-      totalKpis,
-      reportedKpis
+      aowsCount: this.aows().length,
+      totalKpis: counted,
+      reportedKpis: reported,
+      plannedKpis: planned,
+      zeroTargetKpis: zeroTarget
     };
   });
 
@@ -2416,6 +2621,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         this.selectedId.set(id);
         this.scope.set('program');
       }
+      if (qp.get('whereToReport') === 'true') {
+        this.openWhereToReportModal();
+      }
       // Browser back/forward on Planned ToC browse mode.
       if (this.rfrView() === 'planned') {
         const view = parsePlannedBrowseView(qp.get('tocView')) ?? 'aows';
@@ -2488,6 +2696,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // ToC-scope filter (`OSF-DD-12`): read once here, resolved by the constructor effect once
     // this program's `scopeOptions()` are known.
     this.pendingOverviewScope = qp.get('scope') || null;
+    if (qp.get('whereToReport') === 'true') {
+      this.openWhereToReportModal();
+    }
     this.restorePlannedBrowseFromQuery(qp);
   }
 
@@ -2702,6 +2913,34 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   /** Flat list of every indicator in the program, for the "indicators" view. */
   readonly allPanelIndicators = computed(() => this.indicatorsByAow().flatMap(x => x.indicators));
 
+  // @akili-spec bugfix/kpi-count-reconciliation
+  /**
+   * The ONE deduplicated KPI universe every shell surface counts over (KCR-R-1, KCR-R-3, KCR-DD-1).
+   *
+   * Built once per program + phase from the already-cached ToCs — the same `tocByKey` entries
+   * `reportingGroups` reads, under the same two bucket keys — and **unfiltered by construction**:
+   * it never touches `plannedFilteredAows()`, the Section/Type/Category filters or Only-pending, so
+   * the band figures derived from it cannot move when the user filters (KCR-R-4, KCR-AC-3).
+   *
+   * Every total, ratio, count label, rail figure and chip on the shell derives from this partition
+   * via `summarisePartition` / `buildRatio`. No consumer may re-derive a denominator from
+   * `reportingGroups()` or from the `__tier` / `__isIntermediateCrosscut` stamps directly — that
+   * three-way re-derivation IS the drift this spec removes.
+   */
+  readonly programKpiPartition = computed(() => {
+    const sp = this.selected()?.initiativeCode;
+    const map = this.tocByKey();
+    const ioToc = map.get(this.tocCacheKey(sp, INTERMEDIATE_OUTCOMES_CODE));
+    const o30Toc = map.get(this.tocCacheKey(sp, OUTCOMES_2030_CODE));
+    // `!toc` = loading — the same cache-presence predicate `indicatorsByAow` and `reportingGroups`
+    // already use (`loadToc` ALWAYS caches, an errored fetch included).
+    return partitionProgramKpis<ReportingIndicator>(
+      this.indicatorsByAow(),
+      { indicators: this.flattenBucketIndicators(ioToc?.outputs, INTERMEDIATE_OUTCOMES_CODE, 'Intermediate Outcomes'), loading: !ioToc },
+      { indicators: this.flattenBucketIndicators(o30Toc?.outputs, OUTCOMES_2030_CODE, '2030 Outcomes'), loading: !o30Toc }
+    );
+  });
+
   isPanelAowExpanded(code: string): boolean {
     if (this.expandedPanelAows().has(code)) return true;
     // While searching on Planned → Areas of Work, auto-open parents that matched via children.
@@ -2739,9 +2978,49 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const code = this.plannedHloAowCode();
     if (!code) return null;
     const name = this.aows().find(a => a.code === code)?.name ?? '';
-    const inds = this.indicatorsForAow(code)?.indicators ?? [];
-    return { code, name, ...buildAowBannerStats(inds) };
+    // @akili-spec bugfix/kpi-count-reconciliation — the AoW-own set, resolved through the
+    // partition's `aowByCode` map (KCR-DD-1: consumers resolve by code, never by array index), so
+    // the banner equals this AoW's grouped-table header (MRF-R-6 pins them equal) instead of adding
+    // the cross-cut IO rows the payload repeats into every AoW (KCR-R-5, KCR-DD-6).
+    const inds = this.programKpiPartition().aowByCode.get(code)?.own ?? [];
+    return {
+      code,
+      name,
+      ...buildAowBannerStats(inds),
+      achievement: this.achievementByAowCode()[code] ?? null
+    };
   });
+
+  /** P2-3296 — achievement helpers for By-AOW view */
+  achievementLabel(achievement: TocAchievement | null | undefined): string {
+    return achievement?.progress_percentage ?? '—';
+  }
+
+  preliminaryAchievementLabel(achievement: TocAchievement | null | undefined): string {
+    return achievement?.preliminary_progress_percentage ?? '—';
+  }
+
+  achievementCoverage(achievement: TocAchievement | null | undefined): string {
+    const counted = achievement?.indicators_counted;
+    const total = achievement?.indicators_total;
+    if (!Number.isFinite(counted) || !Number.isFinite(total) || !total) return '';
+    return counted === total ? `${total} indicators` : `${counted} of ${total} indicators`;
+  }
+
+  achievementTooltip(achievement: TocAchievement | null | undefined, childNoun = 'Intermediate Outcomes'): string {
+    if (!achievement || !achievement.total) return 'Nothing has been planned here yet.';
+    const { counted, total, indicators_counted: withTarget, indicators_total: allIndicators } = achievement;
+    if (!counted) {
+      return `None of the ${allIndicators} indicators has a target set, so no achievement percentage can be calculated.`;
+    }
+    const excluded = allIndicators - withTarget;
+    const base =
+      `QA ${this.achievementLabel(achievement)} and Preliminary ${this.preliminaryAchievementLabel(achievement)}, ` +
+      `averaged over ${counted} of ${total} ${childNoun}, covering ${withTarget} of ${allIndicators} indicators.`;
+    return excluded > 0
+      ? `${base} ${excluded} indicator${excluded === 1 ? ' is' : 's are'} excluded for having no target set.`
+      : base;
+  }
 
   /** Per-indicator meta for the By-AOW cards (labelled progress + state). @akili-spec changes/reporting-entry-hub */
   indicatorCardMeta(ind: { actual_achieved_value_sum?: unknown; target_value_sum?: unknown }) {
@@ -2958,7 +3237,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
             return {
               aow,
               indicators: rows,
-              count: tierRows.length,
+              // @akili-spec bugfix/kpi-count-reconciliation — the count label is AoW-own *Planned*
+              // (KCR-R-10, KCR-AC-5), so `count − zeroTarget === ratio.total` holds on the same
+              // header while Type and Category are `all`. The rendered `indicators` above keep the
+              // Type/Category filtering (existing behaviour); only the label leaves the filter.
+              count: this.programKpiPartition().aowByCode.get(aow.code)?.own.length ?? tierRows.length,
               loading: bundle.loading,
               kind: 'aow' as const,
               // P2-3296 AC3. Taken from the roll-up call, not recomputed from `rows`: the figure
@@ -3151,13 +3434,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * cerradas"): this seed is a deliberate override of both, decided by Yeck on 1 Sep 2026. Do not
    * "correct" it back by reading the ticket — read the comment trail first.
    */
-  readonly reportingAllExpanded = signal(true);
+  readonly reportingAllExpanded = signal(false);
   /**
    * What the table reports back: every visible AoW card is open right now (overrides included).
    * The toolbar label is written from THIS, not from `reportingAllExpanded` — otherwise a user who
    * opened every card by hand got a press that changed nothing and a label that lied (QA: dead click).
    */
-  readonly reportingAllOpen = signal(true);
+  readonly reportingAllOpen = signal(false);
   /**
    * Press counter. `reportingAllExpanded` can legitimately be asked for the value it already holds
    * (everything opened by hand → the press means "collapse", i.e. `false`, which is where it already
@@ -3202,7 +3485,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       this.reportingAowFilter().length > 0 ||
       this.reportingTypeFilter() !== 'all' ||
       this.reportingTypologyFilter() !== 'all' ||
-      this.reportingStatusFilter() !== 'all'
+      this.reportingStatusFilter() !== 'all' ||
+      !!this.byAowSelectedCenter() ||
+      !!this.byAowSelectedType()
   );
 
   /** `Clear filters` in the Reporting tab's empty state. Resets the same five signals, together. */
@@ -3212,6 +3497,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.reportingTypeFilter.set('all');
     this.reportingTypologyFilter.set('all');
     this.reportingStatusFilter.set('all');
+    this.byAowSelectedCenter.set(null);
+    this.byAowSelectedType.set(null);
   }
 
   /**
@@ -3307,7 +3594,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   onReportingOpenAchieved(row: ReportingIndicator): void {
-    this.manageIndicator(row, row.__hlo ?? '', 'report');
+    // @akili-spec changes/indicator-reported-results
+    // IRR-R-1 / IRR-AC-1 — "View reported results" asks WHAT was reported; `'report'` answered with
+    // the blank create form. The Reported results table is the answer.
+    this.manageIndicator(row, row.__hlo ?? '', 'results');
   }
 
   /**
@@ -3531,6 +3821,76 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
   });
 
+  readonly byAowCenterFilterOptions = computed<BandFilterOption[]>(() => {
+    const counts = this.byAowCenterCounts();
+    return [
+      { value: 'all', label: 'All centers' },
+      ...counts.map(c => ({ value: c.center, label: `${c.center} (${c.count})` }))
+    ];
+  });
+
+  readonly byAowTypeFilterOptions = computed<BandFilterOption[]>(() => {
+    const counts = this.byAowTypeCounts();
+    return [
+      { value: 'all', label: 'All types' },
+      ...counts.map(t => ({ value: t.type, label: `${t.type} (${t.count})` }))
+    ];
+  });
+
+  readonly byAowVisibleCenters = computed<{ center: string; count: number }[]>(() => {
+    const list = this.byAowCenterCounts();
+    return list.length > 4 ? list.slice(0, 3) : list;
+  });
+
+  readonly byAowOverflowCenters = computed<{ center: string; count: number }[]>(() => {
+    const list = this.byAowCenterCounts();
+    return list.length > 4 ? list.slice(3) : [];
+  });
+
+  readonly byAowVisibleTypes = computed<{ type: string; count: number }[]>(() => {
+    const list = this.byAowTypeCounts();
+    return list.length > 3 ? list.slice(0, 2) : list;
+  });
+
+  readonly byAowOverflowTypes = computed<{ type: string; count: number }[]>(() => {
+    const list = this.byAowTypeCounts();
+    return list.length > 3 ? list.slice(2) : [];
+  });
+
+  readonly byAowHasOverflowFilters = computed<boolean>(() => {
+    return this.byAowOverflowCenters().length > 0 || this.byAowOverflowTypes().length > 0;
+  });
+
+  readonly byAowIsOverflowCenterActive = computed<boolean>(() => {
+    const sel = this.byAowSelectedCenter();
+    if (!sel) return false;
+    return this.byAowOverflowCenters().some(c => c.center === sel);
+  });
+
+  readonly byAowIsOverflowTypeActive = computed<boolean>(() => {
+    const sel = this.byAowSelectedType();
+    if (!sel) return false;
+    return this.byAowOverflowTypes().some(t => t.type === sel);
+  });
+
+  readonly byAowActiveOverflowCount = computed<number>(() => {
+    let count = 0;
+    if (this.byAowIsOverflowCenterActive()) count++;
+    if (this.byAowIsOverflowTypeActive()) count++;
+    return count;
+  });
+
+  readonly byAowFilterPopoverOpen = signal<boolean>(false);
+
+  toggleByAowFilterPopover(event: MouseEvent): void {
+    event.stopPropagation();
+    this.byAowFilterPopoverOpen.update(v => !v);
+  }
+
+  closeByAowFilterPopover(): void {
+    this.byAowFilterPopoverOpen.set(false);
+  }
+
   readonly byAowBreakdownOpen = signal<boolean>(true);
 
   toggleByAowBreakdown(): void {
@@ -3538,7 +3898,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   setByAowCenterFilter(center: string | null): void {
-    if (this.byAowSelectedCenter() === center) {
+    if (center === 'all' || !center || this.byAowSelectedCenter() === center) {
       this.byAowSelectedCenter.set(null);
     } else {
       this.byAowSelectedCenter.set(center);
@@ -3546,7 +3906,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   setByAowTypeFilter(type: string | null): void {
-    if (this.byAowSelectedType() === type) {
+    if (type === 'all' || !type || this.byAowSelectedType() === type) {
       this.byAowSelectedType.set(null);
     } else {
       this.byAowSelectedType.set(type);
@@ -3571,6 +3931,18 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     }
     if (selType) {
       allInds = allInds.filter(i => (i?.result_type_name?.trim() || i?.type_name?.trim()) === selType);
+    }
+    const statusKey = this.reportingStatusFilter();
+    if (statusKey && statusKey !== 'all') {
+      const targetLabel = {
+        'not-started': 'Not started',
+        'in-progress': 'In progress',
+        'achieved': 'Achieved',
+        'overachieved': 'Overachieved'
+      }[statusKey];
+      if (targetLabel) {
+        allInds = allInds.filter(i => this.statusLabel(i?.progress_percentage) === targetLabel);
+      }
     }
 
     const { outputs, outcomes } = splitIndicatorsByTier(allInds);
@@ -3692,10 +4064,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * Keep groups that match (phrase / unordered tokens / fuzzy).
    * Order: 1 exact phrase → 2 split words → 3 average similarity (typos).
    */
-  private rankPlannedHloGroups(
-    groups: { title: string; indicators: any[]; split: { code: string | null; name: string } }[],
+  private rankPlannedHloGroups<
+    G extends { title: string; indicators: any[]; split: { code: string | null; name: string }; achievement?: TocAchievement | null }
+  >(
+    groups: G[],
     parsed: ReturnType<typeof parsePlannedSearch>
-  ) {
+  ): (G & { count: number; eval?: PlannedSearchEvaluation })[] {
     if (!parsed.phrase) {
       return groups.map(g => ({ ...g, count: g.indicators.length }));
     }
@@ -3723,14 +4097,19 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   /** Group one AoW's indicators by HLO for the expanded Areas-of-Work cards. */
-  groupIndicatorsByHlo(indicators: any[] | null | undefined): { title: string; indicators: any[]; split: { code: string | null; name: string } }[] {
+  groupIndicatorsByHlo(indicators: any[] | null | undefined): { title: string; indicators: any[]; split: { code: string | null; name: string }; achievement?: TocAchievement | null }[] {
     const map = new Map<string, any[]>();
     for (const ind of indicators ?? []) {
       const key = (ind.__hlo as string) || 'Other';
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(ind);
     }
-    return [...map.entries()].map(([title, inds]) => ({ title, indicators: inds, split: this.splitGroupTitle(title) }));
+    return [...map.entries()].map(([title, inds]) => ({
+      title,
+      indicators: inds,
+      split: this.splitGroupTitle(title),
+      achievement: (inds[0] as any)?.__hloNode?.progress ?? null
+    }));
   }
 
   isPlannedHloExpanded(title: string): boolean {
@@ -3767,6 +4146,21 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       }
       return next;
     });
+  }
+
+  /** Helper to extract a clean HLO or Outcome code token (e.g. 'HLO4', 'HL013', 'I-OC 3.5', 'OC 3.1') for By-AOW group headers (BTC-R-1, BTC-AC-1.1). */
+  cleanHloCode(raw: string | undefined): string {
+    if (!raw) return '';
+    const trimmed = raw.trim();
+    const iocMatch = /^((?:I-OC|OC)\s*\d+(?:\.\d+)*)\.?/i.exec(trimmed);
+    if (iocMatch) {
+      return iocMatch[1].toUpperCase().replace(/\s+/, ' ');
+    }
+    const match = /^((?:HLO|HL|IO|EOI)[\w.\-]*)/i.exec(trimmed);
+    if (!match) return '';
+    const rawCode = match[1];
+    const codeMatch = /^(HLO\d+|IO\d+|EOI\d+|HL\d+)/i.exec(rawCode);
+    return codeMatch ? codeMatch[1].toUpperCase() : rawCode.split('.')[0].toUpperCase();
   }
 
   /** Sum of target values across an HLO's indicators. */
@@ -3852,19 +4246,23 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Split an HLO group title into code + name. The API is not consistent about the
-   * shape, so three forms are handled:
-   *   "HLO4.AOW1.IO1 Foster motivations"        → HLO4.AOW1.IO1 | Foster motivations
-   *   "HLO 3.1 - Targeted innovations…"         → HLO 3.1       | Targeted innovations…
-   *   "2.2.2: Policy engagement…"               → 2.2.2         | Policy engagement…
-   * Anything else keeps the whole string as the name (no invented code).
+   * Split an HLO or Outcome group title into code + name. Handles:
+   *   "I-OC 3.5. Women, men..."          → I-OC 3.5      | Women, men...
+   *   "HLO4.AOW1.IO1 Foster motivations" → HLO4.AOW1.IO1 | Foster motivations
+   *   "HL013 Power seed scaling"         → HL013         | Power seed scaling
+   *   "2.2.2: Policy engagement…"        → 2.2.2         | Policy engagement…
    */
   splitGroupTitle(title: string | null | undefined): { code: string | null; name: string } {
     const text = String(title ?? '').trim();
-    const hlo = /^(HLO[^\s]*(?:\s*\d[\d.]*)?)\s*[-–:]?\s+(.+)$/i.exec(text);
-    if (hlo) return { code: hlo[1].trim(), name: hlo[2].trim() };
+    const prefixed = /^((?:HLO|HL|I-OC|OC|IO|EOI)(?:[-\s]?\d[\w.\-]*)?)\.?\s*[-–:]?\s+(.+)$/i.exec(text);
+    if (prefixed) {
+      return { code: prefixed[1].replace(/\.+$/, '').trim(), name: prefixed[2].trim() };
+    }
     const numeric = /^([\d.]+)\s*[:–-]\s*(.+)$/.exec(text);
-    return numeric ? { code: numeric[1], name: numeric[2] } : { code: null, name: text };
+    if (numeric) {
+      return { code: numeric[1].trim(), name: numeric[2].trim() };
+    }
+    return { code: null, name: text };
   }
 
   /**
@@ -4204,7 +4602,12 @@ export function splitIndicatorsByTier<T extends { __tier?: unknown }>(inds: T[])
 export function buildIndicatorCardMeta(
   achievedRaw: unknown,
   targetRaw: unknown
-): { achieved: number; target: number; pct: number; state: 'complete' | 'in-progress' | 'not-started' } {
+): {
+  achieved: number;
+  target: number;
+  pct: number;
+  state: 'complete' | 'in-progress' | 'not-started' | 'overachieved' | 'in_progress' | 'not_started';
+} {
   const achieved = Number(achievedRaw ?? 0) || 0;
   const target = Number(targetRaw ?? 0) || 0;
   const pct = target > 0 ? Math.min(100, Math.round((achieved / target) * 100)) : achieved > 0 ? 100 : 0;

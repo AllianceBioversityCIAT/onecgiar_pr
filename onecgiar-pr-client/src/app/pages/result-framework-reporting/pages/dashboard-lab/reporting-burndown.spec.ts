@@ -3,8 +3,10 @@ import {
   countNewlyReported,
   groupPendingCount,
   nextPendingAfter,
+  partitionProgramKpis,
   pendingOf,
-  sortRemainingFirst
+  sortRemainingFirst,
+  summarisePartition
 } from './reporting-burndown';
 
 // MRF-TEST-1 (docs/specs/changes/mass-reporting-flow/tasks.md, MRF-T-1) — pure burn-down helpers
@@ -203,5 +205,173 @@ describe('countNewlyReported', () => {
     const next = [{ indicator_id: 1, actual_achieved_value_sum: '5' }];
 
     expect(countNewlyReported(prev, next)).toBe(1);
+  });
+});
+
+// ── KCR-TEST-1 (docs/specs/bugfix/kpi-count-reconciliation, KCR-T-1) ─────────────────────────
+//
+// `partitionProgramKpis` / `summarisePartition` — the count-once rule (KCR-R-1, KCR-R-1.1) and the
+// program-wide totals every shell surface must agree with (KCR-R-3, R-8, R-9). Fixture is the
+// requirements.md "Cross-cut IOs counted once (the SP01 case, reduced)" scenario, transcribed into
+// the `indicatorsByAow()` bundle shape the helper consumes:
+//
+//   AoW A — 4 output KPIs, one of them zero-target, none reported
+//   AoW B — 3 output KPIs (one reported, achieved 75) + 1 outcome node the payload marks
+//           `is_aow: true` (1 KPI, not reported)
+//   both  — the SAME 2 cross-cut outcome nodes (`is_aow: false`) carrying #901 and #902 (#902 is
+//           zero-target); `indicatorsByAow` stamps those rows `__isIntermediateCrosscut: true`
+//   IO bucket   — #901, #902     2030 bucket — #950
+//
+// Expected values are read off the scenario, not recomputed the way the helper does
+// (anti-tautology): planned 11, zero-target 2, counted 9, reported 1.
+
+/** An output-tier row as `indicatorsByAow` stamps it (`__isIntermediateCrosscut` is false there). */
+const output = (id: string | number, target: number, achieved: number) => ({
+  indicator_id: id,
+  target_value_sum: target,
+  actual_achieved_value_sum: achieved,
+  __tier: 'output' as const,
+  __isIntermediateCrosscut: false
+});
+
+/** An outcome-tier row. `crosscut: true` mirrors a payload group with `is_aow: false` (RES-R-3). */
+const outcome = (id: string | number, target: number, achieved: number, crosscut: boolean) => ({
+  indicator_id: id,
+  target_value_sum: target,
+  actual_achieved_value_sum: achieved,
+  __tier: 'outcome' as const,
+  __isIntermediateCrosscut: crosscut
+});
+
+const CROSSCUT_901 = () => outcome(901, 5, 0, true);
+const CROSSCUT_902 = () => outcome(902, 0, 0, true); // zero-target
+
+function scenarioBundles() {
+  return [
+    {
+      aow: { code: 'A', name: 'Area A' },
+      indicators: [
+        output('a1', 10, 0),
+        output('a2', 10, 0),
+        output('a3', 10, 0),
+        output('a4', 0, 0), // zero-target
+        CROSSCUT_901(),
+        CROSSCUT_902()
+      ],
+      loading: false
+    },
+    {
+      aow: { code: 'B', name: 'Area B' },
+      indicators: [
+        output('b1', 10, 0),
+        output('b2', 100, 75), // the only reported KPI in the whole fixture
+        output('b3', 10, 0),
+        outcome('b-own', 4, 0, false), // AoW-owned outcome (`is_aow: true`) — an AoW-own KPI
+        CROSSCUT_901(),
+        CROSSCUT_902()
+      ],
+      loading: false
+    }
+  ];
+}
+
+const scenarioIntermediate = () => ({ indicators: [outcome(901, 5, 0, true), outcome(902, 0, 0, true)], loading: false });
+const scenario2030 = () => ({ indicators: [outcome(950, 3, 0, true)], loading: false });
+
+describe('partitionProgramKpis (KCR-R-1)', () => {
+  it('puts the cross-cut IO rows in neither AoW: A own = its 4 outputs, B own = 3 outputs + its owned outcome', () => {
+    const partition = partitionProgramKpis(scenarioBundles(), scenarioIntermediate(), scenario2030());
+
+    const a = partition.aowByCode.get('A')!;
+    const b = partition.aowByCode.get('B')!;
+
+    expect(a.own.map(i => i.indicator_id)).toEqual(['a1', 'a2', 'a3', 'a4']);
+    expect(a.crosscut).toBe(2);
+    expect(b.own.map(i => i.indicator_id)).toEqual(['b1', 'b2', 'b3', 'b-own']);
+    expect(b.crosscut).toBe(2);
+    // The cross-cuts live in the Intermediate bucket, once.
+    expect(partition.intermediate.indicators.map(i => i.indicator_id)).toEqual([901, 902]);
+    expect(partition.outcomes2030.indicators.map(i => i.indicator_id)).toEqual([950]);
+  });
+
+  it('every indicator_id lands in exactly one bucket (KCR-AC-1 last clause)', () => {
+    const partition = partitionProgramKpis(scenarioBundles(), scenarioIntermediate(), scenario2030());
+
+    const ids = [
+      ...partition.aows.flatMap(entry => entry.own.map(i => i.indicator_id)),
+      ...partition.intermediate.indicators.map(i => i.indicator_id),
+      ...partition.outcomes2030.indicators.map(i => i.indicator_id)
+    ];
+
+    expect(ids).toHaveLength(11);
+    expect(new Set(ids).size).toBe(11);
+  });
+
+  // KCR-R-1.1 — membership is decided from the payload's OWN `is_aow` stamp, never by matching
+  // `indicator_id` against the Intermediate endpoint. Same id, two payloads, two verdicts.
+  it('moves #901 into A own when A\'s payload marks it is_aow: true, while B still treats it as a cross-cut', () => {
+    const bundles = scenarioBundles();
+    bundles[0].indicators = bundles[0].indicators.map(ind =>
+      ind.indicator_id === 901 ? outcome(901, 5, 0, false) : ind
+    );
+
+    const partition = partitionProgramKpis(bundles, scenarioIntermediate(), scenario2030());
+
+    expect(partition.aowByCode.get('A')!.own.map(i => i.indicator_id)).toEqual(['a1', 'a2', 'a3', 'a4', 901]);
+    expect(partition.aowByCode.get('A')!.crosscut).toBe(1);
+    // B is untouched: the id is still cross-cut there, and the IO bucket still serves it.
+    expect(partition.aowByCode.get('B')!.own.map(i => i.indicator_id)).toEqual(['b1', 'b2', 'b3', 'b-own']);
+    expect(partition.intermediate.indicators.map(i => i.indicator_id)).toEqual([901, 902]);
+  });
+
+  it('deduplicates a bucket by indicator_id, keeping the first occurrence', () => {
+    const first = outcome(901, 5, 0, true);
+    const repeat = outcome(901, 5, 0, true);
+    const partition = partitionProgramKpis([], { indicators: [first, repeat, outcome(902, 0, 0, true)] }, null);
+
+    expect(partition.intermediate.indicators).toHaveLength(2);
+    expect(partition.intermediate.indicators[0]).toBe(first);
+  });
+
+  it('carries each AoW and bucket loading flag through, and exposes aowByCode keyed by code', () => {
+    const partition = partitionProgramKpis(
+      [{ aow: { code: 'A', name: 'Area A' }, indicators: [], loading: true }],
+      { indicators: [], loading: true },
+      { indicators: [], loading: false }
+    );
+
+    expect(partition.aowByCode.get('A')).toBe(partition.aows[0]);
+    expect(partition.aows[0].loading).toBe(true);
+    expect(partition.intermediate.loading).toBe(true);
+    expect(partition.outcomes2030.loading).toBe(false);
+  });
+
+  it('returns empty buckets for null/undefined inputs — no throw', () => {
+    const partition = partitionProgramKpis(null, null, undefined);
+
+    expect(partition.aows).toEqual([]);
+    expect(partition.aowByCode.size).toBe(0);
+    expect(partition.intermediate).toEqual({ indicators: [], loading: false });
+    expect(partition.outcomes2030).toEqual({ indicators: [], loading: false });
+  });
+});
+
+describe('summarisePartition (KCR-R-2 / R-8 / R-9)', () => {
+  it('reads the requirements fixture as planned 11, zeroTarget 2, counted 9, reported 1', () => {
+    const partition = partitionProgramKpis(scenarioBundles(), scenarioIntermediate(), scenario2030());
+
+    // Hand-counted from the scenario, NOT from the helper: A 4 + B 4 + IO 2 + 2030 1 = 11 planned;
+    // zero-target = a4 and #902; counted = 9; reported = b2 (achieved 75) only.
+    expect(summarisePartition(partition)).toEqual({ planned: 11, zeroTarget: 2, counted: 9, reported: 1 });
+  });
+
+  it('counts reported from achieved > 0 alone — a progress_percentage string never makes a KPI reported (KCR-R-9)', () => {
+    const zeroAchievedButPercentString = {
+      ...output('p1', 10, 0),
+      progress_percentage: '1500%'
+    } as ReturnType<typeof output> & { progress_percentage: string };
+    const partition = partitionProgramKpis([{ aow: { code: 'A' }, indicators: [zeroAchievedButPercentString] }], null, null);
+
+    expect(summarisePartition(partition)).toEqual({ planned: 1, zeroTarget: 0, counted: 1, reported: 0 });
   });
 });

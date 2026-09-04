@@ -10,8 +10,9 @@ export const PROGRAMME_RESULTS_STATUS_QUERY_PARAM = 'status';
 export const PROGRAMME_RESULTS_CATEGORY_QUERY_PARAM = 'category';
 export const PROGRAMME_RESULTS_ORIGIN_QUERY_PARAM = 'origin';
 export const PROGRAMME_RESULTS_CENTER_QUERY_PARAM = 'center';
+export const PROGRAMME_RESULTS_CREATED_BY_QUERY_PARAM = 'createdBy';
 
-export type ProgrammeResultsQueryParamDimension = 'phase' | 'status' | 'category' | 'origin' | 'center';
+export type ProgrammeResultsQueryParamDimension = 'phase' | 'status' | 'category' | 'origin' | 'center' | 'createdBy';
 
 /** `dimension → param name`, in toolbar order. */
 export const PROGRAMME_RESULTS_QUERY_PARAM_MAP: Record<ProgrammeResultsQueryParamDimension, string> = {
@@ -19,5 +20,7 @@ export const PROGRAMME_RESULTS_QUERY_PARAM_MAP: Record<ProgrammeResultsQueryPara
   status: PROGRAMME_RESULTS_STATUS_QUERY_PARAM,
   category: PROGRAMME_RESULTS_CATEGORY_QUERY_PARAM,
   origin: PROGRAMME_RESULTS_ORIGIN_QUERY_PARAM,
-  center: PROGRAMME_RESULTS_CENTER_QUERY_PARAM
+  center: PROGRAMME_RESULTS_CENTER_QUERY_PARAM,
+  // @akili-spec result-framework-reporting/programme-results-created-by-filter
+  createdBy: PROGRAMME_RESULTS_CREATED_BY_QUERY_PARAM
 };

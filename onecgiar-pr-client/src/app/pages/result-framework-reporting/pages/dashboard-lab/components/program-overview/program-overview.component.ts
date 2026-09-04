@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, input, output, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, input, model, output, signal, viewChild } from '@angular/core';
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import { NgClass } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -38,6 +38,7 @@ import type { OverviewAowProgressRowRich, OverviewScopeOption, OverviewScopeBrea
 import type { ECElementEvent } from 'echarts/core';
 // @akili-spec changes/reporting-entry-hub — reuse the hub's centralised copy for the Report button's tooltip text.
 import { HUB_COPY } from '../reporting-entry-hub/hub-copy';
+import { SCIENCE_PROGRAM_DESCRIPTIONS } from '../reporting-program-band/reporting-program-band.component';
 
 /** A matrix card's view mode: default 'vertical-bar', then 'horizontal-bar', then 'heatmap'. */
 export type ChartViewMode = 'vertical-bar' | 'horizontal-bar' | 'heatmap';
@@ -76,6 +77,13 @@ export interface AowProgressRow {
   name: string;
   done: number;
   total: number;
+  /**
+   * How many KPIs the zero-target rule (MRF-R-7) excluded from `total` on this row — the number the
+   * `excludes N zero-target KPIs` disclosure states (KCR-R-2.1). Optional: a caller that has no
+   * figure to disclose simply omits it, and `0`/absent means the denominator hid nothing.
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  zeroTarget?: number;
   /**
    * P2-3296 AC3 — the ToC achievement of this Area of Work, computed server-side.
    *
@@ -174,8 +182,6 @@ export interface HeatmapModel {
  *
  * ⚠️ px only — `html` is 12px (UI-RULES §1.3).
  */
-import { PrTabIntroComponent } from '../../../../../../shared/components/pr-tab-intro/pr-tab-intro.component';
-
 @Component({
   selector: 'app-program-overview',
   standalone: true,
@@ -183,7 +189,6 @@ import { PrTabIntroComponent } from '../../../../../../shared/components/pr-tab-
     NgClass,
     PrVizChartComponent,
     PrTooltipDirectiveModule,
-    PrTabIntroComponent,
     NgIcon,
     HlmPopover,
     HlmPopoverContent,
@@ -195,6 +200,7 @@ import { PrTabIntroComponent } from '../../../../../../shared/components/pr-tab-
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProgramOverviewComponent {
+  readonly programCode = input<string>('');
   readonly programName = input<string>('');
   /** Long About copy. Empty → short stand-in using the program name. */
   readonly programDescription = input<string>('');
@@ -215,10 +221,17 @@ export class ProgramOverviewComponent {
    * design.md §3/§6). Feeds the summary rail (`richStats` below — the rail's OWN sum of these
    * rows, OAH-R-1 "internal coherence") and, for now, the pre-existing row markup (the segmented-
    * bar row anatomy is OAH-T-4's rebuild — this task keeps the existing row fed from the rich
-   * rows' `code`/`name`/`reported`/`total`). The thin `aowProgress`/`xcutProgress` inputs above
-   * stay UNTOUCHED (design DD-4) — they keep feeding KPI card 4, the section-tab badge and
-   * `aowStats`; their numbers do not move.
+   * rows' `code`/`name`/`reported`/`total`).
+   *
+   * ⚠️ OAH DD-4's "the thin `aowProgress`/`xcutProgress` inputs stay UNTOUCHED — their numbers do
+   * not move" is SUPERSEDED by `bugfix/kpi-count-reconciliation` (KCR-DD-2, KCR-R-2/R-5). The host
+   * now builds all three inputs from one `programKpiPartition()`: the thin rows carry the same
+   * AoW-own basis and the same zero-target rule as `richRows`, so KPI card 4, the section-tab badge
+   * (`aowStats`) and the chips agree with the rail instead of standing at a disclosed divergence.
+   * The rail is still Σ `richRows` and still sums AoW rows ONLY — program-level KPIs are the chips
+   * beneath it (KCR-R-3) — so `band = rail + chips`, not `band = rail`.
    * @akili-spec changes/overview-aow-progress-hero
+   * @akili-spec bugfix/kpi-count-reconciliation
    */
   readonly richRows = input<OverviewAowProgressRowRich[]>([]);
   /**
@@ -317,8 +330,11 @@ export class ProgramOverviewComponent {
     if (link) this.openResults.emit(link);
   }
 
+  /** When true, the inline filter bar is omitted because filters are handled in the top bar. */
+  readonly hideInlineFilters = input<boolean>(false);
+
   /** Active section filter: 'all' | 'w1w2' | 'bilateral' | 'aow' */
-  readonly activeSection = signal<OverviewSection>('all');
+  readonly activeSection = model<OverviewSection>('all');
 
   setActiveSection(section: OverviewSection): void {
     this.activeSection.set(this.activeSection() === section && section !== 'all' ? 'all' : section);
@@ -349,6 +365,19 @@ export class ProgramOverviewComponent {
     const pct = total ? Math.round((reported / total) * 100) : 0;
     return { complete, inProgress, notStarted, zeroTarget, total, reported, pct };
   });
+
+  /**
+   * Per-chip `title` disclosure for the Strategic-outcomes footer (`KCR-R-2.1` / `KCR-R-6`). The
+   * chip's `total` is *Counted*, so a bucket that plans more than it counts states the difference —
+   * `excludes 1 zero-target KPI` / `excludes 3 zero-target KPIs`, pluralised exactly as
+   * `reporting-aow-table.countLabel` does. `null` (not `''`) omits the attribute: a chip that
+   * excluded nothing must carry no tooltip at all (`KCR-AC-2`'s "2030 `0/1` no title").
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  chipZeroTargetTitle(row: AowProgressRow): string | null {
+    const n = row.zeroTarget ?? 0;
+    return n > 0 ? `excludes ${n} zero-target KPI${n === 1 ? '' : 's'}` : null;
+  }
 
   /** Rail `title` disclosure for the zero-target exclusion (OAH-R-1) — `null` omits the attribute. */
   readonly zeroTargetTitle = computed(() => {
@@ -415,10 +444,41 @@ export class ProgramOverviewComponent {
   }
 
   /**
+   * Accessible-name PREFIX for the AoW identity button (`RGS-R-3`, `RGS-T-1`), rendered as a
+   * `.sr-only` span that COMPOSES with the button's own visible content (code + name + subline) —
+   * deliberately NOT `[attr.aria-label]`, which would REPLACE that content and silently drop the
+   * "N KPIs remaining" subline from the accessible name (WCAG 2.5.3 name-in-name; Reviewer finding,
+   * rework attempt 2). Same house pattern already established at `:291` for the scope trigger.
+   * Describes FILTERING — deliberately never "open", which is what the separate `→` action already
+   * announces (`aria-label="Open this Area of Work"` a few lines down). The click→`selectScope`
+   * wiring lives in `onSelectAowRow` below (`RGS-T-2`); this constant is structural/a11y only.
+   * @akili-spec changes/aow-row-gesture-split
+   */
+  readonly aowFilterVerb = 'Filter by Area of Work';
+
+  /**
+   * `RGS-T-2` (`RGS-DD-1`, `RGS-DD-2`, `RGS-R-1`): the identity button's own gesture — the SAME
+   * `selectScope`/`scopeChange` path the row-level mouse convenience below it also calls, so the
+   * filter is reachable identically by mouse or keyboard (`RGS-R-3`). Stops propagation so a click
+   * here does not ALSO bubble into the row's own `(click)` and double-fire `selectScope` —
+   * harmless either way per `RGS-DD-2` (re-emitting the same key is idempotent, and `selectScope`
+   * is never a toggle, so this is also how `RGS-DD-6`'s "already-selected row does nothing" holds),
+   * but there is no reason to rely on that. Never touches `PROGRAMME_RESULTS_QUERY_PARAM_MAP` /
+   * `OverviewLink` / the `?scope=` value shape — `selectScope` already owns that contract,
+   * untouched by this task.
+   * @akili-spec changes/aow-row-gesture-split
+   */
+  onSelectAowRow(row: { code: string }, event: Event): void {
+    event.stopPropagation();
+    if (row.code) this.selectScope(row.code);
+  }
+
+  /**
    * The row's open icon + (once complete) "View results" button: same single navigation path as
    * `onReportAowRow` (`openAow`, OAH-R-4/DD-6) but with NO permission gate — `canReportW1W2` only
    * fences the reporting action, never plain navigation. Stops propagation so the row's own
-   * `(click)="openAow.emit(row.code)"` does not ALSO fire.
+   * `(click)="selectScope(row.code)"` (`RGS-T-2`) does not ALSO fire — this action must navigate,
+   * and ONLY navigate (`RGS-R-2`).
    * @akili-spec changes/overview-aow-progress-hero
    */
   onOpenAowRowAction(row: { code: string }, event: Event): void {
@@ -549,14 +609,23 @@ export class ProgramOverviewComponent {
   readonly description = computed(() => {
     const explicit = this.programDescription()?.trim();
     if (explicit) return explicit;
-    const name = this.programName()?.trim() || 'This program';
+    const code = this.programCode()?.trim().toUpperCase();
+    if (code && SCIENCE_PROGRAM_DESCRIPTIONS[code]) {
+      return SCIENCE_PROGRAM_DESCRIPTIONS[code];
+    }
+    const name = this.programName()?.trim();
+    if (name) {
+      const normalized = name.toLowerCase();
+      for (const [, desc] of Object.entries(SCIENCE_PROGRAM_DESCRIPTIONS)) {
+        if (desc.toLowerCase().startsWith(normalized)) {
+          return desc;
+        }
+      }
+      return `${name} is a CGIAR research program delivering science, innovations, and partnerships to advance food, land, and water systems transformation and contribute to CGIAR 2030 targets.`;
+    }
     return (
-      `${name} modernizes CGIAR and national breeding programs so that farmers get climate-resilient, ` +
-      `market-preferred varieties faster. The program connects market intelligence, breeding pipelines, ` +
-      `trait discovery, genetic innovation and seed systems into one delivery chain, and works with national ` +
-      `agricultural research systems and private seed partners across South Asia, sub-Saharan Africa and ` +
-      `Latin America. Reporting covers products delivered to partners, the outcomes those products enable, ` +
-      `and progress toward the 2030 outcomes agreed with donors.`
+      'This program works with partners across the CGIAR portfolio to deliver research, innovations, ' +
+      'and outcomes contributing to the 2030 targets.'
     );
   });
 
@@ -631,7 +700,8 @@ export class ProgramOverviewComponent {
 
   /**
    * `REH-R-7`/`REH-AC-15`: the row's inline Report button. Stops propagation so the row's own
-   * `(click)="openAow.emit(row.code)"` does not ALSO fire — otherwise every click emits twice.
+   * `(click)="selectScope(row.code)"` (`RGS-T-2`) does not ALSO fire — otherwise every click would
+   * both navigate AND change the scope, violating `RGS-R-2`.
    * Typed to the minimal shape both `AowProgressRow` and `OverviewAowProgressRowRich` satisfy
    * (`changes/overview-aow-progress-hero` OAH-T-3: the hero row now iterates `richRows`).
    */
@@ -812,6 +882,28 @@ export class ProgramOverviewComponent {
    */
   readonly heroNoPlan = computed(() => this.isFiltered() && this.richStats().total === 0);
 
+  /**
+   * `RGS-R-7`/`RGS-DD-7`: whether the AoW progress section (summary rail + row list) is expanded.
+   * Default EXPANDED, stated per the task's DoD — this card is the Overview hero (promoted to that
+   * position by `changes/overview-aow-progress-hero`), not a housekeeping panel that should start
+   * closed.
+   * @akili-spec changes/aow-row-gesture-split
+   */
+  readonly aowSectionExpanded = signal(true);
+
+  /**
+   * `RGS-DD-7`: flips the disclosure. The template marks the collapsed body `inert` (never
+   * `aria-hidden` layered over it) so it drops out of BOTH the tab order and the accessibility
+   * tree — the exact gap the house pattern (`reporting-aow-table`'s `.pr-collapse`) leaves open:
+   * it collapses its rows to zero height with `aria-hidden="true"` and no `inert`, so a keyboard
+   * user still tabs into 20 invisible buttons. `RGS-R-8` exists so this section does not inherit
+   * that defect.
+   * @akili-spec changes/aow-row-gesture-split
+   */
+  toggleAowSection(): void {
+    this.aowSectionExpanded.update(expanded => !expanded);
+  }
+
   private static readonly SCOPE_GROUP_LABEL: Record<OverviewScopeOption['kind'], string> = {
     aow: 'Areas of work',
     outcome: 'Strategic outcomes',
@@ -928,6 +1020,44 @@ export class ProgramOverviewComponent {
   selectScope(key: string | null): void {
     this.scopeChange.emit(key);
     this.closeScopePopover();
+  }
+
+  // ── Clear filters control (`changes/clear-filters`, `CF-T-1`) ──────────────────────────────────
+  //
+  // One button that resets BOTH axes in a single activation (`CF-R-1`), reusing the two mechanisms
+  // above rather than adding a new one. `OQ-2`: it coexists with "All Sections" and the scope
+  // dropdown — neither existing control is removed or altered by this section.
+
+  /**
+   * `CF-DD-1`: visible only while at least one axis is filtered — section ≠ `'all'` OR scope ≠
+   * `null`. Gates an `@if` (removal from the DOM, never `hidden`/opacity) so the control can never
+   * be invisible-but-focusable (`CF-AC-2`'s negative clause — the exact defect `RGS-T-3` spent a
+   * whole task avoiding in the collapse above).
+   * @akili-spec changes/clear-filters
+   */
+  readonly showClearFilters = computed(() => this.activeSection() !== 'all' || this.selectedScope() !== null);
+
+  /**
+   * `CF-DD-5` focus target: the "All Sections" tab is never conditionally rendered, so moving focus
+   * there works synchronously even on the same tick the Clear filters button removes itself.
+   */
+  private readonly allSectionsTabRef = viewChild<ElementRef<HTMLButtonElement>>('allSectionsTab');
+
+  /**
+   * `CF-DD-2`: resets both axes through their EXISTING paths — `activeSection` set DIRECTLY (never
+   * `setActiveSection('all')`, which carries toggle logic that is a no-op for `'all'` today but
+   * would couple clearing to an unrelated future change to toggling) and `scopeChange` emitted
+   * `null` through the same output the host already binds to `overviewScope.set($event)` — no host
+   * change (`CF-R-1`, design.md §3).
+   * `CF-DD-5`: focus moves to the "All Sections" tab BEFORE `showClearFilters()` flips false and the
+   * `@if` removes this button from the DOM, so a keyboard user's focus is never dropped to `<body>`
+   * (`CF-AC-4`) — the tab is always in the DOM, so this `.focus()` call needs no `queueMicrotask`.
+   * @akili-spec changes/clear-filters
+   */
+  clearFilters(): void {
+    this.activeSection.set('all');
+    this.scopeChange.emit(null);
+    this.allSectionsTabRef()?.nativeElement.focus();
   }
 
   /** `Enter`/`Space`/`↓` open the popover when it is closed (`OSF-DD-13` Keys row). */

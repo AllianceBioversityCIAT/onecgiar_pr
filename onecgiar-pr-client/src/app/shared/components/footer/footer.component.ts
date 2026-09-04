@@ -13,7 +13,6 @@ import { GlobalLinksService } from '../../services/variables/global-links.servic
 export class FooterComponent {
   routes = [
     { path: '/result/results-outlet/results-list' },
-    { path: '/result/result-detail/', floating: true },
     { path: '/type-one-report', floating: true },
     { path: '/ipsr/list/innovation-list' },
     { path: '/ipsr/detail' },

@@ -4950,6 +4950,23 @@ describe('ResultsApiService', () => {
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
+
+    // @akili-spec changes/indicator-reported-results
+    // IRR-R-3 / IRR-AC-1 — the drawer opts into the wider population with `scope=all`. The param is
+    // appended ONLY when given, so every existing caller keeps the byte-identical URL asserted above.
+    it('appends &scope=all only when a scope is given (IRR-R-3)', done => {
+      service.GET_ExistingResultsContributors('rtr1', 'tri1', 'all').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=rtr1&tocResultIndicatorId=tri1&scope=all`
+      );
+      expect(req.request.url.endsWith('&scope=all')).toBe(true);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
   });
 
   describe('GET_DashboardData', () => {

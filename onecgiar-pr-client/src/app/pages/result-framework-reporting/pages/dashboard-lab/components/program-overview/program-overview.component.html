@@ -26,22 +26,6 @@
 -->
 
 <div class="grid grid-cols-12 content-start gap-[16px] p-[32px]">
-  <div class="col-span-12">
-    <app-pr-tab-intro
-      title="What does this tab show?"
-      description="A summary of your Science Program: how many results you have planned and reported, which CGIAR Centers are contributing, the Areas of Work involved, and other summary figures. Use it to see the overall picture of your Science Program at a glance." />
-  </div>
-
-  <!-- 1 · About this program · span 12 -->
-  <section class="col-span-12 rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
-    <h2 class="m-0 mb-[20px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
-      About this program
-    </h2>
-    <p class="m-0 text-[14px] font-normal leading-[1.6] text-[var(--pr-text)] [text-wrap:pretty]">
-      {{ description() }}
-    </p>
-  </section>
-
   <!-- KPI Summary Cards: Totals and key health metrics -->
   <div class="col-span-12 grid grid-cols-12 gap-[16px]">
     <!-- KPI 1: W1/W2 Results (Hero Highlight Card with diffused purple gradient) -->
@@ -194,14 +178,16 @@
     `min-[…]:max-[…]:` bands on the trigger below); its OWN full-width row beneath the tabs below
     900px, via `order`/`w-full` on the SAME control instance — never a second, duplicate instance.
   -->
+  @if (!hideInlineFilters()) {
   <div class="col-span-12 flex flex-wrap items-center gap-[12px] pt-1">
     <div class="inline-flex rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] p-[3px]" role="tablist" aria-label="Section filter">
       <button
+        #allSectionsTab
         type="button"
         role="tab"
         [attr.aria-selected]="activeSection() === 'all'"
         (click)="setActiveSection('all')"
-        class="cursor-pointer rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none"
+        class="cursor-pointer rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
         [class]="activeSection() === 'all'
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
@@ -212,7 +198,7 @@
         role="tab"
         [attr.aria-selected]="activeSection() === 'w1w2'"
         (click)="setActiveSection('w1w2')"
-        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none"
+        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
         [class]="activeSection() === 'w1w2'
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-color-primary-600)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
@@ -228,7 +214,7 @@
         role="tab"
         [attr.aria-selected]="activeSection() === 'bilateral'"
         (click)="setActiveSection('bilateral')"
-        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none"
+        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
         [class]="activeSection() === 'bilateral'
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-color-primary-600)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
@@ -244,7 +230,7 @@
         role="tab"
         [attr.aria-selected]="activeSection() === 'aow'"
         (click)="setActiveSection('aow')"
-        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none"
+        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
         [class]="activeSection() === 'aow'
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-color-primary-600)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
@@ -368,7 +354,26 @@
         Show all sections
       </button>
     }
+
+    <!--
+      Clear filters (`changes/clear-filters`, `CF-T-1`) — resets BOTH axes in one activation
+      (`CF-R-1`), present only while at least one is filtered (`CF-R-2`/`CF-DD-1`). `ml-auto` only
+      when "Show all sections" above is NOT also rendering (`activeSection() === 'all'`, i.e. only
+      the scope axis is filtered) — when both render, this sits right after "Show all sections",
+      which already carries the row's own `ml-auto`, so the pair group at the right edge without a
+      second competing auto-margin splitting the row.
+    -->
+    @if (showClearFilters()) {
+      <button
+        type="button"
+        (click)="clearFilters()"
+        [class.ml-auto]="activeSection() === 'all'"
+        class="flex h-[30px] cursor-pointer items-center rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12.5px] font-semibold text-[var(--pr-text-secondary)] outline-none transition-colors duration-150 hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-text-heading)] focus-visible:shadow-[var(--pr-focus-ring)] max-[899px]:order-2">
+        Clear filters
+      </button>
+    }
   </div>
+  }
 
   @if (activeSection() === 'all' || activeSection() === 'aow') {
   <!-- 2 · Progress by area of work · span 12 — promoted to the HERO position by
@@ -385,11 +390,18 @@
        segmented-bar anatomy.
        @akili-spec changes/overview-aow-progress-hero -->
   <section
-    class="col-span-12 flex overflow-hidden rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] max-[1024px]:flex-col">
+    class="col-span-12 overflow-hidden rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)]">
 
-    <!-- Summary rail — the section's one tinted surface (program-band violet, the accepted
-         exception to "content surfaces are neutral", UI-RULES §2/§7). -->
-    <div class="flex w-[300px] flex-none flex-col gap-[18px] border-r border-[var(--pr-border)] bg-[var(--pr-surface-band)] p-[20px] max-[1024px]:w-full max-[1024px]:border-b max-[1024px]:border-r-0">
+    <!-- @akili-spec changes/aow-row-gesture-split (RGS-T-3, RGS-DD-7): disclosure header — ALWAYS
+         visible, so a collapsed section still announces what it is and offers a way back in.
+         Reuses the house collapse mechanism from `reporting-aow-table` (`grid-template-rows:
+         0fr → 1fr`, now the shared `.pr-collapse` in `src/styles/collapse.scss` rather than a
+         second local copy) but does NOT reuse its defect: the source pattern collapses its rows to
+         zero height with `aria-hidden="true"` and no `inert`, leaving ~20 buttons tabbable while
+         AT is told to ignore them. Here the collapsed body below is marked `inert` instead —
+         `aria-hidden` is never added (RGS-R-8). Default EXPANDED (RGS-R-7 DoD's stated default;
+         this card is the Overview hero, not a panel that should start closed). -->
+    <div class="flex items-start justify-between gap-[16px] border-b border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
       <div>
         <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
           Progress by area of work
@@ -398,6 +410,24 @@
           Completion progress against planned Key Performance Indicators (KPIs) per Area of Work
         </p>
       </div>
+      <button
+        type="button"
+        (click)="toggleAowSection()"
+        [attr.aria-expanded]="aowSectionExpanded()"
+        aria-controls="aow-progress-panel"
+        class="flex h-[32px] w-[32px] shrink-0 cursor-pointer items-center justify-center rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-text-heading)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
+        <span class="material-icons-round text-[18px]" aria-hidden="true">{{ aowSectionExpanded() ? 'expand_less' : 'expand_more' }}</span>
+        <span class="sr-only">{{ aowSectionExpanded() ? 'Collapse' : 'Expand' }} progress by area of work</span>
+      </button>
+    </div>
+
+    <div id="aow-progress-panel" class="pr-collapse" [class.is-open]="aowSectionExpanded()">
+      <div class="pr-collapse-inner">
+        <div data-testid="aow-section-inert-container" [attr.inert]="aowSectionExpanded() ? null : ''" class="flex max-[1024px]:flex-col">
+
+    <!-- Summary rail — the section's one tinted surface (program-band violet, the accepted
+         exception to "content surfaces are neutral", UI-RULES §2/§7). -->
+    <div class="flex w-[300px] flex-none flex-col gap-[18px] border-r border-[var(--pr-border)] bg-[var(--pr-surface-band)] p-[20px] max-[1024px]:w-full max-[1024px]:border-b max-[1024px]:border-r-0">
 
       @if (richLoading()) {
         <!-- OAH-R-1 BUT / OAH-R-6: no figure paints while any AoW ToC is still loading. -->
@@ -504,7 +534,7 @@
     <!-- AoW rows + outcomes footer -->
     <div class="flex min-w-0 flex-1 flex-col">
       @if (richLoading()) {
-        <div class="flex flex-col gap-[8px] p-[20px]" aria-hidden="true">
+        <div class="@container flex flex-col gap-[8px] p-[20px]" aria-hidden="true" data-testid="aow-rows-skeleton">
           @for (i of skeletonRowPlaceholders; track i) {
             <!-- T-6 live finding (2026-09-01, field measurement at 1398px viewport): the fixed
                  `1fr 260px 120px 170px` tracks starved the identity column to ~99px / the AoW
@@ -515,25 +545,57 @@
                  P2-3296: a fifth `max-content` track for the achievement figures sits between
                  figures and actions — `max-content` so it costs nothing when `row.achievement`
                  is absent. -->
-            <!-- OSF-DD-8 ladder (changes/overview-aow-cross-filter, OSF-T-2b): identical
-                 responsive grid to the real row below — kept in lockstep so the skeleton never
-                 promises a column the real row can't deliver (and so there is no layout shift on
-                 the skeleton→content swap). 900-1100px drops the achievement track (4th
-                 placeholder here too, `max-[1101px]:hidden` — deliberately not 1100px, see the
-                 real row's comment); below 900px (`max-[900px]`, exclusive — tiles exactly
-                 against `min-[900px]` with no gap) the row becomes a 2-col/2-row grid via
-                 explicit [grid-column]/[grid-row] placement (identity+actions row 1, bar+figures
-                 row 2) rather than a flex spacer hack. See the real row for the full rationale. -->
-            <div class="grid grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content_max-content] items-center gap-[16px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[16px] py-[12px] min-[900px]:max-[1101px]:grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content] max-[900px]:grid-cols-[minmax(0,1fr)_max-content] max-[900px]:gap-y-[8px]">
-              <div class="flex items-center gap-[10px] max-[900px]:[grid-column:1] max-[900px]:[grid-row:1]">
-                <span class="h-[24px] w-[58px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
-                <span class="h-[16px] w-[190px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+            <!-- AIS-DD-1/AIS-DD-2/AIS-DD-3 container ladder (changes/aow-identity-column-starvation,
+                 AIS-T-2, replaces the OSF-DD-8 viewport ladder): identical container ladder to the
+                 real row below — kept in lockstep so the skeleton never promises a column the real
+                 row can't deliver (no layout shift on the skeleton→content swap). This wrapper
+                 (`data-testid="aow-rows-skeleton"`) is `@container` (container-type: inline-size);
+                 every threshold below reads the row's OWN container-query width `Q`, never the
+                 viewport — two rows given the same `Q` render identically regardless of sidebar/rail
+                 state (`AIS-R-3`). Full arithmetic and per-branch rationale are on the real row's
+                 comment (`:~635`) — this comment states the same three thresholds and result only.
+
+                 Thresholds (`Σ branch track minimums + gaps + 36px row chrome`, rounded up to 10px,
+                 measured by `AIS-T-1` post icon-font harness fix — `execution.md` §2 AIS-T-1):
+                 `T_restack = 700`, `T_full = 630`, `T_stack = 560`. `@max-[N]` is EXCLUSIVE
+                 (`@container (width < N)`) — same trap as the viewport variant it replaces
+                 (`onecgiar-pr-client/CLAUDE.md` §5).
+                   - Q ≥ 700: unmodified 5-track row (identity floor 143px — chip MEASURED 51.1px,
+                     not the requirement's ~50px estimate, `AIS-T-1`).
+                   - 560 ≤ Q < 700 (`@max-[700px]` on the row, `@min-[560px]:@max-[630px]:grid-cols-…`
+                     scoping the identity floor to 167px only in the sub-band where the achievement
+                     track is gone): the 4th placeholder (achievement) hides below 630
+                     (`@max-[630px]:hidden`).
+                   - Q < 560 (`@max-[560px]`): row folds into a 2-col/2-row grid via explicit
+                     [grid-column]/[grid-row] placement (identity+actions row 1, bar+figures row 2). -->
+            <div class="grid grid-cols-[minmax(143px,1fr)_minmax(120px,240px)_max-content_max-content_max-content] items-center gap-[16px] rounded-[10px] border-2 border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[16px] py-[12px] @min-[560px]:@max-[630px]:grid-cols-[minmax(167px,1fr)_minmax(120px,240px)_max-content_max-content] @max-[560px]:grid-cols-[minmax(167px,1fr)_max-content] @max-[560px]:gap-y-[8px]">
+              <div class="flex items-center gap-[10px] @max-[560px]:[grid-column:1] @max-[560px]:[grid-row:1]">
+                <!-- @akili-spec changes/aow-row-gesture-split: mirrors the real row's new identity
+                     button below (RGS-DD-5 parity — the skeleton never promises a control the real
+                     row doesn't also carry). `disabled`, not `aria-hidden`: this whole list is
+                     already `aria-hidden="true"` (above), and a disabled native button drops out of
+                     the tab order on its own, so nothing here becomes focusable-but-invisible while
+                     loading (the exact ARIA violation `RGS-DD-7` calls out elsewhere in this spec). -->
+                <button
+                  type="button"
+                  disabled
+                  class="flex min-w-0 items-center gap-[10px] truncate rounded-[6px] border-0 bg-transparent p-0 cursor-default">
+                  <span class="h-[24px] w-[58px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
+                  <span class="h-[16px] w-[190px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+                </button>
               </div>
-              <span class="h-[12px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)] max-[900px]:[grid-column:1] max-[900px]:[grid-row:2]"></span>
-              <span class="h-[16px] w-[76px] animate-pulse justify-self-end rounded-[4px] bg-[var(--pr-surface-ground)] max-[900px]:[grid-column:2] max-[900px]:[grid-row:2]"></span>
-              <span class="h-[16px] w-[64px] animate-pulse justify-self-end rounded-[4px] bg-[var(--pr-surface-ground)] max-[1101px]:hidden"></span>
-              <span class="h-[32px] w-[118px] animate-pulse justify-self-end rounded-[8px] bg-[var(--pr-surface-ground)] max-[900px]:[grid-column:2] max-[900px]:[grid-row:1]"></span>
+              <span class="h-[12px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)] @max-[560px]:[grid-column:1] @max-[560px]:[grid-row:2]"></span>
+              <span class="h-[16px] w-[76px] animate-pulse justify-self-end rounded-[4px] bg-[var(--pr-surface-ground)] @max-[560px]:[grid-column:2] @max-[560px]:[grid-row:2]"></span>
+              <span class="h-[16px] w-[64px] animate-pulse justify-self-end rounded-[4px] bg-[var(--pr-surface-ground)] @max-[630px]:hidden"></span>
+              <span class="h-[32px] w-[118px] animate-pulse justify-self-end rounded-[8px] bg-[var(--pr-surface-ground)] @max-[560px]:[grid-column:2] @max-[560px]:[grid-row:1]"></span>
             </div>
+
+            <!-- `RGS-T-2` parity note: the real row's border became `border-2` (selected-state
+                 toggle, RGS-DD-4). Matched here as `border-2 border-[var(--pr-border)]` — same
+                 visible neutral outline as before, just the WIDTH kept in step with the real row —
+                 so the skeleton→content swap doesn't also shift by the 1px the two border widths
+                 would otherwise disagree on (the exact class of shift `KZ-OAH-1` keeps recurring
+                 on). Colour is untouched: this is a loading skeleton, never a selected state. -->
           }
         </div>
       } @else if (heroNoPlan()) {
@@ -569,82 +631,140 @@
              adds a fifth `max-content` track (achievement) between figures and actions — see the
              `@if (row.achievement)` block below. -->
         <!-- @akili-spec changes/overview-aow-progress-hero -->
-        <div class="flex flex-col gap-[8px] p-[20px]">
+        <div class="@container flex flex-col gap-[8px] p-[20px]" data-testid="aow-rows">
           @for (row of richRows(); track row.code) {
-            <!-- `OSF-DD-8` ladder (changes/overview-aow-cross-filter, OSF-T-2b, design.md §8.2):
-                 the identity track is ALREADY `minmax(0,1fr)` — that is not the bug, it is the
-                 permission to collapse when its rigid `max-content` siblings don't fit
-                 (`execution.md` §13 measured identity `clientWidth` 0 at 1100px/768px). The
-                 remedy is removing rigid tracks at narrow widths, never raising the identity
-                 min (that trades an `OSF-AC-10` collapse for an `OSF-AC-9` overflow — the bug
-                 this spec already spent two tasks removing) and never a card-level scroller
-                 (design.md §346 rejects it explicitly).
+            <!-- `AIS-DD-1`/`AIS-DD-2`/`AIS-DD-3` container ladder (changes/aow-identity-column-starvation,
+                 `AIS-T-2` — replaces the `OSF-DD-8` viewport ladder, `KZ-OAH-1` recurrence #4).
+                 `OSF-DD-8`'s diagnosis stands (`minmax(0,1fr)` was permission to collapse when rigid
+                 `max-content` siblings don't fit, `execution.md` §13 of `overview-aow-cross-filter`),
+                 but keying the shed points on the VIEWPORT rather than the row's OWN width let this
+                 recur a fourth time the moment the shell (rail, sidebar) changed what width the row
+                 actually receives (`AIS-DD-1`). The fix has two parts:
 
-                 ⚠️ TAILWIND `max-[Npx]:` IS EXCLUSIVE (`@media (width < Npx)`), not `<= Npx` the
-                 way plain CSS `max-width` reads. Verified against the generated CSSOM. This is
-                 why the bands below use the design's own breakpoint VALUES (900, 1280) directly
-                 as the `max-[…]` argument — `max-[900px]` already means "< 900", i.e. exactly
-                 "below 900px", so it tiles with `min-[900px]` ("≥900") with no gap and no
-                 overlap at 900 itself. An off-by-one attempt (`max-[899px]`, subtracting 1 to
-                 fake inclusivity) was tried first and left width=899 matching NEITHER band —
-                 caught by Reviewer, fixed here. The pre-existing `max-[899px]` at `:267`/`:352`
-                 (scope trigger, OSF-DD-7/OSF-T-6) has the same property and is OUT OF SCOPE for
-                 this task — left untouched, reported upward instead.
+                 (1) A REAL floor on the identity track — `minmax(0,…)` explicitly permits collapse;
+                 `minmax(143px,1fr)` when the achievement figure shares the row (chip MEASURED
+                 51.1px, not the requirement's `AIS-R-1` estimate of ~50px — the +1px difference
+                 already starved the name to 79px at the floor before this correction, `AIS-T-1`'s
+                 own CT gate caught it — + 10px gap + 80px name = 141.1, rounded up with a small
+                 safety margin), `minmax(167px,1fr)` where the ⓘ fallback shares the identity cell
+                 instead (+24px for ⓘ + its gap). The row's `1fr` track can no longer starve to 0 —
+                 a floor that CANNOT overflow because part (2) derives every shed point from it.
 
-                 Ladder, by width:
-                   - >=1280px: unchanged 5-track row.
-                   - 900-1279px (`max-[1280px]`, tiles exactly against the `>=1280` base): same
-                     5 tracks, but the achievement cell's own content narrows (coverage line
-                     hidden, QA/Prel stacked) so its max-content footprint shrinks, freeing room
-                     for the identity `1fr` track. NOT enough on its own at the low end of this
-                     band — see the next bullet.
-                   - <=1100px (`max-[1101px]`, DELIBERATELY not `max-[1100px]`): the achievement
-                     track is dropped from the grid entirely (`max-[1101px]:hidden` on that cell
-                     below). This is a deliberate deviation from the DoD's literal "achievement
-                     track removed below 1100px" wording: `execution.md` §13 (this task's browser
-                     sweep) measured `nameClientWidth` still 0 AT exactly 1100px with the
-                     achievement TRACK kept and only its content narrowed (the previous bullet's
-                     band alone does not save 1100px) — so the "drop the track" boundary moved UP
-                     to include 1100px itself, per design.md's own fallback ("if the measured row
-                     minimum ... still exceeds its container, the breakpoints move"). Its content
-                     is not silently lost — a focusable tooltip glyph in the identity block picks
-                     it up at those same widths (see the `@if (row.achievement)` block a few
-                     lines down), matching `docs/ux-ui/design.md` §9 "never hide columns
-                     silently", adapted from tables to a row.
-                   - <900px (`max-[900px]`, tiles exactly against `min-[900px]` above): row folds
-                     into a 2-col/2-row grid via explicit [grid-column]/[grid-row] placement on
-                     each cell (identity+actions row 1, bar+figures row 2) instead of a flex
-                     spacer hack — no shared 5-column grid, no horizontal scroll (§346), `Report`
-                     stays a labelled button (never icon-only). -->
+                 (2) The whole ladder is re-keyed on the ROW'S OWN container-query width `Q` (this
+                 wrapper, `data-testid="aow-rows"`, is `@container`: `container-type: inline-size`),
+                 never the viewport — `AIS-R-3`: two rows given the same `Q` render identically
+                 regardless of sidebar state, rail fold or viewport. `@min-[N]:`/`@max-[N]:` replace
+                 every `min-[N]:`/`max-[N]:` on the row and its cells; `@max-[N]` is EXCLUSIVE
+                 (`@container (width < N)`, confirmed against the generated CSSOM) — the SAME trap
+                 the viewport variant had, so consecutive bands still use the same boundary VALUE on
+                 both sides to tile with no gap (`onecgiar-pr-client/CLAUDE.md` §5). The pre-existing
+                 `max-[899px]` at `:267`/`:352` (scope trigger, `OSF-DD-7`/`OSF-T-6`) is a SECTION-level
+                 control, stays viewport-keyed, and is out of scope here — the row no longer depends
+                 on it either way.
+
+                 Thresholds — `threshold = Σ(minimum of every track in the branch) + gaps + 36px row
+                 chrome` (`px-[16px]`×2 + `border-2`×2), rounded up to 10px, NEVER by eye (`AIS-DD-3`).
+                 Measured by `AIS-T-1` (`execution.md` §2 `AIS-T-1`, post icon-font harness fix —
+                 the CT Chromium process has no network route to Google Fonts, so `Material Icons
+                 Round` is self-hosted for the harness; before that fix, `arrow_forward` rendered as
+                 literal text and inflated the actions cell): figures max-content 75.6px, actions
+                 max-content 112.8px, achievement unstacked `A_wide` 143.8px, achievement restacked
+                 `A_narrow` 73.5px.
+                   T_restack = 143 + 120 + 75.6 + 143.8 (A_wide)   + 112.8 + 64 (4 gaps) + 36 = 695.2 → 700
+                   T_full    = 143 + 120 + 75.6 +  73.5 (A_narrow) + 112.8 + 64 (4 gaps) + 36 = 624.9 → 630
+                   T_stack   = 167 + 120 + 75.6                    + 112.8 + 48 (3 gaps) + 36 = 559.4 → 560
+                   absolute floor (2×2, per-COLUMN minimum, not a sum of row cells) =
+                     max(167,120) + 16 (1 gap) + max(112.8,75.6) + 36 = 331.8 → 340 (below any Q this
+                     spec's sweep drives; not a class boundary, just the row's own hard minimum)
+                 `T_full` lands 10px below `design.md`'s ≈640 estimate, `T_stack` 20px above its ≈540
+                 estimate — both inside the task's own ±30px re-check tolerance.
+
+                 Ladder, by container width `Q` (preserves `OSF-DD-8`'s restack → shed → stack order):
+                   - Q ≥ 700 (`T_restack`): unmodified 5-track row, achievement unstacked (`A_wide`) —
+                     identical to the old ≥1280 viewport branch.
+                   - 630 ≤ Q < 700 (`@max-[700px]` on the achievement cell's OWN inner content only —
+                     the row keeps all 5 tracks the whole way down to 630): achievement narrows
+                     (coverage line hidden, QA/Prel stack vertically) so its own max-content shrinks
+                     to `A_narrow`, freeing room for identity — same content-narrowing step as the old
+                     `max-[1280px]` band, now bounded by a MEASURED threshold instead of an unbounded
+                     "somewhere below 1280" guess.
+                   - 560 ≤ Q < 630 (`@min-[560px]:@max-[630px]:grid-cols-…` on the row itself — BOTH
+                     bounds, so this band can never win outside its own range regardless of Tailwind's
+                     internal rule ordering, the exact reason the old viewport ladder ALSO combined a
+                     min and a max modifier for its own middle band): the achievement track is
+                     dropped from the grid entirely (`@max-[630px]:hidden` on that cell below). Its
+                     content is not silently lost — the focusable tooltip glyph in the identity block
+                     picks it up at these widths (`docs/ux-ui/design.md` §9 "never hide columns
+                     silently").
+                   - Q < 560 (`@max-[560px]`): row folds into a 2-col/2-row grid via explicit
+                     [grid-column]/[grid-row] placement on each cell (identity+actions row 1,
+                     bar+figures row 2) instead of a flex spacer hack — no shared 5-column grid, no
+                     horizontal scroll (design.md §346), `Report` stays a labelled button (never
+                     icon-only). -->
+            <!-- @akili-spec changes/aow-row-gesture-split (`RGS-T-2`, `RGS-DD-2`, `RGS-DD-6`): the
+                 row-level click is now a MOUSE CONVENIENCE that calls the SAME `selectScope` path
+                 as the identity button below — not a toggle, so re-clicking the already-selected
+                 row just re-emits the same key (idempotent, harmless — `RGS-DD-6`). It reverts
+                 `openAow.emit(row.code)`, deliberately (`execution.md` §7 reversion challenge):
+                 `Report` and `→` keep that output untouched (`onOpenAowRowAction`/`onReportAowRow`,
+                 `RGS-R-2`), via their own pre-existing `stopPropagation()` guards, unchanged. -->
             <div
-              (click)="row.code ? openAow.emit(row.code) : null"
-              class="group grid grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content_max-content] items-center gap-[16px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[16px] py-[12px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs min-[900px]:max-[1101px]:grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content] max-[900px]:grid-cols-[minmax(0,1fr)_max-content] max-[900px]:gap-y-[8px]"
+              (click)="row.code ? selectScope(row.code) : null"
+              class="group grid grid-cols-[minmax(143px,1fr)_minmax(120px,240px)_max-content_max-content_max-content] items-center gap-[16px] rounded-[10px] bg-[var(--pr-surface-ground)] px-[16px] py-[12px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs @min-[560px]:@max-[630px]:grid-cols-[minmax(167px,1fr)_minmax(120px,240px)_max-content_max-content] @max-[560px]:grid-cols-[minmax(167px,1fr)_max-content] @max-[560px]:gap-y-[8px]"
+              [class]="selectedScope() === row.code ? 'border-2 border-[var(--pr-color-primary-300)]' : 'border-2 border-transparent'"
               [class.cursor-pointer]="!!row.code">
 
               <!-- Identity: AoW code chip + name + "N KPIs remaining" subline -->
-              <div class="flex min-w-0 items-center gap-[10px] max-[900px]:[grid-column:1] max-[900px]:[grid-row:1]">
-                <span class="inline-flex shrink-0 items-center justify-center rounded-[6px] bg-purple-100/80 px-[8px] py-[2px] font-mono text-[11px] font-bold text-purple-800 border border-purple-200/70 group-hover:bg-purple-200/80 transition-colors">
-                  {{ row.code }}
-                </span>
-                <div class="flex min-w-0 flex-col">
-                  <span
-                    class="min-w-0 truncate text-[14.5px] font-bold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors"
-                    [prTooltip]="row.name">
-                    {{ row.name }}
+              <div class="flex min-w-0 items-center gap-[10px] @max-[560px]:[grid-column:1] @max-[560px]:[grid-row:1]">
+                <!-- @akili-spec changes/aow-row-gesture-split (`RGS-T-1`, `RGS-DD-1`): the code+name
+                     becomes a real, keyboard-operable control — a native `<button>`, never
+                     `role="button"` (children-presentational; would risk hiding the achievement
+                     glyph/`Report`/`→` below from AT). The row stays a plain `<div>` with no ARIA
+                     role so those three buttons stay independently reachable. `min-w-0` (no fixed
+                     width) so the identity column keeps the starvation protection `OSF-DD-8` already
+                     gives it (`KZ-OAH-1` has recurred three times here).
+
+                     `RGS-T-2` (`RGS-DD-1`, `RGS-DD-2`, `RGS-R-1`, `RGS-R-4`): `(click)` calls
+                     `onSelectAowRow`, the SAME `selectScope` path as the row's own mouse-convenience
+                     click above, and stops propagation for cleanliness (re-emitting the same key
+                     twice is harmless, DD-2, but there is no reason to rely on that).
+                     `aria-pressed` reflects whether THIS row's AoW is the active scope — the honest
+                     mapping for a filter control that behaves like a toggle-on-select (`RGS-DD-4`).
+
+                     Rework (attempt 2, Reviewer finding): the accessible name is a `.sr-only` span
+                     that COMPOSES with the button's own visible content — NEVER `[attr.aria-label]`,
+                     which would REPLACE that content and silently drop the "N KPIs remaining" subline
+                     from the accessible name (WCAG 2.5.3 name-in-name). Same house pattern already
+                     established at `:291` for the scope trigger. -->
+                <button
+                  type="button"
+                  (click)="onSelectAowRow(row, $event)"
+                  [attr.aria-pressed]="selectedScope() === row.code"
+                  class="flex min-w-0 items-center gap-[10px] truncate rounded-[6px] border-0 bg-transparent p-0 text-left cursor-pointer transition-colors focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
+                  <span class="sr-only">{{ aowFilterVerb }}</span>
+                  <span class="inline-flex shrink-0 items-center justify-center rounded-[6px] bg-purple-100/80 px-[8px] py-[2px] font-mono text-[11px] font-bold text-purple-800 border border-purple-200/70 group-hover:bg-purple-200/80 transition-colors">
+                    {{ row.code }}
                   </span>
-                  @if (isRowComplete(row)) {
-                    <span class="inline-flex items-center gap-[5px] text-[11.5px] font-semibold text-emerald-700">
-                      <span class="material-icons-round text-[12px]" aria-hidden="true">check</span>
-                      {{ rowSubline(row) }}
+                  <div class="flex min-w-0 flex-col">
+                    <span
+                      class="min-w-0 truncate text-[14.5px] font-bold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors"
+                      [prTooltip]="row.name">
+                      {{ row.name }}
                     </span>
-                  } @else {
-                    <span class="text-[11.5px] text-[var(--pr-text-muted)]">{{ rowSubline(row) }}</span>
-                  }
-                </div>
+                    @if (isRowComplete(row)) {
+                      <span class="inline-flex items-center gap-[5px] text-[11.5px] font-semibold text-emerald-700">
+                        <span class="material-icons-round text-[12px]" aria-hidden="true">check</span>
+                        {{ rowSubline(row) }}
+                      </span>
+                    } @else {
+                      <span class="text-[11.5px] text-[var(--pr-text-muted)]">{{ rowSubline(row) }}</span>
+                    }
+                  </div>
+                </button>
                 @if (row.achievement) {
-                  <!-- Row-tooltip fallback for the achievement cell hidden at/below 1100px (see
-                       the ladder comment above). `hidden`/`max-[1101px]:inline-flex` are the
-                       mirror image of the achievement cell's own `max-[1101px]:hidden` below, so
+                  <!-- Row-tooltip fallback for the achievement cell hidden below `T_full` (630px
+                       container width — see the ladder comment above). `hidden`/`@max-[630px]:inline-flex`
+                       are the mirror image of the achievement cell's own `@max-[630px]:hidden` below, so
                        exactly one of the two is ever hoverable at a given width — never both, so
                        never a duplicate tooltip.
 
@@ -662,7 +782,7 @@
                        label) so AT reads the figures, never merely that something exists. -->
                   <button
                     type="button"
-                    class="hidden max-[1101px]:inline-flex shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] transition-colors group-hover:text-[var(--pr-color-primary-600)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+                    class="hidden @max-[630px]:inline-flex shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] transition-colors group-hover:text-[var(--pr-color-primary-600)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
                     [prTooltip]="achievementTooltip(row.achievement)"
                     prTooltipPosition="top"
                     [prTooltipPinnable]="true"
@@ -680,7 +800,7 @@
                    would otherwise go unannounced. -->
               <span
                 role="img"
-                class="flex h-[12px] overflow-hidden rounded-[6px] bg-[var(--pr-border)] max-[900px]:[grid-column:1] max-[900px]:[grid-row:2]"
+                class="flex h-[12px] overflow-hidden rounded-[6px] bg-[var(--pr-border)] @max-[560px]:[grid-column:1] @max-[560px]:[grid-row:2]"
                 [attr.title]="rowBarTitle(row)"
                 [attr.aria-label]="rowBarTitle(row)">
                 <span class="block h-full bg-[var(--pr-color-green-500)]" [style.width.%]="completeSegmentWidth(row)"></span>
@@ -688,7 +808,7 @@
               </span>
 
               <!-- Mono figures: reported/total + % -->
-              <div class="flex flex-col items-end max-[900px]:[grid-column:2] max-[900px]:[grid-row:2]">
+              <div class="flex flex-col items-end @max-[560px]:[grid-column:2] @max-[560px]:[grid-row:2]">
                 <span class="pr-figure text-[16px] font-bold text-[var(--pr-text-heading)]">
                   {{ row.reported }}<span class="font-semibold text-[var(--pr-text-muted)]">/{{ row.total }}</span>
                 </span>
@@ -704,19 +824,20 @@
                 slot on rows without an achievement figure, breaking column alignment down the
                 table. An empty `max-content` cell collapses to ~0 width and costs nothing.
               -->
-              <!-- `OSF-DD-8`: dropped from the grid entirely at/below 1100px — the row-tooltip
-                   fallback glyph in the identity block (above) picks up its content at that
-                   width. Above 1100px it stays, but narrows: the coverage subline hides below
-                   1280px and QA/Prel stack vertically, shrinking this cell's own max-content
-                   footprint (design.md §8.2's "restacked, not removed" step). -->
+              <!-- `AIS-DD-1`/`AIS-DD-3`: dropped from the grid entirely below `T_full` (630px
+                   container width) — the row-tooltip fallback glyph in the identity block (above)
+                   picks up its content at that width. At/above `T_full` it stays, but narrows below
+                   `T_restack` (700px): the coverage subline hides and QA/Prel stack vertically,
+                   shrinking this cell's own max-content footprint from `A_wide` to `A_narrow`
+                   (design.md §8.2's "restacked, not removed" step, now container-keyed). -->
               <div
-                class="flex flex-col items-end leading-tight max-[1101px]:hidden"
+                class="flex flex-col items-end leading-tight @max-[630px]:hidden"
                 [prTooltip]="row.achievement ? achievementTooltip(row.achievement) : ''"
                 prTooltipPosition="top">
                 @if (row.achievement) {
                   <!-- Label before value ("QA 10%", not "10% QA"): the other order runs the two
                        figures together into one unreadable string. -->
-                  <span class="flex items-baseline gap-[8px] whitespace-nowrap max-[1280px]:flex-col max-[1280px]:items-end max-[1280px]:gap-[2px]">
+                  <span class="flex items-baseline gap-[8px] whitespace-nowrap @max-[700px]:flex-col @max-[700px]:items-end @max-[700px]:gap-[2px]">
                     <span class="flex items-baseline gap-[4px]">
                       <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
                       <span class="text-[13px] font-bold tabular-nums text-emerald-700">{{ achievementLabel(row.achievement) }}</span>
@@ -727,7 +848,7 @@
                     </span>
                   </span>
                   @if (achievementCoverage(row.achievement)) {
-                    <span class="text-[10px] font-medium text-[var(--pr-text-muted)] max-[1280px]:hidden">{{ achievementCoverage(row.achievement) }}</span>
+                    <span class="text-[10px] font-medium text-[var(--pr-text-muted)] @max-[700px]:hidden">{{ achievementCoverage(row.achievement) }}</span>
                   }
                 }
               </div>
@@ -736,7 +857,7 @@
                    (single path, DD-6). A fully-reported row swaps to the quiet "View results"
                    treatment (RowStates.dc.html "Complete" block). -->
               @if (isRowComplete(row)) {
-                <div class="flex justify-end max-[900px]:[grid-column:2] max-[900px]:[grid-row:1]">
+                <div class="flex justify-end @max-[560px]:[grid-column:2] @max-[560px]:[grid-row:1]">
                   <button
                     type="button"
                     (click)="onOpenAowRowAction(row, $event)"
@@ -745,7 +866,7 @@
                   </button>
                 </div>
               } @else {
-                <div class="flex justify-end gap-[6px] max-[900px]:[grid-column:2] max-[900px]:[grid-row:1]">
+                <div class="flex justify-end gap-[6px] @max-[560px]:[grid-column:2] @max-[560px]:[grid-row:1]">
                   <!-- Report (REH-R-7/REH-AC-15): inline reporting entry point. No native
                        `disabled` — a natively disabled button drops out of the tab order, so a
                        keyboard/screen-reader user could not reach it or hear the `title`
@@ -789,9 +910,12 @@
         <div class="mt-auto flex flex-wrap items-center gap-[12px] border-t border-[var(--pr-border)] bg-[var(--pr-surface-subtle)] px-[20px] py-[14px]">
           <span class="text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">Strategic outcomes</span>
           @for (row of xcutProgress(); track row.code) {
+            <!-- @akili-spec bugfix/kpi-count-reconciliation — KCR-R-2.1: the chip figure is
+                 *Counted*, so it discloses what the zero-target rule took out of it. -->
             <button
               type="button"
               (click)="openAow.emit(row.code || 'xcut')"
+              [attr.title]="chipZeroTargetTitle(row)"
               class="inline-flex cursor-pointer items-center gap-[8px] rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] py-[5px] text-[12.5px] text-[var(--pr-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
               {{ row.name }}
               <span class="pr-figure-sm font-bold">{{ row.done }}/{{ row.total }}</span>
@@ -804,6 +928,11 @@
           </span>
         </div>
       }
+    </div>
+        <!-- @akili-spec changes/aow-row-gesture-split: closes the inert wrapper / .pr-collapse-inner
+             / .pr-collapse opened above the rail, RGS-T-3 -->
+        </div>
+      </div>
     </div>
   </section>
   }

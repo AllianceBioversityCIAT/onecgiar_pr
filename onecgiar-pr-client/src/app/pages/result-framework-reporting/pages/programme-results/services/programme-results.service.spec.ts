@@ -295,7 +295,14 @@ describe('ProgrammeResultsService', () => {
     });
 
     it('never offers an empty option', () => {
-      const all = [...service.phaseOptions(), ...service.statusOptions(), ...service.categoryOptions(), ...service.originOptions(), ...service.centerOptions()];
+      const all = [
+        ...service.phaseOptions(),
+        ...service.statusOptions(),
+        ...service.categoryOptions(),
+        ...service.originOptions(),
+        ...service.centerOptions(),
+        ...service.createdByOptions()
+      ];
       expect(all.every(option => option.length > 0)).toBe(true);
     });
 
@@ -307,8 +314,29 @@ describe('ProgrammeResultsService', () => {
       expect(service.categoryOptions()).toEqual([]);
       expect(service.originOptions()).toEqual([]);
       expect(service.centerOptions()).toEqual([]);
+      expect(service.createdByOptions()).toEqual([]);
       expect(service.rows()).toEqual([]);
       expect(service.initiativeId()).toBeNull();
+    });
+  });
+
+  describe('createdByOptions (CBF-T-1)', () => {
+    it('derives sorted, de-duplicated Created by options and drops blanks and missing names (CBF-R-1)', () => {
+      GET_AllResultsWithUseRole.mockReturnValue(
+        of(
+          resultsResponse([
+            rawResult({ create_first_name: 'Santiago', create_last_name: 'Sanchez' }),
+            rawResult({ create_first_name: 'Angel', create_last_name: 'Jarrin' }),
+            rawResult({ create_first_name: 'Angel', create_last_name: 'Jarrin' }),
+            rawResult({ create_first_name: '', create_last_name: '' }),
+            rawResult({ create_first_name: null, create_last_name: null })
+          ])
+        )
+      );
+      service.load('SP01');
+
+      expect(service.createdByOptions()).toEqual(['Angel Jarrin', 'Santiago Sanchez']);
+      expect(service.createdByOptions().some(option => option.trim() === '')).toBe(false);
     });
   });
 

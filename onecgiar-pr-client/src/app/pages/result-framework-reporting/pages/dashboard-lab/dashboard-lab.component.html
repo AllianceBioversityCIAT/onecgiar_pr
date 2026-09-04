@@ -1157,7 +1157,8 @@
           [programDotColor]="accentTheme().solid"
           activeTab="overview"
           [canReport]="canReportEmerging()"
-          (reportEmerging)="openReportModal()"
+          (whereToReport)="openWhereToReportModal()"
+          (reportEmerging)="openWhereToReportModal()"
           [showToolbar]="false" />
 
         <!-- ═══ PHASE SELECTOR — Overview-only (changes/overview-phase-filter, OPF-R-1, design.md
@@ -1168,55 +1169,215 @@
              selected by default (`effectiveVersionId()` resolves it); picking any row writes a
              concrete `versionId` into `selectedVersionId` via `onPhaseOptionSelected`. ═══ -->
         <div
-          class="flex flex-wrap items-center gap-[10px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[32px] py-[12px]"
+          class="flex flex-wrap items-center justify-between gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[32px] py-[10px]"
           role="group"
-          aria-label="Reporting phase">
-          <span class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">Phase</span>
-          <div class="opf-phase-select w-[210px] max-[620px]:w-full">
-            <app-pr-select
-              [options]="phaseSelectorOptions()"
-              optionLabel="label"
-              optionValue="versionId"
-              optionBadgeLabel="phaseTagLabel"
-              optionBadgeTone="phaseTagTone"
-              placeholder="Select phase"
-              [editable]="true"
-              [required]="false"
-              [truncateSelectionText]="true"
-              [ngModel]="effectiveVersionId()"
-              [ngModelOptions]="{ standalone: true }"
-              (selectOptionEvent)="onPhaseOptionSelected($event)">
-            </app-pr-select>
+          aria-label="Overview controls">
+          <div class="flex flex-wrap items-center gap-[10px]">
+            <!-- Phase selector -->
+            <div class="flex items-center gap-[8px]">
+              <span class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">Phase</span>
+              <div class="opf-phase-select w-[210px] max-[620px]:w-full">
+                <app-pr-select
+                  [options]="phaseSelectorOptions()"
+                  optionLabel="label"
+                  optionValue="versionId"
+                  optionBadgeLabel="phaseTagLabel"
+                  optionBadgeTone="phaseTagTone"
+                  placeholder="Select phase"
+                  [editable]="true"
+                  [required]="false"
+                  [truncateSelectionText]="true"
+                  [ngModel]="effectiveVersionId()"
+                  [ngModelOptions]="{ standalone: true }"
+                  (selectOptionEvent)="onPhaseOptionSelected($event)">
+                </app-pr-select>
+              </div>
+              @if (loadingMeter()) {
+                <span class="material-icons-round animate-spin text-[14px] text-[var(--pr-text-subtle)]" aria-hidden="true">progress_activity</span>
+                <span class="sr-only">Loading phase data…</span>
+              }
+            </div>
+
+            <!-- Divider -->
+            <div class="h-[22px] w-[1px] bg-[var(--pr-border-divider)] mx-[2px] hidden sm:block"></div>
+
+            <!-- JIRA-style Filter Button & Popover -->
+            <div class="relative pr-overview-filter-container">
+              <button
+                type="button"
+                (click)="toggleOverviewFilterPopover($event)"
+                class="inline-flex h-[34px] cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+                [class]="hasActiveOverviewFilters()
+                  ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] font-semibold'
+                  : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] font-medium hover:border-slate-400 hover:bg-slate-50'"
+                aria-label="Filter overview"
+                [attr.aria-expanded]="overviewFilterOpen()">
+                <span class="material-icons-round text-[18px]" [class.text-[var(--pr-color-primary-600)]]="hasActiveOverviewFilters()" [class.text-slate-500]="!hasActiveOverviewFilters()">filter_list</span>
+                <span>Filter</span>
+                @if (activeOverviewFilterCount() > 0) {
+                  <span class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums">
+                    {{ activeOverviewFilterCount() }}
+                  </span>
+                }
+              </button>
+
+              @if (overviewFilterOpen()) {
+                <div
+                  class="absolute left-0 top-[40px] z-30 w-[360px] max-w-[90vw] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+                  (click)="$event.stopPropagation()">
+                  <!-- Header -->
+                  <div class="mb-[12px] flex items-center justify-between">
+                    <span class="text-[13.5px] font-bold text-[var(--pr-text-heading)]">Filters</span>
+                    <div class="flex items-center gap-[10px]">
+                      @if (hasActiveOverviewFilters()) {
+                        <button
+                          type="button"
+                          (click)="clearOverviewFilters()"
+                          class="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:underline">
+                          Clear all
+                        </button>
+                      }
+                      <button
+                        type="button"
+                        (click)="closeOverviewFilterPopover()"
+                        class="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[5px] border-0 bg-transparent p-0 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                        aria-label="Close filters">
+                        <span class="material-icons-round text-[16px]">close</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Section filter -->
+                  <div class="mb-[14px]">
+                    <span class="mb-[6px] block text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">
+                      Section
+                    </span>
+                    <div class="grid grid-cols-2 gap-[6px]">
+                      <button
+                        type="button"
+                        (click)="setOverviewSection('all')"
+                        class="cursor-pointer rounded-[7px] border px-[10px] py-[6px] text-left text-[12px] transition-all"
+                        [class]="overviewSection() === 'all'
+                          ? 'border-[var(--pr-color-primary-500)] bg-[var(--pr-color-primary-50)] font-bold text-[var(--pr-color-primary-700)] shadow-2xs'
+                          : 'border-[var(--pr-border)] bg-[var(--pr-surface-ground)] font-medium text-[var(--pr-text-secondary)] hover:bg-white'">
+                        All Sections
+                      </button>
+                      <button
+                        type="button"
+                        (click)="setOverviewSection('w1w2')"
+                        class="flex cursor-pointer items-center justify-between rounded-[7px] border px-[10px] py-[6px] text-[12px] transition-all"
+                        [class]="overviewSection() === 'w1w2'
+                          ? 'border-[var(--pr-color-primary-500)] bg-[var(--pr-color-primary-50)] font-bold text-[var(--pr-color-primary-700)] shadow-2xs'
+                          : 'border-[var(--pr-border)] bg-[var(--pr-surface-ground)] font-medium text-[var(--pr-text-secondary)] hover:bg-white'">
+                        <span>W1/W2</span>
+                        @if (overviewStatusTotal() > 0) {
+                          <span class="rounded-full bg-purple-100 px-[6px] py-[1px] text-[10.5px] font-bold text-purple-700 tabular-nums">
+                            {{ overviewStatusTotal() }}
+                          </span>
+                        }
+                      </button>
+                      <button
+                        type="button"
+                        (click)="setOverviewSection('bilateral')"
+                        class="flex cursor-pointer items-center justify-between rounded-[7px] border px-[10px] py-[6px] text-[12px] transition-all"
+                        [class]="overviewSection() === 'bilateral'
+                          ? 'border-[var(--pr-color-primary-500)] bg-[var(--pr-color-primary-50)] font-bold text-[var(--pr-color-primary-700)] shadow-2xs'
+                          : 'border-[var(--pr-border)] bg-[var(--pr-surface-ground)] font-medium text-[var(--pr-text-secondary)] hover:bg-white'">
+                        <span>W3 / Bilateral</span>
+                        @if (overviewBilateralTotal() > 0) {
+                          <span class="rounded-full bg-blue-100 px-[6px] py-[1px] text-[10.5px] font-bold text-blue-700 tabular-nums">
+                            {{ overviewBilateralTotal() }}
+                          </span>
+                        }
+                      </button>
+                      <button
+                        type="button"
+                        (click)="setOverviewSection('aow')"
+                        class="flex cursor-pointer items-center justify-between rounded-[7px] border px-[10px] py-[6px] text-[12px] transition-all"
+                        [class]="overviewSection() === 'aow'
+                          ? 'border-[var(--pr-color-primary-500)] bg-[var(--pr-color-primary-50)] font-bold text-[var(--pr-color-primary-700)] shadow-2xs'
+                          : 'border-[var(--pr-border)] bg-[var(--pr-surface-ground)] font-medium text-[var(--pr-text-secondary)] hover:bg-white'">
+                        <span>Areas of Work</span>
+                        @if (overviewAowProgress().length > 0) {
+                          <span class="rounded-full bg-slate-200 px-[6px] py-[1px] text-[10.5px] font-bold text-slate-700 tabular-nums">
+                            {{ overviewAowProgress().length }}
+                          </span>
+                        }
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Scope filter -->
+                  <div>
+                    <span class="mb-[6px] block text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">
+                      Scope
+                    </span>
+                    <div class="max-h-[180px] overflow-y-auto rounded-[8px] border border-[var(--pr-border)] p-[4px] flex flex-col gap-[2px]">
+                      <button
+                        type="button"
+                        (click)="setOverviewScope(null)"
+                        class="cursor-pointer rounded-[6px] px-[8px] py-[5px] text-left text-[12px] transition-colors"
+                        [class]="overviewScope() === null
+                          ? 'bg-[var(--pr-color-primary-50)] font-bold text-[var(--pr-color-primary-700)]'
+                          : 'text-[var(--pr-text)] hover:bg-slate-50 font-normal'">
+                        All areas and outcomes
+                      </button>
+                      @for (opt of scopeOptions(); track opt.key) {
+                        <button
+                          type="button"
+                          (click)="setOverviewScope(opt.key)"
+                          class="flex cursor-pointer items-center gap-[6px] rounded-[6px] px-[8px] py-[5px] text-left text-[12px] transition-colors"
+                          [class]="overviewScope() === opt.key
+                            ? 'bg-[var(--pr-color-primary-50)] font-bold text-[var(--pr-color-primary-700)]'
+                            : 'text-[var(--pr-text)] hover:bg-slate-50 font-normal'">
+                          @if (overviewScopeDisplayCode(opt) !== '—') {
+                            <span class="shrink-0 rounded-[4px] bg-slate-100 px-[5px] py-[1px] font-mono text-[10.5px] font-medium text-slate-700">
+                              {{ overviewScopeDisplayCode(opt) }}
+                            </span>
+                          }
+                          <span class="truncate" [title]="opt.name">{{ opt.name }}</span>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Active filter chips (JIRA style with quick clear) -->
+            @if (overviewSection() !== 'all') {
+              <div class="inline-flex items-center gap-[5px] rounded-full border border-purple-200 bg-purple-50 py-[2px] pl-[10px] pr-[6px] text-[12px] font-semibold text-purple-800">
+                <span>Section: {{ overviewSectionLabel() }}</span>
+                <button
+                  type="button"
+                  (click)="setOverviewSection('all')"
+                  class="flex h-[16px] w-[16px] cursor-pointer items-center justify-center rounded-full hover:bg-purple-200 text-purple-700"
+                  aria-label="Clear section filter">
+                  <span class="material-icons-round text-[13px]">close</span>
+                </button>
+              </div>
+            }
+            @if (overviewScope() !== null) {
+              <div class="inline-flex items-center gap-[5px] rounded-full border border-purple-200 bg-purple-50 py-[2px] pl-[10px] pr-[6px] text-[12px] font-semibold text-purple-800">
+                <span class="max-w-[180px] truncate">Scope: {{ activeScopeLabel() }}</span>
+                <button
+                  type="button"
+                  (click)="setOverviewScope(null)"
+                  class="flex h-[16px] w-[16px] cursor-pointer items-center justify-center rounded-full hover:bg-purple-200 text-purple-700"
+                  aria-label="Clear scope filter">
+                  <span class="material-icons-round text-[13px]">close</span>
+                </button>
+              </div>
+            }
           </div>
-          @if (loadingMeter()) {
-            <span class="material-icons-round animate-spin text-[14px] text-[var(--pr-text-subtle)]" aria-hidden="true">progress_activity</span>
-            <span class="sr-only">Loading phase data…</span>
-          }
         </div>
 
-        <!-- Reporting Entry Hub (`changes/reporting-entry-hub`, REH-R-1) — mounted BEFORE
-             `app-program-overview`, design.md §6.1. -->
-        <app-reporting-entry-hub
-          id="reporting-entry-hub"
-          [programCode]="selected()?.initiativeCode || ''"
-          [phaseLabel]="phaseLabel()"
-          [isActivePhase]="hubIsActivePhase()"
-          [activeYear]="hubActiveYear()"
-          [aowRows]="overviewAowProgress()"
-          [w1w2Loading]="loadingAows()"
-          [programLevelRows]="hubProgramLevelRows()"
-          [canReportW1W2]="entityAowService.canReportResults()"
-          [w3State]="w3State()"
-          [myCentersCount]="myCenters().length"
-          [canReportEmerging]="canReportEmerging()"
-          (reportEmerging)="openReportModal()"
-          (reportAow)="onOpenAow($event)"
-          (reportProgramLevel)="onReportProgramLevel($event)"
-          (createResult)="onHubCreateResult($event)"
-          (retryW3)="retryW3()" />
-
         <app-program-overview
+          data-guide="tab-overview-view"
+          [programCode]="selected()?.initiativeCode || ''"
           [programName]="selected()?.initiativeShortName || selected()?.initiativeName || ''"
+          [(activeSection)]="overviewSection"
+          [hideInlineFilters]="true"
           [statusSegments]="overviewStatusSegments()"
           [bilateralStatusSegments]="overviewBilateralStatusSegments()"
           [aowProgress]="overviewAowProgress()"
@@ -1270,7 +1431,8 @@
             [programDotColor]="accentTheme().solid"
             activeTab="reporting"
             [canReport]="canReportEmerging()"
-            (reportEmerging)="openReportModal()"
+            (whereToReport)="openWhereToReportModal()"
+            (reportEmerging)="openWhereToReportModal()"
             [search]="plannedSearch()"
             [statusValue]="reportingStatusFilter()"
             [aowOptions]="reportingSectionOptions()"
@@ -1294,20 +1456,24 @@
             (typeChange)="reportingTypeFilter.set($event)"
             (typologyChange)="reportingTypologyFilter.set($event)"
             (viewModeChange)="reportingViewMode.set($event)"
+            [centerOptions]="byAowCenterFilterOptions()"
+            [centerValue]="byAowSelectedCenter()"
+            (centerChange)="setByAowCenterFilter($event)"
+            [byAowTypeOptions]="byAowTypeFilterOptions()"
+            [byAowTypeValue]="byAowSelectedType()"
+            (byAowTypeChange)="setByAowTypeFilter($event)"
             [onlyPending]="onlyPending()"
             [burndownSort]="burndownSort()"
             (onlyPendingChange)="setOnlyPending($event)"
-            (burndownSortChange)="setBurndownSort($event)" />
+            (burndownSortChange)="setBurndownSort($event)"
+            (allAowsClick)="setPlannedBrowseView('aows')" />
 
           <!-- The old filter strip (72 lines: its own search plus the AoW / typology selects)
                was removed — the band above now owns search, filters and the grouping toggle,
                and having two search boxes on one screen was the visible symptom. -->
 
-          <!-- Content pad: 32px on every side, 20px between AoW cards (reference :736 / :989).
-               No inner scroller — the page scrolls and the band sticks. The old `min-h-0 flex-1
-               overflow-y-auto` gave this box no height to work with, which is why the canvas
-               stopped halfway down the viewport and left a white band underneath. -->
-          <div class="flex flex-col gap-[20px] px-[32px] pb-[32px]">
+          <!-- Content pad: 32px horizontal, 20px top, 32px bottom. 20px between AoW cards. -->
+          <div class="flex flex-col gap-[20px] px-[32px] pt-[20px] pb-[32px]" data-guide="tab-reporting-view">
             @if (loadingAows()) {
               @for (s of [1, 2, 3, 4]; track s) {
                 <div class="h-14 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
@@ -1377,6 +1543,34 @@
                         {{ banner.name }}
                       </h3>
                     </div>
+
+                    @if (banner.achievement) {
+                      <div
+                        class="flex shrink-0 flex-col items-end border-l border-[var(--pr-border)] pl-[14px] leading-tight max-[768px]:sr-only"
+                        [prTooltip]="achievementTooltip(banner.achievement)"
+                        prTooltipPosition="top">
+                        <div class="flex items-baseline gap-[10px] whitespace-nowrap">
+                          <span class="flex items-baseline gap-[4px]">
+                            <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
+                            <span class="text-[14px] font-bold tabular-nums text-[var(--pr-text-heading)]">
+                              {{ achievementLabel(banner.achievement) }}
+                            </span>
+                          </span>
+                          <span class="flex items-baseline gap-[4px]">
+                            <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
+                            <span class="text-[14px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+                              {{ preliminaryAchievementLabel(banner.achievement) }}
+                            </span>
+                          </span>
+                        </div>
+                        @if (achievementCoverage(banner.achievement)) {
+                          <span class="whitespace-nowrap text-[10.5px] font-medium text-[var(--pr-text-muted)]">
+                            {{ achievementCoverage(banner.achievement) }}
+                          </span>
+                        }
+                      </div>
+                    }
+
                     <div class="flex shrink-0 items-center gap-[8px]">
                       <!-- @akili-spec changes/mass-reporting-flow — MRF-R-8: double-gated. When
                            either gate is off the control is ABSENT here, never rendered disabled. -->
@@ -1391,13 +1585,6 @@
                           {{ narrativeCopy.trigger }}
                         </button>
                       }
-                      <button
-                        type="button"
-                        (click)="setPlannedBrowseView('aows')"
-                        class="inline-flex h-[30px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
-                        <span class="material-icons-round text-[16px]" aria-hidden="true">grid_view</span>
-                        All Areas of Work
-                      </button>
                     </div>
                   </div>
                   <!-- @akili-spec changes/mass-reporting-flow — MRF-R-4: the session counter joins the
@@ -1443,98 +1630,6 @@
                   </div>
                 </section>
 
-                <!-- In-card Breakdown Filters by Center and Result Type for By-AoW mode -->
-                @let centers = byAowCenterCounts();
-                @let types = byAowTypeCounts();
-                @let selCenter = byAowSelectedCenter();
-                @let selType = byAowSelectedType();
-
-                @if (centers.length > 1 || types.length > 1) {
-                  <div class="flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[20px] py-[8px] shadow-xs">
-                    <!-- Collapsible toggle header -->
-                    <button
-                      type="button"
-                      class="flex h-[32px] w-full items-center justify-between bg-transparent border-0 p-0 text-left cursor-pointer hover:text-[var(--pr-color-primary-600)] transition-colors group/bhead"
-                      [attr.aria-expanded]="byAowBreakdownOpen()"
-                      (click)="toggleByAowBreakdown()">
-                      <div class="flex items-center gap-[6px]">
-                        <span
-                          class="material-icons-round text-[18px] text-[var(--pr-text-secondary)] transition-transform duration-200 group-hover/bhead:text-[var(--pr-color-primary-600)]"
-                          [class.rotate-180]="byAowBreakdownOpen()"
-                          aria-hidden="true"
-                          >expand_more</span
-                        >
-                        <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)] group-hover/bhead:text-[var(--pr-color-primary-600)]">
-                          Filters by Center & Type
-                        </span>
-                        @if (selCenter || selType) {
-                          <span class="ml-[4px] inline-flex items-center gap-[4px] rounded-full bg-[var(--pr-color-primary-100)] px-[8px] py-[1px] text-[10.5px] font-semibold text-[var(--pr-color-primary-700)]">
-                            {{ selCenter ? selCenter : '' }}{{ selCenter && selType ? ' · ' : '' }}{{ selType ? selType : '' }}
-                          </span>
-                        }
-                      </div>
-                      <span class="text-[11px] font-medium text-[var(--pr-text-subtle)] group-hover/bhead:text-[var(--pr-color-primary-600)]">
-                        {{ byAowBreakdownOpen() ? 'Hide filters' : 'Show filters' }}
-                      </span>
-                    </button>
-
-                    <!-- Filter Pills Content -->
-                    @if (byAowBreakdownOpen()) {
-                      <div class="flex flex-col gap-[8px] pb-[6px] pt-[6px] border-t border-[var(--pr-border-divider)] mt-[4px]">
-                        <!-- Centers Row -->
-                        @if (centers.length > 1) {
-                          <div class="flex flex-wrap items-center gap-[5px]">
-                            <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[4px]">
-                              Centers:
-                            </span>
-                            <button
-                              type="button"
-                              class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                              [class]="!selCenter ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
-                              (click)="setByAowCenterFilter(null)">
-                              All <span class="opacity-75 tabular-nums">({{ banner.total }})</span>
-                            </button>
-                            @for (c of centers; track c.center) {
-                              <button
-                                type="button"
-                                class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                                [class]="selCenter === c.center ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
-                                (click)="setByAowCenterFilter(c.center)">
-                                {{ c.center }} <span class="opacity-75 tabular-nums">({{ c.count }})</span>
-                              </button>
-                            }
-                          </div>
-                        }
-
-                        <!-- Types Row -->
-                        @if (types.length > 1) {
-                          <div class="flex flex-wrap items-center gap-[5px]">
-                            <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[4px]">
-                              Types:
-                            </span>
-                            <button
-                              type="button"
-                              class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                              [class]="!selType ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
-                              (click)="setByAowTypeFilter(null)">
-                              All Types
-                            </button>
-                            @for (t of types; track t.type) {
-                              <button
-                                type="button"
-                                class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                                [class]="selType === t.type ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
-                                (click)="setByAowTypeFilter(t.type)">
-                                {{ t.type }} <span class="opacity-75 tabular-nums">({{ t.count }})</span>
-                              </button>
-                            }
-                          </div>
-                        }
-                      </div>
-                    }
-                  </div>
-                }
-
                 <!-- @akili-spec changes/mass-reporting-flow — MRF-R-9: same double gate; the panel
                      runs in-browser and writes nothing, so closing it discards the draft. -->
                 @if (narrativeGateOpen() && narrativePanelOpen()) {
@@ -1556,62 +1651,125 @@
                 <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No indicators match the current filters for this Area of Work.</p>
               } @else {
                 @for (sec of plannedByAowSections(); track sec.label) {
-                <div class="flex items-center justify-between gap-[8px] pt-2 pb-1">
-                  <div class="flex items-center gap-[8px]">
-                    <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">{{ sec.label }}</span>
-                    <span class="font-mono text-[11px] font-semibold text-[var(--pr-color-accents-4)]">{{ sec.kpis }} KPIs</span>
-                  </div>
-                  @if (sec.groups.length > 0) {
-                    <button
-                      type="button"
-                      class="inline-flex items-center gap-[4px] rounded-[6px] border border-transparent bg-transparent px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-600)] transition-colors hover:bg-[var(--pr-color-primary-50)] hover:text-[var(--pr-color-primary-700)] cursor-pointer"
-                      [attr.aria-expanded]="isByAowSectionAllExpanded(sec)"
-                      (click)="toggleByAowSection(sec)">
-                      <span class="material-icons-round text-[15px]" aria-hidden="true">
-                        {{ isByAowSectionAllExpanded(sec) ? 'unfold_less' : 'unfold_more' }}
-                      </span>
-                      <span>{{ isByAowSectionAllExpanded(sec) ? 'Collapse all' : 'Expand all' }}</span>
-                    </button>
-                  }
-                </div>
-                @for (hlo of sec.groups; track hlo.title) {
-                  <section class="overflow-hidden rounded-xl border border-[rgba(30,32,47,0.07)] bg-white">
-                    <button
-                      type="button"
-                      (click)="togglePlannedHlo(hlo.title)"
-                      [attr.aria-expanded]="isPlannedHloExpanded(hlo.title)"
-                      class="flex w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-[var(--pr-color-accents-1)] transition-colors cursor-pointer">
-                      <span
-                        class="material-icons-round text-[18px] text-[var(--pr-color-accents-4)] transition-transform"
-                        [class.rotate-90]="isPlannedHloExpanded(hlo.title)"
-                        aria-hidden="true"
-                        >chevron_right</span
-                      >
-                      <span class="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">
-                        @if (hlo.split.code) {
-                          <span class="font-extrabold text-[var(--pr-color-primary-400)]" [innerHTML]="hlo.split.code | highlightSearch: plannedSearch()"></span>
-                          <span class="mx-1 font-normal text-[var(--pr-color-accents-3)]">·</span>
-                          <span [innerHTML]="hlo.split.name | highlightSearch: plannedSearch()"></span>
-                        } @else {
-                          <span [innerHTML]="hlo.split.name | highlightSearch: plannedSearch()"></span>
-                        }
-                      </span>
-                      <div class="flex items-center gap-3 shrink-0">
-                        <span class="text-[11px] text-[var(--pr-text-secondary)]">
-                          <span class="font-semibold uppercase tracking-wider text-[9.5px] text-slate-400">Target:</span>
-                          <span class="ml-1 font-bold tabular-nums text-[var(--pr-text-heading)]">{{ hloTargetSum(hlo) }}</span>
-                        </span>
-                        <span class="text-[11px] text-[var(--pr-text-secondary)]">
-                          <span class="font-semibold uppercase tracking-wider text-[9.5px] text-slate-400">Achieved:</span>
-                          <span class="ml-1 font-bold tabular-nums text-emerald-700">{{ hloAchievedSum(hlo) }}</span>
-                        </span>
-                        <span class="shrink-0 rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--pr-text-secondary)] tabular-nums">
-                          {{ hlo.count }} KPI{{ hlo.count === 1 ? '' : 's' }}
-                        </span>
+                  <div class="flex flex-col gap-[8px]">
+                    <div class="flex items-center justify-between gap-[8px] pt-1">
+                      <div class="flex items-center gap-[8px]">
+                        <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">{{ sec.label }}</span>
+                        <span class="font-mono text-[11px] font-semibold text-[var(--pr-color-accents-4)]">{{ sec.kpis }} KPIs</span>
                       </div>
-                    </button>
+                      @if (sec.groups.length > 0) {
+                        <button
+                          type="button"
+                          class="inline-flex items-center gap-[4px] rounded-[6px] border border-transparent bg-transparent px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-600)] transition-colors hover:bg-[var(--pr-color-primary-50)] hover:text-[var(--pr-color-primary-700)] cursor-pointer"
+                          [attr.aria-expanded]="isByAowSectionAllExpanded(sec)"
+                          (click)="toggleByAowSection(sec)">
+                          <span class="material-icons-round text-[15px]" aria-hidden="true">
+                            {{ isByAowSectionAllExpanded(sec) ? 'unfold_less' : 'unfold_more' }}
+                          </span>
+                          <span>{{ isByAowSectionAllExpanded(sec) ? 'Collapse all' : 'Expand all' }}</span>
+                        </button>
+                      }
+                    </div>
+                    <div class="overflow-x-auto">
+                      <div class="pr-by-aow-head hidden md:grid" aria-hidden="true">
+                        <span></span>
+                        <span>{{ sec.label === 'High Level Outputs' ? 'High-Level Output' : 'Outcome' }}</span>
+                        <span class="text-center">Target</span>
+                        <span class="text-center">Achieved</span>
+                        <span class="text-center">KPIs</span>
+                        <span class="text-center">Progress</span>
+                      </div>
+                      <div class="flex flex-col gap-[8px]">
+                        @for (hlo of sec.groups; track hlo.title) {
+                          <section class="overflow-hidden rounded-xl border border-[var(--pr-border)] bg-white shadow-xs transition-shadow hover:shadow-sm">
+                            <button
+                              type="button"
+                              (click)="togglePlannedHlo(hlo.title)"
+                              [attr.aria-expanded]="isPlannedHloExpanded(hlo.title)"
+                              class="pr-by-aow-row group/hlo border-l-[3px] cursor-pointer transition-all duration-150"
+                              [class.border-l-[var(--pr-color-primary-400)]]="isPlannedHloExpanded(hlo.title)"
+                              [class.bg-[var(--pr-color-primary-25)]]="isPlannedHloExpanded(hlo.title)"
+                              [class.border-l-transparent]="!isPlannedHloExpanded(hlo.title)"
+                              [class.bg-white]="!isPlannedHloExpanded(hlo.title)"
+                              [class.hover:bg-[var(--pr-surface-subtle)]]="!isPlannedHloExpanded(hlo.title)">
+                              <span
+                                class="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[6px] border transition-all duration-200"
+                                [class.border-[var(--pr-color-primary-200)]]="isPlannedHloExpanded(hlo.title)"
+                                [class.bg-white]="isPlannedHloExpanded(hlo.title)"
+                                [class.text-[var(--pr-color-primary-600)]]="isPlannedHloExpanded(hlo.title)"
+                                [class.shadow-xs]="isPlannedHloExpanded(hlo.title)"
+                                [class.border-[var(--pr-border)]]="!isPlannedHloExpanded(hlo.title)"
+                                [class.bg-[var(--pr-surface-card)]]="!isPlannedHloExpanded(hlo.title)"
+                                [class.text-[var(--pr-text-secondary)]]="!isPlannedHloExpanded(hlo.title)"
+                                [class.group-hover/hlo:border-[var(--pr-color-primary-200)]]="!isPlannedHloExpanded(hlo.title)"
+                                [class.group-hover/hlo:text-[var(--pr-color-primary-600)]]="!isPlannedHloExpanded(hlo.title)">
+                                <span
+                                  class="material-icons-round text-[18px] transition-transform duration-200"
+                                  [class.rotate-180]="isPlannedHloExpanded(hlo.title)"
+                                  aria-hidden="true">expand_more</span>
+                              </span>
+                              <div class="flex min-w-0 items-center gap-[6px]">
+                                @if (cleanHloCode(hlo.split.code || hlo.title)) {
+                                  <span
+                                    class="pr-hlo-code inline-flex shrink-0 items-center justify-center rounded-[5px] border border-purple-200/70 bg-purple-100/80 px-[6px] py-[1px] font-mono text-[11px] font-bold text-purple-800">
+                                    {{ cleanHloCode(hlo.split.code || hlo.title) }}
+                                  </span>
+                                }
+                                <span
+                                  class="min-w-0 flex-1 truncate text-[13.5px] sm:text-[14px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)] group-hover/hlo:text-[var(--pr-color-primary-600)] transition-colors"
+                                  [title]="hlo.split.name">
+                                  <span [innerHTML]="hlo.split.name | highlightSearch: plannedSearch()"></span>
+                                </span>
+                              </div>
+                              <div class="text-center">
+                                <span class="block text-[13px] font-bold tabular-nums text-[var(--pr-text-heading)]">
+                                  {{ hloTargetSum(hlo) }}
+                                </span>
+                                <span class="block text-[9px] font-medium uppercase tracking-[0.04em] text-[var(--pr-text-subtle)] md:hidden">
+                                  Target
+                                </span>
+                              </div>
+                              <div class="text-center">
+                                <span class="block text-[13px] font-bold tabular-nums text-[var(--pr-color-green-500)]">
+                                  {{ hloAchievedSum(hlo) }}
+                                </span>
+                                <span class="block text-[9px] font-medium uppercase tracking-[0.04em] text-[var(--pr-text-subtle)] md:hidden">
+                                  Achieved
+                                </span>
+                              </div>
+                              <div class="flex items-center justify-center">
+                                <span
+                                  class="inline-flex items-center justify-center rounded-full px-[8px] py-[2px] text-[11px] tabular-nums border transition-colors min-w-[28px]"
+                                  [class.bg-white]="isPlannedHloExpanded(hlo.title)"
+                                  [class.text-[var(--pr-color-primary-600)]]="isPlannedHloExpanded(hlo.title)"
+                                  [class.border-[var(--pr-color-primary-200)]]="isPlannedHloExpanded(hlo.title)"
+                                  [class.font-bold]="isPlannedHloExpanded(hlo.title)"
+                                  [class.shadow-xs]="isPlannedHloExpanded(hlo.title)"
+                                  [class.bg-[var(--pr-surface-card)]]="!isPlannedHloExpanded(hlo.title)"
+                                  [class.text-[var(--pr-text-secondary)]]="!isPlannedHloExpanded(hlo.title)"
+                                  [class.border-[var(--pr-border)]]="!isPlannedHloExpanded(hlo.title)"
+                                  [class.font-semibold]="!isPlannedHloExpanded(hlo.title)">
+                                  {{ hlo.count }}
+                                </span>
+                              </div>
+                              <div class="min-w-0">
+                                @if (hlo.achievement) {
+                                  <div
+                                    class="flex flex-col items-center justify-center text-center leading-tight"
+                                    [prTooltip]="achievementTooltip(hlo.achievement, 'indicators')"
+                                    prTooltipPosition="top">
+                                    <span class="text-[12px] font-bold tabular-nums text-[var(--pr-text-heading)] whitespace-nowrap">
+                                      <span class="text-[9.5px] font-medium uppercase text-[var(--pr-text-subtle)] mr-[2px]">QA</span>{{ achievementLabel(hlo.achievement) }}
+                                    </span>
+                                    <span class="text-[11px] font-semibold tabular-nums text-[var(--pr-text-secondary)] whitespace-nowrap">
+                                      <span class="text-[9px] font-medium uppercase text-[var(--pr-text-subtle)] mr-[2px]">Prel.</span>{{ preliminaryAchievementLabel(hlo.achievement) }}
+                                    </span>
+                                  </div>
+                                }
+                              </div>
+                            </button>
                     @if (isPlannedHloExpanded(hlo.title)) {
-                      <div class="border-t border-[rgba(30,32,47,0.06)] px-2.5 py-2">
+                      <div class="border-t border-[var(--pr-border-divider)] px-2.5 py-2">
                         @if (plannedLayout() === 'table') {
                           <div class="overflow-x-auto rounded-xl border border-[rgba(30,32,47,0.07)]">
                             <table class="w-full border-collapse text-left text-[12px]">
@@ -1654,7 +1812,11 @@
                                   [ngClass]="{
                                     'outline outline-2 outline-offset-2 outline-[var(--pr-color-primary-300)]': highlightedKpiId() === kpiKey(ind)
                                   }"
-                                  class="flex flex-wrap items-center justify-between gap-[12px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[14px] py-[10px] transition-colors hover:border-[var(--pr-color-primary-200)]">
+                                  class="flex flex-wrap items-center justify-between gap-[12px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[14px] py-[10px] transition-colors hover:border-[var(--pr-color-primary-200)] border-l-[3px]"
+                                  [class.border-l-[var(--pr-color-green-500)]]="meta.state === 'complete'"
+                                  [class.border-l-purple-500]="meta.state === 'overachieved'"
+                                  [class.border-l-[var(--pr-color-primary-500)]]="meta.state === 'in_progress' || meta.state === 'in-progress'"
+                                  [class.border-l-[var(--pr-border-strong)]]="meta.state === 'not_started' || meta.state === 'not-started'">
                                   <div class="flex min-w-0 flex-1 flex-col gap-[6px]">
                                     <p
                                       class="m-0 text-[12.5px] font-semibold leading-snug text-[var(--pr-text-heading)]"
@@ -1765,6 +1927,9 @@
                     }
                   </section>
                 }
+                      </div>
+                    </div>
+                  </div>
                 }
               }
             } @else {
@@ -2008,5 +2173,60 @@
       [disableInitiativeSelect]="true"
       (resultCreated)="closeReportModal()">
     </app-report-result-form>
+  </app-pr-dialog>
+}
+
+<!-- ==================== "Where to report" MODAL ==================== -->
+@if (showWhereToReportModal()) {
+  <app-pr-dialog
+    [visible]="showWhereToReportModal()"
+    [modal]="true"
+    [closeOnEscape]="true"
+    [showHeader]="false"
+    [dismissableMask]="true"
+    styleClass="where-to-report-dialog"
+    (onHide)="closeWhereToReportModal()">
+    <div class="flex items-center justify-between border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[24px] py-[16px]">
+      <div class="flex items-center gap-[10px]">
+        <span class="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[8px] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]">
+          <span class="material-icons-round text-[20px]">explore</span>
+        </span>
+        <div>
+          <h2 class="m-0 text-[16px] font-bold text-[var(--pr-text-heading)]">Where to report</h2>
+          <p class="m-0 mt-[1px] text-[12px] text-[var(--pr-text-muted)]">
+            Two funding paths, two entry points. Pick the one that matches the result you are reporting.
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        (click)="closeWhereToReportModal()"
+        aria-label="Close modal"
+        class="flex h-[32px] w-[32px] cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)] transition-colors">
+        <i class="material-icons-round text-[20px]">close</i>
+      </button>
+    </div>
+
+    <div class="p-[20px] max-h-[82vh] overflow-y-auto bg-[var(--pr-surface-ground)]">
+      <app-reporting-entry-hub
+        id="reporting-entry-hub"
+        [isModal]="true"
+        [programCode]="selected()?.initiativeCode || ''"
+        [phaseLabel]="phaseLabel()"
+        [isActivePhase]="hubIsActivePhase()"
+        [activeYear]="hubActiveYear()"
+        [aowRows]="overviewAowProgress()"
+        [w1w2Loading]="loadingAows()"
+        [programLevelRows]="hubProgramLevelRows()"
+        [canReportW1W2]="entityAowService.canReportResults()"
+        [w3State]="w3State()"
+        [myCentersCount]="myCenters().length"
+        [canReportEmerging]="canReportEmerging()"
+        (reportEmerging)="closeWhereToReportModal(); openReportModal()"
+        (reportAow)="closeWhereToReportModal(); onOpenAow($event)"
+        (reportProgramLevel)="closeWhereToReportModal(); onReportProgramLevel($event)"
+        (createResult)="closeWhereToReportModal(); onHubCreateResult($event)"
+        (retryW3)="retryW3()" />
+    </div>
   </app-pr-dialog>
 }

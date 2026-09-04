@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 import { signal, WritableSignal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { DashboardLabComponent } from './dashboard-lab.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -251,7 +253,8 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
           useValue: {
             mySPsList: signal([]),
             otherSPsList: signal([program]),
-            otherProjectsList: signal([])
+            otherProjectsList: signal([]),
+            overviewSelectedPhase: signal<string | null>(null)
           }
         },
         { provide: ApiService, useValue: {} },
@@ -284,7 +287,7 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
     const inQa = segments.find(s => s.key === 'in-qa');
 
     expect(inProgress?.statusName).toBe('Editing');
-    expect(inProgress?.link).toEqual({ status: 'Editing' });
+    expect(inProgress?.link).toEqual({ origin: 'W1/W2', status: 'Editing' });
     expect(inQa?.link).toBeNull();
   });
 
@@ -294,7 +297,7 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
     const notStarted = component.overviewStatusSegments().find(s => s.key === 'not-started');
 
     expect(notStarted?.statusName).toBe('Pending Review');
-    expect(notStarted?.link).toEqual({ status: 'Pending Review' });
+    expect(notStarted?.link).toEqual({ origin: 'W1/W2', status: 'Pending Review' });
   });
 
   it('maps every one of the six status slots (incl. the appended discontinued slot) to its own statusName + link', async () => {
@@ -385,7 +388,7 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
 
     expect(navigate).toHaveBeenCalledTimes(1);
     expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP02', 'results'], {
-      queryParams: { origin: 'W3/Bilaterals', center: 'IITA' }
+      queryParams: { origin: 'W3/Bilaterals', center: 'IITA', phase: 'Reporting' }
     });
   });
 
@@ -395,7 +398,29 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
     component.onOverviewLink({ category: 'KP' });
 
     expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP02', 'results'], {
-      queryParams: { category: 'KP' }
+      queryParams: { category: 'KP', phase: 'Reporting' }
+    });
+  });
+
+  it('onOverviewLink preserves explicit link.phase when present (ODF-R-3)', async () => {
+    const component = await createComponent();
+    component.homeSE?.overviewSelectedPhase?.set('Reporting 2025');
+
+    component.onOverviewLink({ origin: 'W3/Bilaterals', center: 'IITA', phase: 'Reporting 2024' });
+
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP02', 'results'], {
+      queryParams: { origin: 'W3/Bilaterals', center: 'IITA', phase: 'Reporting 2024' }
+    });
+  });
+
+  it('onOverviewLink uses homeSE.overviewSelectedPhase when set (ODF-R-3, ODF-R-4)', async () => {
+    const component = await createComponent();
+    component.homeSE?.overviewSelectedPhase?.set('Reporting 2025');
+
+    component.onOverviewLink({ origin: 'W1/W2', status: 'Editing' });
+
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP02', 'results'], {
+      queryParams: { origin: 'W1/W2', status: 'Editing', phase: 'Reporting 2025' }
     });
   });
 
@@ -539,9 +564,9 @@ describe('DashboardLabComponent — overview heatmap matrices (OVW-T-3)', () => 
     expect(heatmap.cols).toEqual(['Editing', 'Quality Assessed', 'Submitted', 'Other']);
     expect(heatmap.cells.map(c => c.value)).toEqual([1, 2, 0, 3]);
 
-    expect(heatmap.cells.find(c => c.c === 0)?.link).toEqual({ category: 'Knowledge product', status: 'Editing' });
-    expect(heatmap.cells.find(c => c.c === 1)?.link).toEqual({ category: 'Knowledge product', status: 'Quality Assessed' });
-    expect(heatmap.cells.find(c => c.c === 2)?.link).toEqual({ category: 'Knowledge product', status: 'Submitted' });
+    expect(heatmap.cells.find(c => c.c === 0)?.link).toEqual({ origin: 'W1/W2', category: 'Knowledge product', status: 'Editing' });
+    expect(heatmap.cells.find(c => c.c === 1)?.link).toEqual({ origin: 'W1/W2', category: 'Knowledge product', status: 'Quality Assessed' });
+    expect(heatmap.cells.find(c => c.c === 2)?.link).toEqual({ origin: 'W1/W2', category: 'Knowledge product', status: 'Submitted' });
     // FAIL input: mapping 'Other' to {status:'Other'} instead of null turns this red.
     expect(heatmap.cells.find(c => c.c === 3)?.link).toBeNull();
   });
@@ -620,6 +645,46 @@ describe('DashboardLabComponent — overview heatmap matrices (OVW-T-3)', () => 
 
     expect(heatmap.rows.length).toBe(2);
     expect(heatmap.shownOf).toBeUndefined();
+  });
+
+  describe('Overview JIRA-style Top-Bar Filter', () => {
+    it('manages filter open state, sections, scope, and counts', async () => {
+      const component = await createComponent();
+
+      expect(component.overviewSection()).toBe('all');
+      expect(component.overviewScope()).toBeNull();
+      expect(component.hasActiveOverviewFilters()).toBe(false);
+      expect(component.activeOverviewFilterCount()).toBe(0);
+
+      // Section selection
+      component.setOverviewSection('w1w2');
+      expect(component.overviewSection()).toBe('w1w2');
+      expect(component.overviewSectionLabel()).toBe('W1/W2');
+      expect(component.hasActiveOverviewFilters()).toBe(true);
+      expect(component.activeOverviewFilterCount()).toBe(1);
+
+      // Scope selection
+      component.setOverviewScope('AOW01');
+      expect(component.overviewScope()).toBe('AOW01');
+      expect(component.activeOverviewFilterCount()).toBe(2);
+
+      // Clear filters
+      component.clearOverviewFilters();
+      expect(component.overviewSection()).toBe('all');
+      expect(component.overviewScope()).toBeNull();
+      expect(component.hasActiveOverviewFilters()).toBe(false);
+      expect(component.activeOverviewFilterCount()).toBe(0);
+
+      // Popover toggling
+      expect(component.overviewFilterOpen()).toBe(false);
+      const fakeEvent = { stopPropagation: jest.fn() } as unknown as Event;
+      component.toggleOverviewFilterPopover(fakeEvent);
+      expect(fakeEvent.stopPropagation).toHaveBeenCalled();
+      expect(component.overviewFilterOpen()).toBe(true);
+
+      component.closeOverviewFilterPopover();
+      expect(component.overviewFilterOpen()).toBe(false);
+    });
   });
 });
 
@@ -1556,27 +1621,266 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
     return fixture.componentInstance;
   }
 
-  it('seeds the disclosure switch open, so the AoW cards arrive expanded', async () => {
+  it('seeds the disclosure switch closed, so the AoW cards arrive collapsed', async () => {
     const component = await createComponent();
 
     // This is the value the grouped table receives as `[expandAll]`, and the table uses it as the
     // level default for both the AoW cards and their HLO sub-groups.
-    expect(component.reportingAllExpanded()).toBe(true);
-    // The toolbar label is written from this one; seeding it `false` while the cards are open made
-    // the first press a dead click (the press asks for the value already on screen).
-    expect(component.reportingAllOpen()).toBe(true);
+    expect(component.reportingAllExpanded()).toBe(false);
+    // The toolbar label is written from this one: with cards arriving closed, the toolbar reads Expand all.
+    expect(component.reportingAllOpen()).toBe(false);
   });
 
   // The seed and the toolbar are one mechanism, so this asserts it from the other side: arriving
-  // expanded means the FIRST press of the single Expand all / Collapse all control must COLLAPSE.
-  // Re-seeding to `false` flips this expectation, which is what makes it a lock and not a restatement.
-  it('makes the first press of the toolbar control collapse, not expand', async () => {
+  // collapsed means the FIRST press of the single Expand all / Collapse all control must EXPAND.
+  it('makes the first press of the toolbar control expand, not collapse', async () => {
     const component = await createComponent();
 
     component.toggleReportingExpandAll();
 
-    expect(component.reportingAllExpanded()).toBe(false);
+    expect(component.reportingAllExpanded()).toBe(true);
     // Every press is a real change for the table, even when the boolean repeats.
     expect(component.reportingExpandNonce()).toBe(1);
+  });
+
+  describe('cleanHloCode (RAJ-R-1, RAJ-DD-2, BTC-R-1)', () => {
+    it('extracts clean badge token from raw codes and strings in dashboard-lab', async () => {
+      const component = await createComponent();
+      expect(component.cleanHloCode('HLO4.AOW1.IO1 Foster motivations')).toBe('HLO4');
+      expect(component.cleanHloCode('HLO-04 Some Title')).toBe('HLO-04');
+      expect(component.cleanHloCode('IO2.1 Intermediate')).toBe('IO2');
+      expect(component.cleanHloCode('EOI3.1 Early outcome')).toBe('EOI3');
+      expect(component.cleanHloCode('I-OC 3.5. Women, men, youth')).toBe('I-OC 3.5');
+      expect(component.cleanHloCode('I-OC 1.1. Breeding network')).toBe('I-OC 1.1');
+      expect(component.cleanHloCode('OC 3.1. Some title')).toBe('OC 3.1');
+      expect(component.cleanHloCode('Foster motivations')).toBe('');
+      expect(component.cleanHloCode('')).toBe('');
+      expect(component.cleanHloCode(undefined)).toBe('');
+    });
+  });
+
+  describe('splitGroupTitle (BTC-R-1, BTC-AC-1.1)', () => {
+    it('splits I-OC outcome titles into clean code and sanitized name', async () => {
+      const component = await createComponent();
+      const res = component.splitGroupTitle('I-OC 3.5. Women, men, youth and vulnerable groups');
+      expect(res.code).toBe('I-OC 3.5');
+      expect(res.name).toBe('Women, men, youth and vulnerable groups');
+    });
+
+    it('splits HLO and numeric titles correctly', async () => {
+      const component = await createComponent();
+      expect(component.splitGroupTitle('HLO4.AOW1.IO1 Foster motivations')).toEqual({
+        code: 'HLO4.AOW1.IO1',
+        name: 'Foster motivations'
+      });
+      expect(component.splitGroupTitle('2.2.2: Policy engagement')).toEqual({
+        code: '2.2.2',
+        name: 'Policy engagement'
+      });
+      expect(component.splitGroupTitle('Plain title without code')).toEqual({
+        code: null,
+        name: 'Plain title without code'
+      });
+    });
+  });
+
+  describe('By-AoW popover filters and active filters', () => {
+    it('generates options with counts and resets in clearReportingFilters', async () => {
+      const component = await createComponent();
+      component.plannedHloAowCode.set('AOW01');
+      const mockInds = [
+        { indicator_id: 1, center_acronym: 'CIAT', result_type_name: 'Knowledge product', __tier: 'output' },
+        { indicator_id: 2, center_acronym: 'CIAT', result_type_name: 'Innovation use', __tier: 'output' },
+        { indicator_id: 3, center_acronym: 'IITA', result_type_name: 'Knowledge product', __tier: 'output' }
+      ];
+      jest.spyOn(component, 'indicatorsForAow').mockReturnValue({ aow: { code: 'AOW01', name: 'Test' }, indicators: mockInds } as any);
+
+      const centerOptions = component.byAowCenterFilterOptions();
+      expect(centerOptions).toEqual([
+        { value: 'all', label: 'All centers' },
+        { value: 'CIAT', label: 'CIAT (2)' },
+        { value: 'IITA', label: 'IITA (1)' }
+      ]);
+
+      const typeOptions = component.byAowTypeFilterOptions();
+      expect(typeOptions).toEqual([
+        { value: 'all', label: 'All types' },
+        { value: 'Knowledge product', label: 'Knowledge product (2)' },
+        { value: 'Innovation use', label: 'Innovation use (1)' }
+      ]);
+
+      component.setByAowCenterFilter('CIAT');
+      component.setByAowTypeFilter('Knowledge product');
+      expect(component.byAowSelectedCenter()).toBe('CIAT');
+      expect(component.byAowSelectedType()).toBe('Knowledge product');
+      expect(component.reportingFiltersActive()).toBe(true);
+
+      component.clearReportingFilters();
+      expect(component.byAowSelectedCenter()).toBeNull();
+      expect(component.byAowSelectedType()).toBeNull();
+      expect(component.reportingFiltersActive()).toBe(false);
+    });
+  });
+
+  describe('By-AoW tabular layout (BTC-R-2, BTC-R-3)', () => {
+    it('renders .pr-by-aow-head table column headers with Target, Achieved, KPIs, and Progress', () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+
+      // Test checking that the template includes the .pr-by-aow-head and .pr-by-aow-row structure
+      expect(template).toContain('class="pr-by-aow-head hidden md:grid"');
+      expect(template).toContain('class="overflow-x-auto"');
+
+      // Check column header titles (BTC-AC-3.1)
+      expect(template).toContain("<span>{{ sec.label === 'High Level Outputs' ? 'High-Level Output' : 'Outcome' }}</span>");
+      expect(template).toContain('<span class="text-center">Target</span>');
+      expect(template).toContain('<span class="text-center">Achieved</span>');
+      expect(template).toContain('<span class="text-center">KPIs</span>');
+      expect(template).toContain('<span class="text-center">Progress</span>');
+    });
+
+    it('renders .pr-by-aow-head table column headers into DOM elements with correct text (BTC-AC-3.1)', () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(template, 'text/html');
+
+      const head = doc.querySelector('.pr-by-aow-head');
+      expect(head).not.toBeNull();
+      expect(head?.classList.contains('hidden')).toBe(true);
+      expect(head?.classList.contains('md:grid')).toBe(true);
+
+      const headerSpans = Array.from(head?.querySelectorAll('span') ?? []);
+      expect(headerSpans.length).toBe(6);
+      expect(headerSpans[0].textContent?.trim()).toBe('');
+      expect(headerSpans[1].textContent).toContain('sec.label');
+      expect(headerSpans[2].textContent?.trim()).toBe('Target');
+      expect(headerSpans[3].textContent?.trim()).toBe('Achieved');
+      expect(headerSpans[4].textContent?.trim()).toBe('KPIs');
+      expect(headerSpans[5].textContent?.trim()).toBe('Progress');
+    });
+
+    it('renders .pr-by-aow-row grid with code badge, sanitized title, and stacked metric cells (BTC-AC-2.1, BTC-AC-2.3)', () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(template, 'text/html');
+
+      const row = doc.querySelector('.pr-by-aow-row');
+      expect(row).not.toBeNull();
+      expect(row?.tagName.toLowerCase()).toBe('button');
+
+      // Check badge rendered with cleanHloCode binding (BTC-AC-1.2)
+      const badge = doc.querySelector('.pr-hlo-code');
+      expect(badge).not.toBeNull();
+      expect(badge?.textContent).toContain('cleanHloCode(hlo.split.code || hlo.title)');
+
+      // Check stacked target and achieved cells (BTC-AC-2.3)
+      expect(template).toContain('{{ hloTargetSum(hlo) }}');
+      expect(template).toContain('{{ hloAchievedSum(hlo) }}');
+      expect(template).toContain('{{ hlo.count }}');
+    });
+
+    it('computes plannedByAowSections with clean codes, titles, and metrics in byAow mode (BTC-R-1, BTC-AC-1.1, BTC-AC-2.1)', async () => {
+      const component = await createComponent();
+      component.plannedBrowseView.set('byAow');
+      component.plannedHloAowCode.set('SP02-AOW01');
+
+      const mockInds = [
+        {
+          indicator_id: 101,
+          indicator_description: 'Breeding pipeline efficiency',
+          target_value_sum: 50,
+          actual_achieved_value_sum: 25,
+          __tier: 'output',
+          __hlo: 'HLO4.AOW1.IO1 Foster motivations'
+        },
+        {
+          indicator_id: 201,
+          indicator_description: 'Gender-responsive seed systems',
+          target_value_sum: 30,
+          actual_achieved_value_sum: 30,
+          __tier: 'outcome',
+          __hlo: 'I-OC 3.5. Women, men, youth and vulnerable groups'
+        }
+      ];
+
+      jest.spyOn(component, 'indicatorsForAow').mockReturnValue({
+        aow: { code: 'SP02-AOW01', name: 'Genetic Innovation' },
+        indicators: mockInds
+      } as any);
+
+      const sections = component.plannedByAowSections();
+      expect(sections.length).toBe(2);
+
+      // 1. High Level Outputs section
+      const outputsSec = sections.find(s => s.label === 'High Level Outputs');
+      expect(outputsSec).toBeDefined();
+      expect(outputsSec?.kpis).toBe(1);
+      expect(outputsSec?.groups.length).toBe(1);
+      const hloGroup = outputsSec!.groups[0];
+      expect(hloGroup.split.code).toBe('HLO4.AOW1.IO1');
+      expect(hloGroup.split.name).toBe('Foster motivations');
+      expect(component.cleanHloCode(hloGroup.split.code)).toBe('HLO4');
+      expect(component.hloTargetSum(hloGroup)).toBe('50');
+      expect(component.hloAchievedSum(hloGroup)).toBe('25');
+      expect(hloGroup.count).toBe(1);
+
+      // 2. Outcomes section
+      const outcomesSec = sections.find(s => s.label === 'Outcomes');
+      expect(outcomesSec).toBeDefined();
+      expect(outcomesSec?.kpis).toBe(1);
+      expect(outcomesSec?.groups.length).toBe(1);
+      const outcomeGroup = outcomesSec!.groups[0];
+      expect(outcomeGroup.split.code).toBe('I-OC 3.5');
+      expect(outcomeGroup.split.name).toBe('Women, men, youth and vulnerable groups');
+      expect(component.cleanHloCode(outcomeGroup.split.code)).toBe('I-OC 3.5');
+      expect(component.hloTargetSum(outcomeGroup)).toBe('30');
+      expect(component.hloAchievedSum(outcomeGroup)).toBe('30');
+      expect(outcomeGroup.count).toBe(1);
+    });
+
+    it('defines $pr-by-aow-tracks CSS Grid specification matching BTC-AC-2.1 and BTC-AC-3.2', () => {
+      const scss = readFileSync(join(__dirname, 'dashboard-lab.component.scss'), 'utf8');
+
+      // Tracks specification: [Chevron 28px] [Title 1fr] [Target 76px] [Achieved 76px] [KPIs 64px] [Progress 130px]
+      expect(scss).toMatch(/\$pr-by-aow-tracks:\s*28px\s+minmax\(240px,\s*1fr\)\s+76px\s+76px\s+64px\s+130px;/);
+
+      // Both .pr-by-aow-head and .pr-by-aow-row must use $pr-by-aow-tracks
+      expect(scss).toMatch(/\.pr-by-aow-head\s*\{[^}]*grid-template-columns:\s*\$pr-by-aow-tracks;/);
+      expect(scss).toMatch(/\.pr-by-aow-row\s*\{[^}]*grid-template-columns:\s*\$pr-by-aow-tracks;/);
+    });
+
+    it('renders By-AoW tabular DOM fixture with correct headers and outcome badge (BTC-AC-2.1, BTC-AC-3.1)', () => {
+      const template = `
+        <div class="overflow-x-auto">
+          <div class="pr-by-aow-head hidden md:grid">
+            <span></span>
+            <span>Outcome</span>
+            <span class="text-center">Target</span>
+            <span class="text-center">Achieved</span>
+            <span class="text-center">KPIs</span>
+            <span class="text-center">Progress</span>
+          </div>
+          <button type="button" class="pr-by-aow-row">
+            <span>chevron</span>
+            <div><span class="pr-hlo-code">I-OC 3.5</span><span>Women, men, youth</span></div>
+            <div class="text-center"><span class="tabular-nums">30</span></div>
+            <div class="text-center"><span class="tabular-nums">30</span></div>
+            <div class="kpis-col"><span>1</span></div>
+            <div class="progress-col"><span>QA 100%</span></div>
+          </button>
+        </div>
+      `;
+      const div = document.createElement('div');
+      div.innerHTML = template;
+
+      const head = div.querySelector('.pr-by-aow-head');
+      expect(head).not.toBeNull();
+      const headers = Array.from(head!.querySelectorAll('span')).map(s => s.textContent?.trim());
+      expect(headers).toEqual(['', 'Outcome', 'Target', 'Achieved', 'KPIs', 'Progress']);
+
+      const row = div.querySelector('.pr-by-aow-row');
+      expect(row).not.toBeNull();
+      const badge = row!.querySelector('.pr-hlo-code');
+      expect(badge?.textContent?.trim()).toBe('I-OC 3.5');
+    });
   });
 });

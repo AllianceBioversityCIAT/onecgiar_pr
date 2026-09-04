@@ -184,12 +184,15 @@ export class SmartNavigationService {
     }
 
     // 4. Science Program Shell (Overview, Reporting grouped, Results)
+    // @akili-spec bugfix/smart-back-button
+    // SBB-DD-1: skip every /entity-details/ URL in the shell branch (not just same-program)
+    // so a sidebar hop to another SP never becomes the Back destination.
     for (let i = this.history.length - 1; i >= 0; i--) {
       const prev = this.history[i];
       if (!prev || prev === active) continue;
 
-      const isSameProgram = code ? prev.includes(`/entity-details/${code}`) : false;
-      if (!isSameProgram) {
+      const isEntityDetails = prev.includes('/entity-details/');
+      if (!isEntityDetails) {
         if (prev.includes('/portfolio-overview')) {
           return { url: prev, label: 'Back to Portfolio overview' };
         }
@@ -235,6 +238,14 @@ export class SmartNavigationService {
       return;
     }
     const target = this.getBackTarget(undefined, entityIdentifier);
+    // @akili-spec bugfix/smart-back-button
+    // SBB-DD-2: drop the current URL before navigating so the NavigationEnd that
+    // back() itself causes cannot retarget the shell we just left on a second Back.
+    const currentUrl = this.sanitizeUrl(this.router?.url);
+    const lastIdx = this.history.lastIndexOf(currentUrl);
+    if (lastIdx !== -1) {
+      this.history.splice(lastIdx, 1);
+    }
     this.router?.navigateByUrl(target.url);
   }
 

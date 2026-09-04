@@ -152,16 +152,32 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
       );
     }
 
-    /** One output-tier group per AoW, seeded straight into `tocByKey` — same fixture shape as `dashboard-lab.oah-rows.spec.ts`. */
-    function seedAows(component: DashboardLabComponent, aows: Record<string, { name: string; outputIndicators: unknown[] }>) {
+    /**
+     * One output-tier group per AoW, seeded straight into `tocByKey` — same fixture shape as
+     * `dashboard-lab.oah-rows.spec.ts`, including its optional outcome-tier nodes:
+     * `outcomeIndicators` lands on an AoW-**owned** node (`is_aow: true`) and `crosscutIndicators`
+     * on a **cross-cut** one (`is_aow: false`). `bugfix/kpi-count-reconciliation` routes those two
+     * to different buckets off that group-level flag alone (KCR-R-1.1), so an outputs-only fixture
+     * cannot tell the AoW-own row basis from the superseded one.
+     */
+    function seedAows(
+      component: DashboardLabComponent,
+      aows: Record<string, { name: string; outputIndicators: unknown[]; outcomeIndicators?: unknown[]; crosscutIndicators?: unknown[] }>
+    ) {
       const codes = Object.keys(aows);
       component.aowsByCode.set(new Map([[PROGRAM_A.initiativeCode, codes.map(code => ({ code, name: aows[code].name }) as unknown as Unit)]]));
       const tocMap = new Map<string, { outputs: unknown[]; outcomes: unknown[] }>();
       for (const code of codes) {
         const key = `${PROGRAM_A.initiativeCode}::${code}::default`;
+        const { outputIndicators, outcomeIndicators, crosscutIndicators } = aows[code];
         tocMap.set(key, {
-          outputs: [{ toc_result_id: 1, result_title: 'HLO', is_aow: true, indicators: aows[code].outputIndicators }],
-          outcomes: []
+          outputs: [{ toc_result_id: 1, result_title: 'HLO', is_aow: true, indicators: outputIndicators }],
+          outcomes: [
+            ...(outcomeIndicators?.length ? [{ toc_result_id: 2, result_title: 'Owned outcome', is_aow: true, indicators: outcomeIndicators }] : []),
+            ...(crosscutIndicators?.length
+              ? [{ toc_result_id: 901, result_title: 'Cross-cutting intermediate outcome', is_aow: false, indicators: crosscutIndicators }]
+              : [])
+          ]
         });
       }
       component.tocByKey.set(tocMap);
@@ -222,8 +238,8 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
       // Hand-computed from `PROGRAM_A.versions[0].statuses` (statusId 1→10, 3→5, everything else 0).
       expect(segments).toEqual([
         { key: 'not-started', count: 0, statusName: 'Pending Review', link: null },
-        { key: 'in-progress', count: 10, statusName: 'Editing', link: { status: 'Editing' } },
-        { key: 'submitted', count: 5, statusName: 'Submitted', link: { status: 'Submitted' } },
+        { key: 'in-progress', count: 10, statusName: 'Editing', link: { origin: 'W1/W2', status: 'Editing' } },
+        { key: 'submitted', count: 5, statusName: 'Submitted', link: { origin: 'W1/W2', status: 'Submitted' } },
         { key: 'in-qa', count: 0, statusName: 'Quality Assessed', link: null },
         { key: 'approved', count: 0, statusName: 'Approved', link: null }
       ]);
@@ -256,12 +272,34 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
     it('overviewAowProgressRich narrows to the selected scope\'s row (OSF-R-11) and restores the full set when scope is cleared', async () => {
       const component = await createComponent();
       seedAows(component, {
-        AOW01: { name: 'AoW 01', outputIndicators: [{ indicator_id: 1, target_value_sum: 10, actual_achieved_value_sum: 5 }] },
+        AOW01: {
+          name: 'AoW 01',
+          outputIndicators: [{ indicator_id: 1, target_value_sum: 10, actual_achieved_value_sum: 5 }],
+          // KCR fixture extension — this suite seeded outputs only, so its rows read the same
+          // under the superseded output-tier basis and the AoW-own one and proved neither. An
+          // owned outcome (one countable KPI + one zero-target) plus a cross-cut IO make the three
+          // candidate bases produce three different totals; pinned right below.
+          outcomeIndicators: [
+            { indicator_id: 3, target_value_sum: 4, actual_achieved_value_sum: 0 },
+            { indicator_id: 4, target_value_sum: 0, actual_achieved_value_sum: 0 }
+          ],
+          crosscutIndicators: [{ indicator_id: 901, target_value_sum: 5, actual_achieved_value_sum: 5 }]
+        },
         AOW02: { name: 'AoW 02', outputIndicators: [{ indicator_id: 2, target_value_sum: 10, actual_achieved_value_sum: 0 }] }
       });
 
       const unfiltered = component.overviewAowProgressRich().map(r => r.code).sort();
       expect(unfiltered).toEqual(['AOW01', 'AOW02']);
+
+      // KCR — the scope filter narrows rows, it does not compute them, so pin the BASIS of the row
+      // it narrows to (design §6.2 `overviewAowProgressRich` row; KCR-R-1/R-5, KCR-DD-2).
+      // AOW01 own = output #1 + the `is_aow: true` node's #3 and #4; #4 is zero-target and the
+      // `is_aow: false` #901 belongs to the Intermediate bucket → total 2, zeroTarget 1, reported 1.
+      // Superseded output-tier-only basis: total 1. Cross-cut-inclusive basis: total 3.
+      const aow01 = component.overviewAowProgressRich().find(r => r.code === 'AOW01')!;
+      expect(aow01.total).toBe(2);
+      expect(aow01.zeroTarget).toBe(1);
+      expect(aow01.reported).toBe(1);
 
       component.overviewScope.set('AOW01');
       expect(component.overviewAowProgressRich().map(r => r.code)).toEqual(['AOW01']);
@@ -277,7 +315,7 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
       const link: OverviewLink = { status: 'x', category: 'y', origin: 'z', center: 'w', phase: 'v' };
       expect(Object.keys(link).sort()).toEqual(['category', 'origin', 'phase', 'status', 'center'].sort());
       expect('scope' in link).toBe(false);
-      expect(Object.keys(PROGRAMME_RESULTS_QUERY_PARAM_MAP)).toEqual(['phase', 'status', 'category', 'origin', 'center']);
+      expect(Object.keys(PROGRAMME_RESULTS_QUERY_PARAM_MAP)).not.toContain('scope');
       expect(Object.values(PROGRAMME_RESULTS_QUERY_PARAM_MAP)).not.toContain('scope');
     });
 

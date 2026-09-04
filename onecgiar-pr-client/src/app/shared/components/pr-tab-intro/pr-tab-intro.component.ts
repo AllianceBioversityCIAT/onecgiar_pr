@@ -12,9 +12,9 @@ export class PrTabIntroComponent implements OnInit {
   readonly title = input<string>('What does this tab show?');
   readonly description = input<string>('');
   readonly icon = input<string>('info');
-  readonly defaultOpen = input<boolean>(true);
+  readonly defaultOpen = input<boolean>(false);
 
-  readonly isOpen = signal<boolean>(true);
+  readonly isOpen = signal<boolean>(false);
 
   ngOnInit(): void {
     this.isOpen.set(this.defaultOpen());

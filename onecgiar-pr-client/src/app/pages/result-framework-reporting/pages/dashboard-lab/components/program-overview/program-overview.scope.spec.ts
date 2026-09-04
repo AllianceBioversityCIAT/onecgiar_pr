@@ -9,6 +9,7 @@
 // never enter the keyboard order, arrow-key movement (including the group-boundary case), Enter/
 // Escape, and the emitted `scopeChange`.
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ProgramOverviewComponent, HeatmapModel, TocAchievement, overviewScopeDisplayCode } from './program-overview.component';
 import type { OverviewScopeOption, OverviewScopeBreakdown, OverviewAowProgressRowRich } from '../../dashboard-lab.component';
 
@@ -758,24 +759,27 @@ describe('ProgramOverviewComponent — AoW row responsive ladder (OSF-T-2b)', ()
     fixture.detectChanges();
   });
 
-  /** The real (non-skeleton) AoW row — the `@for (row of richRows())` grid container. */
+  /** The real (non-skeleton) AoW row — the `@for (row of richRows())` grid container.
+   *  `AIS-T-2` (changes/aow-identity-column-starvation): identity floor is `143px` (measured chip
+   *  width 51.1px, not the ~50px estimate — `execution.md` §2 `AIS-T-2`), not the old `0` starve
+   *  permission. */
   function realRow(): HTMLElement {
     return fixture.nativeElement.querySelector(
-      'div.group.grid[class*="grid-cols-\\[minmax\\(0\\,1fr\\)_minmax\\(120px\\,240px\\)_max-content_max-content_max-content\\]"]'
+      'div.group.grid[class*="grid-cols-\\[minmax\\(143px\\,1fr\\)_minmax\\(120px\\,240px\\)_max-content_max-content_max-content\\]"]'
     ) as HTMLElement;
   }
 
-  it('the real row carries the drop-achievement-track and two-line-stack grid overrides, tiled with NO gap at 900px', () => {
+  it('the real row carries the drop-achievement-track and two-line-stack grid overrides, tiled with NO gap at Q=560/630 (AIS-T-2 container thresholds T_stack/T_full)', () => {
     const row = realRow();
     expect(row).toBeTruthy();
-    // `max-[…]:` is exclusive (`width < N`) — `max-[900px]` and `min-[900px]` must use the SAME
-    // boundary value to tile with no gap at exactly 900px (rework: `max-[899px]` left width=899
-    // matching neither band; caught by Reviewer).
-    expect(row.className).toContain('min-[900px]:max-[1101px]:grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content]');
-    expect(row.className).toContain('max-[900px]:grid-cols-[minmax(0,1fr)_max-content]');
+    // `@max-[…]:` is exclusive (`width < N`) — `@max-[560px]` and `@min-[560px]` must use the SAME
+    // boundary value to tile with no gap at exactly Q=560 (the same off-by-one trap the old viewport
+    // variant had — `onecgiar-pr-client/CLAUDE.md` §5).
+    expect(row.className).toContain('@min-[560px]:@max-[630px]:grid-cols-[minmax(167px,1fr)_minmax(120px,240px)_max-content_max-content]');
+    expect(row.className).toContain('@max-[560px]:grid-cols-[minmax(167px,1fr)_max-content]');
   });
 
-  it('every real-row cell that must move for the <900px stack carries its explicit grid placement', () => {
+  it('every real-row cell that must move for the Q<560 stack carries its explicit grid placement (AIS-T-2 T_stack)', () => {
     const row = realRow();
     // identity, bar, figures, and BOTH action-variant wrappers (only one renders per row state).
     const identity = row.querySelector('.flex.min-w-0.items-center.gap-\\[10px\\]') as HTMLElement;
@@ -783,34 +787,38 @@ describe('ProgramOverviewComponent — AoW row responsive ladder (OSF-T-2b)', ()
     const figures = row.querySelector('.flex.flex-col.items-end:not(.leading-tight)') as HTMLElement;
     const actions = row.querySelector('.flex.justify-end') as HTMLElement;
 
-    expect(identity.className).toContain('max-[900px]:[grid-column:1]');
-    expect(identity.className).toContain('max-[900px]:[grid-row:1]');
-    expect(bar.className).toContain('max-[900px]:[grid-column:1]');
-    expect(bar.className).toContain('max-[900px]:[grid-row:2]');
-    expect(figures.className).toContain('max-[900px]:[grid-column:2]');
-    expect(figures.className).toContain('max-[900px]:[grid-row:2]');
-    expect(actions.className).toContain('max-[900px]:[grid-column:2]');
-    expect(actions.className).toContain('max-[900px]:[grid-row:1]');
+    expect(identity.className).toContain('@max-[560px]:[grid-column:1]');
+    expect(identity.className).toContain('@max-[560px]:[grid-row:1]');
+    expect(bar.className).toContain('@max-[560px]:[grid-column:1]');
+    expect(bar.className).toContain('@max-[560px]:[grid-row:2]');
+    expect(figures.className).toContain('@max-[560px]:[grid-column:2]');
+    expect(figures.className).toContain('@max-[560px]:[grid-row:2]');
+    expect(actions.className).toContain('@max-[560px]:[grid-column:2]');
+    expect(actions.className).toContain('@max-[560px]:[grid-row:1]');
   });
 
-  it('the achievement cell narrows below 1280px (tiled with the >=1280 base) and drops entirely at/below 1100px', () => {
+  it('the achievement cell narrows below Q=700 (AIS-T-2 T_restack) and drops entirely below Q=630 (T_full)', () => {
     const row = realRow();
     const achievementCell = row.querySelector('.leading-tight') as HTMLElement;
-    expect(achievementCell.className).toContain('max-[1101px]:hidden');
+    expect(achievementCell.className).toContain('@max-[630px]:hidden');
 
     const qaPrelRow = row.querySelector('.leading-tight .items-baseline.whitespace-nowrap') as HTMLElement;
-    expect(qaPrelRow.className).toContain('max-[1280px]:flex-col');
+    expect(qaPrelRow.className).toContain('@max-[700px]:flex-col');
 
     const coverageLine = row.querySelector('.leading-tight span.text-\\[10px\\].text-\\[var\\(--pr-text-muted\\)\\]') as HTMLElement;
-    expect(coverageLine.className).toContain('max-[1280px]:hidden');
+    expect(coverageLine.className).toContain('@max-[700px]:hidden');
   });
 
   it('the row-tooltip fallback is a focusable, keyboard-and-touch-reachable BUTTON whose accessible name carries the real figures — not a generic label', () => {
     const row = realRow();
     // Scoped to the identity block so this can't accidentally match the achievement cell's own
     // (hover-only, sighted-pointer) tooltip host a few lines down in the same row.
+    // `RGS-T-1`: the identity block now ALSO holds the code+name filter button (DOM-first), so the
+    // achievement fallback is picked out by its own distinguishing class, not `querySelector('button')`
+    // (which would now match the filter button instead). `AIS-T-2`: `[class*="…"]` sidesteps escaping
+    // the `@`/`[`/`]`/`:` characters a dot-selector on the container variant would need.
     const identityBlock = row.querySelector('.flex.min-w-0.items-center.gap-\\[10px\\]') as HTMLElement;
-    const fallback = identityBlock.querySelector('button') as HTMLButtonElement;
+    const fallback = identityBlock.querySelector('button[class*="@max-[630px]:inline-flex"]') as HTMLButtonElement;
 
     expect(fallback).toBeTruthy();
     expect(fallback.tagName).toBe('BUTTON'); // focusable — a <span> is not (Reviewer finding)
@@ -820,14 +828,17 @@ describe('ProgramOverviewComponent — AoW row responsive ladder (OSF-T-2b)', ()
     expect(fallback.getAttribute('aria-label')).toContain('Preliminary');
     expect(fallback.getAttribute('aria-label')).not.toBe('Achievement against targets');
     // width-gating: mutually exclusive with the achievement cell's own tooltip (test above).
+    // `@max-[630px]:inline-flex` is not re-asserted — the selector above already required it
+    // (Reviewer advisory, tautology fold). `hidden` IS asserted: it is an independent class the
+    // selector does not require, and without it the glyph renders at Q≥630 too, duplicating
+    // the achievement cell's own tooltip host.
     expect(fallback.className).toContain('hidden');
-    expect(fallback.className).toContain('max-[1101px]:inline-flex');
   });
 
   it('the row-tooltip fallback stops click propagation so tapping it does not ALSO navigate the row', () => {
     const row = realRow();
     const identityBlock = row.querySelector('.flex.min-w-0.items-center.gap-\\[10px\\]') as HTMLElement;
-    const fallback = identityBlock.querySelector('button') as HTMLButtonElement;
+    const fallback = identityBlock.querySelector('button[class*="@max-[630px]:inline-flex"]') as HTMLButtonElement;
 
     let rowNavigated = false;
     row.addEventListener('click', () => (rowNavigated = true));
@@ -841,14 +852,606 @@ describe('ProgramOverviewComponent — AoW row responsive ladder (OSF-T-2b)', ()
     fixture.detectChanges();
 
     const skeletonRow = fixture.nativeElement.querySelector(
-      'div.grid[class*="grid-cols-\\[minmax\\(0\\,1fr\\)_minmax\\(120px\\,240px\\)_max-content_max-content_max-content\\]"]'
+      'div.grid[class*="grid-cols-\\[minmax\\(143px\\,1fr\\)_minmax\\(120px\\,240px\\)_max-content_max-content_max-content\\]"]'
     ) as HTMLElement;
     expect(skeletonRow).toBeTruthy();
-    expect(skeletonRow.className).toContain('min-[900px]:max-[1101px]:grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content]');
-    expect(skeletonRow.className).toContain('max-[900px]:grid-cols-[minmax(0,1fr)_max-content]');
+    expect(skeletonRow.className).toContain('@min-[560px]:@max-[630px]:grid-cols-[minmax(167px,1fr)_minmax(120px,240px)_max-content_max-content]');
+    expect(skeletonRow.className).toContain('@max-[560px]:grid-cols-[minmax(167px,1fr)_max-content]');
 
-    // The 4th placeholder (achievement track) is the one hidden at/below 1100px, same as the real row.
+    // The 4th placeholder (achievement track) is the one hidden below Q=630, same as the real row.
     const placeholders = Array.from(skeletonRow.children) as HTMLElement[];
-    expect(placeholders[3].className).toContain('max-[1101px]:hidden');
+    expect(placeholders[3].className).toContain('@max-[630px]:hidden');
+
+    // `RGS-T-1` extension (RGS-DD-5 parity, NOT a replacement guard): the skeleton's identity cell
+    // (1st placeholder) must ALSO wrap its code+name placeholders in a native <button>, same as the
+    // real row does — so the skeleton never promises a control the real row can't deliver, and a
+    // future edit can't silently drop the button from one site only.
+    const skeletonIdentityButton = placeholders[0].querySelector('button');
+    expect(skeletonIdentityButton).toBeTruthy();
+    expect(skeletonIdentityButton!.tagName).toBe('BUTTON');
+    expect(skeletonIdentityButton!.getAttribute('type')).toBe('button');
+  });
+});
+
+// `RGS-T-1` (`changes/aow-row-gesture-split`) — the AoW code+name becomes a real, native
+// keyboard-operable control. Covers `RGS-R-3`, `RGS-R-6`, `RGS-DD-1`, `RGS-DD-3`. Split from the
+// gesture wiring itself (`selectScope`/`aria-pressed`), which is `RGS-T-2`'s scope — see the
+// "AoW row gestures split, and the selected state (RGS-T-2)" describe block below.
+describe('ProgramOverviewComponent — AoW identity button is a real control (RGS-T-1)', () => {
+  let fixture: ComponentFixture<ProgramOverviewComponent>;
+  let component: ProgramOverviewComponent;
+
+  const achievement: TocAchievement = {
+    progress_percentage: '19.4',
+    preliminary_progress_percentage: '0.6',
+    progress_value: 19.4,
+    preliminary_value: 0.6,
+    counted: 84,
+    total: 437,
+    indicators_counted: 382,
+    indicators_total: 437
+  };
+
+  const row: OverviewAowProgressRowRich = {
+    code: 'AOW02',
+    name: 'Accelerated Breeding',
+    complete: 1,
+    inProgress: 2,
+    notStarted: 3,
+    zeroTarget: 0,
+    reported: 3,
+    total: 6,
+    remaining: 3,
+    achievement
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ProgramOverviewComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ProgramOverviewComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('richRows', [row]);
+    fixture.detectChanges();
+  });
+
+  /** The identity cell's own button — first `<button>` in DOM order (the achievement glyph, when
+   *  present, is a later sibling — see `RGS-DD-1`'s "sibling, never a descendant"). */
+  function identityButton(): HTMLButtonElement {
+    const realRow = fixture.nativeElement.querySelector('div.group.grid') as HTMLElement;
+    const identityCell = realRow.querySelector('.flex.min-w-0.items-center.gap-\\[10px\\]') as HTMLElement;
+    return identityCell.querySelector('button') as HTMLButtonElement;
+  }
+
+  it('is a native BUTTON, never a role="button" div (RGS-DD-1 — role=button is children-presentational and can hide Report/→ from AT)', () => {
+    const button = identityButton();
+    expect(button).toBeTruthy();
+    expect(button.tagName).toBe('BUTTON');
+    expect(button.getAttribute('type')).toBe('button');
+    expect(button.getAttribute('role')).toBeNull();
+  });
+
+  it('the row stays a plain <div> with no ARIA role, so the achievement glyph / Report / → stay independent controls', () => {
+    const realRow = fixture.nativeElement.querySelector('div.group.grid') as HTMLElement;
+    expect(realRow.tagName).toBe('DIV');
+    expect(realRow.getAttribute('role')).toBeNull();
+    // Achievement glyph is a SIBLING of the identity button inside the identity cell, not nested in it.
+    const identityCell = realRow.querySelector('.flex.min-w-0.items-center.gap-\\[10px\\]') as HTMLElement;
+    const nameButton = identityButton();
+    // `AIS-T-2` (changes/aow-identity-column-starvation): the viewport variant `max-[1101px]:inline-flex`
+    // became the container variant `@max-[630px]:inline-flex` (`T_full`) — `[class*="…"]` sidesteps
+    // escaping the `@`/`[`/`]`/`:` characters in a dot-selector.
+    const achievementButton = identityCell.querySelector('button[class*="@max-[630px]:inline-flex"]');
+    expect(achievementButton).toBeTruthy();
+    expect(nameButton.contains(achievementButton)).toBe(false);
+    expect(achievementButton!.parentElement).toBe(identityCell);
+  });
+
+  it('the accessible name describes FILTERING and NOT the old navigation wording (RGS-R-3, D3)', () => {
+    const button = identityButton();
+    const accessibleName = (button.getAttribute('aria-label') || button.textContent || '').trim();
+    expect(accessibleName.toLowerCase()).toContain('filter');
+    expect(accessibleName.toLowerCase()).not.toContain('open');
+    expect(accessibleName).toContain('AOW02');
+    expect(accessibleName).toContain('Accelerated Breeding');
+  });
+
+  it('carries the visible-focus CLASS CONTRACT: focus-visible:shadow-[var(--pr-focus-ring)], never the box-shadow-blind ring-[var(--pr-focus-ring)]', () => {
+    // jsdom loads no Tailwind CSS, so this proves the CLASS is present, never that it paints — a
+    // class-presence assertion alone would have passed against the live `ring-[…]` bug this DoD
+    // bullet exists to catch. The actual computed `boxShadow` under a real `:focus-visible` is
+    // `RGS-T-4`'s browser gate (D5 — no automated gate exists for paint).
+    const button = identityButton();
+    expect(button.className).toContain('focus-visible:shadow-[var(--pr-focus-ring)]');
+    expect(button.className).not.toContain('ring-[var(--pr-focus-ring)]');
+  });
+
+  it('carries min-w-0 + truncate, and introduces NO fixed width (KZ-OAH-1 has already recurred three times in this component)', () => {
+    const button = identityButton();
+    expect(button.className).toContain('min-w-0');
+    expect(button.className).toContain('truncate');
+    expect(button.className).not.toMatch(/\bw-\[/); // no fixed-width utility (min-w-0 alone doesn't match this)
+  });
+
+  it('Enter and Space are native <button> activation, and the click they produce now reaches the button\'s OWN handler (RGS-T-2 closes the RGS-T-1 residue, execution.md forward pointer 2): jsdom performs no keydown→click translation for buttons (verified: dispatching keydown alone does not fire click), so a real PHYSICAL key press stays RGS-T-4\'s browser gate — but `button.click()`/a dispatched MouseEvent IS the click a real Enter/Space activation PRODUCES, and since `RGS-T-2` wires this button\'s own `(click)`, that dispatch now proves the handler a real Enter/Space would reach: it fires `scopeChange`, and — because `onSelectAowRow` stops propagation — it no longer also bubbles into the row and fires `openAow` the way it did before this button had its own click', () => {
+    const button = identityButton();
+    expect(button.hasAttribute('disabled')).toBe(false);
+    expect(button.tabIndex).not.toBe(-1);
+
+    // Dispatch the keydown itself (documents intent; jsdom performs no default action for it).
+    button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    button.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+
+    // The click a real browser's Enter/Space activation PRODUCES. `MouseEvent.detail === 0` is how
+    // a real browser marks a keyboard-originated click (vs. a mouse click), reproduced here for
+    // fidelity.
+    //
+    // REVERTED PREMISE (`RGS-T-2`, forward pointer 1 in execution.md — "a third row-click test now
+    // exists... `RGS-T-2` reverts that premise"): `RGS-T-1` left this button's own `(click)`
+    // unwired, so this SAME dispatch used to bubble to the row's `openAow` handler — proving only
+    // that the new button didn't block it. Now the button owns `(click)` itself (`onSelectAowRow`,
+    // `RGS-DD-1`/`RGS-DD-2`) and stops propagation, so the dispatch must emit `scopeChange('AOW02')`
+    // and must NOT reach `openAow` at all.
+    const realRow = fixture.nativeElement.querySelector('div.group.grid') as HTMLElement;
+    const openAowEmitted: string[] = [];
+    const scopeChangeEmitted: (string | null)[] = [];
+    const openAowSub = component.openAow.subscribe(code => openAowEmitted.push(code));
+    const scopeChangeSub = component.scopeChange.subscribe(key => scopeChangeEmitted.push(key));
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+    expect(scopeChangeEmitted).toEqual(['AOW02']);
+    expect(openAowEmitted).toEqual([]);
+    openAowSub.unsubscribe();
+    scopeChangeSub.unsubscribe();
+    expect(realRow).toBeTruthy();
+  });
+});
+
+// `RGS-T-2` (`changes/aow-row-gesture-split`) — the row body and the identity button both call the
+// scope selection; `Report` and `→` keep navigating and never touch the scope; the active row
+// renders its selected state. Covers `RGS-R-1`, `RGS-R-2`, `RGS-R-4`, `RGS-DD-2`, `RGS-DD-4`,
+// `RGS-DD-6`. Split from `RGS-T-1`'s structural/a11y-only coverage above.
+describe('ProgramOverviewComponent — AoW row gestures split, and the selected state (RGS-T-2)', () => {
+  let fixture: ComponentFixture<ProgramOverviewComponent>;
+  let component: ProgramOverviewComponent;
+
+  const row: OverviewAowProgressRowRich = {
+    code: 'AOW02',
+    name: 'Accelerated Breeding',
+    complete: 1,
+    inProgress: 2,
+    notStarted: 3,
+    zeroTarget: 0,
+    reported: 3,
+    total: 6,
+    remaining: 3
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ProgramOverviewComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ProgramOverviewComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('richRows', [row]);
+    fixture.detectChanges();
+  });
+
+  function rowEl(): HTMLElement {
+    return fixture.nativeElement.querySelector('div.group.grid') as HTMLElement;
+  }
+
+  function identityButton(): HTMLButtonElement {
+    const identityCell = rowEl().querySelector('.flex.min-w-0.items-center.gap-\\[10px\\]') as HTMLElement;
+    return identityCell.querySelector('button') as HTMLButtonElement;
+  }
+
+  function findButtonByText(text: string): HTMLButtonElement {
+    return fixture.debugElement.queryAll(By.css('button')).find(b => b.nativeElement.textContent.trim() === text)!
+      .nativeElement;
+  }
+
+  function openIconButton(): HTMLButtonElement {
+    return fixture.debugElement
+      .queryAll(By.css('button'))
+      .find(b => b.nativeElement.getAttribute('aria-label') === 'Open this Area of Work')!.nativeElement;
+  }
+
+  /** Dispatches a click and records which of the two outputs fired — the DoD's own "exactly one of
+   *  scopeChange / openAow fires each time and never both" (tasks.md, `RGS-T-2` verification). */
+  function clickAndRecord(el: HTMLElement): { scope: (string | null)[]; open: string[] } {
+    const scope: (string | null)[] = [];
+    const open: string[] = [];
+    const s1 = component.scopeChange.subscribe(k => scope.push(k));
+    const s2 = component.openAow.subscribe(c => open.push(c));
+    el.click();
+    s1.unsubscribe();
+    s2.unsubscribe();
+    return { scope, open };
+  }
+
+  it('row body click selects the scope via the existing selectScope/scopeChange path, and does NOT navigate (RGS-R-1, RGS-AC-1)', () => {
+    const { scope, open } = clickAndRecord(rowEl());
+    expect(scope).toEqual(['AOW02']);
+    expect(open).toEqual([]);
+  });
+
+  it('the identity button click ALSO selects the scope via the same path, and does NOT navigate (RGS-DD-1, RGS-DD-2)', () => {
+    const { scope, open } = clickAndRecord(identityButton());
+    expect(scope).toEqual(['AOW02']);
+    expect(open).toEqual([]);
+  });
+
+  it('Report navigates and does NOT change the scope, even when the row is already the selected scope (RGS-R-2, AC-2 "keep working when already selected")', () => {
+    fixture.componentRef.setInput('selectedScope', 'AOW02');
+    fixture.detectChanges();
+    const { scope, open } = clickAndRecord(findButtonByText('Report'));
+    expect(open).toEqual(['AOW02']);
+    expect(scope).toEqual([]);
+  });
+
+  it('→ navigates and does NOT change the scope (RGS-R-2, RGS-AC-2)', () => {
+    const { scope, open } = clickAndRecord(openIconButton());
+    expect(open).toEqual(['AOW02']);
+    expect(scope).toEqual([]);
+  });
+
+  it('clicking the already-selected row is NOT a toggle (RGS-DD-6) — it re-selects the SAME key, idempotently (RGS-DD-2), never clears it', () => {
+    fixture.componentRef.setInput('selectedScope', 'AOW02');
+    fixture.detectChanges();
+    const { scope, open } = clickAndRecord(rowEl());
+    expect(scope).toEqual(['AOW02']); // re-emits the SAME key, never `null` — a toggle would clear it
+    expect(open).toEqual([]);
+  });
+
+  it('aria-pressed on the identity button reflects the active scope (RGS-R-4)', () => {
+    expect(identityButton().getAttribute('aria-pressed')).toBe('false');
+
+    fixture.componentRef.setInput('selectedScope', 'AOW02');
+    fixture.detectChanges();
+    expect(identityButton().getAttribute('aria-pressed')).toBe('true');
+
+    fixture.componentRef.setInput('selectedScope', 'AOW01');
+    fixture.detectChanges();
+    expect(identityButton().getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('the selected-state border carries border-2 in BOTH branches, only the COLOR toggles, so the row does not shift as the selection moves (RGS-DD-4)', () => {
+    // jsdom proves the class is present, never that it paints at ≥3:1 — that is D4, RGS-T-4's
+    // browser gate (requirements.md §9). This asserts the structural half: the WIDTH utility never
+    // changes between the two branches, only the color utility. `classList.contains` (exact token
+    // match), not a substring check on `className` — the row's static `hover:border-[var(--pr-
+    // color-primary-300)]` utility ALSO contains the plain selected-color class as a substring, so
+    // `.toContain(...)` on the raw string would false-positive on the unselected branch too.
+    expect(rowEl().classList.contains('border-2')).toBe(true);
+    expect(rowEl().classList.contains('border-transparent')).toBe(true);
+    expect(rowEl().classList.contains('border-[var(--pr-color-primary-300)]')).toBe(false);
+
+    fixture.componentRef.setInput('selectedScope', 'AOW02');
+    fixture.detectChanges();
+    expect(rowEl().classList.contains('border-2')).toBe(true);
+    expect(rowEl().classList.contains('border-[var(--pr-color-primary-300)]')).toBe(true);
+    expect(rowEl().classList.contains('border-transparent')).toBe(false);
+  });
+});
+
+// `RGS-T-3` (`changes/aow-row-gesture-split`) — the AoW progress section becomes a collapsible
+// disclosure, reusing `reporting-aow-table`'s `.pr-collapse` mechanism (moved to the shared
+// `src/styles/collapse.scss`, `RGS-DD-7`) WITHOUT its defect: the source pattern collapses its rows
+// to zero height with `aria-hidden="true"` and no `inert`, leaving them tabbable while AT is told to
+// ignore them. Here the collapsed body gets `inert` instead, and `aria-hidden` is never added.
+// Covers `RGS-R-7`, `RGS-R-8`, `RGS-AC-6`, `RGS-AC-7` (attribute half only — see the note below).
+describe('ProgramOverviewComponent — AoW progress section is collapsible, without the house defect (RGS-T-3, RGS-DD-7)', () => {
+  let fixture: ComponentFixture<ProgramOverviewComponent>;
+  let component: ProgramOverviewComponent;
+
+  const row: OverviewAowProgressRowRich = {
+    code: 'AOW02',
+    name: 'Accelerated Breeding',
+    complete: 1,
+    inProgress: 2,
+    notStarted: 3,
+    zeroTarget: 0,
+    reported: 3,
+    total: 6,
+    remaining: 3
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ProgramOverviewComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ProgramOverviewComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('richRows', [row]);
+    fixture.detectChanges();
+  });
+
+  function trigger(): HTMLButtonElement {
+    return fixture.nativeElement.querySelector('button[aria-controls="aow-progress-panel"]') as HTMLButtonElement;
+  }
+
+  function collapseEl(): HTMLElement {
+    return fixture.nativeElement.querySelector('#aow-progress-panel') as HTMLElement;
+  }
+
+  /** The single element that carries `inert` while collapsed — wraps BOTH the summary rail
+   *  (`Continue reporting`) and the row list (name button, `Report`, `→`, achievement glyph).
+   *  `RGS-R-8` covers the whole section, not just the rows. Selected by `data-testid`, not
+   *  positionally (`.pr-collapse-inner > div`) — a future sibling inside the inner wrapper would
+   *  otherwise silently re-point every assertion below, including the `aria-hidden` negative. */
+  function inertContainer(): HTMLElement {
+    return fixture.nativeElement.querySelector('[data-testid="aow-section-inert-container"]') as HTMLElement;
+  }
+
+  it('defaults to EXPANDED (RGS-R-7 DoD stated default) — aria-expanded="true", .is-open present, no inert', () => {
+    expect(trigger().getAttribute('aria-expanded')).toBe('true');
+    expect(collapseEl().classList.contains('pr-collapse')).toBe(true);
+    expect(collapseEl().classList.contains('is-open')).toBe(true);
+    expect(inertContainer().hasAttribute('inert')).toBe(false);
+  });
+
+  it('is a real <button>, not a div — keyboard-reachable and operable by construction', () => {
+    const btn = trigger();
+    expect(btn.tagName).toBe('BUTTON');
+    expect(btn.getAttribute('type')).toBe('button');
+    expect(btn.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('carries the visible-focus CLASS CONTRACT: focus-visible:shadow-[var(--pr-focus-ring)], never the box-shadow-blind ring-[var(--pr-focus-ring)]', () => {
+    // jsdom loads no Tailwind CSS, so this proves the CLASS is present, never that it paints — the
+    // same limit RGS-T-1's identical assertion records for the identity button. The computed
+    // box-shadow under a real :focus-visible is RGS-T-4's browser gate (D5).
+    const btn = trigger();
+    expect(btn.className).toContain('focus-visible:shadow-[var(--pr-focus-ring)]');
+    expect(btn.className).not.toContain('ring-[var(--pr-focus-ring)]');
+  });
+
+  it('the inert container actually holds the focusable controls — not an empty wrapper (RGS-R-8 covers the whole section)', () => {
+    const container = inertContainer();
+    expect(container.querySelector('button')).toBeTruthy();
+    expect(container.textContent).toContain('Continue reporting');
+    expect(container.textContent).toContain('Report');
+  });
+
+  it('activating the trigger flips aria-expanded to false, turns .is-open off, and marks the container inert (RGS-AC-6)', () => {
+    // jsdom does not implement `inert` (no tab-order exclusion, no accessibility-tree removal) and
+    // cannot walk a real tab order, so this proves ATTRIBUTE PRESENCE only — never that a collapsed
+    // row button is actually unreachable by Tab or invisible to AT. That behavioural proof is
+    // `RGS-T-4`'s browser gate (requirements.md §9, D7); recorded here per this task's own DoD
+    // ("record that limit in the test file rather than letting a green run imply more than it
+    // checked").
+    trigger().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(trigger().getAttribute('aria-expanded')).toBe('false');
+    expect(collapseEl().classList.contains('is-open')).toBe(false);
+    expect(inertContainer().hasAttribute('inert')).toBe(true);
+  });
+
+  it('the collapsed container drops aria-hidden rather than layering it over inert (RGS-DD-7 — the exact defect the house pattern carries, and this task exists partly to not inherit)', () => {
+    trigger().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(inertContainer().hasAttribute('inert')).toBe(true);
+    expect(inertContainer().hasAttribute('aria-hidden')).toBe(false);
+  });
+
+  it('expanding again removes inert, restoring the section a keyboard user can re-enter', () => {
+    trigger().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+    expect(inertContainer().hasAttribute('inert')).toBe(true);
+
+    trigger().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(trigger().getAttribute('aria-expanded')).toBe('true');
+    expect(collapseEl().classList.contains('is-open')).toBe(true);
+    expect(inertContainer().hasAttribute('inert')).toBe(false);
+  });
+
+  it('Enter and Space are native <button> activation (jsdom performs no keydown→click translation for buttons, verified — a dispatched click IS the click a real Enter/Space activation produces; the physical key press itself stays RGS-T-4\'s browser gate, same precedent as RGS-T-1\'s identity-button test)', () => {
+    const btn = trigger();
+    expect(btn.tabIndex).not.toBe(-1);
+
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+    btn.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+    fixture.detectChanges();
+
+    expect(trigger().getAttribute('aria-expanded')).toBe('false');
+  });
+});
+
+// `changes/clear-filters`, `CF-T-1` — the "Clear filters" control: a single button, visible only
+// while at least one of the two filter axes (section, scope) is active, that resets both in one
+// activation and hands focus to the "All Sections" tab so a keyboard user never loses their place
+// when the control removes itself mid-interaction (CF-AC-4).
+//
+// jsdom limits, stated per the task's own disqualifier: jsdom loads no Tailwind CSS, so the
+// focus-ring assertions below prove the CLASS is present/absent, never that it PAINTS — that is the
+// closing browser check (D4, requirements.md §8). jsdom also performs no layout, so no overflow/
+// width assertion is made here — that is the browser check's D5. And jsdom performs no keydown→click
+// translation for native <button> elements (verified against this same codebase's own RGS-T-1/RGS-T-3
+// precedent) — a dispatched click is the click a real Enter/Space activation PRODUCES.
+describe('ProgramOverviewComponent — Clear filters control (CF-T-1)', () => {
+  let fixture: ComponentFixture<ProgramOverviewComponent>;
+  let component: ProgramOverviewComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ProgramOverviewComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ProgramOverviewComponent);
+    component = fixture.componentInstance;
+  });
+
+  function detect(): void {
+    fixture.detectChanges();
+  }
+
+  function clearButton(): HTMLButtonElement | null {
+    return (
+      (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(
+        b => b.textContent?.trim() === 'Clear filters'
+      ) ?? null
+    );
+  }
+
+  function allSectionsTab(): HTMLButtonElement {
+    return fixture.debugElement
+      .queryAll(By.css('[role="tab"]'))
+      .find(t => t.nativeElement.textContent.trim() === 'All Sections')!.nativeElement;
+  }
+
+  // D2 — the visibility rule has FOUR states, and the single-axis ones are where it breaks (the
+  // task's own disqualifier: testing only "both active" would miss exactly this).
+  describe('Presence rule across all four state combinations (CF-R-2, CF-AC-2, D2)', () => {
+    it('is ABSENT when neither axis is filtered', () => {
+      detect();
+      expect(clearButton()).toBeNull();
+    });
+
+    it('is PRESENT when only the section is filtered', () => {
+      component.activeSection.set('w1w2');
+      detect();
+      expect(clearButton()).not.toBeNull();
+    });
+
+    it('is PRESENT when only the scope is filtered', () => {
+      fixture.componentRef.setInput('selectedScope', 'AOW01');
+      detect();
+      expect(clearButton()).not.toBeNull();
+    });
+
+    it('is PRESENT when both axes are filtered', () => {
+      component.activeSection.set('aow');
+      fixture.componentRef.setInput('selectedScope', 'AOW01');
+      detect();
+      expect(clearButton()).not.toBeNull();
+    });
+
+    it('the unfiltered state removes the control from the DOM entirely — never invisible-but-focusable (CF-AC-2 negative clause, the RGS-T-3 defect this repeats avoiding)', () => {
+      detect();
+      const allButtonTexts = (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).map(
+        b => b.textContent?.trim()
+      );
+      expect(allButtonTexts).not.toContain('Clear filters');
+      expect(component.showClearFilters()).toBe(false);
+    });
+  });
+
+  it('is a native <button type="button">, not disabled, not removed from the tab order, with an accessible name describing clearing (CF-R-3, D3)', () => {
+    component.activeSection.set('w1w2');
+    detect();
+
+    const btn = clearButton()!;
+    expect(btn.tagName).toBe('BUTTON');
+    expect(btn.getAttribute('type')).toBe('button');
+    expect(btn.hasAttribute('disabled')).toBe(false);
+    expect(btn.tabIndex).not.toBe(-1);
+    expect(btn.textContent?.trim().toLowerCase()).toContain('clear');
+  });
+
+  it('carries the focus-visible shadow-ring utility, never the box-shadow-blind ring-[…] utility that painted nothing and cost a rework round on RGS-T-1 (CF-DD-3)', () => {
+    component.activeSection.set('w1w2');
+    detect();
+
+    const btn = clearButton()!;
+    expect(btn.className).toContain('focus-visible:shadow-[var(--pr-focus-ring)]');
+    expect(btn.className).not.toContain('ring-[var(--pr-focus-ring)]');
+    expect(btn.className).not.toContain('ring-2');
+  });
+
+  it('introduces no fixed width and no new grid/flex track in the bar (CF-DD-4)', () => {
+    component.activeSection.set('w1w2');
+    detect();
+
+    const btn = clearButton()!;
+    expect(btn.className).not.toMatch(/\bw-\[/);
+    expect(btn.className).not.toContain('basis-');
+    expect(btn.className).not.toContain('grid-cols');
+  });
+
+  it('activating it resets BOTH axes in one activation: activeSection -> "all" AND scopeChange emits null — and nothing else fires (CF-AC-1, D1)', () => {
+    component.activeSection.set('w1w2');
+    fixture.componentRef.setInput('selectedScope', 'AOW01');
+    detect();
+
+    const scopeEmitted: (string | null)[] = [];
+    const openResultsEmitted: unknown[] = [];
+    const openAowEmitted: string[] = [];
+    component.scopeChange.subscribe(v => scopeEmitted.push(v));
+    component.openResults.subscribe(v => openResultsEmitted.push(v));
+    component.openAow.subscribe(v => openAowEmitted.push(v));
+
+    clearButton()!.click();
+
+    expect(component.activeSection()).toBe('all');
+    expect(scopeEmitted).toEqual([null]);
+    // CF-AC-1's BUT clause: it must not navigate or change anything else.
+    expect(openResultsEmitted).toEqual([]);
+    expect(openAowEmitted).toEqual([]);
+  });
+
+  it('resets the section by setting the signal DIRECTLY, never through setActiveSection() — that method carries toggle logic irrelevant to clearing (CF-DD-2)', () => {
+    const spy = jest.spyOn(component, 'setActiveSection');
+    component.activeSection.set('bilateral');
+    detect();
+
+    clearButton()!.click();
+
+    expect(component.activeSection()).toBe('all');
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('Enter and Space both activate the control — a dispatched click is the click a real keyboard activation produces (CF-AC-3, CF-R-3)', () => {
+    component.activeSection.set('w1w2');
+    detect();
+
+    const btn = clearButton()!;
+    expect(btn.tabIndex).not.toBe(-1);
+
+    const scopeEmitted: (string | null)[] = [];
+    component.scopeChange.subscribe(v => scopeEmitted.push(v));
+
+    // Documents intent — jsdom performs no default action for these on their own.
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+    // The click a real browser's Enter/Space activation PRODUCES (detail: 0 marks it keyboard-origin).
+    btn.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+
+    expect(component.activeSection()).toBe('all');
+    expect(scopeEmitted).toEqual([null]);
+  });
+
+  // The single most likely thing to be missed (task's own disqualifier): asserting the clear worked
+  // without asserting WHERE focus went.
+  it('on a successful clear, focus moves to the "All Sections" tab — never lost to <body> (CF-AC-4, D6)', () => {
+    component.activeSection.set('aow');
+    fixture.componentRef.setInput('selectedScope', 'AOW01');
+    detect();
+
+    clearButton()!.click();
+    detect();
+
+    expect(document.activeElement).toBe(allSectionsTab());
+    expect(document.activeElement).not.toBe(document.body);
+  });
+
+  it('does not alter re-click behaviour on the pre-existing controls (OQ-3): sections still toggle off on re-click, scope selection is still never a toggle', () => {
+    detect();
+
+    // Section toggling is `setActiveSection`'s own pre-existing behaviour, untouched by this task.
+    component.setActiveSection('w1w2');
+    expect(component.activeSection()).toBe('w1w2');
+    component.setActiveSection('w1w2');
+    expect(component.activeSection()).toBe('all');
+
+    // Scope selection never toggles — re-selecting the same key re-emits it, it does not clear.
+    const emitted: (string | null)[] = [];
+    component.scopeChange.subscribe(v => emitted.push(v));
+    component.selectScope('AOW01');
+    component.selectScope('AOW01');
+    expect(emitted).toEqual(['AOW01', 'AOW01']);
+  });
+
+  it('the "All Sections" tab keeps working exactly as before — unaffected by the new focus-target reference', () => {
+    component.activeSection.set('bilateral');
+    detect();
+
+    allSectionsTab().click();
+    expect(component.activeSection()).toBe('all');
   });
 });

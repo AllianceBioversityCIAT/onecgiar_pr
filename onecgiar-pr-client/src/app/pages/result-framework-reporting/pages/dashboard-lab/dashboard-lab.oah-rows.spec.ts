@@ -87,17 +87,34 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
     return component;
   }
 
-  /** One output-tier group + indicators for a given AoW code, seeded straight into `tocByKey`. */
-  function seedAows(component: DashboardLabComponent, aows: Record<string, { name: string; outputIndicators: unknown[]; outcomeIndicators?: unknown[] }>) {
+  /**
+   * One output-tier group + indicators for a given AoW code, seeded straight into `tocByKey`.
+   *
+   * `outcomeIndicators` seeds an AoW-**owned** outcome node (`is_aow: true`) and
+   * `crosscutIndicators` a **cross-cut** one (`is_aow: false` — the program-level Intermediate
+   * Outcome the payload repeats into every AoW, RES-R-3). The two are seeded as SEPARATE nodes on
+   * purpose: `bugfix/kpi-count-reconciliation` routes them to different buckets from that
+   * group-level flag alone (KCR-R-1.1), so a fixture with only one of them cannot tell the AoW-own
+   * basis from a cross-cut-inclusive one.
+   */
+  function seedAows(
+    component: DashboardLabComponent,
+    aows: Record<string, { name: string; outputIndicators: unknown[]; outcomeIndicators?: unknown[]; crosscutIndicators?: unknown[] }>
+  ) {
     const codes = Object.keys(aows);
     component.aowsByCode.set(new Map([[PROGRAM.initiativeCode, codes.map(code => ({ code, name: aows[code].name } as unknown as Unit))]]));
     const tocMap = new Map<string, { outputs: unknown[]; outcomes: unknown[] }>();
     for (const code of codes) {
       const key = `${PROGRAM.initiativeCode}::${code}::default`;
-      const { outputIndicators, outcomeIndicators } = aows[code];
+      const { outputIndicators, outcomeIndicators, crosscutIndicators } = aows[code];
       tocMap.set(key, {
         outputs: [{ toc_result_id: 1, result_title: 'HLO', is_aow: true, indicators: outputIndicators }],
-        outcomes: outcomeIndicators?.length ? [{ toc_result_id: 2, result_title: 'Outcome', is_aow: true, indicators: outcomeIndicators }] : []
+        outcomes: [
+          ...(outcomeIndicators?.length ? [{ toc_result_id: 2, result_title: 'Outcome', is_aow: true, indicators: outcomeIndicators }] : []),
+          ...(crosscutIndicators?.length
+            ? [{ toc_result_id: 901, result_title: 'Cross-cutting intermediate outcome', is_aow: false, indicators: crosscutIndicators }]
+            : [])
+        ]
       });
     }
     component.tocByKey.set(tocMap);
@@ -120,25 +137,38 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
           { indicator_id: 4, target_value_sum: 0, actual_achieved_value_sum: 0 }, // zero-target — excluded
           { indicator_id: 5, target_value_sum: 0, actual_achieved_value_sum: 3 } // the C-2 orphan → in-progress
         ],
-        // Outcome-tier indicators must never be counted here (row basis = output tier, DD-3).
-        outcomeIndicators: [{ indicator_id: 99, target_value_sum: 5, actual_achieved_value_sum: 5 }]
+        // AoW-OWNED outcome (`is_aow: true`): counted here since KCR-DD-2 moved the row basis from
+        // output-tier-only (OAH DD-3) to the AoW-own set — design §6.2 `overviewAowProgressRich` row.
+        outcomeIndicators: [{ indicator_id: 99, target_value_sum: 5, actual_achieved_value_sum: 5 }],
+        // KCR fixture extension — a CROSS-CUT outcome (`is_aow: false`, complete on its own terms).
+        // It belongs to the Intermediate bucket and must never reach this row (KCR-R-1/R-5).
+        // Without it the fixture could not separate "AoW-own" from "every outcome tier row":
+        // both would read complete 2 / reported 4 / total 5. With it, a cross-cut-inclusive basis
+        // reads complete 3 / reported 5 / total 6 instead.
+        crosscutIndicators: [{ indicator_id: 901, target_value_sum: 5, actual_achieved_value_sum: 5 }]
       }
     });
 
     const row = rowsByCode(component)['AOW01'];
 
-    // Hand-computed independently of the production code's own arithmetic (anti-tautology):
-    // counted set = {1,2,3,5} (4 is excluded as zero-target) → complete=1, inProgress=2 (2 and 5),
-    // notStarted=1, zeroTarget=1, total=4, reported=3, remaining=1.
+    // Hand-computed independently of the production code's own arithmetic (anti-tautology).
+    // AoW-own set = the 5 output KPIs + the `is_aow: true` outcome #99; the `is_aow: false` #901 is
+    // NOT in it. Counted = {1,2,3,5,99} (4 is excluded as zero-target) → complete=2 (1 and 99),
+    // inProgress=2 (2 and 5), notStarted=1 (3), zeroTarget=1, total=5, reported=4, remaining=1.
     expect(row).toEqual<OverviewAowProgressRowRich>({
       code: 'AOW01',
       name: 'AoW 01',
-      complete: 1,
+      // KCR: 1 → 2, design §6.2 `overviewAowProgressRich` row (KCR-DD-2) — the owned outcome #99
+      // (achieved 5 >= target 5) is `complete` and now belongs to this row.
+      complete: 2,
       inProgress: 2,
       notStarted: 1,
       zeroTarget: 1,
-      reported: 3,
-      total: 4,
+      // KCR: 3 → 4, same row — #99 has `achieved > 0`, so it is Reported (KCR-R-9).
+      reported: 4,
+      // KCR: 4 → 5, same row — outputs contribute 4 counted, the owned outcome 1. A basis that
+      // also swallowed the cross-cut #901 would read 6; the superseded output-tier basis, 4.
+      total: 5,
       remaining: 1,
       // P2-3296 — beside the reported-KPI count; no achievement data seeded by this fixture.
       achievement: null

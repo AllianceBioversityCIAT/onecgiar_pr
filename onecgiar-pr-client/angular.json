@@ -37,6 +37,7 @@
               "src/styles/fonts.scss",
               "src/styles/colors.scss",
               "src/styles/transitions.scss",
+              "src/styles/collapse.scss",
               "src/styles/containers.scss",
               "src/styles/table-custom-styles.scss",
               "src/app/custom-fields/custom-fields.scss",

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { AfterViewInit, Component, inject, OnDestroy, OnInit } from '@angular/core';
 import Hotjar from '@hotjar/browser';
 import { AuthService } from './shared/services/api/auth.service';
 import { environment } from '../environments/environment';
@@ -17,7 +17,8 @@ import { ResultsNotificationsService } from './pages/results/pages/results-outle
   styleUrls: ['./app.component.scss'],
   standalone: false
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
+  private headerResizeObserver?: ResizeObserver;
   title = 'onecgiar-pr-client';
   isProduction = environment.production;
   aiAssistantEnabled = environment.aiAssistant?.enabled ?? false;
@@ -136,5 +137,24 @@ export class AppComponent implements OnInit {
     this.api.resultsSE.GET_platformGlobalVariables().subscribe(({ response }) => {
       this.api.globalVariablesSE.get = response;
     });
+  }
+
+  ngAfterViewInit(): void {
+    if (typeof window !== 'undefined' && 'ResizeObserver' in window) {
+      const headerEl = document.querySelector('.app-shell-header');
+      if (headerEl) {
+        const updateHeight = () => {
+          const height = Math.round(headerEl.getBoundingClientRect().height);
+          document.documentElement.style.setProperty('--pr-shell-header-height', `${height}px`);
+        };
+        updateHeight();
+        this.headerResizeObserver = new ResizeObserver(updateHeight);
+        this.headerResizeObserver.observe(headerEl);
+      }
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.headerResizeObserver?.disconnect();
   }
 }
