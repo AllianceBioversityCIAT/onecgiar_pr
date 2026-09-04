@@ -77,15 +77,14 @@ describe('SectionZeroDashboardComponent', () => {
     expect(el.textContent).toContain('Select a project');
   });
 
-  // Submit for review lives in the editor's sections rail since 2026-09-04 — this card only keeps
-  // the Coming-soon actions, and the stale "In progress" badge left with the button.
-  it('should label unavailable actions and carry NO submit button here', () => {
+  // The Actions card is gone (feedback 2026-09-04): Submit for review lives in the editor's
+  // sections rail, and a column of disabled Coming-soon buttons earned no screen space.
+  it('renders NO Actions card — no submit, no Coming-soon buttons, no stale badge', () => {
     const el = fixture.nativeElement as HTMLElement;
-    const statuses = Array.from(el.querySelectorAll('.bp-action-status'))
-      .map(status => status.textContent?.trim());
 
-    expect(statuses).toEqual(['Coming soon', 'Coming soon', 'Coming soon']);
-    expect(el.querySelector('.bp-action-btn--submit')).toBeNull();
+    expect(el.querySelector('.bp-dashboard-card--actions')).toBeNull();
+    expect(el.querySelectorAll('.bp-action-btn').length).toBe(0);
+    expect(el.textContent).not.toContain('Coming soon');
     expect(el.textContent).not.toContain('In progress');
   });
 
