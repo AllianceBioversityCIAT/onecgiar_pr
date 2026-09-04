@@ -1,6 +1,6 @@
 # dashboard-lab
 
-**Verified:** 2026-09-04 · branch qa-development-2026 · fa3f06a90 (fixes stale `manageIndicator` tab union — now `'report' | 'info' | 'results'`, spec `changes/indicator-reported-results`; prior: 2026-09-03 f0c0f68ba adds `partitionProgramKpis` / `summarisePartition` note, spec `bugfix/kpi-count-reconciliation`; before that 52ddf00af merged with performance-refactor · 4c2c0c69f — ToC achievement rollup, P2-3296)
+**Verified:** 2026-09-04 · branch performance-refactor · f38c13161 (P2-3569: el modal emergente vivo ahora pasa `showInnovationLinkQuestion`; prior: 2026-09-04 · branch qa-development-2026 · fa3f06a90 (fixes stale `manageIndicator` tab union — now `'report' | 'info' | 'results'`, spec `changes/indicator-reported-results`; prior: 2026-09-03 f0c0f68ba adds `partitionProgramKpis` / `summarisePartition` note, spec `bugfix/kpi-count-reconciliation`; before that 52ddf00af merged with performance-refactor · 4c2c0c69f — ToC achievement rollup, P2-3296))
 
 ## Qué es
 El shell de un Science Program. Un solo componente que sirve varias vistas según `rfrView`, y que es
@@ -38,6 +38,21 @@ de TS): trátalo como host, no como pantalla.
 | `reporting-program-band/` | Banda del programa + tabs + toolbar (búsqueda, 4 filtros, Grouped/All, Expand all) | ⚠️ `resolvedDescription` cae a un texto fijo de SP01 ("Breeding for Tomorrow") cuando no hay descripción — pega la copy de un programa en cualquier otro. **No copies ese patrón.** |
 | `indicator-drawer/` | El aside: Target (`info`) y creación de resultado (`report`) | **Tiene `CLAUDE.md` propio** |
 | `lab-report-form/` | El formulario de creación que monta el aside | **Tiene `CLAUDE.md` propio** |
+
+## Trampa: este componente es el host VIVO de la pantalla emergente (2026-09-04, P2-3569)
+
+El modal "Report emerging result" de este archivo (`<app-report-result-form>`) **es** la vía
+emergente que la gente usa. `entity-details` — de donde se copió el modal — está **retirado y sin
+ruta**: `routing-data.ts` carga `DashboardLabComponent` para `emerging`, `entity-details/:entityId`,
+`overview` y `planned-toc`.
+
+⚠️ **Y eso ya costó un requisito entero.** La pregunta obligatoria de P2-3421 ("¿reporta el uso de
+una innovación ya evaluada?") se cableó con `[showInnovationLinkQuestion]="true"` **solo en
+`entity-details`**, con una nota que declaraba esta superficie "fuera de alcance". Nunca se vio en
+pantalla; QA reprodujo su ausencia tres veces. Corregido aquí y con candado estático:
+`report-result-form/innovation-link-surfaces.spec.ts`.
+
+⇒ **Al leer una nota que dice "esa otra superficie es la que importa", comprueba que esté enrutada.**
 
 ## Trampas (⚠️ = ya rompió algo)
 - ⚠️ **`filtersActive` hay que pasarlo a `reporting-aow-table`.** El hijo no ve tres de los cinco
