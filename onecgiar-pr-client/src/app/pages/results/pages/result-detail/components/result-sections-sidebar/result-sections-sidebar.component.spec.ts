@@ -43,6 +43,8 @@ describe('ResultSectionsSidebarComponent', () => {
       progressLabel: signal('1 of 2 sections complete'),
       sectionLink: (s: any) => `/result/result-detail/1234/${s.path}`,
       sectionQueryParams: () => ({ phase: 7 }),
+      resultCode: signal('9006'),
+      resultTypeName: signal('Capacity sharing for development'),
       showAiReview: true,
       aiReviewDisabled: false,
       aiReviewLabel: 'AI review',
@@ -65,6 +67,23 @@ describe('ResultSectionsSidebarComponent', () => {
 
     expect(component).toBeTruthy();
     expect(html().querySelector('[data-testid="result-sections-sidebar"]')).toBeTruthy();
+  });
+
+  it('pins the result code and type above the section list', async () => {
+    await build();
+
+    expect(html().querySelector('[data-testid="result-sections-code"]')?.textContent?.trim()).toBe('9006');
+    expect(html().querySelector('[data-testid="result-sections-type"]')?.textContent?.trim()).toBe(
+      'Capacity sharing for development'
+    );
+  });
+
+  it('hides the identity block when the open result has no code or type', async () => {
+    sectionsMock.resultCode = signal('');
+    sectionsMock.resultTypeName = signal('');
+    await build();
+
+    expect(html().querySelector('[data-testid="result-sections-identity"]')).toBeNull();
   });
 
   it('renders one row per section, linking to it with the phase', async () => {

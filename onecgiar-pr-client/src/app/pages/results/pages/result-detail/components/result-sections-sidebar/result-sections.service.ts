@@ -87,6 +87,22 @@ export class ResultSectionsService {
 
   readonly progressLabel = computed(() => `${this.doneCount()} of ${this.totalCount()} sections complete`);
 
+  /**
+   * Identity pinned at the top of the sections rail so the code and type stay visible while the
+   * header identity strip scrolls away. Same fields the header used to show inline.
+   */
+  readonly resultCode = computed(() => {
+    this.dataControlSE.currentResultSignal();
+    const fromResult = this.dataControlSE.currentResult?.result_code;
+    const code = fromResult != null && `${fromResult}`.trim() !== '' ? fromResult : this.api.resultsSE?.currentResultCode;
+    return code != null && `${code}`.trim() !== '' ? String(code) : '';
+  });
+
+  readonly resultTypeName = computed(() => {
+    this.dataControlSE.currentResultSignal();
+    return this.dataControlSE.currentResult?.result_type_name ?? '';
+  });
+
   /** Router link for a section (needs the open result's code). */
   sectionLink(section: RdSection): string {
     return `/result/result-detail/${this.dataControlSE.currentResult?.result_code}/${section.path}`;

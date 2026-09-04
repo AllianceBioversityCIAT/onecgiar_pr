@@ -103,11 +103,10 @@
     </div>
   </div>
 
-  <!-- Identity strip: the six metadata fields the docked card used to spell out are behind the ⓘ;
-       the four that identify the result at a glance stay inline. -->
+  <!-- Identity strip: code and type live in the sections rail (always visible). Level, funding,
+       submitter, AoW and status stay inline; the six extra metadata fields stay behind the ⓘ. -->
   <div class="flex flex-wrap items-center gap-[10px] text-[12px] font-normal text-[var(--pr-text-secondary)]">
-    <span class="relative inline-flex items-center gap-[6px]" data-testid="result-header-meta-wrap">
-      <span class="font-mono text-[12px] font-medium text-[var(--pr-text)]" data-testid="result-header-code">{{ code }}</span>
+    <span class="relative inline-flex items-center" data-testid="result-header-meta-wrap">
       <button
         type="button"
         class="flex h-[18px] w-[18px] items-center justify-center text-[var(--pr-text-muted)] hover:text-[var(--pr-color-primary-300)]"
@@ -156,10 +155,6 @@
       }
     </span>
 
-    @if (category) {
-      <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
-      <span>{{ category }}</span>
-    }
     @if (level) {
       <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
       <span>{{ level }}</span>

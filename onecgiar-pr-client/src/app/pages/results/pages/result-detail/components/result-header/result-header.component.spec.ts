@@ -98,12 +98,12 @@ describe('ResultHeaderComponent', () => {
       expect(q('[data-testid="result-detail-back-link"]').getAttribute('href')).toBe('/result/results-outlet/results-list');
     });
 
-    it('shows the code, category, level and funding inline', async () => {
+    it('shows the level and funding inline (code and type live in the sections sidebar)', async () => {
       await build();
       const strip = html().textContent;
 
-      expect(q('[data-testid="result-header-code"]').textContent.trim()).toBe('8871');
-      expect(strip).toContain('Capacity sharing for development');
+      expect(q('[data-testid="result-header-code"]')).toBeNull();
+      expect(strip).not.toContain('Capacity sharing for development');
       expect(strip).toContain('Output');
       expect(strip).toContain('W3/Bilaterals');
     });

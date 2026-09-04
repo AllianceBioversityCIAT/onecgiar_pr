@@ -41,7 +41,14 @@ describe('ResultSectionsService', () => {
   beforeEach(() => {
     TestBed.resetTestingModule();
     dataControl = {
-      currentResult: { result_code: '1234', version_id: 7, result_type_id: 1, status_id: 1, initiative_id: 9 },
+      currentResult: {
+        result_code: '1234',
+        result_type_name: 'Policy change',
+        version_id: 7,
+        result_type_id: 1,
+        status_id: 1,
+        initiative_id: 9
+      },
       currentResultSignal: signal({ portfolio: 'P25' }),
       greenChecksString: signal('[]'),
       green_checks: [],
@@ -151,6 +158,25 @@ describe('ResultSectionsService', () => {
       build();
 
       expect(service.totalCount()).toBe(service.sections().filter(s => s.underConstruction !== true).length);
+    });
+  });
+
+  describe('identity', () => {
+    it('exposes the open result code and type', () => {
+      build();
+
+      expect(service.resultCode()).toBe('1234');
+      expect(service.resultTypeName()).toBe('Policy change');
+    });
+
+    it('falls back to the results API code when the loaded result has none', () => {
+      dataControl.currentResult.result_code = '';
+      dataControl.currentResult.result_type_name = '';
+      api.resultsSE = { currentResultCode: 9006 };
+      build();
+
+      expect(service.resultCode()).toBe('9006');
+      expect(service.resultTypeName()).toBe('');
     });
   });
 

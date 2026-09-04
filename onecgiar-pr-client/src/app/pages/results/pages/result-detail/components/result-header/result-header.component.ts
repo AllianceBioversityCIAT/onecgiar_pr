@@ -141,7 +141,8 @@ const STATUS_TOKENS: Record<string, { fg: string; bg: string }> = {
 
 /**
  * Result-detail header: the way back, the result's title, the result-level actions (PDF export and
- * the ⋮ menu) and a one-line identity strip — code, category, level, funding and the status chip.
+ * the ⋮ menu) and a one-line identity strip — level, funding, submitter, AoW and the status chip.
+ * Result code and type sit in the sections sidebar so they stay visible while this header scrolls.
  *
  * Built from the approved mockup ("PRMS Reporting.dc.html", the `pageOpen` header). It replaces the
  * docked "RESULT METADATA" card: the same six fields now live behind the ⓘ next to the code, which
@@ -179,14 +180,6 @@ export class ResultHeaderComponent implements DoCheck {
 
   get title(): string {
     return this.dataControlSE.currentResult?.title ?? '';
-  }
-
-  get code(): string {
-    return String(this.api.resultsSE.currentResultCode ?? '');
-  }
-
-  get category(): string {
-    return this.dataControlSE.currentResult?.result_type_name ?? '';
   }
 
   get level(): string {
@@ -248,9 +241,8 @@ export class ResultHeaderComponent implements DoCheck {
   /**
    * Las filas que el mockup pone en este popover: Center, Phase, Portfolio, Origin, Created by.
    *
-   * Ya NO repite Status / Level / Category / Funding: los cuatro están a la vista en la tira de
-   * identidad, a un centímetro del ⓘ, y el mockup los saca de aquí justamente por eso. Code
-   * tampoco, que es el texto al que este botón está pegado.
+   * Ya NO repite Status / Level / Funding: esos siguen a la vista en la tira. Code y Category
+   * viven en el riel de secciones; el ⓘ queda como ancla del popover.
    *
    * Tres de las cinco no tienen dato en `GET /api/results/get/:id` y van marcadas `pending`:
    *  · Center — el payload trae la Science Program (`initiative_*`), que es otra cosa;
