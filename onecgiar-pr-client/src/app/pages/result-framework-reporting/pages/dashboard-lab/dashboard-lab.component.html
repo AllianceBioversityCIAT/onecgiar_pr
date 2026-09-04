@@ -1471,11 +1471,8 @@
                was removed — the band above now owns search, filters and the grouping toggle,
                and having two search boxes on one screen was the visible symptom. -->
 
-          <!-- Content pad: 32px on every side, 20px between AoW cards (reference :736 / :989).
-               No inner scroller — the page scrolls and the band sticks. The old `min-h-0 flex-1
-               overflow-y-auto` gave this box no height to work with, which is why the canvas
-               stopped halfway down the viewport and left a white band underneath. -->
-          <div class="flex flex-col gap-[20px] px-[32px] pb-[32px]">
+          <!-- Content pad: 32px horizontal, 20px top, 32px bottom. 20px between AoW cards. -->
+          <div class="flex flex-col gap-[20px] px-[32px] pt-[20px] pb-[32px]">
             @if (loadingAows()) {
               @for (s of [1, 2, 3, 4]; track s) {
                 <div class="h-14 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
