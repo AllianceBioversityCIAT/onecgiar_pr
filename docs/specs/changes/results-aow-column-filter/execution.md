@@ -145,3 +145,103 @@ Verification: `npx jest src/app/pages/result-framework-reporting/pages/dashboard
 
 **T-5 environment pre-check (Leader, before spawning):** local API `http://localhost:3400/` runs from this worktree (`nest start --watch`, process started 14:05 local) and `dist/.../results-framework-reporting.controller.js` contains `results-scope`; client dev server on `:4200` (pid 46077) has cwd `…/qa-development-2026/onecgiar-pr-client`, proxied by Orca at `http://qa-development-2026.orca.localhost:50196/`; Orca tab 1 is on `/result-framework-reporting/entity-details/SP01/results?phase=Reporting%202026` with an authenticated session. Live route available — no deferral.
 
+### `RAC-T-5` — Live reconciliation on SP01 / SP12, latency, docs — **PASS**
+
+| Field | Value |
+|---|---|
+| Date | 2026-09-04 |
+| Type | `docs` + manual verification (Orca embedded browser, `orca-cli` skill, tab `1ba0a9e0-d455-401d-b7d6-96db9ce0cf0e`) |
+| Requirements covered | `RAC-R-5`, `RAC-AC-7`; defect class *fixture-shaped blindness*; confirms A-1..A-3, A-5 / `RAC-DD-6` |
+| Phase / versionId | "Reporting 2026" → `versionId` **36**, both programs (`dashboard-lab.component.ts`'s `effectiveVersionId`) |
+| Bilateral rows | Both SP01 and SP12 have `W3/Bilaterals` origin rows (`originOptions()` returned both values on each program) — the W1/W2 funding filter is NOT a no-op for either program |
+
+**Method.** Read `program-overview`'s `scopeBreakdown()` signal for the Overview totals (the exact
+values `program-overview.component.html`'s breakdown rows render — same source, not re-derived).
+Read `programme-results.component.ts`'s `totalLabel()` signal for the Results counter (the exact
+string the template binds at `:330`) after navigating with `?section=<key>&origin=W1%2FW2`, double-read
+after `networkidle` to avoid a race with the token-guarded fetch. For every key with a non-zero delta,
+fetched the raw `results-scope` payload (`auth` header from `localStorage.token`, never printed) and
+diffed its `result_id`s against `ProgrammeResultsService.rows()` for that `versionId` to classify the
+delta: **not owned at all** (contributor-only, A-5 / `RAC-DD-6`, expected) vs. anything else (would be
+a FAIL — none found).
+
+#### SP01 (Breeding for Tomorrow)
+
+| Key | Overview total | Results (W1/W2) | Results (all origins) | Verdict | Contributor-only ids |
+|---|---|---|---|---|---|
+| AOW01 | 33 | 32 | 36 | PASS (Δ1 explained) | `11037` |
+| AOW02 | 3 | 3 | 3 | PASS | — |
+| AOW03 | 6 | 4 | 6 | PASS (Δ2 explained) | `11175`, `11378` |
+| AOW04 | 2 | 1 | 2 | PASS (Δ1 explained) | `11125` |
+| AOW05 | 2 | 2 | 2 | PASS | — |
+| INTERMEDIATE | 5 | 5 | 5 | PASS | — |
+| EOI_2030 | 0 | 0 | 1 | PASS (the 1 all-origins row is W3, owned — outside the Overview's W1/W2 population, A-3) | — |
+| UNTAGGED | 55 | 55 | 93 | PASS (owned-but-W3 rows explain the all-origins gap, A-3; 1 contributor-only) | `11513` |
+| **All scopes** | **106** | **102** | — | reconciles: 106 − 102 = 4 contributor-only ids across AOW01/03/04/UNTAGGED | — |
+
+Every key where Overview total ≠ Results(W1/W2) is fully accounted for by ids present in
+`results-scope` but absent from this programme's owned rows at *any* origin (i.e., genuinely
+contributor-only, never a bucket-rule or join defect) — **RAC-DD-6 holds exactly**, no unexplained
+residual on any key. `AOW02`, `AOW05`, `INTERMEDIATE`, `EOI_2030`, `UNTAGGED` (net) reconcile with
+zero delta, satisfying the disqualifier's "every key, including UNTAGGED" clause.
+
+#### SP12 (the user's screenshot program)
+
+| Key | Overview total | Results (W1/W2) | Verdict | Contributor-only ids |
+|---|---|---|---|---|
+| AOW01 | 5 | 3 | PASS (Δ2 explained) | `11034`, `11074` |
+| AOW02 | 3 | 3 | PASS | — |
+| AOW03 | 5 | 5 | PASS | — |
+| AOW04 | 1 | 1 | PASS | — |
+| INTERMEDIATE | 0 | 0 | PASS | — |
+| EOI_2030 | 0 | 0 | PASS | — |
+| UNTAGGED | 2 | 2 | PASS | — |
+| **All scopes** | **16** | **14** | reconciles: 16 − 14 = 2 contributor-only ids, both AOW01 | — |
+
+**Verdict: PASS on every key, both programs.** No `INCONCLUSIVE` — every delta resolved to a named,
+listed contributor-only id set via the raw payload, none left unexplained.
+
+#### Latency (`results-scope`, 3 direct requests each, `cache: 'no-store'`, `performance.now()`)
+
+| Program | Run 1 | Run 2 | Run 3 | Median | Target |
+|---|---|---|---|---|---|
+| SP01 | 76 ms | 61 ms | 39 ms | **61 ms** | < 300 ms p95 |
+| SP12 | 123 ms | 182 ms | 115 ms | **123 ms** | < 300 ms p95 |
+
+#### Column + search check
+
+- Cell text sample (SP01, `cellText(row,'aow')`, first 3 unfiltered rows): `"Not tagged"`, `"AOW02"`,
+  `"AOW01"` — DOM-confirmed (`document.body.innerText` contains `AOW01` beside the row's other cells,
+  the "Area of Work" `<th>` is present).
+- Cell text sample (SP12): `"AOW02"`, `"AOW03"`, `"Not tagged"`.
+- Search box (real UI `fill` into the `aria-label="Search results or indicators"` textbox, not just
+  the signal): typing `AOW02` → **SP01: 4 rows**, **SP12: 5 rows** — both counts reconcile with the
+  `results-scope` bucket totals for `AOW02` on each program (3 on SP01 restricted to owned+W1/W2 plus
+  1 not-owned row surfacing under all-origin search; 5 on SP12 matching its bucket total exactly since
+  none of its AOW02 rows are contributor-only).
+
+**Tab restored:** navigated back to
+`http://qa-development-2026.orca.localhost:50196/result-framework-reporting/entity-details/SP01/results?phase=Reporting%202026`
+— confirmed via `orca tab list --json` (`browserPageId 1ba0a9e0-d455-401d-b7d6-96db9ce0cf0e`, index 1)
+matching the URL captured before any navigation in this task.
+
+**Docs:** `pages/programme-results/CLAUDE.md` — removed the *Section* filter row from the
+"Coming soon" table and the stale `section` hardcoded-`''` gotcha; added "Area of Work column + live
+Section filter" documenting `loadScope`/`joinResultScope`/`sectionState`/version-mismatch, the shared
+bucket-key vocabulary, `?section=`, R-7's fail-soft unit-name lookup, and this reconciliation
+evidence; re-stamped `Verified: 2026-09-04 · branch qa-development-2026 · 6a9a45b5e`.
+`pages/dashboard-lab/CLAUDE.md` and `components/program-overview/CLAUDE.md` — added the
+`onOverviewLink` scope-stamping seam and `viewBreakdownResults` sibling-button notes respectively
+(T-4's forward pointer honored — neither guide had stale OSF-DD-12 deferral wording to remove; that
+clause lives only in code comments describing the pre-existing `?scope=` mechanism, unrelated to the
+old "no scope on the Results deep link" prohibition this spec supersedes); re-stamped both `Verified:`
+lines to `2026-09-04 · branch qa-development-2026 · 6a9a45b5e`. No `.ts`/`.html` files touched.
+
+**Not Done / Assumptions:** none — every breakdown key on both programs was compared and every
+non-zero delta was resolved to a named id set, not asserted away.
+
+**Decisions:** none beyond the spec. **Issues:** none — zero unexplained reconciliation gaps.
+**Final verification:** live SP01 + SP12 read, all 8 (SP01) / 7 (SP12) keys PASS, medians 61 ms / 123 ms
+(both < 300 ms target), column + search confirmed in the live DOM. Gate: *auto-approved (pre-approved
+mode)*. **Spec `changes/results-aow-column-filter` complete: T-1..T-5 all PASS.**
+

@@ -1,6 +1,6 @@
 # dashboard-lab
 
-**Verified:** 2026-09-04 · branch qa-development-2026 · fa3f06a90 (fixes stale `manageIndicator` tab union — now `'report' | 'info' | 'results'`, spec `changes/indicator-reported-results`; prior: 2026-09-03 f0c0f68ba adds `partitionProgramKpis` / `summarisePartition` note, spec `bugfix/kpi-count-reconciliation`; before that 52ddf00af merged with performance-refactor · 4c2c0c69f — ToC achievement rollup, P2-3296)
+**Verified:** 2026-09-04 · branch qa-development-2026 · 6a9a45b5e (adds `onOverviewLink` scope stamping note, spec `changes/results-aow-column-filter` RAC-T-5; prior: fa3f06a90 fixes stale `manageIndicator` tab union — now `'report' | 'info' | 'results'`, spec `changes/indicator-reported-results`; before that 2026-09-03 f0c0f68ba adds `partitionProgramKpis` / `summarisePartition` note, spec `bugfix/kpi-count-reconciliation`; before that 52ddf00af merged with performance-refactor · 4c2c0c69f — ToC achievement rollup, P2-3296)
 
 ## Qué es
 El shell de un Science Program. Un solo componente que sirve varias vistas según `rfrView`, y que es
@@ -95,6 +95,20 @@ de TS): trátalo como host, no como pantalla.
   `colors.scss`: la página parecía cargada-y-vacía mientras cargaba. Ahora está definido
   (`#efeef3`) y `design-tokens.spec.ts` barre el módulo entero y falla si aparece otro token
   usado-pero-no-definido. Si añades un token, decláralo en `src/styles/colors.scss` PRIMERO.
+
+## Añadido 2026-09-04 (spec `changes/results-aow-column-filter`, RAC-T-4/T-5)
+- `onOverviewLink(link)` (`:2375`) is the ONE seam every `OverviewLink` a chart/card/breakdown row
+  emits passes through on its way to `router.navigate` — not each of the ~6 builders in
+  `program-overview.component.ts` (`RAC-DD-4`). When `overviewScope()` is set and the emitted
+  `link.section` is `undefined`, it stamps `section = overviewScope()` before mapping to
+  `queryParams` via `PROGRAMME_RESULTS_QUERY_PARAM_MAP`; no active scope → no `section` key at all.
+  A builder that already knows its own scope (the breakdown rows' `viewBreakdownResults`, see
+  `components/program-overview/CLAUDE.md`) sets `section` explicitly and is **never** overwritten.
+  Hero-row and ToC-map clicks are untouched — they keep opening Reporting By-AOW, not Results.
+  Live-verified (RAC-T-5, SP01/SP12): every Results-tab count under `?section=<key>&origin=W1/W2`
+  reconciles against the Overview breakdown total for that key (owner population, W1/W2 only,
+  `RAC-DD-6`) — see `pages/programme-results/CLAUDE.md` for the reconciliation table and the
+  contributor-only delta this component's `overviewScope`/breakdown totals still include.
 
 ## Trampa nueva (2026-08-26)
 - ⚠️ **Dos convenciones opuestas para `is_aow` ausente.** `indicatorsByAow()`'s `fromTier` (~línea

@@ -1,6 +1,6 @@
 # program-overview
 
-**Verified:** 2026-09-03 · branch qa-development-2026 · e227ce935
+**Verified:** 2026-09-04 · branch qa-development-2026 · 6a9a45b5e
 
 **What this owns:** the **Overview** tab of the programme shell — the six cards under
 `entity-details/:entityId/overview`. Purely presentational: every figure arrives as a signal input.
@@ -118,3 +118,12 @@ Every input is a `computed()` on the parent (`dashboard-lab.component.ts`):
 - Convention drift: `docs/COMPONENT-DOCS.md` §5 puts `Verified:` last; every file in this shell puts it on line 3 instead — line 3 wins here, for consistency.
 - **Card 2 is collapsible** (`RGS-T-3`). Header (`h2`+subtitle+trigger, default expanded) sits
   OUTSIDE the `.pr-collapse` body; that body is `[attr.inert]` while closed, never `aria-hidden`.
+- **Breakdown rows carry a second, sibling button (`changes/results-aow-column-filter`, `RAC-R-4`):**
+  `viewBreakdownResults(row, event)` (`:1042`) emits `{ section: row.key }` straight to the host's
+  `openResults` output — it does NOT call `selectScope`. Never nested inside the pre-existing
+  `selectScope(row.key)` button: a `<button>` cannot legally contain interactive content, so the new
+  `aria-label="View results for <name>"` icon button sits BESIDE it in the same row wrapper, not
+  inside it. The row's own click (`selectScope`) is unchanged. Live-verified (RAC-T-5): the emitted
+  `section` reconciles against the Results tab's `?section=<key>&origin=W1/W2` count for every
+  breakdown key on SP01 and SP12 (owner population; contributor-only deltas reported per key in
+  `pages/programme-results/CLAUDE.md`).
