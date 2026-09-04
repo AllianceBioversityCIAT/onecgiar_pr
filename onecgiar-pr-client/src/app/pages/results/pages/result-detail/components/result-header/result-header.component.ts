@@ -7,6 +7,7 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { PdfExportService } from '../../../../../../shared/services/pdf-export.service';
 import { ResultMetadataPanelService } from '../../../../../../shared/components/result-metadata/result-metadata-panel.service';
+import { isProgrammeResultsTab, SmartNavigationService, splitNavUrl } from '../../../../../../shared/services/smart-navigation.service';
 
 interface MetaRow {
   label: string;
@@ -162,6 +163,7 @@ export class ResultHeaderComponent implements DoCheck {
   private readonly rolesSE = inject(RolesService);
   private readonly elementRef = inject(ElementRef);
   private readonly router = inject(Router);
+  private readonly smartNav = inject(SmartNavigationService);
 
   readonly metaOpen = signal(false);
   readonly actionsOpen = signal(false);
@@ -180,6 +182,23 @@ export class ResultHeaderComponent implements DoCheck {
    */
   get identityReady(): boolean {
     return !!this.dataControlSE.currentResult;
+  }
+
+  /**
+   * Origin-aware way back: Science Program Results tab when that is how the user
+   * arrived, otherwise Results Center. Query string (phase, filters) is preserved.
+   */
+  get backLink(): string {
+    return splitNavUrl(this.smartNav.getResultDetailBackTarget().url).path;
+  }
+
+  get backQueryParams(): Record<string, string> {
+    return splitNavUrl(this.smartNav.getResultDetailBackTarget().url).queryParams;
+  }
+
+  get backTitle(): string {
+    const url = this.smartNav.getResultDetailBackTarget().url;
+    return isProgrammeResultsTab(url) ? 'Back to programme results' : 'Back to all results';
   }
 
   get title(): string {

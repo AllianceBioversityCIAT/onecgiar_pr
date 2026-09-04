@@ -7,6 +7,39 @@ export interface BackTarget {
   label: string;
 }
 
+/** Default way out of result-detail when the origin is unknown. */
+export const RESULTS_CENTER_LIST_PATH = '/result/results-outlet/results-list';
+
+/** Visible label for the result-detail header back link (kept stable across origins). */
+export const RESULT_DETAIL_BACK_LABEL = 'Back to results';
+
+/**
+ * Programme Results tab only — `/entity-details/:code/results`.
+ * Must not match the sibling `results-review` route.
+ */
+export function isProgrammeResultsTab(url: string): boolean {
+  return /\/entity-details\/[^/?#]+\/results(?:[/?#]|$)/.test(url);
+}
+
+export function isResultDetailUrl(url: string): boolean {
+  return url.includes('/result/result-detail/');
+}
+
+export function isResultsCenterList(url: string): boolean {
+  return url.includes('/results-outlet/results-list');
+}
+
+/** Split a stored history URL so `[routerLink]` + `[queryParams]` can consume it. */
+export function splitNavUrl(url: string): { path: string; queryParams: Record<string, string> } {
+  const qIndex = url.indexOf('?');
+  if (qIndex === -1) return { path: url, queryParams: {} };
+  const queryParams: Record<string, string> = {};
+  new URLSearchParams(url.slice(qIndex + 1)).forEach((value, key) => {
+    queryParams[key] = value;
+  });
+  return { path: url.slice(0, qIndex), queryParams };
+}
+
 /**
  * Smart navigation tracker that listens to router transitions and determines
  * the context-aware "Back" destination and human-readable label based on where the
@@ -247,6 +280,32 @@ export class SmartNavigationService {
       this.history.splice(lastIdx, 1);
     }
     this.router?.navigateByUrl(target.url);
+  }
+
+  /**
+   * Back target for the result-detail header.
+   *
+   * Walks history newest-first, skipping the current URL and sibling result-detail
+   * section hops (general-information → contributors, etc.). The only known origin
+   * that is restored as-is is the Science Program Results tab. Coming from Results
+   * Center keeps that list URL (filters included). Everything else — Overview,
+   * Reporting, QA, deep link, empty history — falls back to Results Center.
+   */
+  getResultDetailBackTarget(currentUrl?: string): BackTarget {
+    const fallback: BackTarget = { url: RESULTS_CENTER_LIST_PATH, label: RESULT_DETAIL_BACK_LABEL };
+    const active = this.sanitizeUrl(currentUrl ?? this.router?.url);
+
+    for (let i = this.history.length - 1; i >= 0; i--) {
+      const prev = this.history[i];
+      if (!prev || prev === active) continue;
+      if (isResultDetailUrl(prev)) continue;
+      if (isProgrammeResultsTab(prev) || isResultsCenterList(prev)) {
+        return { url: prev, label: RESULT_DETAIL_BACK_LABEL };
+      }
+      return fallback;
+    }
+
+    return fallback;
   }
 
   private extractProgramCode(url: string): string | null {

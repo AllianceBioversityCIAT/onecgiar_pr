@@ -1,12 +1,12 @@
 <header class="mb-[16px] flex w-full flex-col gap-[8px]" data-testid="result-header">
-  <!-- Explicit way back to the results table. The sidebar's "Results Center" row navigates here
-       too, but a user several sections deep should not have to hunt through the nav to get out.
-       The fully-resolved path is used (rather than `/result`) so the link does not depend on the
-       redirect chain. -->
+  <!-- Origin-aware way back: the Science Program Results tab when that is how the user arrived,
+       otherwise Results Center. Query params (phase, filters) are kept. The fully-resolved path
+       is used (rather than `/result`) so the link does not depend on the redirect chain. -->
   <a
-    routerLink="/result/results-outlet/results-list"
+    [routerLink]="backLink"
+    [queryParams]="backQueryParams"
     class="inline-flex h-[20px] w-fit items-center gap-[5px] text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:opacity-80"
-    title="Back to all results"
+    [title]="backTitle"
     data-testid="result-detail-back-link">
     <!-- Chevron at 14px, per the mockup. It used to be `arrow_back` at 16px: a tailed arrow reads
          heavier than the rest of the chrome and made the link compete with the title above it. -->

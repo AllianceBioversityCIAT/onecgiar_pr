@@ -225,4 +225,57 @@ describe('SmartNavigationService', () => {
       expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/custom-fallback');
     });
   });
+
+  describe('getResultDetailBackTarget', () => {
+    const detail = '/result/result-detail/9042/general-information?phase=36';
+    const contributors = '/result/result-detail/9042/rd-contributors-and-partners?phase=36';
+    const programmeResults = '/result-framework-reporting/entity-details/SP12/results?phase=Reporting%202026&createdBy=42';
+    const resultsCenter = '/result/results-outlet/results-list?phase=36';
+    const overview = '/result-framework-reporting/entity-details/SP12/overview';
+    const resultsReview = '/result-framework-reporting/entity-details/SP12/results-review';
+
+    it('returns the Science Program Results tab when that is the first non-detail origin', () => {
+      service.recordUrl(programmeResults);
+      service.recordUrl(detail);
+
+      const target = service.getResultDetailBackTarget(detail);
+
+      expect(target.url).toBe(programmeResults);
+      expect(target.label).toBe('Back to results');
+    });
+
+    it('skips sibling result-detail section hops and still finds the programme Results tab', () => {
+      service.recordUrl(programmeResults);
+      service.recordUrl(detail);
+      service.recordUrl(contributors);
+
+      expect(service.getResultDetailBackTarget(contributors).url).toBe(programmeResults);
+    });
+
+    it('preserves Results Center query params when that is the origin', () => {
+      service.recordUrl(resultsCenter);
+      service.recordUrl(detail);
+
+      expect(service.getResultDetailBackTarget(detail).url).toBe(resultsCenter);
+    });
+
+    it('falls back to Results Center when the origin is Overview', () => {
+      service.recordUrl(overview);
+      service.recordUrl(detail);
+
+      expect(service.getResultDetailBackTarget(detail).url).toBe('/result/results-outlet/results-list');
+    });
+
+    it('does not treat results-review as the programme Results tab', () => {
+      service.recordUrl(resultsReview);
+      service.recordUrl(detail);
+
+      expect(service.getResultDetailBackTarget(detail).url).toBe('/result/results-outlet/results-list');
+    });
+
+    it('falls back to Results Center when history is empty or only the current detail URL', () => {
+      mockRouter.url = detail;
+      expect(service.getResultDetailBackTarget(detail).url).toBe('/result/results-outlet/results-list');
+    });
+  });
 });
