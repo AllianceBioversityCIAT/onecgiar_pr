@@ -8,7 +8,7 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { PdfExportService } from '../../../../../../shared/services/pdf-export.service';
 import { ResultMetadataPanelService } from '../../../../../../shared/components/result-metadata/result-metadata-panel.service';
-import { SmartNavigationService } from '../../../../../../shared/services/smart-navigation.service';
+import { RESULT_DETAIL_ORIGIN_STORAGE_KEY, SmartNavigationService } from '../../../../../../shared/services/smart-navigation.service';
 
 describe('ResultHeaderComponent', () => {
   let fixture: ComponentFixture<ResultHeaderComponent>;
@@ -23,6 +23,7 @@ describe('ResultHeaderComponent', () => {
   const q = (sel: string) => html().querySelector(sel) as HTMLElement;
 
   const build = async (url = '/result/result-detail/1234/general-information?phase=7', setup?: () => void) => {
+    sessionStorage.removeItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY);
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [ResultHeaderComponent],

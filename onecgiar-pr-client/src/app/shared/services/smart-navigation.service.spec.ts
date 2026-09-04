@@ -1,14 +1,21 @@
 import { TestBed } from '@angular/core/testing';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { SmartNavigationService } from './smart-navigation.service';
+import { RESULT_DETAIL_ORIGIN_STORAGE_KEY, SmartNavigationService } from './smart-navigation.service';
 
 describe('SmartNavigationService', () => {
   let service: SmartNavigationService;
   let routerEvents$: Subject<unknown>;
-  let mockRouter: Partial<Router> & { events: Subject<unknown>; navigateByUrl: jest.Mock; url: string };
+  let mockRouter: Partial<Router> & {
+    events: Subject<unknown>;
+    navigateByUrl: jest.Mock;
+    url: string;
+    getCurrentNavigation?: jest.Mock;
+    serializeUrl?: jest.Mock;
+  };
 
   beforeEach(() => {
+    sessionStorage.removeItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY);
     routerEvents$ = new Subject<unknown>();
     mockRouter = {
       url: '/result-framework-reporting/home',
@@ -276,6 +283,35 @@ describe('SmartNavigationService', () => {
     it('falls back to Results Center when history is empty or only the current detail URL', () => {
       mockRouter.url = detail;
       expect(service.getResultDetailBackTarget(detail).url).toBe('/result/results-outlet/results-list');
+    });
+
+    it('seeds the in-flight previous URL so Back still works when first constructed on result-detail', () => {
+      TestBed.resetTestingModule();
+      mockRouter.url = detail;
+      mockRouter.getCurrentNavigation = jest.fn(() => ({
+        previousNavigation: { finalUrl: programmeResults }
+      }));
+      mockRouter.serializeUrl = jest.fn((tree: unknown) => String(tree));
+      TestBed.configureTestingModule({
+        providers: [SmartNavigationService, { provide: Router, useValue: mockRouter }]
+      });
+
+      const lateService = TestBed.inject(SmartNavigationService);
+
+      expect(lateService.getHistory()).toEqual([programmeResults, detail]);
+      expect(lateService.getResultDetailBackTarget(detail).url).toBe(programmeResults);
+    });
+
+    it('reads a persisted programme Results origin after a fresh construct (full page load)', () => {
+      sessionStorage.setItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY, programmeResults);
+      TestBed.resetTestingModule();
+      mockRouter.url = detail;
+      mockRouter.getCurrentNavigation = jest.fn(() => null);
+      TestBed.configureTestingModule({
+        providers: [SmartNavigationService, { provide: Router, useValue: mockRouter }]
+      });
+
+      expect(TestBed.inject(SmartNavigationService).getResultDetailBackTarget(detail).url).toBe(programmeResults);
     });
   });
 });

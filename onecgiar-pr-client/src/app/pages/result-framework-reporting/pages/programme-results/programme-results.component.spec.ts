@@ -18,6 +18,7 @@ import { DataControlService } from '../../../../shared/services/data-control.ser
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { BilateralResultsService } from '../bilateral-results/bilateral-results.service';
 import { PrToastService } from '../../../../shared/components/pr-toast';
+import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
 import { PrTableComponent } from '../../../../shared/components/pr-table';
 
@@ -1158,7 +1159,9 @@ describe('ProgrammeResultsComponent', () => {
       queryParams: { phase: '11' }
     });
 
+    const rememberOrigin = jest.spyOn(TestBed.inject(SmartNavigationService), 'rememberResultDetailOrigin');
     component.openResult(row);
+    expect(rememberOrigin).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/result', 'result-detail', '5001', 'general-information'], {
       queryParams: { phase: '11' }
     });

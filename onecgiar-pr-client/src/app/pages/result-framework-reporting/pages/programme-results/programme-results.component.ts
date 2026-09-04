@@ -41,6 +41,7 @@ import {
   normalize
 } from './services/programme-results-filter.service';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from './services/programme-results-query-params';
+import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 
 /**
  * Router commands + query params for one result. Same shape as
@@ -562,6 +563,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
   private readonly bilateralSE = inject(BilateralResultsService);
   private readonly clipboard = inject(Clipboard);
   private readonly toastSE = inject(PrToastService);
+  private readonly smartNav = inject(SmartNavigationService);
 
   readonly data = inject(ProgrammeResultsService);
   readonly filter = inject(ProgrammeResultsFilterService);
@@ -1177,6 +1179,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
       return;
     }
 
+    this.smartNav.rememberResultDetailOrigin();
     this.router.navigate(commands, { queryParams });
   }
 
