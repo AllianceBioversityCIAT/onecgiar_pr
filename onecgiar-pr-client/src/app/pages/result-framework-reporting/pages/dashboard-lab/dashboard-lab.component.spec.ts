@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 import { signal, WritableSignal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { DashboardLabComponent } from './dashboard-lab.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -1717,6 +1719,168 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(component.byAowSelectedCenter()).toBeNull();
       expect(component.byAowSelectedType()).toBeNull();
       expect(component.reportingFiltersActive()).toBe(false);
+    });
+  });
+
+  describe('By-AoW tabular layout (BTC-R-2, BTC-R-3)', () => {
+    it('renders .pr-by-aow-head table column headers with Target, Achieved, KPIs, and Progress', () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+
+      // Test checking that the template includes the .pr-by-aow-head and .pr-by-aow-row structure
+      expect(template).toContain('class="pr-by-aow-head hidden md:grid"');
+      expect(template).toContain('class="overflow-x-auto"');
+
+      // Check column header titles (BTC-AC-3.1)
+      expect(template).toContain("<span>{{ sec.label === 'High Level Outputs' ? 'High-Level Output' : 'Outcome' }}</span>");
+      expect(template).toContain('<span class="text-center">Target</span>');
+      expect(template).toContain('<span class="text-center">Achieved</span>');
+      expect(template).toContain('<span class="text-center">KPIs</span>');
+      expect(template).toContain('<span class="text-center">Progress</span>');
+    });
+
+    it('renders .pr-by-aow-head table column headers into DOM elements with correct text (BTC-AC-3.1)', () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(template, 'text/html');
+
+      const head = doc.querySelector('.pr-by-aow-head');
+      expect(head).not.toBeNull();
+      expect(head?.classList.contains('hidden')).toBe(true);
+      expect(head?.classList.contains('md:grid')).toBe(true);
+
+      const headerSpans = Array.from(head?.querySelectorAll('span') ?? []);
+      expect(headerSpans.length).toBe(6);
+      expect(headerSpans[0].textContent?.trim()).toBe('');
+      expect(headerSpans[1].textContent).toContain('sec.label');
+      expect(headerSpans[2].textContent?.trim()).toBe('Target');
+      expect(headerSpans[3].textContent?.trim()).toBe('Achieved');
+      expect(headerSpans[4].textContent?.trim()).toBe('KPIs');
+      expect(headerSpans[5].textContent?.trim()).toBe('Progress');
+    });
+
+    it('renders .pr-by-aow-row grid with code badge, sanitized title, and stacked metric cells (BTC-AC-2.1, BTC-AC-2.3)', () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(template, 'text/html');
+
+      const row = doc.querySelector('.pr-by-aow-row');
+      expect(row).not.toBeNull();
+      expect(row?.tagName.toLowerCase()).toBe('button');
+
+      // Check badge rendered with cleanHloCode binding (BTC-AC-1.2)
+      const badge = doc.querySelector('.pr-hlo-code');
+      expect(badge).not.toBeNull();
+      expect(badge?.textContent).toContain('cleanHloCode(hlo.split.code || hlo.title)');
+
+      // Check stacked target and achieved cells (BTC-AC-2.3)
+      expect(template).toContain('{{ hloTargetSum(hlo) }}');
+      expect(template).toContain('{{ hloAchievedSum(hlo) }}');
+      expect(template).toContain('{{ hlo.count }}');
+    });
+
+    it('computes plannedByAowSections with clean codes, titles, and metrics in byAow mode (BTC-R-1, BTC-AC-1.1, BTC-AC-2.1)', async () => {
+      const component = await createComponent();
+      component.plannedBrowseView.set('byAow');
+      component.plannedHloAowCode.set('SP02-AOW01');
+
+      const mockInds = [
+        {
+          indicator_id: 101,
+          indicator_description: 'Breeding pipeline efficiency',
+          target_value_sum: 50,
+          actual_achieved_value_sum: 25,
+          __tier: 'output',
+          __hlo: 'HLO4.AOW1.IO1 Foster motivations'
+        },
+        {
+          indicator_id: 201,
+          indicator_description: 'Gender-responsive seed systems',
+          target_value_sum: 30,
+          actual_achieved_value_sum: 30,
+          __tier: 'outcome',
+          __hlo: 'I-OC 3.5. Women, men, youth and vulnerable groups'
+        }
+      ];
+
+      jest.spyOn(component, 'indicatorsForAow').mockReturnValue({
+        aow: { code: 'SP02-AOW01', name: 'Genetic Innovation' },
+        indicators: mockInds
+      } as any);
+
+      const sections = component.plannedByAowSections();
+      expect(sections.length).toBe(2);
+
+      // 1. High Level Outputs section
+      const outputsSec = sections.find(s => s.label === 'High Level Outputs');
+      expect(outputsSec).toBeDefined();
+      expect(outputsSec?.kpis).toBe(1);
+      expect(outputsSec?.groups.length).toBe(1);
+      const hloGroup = outputsSec!.groups[0];
+      expect(hloGroup.split.code).toBe('HLO4.AOW1.IO1');
+      expect(hloGroup.split.name).toBe('Foster motivations');
+      expect(component.cleanHloCode(hloGroup.split.code)).toBe('HLO4');
+      expect(component.hloTargetSum(hloGroup)).toBe('50');
+      expect(component.hloAchievedSum(hloGroup)).toBe('25');
+      expect(hloGroup.count).toBe(1);
+
+      // 2. Outcomes section
+      const outcomesSec = sections.find(s => s.label === 'Outcomes');
+      expect(outcomesSec).toBeDefined();
+      expect(outcomesSec?.kpis).toBe(1);
+      expect(outcomesSec?.groups.length).toBe(1);
+      const outcomeGroup = outcomesSec!.groups[0];
+      expect(outcomeGroup.split.code).toBe('I-OC 3.5');
+      expect(outcomeGroup.split.name).toBe('Women, men, youth and vulnerable groups');
+      expect(component.cleanHloCode(outcomeGroup.split.code)).toBe('I-OC 3.5');
+      expect(component.hloTargetSum(outcomeGroup)).toBe('30');
+      expect(component.hloAchievedSum(outcomeGroup)).toBe('30');
+      expect(outcomeGroup.count).toBe(1);
+    });
+
+    it('defines $pr-by-aow-tracks CSS Grid specification matching BTC-AC-2.1 and BTC-AC-3.2', () => {
+      const scss = readFileSync(join(__dirname, 'dashboard-lab.component.scss'), 'utf8');
+
+      // Tracks specification: [Chevron 28px] [Title 1fr] [Target 76px] [Achieved 76px] [KPIs 64px] [Progress 130px]
+      expect(scss).toMatch(/\$pr-by-aow-tracks:\s*28px\s+minmax\(240px,\s*1fr\)\s+76px\s+76px\s+64px\s+130px;/);
+
+      // Both .pr-by-aow-head and .pr-by-aow-row must use $pr-by-aow-tracks
+      expect(scss).toMatch(/\.pr-by-aow-head\s*\{[^}]*grid-template-columns:\s*\$pr-by-aow-tracks;/);
+      expect(scss).toMatch(/\.pr-by-aow-row\s*\{[^}]*grid-template-columns:\s*\$pr-by-aow-tracks;/);
+    });
+
+    it('renders By-AoW tabular DOM fixture with correct headers and outcome badge (BTC-AC-2.1, BTC-AC-3.1)', () => {
+      const template = `
+        <div class="overflow-x-auto">
+          <div class="pr-by-aow-head hidden md:grid">
+            <span></span>
+            <span>Outcome</span>
+            <span class="text-center">Target</span>
+            <span class="text-center">Achieved</span>
+            <span class="text-center">KPIs</span>
+            <span class="text-center">Progress</span>
+          </div>
+          <button type="button" class="pr-by-aow-row">
+            <span>chevron</span>
+            <div><span class="pr-hlo-code">I-OC 3.5</span><span>Women, men, youth</span></div>
+            <div class="text-center"><span class="tabular-nums">30</span></div>
+            <div class="text-center"><span class="tabular-nums">30</span></div>
+            <div class="kpis-col"><span>1</span></div>
+            <div class="progress-col"><span>QA 100%</span></div>
+          </button>
+        </div>
+      `;
+      const div = document.createElement('div');
+      div.innerHTML = template;
+
+      const head = div.querySelector('.pr-by-aow-head');
+      expect(head).not.toBeNull();
+      const headers = Array.from(head!.querySelectorAll('span')).map(s => s.textContent?.trim());
+      expect(headers).toEqual(['', 'Outcome', 'Target', 'Achieved', 'KPIs', 'Progress']);
+
+      const row = div.querySelector('.pr-by-aow-row');
+      expect(row).not.toBeNull();
+      const badge = row!.querySelector('.pr-hlo-code');
+      expect(badge?.textContent?.trim()).toBe('I-OC 3.5');
     });
   });
 });
