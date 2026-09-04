@@ -17,7 +17,7 @@
 
 ## 1. Scope of this task list
 - **Module / feature:** `result-framework-reporting` / Program shell KPI counts.
-- **Status:** `in-progress` (execution started 2026-09-03).
+- **Status:** `complete` — 5/5 PASS 2026-09-03; see `execution.md`.
 
 ## 2. Pre-flight checklist
 - [x] `requirements.md` approved (auto-approved, pre-approved mode).
@@ -72,7 +72,7 @@
   - *Input that fails:* each updated literal must differ from the old one **and** be reproducible by hand from the fixture — a fixture whose new expectation coincidentally equals the old basis proves nothing and must be extended (e.g. add a zero-target KPI) until the two bases diverge.
 - **Done:** folder suite green; every changed literal commented; report lists old → new per file.
 
-### `KCR-T-5` — Live SP01 read-back + docs
+### `KCR-T-5` — Live SP01 read-back + docs `[x]`
 - **Type:** `docs` + manual verification
 - **Description:** Run `evidence/reconcile.browser.js` in the authenticated Orca browser tab and read the rendered figures on `/result-framework-reporting/entity-details/SP01` (Overview) and `?tocView=aows` (Reporting) at default phase, no filters. Record results in `execution.md`; update the `dashboard-lab` folder guide (`src/CLAUDE.md`/`AGENTS.md` navigation notes for `reporting-burndown.ts`) if they describe the old basis.
 - **Implements:** `KCR-AC-7`; defect class *fixture-shaped blindness*.
