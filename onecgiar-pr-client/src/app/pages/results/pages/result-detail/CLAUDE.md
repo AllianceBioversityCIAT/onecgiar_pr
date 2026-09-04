@@ -40,7 +40,7 @@ scrollea en esta ruta.
 |---|---|---|
 | `components/result-sections-sidebar/` | Riel de 240px: secciones, progreso, AI review, Submit | `h-full`, nunca `sticky`+`max-h-svh`: sticky lo deja del alto de su contenido y la regla derecha muere a media pantalla (se midió en 477px de 842) |
 | `components/section-bottom-bar/` | Back / Next / posición / campos faltantes / Save | Se **teletransporta**: ver abajo |
-| `components/result-header/` | Título, back-link, PDF, menú, tira (nivel/funding/submitter/AoW/status; ⓘ metadata). Code y type viven en el riel de secciones | Vive dentro de `.rd_scroll` |
+| `components/result-header/` | Título, back-link, PDF, menú, tira (nivel/funding/submitter/AoW; ⓘ metadata). Code, type y status viven en el riel de secciones. La tira usa `pr-skeleton` mientras `currentResult` o el mapping AoW siguen en vuelo | Vive dentro de `.rd_scroll` |
 
 ## La bottom bar se teletransporta (leer antes de tocarla)
 

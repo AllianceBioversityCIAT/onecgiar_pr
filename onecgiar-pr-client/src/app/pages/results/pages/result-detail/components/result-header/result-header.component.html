@@ -156,37 +156,60 @@
   </div>
 
   <!-- Identity strip: code, type and status live in the sections rail. ⓘ sits next to the title.
-       Level, funding, submitter and AoW stay inline. -->
-  <div class="flex flex-wrap items-center gap-[10px] text-[12px] font-normal text-[var(--pr-text-secondary)]">
-    @if (level) {
-      <span>{{ level }}</span>
-    }
-    @if (funding) {
-      <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
-      <span>{{ funding }}</span>
-    }
-    @if (officialCode) {
-      <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
-      <span class="text-[var(--pr-text-secondary)]">Submitter</span>
-      <a
-        [routerLink]="['/result-framework-reporting/entity-details', officialCode]"
-        class="cursor-pointer font-medium text-[var(--pr-color-primary-300)] hover:opacity-80"
-        [attr.aria-label]="'Submitter: ' + submitterValue"
-        data-testid="result-header-submitter">
-        {{ submitterValue }}
-      </a>
-    }
-    @if (aowValue) {
-      <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
-      <span class="text-[var(--pr-text-secondary)]">Area of Work</span>
-      <a
-        [routerLink]="['/result-framework-reporting/entity-details', officialCode]"
-        [queryParams]="aowQueryParams"
-        class="cursor-pointer font-medium text-[var(--pr-color-primary-300)] hover:opacity-80"
-        [attr.aria-label]="'Area of Work: ' + aowValue"
-        data-testid="result-header-aow">
-        {{ aowValue }}
-      </a>
+       Level, funding, submitter and AoW stay inline. Skeletons hold the row while GET_resultById
+       (and the AoW mapping GET) is still in flight so the strip does not pop in empty. -->
+  <div
+    class="flex min-h-[14px] flex-wrap items-center gap-[10px] text-[12px] font-normal text-[var(--pr-text-secondary)]"
+    data-testid="result-header-identity">
+    @if (!identityReady) {
+      <div class="flex flex-wrap items-center gap-[10px]" data-testid="result-header-identity-skeleton" aria-hidden="true">
+        <div class="pr-skeleton" style="width: 52px; height: 12px"></div>
+        <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]"></span>
+        <div class="pr-skeleton" style="width: 44px; height: 12px"></div>
+        <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]"></span>
+        <div class="pr-skeleton" style="width: 64px; height: 12px"></div>
+        <div class="pr-skeleton" style="width: 180px; height: 12px"></div>
+        <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]"></span>
+        <div class="pr-skeleton" style="width: 80px; height: 12px"></div>
+        <div class="pr-skeleton" style="width: 56px; height: 12px"></div>
+      </div>
+    } @else {
+      @if (level) {
+        <span>{{ level }}</span>
+      }
+      @if (funding) {
+        <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
+        <span>{{ funding }}</span>
+      }
+      @if (officialCode) {
+        <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
+        <span class="text-[var(--pr-text-secondary)]">Submitter</span>
+        <a
+          [routerLink]="['/result-framework-reporting/entity-details', officialCode]"
+          class="cursor-pointer font-medium text-[var(--pr-color-primary-300)] hover:opacity-80"
+          [attr.aria-label]="'Submitter: ' + submitterValue"
+          data-testid="result-header-submitter">
+          {{ submitterValue }}
+        </a>
+      }
+      @if (aowLoading()) {
+        <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
+        <div class="flex items-center gap-[10px]" data-testid="result-header-aow-skeleton" aria-hidden="true">
+          <div class="pr-skeleton" style="width: 80px; height: 12px"></div>
+          <div class="pr-skeleton" style="width: 56px; height: 12px"></div>
+        </div>
+      } @else if (aowValue) {
+        <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
+        <span class="text-[var(--pr-text-secondary)]">Area of Work</span>
+        <a
+          [routerLink]="['/result-framework-reporting/entity-details', officialCode]"
+          [queryParams]="aowQueryParams"
+          class="cursor-pointer font-medium text-[var(--pr-color-primary-300)] hover:opacity-80"
+          [attr.aria-label]="'Area of Work: ' + aowValue"
+          data-testid="result-header-aow">
+          {{ aowValue }}
+        </a>
+      }
     }
   </div>
 </header>

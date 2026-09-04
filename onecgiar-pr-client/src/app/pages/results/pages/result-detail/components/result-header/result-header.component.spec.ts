@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { of, throwError } from 'rxjs';
+import { NEVER, of, throwError } from 'rxjs';
 import { Router, provideRouter } from '@angular/router';
 import { ResultHeaderComponent } from './result-header.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
@@ -123,6 +123,25 @@ describe('ResultHeaderComponent', () => {
 
       expect(html().textContent).not.toContain('W3/Bilaterals');
     });
+
+    it('shows a skeleton for the identity strip while the result is still loading', async () => {
+      dataControlMock.currentResult = null;
+      await build();
+
+      expect(q('[data-testid="result-header-identity-skeleton"]')).toBeTruthy();
+      expect(q('[data-testid="result-header-identity-skeleton"]').querySelectorAll('.pr-skeleton').length).toBe(6);
+      expect(q('[data-testid="result-header-submitter"]')).toBeNull();
+      expect(html().textContent).not.toContain('Output');
+      expect(html().textContent).not.toContain('Submitter');
+    });
+
+    it('replaces the identity skeleton with the live strip once the result is loaded', async () => {
+      await build();
+
+      expect(q('[data-testid="result-header-identity-skeleton"]')).toBeNull();
+      expect(html().textContent).toContain('Output');
+      expect(q('[data-testid="result-header-submitter"]')).toBeTruthy();
+    });
   });
 
   // RSBL-R-1, RSBL-R-2, RSBL-R-6 / RSBL-AC-1, RSBL-AC-2, RSBL-AC-6. Fixture already carries
@@ -229,6 +248,15 @@ describe('ResultHeaderComponent', () => {
     const mockAowMapping = (rows?: any, plannedResult?: boolean, contributorsRows?: any[]) => {
       apiMock.resultsSE.GET_ContributorsPartners = jest.fn().mockReturnValue(of(plannedAowMapping(rows, plannedResult, contributorsRows)));
     };
+
+    it('shows an Area of Work skeleton while the mapping GET is in flight', async () => {
+      apiMock.resultsSE.GET_ContributorsPartners = jest.fn().mockReturnValue(NEVER);
+      await build();
+
+      expect(q('[data-testid="result-header-aow-skeleton"]')).toBeTruthy();
+      expect(q('[data-testid="result-header-aow"]')).toBeNull();
+      expect(html().textContent).toContain('Output');
+    });
 
     it('shows the owning Area of Work code from the planned submitter mapping', async () => {
       mockAowMapping();

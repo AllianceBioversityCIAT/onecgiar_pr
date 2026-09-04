@@ -170,6 +170,17 @@ export class ResultHeaderComponent implements DoCheck {
   private readonly aowMapping = signal<AowMapping | null>(null);
   /** Result id the mapping was fetched for — guards the "once per result id" GET (design.md §8). */
   private aowMappingLoadedFor: number | string | null = null;
+  /** True while `GET_ContributorsPartners` (and the optional catalog hop) is in flight. */
+  readonly aowLoading = signal(false);
+
+  /**
+   * The identity strip (level / funding / submitter / AoW) skeletons until `GET_resultById`
+   * writes `currentResult`. `result-detail` clears that field on every open, so an empty object
+   * is not "ready".
+   */
+  get identityReady(): boolean {
+    return !!this.dataControlSE.currentResult;
+  }
 
   get title(): string {
     return this.dataControlSE.currentResult?.title ?? '';
@@ -281,31 +292,44 @@ export class ResultHeaderComponent implements DoCheck {
     const resultId = this.api.resultsSE.currentResultId;
     if (!this.officialCode || resultId === null || resultId === undefined) {
       if (this.aowMapping() !== null) this.aowMapping.set(null);
+      this.aowLoading.set(false);
       this.aowMappingLoadedFor = null;
       return;
     }
     if (this.aowMappingLoadedFor === resultId) return;
     this.aowMappingLoadedFor = resultId;
+    this.aowLoading.set(true);
     this.api.resultsSE.GET_ContributorsPartners().subscribe({
       next: (resp: any) => {
         const mapped = mapAowFromContributorsPartners(resp);
         if (mapped) {
           this.aowMapping.set(mapped);
+          this.aowLoading.set(false);
           return;
         }
         const lookup = catalogLookupFromContributorsPartners(resp);
         if (!lookup) {
           this.aowMapping.set(null);
+          this.aowLoading.set(false);
           return;
         }
         const isP25 = String(this.dataControlSE.currentResult?.portfolio ?? '').toUpperCase() === 'P25';
         this.api.tocApiSE.GET_tocLevelsByconfig(resultId, lookup.initiativeId, lookup.tocLevelId, isP25, true).subscribe({
-          next: (catalogResp: any) => this.aowMapping.set(mapAowFromCatalog(lookup, catalogResp)),
-          error: () => this.aowMapping.set(null)
+          next: (catalogResp: any) => {
+            this.aowMapping.set(mapAowFromCatalog(lookup, catalogResp));
+            this.aowLoading.set(false);
+          },
+          error: () => {
+            this.aowMapping.set(null);
+            this.aowLoading.set(false);
+          }
         });
       },
       // Fail-soft (RIBL-DD-1 / design.md §7): hide the control, no toast, no log.
-      error: () => this.aowMapping.set(null)
+      error: () => {
+        this.aowMapping.set(null);
+        this.aowLoading.set(false);
+      }
     });
   }
 
