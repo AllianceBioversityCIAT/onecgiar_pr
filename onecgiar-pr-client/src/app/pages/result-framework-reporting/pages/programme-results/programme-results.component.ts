@@ -600,6 +600,14 @@ export class ProgrammeResultsComponent implements OnDestroy {
     this.filterPopoverOpen.set(false);
   }
 
+  /**
+   * quick/filters-clear-button-everywhere (2026-09-04): the toolbar's "Clear filters" shows only when
+   * there is something `clearAll()` would actually remove. The phase chip does not count — `clearAll()`
+   * deliberately retains the phase (see the URL-mirroring spec), so a button that showed for the phase
+   * alone would be permanently visible and would do nothing.
+   */
+  readonly hasClearableFilters = computed(() => this.filter.activeChips().some(chip => chip.dimension !== 'phase'));
+
   readonly activeFilterCount = computed(() => {
     return this.filter.activeChips().length;
   });

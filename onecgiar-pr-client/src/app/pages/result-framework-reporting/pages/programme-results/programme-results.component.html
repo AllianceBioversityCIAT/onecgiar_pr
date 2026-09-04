@@ -95,7 +95,8 @@
                   <button
                     type="button"
                     (click)="clearAll()"
-                    class="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:underline">
+                    class="inline-flex cursor-pointer items-center gap-[3px] border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:underline">
+                    <span class="material-icons-round text-[14px]" aria-hidden="true">filter_alt_off</span>
                     Clear all
                   </button>
                 }
@@ -235,12 +236,18 @@
               </button>
             </span>
           }
+          <!-- quick/filters-clear-button-everywhere (2026-09-04): same control as Overview and Reporting;
+               hidden while the only chip is the phase, which Clear deliberately keeps. -->
+          @if (hasClearableFilters()) {
           <button
             type="button"
-            class="h-[26px] rounded-[8px] border-0 bg-transparent px-[10px] text-[13px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
+            data-testid="results-clear-filters"
+            class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[4px] rounded-[8px] border-0 bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
             (click)="clearAll()">
-            Clear all
+            <span class="material-icons-round text-[15px]" aria-hidden="true">filter_alt_off</span>
+            Clear filters
           </button>
+          }
         }
       </div>
 
