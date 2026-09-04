@@ -18,18 +18,18 @@
 
 ## 1. Scope of this task list
 - **Module / feature:** `result-framework-reporting` / indicator drawer *Reported results* tab.
-- **Status:** `not-started`.
+- **Status:** `in-progress` (execution started 2026-09-03).
 
 ## 2. Pre-flight checklist
 - ✅ `requirements.md` approved (auto-approved, pre-approved mode).
 - ✅ `design.md` approved (auto-approved, pre-approved mode).
 - ✅ Open questions resolved (proposal OQ-1 → IRR-R-3 / IRR-DD-2; OQ-2 → IRR-R-2.2 / IRR-DD-3).
-- ☐ No in-flight spec editing `indicator-drawer/*` (check `docs/specs/changes/` at execution start).
+- ✅ No in-flight spec editing `indicator-drawer/*` (checked 2026-09-03 at execution start).
 - ✅ No migration, no CLARISA dependency.
 
 ## 3. Task list
 
-### `IRR-T-1` — Server: `scope` param and `result_type_name` on `existing-result-contributors`
+### `IRR-T-1` — Server: `scope` param and `result_type_name` on `existing-result-contributors` `[x]`
 - **Type:** `server` + `tests`
 - **Description:** Add optional `scope` (`reviewed` default | `all`) to the controller (`@Query`, Swagger enum), service and `GetExistingResultContributorsToIndicatorsQuery`; the handler normalises anything but `'all'` to `'reviewed'`. Loader picks the status set by scope (`reviewed` = today's literal `[QualityAssessed, Approved]`; `all` = the explicit list `[Editing, QualityAssessed, Submitted, PendingReview, Approved]` — `Discontinued`, `Rejected`, `Draft` excluded) and adds `obj_result_type: { id, name }` to relations/select. Mapper emits `result_type_id`, `result_type_name` (null-safe); types updated. Design §4.1, §5, IRR-DD-2, IRR-DD-3.
 - **Implements:** `IRR-R-2.2` (server half), `IRR-R-3` (filter), `IRR-R-3.1`, `IRR-AC-3`; scenario *Endpoint default unchanged* (all clauses); *The table shows the pipeline* → `AND IT MUST omit Discontinued/Rejected`.
