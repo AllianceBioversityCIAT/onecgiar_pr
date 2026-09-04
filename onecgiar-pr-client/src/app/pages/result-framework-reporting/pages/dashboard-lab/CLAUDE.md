@@ -1,6 +1,6 @@
 # dashboard-lab
 
-**Verified:** 2026-09-01 · branch qa-development-2026 · 52ddf00af (merged with performance-refactor · 4c2c0c69f — ToC achievement rollup, P2-3296)
+**Verified:** 2026-09-03 · branch qa-development-2026 · f0c0f68ba (adds `partitionProgramKpis` / `summarisePartition` note, spec `bugfix/kpi-count-reconciliation`; prior: 52ddf00af merged with performance-refactor · 4c2c0c69f — ToC achievement rollup, P2-3296)
 
 ## Qué es
 El shell de un Science Program. Un solo componente que sirve varias vistas según `rfrView`, y que es
@@ -70,7 +70,7 @@ de TS): trátalo como host, no como pantalla.
 
 - `components/reporting-entry-hub/` — hub "Where to report" (lanes W1/W2 + W3; strings en `hub-copy.ts`).
 - `components/narrative-panel/` — panel de narrativa IA in-browser (WebLLM vía `ASSISTANT_ENGINE`); doble gate `environment.aiAssistant.enabled` && `ai_narrative_enabled` (global parameter); el consentimiento del panel es la ÚNICA puerta a `engine.init` (descarga del modelo).
-- `reporting-burndown.ts` — helpers puros del burn-down; `buildRatio` es el ÚNICO hogar de la regla zero-target (banner + `ratioOf` de la tabla delegan). ⚠️ `__allIndicators` (side-channel escrito solo con Only-pending ON) trae Section/Type/Category ya aplicados, Only-pending no.
+- `reporting-burndown.ts` — helpers puros del burn-down; `buildRatio` es el ÚNICO hogar de la regla zero-target (banner + `ratioOf` de la tabla delegan). `partitionProgramKpis` / `summarisePartition` son el ÚNICO hogar de la partición cuenta-una-vez que lee toda cifra de KPI del shell (band, hero, chips, hub, ToC map, tabla, banner — design §6.1, KCR-DD-1; spec `bugfix/kpi-count-reconciliation`). ⚠️ `__allIndicators` (side-channel escrito solo con Only-pending ON) trae Section/Type/Category ya aplicados, Only-pending no.
 - Deep-link `?kpi=` (siempre con `tocAow`; los ids de indicador se repiten entre AoWs) + contador de sesión + Next pending (tarjetas By-AOW **y** filas de la tabla agrupada/flat — `lastReportedKpi` lo publican AMBOS cierres: el modal legacy (`openLegacyReportModal`+efecto) y el drawer (`onReportingRowReport` captura → `closeManage` publica vía `publishReportedKpi`; filas bucket publican sin force-refresh).
 
 ## Alineación de vistas (2026-08-30)

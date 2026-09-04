@@ -89,8 +89,10 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
   //   IO endpoint   — #901, #902        2030 endpoint — #950
   //
   // Planned 11 · zero-target 2 (`a4`, #902) · counted 9 · reported 1 (`b2`).
-  // `progress_percentage` is deliberately a nonsense string on every row (KCR-R-9: the band's old
-  // `progress_percentage > 0` clause read exactly such a string and must be gone).
+  // `progress_percentage` is deliberately a nonsense string on every REPORTED row (`'1500%'`);
+  // every unreported row instead carries `'0%'` (KCR-R-9 requires this). The nonsense value on
+  // reported rows proves the band's old `progress_percentage > 0` clause read exactly such a
+  // string and must be gone — the predicate must key off `actual_achieved_value_sum` alone.
 
   /** The 9 KPIs that survive the zero-target rule — the whole shell's denominator budget. */
   const COUNTED_IDS: Array<string | number> = ['a1', 'a2', 'a3', 'b1', 'b2', 'b3', 'b-own', 901, 950];
