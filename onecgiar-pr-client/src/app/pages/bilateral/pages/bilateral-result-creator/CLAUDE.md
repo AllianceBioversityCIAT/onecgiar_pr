@@ -20,7 +20,10 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
   persisten con **Save draft** de la sección activa; navegar o destruir el editor nunca escribe.
 - **Dos marcos, uno por modo.** El wizard (`isCreating()`) conserva el header de banda y la columna
   centrada de 1100px (`.bilateral-creator`). El editor dibuja su propio marco a lo ancho: riel de
-  secciones de 240px (`.bcr-rail`, checks + "N of M sections complete"), columna con scroll propio
+  secciones de 240px (`.bcr-rail`, checks + "N of M sections complete" + **Submit for review** —
+  movido aquí desde la card Actions del Overview el 2026-09-04, gateado por `canSubmitFromRail()`:
+  `mdsTracker.overallStatus() === 'complete'` + no in-flight + no read-only; `submitResult()`
+  re-chequea sus propios guards), columna con scroll propio
   (`.bcr-scroll`: header `variant="detail"`, phase switcher, card con pastilla numérica) y footer
   fijo al piso (`.bcr-editor-footer`: Back · **Next** primario · "Section X of Y" · estado ·
   Save draft secundario). Misma geometría que `pages/results/.../result-detail`, reconstruida aquí.

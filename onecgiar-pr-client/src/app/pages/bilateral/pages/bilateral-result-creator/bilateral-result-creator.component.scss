@@ -387,6 +387,16 @@
   &:disabled { opacity: 0.35; }
 }
 
+/* The rail's Submit for review (moved from the Overview card, 2026-09-04): full-width, pinned
+   under the sections progress — the same slot the W1/W2 result-detail rail gives its Submit. */
+.bcr-rail__submit {
+  width: 100%;
+  justify-content: center;
+  margin-top: 12px;
+
+  .material-icons-round { font-size: 16px; }
+}
+
 @media (max-width: 900px) {
   .bcr-rail { width: 200px; padding: 16px 12px; }
   .bcr-scroll { padding: 20px 16px; }
