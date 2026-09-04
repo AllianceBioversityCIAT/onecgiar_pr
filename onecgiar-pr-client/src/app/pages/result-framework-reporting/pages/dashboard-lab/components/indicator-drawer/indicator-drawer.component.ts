@@ -1,8 +1,19 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, input, output, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { Clipboard } from '@angular/cdk/clipboard';
+import { Router } from '@angular/router';
 import { LabReportFormComponent } from '../lab-report-form/lab-report-form.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
+// @akili-spec changes/indicator-reported-results
+import {
+  PrTableComponent,
+  PrTableBodyDirective,
+  PrTableEmptyDirective,
+  PrTableHeaderDirective,
+  PrSortableColumnDirective
+} from '../../../../../../shared/components/pr-table';
+import { PrToastService } from '../../../../../../shared/components/pr-toast';
 
 // @akili-spec changes/indicator-reported-results
 // IRR-R-1 / IRR-DD-1 — a third tab inside the drawer (never a second surface): the reported
@@ -25,6 +36,25 @@ export interface ReportedResultRow {
 
 /** Em dash — the single placeholder for "the server did not send it" across every cell. */
 const EMPTY_CELL = '\u2014';
+
+// @akili-spec changes/indicator-reported-results
+/**
+ * `status_id` → the `--pr-status-*` fg/bg token PAIRS (IRR-R-2.1).
+ *
+ * A DELIBERATE local copy of `programme-results.component.ts:127`, which is itself a copy of
+ * `result-header.component.ts:17`. Do NOT "DRY it in passing": lifting the map into `shared/`
+ * touches three live screens and is its own PR (IRR §12 / the Results-tab folder guide). What must
+ * never happen is a fifth colour or a recombined pair — an unknown `status_id` falls back to the
+ * *not-started* pair, whole.
+ */
+const STATUS_TOKENS: Record<string, { fg: string; bg: string }> = {
+  1: { fg: 'var(--pr-status-in-progress-fg)', bg: 'var(--pr-status-in-progress-bg)' },
+  2: { fg: 'var(--pr-status-approved-fg)', bg: 'var(--pr-status-approved-bg)' },
+  3: { fg: 'var(--pr-status-submitted-fg)', bg: 'var(--pr-status-submitted-bg)' }
+};
+
+/** Below this many rows the search box is noise, not a tool (IRR-R-6.1). */
+const SEARCH_VISIBLE_ABOVE = 8;
 
 /**
  * Contributor DTO → table row (IRR-R-2.2, IRR-R-2.3, IRR-R-2.4; IRR-DD-3).
@@ -71,7 +101,16 @@ export function toReportedResultRow(dto: any, phases: any[]): ReportedResultRow 
 @Component({
   selector: 'app-indicator-drawer',
   standalone: true,
-  imports: [DecimalPipe, LabReportFormComponent],
+  imports: [
+    DecimalPipe,
+    LabReportFormComponent,
+    // @akili-spec changes/indicator-reported-results — the Reported results table (IRR-R-2)
+    PrTableComponent,
+    PrTableHeaderDirective,
+    PrTableBodyDirective,
+    PrTableEmptyDirective,
+    PrSortableColumnDirective
+  ],
   templateUrl: './indicator-drawer.component.html',
   styleUrls: ['./indicator-drawer.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -82,6 +121,10 @@ export class IndicatorDrawerComponent {
   // IRR-DD-3 — the phase NAME is client-side data: the payload carries only `version_id`, and the
   // shell has already loaded the reporting phases by the time this drawer can open.
   private readonly phasesSE = inject(PhasesService);
+  // @akili-spec changes/indicator-reported-results — row actions (IRR-R-5).
+  private readonly router = inject(Router);
+  private readonly clipboard = inject(Clipboard);
+  private readonly toastSE = inject(PrToastService);
 
   /** The indicator being managed, plus the context it lives in. */
   readonly indicator = input.required<any>();
@@ -228,6 +271,11 @@ export class IndicatorDrawerComponent {
       this.existing.set(null);
       this.loadError.set(null);
       this.formDirty.set(false);
+      // @akili-spec changes/indicator-reported-results
+      // Folder-guide trap: state added here MUST be reset here, or it leaks between indicators —
+      // a search typed against indicator A would silently hide indicator B's rows.
+      this.searchText.set('');
+      this.openMenuKey.set(null);
       if (ind) this.loadExisting(ind);
     });
   }
@@ -287,6 +335,207 @@ export class IndicatorDrawerComponent {
         if (err?.status !== 404) this.loadError.set('Could not load reported results');
       }
     });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // @akili-spec changes/indicator-reported-results — Reported results table (IRR-T-3)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /** Re-issue the request the error block failed on (IRR-R-7). */
+  retryLoad(): void {
+    const ind = this.indicator();
+    if (ind) this.loadExisting(ind);
+  }
+
+  // ── Search (IRR-R-6.1) ────────────────────────────────────────────────────
+  readonly searchText = signal('');
+
+  /** The box only exists once the list is long enough to need one. */
+  readonly showSearch = computed(() => this.reportedRows().length > SEARCH_VISIBLE_ABOVE);
+
+  onSearchInput(event: Event): void {
+    this.searchText.set((event.target as HTMLInputElement)?.value ?? '');
+  }
+
+  /** Case-insensitive substring over code OR title — nothing else is searchable text. */
+  readonly visibleRows = computed<ReportedResultRow[]>(() => {
+    const needle = this.searchText().trim().toLowerCase();
+    const rows = this.reportedRows();
+    if (!needle) return rows;
+    return rows.filter(r => r.code.toLowerCase().includes(needle) || r.title.toLowerCase().includes(needle));
+  });
+
+  // ── Header strip (IRR-R-4, IRR-R-4.1, IRR-R-11) ───────────────────────────
+  /** Σ over the rows. A `null` contribution is NOT zero: it is excluded, not counted (IRR-R-2.4). */
+  readonly contributionSum = computed(() => this.reportedRows().reduce((acc, r) => acc + (r.contribution ?? 0), 0));
+
+  readonly targetValue = computed(() => Number(this.indicator()?.target_value_sum ?? 0));
+
+  readonly reportedCountLabel = computed(() => {
+    const n = this.reportedRows().length;
+    return `${n} result${n === 1 ? '' : 's'} reported`;
+  });
+
+  /**
+   * IRR-R-4.1 — the disclosure, never silence.
+   *
+   * This list is `scope=all`, the row's ACHIEVED is the server's reviewed-only roll-up, so the two
+   * numbers legitimately differ. Returning `null` when they agree keeps the tooltip off a strip
+   * that has nothing to disclose (a permanent tooltip trains people to ignore it).
+   */
+  stripTitle(): string | null {
+    const achieved = Number(this.indicator()?.actual_achieved_value_sum ?? 0);
+    const sum = this.contributionSum();
+    if (sum === achieved) return null;
+    return `Achieved on the row: ${achieved} — it counts reviewed results only; this list sums ${sum} across every status.`;
+  }
+
+  /**
+   * IRR-R-11 (SHOULD) — the status split, as its OWN line rather than inside the strip.
+   *
+   * The strip's own string is pinned by IRR-AC-2 (`N results reported · Σ contribution X of target
+   * Y`); folding the split into it would have changed a sentence the acceptance criteria quote
+   * verbatim. Empty when every row shares one status — a split of one is not a split.
+   */
+  readonly statusSplit = computed(() => {
+    const counts = new Map<string, number>();
+    for (const row of this.reportedRows()) counts.set(row.statusName, (counts.get(row.statusName) ?? 0) + 1);
+    if (counts.size < 2) return '';
+    return [...counts.entries()].map(([name, n]) => `${n} ${name.toLowerCase()}`).join(' · ');
+  });
+
+  // ── Status pill (IRR-R-2.1) ───────────────────────────────────────────────
+  statusFg(statusId: number | null): string {
+    return STATUS_TOKENS[String(statusId)]?.fg ?? 'var(--pr-status-not-started-fg)';
+  }
+
+  statusBg(statusId: number | null): string {
+    return STATUS_TOKENS[String(statusId)]?.bg ?? 'var(--pr-status-not-started-bg)';
+  }
+
+  // ── Sorting (owned by app-pr-table — IRR-R-6) ─────────────────────────────
+  /** The direction glyph, exactly as the Results tab renders it. */
+  sortArrow(table: PrTableComponent, field: string): string {
+    if (!field || table?.activeSortField() !== field) return '';
+    return table.activeSortOrder() === 1 ? '↑' : '↓';
+  }
+
+  /** `aria-sort` is NOT set here: `prSortableColumn` already host-binds it from the same state. */
+  sortColor(table: PrTableComponent, field: string): string {
+    return field && table?.activeSortField() === field ? 'var(--pr-color-primary-400)' : 'var(--pr-text-secondary)';
+  }
+
+  // ── Row menu (IRR-R-10) ───────────────────────────────────────────────────
+  private readonly openMenuKey = signal<string | null>(null);
+
+  /** `id ?? code`: a contributor with no `result_code` would collide with every other one on code. */
+  rowKey(row: ReportedResultRow): string {
+    return String(row?.id ?? row?.code ?? '');
+  }
+
+  isMenuOpen(row: ReportedResultRow): boolean {
+    return this.openMenuKey() === this.rowKey(row);
+  }
+
+  /** `stopPropagation` is load-bearing: without it the kebab click also opens the result. */
+  toggleRowMenu(row: ReportedResultRow, event: Event): void {
+    event.stopPropagation();
+    const key = this.rowKey(row);
+    this.openMenuKey.update(open => (open === key ? null : key));
+  }
+
+  closeRowMenu(): void {
+    this.openMenuKey.set(null);
+  }
+
+  /** Outside click dismisses the menu (hard UI rule 4), same as the Reporting table's. */
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    if (this.openMenuKey() !== null) this.openMenuKey.set(null);
+  }
+
+  /**
+   * Escape is shared with the drawer's own close. An open menu owns it first — closing the whole
+   * panel because a popup was open is the classic "Escape did too much" bug.
+   */
+  onEscape(): void {
+    if (this.openMenuKey() !== null) {
+      this.closeRowMenu();
+      return;
+    }
+    this.requestClose();
+  }
+
+  // ── A way in (IRR-R-5, IRR-DD-4) ──────────────────────────────────────────
+  /**
+   * Result Detail with the row's phase — for EVERY row.
+   *
+   * IRR-DD-4: `programme-results.resultRoute()` diverts a non-AVISA `W3/Bilaterals` result that is
+   * not Approved into the bilateral review drawer, on `source_name` / `initiative` fields this
+   * payload does not carry. Reproducing the branch here would mean guessing them, so the accepted
+   * gap is that a bilateral draft opens Result Detail, where the app's own guards apply.
+   */
+  resultRoute(row: ReportedResultRow): { commands: any[]; queryParams: Record<string, any> } {
+    return {
+      commands: ['/result', 'result-detail', row?.code, 'general-information'],
+      queryParams: { phase: row?.versionId }
+    };
+  }
+
+  /** Row click and the menu's "Open result" — one behaviour. */
+  openResult(row: ReportedResultRow): void {
+    this.closeRowMenu();
+    const { commands, queryParams } = this.resultRoute(row);
+    this.router.navigate(commands, { queryParams });
+  }
+
+  /** IRR-R-12 (MAY) — ctrl/cmd-click opens the same destination in a new tab instead. */
+  onRowClick(event: MouseEvent, row: ReportedResultRow): void {
+    if (event?.ctrlKey || event?.metaKey) {
+      this.openInNewTab(row);
+      return;
+    }
+    this.openResult(row);
+  }
+
+  /** IRR-R-12 (MAY) — middle click, the other half of the same habit. */
+  onRowAuxClick(event: MouseEvent, row: ReportedResultRow): void {
+    if (event?.button !== 1) return;
+    event.preventDefault();
+    this.openInNewTab(row);
+  }
+
+  private openInNewTab(row: ReportedResultRow): void {
+    this.closeRowMenu();
+    window.open(this.resultLink(row), '_blank', 'noopener');
+  }
+
+  /**
+   * Space must scroll nothing when the row is the focused control. Typed as `Event` because the
+   * `(keydown.enter)` / `(keydown.space)` pseudo-events are declared as `Event` by the template
+   * type-checker.
+   */
+  onRowKeydown(event: Event, row: ReportedResultRow): void {
+    event.preventDefault();
+    this.openResult(row);
+  }
+
+  /** The ABSOLUTE url of the destination `openResult()` opens — built through the router, not concat. */
+  resultLink(row: ReportedResultRow): string {
+    const { commands, queryParams } = this.resultRoute(row);
+    const path = this.router.serializeUrl(this.router.createUrlTree(commands, { queryParams }));
+    return `${window.location.origin}${path}`;
+  }
+
+  /**
+   * Clipboard + toast, then close the menu. The key MUST be `globalUserNotification`: an
+   * `<app-pr-toast>` host only renders its own key, and that is the one the app shell mounts
+   * unconditionally (`app.component.html:83`). Any other key pushes a toast nobody ever sees.
+   */
+  copyLink(row: ReportedResultRow): void {
+    this.clipboard.copy(this.resultLink(row));
+    this.toastSE.add({ key: 'globalUserNotification', severity: 'success', summary: 'Result link copied' });
+    this.closeRowMenu();
   }
 }
 

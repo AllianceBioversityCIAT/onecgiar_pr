@@ -9,7 +9,7 @@
   [style.width.px]="width()"
   role="complementary"
   aria-label="Manage indicator"
-  (keydown.escape)="requestClose()"
+  (keydown.escape)="onEscape()"
   tabindex="-1">
   <!-- drag the left edge to widen; past a threshold the form goes two-column -->
   <div
@@ -123,6 +123,20 @@
               See them in detail
             </button>
           </div>
+        } @else if (loadError()) {
+          <!-- @akili-spec changes/indicator-reported-results
+               IRR-R-7 — gated on the error: "nothing reported yet" is a factual claim, and a failed
+               request cannot support it. -->
+          <p class="m-0 mb-4 flex items-center gap-1.5 text-[13px] font-medium text-[var(--pr-color-accents-5)]">
+            <span class="material-icons-round text-[15px] text-[var(--pr-color-red-300)]">error_outline</span>
+            {{ loadError() }}
+            <button
+              type="button"
+              (click)="retryLoad()"
+              class="appearance-none border-0 bg-transparent p-0 text-[12.5px] font-semibold text-[var(--pr-color-primary-300)] underline">
+              Retry
+            </button>
+          </p>
         } @else {
           <p class="m-0 mb-4 text-[13px] text-[var(--pr-color-accents-5)] font-medium">Nothing has been reported against this indicator yet.</p>
         }
@@ -143,35 +157,177 @@
       <!-- @akili-spec changes/indicator-reported-results
            IRR-R-9 / IRR-DD-6 — the reported results left `info` for their own tab. `info` keeps
            exactly what it is for: Target, Achieved so far and the per-Center split.
-           IRR-R-2..R-8 (table, strip, sorting, row actions, width floor) land in T-3; this body is
-           the data path made visible, deliberately unstyled. -->
+           IRR-R-2..R-7, R-10..R-12 — the table, the strip, the row actions and the states.
+           The four view states are MUTUALLY EXCLUSIVE and ordered: loading, then failure, then the
+           table, then "nothing here". Error before empty is the whole point (IRR-R-7): a 500 that
+           renders the empty state tells the user this indicator has no results, which is a lie.
+           A search that matches nothing is NOT this branch — it is the table's own empty template. -->
       @case ('results') {
         @if (loadingExisting()) {
-          <div class="flex flex-col gap-2">
+          <div class="flex flex-col gap-2" aria-hidden="true">
             @for (s of [1, 2, 3]; track s) {
               <div class="h-[44px] animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
             }
           </div>
         } @else if (loadError()) {
-          <div class="rounded-xl border border-dashed border-[rgba(30,32,47,0.14)] bg-white px-5 py-8 text-center">
+          <div class="rounded-xl border border-dashed border-[rgba(30,32,47,0.14)] bg-white px-5 py-8 text-center" role="alert">
             <span class="material-icons-round text-[24px] text-[var(--pr-color-red-300)]">error_outline</span>
             <p class="m-0 mt-1.5 text-[13px] text-[var(--pr-color-accents-5)]">{{ loadError() }}</p>
+            <button
+              type="button"
+              (click)="retryLoad()"
+              class="mt-3 inline-flex appearance-none items-center gap-1.5 rounded-lg border border-[rgba(30,32,47,0.12)] bg-white px-3.5 py-2 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)]">
+              <span class="material-icons-round text-[15px]">refresh</span> Retry
+            </button>
           </div>
         } @else if (reportedRows().length) {
-          <ul class="m-0 list-none space-y-2 p-0">
-            @for (row of reportedRows(); track row.code) {
-              <li class="rounded-xl border border-[rgba(30,32,47,0.08)] bg-white p-3.5">
-                <p class="m-0 text-[13px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]">{{ row.title }}</p>
-                <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px] text-[var(--pr-color-accents-5)]">
-                  <span class="rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 font-semibold">{{ row.code }}</span>
-                  <span>{{ row.category }}</span>
-                  <span>{{ row.statusName }}</span>
-                  <span class="tabular-nums">{{ row.contribution ?? '\u2014' }}</span>
-                  <span>{{ row.phaseName }}</span>
-                </div>
-              </li>
-            }
-          </ul>
+          <!-- ---- strip: the count, the sum and the target on one line (IRR-R-4) ----
+               `title` only exists when Σ and the row's ACHIEVED disagree (IRR-R-4.1). -->
+          <div
+            class="irr-strip mb-3 flex flex-wrap items-baseline gap-x-1.5 gap-y-1"
+            data-testid="irr-strip"
+            [attr.title]="stripTitle()">
+            <b class="text-[13px] font-bold text-[var(--pr-color-secondary-400)]">{{ reportedCountLabel() }}</b>
+            <!-- The separator is part of the sentence IRR-AC-2 quotes, so it is real text (with its
+                 own leading space) rather than a CSS gap — and hidden from screen readers. -->
+            <span class="text-[12.5px] text-[var(--pr-color-accents-3)]" aria-hidden="true">&nbsp;·</span>
+            <span class="text-[12.5px] tabular-nums text-[var(--pr-color-accents-5)]">
+              Σ contribution <b class="text-[var(--pr-color-secondary-400)]">{{ contributionSum() }}</b> of target
+              <b class="text-[var(--pr-color-secondary-400)]">{{ targetValue() }}</b>
+            </span>
+          </div>
+
+          <!-- IRR-R-11 (SHOULD) — the split lives on its own line so the strip above keeps the
+               exact sentence IRR-AC-2 pins. -->
+          @if (statusSplit()) {
+            <p class="m-0 mb-3 text-[11.5px] text-[var(--pr-color-accents-5)]" data-testid="irr-status-split">{{ statusSplit() }}</p>
+          }
+
+          <!-- IRR-R-6.1 — a filter for a list you can read at a glance is noise; it appears past 8 rows. -->
+          @if (showSearch()) {
+            <div class="relative mb-3">
+              <span class="material-icons-round pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-[var(--pr-color-accents-5)]">search</span>
+              <input
+                type="search"
+                class="h-[34px] w-full rounded-lg border border-[rgba(30,32,47,0.12)] bg-white pl-8 pr-3 text-[12.5px] text-[var(--pr-color-secondary-400)] outline-none focus:border-[var(--pr-color-primary-300)]"
+                placeholder="Search by code or title"
+                aria-label="Search reported results by code or title"
+                data-testid="irr-search"
+                [value]="searchText()"
+                (input)="onSearchInput($event)" />
+            </div>
+          }
+
+          <app-pr-table #tbl styleClass="irr-table" [value]="visibleRows()">
+            <!-- HEADER — Code · Result · Category · Status · Contribution · Phase · actions.
+                 `aria-sort` is host-bound by prSortableColumn; never set it here too. -->
+            <ng-template prTableHeader>
+              <tr class="irr-row irr-head">
+                <th
+                  class="irr-th irr-th--sortable"
+                  scope="col"
+                  tabindex="0"
+                  prSortableColumn="code"
+                  [style.color]="sortColor(tbl, 'code')"
+                  (keydown.enter)="tbl.sort('code')">
+                  Code {{ sortArrow(tbl, 'code') }}
+                </th>
+                <th class="irr-th" scope="col">Result</th>
+                <th class="irr-th" scope="col">Category</th>
+                <th
+                  class="irr-th irr-th--sortable"
+                  scope="col"
+                  tabindex="0"
+                  prSortableColumn="statusName"
+                  [style.color]="sortColor(tbl, 'statusName')"
+                  (keydown.enter)="tbl.sort('statusName')">
+                  Status {{ sortArrow(tbl, 'statusName') }}
+                </th>
+                <th
+                  class="irr-th irr-th--sortable irr-th--num"
+                  scope="col"
+                  tabindex="0"
+                  prSortableColumn="contribution"
+                  [style.color]="sortColor(tbl, 'contribution')"
+                  (keydown.enter)="tbl.sort('contribution')">
+                  Contribution {{ sortArrow(tbl, 'contribution') }}
+                </th>
+                <th
+                  class="irr-th irr-th--sortable"
+                  scope="col"
+                  tabindex="0"
+                  prSortableColumn="phaseName"
+                  [style.color]="sortColor(tbl, 'phaseName')"
+                  (keydown.enter)="tbl.sort('phaseName')">
+                  Phase {{ sortArrow(tbl, 'phaseName') }}
+                </th>
+                <th class="irr-th irr-th--actions" scope="col"><span class="sr-only">Row actions</span></th>
+              </tr>
+            </ng-template>
+
+            <!-- ROWS — `track row.id ?? row.code`: a contributor with no code would collide with
+                 every other codeless one and Angular would recycle the wrong DOM. -->
+            <ng-template prTableBody let-row>
+              <tr
+                class="irr-row irr-data-row"
+                tabindex="0"
+                role="button"
+                [attr.aria-label]="'Open result ' + row.code"
+                (click)="onRowClick($event, row)"
+                (auxclick)="onRowAuxClick($event, row)"
+                (keydown.enter)="onRowKeydown($event, row)"
+                (keydown.space)="onRowKeydown($event, row)">
+                <td class="irr-td font-mono text-[12px] font-semibold tabular-nums text-[var(--pr-color-primary-300)]">#{{ row.code }}</td>
+                <!-- IRR-R-2.5 — two lines, then the full title in `title`. -->
+                <td class="irr-td">
+                  <span class="irr-clamp text-[13px] font-medium text-[var(--pr-color-secondary-400)]" [attr.title]="row.title">{{ row.title }}</span>
+                </td>
+                <td class="irr-td truncate text-[12px] text-[var(--pr-color-accents-5)]" [attr.title]="row.category">{{ row.category }}</td>
+                <!-- IRR-R-2.1 — pill from the fixed --pr-status-* fg/bg PAIR; never recombined. -->
+                <td class="irr-td">
+                  <span
+                    class="inline-block whitespace-nowrap rounded-full px-[8px] py-[2px] text-[11.5px] font-semibold"
+                    [style.color]="statusFg(row.statusId)"
+                    [style.background]="statusBg(row.statusId)">
+                    {{ row.statusName }}
+                  </span>
+                </td>
+                <!-- IRR-R-2.4 — right, tabular, em dash for null (a missing figure is not a zero). -->
+                <td class="irr-td irr-td--num text-[13px] font-semibold tabular-nums text-[var(--pr-color-secondary-400)]">
+                  {{ row.contribution ?? '\u2014' }}
+                </td>
+                <td class="irr-td truncate text-[12px] text-[var(--pr-color-accents-5)]" [attr.title]="row.phaseName">{{ row.phaseName }}</td>
+                <!-- The open row's CELL is elevated, not the popup: every actions cell shares a
+                     stacking context, so the rows below would paint over an open menu. -->
+                <td class="irr-td irr-actions" [class.irr-actions--open]="isMenuOpen(row)">
+                  <button
+                    type="button"
+                    class="flex size-[26px] items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-color-accents-5)] transition-colors hover:bg-[var(--pr-color-accents-1)]"
+                    aria-label="Open row actions"
+                    aria-haspopup="menu"
+                    [attr.aria-expanded]="isMenuOpen(row)"
+                    (click)="toggleRowMenu(row, $event)">
+                    <span class="material-icons-round text-[18px]">more_horiz</span>
+                  </button>
+
+                  @if (isMenuOpen(row)) {
+                    <div class="pr-row-menu" role="menu" (click)="$event.stopPropagation()">
+                      <button type="button" role="menuitem" class="pr-row-menu_item" (click)="openResult(row)">Open result</button>
+                      <button type="button" role="menuitem" class="pr-row-menu_item" (click)="copyLink(row)">Copy link</button>
+                    </div>
+                  }
+                </td>
+              </tr>
+            </ng-template>
+
+            <!-- The SEARCH empty state. Distinct from "nothing reported": the rows exist, the
+                 filter hid them, and offering "Report the first result" here would be wrong. -->
+            <ng-template prTableEmpty>
+              <tr>
+                <td colspan="7" class="px-3 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No results match your search.</td>
+              </tr>
+            </ng-template>
+          </app-pr-table>
         } @else {
           <div class="rounded-xl border border-dashed border-[rgba(30,32,47,0.14)] bg-white px-5 py-8 text-center">
             <span class="material-icons-round text-[24px] text-[var(--pr-color-accents-3)]">inbox</span>
