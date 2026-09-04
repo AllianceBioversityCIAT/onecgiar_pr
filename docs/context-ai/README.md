@@ -62,6 +62,12 @@ días anteriores, o sea **información falsa esperando a que alguien la citara**
 > de días pasados. Nada de ahí describe el presente. Si necesitas saber cómo se llegó a algo, está
 > ahí; si necesitas saber **qué pasa hoy**, está en `estado-<fecha>` más reciente y en el índice.
 
+> ⚠️ **Y se archiva por la fecha en que se MODIFICÓ, no por la del nombre.** El 4-sep archivé
+> `p2-3472-feedback-verificacion-2026-09-03.md` por su nombre, y su dueño lo había actualizado **esa
+> misma mañana** con la verificación posdespliegue: dentro estaba la única receta de las tres sondas
+> de diagnóstico sin escritura. Un `git log -1 --format=%ad -- <archivo>` cuesta un segundo y es la
+> única fecha que dice algo.
+
 **8. Al archivar, revisa que el vigente no se contradiga consigo mismo.** El mismo 4-sep,
 `estado-2026-09-04.md` decía arriba que el alcance de P2-3292 ya estaba decidido y abajo lo listaba
 como *"decisión de Yeck pendiente"*. Un documento que se contradice es peor que uno viejo: el lector
@@ -107,4 +113,5 @@ Si un disparador debería haber funcionado y no lo hizo, se arregla en el mismo 
 | `como-validar-un-despliegue-en-prtest.md` | Cómo se comprueba que algo llegó de verdad al ambiente. 🥇 El sello `APP_VERSION` es del **cliente** y no dice nada del server |
 | `pendiente-defectos-formularios.md` | Los defectos de formularios pendientes del blindaje pre-producción (épico `P2-3558`, valida **Santi**) |
 | `handover-toc-user-feedback.md` | Theory of Change. 🛑 **No se toca** — es de Juan David Delgado (R18) |
+| `p2-3472-feedback-verificacion-2026-09-03.md` | El módulo de reportes: la verificación posdespliegue y 🥇 **la receta de las tres sondas de diagnóstico SIN escritura**. ⚠️ Su nombre lleva fecha del 3-sep pero se actualizó el 4 — **no es histórico** |
 | `archivo/` | 🛑 **Historia. No se lee para trabajar.** Estados, censos, barridos y verificaciones de días pasados — ver regla 7 |
