@@ -19,6 +19,8 @@ The Overview has two filter axes that expose their reset asymmetrically: section
 
 Verified in the running app: enumerating every `<button>` on the page and matching `clear|reset|all` returns **zero**.
 
+> **Correction (archive, 2026-09-03):** this sentence is **false**. The sweep pattern actually run was `clear|reset|limpiar|all scopes|todos` — not bare `all` — so the pre-existing conditional **"Show all sections"** button (`program-overview.component.html:350-356`, rendered when `activeSection() !== 'all'`) never matched. It clears the **section axis only**; the scope axis still had no visible reset, so the asymmetry that motivated this spec stands and the requirements are unaffected (Reviewer adjudication 1, `execution.md` §4). Recorded here so the evidence trail is honest; see `execution.md` §2.
+
 ## 3. Scope
 
 **In:** one new control in the filter bar that resets `activeSection` → `'all'` and emits `scopeChange` → `null`.

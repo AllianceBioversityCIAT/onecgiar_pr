@@ -677,6 +677,69 @@ export class ReportingAowTableComponent {
       .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
   }
 
+  visibleCentersOf(group: ReportingAowGroup): { center: string; count: number }[] {
+    const list = this.centerCountsOf(group);
+    return list.length > 4 ? list.slice(0, 3) : list;
+  }
+
+  overflowCentersOf(group: ReportingAowGroup): { center: string; count: number }[] {
+    const list = this.centerCountsOf(group);
+    return list.length > 4 ? list.slice(3) : [];
+  }
+
+  visibleTypesOf(group: ReportingAowGroup): { type: string; count: number }[] {
+    const list = this.typeCountsOf(group);
+    return list.length > 3 ? list.slice(0, 2) : list;
+  }
+
+  overflowTypesOf(group: ReportingAowGroup): { type: string; count: number }[] {
+    const list = this.typeCountsOf(group);
+    return list.length > 3 ? list.slice(2) : [];
+  }
+
+  hasOverflowFilters(group: ReportingAowGroup): boolean {
+    return this.overflowCentersOf(group).length > 0 || this.overflowTypesOf(group).length > 0;
+  }
+
+  isOverflowCenterActive(group: ReportingAowGroup): boolean {
+    const sel = this.selectedCenterOf(group);
+    if (!sel) return false;
+    return this.overflowCentersOf(group).some(c => c.center === sel);
+  }
+
+  isOverflowTypeActive(group: ReportingAowGroup): boolean {
+    const sel = this.selectedTypeOf(group);
+    if (!sel) return false;
+    return this.overflowTypesOf(group).some(t => t.type === sel);
+  }
+
+  hasActiveOverflowFilter(group: ReportingAowGroup): boolean {
+    return this.isOverflowCenterActive(group) || this.isOverflowTypeActive(group);
+  }
+
+  activeOverflowCount(group: ReportingAowGroup): number {
+    let count = 0;
+    if (this.isOverflowCenterActive(group)) count++;
+    if (this.isOverflowTypeActive(group)) count++;
+    return count;
+  }
+
+  readonly openCardFilterKey = signal<string | null>(null);
+
+  isCardFilterOpen(group: ReportingAowGroup): boolean {
+    return this.openCardFilterKey() === this.groupKey(group);
+  }
+
+  toggleCardFilterPopover(group: ReportingAowGroup, ev: Event): void {
+    ev.stopPropagation();
+    const key = this.groupKey(group);
+    this.openCardFilterKey.update(curr => (curr === key ? null : key));
+  }
+
+  closeCardFilterPopover(): void {
+    this.openCardFilterKey.set(null);
+  }
+
   /** Sum of target values across an HLO's rows. */
   hloTargetSum(hlo: { rows?: ReportingIndicator[] }): string {
     const sum = (hlo.rows ?? []).reduce((acc, row) => acc + (parseFloat(String(row?.target_value_sum ?? 0)) || 0), 0);
@@ -1229,5 +1292,6 @@ export class ReportingAowTableComponent {
   private closeOverlays(): void {
     if (this.openMenuKey() !== null) this.openMenuKey.set(null);
     if (this.openInfoKey() !== null) this.openInfoKey.set(null);
+    if (this.openCardFilterKey() !== null) this.openCardFilterKey.set(null);
   }
 }

@@ -23,6 +23,8 @@ Give the Overview one visible, discoverable control that returns the filter bar 
 
 **There is no clear button.** Verified in the running app by enumerating every `<button>` on the page and matching against `clear|reset|all` — **zero matches**.
 
+> **Correction (archive, 2026-09-03):** this sentence is **false**. The sweep pattern actually run was `clear|reset|limpiar|all scopes|todos` — not bare `all` — so the pre-existing conditional **"Show all sections"** button (`program-overview.component.html:350-356`, rendered when `activeSection() !== 'all'`) never matched. It clears the **section axis only**; the scope axis still had no visible reset, so the asymmetry that motivated this spec stands and the requirements are unaffected (Reviewer adjudication 1, `execution.md` §4). Recorded here so the evidence trail is honest; see `execution.md` §2.
+
 The bar carries **two independent filter axes**, and they expose their reset asymmetrically:
 
 | Axis | State | "No filter" value | How you clear it | Visible? |

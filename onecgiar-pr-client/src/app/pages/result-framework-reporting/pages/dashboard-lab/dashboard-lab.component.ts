@@ -2240,12 +2240,18 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (this.overviewFilterOpen()) {
       this.overviewFilterOpen.set(false);
     }
+    if (!target?.closest('.pr-by-aow-filter-container') && this.byAowFilterPopoverOpen()) {
+      this.byAowFilterPopoverOpen.set(false);
+    }
   }
 
   @HostListener('document:keydown.escape')
   onDocumentEscape(): void {
     if (this.overviewFilterOpen()) {
       this.overviewFilterOpen.set(false);
+    }
+    if (this.byAowFilterPopoverOpen()) {
+      this.byAowFilterPopoverOpen.set(false);
     }
   }
 
@@ -3713,6 +3719,60 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .map(([type, count]) => ({ type, count }))
       .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
   });
+
+  readonly byAowVisibleCenters = computed<{ center: string; count: number }[]>(() => {
+    const list = this.byAowCenterCounts();
+    return list.length > 4 ? list.slice(0, 3) : list;
+  });
+
+  readonly byAowOverflowCenters = computed<{ center: string; count: number }[]>(() => {
+    const list = this.byAowCenterCounts();
+    return list.length > 4 ? list.slice(3) : [];
+  });
+
+  readonly byAowVisibleTypes = computed<{ type: string; count: number }[]>(() => {
+    const list = this.byAowTypeCounts();
+    return list.length > 3 ? list.slice(0, 2) : list;
+  });
+
+  readonly byAowOverflowTypes = computed<{ type: string; count: number }[]>(() => {
+    const list = this.byAowTypeCounts();
+    return list.length > 3 ? list.slice(2) : [];
+  });
+
+  readonly byAowHasOverflowFilters = computed<boolean>(() => {
+    return this.byAowOverflowCenters().length > 0 || this.byAowOverflowTypes().length > 0;
+  });
+
+  readonly byAowIsOverflowCenterActive = computed<boolean>(() => {
+    const sel = this.byAowSelectedCenter();
+    if (!sel) return false;
+    return this.byAowOverflowCenters().some(c => c.center === sel);
+  });
+
+  readonly byAowIsOverflowTypeActive = computed<boolean>(() => {
+    const sel = this.byAowSelectedType();
+    if (!sel) return false;
+    return this.byAowOverflowTypes().some(t => t.type === sel);
+  });
+
+  readonly byAowActiveOverflowCount = computed<number>(() => {
+    let count = 0;
+    if (this.byAowIsOverflowCenterActive()) count++;
+    if (this.byAowIsOverflowTypeActive()) count++;
+    return count;
+  });
+
+  readonly byAowFilterPopoverOpen = signal<boolean>(false);
+
+  toggleByAowFilterPopover(event: MouseEvent): void {
+    event.stopPropagation();
+    this.byAowFilterPopoverOpen.update(v => !v);
+  }
+
+  closeByAowFilterPopover(): void {
+    this.byAowFilterPopoverOpen.set(false);
+  }
 
   readonly byAowBreakdownOpen = signal<boolean>(true);
 

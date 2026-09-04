@@ -20,16 +20,25 @@
    progress section now reuses it too. Do not re-add a local copy; extend the shared file instead.
    @akili-spec changes/aow-row-gesture-split ── */
 
+/* ── Shared Reporting Grid Definition ──
+   Used identically by .pr-hlo-head, .pr-hlo-row, and .pr-reporting-row so all headers, HLO
+   metric totals, and indicator rows align with pixel precision. */
+$pr-reporting-tracks: 24px minmax(280px, 1fr) 72px 72px 104px 124px 108px 28px;
+$pr-reporting-gap: 12px;
+$pr-reporting-pad: 8px 16px 8px 24px;
+
 /* ── Subgroup table column header ── */
 .pr-hlo-head {
   display: grid;
-  grid-template-columns: 28px minmax(280px, 1fr) 80px 80px 112px 132px 136px 36px;
+  grid-template-columns: $pr-reporting-tracks;
   align-items: center;
-  gap: 16px;
-  height: 30px;
-  padding: 0 20px 0 32px;
+  gap: $pr-reporting-gap;
+  height: 32px;
+  padding: 0 16px 0 24px;
   background: var(--pr-surface-subtle);
   border-top: 1px solid var(--pr-border-divider);
+  border-left: 3px solid transparent;
+  box-sizing: border-box;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -38,23 +47,35 @@
   user-select: none;
 }
 
+/* ── HLO row (tabular tree-table node) ── */
+.pr-hlo-row {
+  display: grid;
+  grid-template-columns: $pr-reporting-tracks;
+  align-items: center;
+  gap: $pr-reporting-gap;
+  min-height: 48px;
+  padding: $pr-reporting-pad;
+  box-sizing: border-box;
+  width: 100%;
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: -2px;
+  }
+}
+
 /* ── The row. Grid + pad are the design verbatim (spacers keep Target / Achieved / action aligned). ── */
 .pr-reporting-row {
   display: grid;
-  /* status (28px) | title (1fr) | target (80px) | achieved (80px) | status (112px) | Progress
-     (132px) | action (136px, fits copy-link + Report; Next pending wraps above) | menu (36px)
-     P2-3296: the Progress track is new. It sits after the status figures because it is derived
-     from them, and its 132px is the narrowest width that fits "Overachieved" without wrapping —
-     the label an indicator with no usable target shows in place of a percentage. The action track
-     stays 136px (MRF-R-3.1/R-5: copy-link icon + Report, with "Next pending" wrapping above it) —
-     narrowing it back to 96px would clip that control now that Progress sits beside it. */
-  grid-template-columns: 28px minmax(280px, 1fr) 80px 80px 112px 132px 136px 36px;
+  grid-template-columns: $pr-reporting-tracks;
   align-items: center;
-  gap: 16px;
-  min-height: 58px;
-  padding: 10px 20px 10px 32px;
+  gap: $pr-reporting-gap;
+  min-height: 48px;
+  padding: $pr-reporting-pad;
   border-top: 1px solid var(--pr-border-divider);
   background: var(--pr-surface-card);
+  box-sizing: border-box;
+  width: 100%;
   cursor: pointer;
   transition: background 150ms ease;
 
@@ -120,12 +141,12 @@
    under the WCAG 1.4.11 3:1 floor. A deliberate, decided deviation — recorded in
    docs/DESIGN-DEVIATIONS.md; do not "correct" it back. ── */
 .pr-row-action {
-  height: 32px;
-  padding: 0 14px;
+  height: 26px;
+  padding: 0 10px;
   border: 1px solid var(--pr-color-primary-300);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--pr-surface-card);
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--pr-color-primary-400);
   cursor: pointer;

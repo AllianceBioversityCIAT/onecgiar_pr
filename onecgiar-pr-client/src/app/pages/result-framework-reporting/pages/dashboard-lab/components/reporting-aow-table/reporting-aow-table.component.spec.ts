@@ -423,7 +423,7 @@ describe('ReportingAowTableComponent', () => {
 
       const filterBar = (fixture.nativeElement as HTMLElement).querySelector('.h-\\[32px\\].min-h-\\[32px\\]');
       expect(filterBar).toBeTruthy();
-      expect(filterBar!.className).toContain('overflow-x-auto');
+      expect(filterBar!.className).toContain('justify-between');
 
       // Centers & Types are displayed in the quick bar
       expect(filterBar!.textContent).toContain('Centers:');
@@ -1630,6 +1630,118 @@ describe('ReportingAowTableComponent', () => {
       expect(component.statusPillClass('not-started')).toBe(
         'bg-[var(--pr-status-not-started-bg)] text-[var(--pr-status-not-started-fg)]'
       );
+    });
+  });
+
+  // ── AoW In-Card Filter Overflow & Indicator Row Compaction (AFP-R-1..5) ──
+  describe('AoW In-Card Filter Overflow & Indicator Row Compaction (AFP-R-1..5)', () => {
+    it('partitions centers into top 3 visible and remaining in overflow when count > 4 (AFP-R-1)', () => {
+      const g = group([
+        row({ indicator_id: 1, center_acronym: 'CIAT' }),
+        row({ indicator_id: 2, center_acronym: 'CIAT' }),
+        row({ indicator_id: 3, center_acronym: 'IITA' }),
+        row({ indicator_id: 4, center_acronym: 'CIP' }),
+        row({ indicator_id: 5, center_acronym: 'IFPRI' }),
+        row({ indicator_id: 6, center_acronym: 'ICARDA' })
+      ]);
+      const visible = component.visibleCentersOf(g);
+      const overflow = component.overflowCentersOf(g);
+
+      expect(visible.map(c => c.center)).toEqual(['CIAT', 'CIP', 'ICARDA']);
+      expect(overflow.map(c => c.center)).toEqual(['IFPRI', 'IITA']);
+      expect(component.hasOverflowFilters(g)).toBe(true);
+    });
+
+    it('partitions types into top 2 visible and remaining in overflow when count > 3 (AFP-R-1)', () => {
+      const g = group([
+        row({ indicator_id: 1, result_type_name: 'Policy change' }),
+        row({ indicator_id: 2, result_type_name: 'Policy change' }),
+        row({ indicator_id: 3, result_type_name: 'Innovation use' }),
+        row({ indicator_id: 4, result_type_name: 'Capacity change' }),
+        row({ indicator_id: 5, result_type_name: 'Knowledge product' })
+      ]);
+      const visible = component.visibleTypesOf(g);
+      const overflow = component.overflowTypesOf(g);
+
+      expect(visible.map(t => t.type)).toEqual(['Policy change', 'Capacity change']);
+      expect(overflow.map(t => t.type)).toEqual(['Innovation use', 'Knowledge product']);
+      expect(component.hasOverflowFilters(g)).toBe(true);
+    });
+
+    it('does not show [ ⠚ Filter ] button when centers <= 4 and types <= 3 (AFP-R-1)', async () => {
+      const g = group([
+        row({ indicator_id: 1, center_acronym: 'CIAT', result_type_name: 'Policy change' }),
+        row({ indicator_id: 2, center_acronym: 'IITA', result_type_name: 'Innovation use' })
+      ]);
+      await build([g]);
+      openAow();
+
+      const el = fixture.nativeElement as HTMLElement;
+      const filterBtn = el.querySelector('button[aria-label="More filters"]');
+      expect(filterBtn).toBeNull();
+    });
+
+    it('renders [ ⠚ Filter ] button and toggles popover with overflow items (AFP-R-2)', async () => {
+      const g = group([
+        row({ indicator_id: 1, center_acronym: 'CIAT', result_type_name: 'Policy change' }),
+        row({ indicator_id: 2, center_acronym: 'IITA', result_type_name: 'Innovation use' }),
+        row({ indicator_id: 3, center_acronym: 'CIP', result_type_name: 'Capacity change' }),
+        row({ indicator_id: 4, center_acronym: 'IFPRI', result_type_name: 'Knowledge product' }),
+        row({ indicator_id: 5, center_acronym: 'ICARDA', result_type_name: 'Other outcome' })
+      ]);
+      await build([g]);
+      openAow();
+
+      const el = fixture.nativeElement as HTMLElement;
+      const filterBtn = el.querySelector('button[aria-label="More filters"]') as HTMLButtonElement;
+      expect(filterBtn).toBeTruthy();
+      expect(filterBtn.textContent).toContain('Filter');
+
+      // Popover is initially closed
+      expect(component.isCardFilterOpen(g)).toBe(false);
+
+      // Click opens popover
+      filterBtn.click();
+      fixture.detectChanges();
+      expect(component.isCardFilterOpen(g)).toBe(true);
+
+      // Escape key closes popover
+      component.onEscape();
+      fixture.detectChanges();
+      expect(component.isCardFilterOpen(g)).toBe(false);
+    });
+
+    it('omits the Next pending button from grouped indicator rows (AFP-R-4)', async () => {
+      const rows = [
+        row({ indicator_id: 1, actual_achieved_value_sum: 1, target_value_sum: '1' }),
+        row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '2' })
+      ];
+      await build([group(rows)], { lastReported: { id: 1, aowCode: 'AOW01' }, expandAll: true });
+
+      const el = fixture.nativeElement as HTMLElement;
+      const nextPendingBtn = el.querySelector('button[aria-label="Go to the next pending KPI"]');
+      expect(nextPendingBtn).toBeNull();
+      expect(el.textContent).not.toContain('Next pending');
+      expect(el.textContent).not.toContain('All pending KPIs reported');
+    });
+
+    it('applies compact typography, metric figures and report action sizes (AFP-R-3)', async () => {
+      await build([group([row({ indicator_id: 1, target_value_sum: '10', actual_achieved_value_sum: 5 })])], {
+        canReport: true,
+        expandAll: true
+      });
+
+      const el = fixture.nativeElement as HTMLElement;
+      const title = el.querySelector('.flex.min-w-0.flex-col > p');
+      expect(title?.className).toContain('text-[12.5px]');
+      expect(title?.className).toContain('font-medium');
+
+      const target = el.querySelector('.pr-figure');
+      expect(target?.className).toContain('text-[13px]');
+
+      const reportBtn = el.querySelector('.pr-row-action');
+      expect(reportBtn?.className).toContain('h-[26px]');
+      expect(reportBtn?.className).toContain('text-[11px]');
     });
   });
 });
