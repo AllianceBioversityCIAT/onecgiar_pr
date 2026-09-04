@@ -246,6 +246,7 @@ export class ReportingProgramBandComponent {
     this.guideSE.startSpTour({
       programName: this.programName(),
       cycleYear: this.cycleYear() ?? undefined,
+      activeTab: this.activeTab(),
       onTabNavigate: (tab: 'overview' | 'reporting' | 'results') => {
         const targetPath =
           tab === 'overview'

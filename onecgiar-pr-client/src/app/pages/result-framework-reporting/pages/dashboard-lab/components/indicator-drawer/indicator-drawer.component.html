@@ -94,8 +94,10 @@
 
   <!-- ---------- panel ---------- -->
   <div class="custom_scroll flex-1 overflow-y-auto px-6 pt-5 pb-0 flex flex-col">
-    @switch (tab()) {
-      @case ('report') {
+    <!-- Follow-up 2026-09-04 (quick/indicator-reported-results-followups): the Report case is a
+         persistent wrapper, not a @switch case — "See them in detail" must not unmount the form
+         the user is filling. The other two tabs are conditional as before. -->
+    <div class="flex flex-1 min-h-0 flex-col" [style.display]="tab() === 'report' ? null : 'none'" data-testid="irr-report-pane">
         <!-- What is already reported here, visible WHILE the form is being filled: recognising a
              duplicate after creating it is too late. Compact on purpose — the form is the job. -->
         @if (loadingExisting()) {
@@ -107,7 +109,7 @@
               {{ existing()!.length }} result{{ existing()!.length === 1 ? '' : 's' }} already reported against this indicator
             </p>
             <ul class="m-0 mt-2 list-none space-y-1 p-0">
-              @for (r of existing()!; track $index) {
+              @for (r of previewRows(); track $index) {
                 <li class="truncate text-[12px] text-[var(--pr-color-accents-6)]">
                   @if (r?.result_code) {
                     <span class="font-mono text-[11.5px] text-[var(--pr-color-accents-5)]">{{ r.result_code }}</span>
@@ -115,12 +117,15 @@
                   {{ r?.result_title || r?.title || 'Untitled result' }}
                 </li>
               }
+              @if (previewMore()) {
+                <li class="text-[12px] text-[var(--pr-color-accents-5)]" data-testid="irr-preview-more">…and {{ previewMore() }} more</li>
+              }
             </ul>
             <button
               type="button"
-              (click)="setTab('results')"
+              (click)="openResultsFromReport()"
               class="mt-2 appearance-none border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-300)] underline">
-              See them in detail
+              See all {{ existing()!.length }} in detail
             </button>
           </div>
         } @else if (loadError()) {
@@ -152,7 +157,7 @@
           (dirtyChange)="onDirtyChange($event)"
           (cancelled)="requestClose()"
           (created)="close()" />
-      }
+      </div>
 
       <!-- @akili-spec changes/indicator-reported-results
            IRR-R-9 / IRR-DD-6 — the reported results left `info` for their own tab. `info` keeps
@@ -162,7 +167,16 @@
            table, then "nothing here". Error before empty is the whole point (IRR-R-7): a 500 that
            renders the empty state tells the user this indicator has no results, which is a lie.
            A search that matches nothing is NOT this branch — it is the table's own empty template. -->
-      @case ('results') {
+      @if (tab() === 'results') {
+        @if (returnTab()) {
+          <button
+            type="button"
+            (click)="backFromResults()"
+            data-testid="irr-back"
+            class="mb-3 inline-flex w-fit appearance-none items-center gap-1 border-0 bg-transparent p-0 text-[12.5px] font-semibold text-[var(--pr-color-primary-300)] hover:underline">
+            <span class="material-icons-round text-[16px]" aria-hidden="true">arrow_back</span> Back to Report result
+          </button>
+        }
         @if (loadingExisting()) {
           <div class="flex flex-col gap-2" aria-hidden="true">
             @for (s of [1, 2, 3]; track s) {
@@ -410,7 +424,7 @@
         }
       }
 
-      @case ('info') {
+      @if (tab() === 'info') {
         <!-- ---- Target ---- -->
         <p class="m-0 mb-3 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">
           <span class="material-icons-round text-[16px]">flag</span> Target
@@ -452,7 +466,7 @@
           <p class="m-0 mt-5 text-[12.5px] text-[var(--pr-color-accents-5)]">This indicator has no per-Center split — the target is reported as a single figure.</p>
         }
       }
-    }
+
   </div>
 
   @if (confirmingExit()) {

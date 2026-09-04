@@ -1,5 +1,6 @@
 @use './styles/fonts.scss' as fonts; // SCSS @use must precede all other rules
 @use './styles/field-card.scss';
+@use './styles/row-menu.scss';
 @layer theme, base, components, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
 // Tailwind's global preflight (base reset) — RE-ENABLED now that PrimeNG was removed
@@ -677,7 +678,11 @@ background-attachment: fixed;
 // `pr-guide` class we pass in popoverClass — the library's defaults are left
 // alone for any other future tour.
 // ---------------------------------------------------------------------------
+@import 'driver.js/dist/driver.css';
+
 .driver-popover.pr-guide {
+  position: fixed !important;
+  z-index: 1000000000 !important;
   max-width: 340px;
   padding: 20px 20px 16px;
   border-radius: 18px;

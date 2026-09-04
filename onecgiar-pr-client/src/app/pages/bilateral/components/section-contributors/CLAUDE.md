@@ -1,6 +1,6 @@
 # section-contributors
 
-**Verified:** 2026-08-26 · branch performance-refactor · 75d56f2cd
+**Verified:** 2026-09-04 · branch performance-refactor (feedback: SP chips carry the full name)
 
 ## Qué es
 Sección 2 del formulario bilateral (W3/Bilateral): a quién se atribuye el resultado — centro líder,
@@ -138,6 +138,11 @@ renderizaba; en un resultado guardado tampoco (`sciencePrograms: []` al cargar).
 - **Lectura:** `BilateralCreationService.loadResult` hidrata `selectedSecondarySps` con las filas
   `initiative_role_id === 2` de `contributing_and_primary_initiative`, y el primario ahora se busca por
   rol 1 (antes era `[0]`, correcto sólo por suerte).
+- **Chips con nombre completo (feedback 2026-09-04):** el chip seleccionado muestra `CODE - Name`,
+  igual que la opción del dropdown (`full_name`). El `name` viaja en `selectedSecondarySps` desde
+  `onSecondarySpsModelChange` (opciones del catálogo) y desde la hidratación de `loadResult`
+  (`initiative_name || short_name`); el fallback de SPs del proyecto no trae nombre y el chip degrada
+  a solo el código.
 - ⚠️ El ingest (`POST /create`) sigue guardando los programas contribuyentes como
   `share_result_request` con status 4, no como rol 2: un resultado creado por API no muestra sus
   programas en el formulario hasta que alguien los guarde desde aquí. Anotado en el change log del

@@ -42,7 +42,7 @@ export class BilateralCreationService {
   /** Always start empty — do not hydrate from localStorage (avoids stale create wizard). */
   selectedProject = signal<BilateralProject | null>(null);
   selectedPrimarySp = signal<{ programId: number; programCode: string; allocation: string; name?: string; shortName?: string } | null>(null);
-  selectedSecondarySps = signal<{ programId: number; programCode: string; allocation: string }[]>([]);
+  selectedSecondarySps = signal<{ programId: number; programCode: string; allocation: string; name?: string }[]>([]);
 
   /**
    * Internal DB `result.id` of the result being edited — the ONLY id every write endpoint accepts.
@@ -210,7 +210,14 @@ export class BilateralCreationService {
         this.selectedSecondarySps.set(
           initiatives
             .filter((i: any) => i?.id && Number(i.initiative_role_id) === 2)
-            .map((i: any) => ({ programId: Number(i.id), programCode: i.official_code, allocation: '' }))
+            // The chips render "CODE - Name", like the dropdown options — a bare code reads as a
+            // different program than the option the user just picked.
+            .map((i: any) => ({
+              programId: Number(i.id),
+              programCode: i.official_code,
+              allocation: '',
+              name: i.initiative_name || i.short_name || ''
+            }))
         );
         if (primaryInit?.id) {
           this.resultInitiativeId.set(primaryInit.id);

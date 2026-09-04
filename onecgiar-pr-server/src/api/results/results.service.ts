@@ -5255,7 +5255,11 @@ export class ResultsService {
       ) {
         return {
           response: {},
-          message: 'At least one field must be provided.',
+          // This message reaches the editor's Save-draft alert verbatim, so it has to explain the
+          // rule, not just state the rejection: the common way to land here is clearing the title
+          // (or description) and saving — empty text for a required field is ignored, never stored.
+          message:
+            'Nothing was saved: title and description are required and cannot be emptied — the stored text is kept. Provide at least one field with a value.',
           status: HttpStatus.BAD_REQUEST,
         };
       }

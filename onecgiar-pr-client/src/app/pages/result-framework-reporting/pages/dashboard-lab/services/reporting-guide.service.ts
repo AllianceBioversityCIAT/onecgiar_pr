@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { driver, DriveStep, Driver } from 'driver.js';
-import 'driver.js/dist/driver.css';
 
 export const SP_TOUR_STORAGE_KEY = 'pr.tour.sp.completed';
 
@@ -8,6 +7,7 @@ export interface SpTourOptions {
   onTabNavigate?: (tab: 'overview' | 'reporting' | 'results') => void | Promise<void>;
   programName?: string;
   cycleYear?: number | string;
+  activeTab?: 'overview' | 'reporting' | 'results';
 }
 
 /** What the tutorials need to know about the screen they are about to explain. */
@@ -176,9 +176,11 @@ export class ReportingGuideService {
       }
     ];
 
+    const initialTab = options.activeTab ?? 'overview';
+
     const stepTabs: Array<'overview' | 'reporting' | 'results'> = [
-      'overview',
-      'overview',
+      initialTab,
+      initialTab,
       'overview',
       'reporting',
       'results',

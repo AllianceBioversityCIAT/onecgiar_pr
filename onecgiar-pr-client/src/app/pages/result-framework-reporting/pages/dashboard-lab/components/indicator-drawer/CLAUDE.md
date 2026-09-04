@@ -31,7 +31,13 @@ outputs  closed · widthChange
 - `../../dashboard-lab.component.html:1548` — único host. Se abre por `manageIndicator(row, hlo,
   tab, node)` (`dashboard-lab.component.ts:663`), `tab: 'report' | 'info' | 'results' = 'report'`.
 
-## Trampas (⚠️ = ya rompió algo)
+## Trampas
+- **Follow-up 2026-09-04 (quick/indicator-reported-results-followups):** la pestaña `report` NO es un
+  `@case` sino un panel persistente (`[data-testid=irr-report-pane]`, `display:none` fuera de la
+  pestaña) para que "See all N in detail" no desmonte el formulario a medio llenar. El preview lista
+  3 filas + "…and N more" (`PREVIEW_MAX`). `returnTab` guarda de dónde se llegó a `results`: solo el
+  enlace del Report-tab lo fija, así el drawer abierto desde el menú de fila no muestra "Back". Las
+  pistas de la tabla suman 654px para caber en el piso de 760px sin segundo scroller. (⚠️ = ya rompió algo)
 - ⚠️ **`existing-result-contributors` se consulta con `related_node_id`, NO con
   `toc_result_indicator_id`.** Son dos columnas distintas del mismo payload. El servidor persiste
   `toc_results_indicator_id = indicatorRow.related_node_id` al crear

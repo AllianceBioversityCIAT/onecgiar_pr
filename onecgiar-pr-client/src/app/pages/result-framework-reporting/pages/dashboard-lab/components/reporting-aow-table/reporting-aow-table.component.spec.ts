@@ -1527,6 +1527,10 @@ describe('ReportingAowTableComponent', () => {
       fixture.detectChanges();
     };
 
+    afterEach(() => {
+      document.querySelectorAll('.cdk-overlay-container').forEach(c => c.remove());
+    });
+
     it('opens a menu instead of doing nothing, and does not open the row', async () => {
       await openFirstRow();
       const opened = jest.fn();
@@ -1534,7 +1538,7 @@ describe('ReportingAowTableComponent', () => {
       const el = fixture.nativeElement as HTMLElement;
       el.querySelector<HTMLButtonElement>('button[aria-label="More actions"]')!.click();
       fixture.detectChanges();
-      expect(el.querySelector('.pr-row-menu')).toBeTruthy();
+      expect(document.querySelector('.pr-row-menu')).toBeTruthy();
       expect(opened).not.toHaveBeenCalled();
     });
 
@@ -1545,12 +1549,12 @@ describe('ReportingAowTableComponent', () => {
       const el = fixture.nativeElement as HTMLElement;
       el.querySelector<HTMLButtonElement>('button[aria-label="More actions"]')!.click();
       fixture.detectChanges();
-      const items = Array.from(el.querySelectorAll<HTMLButtonElement>('.pr-row-menu_item'));
+      const items = Array.from(document.querySelectorAll<HTMLButtonElement>('.pr-row-menu_item'));
       items.find(b => b.textContent?.includes('View reported results'))!.click();
       expect(spy).toHaveBeenCalled();
       fixture.detectChanges();
       // Acting closes the menu.
-      expect(el.querySelector('.pr-row-menu')).toBeNull();
+      expect(document.querySelector('.pr-row-menu')).toBeNull();
     });
 
     it('routes Target details to the same output as the Target cell', async () => {
@@ -1560,7 +1564,7 @@ describe('ReportingAowTableComponent', () => {
       const el = fixture.nativeElement as HTMLElement;
       el.querySelector<HTMLButtonElement>('button[aria-label="More actions"]')!.click();
       fixture.detectChanges();
-      Array.from(el.querySelectorAll<HTMLButtonElement>('.pr-row-menu_item'))
+      Array.from(document.querySelectorAll<HTMLButtonElement>('.pr-row-menu_item'))
         .find(b => b.textContent?.includes('Target details'))!
         .click();
       expect(spy).toHaveBeenCalled();
@@ -1571,7 +1575,7 @@ describe('ReportingAowTableComponent', () => {
       const el = fixture.nativeElement as HTMLElement;
       el.querySelector<HTMLButtonElement>('button[aria-label="More actions"]')!.click();
       fixture.detectChanges();
-      const copy = Array.from(el.querySelectorAll<HTMLButtonElement>('.pr-row-menu_item')).find(b =>
+      const copy = Array.from(document.querySelectorAll<HTMLButtonElement>('.pr-row-menu_item')).find(b =>
         b.textContent?.includes('Copy indicator code')
       )!;
       expect(copy.disabled).toBe(true);
@@ -1583,10 +1587,10 @@ describe('ReportingAowTableComponent', () => {
       const el = fixture.nativeElement as HTMLElement;
       el.querySelector<HTMLButtonElement>('button[aria-label="More actions"]')!.click();
       fixture.detectChanges();
-      expect(el.querySelector('.pr-row-menu')).toBeTruthy();
+      expect(document.querySelector('.pr-row-menu')).toBeTruthy();
       component.onEscape();
       fixture.detectChanges();
-      expect(el.querySelector('.pr-row-menu')).toBeNull();
+      expect(document.querySelector('.pr-row-menu')).toBeNull();
     });
   });
 

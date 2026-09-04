@@ -55,7 +55,10 @@
 // added to the header without shifting every cell under it.
 :host ::ng-deep .irr-table .pr-table tr.irr-row {
   display: grid;
-  grid-template-columns: 84px minmax(180px, 1fr) 128px 118px 96px 110px 36px;
+  // Follow-up 2026-09-04: tracks sum to 654px so the table fits the 760px floor minus the panel's
+  // 48px of padding (712px) — the previous 752px forced a second, horizontal scroller inside the
+  // drawer's own vertical one.
+  grid-template-columns: 72px minmax(150px, 1fr) 116px 104px 84px 96px 32px;
   gap: 0;
   align-items: stretch;
 }

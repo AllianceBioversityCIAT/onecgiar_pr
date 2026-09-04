@@ -298,6 +298,29 @@ export class IndicatorDrawerComponent {
   // ---- existing results (View results tab) --------------------------------
   readonly existing = signal<any[] | null>(null);
   readonly loadingExisting = signal(false);
+
+  // Follow-up 2026-09-04 (quick/indicator-reported-results-followups) — the Report-tab preview is
+  // a reminder, not a list: three rows and a count, the table is one click away.
+  readonly PREVIEW_MAX = 3;
+  readonly previewRows = computed<any[]>(() => (this.existing() ?? []).slice(0, this.PREVIEW_MAX));
+  readonly previewMore = computed(() => Math.max(0, (this.existing()?.length ?? 0) - this.PREVIEW_MAX));
+
+  /**
+   * Where "Back" goes from the results tab. Set only by the Report-tab link, so a drawer opened
+   * straight on the table (row menu) shows no back control — there is nowhere to go back to.
+   */
+  readonly returnTab = signal<DrawerTab | null>(null);
+
+  openResultsFromReport(): void {
+    this.returnTab.set('report');
+    this.setTab('results');
+  }
+
+  backFromResults(): void {
+    const target = this.returnTab() ?? 'report';
+    this.returnTab.set(null);
+    this.setTab(target);
+  }
   // @akili-spec changes/indicator-reported-results
   // IRR-R-7 — a 404 means "nothing reported here yet" (the server's contract for a virgin
   // indicator) and stays an empty list. Anything else is a FAILURE and must say so: rendering an
@@ -337,6 +360,7 @@ export class IndicatorDrawerComponent {
       // a search typed against indicator A would silently hide indicator B's rows.
       this.searchText.set('');
       this.openMenuKey.set(null);
+      this.returnTab.set(null);
       // The remembered width belongs to the indicator that was on screen when the floor fired; a
       // different indicator has no claim on it (IRR-DD-5 / design §6.2 "Reset effect").
       this.widthBeforeResults = null;
