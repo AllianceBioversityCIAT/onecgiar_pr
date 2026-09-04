@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { signal } from '@angular/core';
 
 import { TypeInnovationUseComponent } from './type-innovation-use.component';
@@ -25,9 +25,20 @@ describe('TypeInnovationUseComponent', () => {
   let innovationControlListSE: any;
   let innovationUseResultsSE: any;
 
+  /**
+   * P2-3556 — `build()` now RUNS the first change detection, so `ngOnInit` fires and the default
+   * `GET_innovationUse` mock (which resolves synchronously) leaves the component `loaded`.
+   *
+   * Before the fix it did not, and that was a hole in this spec rather than a detail: `ngOnInit` never
+   * ran, so every save assertion below was exercising a component that had never initialized. With the
+   * load gate in place those assertions would all have passed for the WRONG reason — `schedulePayload`
+   * called with a body the test had assigned by hand, on a component that could not legally save at
+   * all. The sibling sections had the same hole (`6e88e275b`, `1fef02f2a`).
+   */
   const build = () => {
     fixture = TestBed.createComponent(TypeInnovationUseComponent);
     component = fixture.componentInstance;
+    fixture.detectChanges();
     return component;
   };
 
@@ -148,6 +159,154 @@ describe('TypeInnovationUseComponent', () => {
       build();
       fixture.detectChanges();
       expect(component.body.organization[0]).toMatchObject({ institution_types_id: 10, institution_sub_type_id: 11 });
+    });
+
+    it('marks the section as loaded once the body is in hand', () => {
+      build();
+      expect(component.loaded()).toBe(true);
+    });
+
+    /**
+     * P2-3556 — the data-loss chain, cut at its root.
+     *
+     * `loadData()` had no error handler, and the interceptor rethrows every failed response
+     * (`shared/interceptors/general-interceptor.service.ts:81-83`), so `next` never ran and `body`
+     * stayed the `{}` it was constructed with. The form painted blank with no warning and the first
+     * keystroke autosaved `buildPayload()`'s `?? null` / `?? []` over the stored record: the use level
+     * and the "to be determined" answer are written as `?? null`
+     * (`api/results/summary/summary.service.ts:104-106`, `:121-123`), the four optional columns are
+     * written whenever the key is present and it always is (`:185-201`), and `scaling_studies_urls: []`
+     * de-activates every stored study link (`:228-245`).
+     *
+     * These assert on the ABSENCE of a request, which is the only thing that distinguishes the fix from
+     * the defect: the old code reached `schedulePayload` on every one of these paths, and a failure here
+     * prints the wipe payload itself.
+     */
+    describe('when the GET fails (P2-3556)', () => {
+      const failLoad = () => bilateralApi.GET_innovationUse.mockReturnValue(throwError(() => new Error('HTTP 500')));
+
+      it('leaves the section not loaded, with an empty body', () => {
+        failLoad();
+        build();
+        expect(component.loaded()).toBe(false);
+        expect(component.body).toEqual({});
+      });
+
+      it('sends NOTHING when the person types on a form that never loaded', () => {
+        failLoad();
+        build();
+        autoSave.schedulePayload.mockClear();
+
+        component.body.readiness_level_explanation = 'typed by the user';
+        component.onFieldChange();
+
+        expect(autoSave.schedulePayload).not.toHaveBeenCalled();
+      });
+
+      it('sends nothing when the person presses Save either', () => {
+        failLoad();
+        build();
+        autoSave.schedulePayload.mockClear();
+        component.onSave();
+        expect(autoSave.schedulePayload).not.toHaveBeenCalled();
+      });
+
+      // Every list/cascade handler funnels into `onFieldChange`, so the choke point covers them all —
+      // but they are the paths a user reaches by clicking rather than typing, and the ones a future
+      // refactor is most likely to wire straight to `schedulePayload`. Pinned one by one.
+      it.each([
+        ['addActor', (c: any) => c.addActor()],
+        ['deleteActor', (c: any) => c.deleteActor(c.body.actors[0])],
+        ['onDisaggregationChange', (c: any) => c.onDisaggregationChange(c.body.actors[0])],
+        ['addOrganization', (c: any) => c.addOrganization()],
+        ['deleteOrganization', (c: any) => c.deleteOrganization(c.body.organization[0])],
+        ['onOrganizationTypeChange', (c: any) => c.onOrganizationTypeChange(c.body.organization[0])],
+        ['addMeasure', (c: any) => c.addMeasure()],
+        ['deleteMeasure', (c: any) => c.deleteMeasure(c.body.measures[0])],
+        ['addStudyLink', (c: any) => c.addStudyLink()],
+        ['deleteStudyLink', (c: any) => c.deleteStudyLink(0)],
+        ['onInnovationLinkChange', (c: any) => c.onInnovationLinkChange()],
+        ['onUseLevelChange', (c: any) => c.onUseLevelChange()],
+      ])('sends nothing from %s either', (_name, act) => {
+        failLoad();
+        build();
+        component.body = {
+          actors: [{ actor_type_id: 1, is_active: true }],
+          organization: [{ institution_types_id: 10, is_active: true }],
+          measures: [{ unit_of_measure: 'ha', quantity: 3, is_active: true }],
+          scaling_studies_urls: ['https://example.org'],
+        };
+        autoSave.schedulePayload.mockClear();
+
+        act(component);
+
+        expect(autoSave.schedulePayload).not.toHaveBeenCalled();
+      });
+
+      // Same reason as the sibling section (P2-3355): publishing no checklist at all leaves the section
+      // at "0/0 fields", which reads as "nothing required here" instead of as incomplete.
+      it('still publishes the three unfilled MDS items, so the section stays honestly incomplete', () => {
+        failLoad();
+        build();
+        const fields = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
+        expect(fields.map((f: any) => f.key)).toEqual(['use-actors', 'use-measures', 'use-level']);
+        expect(fields.every((f: any) => f.filled === false)).toBe(true);
+      });
+    });
+
+    /**
+     * P2-3556, the secondary window: `GET summary/innovation-use/get/result/:id` takes 94-159 ms on
+     * prtest (measured 2-Sep-2026) against an 800 ms autosave debounce, so an edit could reach the PATCH
+     * before the body ever arrived — and a payload built from `{}` blanks the record exactly as a failed
+     * load does. `null` therefore blocks too.
+     */
+    describe('while the GET is still in flight (P2-3556)', () => {
+      it('sends nothing before the body arrives, and saves normally afterwards', () => {
+        const inFlight = new Subject<any>();
+        bilateralApi.GET_innovationUse.mockReturnValue(inFlight.asObservable());
+        build();
+
+        expect(component.loaded()).toBeNull();
+        component.body.readiness_level_explanation = 'typed too early';
+        component.onFieldChange();
+        expect(autoSave.schedulePayload).not.toHaveBeenCalled();
+
+        inFlight.next({ response: { innovation_use_level_id: 4, readiness_level_explanation: 'stored' } });
+        expect(component.loaded()).toBe(true);
+
+        component.onFieldChange();
+        expect(autoSave.schedulePayload).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    /**
+     * P2-3556 — the person must be TOLD. Before this, a failed load painted an ordinary empty form:
+     * indistinguishable from a result nobody had filled in yet, which is what made them start typing
+     * over a record they could not see. The template is `overrideTemplate`d in this spec, so it is
+     * asserted as text — same approach as the `Coming soon` investment test below.
+     */
+    describe('what the failed load looks like on screen (P2-3556)', () => {
+      const html = () => readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
+
+      it('renders the error alert only when the load actually failed', () => {
+        const banner = html();
+        expect(banner).toContain('@if (loaded() === false) {');
+        expect(banner).toContain('<app-alert-status status="error" [description]="loadErrorNote">');
+        // A naive `@if (!loaded())` would flash the error on every open while the GET is merely in
+        // flight, and this endpoint has no 404 "no row yet" state to confuse it with.
+        expect(banner).not.toContain('@if (!loaded())');
+      });
+
+      it('tells the person the two things that matter: nothing is saved, nothing was lost', () => {
+        const note = build().loadErrorNote;
+        expect(note).toContain('nothing typed here will be saved');
+        expect(note).toContain('reported earlier has not been changed');
+      });
+
+      // Explicit-save model (2026-09-03): no in-section Save; the footer's Save draft persists it.
+      it('renders no in-section Save button', () => {
+        expect(html()).not.toContain('(click)="onSave()"');
+      });
     });
 
     it('leaves a top-level-only organization untouched', () => {
@@ -543,6 +702,48 @@ describe('TypeInnovationUseComponent', () => {
       component.onSave();
       [, payload] = autoSave.schedulePayload.mock.calls[1];
       expect((payload as any).result_innovation_use_id).toBe(7);
+    });
+
+    // P2-3556 regression guards: the load gate must not touch the two things that legitimately save.
+    it('saves normally once the body has loaded', () => {
+      bilateralApi.GET_innovationUse.mockReturnValue(
+        of({ response: { innovation_use_level_id: 4, readiness_level_explanation: 'stored' } }),
+      );
+      build();
+      autoSave.schedulePayload.mockClear();
+
+      component.body.readiness_level_explanation = 'edited';
+      component.onFieldChange();
+
+      const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+      expect((payload as any).readiness_level_explanation).toBe('edited');
+      expect((payload as any).innovation_use_level_id).toBe(4);
+    });
+
+    it('still persists the removal of the last row of every list', () => {
+      const actor = { result_actors_id: 9, actor_type_id: 1, is_active: true };
+      const organization = { result_by_institution_type_id: 4, institution_types_id: 10, is_active: true };
+      const measure = { result_ip_measure_id: 6, unit_of_measure: 'ha', quantity: 3, is_active: true };
+      bilateralApi.GET_innovationUse.mockReturnValue(
+        of({ response: { actors: [actor], organization: [organization], measures: [measure], scaling_studies_urls: ['https://a'] } }),
+      );
+      build();
+
+      component.deleteActor(component.body.actors[0]);
+      component.deleteOrganization(component.body.organization[0]);
+      component.deleteMeasure(component.body.measures[0]);
+      component.deleteStudyLink(0);
+
+      const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+      // The rows stay in the payload flagged inactive — that is HOW the server deletes them; dropping
+      // them would silently keep them alive (`innovation_dev.service.ts:158`, `:259`, `:323` only ever
+      // look at the rows they are given).
+      expect((payload as any).innovatonUse.actors).toEqual([expect.objectContaining({ is_active: false })]);
+      expect((payload as any).innovatonUse.organization).toEqual([expect.objectContaining({ is_active: false })]);
+      expect((payload as any).innovatonUse.measures).toEqual([expect.objectContaining({ is_active: false })]);
+      // The empty array IS the deletion for the study links: `shouldSync` is true because the key is
+      // present, and the sync de-activates every stored row (`summary.service.ts:228-245`).
+      expect((payload as any).scaling_studies_urls).toEqual([]);
     });
 
     it('onSave queues an immediate save', () => {

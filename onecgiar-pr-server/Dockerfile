@@ -15,6 +15,11 @@ COPY nest-cli.json ./
 COPY eslint.config.mjs ./
 COPY scripts ./scripts
 
+# Migrations are NOT run from this image, on purpose: the Jenkins deployment pipeline runs
+# `npm run migration:run` as its own step and the migrations stay applied in the database
+# (confirmed by Cristian Gamboa, 2 Sep 2026). This line is kept commented as a pointer, NOT as a
+# pending task — uncommenting it would apply migrations at BUILD time, against whatever database
+# the build can reach, which is not where they belong.
 # RUN npm run migration:run
 
 RUN npm run build

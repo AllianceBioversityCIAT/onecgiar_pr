@@ -9,7 +9,7 @@ import { map } from 'rxjs/operators';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { SPProgress, Version } from '../../../../shared/interfaces/SP-progress.interface';
 import { ApiService } from '../../../../shared/services/api/api.service';
-import { Unit } from '../entity-details/interfaces/entity-details.interface';
+import { ScopeBucket, Unit } from '../entity-details/interfaces/entity-details.interface';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { HighlightSearchPipe } from './pipes/highlight-search.pipe';
 import {
@@ -61,6 +61,8 @@ import {
 import { BilateralCreationService } from '../../../bilateral/services/bilateral-creation.service';
 import { BilateralProject } from '../../../bilateral/services/bilateral-creation.interfaces';
 import { applyZeroTargetRule, buildRatio, countNewlyReported, groupPendingCount, nextPendingAfter, pendingOf, sortRemainingFirst, stateOf } from './reporting-burndown';
+// @akili-spec changes/overview-aow-cross-filter
+import { filterRowsByScope } from './overview-scope-filter';
 // @akili-spec changes/mass-reporting-flow
 import { environment } from '../../../../../environments/environment';
 import {
@@ -138,6 +140,19 @@ const OVERVIEW_STATUS_NAME_FALLBACK: Record<number, string> = {
   8: 'Draft'
 };
 
+/**
+ * Fixed labels for the two non-AoW scope buckets (`changes/overview-aow-cross-filter`, design.md
+ * §5 label table) — the server sends no `label`, and neither string is a `TermKey` today
+ * (`terminology.config.ts` only carries the Initiative ↔ Science Program P22/P25 swap). AoW bucket
+ * names are resolved from the ToC data the client already has (`aowsByCode`) instead of a lookup
+ * table.
+ */
+const OVERVIEW_SCOPE_FIXED_LABEL: Record<string, string> = {
+  INTERMEDIATE: 'Intermediate outcomes',
+  EOI_2030: '2030 outcomes',
+  UNTAGGED: 'Not tagged to a ToC area'
+};
+
 /** Science-Program role id for "Primary submitter" on a bilateral result. The wire sends a STRING. */
 const BILATERAL_PRIMARY_ROLE_ID = '1';
 
@@ -210,6 +225,38 @@ export interface OverviewAowProgressRowRich {
   remaining: number;
   /** P2-3296 AC3 — this Area of Work's ToC achievement, beside the reported-KPI count above. */
   achievement?: TocAchievement | null;
+}
+
+/**
+ * One display-ready scope option (`changes/overview-aow-cross-filter`, `OSF-R-1`/`OSF-R-2`).
+ * `program-overview`'s scope control (`OSF-T-6`) and breakdown (`OSF-T-7`) render these — they do
+ * not derive them (`OSF-DD-4`).
+ * @akili-spec changes/overview-aow-cross-filter
+ */
+export interface OverviewScopeOption {
+  key: string;
+  kind: 'aow' | 'outcome' | 'untagged';
+  name: string;
+  count: number;
+  /**
+   * `OSF-T-13` (mockup drift — the breakdown's status-bar column) — the bucket's OWN `byStatus`
+   * (`ScopeBucket.byStatus`, `OSF-T-3`'s additive payload, the SAME field `overviewStatusSegments`
+   * already reads once a scope is selected). Threaded straight through with no new fetch and no
+   * server change — `scopeOptions()` below is the only writer. Optional so every pre-existing
+   * `OverviewScopeOption` literal (tests, `scopeGroups()`'s consumer) stays valid without it.
+   */
+  byStatus?: Record<number, number>;
+}
+
+/**
+ * The unfiltered per-scope breakdown (`OSF-R-13`) — `rows` plus the two aggregates its
+ * reconciliation sentence needs, so the consumer sums nothing itself.
+ * @akili-spec changes/overview-aow-cross-filter
+ */
+export interface OverviewScopeBreakdown {
+  rows: OverviewScopeOption[];
+  aowSubtotal: number;
+  total: number;
 }
 
 /**
@@ -372,6 +419,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   private pendingKpi: string | null = null;
   /** Skip echoing Planned URL params while hydrating from the query string. */
   private restoringPlannedUrl = false;
+  /**
+   * ToC-scope code from `?scope=` (`changes/overview-aow-cross-filter`, `OSF-DD-12`), applied once
+   * the program's `scopeOptions()` are known. An unrecognised code (an AoW absent from THIS
+   * program, or a stale bucket key) is simply dropped — `overviewScope` stays `null` ("All"),
+   * never an empty page.
+   */
+  private pendingOverviewScope: string | null = null;
 
   // ── Next pending + session counter (MRF-R-3/R-3.1/R-4) ───────────────────────────────────
   // @akili-spec changes/mass-reporting-flow
@@ -429,6 +483,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   /** Areas of Work cached by program code (signal-backed for template reactivity). */
   readonly aowsByCode = signal<Map<string, Unit[]>>(new Map());
   private readonly loadingCodes = signal<Set<string>>(new Set());
+  /**
+   * `clarisa-global-units`'s additive `scopeBuckets[]` (design.md §5, `OSF-T-3`), cached by
+   * program code exactly like `aowsByCode` above — same call, same response, no new request
+   * (`OSF-NFR Performance`). Populated by `cacheAows()`.
+   * @akili-spec changes/overview-aow-cross-filter
+   */
+  private readonly scopeBucketsByCode = signal<Map<string, ScopeBucket[]>>(new Map());
 
   /** AOWs + loading state for the currently selected program. */
   readonly aows = computed(() => {
@@ -872,6 +933,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         // program's Open phase — a phase picked for the PREVIOUS program is not a valid selection
         // for this one.
         this.selectedVersionId.set(null);
+        // ToC-scope filter (`changes/overview-aow-cross-filter`, `OSF-DD-5`): a scope picked for
+        // the PREVIOUS program is not a valid selection for this one — reset beside the Reporting
+        // filters' own per-program reset above, not on every `selected()` identity churn.
+        this.overviewScope.set(null);
       }
     });
 
@@ -958,6 +1023,25 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         setTimeout(() => this.scrollToHighlightedKpi(match), 0);
       }
       this.consumeKpiQueryParam();
+    });
+
+    /**
+     * Restore `?scope=` (`changes/overview-aow-cross-filter`, `OSF-DD-12`), read in `restoreFromUrl()`
+     * below. `scopeOptions()` is read UNCONDITIONALLY (before the `pendingOverviewScope` early
+     * return) so this effect re-subscribes even on a run where nothing is pending yet — it must
+     * still react once the options arrive from the async `GET_ClarisaGlobalUnits` call.
+     */
+    effect(() => {
+      const options = this.scopeOptions();
+      const pending = this.pendingOverviewScope;
+      if (!pending) return;
+      if (!options.length) return; // wait for this program's buckets to load
+      this.pendingOverviewScope = null;
+      // An AoW absent from THIS program (or a stale bucket key) falls back to "All" — `overviewScope`
+      // is already `null` — rather than rendering an empty page.
+      if (options.some(o => o.key === pending)) {
+        this.overviewScope.set(pending);
+      }
     });
 
     /**
@@ -1107,7 +1191,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       const onPlanned = this.rfrView() === 'planned';
       const tocView = onPlanned ? this.plannedBrowseView() : null;
       const tocAow = onPlanned && tocView === 'byAow' ? this.plannedHloAowCode() : null;
-      if (this.pendingAow || this.pendingFilters || this.restoringPlannedUrl) return;
+      // ToC-scope filter (`OSF-DD-12`): read here, in the SAME url-mirror effect as every other
+      // piece of URL state — a second, independent `router.navigate` effect would race this one
+      // (both read the URL's current queryParams before either write lands, so whichever loses the
+      // router's cancel-and-supersede would silently drop its own params for that flush).
+      const overviewScopeParam = this.overviewScope();
+      if (this.pendingAow || this.pendingFilters || this.restoringPlannedUrl || this.pendingOverviewScope) return;
       this.router.navigate([], {
         relativeTo: this.route,
         queryParams: {
@@ -1121,7 +1210,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           q: aow && q ? q : null,
           // Planned ToC browse mode (+ selected AoW when browsing By AOW)
           tocView: tocView,
-          tocAow: tocAow
+          tocAow: tocAow,
+          // `scope` is free on this route — `phase`/`reviewResult`/`reviewResultId`/`kpi`/`tocView`
+          // are taken (`OSF-DD-12`).
+          scope: overviewScopeParam ?? null
         },
         queryParamsHandling: 'merge',
         replaceUrl: true
@@ -1317,18 +1409,69 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   // ── Overview tab feeds (real SP / AoW / ToC data) ─────────────────────────
 
+  // ── ToC-scope filter (`changes/overview-aow-cross-filter`) ────────────────
+  //
+  // `overviewScope` is the second, independent axis beside the section tabs (`OSF-R-1`). `null` =
+  // "All areas and outcomes" and MUST reproduce today's unfiltered figures exactly (`OSF-AC-1`) —
+  // every computed below branches on `null` before touching its existing unfiltered logic, so the
+  // unfiltered path is never rewritten, only reused. Reset on program change (`OSF-DD-5`, the
+  // constructor effect below) and synced to `?scope=` (`OSF-DD-12`, the URL-mirror effect and
+  // `restoreFromUrl()`).
+  readonly overviewScope = signal<string | null>(null);
+
+  /** The current program's scope buckets (`OSF-T-3`'s additive payload), or `[]` before they load. */
+  readonly scopeBuckets = computed<ScopeBucket[]>(() => {
+    const code = this.selected()?.initiativeCode;
+    if (!code) return [];
+    return this.scopeBucketsByCode().get(code) ?? [];
+  });
+
   /**
-   * Reporting-status meter + legend. Built from the fixed slot list, not from the API order, so
-   * the five reference states always show in the same order and `Approved` still reads `0`.
+   * Display-ready scope options (`OSF-R-1`/`OSF-R-2`), grouped `Areas of work` → `Strategic
+   * outcomes` → `Outside the Theory of Change` (`OSF-AC-2`) — `program-overview`'s control
+   * (`OSF-T-6`) renders these, it does not derive them (`OSF-DD-4`). AoW names come from the ToC
+   * data already cached in `aowsByCode`; the two fixed outcome/untagged labels come from
+   * `OVERVIEW_SCOPE_FIXED_LABEL`.
    */
-  readonly overviewStatusSegments = computed<OverviewStatusSegment[]>(() => {
-    const statuses = this.latestVersion(this.selected())?.statuses ?? [];
-    if (!statuses.length) return [];
-    const countOf = (statusId: number) => statuses.find(s => s.statusId === statusId)?.count ?? 0;
-    // Real `status_name` from the wire, never the slot `label` — falls back to the catalogue map
-    // only when the wire omits/empties the name (`OVW-DD-2`).
-    const statusNameOf = (statusId: number) =>
-      statuses.find(s => s.statusId === statusId)?.statusName?.trim() || OVERVIEW_STATUS_NAME_FALLBACK[statusId] || '';
+  readonly scopeOptions = computed<OverviewScopeOption[]>(() => {
+    const code = this.selected()?.initiativeCode;
+    const units = code ? (this.aowsByCode().get(code) ?? []) : [];
+    const kindOrder: Record<ScopeBucket['kind'], number> = { aow: 0, outcome: 1, untagged: 2 };
+    return [...this.scopeBuckets()]
+      .sort((a, b) => kindOrder[a.kind] - kindOrder[b.kind])
+      .map(bucket => ({
+        key: bucket.key,
+        kind: bucket.kind,
+        name:
+          bucket.kind === 'aow'
+            ? (units.find(u => u.code === bucket.key)?.name ?? bucket.key)
+            : (OVERVIEW_SCOPE_FIXED_LABEL[bucket.key] ?? bucket.key),
+        count: bucket.total,
+        // `OSF-T-13` — the breakdown's status-bar segments read this straight from the bucket.
+        byStatus: bucket.byStatus
+      }));
+  });
+
+  /**
+   * The unfiltered per-scope breakdown (`OSF-R-13`) — `scopeOptions()` plus the two aggregates its
+   * reconciliation sentence needs, so the consumer (`OSF-T-7`) sums nothing itself.
+   */
+  readonly scopeBreakdown = computed<OverviewScopeBreakdown>(() => {
+    const rows = this.scopeOptions();
+    return {
+      rows,
+      aowSubtotal: rows.filter(r => r.kind === 'aow').reduce((sum, r) => sum + r.count, 0),
+      total: rows.reduce((sum, r) => sum + r.count, 0)
+    };
+  });
+
+  /**
+   * Shared segment-assembly for `overviewStatusSegments` below — the same `OVERVIEW_STATUS_SLOTS`
+   * shape fed from either source (unfiltered `latestVersion().statuses`, or a `scopeBuckets` entry's
+   * `byStatus`), so the two never duplicate the slot/discontinued assembly and the unfiltered path
+   * stays byte-identical to before this spec (`OSF-AC-1`).
+   */
+  private buildOverviewStatusSegments(countOf: (statusId: number) => number, statusNameOf: (statusId: number) => string): OverviewStatusSegment[] {
     const linkOf = (statusId: number, count: number): OverviewLink | null => (count > 0 ? { status: statusNameOf(statusId) } : null);
     const segments: OverviewStatusSegment[] = OVERVIEW_STATUS_SLOTS.map(slot => {
       const count = countOf(slot.statusId);
@@ -1355,6 +1498,34 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       });
     }
     return segments;
+  }
+
+  /**
+   * Reporting-status meter + legend. Built from the fixed slot list, not from the API order, so
+   * the five reference states always show in the same order and `Approved` still reads `0`.
+   *
+   * `overviewScope() === null` keeps the ORIGINAL unfiltered logic untouched (`OSF-AC-1`). Once a
+   * scope is selected, the segments come from that scope's bucket `byStatus` instead (`OSF-R-4`,
+   * `OSF-AC-5`) — resolved through the SAME single-homed filter rule (`OSF-DD-6`) the hero row
+   * below and (`OSF-T-5`) the W3 cards use, so all three surfaces can never drift apart.
+   */
+  readonly overviewStatusSegments = computed<OverviewStatusSegment[]>(() => {
+    const scope = this.overviewScope();
+    if (scope === null) {
+      const statuses = this.latestVersion(this.selected())?.statuses ?? [];
+      if (!statuses.length) return [];
+      const countOf = (statusId: number) => statuses.find(s => s.statusId === statusId)?.count ?? 0;
+      // Real `status_name` from the wire, never the slot `label` — falls back to the catalogue map
+      // only when the wire omits/empties the name (`OVW-DD-2`).
+      const statusNameOf = (statusId: number) =>
+        statuses.find(s => s.statusId === statusId)?.statusName?.trim() || OVERVIEW_STATUS_NAME_FALLBACK[statusId] || '';
+      return this.buildOverviewStatusSegments(countOf, statusNameOf);
+    }
+    const [bucket] = filterRowsByScope(this.scopeBuckets(), scope, b => b.key);
+    if (!bucket) return [];
+    const countOf = (statusId: number) => bucket.byStatus[statusId] ?? 0;
+    const statusNameOf = (statusId: number) => OVERVIEW_STATUS_NAME_FALLBACK[statusId] || '';
+    return this.buildOverviewStatusSegments(countOf, statusNameOf);
   });
 
   /**
@@ -1418,10 +1589,14 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * NOT zero-target (achieved > 0), so `stateOf` correctly lands it in `in-progress` (the C-2
    * orphan — the partition stays total). Sort: remaining DESC, tie code ASC (OAH-R-3). Loading
    * reuses `loadingAows()` — no new aggregate computed (design B-16).
+   *
+   * `changes/overview-aow-cross-filter` `OSF-R-11`: with a scope selected, narrows to that
+   * scope's row via the single-homed `filterRowsByScope` (`OSF-DD-6`) — `scope === null` returns
+   * every row unchanged, keeping `OSF-AC-1`'s unfiltered figures intact.
    * @akili-spec changes/overview-aow-progress-hero
    */
   readonly overviewAowProgressRich = computed<OverviewAowProgressRowRich[]>(() => {
-    return this.indicatorsByAow()
+    const rows = this.indicatorsByAow()
       .map(b => {
         const inds = (b.indicators ?? []).filter(i => i?.__tier !== 'outcome');
         const { counted, zeroTarget } = applyZeroTargetRule(inds);
@@ -1453,6 +1628,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       })
       .filter(r => r.total > 0 || !this.loadingAows())
       .sort((a, b) => b.remaining - a.remaining || a.code.localeCompare(b.code));
+    return filterRowsByScope(rows, this.overviewScope(), r => r.code);
   });
 
   /**
@@ -1580,9 +1756,21 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return this.bilateralRowsByKey().get(key) ?? [];
   });
 
+  /**
+   * `bilateralRows()` narrowed to the selected scope (`OSF-R-3`, `OSF-T-5`) via the SAME
+   * single-homed rule (`OSF-DD-6`) the hero row and the W1/W2 status bucket use — `row.acronym` is
+   * already on the wire (`result.repository.ts` selects `MAX(twp.acronym) AS acronym`), so this
+   * partitions an array already in the client with no server change and no residual arithmetic
+   * (`OSF-DD-3b`). A `null`/empty `acronym` lands in `UNTAGGED` rather than being dropped from
+   * every scope. `overviewScope() === null` returns every row unchanged.
+   */
+  private readonly scopedBilateralRows = computed<ResultToReview[]>(() =>
+    filterRowsByScope(this.bilateralRows(), this.overviewScope(), r => r.acronym)
+  );
+
   /** Only the rows where this programme is the primary submitter (role id '1'). */
   private readonly bilateralPrimaryRows = computed(() =>
-    this.bilateralRows().filter(r => String(r.initiative_role_id ?? '') === BILATERAL_PRIMARY_ROLE_ID)
+    this.scopedBilateralRows().filter(r => String(r.initiative_role_id ?? '') === BILATERAL_PRIMARY_ROLE_ID)
   );
 
   /**
@@ -1604,9 +1792,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return !this.bilateralRowsByKey().has(key);
   });
 
-  /** Centers with reported W3/bilateral results, ranked descending by count with alphabetical tie-breaking. */
+  /**
+   * Centers with reported W3/bilateral results, ranked descending by count with alphabetical
+   * tie-breaking. `OSF-T-5`: reads the scope-narrowed rows so this card reconciles with
+   * `overviewBilateralCategories` / `overviewBilateralStatusSegments` under any scope (`OSF-AC-4`).
+   */
   readonly overviewBilateralCenters = computed<OverviewCenterBar[]>(() => {
-    const rows = this.bilateralRows();
+    const rows = this.scopedBilateralRows();
     if (!rows.length) return [];
     const byCenter = new Map<string, number>();
     for (const row of rows) {
@@ -1623,7 +1815,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   });
 
-  /** Bilateral results by category, primary-role only — matches the card's subtitle. */
+  /**
+   * Bilateral results by category, primary-role only — matches the card's subtitle. `OSF-T-5`:
+   * `bilateralPrimaryRows` already derives from the scope-narrowed `scopedBilateralRows`, so this
+   * card filters by scope for free.
+   */
   readonly overviewBilateralCategories = computed<OverviewCategoryBar[]>(() => {
     const byName = new Map<string, number>();
     for (const row of this.bilateralPrimaryRows()) {
@@ -1636,9 +1832,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   });
 
-  /** Bilateral results reporting status segments (Pending Review, In QA, Approved, Rejected). */
+  /**
+   * Bilateral results reporting status segments (Pending Review, In QA, Approved, Rejected).
+   * `OSF-T-5`: reads the scope-narrowed rows, same population as `overviewBilateralCenters` /
+   * `overviewBilateralCategories` under any scope (`OSF-AC-4`).
+   */
   readonly overviewBilateralStatusSegments = computed<OverviewStatusSegment[]>(() => {
-    const rows = this.bilateralRows();
+    const rows = this.scopedBilateralRows();
     if (!rows.length) return [];
 
     const byStatus = new Map<string, number>();
@@ -1771,11 +1971,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * the primary-only set `overviewBilateralCategories` uses — so row totals reconcile with the
    * center bars. Capped at the top 8 centers by total (desc, then name); `shownOf` is only set
    * when more than 8 exist. `Not specified` rows are non-navigable (`OVW-DD-3`).
+   *
+   * `OSF-T-5` (Leader adjudication): has the same scope dimension (`row.acronym`) as its three
+   * siblings, so it filters too rather than taking the `Program-wide` treatment — reads the same
+   * `scopedBilateralRows` via the single-homed `filterRowsByScope` (`OSF-DD-6`).
    */
   readonly overviewBilateralHeatmap = computed<HeatmapModel>(() => {
     const caption = 'W3/Bilateral results by center and category';
     const subtitle = 'Bilateral results in review (Submitted · In QA · Approved)';
-    const rows = this.bilateralRows();
+    const rows = this.scopedBilateralRows();
     if (!rows.length) return { rows: [], cols: [], cells: [], caption, subtitle };
 
     const cols = [...new Set(rows.map(r => r.indicator_category?.trim()).filter((c): c is string => !!c))].sort((a, b) =>
@@ -2281,6 +2485,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (this.pendingAow) {
       this.pendingFilters = { typ: qp.get('typ') || null, st: qp.get('st') || null, q: qp.get('q') || '' };
     }
+    // ToC-scope filter (`OSF-DD-12`): read once here, resolved by the constructor effect once
+    // this program's `scopeOptions()` are known.
+    this.pendingOverviewScope = qp.get('scope') || null;
     this.restorePlannedBrowseFromQuery(qp);
   }
 
@@ -2332,13 +2539,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (this.aowsByCode().has(code) || this.loadingCodes().has(code)) return;
     this.loadingCodes.update(set => new Set(set).add(code));
     this.api.resultsSE.GET_ClarisaGlobalUnits(code).subscribe({
-      next: ({ response }) => this.cacheAows(code, response?.units ?? []),
-      error: () => this.cacheAows(code, [])
+      // `scopeBuckets` (OSF-T-3) rides the SAME response as `units` — no second request.
+      next: ({ response }) => this.cacheAows(code, response?.units ?? [], response?.scopeBuckets ?? []),
+      error: () => this.cacheAows(code, [], [])
     });
   }
 
-  private cacheAows(code: string, units: Unit[]): void {
+  private cacheAows(code: string, units: Unit[], scopeBuckets: ScopeBucket[] = []): void {
     this.aowsByCode.update(map => new Map(map).set(code, units));
+    this.scopeBucketsByCode.update(map => new Map(map).set(code, scopeBuckets));
     this.loadingCodes.update(set => {
       const next = new Set(set);
       next.delete(code);

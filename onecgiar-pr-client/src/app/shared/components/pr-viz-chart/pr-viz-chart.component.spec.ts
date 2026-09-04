@@ -146,7 +146,7 @@ describe('PrVizChartComponent', () => {
       fixture.componentRef.setInput('chartTitle', 'Custom Chart Title');
       fixture.detectChanges();
 
-      const table = fixture.nativeElement.querySelector('table.sr-only');
+      const table = fixture.nativeElement.querySelector('table');
       expect(table).not.toBeNull();
       expect(table.getAttribute('aria-label')).toBe('Custom Chart Title');
 
@@ -176,13 +176,32 @@ describe('PrVizChartComponent', () => {
       expect(mockChartInstance.setOption).toHaveBeenCalled();
     });
 
+    it('wraps the table in a div.sr-only instead of putting sr-only on the table (OSF-DD-14)', () => {
+      // `.sr-only` sets `width:1px`, but under `table-layout: auto` a specified width is a
+      // minimum, not a cap — `sr-only` on a `<table>` cannot constrain it, and an absolutely
+      // positioned descendant with nothing clipping it inflates the document's scroll area
+      // (execution.md §2). The wrapper `<div>` honours `width:1px`; the table keeps its
+      // semantics for assistive tech.
+      fixture.componentRef.setInput('options', sampleOptions);
+      fixture.componentRef.setInput('tableModel', mockTableModel);
+      fixture.detectChanges();
+
+      const wrapper = fixture.nativeElement.querySelector('div.sr-only');
+      expect(wrapper).not.toBeNull();
+
+      const table = wrapper.querySelector('table');
+      expect(table).not.toBeNull();
+      expect(table.classList.contains('sr-only')).toBe(false);
+      expect(table.getAttribute('aria-label')).toBe(mockTableModel.caption);
+    });
+
     it('falls back to tableModel caption for aria-label when chartTitle is empty', () => {
       fixture.componentRef.setInput('options', sampleOptions);
       fixture.componentRef.setInput('tableModel', mockTableModel);
       fixture.componentRef.setInput('chartTitle', '');
       fixture.detectChanges();
 
-      const table = fixture.nativeElement.querySelector('table.sr-only');
+      const table = fixture.nativeElement.querySelector('table');
       expect(table.getAttribute('aria-label')).toBe('Results by report year');
     });
 
@@ -198,7 +217,7 @@ describe('PrVizChartComponent', () => {
         'Warning: Chart rendered without required accessibility tableModel'
       );
 
-      const table = fixture.nativeElement.querySelector('table.sr-only');
+      const table = fixture.nativeElement.querySelector('table');
       expect(table).toBeNull();
       expect(mockChartInstance.clear).toHaveBeenCalled();
       expect(mockChartInstance.setOption).not.toHaveBeenCalled();
@@ -213,7 +232,7 @@ describe('PrVizChartComponent', () => {
       const warningAlert = fixture.nativeElement.querySelector('div.sr-only[role="alert"]');
       expect(warningAlert).toBeNull();
 
-      const table = fixture.nativeElement.querySelector('table.sr-only');
+      const table = fixture.nativeElement.querySelector('table');
       expect(table).toBeNull();
       expect(mockChartInstance.setOption).toHaveBeenCalledWith(sampleOptions, true);
     });

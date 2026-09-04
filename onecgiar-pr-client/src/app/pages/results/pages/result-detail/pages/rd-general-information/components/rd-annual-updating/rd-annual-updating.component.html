@@ -10,14 +10,38 @@
       </div>
     </div>
 
+    <!-- P2-3292 Step 4: once the result is STORED as inactive the answer locks. `isStatic` is the
+         escape hatch that forces editability despite the global read-only, so the lock has to close
+         BOTH: turn the hatch off (annualUpdatingEditable) and disable the control. -->
     <app-pr-radio-button
       [(ngModel)]="this.generalInfoBody.is_discontinued"
       [verticalAlignment]="true"
       [options]="this.options"
       optionLabel="name"
       optionValue="value"
+      [disabled]="lockedByDiscontinuation"
       [isStatic]="annualUpdatingEditable">
     </app-pr-radio-button>
+
+    <!-- The way out of the lock. Only an administrator sees it; for everyone else the notice below
+         says who to ask, so nobody is left staring at a greyed-out form with no explanation — which
+         is the trap P2-2923 was raised for. -->
+    @if (canReopenDiscontinuation) {
+      <div class="reopen">
+        <button type="button" class="reopen--button" (click)="reopenDiscontinuation()">Reopen this innovation</button>
+        <div class="reopen--hint">Sets the innovation back to active and clears the reasons. Remember to save.</div>
+      </div>
+    }
+
+    @if (showDiscontinuationLockNotice) {
+      <div class="message">
+        <i class="pi pi-lock" style="font-size: 14px; margin-top: 2px; color: var(--pr-color-blue-600)"></i>
+        <div class="message--text">
+          This innovation is reported as inactive, so this block can no longer be edited. If it was closed by mistake, ask a
+          PRMS administrator to reopen it.
+        </div>
+      </div>
+    }
 
     @if (this.generalInfoBody.is_discontinued == false) {
       <div class="message">
@@ -27,17 +51,41 @@
     }
 
     <div class="discontinued_options" *ngIf="this.generalInfoBody.is_discontinued">
+      <!-- P2-3292 Step 2: the prompt above the reason checklist. 2026 branch only — up to 2025 the
+           lead-in is part of the second radio label ("...was discontinued, because:"), and Step 1
+           replaced that label with a bare "No", leaving the checklist with no prompt at all.
+           The label is a question, so [useColon]="false" (same trap as the header above). -->
+      @if (usesStatusTriggerWording) {
+        <div class="discontinued_options__header">
+          <app-pr-field-header
+            [label]="reasonsHeaderLabel"
+            [useColon]="false"
+            [description]="reasonsHeaderHint"
+            [showDescriptionLabel]="false">
+          </app-pr-field-header>
+        </div>
+      }
+
       @for (discontinuedOption of this.generalInfoBody.discontinued_options; track $index; let i = $index) {
         <div class="discontinued_option">
-          <app-pr-checkbox [label]="discontinuedOption?.option" [(ngModel)]="discontinuedOption.value" [isStatic]="annualUpdatingEditable">
+          <app-pr-checkbox
+            [label]="discontinuedOption?.option"
+            [(ngModel)]="discontinuedOption.value"
+            [readOnly]="lockedByDiscontinuation"
+            [isStatic]="annualUpdatingEditable">
           </app-pr-checkbox>
+          <!-- P2-3292 Step 2: which reason owns the free-text box is now the catalogue's call
+               (`requires_description`), because the 2026 "Other" row gets whatever id the
+               AUTO_INCREMENT hands it and would never have matched the literal 6. The legacy row
+               keeps being recognised by its id: flagging it would have meant an UPDATE on a live
+               catalogue row, and rewriting those is exactly what epic P2-3243 forbids. -->
           <app-pr-input
-            *ngIf="discontinuedOption?.investment_discontinued_option_id == 6"
+            *ngIf="needsDescription(discontinuedOption)"
             placeholder="Enter text"
             type="text"
             [required]="false"
             [(ngModel)]="discontinuedOption.description"
-            [disabled]="!annualUpdatingEditable">
+            [disabled]="lockedByDiscontinuation || !annualUpdatingEditable">
           </app-pr-input>
         </div>
       }

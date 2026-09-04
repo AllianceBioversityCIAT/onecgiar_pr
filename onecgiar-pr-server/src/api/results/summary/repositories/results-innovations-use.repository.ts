@@ -181,13 +181,38 @@ export class ResultsInnovationsUseRepository
         riu.readiness_level_explanation,
         riu.innov_use_to_be_determined,
         riu.innov_use_2030_to_be_determined,
+        -- P2-3295 §3. 🛑 This SELECT lists its columns one by one: a column missing here is written
+        -- and never read back, which reaches the screen as an empty field after a reload with no
+        -- error anywhere (that is exactly what happened to Policy Change's actors_influenced).
+        riu.innov_use_2030_justification,
+        -- P2-3537 §4. Same 🛑 as above: this SELECT lists columns one by one, so a column missing
+        -- here is written and never read back — the reporter fills the box, saves, returns and
+        -- finds it empty, with no error in any log.
+        riu.new_users_added,
+        riu.use_expansion_narrative,
         ciul.level AS level,
-        r.is_discontinued
+        r.is_discontinued,
+        -- The joins below were already here and unused. This alias is what lets the read side offer
+        -- the projection the reporter entered in the previous phase without a second round trip to
+        -- resolve the phase.
+        previous_r.id AS previous_result_id,
+        -- P2-3537 §4: the block has to label the figure with the round it came from
+        -- ("1,200 users (FY2025)"). Taken from the previous phase of THIS result, never from the
+        -- open phase minus one — a result can sit in a phase that is not the open one.
+        previous_v.phase_year AS previous_phase_year
       FROM result r
       JOIN results_innovations_use riu
         ON riu.results_id = r.id
       AND riu.is_active = 1
-      JOIN clarisa_innovation_use_levels ciul
+      -- 🛑 LEFT, and it has to stay LEFT. An INNER here took the whole section down after every
+      -- phase change: createQueries replicates results_innovations_use copying only male_using
+      -- and female_using, so the new phase's row carries a NULL innovation_use_level_id. With an
+      -- INNER JOIN the catalogue matched nothing, this query returned no row, getInnovationUse
+      -- threw 404 "Innovation Use not found", and the client -- which reaches this through
+      -- GET_innovationUseP25 for every P25 result -- swallowed the error into console and painted
+      -- an EMPTY form. The reporter saw everything they filed last year as gone.
+      -- Found 3 Sep 2026 by phase-changing result 8694 into 11496 in prtest.
+      LEFT JOIN clarisa_innovation_use_levels ciul
         ON ciul.id = riu.innovation_use_level_id
       LEFT JOIN version v
         ON v.id = r.version_id

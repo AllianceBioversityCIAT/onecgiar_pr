@@ -155,9 +155,9 @@ describe('ProgramOverviewComponent', () => {
     expect(headings).toEqual([
       'About this program',
       'Progress by area of work',
-      'Reporting status',
+      'W1/W2 Reporting Status',
       'W1/W2 results by category and status',
-      'Reporting status',
+      'W3/Bilateral Reporting Status',
       'W3/Bilateral results by indicator category',
       'W3/Bilateral results by center and category',
       'Theory of Change map'
@@ -423,7 +423,7 @@ describe('ProgramOverviewComponent', () => {
       expect(statusCards.length).toBeGreaterThanOrEqual(segments.length);
 
       const donutHost = fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).find(
-        host => host.componentInstance.chartTitle() === 'Reporting status'
+        host => host.componentInstance.chartTitle() === 'W1/W2 Reporting Status'
       );
       expect(donutHost).toBeTruthy();
       expect(donutHost?.componentInstance.tableModel()).toBeTruthy();
@@ -462,7 +462,7 @@ describe('ProgramOverviewComponent', () => {
 
       expect(fixture.nativeElement.textContent).not.toContain('No results reported for this program yet.');
       const donutHost = fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).find(
-        host => host.componentInstance.chartTitle() === 'Reporting status'
+        host => host.componentInstance.chartTitle() === 'W1/W2 Reporting Status'
       );
       expect(donutHost).toBeTruthy();
       expect(donutHost?.componentInstance.loading()).toBe(true);
@@ -665,7 +665,7 @@ describe('ProgramOverviewComponent', () => {
         el => el.getAttribute('aria-hidden') === 'true' && el.textContent?.trim() === 'W1/W2'
       );
       const w12CardIndex = children.findIndex(
-        el => el.querySelector('h2')?.textContent?.trim() === 'Reporting status'
+        el => el.querySelector('h2')?.textContent?.trim() === 'W1/W2 Reporting Status'
       );
       expect(separatorIndex).toBeGreaterThan(-1);
       expect(w12CardIndex).toBe(separatorIndex + 1);
@@ -678,7 +678,7 @@ describe('ProgramOverviewComponent', () => {
         el => el.getAttribute('aria-hidden') === 'true' && el.textContent?.trim() === 'W3/Bilateral'
       );
       const bilateralCardIndex = children.findIndex(
-        (el, idx) => idx > separatorIndex && el.querySelector('h2')?.textContent?.trim() === 'Reporting status'
+        (el, idx) => idx > separatorIndex && el.querySelector('h2')?.textContent?.trim() === 'W3/Bilateral Reporting Status'
       );
       expect(separatorIndex).toBeGreaterThan(-1);
       expect(bilateralCardIndex).toBe(separatorIndex + 1);
@@ -740,7 +740,7 @@ describe('ProgramOverviewComponent', () => {
 
       expect(fixture.nativeElement.textContent).not.toContain('No bilateral results reported for this program yet.');
       const donutHost = fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).find(
-        host => host.componentInstance.chartTitle() === 'Bilateral reporting status'
+        host => host.componentInstance.chartTitle() === 'W3/Bilateral Reporting Status'
       );
       expect(donutHost).toBeTruthy();
       expect(donutHost?.componentInstance.loading()).toBe(true);
@@ -856,7 +856,7 @@ describe('ProgramOverviewComponent', () => {
       fixture.detectChanges();
       expect(component.activeSection()).toBe('w1w2');
       let headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
-      expect(headings).toContain('Reporting status');
+      expect(headings).toContain('W1/W2 Reporting Status');
       expect(headings).toContain('W1/W2 results by category and status');
       expect(headings).not.toContain('W3/Bilateral results by indicator category');
       expect(headings).not.toContain('Progress by area of work');

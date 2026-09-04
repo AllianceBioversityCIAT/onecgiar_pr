@@ -73,7 +73,9 @@ describe('SectionContributorsComponent', () => {
 
     api = {
       resultsSE: {
-        GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] }))
+        GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] })),
+        // P25 programs/accelerators catalogue for "Contributing science programs" (2026-09-03).
+        GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] }))
       }
     };
 
@@ -535,7 +537,7 @@ describe('SectionContributorsComponent', () => {
       component.contributorsHydrated.set(true);
       component.onCentersChange(null as any);
       expect(component.selectedCenterInstitutionIds()).toEqual([]);
-      expect(autoSave.saveContributors).toHaveBeenCalledWith({ contributing_center: [], contributing_bilateral_projects: [] });
+      expect(autoSave.saveContributors).toHaveBeenCalledWith({ contributing_center: [], contributing_bilateral_projects: [], contributing_programs: [] });
     });
 
     it('skips ids that are not part of the available centers', () => {
@@ -545,7 +547,8 @@ describe('SectionContributorsComponent', () => {
       component.onCentersChange([5, 404]);
       expect(autoSave.saveContributors).toHaveBeenCalledWith({
         contributing_center: [{ institution_id: 5 }],
-        contributing_bilateral_projects: []
+        contributing_bilateral_projects: [],
+        contributing_programs: []
       });
     });
 
@@ -565,7 +568,8 @@ describe('SectionContributorsComponent', () => {
         contributing_bilateral_projects: [
           { project_id: 1, is_lead: true },
           { project_id: 2, is_lead: false }
-        ]
+        ],
+        contributing_programs: []
       });
     });
 
@@ -574,7 +578,7 @@ describe('SectionContributorsComponent', () => {
       component.contributorsHydrated.set(true);
       component.onProjectsChange(null as any);
       expect(component.selectedProjectIds()).toEqual([]);
-      expect(autoSave.saveContributors).toHaveBeenCalledWith({ contributing_bilateral_projects: [], contributing_center: [] });
+      expect(autoSave.saveContributors).toHaveBeenCalledWith({ contributing_bilateral_projects: [], contributing_center: [], contributing_programs: [] });
     });
 
     it('skips ids that are not part of the available projects', () => {
@@ -584,7 +588,8 @@ describe('SectionContributorsComponent', () => {
       component.onProjectsChange([1, 99]);
       expect(autoSave.saveContributors).toHaveBeenCalledWith({
         contributing_bilateral_projects: [{ project_id: 1, is_lead: false }],
-        contributing_center: []
+        contributing_center: [],
+        contributing_programs: []
       });
     });
   });
@@ -1187,16 +1192,51 @@ describe('SectionContributorsComponent', () => {
       });
     });
 
-    // Same house rule, same reason: nothing persists the contributing science programs either.
-    it('sends nothing of the contributing science programs to the server', () => {
+    // Nicoleta Trifa via Ángel Jarrín, 2026-09-03: contributing programs are persisted now
+    // (`contributing_programs[]` on the contributors PATCH), so picking one stages a save.
+    it('stages the contributing science programs for Save draft', () => {
       creation.selectedProject.set({ id: 1, sciencePrograms: [{ programId: 7, programCode: 'SP07' }] });
       build();
+      component.contributorsHydrated.set(true);
       autoSave.saveContributors.mockClear();
 
       component.onSecondarySpsModelChange([{ programId: 7 }]);
 
       expect(creation.selectedSecondarySps()).toEqual([{ programId: 7, programCode: 'SP07', allocation: '' }]);
-      expect(autoSave.saveContributors).not.toHaveBeenCalled();
+      expect(autoSave.saveContributors).toHaveBeenCalledWith(
+        expect.objectContaining({ contributing_programs: [{ science_program_id: 'SP07' }] })
+      );
+    });
+
+    it('offers every P25 program from the catalogue, not only the project\'s own, minus the primary', () => {
+      api.resultsSE.GET_AllInitiatives.mockReturnValue(
+        of({
+          response: [
+            { id: 1, official_code: 'SP01', name: 'Breeding for Tomorrow' },
+            { id: 6, official_code: 'SP06', name: 'Climate Action' },
+            { id: 20, official_code: 'AC01', short_name: 'Accelerator One' }
+          ]
+        })
+      );
+      creation.selectedPrimarySp.set({ programId: 6, programCode: 'SP06', allocation: '100' });
+      // A project mapped 100% to SP06 used to leave this list empty.
+      creation.selectedProject.set({ id: 1, sciencePrograms: [{ programId: 6, programCode: 'SP06' }] });
+      build();
+      fixture.detectChanges();
+
+      expect(api.resultsSE.GET_AllInitiatives).toHaveBeenCalledWith('p25');
+      expect(component.availableSecondarySpOptions().map(o => o.full_name)).toEqual([
+        'SP01 - Breeding for Tomorrow',
+        'AC01 - Accelerator One'
+      ]);
+    });
+
+    it('does not send contributing programs before the stored ones have been hydrated', () => {
+      build();
+      autoSave.saveContributors.mockClear();
+      component.onSecondarySpsModelChange([]);
+      const payload = autoSave.saveContributors.mock.calls.at(-1)?.[0] ?? {};
+      expect(payload).not.toHaveProperty('contributing_programs');
     });
 
     it('formats a linked result as code + name + type + title', () => {

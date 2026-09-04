@@ -48,6 +48,15 @@ const EVIDENCE_JUSTIFICATION_DESC = `<strong>Example:</strong> We chose readines
 
 const REFERENCE_MATERIALS_DESC = `Provide reference material(s) that describe the innovation<ul><li>Reference materials may include (science) publications, websites, newsletters, reports, newspaper articles, videos, etc.</li></ul>`;
 
+/**
+ * P2-3558 — what the person reads when the section could not be fetched. Plain language on purpose:
+ * the only two things that matter to them are that nothing they type is being kept, and that what
+ * they reported before is untouched.
+ */
+const LOAD_ERROR_NOTE =
+  'We could not load the information saved for this section, so the fields below are empty and nothing typed here will be saved. ' +
+  'Please reload the page to try again — the information reported earlier has not been changed.';
+
 const HAS_SCALING_STUDIES_OPTIONS = [
   { value: true, label: 'Yes' },
   { value: false, label: 'No' }
@@ -72,12 +81,32 @@ export class TypeInnovationDevComponent implements OnInit {
   readonly saving = computed(() => this.autoSave.fieldStatus()['type-specific'] === 'saving');
   showAllFields = signal(false);
 
+  /**
+   * P2-3558 — three-state load flag: `null` while the GET is still in flight, `true` once the
+   * server's body is in hand, `false` when the fetch failed. Same shape and the same
+   * "null means not loaded yet" contract the folder already uses for
+   * `hasLinkedResult = signal<boolean | null>(null)` (`../../section-contributors/section-contributors.component.ts:198`)
+   * and for `resultStatusId` (`../../../services/bilateral-creation.service.ts:351-357`).
+   *
+   * It exists because a save may only go out once the component knows what the server holds. `body`
+   * is constructed as `{}`, so a form that never loaded is indistinguishable from a form the user
+   * emptied — and `buildPayload()` sends `?? null` for every key. `GET summary/innovation-dev/get/result/:id`
+   * answers a server-side exception with a real **HTTP 500** (measured on prtest, 2-Sep-2026) and the
+   * interceptor rethrows it (`shared/interceptors/general-interceptor.service.ts:81-83`), so `next`
+   * never ran, `body` stayed `{}`, the form painted blank with no warning, and the first keystroke
+   * autosaved `null` over the stored short title, innovation developers, readiness level and the
+   * rest. `null` blocks for the same reason: the GET takes 240-620 ms on prtest against an 800 ms
+   * debounce, so an early edit could reach the PATCH before the body ever arrived.
+   */
+  readonly loaded = signal<boolean | null>(null);
+
   readonly shortTitleDesc = SHORT_TITLE_DESC;
   /** Bound by the template so the counter and the Submit check can never drift apart. */
   readonly shortTitleMaxWords = SHORT_TITLE_MAX_WORDS;
   readonly collaboratorsDesc = COLLABORATORS_DESC;
   readonly evidenceJustificationDesc = EVIDENCE_JUSTIFICATION_DESC;
   readonly referenceMaterialsDesc = REFERENCE_MATERIALS_DESC;
+  readonly loadErrorNote = LOAD_ERROR_NOTE;
   readonly hasScalingStudiesOptions = HAS_SCALING_STUDIES_OPTIONS;
 
   get isVarietyType(): boolean {
@@ -131,9 +160,21 @@ export class TypeInnovationDevComponent implements OnInit {
   private loadData(): void {
     const resultId = this.creationService.currentResultId();
     if (!resultId) return;
-    this.bilateralApi.GET_innovationDev(resultId).subscribe(({ response }) => {
-      this.body = response || {};
-      this.updateMds();
+    this.bilateralApi.GET_innovationDev(resultId).subscribe({
+      next: ({ response }) => {
+        this.body = response || {};
+        this.loaded.set(true);
+        this.updateMds();
+      },
+      error: () => {
+        this.body = {};
+        this.loaded.set(false);
+        // The checklist is published on EVERY outcome, failure included — same reason as the sibling
+        // section (`../type-capacity-sharing/type-capacity-sharing.component.ts:73-94`, P2-3355):
+        // publishing nothing leaves the section at "0/0 fields", which reads as "nothing required
+        // here" instead of as incomplete. Three unfilled items keep it honestly amber.
+        this.updateMds();
+      }
     });
   }
 
@@ -169,6 +210,12 @@ export class TypeInnovationDevComponent implements OnInit {
   }
 
   private queueTypeSave(debounceMs = 800): void {
+    // P2-3558 — the single choke point every write of this section goes through (`onFieldChange`,
+    // `onSave`, and the four add/delete helpers). A section that does not know what the server holds
+    // cannot tell "empty because the user emptied it" from "empty because it never loaded", so it
+    // writes nothing at all rather than blanking the stored record.
+    if (this.loaded() !== true) return;
+
     this.autoSave.schedulePayload('typeSpecific', this.buildPayload(), {
       debounceMs,
       statusKey: 'type-specific',
@@ -176,20 +223,53 @@ export class TypeInnovationDevComponent implements OnInit {
     });
   }
 
+  /**
+   * P2-3557 — `reference_materials` is the one key of this payload where **absent and empty mean
+   * opposite things to the server**, so it can never be defaulted.
+   *
+   * `InnovationDevService.saveEvidence` returns early only for `null`/`undefined`
+   * (`onecgiar-pr-server/src/api/results/summary/innovation_dev.service.ts:99-101`); with any other
+   * value — `[]` included — it walks every stored evidence of `evidence_type_id = 4` and sets
+   * `is_active = 0` on the ones whose link is not in the payload (`:110-125`). The caller gates on
+   * the same contract before even reaching it (`summary.service.ts:679`).
+   *
+   * `?? []` therefore turned "we do not know what this result has" into "delete everything it has".
+   * That was reachable through a failed GET: `.../result/abc` answers `500 {"response":{"error":true}}`
+   * (measured on prtest, 2-Sep-2026) and the interceptor rethrows it, so `body` stayed the `{}` it was
+   * constructed with and the first keystroke autosaved a wipe. **P2-3558 closed that route** — the
+   * `loaded` flag now refuses every save until the body has actually arrived — so this guard is no
+   * longer the only thing standing between a failed load and a deletion. It stays because it is the
+   * key's real contract, not a workaround: `undefined` and `[]` mean opposite things to the server
+   * whatever the load state, and a caller that builds a payload from a partial body must still not
+   * imply "delete everything".
+   *
+   * So the key is **omitted** whenever the body carries no array, and sent untouched whenever it
+   * does — a user who deleted the last row still sends `[]` and still gets the deletion. Same
+   * undefined-vs-value contract, and the same destructuring guarantee that the key is absent from the
+   * JSON rather than present with `undefined`, as `buildSectionPayload()` in the pooled-funding form
+   * (`pages/results/.../innovation-dev-info/innovation-dev-info.component.ts`, commit `0fca46d3a`,
+   * P2-3550 AC4).
+   *
+   * ⚠️ `scaling_studies_urls` needs no such treatment: its writer only runs when
+   * `scaling_studies_urls?.length` is truthy (`summary.service.ts:710-731`), so `[]` is a no-op there.
+   */
   private buildPayload(): Record<string, unknown> {
+    const { reference_materials } = this.body as { reference_materials?: unknown };
     const payload: Record<string, unknown> = {
       short_title: this.body.short_title ?? null,
       innovation_characterization_id: this.body.innovation_characterization_id ?? null,
       innovation_nature_id: this.body.innovation_nature_id ?? null,
-      innovation_developers: this.body.innovation_developers ?? null,
+      // The Lead contact person is the innovation developer (2026-09-03): the field left the form, but
+      // the column keeps a value for the API summary — the contact's name, else whatever was stored.
+      innovation_developers: this.creationService.resultLeadContact()?.trim() || this.body.innovation_developers || null,
       innovation_readiness_level_id: this.body.innovation_readiness_level_id ?? null,
       is_new_variety: this.body.is_new_variety ?? null,
       number_of_varieties: this.body.number_of_varieties ?? null,
       innovation_collaborators: this.body.innovation_collaborators ?? null,
       evidences_justification: this.body.evidences_justification ?? null,
-      reference_materials: this.body.reference_materials ?? [],
       has_scaling_studies: this.body.has_scaling_studies ?? null,
-      scaling_studies_urls: this.body.scaling_studies_urls ?? []
+      scaling_studies_urls: this.body.scaling_studies_urls ?? [],
+      ...(Array.isArray(reference_materials) ? { reference_materials } : {})
     };
     // Omit null PK so the server can AUTO_INCREMENT on first create.
     if (this.body.result_innovation_dev_id != null) {
@@ -199,9 +279,10 @@ export class TypeInnovationDevComponent implements OnInit {
   }
 
   /**
-   * P2-3391 AC9/AC10: the green check is the three MDS fields the story names — typology, innovation
-   * developer, readiness level — and nothing else. Short title moved to full metadata (AC8: strictly
-   * optional), so it can no longer hold the section back.
+   * P2-3391 AC9/AC10 named three MDS fields — typology, innovation developer, readiness level. Since
+   * 2026-09-03 the innovation developer is the Lead contact person (Section 1, already mandatory), so
+   * the green check here is typology + readiness level and nothing else. Short title is full metadata
+   * (AC8: strictly optional) and cannot hold the section back.
    *
    * P2-3340 still applies though: the 10-word ceiling on the short title is only painted red by
    * `pr-input`, so it is reported here as an INVALID item — but only while it is actually over the
@@ -215,11 +296,6 @@ export class TypeInnovationDevComponent implements OnInit {
         key: 'nature',
         label: 'Innovation typology (nature)',
         filled: this.body.innovation_nature_id != null
-      },
-      {
-        key: 'developers',
-        label: 'Innovation developer',
-        filled: !!this.body.innovation_developers?.trim()
       },
       {
         key: 'readiness',

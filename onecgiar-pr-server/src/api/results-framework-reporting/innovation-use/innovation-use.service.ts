@@ -89,6 +89,9 @@ export class InnovationUseService {
         has_scaling_studies,
         scaling_studies_urls,
         innov_use_2030_to_be_determined,
+        innov_use_2030_justification,
+        new_users_added,
+        use_expansion_narrative,
         innov_use_to_be_determined,
         is_discontinued,
         discontinued_options,
@@ -179,6 +182,15 @@ export class InnovationUseService {
         resultExist.innov_use_to_be_determined = innov_use_to_be_determined;
         resultExist.innov_use_2030_to_be_determined =
           innov_use_2030_to_be_determined;
+        // P2-3295 §3. `?? null` and not `|| null`: an empty string is the reporter clearing the box,
+        // and a missing key is a client that does not send this field at all — both mean "no
+        // justification", and neither must wipe a value the other surface just wrote.
+        resultExist.innov_use_2030_justification =
+          innov_use_2030_justification ?? null;
+        // P2-3537 §4. `?? null` and never `|| null`: with `||`, a reported 0 ("use was verified and
+        // did not grow", which §5 allows explicitly) would be stored as "not answered".
+        resultExist.new_users_added = new_users_added ?? null;
+        resultExist.use_expansion_narrative = use_expansion_narrative ?? null;
 
         if (innovation_use_level >= InnovationUseLevel.Level_6) {
           resultExist.readiness_level_explanation =
@@ -214,6 +226,10 @@ export class InnovationUseService {
         newInnUse.innov_use_to_be_determined = innov_use_to_be_determined;
         newInnUse.innov_use_2030_to_be_determined =
           innov_use_2030_to_be_determined;
+        newInnUse.innov_use_2030_justification =
+          innov_use_2030_justification ?? null;
+        newInnUse.new_users_added = new_users_added ?? null;
+        newInnUse.use_expansion_narrative = use_expansion_narrative ?? null;
 
         if (innovation_use_level >= InnovationUseLevel.Level_6) {
           newInnUse.readiness_level_explanation =
@@ -626,6 +642,15 @@ export class InnovationUseService {
       created_by: user,
       result_id: resultId,
       sex_and_age_disaggregation: el?.sex_and_age_disaggregation === true,
+      // P2-3537 section 7. `isNullData` and not `=== true` on purpose: for these two,
+      // "not answered" and "answered no" are different facts, and a default `false`
+      // would claim the reporter said age data is available.
+      age_disaggregation_not_available: this.isNullData(
+        el?.age_disaggregation_not_available,
+      ),
+      youth_split_applied_by_system: this.isNullData(
+        el?.youth_split_applied_by_system,
+      ),
       how_many: el?.how_many,
       addressing_demands: this.isNullData(el?.addressing_demands),
     };
@@ -670,6 +695,110 @@ export class InnovationUseService {
     };
   }
 
+  /**
+   * P2-3295 §3 — the 2030 projection of the SAME result in the previous reporting phase, or `null`
+   * when there is none (first-time reporting).
+   *
+   * Reuses the very readers the current phase uses, with the previous result's id, so the two
+   * projections can never be shaped differently on screen. Fails soft on purpose: an unreadable
+   * previous phase must not cost the reporter the section they came to fill in — the screen then
+   * behaves as first-time reporting, which is the safe side (fields editable, nothing locked).
+   */
+  private async getPreviousPhase2030Projection(previousResultId: unknown) {
+    const previousId = Number(previousResultId);
+    if (!Number.isFinite(previousId) || previousId <= 0) return null;
+
+    try {
+      const previous =
+        await this._resultsInnovationsUseRepository.InnovUseExists(previousId);
+      if (!previous) return null;
+
+      const [actors, organization, measures] = await Promise.all([
+        this.getActorsData(previousId),
+        this.getOrganizationsData(previousId),
+        this.getMeasuresData(previousId),
+      ]);
+
+      const isFuture = (row: any) => Number(row.section_id) === 2;
+
+      return {
+        result_id: previousId,
+        innov_use_2030_to_be_determined:
+          previous.innov_use_2030_to_be_determined ?? null,
+        actors: actors.filter(isFuture),
+        organization: organization.filter(isFuture),
+        measures: measures.filter(isFuture),
+      };
+    } catch (error) {
+      this.logger.error(
+        `P2-3295: could not read the previous-phase 2030 projection from result ${previousId}`,
+        error,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * P2-3537 §4 — the "Previous reported use" the Current Use Update block shows.
+   *
+   * A READ of history, never a copy stored on this result. The story is explicit about it, and the
+   * reason is concrete: if the previous round's report is later amended, this figure has to follow.
+   * It also has to, because the phase rollover does not copy these rows at all —
+   * `ResultsInnovationsUseRepository.createQueries` only carries `male_using` / `female_using`.
+   *
+   * The figure is the **sum of the actors** of the previous phase's current-use section. That is
+   * Yeck's decision of 3 Sep 2026 (Q4): the total counts PEOPLE, not organisations or hectares, so
+   * that next year's "previous use" is a number whose meaning can still be read.
+   *
+   * ⚠️ `how_many` is authoritative here because `getActorsData` recomputes it as `women + men` for
+   * every disaggregated row, and leaves the typed value on rows where disaggregation does not
+   * apply. Summing the gender columns instead would drop the second kind.
+   *
+   * Returns `null` for Scenario A — no previous phase, or a previous phase with no current-use
+   * actors. `null` is what tells the screen not to render the block at all, which is the other half
+   * of Yeck's decision: a reporter with organisations and no actors must not be shown a
+   * reconciliation they can never satisfy.
+   *
+   * Fails soft, same as the 2030 sibling: an unreadable previous phase must not cost the reporter
+   * the section they came to fill in.
+   */
+  private async getPreviousPhaseCurrentUse(
+    previousResultId: unknown,
+    previousPhaseYear: unknown,
+  ) {
+    const previousId = Number(previousResultId);
+    if (!Number.isFinite(previousId) || previousId <= 0) return null;
+
+    try {
+      const actors = await this.getActorsData(previousId);
+      const currentUseActors = actors.filter(
+        (row: any) => Number(row.section_id) === 1,
+      );
+
+      if (!currentUseActors.length) return null;
+
+      const total = currentUseActors.reduce(
+        (sum: number, row: any) => sum + (Number(row.how_many) || 0),
+        0,
+      );
+
+      const year = Number(previousPhaseYear);
+
+      return {
+        result_id: previousId,
+        phase_year: Number.isFinite(year) ? year : null,
+        total_actors: total,
+        actors: currentUseActors,
+      };
+    } catch (error) {
+      this.logger.error(
+        `P2-3537: could not read the previous-phase current use from result ${previousId}`,
+        error,
+      );
+      return null;
+    }
+  }
+
   async getInnovationUse(resultId: number) {
     try {
       const innDevExists =
@@ -708,6 +837,26 @@ export class InnovationUseService {
         measures: measures.filter((m) => Number(m.section_id) === 2),
       };
 
+      // P2-3295 §3 — the projection this result inherited from the previous reporting phase.
+      // `previous_result_id` rides along in `InnovUseExists` (the joins to `previous_phase` were
+      // already there, unused), so resolving the phase costs no extra round trip and the rule stays
+      // "the previous phase", never a hardcoded year.
+      // `null` means first-time reporting (Scenario A): the screen leaves the four sub-fields blank
+      // and editable. An object means Scenario B: previous values shown read-only until the reporter
+      // says they want to revise them.
+      const innovation_use_2030_previous =
+        await this.getPreviousPhase2030Projection(
+          (innDevExists as any).previous_result_id,
+        );
+
+      // P2-3537 §4 — the current use this result inherited from the previous reporting phase.
+      // `null` is Scenario A (first report, or no actors last round): the screen does not render
+      // the Current Use Update block at all.
+      const current_use_previous = await this.getPreviousPhaseCurrentUse(
+        (innDevExists as any).previous_result_id,
+        (innDevExists as any).previous_phase_year,
+      );
+
       const discontinued_options =
         await this._resultsInvestmentDiscontinuedOptionRepository.find({
           where: { result_id: resultId, is_active: true },
@@ -728,6 +877,8 @@ export class InnovationUseService {
         organization: organizations_current,
         measures: measures_current,
         innovation_use_2030,
+        innovation_use_2030_previous,
+        current_use_previous,
         investment_programs,
         investment_partners,
         investment_bilateral,

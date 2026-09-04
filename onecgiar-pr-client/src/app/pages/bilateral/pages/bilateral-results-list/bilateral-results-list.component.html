@@ -292,6 +292,18 @@
                         <button class="brl_action_btn brl_action_btn--edit" title="Edit result" (click)="editResult(result, $event)">
                           <i class="pi pi-pencil"></i>
                         </button>
+                        @if (canUpdateResult(result)) {
+                          <!-- Same action the Results Center row menu offers (P2-3229): carry an approved
+                               result of a previous phase into the open one. -->
+                          <button
+                            class="brl_action_btn brl_action_btn--update"
+                            title="Update result"
+                            aria-label="Update result"
+                            data-testid="bilateral-update-result"
+                            (click)="updateResult(result, $event)">
+                            <i class="pi pi-clone"></i>
+                          </button>
+                        }
                         @if (canDeleteResult(result)) {
                           <button class="brl_action_btn brl_action_btn--delete" title="Delete result" (click)="requestDelete(result, $event)">
                             <i class="pi pi-trash"></i>
@@ -371,3 +383,6 @@
     <button type="button" class="brl_justification_close" (click)="closeJustification()">Close</button>
   </div>
 </app-pr-dialog>
+
+<!-- Same modal the Results Center uses for "Update result"; it reads `dataControlSE.currentResult`. -->
+<app-change-phase-modal></app-change-phase-modal>

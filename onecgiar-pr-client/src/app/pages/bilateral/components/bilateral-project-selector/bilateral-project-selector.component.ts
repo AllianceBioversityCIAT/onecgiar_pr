@@ -1,4 +1,4 @@
-import { Component, inject, output, effect, signal, computed } from '@angular/core';
+import { Component, inject, input, output, effect, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
@@ -13,6 +13,16 @@ import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 export class BilateralProjectSelectorComponent {
   readonly creationService = inject(BilateralCreationService);
   readonly ctx = inject(BilateralContextService);
+
+  /**
+   * P2-3518 — `inline` embeds this picker in the Section 0 card of an EXISTING result. It drops the
+   * label and the summary/description block (that card renders both itself, so keeping them would
+   * duplicate them), and it re-points the lead project through
+   * `BilateralCreationService.setLeadProject()` instead of `selectProject()`, which would clear the
+   * Science Program choice. `wizard` (the default) is the create flow, unchanged.
+   */
+  variant = input<'wizard' | 'inline'>('wizard');
+  readonly isInline = computed(() => this.variant() === 'inline');
 
   projectSelected = output<BilateralProject>();
   showDropdown = signal(false);
@@ -55,7 +65,11 @@ export class BilateralProjectSelectorComponent {
   }
 
   selectProject(project: BilateralProject): void {
-    this.creationService.selectProject(project);
+    if (this.isInline()) {
+      this.creationService.setLeadProject(project);
+    } else {
+      this.creationService.selectProject(project);
+    }
     this.showDropdown.set(false);
     this.projectSelected.emit(project);
   }

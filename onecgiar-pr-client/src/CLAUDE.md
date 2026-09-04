@@ -338,7 +338,7 @@ These are read-mostly helpers that pull catalogs from the server and cache them 
 
 | File | Purpose |
 |---|---|
-| `centers.service.ts` | CLARISA centers. |
+| `centers.service.ts` | CLARISA centers. ⚠️ Fetched **once** at bootstrap. P2-3554: the request now retries (`retry` + `defer`, so each attempt re-issues it) and treats a 200-with-empty-list as a failed attempt; `getData()` is idempotent once loaded, so a screen that needs the list may call it again to recover a session whose bootstrap attempt failed. Before that, one bad response emptied **every** centres dropdown app-wide ("No information found") until a page reload. |
 | `initiatives.service.ts` | CLARISA initiatives. |
 | `institutions.service.ts` | Institutions / partners. |
 | `regions-countries.service.ts` | Geography catalogs. |

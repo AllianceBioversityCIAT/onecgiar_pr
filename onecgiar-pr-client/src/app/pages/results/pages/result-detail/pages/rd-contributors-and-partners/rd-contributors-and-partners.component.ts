@@ -8,8 +8,25 @@ import { NonPooledProjectDto } from '../rd-partners/models/partnersBody';
 import { RdContributorsAndPartnersService } from './rd-contributors-and-partners.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { InnovationUseResultsService } from '../../../../../../shared/services/global/innovation-use-results.service';
+import {
+  INNOVATION_LINK_MIN_PHASE_YEAR,
+  INNOVATION_LINK_QUESTION,
+  INNOVATION_USE_RESULT_TYPE_ID,
+  QaInnovationDevelopmentOption,
+  QaInnovationDevelopmentResultsService
+} from '../../../../../../shared/services/global/qa-innovation-development-results.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { filterOutAvisaInitiatives, isAvisaInitiative as checkAvisaInitiative } from '../../../../../../shared/utils/avisa-initiative.util';
+import { User } from '../rd-general-information/models/userSearchResponse';
+
+/**
+ * Plain body shape `<app-lead-contact-person-field>` expects and mutates in place — it has no
+ * `@Output()`. See `custom-fields/lead-contact-person-field/CLAUDE.md`.
+ */
+interface LeadContactBody {
+  lead_contact_person: string | null;
+  lead_contact_person_data: User | null;
+}
 
 @Component({
   selector: 'app-rd-contributors-and-partners',
@@ -25,6 +42,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   tocConsumed = true;
   disabledText = 'To remove this center, please contact your librarian';
   innovationUseResultsSE = inject(InnovationUseResultsService);
+  qaInnovationsSE = inject(QaInnovationDevelopmentResultsService);
   fieldsManagerSE = inject(FieldsManagerService);
   constructor(
     public api: ApiService,
@@ -39,6 +57,12 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   ngOnInit() {
+    // P2-3554: the CLARISA centres catalogue is fetched once at app bootstrap. If that single attempt
+    // failed, EVERY centres dropdown on this section — "Contributing CGIAR Centers" and the mandatory
+    // "Lead center" — shows "No information found" for the rest of the session, so the section cannot be
+    // completed at all. `getData()` is a no-op once the catalogue is in memory, so this is the (cheap)
+    // recovery point: re-ask on entering the section that needs it.
+    this.centersSE.getData().catch(() => undefined);
     this.rdPartnersSE.resetState();
     this.rdPartnersSE.getSectionInformation();
     this.GET_AllWithoutResults();
@@ -84,6 +108,115 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   // P2-3036: the 2026 redesign of this section applies only to phase 2026+. 2025 keeps the legacy copy/fields.
   isCP2026 = computed(() => this.fieldsManagerSE.isContributorsPartners2026());
 
+  /**
+   * P2-3420 / P2-3421 — Innovation use, phase 2026 onwards: the linked innovation is picked with a
+   * SINGLE select over the QA'd Innovation Development catalogue (QAed, Approved, Discontinued —
+   * portfolio-wide), type-ahead by result id and title. Every other surface this question serves
+   * (Innovation development, and the generic 2026 question of the remaining result types) keeps the
+   * legacy all-results multi-select untouched.
+   *
+   * 🛑 A phase gate, never `isP25()`: prtest holds 2025-phase results inside the P25 portfolio and
+   * those must render exactly as they do today.
+   * 🛑 And, unlike the creation screens, an UNKNOWN year renders the legacy control here: in the
+   * detail the result can land AFTER the section mounts, so the safe side to fail towards is the old
+   * form — the same decision `FieldsManagerService.currentResultPhaseYear` documents at length.
+   */
+  /**
+   * The catalogue is fetched ONLY for the surface that uses it: every other result type keeps the
+   * legacy multi-select, so asking for it on entering any section would be a request for nothing.
+   * The result (and with it its phase year) usually lands after the section mounts, hence an effect
+   * and not a call in `ngOnInit`. `load()` is idempotent, so repeated ticks cost nothing.
+   */
+  private readonly loadQaInnovationCatalogue = effect(() => this.ensureQaInnovationCatalogue());
+
+  /**
+   * Verbatim from P2-3420 / P2-3421 — QA reads it back word for word. It REPLACES the generic 2026
+   * question ("linked or bundled with another CGIAR-reported result") for Innovation use only: both
+   * questions are answered by the same stored field, so showing the generic wording here would ask
+   * the user something different from what the creation screen asked, about the same answer.
+   */
+  innovationLinkQuestion = INNOVATION_LINK_QUESTION;
+
+  /** The whole body of the effect above, in one callable place so it can be asserted directly. */
+  ensureQaInnovationCatalogue(): void {
+    if (this.showsQaInnovationLink()) this.qaInnovationsSE.load();
+  }
+
+  showsQaInnovationLink = computed(() => {
+    // Optional call: several hosts (and specs) stub `dataControlSE` without the signal — same guard
+    // `isAvisaInitiative` and `hideWhyReportedField` already use above.
+    const result = this.api.dataControlSE.currentResultSignal?.();
+    const year = result?.phase_year;
+    return Number(result?.result_type_id) === INNOVATION_USE_RESULT_TYPE_ID && typeof year === 'number' && year >= INNOVATION_LINK_MIN_PHASE_YEAR;
+  });
+
+  /**
+   * Single selection over an array-shaped payload: `linked_results` stays an array both ways (the
+   * PATCH contract and the GET are shared with the multi-select surfaces), so only one id lives in it.
+   */
+  get linkedInnovationId(): number | null {
+    const first = (this.rdPartnersSE.partnersBody?.linked_results ?? [])[0];
+    const id = Number((first as any)?.id ?? first);
+    return Number.isFinite(id) ? id : null;
+  }
+  set linkedInnovationId(value: number | null) {
+    this.rdPartnersSE.partnersBody.linked_results = value == null ? [] : [value];
+  }
+
+  /**
+   * ⚠️ The stored link is just an id, and the catalogue only lists what is linkable TODAY. A link
+   * saved before that innovation left those statuses would otherwise paint an EMPTY select — and
+   * saving the section would then wipe the link without the user ever touching it. So keep the stored
+   * id as an option, borrowing its title from the wider catalogue this section already loads.
+   */
+  get qaInnovationOptions(): QaInnovationDevelopmentOption[] {
+    const options = this.qaInnovationsSE.options();
+    const selected = this.linkedInnovationId;
+    if (selected == null || options.some(option => option.id === selected)) return options;
+    return [this.linkedInnovationFallbackOption(selected), ...options];
+  }
+
+  /** `status_id` / `phase_year` are left at 0: unknown for a fallback option, and nothing reads them. */
+  private linkedInnovationFallbackOption(id: number): QaInnovationDevelopmentOption {
+    const groups = (this.innovationUseResultsSE.resultsList ?? []) as any[];
+    const match = groups.flatMap(group => group?.options ?? group ?? []).find((option: any) => Number(option?.id) === id);
+    const code = Number(match?.result_code ?? id);
+    const title = `${match?.title ?? ''}`.trim();
+    return {
+      id,
+      result_code: code,
+      title,
+      status_id: 0,
+      phase_year: 0,
+      acronym: match?.acronym ?? null,
+      display: title ? `${code} - ${title}` : `${code} - (linked result outside the QA’d list)`
+    };
+  }
+
+  /** "No" clears the link — P2-3421 asks for it, and the server reads a false flag as "no link". */
+  onQaInnovationLinkChange(): void {
+    // The radio is shared with the Innovation development / legacy surfaces: only the 2026 Innovation
+    // use control owns this clearing behaviour, the others keep whatever they had.
+    if (!this.showsQaInnovationLink()) return;
+    if (!this.rdPartnersSE.partnersBody.has_innovation_link) this.rdPartnersSE.partnersBody.linked_results = [];
+  }
+
+  // ── P2-2911 AC2: "Lead contact person" displayed next to "Lead center" ─────────────────────────
+  /**
+   * Same gate General Information uses (`rd-general-information.component.ts:78`) so the asterisk /
+   * done-tag agree across both screens. It only paints the marker — the field does not validate.
+   */
+  isLeadContactPersonRequired = computed(() => this.fieldsManagerSE.isLeadContactPersonMandatory2026());
+
+  leadContactPersonNote =
+    'The Lead contact person recorded for this result. It is still entered and saved in the <strong>General Information</strong> section.';
+
+  /**
+   * Reassigned (never mutated) so `<app-lead-contact-person-field>`'s `ngOnChanges` — which only
+   * fires on a reference change — picks the loaded contact up. Hydrated by `GET_leadContactPerson`.
+   */
+  leadContactBody = signal<LeadContactBody>({ lead_contact_person: null, lead_contact_person_data: null });
+
   // P2-3063 / P2-3036 AC6 (2026, unplanned scenario): single mandatory Yes/No radio
   // "Did the Program invest financial resources in the achievement of this result?".
   // Backend persists per row in result_toc_results[] (matched by result_toc_result_id, no dedup), so the single
@@ -101,9 +234,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   tocQuestionLabel = computed(() =>
-    this.isCP2026()
-      ? 'Can this result be mapped to a ToC KPI?'
-      : "Does this result align with the Program's planned TOC indicators?"
+    this.isCP2026() ? 'Can this result be mapped to a ToC KPI?' : "Does this result align with the Program's planned TOC indicators?"
   );
 
   // P2-3171 (AC5): inform the user that External Partners are inherited from the HLO/Outcome level in the ToC.
@@ -218,7 +349,13 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   readonly OTHER_CENTERS_CODE = '__OTHER_CENTERS__';
   dropdown1Options = computed(() => [
     ...this.referenceCenters(),
-    { code: this.OTHER_CENTERS_CODE, name: 'Other(s) CGIAR Centers', acronym: 'Other(s)', full_name: '<strong>Other(s) CGIAR Centers</strong>', institutionId: -1 }
+    {
+      code: this.OTHER_CENTERS_CODE,
+      name: 'Other(s) CGIAR Centers',
+      acronym: 'Other(s)',
+      full_name: '<strong>Other(s) CGIAR Centers</strong>',
+      institutionId: -1
+    }
   ]);
 
   // QA P2-2929/P2-2998 (2026-07-03): reconcile the from-ToC Centers preselection whenever the resolved ToC
@@ -280,9 +417,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   // only. `otherCentersSelected` is deliberately NOT added: the floor is "at least 1 ToC-origin
   // Center remains", independent of how many "Other" Centers exist.
   private getRealCenterCount(): number {
-    const realCentersSelected = (this.rdPartnersSE.partnersBody?.contributing_center || []).filter(
-      (c: any) => c?.code !== this.OTHER_CENTERS_CODE
-    );
+    const realCentersSelected = (this.rdPartnersSE.partnersBody?.contributing_center || []).filter((c: any) => c?.code !== this.OTHER_CENTERS_CODE);
     return realCentersSelected.length;
   }
 
@@ -290,8 +425,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   // combined with the live ToC Center-institution-id set already exposed by the service (see `hasReferenceCenters`, :146).
   private get hasTocPlannedCenter(): boolean {
     return (
-      this.rdPartnersSE.partnersBody?.result_toc_result?.planned_result !== false &&
-      this.rdPartnersSE.tocReferenceCenterInstitutionIds().length > 0
+      this.rdPartnersSE.partnersBody?.result_toc_result?.planned_result !== false && this.rdPartnersSE.tocReferenceCenterInstitutionIds().length > 0
     );
   }
 
@@ -345,8 +479,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
    * This branch only ever renders under `isCP2026()` — see the template gate — so the question stays
    * 2026-only and earlier phases keep exactly what they have today.
    */
-  readonly linkedResultQuestionLabel =
-    'Is this result linked or bundled with another CGIAR-reported result (such as innovation, KP, policy, etc.)?';
+  readonly linkedResultQuestionLabel = 'Is this result linked or bundled with another CGIAR-reported result (such as innovation, KP, policy, etc.)?';
 
   // The result's own (owner/primary) Science Program: it can never be a contributor to its own result
   // (backend rejects "The owner initiative cannot be shared with itself"), so it must not appear in either dropdown.
@@ -427,8 +560,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   // combined with the live ToC synergy-id set already exposed by the service.
   private get hasTocPlannedScience(): boolean {
     return (
-      this.rdPartnersSE.partnersBody?.result_toc_result?.planned_result !== false &&
-      this.rdPartnersSE.tocReferenceSynergyInitiativeIds().length > 0
+      this.rdPartnersSE.partnersBody?.result_toc_result?.planned_result !== false && this.rdPartnersSE.tocReferenceSynergyInitiativeIds().length > 0
     );
   }
 
@@ -470,6 +602,9 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       next: ({ response }) => {
         this.api.dataControlSE.currentResult = response;
         const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
+        // P2-2911 AC2: chained here rather than in `ngOnInit` because the General Information GET is
+        // versioned by portfolio, and `currentResultSignal()` is not reliably populated yet on entry.
+        this.GET_leadContactPerson(activePortfolio === 'P25');
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
           this.contributingInitiativesList = filterOutAvisaInitiatives(response);
         });
@@ -477,6 +612,32 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         // P2-3131: AVISA (SGP-02) must not be selectable in the "Other(s) Science Program" dropdown either.
         this.api.resultsSE.GET_AllInitiatives(activePortfolio).subscribe(({ response }) => {
           this.allScienceProgramsList.set(filterOutAvisaInitiatives(response || []));
+        });
+      },
+      error: err => {
+        console.error(err);
+      }
+    });
+  }
+
+  /**
+   * P2-2911 AC2 — read-only hydration for the "Lead contact person" display.
+   *
+   * This section's own GET does not echo `lead_contact_person` / `lead_contact_person_data`
+   * (`contributors-partners.service.ts#getContributorsPartnersByResultId` builds its response key by
+   * key and omits both), and `GET api/results/get/:id` — the call that fills
+   * `dataControlSE.currentResultSignal()` — does not carry them either (verified against prtest on
+   * 2026-09-02). The General Information GET is the only endpoint that returns the pair
+   * (`results.service.ts#getGeneralInformation`), so it is read here purely to display the value.
+   *
+   * ⚠️ Fails soft: this is a display. The section must load even if the call does not.
+   */
+  private GET_leadContactPerson(isP25: boolean) {
+    this.api.resultsSE.GET_generalInformationByResultId(isP25).subscribe({
+      next: ({ response }) => {
+        this.leadContactBody.set({
+          lead_contact_person: response?.lead_contact_person ?? null,
+          lead_contact_person_data: response?.lead_contact_person_data ?? null
         });
       },
       error: err => {

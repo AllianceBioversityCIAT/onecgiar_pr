@@ -8,31 +8,38 @@
   }
 
   @if (tableModel(); as model) {
-    <table class="sr-only" [attr.aria-label]="chartTitle() || model.caption">
-      <caption>{{ model.caption }}</caption>
-      @if (model.headers && model.headers.length > 0) {
-        <thead>
-          <tr>
-            @for (header of model.headers; track $index) {
-              <th scope="col">{{ header }}</th>
-            }
-          </tr>
-        </thead>
-      }
-      <tbody>
-        @for (row of model.rows; track $index) {
-          <tr>
-            @for (cell of row; track $index) {
-              @if ($index === 0) {
-                <th scope="row">{{ cell }}</th>
-              } @else {
-                <td>{{ cell }}</td>
+    <!-- OSF-DD-14: `sr-only` lives on this wrapping div, not on the `<table>`. Under
+         `table-layout: auto` a specified width is a minimum, not a cap (CSS 2.1 §17.5.2), so
+         `sr-only`'s `width:1px` cannot constrain a table — it lays out at full content size and,
+         being `position:absolute` with nothing clipping it, inflates the document's scroll area.
+         A `div` honours `width:1px`; the table inside keeps its semantics for assistive tech. -->
+    <div class="sr-only">
+      <table [attr.aria-label]="chartTitle() || model.caption">
+        <caption>{{ model.caption }}</caption>
+        @if (model.headers && model.headers.length > 0) {
+          <thead>
+            <tr>
+              @for (header of model.headers; track $index) {
+                <th scope="col">{{ header }}</th>
               }
-            }
-          </tr>
+            </tr>
+          </thead>
         }
-      </tbody>
-    </table>
+        <tbody>
+          @for (row of model.rows; track $index) {
+            <tr>
+              @for (cell of row; track $index) {
+                @if ($index === 0) {
+                  <th scope="row">{{ cell }}</th>
+                } @else {
+                  <td>{{ cell }}</td>
+                }
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   } @else if (options() && requireTable()) {
     <div class="sr-only" role="alert">Warning: Chart rendered without required accessibility tableModel</div>
   }

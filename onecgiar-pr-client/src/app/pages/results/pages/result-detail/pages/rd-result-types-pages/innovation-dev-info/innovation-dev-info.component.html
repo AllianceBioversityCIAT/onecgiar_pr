@@ -103,7 +103,18 @@
     }
   </div>
 
-  <app-intellectual-property-rights [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-intellectual-property-rights>
+  <!-- P2-3272 / P2-3513: from the 2026 phase the four IPR questions become one. Gated on the PHASE
+       year, never on isP25(): the P25 portfolio also holds phase-2025 results, which must keep
+       rendering their four original questions with the answers already given. -->
+  @if (this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
+    <app-intellectual-property-considerations
+      [body]="innovationDevInfoBody"
+      [options]="innovationDevelopmentQuestions"></app-intellectual-property-considerations>
+  } @else {
+    <app-intellectual-property-rights
+      [body]="innovationDevInfoBody"
+      [options]="innovationDevelopmentQuestions"></app-intellectual-property-rights>
+  }
 
   <app-pr-textarea
     placeholder="Contact persons info goes here..."
@@ -190,7 +201,14 @@
 
   <app-estimates [body]="innovationDevInfoBody"></app-estimates>
 
-  <app-innovation-links [body]="innovationDevInfoBody" [options]="innovationDevelopmentLinks" [saving]="this.savingSection"></app-innovation-links>
+  <!-- P2-3550: the "Innovation reference materials" block (and its "Provide reference material(s)…"
+       help text, which is built inside the same component) is dropped from the 2026 form. Same
+       phase-year reasoning as P2-3263/P2-3264, plus the ticket's second rule: a 2026 result that was
+       created with the 2025 form keeps its structure, so replicated results still render the block.
+       Stored links are NOT deleted — `buildSectionPayload()` omits the key instead of emptying it. -->
+  @if (!this.fieldsManagerSE.isInnovationReferenceMaterialsRemoved2026()) {
+    <app-innovation-links [body]="innovationDevInfoBody" [options]="innovationDevelopmentLinks" [saving]="this.savingSection"></app-innovation-links>
+  }
 </div>
 
 <app-section-bottom-bar [disabled]="savingSection" (clickSave)="onSaveSection()" />

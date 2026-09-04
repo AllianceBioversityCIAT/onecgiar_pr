@@ -3,6 +3,7 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultQuestionsRepository } from './repository/result-questions.repository';
 import { ResultAnswerRepository } from './repository/result-answers.repository';
 import {
+  isConsolidatedIprQuestion,
   isGesiStageQuestion,
   isReducedInnovationDevForm,
   isRiskStageQuestion,
@@ -532,6 +533,41 @@ export class ResultQuestionsService {
     ];
   }
 
+  /**
+   * Slot table of the Intellectual Property group for the result's phase
+   * (P2-3272 / P2-3513).
+   *
+   * Up to the 2025 phase the group is 101 / 102 / 103 / 138, pinned by id, so a
+   * result of that phase keeps rendering its four original questions with the
+   * answers already given — the governing rule of epic P2-3243.
+   *
+   * From 2026 the four are replaced by the single consolidated question, which
+   * takes q1; q2, q3 and q4 are left empty. It is matched by TEXT because its id
+   * comes from the AUTO_INCREMENT of the migration that inserts it and differs
+   * across environments. Before that migration runs, the lookup yields NaN and
+   * `assignQuestionSlotsById` resolves the slot to `undefined`: the group is
+   * served with no children rather than with the wrong ones.
+   */
+  private resolveIprSlotsForPhase(
+    childQuestions: any[],
+    phaseYear: number | null,
+  ): ReadonlyArray<readonly [string, number]> {
+    if (!isReducedInnovationDevForm(phaseYear)) {
+      return ResultQuestionsService.INTELLECTUAL_PROPERTY_RIGHTS_P25_SLOTS;
+    }
+
+    const consolidated = (childQuestions ?? []).find((q) =>
+      isConsolidatedIprQuestion(q?.question_text),
+    );
+
+    return [
+      [
+        'q1',
+        consolidated ? Number(consolidated.result_question_id) : Number.NaN,
+      ],
+    ];
+  }
+
   async intellectualPropertyRights(resultId: number) {
     try {
       const topLevelQuestions = await this._resultQuestionRepository.find({
@@ -600,14 +636,28 @@ export class ResultQuestionsService {
         },
       });
 
+      const phaseYear = await this.getResultPhaseYear(resultId);
+
       const intelectuaWithOptions = await Promise.all(
         topLevelQuestions.map(async (topLevelQuestion) => {
-          const childQuestions = await this._resultQuestionRepository.find({
+          const allChildQuestions = await this._resultQuestionRepository.find({
             where: {
               question_level: 2,
               parent_question_id: topLevelQuestion.result_question_id,
             },
           });
+
+          const slots = this.resolveIprSlotsForPhase(
+            allChildQuestions,
+            phaseYear,
+          );
+
+          // Only the questions that own a slot are worth walking: the rest would
+          // cost an options query each and then be dropped by assignQuestionSlotsById.
+          const slotIds = new Set(slots.map(([, id]) => id));
+          const childQuestions = (allChildQuestions ?? []).filter((q) =>
+            slotIds.has(Number(q.result_question_id)),
+          );
 
           const questionsWithOptions = await Promise.all(
             childQuestions.map(async (childQuestion) => {
@@ -634,10 +684,7 @@ export class ResultQuestionsService {
 
           return {
             ...topLevelQuestion,
-            ...this.assignQuestionSlotsById(
-              questionsWithOptions,
-              ResultQuestionsService.INTELLECTUAL_PROPERTY_RIGHTS_P25_SLOTS,
-            ),
+            ...this.assignQuestionSlotsById(questionsWithOptions, slots),
           };
         }),
       );

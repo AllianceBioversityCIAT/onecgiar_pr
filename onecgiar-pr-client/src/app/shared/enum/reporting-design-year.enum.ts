@@ -77,5 +77,28 @@ export const ReportingDesignYear = {
    * Gated on the reporting phase YEAR, not on the portfolio: prtest holds 2025-phase results
    * inside the P25 portfolio, and `isP25()` would pre-fill and strip the note for those too.
    */
-  InnovationDeveloperAutoFill: 2026
+  InnovationDeveloperAutoFill: 2026,
+
+  /**
+   * SIDS revision (P2-3550): from the 2026 cycle the "Innovation reference materials" block — the
+   * last section of Innovation Development, with its "Provide reference material(s)…" help text —
+   * is dropped. Phases <= 2025 keep it verbatim, and so do 2026 results that were created with the
+   * 2025 form (`is_replicated`), which the ticket's own rule protects.
+   *
+   * Gated on the reporting phase YEAR, not on the portfolio: prtest holds 2025-phase results
+   * inside the P25 portfolio, and `isP25()` would strip the block from those too.
+   */
+  InnovationReferenceMaterialsRemoval: 2026,
+
+  /**
+   * P2-3537 section 7 — from this reporting phase the Innovation Use "Current use" block
+   * offers an AGE-ONLY fallback per actor row ("Age disaggregation not available") and
+   * splits youth / non-youth 50/50 when it is chosen, recording that the split was
+   * applied by the system.
+   *
+   * Phase year, never `isP25()`: prtest holds phase-2025 results inside the P25
+   * portfolio, and a portfolio gate would offer the fallback on results this epic
+   * requires to behave exactly as they do today.
+   */
+  InnovationUseAgeDisaggregationFallback: 2026
 } as const;

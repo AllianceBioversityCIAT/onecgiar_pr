@@ -1,5 +1,9 @@
 import {
+  POLICY_QUESTION_CAPACITY_OF_ACTORS,
+  POLICY_QUESTION_POLICY_CHANGE,
+  POLICY_TYPE_BUDGET_OR_INVESTMENT,
   compareResultTotal,
+  derivePolicyChangeValue,
   defaultContributionFor,
   shouldRejectValue,
   compareWithReportedData,
@@ -476,6 +480,153 @@ describe('P2-2932 — AC1 and AC3: the pre-filled default, and the one value tha
         'NOTHING_TO_COMPARE',
       );
       expect(compareWithReportedData(kp, '').status).toBe('NOTHING_TO_COMPARE');
+    });
+  });
+});
+
+describe('P2-2932 AC4 — Policy Change, the last type to become derivable', () => {
+  /**
+   * The sub-category is the answer to result question 49, not `policy_type_id`. Both exist and they
+   * are different axes — that distinction is what took this branch from "impossible" to "one field".
+   */
+  describe('the sub-category branches', () => {
+    it('expects 1 for a plain policy change', () => {
+      expect(
+        derivePolicyChangeValue({
+          answeredQuestionId: POLICY_QUESTION_POLICY_CHANGE,
+        }),
+      ).toBe(1);
+    });
+
+    it('expects the actor count for capacity development of key actors', () => {
+      expect(
+        derivePolicyChangeValue({
+          answeredQuestionId: POLICY_QUESTION_CAPACITY_OF_ACTORS,
+          actors_influenced: 42,
+        }),
+      ).toBe(42);
+    });
+
+    it('expects the USD amount when the policy type is budget or investment', () => {
+      expect(
+        derivePolicyChangeValue({
+          policy_type_id: POLICY_TYPE_BUDGET_OR_INVESTMENT,
+          amount: 250000,
+        }),
+      ).toBe(250000);
+    });
+
+    /**
+     * 🛑 A decision, not a reading of the AC. A result can answer 50 AND carry policy_type 1, and
+     * AC4 then asks for 1 and for the amount at once. The amount wins because the reporter typed a
+     * concrete figure; treating it as "1" would ignore it. Flagged with the PO — inverting this is
+     * one branch.
+     */
+    it('lets the budget amount win when both branches apply', () => {
+      expect(
+        derivePolicyChangeValue({
+          answeredQuestionId: POLICY_QUESTION_POLICY_CHANGE,
+          policy_type_id: POLICY_TYPE_BUDGET_OR_INVESTMENT,
+          amount: 250000,
+        }),
+      ).toBe(250000);
+    });
+
+    it('does not read the amount for a policy type that is not budget or investment', () => {
+      // 2 = Legal instrument. The USD field is not even rendered for it.
+      expect(
+        derivePolicyChangeValue({
+          answeredQuestionId: POLICY_QUESTION_POLICY_CHANGE,
+          policy_type_id: 2,
+          amount: 250000,
+        }),
+      ).toBe(1);
+    });
+  });
+
+  describe('when there is nothing to compare', () => {
+    it('returns null with no sub-category answered', () => {
+      expect(derivePolicyChangeValue({})).toBeNull();
+      expect(derivePolicyChangeValue(null)).toBeNull();
+    });
+
+    // Answer 51 with the count left blank is "not filled in yet", not "zero actors".
+    it('returns null when the actor count is empty', () => {
+      expect(
+        derivePolicyChangeValue({
+          answeredQuestionId: POLICY_QUESTION_CAPACITY_OF_ACTORS,
+          actors_influenced: null,
+        }),
+      ).toBeNull();
+    });
+
+    it('returns null when the budget amount is empty', () => {
+      expect(
+        derivePolicyChangeValue({
+          policy_type_id: POLICY_TYPE_BUDGET_OR_INVESTMENT,
+          amount: '',
+        }),
+      ).toBeNull();
+    });
+
+    // Zero actors influenced is a reported figure, not an empty one.
+    it('keeps a reported zero', () => {
+      expect(
+        derivePolicyChangeValue({
+          answeredQuestionId: POLICY_QUESTION_CAPACITY_OF_ACTORS,
+          actors_influenced: 0,
+        }),
+      ).toBe(0);
+    });
+  });
+
+  describe('through deriveAchievedValue', () => {
+    it('is derivable once the sub-category is answered', () => {
+      expect(
+        deriveAchievedValue({
+          resultTypeId: ResultTypeEnum.POLICY_CHANGE,
+          policyChange: {
+            answeredQuestionId: POLICY_QUESTION_CAPACITY_OF_ACTORS,
+            actors_influenced: 42,
+          },
+        }),
+      ).toEqual({ derivable: true, value: 42 });
+    });
+
+    it('stays silent while the sub-category is unanswered', () => {
+      expect(
+        deriveAchievedValue({ resultTypeId: ResultTypeEnum.POLICY_CHANGE }),
+      ).toEqual({ derivable: false, reason: 'NO_CONTRIBUTION_TYPE_SELECTOR' });
+    });
+
+    it('flags a contribution that disagrees with the actor count', () => {
+      const result = compareWithReportedData(
+        {
+          resultTypeId: ResultTypeEnum.POLICY_CHANGE,
+          policyChange: {
+            answeredQuestionId: POLICY_QUESTION_CAPACITY_OF_ACTORS,
+            actors_influenced: 42,
+          },
+        },
+        10,
+      );
+
+      expect(result.status).toBe('DIFFERS');
+      expect(result.expected).toBe(42);
+    });
+
+    // AC6 governs Policy Change; only AC1's Knowledge Product may refuse a value.
+    it('warns rather than refuses', () => {
+      const result = compareWithReportedData(
+        {
+          resultTypeId: ResultTypeEnum.POLICY_CHANGE,
+          policyChange: { answeredQuestionId: POLICY_QUESTION_POLICY_CHANGE },
+        },
+        7,
+      );
+
+      expect(result.status).toBe('DIFFERS');
+      expect(result.status).not.toBe('REJECTED');
     });
   });
 });

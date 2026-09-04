@@ -62,9 +62,22 @@
       <dl class="bp-project-fields">
         <div class="bp-meta-field bp-meta-field--project">
           <dt class="bp-meta-field-label">Project</dt>
-          <dd class="bp-meta-field-value bp-meta-field-value--project" [title]="project.fullName || project.shortName">
-            {{ project.fullName || project.shortName }}
-          </dd>
+          @if (canChangeProject()) {
+            <!--
+              P2-3518 — the field was static text, so a draft reported against the wrong W3/Bilateral
+              project could never be corrected. `canChangeProject()` keeps it text once the result
+              leaves the centre's hands.
+            -->
+            <dd class="bp-meta-field-value bp-meta-field-value--project bp-meta-field-value--editable">
+              <app-bilateral-project-selector
+                variant="inline"
+                (projectSelected)="onProjectChanged()"></app-bilateral-project-selector>
+            </dd>
+          } @else {
+            <dd class="bp-meta-field-value bp-meta-field-value--project" [title]="project.fullName || project.shortName">
+              {{ project.fullName || project.shortName }}
+            </dd>
+          }
         </div>
         @if (project.leadCenter) {
           <div class="bp-meta-field">

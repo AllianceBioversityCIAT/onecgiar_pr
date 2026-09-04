@@ -1,0 +1,244 @@
+<app-pr-dialog
+  [(visible)]="visible"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [header]="mode() === 'view' ? 'My reports' : 'Report a bug or adjustment'"
+  styleClass="report-feedback-dialog"
+  (onHide)="visibleChange.emit(false)">
+
+  @if (createdIssueKey() === null) {
+    <div class="rf-body">
+      <!-- Report / View switch -->
+      <div class="rf-tabs" role="tablist" aria-label="Feedback mode">
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="mode() === 'report'"
+          class="rf-tab"
+          [class.rf-tab--active]="mode() === 'report'"
+          (click)="setMode('report')">
+          Report something
+        </button>
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="mode() === 'view'"
+          class="rf-tab"
+          [class.rf-tab--active]="mode() === 'view'"
+          (click)="setMode('view')">
+          My reports
+        </button>
+      </div>
+
+      @if (mode() === 'report') {
+        <!-- ------------------------------------------------------ REPORT -->
+        <p class="rf-intro">
+          Tell us what went wrong or what should be adjusted. Your current screen and browser are
+          attached automatically to help the team reproduce it.
+        </p>
+
+        <div class="rf-field">
+          <span class="rf-label">Type</span>
+          <div class="rf-segment" role="radiogroup" aria-label="Report type">
+            <button
+              type="button"
+              role="radio"
+              [attr.aria-checked]="type() === 'bug'"
+              class="rf-segment__btn"
+              [class.rf-segment__btn--active]="type() === 'bug'"
+              (click)="type.set('bug')">
+              <i class="material-icons-round">bug_report</i> Bug
+            </button>
+            <button
+              type="button"
+              role="radio"
+              [attr.aria-checked]="type() === 'adjustment'"
+              class="rf-segment__btn"
+              [class.rf-segment__btn--active]="type() === 'adjustment'"
+              (click)="type.set('adjustment')">
+              <i class="material-icons-round">tune</i> Adjustment
+            </button>
+          </div>
+        </div>
+
+        <div class="rf-field">
+          <label class="rf-label" for="rf-title">Title</label>
+          <input
+            id="rf-title"
+            type="text"
+            class="rf-input"
+            [maxlength]="maxTitle"
+            placeholder="Short summary of the issue"
+            [ngModel]="title()"
+            (ngModelChange)="onTitleChange($event)" />
+        </div>
+
+        <!-- Possible duplicates: several people hit the same thing -->
+        @if (similar().length) {
+          <div class="rf-similar">
+            <span class="rf-similar__title">Someone may have reported this already</span>
+            @for (report of similar(); track report.issueKey) {
+              <div class="rf-similar__item">
+                <div class="rf-similar__text">
+                  <span class="rf-similar__summary">{{ report.title }}</span>
+                  <span class="rf-similar__stage">{{ report.stage }}</span>
+                </div>
+                <button type="button" class="rf-btn rf-btn--tiny" [disabled]="submitting()" (click)="joinReport(report)">
+                  Same for me
+                </button>
+              </div>
+            }
+            <span class="rf-similar__hint">
+              Choosing “Same for me” adds you to that report instead of opening a new one.
+            </span>
+          </div>
+        }
+
+        <div class="rf-field">
+          <label class="rf-label" for="rf-desc">Description</label>
+          <textarea
+            id="rf-desc"
+            class="rf-textarea"
+            rows="5"
+            placeholder="What happened? What did you expect instead? Steps to reproduce…"
+            [ngModel]="description()"
+            (ngModelChange)="description.set($event)"></textarea>
+        </div>
+
+        <!-- The label is ours, not the select's: app-pr-field-header appends its own
+             colon (useColon defaults to true and pr-select does not expose it), so
+             "How urgent is it?" rendered as "How urgent is it?:" and the field
+             looked unlike the other four. -->
+        <div class="rf-field">
+          <span class="rf-label">How urgent is it?</span>
+          <app-pr-select
+            [options]="priorities"
+            optionLabel="label"
+            optionValue="id"
+            [required]="false"
+            [editable]="true"
+            [ngModel]="priority()"
+            (ngModelChange)="priority.set($event)" />
+        </div>
+
+        <!-- Evidence: the automatic shot plus anything the user adds -->
+        <div class="rf-field">
+          <span class="rf-label">Screenshots</span>
+
+          @if (autoScreenshot()) {
+            <button
+              type="button"
+              class="rf-segment__btn rf-shot"
+              [class.rf-segment__btn--active]="includeScreenshot()"
+              [attr.aria-pressed]="includeScreenshot()"
+              (click)="includeScreenshot.set(!includeScreenshot())">
+              <i class="material-icons-round">{{ includeScreenshot() ? 'check_box' : 'check_box_outline_blank' }}</i>
+              Attach the screen as it looked when you opened this form
+            </button>
+
+            <!-- Shown whether or not the box is ticked: the point is that nobody
+                 attaches a picture of their screen without having seen it. -->
+            <button
+              type="button"
+              class="rf-preview"
+              [class.rf-preview--expanded]="shotExpanded()"
+              [attr.aria-label]="shotExpanded() ? 'Shrink the preview' : 'Enlarge the preview'"
+              (click)="shotExpanded.set(!shotExpanded())">
+              <img [src]="autoScreenshot()" alt="Preview of the screen that would be attached" />
+              <span class="rf-preview__hint">
+                <i class="material-icons-round">{{ shotExpanded() ? 'zoom_out' : 'zoom_in' }}</i>
+                {{ shotExpanded() ? 'Click to shrink' : 'Click to see what would be attached' }}
+              </span>
+            </button>
+            <span class="rf-preview__warn">
+              Everything visible on your screen goes with the image. Leave it unticked if it shows
+              anything you would rather not share.
+            </span>
+          }
+
+          <label class="rf-file">
+            <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" />
+            <i class="material-icons-round">attach_file</i>
+            <span>Add an image</span>
+          </label>
+
+          @if (userFiles().length) {
+            <ul class="rf-files">
+              @for (file of userFiles(); track file.name; let i = $index) {
+                <li class="rf-files__item">
+                  <span class="rf-files__name">{{ file.name }}</span>
+                  <button type="button" class="rf-files__remove" aria-label="Remove" (click)="removeFile(i)">
+                    <i class="material-icons-round">close</i>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+
+          @if (fileError()) {
+            <span class="rf-files__error">{{ fileError() }}</span>
+          }
+        </div>
+
+        @if (errorMsg()) {
+          <p class="rf-error" role="alert">{{ errorMsg() }}</p>
+        }
+      } @else {
+        <!-- -------------------------------------------------------- VIEW -->
+        <p class="rf-intro">
+          What you have reported from inside the platform, and where each one stands.
+        </p>
+
+        @if (loadingReports()) {
+          <p class="rf-muted">Loading your reports…</p>
+        } @else if (reportsError()) {
+          <p class="rf-error" role="alert">{{ reportsError() }}</p>
+        } @else if (!myReports().length) {
+          <p class="rf-muted">You have not reported anything yet.</p>
+        } @else {
+          <ul class="rf-reports">
+            @for (report of myReports(); track report.issueKey) {
+              <li class="rf-reports__item">
+                <div class="rf-reports__head">
+                  <span class="rf-reports__title">{{ report.title }}</span>
+                  <span class="rf-badge" [class.rf-badge--done]="report.released">{{ report.stage }}</span>
+                </div>
+                <span class="rf-reports__meta">
+                  {{ report.type }} · reported {{ report.createdAt | date: 'mediumDate' }}
+                </span>
+              </li>
+            }
+          </ul>
+        }
+      }
+    </div>
+  } @else {
+    <!-- SUCCESS -->
+    <div class="rf-success">
+      <i class="material-icons-round rf-success__icon">check_circle</i>
+      <p class="rf-success__title">
+        {{ joinedExisting() ? 'Added to the existing report.' : 'Thanks! Your report was submitted.' }}
+      </p>
+      @if (createdIssueKey()) {
+        <p class="rf-success__ref">Reference: <strong>{{ createdIssueKey() }}</strong></p>
+      }
+      <p class="rf-success__hint">You can follow it under “My reports”.</p>
+    </div>
+  }
+
+  <!-- Single footer node so [pr-dialog-footer] projects into the right slot (NG8011). -->
+  <div pr-dialog-footer class="rf-footer">
+    @if (createdIssueKey() === null) {
+      @if (mode() === 'report') {
+        <button type="button" class="rf-btn rf-btn--ghost" (click)="close()">Cancel</button>
+        <button type="button" class="rf-btn rf-btn--primary" [disabled]="!canSubmit" (click)="submit()">
+          {{ submitting() ? 'Sending…' : 'Submit report' }}
+        </button>
+      } @else {
+        <button type="button" class="rf-btn rf-btn--primary" (click)="close()">Close</button>
+      }
+    } @else {
+      <button type="button" class="rf-btn rf-btn--primary" (click)="close()">Done</button>
+    }
+  </div>
+</app-pr-dialog>

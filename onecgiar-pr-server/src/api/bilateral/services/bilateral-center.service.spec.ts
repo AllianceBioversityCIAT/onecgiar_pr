@@ -495,6 +495,106 @@ describe('BilateralCenterService', () => {
      * and the form offers no way to pick the lead centre again — so losing it bricks the submit
      * with "The result has no lead center assigned".
      */
+    // Nicoleta Trifa via Ángel Jarrín, 2026-09-03: contributing programs must persist and be pickable
+    // whatever the project maps to. Stored as role-2 `results_by_inititiative` rows, like W1/W2.
+    describe('contributing_programs', () => {
+      const user2: TokenDto = {
+        id: 7,
+        email: 'u@cgiar.org',
+        first_name: 'U',
+        last_name: 'S',
+      };
+
+      const arrange = () => {
+        jest
+          .spyOn(resultRepository, 'findOne')
+          .mockResolvedValue({ id: 10, source: SourceEnum.Bilateral } as any);
+        const rbi = module.get<ResultByInitiativesRepository>(
+          ResultByInitiativesRepository,
+        ) as any;
+        const clarisa = module.get<ClarisaInitiativesRepository>(
+          ClarisaInitiativesRepository,
+        ) as any;
+        rbi.getOwnerInitiativeByResult = jest.fn().mockResolvedValue({ id: 1 });
+        rbi.find = jest.fn().mockResolvedValue([
+          {
+            id: 501,
+            initiative_id: 3,
+            initiative_role_id: 2,
+            is_active: true,
+          },
+        ]);
+        rbi.findOne = jest.fn().mockResolvedValue(null);
+        rbi.update = jest.fn().mockResolvedValue({});
+        rbi.save = jest.fn().mockResolvedValue({});
+        clarisa.findOne = jest.fn(({ where }) =>
+          Promise.resolve(
+            ({ SP01: { id: 1 }, SP02: { id: 2 }, SP03: { id: 3 } } as any)[
+              where.official_code
+            ] ?? null,
+          ),
+        );
+        return { rbi, clarisa };
+      };
+
+      it('stores the listed programs as role-2 rows, deactivates the ones no longer listed and skips the primary', async () => {
+        const { rbi } = arrange();
+
+        const response = await service.saveContributors(
+          10,
+          {
+            contributing_programs: [
+              { science_program_id: 'sp02' },
+              { science_program_id: 'SP01' },
+            ],
+          },
+          user2,
+        );
+
+        // SP02 is new → saved as role 2; SP01 is the owner (role 1) → untouched; SP03 was stored → deactivated.
+        expect(rbi.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            result_id: 10,
+            initiative_id: 2,
+            initiative_role_id: 2,
+            is_active: true,
+            created_by: 7,
+          }),
+        );
+        expect(rbi.update).toHaveBeenCalledWith(
+          { id: 501 },
+          expect.objectContaining({ is_active: false, last_updated_by: 7 }),
+        );
+        expect(response.response).toEqual(
+          expect.objectContaining({
+            savedPrograms: ['SP02'],
+            deactivatedPrograms: [3],
+            failedPrograms: [],
+          }),
+        );
+      });
+
+      it('reports an unknown code as failed instead of dropping it silently', async () => {
+        arrange();
+        const response = await service.saveContributors(
+          10,
+          { contributing_programs: [{ science_program_id: 'NOPE' }] },
+          user2,
+        );
+        expect(response.response).toEqual(
+          expect.objectContaining({ failedPrograms: ['NOPE'] }),
+        );
+        expect(response.message).toContain('1 failed programs');
+      });
+
+      it('leaves the stored programs alone when the key is omitted', async () => {
+        const { rbi } = arrange();
+        await service.saveContributors(10, { contributing_center: [] }, user2);
+        expect(rbi.find).not.toHaveBeenCalled();
+        expect(rbi.update).not.toHaveBeenCalled();
+      });
+    });
+
     it('keeps the lead centre active even when the payload lists no centres at all', async () => {
       jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
         id: 10,

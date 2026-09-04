@@ -179,11 +179,14 @@ export class ContributorsPartnersService {
    * read: the comparison is between what this reporter typed and what this reporter recorded in
    * Section 4, not what contributing initiatives entered against their own sections.
    *
-   * ⚠️ `indicatorResultTypeId` is left undefined, so nothing is excluded for being of another type
-   * yet. This payload carries `toc_results_indicator_id` but not the indicator's category — that
-   * lives on the ToC side (`toc_results_indicators.type_value`) and is not joined here. Leaving it
-   * undefined is the safe direction: an unidentified indicator is compared rather than silently
-   * dropped. The mixed-type rule the PO gave still needs that join before it bites.
+   * `indicatorResultTypeId` now carries the indicator's own category, joined from the ToC side in
+   * `getRTRPrimaryV2`. That is what makes the PO's mixed-type rule bite: a Capacity Sharing result
+   * that later picks up an Innovation Development indicator compares only its Capacity Sharing
+   * boxes, because Section 4 holds nothing to check the other one against.
+   *
+   * ⚠️ Null is passed through as undefined on purpose. An indicator whose `type_value` matches no
+   * known pattern is "cannot tell", not "another type" — comparing it is the safe direction, since
+   * dropping it would hide a real disagreement behind an unrecognised label.
    */
   private contributionBoxesOf(resultTocResult: any): ContributionBox[] {
     const nodes = Array.isArray(resultTocResult)
@@ -196,6 +199,8 @@ export class ContributorsPartnersService {
       (node?.indicators ?? []).flatMap((indicator: any) =>
         (indicator?.targets ?? []).map((target: any) => ({
           contributingIndicator: target?.contributing_indicator,
+          indicatorResultTypeId:
+            indicator?.indicator_result_type_id ?? undefined,
         })),
       ),
     );

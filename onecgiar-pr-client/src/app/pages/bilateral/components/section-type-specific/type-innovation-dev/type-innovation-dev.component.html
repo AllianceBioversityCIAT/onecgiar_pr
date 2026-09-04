@@ -15,6 +15,17 @@
     </button>
   </div>
 
+  <!--
+    P2-3558 — the fetch failed, so every field below is blank for a reason that has nothing to do with
+    what is stored. Autosave is off while `loaded()` is not true (see `queueTypeSave`) and this says so,
+    through the same `app-alert-status` the section already uses for its MDS note — no new alert widget.
+    Rendered only on `=== false`: `null` means the GET is still in flight, which is not an error yet.
+    Kept OUTSIDE the note/button row above, whose two children are an acceptance criterion (P2-3327 AC2).
+  -->
+  @if (loaded() === false) {
+    <app-alert-status status="error" [description]="loadErrorNote"></app-alert-status>
+  }
+
   <!-- MDS block — exactly the three fields the story names, all required for bilateral. -->
   <app-pr-select
     [options]="innovationControlListSE.typeList"
@@ -29,14 +40,9 @@
     (ngModelChange)="onFieldChange()">
   </app-pr-select>
 
-  <app-pr-textarea
-    placeholder="Contact persons info goes here..."
-    [required]="true"
-    label="Innovation Developer"
-    [tooltip]="'Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person.'"
-    [(ngModel)]="body.innovation_developers"
-    (ngModelChange)="onFieldChange()">
-  </app-pr-textarea>
+  <!-- No Innovation Developer field: for a bilateral innovation the Lead contact person (Section 1)
+       IS the developer (Nicoleta Trifa via Ángel Jarrín, 2026-09-03). `buildPayload()` still fills
+       `innovation_developers` from that contact so the API summary keeps a value. -->
 
   <app-pr-field-header
     label="How would you assess the current readiness of this innovation?"
@@ -223,9 +229,5 @@
   }
 </div>
 
-<div class="tsf-actions">
-  <button class="tsf-save-btn" type="button" [disabled]="saving()" (click)="onSave()">
-    <i class="material-icons-round">{{ saving() ? 'hourglass_empty' : 'save' }}</i>
-    {{ saving() ? 'Saving...' : 'Save' }}
-  </button>
-</div>
+<!-- No in-section Save: every change is staged and the footer's Save draft persists the section
+     (explicit-save model, 2026-09-03). The old button only re-staged what was already staged. -->

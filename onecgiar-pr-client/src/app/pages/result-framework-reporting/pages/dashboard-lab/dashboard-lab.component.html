@@ -1236,10 +1236,14 @@
           [programResults]="overviewProgramResults()"
           [cycleYear]="dataControlSE.reportingCurrentPhase.phaseYear"
           [canReportW1W2]="entityAowService.canReportResults()"
+          [scopeOptions]="scopeOptions()"
+          [scopeBreakdown]="scopeBreakdown()"
+          [selectedScope]="overviewScope()"
           (openResults)="onOverviewLink($event)"
           (openAow)="onOpenAow($event)"
           (focusHub)="onFocusHub($event)"
-          (continueReporting)="continueReporting()" />
+          (continueReporting)="continueReporting()"
+          (scopeChange)="overviewScope.set($event)" />
       </article>
       }
 

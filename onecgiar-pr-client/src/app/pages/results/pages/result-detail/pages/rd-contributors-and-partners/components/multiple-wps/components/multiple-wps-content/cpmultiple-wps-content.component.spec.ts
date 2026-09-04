@@ -37,7 +37,9 @@ describe('CPMultipleWPsContentComponent', () => {
             tocSelectionTouched: signal(false),
             tocReferenceCenterInstitutionIds: signal([]),
             tocReferenceSynergyInitiativeIds: signal([]),
-            tocReferencePartnerInstitutionIds: signal([])
+            tocReferencePartnerInstitutionIds: signal([]),
+            // P2-2932: the consistency check rides on the Section 2 payload.
+            partnersBody: {}
           }
         },
         { provide: TocInitiativeOutcomeListsService, useValue: {} },
@@ -266,6 +268,83 @@ describe('CPMultipleWPsContentComponent', () => {
         expect(block).toContain('[readOnly]="tocAlignmentReadOnly()"');
         expect(block).toContain('tocAlignmentReadOnly()');
       });
+    });
+  });
+
+  /**
+   * P2-2932 — the Section 2 vs Section 4 consistency warning.
+   *
+   * Advisory: it never rewrites the field and never blocks saving. The single exception the PO
+   * carved out is a Knowledge Product outside 0/1 (AC1); AC6 governs everything else and says the
+   * system must not block.
+   */
+  describe('P2-2932 — the contribution consistency warning', () => {
+    const withCheck = (check: any) => {
+      const c = buildComponent(true);
+      (c.rdPartnersSE as any).partnersBody = { contribution_consistency: check };
+      return c;
+    };
+
+    it('says nothing when the two figures agree', () => {
+      const c = withCheck({ status: 'MATCH', expected: 200, reported: 200, boxesCounted: 1 });
+
+      expect(c.showContributionCheck()).toBe(false);
+    });
+
+    // The tooltip under the field tells the user to enter 0 for an enabler KP. Warning about it
+    // would fire at someone for following the instruction printed beside the input.
+    it('says nothing about the documented 0 on a Knowledge Product', () => {
+      const c = withCheck({ status: 'ALLOWED_EXCEPTION', expected: 1, reported: 0, boxesCounted: 1 });
+
+      expect(c.showContributionCheck()).toBe(false);
+    });
+
+    it('says nothing when there is nothing to compare', () => {
+      const c = withCheck({ status: 'NOTHING_TO_COMPARE', expected: null, reported: null, boxesCounted: 0 });
+
+      expect(c.showContributionCheck()).toBe(false);
+    });
+
+    it('says nothing when the payload carries no check at all', () => {
+      const c = buildComponent(true);
+      (c.rdPartnersSE as any).partnersBody = {};
+
+      expect(c.showContributionCheck()).toBe(false);
+      expect(c.contributionCheckMessage()).toBe('');
+    });
+
+    it('warns on a real disagreement, naming both figures', () => {
+      const c = withCheck({ status: 'DIFFERS', expected: 200, reported: 150, boxesCounted: 1 });
+
+      expect(c.showContributionCheck()).toBe(true);
+      expect(c.contributionIsRejected()).toBe(false);
+      expect(c.contributionCheckMessage()).toContain('150');
+      expect(c.contributionCheckMessage()).toContain('200');
+    });
+
+    /**
+     * With several indicators the user needs to know the figure is a total, not one box — the PO's
+     * rule is that the boxes sum (120 + 80 = 200 against Section 4).
+     */
+    it('says the figure is a total when several indicators were added up', () => {
+      const c = withCheck({ status: 'DIFFERS', expected: 200, reported: 150, boxesCounted: 3 });
+
+      expect(c.contributionCheckMessage()).toContain('across 3 indicators');
+    });
+
+    it('does not call it a total when only one box was counted', () => {
+      const c = withCheck({ status: 'DIFFERS', expected: 200, reported: 150, boxesCounted: 1 });
+
+      expect(c.contributionCheckMessage()).not.toContain('across');
+    });
+
+    it('marks a Knowledge Product outside 0/1 as a rejection, not a warning', () => {
+      const c = withCheck({ status: 'REJECTED', expected: 1, reported: 7, boxesCounted: 1 });
+
+      expect(c.contributionIsRejected()).toBe(true);
+      expect(c.showContributionCheck()).toBe(true);
+      expect(c.contributionCheckMessage()).toContain('7');
+      expect(c.contributionCheckMessage()).toContain('single unit');
     });
   });
 });

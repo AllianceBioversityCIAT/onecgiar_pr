@@ -989,6 +989,7 @@ export class SummaryService {
         status_amount,
         optionsWithAnswers,
         result_related_engagement,
+        actors_influenced,
       } = policyChangesDto;
 
       let policyChangesData: ResultsPolicyChanges = undefined;
@@ -1000,6 +1001,9 @@ export class SummaryService {
         resultsPolicyChanges.result_related_engagement =
           result_related_engagement;
         resultsPolicyChanges.status_amount = status_amount;
+        // P2-2932 AC4. `?? null` rather than `|| null`: a reported 0 is a figure someone entered
+        // ("no actors were influenced"), and `||` would erase it into an empty field.
+        resultsPolicyChanges.actors_influenced = actors_influenced ?? null;
         policyChangesData =
           await this._resultsPolicyChangesRepository.save(resultsPolicyChanges);
       } else {
@@ -1013,6 +1017,7 @@ export class SummaryService {
         newResultsPolicyChanges.created_by = user.id;
         newResultsPolicyChanges.last_updated_by = user.id;
         newResultsPolicyChanges.status_amount = status_amount;
+        newResultsPolicyChanges.actors_influenced = actors_influenced ?? null;
         policyChangesData = await this._resultsPolicyChangesRepository.save(
           newResultsPolicyChanges,
         );

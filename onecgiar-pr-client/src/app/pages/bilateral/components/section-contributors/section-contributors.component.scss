@@ -1,159 +1,52 @@
+// Contributors & partners — bilateral. Same visual language as the W1/W2 section
+// (rd-contributors-and-partners): fields stacked in the card with the standard custom-field
+// headers, no per-block cards, icons or uppercase banners. Only the chips below the multi-selects
+// and the read-only values are styled here; the inputs are the shared custom-fields.
 .sc-fields {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   position: relative;
   z-index: 1;
 }
 
-.sc-card {
-  background: #FFFFFF;
-  border: 1px solid #E0E0E0;
-  border-radius: 10px;
-  overflow: visible;
+// One block per field group. The z-index ladder descends with document order so an open
+// multi-select panel overlays the blocks beneath it (QA 2026-08-28).
+.sc-block {
   position: relative;
-  z-index: 10;
-
-  &--toc {
-    z-index: 200;
-  }
-
-  &--centers {
-    z-index: 100;
-  }
-
-  // QA 2026-08-28: was `5`, i.e. BELOW the `.sc-card` base of 10, so the card that follows in the
-  // DOM (External partners) painted over this one's open dropdown panel and swallowed the option
-  // list. The ladder is meant to descend with document order so an upper card's panel overlays the
-  // cards beneath it, which needs every value to stay above that base.
-  &--projects {
-    z-index: 50;
-  }
-
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    background: linear-gradient(135deg, #F5F5F5, #FAFAFA);
-    border-bottom: 1px solid #E0E0E0;
-  }
-
-  &__title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--pr-color-secondary-400);
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-  }
-
-  &__icon {
-    width: 18px;
-    height: 18px;
-    display: inline-block;
-    position: relative;
-  }
-
-  &__badge {
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 3px 8px;
-    border-radius: 4px;
-    background: #FFECB3;
-    color: #F57C00;
-    border: 1px solid #FFE082;
-  }
-
-  &__body {
-    padding: 16px;
-  }
-
-  &--lead-center {
-    border-color: var(--pr-color-primary-100);
-    border-width: 1.5px;
-
-    .sc-card__header {
-      background: linear-gradient(135deg, var(--pr-color-primary-50), var(--pr-color-primary-100));
-    }
-
-    .sc-card__icon {
-      color: var(--pr-color-primary-400);
-    }
-  }
-}
-
-.sc-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  z-index: 10;
+
+  &--toc { z-index: 200; }
+  &--programs { z-index: 150; }
+  &--centers { z-index: 100; }
+  &--projects { z-index: 50; }
+  &--partners { z-index: 20; }
 }
 
-.sc-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: #607D8B;
-}
-
-.sc-sp-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 16px;
-  font-size: 12px;
-  font-weight: 500;
-  border: 1.5px solid #CFD8DC;
-  color: #546E7A;
-  background: #FAFAFA;
-  align-self: flex-start;
-
-  &--primary {
-    background: linear-gradient(135deg, var(--pr-color-primary-400), var(--pr-color-primary-300));
-    border-color: transparent;
-    color: #FFFFFF;
-    font-weight: 600;
-    box-shadow: 0 2px 6px rgba(var(--pr-color-primary-rgb), 0.15);
-  }
-}
-
-.sc-sp-pct {
-  opacity: 0.75;
-  font-size: 11px;
-}
-
-.sc-chips {
+// Read-only value drawn like a disabled input — the same look the W1/W2 "Submitter" select has
+// when it cannot be changed.
+.sc-readonly-value {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.sc-lead {
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid var(--pr-border);
+  border-radius: 8px;
+  background: var(--pr-surface-app);
   font-size: 14px;
-  color: var(--pr-color-primary-400);
-  font-weight: 600;
+  color: var(--pr-text-secondary);
 }
 
-.sc-value {
+// The one-line note under a read-only field: `.no-primary-list` in W1/W2.
+.sc-helper {
+  margin-top: -2px;
   font-size: 13px;
-  color: #546E7A;
-}
-
-.sc-sp-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, var(--pr-color-primary-25), var(--pr-color-primary-50));
-  border: 1.5px solid var(--pr-color-primary-100);
-  border-radius: 10px;
-  margin-bottom: 16px;
+  font-weight: 500;
+  color: var(--pr-color-primary-300);
 }
 
 .sc-sp-icon {
@@ -161,28 +54,11 @@
   border-radius: 6px;
 }
 
-.sc-sp-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
 .sc-sp-code {
   font-family: 'JetBrains Mono', 'SF Mono', monospace;
   font-size: 13px;
   font-weight: 700;
   color: var(--pr-color-primary-600);
-}
-
-.sc-sp-name {
-  font-size: 12px;
-  color: #455A64;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .sc-sp-pct {
@@ -268,122 +144,4 @@
 
 .status-error {
   color: var(--pr-color-red-300);
-}
-
-.toc-icon {
-  background: linear-gradient(135deg, #7B1FA2, #9C27B0);
-  border-radius: 3px;
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 4px;
-    left: 4px;
-    width: 10px;
-    height: 10px;
-    background: white;
-    border-radius: 50%;
-  }
-}
-
-.sp-icon {
-  background: linear-gradient(135deg, #00897B, #26A69A);
-  border-radius: 50%;
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 12px;
-    height: 6px;
-    background: white;
-    border-radius: 3px 3px 0 0;
-  }
-}
-
-.lead-icon {
-  background: linear-gradient(135deg, #F9A825, #FDD835);
-  border-radius: 2px;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(45deg);
-    width: 6px;
-    height: 6px;
-    background: #F57F17;
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-bottom: 7px solid #F57F17;
-  }
-}
-
-.center-icon {
-  background: linear-gradient(135deg, var(--pr-color-primary-400), var(--pr-color-primary-300));
-  border-radius: 4px;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 3px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 10px;
-    height: 10px;
-    background: white;
-    border-radius: 50%;
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: 3px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-top: 6px solid white;
-  }
-}
-
-.project-icon {
-  background: linear-gradient(135deg, #EF6C00, #FF9800);
-  border-radius: 2px;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 5px;
-    height: 12px;
-    background: white;
-    border-radius: 1px;
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 3px;
-    right: 3px;
-    width: 5px;
-    height: 5px;
-    background: white;
-    border-radius: 50%;
-  }
 }

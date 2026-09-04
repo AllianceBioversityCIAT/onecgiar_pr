@@ -15,6 +15,8 @@ import { ResultsInnovationsUseRepository } from '../../results/summary/repositor
 import { ContributionConsistencyService } from './contribution-consistency.service';
 import { ResultsCapacityDevelopmentsRepository } from '../../results/summary/repositories/results-capacity-developments.repository';
 import { ResultActorRepository } from '../../results/result-actors/repositories/result-actors.repository';
+import { ResultsPolicyChangesRepository } from '../../results/summary/repositories/results-policy-changes.repository';
+import { ResultAnswerRepository } from '../../results/result-questions/repository/result-answers.repository';
 @Module({
   controllers: [ContributorsPartnersController],
   providers: [
@@ -30,6 +32,8 @@ import { ResultActorRepository } from '../../results/result-actors/repositories/
     ContributionConsistencyService,
     ResultsCapacityDevelopmentsRepository,
     ResultActorRepository,
+    ResultsPolicyChangesRepository,
+    ResultAnswerRepository,
   ],
   imports: [
     ResultsByInstitutionsModule,

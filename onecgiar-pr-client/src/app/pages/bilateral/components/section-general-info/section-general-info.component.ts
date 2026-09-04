@@ -120,6 +120,9 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
   /** Key of the lead contact last handed to autosave (or hydrated from the server). */
   private lastSyncedContactKey: string | null = null;
 
+  /** Innovation Development (result_type_id 7): the note under Lead contact person renders for it only. */
+  readonly isInnovationDevelopment = computed(() => this.creationService.resultTypeId() === 7);
+
   showAllFields = signal(this.loadShowAllFromStorage());
 
   dacAreas = DAC_AREAS;

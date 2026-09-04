@@ -2,6 +2,23 @@
   margin-bottom: 24px;
 }
 
+// P2-3518 — inline inside the Section 0 card: the card owns the label, the spacing and the
+// summary/description block, so the picker is only the field itself.
+.bps-selector--inline {
+  margin-bottom: 0;
+
+  .bps-field {
+    padding: 6px 10px;
+    min-height: 34px;
+  }
+
+  .bps-field-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--pr-color-primary-600);
+  }
+}
+
 .bps-dropdown-anchor {
   position: relative;
 }

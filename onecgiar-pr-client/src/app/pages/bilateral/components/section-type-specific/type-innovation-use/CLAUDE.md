@@ -1,119 +1,119 @@
 # type-innovation-use (bilateral)
 
-**Verified:** 2026-08-27 · branch performance-refactor · 6407a50fa (+WIP sin commitear: gate de scaling studies P2-3294)
+**Verified:** 2026-09-02 · branch performance-refactor · d3dbdd6b0
 
-## Qué es
-Sección 5 del creador de resultados W3/Bilateral cuando el tipo es **Innovation Use**. Muestra los 4 campos
-del MDS siempre visibles y esconde el resto del formulario de pooled funding detrás del botón
-**"Complete full metadata"**. Historias: P2-3428 (implementación), P2-3424 (link a un Innovation
-Development QA'd), P2-3331 (gemelo de verificación de QA).
+## What it is
+Section 5 of the W3/bilateral result creator when the type is **Innovation Use**. Shows the MDS fields
+always, and hides the rest of the pooled-funding form behind **"Complete full metadata"**.
+Stories: P2-3428 (build), P2-3424 (link to a QA'd Innovation Development), P2-3331 (QA twin),
+P2-3556 (load gate).
 
-## Contrato
-- Sin `@Input`/`@Output`: todo el estado viaja por servicios.
-- `BilateralCreationService.currentResultId()` — de dónde sale el resultado; `reportingYear()` — gate de fase.
-- `BilateralMdsTrackerService.setSectionFields('type-specific', …)` — **3 entradas y solo 3**:
-  `use-actors`, `use-measures`, `use-level`. ⚠️ El cuarto campo MDS de la historia,
-  `use-investment`, **se pinta deshabilitado con tag `Coming soon` y NO se publica aquí** — ver la
-  trampa de abajo. Submit se bloquea con `overallStatus() === 'complete'`, así que cada entrada extra sube
-  la barra en silencio.
-- `BilateralAutoSaveService.schedulePayload('typeSpecific', …)` — autoguardado con debounce 800 ms.
-- `BilateralExpandableStateService` — recuerda el toggle por resultado + sección.
-- `InnovationControlListService.useLevelsList` — catálogo `{ id, level, name, definition }`.
-  ⚠️ el form guarda el **`id`**, y los gates leen el **`level`** → `useLevelNumber`.
-- `InnovationUseResultsService.resultsList` — catálogo del desplegable de P2-3424 (reutilizado de W1/W2).
-- Endpoints: `GET/PATCH /api/results/summary/innovation-use/{get|create}/result/:id`
-  vía `BilateralApiService.GET_innovationUse` / `PATCH_innovationUse`. **El mismo endpoint sirve al
-  formulario viejo de W1/W2** (`results-api.service.ts:460`), así que todo cambio de contrato tiene que
-  ser aditivo para ese lado también.
+## Contract
+- No `@Input`/`@Output`: all state travels through services.
+- `BilateralCreationService.currentResultId()` — which result; `reportingYear()` — the phase gate.
+- `BilateralMdsTrackerService.setSectionFields('type-specific', …)` — **three entries and only three**:
+  `use-actors`, `use-measures`, `use-level`. ⚠️ The story's fourth MDS field, `use-investment`, is
+  rendered disabled with a `Coming soon` tag and is **NOT published here** — see the trap below. Submit
+  is gated on `overallStatus() === 'complete'`, so every extra entry silently raises the bar.
+- `BilateralAutoSaveService.schedulePayload('typeSpecific', …)` — autosave, 800 ms debounce.
+- Load flag: `loaded = signal<boolean | null>(null)` — `null` in flight, `true` loaded, `false` failed.
+  **Every write is gated on `=== true`** at the single choke point `queueTypeSave()`.
+- `BilateralExpandableStateService` — remembers the toggle per result + section.
+- `InnovationControlListService.useLevelsList` — catalog `{ id, level, name, definition }`. ⚠️ the form
+  stores the **`id`** and the gates read the **`level`** → `useLevelNumber`.
+- `InnovationUseResultsService.resultsList` — catalog for P2-3424's dropdown (reused from W1/W2).
+- Endpoints: `GET/PATCH /api/results/summary/innovation-use/{get|create}/result/:id` via
+  `BilateralApiService.GET_innovationUse` / `PATCH_innovationUse`. **The same endpoint serves the legacy
+  W1/W2 Innovation Use form** (`results-api.service.ts:460`), so every contract change must be additive
+  for that side too.
 
-## Dónde se usa
-- `src/app/pages/bilateral/components/section-type-specific/section-type-specific.component.html` — rama del
-  tipo Innovation Use.
+## Where it is used
+- `../section-type-specific.component.html` — the Innovation Use branch of the type switch.
 
-## Trampas (⚠️ = ya rompió algo)
-- ⚠️ **El monto de inversión está VISIBLE PERO DESHABILITADO con tag `Coming soon` — 26-ago-2026, no es un
-  olvido.** `investment_bilateral_usd` **no existe en el servidor** (cero coincidencias en
-  `onecgiar-pr-server/src/`) y el endpoint legacy lo descartaba en silencio. Hasta el 26-ago se pintaba
-  **editable y con asterisco rojo**: el usuario escribía un número que desaparecía al recargar sin ningún
-  aviso. Ahora, por la regla de la casa (control cuyo dato no se puede guardar → visible, deshabilitado y
-  etiquetado), el input va con `[required]="false"`, `[disabled]="true"`, la clase `globalDisabled` y el tag
-  `Coming soon` (mismo markup que `result-ai-item.component.html`), **y la clave ya no viaja en el payload**
-  — mandarla solo hacía parecer soportado un contrato que no lo está. Tampoco se publica al tracker MDS: si
-  se publicara, al recargar contaría como incompleto y **Submit quedaría bloqueado sin forma de
-  desbloquearlo**. Mismo patrón que `external-partners` en `section-contributors`
-  (`section-contributors.component.ts:344`). **Ruta de arreglo real:** repuntar a
-  `PATCH /v2/api/innovation-use/create/result/:resultId`, que modela el monto **por proyecto**
-  (`investment_bilateral: [{ id, kind_cash, is_determined }]`, tabla `non_pooled_projetct_budget.kind_cash`)
-  y espera el **nivel 0-9** en `innovation_use_level_id`, no el id del catálogo — hoy lanzaría **400**
-  abortando el PATCH entero y el GET v2 devuelve **404** sin nivel guardado. Además **la historia no define
-  cómo repartir un único total entre varios proyectos contribuyentes**, y eso no se inventa (regla 6).
-  Candados: los tests `AC8 — the investment amount is rendered disabled and tagged Coming soon, never as
-  required`, `never sends investment_bilateral_usd in the payload…` y `does NOT publish use-investment to
-  the MDS tracker…`. ⚠️ Diverge de **AC8**, que lo pide editable y obligatorio: no se puede cumplir sin
-  columna en el servidor.
-- ⚠️ **El backend YA guarda todo lo nuevo menos la inversión (P2-3424, 26-ago-2026).** El DTO
-  (`onecgiar-pr-server/src/api/results/summary/dto/create-innovation-use.dto.ts`) declara
-  `has_scaling_studies`, `scaling_studies_urls`, `innov_use_2030_to_be_determined`,
-  `readiness_level_explanation`, `has_innovation_link` y `linked_results`, y
-  `SummaryService.saveInnovationUse` los persiste (columnas de `results_innovations_use`,
-  `result_scaling_study_urls.result_innov_use_id` y `linked_result`). **`investment_bilateral_usd` sigue
-  descartándose: no existe columna en ningún sitio del servidor** — necesita migración, ver la trampa de
-  arriba. El controlador sigue sin `ValidationPipe`, así que un campo no declarado se pierde en silencio:
-  antes de añadir uno nuevo al payload, declararlo en el DTO.
-- ⚠️ **El servidor solo escribe la clave que el payload trae.** Un `undefined` deja el valor guardado como
-  estaba; hace falta porque el formulario viejo de W1/W2 no manda todas las claves. Y **`linked_result` es
-  una tabla compartida** con la sección P22 "Links to results": solo se toca cuando la pregunta se contesta
-  **Sí** (guarda la selección) o cuando un **Sí guardado pasa a No** (la borra). Un "No" que nunca fue "Sí"
-  no toca nada — si no, el primer autoguardado se llevaría por delante los enlaces de esa otra sección.
-- ⚠️ **MySQL devuelve los `tinyint` como `1`/`0`, y los radios enlazan `true`/`false`.**
-  `normalizeStoredBoolean()` lo arregla para `has_scaling_studies`, `innov_use_2030_to_be_determined` y
-  `has_innovation_link`. Sin eso la respuesta guardada recarga sin marcar y el bloque que depende de ella
-  no se pinta.
-- ⚠️ **`status_id` no existe en el catálogo del desplegable de P2-3424.**
-  `getResultsForInnovUse` (`onecgiar-pr-server/src/api/results/result.repository.ts:2645`) hace
-  `SELECT id, acronym, phase_year, result_code, name, title` — sin estado. Por eso
-  `isLinkableInnovationDevelopment()` deja pasar la opción cuando el campo no viene: filtrar estricto
-  dejaría el desplegable **siempre vacío**. Supuesto: **"QA'd" = `status_id = 2` (Quality Assessed)**,
-  declarado por el PO (Ángel Jarrín, 23-ago-2026 en P2-3424) y **pendiente de confirmación de negocio**.
-  Tampoco se filtra por "fase anterior": el endpoint ya restringe a fase 2025 / P25.
-- ⚠️ **FASE ≠ PORTAFOLIO.** El gate de P2-3424 es `reportingYear() >= 2026` (constante local
-  `INNOVATION_LINK_MIN_PHASE_YEAR`), **no** `isP25()`: en prtest hay resultados de fase 2025 dentro del
-  portafolio P25 y un gate de portafolio les encendería el campo. No se metió en `ReportingDesignYear`
-  porque es un archivo compartido que esta historia no posee.
-- ⚠️ **La compuerta "Innovation Use to be Determined" está invertida respecto a lo que suena:**
-  `innov_use_to_be_determined === true` = el uso está por determinar → **no se piden actores** y el MDS
-  de Actors se da por satisfecho (AC4). El bloque de actores solo se pinta con `=== false`.
-- ⚠️ `use-determined` **ya no es una entrada del tracker**. Estaba de más (la historia cuenta 4 campos) y
-  cada entrada extra sube el umbral de Submit.
-- ⚠️ **Al subir el nivel de uso a 6 o más, `onUseLevelChange()` BORRA `has_scaling_studies` y
-  `scaling_studies_urls`.** La pregunta desaparece de la pantalla a partir de 6 y, sin ese limpiado, un
-  "Sí" con tres URLs se seguía guardando detrás de un control que el usuario ya no puede ver ni corregir.
-  Mismo motivo por el que `onInnovationLinkChange()` borra el resultado enlazado. Solo limpia cuando el
-  nivel **llega a 6 o más**: con el nivel sin elegir no se ocultó nada, así que no se toca nada.
-- El gate de la pregunta de scaling studies aquí es `nivel < 6` (P2-3428 AC13 / P2-3294, **confirmado por el
-  PO Ángel Jarrín el 26-ago-2026**). **W1/W2 ya aplica el mismo techo** desde P2-3294
-  (`shared/components/innovation-use-form/innovation-use-form.component.html:338`), pero allí el rango
-  queda `>= 5 && < 6` y el techo va detrás de un gate de fase 2026 (`isScalingStudiesQuestionHiddenByLevel()`).
-  ⚠️ **Aquí NO hay gate de fase** — el techo aplica en cualquier fase, porque bilateral solo existe de 2026
-  en adelante. Divergencia deliberada: no "alinear" a ciegas ni añadir el gate de año sin pedirlo.
-- ⚠️ **`showScalingStudies` NO tiene guarda `level >= 0` — a propósito.** `useLevelNumber` devuelve `-1`
-  cuando todavía no se eligió nivel, y `-1 < 6` es `true` en JS: sin nivel elegido, la pregunta se
-  **muestra**, igual que en los niveles 0-5. Antes del 26-ago-2026 el getter tenía `level >= 0 && level < 6`,
-  lo que la ocultaba mientras no hubiera nivel — un defecto real (la pregunta debía verse por defecto y
-  esconderse solo al llegar a 6), corregido al auditar P2-3428 contra la confirmación del PO. Ver
-  `type-innovation-use.component.ts` — el comentario sobre el getter explica por qué no se reintroduce la
-  guarda. Candado: test `shows the scaling studies question while no use level is picked yet`.
-- Los tests usan `overrideTemplate`, así que el HTML no se compila en Jest. El texto de la nota MDS vive en
-  la constante `MDS_INFO_NOTE` justamente para poder afirmarlo palabra por palabra sin renderizar.
-- Las medidas cuantitativas solo cuentan para el MDS con **unidad Y cantidad** (AC6); una unidad suelta no
-  dice nada.
+## Traps (⚠️ = already broke something)
+- ⚠️ **NOTHING may be saved until `loaded() === true`** (P2-3556). `body` is built as `{}`, so a form that
+  never loaded is indistinguishable from a form the user emptied — and `buildPayload()` sends `?? null` /
+  `?? []` for every key. `loadData()` had no error handler and the interceptor rethrows every failed
+  response (`shared/interceptors/general-interceptor.service.ts:81-83`), so `next` never ran, the form
+  painted blank with no warning, and the first keystroke autosaved a wipe. What the empty body does on the
+  server, key by key:
+  - `innov_use_to_be_determined`, `innovation_use_level_id` → `?? null`, NULLED
+    (`api/results/summary/summary.service.ts:104-106`, `:121-123`, `:138-139`).
+  - `has_scaling_studies`, `innov_use_2030_to_be_determined`, `readiness_level_explanation`,
+    `has_innovation_link` → written whenever the key is present, and it always is → NULLED (`:185-201`).
+  - `scaling_studies_urls: []` → `shouldSync` is true for any present key, and the sync de-activates every
+    stored row and re-inserts nothing → **every study link deleted** (`:228-245`).
+  - `innovatonUse.actors` / `.organization` / `.measures` → **safe**: each writer is guarded on `?.length`
+    with **no `else`** (`api/results/summary/innovation_dev.service.ts:158`, `:259`, `:323`). This is where
+    the section differs from Policy Change and Capacity Sharing, whose `institutions` `else` branch
+    de-activates every stored organization.
+  - `linked_results: []` → safe, but only by guard order: the sync needs `has_innovation_link` to be `true`,
+    or a `false` retracting a stored `true` (`:273-291`), and an unloaded body sends `null`.
+  `null` blocks too: the GET takes **94-159 ms** on prtest (measured 2-Sep-2026) against an 800 ms debounce.
+  A new write path MUST go through `queueTypeSave()`, never straight to `schedulePayload`.
+- ⚠️ **This GET never answers 404 for "no row yet"** — unlike Policy Change. `getInnovationUse` assembles its
+  skeleton with `innUseExists?.x ?? null` and returns 200 either way (`summary.service.ts:301-374`); measured
+  on prtest, `…/get/result/999999` → `200` with every key null and the three lists empty. So there is no
+  status to whitelist here: every error that reaches the handler really is one, and none of them may write.
+- ⚠️ **A failed load shows `app-alert-status status="error"` and disables Save** — the widget the section
+  already had. It renders on `=== false` only (a naive `!loaded()` flashes on every open), and sits at the
+  TOP of the field list, not beside the MDS note row, which is halfway down this template.
+- ⚠️ **The spec's `build()` runs the first change detection**, so `ngOnInit` fires and the default GET mock
+  leaves the component `loaded`. Without it every save assertion in the file passes on a component that
+  never initialized — which is exactly what it did before P2-3556.
+- ⚠️ **The investment amount is VISIBLE BUT DISABLED with a `Coming soon` tag — 26-Aug-2026, not an
+  oversight.** `investment_bilateral_usd` **does not exist on the server** (zero hits in
+  `onecgiar-pr-server/src/`) and the legacy endpoint dropped it silently. Until 26-Aug it rendered editable
+  with a red asterisk: the user typed a number that vanished on reload with no warning. It now goes
+  `[required]="false"`, `[disabled]="true"`, class `globalDisabled` and the `Coming soon` tag (same markup as
+  `result-ai-item.component.html`), **and the key no longer travels in the payload**. It is not published to
+  the MDS tracker either: if it were, it would count as unfilled after every reload and **Submit would be
+  blocked with no way to unblock it**. Same pattern as `external-partners` in
+  `section-contributors.component.ts:344`. **Real fix path:** repoint to
+  `PATCH /v2/api/innovation-use/create/result/:resultId`, which models the amount **per project**
+  (`investment_bilateral: [{ id, kind_cash, is_determined }]`, `non_pooled_projetct_budget.kind_cash`) and
+  expects the **0-9 level** in `innovation_use_level_id`, not the catalog id — today it would 400 and abort
+  the whole PATCH. And **the story does not define how to split one total across several contributing
+  projects**, which is not ours to invent (rule 6). Locks: the three tests named `AC8 — …`,
+  `never sends investment_bilateral_usd in the payload…` and `does NOT publish use-investment…`.
+  ⚠️ Diverges from **AC8**, which asks for it editable and mandatory: impossible without a column.
+- ⚠️ **The backend already persists everything but the investment (P2-3424).** The DTO
+  (`api/results/summary/dto/create-innovation-use.dto.ts`) declares `has_scaling_studies`,
+  `scaling_studies_urls`, `innov_use_2030_to_be_determined`, `readiness_level_explanation`,
+  `has_innovation_link` and `linked_results`. The controller still has **no `ValidationPipe`**, so an
+  undeclared key is lost silently — declare it in the DTO before adding it to the payload.
+- ⚠️ **`linked_result` is a SHARED table** with the P22 "Links to results" section. It is only touched when
+  the question is answered **Yes** (stores the selection) or when a stored **Yes becomes No** (clears it). A
+  "No" that was never a "Yes" touches nothing — otherwise the first autosave would wipe that other section.
+- ⚠️ **MySQL returns `tinyint` as `1`/`0` and the radios bind `true`/`false`.** `normalizeStoredBoolean()`
+  covers `innov_use_to_be_determined` (P2-3533 — it was missing, and it gates the whole Actors block),
+  `has_scaling_studies`, `innov_use_2030_to_be_determined` and `has_innovation_link`.
+- ⚠️ **`status_id` is not in P2-3424's dropdown catalog.** `getResultsForInnovUse`
+  (`result.repository.ts:2645`) selects `id, acronym, phase_year, result_code, name, title` — no status. So
+  `isLinkableInnovationDevelopment()` lets an option through when the field is absent; filtering strictly
+  would leave the dropdown permanently empty. Assumption: **"QA'd" = `status_id = 2`**, declared by the PO
+  (Ángel Jarrín, 23-Aug-2026 on P2-3424) and still awaiting business confirmation.
+- ⚠️ **PHASE ≠ PORTFOLIO.** P2-3424's gate is `reportingYear() >= 2026` (local constant
+  `INNOVATION_LINK_MIN_PHASE_YEAR`), **not** `isP25()`: prtest holds 2025-phase results inside the P25
+  portfolio and a portfolio gate would switch the field on for them.
+- ⚠️ **"Innovation Use to be Determined" reads backwards:** `=== true` means the use is still to be
+  determined → no actor is requested and the Actors MDS item counts as satisfied (AC4). The actors block
+  renders on `=== false` only.
+- ⚠️ **Raising the use level to 6+ makes `onUseLevelChange()` CLEAR `has_scaling_studies` and
+  `scaling_studies_urls`.** The question disappears from 6 up, and without the clear a "Yes" plus three URLs
+  kept being saved behind a control the user can no longer see or correct.
+- ⚠️ **`showScalingStudies` has NO `level >= 0` guard, on purpose.** `useLevelNumber` is `-1` before a level
+  is picked and `-1 < 6` is `true`, so the question shows by default and hides only from 6 up (P2-3428 AC13 /
+  P2-3294, confirmed by the PO 26-Aug-2026). W1/W2 applies the same ceiling
+  (`innovation-use-form.component.html:338`) but behind a 2026 phase gate; **there is no phase gate here**
+  because bilateral only exists from 2026 onwards. Deliberate divergence — do not "align" it.
+- The whole spec uses `overrideTemplate`, so the HTML is not compiled in Jest: template facts are asserted by
+  reading the `.html` file as text, and copy that QA quotes lives in a constant (`MDS_INFO_NOTE`,
+  `LOAD_ERROR_NOTE`).
+- A quantitative measure only counts for the MDS with **both unit AND quantity** (AC6).
 
-## Pendiente / Coming soon
-- **2030 Use Projection**: solo se construyó la opción "This is yet to be determined". Los campos de la
-  proyección los está redefiniendo **P2-3295 (Open)** y P2-3428 pide coordinar con el PO en vez de
-  adivinarlos.
-- **Modo solo lectura (AC17)** no se implementó ni se verificó en esta sección.
-- **Monto de inversión W3/bilateral**: deshabilitado con tag `Coming soon` hasta que el servidor tenga
-  dónde guardarlo (primera trampa). Falta el ticket que pida esa columna/endpoint.
-- Filas de inversión "CGIAR Programs / Initiatives" y "Partner Institutions": siguen read-only con
-  "Not available yet", a la espera de la decisión del PO anotada en P2-3428 (MDS field 4).
+## Pending / Coming soon
+- **2030 Use Projection**: only "This is yet to be determined" was built; fields redefined by **P2-3295**.
+- **Read-only mode (AC17)**: not implemented and not verified in this section.
+- **W3/bilateral investment amount**: `Coming soon` until the server has somewhere to store it. Investment
+  rows "CGIAR Programs / Initiatives" and "Partner Institutions": read-only, awaiting the P2-3428 decision.

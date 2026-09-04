@@ -136,14 +136,46 @@ export class ResultSectionsService {
   }
 
   // --- Result-level actions. Gating mirrors the previous panel-menu / nav-sidebar rules. ---
+  /**
+   * ⚠️ P2-3558 — the AI review is a WRITE action and used to ignore the write lock.
+   *
+   * Applying a proposal rewrites `title` / `description` / the innovation `short_title`
+   * (`onecgiar-pr-server/src/api/ai/ai.service.ts` `saveChanges`), and validating an impact area
+   * rewrites the DAC tag plus its `result_impact_area_score` rows (same file, `updateDacScore`).
+   * `RolesService.readOnly` is the canonical write lock in this app: it HIDES the whole save bar
+   * (`custom-fields/save-button/save-button.component.html:1` and `:27`) and this screen's bottom
+   * bar (`components/section-bottom-bar/section-bottom-bar.component.ts:118`). Without it here, a
+   * viewer who cannot type a single character into the form was still handed a button that rewrites
+   * it for them. Every one of these lock states coexists with `status_id == 1`:
+   *  - **CLOSED PHASE** — `current-result.service.ts:37-41`: `is_phase_open === 0` sets
+   *    `readOnly = !isAdmin`.
+   *  - **NOT A MEMBER** of the result's initiative — `roles.service.ts:129-131`.
+   *  - **DISCONTINUED** result outside types 7 / 2 — `current-result.service.ts:48-51`.
+   *  - **AVISA initiative** — `current-result.service.ts:56-63`.
+   *  - **Platform closed**, or roles that failed to resolve — `roles.service.ts:92-93` and `:114-115`.
+   *
+   * 🛑 This is deliberately NOT a `phase_year` gate, and no such gate belongs here: the AI review
+   * backend is phase-agnostic. `src/api/ai/**` holds zero phase / version / portfolio branches and
+   * keys every read and write on `result_id` (the per-phase row) or `session_id`; its one
+   * phase-aware dependency, `results.service.ts` `getTocMetadata(..., phaseYear)`, takes the year
+   * from the viewed result's own version. So the feature works in EVERY phase, and what closes an
+   * old phase to it is `is_phase_open` above — not the year.
+   *
+   * Hidden rather than greyed, to match the save bar. `readOnly` is signal-backed
+   * (`roles.service.ts:22`, `:53-59`), so the async role resolution repaints this getter by itself;
+   * it also defaults to `true`, which fails to the safe side while permissions are unknown.
+   */
   get showAiReview(): boolean {
     const r = this.dataControlSE.currentResult;
-    return !!(r && r.result_type_id != 6 && r.status_id == 1);
+    return !!(r && r.result_type_id != 6 && r.status_id == 1) && !this.rolesSE.readOnly;
   }
 
+  /** Second line of defence for `runAiReview()`, so the TS guard holds even if the button renders. */
   get aiReviewDisabled(): boolean {
     const r = this.dataControlSE.currentResult;
-    return !this.greenChecksSE.submit || !!(r?.inQA && this.api.globalVariablesSE.get?.in_qa && r?.status_id == 1);
+    return (
+      this.rolesSE.readOnly || !this.greenChecksSE.submit || !!(r?.inQA && this.api.globalVariablesSE.get?.in_qa && r?.status_id == 1)
+    );
   }
 
   get aiReviewLabel(): string {

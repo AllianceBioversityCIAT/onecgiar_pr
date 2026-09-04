@@ -1,4 +1,19 @@
 <div class="tsf-fields">
+  <!--
+    P2-3556 — the fetch failed, so every field below is blank for a reason that has nothing to do
+    with what is stored. Autosave is off while `loaded()` is not true (see `queueTypeSave`) and this
+    says so, through the same `app-alert-status` the section already uses for its MDS note — no new
+    alert widget. Rendered only on `=== false`: `null` means the GET is still in flight, and a 404
+    means "no policy-change row yet", which is the normal state of a new result — neither is an error.
+    Placed at the TOP of the field list, above the fields it explains. The sibling Innovation
+    Development section puts it under its note row only because that row is the first block of its own
+    template; here the MDS note sits halfway down the form, and an error next to it would only be read
+    after the person had already scrolled past every blank field.
+  -->
+  @if (loaded() === false) {
+    <app-alert-status status="error" [description]="loadErrorNote"></app-alert-status>
+  }
+
   <div class="tsf-policy-guidance">
     <span>Policy type guidance</span>
     <button
@@ -107,9 +122,5 @@
   }
 </div>
 
-<div class="tsf-actions">
-  <button class="tsf-save-btn" type="button" [disabled]="saving()" (click)="onSave()">
-    <i class="material-icons-round">{{ saving() ? 'hourglass_empty' : 'save' }}</i>
-    {{ saving() ? 'Saving...' : 'Save' }}
-  </button>
-</div>
+<!-- No in-section Save: every change is staged and the footer's Save draft persists the section
+     (explicit-save model, 2026-09-03). The old button only re-staged what was already staged. -->

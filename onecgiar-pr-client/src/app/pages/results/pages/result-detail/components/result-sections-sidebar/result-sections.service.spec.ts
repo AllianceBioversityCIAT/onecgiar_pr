@@ -49,7 +49,7 @@ describe('ResultSectionsService', () => {
     };
     fieldsManager = { portfolioAcronym: signal('P25'), isP25: signal(true), isP22: signal(false) };
     greenChecks = { submit: true };
-    roles = { isAdmin: false };
+    roles = { isAdmin: false, readOnly: false };
     aiReview = { aiReviewButtonState: 'idle', onAIReviewClick: jest.fn() };
     api = { globalVariablesSE: { get: { in_qa: false } } };
     submissionModal = { showModal: false };
@@ -185,6 +185,37 @@ describe('ResultSectionsService', () => {
       expect(service.showAiReview).toBe(false);
     });
 
+    // P2-3558: the AI review WRITES the result (title / description / short_title / DAC scores), so
+    // it must obey `RolesService.readOnly` — the same lock that hides the save bar. `readOnly` is
+    // what makes a CLOSED phase read-only (`current-result.service.ts:37-41`, `is_phase_open === 0`),
+    // so this, and not a `phase_year` threshold, is the phase rule for the button. It is equally the
+    // rule for a non-member, a discontinued result, an AVISA result and a closed platform.
+    it('hides AI review while the result is read-only, even on a draft with every section complete', () => {
+      roles.readOnly = true;
+      build();
+
+      expect(service.showAiReview).toBe(false);
+      expect(service.aiReviewDisabled).toBe(true);
+    });
+
+    it('keeps AI review out of reach for a read-only admin-less viewer of a closed phase', () => {
+      // `is_phase_open === 0` -> `readOnly = !isAdmin`; the result itself is still status_id 1.
+      roles.readOnly = true;
+      roles.isAdmin = false;
+      build();
+
+      expect(service.showAiReview).toBe(false);
+    });
+
+    it('still offers AI review to an admin, who keeps write access on a closed phase', () => {
+      roles.readOnly = false;
+      roles.isAdmin = true;
+      build();
+
+      expect(service.showAiReview).toBe(true);
+      expect(service.aiReviewDisabled).toBe(false);
+    });
+
     it('disables AI review and Submit while sections are missing, with the tooltip', () => {
       greenChecks.submit = false;
       build();
@@ -310,6 +341,16 @@ describe('ResultSectionsService', () => {
       greenChecks.submit = false;
       service.runAiReview();
       expect(aiReview.onAIReviewClick).toHaveBeenCalledTimes(1);
+    });
+
+    // P2-3558: the guard, not only the hidden button — `runAiReview()` is the one entry point that
+    // reaches the writing endpoints, so a read-only result must be refused here too.
+    it('refuses to run the AI review on a read-only result', () => {
+      roles.readOnly = true;
+      build();
+
+      service.runAiReview();
+      expect(aiReview.onAIReviewClick).not.toHaveBeenCalled();
     });
 
     it('opens the submission modal only when Submit is enabled', () => {

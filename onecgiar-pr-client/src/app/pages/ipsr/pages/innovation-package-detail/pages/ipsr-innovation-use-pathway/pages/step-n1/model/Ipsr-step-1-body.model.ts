@@ -6,6 +6,35 @@ export class IpsrStep1Body {
   has_studies_links: boolean = false;
   innov_use_to_be_determined: boolean = false;
   innov_use_2030_to_be_determined: boolean = false;
+  /**
+   * P2-3295 §3 — why a 2030 projection inherited from the previous phase was changed. Declared here
+   * because `innovation-use-form` binds it in its template, and an Angular template IS typechecked
+   * against this model by `npm run build` (Jest and `tsc --noEmit` are not: they let a missing
+   * property through, which is exactly how it reached the build).
+   */
+  innov_use_2030_justification: string = null;
+  /** P2-3295 §3 — the projection reported in the previous phase, or null on first-time reporting. */
+  innovation_use_2030_previous: any = null;
+  /**
+   * P2-3537 §4 — users added during THIS reporting period. Not the cumulative total: the actor rows
+   * hold that. `null` means not answered, which is NOT the same as a reported 0 ("use was verified
+   * and did not grow", which §5 allows explicitly).
+   *
+   * 🛑 Declared here for the same reason as the field above: `app-innovation-use-form` types its
+   * `@Input() body` as `IpsrStep1Body`, so THIS is the model its template is checked against. A
+   * binding missing here passes `tsc --noEmit` and Jest and fails `npm run build` with TS2339 —
+   * twice already, in this very file.
+   */
+  new_users_added: number = null;
+  /** P2-3537 §4 — how the use expanded this period. Capped at 100 words on screen. */
+  use_expansion_narrative: string = null;
+  /**
+   * P2-3537 §4 — the current use reported in the previous phase: `{ total_actors, phase_year }`,
+   * or `null`. 🥇 `null` is what tells the screen NOT to render the Current Use Update block at all
+   * — first-time reporting, or a previous phase with no actors. Yeck's decision of 3 Sep 2026: a
+   * result with organisations and no actors must not face a reconciliation it can never satisfy.
+   */
+  current_use_previous: any = null;
   evidences_justification: string = '';
   readiness_level_explanation: string = '';
   is_discontinued: boolean = null;
@@ -140,6 +169,25 @@ export class Actor {
   previousWomen_youth: any;
   other_actor_type: any;
   sex_and_age_disaggregation: boolean;
+  /**
+   * P2-3537 section 7 — the reporter cannot disaggregate THIS row by age, although they
+   * can by sex. Distinct from `sex_and_age_disaggregation`, which switches both off.
+   * Three states: `null` means not answered, which is not the same as `false`.
+   *
+   * 🛑 Declared here even though the fallback is NOT offered inside IPSR, and that is not
+   * a contradiction: `app-innovation-use-form` is shared, and its `@Input() body` is typed
+   * `IpsrStep1Body`, so THIS is the `Actor` its template checks against. A binding the
+   * model does not declare compiles under `tsc --noEmit` and under Jest, and fails
+   * `npm run build` — the TS2339 that turned into two red Jenkins builds on 2 Sep 2026,
+   * in this very file.
+   */
+  age_disaggregation_not_available: boolean | null;
+  /**
+   * P2-3537 section 7 — the youth / non-youth figures on this row were split 50/50 by the
+   * system, not reported. Persisted so any later report can tell an estimate from a
+   * reported figure. See the note above on why it lives here.
+   */
+  youth_split_applied_by_system: boolean | null;
   how_many: any;
   result_actors_id: number;
 }

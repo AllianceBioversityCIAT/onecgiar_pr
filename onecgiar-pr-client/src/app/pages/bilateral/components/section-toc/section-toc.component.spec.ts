@@ -842,9 +842,10 @@ describe('SectionTocComponent template — ToC question wording (P2-3142)', () =
     fixture.detectChanges();
   });
 
-  it('renders the shared ToC question label', () => {
-    const label: HTMLElement | null = fixture.nativeElement.querySelector('.st-label');
-    expect(label?.textContent?.trim()).toBe(TOC_QUESTION_LABEL);
+  it('renders the shared ToC question label through the same yes/no control W1/W2 uses', () => {
+    const question: HTMLElement | null = fixture.nativeElement.querySelector('[data-testid="toc-planned-question"] app-pr-yes-or-not');
+    expect(question).not.toBeNull();
+    expect(question?.textContent).toContain(TOC_QUESTION_LABEL);
   });
 
   it('no longer renders the pre-P2-3142 wording', () => {

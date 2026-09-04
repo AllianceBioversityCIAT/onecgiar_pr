@@ -91,7 +91,10 @@ export class ManageUserModalComponent {
     return centerIds;
   });
 
-  centers = computed(() => this.centersService.centersList ?? []);
+  // P2-3554: `centers()` (signal), not `centersList` (plain array) — a plain array is not a reactive
+  // dependency, so this `computed` froze on the empty catalogue of its first evaluation and, with no other
+  // signal in it to invalidate the cache, never recovered. Same fix as P2-3190 (`733575421`).
+  centers = computed(() => this.centersService.centers());
 
   selectedEntityIds = computed(() => {
     const roleAssignments = this.addUserForm().role_assignments;

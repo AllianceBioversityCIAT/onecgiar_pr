@@ -38,6 +38,7 @@ import { FairFieldRepository } from './repositories/fair-fields.repository';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { ResultsService } from '../results.service';
+import { ResultInnovationMergeSplitModule } from '../result-innovation-merge-split/result-innovation-merge-split.module';
 import { ResultTypesModule } from '../result_types/result_types.module';
 import { ResultsByInititiativesModule } from '../results_by_inititiatives/results_by_inititiatives.module';
 import { ResultsByEvidencesModule } from '../results_by_evidences/results_by_evidences.module';
@@ -81,6 +82,7 @@ import { ResultDeletionAuditModule } from '../result-deletion-audit/result-delet
     ResultsValidationModuleModule,
     DynamodbLogsModule,
     ResultsInvestmentDiscontinuedOptionsModule,
+    ResultInnovationMergeSplitModule,
     ImpactAreasScoresComponentsModule,
     NotificationModule,
     ResultImpactAreaScoresModule,

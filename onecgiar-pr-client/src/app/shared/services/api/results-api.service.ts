@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
-import { map, Observable, firstValueFrom } from 'rxjs';
+import { catchError, map, of, throwError, Observable, firstValueFrom } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
 import { GeneralInfoBody } from '../../../pages/results/pages/result-detail/pages/rd-general-information/models/generalInfoBody';
 import { PartnersBody } from '../../../pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
@@ -11,7 +11,6 @@ import { PartnersRequestBody } from '../../../pages/results/pages/result-detail/
 import { EvidencesBody, EvidencesCreateInterface } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
 import { TheoryOfChangeBody } from '../../../pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
-import { ElasticResult, Source } from '../../interfaces/elastic.interface';
 import { KnowledgeProductSaveDto } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/knowledge-product-save.dto';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 import { UpdateUserStatus } from '../../interfaces/updateUserStatus.interface';
@@ -38,7 +37,6 @@ export class ResultsApiService {
   currentResultId: number | string = null;
   currentResultCode: number | string = null;
   currentResultPhase: number | string = null;
-  private readonly elasticCredentials = `Basic ${btoa(environment.elastic.username + ':' + environment.elastic.password)}`;
   GET_AllResultLevel() {
     return this.http.get<any>(`${this.apiBaseUrl}levels/all`);
   }
@@ -104,74 +102,6 @@ export class ResultsApiService {
     }>(`${this.apiBaseUrl}check-title-uniqueness`, { params });
   }
 
-  GET_FindResultsElastic(search?: string, type?: string) {
-    const body = {
-      size: 20,
-      query: {
-        bool: {
-          must: [
-            {
-              match_bool_prefix: {
-                title: {
-                  query: search ?? '',
-                  operator: 'and'
-                }
-              }
-            },
-            {
-              bool: {
-                should: [
-                  {
-                    bool: {
-                      must: [
-                        {
-                          match: {
-                            type: type ?? ''
-                          }
-                        },
-                        {
-                          match: {
-                            is_legacy: true
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    bool: {
-                      must: [
-                        {
-                          match: {
-                            is_legacy: false
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            }
-          ]
-        }
-      },
-      sort: [
-        {
-          'id.keyword': {
-            order: 'asc'
-          }
-        }
-      ]
-    };
-    const options = { headers: new HttpHeaders({ Authorization: this.elasticCredentials }) };
-    return this.http.post<ElasticResult>(`${environment.elastic.baseUrl}`, body, options).pipe(
-      map(resp =>
-        (resp?.hits?.hits ?? []).map(h => {
-          return { probability: h._score, ...h._source } as Source & { probability: number };
-        })
-      )
-    );
-  }
-
   POST_resultCreateHeader(body: ResultBody, v2: boolean = false) {
     return this.http.post<any>(`${v2 ? this.apiBaseUrlV2 : this.apiBaseUrl}create/header`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
@@ -232,8 +162,42 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}get/${this.currentResultId}`);
   }
 
-  GET_depthSearch(title: string) {
-    return this.http.get<any>(`${this.apiBaseUrl}get/depth-search/${title}`);
+  /**
+   * Similar-results suggestions for the result creator, served by our own backend.
+   *
+   * P2-3527: this list used to come from Elastic. That host stopped resolving and both callers
+   * swallowed the failure into an empty list, so the screen silently claimed "no similarities" for
+   * every title. `get/depth-search` is the same search on MySQL — it existed before Elastic and is
+   * still live — now with a capped, relevance-ordered page.
+   *
+   * Two contract details are normalized here so the callers and the template stay simple:
+   *  - a 404 is how the backend says "no matches"; that is an empty list, not a failed search,
+   *    and telling those two apart is what P2-3526 is about.
+   *  - MySQL bigints arrive as strings, so `version_id` is coerced to a number. Without it the
+   *    phase lookup (`phase.id === version_id`, strict) never matches and every suggestion renders
+   *    as "This result does not exist in this reporting phase" with Map-to-ToC disabled.
+   *
+   * @param title free text typed by the user
+   * @param type legacy indicator type (Innovation / Policy / OICR); narrows legacy rows only
+   * @param limit maximum suggestions; the backend defaults to 20 and caps at 50
+   */
+  GET_depthSearch(title: string, type?: string, limit?: number) {
+    const params: Record<string, string> = {};
+    if (type) params['type'] = type;
+    if (limit !== undefined && limit !== null) params['limit'] = String(limit);
+
+    return this.http
+      .get<{ response: any[] }>(`${this.apiBaseUrl}get/depth-search/${encodeURIComponent(title ?? '')}`, { params })
+      .pipe(
+        map(resp =>
+          (resp?.response ?? []).map(item => ({
+            ...item,
+            version_id: item?.version_id === null || item?.version_id === undefined ? null : Number(item.version_id),
+            is_legacy: Number(item?.legacy) === 1
+          }))
+        ),
+        catchError(err => (err?.status === 404 ? of([]) : throwError(() => err)))
+      );
   }
 
   GET_ostMeliaStudiesByResultId() {
@@ -1251,8 +1215,16 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.baseApiBaseUrlV2}results/questions/innovation-development/${this.currentResultId}`);
   }
 
-  GET_investmentDiscontinuedOptions(result_type_id) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results/investment-discontinued-options/${result_type_id}`);
+  /**
+   * P2-3292 — `phase_year` picks the reason generation: the 2026 set from the 2026 phase on, the
+   * six original ones before that. Omitting it answers the pre-P2-3292 catalogue, so callers that
+   * do not know about phases (IPSR) keep working unchanged.
+   */
+  GET_investmentDiscontinuedOptions(result_type_id, phase_year?: number) {
+    const phaseYearParam = typeof phase_year === 'number' ? `?phaseYear=${phase_year}` : '';
+    return this.http.get<any>(
+      `${environment.apiBaseUrl}api/results/investment-discontinued-options/${result_type_id}${phaseYearParam}`
+    );
   }
 
   GET_versioningResult() {

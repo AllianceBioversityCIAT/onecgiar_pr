@@ -1,9 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { ResultsCapacityDevelopmentsRepository } from '../../results/summary/repositories/results-capacity-developments.repository';
 import { ResultActorRepository } from '../../results/result-actors/repositories/result-actors.repository';
+import { ResultsPolicyChangesRepository } from '../../results/summary/repositories/results-policy-changes.repository';
+import { ResultAnswerRepository } from '../../results/result-questions/repository/result-answers.repository';
+import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import {
-  ComparisonResult,
   ContributionBox,
+  PolicyChangeData,
+  POLICY_QUESTION_CAPACITY_OF_ACTORS,
+  POLICY_QUESTION_POLICY_CHANGE,
+  ResultComparison,
   compareResultTotal,
   defaultContributionFor,
 } from '../../results/results-toc-results/achieved-value-derivation';
@@ -28,6 +34,8 @@ export class ContributionConsistencyService {
   constructor(
     private readonly _capacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
     private readonly _resultActorRepository: ResultActorRepository,
+    private readonly _policyChangesRepository: ResultsPolicyChangesRepository,
+    private readonly _resultAnswerRepository: ResultAnswerRepository,
   ) {}
 
   /**
@@ -41,14 +49,24 @@ export class ContributionConsistencyService {
     resultId: number,
     resultTypeId: number,
     boxes: readonly ContributionBox[],
-  ): Promise<ComparisonResult & { defaultValue: number | null }> {
-    const [capacityDevelopment, innovationUseActors] = await Promise.all([
-      this.capacityDevelopmentOf(resultId),
-      this.actorsOf(resultId),
-    ]);
+  ): Promise<ResultComparison & { defaultValue: number | null }> {
+    // Only the section that belongs to this result's type is read. Fetching all three would put
+    // three queries on every Section 2 load to use one of them.
+    const [capacityDevelopment, innovationUseActors, policyChange] =
+      await Promise.all([
+        Number(resultTypeId) === ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT
+          ? this.capacityDevelopmentOf(resultId)
+          : null,
+        Number(resultTypeId) === ResultTypeEnum.INNOVATION_USE
+          ? this.actorsOf(resultId)
+          : [],
+        Number(resultTypeId) === ResultTypeEnum.POLICY_CHANGE
+          ? this.policyChangeOf(resultId)
+          : null,
+      ]);
 
     const comparison = compareResultTotal(
-      { resultTypeId, capacityDevelopment, innovationUseActors },
+      { resultTypeId, capacityDevelopment, innovationUseActors, policyChange },
       boxes,
     );
 
@@ -75,5 +93,44 @@ export class ContributionConsistencyService {
     return this._resultActorRepository.find({
       where: { result_id: resultId, is_active: true },
     });
+  }
+
+  /**
+   * AC4 needs two things that live in different tables: the Policy Change row itself, and which
+   * sub-category the reporter answered.
+   *
+   * The sub-category is NOT a column on `results_policy_changes`. It is the answer to result
+   * question 49, stored one row per option in `result_answers` with `answer_boolean` true on the
+   * chosen one — which is why this branch looked impossible until the question mechanism turned up.
+   */
+  private async policyChangeOf(
+    resultId: number,
+  ): Promise<PolicyChangeData | null> {
+    const [policyChange, answers] = await Promise.all([
+      this._policyChangesRepository.findOne({
+        where: { result_id: resultId, is_active: true },
+      }),
+      this._resultAnswerRepository.find({
+        where: { result_id: resultId, is_active: true },
+      }),
+    ]);
+
+    if (!policyChange) return null;
+
+    const answered = (answers ?? []).find(
+      (answer) =>
+        answer?.answer_boolean === true &&
+        [
+          POLICY_QUESTION_POLICY_CHANGE,
+          POLICY_QUESTION_CAPACITY_OF_ACTORS,
+        ].includes(Number(answer.result_question_id)),
+    );
+
+    return {
+      answeredQuestionId: answered ? Number(answered.result_question_id) : null,
+      policy_type_id: policyChange.policy_type_id,
+      amount: policyChange.amount,
+      actors_influenced: policyChange.actors_influenced,
+    };
   }
 }

@@ -121,6 +121,7 @@ export class BilateralCreationService {
     this.resultProjectId.set(null);
     this.resultContributingProjectIds.set([]);
     this.resultContributingProjects.set([]);
+    this.selectedSecondarySps.set([]);
   }
 
   /**
@@ -201,7 +202,16 @@ export class BilateralCreationService {
           }
           this.resultDacSubScores.set(subs);
         }
-        const primaryInit = response?.contributingInitiatives?.contributing_and_primary_initiative?.[0];
+        // Role 1 is the primary program; role 2 rows are the contributing programs the Contributors
+        // section persists (results_by_inititiative, same rows W1/W2 keeps). The query does not order
+        // by role, so `[0]` was only right by luck once a contributing program existed.
+        const initiatives: any[] = response?.contributingInitiatives?.contributing_and_primary_initiative ?? [];
+        const primaryInit = initiatives.find((i: any) => Number(i?.initiative_role_id) === 1) ?? initiatives[0];
+        this.selectedSecondarySps.set(
+          initiatives
+            .filter((i: any) => i?.id && Number(i.initiative_role_id) === 2)
+            .map((i: any) => ({ programId: Number(i.id), programCode: i.official_code, allocation: '' }))
+        );
         if (primaryInit?.id) {
           this.resultInitiativeId.set(primaryInit.id);
           this.selectedPrimarySp.set({
@@ -276,6 +286,62 @@ export class BilateralCreationService {
     this.selectedPrimarySp.set(null);
     this.selectedSecondarySps.set([]);
     this.clearLegacyWizardStorage();
+  }
+
+  /**
+   * P2-3518 — re-points the lead W3/Bilateral project of an EXISTING result.
+   *
+   * Deliberately NOT `selectProject()`: that one is the create wizard's entry point and clears
+   * `selectedPrimarySp` / `selectedSecondarySps`, so reusing it here would silently blank the
+   * Science Program the result already reports against. What a project change should do to the
+   * Science Program is an OPEN REQUIREMENT QUESTION (P2-3518, pending business), so the current
+   * answer is preserved untouched instead of being decided here.
+   *
+   * ⚠️ It also keeps `resultContributingProjectIds` / `resultContributingProjects` in step, because
+   * the persistence endpoint is a SYNC-REPLACE: `syncBilateralProjects`
+   * (`results_by_projects.service.ts:76-148`) deactivates every linked project missing from the
+   * payload. The new lead goes first, the old lead is dropped, and every other contributing project
+   * survives — see `leadProjectSyncPayload`.
+   */
+  setLeadProject(project: BilateralProject): void {
+    const previousLeadId = Number(this.selectedProject()?.id ?? this.resultProjectId() ?? 0);
+    const newLeadId = Number(project.id);
+    this.selectedProject.set(project);
+    if (!Number.isFinite(newLeadId) || newLeadId <= 0) return;
+    this.resultProjectId.set(newLeadId);
+    const isDropped = (id: number) => id === newLeadId || id === previousLeadId;
+    this.resultContributingProjectIds.update(ids => [
+      newLeadId,
+      ...ids.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0 && !isDropped(id))
+    ]);
+    this.resultContributingProjects.update(list => [
+      { id: newLeadId, shortName: project.shortName, fullName: project.fullName },
+      ...list.filter(p => !isDropped(Number(p.id)))
+    ]);
+  }
+
+  /**
+   * P2-3518 — body for the `contributing_bilateral_projects` key of the endpoint that already
+   * exists: `PATCH api/bilateral/center/contributors/:resultId`
+   * (`bilateral-center.service.ts:490-496` → `syncContributingProjects:863-918`). No new endpoint is
+   * needed; that method already flips every active row to `is_lead: false` and then raises the ones
+   * flagged in the payload, so the flag has to travel on the lead only.
+   *
+   * ⚠️ The full list is REQUIRED, not an optimisation: whatever is left out gets deactivated.
+   */
+  leadProjectSyncPayload(): { project_id: number; is_lead: boolean }[] {
+    const leadId = Number(this.selectedProject()?.id ?? 0);
+    const payload: { project_id: number; is_lead: boolean }[] = [];
+    if (Number.isFinite(leadId) && leadId > 0) {
+      payload.push({ project_id: leadId, is_lead: true });
+    }
+    for (const id of this.resultContributingProjectIds()) {
+      const projectId = Number(id);
+      if (Number.isFinite(projectId) && projectId > 0 && projectId !== leadId) {
+        payload.push({ project_id: projectId, is_lead: false });
+      }
+    }
+    return payload;
   }
 
   resetWizard(): void {

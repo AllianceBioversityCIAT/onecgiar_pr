@@ -52,7 +52,11 @@ describe('InnovationUseFormComponent', () => {
 
     fieldsManagerServiceMock = {
       isP25: jest.fn().mockReturnValue(false),
-      innovationUse2030ProjectionTooltip: jest.fn().mockReturnValue('')
+      // P2-3295 §2: the projection question is gated on the same 2026 phase threshold as the rename.
+      isInnovationUse2030Projection2026: jest.fn().mockReturnValue(true),
+      innovationUse2030ProjectionTooltip: jest.fn().mockReturnValue(''),
+      // P2-3537 §7: the age-only fallback rides on its own 2026 phase threshold.
+      isInnovationUseAgeFallback2026: jest.fn().mockReturnValue(true)
     };
 
     innovationControlListServiceMock = {
@@ -133,7 +137,12 @@ describe('InnovationUseFormComponent', () => {
       men: null,
       men_youth: null,
       men_non_youth: null,
-      how_many: null
+      how_many: null,
+      // P2-3537 §7: "sex and age does not apply" switches both off, so the age-only answer
+      // and the system-split stamp have no meaning here. Leaving them set would send the
+      // server a contradiction: "age cannot be disaggregated" alongside "neither applies".
+      age_disaggregation_not_available: null,
+      youth_split_applied_by_system: null
     });
   });
 
@@ -677,7 +686,16 @@ describe('InnovationUseFormComponent', () => {
 
     it('should handle men < men_youth', fakeAsync(() => {
       component.body.innovatonUse.actors = [
-        { women: 10, women_youth: 5, men: 3, men_youth: 10, men_non_youth: 0, sex_and_age_disaggregation: false, previousWomen: 3, previousWomen_youth: 10 } as Actor
+        {
+          women: 10,
+          women_youth: 5,
+          men: 3,
+          men_youth: 10,
+          men_non_youth: 0,
+          sex_and_age_disaggregation: false,
+          previousWomen: 3,
+          previousWomen_youth: 10
+        } as Actor
       ];
       const actorItem = component.body.innovatonUse.actors[0];
       component.validateYouth(0, false, actorItem);
@@ -795,12 +813,25 @@ describe('InnovationUseFormComponent', () => {
       expect(component.isScalingStudiesQuestionHidden()).toBe(false);
     });
 
-    it('falls back to reportingCurrentPhase.phaseYear when currentResultSignal has no phase_year', () => {
+    // P2-3558 — this used to assert `true`, i.e. it described the defect: with no `phase_year` on
+    // the result the gate read `reportingCurrentPhase.phaseYear`, the OPEN reporting phase (2026 in
+    // production), and hid the question on a legacy result. Same call the eight sibling gates in
+    // `FieldsManagerService` made, fixed in `8afb574f3`.
+    it('ignores reportingCurrentPhase.phaseYear when currentResultSignal has no phase_year', () => {
       apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({});
       apiServiceMock.dataControlSE.reportingCurrentPhase = { phaseYear: 2026 };
       component.body.innovation_use_level_id = 7;
 
-      expect(component.isScalingStudiesQuestionHidden()).toBe(true);
+      expect(component.isScalingStudiesQuestionHidden()).toBe(false);
+    });
+
+    // A year arriving as a string is a bad payload, and a bad payload gets the legacy form.
+    it('keeps the question visible when phase_year arrives as a string', () => {
+      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: '2026' });
+      apiServiceMock.dataControlSE.reportingCurrentPhase = { phaseYear: 2026 };
+      component.body.innovation_use_level_id = 7;
+
+      expect(component.isScalingStudiesQuestionHidden()).toBe(false);
     });
 
     // Scope lock (Yeck, 31-Aug-2026): P2-3535 covers the Innovation Use section only. IPSR
@@ -829,13 +860,101 @@ describe('InnovationUseFormComponent', () => {
 
         expect(component.isScalingStudiesQuestionHidden()).toBe(false);
       });
+
+      // P2-3558 — the IPSR branch must not consult the open reporting phase either.
+      it('keeps the question visible at level 9 when the result carries no phase_year', () => {
+        apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({});
+        apiServiceMock.dataControlSE.reportingCurrentPhase = { phaseYear: 2026 };
+        component.body.innovation_use_level_id = 9;
+
+        expect(component.isScalingStudiesQuestionHidden()).toBe(false);
+      });
+    });
+  });
+
+  /**
+   * P2-3558 — the SAME assertions, but against the RENDERED DOM.
+   *
+   * ⚠️ Zoneless: asserting on `isScalingStudiesQuestionHidden()` alone is not enough — the method
+   * is a plain class member and a test that reads it passes with the defect present as long as the
+   * mock nulls `reportingCurrentPhase`. These tests set `reportingCurrentPhase.phaseYear = 2026`,
+   * which is what production actually carries (`data-control.service.ts:125`), and then look for the
+   * radio in the DOM. The "no phase_year" case below FAILS on the pre-fix code.
+   */
+  describe('scaling-studies question in the rendered DOM', () => {
+    const SCALING_RADIO_FIELD_REF = '[innovation-use-form]-has-studies-links';
+    /** The whole scaling-studies block lives inside `@if (isP25() && !isIpsr)` (`.html:287`). */
+    const renderWith = ({ phaseYear, level, isIpsr = false }: { phaseYear?: unknown; level: number | null; isIpsr?: boolean }) => {
+      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue(phaseYear === undefined ? {} : { phase_year: phaseYear });
+      // The OPEN reporting phase, as production carries it — the value the removed fallback read.
+      apiServiceMock.dataControlSE.reportingCurrentPhase = { phaseYear: 2026 };
+      fieldsManagerServiceMock.isP25.mockReturnValue(true);
+      innovationControlListServiceMock.useLevelsList = [
+        { id: 5, level: 5 },
+        { id: 6, level: 6 },
+        { id: 9, level: 9 }
+      ];
+
+      fixture = TestBed.createComponent(InnovationUseFormComponent);
+      component = fixture.componentInstance;
+      component.body = new IpsrStep1Body();
+      component.body.innovation_use_level_id = level;
+      component.saving = false;
+      component.isIpsr = isIpsr;
+      // This view only: the app-wide checkNoChanges pass trips on the P25 branch on its own
+      // (`getUseLevelIndex()` settles from -1), unrelated to this gate.
+      fixture.changeDetectorRef.detectChanges();
+      fixture.changeDetectorRef.detectChanges();
+
+      return fixture.debugElement
+        .queryAll(By.css('app-pr-radio-button'))
+        .some(de => de.nativeElement.getAttribute('fieldRef') === SCALING_RADIO_FIELD_REF);
+    };
+
+    // 🛑 The regression test: FAILS on the pre-fix code, which resolved the year to the open
+    // reporting phase (2026) and painted no radio at all on a result whose year had not landed.
+    it('paints the radio when the result carries no phase_year, even with the open phase at 2026', () => {
+      expect(renderWith({ level: 9 })).toBe(true);
+    });
+
+    it('paints the radio for a 2025-phase result', () => {
+      expect(renderWith({ phaseYear: 2025, level: 9 })).toBe(true);
+    });
+
+    it('drops the radio for a 2026-phase result', () => {
+      expect(renderWith({ phaseYear: 2026, level: 9 })).toBe(false);
+    });
+
+    it('paints the radio when phase_year arrives as a string', () => {
+      expect(renderWith({ phaseYear: '2026', level: 9 })).toBe(true);
+    });
+
+    /**
+     * The IPSR Innovation Package step-1 host (`step-n1.component.html:26`, `[isIpsr]="true"`).
+     * ⚠️ The block that holds this question is fenced with `&& !this.isIpsr` (`.html:287`), so the
+     * IPSR host paints no scaling-studies radio in ANY phase — the `isIpsr` level-6 branch inside
+     * `isScalingStudiesQuestionHidden()` is unreachable from this template. These cases lock that
+     * the fix leaves the IPSR host exactly where it was.
+     */
+    describe('IPSR step 1 host ([isIpsr] = true)', () => {
+      it.each([
+        ['no phase_year', undefined],
+        ['a 2025 phase', 2025],
+        ['a 2026 phase', 2026]
+      ])('paints no scaling-studies radio with %s', (_label, phaseYear) => {
+        expect(renderWith({ phaseYear, level: 9, isIpsr: true })).toBe(false);
+      });
     });
   });
 
   /**
    * P2-3295 — the 2030 block gets the projection tooltip from the 2026 phase on. The string itself lives on
    * `FieldsManagerService`, because `preventFieldRender()` only mirrors label/description/required and would
-   * drop a tooltip carried in `fields()`; what this asserts is that the template forwards it to the radio.
+   * drop a tooltip carried in `fields()`; what this asserts is that the template forwards it.
+   *
+   * ⚠️ It used to hang off the "This is yet to be determined" radio. That radio is one of the four
+   * sub-fields, not the question, and §2 of the story attaches the tooltip to the mandatory label
+   * "What is the projected innovation use by end of 2030?" — so that is where it is asserted now.
    */
   describe('2030 Use Projection tooltip binding', () => {
     /** The 2030 block only exists on the P25 branch, which is picked on the first render. */
@@ -849,16 +968,29 @@ describe('InnovationUseFormComponent', () => {
       // Refresh this view only: `fixture.detectChanges()` runs the app-wide checkNoChanges pass, which the
       // P25 branch trips on its own (`getUseLevelIndex()` settles from -1 on the second pass) — unrelated to P2-3295.
       fixture.changeDetectorRef.detectChanges();
-      return fixture.debugElement
-        .queryAll(By.css('app-pr-radio-button'))
-        .find(de => de.nativeElement.getAttribute('fieldRef') === '[innovation-use-form]-2030-to-be-determined');
+      return fixture.debugElement.query(By.css('[data-testid="iu-field-2030-projection-question"]'));
     };
 
-    it('forwards the projection tooltip to the 2030 radio for a 2026-phase result', () => {
-      const radio = renderP25With(TOOLTIP_2030);
+    it('forwards the projection tooltip to the projection question for a 2026-phase result', () => {
+      const question = renderP25With(TOOLTIP_2030);
 
-      expect(radio).toBeTruthy();
-      expect(radio.nativeElement.tooltip).toBe(TOOLTIP_2030);
+      expect(question).toBeTruthy();
+      expect(question.nativeElement.tooltip).toBe(TOOLTIP_2030);
+    });
+
+    it('renders the question verbatim, and mandatory', () => {
+      const question = renderP25With(TOOLTIP_2030);
+
+      expect(question.nativeElement.label).toBe('What is the projected innovation use by end of 2030?');
+      expect(question.nativeElement.required).toBe(true);
+    });
+
+    it('does NOT render the question for an earlier phase — that form stays as it is', () => {
+      fieldsManagerServiceMock.isInnovationUse2030Projection2026.mockReturnValue(false);
+
+      const question = renderP25With(TOOLTIP_2030);
+
+      expect(question).toBeNull();
     });
 
     it('forwards an empty tooltip for a 2025-phase result, so no \u24d8 button is painted', () => {
@@ -866,6 +998,390 @@ describe('InnovationUseFormComponent', () => {
 
       expect(radio).toBeTruthy();
       expect(radio.nativeElement.tooltip).toBe('');
+    });
+  });
+  /**
+   * P2-3537 §4 — the Current Use Update block, and the reconciliation that governs it.
+   *
+   * The case that matters most is the one that is NOT here as an error: a result whose previous
+   * phase reported no actors must not see the block at all. Yeck's decision of 3 Sep 2026 — showing
+   * it would mean reconciling against zero actors, an error the reporter can never resolve, so they
+   * could never submit. Every other test guards the arithmetic or the "0 is a valid answer" rule.
+   */
+  describe('§4 — Current Use Update block (P2-3537)', () => {
+    const previous = (total: number, year: number | null = 2025) => ({
+      result_id: 40,
+      phase_year: year,
+      total_actors: total,
+      actors: [],
+    });
+
+    const withActors = (...amounts: number[]) =>
+      amounts.map(n => Object.assign(new Actor(), { how_many: n, is_active: true }));
+
+    beforeEach(() => {
+      component.body = new IpsrStep1Body();
+      component.body.current_use_previous = previous(500);
+      component.body.innovatonUse.actors = withActors(500);
+      component.body.new_users_added = null;
+      component.body.use_expansion_narrative = null;
+    });
+
+    it('renders the block when the previous phase reported actors', () => {
+      expect(component.showCurrentUseUpdate()).toBe(true);
+    });
+
+    it('does NOT render it on a first report', () => {
+      component.body.current_use_previous = null;
+      expect(component.showCurrentUseUpdate()).toBe(false);
+    });
+
+    it('does NOT render it when the previous phase had organisations but no actors', () => {
+      // The server sends null for that case too. Rendering the block would show a permanent
+      // mismatch against zero actors that nothing the reporter does can fix.
+      component.body.current_use_previous = null;
+      expect(component.showCurrentUseUpdate()).toBe(false);
+      expect(component.hasCurrentUseMismatch()).toBe(false);
+    });
+
+    it('does NOT render it before the 2026 phase', () => {
+      fieldsManagerServiceMock.isInnovationUseAgeFallback2026.mockReturnValue(false);
+      expect(component.showCurrentUseUpdate()).toBe(false);
+    });
+
+    it('does NOT render it inside IPSR, which shares this template', () => {
+      component.isIpsr = true;
+      expect(component.showCurrentUseUpdate()).toBe(false);
+    });
+
+    it('calculates the cumulative total as previous + new, never typed', () => {
+      component.body.new_users_added = 120;
+      expect(component.totalCumulativeUse()).toBe(620);
+    });
+
+    it('treats an unanswered increment as zero for the arithmetic, without NaN', () => {
+      expect(component.totalCumulativeUse()).toBe(500);
+      expect(Number.isNaN(component.totalCumulativeUse())).toBe(false);
+    });
+
+    it('reconciles when the user categories match the cumulative total', () => {
+      component.body.new_users_added = 120;
+      component.body.innovatonUse.actors = withActors(400, 220);
+      expect(component.actorsTotal()).toBe(620);
+      expect(component.hasCurrentUseMismatch()).toBe(false);
+    });
+
+    it('flags a mismatch naming the exact difference', () => {
+      component.body.new_users_added = 120;
+      component.body.innovatonUse.actors = withActors(600);
+
+      expect(component.hasCurrentUseMismatch()).toBe(true);
+      expect(component.currentUseDifference()).toBe(-20);
+      const msg = component.currentUseMismatchMessage();
+      expect(msg).toContain('600');
+      expect(msg).toContain('620');
+      expect(msg).toContain('20');
+    });
+
+    it('ignores actor rows the reporter deleted', () => {
+      component.body.new_users_added = 0;
+      const actors = withActors(500, 999);
+      actors[1].is_active = false;
+      component.body.innovatonUse.actors = actors;
+
+      expect(component.actorsTotal()).toBe(500);
+      expect(component.hasCurrentUseMismatch()).toBe(false);
+    });
+
+    it('accepts a reported ZERO and still demands the narrative', () => {
+      // §5: use verified and did not grow. Allowed, but it has to be explained.
+      component.body.new_users_added = 0;
+      expect(component.isCurrentUseUpdateComplete()).toBe(false);
+
+      component.body.use_expansion_narrative = 'Verified with the cooperative; no new users.';
+      expect(component.isCurrentUseUpdateComplete()).toBe(true);
+    });
+
+    it('is incomplete while the increment has not been answered at all', () => {
+      component.body.use_expansion_narrative = 'Something happened.';
+      expect(component.isCurrentUseUpdateComplete()).toBe(false);
+    });
+
+    it('is incomplete while the figures do not reconcile, even with both fields filled', () => {
+      component.body.new_users_added = 120;
+      component.body.use_expansion_narrative = 'A distribution agreement.';
+      component.body.innovatonUse.actors = withActors(1);
+
+      expect(component.isCurrentUseUpdateComplete()).toBe(false);
+    });
+
+    it('refuses a negative increment: use cannot decrease through this field', () => {
+      component.body.new_users_added = -5;
+      component.onNewUsersAddedChange();
+      expect(component.body.new_users_added).toBe(0);
+    });
+
+    it('omits the round label rather than guessing it', () => {
+      component.body.current_use_previous = previous(500, null);
+      expect(component.previousUsePhaseYear()).toBeNull();
+      expect(component.previousReportedUse()).toBe(500);
+    });
+
+    it('counts nothing but actors — organisations never enter the total', () => {
+      // Yeck's Q4 decision. If this ever changes, next year's "previous use" becomes a figure
+      // nobody can decompose.
+      component.body.new_users_added = 0;
+      component.body.innovatonUse.organization = [{ how_many: 12 } as any];
+      component.body.innovatonUse.actors = withActors(500);
+
+      expect(component.actorsTotal()).toBe(500);
+      expect(component.hasCurrentUseMismatch()).toBe(false);
+    });
+  });
+
+  /**
+   * P2-3537 section 7 — the age-only fallback and the system-applied 50/50 split.
+   *
+   * What this pins is the part the story cares about most: that a computed figure is
+   * never mistaken for a reported one. Every case below is one that would either lose
+   * that distinction or leave the arithmetic inconsistent.
+   */
+  describe('section 7 — age-only fallback (P2-3537)', () => {
+    const actorWith = (over: any = {}) => Object.assign(new Actor(), { women: 10, men: 7, ...over });
+
+    beforeEach(() => {
+      component.body = new IpsrStep1Body();
+      component.body.innovatonUse.actors = [actorWith()];
+    });
+
+    it('is offered from the 2026 phase, on a row that still disaggregates by sex', () => {
+      expect(component.showAgeFallback(component.body.innovatonUse.actors[0])).toBe(true);
+    });
+
+    it('is NOT offered before the 2026 phase', () => {
+      fieldsManagerServiceMock.isInnovationUseAgeFallback2026.mockReturnValue(false);
+      expect(component.showAgeFallback(component.body.innovatonUse.actors[0])).toBe(false);
+    });
+
+    it('is NOT offered inside IPSR, which shares this template', () => {
+      // Gated out explicitly rather than by omission — the lesson P2-3295 left here.
+      component.isIpsr = true;
+      expect(component.showAgeFallback(component.body.innovatonUse.actors[0])).toBe(false);
+    });
+
+    it('is NOT offered while "sex and age" is ticked, which already switches both off', () => {
+      const actor = actorWith({ sex_and_age_disaggregation: true });
+      expect(component.showAgeFallback(actor)).toBe(false);
+    });
+
+    it('splits youth 50/50 and stamps that the SYSTEM did it', () => {
+      const actor = actorWith({ age_disaggregation_not_available: true });
+      component.applyAgeDisaggregationFallback(actor);
+
+      expect(actor.women_youth).toBe(5);
+      expect(actor.women_non_youth).toBe(5);
+      expect(actor.men_youth).toBe(4);
+      expect(actor.men_non_youth).toBe(3);
+      // The whole point of the story: this is what tells an estimate from a report.
+      expect(actor.youth_split_applied_by_system).toBe(true);
+    });
+
+    it('keeps youth + non-youth equal to the total on an odd number', () => {
+      // 7 men -> 4 + 3. Rounding can never break it because non-youth is the remainder.
+      const actor = actorWith({ men: 7, women: 3, age_disaggregation_not_available: true });
+      component.applyAgeDisaggregationFallback(actor);
+
+      expect(actor.men_youth + actor.men_non_youth).toBe(7);
+      expect(actor.women_youth + actor.women_non_youth).toBe(3);
+    });
+
+    it('recalculates when the total changes, so the halves never go stale', () => {
+      const actor = actorWith({ age_disaggregation_not_available: true });
+      component.applyAgeDisaggregationFallback(actor);
+      actor.women = 20;
+      component.recalculateAgeFallback(actor);
+
+      expect(actor.women_youth).toBe(10);
+      expect(actor.women_non_youth).toBe(10);
+    });
+
+    it('does not touch a row whose fallback is off', () => {
+      const actor = actorWith({ women_youth: 3 });
+      component.recalculateAgeFallback(actor);
+
+      expect(actor.women_youth).toBe(3);
+      expect(actor.youth_split_applied_by_system).toBeUndefined();
+    });
+
+    it('unticking clears the computed halves AND the stamp', () => {
+      // Leaving the halves behind would turn a system estimate into what reads as the
+      // reporter's own answer — the exact confusion the stamp exists to prevent.
+      const actor = actorWith({ age_disaggregation_not_available: true });
+      component.applyAgeDisaggregationFallback(actor);
+      actor.age_disaggregation_not_available = false;
+      component.applyAgeDisaggregationFallback(actor);
+
+      expect(actor.women_youth).toBeNull();
+      expect(actor.men_youth).toBeNull();
+      expect(actor.youth_split_applied_by_system).toBeNull();
+    });
+
+    it('ticking "sex and age" wipes the age-only answer, so no contradiction is sent', () => {
+      const actor = actorWith({ age_disaggregation_not_available: true });
+      component.applyAgeDisaggregationFallback(actor);
+      component.cleanActor(actor);
+
+      expect(actor.age_disaggregation_not_available).toBeNull();
+      expect(actor.youth_split_applied_by_system).toBeNull();
+    });
+
+    it('treats an empty or zero total as zero, without producing NaN', () => {
+      const actor = actorWith({ women: null, men: 0, age_disaggregation_not_available: true });
+      component.applyAgeDisaggregationFallback(actor);
+
+      expect(actor.women_youth).toBe(0);
+      expect(actor.men_youth).toBe(0);
+      expect(Number.isNaN(actor.women_non_youth)).toBe(false);
+    });
+
+    it('reports the split as system-applied only while the stamp is set', () => {
+      const actor = actorWith();
+      expect(component.isYouthSplitBySystem(actor)).toBe(false);
+      actor.youth_split_applied_by_system = true;
+      expect(component.isYouthSplitBySystem(actor)).toBe(true);
+    });
+  });
+});
+
+/**
+ * P2-3295 §3 — reviewing a 2030 projection inherited from the previous reporting phase.
+ *
+ * Built off the prototype, with no TestBed: every path below is a getter over `body` and the Yes/No
+ * answer, and rendering the 2030 block (~270 lines of repeated field groups) would test the DOM
+ * instead of the rule that decides the behaviour — which values differ from the previous phase.
+ */
+describe('InnovationUseFormComponent — 2030 projection review (P2-3295 §3)', () => {
+  const actor = (over: Record<string, unknown> = {}) => ({
+    actor_type_id: 4,
+    women: 10,
+    women_youth: 2,
+    men: 8,
+    men_youth: 1,
+    how_many: null,
+    is_active: true,
+    ...over
+  });
+
+  function makeComponent(body: any) {
+    const instance: any = Object.create(InnovationUseFormComponent.prototype);
+    instance.body = body;
+    instance.reviewing2030Projection = false;
+    return instance;
+  }
+
+  const withoutPreviousPhase = () => makeComponent({ innovation_use_2030: { actors: [], organization: [], measures: [] } });
+
+  const withPreviousPhase = () =>
+    makeComponent({
+      innovation_use_2030: { actors: [actor()], organization: [], measures: [] },
+      innovation_use_2030_previous: {
+        result_id: 8090,
+        actors: [actor()],
+        organization: [],
+        measures: []
+      }
+    });
+
+  describe('Scenario A — first-time reporting', () => {
+    it('is not in review mode and never locks the fields', () => {
+      const component = withoutPreviousPhase();
+
+      expect(component.has2030PreviousProjection).toBe(false);
+      expect(component.projection2030Locked).toBe(false);
+      expect(component.projection2030Changed).toBe(false);
+      expect(component.projection2030JustificationRequired).toBe(false);
+    });
+  });
+
+  describe('Scenario B — the projection came from the previous phase', () => {
+    it('starts locked, because the default answer is No', () => {
+      const component = withPreviousPhase();
+
+      expect(component.has2030PreviousProjection).toBe(true);
+      expect(component.reviewing2030Projection).toBe(false);
+      expect(component.projection2030Locked).toBe(true);
+    });
+
+    it('unlocks when the reporter answers Yes', () => {
+      const component = withPreviousPhase();
+      component.reviewing2030Projection = true;
+
+      expect(component.projection2030Locked).toBe(false);
+    });
+
+    it('asks for no justification while the values still match what was reported', () => {
+      const component = withPreviousPhase();
+      component.reviewing2030Projection = true;
+
+      expect(component.projection2030Changed).toBe(false);
+      expect(component.projection2030JustificationRequired).toBe(false);
+    });
+
+    it('asks for a justification once an inherited value is changed', () => {
+      const component = withPreviousPhase();
+      component.reviewing2030Projection = true;
+      component.body.innovation_use_2030.actors[0].women = 40;
+
+      expect(component.projection2030Changed).toBe(true);
+      expect(component.projection2030JustificationRequired).toBe(true);
+    });
+
+    it('stops asking when the change is undone', () => {
+      const component = withPreviousPhase();
+      component.reviewing2030Projection = true;
+      component.body.innovation_use_2030.actors[0].women = 40;
+      expect(component.projection2030JustificationRequired).toBe(true);
+
+      component.body.innovation_use_2030.actors[0].women = 10;
+
+      expect(component.projection2030JustificationRequired).toBe(false);
+    });
+
+    it('sees an added row as a change', () => {
+      const component = withPreviousPhase();
+      component.reviewing2030Projection = true;
+      component.body.innovation_use_2030.actors.push(actor({ actor_type_id: 7 }));
+
+      expect(component.projection2030Changed).toBe(true);
+    });
+
+    it('sees a row the reporter removed as a change', () => {
+      const component = withPreviousPhase();
+      component.reviewing2030Projection = true;
+      component.body.innovation_use_2030.actors[0].is_active = false;
+
+      expect(component.projection2030Changed).toBe(true);
+    });
+
+    /** Ids and audit fields differ between two phases by construction — they are not user changes. */
+    it('does not report a change for ids or audit fields that differ between phases', () => {
+      const component = withPreviousPhase();
+      component.reviewing2030Projection = true;
+      component.body.innovation_use_2030.actors[0] = actor({
+        result_actors_id: 999,
+        created_date: '2026-09-02',
+        last_updated_by: 77
+      });
+
+      expect(component.projection2030Changed).toBe(false);
+    });
+
+    it('never asks for a justification while the projection is still locked', () => {
+      const component = withPreviousPhase();
+      component.body.innovation_use_2030.actors[0].women = 40;
+
+      expect(component.projection2030Changed).toBe(true);
+      expect(component.projection2030JustificationRequired).toBe(false);
     });
   });
 });

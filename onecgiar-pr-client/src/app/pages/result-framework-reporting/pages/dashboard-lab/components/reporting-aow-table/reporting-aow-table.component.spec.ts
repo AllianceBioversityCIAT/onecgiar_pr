@@ -1,7 +1,12 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { ReportingAowTableComponent, ReportingAowGroup, ReportingIndicator } from './reporting-aow-table.component';
+import {
+  ReportingAowTableComponent,
+  ReportingAowGroup,
+  ReportingIndicator,
+  TocAchievement
+} from './reporting-aow-table.component';
 import { PrTooltipDirective } from '../../../../../../shared/directives/pr-tooltip.directive';
 import { buildAowBannerStats } from '../../dashboard-lab.component';
 
@@ -96,6 +101,18 @@ describe('ReportingAowTableComponent', () => {
     indicators: rows,
     count: rows.length,
     loading: false,
+    ...over
+  });
+
+  const achievement = (over: Partial<TocAchievement> = {}): TocAchievement => ({
+    progress_percentage: '40%',
+    preliminary_progress_percentage: '55%',
+    progress_value: 40,
+    preliminary_value: 55,
+    counted: 2,
+    total: 3,
+    indicators_counted: 5,
+    indicators_total: 6,
     ...over
   });
 
@@ -414,6 +431,75 @@ describe('ReportingAowTableComponent', () => {
     });
   });
 
+  // ── achievement column (OSF-T-16: Reporting @900px overflow) ────────────────
+  describe('achievement column, OSF-T-16', () => {
+    // OSF-DD-8's ladder sheds the achievement block first. It must go `sr-only` below 1100px,
+    // never `hidden` — `OSF-R-8` forbids removing it from the accessibility tree to fix layout.
+    it('keeps the achievement block in the DOM, marked sr-only below 1100px — never hidden', async () => {
+      const g = group([row()], { achievement: achievement() });
+      await build([g]);
+      openAow();
+
+      // Query by the class the template actually renders on the achievement block.
+      const achievementEl = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('span')).find(el =>
+        el.className.includes('w-[168px]')
+      );
+      expect(achievementEl).toBeTruthy();
+      expect(achievementEl!.className).toContain('max-[1100px]:sr-only');
+      expect(achievementEl!.className).not.toContain('hidden');
+      // Its figures are still real text nodes in the DOM — an AT user reading the block gets them.
+      expect(achievementEl!.textContent).toContain('40%');
+      expect(achievementEl!.textContent).toContain('55%');
+    });
+
+    it('omits the achievement block entirely when the group carries none — unaffected by OSF-T-16', async () => {
+      await build([group([row()])]);
+      const achievementEl = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('span')).find(el =>
+        el.className.includes('w-[168px]')
+      );
+      expect(achievementEl).toBeUndefined();
+    });
+
+    // The sighted-hover fallback the ladder promises ("available in the row tooltip"): once the
+    // achievement block is sr-only (unreachable by a pointer), its content must still be
+    // discoverable by hovering the group that stays visible.
+    it('carries the achievement figures into the group title when the block is present', async () => {
+      const g = group([row()], { achievement: achievement() });
+      await build([g]);
+
+      expect(component.rowTitle(g)).toContain('QA 40%');
+      expect(component.rowTitle(g)).toContain('Preliminary 55%');
+      const titled = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[title]')).find(el =>
+        (el.getAttribute('title') || '').includes('QA 40%')
+      );
+      expect(titled).toBeTruthy();
+    });
+
+    // The zero-target `ratioTitle` fallback must survive — OSF-T-16 composes onto it, not over it.
+    it('keeps the zero-target ratioTitle when there is no achievement', async () => {
+      const withZeros = group([
+        row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }),
+        row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '0' })
+      ]);
+      expect(component.rowTitle(withZeros)).toBe(component.ratioTitle(withZeros));
+      expect(component.rowTitle(withZeros)).toBe('excludes 1 zero-target KPI');
+    });
+
+    // Both fallbacks compose when both conditions are true — neither must silently drop the other.
+    it('composes the zero-target exclusion and the achievement figures when both apply', async () => {
+      const g = group(
+        [
+          row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }),
+          row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '0' })
+        ],
+        { achievement: achievement() }
+      );
+      const title = component.rowTitle(g);
+      expect(title).toContain('excludes 1 zero-target KPI');
+      expect(title).toContain('QA 40%');
+    });
+  });
+
   // ── filtering ─────────────────────────────────────────────────────────────
   describe('filters', () => {
     it('matches the title, the HLO and the category', async () => {
@@ -470,6 +556,31 @@ describe('ReportingAowTableComponent', () => {
       component.openAow.subscribe(code => emitted.push(code));
       (jumps[0] as HTMLElement).click();
       expect(emitted).toEqual(['AOW01']);
+    });
+
+    // OSF-T-12: at 768px the header row has no width left to give (the AoW name is already
+    // min-w-0/truncate and fully squeezed) — every other header child is `shrink-0`. Collapsing
+    // this control to icon-only below 900px (Tailwind v4 `max-[900px]:` — exclusive, so 900px
+    // itself is untouched, matching OSF-T-10's already-clean reading there) closed the measured
+    // 768px 798→750 overflow (browser-verified; jsdom performs no layout, see OSF-R-8's D4 gap).
+    it('collapses to icon-only below 900px without losing the accessible name (OSF-T-12)', async () => {
+      await build([group([row()])]);
+      const el: HTMLElement = fixture.nativeElement;
+      const jump = el.querySelector('[aria-label="Open this Area of Work in the By-AOW view"]') as HTMLElement;
+      expect(jump).toBeTruthy();
+      expect(jump.className).toContain('max-[900px]:w-[30px]');
+      expect(jump.className).toContain('max-[900px]:justify-center');
+      expect(jump.className).toContain('max-[900px]:px-0');
+      // the label is a real element (reachable text at ≥900px), not deleted — only visually hidden
+      // below 900px, and the aria-label carries the accessible name regardless of width.
+      const label = jump.querySelector('span:not(.material-icons-round)');
+      expect(label?.textContent?.trim()).toBe('By AOW');
+      expect(label?.className).toContain('max-[900px]:hidden');
+      expect(jump.getAttribute('aria-label')).toBe('Open this Area of Work in the By-AOW view');
+      // a hover affordance matching the file's own convention (`Copy link`, :207/:922 carries both
+      // aria-label AND title) — without this, an icon-only `folder_open` glyph self-describes to
+      // nobody. Asserted as its own attribute, not folded into aria-label.
+      expect(jump.getAttribute('title')).toBe('By AOW');
     });
   });
 

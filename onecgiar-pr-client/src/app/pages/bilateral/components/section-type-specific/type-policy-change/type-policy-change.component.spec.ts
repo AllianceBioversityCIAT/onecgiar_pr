@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { By } from '@angular/platform-browser';
+import { of, throwError, Subject } from 'rxjs';
 import { signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 
 import { TypePolicyChangeComponent } from './type-policy-change.component';
 import { BilateralApiService } from '../../../../../shared/services/api/bilateral-api.service';
@@ -30,13 +32,21 @@ describe('TypePolicyChangeComponent', () => {
     ],
   };
 
+  /**
+   * P2-3556 — `build()` now RUNS the first change detection, so `ngOnInit` fires and the default
+   * `GET_policyChanges` mock (which resolves synchronously) leaves the component `loaded`. Every
+   * save is now gated on that flag, so a component that was never initialized can no longer save
+   * anything — which is the point of the fix, and would otherwise silently neuter every save
+   * assertion in this file (they would pass because nothing ever loaded, not because saving works).
+   */
   const build = () => {
     fixture = TestBed.createComponent(TypePolicyChangeComponent);
     component = fixture.componentInstance;
+    fixture.detectChanges();
     return component;
   };
 
-  beforeEach(async () => {
+  const makeMocks = () => {
     mdsTracker = { setSectionFields: jest.fn() };
     autoSave = {
       fieldStatus: signal<Record<string, string>>({}),
@@ -57,8 +67,10 @@ describe('TypePolicyChangeComponent', () => {
       GET_policyChangesQuestions: jest.fn().mockReturnValue(of({ response: { ...QUESTIONS_RESPONSE } })),
       PATCH_policyChanges: jest.fn().mockReturnValue(of({})),
     };
+  };
 
-    await TestBed.configureTestingModule({
+  const configure = () =>
+    TestBed.configureTestingModule({
       imports: [TypePolicyChangeComponent],
       providers: [
         { provide: BilateralApiService, useValue: bilateralApi },
@@ -69,9 +81,11 @@ describe('TypePolicyChangeComponent', () => {
         { provide: PolicyControlListService, useValue: policyControlList },
         { provide: InstitutionsService, useValue: institutionsService },
       ],
-    })
-      .overrideTemplate(TypePolicyChangeComponent, '<div></div>')
-      .compileComponents();
+    });
+
+  beforeEach(async () => {
+    makeMocks();
+    await configure().overrideTemplate(TypePolicyChangeComponent, '<div></div>').compileComponents();
   });
 
   it('should create', () => {
@@ -130,6 +144,133 @@ describe('TypePolicyChangeComponent', () => {
       expect(component.body).toEqual({});
       expect(component.questions).toEqual({});
       expect(component.relatedTo).toBeNull();
+    });
+
+    it('marks the section as loaded once the body is in hand', () => {
+      build();
+      expect(component.loaded()).toBe(true);
+    });
+
+    /**
+     * P2-3556 — the data-loss chain, cut at its root.
+     *
+     * `loadData()` had no error handler at all. The interceptor rethrows every failed response
+     * (`shared/interceptors/general-interceptor.service.ts:81-83`), so `next` never ran, `body`
+     * stayed the `{}` it was constructed with, and the form painted blank with no warning. The
+     * first keystroke then autosaved a payload built from that `{}`, and the server reads it as a
+     * deletion, not as "nothing to say":
+     *
+     * - `institutions` absent (or `[]`) falls into the `else` branch of `savePolicyChanges`
+     *   (`api/results/summary/summary.service.ts:1021`, `:1048-1054`) which calls
+     *   `updateGenericIstitutions(resultId, [], 4, ...)` — and that runs `upDateAllInactiveRBI`,
+     *   `set is_active = 0 ... where result_id = ? and institution_roles_id = ?`
+     *   (`results_by_institutions/result_by_intitutions.repository.ts:606-650`). Every stored
+     *   implementing organization is de-activated.
+     * - `amount` absent becomes `amount || null` (`summary.service.ts:996`), so the stored USD
+     *   figure is nulled.
+     *
+     * These assert on the ABSENCE of a request, which is the only thing that separates the fix from
+     * the defect: the old code reached `schedulePayload` on every one of these paths.
+     */
+    describe('when the GET fails (P2-3556)', () => {
+      const failLoad = (status = 500) =>
+        bilateralApi.GET_policyChanges.mockReturnValue(
+          throwError(() => new HttpErrorResponse({ status, statusText: 'Internal Server Error' })),
+        );
+
+      it('leaves the section not loaded, with an empty body', () => {
+        failLoad();
+        build();
+        expect(component.loaded()).toBe(false);
+        expect(component.body).toEqual({});
+      });
+
+      it('sends NOTHING when the person types on a form that never loaded', () => {
+        failLoad();
+        build();
+        autoSave.schedulePayload.mockClear();
+
+        component.body.policy_type_id = 1;
+        component.onFieldChange();
+
+        expect(autoSave.schedulePayload).not.toHaveBeenCalled();
+      });
+
+      it('sends nothing when the person presses Save either', () => {
+        failLoad();
+        build();
+        autoSave.schedulePayload.mockClear();
+        component.onSave();
+        expect(autoSave.schedulePayload).not.toHaveBeenCalled();
+      });
+
+      it('sends nothing from onRelatedToChange, the third write path', () => {
+        failLoad();
+        build();
+        autoSave.schedulePayload.mockClear();
+        component.onRelatedToChange(1);
+        expect(autoSave.schedulePayload).not.toHaveBeenCalled();
+      });
+
+      // Same reason as the sibling sections (P2-3355): publishing no checklist at all leaves the
+      // section at "0/0 fields", which reads as "nothing required here" instead of as incomplete.
+      it('still publishes the three unfilled MDS items, so the section stays honestly incomplete', () => {
+        failLoad();
+        bilateralApi.GET_policyChangesQuestions.mockReturnValue(throwError(() => new Error('down too')));
+        build();
+        const fields = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
+        expect(fields.map((f: any) => f.key)).toEqual(['policy-type', 'policy-stage', 'policy-institutions']);
+        expect(fields.every((f: any) => f.filled === false)).toBe(true);
+      });
+
+      /**
+       * 🛑 The one place this section is NOT the same as its siblings.
+       *
+       * `getPolicyChanges` throws `{ status: 404 }` whenever the result has no
+       * `results_policy_changes` row yet (`summary.service.ts:1104-1110`) and the controller's
+       * `ResponseInterceptor` turns that field into the real HTTP status
+       * (`shared/Interceptors/Return-data.interceptor.ts:46`). Measured on prtest 2-Sep-2026:
+       * `GET summary/policy-changes/get/result/999999` -> `404 {"response":{},"message":"Results
+       * Innovations Dev not found"}`. So 404 is the ORDINARY answer for every brand-new policy
+       * change, and an empty body is then the truth rather than a failure. Treating it as a failed
+       * load would leave the Save button disabled forever on a result nobody has filled in yet —
+       * i.e. it would make the section impossible to complete.
+       */
+      it('treats a 404 as an empty record, not as a failure — a brand-new result must still save', () => {
+        failLoad(404);
+        build();
+        expect(component.loaded()).toBe(true);
+        expect(component.body).toEqual({});
+
+        autoSave.schedulePayload.mockClear();
+        component.body.policy_type_id = 1;
+        component.onFieldChange();
+        expect(autoSave.schedulePayload).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    /**
+     * P2-3556, the secondary window: the GET takes 180-280 ms on prtest against an 800 ms autosave
+     * debounce, so an edit could reach the PATCH before the body ever arrived — and a payload built
+     * from `{}` deletes the organizations exactly as a failed load does. `null` therefore blocks too.
+     */
+    describe('while the GET is still in flight (P2-3556)', () => {
+      it('sends nothing before the body arrives, and saves normally afterwards', () => {
+        const inFlight = new Subject<any>();
+        bilateralApi.GET_policyChanges.mockReturnValue(inFlight.asObservable());
+        build();
+
+        expect(component.loaded()).toBeNull();
+        component.body.policy_type_id = 1;
+        component.onFieldChange();
+        expect(autoSave.schedulePayload).not.toHaveBeenCalled();
+
+        inFlight.next({ response: { policy_type_id: 2, institutions: [{ institutions_id: 7 }] } });
+        expect(component.loaded()).toBe(true);
+
+        component.onFieldChange();
+        expect(autoSave.schedulePayload).toHaveBeenCalledTimes(1);
+      });
     });
   });
 
@@ -253,6 +394,42 @@ describe('TypePolicyChangeComponent', () => {
       autoSave.fieldStatus.set({ 'type-specific': 'saving' });
       expect(component.saving()).toBe(true);
     });
+
+    // P2-3556 regression guards: the load gate must not change the happy path in any way.
+    it('saves normally once the body has loaded', () => {
+      bilateralApi.GET_policyChanges.mockReturnValue(
+        of({ response: { policy_type_id: 1, institutions: [{ institutions_id: 7 }] } }),
+      );
+      build();
+      autoSave.schedulePayload.mockClear();
+
+      component.body.policy_stage_id = 2;
+      component.onFieldChange();
+
+      const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+      expect(payload.policy_type_id).toBe(1);
+      expect(payload.policy_stage_id).toBe(2);
+      expect(payload.institutions).toEqual([{ institutions_id: 7 }]);
+    });
+
+    /**
+     * The deletion the user actually asked for still goes through. `institutions: []` is what makes
+     * the server de-activate every stored organization (`summary.service.ts:1048-1054`), so the fix
+     * must not start omitting or filtering that key — only refuse to send it before the body is
+     * known. Removing the last organization is a legitimate edit and has to persist.
+     */
+    it('still sends an empty institutions array once the user removes the last organization', () => {
+      bilateralApi.GET_policyChanges.mockReturnValue(of({ response: { institutions: [{ institutions_id: 7 }] } }));
+      build();
+      autoSave.schedulePayload.mockClear();
+
+      component.body.institutions = [];
+      component.onFieldChange();
+
+      const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+      expect('institutions' in payload).toBe(true);
+      expect(payload.institutions).toEqual([]);
+    });
   });
 
   describe('toggleShowAll', () => {
@@ -263,6 +440,85 @@ describe('TypePolicyChangeComponent', () => {
       expect(expandableState.setShowAllFields).toHaveBeenCalledWith(123, 'type-specific', true);
       component.toggleShowAll();
       expect(expandableState.setShowAllFields).toHaveBeenLastCalledWith(123, 'type-specific', false);
+    });
+  });
+
+  /**
+   * ── P2-3556 — rendered template ────────────────────────────────────────────────────────────────
+   * This runs against the REAL template on purpose: whether the person is told that the section
+   * failed to load, and whether the Save button still invites a save that `queueTypeSave` would
+   * refuse, are the two things the fix promises on screen. Every other block in this file overrides
+   * the template away.
+   */
+  describe('rendered template (P2-3556)', () => {
+    // `app-alert-status` declares plain `@Input()`s while some `app-pr-*` controls use signals, so
+    // read both shapes — same helper the sibling section uses.
+    const read = (value: any) => (typeof value === 'function' ? value() : value);
+    const alerts = () =>
+      fixture.debugElement.queryAll(By.css('app-alert-status')).map(d => ({
+        status: read(d.componentInstance.status),
+        description: read(d.componentInstance.description),
+      }));
+    const render = () => {
+      build();
+      fixture.detectChanges();
+    };
+
+    beforeEach(async () => {
+      TestBed.resetTestingModule();
+      makeMocks();
+      await configure().compileComponents();
+    });
+
+    it('renders an error note that says nothing typed will be saved', () => {
+      bilateralApi.GET_policyChanges.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+      render();
+
+      const error = alerts().find(a => a.status === 'error');
+      expect(error).toBeDefined();
+      expect(error.description).toContain('nothing typed here will be saved');
+      expect(error.description).toContain('reported earlier has not been changed');
+    });
+
+    // The note sits at the TOP of the field list, above the fields it explains — unlike the sibling
+    // section, whose MDS note happens to be the first block of its own template. Here the MDS note
+    // is halfway down the form, and an error placed next to it would only be read after the person
+    // had already scrolled past every blank field.
+    it('keeps the MDS note in place, and puts the error note above it', () => {
+      bilateralApi.GET_policyChanges.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+      render();
+      expect(alerts().map(a => a.status)).toEqual(['error', 'info']);
+    });
+
+    it('renders no error note on a successful load', () => {
+      render();
+      expect(alerts().map(a => a.status)).toEqual(['info']);
+    });
+
+    // A naive `@if (!loaded())` would flash the error note on every open, while the GET is normal
+    // and simply not back yet. The template asks for `=== false` on purpose.
+    it('renders no error note while the GET is still in flight — null is not an error', () => {
+      bilateralApi.GET_policyChanges.mockReturnValue(new Subject<any>().asObservable());
+      render();
+      expect(component.loaded()).toBeNull();
+      expect(alerts().map(a => a.status)).toEqual(['info']);
+    });
+
+    it('renders no error note for a 404 — a result with no policy-change row yet is not an error', () => {
+      bilateralApi.GET_policyChanges.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
+      render();
+      expect(alerts().map(a => a.status)).toEqual(['info']);
+    });
+
+
+    // Explicit-save model (2026-09-03): the footer's Save draft persists the section, so the form
+    // renders no Save of its own — it only re-staged what every change had already staged.
+    it('renders no in-section Save button', () => {
+      render();
+      const saveButtons = Array.from(fixture.nativeElement.querySelectorAll('button')).filter(
+        (b: any) => ['Save', 'Saving...'].includes(b.textContent.trim())
+      );
+      expect(saveButtons).toHaveLength(0);
     });
   });
 });

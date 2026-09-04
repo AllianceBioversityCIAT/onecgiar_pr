@@ -48,6 +48,28 @@ export interface OptionV2 {
   subOptions: SubOptionV2[];
 }
 
+/**
+ * A questionnaire group as the client echoes it back to the save endpoint.
+ *
+ * ⚠️ `q1`…`q4` are declared required but ARE NOT GUARANTEED AT RUNTIME (P2-3557).
+ * The GET serves only the question slots the result's reporting phase owns, and
+ * the client sends back exactly what it received: from the 2026 phase on,
+ * `responsible_innovation_and_scaling` arrives with `q1`…`q3` and no `q4`, because
+ * question 137 ("partners, policies and financial mechanisms") was retired with no
+ * replacement. Reading a fixed `q4` here is what threw
+ * `Cannot read properties of undefined (reading 'radioButtonValue')` on every
+ * 2026 Innovation Development save.
+ *
+ * So never dereference a slot by name: iterate the `qN` keys that are present
+ * (`InnovationDevService._saveNestedQuestionGroup`). The members stay required
+ * because marking them optional makes this DTO unassignable to the V1
+ * `CreateInnovationDevDto` that `InnoDevService.saveInitiativeInvestment` and
+ * `savePartnerInvestment` still declare — the type cannot be made honest without
+ * touching that legacy shared service.
+ *
+ * The group's own `radioButtonValue` / `options` are the flat shape used by
+ * `innovation_team_diversity` and `megatrends`, which have no `qN` children.
+ */
 export interface TopLevelQuestionsV2 {
   q1: {
     radioButtonValue: number;

@@ -33,6 +33,11 @@
       flex-direction: column;
       gap: 2px;
 
+      // P2-3292 Step 2: prompt above the checklist, so it does not sit flush against the first box.
+      .discontinued_options__header {
+        margin-bottom: 8px;
+      }
+
       .discontinued_option {
         display: flex;
         align-items: center;
@@ -57,4 +62,30 @@
   display: flex;
   justify-content: flex-start;
   gap: 1rem;
+}
+
+// P2-3292 Step 4 — the administrator's way out of the auto-lock.
+.reopen {
+  margin-top: 16px;
+
+  &--button {
+    background-color: var(--pr-color-primary-25);
+    color: var(--pr-color-blue-600);
+    border: 1px solid var(--pr-color-blue-600);
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 13px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--pr-color-blue-600);
+      color: #fff;
+    }
+  }
+
+  &--hint {
+    font-size: 12px;
+    color: var(--pr-color-gray-500, #6b7280);
+    margin-top: 6px;
+  }
 }

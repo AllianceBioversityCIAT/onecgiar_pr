@@ -166,6 +166,15 @@
   white-space: normal;
 }
 
+// P2-3518 — the editable Project field hosts `app-bilateral-project-selector`, which brings its own
+// typography and box; the <dd> only has to stop imposing the static value's font.
+.bp-meta-field-value--editable {
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: normal;
+  overflow: visible;
+}
+
 // Summary/Description read as short paragraphs, not single-line values — same
 // labeled-list shape as .bp-project-fields but wrapping instead of truncating.
 .bp-project-summary-fields {

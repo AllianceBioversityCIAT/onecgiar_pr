@@ -1,11 +1,13 @@
 # rd-annual-updating
 
-**Verified:** 2026-08-31 · branch performance-refactor · 4ffec6d4a
+**Verified:** 2026-09-03 · branch performance-refactor
 
 ## What it is
 The "Annual updating" block at the very top of General Information. It asks whether the innovation
 is still active / still receiving investment, and when the answer is "no" it collects the reasons
-(checkbox list, plus a free-text box for the "Other" reason).
+(checkbox list, plus a free-text box for the "Other" reason). From the 2026 phase on, Innovation
+Development uses the P2-3292 wording for both questions; every earlier phase and Innovation Use
+render exactly as they always did.
 
 ## Contract
 - `@Input() generalInfoBody: GeneralInfoBody` — two-way bound to `is_discontinued` (the stored
@@ -14,6 +16,8 @@ is still active / still receiving investment, and when the answer is "no" it col
 - `usesStatusTriggerWording: boolean` (readonly) — P2-3292 wording switch, resolved **once at
   construction**, same as `options` always was.
 - `headerLabel` / `options` — derived from `usesStatusTriggerWording`.
+- `reasonsHeaderLabel` / `reasonsHeaderHint` (readonly) — P2-3292 Step 2 prompt above the reason
+  checklist. Rendered only on the 2026 branch (template gate), never on the legacy one.
 - `annualUpdatingEditable` getter = `isPhaseOpen && rolesSE.access?.canDdit`; feeds every
   `[isStatic]` / `[disabled]` in the template (P2-2923).
 - Endpoint: `GET_globalNarratives('updated_innodev_guidance')` via `ResultsApiService`, in `ngOnInit`,
@@ -24,6 +28,62 @@ is still active / still receiving investment, and when the answer is "no" it col
 - `rd-general-information.component.html:1` — rendered only when `generalInfoBody.is_replicated`
   is known, which is what makes the construction-time resolution safe.
 - Declared in `rd-general-information.module.ts:22` (the component itself is standalone).
+
+## The reason checklist is ONE phase generation (P2-3292 Step 2)
+
+`investment_discontinued_option` has no phase column beyond `phase_year_from`, which marks the phase
+a reason was introduced for. The six original rows carry `NULL` (the base generation); the seven
+2026 ones carry `2026`. The endpoint serves exactly one generation — the newest at or below the
+result's phase year — so the checklist never mixes the two.
+
+- The year travels on `GET_investmentDiscontinuedOptions(result_type_id, phase_year)` from
+  `rd-general-information.component.ts`. 🛑 It comes from `FieldsManagerService.phaseYear`, **not**
+  from the general-information payload that call sits inside: that endpoint answers
+  `phase_year: 2025` for a result the screen shows in Reporting 2026. An unknown year sends nothing,
+  which asks for the legacy catalogue.
+- ⚠️ **`needsDescription()` replaced the hardcoded `investment_discontinued_option_id == 6`.** The
+  2026 "Other" row is a new row with an AUTO_INCREMENT id, so under the old rule its free-text box
+  would never have rendered and the reason could not have been typed at all. A row that declares
+  `requires_description` wins; only a row that says nothing falls back to the id, which is how the
+  legacy "Other" keeps working **without being rewritten** — flagging it would have meant an UPDATE
+  on a catalogue row a 2025-phase result still renders.
+- ⚠️ **The green check still only knows the legacy "Other".** `validation_innovation_dev_P22`
+  requires `description` when `investment_discontinued_option_id = 6`; the 2026 "Other" row is a
+  different id and nothing demands its text. That branch is in the MySQL validation function, not
+  here.
+- 🛑 **Steps 3 and 4 of the story are NOT built.** Merge / split has nowhere to store the link
+  (`linked_result` carries no link-type discriminator), so the two reasons record *that* the
+  innovation merged or split but not *with what*. The auto-lock of Step 4 is waiting on the A/B
+  question published on the ticket on 31 Aug 2026.
+
+## Step 4 — the auto-lock, and why it has an escape (P2-3292)
+
+From the 2026 phase, an Innovation Development result **stored** as inactive locks this block: the
+answer, the reason checklist and the "Other" text all go read-only. An administrator does not lock,
+and sees a **Reopen this innovation** button that sets the answer back to active and clears every
+ticked reason (the parent still owns the save).
+
+- 🛑 **The administrator escape is load-bearing, not a nicety.** `P2-2923` was raised by QA precisely
+  because people who closed an innovation by mistake were trapped with no way back — which is why
+  `is_discontinued` deliberately does NOT lock result types 7 and 2 in `CurrentResultService`.
+  Locking with no way out puts that trap back on purpose. Decision: Yeck, 3 Sep 2026.
+- 🥇 **`lockedByDiscontinuation` reads the STORED flag** (`dataControlSE.currentResult.is_discontinued`),
+  never `generalInfoBody.is_discontinued`, which is the value being edited. Reading the form would
+  lock the block the instant somebody picked "No" — before confirming — and they could never tick a
+  single reason. A spec pins that case.
+- 🛑 **The lock has to close TWO doors.** `[isStatic]` is the escape hatch that forces editability
+  despite the global read-only, so `[disabled]` alone does nothing while `annualUpdatingEditable` is
+  true. Both are wired, and a spec pins that the hatch closes.
+- **Nobody is left in front of a dead form**: a locked reporter gets a notice naming who to ask. The
+  notice is hidden from the administrator, who has the button instead.
+- ⚠️ **It is a UI lock only.** The server applies no guard to the section-save endpoints (verified
+  3 Sep 2026: `results.controller.ts` carries no `@UseGuards`, and `saveGeneralInformation` never
+  reads `status_id`, `is_discontinued` or the phase), so a crafted PATCH still goes through. Making
+  it a real lock is server work and is not in this story.
+- 🛑 **Do NOT implement this as one more write to `rolesSE.readOnly` inside `CurrentResultService`.**
+  That switch is followed by the async continuation of `validateReadOnly`, whose last write sets
+  `readOnly = false` for any member of the result's initiative — so a lock assigned there can be
+  silently overwritten. This is a derived getter for that reason (same shape as `showAiReview`).
 
 ## Traps (⚠️ = already broke something)
 - ⚠️ **The 2026 label is a question, so it must pass `[useColon]="false"`.** `app-pr-field-header`
@@ -42,6 +102,14 @@ is still active / still receiving investment, and when the answer is "no" it col
   rule that earlier phases render exactly as they do today. `resolveStatusTriggerWording()` compares
   `currentResult.phase_year` (falling back to the open phase) against a **local** 2025/2026 constant
   — deliberately not added to `ReportingDesignYear`.
+- ⚠️ **The open-phase fallback here now DIVERGES from `FieldsManagerService` (P2-3558).** The eight
+  `*2026` gates in that service dropped their `?? reportingCurrentPhase?.phaseYear` fallback, because
+  it resolves to the OPEN phase (2026) and therefore rendered the NEW form over a result whose own
+  year had not arrived — 1516 phase-2025 results against 353 phase-2026 in prtest. This component
+  still has the fallback: it reads `dataControlSE.currentResult` (the plain object, a different
+  source from the signal) and its own reachability was not measured under P2-3558, so it was left
+  unchanged rather than changed unverified. **Do not copy this shape into a new gate** — the
+  reference is `FieldsManagerService.isPhaseYearAtLeast`.
 - A `phase_year` arriving as a string is treated as a bad payload and falls back to the legacy
   wording (`typeof === 'number'` guard). Do not "fix" that with `Number()`.
 - `usesStatusTriggerWording` is a field, not a getter: a test must seed
@@ -51,6 +119,20 @@ is still active / still receiving investment, and when the answer is "no" it col
   mid-tick (NG0100).
 - The outer `*ngIf` limits the whole block to result types **7** (Innovation Development) and
   **2** (Innovation Use). Only type 7 ever gets the 2026 wording.
+- ⚠️ **Step 1 left the reason checklist with no prompt on the 2026 branch.** Up to 2025 the lead-in
+  is part of the second radio label ("...investment was discontinued, because:"); Step 1 replaced
+  that label with a bare "No", so the checklist rendered headless. The Step 2 prompt
+  (`rd-annual-updating.component.html:34-43`) fills that gap and is gated on
+  `usesStatusTriggerWording` for exactly this reason — adding it to the legacy branch would print
+  the lead-in twice on 2025 results.
+- The Step 2 hint passes `[showDescriptionLabel]="false"`, otherwise `app-pr-field-header` prefixes
+  it with a bold `Description:` chip (`pr-field-header.component.ts:26-28`).
 
 ## Pending / Coming soon
-- Nothing disabled here. P2-3292's merge/split link is a separate step and is not in this component.
+Nothing is disabled here. What is still missing from P2-3292, and who owns it:
+| Piece | Owner | Why not here |
+|---|---|---|
+| The seven 2026 reason **texts** | Juan David Delgado | Rows of `investment_discontinued_option`; the table has no phase axis, so they must be new rows, never an `UPDATE` (see the pre-plan on P2-3292, 1-Sep). |
+| Step 3 merge / split links | Juan David Delgado | `linked_result` has no link-type discriminator, and no portfolio-wide QA'd innovation endpoint exists. |
+| Step 4 auto-lock / view-only | blocked on business | A/B question published on P2-3292 on 31-Aug (can a mistaken discontinuation be reopened?). Locking undoes the P2-2923 fix, so it waits for the answer. |
+| Green check rule | Juan David Delgado | MySQL `validation_<section>_<portfolio>` + `validate_sections_mapped_batch`. |

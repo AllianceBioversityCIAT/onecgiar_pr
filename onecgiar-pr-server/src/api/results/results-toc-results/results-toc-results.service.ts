@@ -500,6 +500,12 @@ export class ResultsTocResultsService {
         toc_results_indicator_id: string | null;
         indicator_contributing: string | null;
         status_id: number | null;
+        /**
+         * P2-2932 — the result type this ToC indicator belongs to, derived from its `type_value`.
+         * Null when the indicator matches no known pattern; the consistency check treats null as
+         * "cannot tell" and compares the box rather than dropping it.
+         */
+        indicator_result_type_id: number | null;
         targets: Array<{
           indicators_targets: number | null;
           number_target: number | null;
@@ -615,6 +621,14 @@ export class ResultsTocResultsService {
                 row?.indicator_status !== undefined
                   ? Number(row.indicator_status)
                   : null,
+              // P2-2932. Null stays null: an indicator whose `type_value` matches no known pattern
+              // is "cannot tell", and the consistency check compares it rather than dropping it.
+              // `Number(null)` would turn that into 0 and match no result type at all.
+              indicator_result_type_id:
+                row?.indicator_result_type_id !== null &&
+                row?.indicator_result_type_id !== undefined
+                  ? Number(row.indicator_result_type_id)
+                  : null,
               targets: [],
             };
             resultEntry.indicatorsMap.set(indicatorId, indicatorEntry);
@@ -720,6 +734,8 @@ export class ResultsTocResultsService {
                       indicator.toc_results_indicator_id,
                     indicator_contributing: indicator.indicator_contributing,
                     status_id: indicator.status_id,
+                    indicator_result_type_id:
+                      indicator.indicator_result_type_id,
                     targets: indicator.targets,
                   }),
                 ),

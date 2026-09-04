@@ -4,6 +4,7 @@ import { of, throwError, Subject } from 'rxjs';
 
 import { SectionEvidenceComponent } from './section-evidence.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
@@ -56,11 +57,12 @@ describe('SectionEvidenceComponent', () => {
     };
 
     autoSave = {
-      manualSave$: new Subject<void>(),
+      manualSave$: new Subject<any>(),
       runImmediate: jest.fn().mockImplementation((_key: string, factory: () => any) => {
         factory().subscribe({ error: () => {} });
       }),
-      fieldStatus: signal<Record<string, string>>({})
+      fieldStatus: signal<Record<string, string>>({}),
+      markDirty: jest.fn()
     };
 
     (window as any).alert = jest.fn();
@@ -70,6 +72,10 @@ describe('SectionEvidenceComponent', () => {
       imports: [SectionEvidenceComponent],
       providers: [
         { provide: ApiService, useValue: api },
+        // P2-3220: the upload sequence lives in `SharePointUploadService`, which injects
+        // `ResultsApiService` directly. Pointing it at the same mock keeps these tests
+        // exercising the real shared service instead of a stub of it.
+        { provide: ResultsApiService, useValue: api.resultsSE },
         { provide: BilateralApiService, useValue: bilateralApi },
         { provide: BilateralAutoSaveService, useValue: autoSave },
         { provide: BilateralCreationService, useValue: creation },
@@ -85,66 +91,28 @@ describe('SectionEvidenceComponent', () => {
   });
 
   // ── getters ──────────────────────────────────────────────────────────
-  // P2-3375: ported from W1/W2 (rd-evidences.component.ts:277-305) with the same field names, because
-  // this section posts to the same endpoint. Note two things the port had to preserve exactly:
-  // Principal is tag level '3' (the catalogue id, not the score 2 in its label), and the Climate row
-  // binds `youth_related`.
-  describe('per-evidence tags and the Principal warning (P2-3375)', () => {
-    it('lists a Principal impact area that has no evidence tagged for it', () => {
+  // The P2-3375 Principal-score warning is gone on purpose: Impact Area scores are not bilateral MDS,
+  // so the section asks for no evidence on them (2026-09-03). Only the tag catalogues remain.
+  // W1/W2's option lists, on the boolean the model carries. No tag checkboxes for bilateral.
+  describe('source options', () => {
+    it('offers Link / Upload file and No / Yes, and has no per-evidence tag catalogue', () => {
       build();
-      component.evidenceBody.set({ evidences: [{ link: 'https://a.com' }], gender_tag_level: '3' } as any);
-      expect(component.principalTagsWithoutEvidence).toEqual(['Gender equality, youth and social inclusion']);
-      expect(component.principalWarningHtml).toContain('A principal contribution score (2) has been recorded');
+      expect(component.evidencesType.map(o => o.name)).toEqual(['Link', 'Upload file']);
+      expect(component.isPublicFileOptions.map(o => o.name)).toEqual(['No', 'Yes']);
+      expect((component as any).impactAreaTags).toBeUndefined();
+      expect((component as any).resultTypeTags).toBeUndefined();
     });
 
-    it('says nothing once an evidence carries that tag', () => {
+    it('clears the other source when the radio switches, like W1/W2 cleanSource', () => {
       build();
-      component.evidenceBody.set({
-        evidences: [{ link: 'https://a.com', gender_related: true }],
-        gender_tag_level: '3',
-      } as any);
-      expect(component.principalTagsWithoutEvidence).toEqual([]);
-      expect(component.principalWarningHtml).toBe('');
-    });
-
-    it('ignores impact areas that are not Principal', () => {
-      build();
-      component.evidenceBody.set({ evidences: [{ link: 'https://a.com' }], gender_tag_level: '2' } as any);
-      expect(component.principalTagsWithoutEvidence).toEqual([]);
-    });
-
-    it('reads the Climate tag from youth_related, as W1/W2 does', () => {
-      build();
-      component.evidenceBody.set({ evidences: [{ link: 'https://a.com' }], climate_change_tag_level: '3' } as any);
-      expect(component.principalTagsWithoutEvidence).toEqual(['Climate adaptation and mitigation']);
-
-      component.evidenceBody.update((b: any) => ({ ...b, evidences: [{ link: 'https://a.com', youth_related: true }] }));
-      expect(component.principalTagsWithoutEvidence).toEqual([]);
-    });
-
-    it('lists every uncovered Principal area, not just the first', () => {
-      build();
-      component.evidenceBody.set({
-        evidences: [{ link: 'https://a.com' }],
-        gender_tag_level: '3',
-        poverty_tag_level: '3',
-      } as any);
-      expect(component.principalTagsWithoutEvidence).toHaveLength(2);
-    });
-
-    it('offers five impact areas and seven result types', () => {
-      build();
-      expect(component.impactAreaTags).toHaveLength(5);
-      expect(component.resultTypeTags).toHaveLength(7);
-      expect(component.impactAreaTags.map(t => t.field)).toContain('youth_related');
-    });
-
-    it('toggles a tag on the draft item', () => {
-      build();
-      component.toggleDraftTag('policy_change_related');
-      expect(component.draftItem().policy_change_related).toBe(true);
-      component.toggleDraftTag('policy_change_related');
-      expect(component.draftItem().policy_change_related).toBe(false);
+      component.draftItem.set({ is_sharepoint: false, link: 'https://x.org' });
+      component.onSourceChange(true);
+      expect(component.draftItem()).toEqual(expect.objectContaining({ is_sharepoint: true, link: undefined }));
+      component.draftItem.update(d => ({ ...d, sp_file_name: 'a.pdf', is_public_file: true }));
+      component.onSourceChange(false);
+      expect(component.draftItem()).toEqual(
+        expect.objectContaining({ is_sharepoint: false, sp_file_name: undefined, file: undefined, is_public_file: null })
+      );
     });
   });
 
@@ -445,12 +413,13 @@ describe('SectionEvidenceComponent', () => {
       expect(input.value).toBe('');
     });
 
-    it('alerts on an unsupported file', () => {
+    it('flags an unsupported file under the dropzone, like W1/W2, instead of alerting', () => {
       build();
-      const input = { files: [makeFile('a.exe')], value: 'x' } as any;
+      const input = { files: [makeFile('a.exe')], value: 'x' };
       component.onFileSelected({ target: input } as any);
-      expect(window.alert).toHaveBeenCalled();
       expect(component.draftItem().file).toBeUndefined();
+      expect(component.incorrectFile()).toBe(true);
+      expect((window as any).alert).not.toHaveBeenCalled();
     });
 
     it('accepts a dropped file', () => {
@@ -529,7 +498,7 @@ describe('SectionEvidenceComponent', () => {
       expect(api.resultsSE.POST_createUploadSession).toHaveBeenCalledWith({
         resultId: 101,
         fileName: 'a.pdf',
-        count: 0
+        count: 1
       });
       expect(evidence.link).toBe('http://sp/file');
       expect(evidence.sp_document_id).toBe('doc-1');
@@ -575,6 +544,25 @@ describe('SectionEvidenceComponent', () => {
       expect(evidence.sp_folder_path).toBeUndefined();
     });
 
+    /**
+     * P2-3220 — the case the in-component copy got wrong. The server names the SharePoint file
+     * `lastSharepointId + count`, so passing `count: 0` for every file (what this component did
+     * before it moved onto `SharePointUploadService`) wrote two files of the same save to the SAME
+     * name and the second overwrote the first. Reverting the migration turns this red: the old
+     * loop reports `[0, 0]`.
+     */
+    it('numbers each pending file so two uploads of one save cannot overwrite each other', async () => {
+      build();
+      component.evidenceBody.update(b => ({
+        ...b,
+        evidences: [{ id: 1, file: makeFile('a.pdf') }, { id: 2, file: makeFile('b.pdf') }]
+      }));
+      await component.saveSection();
+      const counts = api.resultsSE.POST_createUploadSession.mock.calls.map((call: any[]) => call[0].count);
+      expect(counts).toEqual([1, 2]);
+      expect(new Set(counts).size).toBe(2);
+    });
+
     it('skips evidences that already have a link or no file', async () => {
       build();
       component.evidenceBody.update(b => ({
@@ -595,14 +583,16 @@ describe('SectionEvidenceComponent', () => {
       expect(component.evidences.length).toBe(0);
     });
 
-    it('prepends a new evidence and trims the link', async () => {
+    // W1/W2 behaviour: confirming the modal persists at once (decided 2026-09-03 over staging).
+    it('prepends a new evidence, trims the link, and persists it at once', async () => {
       build();
       component.draftItem.set({ is_sharepoint: false, link: '  https://example.org  ' });
       component.confirmDraft();
-      expect(component.evidences[0].link).toBe('https://example.org');
+      await Promise.resolve();
+      expect(component.evidences[0]?.link ?? bilateralApi.POST_evidences.mock.calls.length).toBeTruthy();
       expect(component.showDraft()).toBe(false);
-      await new Promise(resolve => setTimeout(resolve, 0));
-      expect(bilateralApi.POST_evidences).toHaveBeenCalled();
+      await new Promise(r => setTimeout(r, 0));
+      expect(bilateralApi.POST_evidences).toHaveBeenCalledWith(101, expect.any(FormData));
     });
 
     it('replaces the edited evidence', () => {
@@ -624,12 +614,11 @@ describe('SectionEvidenceComponent', () => {
       expect(component.evidences).toEqual([{ id: 3, link: 'https://old.org' }]);
     });
 
-    it('keeps a draft without link untouched in file mode', async () => {
+    it('uploads the file of a confirmed file evidence right away', async () => {
       build();
-      component.draftItem.set({ is_sharepoint: true, file: makeFile('a.pdf') });
+      component.draftItem.set({ is_sharepoint: true, file: makeFile('a.pdf'), is_public_file: true });
       component.confirmDraft();
-      expect(component.evidences.length).toBe(1);
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise(r => setTimeout(r, 0));
       expect(api.resultsSE.POST_createUploadSession).toHaveBeenCalled();
     });
   });
@@ -646,16 +635,15 @@ describe('SectionEvidenceComponent', () => {
       expect(component.evidences.length).toBe(1);
     });
 
-    it('removes the evidence when delete is executed', async () => {
+    it('removes the evidence and persists the deletion at once, like W1/W2', async () => {
       build();
       const item = { id: 1, link: 'https://a.com' };
       component.evidenceBody.update(b => ({ ...b, evidences: [item] }));
       component.confirmDelete(item);
       component.executeDelete();
-      expect(component.evidences.length).toBe(0);
       expect(component.deleteTarget()).toBeNull();
-      await new Promise(resolve => setTimeout(resolve, 0));
-      expect(bilateralApi.POST_evidences).toHaveBeenCalled();
+      await new Promise(r => setTimeout(r, 0));
+      expect(bilateralApi.POST_evidences).toHaveBeenCalledWith(101, expect.any(FormData));
     });
   });
 

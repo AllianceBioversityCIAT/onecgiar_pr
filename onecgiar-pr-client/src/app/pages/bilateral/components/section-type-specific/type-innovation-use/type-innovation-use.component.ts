@@ -28,6 +28,17 @@ const MDS_INFO_NOTE =
   'If you need to complete the full metadata for this section, click the button on the right.';
 
 /**
+ * P2-3556 — what the person reads when the section could not be fetched. Plain language on purpose:
+ * the only two things that matter to them are that nothing they type is being kept, and that what
+ * they reported before is untouched. Same copy, word for word, as the sibling Innovation Development,
+ * Policy Change and Capacity Sharing sections so the form never explains the same failure two
+ * different ways.
+ */
+const LOAD_ERROR_NOTE =
+  'We could not load the information saved for this section, so the fields below are empty and nothing typed here will be saved. ' +
+  'Please reload the page to try again — the information reported earlier has not been changed.';
+
+/**
  * P2-3424: "QA'd" asumido como status_id = 2 (Quality Assessed) — supuesto declarado por el PO, pendiente de confirmación de negocio
  * (Ángel Jarrín, 23-ago-2026, comentario en P2-3424; ver `result-status.enum.ts` del server).
  */
@@ -83,6 +94,58 @@ export class TypeInnovationUseComponent implements OnInit {
   readonly otherInstitutionTypeId = OTHER_INSTITUTION_TYPE_ID;
   readonly graduateStudentsInstitutionTypeId = GRADUATE_STUDENTS_INSTITUTION_TYPE_ID;
   readonly mdsInfoNote = MDS_INFO_NOTE;
+  readonly loadErrorNote = LOAD_ERROR_NOTE;
+
+  /**
+   * P2-3556 — three-state load flag: `null` while the GET is still in flight, `true` once the
+   * server's body is in hand, `false` when the fetch failed. Same shape and the same
+   * "null means not loaded yet" contract the folder already uses for
+   * `hasLinkedResult = signal<boolean | null>(null)` (`../../section-contributors/section-contributors.component.ts:198`)
+   * and for `resultStatusId` (`../../../services/bilateral-creation.service.ts:351-357`).
+   *
+   * It exists because a save may only go out once the component knows what the server holds. `body`
+   * is constructed as `{}`, so a form that never loaded is indistinguishable from a form the user
+   * emptied — and `buildPayload()` sends `?? null` / `?? []` for every key. `loadData()` had no error
+   * handler, and the interceptor rethrows every failed response
+   * (`shared/interceptors/general-interceptor.service.ts:81-83`), so `next` never ran, the form
+   * painted blank with no warning, and the first keystroke autosaved that empty body.
+   *
+   * What an empty body does key by key on the server, verified before writing this — the answer is
+   * NOT the same as the sibling sections', and it is worse for the scalars than for the lists:
+   *
+   * - `innov_use_to_be_determined` and `innovation_use_level_id` are written as `?? null` on the
+   *   update branch (`api/results/summary/summary.service.ts:104-106`), the insert branch (`:121-123`)
+   *   and the duplicate-key retry (`:138-139`) — the stored answer and the MDS use level are NULLED.
+   * - `has_scaling_studies`, `innov_use_2030_to_be_determined`, `readiness_level_explanation` and
+   *   `has_innovation_link` are only written when the key is PRESENT (`:185-201`), and
+   *   `buildPayload()` always sends them, as `null` — so all four are NULLED too.
+   * - `scaling_studies_urls` as `[]` is not "no news": `shouldSync` is true whenever the key is present
+   *   (`:228-230`), and the sync de-activates every stored row first
+   *   (`:241-245`, `update … { is_active: false }`) and re-inserts nothing — EVERY stored study link
+   *   is deleted.
+   * - The three lists are the only safe keys: `saveAnticipatedInnoUser` guards each writer on
+   *   `?.length` with NO `else` branch (`api/results/summary/innovation_dev.service.ts:158`, `:259`,
+   *   `:323`), so an empty `actors` / `organization` / `measures` is a no-op. This is where this section
+   *   differs from Policy Change and Capacity Sharing, whose `institutions` `else` branch de-activates
+   *   every stored organization.
+   * - `linked_results: []` is a no-op as well, but only by accident of the guard order: the sync needs
+   *   `has_innovation_link` to be exactly `true` or a `false` retracting a stored `true` (`:273-291`),
+   *   and an unloaded body sends `null`.
+   *
+   * `null` blocks for the same reason `false` does: `GET summary/innovation-use/get/result/:id` takes
+   * 94-159 ms on prtest (measured 2-Sep-2026 over ids 187, 347, 1011, 8090, 8582…8767) against an
+   * 800 ms autosave debounce, so an early edit could otherwise reach the PATCH before the body arrived
+   * and a payload built from `{}` blanks the record exactly as a failed load does.
+   *
+   * ⚠️ Unlike Policy Change, this GET never answers 404 for a result with no row: `getInnovationUse`
+   * assembles its skeleton with `innUseExists?.x ?? null` and returns `HttpStatus.OK` whether the row
+   * exists or not (`summary.service.ts:301-374`). Measured on prtest 2-Sep-2026:
+   * `…/innovation-use/get/result/999999` → `200` with every key null and the three lists empty, and so
+   * does a non-numeric id. So there is no "no record yet" status to whitelist here — every error that
+   * reaches the handler really is one (401 on an expired token, a 5xx, an Apache 403, a dropped
+   * connection), and none of them may write.
+   */
+  readonly loaded = signal<boolean | null>(null);
 
   readonly saving = computed(() => this.autoSave.fieldStatus()['type-specific'] === 'saving');
   showAllFields = signal(false);
@@ -177,12 +240,25 @@ export class TypeInnovationUseComponent implements OnInit {
     });
     const resultId = this.creationService.currentResultId();
     if (!resultId) return;
-    this.bilateralApi.GET_innovationUse(resultId).subscribe(({ response }) => {
-      this.body = response || {};
-      this.hydrateOrganizations();
-      this.hydrateStoredAnswers();
-      this.hydrateInnovationLink();
-      this.updateMds();
+    this.bilateralApi.GET_innovationUse(resultId).subscribe({
+      next: ({ response }) => {
+        this.body = response || {};
+        this.hydrateOrganizations();
+        this.hydrateStoredAnswers();
+        this.hydrateInnovationLink();
+        this.loaded.set(true);
+        this.updateMds();
+      },
+      error: () => {
+        this.body = {};
+        // P2-3556 — see the `loaded` doc for what the server does with an empty innovation-use payload.
+        this.loaded.set(false);
+        // The checklist is published on EVERY outcome, failure included — same reason as the sibling
+        // section (`../type-capacity-sharing/type-capacity-sharing.component.ts:73-94`, P2-3355):
+        // publishing nothing leaves the section at "0/0 fields", which reads as "nothing required
+        // here" instead of as incomplete. Three unfilled items keep it honestly amber.
+        this.updateMds();
+      },
     });
   }
 
@@ -335,6 +411,20 @@ export class TypeInnovationUseComponent implements OnInit {
   }
 
   private queueTypeSave(debounceMs = 800): void {
+    // P2-3556 — the single choke point every write of this section goes through. `onFieldChange` and
+    // `onSave` are its only callers, and every one of the eleven list/cascade handlers funnels into
+    // `onFieldChange`; nothing else in this component calls `schedulePayload`, and
+    // `BilateralApiService.PATCH_innovationUse` has no other caller in the client (the W1/W2 form uses
+    // `ResultsApiService.PATCH_innovationUse`, a different method against a different URL), while
+    // `patchByEndpoint`'s `typeSpecific` case throws (`bilateral-auto-save.service.ts:427`) so the
+    // executor above is the only route to the endpoint.
+    //
+    // A section that does not know what the server holds cannot tell "empty because the user emptied
+    // it" from "empty because it never loaded", so it writes nothing at all rather than nulling the
+    // use level, the two to-be-determined answers, the readiness explanation and the innovation link,
+    // and deleting every stored scaling-study URL.
+    if (this.loaded() !== true) return;
+
     this.autoSave.schedulePayload('typeSpecific', this.buildPayload(), {
       debounceMs,
       statusKey: 'type-specific',

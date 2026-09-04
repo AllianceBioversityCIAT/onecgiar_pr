@@ -1,3 +1,5 @@
+import { BadRequestException, ParseIntPipe } from '@nestjs/common';
+import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ResultsController } from './results.controller';
 import { ResultsService } from './results.service';
@@ -149,7 +151,28 @@ describe('ResultsController', () => {
 
   it('depthSearch delegates to service', async () => {
     await controller.depthSearch('abc');
-    expect(mockService.findAllResultsLegacyNew).toHaveBeenCalledWith('abc');
+    expect(mockService.findAllResultsLegacyNew).toHaveBeenCalledWith('abc', {
+      type: undefined,
+      limit: undefined,
+    });
+  });
+
+  // P2-3527 — the similar-results list of the result creator calls this route with the legacy
+  // indicator type and its own page size.
+  it('depthSearch forwards the legacy type and a numeric limit', async () => {
+    await controller.depthSearch('abc', 'Innovation', '10');
+    expect(mockService.findAllResultsLegacyNew).toHaveBeenCalledWith('abc', {
+      type: 'Innovation',
+      limit: 10,
+    });
+  });
+
+  it('depthSearch drops a non-numeric limit', async () => {
+    await controller.depthSearch('abc', undefined, 'many');
+    expect(mockService.findAllResultsLegacyNew).toHaveBeenCalledWith('abc', {
+      type: undefined,
+      limit: undefined,
+    });
   });
 
   it('checkTitleUniqueness delegates to service with optional excludeResultId', async () => {
@@ -294,5 +317,49 @@ describe('ResultsController', () => {
     await controller.getQaInnovationDevelopmentResults();
 
     expect(mockService.getQaInnovationDevelopmentResults).toHaveBeenCalled();
+  });
+});
+
+/**
+ * P2-3498 — `GET results/get/:id` declared `@Param('id') id: number` with no pipe, so the path
+ * segment reached `result.repository.ts` `getResultById` as whatever string the URL carried. The
+ * repository now binds it; this is the other half — the value is a number before it ever gets
+ * there, and a non-numeric id is refused at the door with a 400 instead of travelling on.
+ *
+ * Only this route is piped: it is the one the ticket proved. The controller had zero
+ * `ParseIntPipe` uses, and adding them everywhere would be the sweep the ticket rules out.
+ */
+describe('ResultsController — the id path parameter is parsed (P2-3498)', () => {
+  /** Nest keeps per-handler parameter decorators (and their pipes) in this metadata key. */
+  const pipesFor = (handler: string) => {
+    const args =
+      Reflect.getMetadata(ROUTE_ARGS_METADATA, ResultsController, handler) ??
+      {};
+    return Object.values(args).flatMap((arg: any) => arg?.pipes ?? []);
+  };
+
+  it('wires ParseIntPipe onto the id of GET results/get/:id', () => {
+    expect(pipesFor('findResultById')).toContain(ParseIntPipe);
+  });
+
+  it('refuses a path segment that is not a number, instead of passing it down', async () => {
+    const pipe = new ParseIntPipe();
+    const meta = { type: 'param' as const, data: 'id' };
+
+    // This is the string that used to be concatenated into the SQL.
+    await expect(
+      pipe.transform('1 OR 1=1 UNION SELECT 1 -- ', meta),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(pipe.transform('abc', meta)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('still lets a real numeric id through, as a number', async () => {
+    const pipe = new ParseIntPipe();
+
+    await expect(
+      pipe.transform('1234', { type: 'param', data: 'id' }),
+    ).resolves.toBe(1234);
   });
 });

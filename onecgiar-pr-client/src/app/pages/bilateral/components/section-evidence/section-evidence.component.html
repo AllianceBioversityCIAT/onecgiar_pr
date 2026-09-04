@@ -1,265 +1,242 @@
-<div class="sev-fields">
+<!-- Same shape and behaviour as the W1/W2 Evidence section (rd-evidences + evidence-item): flat
+     evidence cards, "Add evidence" opening a modal with Source · Link/Upload file · public/private ·
+     description, and every confirm/delete persisting at once through the shared endpoint. Bilateral
+     differences, on purpose: no per-evidence impact-area / result-type checkboxes (not MDS here —
+     Juan, 2026-09-03) and no readiness-level rules. -->
+<div class="sev-fields" [class.sev-fields--busy]="isSaving()">
   <app-alert-status
     status="info"
     description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting.">
   </app-alert-status>
 
-  @if (principalTagsWithoutEvidence.length) {
-    <app-alert-status status="warning" [description]="principalWarningHtml"></app-alert-status>
-  }
-
   @if (isLoading()) {
     <app-form-skeleton [rows]="2" [hasLabel]="true" [hasExtra]="true" [extraRows]="3" />
   } @else {
-    @if (evidences.length === 0 && !showDraft()) {
-      <div class="sev-empty">
-        <i class="material-icons-round sev-empty-icon">attachment</i>
-        <p class="sev-empty-text">No evidence added yet.</p>
-        <p class="sev-empty-hint">Add links or files that support this result (max {{ maxItems }}).</p>
-      </div>
-    }
-
-    @for (item of evidences; track $index) {
-      <div class="sev-card">
-        <div class="sev-card-top">
-          <span class="sev-card-index">{{ $index + 1 }}</span>
-          <span class="sev-card-type">
-            <i class="material-icons-round sev-card-type-icon">{{ isFileEvidence(item) ? 'description' : 'link' }}</i>
-            {{ isFileEvidence(item) ? 'File' : 'Link' }}
-          </span>
-          @if (item.creation_date || item.last_updated_date) {
-            <span class="sev-card-date">
-              @if (item.creation_date) { Added: {{ item.creation_date | date:'MMM d, y' }} }
-              @if (item.last_updated_date) { | Updated: {{ item.last_updated_date | date:'MMM d, y' }} }
-            </span>
-          }
-          <div class="sev-card-actions">
-            <button type="button" class="sev-icon-btn sev-icon-btn--edit"
-              [disabled]="readOnly()" title="Edit" (click)="editItem(item)">
-              <i class="material-icons-round">edit</i>
-            </button>
-            <button type="button" class="sev-icon-btn sev-icon-btn--delete"
-              [disabled]="readOnly()" title="Delete" (click)="confirmDelete(item)">
-              <i class="material-icons-round">delete</i>
-            </button>
-          </div>
-        </div>
-        <div class="sev-card-body">
-          <span class="sev-card-main">
-            <i class="material-icons-round sev-card-main-icon">{{ isFileEvidence(item) ? 'description' : 'link' }}</i>
-            @if (item.link) {
-              <a [href]="item.link" target="_blank" rel="noopener noreferrer" class="sev-card-link">{{ evidenceDisplayName(item) }}</a>
-            } @else {
-              <span class="sev-card-name">{{ evidenceDisplayName(item) || '—' }}</span>
+    <div class="evidences">
+      @for (evidence of evidences; track $index) {
+        <div class="evidence_card" data-testid="evidence-card">
+          <div class="ev_card_top">
+            <div class="ev_index">{{ $index + 1 }}</div>
+            <div class="ev_type_row">
+              <span class="ev_type">{{ evidenceTypeLabel(evidence) }}</span>
+              @if (isFileEvidence(evidence)) {
+                <i
+                  class="material-icons-round ev_lock"
+                  [class.public]="evidence.is_public_file"
+                  [class.private]="!evidence.is_public_file"
+                  [title]="evidence.is_public_file ? 'Public' : 'Private'">
+                  {{ evidence.is_public_file ? 'lock_open' : 'lock' }}
+                </i>
+              }
+              @if (evidence.creation_date || evidence.last_updated_date) {
+                <span class="ev_date">
+                  @if (evidence.creation_date) { Added: {{ evidence.creation_date | date: 'MMM d, y' }} }
+                  @if (evidence.last_updated_date) { | Updated: {{ evidence.last_updated_date | date: 'MMM d, y' }} }
+                </span>
+              }
+            </div>
+            @if (!readOnly()) {
+              <div class="ev_actions">
+                <button type="button" class="ev_edit" title="Edit evidence" (click)="editItem(evidence)">
+                  <i class="material-icons-round">edit</i>
+                </button>
+                <button type="button" class="ev_delete" title="Delete evidence" (click)="confirmDelete(evidence)">
+                  <i class="material-icons-round">delete</i>
+                </button>
+              </div>
             }
-          </span>
-          @if (item.description) {
-            <span class="sev-card-detail">
-              <i class="material-icons-round">notes</i>
-              {{ item.description }}
-            </span>
-          }
-        </div>
-      </div>
-    }
-
-    @if (showDraft()) {
-      <div class="sev-draft">
-        <div class="sev-draft-header">
-          <span class="sev-draft-title">{{ editingId() !== null ? 'Edit Evidence' : 'Add New Evidence' }}</span>
-          <button type="button" class="sev-icon-btn"
-            [disabled]="readOnly()" (click)="cancelDraft()">
-            <i class="material-icons-round">close</i>
-          </button>
-        </div>
-
-        <div class="sev-draft-body">
-          <div class="sev-draft-field">
-            <label class="sev-draft-label">Source <span class="sev-required">*</span></label>
-            <div class="sev-draft-radios">
-              <button type="button" class="sev-radio"
-                [disabled]="readOnly()" [class.sev-radio--selected]="!draftItem().is_sharepoint" (click)="setDraftLinkMode()">
-                <i class="material-icons-round">link</i> Link
-              </button>
-              <button type="button" class="sev-radio"
-                [disabled]="readOnly()" [class.sev-radio--selected]="draftItem().is_sharepoint" (click)="setDraftFileMode()">
-                <i class="material-icons-round">upload_file</i> Upload File
-              </button>
-            </div>
           </div>
 
-          @if (!draftItem().is_sharepoint) {
-            <div class="sev-draft-field">
-              <label class="sev-draft-label">Link <span class="sev-required">*</span></label>
-              <input
-                [disabled]="readOnly()"
-                type="url"
-                class="sev-draft-input"
-                [value]="draftItem().link ?? ''"
-                (input)="onDraftLinkInput($event)"
-                placeholder="https://..."
-              />
-              @if (draftItem().link) {
-                @if (isCloudLink(draftItem().link!) && !isCgSpaceLink(draftItem().link!)) {
-                  <div class="sev-validation sev-validation--warn">
-                    <i class="material-icons-round">warning</i>
-                    Links to file storage platforms (Google Drive, Dropbox, SharePoint, OneDrive) are not accepted. Use "Upload File" instead.
-                  </div>
-                } @else if (isCgSpaceLink(draftItem().link!)) {
-                  <div class="sev-validation sev-validation--info">
-                    <i class="material-icons-round">info</i>
-                    This CGSpace link will be automatically replaced by its permanent link once you save.
-                  </div>
-                } @else if (!isValidUrl(draftItem().link!)) {
-                  <div class="sev-validation sev-validation--error">
-                    <i class="material-icons-round">error</i>
-                    Invalid URL format.
-                  </div>
-                } @else if (draftLinkError.includes('already exists')) {
-                  <div class="sev-validation sev-validation--error">
-                    <i class="material-icons-round">error</i>
-                    {{ draftLinkError }}
-                  </div>
-                }
-              }
-            </div>
-          } @else {
-            <div class="sev-draft-field">
-              <label class="sev-draft-label">File <span class="sev-required">*</span></label>
-              @if (draftItem().sp_file_name) {
-                <div class="sev-draft-file">
-                  <i class="material-icons-round">description</i>
-                  <span class="sev-draft-file-name">{{ draftItem().sp_file_name }}</span>
-                  <button type="button" class="sev-icon-btn sev-icon-btn--delete"
-                    [disabled]="readOnly()" (click)="removeDraftFile()">
-                    <i class="material-icons-round">delete</i>
-                  </button>
-                </div>
+          <div class="ev_card_body">
+            <span class="ev_ro_item ev_ro_main">
+              <i class="material-icons-round">{{ isFileEvidence(evidence) ? 'description' : 'link' }}</i>
+              @if (isEvidenceUploading(evidence)) {
+                <span class="ev_ro_uploading">
+                  <span class="ev_ro_name">{{ evidenceUploadingName(evidence) }}</span>
+                  <div class="pr-skeleton ev_ro_skeleton" style="width: 160px; height: 9px; border-radius: 6px"></div>
+                </span>
+              } @else if (evidence.link) {
+                <a [href]="evidence.link" target="_blank" rel="noopener noreferrer" class="ev_ro_link">{{ evidenceDisplayName(evidence) }}</a>
               } @else {
-                <div
-                  class="sev-draft-dropzone"
-                  (drop)="onFileDropped($event)"
-                  (dragover)="onDragOver($event)"
-                  (dragleave)="onDragLeave($event)"
-                >
-                  <i class="material-icons-round sev-draft-dropzone-icon">cloud_upload</i>
-                  <span class="sev-draft-dropzone-text">Select a file or drag and drop</span>
-                  <span class="sev-draft-dropzone-hint">jpg, png, doc, xlsx or PDF, max 1 GB</span>
-                  <button type="button" class="sev-draft-dropzone-btn"
-                    [disabled]="readOnly()" (click)="fileInput.click()">Select file</button>
-                </div>
-                <input
-                  [disabled]="readOnly()"
-                  #fileInput
-                  type="file"
-                  class="sev-hidden-input"
-                  (change)="onFileSelected($event)"
-                  accept=".jpg, .png, .pdf, .doc, .docx, .pptx, .jpeg, .xlsx, .xlsm"
-                />
+                <span class="ev_ro_name">{{ evidenceDisplayName(evidence) || '—' }}</span>
               }
-            </div>
-          }
-
-          <div class="sev-draft-field">
-            <label class="sev-draft-label">Description (optional)</label>
-            <textarea
-              [disabled]="readOnly()"
-              class="sev-draft-textarea"
-              [value]="draftItem().description ?? ''"
-              (input)="onDraftDescriptionInput($event)"
-              placeholder="e.g. page number, slide number, table number"
-              rows="3"
-            ></textarea>
-            <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">
-              Max {{ maxDescriptionWords }} words:
-              <span class="font-mono font-medium">{{ draftDescriptionWords }}</span> / {{ maxDescriptionWords }}
             </span>
-          </div>
-
-          <div class="sev-draft-field">
-            <label class="sev-draft-label">Which impact areas does this evidence support?</label>
-            <div class="flex flex-wrap gap-x-[18px] gap-y-[8px]">
-              @for (tag of impactAreaTags; track tag.field) {
-                <label class="flex cursor-pointer items-center gap-[7px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
-                  <input
-                    [disabled]="readOnly()"
-                    type="checkbox"
-                    class="size-[15px] cursor-pointer accent-[var(--pr-color-primary-300)]"
-                    [checked]="!!draftItem()[tag.field]"
-                    (change)="toggleDraftTag(tag.field)" />
-                  {{ tag.label }}
-                </label>
-              }
-            </div>
-          </div>
-
-          <div class="sev-draft-field">
-            <label class="sev-draft-label">Which result types does this evidence support?</label>
-            <div class="flex flex-wrap gap-x-[18px] gap-y-[8px]">
-              @for (tag of resultTypeTags; track tag.field) {
-                <label class="flex cursor-pointer items-center gap-[7px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
-                  <input
-                    [disabled]="readOnly()"
-                    type="checkbox"
-                    class="size-[15px] cursor-pointer accent-[var(--pr-color-primary-300)]"
-                    [checked]="!!draftItem()[tag.field]"
-                    (change)="toggleDraftTag(tag.field)" />
-                  {{ tag.label }}
-                </label>
-              }
-            </div>
+            @if (evidence.description) {
+              <span class="ev_ro_item ev_ro_details">
+                <i class="material-icons-round">notes</i>
+                <span>{{ evidence.description }}</span>
+              </span>
+            }
           </div>
         </div>
+      }
+    </div>
 
-        <div class="sev-draft-footer">
-          <button type="button" class="sev-btn sev-btn--secondary"
-            [disabled]="readOnly()" (click)="cancelDraft()">Cancel</button>
-          <button type="button" class="sev-btn sev-btn--primary" [disabled]="!isDraftValid || readOnly()" (click)="confirmDraft()">
-            {{ editingId() !== null ? 'Save Changes' : 'Add Evidence' }}
-          </button>
-        </div>
-      </div>
+    @if (!evidences.length) {
+      <app-no-data-text title="No evidence added"></app-no-data-text>
     }
 
-    @if (canAddMore && !showDraft()) {
-      <button type="button" class="sev-add-trigger"
-        [disabled]="readOnly()" (click)="addNew()">
-        <i class="material-icons-round">add</i>
-        Add evidence
-      </button>
+    <br />
+    @if (canAddMore && !readOnly()) {
+      <app-add-button name="Add evidence" (clickEvent)="addNew()"></app-add-button>
     }
-
-    @if (evidences.length >= maxItems) {
+    @if (!canAddMore) {
       <div class="sev-limit">Maximum of {{ maxItems }} evidence items reached.</div>
     }
   }
 </div>
 
-@if (!isLoading()) {
-  <div class="sev-save-bar" [class.sev-save-bar--saving]="saveStatus() === 'saving'" [class.sev-save-bar--saved]="saveStatus() === 'saved'" [class.sev-save-bar--error]="saveStatus() === 'error'">
-    <div class="sev-save-bar-inner">
-      <i class="material-icons-round sev-save-bar-icon">
-        @switch (saveStatus()) {
-          @case ('saving') { sync }
-          @case ('saved') { cloud_done }
-          @case ('error') { error_outline }
-          @default { cloud }
-        }
-      </i>
-      <span class="sev-save-bar-text">
-        @switch (saveStatus()) {
-          @case ('saving') { Saving... }
-          @case ('saved') { Evidence saved }
-          @case ('error') { Save failed }
-          @default { }
-        }
-      </span>
+<!-- Add / edit modal — same fields as W1/W2's app-evidence-item, minus the tag checkboxes. -->
+<app-pr-dialog
+  [visible]="showDraft()"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="false"
+  (onHide)="cancelDraft()"
+  styleClass="evidence-create-dialog">
+  <div class="evidence_modal">
+    <div class="modal_header">
+      <div class="modal_title">{{ editingId() !== null ? 'Edit Evidence' : 'Add New Evidence' }}</div>
+      <button type="button" class="modal_close" title="Close" (click)="cancelDraft()">
+        <i class="material-icons-round">close</i>
+      </button>
     </div>
-    <button type="button" class="sev-save-btn" [disabled]="saveStatus() === 'saving' || readOnly()" (click)="saveSection()">
-      <i class="material-icons-round">save</i> Save Evidence
-    </button>
+
+    @if (showDraft()) {
+      <div class="evidence_fields">
+        <app-pr-radio-button
+          [readOnly]="readOnly()"
+          [options]="evidencesType"
+          optionLabel="name"
+          optionValue="id"
+          label="Source of the evidence"
+          [ngModel]="draftItem().is_sharepoint ?? false"
+          (ngModelChange)="onSourceChange($event)">
+        </app-pr-radio-button>
+
+        @if (!draftItem().is_sharepoint) {
+          <div class="link">
+            <app-pr-input
+              [readOnly]="readOnly()"
+              label="Link"
+              placeholder="Add link"
+              type="link"
+              [required]="true"
+              [ngModel]="draftItem().link ?? ''"
+              (ngModelChange)="setDraftLink($event)">
+            </app-pr-input>
+          </div>
+          @if (draftItem().link && isCgSpaceLink(draftItem().link!)) {
+            <app-alert-status
+              inlineStyles="width: 100%"
+              status="info"
+              description="This CGSpace link will be automatically replaced by its permanent link once you save the changes in this section."></app-alert-status>
+          }
+          @if (draftItem().link && isCloudLink(draftItem().link!)) {
+            <app-alert-status
+              inlineStyles="width: 100%"
+              status="warning"
+              description="Links to file storage platforms are not accepted. If you do not have a CGSpace or other public link available, use the “Upload file” option to upload your evidence to the PRMS repository."></app-alert-status>
+          }
+          @if (draftLinkError && !isCloudLink(draftItem().link ?? '')) {
+            <p class="sev-field-error">{{ draftLinkError }}</p>
+          }
+        } @else {
+          <app-pr-radio-button
+            [readOnly]="readOnly()"
+            [options]="isPublicFileOptions"
+            optionLabel="name"
+            optionValue="id"
+            label="Can this evidence be shared publicly?"
+            [ngModel]="draftItem().is_public_file"
+            (ngModelChange)="setDraftPublic($event)">
+          </app-pr-radio-button>
+
+          @if (draftItem().is_public_file !== null && draftItem().is_public_file !== undefined) {
+            <app-alert-status [description]="publicFileNote()"></app-alert-status>
+          }
+
+          <app-pr-field-header label="File to be uploaded to the repository" [required]="true" [useColon]="true"></app-pr-field-header>
+          <app-alert-status status="warning" description="Documents in the PRMS repository will be <b>view-only and cannot be edited.</b>"></app-alert-status>
+
+          @if (draftItem().sp_file_name) {
+            <div class="file-link-view">
+              <div class="file-name">
+                <i class="material-icons-round">description</i>
+                @if (draftItem().link) {
+                  <a [href]="draftItem().link" target="_blank" rel="noopener noreferrer">{{ draftItem().sp_file_name }}</a>
+                } @else {
+                  <span>You are going to save the file: <strong>{{ draftItem().sp_file_name }}</strong></span>
+                }
+              </div>
+              <div class="file-actions">
+                @if (!draftItem().link && draftItem().file) {
+                  <div class="size">{{ (draftItem().file!.size / 1048576) | number: '1.2-2' }} MB</div>
+                  <div class="line"></div>
+                }
+                @if (draftItem().link) {
+                  <i class="material-icons-round" title="Uploaded" style="margin-right: 5px">check_circle</i>
+                }
+                @if (!readOnly()) {
+                  <i class="material-icons-round" style="cursor: pointer" title="Remove file" (click)="removeDraftFile()">delete</i>
+                }
+              </div>
+            </div>
+          } @else if (draftItem().is_public_file === true || draftItem().is_public_file === false) {
+            <div
+              class="drag-and-drop-field"
+              [class.incorrect-drag-and-drop-field]="incorrectFile()"
+              (drop)="onFileDropped($event)"
+              (dragover)="onDragOver($event)"
+              (dragleave)="onDragLeave($event)">
+              <div class="content">
+                <img src="assets/icons/feather_upload-cloud.svg" alt="" />
+                <div class="title">Select a file or drag and drop here</div>
+                <div class="description">jpg, png, doc, xlsx or PDF, file size no more than 1GB</div>
+                <app-pr-button text="Select file" (click)="fileInput.click()"></app-pr-button>
+              </div>
+            </div>
+            <input
+              class="inputfieldHidden"
+              #fileInput
+              type="file"
+              (change)="onFileSelected($event)"
+              accept=".jpg, .png, .pdf, .doc, .docx, .pptx, .jpeg, .xlsx, .xlsm" />
+            @if (incorrectFile()) {
+              <div class="incorrect-file">Incorrect format only files supported: .jpg, .png, .pdf, .doc, .pptx, .xlsx</div>
+            }
+          }
+        }
+
+        <app-pr-textarea
+          [readOnly]="readOnly()"
+          [label]="
+            'Please provide details of where evidence can be found within the source ' +
+            (draftItem().is_sharepoint ? 'file' : 'link') +
+            ' (e.g. page number, slide number, table number)'
+          "
+          [required]="false"
+          [maxWords]="maxDescriptionWords"
+          [rows]="3"
+          placeholder="Add description"
+          [ngModel]="draftItem().description ?? ''"
+          (ngModelChange)="setDraftDescription($event)">
+        </app-pr-textarea>
+      </div>
+    }
+
+    <div class="buttons">
+      <app-pr-button padding="medium" text="Cancel" colorType="secondary" (click)="cancelDraft()"></app-pr-button>
+      <app-pr-button
+        padding="medium"
+        [text]="editingId() !== null ? 'Save changes' : 'Add evidence'"
+        [icon]="editingId() !== null ? 'save' : 'add'"
+        [ngClass]="{ globalDisabled: !isDraftValid || readOnly() }"
+        (click)="confirmDraft()"></app-pr-button>
+    </div>
   </div>
-}
+</app-pr-dialog>
 
 <app-pr-dialog
   styleClass="pr-dialog pr-dialog--delete"
@@ -268,8 +245,7 @@
   [closable]="false"
   [dismissableMask]="false"
   [visible]="deleteTarget() !== null"
-  (onHide)="cancelDelete()"
->
+  (onHide)="cancelDelete()">
   <div class="pr-dialog-header">
     <span class="pr-dialog-header-icon pr-dialog-header-icon--discard">
       <i class="material-icons-round">delete_outline</i>

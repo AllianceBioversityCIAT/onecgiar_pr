@@ -51,6 +51,7 @@
     "file-saver": "^2.0.5",
     "jest": "^29.7.0",
     "jest-preset-angular": "^14.6.0",
+    "modern-screenshot": "4.6.0",
     "ng-circle-progress": "^1.7.1",
     "ngx-socket-io": "^4.8.1",
     "pdfjs-dist": "^3.11.174",
@@ -155,6 +156,7 @@
       "^@spartan/tooltip$": "<rootDir>/src/app/spartan/tooltip/src/index.ts",
       "^@spartan/separator$": "<rootDir>/src/app/spartan/separator/src/index.ts",
       "^@spartan/skeleton$": "<rootDir>/src/app/spartan/skeleton/src/index.ts",
+      "^@spartan/popover$": "<rootDir>/src/app/spartan/popover/src/index.ts",
       "^src/(.*)$": "<rootDir>/src/$1"
     },
     "coverageThreshold": {

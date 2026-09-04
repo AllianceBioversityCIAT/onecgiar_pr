@@ -838,6 +838,22 @@ export class ReportingAowTableComponent {
   }
 
   /**
+   * `title` for the ratio+achievement group. Below `1100px` the achievement block itself goes
+   * `max-[1100px]:sr-only` (`OSF-T-16`) — `OSF-DD-8`'s ladder ranks shedding it first, and its own
+   * text says the shed content "stays available in the row tooltip". `sr-only`, not `hidden`:
+   * the figures must not leave the accessibility tree (`OSF-R-8`), only the visual column does.
+   * This `title` is the sighted-hover fallback for the same content, carried onto the group span
+   * that stays visible at every width — the achievement block itself is 1x1px there and
+   * unreachable by a pointer, so the fallback cannot live on it (mirrors `OSF-T-12`'s "By AOW"
+   * `title`, carried on the still-visible control rather than the thing that shrank away).
+   */
+  rowTitle(group: ReportingAowGroup): string {
+    const parts = [this.ratioTitle(group)];
+    if (group.achievement) parts.push(this.achievementTooltip(group.achievement));
+    return parts.filter(Boolean).join(' ');
+  }
+
+  /**
    * The set both ratio readings count over. `__allIndicators` is a side-channel field the host adds
    * ONLY while Only-pending is on (`dashboard-lab.applyBurndownFilterAndSort`) — it is not on
    * `ReportingAowGroup`'s own interface, so it is read through a local cast rather than declared.

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { Brackets, DataSource } from 'typeorm';
 import { Result } from './entities/result.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { DepthSearch } from './dto/depth-search.dto';
@@ -18,27 +18,48 @@ import {
 import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../shared/extendsGlobalDTO/base-repository';
+import {
+  CONSOLIDATED_IPR_QUESTION_TEXT,
+  CONSOLIDATED_IPR_TRIGGER_OPTION_TEXTS,
+  INNOVATION_DEV_FORM_REDUCTION_YEAR,
+  LEGACY_IP_EXPERT_SUPPORT_OPTION_ID,
+} from './result-questions/innovation-dev-questions.const';
 import { ReportParametersDto } from './dto/report-parameters.dto';
 import { BasicReportFiltersNormalized } from './dto/basic-report-filters.dto';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { ResultStatusData } from '../../shared/constants/result-status.enum';
 
 /**
  * P2-3420 / P2-3421 — THE ONE PLACE that decides which Innovation Development results may be
  * linked from an Innovation Use result. Both W1/W2 creation surfaces (the ToC-linked form and the
  * emergent-result modal) read this list through the same endpoint, so the two can never drift.
  *
- * 🛑 PENDING BUSINESS ANSWER (Ángel, asked 26-ago-2026 on P2-3420 and restated on P2-3421): the
- * story asks for "Status = QA'd" AND "Status != Discontinued". A result carries ONE status, so the
- * second clause is either redundant (this reading) or points at the Annual-updating
- * continued/discontinued answer, which is a different field. Until that is answered we start with
- * exactly the states the module already uses for the same question in bilateral
- * (`type-innovation-use.component.ts`, QUALITY_ASSESSED_STATUS_ID = 2). Change THIS constant — and
- * nothing else — when the answer arrives; the audit's alternative reading is
- * `[QualityAssessed, Approved]` plus an `is_discontinued = 0` clause.
+ * ANSWERED 2-Sep-2026. Ángel Jarrín did not reply in a comment: he EDITED both story descriptions
+ * at 09:13, so the two twins now carry the same wording, and quoted Nicoleta the same minute:
+ *   "Los estados válidos para considerar una innovación como activa son únicamente QAed y Approved
+ *    (aplica tanto para W1/W2 como para W3/bilat). Los estados Submitted y Editing quedan
+ *    excluidos: Submitted = la innovación aún no ha pasado por QA. Editing = la innovación sigue en
+ *    borrador. Las innovaciones con estado Discontinued siguen incluyéndose, sin importar la fuente
+ *    de financiamiento."
+ *
+ * ⚠️ That Spanish settles the ambiguity this constant was parked on. The English AC reads
+ * "Discontinued innovations (any funding source): included regardless of status", which sounds like
+ * a second axis; the original says *"las innovaciones con ESTADO Discontinued … sin importar la
+ * FUENTE DE FINANCIAMIENTO"*. Discontinued is a STATUS here, and what is disregarded is the funding
+ * source — not the status. So this stays a plain `status_id` allow-list: no `is_discontinued`
+ * clause, and no W1/W2-vs-W3/bilateral branch, because the same three states apply to both.
+ *
+ * ⚠️ Submitted (3) was IN the rule until that edit — P2-3420 asked for "Active W1/W2 innovations:
+ * status = Submitted or QAed" from 1-Sep 16:07. It is now explicitly out. Do not restore it from an
+ * older reading of the story.
+ *
+ * Change THIS constant — and nothing else — if the set moves again.
  */
 export const QA_LINKABLE_INNOVATION_STATUS_IDS: number[] = [
-  2, // ResultStatusData.QualityAssessed
+  ResultStatusData.QualityAssessed.value, // 2 — QAed
+  ResultStatusData.Approved.value, // 6 — Approved (W3/bilateral and W1/W2 alike)
+  ResultStatusData.Discontinued.value, // 4 — retired innovations stay linkable on purpose
 ];
 
 @Injectable()
@@ -1312,47 +1333,92 @@ WHERE
     }
   }
 
-  async AllResultsLegacyNewByTitle(title: string) {
+  /**
+   * Similar-results search behind the result creator.
+   *
+   * Elastic used to serve that list; its host stopped resolving (P2-3527), so the search runs on
+   * MySQL again — which is where it lived before Elastic. Two guards make the MySQL version usable
+   * from a keystroke-driven UI:
+   *  - `limit` caps the page. Unbounded, `title like '%a%'` answers with ~10k rows / 8 MB.
+   *  - the ordering puts the exact title first, then prefix matches, then the rest, so the capped
+   *    page is the useful one instead of an arbitrary slice.
+   *
+   * `type` narrows only the legacy (pre-PRMS) rows, exactly as the Elastic query did: legacy rows
+   * carry an indicator type, current results are always eligible.
+   */
+  async AllResultsLegacyNewByTitle(
+    title: string,
+    options?: { type?: string; limit?: number },
+  ) {
+    const legacyType = (options?.type ?? '').trim();
+    const requestedLimit = Number(options?.limit);
+    // Interpolated below, so it is clamped to an integer here and never taken from the caller raw.
+    const limit =
+      Number.isFinite(requestedLimit) && requestedLimit > 0
+        ? Math.min(Math.trunc(requestedLimit), 50)
+        : 20;
     const queryData = `
-    (select 
-      lr.legacy_id as id,
-      lr.legacy_id as result_code,
-      lr.title,
-      lr.description,
-      lr.crp,
-      lr.\`year\`,
-      1 as legacy,
-      null as result_level_id,
-      null as result_type_name
-    from legacy_result lr
-    where lr.title like ?
-      and lr.is_migrated = 0)
-    union
-    (select 
-      r.id,
-      r.result_code,
-      r.title,
-      r.description,
-      ci.official_code as crp,
-      r.reported_year_id as \`year\`,
-      0 as legacy,
-      r.result_level_id,
-      rt.name as result_type_name
-    from \`result\` r 
-      inner join results_by_inititiative rbi on rbi.result_id = r.id
-                          and rbi.initiative_role_id = 1
-                          and rbi.is_active > 0
-      inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
-                          and ci.active > 0
-      inner join result_type rt on rt.id = r.result_type_id 
-    where r.is_active > 0
-      and r.title like ?)
+    select q.*
+    from (
+      (select
+        lr.legacy_id as id,
+        lr.legacy_id as result_code,
+        null as version_id,
+        lr.title,
+        lr.description,
+        lr.crp,
+        lr.\`year\`,
+        1 as legacy,
+        null as result_level_id,
+        lr.indicator_type as type,
+        null as result_type_name
+      from legacy_result lr
+      where lr.title like ?
+        and lr.is_migrated = 0
+        and (? = '' or lr.indicator_type = ?))
+      union
+      (select
+        r.id,
+        r.result_code,
+        r.version_id,
+        r.title,
+        r.description,
+        ci.official_code as crp,
+        r.reported_year_id as \`year\`,
+        0 as legacy,
+        r.result_level_id,
+        rt.name as type,
+        rt.name as result_type_name
+      from \`result\` r 
+        inner join results_by_inititiative rbi on rbi.result_id = r.id
+                            and rbi.initiative_role_id = 1
+                            and rbi.is_active > 0
+        inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
+                            and ci.active > 0
+        inner join result_type rt on rt.id = r.result_type_id 
+      where r.is_active > 0
+        and r.title like ?)
+    ) q
+    order by
+      case
+        when lower(q.title) = lower(?) then 0
+        when lower(q.title) like lower(?) then 1
+        else 2
+      end,
+      q.legacy asc,
+      q.\`year\` desc,
+      q.title asc
+    limit ${limit}
     `;
 
     try {
       const results: DepthSearch[] = await this.query(queryData, [
         `%${title}%`,
+        legacyType,
+        legacyType,
         `%${title}%`,
+        title,
+        `${title}%`,
       ]);
       return results;
     } catch (error) {
@@ -1444,6 +1510,7 @@ WHERE
     r.environmental_biodiversity_tag_level_id,
     r.poverty_tag_level_id,
     r.version_id,
+    v.phase_year,
     r.result_type_id,
     IF(r.source = 'Result', 'W1/W2', 'W3/Bilaterals') as source_name,
     r.status,
@@ -1501,12 +1568,12 @@ FROM
     inner join \`version\` v on v.id = r.version_id 
     inner join clarisa_cgiar_entity_types ccet on ccet.code = ci.cgiar_entity_type_id
 WHERE
-    r.id = ${id}
+    r.id = ?
     and r.is_active > 0;
     `;
 
     try {
-      const results: Result[] = await this.query(queryData);
+      const results: Result[] = await this.query(queryData, [id]);
       return results.length ? results[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -2839,11 +2906,32 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
+  /**
+   * True when the reporter asked for Intellectual Property support, which is what
+   * triggers the IP focal-point notification on submission (P2-3272 Part 3).
+   *
+   * The question that carries that request changes with the reporting phase, so the
+   * trigger has to change with it:
+   *
+   * - Up to the 2025 phase it is option 110 ("Yes, please contact me") of question
+   *   103 ("Would you like to receive support from an Intellectual Property
+   *   expert?"), matched by id as before.
+   * - From the 2026 phase those four questions are replaced by the single
+   *   consolidated one, whose "Yes" and "Not sure" options carry the request
+   *   (P2-3513). They are matched by TEXT, under their parent, because their ids
+   *   come from an AUTO_INCREMENT and differ across environments — and because
+   *   "Yes" on its own is the text of half a dozen unrelated options.
+   *
+   * Branching on the phase and not just OR-ing the two matters: a 2026 result that
+   * inherited an answer on 110 from its previous phase would otherwise send the
+   * email without anyone having answered the question the 2026 form actually shows.
+   */
   async getResultInnovationDevelopmentByResultId(
     resultId: number,
   ): Promise<boolean> {
     try {
       return await this.createQueryBuilder('r')
+        .innerJoin('version', 'v', 'v.id = r.version_id')
         .innerJoin(
           'result_answers',
           'ra',
@@ -2854,10 +2942,34 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
           'rq',
           'rq.result_question_id = ra.result_question_id',
         )
-        .where('rq.result_question_id = :questionId', { questionId: 110 }) // "Yes, please contact me"
-        .andWhere('r.is_active = true')
+        .leftJoin(
+          'result_questions',
+          'rqp',
+          'rqp.result_question_id = rq.parent_question_id',
+        )
+        .where('r.is_active = true')
         .andWhere('ra.answer_boolean = true')
         .andWhere('r.id = :resultId', { resultId })
+        .andWhere(
+          new Brackets((qb) =>
+            qb
+              .where(
+                '(v.phase_year IS NULL OR v.phase_year < :reductionYear) AND rq.result_question_id = :legacyOptionId',
+                {
+                  reductionYear: INNOVATION_DEV_FORM_REDUCTION_YEAR,
+                  legacyOptionId: LEGACY_IP_EXPERT_SUPPORT_OPTION_ID,
+                },
+              )
+              .orWhere(
+                'v.phase_year >= :reductionYear AND TRIM(rqp.question_text) = :consolidatedQuestion AND TRIM(rq.question_text) IN (:...triggerOptions)',
+                {
+                  reductionYear: INNOVATION_DEV_FORM_REDUCTION_YEAR,
+                  consolidatedQuestion: CONSOLIDATED_IPR_QUESTION_TEXT,
+                  triggerOptions: CONSOLIDATED_IPR_TRIGGER_OPTION_TEXTS,
+                },
+              ),
+          ),
+        )
         .getExists();
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
