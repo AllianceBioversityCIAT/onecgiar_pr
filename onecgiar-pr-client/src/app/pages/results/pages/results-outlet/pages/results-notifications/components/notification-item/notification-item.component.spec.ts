@@ -498,16 +498,126 @@ describe('NotificationItemComponent', () => {
       component.requestingReject = false;
     });
 
-    it('should accept directly and never open the mapping modal first for a bilateral request (AC1/AC3)', () => {
+    it('opens the optional ToC prompt — never the legacy mapping modal — for a bilateral request (AC1/AC4)', () => {
       component.notification = buildNotification();
       const acceptSpy = jest.spyOn(component, 'acceptOrReject');
       const mapSpy = jest.spyOn(component, 'mapAndAccept');
 
       component.onAcceptContribution();
 
-      expect(acceptSpy).toHaveBeenCalledWith(true);
+      expect(component.showTocPromptDialog()).toBe(true);
+      expect(acceptSpy).not.toHaveBeenCalled();
       expect(mapSpy).not.toHaveBeenCalled();
+      expect(mockApiService.dataControlSE.showShareRequest).toBeFalsy();
       expect(component.acceptsWithoutToc).toBe(true);
+    });
+
+    it('"Not now" records the plain accept with the inert ToC payload (AC1/AC3/AC5)', () => {
+      component.notification = buildNotification();
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+
+      component.onAcceptContribution();
+      component.acceptOrReject(true);
+
+      expect(patchSpy).toHaveBeenCalledTimes(1);
+      const body = patchSpy.mock.calls[0][0];
+      expect(body.request_status_id).toBe(2);
+      expect(body.result_toc_result).toEqual({ planned_result: null, result_toc_results: [] });
+      expect(component.showTocPromptDialog()).toBe(false);
+    });
+
+    it('"Map it" swaps the prompt for the mapping step, seeded with the CONTRIBUTOR initiative (AC4)', () => {
+      component.notification = buildNotification();
+
+      component.onAcceptContribution();
+      component.openTocMappingStep();
+
+      expect(component.showTocPromptDialog()).toBe(false);
+      expect(component.showTocMappingDialog()).toBe(true);
+      expect(component.tocInitiative.initiative_id).toBe(77);
+      expect(component.tocInitiative.official_code).toBe('INIT-77');
+      expect(component.tocInitiative.planned_result).toBeNull();
+      expect(component.tocInitiative.result_toc_results).toHaveLength(1);
+      expect(component.tocInitiative.result_toc_results[0].initiative_id).toBe(77);
+      expect(component.tocInitiative.result_toc_results[0].results_id).toBe('7774');
+      // The shared widget resolves the result id from the hydrated notification.
+      expect(mockApiService.dataControlSE.currentNotification).toBe(component.notification);
+      // The step lives in this card: the legacy app-level modal is never opened.
+      expect(mockApiService.dataControlSE.showShareRequest).toBeFalsy();
+    });
+
+    it('"Accept with mapping" sends ONE PATCH carrying the mapping for the contributor (AC4/AC6)', () => {
+      component.notification = buildNotification();
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+
+      component.openTocMappingStep();
+      component.tocInitiative.planned_result = true;
+      Object.assign(component.tocInitiative.result_toc_results[0], {
+        toc_level_id: 1,
+        toc_result_id: 901,
+        indicators: [{ related_node_id: 55, toc_results_indicator_id: 42, targets: [{ contributing_indicator: 3 }] }]
+      });
+
+      component.acceptOrReject(true, true);
+
+      expect(patchSpy).toHaveBeenCalledTimes(1);
+      const body = patchSpy.mock.calls[0][0];
+      expect(body.request_status_id).toBe(2);
+      expect(body.result_toc_result.planned_result).toBe(true);
+      expect(body.result_toc_result.result_toc_results).toHaveLength(1);
+      const tab = body.result_toc_result.result_toc_results[0];
+      expect(tab.initiative_id).toBe(77);
+      expect(tab.official_code).toBe('INIT-77');
+      expect(tab.results_id).toBe('7774');
+      expect(tab.toc_result_id).toBe(901);
+      expect(tab.toc_level_id).toBe(1);
+      expect(tab.indicators).toHaveLength(1);
+    });
+
+    it('gates "Accept with mapping" on a complete mapping, mirroring the review drawer rule (AC4)', () => {
+      component.notification = buildNotification();
+      component.openTocMappingStep();
+
+      expect(component.isTocMappingComplete()).toBe(false);
+
+      component.tocInitiative.planned_result = true;
+      expect(component.isTocMappingComplete()).toBe(false);
+
+      Object.assign(component.tocInitiative.result_toc_results[0], { toc_level_id: 1, toc_result_id: 901 });
+      // Planned results also demand the indicator, exactly like validateIsToCCompleted in the drawer.
+      expect(component.isTocMappingComplete()).toBe(false);
+
+      component.tocInitiative.result_toc_results[0].indicators[0].toc_results_indicator_id = 42;
+      expect(component.isTocMappingComplete()).toBe(true);
+
+      // Unplanned mappings do not require the indicator.
+      component.tocInitiative.planned_result = false;
+      component.tocInitiative.result_toc_results[0].indicators[0].toc_results_indicator_id = null;
+      expect(component.isTocMappingComplete()).toBe(true);
+    });
+
+    it('routes the decision by the request portfolio, not by session state (P2-3188 parity)', () => {
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+
+      component.notification = buildNotification();
+      component.acceptOrReject(true);
+      expect(patchSpy).toHaveBeenLastCalledWith(expect.anything(), true);
+
+      component.notification = buildNotification({ obj_result: { obj_version: { id: '30', obj_portfolio: { acronym: 'P22' } } } });
+      component.acceptOrReject(false);
+      expect(patchSpy).toHaveBeenLastCalledWith(expect.anything(), false);
+    });
+
+    it('closing either dialog records nothing — the request stays pending', () => {
+      component.notification = buildNotification();
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+
+      component.onAcceptContribution();
+      component.showTocPromptDialog.set(false);
+      component.openTocMappingStep();
+      component.showTocMappingDialog.set(false);
+
+      expect(patchSpy).not.toHaveBeenCalled();
     });
 
     it('should keep the legacy modal-first flow for a non-bilateral request with is_map_to_toc false', () => {
@@ -564,22 +674,20 @@ describe('NotificationItemComponent', () => {
     });
 
     /**
-     * AC4 ("after accepting, show the ToC mapping as an optional step") is deliberately NOT built, and
-     * this is the lock that keeps it that way until the product decision lands. Reopening
-     * `<app-share-request-modal>` after the accept looks like the obvious way to finish AC4, and it is
-     * a trap: for bilateral results its ToC control is `[hidden]` (P2-2498), so the step would be
-     * empty; completing it fires a SECOND `request_status_id: 2` PATCH; and answering "Yes" to the
-     * planned-ToC question dead-ends the user because `validateAcceptOrReject` then demands a
-     * `toc_result_id` that no visible control can fill. If someone implements AC4 properly they will
-     * have to change this test on purpose — which is the point.
+     * AC4 is built (Option A, 2026-09-04), but the OLD lock still matters: the optional step must
+     * never be `<app-share-request-modal>`. Reopening it after an accept is a triple trap — its ToC
+     * control is `[hidden]` for bilateral (P2-2498), completing it fires a SECOND
+     * `request_status_id: 2` PATCH, and answering "Yes" dead-ends on `validateAcceptOrReject`. The
+     * mapping step lives in THIS card and rides the same single PATCH; this test keeps it that way.
      */
-    it('does NOT open any follow-up step after accepting — AC4 stays blocked (see P2-3187)', () => {
+    it('never opens the legacy share-request modal — the AC4 step is in-card and single-PATCH', () => {
       component.notification = buildNotification();
 
-      component.acceptOrReject(true);
+      component.onAcceptContribution();
+      component.openTocMappingStep();
+      component.acceptOrReject(true, true);
 
       expect(mockApiService.dataControlSE.showShareRequest).toBeFalsy();
-      expect(mockApiService.dataControlSE.currentNotification).toBeFalsy();
     });
 
     it('reports the accept failure and opens nothing when the PATCH errors', () => {
