@@ -84,4 +84,5 @@ Si un disparador debería haber funcionado y no lo hizo, se arregla en el mismo 
 | `decisiones-y-contradicciones.md` | Lo decidido y lo que necesita respuesta humana |
 | `fase-vs-portafolio.md` | Qué fase es la nueva, los 11 gates que existen y por qué `isP25()` no sirve para separarlas |
 | **`estado-2026-09-04.md`** | 🥇 **Empieza por aquí si vienes de otro chat.** Los tres bloqueos que cayeron el 3-sep y que otras sesiones siguen citando como abiertos, los dos resultados de prueba de 2026 y qué queda |
+| `2026-09-04-verificaciones.md` | La evidencia de las verificaciones en pantalla del 4-sep (cifras, cabeceras, celdas DOM vs visibles). El padre lleva solo el veredicto |
 | `2026-09-03-green-check-innovation-dev.md` | El green check de Innovation Development: resuelto, las dos causas reales, y por qué la ruta **v1** de green checks no sirve para medir |
