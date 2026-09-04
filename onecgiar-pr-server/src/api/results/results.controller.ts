@@ -753,6 +753,43 @@ export class ResultsController {
   }
 
   @Version('2')
+  @Get('get/merge-split-target-innovations/:resultId')
+  @ApiOperation({
+    summary:
+      'Get the innovations a discontinued innovation may have merged into or split into',
+    description:
+      "P2-3292 Steps 3A / 3B — backs the searchable multi-select shown when a reporter closes an innovation and declares where it continued. QA'd or Approved, never discontinued, one row per innovation, portfolio-wide. The result being discontinued is excluded by code so it cannot point at itself.",
+  })
+  @ApiParam({
+    name: 'resultId',
+    description: 'The innovation being discontinued.',
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Type-ahead over innovation id and title.',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum rows returned. Defaults to 50.',
+    type: Number,
+  })
+  @ApiOkResponse({ description: 'Eligible merge / split target innovations.' })
+  getMergeSplitTargetInnovations(
+    @Param('resultId', ParseIntPipe) resultId: number,
+    @Query('search') search?: string,
+    @Query('limit') limit?: number,
+  ) {
+    return this.resultsService.getMergeSplitTargetInnovations(
+      resultId,
+      search,
+      limit === undefined ? undefined : Number(limit),
+    );
+  }
+
+  @Version('2')
   @Get('ai/context')
   @ApiOperation({
     summary: 'Get AI context',

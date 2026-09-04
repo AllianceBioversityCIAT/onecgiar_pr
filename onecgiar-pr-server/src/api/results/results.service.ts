@@ -3116,6 +3116,51 @@ export class ResultsService {
     }
   }
 
+  /**
+   * P2-3292 Step 3A/3B — the innovations offered as MERGE or SPLIT targets when a reporter closes
+   * an innovation and says where it continued.
+   *
+   * The result being discontinued is excluded by CODE, so no phase of itself can be picked as its
+   * own continuation.
+   *
+   * ⚠️ `ownerInitiativeId` is left undefined here on purpose: Step 3 says "from the full PRMS
+   * portfolio" in writing, so portfolio-wide is the specified behaviour. Narrowing the list to the
+   * reporter's own Science Program is a one-argument change, kept available because it was raised
+   * as a scope option — if it is taken, it must be written into the ticket as a reduction of what
+   * Ángel specified, not applied silently.
+   */
+  async getMergeSplitTargetInnovations(
+    resultId: number,
+    search?: string,
+    limit?: number,
+  ) {
+    try {
+      const result = await this._resultRepository.getResultById(resultId);
+      if (!result) {
+        throw {
+          response: {},
+          message: `Result ID: ${resultId} not found`,
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const results =
+        await this._resultRepository.getMergeSplitTargetInnovations({
+          search,
+          limit,
+          excludeResultCode: Number(result.result_code),
+        });
+
+      return {
+        response: results,
+        message: 'Results retrieved successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   async getAllResultsForInnovUse() {
     try {
       const results = await this._resultRepository.getResultsForInnovUse();
