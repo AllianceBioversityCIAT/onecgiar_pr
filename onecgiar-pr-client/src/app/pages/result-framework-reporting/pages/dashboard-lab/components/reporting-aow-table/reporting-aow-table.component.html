@@ -192,6 +192,8 @@
             }
             <div class="relative">
               <button
+                #flatMenuTrigger="cdkOverlayOrigin"
+                cdkOverlayOrigin
                 type="button"
                 class="flex h-[28px] w-[28px] items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-text-subtle)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text)] cursor-pointer"
                 aria-label="More actions"
@@ -199,7 +201,15 @@
                 (click)="toggleRowMenu(row, $event)">
                 <ng-icon name="lucideEllipsis" class="text-[15px]" />
               </button>
-              @if (isRowMenuOpen(row)) {
+              <ng-template
+                cdkConnectedOverlay
+                [cdkConnectedOverlayOrigin]="flatMenuTrigger"
+                [cdkConnectedOverlayOpen]="isRowMenuOpen(row)"
+                [cdkConnectedOverlayPositions]="rowMenuPositions"
+                [cdkConnectedOverlayHasBackdrop]="true"
+                cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+                (backdropClick)="closeRowMenu()"
+                (detach)="closeRowMenu()">
                 <div class="pr-row-menu" role="menu" (click)="$event.stopPropagation()">
                   <button type="button" role="menuitem" class="pr-row-menu_item" (click)="runFromMenu(openAchieved, row, $event)">
                     View reported results
@@ -229,7 +239,7 @@
                     <span class="pr-row-menu_soon">Coming soon</span>
                   </button>
                 </div>
-              }
+              </ng-template>
             </div>
           </td>
         </tr>
@@ -999,6 +1009,8 @@
     <!-- 8 — overflow ··· -->
     <div class="relative flex items-center justify-center">
       <button
+        #groupedMenuTrigger="cdkOverlayOrigin"
+        cdkOverlayOrigin
         type="button"
         class="flex h-[26px] w-[26px] items-center justify-center rounded-[6px] border border-transparent text-[var(--pr-text-muted)] hover:border-[var(--pr-border)] hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)] cursor-pointer transition-colors"
         aria-label="More actions"
@@ -1006,7 +1018,15 @@
         (click)="toggleRowMenu(row, $event)">
         <ng-icon name="lucideEllipsis" class="text-[14px]" />
       </button>
-      @if (isRowMenuOpen(row)) {
+      <ng-template
+        cdkConnectedOverlay
+        [cdkConnectedOverlayOrigin]="groupedMenuTrigger"
+        [cdkConnectedOverlayOpen]="isRowMenuOpen(row)"
+        [cdkConnectedOverlayPositions]="rowMenuPositions"
+        [cdkConnectedOverlayHasBackdrop]="true"
+        cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+        (backdropClick)="closeRowMenu()"
+        (detach)="closeRowMenu()">
         <div class="pr-row-menu" role="menu" (click)="$event.stopPropagation()">
           <button type="button" role="menuitem" class="pr-row-menu_item" (click)="runFromMenu(openAchieved, row, $event)">
             View reported results
@@ -1036,7 +1056,7 @@
             <span class="pr-row-menu_soon">Coming soon</span>
           </button>
         </div>
-      }
+      </ng-template>
     </div>
   </div>
 </ng-template>
