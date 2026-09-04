@@ -121,3 +121,27 @@ Verification: `npx jest src/app/pages/result-framework-reporting/pages/programme
 
 **Decisions:** R-7 treated as owed scope (SHOULD, but named in T-3's description) and closed before review rather than deferred. **Issues:** none. **Final verification:** 186/186 green, lint clean, dev build clean. Gate: *auto-approved (pre-approved mode)*; the spec's cut point after T-3 is covered by the user's tripwire decision (*continue all tasks*).
 
+### `RAC-T-4` — Overview → Results: scope on every link, *View results* on breakdown rows — **PASS** (attempt 1)
+
+| Field | Value |
+|---|---|
+| Date | 2026-09-04 |
+| Attempts | 1 Implementer attempt · 1 Reviewer round |
+| Requirements covered | `RAC-R-4`, `RAC-AC-4`; scenario *Overview links carry the scope* (all clauses) |
+| Skills / effort | Implementer: `angular-developer` (as listed), `medium`. Reviewer: checklist mode, `high`. Diff (309 lines) handed as a scratchpad file path |
+| LOC | src +84 · test +123 (insertions) |
+
+**Implementer report:** `OverviewLink.section?: string`; `dashboard-lab.component.ts` `onOverviewLink` stamps `section` from `overviewScope()` when the link carries none (RAC-DD-4 single seam); breakdown rows in `program-overview.component.html` gain a *View results* icon button (`aria-label="View results for <name>"`) → new `viewBreakdownResults(row)` → `emitLink({ section: row.key })`. Design judgment call (accepted): the row was a single `<button>` wrapping code + name + bar + count; a `<button>` cannot contain interactive content, so the row became a non-interactive `<div>` wrapper with two sibling `<button>`s (existing select button unchanged; new icon button beside it), mirroring the `aow-row-gesture-split` (RGS-T-2) precedent in the same file.
+Files: `dashboard-lab/dashboard-lab.component.ts`, `dashboard-lab/dashboard-lab.scope.spec.ts` (+4 host `it`s), `dashboard-lab/components/program-overview/program-overview.component.{ts,html}`, `program-overview.scope.spec.ts` (+1 `it`).
+Verification: `npx jest src/app/pages/result-framework-reporting/pages/dashboard-lab/dashboard-lab.scope.spec.ts src/app/pages/result-framework-reporting/pages/dashboard-lab/components/program-overview --silent` → 5 suites, 269 passed; `npx ng lint --quiet` → clean; `npx ng build --configuration development` → success (pre-existing unrelated warnings). New `it`s: host `overviewScope='AOW01'` + `{status:'Editing'}` → `navigate(...,{queryParams:{status:'Editing',section:'AOW01',phase:'Reporting 2026'}})` exact deep-equal; `overviewScope=null` → no `section` key; explicit `section:'EOI_2030'` not overwritten; `overviewScope='UNTAGGED'` propagates; *View results* button emits `openResults {section:'EOI_2030'}` and `scopeChange` never fires; hero-row `openAow` specs untouched and passing. `Not Done / Assumptions`: none.
+
+**Reviewer: `STATUS: PASS`** — "Implements RAC-R-4 / RAC-AC-4 / RAC-DD-4 exactly. Verified at the source: `onOverviewLink` (`dashboard-lab.component.ts:2378-2386`) stamps `section` only when `link.section === undefined`, before the unchanged param loop and `phase` fallback; no scope → no key; explicit `section` survives; `UNTAGGED` propagates. `viewBreakdownResults` → `emitLink({ section: row.key })` only; `scopeChange` is emitted solely by `selectScope`, never called. Markup `<div>` + two sibling `<button>`s is valid a11y and mirrors the same-file precedent; select button keeps click, grid, content verbatim. New button uses only defined tokens and `material-icons-round` as elsewhere; `aria-label` + `aria-hidden` glyph. Hero / ToC-map targets untouched. Tests behavioural (deep-equality on the whole `queryParams`, button clicked by `aria-label`). Scope clean, `@akili-spec` on every new block."
+
+**ADVISORY (4R, recorded):**
+- READABILITY: `dashboard-lab/CLAUDE.md` / `program-overview/CLAUDE.md` not re-stamped — RAC-T-5 owns the guide updates by design. **Forward pointer to T-5:** re-stamp both guides and remove any deep-link-deferral wording.
+- RESILIENCE: the row hover tint now covers only the select button (the wrapper `<div>` has no hover class), so hovering the new icon no longer highlights the row. Cosmetic; `group`/`hover:` on the wrapper would restore it. Not absorbed.
+
+**Decisions:** sibling-button restructure accepted (a11y validity; precedent in file). **Issues:** none. **Final verification:** 269/269 green, lint clean, dev build clean. Gate: *auto-approved (pre-approved mode)*.
+
+**T-5 environment pre-check (Leader, before spawning):** local API `http://localhost:3400/` runs from this worktree (`nest start --watch`, process started 14:05 local) and `dist/.../results-framework-reporting.controller.js` contains `results-scope`; client dev server on `:4200` (pid 46077) has cwd `…/qa-development-2026/onecgiar-pr-client`, proxied by Orca at `http://qa-development-2026.orca.localhost:50196/`; Orca tab 1 is on `/result-framework-reporting/entity-details/SP01/results?phase=Reporting%202026` with an authenticated session. Live route available — no deferral.
+

@@ -2375,6 +2375,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   onOverviewLink(link: OverviewLink): void {
     const code = this.selected()?.initiativeCode;
     if (!code) return;
+    // @akili-spec changes/results-aow-column-filter (`RAC-DD-4`): stamp the active Overview scope
+    // as `section` here — the ONE seam every `OverviewLink` passes through — rather than in each of
+    // the ~6 chart builders that construct a link (`program-overview.component.ts`). A builder that
+    // already knows its own scope (the breakdown rows' `viewBreakdownResults`) sets `section`
+    // explicitly and is never overwritten; no active scope adds no `section` key at all.
+    const scope = this.overviewScope();
+    if (scope && link.section === undefined) {
+      link = { ...link, section: scope };
+    }
     const queryParams: Record<string, string> = {};
     (Object.keys(link) as (keyof OverviewLink)[]).forEach(dimension => {
       const value = link[dimension];

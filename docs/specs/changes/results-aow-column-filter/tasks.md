@@ -18,7 +18,7 @@
 
 ## 1. Scope of this task list
 - **Module / feature:** `result-framework-reporting` / Results tab Area of Work column, Section filter, Overview scope deep link.
-- **Status:** `in-progress` (T-1..T-3 done; tripwire: user chose continue all).
+- **Status:** `in-progress` (T-1..T-4 done; T-5 live check + docs pending).
 
 ## 2. Pre-flight checklist
 - ✅ `requirements.md` approved (auto-approved, pre-approved mode).
@@ -62,7 +62,7 @@
   - *Input that fails:* `?section=aow01` (lower-case) must still match (case-insensitive predicate, chip shows the raw value — existing (g) rule); `?section=NOPE` shows its chip and the filtered-empty state without throwing (existing (b) rule).
 - **Done:** filter usable end to end; `npx ng lint --quiet` clean; `ng build --configuration development` clean.
 
-### `RAC-T-4` — Overview → Results: scope on every link, *View results* on breakdown rows
+### `RAC-T-4` — Overview → Results: scope on every link, *View results* on breakdown rows — [x]
 - **Type:** `client` + `tests`
 - **Description:** `OverviewLink.section?: string` (`program-overview.component.ts:52`). Host `onOverviewLink(link)`: when `overviewScope()` is set and `link.section` is undefined, add `section: overviewScope()` before mapping to params (RAC-DD-4). Scope-breakdown rows (`program-overview.component.html` ~L1095-1125): add a small *View results* icon button per row (`aria-label="View results for <name>"`) → `emitLink({ section: row.key })`; the row's existing `selectScope` click is unchanged; hero rows and ToC-map clicks unchanged.
 - **Implements:** `RAC-R-4`, `RAC-AC-4`; scenario *Overview links carry the scope* (all clauses incl. BUT no scope → no section; AND IT MUST leave hero/ToC-map targets unchanged).
