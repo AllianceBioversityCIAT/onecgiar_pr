@@ -92,3 +92,5 @@ Verification: same jest command → 474/474 green (4 suites); `npx ng lint --qui
 **Cause:** the estimate under-counted the server refactor (the CTE extraction + TS aggregation + population query + DISTINCT guard + JSDoc/traceability comments ≈ 3× the 120 LOC assumed) and the client join/state machine (`sectionState` five-way precedence, phase→version lookup, skeleton/error/mismatch cells). Tests are close to plan per task; there are simply more behaviours to pin than the ≈ 550 figure assumed. Insertion counts include comments and blank lines, so the functional overshoot is smaller than the raw ratio.
 **Leader action:** stopped before spawning `RAC-T-3`; escalated to the user with the delta and the options (continue as specified · continue T-3 only and cut · stop here). Pre-approved mode does not absorb a tripwire.
 
+**User decision (2026-09-04):** *Continue all tasks* — T-3, T-4, T-5 run as specified; projected final total ≈ 2 000–2 200 LOC accepted. Budget line in `design.md` §14 is superseded by this record (not edited on the spec branch).
+
