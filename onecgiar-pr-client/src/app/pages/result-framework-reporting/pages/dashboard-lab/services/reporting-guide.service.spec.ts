@@ -500,6 +500,19 @@ describe('ReportingGuideService', () => {
           expect(inst.drive).toHaveBeenCalledWith(5);
         });
 
+        it('triggers onTabNavigate to overview when starting from reporting tab (step 1 -> step 2)', () => {
+          const onTabNavigate = jest.fn();
+          service.startSpTour({ onTabNavigate, activeTab: 'reporting' });
+
+          const inst = lastInstance();
+          inst.drive(1);
+          inst.config.onNextClick(undefined, inst.config.steps[1], { driver: inst as any, index: 1 });
+
+          expect(onTabNavigate).toHaveBeenCalledWith('overview');
+          jest.advanceTimersByTime(100);
+          expect(inst.drive).toHaveBeenCalledWith(2);
+        });
+
         it('calls driver.destroy() when finishing the last step (step 5)', () => {
           const onTabNavigate = jest.fn();
           service.startSpTour({ onTabNavigate });

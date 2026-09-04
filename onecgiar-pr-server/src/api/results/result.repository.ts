@@ -65,8 +65,19 @@ import { ResultStatusData } from '../../shared/constants/result-status.enum';
  *
  * Includes Approved(6) alongside QualityAssessed(2) for the same reason its sibling does: a
  * W3/bilateral innovation completes the same quality process and lands on 6, so leaving it out
- * would make every bilateral innovation invisible as a target. If business means status 2 alone,
- * this constant is the only thing to change.
+ * would make every bilateral innovation invisible as a target. **Confirmed live on 4 Sep 2026**:
+ * result 8970 "test bilateral JD" comes back in status 6, so with status 2 alone a reporter who
+ * merged into it would have no way to say so. If business means status 2 alone, this constant is
+ * the only thing to change.
+ *
+ * 🛑 DO NOT "UNIFY" THIS WITH THE ENABLERS FILTER OF P2-3572. `getResultByTypes` (used by
+ * Innovation Packages Step 2) filters to statuses 2 and 3 and deliberately leaves Approved OUT —
+ * and that is also correct, because ITS story says "Quality Assessed and Submitted" verbatim while
+ * this one says "QA'd" without qualification. Two stories, two filters; the difference lives in
+ * each story's text, not in a technical preference. Measured on 4 Sep: 6 Policy change, 16
+ * Innovation use, 15 Capacity sharing and 14 Innovation development sit in status 6 and are
+ * excluded there — the last figure since before P2-3572 existed, so it is a pre-existing rule
+ * awaiting a business decision, not a gap. Making the two constants agree breaks one of them.
  */
 export const MERGE_SPLIT_TARGET_STATUS_IDS: number[] = [
   ResultStatusData.QualityAssessed.value, // 2 — QAed

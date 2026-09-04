@@ -46,6 +46,14 @@ import {
 } from './components/program-overview/program-overview.component';
 import { buildTocMapModel, TocMapModel } from './dashboard-lab.toc-map';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from '../programme-results/services/programme-results-query-params';
+
+/** Overview Filter popover Section — sibling of `?scope=` (OSF-DD-12). Survives Overview ↔ Reporting remounts. */
+const OVERVIEW_SECTION_QUERY_PARAM = 'section';
+const OVERVIEW_SECTIONS: readonly OverviewSection[] = ['all', 'w1w2', 'bilateral', 'aow'];
+
+function parseOverviewSection(raw: string | null): OverviewSection {
+  return raw && (OVERVIEW_SECTIONS as readonly string[]).includes(raw) ? (raw as OverviewSection) : 'all';
+}
 import { ResultToReview } from '../bilateral-results/components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
@@ -1210,6 +1218,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       // (both read the URL's current queryParams before either write lands, so whichever loses the
       // router's cancel-and-supersede would silently drop its own params for that flush).
       const overviewScopeParam = this.overviewScope();
+      const overviewSectionParam = this.overviewSection();
       if (this.pendingAow || this.pendingFilters || this.restoringPlannedUrl || this.pendingOverviewScope) return;
       this.router.navigate([], {
         relativeTo: this.route,
@@ -1226,8 +1235,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           tocView: tocView,
           tocAow: tocAow,
           // `scope` is free on this route — `phase`/`reviewResult`/`reviewResultId`/`kpi`/`tocView`
-          // are taken (`OSF-DD-12`).
-          scope: overviewScopeParam ?? null
+          // are taken (`OSF-DD-12`). `section` is the Overview Filter Section (in-memory only
+          // used to drop on Overview ↔ Reporting remount — same sibling-route destroy).
+          scope: overviewScopeParam ?? null,
+          [OVERVIEW_SECTION_QUERY_PARAM]: overviewSectionParam === 'all' ? null : overviewSectionParam
         },
         queryParamsHandling: 'merge',
         replaceUrl: true
@@ -2604,8 +2615,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (this.allPrograms().length === 0) {
       this.homeSE.getScienceProgramsProgress();
     }
-    // The programme now comes from the PATH (`…/entity-details/SP01`), by code. In-app
-    // navigation keeps this component alive, so react to param changes as well as the first load.
+    // The programme now comes from the PATH (`…/entity-details/SP01`), by code. Same-route
+    // path changes keep this instance; Overview / Reporting / Results remount (sibling routes).
     this.entityParamSub = this.route?.paramMap?.subscribe(pm => this.selectProgramByCode(pm?.get('entityId')));
 
     this.reportingPhases.set(this.phasesSE?.phases?.reporting ?? []);
@@ -2696,6 +2707,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // ToC-scope filter (`OSF-DD-12`): read once here, resolved by the constructor effect once
     // this program's `scopeOptions()` are known.
     this.pendingOverviewScope = qp.get('scope') || null;
+    this.overviewSection.set(parseOverviewSection(qp.get(OVERVIEW_SECTION_QUERY_PARAM)));
     if (qp.get('whereToReport') === 'true') {
       this.openWhereToReportModal();
     }

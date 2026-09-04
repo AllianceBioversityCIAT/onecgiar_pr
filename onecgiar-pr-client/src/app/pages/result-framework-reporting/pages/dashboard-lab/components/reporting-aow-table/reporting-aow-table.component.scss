@@ -206,70 +206,8 @@ $pr-reporting-pad: 8px 16px 8px 24px;
   animation: prPop 120ms ease-out;
 }
 
-/* Row overflow menu — 220px, right-aligned to the ··· button. */
-.pr-row-menu {
-  position: absolute;
-  top: 36px;
-  right: 0;
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  /* Wider than the design's 220px: the disabled item carries a `Coming soon` badge beside its
-     label, and at 220px "Copy indicator code" wrapped onto three lines. */
-  width: 268px;
-  padding: 6px;
-  cursor: default;
-  background: var(--pr-surface-card);
-  border: 1px solid var(--pr-border);
-  border-radius: 12px;
-  box-shadow: var(--pr-shadow-2);
-  animation: prPop 120ms ease-out;
-}
-
-.pr-row-menu_item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 36px;
-  padding: 0 10px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--pr-text);
-  text-align: left;
-  white-space: nowrap;
-  cursor: pointer;
-  background: none;
-  border: 0;
-  border-radius: 8px;
-
-  &:hover:not(:disabled) {
-    background: var(--pr-color-primary-50);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--pr-color-primary-300);
-    outline-offset: -2px;
-  }
-
-  /* Visible but inert — the control the design shows, without pretending it works. */
-  &--disabled {
-    color: var(--pr-text-subtle);
-    cursor: not-allowed;
-  }
-}
-
-.pr-row-menu_soon {
-  margin-left: auto;
-  padding: 1px 6px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  background: var(--pr-surface-subtle);
-  border-radius: 6px;
-}
+/* Row overflow menu styles moved to src/styles/row-menu.scss so CDK Connected Overlay panels
+   (attached to document.body outside this component host) receive styling cleanly. */
 
 /* Empty-state recovery. Ghost button, per the design's `Clear filters`. */
 .pr-clear-filters {

@@ -145,7 +145,7 @@ La cadena completa contra Jira real, con el arreglo puesto y con el mismo `axios
 | subir adjunto PNG (`X-Atlassian-Token: no-check`) | `200` |
 | subtarea de consola (issuetype `10002`, `subtask=true`) | `201` → `P2-3576` |
 
-`P2-3575` y `P2-3576` son **sondas sintéticas**: hay que borrarlas cuando Yeck lo autorice.
+`P2-3575` y `P2-3576` eran **sondas sintéticas**: borradas el 4-sep con OK de Yeck.
 
 ## Candado
 
@@ -156,3 +156,32 @@ que no creaba ni un ticket.
 
 > 🥇 **La lección:** un endpoint verificado end-to-end deja de estarlo en cuanto se le añade un campo
 > al payload. La verificación caduca con el payload, no con el endpoint.
+
+## ✅ Verificado en prtest tras el despliegue (4-sep, build #2145)
+
+`19cdc1ccb` subió en el merge `8c8000ff8` (junto a `ef1484067` de otra sesión, autorizado por su
+dueño, y a los 6 commits de Juanda que ya estaban en `origin`). Build **#2145 SUCCESS**, 13 min.
+
+Contra `prtest-back` con el token real, después del despliegue:
+
+| Envío | Resultado |
+|---|---|
+| `type: bug` + `consoleLogs` | `201` → `P2-3579`, subtarea de consola `P2-3580` |
+| `type: adjustment` + captura adjunta | `201` → `P2-3581`, `attachmentsUploaded: 1` |
+
+Los dos caminos de `issuetype`, la subtarea y el adjunto quedan probados **en el ambiente**, no solo
+en local. Sondas previas: `/api/results/get/all/simplified` → `200` (la app sirve; ⚠️ el catálogo de
+CLARISA ahora pide auth y devuelve `401`, ya no vale como sonda anónima).
+
+✅ **Sondas sintéticas ya borradas** (OK de Yeck, 4-sep): `P2-3575` + `P2-3576`, `P2-3579` +
+`P2-3580`, `P2-3581` — los cinco devuelven `404` y el épico quedó con **0 hijos creados hoy**.
+Se borraron con guardia por título (`ZZZ*`) y los padres con `?deleteSubtasks=true`, porque las
+subtareas se llaman *"Console output — …"* y no llevan el prefijo: un `DELETE` del padre sin ese
+parámetro devuelve `400`, no borra nada y parece un permiso denegado.
+
+⚠️ **Del pipeline, para no perder el tiempo:** el build **#2143 salió rojo sin culpa de nadie**.
+Murió en `Build Frontend`, en `COPY --from=build .../dist/onecgiar-pr-client/browser` → *"not
+found"*, con el log diciendo justo antes *"Application bundle generation complete"*. El **#2144**, con
+la misma punta, salió SUCCESS. Es el `COPY`/caché de Docker, no el build de Angular: **reintentar**.
+El **#2141** murió parecido, en `Deploy Frontend` con `docker pull ...:2141` exit 1. Dos de cuatro
+builds seguidos caídos por infraestructura, ninguno por código.

@@ -1,5 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, HostListener, computed, effect, input, linkedSignal, output, signal } from '@angular/core';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideArrowDown, lucideChevronDown, lucideCheck, lucideEllipsis, lucideInfo, lucideLink, lucideX } from '@ng-icons/lucide';
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
@@ -174,6 +175,7 @@ interface IndicatorBand {
   imports: [
     NgIcon,
     NgTemplateOutlet,
+    OverlayModule,
     PrTooltipDirectiveModule,
     PrTableComponent,
     PrSortableColumnDirective,
@@ -1219,6 +1221,19 @@ export class ReportingAowTableComponent {
    * surface of its own and there is no second code path to keep in step.
    */
   private readonly openMenuKey = signal<string | null>(null);
+
+  /**
+   * CDK Connected Overlay positions: opens below the button aligned right by default,
+   * flips above if the trigger is near the bottom of the viewport or container.
+   */
+  readonly rowMenuPositions: ConnectedPosition[] = [
+    { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 4 },
+    { originX: 'end', overlayX: 'end', originY: 'top', overlayY: 'bottom', offsetY: -4 }
+  ];
+
+  closeRowMenu(): void {
+    this.openMenuKey.set(null);
+  }
 
   rowKey(row: ReportingIndicator): string {
     return `${row.indicator_id}::${row.center_id ?? ''}::${row.__aowCode ?? ''}`;
