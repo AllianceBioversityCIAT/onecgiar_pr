@@ -61,6 +61,51 @@ Pendiente: repetir la medición **una vez** con el ambiente quieto.
 🥇 **Los dos 500 sí son sólidos**: medidos con el #2154 servido y estable, dos veces, mismo mensaje —
 y un backend caído no devuelve un mensaje de TypeORM, lo devuelve una aplicación viva.
 
+## ✅ Causa raíz del 500 — encontrada, y era nuestra
+
+**`P2-3589`.** Confirmado primero que el defecto seguía vivo con el ambiente quieto (`demon`, tres
+sondas verdes a dos endpoints, cero builds en vuelo), y luego bisecando el payload contra prtest.
+
+🎯 **La declaración, no la consulta.** `result-innovation-merge-split.entity.ts` declaraba los dos
+ids como relaciones en vez de columnas:
+
+```ts
+@ManyToOne(() => Result, (r) => r.id, { nullable: false })
+@JoinColumn({ name: 'origin_result_id' })
+origin_result_id: number;          // ← relación, no columna
+```
+
+Con eso, `find({ where: { origin_result_id: id } })` **no compara un escalar**: TypeORM lo lee como
+una condición anidada sobre la entidad relacionada. Y el id llega desde SQL crudo, donde mysql2
+devuelve los `bigint` como **string** — las claves enumerables de un string son sus índices, de ahí
+`Property "0" was not found in "Result"`.
+
+🔴 **El alcance real era mucho peor que "no se puede guardar una innovación descontinuada":**
+`replaceForResult` se llama en **las dos ramas** del bloque de discontinuación, y ese bloque corre
+para `result_type_id == 7 || == 2`. Es decir, **ningún Innovation Development ni Innovation Use podía
+guardar General information**, marcase el reportero lo que marcase. Los demás tipos guardaban bien, y
+eso es lo que lo volvía invisible: el 500 parecía específico de la descontinuación.
+
+**La medida que cerró el caso** (`demon`): un Policy change (tipo 1) guardó **200** con el mismo cuerpo
+con el que un tipo 7 daba **500**. No midió que algo fallara — midió **dónde deja de fallar**.
+
+**El arreglo**: columna y relación como propiedades separadas, que es la convención que ya usa
+`Result` (`version_id` + `obj_version`, `result.entity.ts:266-277`). **Sin migración**: los nombres de
+columna no cambian. Commit `a9fcebae3`.
+
+### 🛑 Por qué ningún gate lo vio — y de ahí el candado
+
+| Gate | Por qué es ciego |
+|---|---|
+| `tsc` | un `@ManyToOne` tipado `number` compila perfectamente |
+| tests del repositorio | mockean el `find`, así que nunca construyen el grafo real de metadatos |
+| `build:dev`, `eslint`, las dos suites | estaban **en verde** con el defecto ya desplegado |
+| build de Jenkins | **SUCCESS** — esto no rompe el arranque, rompe en la consulta |
+
+⇒ El candado (`entities/result-innovation-merge-split.entity.spec.ts`) afirma sobre los **metadatos**
+de TypeORM, no sobre el comportamiento: un test de comportamiento con el `find` mockeado **pasa con
+el bug puesto**. Verificado por mutación: reintroducir la relación sobre el escalar da **4 rojos de 7**.
+
 ## Trampas del flujo, para quien lo pruebe después
 
 - 🛑 **El guardado abre un modal de confirmación y sin confirmarlo NO se envía nada.**
