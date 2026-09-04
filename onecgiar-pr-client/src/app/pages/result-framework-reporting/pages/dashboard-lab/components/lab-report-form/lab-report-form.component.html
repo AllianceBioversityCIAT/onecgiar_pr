@@ -420,6 +420,16 @@
     </div>
   }
 
+  @if (autoCreateHint()) {
+    <p
+      class="m-0 flex items-start gap-2 rounded-xl border border-[var(--pr-color-orange-200,#fde3c3)] bg-[var(--pr-color-orange-50,#fff7ed)] px-3.5 py-2.5 text-[12.5px] text-[var(--pr-color-accents-6)]"
+      role="status"
+      data-testid="lrf-autocreate-hint">
+      <span class="material-icons-round mt-[1px] text-[16px] text-[var(--pr-color-orange-500)]" aria-hidden="true">info</span>
+      <span>{{ autoCreateHint() }}</span>
+    </p>
+  }
+
   <!-- Spacer so the last field can scroll fully above the sticky footer -->
   <div class="h-6 shrink-0"></div>
 

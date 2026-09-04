@@ -360,9 +360,25 @@ export class LabReportFormComponent {
     if (!this.currentResultIsKnowledgeProduct()) return;
     await Promise.resolve(this.preselectCentersP);
     if (this.canSave()) {
+      this.autoCreateHint.set(null);
       this.createResult();
+      return;
+    }
+    // Hardening 2026-09-04 (quick/kp-create-navigation-hardening): the auto-create used to skip
+    // SILENTLY when the form was not save-ready at the moment MQAP resolved — the publication looked
+    // linked and nothing happened. Say so, and point at what is missing.
+    if (this.mqapJson()) {
+      const n = this.missingFields().length;
+      this.autoCreateHint.set(
+        n > 0
+          ? `Publication linked. ${n} field${n === 1 ? '' : 's'} still need${n === 1 ? 's' : ''} your input before the result is created.`
+          : 'Publication linked. Use Create result to finish.'
+      );
     }
   }
+
+  /** Why the knowledge-product auto-create did not fire (null when it did, or does not apply). */
+  readonly autoCreateHint = signal<string | null>(null);
 
   /**
    * Centers mapped in the node's ToC: the union of its partner institutions and the centers
@@ -578,16 +594,32 @@ export class LabReportFormComponent {
       linkedResultId: this.linkedResultId()
     });
 
+    this.autoCreateHint.set(null);
     this.api.resultsSE.POST_createResult(body).subscribe({
       next: (resp: any) => {
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
-        this.created.emit();
-        // Keep the button in its "Creating…" state until the router actually lands on the new
-        // result — clearing it before navigating leaves a blank gap with no loading feedback.
+        const code = resp?.response?.result?.result_code;
+        const phase = resp?.response?.result?.version_id;
+        if (code == null) {
+          // Nothing to navigate to — close the drawer; the result exists and is listed on the Results tab.
+          this.created.emit();
+          this.creatingResult.set(false);
+          return;
+        }
+        // Hardening 2026-09-04 (quick/kp-create-navigation-hardening): navigate FIRST and let the
+        // drawer leave with the page. `created` used to fire before this navigation; the host's
+        // reaction to the drawer closing could write the URL itself, which cancels an in-flight
+        // navigation — the user was left on the Reporting tab with a result they never saw.
+        // `created` now fires only when the navigation did NOT happen (refused or failed), so the
+        // drawer still closes in that case. The button stays in "Creating…" until the router lands.
         void this.router
-          .navigate([`/result/result-detail/${resp?.response?.result?.result_code}/general-information`], {
-            queryParams: { phase: resp?.response?.result?.version_id }
-          })
+          .navigate([`/result/result-detail/${code}/general-information`], { queryParams: { phase } })
+          .then(
+            navigated => {
+              if (!navigated) this.created.emit();
+            },
+            () => this.created.emit()
+          )
           .finally(() => this.creatingResult.set(false));
       },
       error: (err: any) => {
