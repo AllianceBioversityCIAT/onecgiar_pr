@@ -145,7 +145,7 @@ La cadena completa contra Jira real, con el arreglo puesto y con el mismo `axios
 | subir adjunto PNG (`X-Atlassian-Token: no-check`) | `200` |
 | subtarea de consola (issuetype `10002`, `subtask=true`) | `201` → `P2-3576` |
 
-`P2-3575` y `P2-3576` son **sondas sintéticas**: hay que borrarlas cuando Yeck lo autorice.
+`P2-3575` y `P2-3576` eran **sondas sintéticas**: borradas el 4-sep con OK de Yeck.
 
 ## Candado
 
@@ -173,8 +173,11 @@ Los dos caminos de `issuetype`, la subtarea y el adjunto quedan probados **en el
 en local. Sondas previas: `/api/results/get/all/simplified` → `200` (la app sirve; ⚠️ el catálogo de
 CLARISA ahora pide auth y devuelve `401`, ya no vale como sonda anónima).
 
-🟡 **Sondas sintéticas por borrar** (requieren OK de Yeck): `P2-3575` + `P2-3576`, `P2-3579` +
-`P2-3580`, `P2-3581`.
+✅ **Sondas sintéticas ya borradas** (OK de Yeck, 4-sep): `P2-3575` + `P2-3576`, `P2-3579` +
+`P2-3580`, `P2-3581` — los cinco devuelven `404` y el épico quedó con **0 hijos creados hoy**.
+Se borraron con guardia por título (`ZZZ*`) y los padres con `?deleteSubtasks=true`, porque las
+subtareas se llaman *"Console output — …"* y no llevan el prefijo: un `DELETE` del padre sin ese
+parámetro devuelve `400`, no borra nada y parece un permiso denegado.
 
 ⚠️ **Del pipeline, para no perder el tiempo:** el build **#2143 salió rojo sin culpa de nadie**.
 Murió en `Build Frontend`, en `COPY --from=build .../dist/onecgiar-pr-client/browser` → *"not
