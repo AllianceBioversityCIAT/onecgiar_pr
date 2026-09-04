@@ -943,10 +943,20 @@ export class ReportingAowTableComponent {
    * ONLY while Only-pending is on (`dashboard-lab.applyBurndownFilterAndSort`) — it is not on
    * `ReportingAowGroup`'s own interface, so it is read through a local cast rather than declared.
    *
+   * Cross-cut Intermediate-Outcome rows are dropped from the base (`__isIntermediateCrosscut`,
+   * stamped by `dashboard-lab.indicatorsByAow()` from the payload's group-level `is_aow`): the same
+   * program-level IO is repeated into EVERY AoW payload and served again by the Intermediate
+   * endpoint, so counting it inside an AoW card counts it n+1 times over the shell (KCR-R-1). It
+   * still RENDERS inside the card's Outcomes band with its cross-cut tooltip (KCR-R-7, RES-R-3) —
+   * only its contribution to this denominator changes. Applied to both readings of the base (the
+   * `__allIndicators` side-channel and `indicators`).
+   *
    * @akili-spec changes/mass-reporting-flow
+   * @akili-spec bugfix/kpi-count-reconciliation
    */
   private ratioBase(group: ReportingAowGroup): ReportingIndicator[] {
-    return (group as { __allIndicators?: ReportingIndicator[] }).__allIndicators ?? group.indicators ?? [];
+    const base = (group as { __allIndicators?: ReportingIndicator[] }).__allIndicators ?? group.indicators ?? [];
+    return base.filter(ind => ind?.__isIntermediateCrosscut !== true);
   }
 
   countLabel(n: number, noun = 'KPI'): string {

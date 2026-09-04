@@ -7,6 +7,13 @@
 // as `parseTitle` — this file never refetches and never parses titles itself (TCM-R-2).
 //
 // Shape mirrors `program-overview.charts.ts`'s pure-builder pattern: plain data in, plain data out.
+//
+// `reporting-burndown` is the one exception to the import rule above, and deliberately so: it is a
+// pure, Angular-free sibling and the SINGLE home of the zero-target rule (MRF-R-7, KCR-DD-1). The
+// map calling `buildRatio` is what makes its node figures the same numbers the hero row shows
+// (`bugfix/kpi-count-reconciliation`, KCR-DD-5) instead of a second copy of the arithmetic.
+
+import { buildRatio } from './reporting-burndown';
 
 /** Raw shape of one indicator entry as it arrives on a `TocResultResponse.indicators[]` node. */
 export interface TocMapIndicatorInput {
@@ -43,12 +50,16 @@ export interface TocLeaf {
   title: string;
   /** Raw `category` passed through as-is (`'OUTPUT' | 'OUTCOME' | 'EOI'` on the wire, or `''`). */
   level: string;
+  /** *Planned*: every indicator on the node, zero-target ones included (KCR-DD-5). */
   indicators: number;
   target: number;
   achieved: number;
-  /** AoW-card rule: indicators with `actual_achieved_value_sum > 0`. */
+  /** AoW-card rule: counted indicators with `actual_achieved_value_sum > 0`. */
   done: number;
-  /** AoW-card rule: indicator count. `0` → structural leaf, no ratio is ever computed here. */
+  /**
+   * AoW-card rule: *Counted* — indicators minus the zero-target ones (`buildRatio`, KCR-DD-5), so
+   * this equals the hero row's denominator. `0` → nothing countable here, no ratio is shown.
+   */
   total: number;
 }
 
@@ -59,9 +70,13 @@ export interface TocBranch {
   name: string;
   /**
    * `done`/`total` for the BRANCH's own node (not a rollup of every leaf below). For `kind: 'aow'`
-   * these are computed from output-tier (HLO) leaves ONLY — the exact `overviewAowProgress` rule
-   * (dashboard-lab.component.ts), so the AoW's node in the map can never disagree with "Progress
-   * by area of work" (TCM-R-3). Every other branch kind rolls up across all its leaves.
+   * these sum ALL of the branch's leaves — its output-tier (HLO) leaves plus the outcome leaves the
+   * payload marked `is_aow: true` — which is exactly the AoW-own set `overviewAowProgress` now
+   * counts (`bugfix/kpi-count-reconciliation` KCR-R-5 / KCR-DD-2, superseding TCM-R-3's
+   * "counts ONLY output-tier" wording), so the AoW's node in the map can never disagree with
+   * "Progress by area of work" (TCM-R-3's actual MUST). The leaf list already excludes cross-cut
+   * program nodes, so "all its leaves" and "the AoW-own set" are the same rows. Every other branch
+   * kind rolls up across all its leaves too.
    */
   done: number;
   total: number;
@@ -113,29 +128,28 @@ function toNum(value: unknown): number {
 }
 
 /**
- * The `done` predicate, card-exact: `overviewAowProgress`/`indicatorsByAow` (dashboard-lab.
- * component.ts) coerce with `Number(value ?? 0) > 0`, NOT `parseFloat` — a string like `'12abc'`
- * coerces to `NaN` (falsy) under `Number`, but to `12` (truthy) under `parseFloat`. Exactness is
- * part of TCM-DD-4's "the exact AoW-card counting rule"; `toNum`/`parseFloat` stay for the
- * Σtarget/Σachieved sums below, which the card has no equivalent rule for.
+ * `done`/`total` are card-exact because they come from the SAME function the card calls:
+ * `buildRatio` (`reporting-burndown.ts`), which applies the zero-target rule (`target = 0 AND
+ * achieved = 0` — MRF-R-7) and counts `done` as `achieved > 0`. `KCR-DD-5`: the leaf used to count
+ * every indicator, so a node with zero-target KPIs read a larger `total` than the hero row TCM-R-3
+ * pins it to. `leaf.indicators` deliberately keeps the PLANNED count — planned and counted are two
+ * different figures and the map states both. `toNum`/`parseFloat` stay for the Σtarget/Σachieved
+ * sums, which have no equivalent card rule.
+ *
+ * @akili-spec bugfix/kpi-count-reconciliation
  */
-function isAchieved(value: unknown): boolean {
-  return Number(value ?? 0) > 0;
-}
-
 function buildLeaf(node: TocMapNodeInput, parseTitle: TocMapBuildInput['parseTitle']): TocLeaf {
   const parsed = parseTitle(node?.result_title);
   const indicators = node?.indicators ?? [];
   const target = indicators.reduce((sum, i) => sum + toNum(i?.target_value_sum), 0);
   const achieved = indicators.reduce((sum, i) => sum + toNum(i?.actual_achieved_value_sum), 0);
-  const done = indicators.filter(i => isAchieved(i?.actual_achieved_value_sum)).length;
-  const total = indicators.length;
+  const { done, total } = buildRatio(indicators);
 
   return {
     code: parsed.code,
     title: parsed.name,
     level: node?.category ?? '',
-    indicators: total,
+    indicators: indicators.length,
     target,
     achieved,
     done,
@@ -237,14 +251,16 @@ export function buildTocMapModel(input: TocMapBuildInput | null | undefined): To
       const leaves = [...outputLeaves, ...outcomeLeaves];
 
       // TCM-R-3: the AoW node's OWN done/total must equal "Progress by area of work" for this AoW
-      // (`overviewAowProgress`), which counts ONLY output-tier (HLO) indicators — outcome-tier
-      // leaves (even AoW-owned IOs) still render below it, they just don't feed this rollup.
+      // (`overviewAowProgress`), which counts the AoW-**own** set — output-tier (HLO) indicators
+      // PLUS the outcome nodes the payload marked `is_aow: true` (KCR-R-5, KCR-DD-2; the earlier
+      // output-tier-only rule left an owned outcome out of the node but in the card). `leaves` is
+      // that set already: the cross-cut nodes were routed to the program pool above.
       const branch: TocBranch = {
         kind: 'aow',
         code: aow.code,
         name: aow.name,
-        done: sumBy(outputLeaves, l => l.done),
-        total: sumBy(outputLeaves, l => l.total),
+        done: sumBy(leaves, l => l.done),
+        total: sumBy(leaves, l => l.total),
         target: sumBy(leaves, l => l.target),
         achieved: sumBy(leaves, l => l.achieved),
         leaves
@@ -253,7 +269,30 @@ export function buildTocMapModel(input: TocMapBuildInput | null | undefined): To
     })
     .filter(branch => branch.leaves.length > 0);
 
-  const programLeaves = [...programNodesByKey.values()].map(node => buildLeaf(node, parseTitle));
+  const intermediateBranch = buildProgramLevelBranch(
+    input.intermediateOutcomes,
+    'intermediate',
+    DEFAULT_INTERMEDIATE_LABEL,
+    input.intermediateOutcomesLabel,
+    parseTitle
+  );
+  const outcomes2030Branch = buildProgramLevelBranch(
+    input.outcomes2030,
+    '2030',
+    DEFAULT_2030_LABEL,
+    input.outcomes2030Label,
+    parseTitle
+  );
+
+  // `KCR-R-5.1` / `KCR-DD-7` — the deduplicated "Program-level" branch (TCM-DD-5) is built from the
+  // `is_aow !== true` nodes the AoW payloads repeat, and the Intermediate-outcomes branch is built
+  // from the IO endpoint: by RES-R-3 those are the SAME population, so rendering both shows every
+  // cross-cutting IO twice and gives it two denominators — exactly what KCR-R-1 forbids. When the
+  // IO branch has at least one leaf it is the authoritative one and the Program-level branch is
+  // suppressed; it stays as the FALLBACK when the IO endpoint returned nothing (or failed), where
+  // the AoW payloads are the only source of those nodes.
+  // @akili-spec bugfix/kpi-count-reconciliation
+  const programLeaves = intermediateBranch ? [] : [...programNodesByKey.values()].map(node => buildLeaf(node, parseTitle));
   const programBranch: TocBranch | null = programLeaves.length
     ? {
         kind: 'program',

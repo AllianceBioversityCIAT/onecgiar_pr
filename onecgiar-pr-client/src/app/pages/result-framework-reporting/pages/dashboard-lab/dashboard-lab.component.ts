@@ -62,7 +62,18 @@ import {
 } from './components/reporting-entry-hub/reporting-entry-hub.component';
 import { BilateralCreationService } from '../../../bilateral/services/bilateral-creation.service';
 import { BilateralProject } from '../../../bilateral/services/bilateral-creation.interfaces';
-import { applyZeroTargetRule, buildRatio, countNewlyReported, groupPendingCount, nextPendingAfter, pendingOf, sortRemainingFirst, stateOf } from './reporting-burndown';
+import {
+  applyZeroTargetRule,
+  buildRatio,
+  countNewlyReported,
+  groupPendingCount,
+  nextPendingAfter,
+  partitionProgramKpis,
+  pendingOf,
+  sortRemainingFirst,
+  stateOf,
+  summarisePartition
+} from './reporting-burndown';
 // @akili-spec changes/overview-aow-cross-filter
 import { filterRowsByScope } from './overview-scope-filter';
 // @akili-spec changes/mass-reporting-flow
@@ -1414,10 +1425,14 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * Footer meta for the program-band ⓘ popover: "M planned results".
    * Prefer the sum of ToC indicators across AoWs + Intermediate + 2030 once loaded;
    * fall back to this phase's result total so the line is never empty on first paint.
+   *
+   * @akili-spec bugfix/kpi-count-reconciliation — the figure is the partition's *Planned* (every
+   * KPI counted once, zero-target INCLUDED; the band's big figure is *Counted* — KCR-R-8/KCR-DD-4).
+   * The two later fallbacks are the unchanged pre-ToC chain.
    */
   readonly bandPlannedResultsCount = computed(() => {
-    const fromReporting = this.reportingGroups().reduce((sum, g) => sum + (g.count || 0), 0);
-    if (fromReporting > 0) return fromReporting;
+    const { planned } = summarisePartition(this.programKpiPartition());
+    if (planned > 0) return planned;
     const fromToc = this.indicatorsByAow().reduce((sum, b) => sum + (b.count || 0), 0);
     return fromToc > 0 ? fromToc : this.selectedTotal();
   });
@@ -1559,18 +1574,27 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly programAchievement = signal<TocAchievement | null>(null);
   readonly achievementByAowCode = signal<Record<string, TocAchievement>>({});
 
+  /**
+   * @akili-spec bugfix/kpi-count-reconciliation — basis is the AoW-**own** set from
+   * `programKpiPartition()` (outputs + `is_aow: true` outcomes, cross-cut IOs excluded — KCR-R-5,
+   * KCR-DD-2, superseding OAH DD-3's output-tier-only rule) and the ratio goes through `buildRatio`,
+   * so the zero-target rule applies here exactly as it does on every other surface (KCR-R-2).
+   * Intended consequence (KCR-DD-2, supersedes OAH DD-4's "their numbers do not move"): KPI card 4,
+   * the section-tab badge (`program-overview.aowStats`) and the hub rows all move with this row.
+   * Sort and the loading filter are unchanged.
+   */
   readonly overviewAowProgress = computed<OverviewAowProgressRow[]>(() => {
-    return this.indicatorsByAow()
-      .map(b => {
-        const inds = (b.indicators ?? []).filter(i => i?.__tier !== 'outcome');
-        const done = inds.filter(i => Number(i?.actual_achieved_value_sum ?? 0) > 0).length;
+    return this.programKpiPartition()
+      .aows.map(slice => {
+        const { done, total, zeroTarget } = buildRatio(slice.own);
         return {
-          code: b.aow.code,
-          name: b.aow.name,
+          code: slice.code,
+          name: slice.name,
           done,
-          total: inds.length,
+          total,
+          zeroTarget,
           // P2-3296 AC3 — beside the reported-KPI count, never instead of it.
-          achievement: this.achievementByAowCode()[b.aow.code] ?? null
+          achievement: this.achievementByAowCode()[slice.code] ?? null
         };
       })
       .filter(r => r.total > 0 || !this.loadingAows())
@@ -1581,24 +1605,37 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       });
   });
 
-  /** Intermediate + 2030 as cross-cutting rows under Progress by AoW (CURRENT xcutProgress). */
+  /**
+   * Intermediate + 2030 as cross-cutting rows under Progress by AoW (CURRENT xcutProgress).
+   *
+   * @akili-spec bugfix/kpi-count-reconciliation — read straight from the partition's two buckets
+   * instead of the Section/Type-filtered `reportingGroups()`, and through `buildRatio`, so the chip
+   * denominator is *Counted* like every other one (KCR-R-2, KCR-R-6). A bucket keeps its row iff it
+   * has ≥ 1 **planned** KPI — a bucket whose every KPI is zero-target still shows `0/0` rather than
+   * vanishing, because "planned but not countable" is not the same as "not planned" (KCR-R-6).
+   */
   readonly overviewXcutProgress = computed<OverviewAowProgressRow[]>(() => {
-    return this.reportingGroups()
-      .filter(g => g.kind === 'intermediate' || g.kind === '2030')
-      .map(g => {
-        const inds = g.indicators ?? [];
-        const done = inds.filter(i => Number(i?.actual_achieved_value_sum ?? 0) > 0).length;
+    const partition = this.programKpiPartition();
+    return [
+      { code: INTERMEDIATE_OUTCOMES_CODE, name: 'Intermediate outcomes', indicators: partition.intermediate.indicators },
+      { code: OUTCOMES_2030_CODE, name: '2030 outcomes', indicators: partition.outcomes2030.indicators }
+    ]
+      .filter(bucket => bucket.indicators.length > 0)
+      .map(bucket => {
+        const { done, total, zeroTarget } = buildRatio(bucket.indicators);
         // Sentence case per the reference ("Intermediate outcomes" / "2030 outcomes"). Only the
         // Overview row is relabelled — the Reporting table keeps the group's own name.
-        return { code: g.aow.code, name: sentenceCaseOutcomes(g.aow.name), done, total: g.count || inds.length };
-      })
-      .filter(r => r.total > 0);
+        return { code: bucket.code, name: sentenceCaseOutcomes(bucket.name), done, total, zeroTarget };
+      });
   });
 
   /**
    * Rich per-AoW rows for the Overview hero section (OAH-R-1 coherence, OAH-R-3 sort/segments).
-   * Row basis = output tier only (`__tier !== 'outcome'`, design DD-3 — same filter as
-   * `overviewAowProgress` above). Splits delegate to `reporting-burndown`'s `stateOf` +
+   * Row basis = the AoW-**own** set from `programKpiPartition()` (outputs + `is_aow: true` outcomes;
+   * cross-cut IOs belong to the Intermediate bucket) — `bugfix/kpi-count-reconciliation` KCR-R-5 /
+   * KCR-DD-2, superseding OAH DD-3's output-tier-only basis, so this row, the thin row, the hub
+   * row, the grouped-table header and the By-AOW banner are one number. Splits delegate to
+   * `reporting-burndown`'s `stateOf` +
    * `applyZeroTargetRule` — NEVER recomputed locally (OAH-R-3 BUT, single-home rule: the glossary
    * partition IS that helper's own `stateOf`) — so this section's numbers can never drift from the
    * Reporting-tab surfaces that already call the same functions. `target = 0 && achieved > 0` is
@@ -1612,10 +1649,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * @akili-spec changes/overview-aow-progress-hero
    */
   readonly overviewAowProgressRich = computed<OverviewAowProgressRowRich[]>(() => {
-    const rows = this.indicatorsByAow()
-      .map(b => {
-        const inds = (b.indicators ?? []).filter(i => i?.__tier !== 'outcome');
-        const { counted, zeroTarget } = applyZeroTargetRule(inds);
+    const rows = this.programKpiPartition()
+      .aows.map(slice => {
+        const { counted, zeroTarget } = applyZeroTargetRule(slice.own);
         let complete = 0;
         let inProgress = 0;
         let notStarted = 0;
@@ -1628,8 +1664,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         const total = counted.length;
         const reported = complete + inProgress;
         return {
-          code: b.aow.code,
-          name: b.aow.name,
+          code: slice.code,
+          name: slice.name,
           complete,
           inProgress,
           notStarted,
@@ -1639,7 +1675,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           remaining: total - reported,
           // P2-3296 AC3 — beside the reported-KPI count, never instead of it (same source as the
           // thin `overviewAowProgress` above).
-          achievement: this.achievementByAowCode()[b.aow.code] ?? null
+          achievement: this.achievementByAowCode()[slice.code] ?? null
         };
       })
       .filter(r => r.total > 0 || !this.loadingAows())
@@ -2365,24 +2401,38 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * True while the AoW list or any group's ToC is still loading — the stats card and the group
    * headers show skeletons instead of partial sums that jump as ToCs stream in (field, 2026-08-31).
    */
-  readonly plannedReportingStatsLoading = computed(() => this.loadingAows() || this.reportingGroups().some(g => g.loading));
+  // @akili-spec bugfix/kpi-count-reconciliation — read the partition's own per-AoW / per-bucket
+  // `loading` flags, never `reportingGroups()`: those cards are Section/Type-filtered, so the
+  // skeleton used to appear and disappear with the toolbar. Semantics are otherwise unchanged.
+  readonly plannedReportingStatsLoading = computed(() => {
+    const partition = this.programKpiPartition();
+    return (
+      this.loadingAows() ||
+      partition.aows.some(slice => slice.loading) ||
+      partition.intermediate.loading ||
+      partition.outcomes2030.loading
+    );
+  });
 
-  /** Summary stats for the top reporting overview card (PROGRAMS, AOWs, TOTAL KPIs, KPIs WITH EVIDENCE). */
+  /**
+   * Summary stats for the top reporting overview card (PROGRAMS, AOWs, TOTAL KPIs, KPIs WITH EVIDENCE).
+   *
+   * @akili-spec bugfix/kpi-count-reconciliation — every figure comes from `summarisePartition`
+   * over the unfiltered `programKpiPartition()`, so a cross-cutting Intermediate Outcome is counted
+   * ONCE (KCR-R-1) and the band never moves under a filter (KCR-R-4). `totalKpis` is *Counted*
+   * (zero-target excluded, KCR-R-2/R-8); `plannedKpis` / `zeroTargetKpis` carry the disclosure the
+   * band's `title` states. The old `progress_percentage > 0` clause is gone (KCR-R-9): it read a
+   * `'1500%'` string and never decided anything `achieved > 0` had not already decided.
+   */
   readonly plannedReportingSummaryStats = computed(() => {
-    const aowsCount = this.aows().length;
-    const groups = this.reportingGroups();
-    const allIndicators = groups.flatMap(g => g.indicators ?? []);
-    const totalKpis = allIndicators.length;
-    const reportedKpis = allIndicators.filter(i => {
-      const pct = Number(i.progress_percentage ?? 0);
-      const achieved = Number(i.actual_achieved_value_sum ?? 0);
-      return pct > 0 || achieved > 0;
-    }).length;
+    const { planned, zeroTarget, counted, reported } = summarisePartition(this.programKpiPartition());
     return {
       programsCount: this.selected() ? 1 : 0,
-      aowsCount,
-      totalKpis,
-      reportedKpis
+      aowsCount: this.aows().length,
+      totalKpis: counted,
+      reportedKpis: reported,
+      plannedKpis: planned,
+      zeroTargetKpis: zeroTarget
     };
   });
 
@@ -2855,6 +2905,34 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   /** Flat list of every indicator in the program, for the "indicators" view. */
   readonly allPanelIndicators = computed(() => this.indicatorsByAow().flatMap(x => x.indicators));
 
+  // @akili-spec bugfix/kpi-count-reconciliation
+  /**
+   * The ONE deduplicated KPI universe every shell surface counts over (KCR-R-1, KCR-R-3, KCR-DD-1).
+   *
+   * Built once per program + phase from the already-cached ToCs — the same `tocByKey` entries
+   * `reportingGroups` reads, under the same two bucket keys — and **unfiltered by construction**:
+   * it never touches `plannedFilteredAows()`, the Section/Type/Category filters or Only-pending, so
+   * the band figures derived from it cannot move when the user filters (KCR-R-4, KCR-AC-3).
+   *
+   * Every total, ratio, count label, rail figure and chip on the shell derives from this partition
+   * via `summarisePartition` / `buildRatio`. No consumer may re-derive a denominator from
+   * `reportingGroups()` or from the `__tier` / `__isIntermediateCrosscut` stamps directly — that
+   * three-way re-derivation IS the drift this spec removes.
+   */
+  readonly programKpiPartition = computed(() => {
+    const sp = this.selected()?.initiativeCode;
+    const map = this.tocByKey();
+    const ioToc = map.get(this.tocCacheKey(sp, INTERMEDIATE_OUTCOMES_CODE));
+    const o30Toc = map.get(this.tocCacheKey(sp, OUTCOMES_2030_CODE));
+    // `!toc` = loading — the same cache-presence predicate `indicatorsByAow` and `reportingGroups`
+    // already use (`loadToc` ALWAYS caches, an errored fetch included).
+    return partitionProgramKpis<ReportingIndicator>(
+      this.indicatorsByAow(),
+      { indicators: this.flattenBucketIndicators(ioToc?.outputs, INTERMEDIATE_OUTCOMES_CODE, 'Intermediate Outcomes'), loading: !ioToc },
+      { indicators: this.flattenBucketIndicators(o30Toc?.outputs, OUTCOMES_2030_CODE, '2030 Outcomes'), loading: !o30Toc }
+    );
+  });
+
   isPanelAowExpanded(code: string): boolean {
     if (this.expandedPanelAows().has(code)) return true;
     // While searching on Planned → Areas of Work, auto-open parents that matched via children.
@@ -2892,7 +2970,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const code = this.plannedHloAowCode();
     if (!code) return null;
     const name = this.aows().find(a => a.code === code)?.name ?? '';
-    const inds = this.indicatorsForAow(code)?.indicators ?? [];
+    // @akili-spec bugfix/kpi-count-reconciliation — the AoW-own set, resolved through the
+    // partition's `aowByCode` map (KCR-DD-1: consumers resolve by code, never by array index), so
+    // the banner equals this AoW's grouped-table header (MRF-R-6 pins them equal) instead of adding
+    // the cross-cut IO rows the payload repeats into every AoW (KCR-R-5, KCR-DD-6).
+    const inds = this.programKpiPartition().aowByCode.get(code)?.own ?? [];
     return {
       code,
       name,
@@ -3147,7 +3229,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
             return {
               aow,
               indicators: rows,
-              count: tierRows.length,
+              // @akili-spec bugfix/kpi-count-reconciliation — the count label is AoW-own *Planned*
+              // (KCR-R-10, KCR-AC-5), so `count − zeroTarget === ratio.total` holds on the same
+              // header while Type and Category are `all`. The rendered `indicators` above keep the
+              // Type/Category filtering (existing behaviour); only the label leaves the filter.
+              count: this.programKpiPartition().aowByCode.get(aow.code)?.own.length ?? tierRows.length,
               loading: bundle.loading,
               kind: 'aow' as const,
               // P2-3296 AC3. Taken from the roll-up call, not recomputed from `rows`: the figure
