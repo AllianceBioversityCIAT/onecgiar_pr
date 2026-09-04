@@ -46,8 +46,9 @@
       @if (creationService.selectedSecondarySps().length) {
         <div class="sc-selected-chips">
           @for (sp of creationService.selectedSecondarySps(); track sp.programId) {
+            <!-- Same "CODE - Name" the dropdown option showed: a bare code reads as a different program. -->
             <span class="sc-chip">
-              {{ sp.programCode }}
+              {{ sp.name ? sp.programCode + ' - ' + sp.name : sp.programCode }}
               @if (sp.allocation) {
                 <span class="sc-sp-pct">{{ formatAlloc(sp.allocation) }}%</span>
               }

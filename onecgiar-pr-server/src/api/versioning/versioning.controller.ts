@@ -176,6 +176,16 @@ export class VersioningController {
     return this.versioningService.find(module_type, status, active);
   }
 
+  // Declared BEFORE `result/:resultId` on purpose: three segments never collide with two, but
+  // keeping the more specific route first is what stops a future `result/:resultId` widening
+  // from swallowing it.
+  @Get('result/code/:resultCode')
+  @ApiOperation({ summary: 'Get the phases in which a result code exists' })
+  @ApiParam({ name: 'resultCode', type: Number })
+  findVersionsOfAResultCode(@Param('resultCode') result_code: string) {
+    return this.versioningService.getVersionsOfAResultCode(+result_code);
+  }
+
   @Get('result/:resultId')
   @ApiOperation({ summary: 'Get version of a specific result' })
   @ApiParam({ name: 'resultId', type: Number })

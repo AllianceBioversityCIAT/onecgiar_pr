@@ -100,5 +100,32 @@ export const ReportingDesignYear = {
    * portfolio, and a portfolio gate would offer the fallback on results this epic
    * requires to behave exactly as they do today.
    */
-  InnovationUseAgeDisaggregationFallback: 2026
+  InnovationUseAgeDisaggregationFallback: 2026,
+
+  /**
+   * SIDS revision (P2-3573, epic P2-3243) — Innovation Packages, Step 3 "Scaling readiness
+   * assessment". From the 2026 cycle the expert-workshop block asks "Provide the readiness and use
+   * levels of the core innovation and complementary enablers following the expert workshop." and its
+   * table drops the "Potential situation (12 months later)" pair of columns, leaving Package element
+   * + Current situation (readiness, use).
+   *
+   * 🛑 Nothing is deleted: `potential_innovation_readiness_level` and
+   * `potential_innovation_use_level` keep their stored values and keep being sent back on save —
+   * phases <= 2025 render the column exactly as they do today, which is this epic's governing rule.
+   *
+   * Gated on the reporting phase YEAR, not on the portfolio: prtest holds 2025-phase results inside
+   * the P25 portfolio, and `isP25()` would strip the column from those too.
+   */
+  IpsrScalingReadinessLayout: 2026,
+
+  /**
+   * SIDS revision (P2-3572, epic P2-3243) — Innovation Packages, Step 2. From the 2026 cycle the
+   * "PRMS-reported Innovation Development" table also lists Innovation Use, Policy Change and
+   * Capacity Sharing for Development. Knowledge Products stay excluded, and the table layout is
+   * unchanged. Phases <= 2025 keep seeing Innovation Development only.
+   *
+   * Gated on the reporting phase YEAR of the PACKAGE being edited, not on the portfolio and not on
+   * the listed results — the ticket lists results "from all phases", it is the form that changes.
+   */
+  IpsrStepTwoEnablerTypes: 2026
 } as const;

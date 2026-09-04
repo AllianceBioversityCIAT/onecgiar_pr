@@ -66,6 +66,41 @@ describe('FeedbackService', () => {
     );
   });
 
+  /**
+   * Regression lock, 4 Sep 2026. Digital Tools (customfield_10521) is a
+   * multi-select: Jira rejects the whole create with 400 "Specify the value
+   * for Digital Tools in an array" if it arrives as a bare object, and the
+   * user only sees "Something went wrong sending your report".
+   */
+  it('sends Digital Tools as an ARRAY of options, never a bare object', async () => {
+    mockHttp.post.mockReturnValue(of({ data: { key: 'P2-9005' } }));
+    await service.createFeedback(validDto, user);
+
+    const digitalTools =
+      mockHttp.post.mock.calls[0][1].fields['customfield_10521'];
+    expect(Array.isArray(digitalTools)).toBe(true);
+    expect(digitalTools).toEqual([{ id: '10215' }]);
+  });
+
+  it('carries the chosen priority and the three labels', async () => {
+    mockHttp.post.mockReturnValue(of({ data: { key: 'P2-9006' } }));
+    await service.createFeedback({ ...validDto, priority: '1' }, user);
+
+    const { priority, labels } = mockHttp.post.mock.calls[0][1].fields;
+    expect(priority).toEqual({ id: '1' });
+    expect(labels).toEqual([
+      'user-feedback-in-app',
+      'fb-tester',
+      'fb-env-other',
+    ]);
+  });
+
+  it('falls back to Medium when the priority is not a known Jira id', async () => {
+    mockHttp.post.mockReturnValue(of({ data: { key: 'P2-9007' } }));
+    await service.createFeedback({ ...validDto, priority: '99' as any }, user);
+    expect(mockHttp.post.mock.calls[0][1].fields.priority).toEqual({ id: '3' });
+  });
+
   it("maps 'adjustment' to Enhancement (10105)", async () => {
     mockHttp.post.mockReturnValue(of({ data: { key: 'P2-9002' } }));
     await service.createFeedback({ ...validDto, type: 'adjustment' }, user);

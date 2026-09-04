@@ -163,6 +163,24 @@ export class FieldsManagerService {
   isLeadContactPersonMandatory2026 = computed(
     () => this.isP25() && this.isPhaseYearAtLeast(ReportingDesignYear.LeadContactPersonMandatory)
   );
+  /**
+   * True when the open Innovation Package's reporting phase is 2026+ → Step 3 uses the restructured
+   * Scaling readiness assessment (P2-3573, epic P2-3243): the new main question and no "Potential
+   * situation (12 months later)" columns. 2025 and earlier render Step 3 exactly as they do today.
+   *
+   * Safe to read from the IPSR screens: `innovation-package-detail.component.html:64` only activates
+   * the `<router-outlet>` once `porfolioExists()` is truthy, and both `portfolio` and `phase_year`
+   * arrive in the same `GETInnovationPackageDetail` payload (`api.service.ts:126`) — so no step ever
+   * mounts before the year is known. Threshold is centralized in {@link ReportingDesignYear}.
+   */
+  isIpsrScalingReadiness2026 = computed(() => this.isPhaseYearAtLeast(ReportingDesignYear.IpsrScalingReadinessLayout));
+  /**
+   * True when the open Innovation Package's reporting phase is 2026+ → Step 2 also lists Innovation
+   * Use, Policy Change and Capacity Sharing for Development alongside Innovation Development
+   * (P2-3572, epic P2-3243). 2025 and earlier keep the Innovation-Development-only table.
+   * Threshold is centralized in {@link ReportingDesignYear}.
+   */
+  isIpsrStepTwoEnablerTypes2026 = computed(() => this.isPhaseYearAtLeast(ReportingDesignYear.IpsrStepTwoEnablerTypes));
   isAnInnovation = computed(
     () => this.dataControlSE.currentResultSignal()?.result_type_id == 2 || this.dataControlSE.currentResultSignal()?.result_type_id == 7
   );

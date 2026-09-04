@@ -1369,6 +1369,30 @@ export class VersioningService {
     });
   }
 
+  /**
+   * Phases in which a result CODE exists. Feeds the result-detail screen when the code/phase pair
+   * in the URL has no row: without an internal id, `getVersionOfAResult` cannot be used, and the
+   * screen still has to say in which years the result DOES exist.
+   */
+  async getVersionsOfAResultCode(result_code: number) {
+    const versions_id =
+      await this._versionRepository.$_getVersionsOfAResultCode(result_code);
+
+    const res = versions_id.length
+      ? await this._versionRepository.find({
+          where: {
+            id: In(versions_id),
+          },
+        })
+      : [];
+
+    return ReturnResponseUtil.format({
+      message: `Phase Retrieved Successfully`,
+      response: res,
+      statusCode: HttpStatus.OK,
+    });
+  }
+
   async getVersionOfAResult(resul_id: number) {
     const versions_id =
       await this._versionRepository.$_getVersionOfAResult(resul_id);

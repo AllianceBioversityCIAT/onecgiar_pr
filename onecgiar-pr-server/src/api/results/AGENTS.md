@@ -46,7 +46,7 @@ Bilateral results enter the system in `PENDING_REVIEW` status.
 | `GET /api/results/bilateral/<resultId>` | `getBilateralResultById` |
 | `PATCH /api/results/bilateral/<resultId>/title` | `updateBilateralResultTitle` |
 | `PATCH /api/results/bilateral/review-update/toc-metadata/<id>` | `updateBilateralResultTocMetadata` |
-| `PATCH /api/results/bilateral/review-update/data-standard/<id>` | `updateBilateralResultReview` |
+| `PATCH /api/results/bilateral/review-update/data-standard/<id>` | `updateBilateralResultReview` — **platform-admin only since 2026-09-04 (P2-3154 BR1)**: the MDS fields belong to the Centre; non-admin reviewers get 403. The `toc-metadata` endpoint is deliberately NOT gated (AC2 keeps ToC editable for the SP Leader) |
 | `PATCH /api/results/bilateral/<resultId>/review-decision` | `reviewBilateralResult` |
 
 ## Related Reporting Services

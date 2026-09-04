@@ -1,4 +1,6 @@
-<div class="local_container" *ngIf="this.api.dataControlSE.currentResult?.result_type_id == 7 || this.api.dataControlSE.currentResult?.result_type_id == 2">
+<div
+  class="local_container"
+  *ngIf="this.api.dataControlSE.currentResult?.result_type_id == 7 || this.api.dataControlSE.currentResult?.result_type_id == 2">
   <div class="annual_updating">
     <div class="title">
       <strong>Annual updating</strong>
@@ -37,8 +39,8 @@
       <div class="message">
         <i class="pi pi-lock" style="font-size: 14px; margin-top: 2px; color: var(--pr-color-blue-600)"></i>
         <div class="message--text">
-          This innovation is reported as inactive, so this block can no longer be edited. If it was closed by mistake, ask a
-          PRMS administrator to reopen it.
+          This innovation is reported as inactive, so this block can no longer be edited. If it was closed by mistake, ask a PRMS administrator to
+          reopen it.
         </div>
       </div>
     }
@@ -57,11 +59,7 @@
            The label is a question, so [useColon]="false" (same trap as the header above). -->
       @if (usesStatusTriggerWording) {
         <div class="discontinued_options__header">
-          <app-pr-field-header
-            [label]="reasonsHeaderLabel"
-            [useColon]="false"
-            [description]="reasonsHeaderHint"
-            [showDescriptionLabel]="false">
+          <app-pr-field-header [label]="reasonsHeaderLabel" [useColon]="false" [description]="reasonsHeaderHint" [showDescriptionLabel]="false">
           </app-pr-field-header>
         </div>
       }
@@ -91,8 +89,70 @@
       }
     </div>
 
+    <!-- P2-3292 Steps 3A / 3B: WHERE the innovation continued. Only when the reason that demands it
+         is ticked — most discontinuations are neither a merge nor a split, and the story does not
+         ask anyone else this question.
+
+         `pr-multi-select` already carries its own search box, so the story's "searchable" needs no
+         extra control; the catalogue itself is filtered server-side because it is portfolio-wide.
+
+         [required]="false" on purpose: the component's `required` defaults to TRUE and feeds a
+         mandatory-marker scan that double-counts when a field already reports through
+         appFeedbackValidation — which is exactly what the block below does. See the trap documented
+         in custom-fields/pr-multi-select/CLAUDE.md. -->
+    @if (showsMergeTargets || showsSplitTargets) {
+      <div class="merge_split_targets">
+        @if (showsMergeTargets) {
+          <app-pr-multi-select
+            data-testid="au-field-merge-targets"
+            label="Which innovations did this one merge into?"
+            description="Only quality-assessed innovations that are not themselves discontinued can be selected."
+            placeholder="Search by innovation ID or title"
+            [options]="mergeSplitCatalogue"
+            optionLabel="label"
+            optionValue="result_code"
+            [required]="false"
+            [readOnly]="lockedByDiscontinuation"
+            [isStatic]="annualUpdatingEditable"
+            [ngModel]="selectedTargets('merge')"
+            (ngModelChange)="onTargetsChange('merge', $event)"
+            (click)="ensureMergeSplitCatalogue()">
+          </app-pr-multi-select>
+        }
+
+        @if (showsSplitTargets) {
+          <app-pr-multi-select
+            data-testid="au-field-split-targets"
+            label="Which innovations did this one split into?"
+            description="Only quality-assessed innovations that are not themselves discontinued can be selected."
+            placeholder="Search by innovation ID or title"
+            [options]="mergeSplitCatalogue"
+            optionLabel="label"
+            optionValue="result_code"
+            [required]="false"
+            [readOnly]="lockedByDiscontinuation"
+            [isStatic]="annualUpdatingEditable"
+            [ngModel]="selectedTargets('split')"
+            (ngModelChange)="onTargetsChange('split', $event)"
+            (click)="ensureMergeSplitCatalogue()">
+          </app-pr-multi-select>
+        }
+
+        @if (mergeSplitCatalogueLoading) {
+          <div class="merge_split_targets--hint">Loading innovations…</div>
+        }
+      </div>
+    }
+
     <div appFeedbackValidation labelText="Annual Update" [isComplete]="generalInfoBody.is_discontinued != null"></div>
 
     <div appFeedbackValidation labelText="Reason for inactivity/discontinuation" [isComplete]="isDiscontinuedOptionsTrue()"></div>
+
+    <!-- P2-3292 Step 3: "it merged" without saying with what is the state this story exists to
+         prevent, so it reports incomplete through the same channel as the reasons above. Only
+         registers when one of the two reasons is actually ticked. -->
+    @if (showsMergeTargets || showsSplitTargets) {
+      <div appFeedbackValidation labelText="Innovations it merged into / split into" [isComplete]="mergeSplitIsComplete"></div>
+    }
   </div>
 </div>

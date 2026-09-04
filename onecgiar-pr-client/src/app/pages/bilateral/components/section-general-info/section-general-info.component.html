@@ -1,22 +1,4 @@
 <div class="sgi-fields">
-  <div class="flex items-center justify-between gap-3 border-b border-[#ECEFF1] pb-3">
-    <app-alert-status
-      class="flex-1"
-      status="info"
-      description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. If you need to complete the full metadata for this section, click the button on the right.">
-    </app-alert-status>
-    <button type="button" class="tsf-save-btn shrink-0" (click)="toggleShowAll()">
-      {{ showAllFields() ? 'Hide full metadata' : 'Complete full metadata' }}
-    </button>
-  </div>
-
-  @if (showHiddenFieldsNote()) {
-    <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">
-      <span class="font-mono font-medium">{{ hiddenFieldsWithValues() }}</span>
-      hidden fields have values and will be saved.
-    </span>
-  }
-
   <app-pr-input
     label="Title of Result"
     type="text"
@@ -51,6 +33,30 @@
       <i class="material-icons-round" aria-hidden="true">info_outline</i>
       For innovations, the lead contact person is also the innovation developer/lead.
     </p>
+  }
+
+  <!-- Minimum-data banner + Full Metadata toggle, BELOW the MDS fields — same placement, copy shape
+       and button style as Contributors & Partners (feedback 2026-09-04): the button sits right where
+       the extra fields (Impact Area Scores) unfold, so no auto-scroll is needed. -->
+  <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
+    <app-alert-status
+      class="flex-1"
+      status="info"
+      description="The fields above are the minimum data standards required to report a bilateral result. Add the full metadata if you need to report more.">
+    </app-alert-status>
+    <button
+      type="button"
+      class="shrink-0 rounded-[6px] border border-[var(--pr-color-primary-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+      (click)="toggleShowAll()">
+      {{ showAllFields() ? 'Hide full metadata' : 'Complete full metadata' }}
+    </button>
+  </div>
+
+  @if (showHiddenFieldsNote()) {
+    <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">
+      <span class="font-mono font-medium">{{ hiddenFieldsWithValues() }}</span>
+      hidden fields have values and will be saved.
+    </span>
   }
 
   @if (showAllFields()) {

@@ -55,7 +55,13 @@ export class FeedbackService {
   /** The only sub-task type P2 offers is 'Task' (10002). */
   private readonly subTaskTypeId = '10002';
 
-  /** Digital Tools (customfield_10521) → 'Reporting Tool'. */
+  /**
+   * Digital Tools (customfield_10521) → 'Reporting Tool'.
+   * 🛑 It is a MULTI-SELECT (schema: array of option), so the value has to be
+   * an array. Sent as a bare object Jira answers 400 "Specify the value for
+   * Digital Tools in an array" and NOTHING is created — which is exactly what
+   * broke every report on 4 Sep 2026.
+   */
   private readonly digitalToolsFieldId = 'customfield_10521';
   private readonly reportingToolOptionId = '10215';
 
@@ -112,7 +118,7 @@ export class FeedbackService {
           this.reporterLabel(user),
           this.detectEnvironment(createFeedbackDto?.contextUrl).label,
         ].filter(Boolean),
-        [this.digitalToolsFieldId]: { id: this.reportingToolOptionId },
+        [this.digitalToolsFieldId]: [{ id: this.reportingToolOptionId }],
         // Jira summary hard-limits at 255 chars
         summary: title.slice(0, 255),
         description: this.buildAdfDescription(

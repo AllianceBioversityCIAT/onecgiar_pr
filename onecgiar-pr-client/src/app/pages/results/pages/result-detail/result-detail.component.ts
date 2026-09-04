@@ -1,5 +1,5 @@
-import { Component, DoCheck, ElementRef, OnInit, OnDestroy, ViewChild, effect, inject, NgZone } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { Component, DoCheck, ElementRef, OnInit, OnDestroy, ViewChild, effect, inject, signal, NgZone } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
@@ -10,6 +10,8 @@ import { environment } from '../../../../../environments/environment';
 import { PdfExportService } from '../../../../shared/services/pdf-export.service';
 import { SectionBottomBarSlotService } from './components/section-bottom-bar/section-bottom-bar-slot.service';
 import { ResultSectionsService } from './components/result-sections-sidebar/result-sections.service';
+import { PhasesService } from '../../../../shared/services/global/phases.service';
+import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 
 @Component({
   selector: 'app-result-detail',
@@ -21,6 +23,15 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
   private readonly pdfSE = inject(PdfExportService);
   private readonly ngZone = inject(NgZone);
   private readonly bottomBarSlotSE = inject(SectionBottomBarSlotService);
+  private readonly router = inject(Router);
+  private readonly phasesSE = inject(PhasesService);
+
+  /**
+   * Phases this result code DOES have a version in, newest first. Only filled when the requested
+   * code/phase pair came back 404: it is what turns "not found" into something the user can act
+   * on. Also published to `dataControlSE.resultPhaseList`, which is the app's canonical holder.
+   */
+  readonly availablePhases = signal<Phases[]>([]);
   /** Público: el template lee de aquí el número y el nombre de la sección abierta. */
   readonly sectionsSE = inject(ResultSectionsService);
 
@@ -70,34 +81,86 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
     this.api.resultsSE.currentResultId = null;
     this.api.resultsSE.currentResultCode = null;
     this.api.resultsSE.currentResultPhase = null;
+    this.availablePhases.set([]);
     this.api.updateUserData(() => {});
     this.api.resultsSE.currentResultCode = this.activatedRoute.snapshot.paramMap.get('id');
     this.api.resultsSE.currentResultPhase = this.activatedRoute.snapshot.queryParamMap.get('phase');
     this.pdfSE.link.set(this.getPdfLink());
     this.pdfSE.enabled.set(true);
+    this.shareRequestModalSE.inNotifications = false;
     await this.GET_resultIdToCode();
+
+    // The conversion is the gate, not a formality: without an id `GET_resultById` would ask for
+    // `results/get/null` (a 400 that reads like a broken backend) and the other two GETs would
+    // spend a round trip each to answer nothing. The screen explains itself instead.
+    if (this.currentResultSE.resultLoadFailure()) {
+      if (this.currentResultSE.resultLoadFailure() === 'not-found') this.GET_phasesOfResultCode();
+      return;
+    }
 
     this.currentResultSE.GET_resultById();
     this.greenChecksSE.getGreenChecks();
     this.GET_versioningResult();
-
-    this.shareRequestModalSE.inNotifications = false;
   }
 
   GET_resultIdToCode() {
     this.currentResultSE.resultIdIsconverted = false;
-    return new Promise((resolve, reject) => {
+    this.currentResultSE.resultLoadFailure.set(null);
+    return new Promise(resolve => {
       this.api.resultsSE.GET_resultIdToCode(this.api.resultsSE.currentResultCode, this.api.resultsSE.currentResultPhase).subscribe({
         next: ({ response }) => {
           this.api.resultsSE.currentResultId = response;
           this.currentResultSE.resultIdIsconverted = true;
           resolve(null);
         },
-        error: () => {
+        error: err => {
+          // A 404 here is the server answering correctly — this code has no row in this phase —
+          // and it is the ONLY case that may be reported as "not reported in this year". Anything
+          // else (500, network, gateway) is a failure and must not be dressed up as missing data.
+          this.currentResultSE.resultLoadFailure.set(err?.status === 404 ? 'not-found' : 'error');
           resolve(null);
         }
       });
     });
+  }
+
+  /**
+   * Fills `availablePhases` for the not-found screen. Keyed by CODE on purpose: there is no id in
+   * this branch, which is exactly why `GET_versioningResult()` (id-based) cannot answer here.
+   */
+  private GET_phasesOfResultCode() {
+    this.api.resultsSE.GET_versioningResultByCode(this.api.resultsSE.currentResultCode).subscribe({
+      next: ({ response }) => {
+        const phases: Phases[] = [...((response ?? []) as Phases[])].sort(
+          (a, b) => Number(b?.phase_year ?? 0) - Number(a?.phase_year ?? 0)
+        );
+        this.api.dataControlSE.resultPhaseList = phases;
+        this.availablePhases.set(phases);
+      },
+      error: () => {
+        this.availablePhases.set([]);
+      }
+    });
+  }
+
+  /** Name of the phase the URL asked for, for the not-found copy. Empty when it cannot be named. */
+  get requestedPhaseName(): string {
+    const requested = this.api.resultsSE.currentResultPhase;
+    const phase = this.phasesSE.phases.reporting.find(item => String(item.id) === String(requested));
+    return phase?.phase_name ?? '';
+  }
+
+  /**
+   * Same route, another phase. A plain href (full document load) and not `routerLink`: the reuse
+   * strategy keeps this component alive when only `?phase=` changes, so an in-app navigation would
+   * leave the old, already-failed state on screen.
+   */
+  phaseLink(phaseId: number | string): string {
+    return `${this.router.url.split('?')[0]}?phase=${phaseId}`;
+  }
+
+  reload(): void {
+    window.location.reload();
   }
   GET_versioningResult() {
     this.api.resultsSE.GET_versioningResult().subscribe(({ response }) => {

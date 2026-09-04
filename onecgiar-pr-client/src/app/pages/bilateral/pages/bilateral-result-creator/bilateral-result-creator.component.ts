@@ -629,12 +629,22 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       await this.waitForSectionSave(activeSection);
 
       if (this.autoSaveService.hasErrorFor(activeSection)) {
+        // Say WHY: the server's rejection reason was always in the response body (e.g. clearing the
+        // required title leaves nothing savable → 400), but the alert used to swallow it into a bare
+        // "Please try again" — which reads as a transient glitch when it is actually a rule.
+        const serverReason = this.autoSaveService.lastErrorMessageFor(activeSection);
+        const missing = this.missingFieldsFor(activeSection);
         this.api.alertsFe.show({
           id: 'bilateralManualSave',
           title: 'Save failed',
-          description: 'This section could not be saved. Please try again.',
+          description: [
+            serverReason ?? 'This section could not be saved. Please try again.',
+            missing.length ? `Still missing: ${missing.join(', ')}.` : ''
+          ]
+            .filter(Boolean)
+            .join(' '),
           status: 'error',
-          closeIn: 5000
+          closeIn: 8000
         });
         return;
       }
