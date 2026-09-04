@@ -3751,6 +3751,20 @@ describe('ResultsApiService', () => {
     });
   });
 
+  // @akili-spec changes/results-aow-column-filter (RAC-T-2)
+  describe('GET_ResultsScope', () => {
+    it('calls results-scope with programId and versionId and returns the buckets envelope', done => {
+      service.GET_ResultsScope('SP01', 36).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/results-scope?programId=SP01&versionId=36`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
   // ========== NEW BRANCH COVERAGE TESTS ==========
 
   describe('GET_AllResultsWithUseRole - searchParams branches', () => {

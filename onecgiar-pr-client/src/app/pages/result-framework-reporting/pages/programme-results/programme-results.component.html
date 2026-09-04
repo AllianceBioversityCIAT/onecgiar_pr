@@ -450,6 +450,43 @@
                       {{ row.category }}
                     </td>
                   }
+                  @case ('aow') {
+                    <!-- @akili-spec changes/results-aow-column-filter (RAC-T-2)
+                         AREA OF WORK (RAC-R-2 / R-2.1) — code / fixed label / `+N` with every
+                         code in `title`; skeleton while the scope request is in flight; `—` +
+                         explanatory `title` on error or a phase mismatch (A-1). -->
+                    <td class="pgr-td">
+                      @switch (row.sectionState) {
+                        @case ('loading') {
+                          <span class="sr-only">Loading area of work</span>
+                          <span
+                            class="inline-block h-[14px] w-[64px] animate-pulse rounded-[4px] bg-[var(--pr-surface-app)]"
+                            aria-hidden="true"></span>
+                        }
+                        @case ('error') {
+                          <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]" [attr.title]="aowTitle(row)">—</span>
+                        }
+                        @case ('version-mismatch') {
+                          <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]" [attr.title]="aowTitle(row)">—</span>
+                        }
+                        @default {
+                          @if ((row.aowCodes ?? []).length > 1) {
+                            <!-- RAC-DD-3 / design.md §6.3 — the code in the mono heading colour,
+                                 `+N` in `--pr-text-muted`. The suffix span's own text starts with
+                                 the space, so the cell's textContent still reads `AOW01 +1`. -->
+                            <span class="truncate" [attr.title]="aowTitle(row)">
+                              <span class="font-mono text-[12px] font-medium text-[var(--pr-text-heading)]">{{ row.section }}</span
+                              ><span class="text-[12px] font-medium text-[var(--pr-text-muted)]"> +{{ (row.aowCodes ?? []).length - 1 }}</span>
+                            </span>
+                          } @else if (row.section && (row.aowCodes ?? []).length === 1) {
+                            <span class="truncate font-mono text-[12px] font-medium text-[var(--pr-text-heading)]">{{ row.section }}</span>
+                          } @else {
+                            <span class="truncate text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ cellText(row, 'aow') }}</span>
+                          }
+                        }
+                      }
+                    </td>
+                  }
                   @case ('status') {
                     <!-- 6 · STATUS — pill from the fixed --pr-status-* fg/bg PAIR (UI-RULES 9). -->
                     <td class="pgr-td">

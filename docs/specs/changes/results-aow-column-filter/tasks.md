@@ -18,7 +18,7 @@
 
 ## 1. Scope of this task list
 - **Module / feature:** `result-framework-reporting` / Results tab Area of Work column, Section filter, Overview scope deep link.
-- **Status:** `in-progress` (T-1 done).
+- **Status:** `in-progress` (T-1, T-2 done; budget tripwire pending user decision).
 
 ## 2. Pre-flight checklist
 - ✅ `requirements.md` approved (auto-approved, pre-approved mode).
@@ -40,7 +40,7 @@
   - *Input that fails:* a fixture row whose `aow_acronym` is not the first of its sorted `aow_codes` (`'AOW02'` vs `'AOW01,AOW02'`) must make the mapper test fail — the mapper derives `key` from `aow_acronym` and the test asserts `key === codes[0]`, so it cannot pass on an inconsistent fixture; a result present in the population but absent from the CTE rows must yield `UNTAGGED`.
 - **Done:** endpoint documented in Swagger; `getScopeBuckets` unchanged for callers; `@akili-spec changes/results-aow-column-filter` on new blocks.
 
-### `RAC-T-2` — Client: fetch + join buckets, Area of Work column
+### `RAC-T-2` — Client: fetch + join buckets, Area of Work column — [x]
 - **Type:** `client` + `tests`
 - **Description:** `results-api.service.ts` `GET_ResultsScope(programId, versionId)`. `ProgrammeResultsService`: `scope` map signal, `scopeLoading`, `scopeError`, `loadScope(programId, versionId)` token-guarded; refetch when the selected phase's version changes; `toProgrammeResultRow` joins by `id`: `section` = bucket key, `aowCodes`, `sectionState`; rows of another `versionId` keep `section ''` (A-1). `PGR_COLUMNS` gains `aow` (*Area of Work*, after Category, default on, 132 px, `sortField: 'sectionSort'`); `sectionSort` rank string; cell renders code chip / fixed label, `+N` with all codes in `title`, skeleton while loading, `—` + `title` on error; `cellText('aow')` for CSV; search haystack adds key + label. Design §6.2, RAC-DD-3 (labels), DD-5.
 - **Implements:** `RAC-R-2`, `R-2.1`, `R-2.2`, `R-6`, `RAC-AC-2`, `AC-6`, `AC-8`; scenario *Column and filter* THEN clause (cell texts).

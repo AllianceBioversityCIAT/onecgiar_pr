@@ -1,5 +1,6 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { ProgrammeResultRow } from './programme-results.service';
+import { sectionLabel } from './programme-results-section-labels';
 
 /** The eight filter dimensions of the Results tab toolbar, left to right. */
 export type ProgrammeResultsFilterDimension = 'search' | 'section' | 'phase' | 'status' | 'category' | 'origin' | 'center' | 'createdBy';
@@ -139,7 +140,18 @@ export function buildCategoryFilterOptions(
 export function matchesProgrammeResultSearch(row: ProgrammeResultRow, searchText: string): boolean {
   const needle = normalize(searchText);
   if (!needle) return true;
-  return normalize(row?.title).includes(needle) || normalize(row?.code).includes(needle) || normalize(row?.indicator).includes(needle);
+  if (normalize(row?.title).includes(needle) || normalize(row?.code).includes(needle) || normalize(row?.indicator).includes(needle)) {
+    return true;
+  }
+  // @akili-spec changes/results-aow-column-filter (RAC-T-2, RAC-R-6) — also match the Area of
+  // Work bucket: every code the result touches (`aowCodes`, NOT just the tie-broken `section`,
+  // so `#9006`'s bucket `AOW01` still matches a search for `AOW02`), the bucket KEY itself
+  // (`UNTAGGED`, `INTERMEDIATE`, `EOI_2030` — the only haystack entry for the three fixed
+  // keys, which have no `aowCodes`), and the bucket's display label (`Not tagged`,
+  // `Intermediate outcomes`, `2030 outcomes`).
+  if ((row?.aowCodes ?? []).some(code => normalize(code).includes(needle))) return true;
+  if (normalize(row?.section).includes(needle)) return true;
+  return normalize(sectionLabel(row?.section)).includes(needle);
 }
 
 /** The whole predicate for one row against one filter state. Pure — the spec drives it directly. */

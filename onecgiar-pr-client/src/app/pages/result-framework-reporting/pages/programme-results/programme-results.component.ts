@@ -40,6 +40,7 @@ import {
   buildStatusCounts,
   normalize
 } from './services/programme-results-filter.service';
+import { sectionLabel } from './services/programme-results-section-labels';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from './services/programme-results-query-params';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 
@@ -84,6 +85,11 @@ export const PGR_COLUMNS: readonly PgrColumnDef[] = [
   { key: 'code', label: 'Code', sortField: 'code', track: '92px', minPx: 92, optional: false },
   { key: 'title', label: 'Result', sortField: 'title', track: 'minmax(240px,2fr)', minPx: 240, optional: false },
   { key: 'category', label: 'Category', sortField: 'category', track: 'minmax(140px,1fr)', minPx: 140, optional: false },
+  // @akili-spec changes/results-aow-column-filter (RAC-T-2)
+  // Area of Work, default on, after Category (design.md §6.2). Sorts by the
+  // precomputed rank string (`sectionSort`), never the raw key, so `INTERMEDIATE` /
+  // `EOI_2030` / `UNTAGGED` land after the alphabetically-sorted AoW codes (RAC-R-2.2).
+  { key: 'aow', label: 'Area of Work', sortField: 'sectionSort', track: '132px', minPx: 132, optional: false },
   { key: 'status', label: 'Status', sortField: 'statusName', track: '120px', minPx: 120, optional: false },
   { key: 'createdBy', label: 'Created by', sortField: 'createdBy', track: 'minmax(140px,1fr)', minPx: 140, optional: true },
   { key: 'created', label: 'Created', sortField: 'created', track: '100px', minPx: 100, optional: true },
@@ -797,11 +803,52 @@ export class ProgrammeResultsComponent implements OnDestroy {
     return activePhaseName || (activePhaseYear ? `Phase ${activePhaseYear}` : null);
   });
 
+  // @akili-spec changes/results-aow-column-filter (RAC-T-2)
+  /**
+   * Numeric `versionId` of the phase currently selected in the toolbar — the phase the Area of
+   * Work buckets must be pinned to (RAC-T-2, A-1). This screen holds every phase's rows in one
+   * flat list and filters client-side, so there is no separate phase→versionId catalog to read;
+   * resolved here the same way `defaultPhase()` matches a phase label against the loaded rows.
+   * `null` while rows have not loaded yet or the selection matches nothing — `loadScope()`
+   * treats that as "skip the request".
+   */
+  readonly currentPhaseVersionId = computed<number | null>(() => {
+    const phase = this.filter.selectedPhase();
+    if (!phase) return null;
+    const target = normalize(phase);
+
+    const match = this.data.rows().find(row => {
+      const pName = normalize(row.phaseName);
+      const pYear = normalize(row.phaseYear);
+      const pPhaseYear = normalize(`Phase ${row.phaseYear}`);
+      const vId = normalize(row.versionId);
+      return (
+        target === pName ||
+        target === pYear ||
+        target === vId ||
+        target === pPhaseYear ||
+        (!!pName && (target.includes(pName) || pName.includes(target)))
+      );
+    });
+
+    const id = match ? Number(match.versionId) : null;
+    return id !== null && Number.isFinite(id) ? id : null;
+  });
+
   constructor() {
     effect(() => {
       const code = this.programmeCode();
       if (code) this.data.load(code);
       else this.data.reset();
+    });
+
+    // RAC-T-2 — the Area of Work buckets are pinned to one phase (A-1); refetch whenever the
+    // programme or the toolbar's selected phase resolves to a different versionId.
+    // `loadScope()` self-guards an empty code / unresolved versionId, so no `else` branch here.
+    effect(() => {
+      const code = this.programmeCode();
+      const versionId = this.currentPhaseVersionId();
+      this.data.loadScope(code, versionId);
     });
 
     // Controlled input + 300ms debounce: the signal stays the single source of truth for both the
@@ -1240,6 +1287,17 @@ export class ProgrammeResultsComponent implements OnDestroy {
       // Always '' in v1 — no endpoint exposes the AoW for a programme's full result set.
       case 'section':
         return row?.section ?? '';
+      // RAC-R-2 / RAC-AC-8 — Area of Work cell text, also used verbatim by CSV export
+      // (`exportCsv()` calls this same switch). Loading has no text (the DOM shows a
+      // skeleton instead); error/version-mismatch render the same dash the cell shows.
+      case 'aow': {
+        const state = row?.sectionState;
+        if (state === 'loading') return '';
+        if (state === 'error' || state === 'version-mismatch') return '—';
+        const label = sectionLabel(row?.section);
+        const extra = (row?.aowCodes?.length ?? 0) > 1 ? ` +${(row?.aowCodes?.length ?? 0) - 1}` : '';
+        return `${label}${extra}`;
+      }
       case 'category':
         return row?.category ?? '';
       case 'status':
@@ -1260,6 +1318,20 @@ export class ProgrammeResultsComponent implements OnDestroy {
       default:
         return '';
     }
+  }
+
+  /**
+   * `title` for the Area of Work cell (RAC-R-2 `+N`, RAC-R-2.1 error/mismatch explanation).
+   * Empty for the loading state (a skeleton has nothing to explain) and for a single-code /
+   * fixed-label cell (nothing more to say than the visible text).
+   */
+  aowTitle(row: ProgrammeResultRow): string {
+    if (row?.sectionState === 'error') return 'The Area of Work buckets could not be loaded.';
+    if (row?.sectionState === 'version-mismatch') {
+      return "This result belongs to a different phase than the Area of Work data currently loaded.";
+    }
+    if ((row?.aowCodes?.length ?? 0) > 1) return row.aowCodes.join(', ');
+    return '';
   }
 
   // ── Export ──────────────────────────────────────────────────────────────────────────────

@@ -1426,6 +1426,29 @@ export class ResultsApiService {
     );
   }
 
+  /**
+   * @akili-spec changes/results-aow-column-filter (RAC-T-2)
+   * Each result's Area of Work scope bucket for one program at one phase — the same partition
+   * and tie-break rule the Overview's `clarisa-global-units` `scopeBuckets` uses (RAC-R-1), but
+   * without the W1/W2 source filter (the Results tab lists every source, RAC A-3). Joined
+   * client-side by `result_id` in `ProgrammeResultsService` (RAC-DD-1).
+   */
+  GET_ResultsScope(programId: string, versionId: number) {
+    return this.http.get<{
+      response: {
+        programId: string;
+        versionId: number;
+        buckets: Array<{ result_id: number | string; key: string; kind: 'aow' | 'outcome' | 'untagged'; codes: string[] }>;
+      };
+      message: string;
+      status: boolean;
+    }>(
+      `${environment.apiBaseUrl}api/results-framework-reporting/results-scope?programId=${encodeURIComponent(
+        programId
+      )}&versionId=${encodeURIComponent(String(versionId))}`
+    );
+  }
+
   GET_TocResultsByAowId(entityId: string, aowId?: string | null, year?: string, versionId?: number) {
     const queryParams: string[] = [`program=${entityId}`];
 
