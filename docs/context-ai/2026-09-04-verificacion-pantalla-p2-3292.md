@@ -29,7 +29,73 @@ lee la consola; el cero de `NG0103` es un cero real.
 `GET /api/results/get/general-information/result/11494` devuelve `merge_split_targets: []`, así que
 el campo **está en el contrato** de la sección (R25: un campo nuevo vive en varios sitios).
 
-## 🛑 Lo que NO se pudo verificar: guardar y recargar
+## ✅ VERIFICADO END TO END — 4-sep-2026 17:40, build #2158
+
+**Condiciones:** `#2158 SUCCESS` (identificado por la línea de checkout de la rama, no por el color),
+cliente servido 17:35 UTC sello **v39**, y ambiente declarado quieto solo tras **tres sondas verdes
+seguidas a dos endpoints distintos**.
+
+| Paso de R23 | Medida | Resultado |
+|---|---|---|
+| Catálogo al abrir la pantalla | opciones cargadas **sin clic** | **14**, y sin "No information found" |
+| Elegir dos | casillas marcadas | **2** |
+| Guardar | `PATCH create/general-information` | **200 OK** |
+| **RECARGAR** | selección tras el reload | 🥇 **2, y las dos correctas** |
+| `NG0103` en consola | ocurrencias | **0** (con `NG0912` ×2 como control positivo) |
+
+**Y la prueba de que el DATO es correcto, no solo la pantalla** — leído del servidor después:
+
+```
+id=11438   code=8970   tipo=merge   título="test bilateral JD"
+id=11436   code=8968   tipo=merge   título="Test for QAed Result"
+```
+
+Los ids son los internos correctos y **los títulos coinciden con lo que se eligió en pantalla**. Ese
+control es el que cazó el bug de datos: antes salía *"Unraveling the genetic architecture of stripe
+rust resistance"* donde el reportero había elegido *"test bilateral JD"*.
+
+⚠️ **Las dos filas corruptas de las pruebas anteriores quedaron reemplazadas** por el propio guardado
+(`replaceForResult` desactiva las que ya no están y reactiva las que vuelven), así que no hizo falta
+borrar nada en prtest.
+
+## 🛑 Los dos defectos que solo aparecieron al COMPLETAR la recarga
+
+Ninguno de los dos se veía parándose en el `200`. Los dos salieron al leer lo guardado.
+
+### 1. Se guardaba el `result_code` donde va el `id` — y se almacenaba OTRA innovación
+
+`target_result_id` es FK a `result.id`, y el desplegable entregaba `result_code`. Medido: el reportero
+eligió **"test bilateral JD"** (id `11438`, code `8970`), se guardó **8970 como id**, y 8970 es el id
+de otro resultado real ⇒ al releer aparecía *"Unraveling the genetic architecture of stripe rust
+resistance in ICARDA spring wheat"*. **Sin error y sin aviso.**
+
+🥇 **Y el FK NO protegió.** Aceptó 8970 porque ese id existe. **Un FK caza los ids inexistentes, nunca
+los equivocados** — y con ~11.000 resultados, casi cualquier código es también el id de algo.
+
+⚠️ **Los 35 tests pasaban con el defecto puesto**, porque el catálogo de prueba solo traía
+`result_code`: guardar uno u otro **no era distinguible**. Ahora `id = code + 2500`, distinto a
+propósito, y si algún día se igualan los candados dejan de vigilar sin avisar.
+
+### 2. El catálogo no se cargaba nunca en la recarga
+
+La carga anticipada estaba condicionada a "hay una razón de transición tildada" — pero **las razones
+llegan en una petición POSTERIOR** a la del formulario: el padre dispara
+`GET_investmentDiscontinuedOptions` dentro del callback de la respuesta principal
+(`rd-general-information.component.ts:214`, asignadas en `:304`). Así que en `ngOnInit` la guarda
+siempre decía "no hay transición".
+
+**En pantalla:** la razón volvía tildada y el desplegable decía *"No information found"* con la
+selección guardada invisible. **El reportero abre su resultado y cree que se le borró la respuesta**,
+aunque esté a salvo en la base. Ahora se activa por `is_discontinued`, que sí viaja en el cuerpo
+principal.
+
+**Candados, cada uno con su mutación y `assert` de que el parche coincidió:** guardar el code → 2
+rojos · resolver por code → 10 rojos · **`optionValue="result_code"` en la PLANTILLA → 1 rojo** (el
+más importante: sin él el componente puede estar perfecto y la pantalla seguir rota, porque un test
+que llama al método directamente no ve lo que el control emite) · volver al criterio de la razón
+tildada → 1 rojo. Commit `f96e7995f`.
+
+## 🛑 Lo que quedó sin poder verificar en su momento (histórico)
 
 **El paso final de R23 —guardar, RECARGAR y comprobar que sigue ahí— no está hecho, porque el
 guardado de General Information devuelve 500.**
