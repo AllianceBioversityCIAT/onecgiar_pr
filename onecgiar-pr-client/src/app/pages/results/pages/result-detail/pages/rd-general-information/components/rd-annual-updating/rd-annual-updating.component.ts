@@ -175,15 +175,48 @@ export class RdAnnualUpdatingComponent implements OnInit {
   }
 
   /**
+   * Stable array instances handed to the two multi-selects.
+   *
+   * 🛑 THE REASON THIS CACHE EXISTS — it is not an optimisation. `selectedTargets()` is bound in the
+   * template, so Angular calls it on every change-detection pass. Returning a freshly built array
+   * each time gave the multi-select a NEW REFERENCE every pass, which made it call `writeValue`,
+   * which marked the view dirty, which ran change detection again — forever:
+   *
+   *     NG0103: Angular could not stabilize because there were endless change notifications
+   *       at _PrMultiSelectComponent.writeValue
+   *
+   * The control rendered and listed the innovations correctly, and clicking an option simply did
+   * not register, because the component never stabilised. Found on prtest on 4 Sep 2026 by
+   * verifying on screen — **the 19 unit tests passed then and still pass**: they call these methods
+   * directly and never run change detection against the real component, so no automated gate in
+   * this repo could have caught it.
+   */
+  private readonly selectionCache: Record<'merge' | 'split', number[]> = {
+    merge: [],
+    split: []
+  };
+
+  /**
    * The ids currently declared for one transition type, for the multi-select to bind to.
    *
    * The two dropdowns share one stored collection, told apart by `transition_type`, because the
-   * server keeps them in one table with that discriminator.
+   * server keeps them in one table with that discriminator. `merge_split_targets` stays the single
+   * source of truth — the cache above only guarantees the REFERENCE is stable while the content is
+   * unchanged, which is what change detection needs. It also means the parent replacing the whole
+   * `generalInfoBody` after the API responds is picked up on the next pass, with no setter needed.
    */
   selectedTargets(type: 'merge' | 'split'): number[] {
-    return (this.generalInfoBody.merge_split_targets ?? [])
+    const wanted = (this.generalInfoBody.merge_split_targets ?? [])
       .filter(target => target.transition_type === type)
       .map(target => Number(target.target_result_id));
+
+    const cached = this.selectionCache[type];
+    if (cached.length === wanted.length && cached.every((id, i) => id === wanted[i])) {
+      return cached;
+    }
+
+    this.selectionCache[type] = wanted;
+    return wanted;
   }
 
   /**
