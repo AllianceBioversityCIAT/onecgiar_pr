@@ -198,3 +198,17 @@ the code disagree on tab count, that is an open item to raise with the owner —
   action to match a mockup would be a regression. `Delete result` is not built — it is a feature,
   not a styling gap, so it is not silently added here. The item *styling* does follow the design
   (36px rows, no icons, `#f5f3ff` hover). Added 2026-08-24.
+
+## 14. Result Detail: the "no version for this year" state is 286px tall, not the 160px empty-state cap
+
+- **The rule says:** empty states max **160px** tall — one line of 14/400 secondary text plus one
+  ghost button (hard UI rule 5, `onecgiar-pr-client/CLAUDE.md`).
+- **We do:** 286px, measured in the browser at 1440×900. Icon, heading, one sentence, a row of
+  phase links, and one brand button.
+- **Why:** the 160px cap governs an *empty list* — a surface whose content simply has not arrived,
+  where extra chrome is noise. This is a **dead end**: the reporter followed a saved link to a year
+  the result has no version for, and the only way out used to be the browser's back button. The
+  height is spent on the exit, not on decoration: the years the result **does** exist in, one link
+  each. Removing them to hit 160px would restore the dead end while keeping the message. Added
+  2026-09-04 (P2-3574).
+- The 160px cap still holds for every real empty state on the screen; nothing else here grew.
