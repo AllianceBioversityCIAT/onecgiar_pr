@@ -36,7 +36,19 @@ export function parsePlannedSearch(query: string | null | undefined): ParsedPlan
 
 /** Build the haystack used for indicator matching. */
 export function indicatorSearchHaystack(ind: any): string {
-  return `${ind?.indicator_description ?? ''} ${ind?.type_name ?? ''} ${ind?.__hlo ?? ''} ${ind?.__aowCode ?? ''} ${ind?.center_acronym ?? ''}`;
+  // Every level the row belongs to (quick/reporting-search-all-levels, 2026-09-04): description,
+  // indicator name, category, HLO / outcome node, AoW code AND name, Center.
+  return [
+    ind?.indicator_description,
+    ind?.type_name,
+    ind?.result_type_name,
+    ind?.__hlo,
+    ind?.__aowCode,
+    ind?.__aowName,
+    ind?.center_acronym
+  ]
+    .filter(v => v != null && String(v).trim() !== '')
+    .join(' ');
 }
 
 export function plannedSearchEvaluate(haystack: string, parsed: ParsedPlannedSearch): PlannedSearchEvaluation {

@@ -290,8 +290,8 @@
         <input
           type="text"
           class="h-[34px] w-full rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-app)] pl-[32px] pr-[28px] text-[13px] text-[var(--pr-text-heading)] outline-none transition-colors placeholder:text-[var(--pr-text-subtle)] focus-visible:border-[var(--pr-color-primary-300)] focus-visible:bg-[var(--pr-surface-card)]"
-          placeholder="Search indicators"
-          aria-label="Search indicators"
+          placeholder="Search AoW, outcomes, outputs or indicators"
+          aria-label="Search by Area of Work, outcome, output or indicator"
           [value]="search()"
           (input)="searchChange.emit($any($event.target).value)" />
         @if (search()) {
@@ -353,7 +353,8 @@
                 <button
                   type="button"
                   (click)="clearAllFilters.emit()"
-                  class="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:underline">
+                  class="inline-flex cursor-pointer items-center gap-[3px] border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:underline">
+                  <span class="material-icons-round text-[14px]" aria-hidden="true">filter_alt_off</span>
                   Clear all
                 </button>
               }

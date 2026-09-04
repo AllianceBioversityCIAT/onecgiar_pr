@@ -1720,6 +1720,21 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(component.byAowSelectedType()).toBeNull();
       expect(component.reportingFiltersActive()).toBe(false);
     });
+
+    // quick/reporting-clear-filters-only-pending (2026-09-04): the band badge counts Only-pending as
+    // a filter, so Clear filters must switch it off — and forget the persisted value, or the next
+    // visit would restore the toggle the user just cleared.
+    it('clearReportingFilters also switches Only-pending off and clears its persisted value', async () => {
+      const component = await createComponent();
+      component.setOnlyPending(true);
+      expect(component.onlyPending()).toBe(true);
+      expect(sessionStorage.getItem('pr.burndown.onlyPending')).toBe('1');
+
+      component.clearReportingFilters();
+
+      expect(component.onlyPending()).toBe(false);
+      expect(sessionStorage.getItem('pr.burndown.onlyPending')).toBe('0');
+    });
   });
 
   describe('By-AoW tabular layout (BTC-R-2, BTC-R-3)', () => {
@@ -1835,6 +1850,36 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(component.hloTargetSum(outcomeGroup)).toBe('30');
       expect(component.hloAchievedSum(outcomeGroup)).toBe('30');
       expect(outcomeGroup.count).toBe(1);
+    });
+
+    it('sorts plannedByAowSections HLO groups numerically by code (e.g. HL01, HL02, HL03, HL04, HL05)', async () => {
+      const component = await createComponent();
+      component.plannedBrowseView.set('byAow');
+      component.plannedHloAowCode.set('SP02-AOW01');
+
+      const mockInds = [
+        { indicator_id: 4, __tier: 'output', __hlo: 'HL04 Foster motivations' },
+        { indicator_id: 5, __tier: 'output', __hlo: 'HL05 Investment cases' },
+        { indicator_id: 2, __tier: 'output', __hlo: 'HL02 Target markets' },
+        { indicator_id: 1, __tier: 'output', __hlo: 'HL01 Steer to impact' },
+        { indicator_id: 3, __tier: 'output', __hlo: 'HL03 Design concepts' }
+      ];
+
+      jest.spyOn(component, 'indicatorsForAow').mockReturnValue({
+        aow: { code: 'SP02-AOW01', name: 'Genetic Innovation' },
+        indicators: mockInds
+      } as any);
+
+      const sections = component.plannedByAowSections();
+      const outputsSec = sections.find(s => s.label === 'High Level Outputs');
+      expect(outputsSec?.groups.map(g => g.split.code)).toEqual(['HL01', 'HL02', 'HL03', 'HL04', 'HL05']);
+      expect(outputsSec?.groups.map(g => g.split.name)).toEqual([
+        'Steer to impact',
+        'Target markets',
+        'Design concepts',
+        'Foster motivations',
+        'Investment cases'
+      ]);
     });
 
     it('defines $pr-by-aow-tracks CSS Grid specification matching BTC-AC-2.1 and BTC-AC-3.2', () => {

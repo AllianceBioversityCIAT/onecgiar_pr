@@ -190,6 +190,39 @@ describe('LabReportFormComponent', () => {
     });
   });
 
+  // quick/category-picker-kp-reset (2026-09-04) — field bug: picking "Knowledge product" in the
+  // category picker snapped back to "Select a category" while every other category stuck.
+  describe('picking Knowledge product in the category picker', () => {
+    it('keeps the choice, switches to KP mode and defaults the contribution to 1', async () => {
+      await setup({ indicator: indicator({ result_type_id: null, type_name: 'Number of services' }), tocNode: { result_level_id: OUTPUT_LEVEL } });
+      expect(component.needsCategoryChoice()).toBe(true);
+
+      component.onCategoryChange(6);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(component.createResultBody().result_type_id).toBe(6);
+      expect(component.currentResultIsKnowledgeProduct()).toBe(true);
+      expect(component.createResultBody().contribution_to_indicator_target).toBe(1);
+      expect(component.missingFields()).not.toContain('Indicator category');
+    });
+
+    it('does not re-arm the form when the body changes — only a new indicator does', async () => {
+      await setup({ indicator: indicator({ result_type_id: null, type_name: 'Number of services' }), tocNode: { result_level_id: OUTPUT_LEVEL } });
+      component.patch('result_name', 'kept');
+      component.onCategoryChange(6);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(component.createResultBody().result_name).toBe('kept');
+
+      fixture.componentRef.setInput('indicator', indicator({ indicator_id: 2, result_type_id: null, type_name: 'Number of services' }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(component.createResultBody().result_type_id).toBeNull();
+      expect(component.createResultBody().result_name).toBe('');
+    });
+  });
+
   describe('changing category away from Knowledge product', () => {
     it('discards the synced metadata, handle and title so they cannot be submitted under another type', async () => {
       await setup({ indicator: indicator({ result_type_id: null }), tocNode: { result_level_id: OUTPUT_LEVEL } });
@@ -497,6 +530,72 @@ describe('LabReportFormComponent', () => {
       expect(api.resultsSE.POST_createResult).toHaveBeenCalledTimes(1);
       const body = api.resultsSE.POST_createResult.mock.calls[0][0];
       expect(body.contributing_indicator).toBe(1);
+    });
+
+    // quick/kp-create-navigation-hardening (2026-09-04) — field report: after "Use this item" the
+    // drawer closed but the user stayed on the Reporting tab. Navigate first; close only if it fails.
+    it('navigates to the new result BEFORE closing the drawer, and does not emit created once the router landed', async () => {
+      await setup(
+        { indicator: kpIndicator(), tocNode: { toc_result_id: 'toc-kp', result_level_id: OUTPUT_LEVEL } },
+        { centersService: { getData: () => Promise.resolve(), centersList: [ilriCenter], centers: signal<any[]>([ilriCenter]) } }
+      );
+      const router = TestBed.inject(Router) as unknown as { navigate: jest.Mock };
+      const created = jest.fn();
+      component.created.subscribe(created);
+
+      component.onCgspaceItemSelected({ itemUrl: 'https://hdl.handle.net/10568/128401' });
+      await flushAsync();
+
+      expect(router.navigate).toHaveBeenCalledWith(['/result/result-detail/R-1/general-information'], { queryParams: { phase: 9 } });
+      expect(created).not.toHaveBeenCalled();
+      expect(component.creatingResult()).toBe(false);
+    });
+
+    it('still closes the drawer (emits created) when the navigation is refused', async () => {
+      await setup(
+        { indicator: kpIndicator(), tocNode: { toc_result_id: 'toc-kp', result_level_id: OUTPUT_LEVEL } },
+        { centersService: { getData: () => Promise.resolve(), centersList: [ilriCenter], centers: signal<any[]>([ilriCenter]) } }
+      );
+      const router = TestBed.inject(Router) as unknown as { navigate: jest.Mock };
+      router.navigate.mockResolvedValueOnce(false);
+      const created = jest.fn();
+      component.created.subscribe(created);
+
+      component.onCgspaceItemSelected({ itemUrl: 'https://hdl.handle.net/10568/128401' });
+      await flushAsync();
+
+      expect(created).toHaveBeenCalledTimes(1);
+      expect(component.creatingResult()).toBe(false);
+    });
+
+    it('closes the drawer without navigating when the response carries no result code', async () => {
+      await setup(
+        { indicator: kpIndicator(), tocNode: { toc_result_id: 'toc-kp', result_level_id: OUTPUT_LEVEL } },
+        { centersService: { getData: () => Promise.resolve(), centersList: [ilriCenter], centers: signal<any[]>([ilriCenter]) } }
+      );
+      api.resultsSE.POST_createResult.mockReturnValueOnce(of({ response: { result: {} } }));
+      const router = TestBed.inject(Router) as unknown as { navigate: jest.Mock };
+      const created = jest.fn();
+      component.created.subscribe(created);
+
+      component.onCgspaceItemSelected({ itemUrl: 'https://hdl.handle.net/10568/128401' });
+      await flushAsync();
+
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(created).toHaveBeenCalledTimes(1);
+    });
+
+    it('explains why the auto-create did not fire when the form is not save-ready after MQAP', async () => {
+      await setup(
+        { indicator: kpIndicator(), tocNode: { toc_result_id: 'toc-kp', result_level_id: OUTPUT_LEVEL }, canReport: false },
+        { centersService: { getData: () => Promise.resolve(), centersList: [ilriCenter], centers: signal<any[]>([ilriCenter]) } }
+      );
+
+      component.onCgspaceItemSelected({ itemUrl: 'https://hdl.handle.net/10568/128401' });
+      await flushAsync();
+
+      expect(api.resultsSE.POST_createResult).not.toHaveBeenCalled();
+      expect(component.autoCreateHint()).toMatch(/^Publication linked\./);
     });
 
     it('KPAC-TEST-4 — validateHandle auto-creates on valid handle; invalid handle does not POST', async () => {
