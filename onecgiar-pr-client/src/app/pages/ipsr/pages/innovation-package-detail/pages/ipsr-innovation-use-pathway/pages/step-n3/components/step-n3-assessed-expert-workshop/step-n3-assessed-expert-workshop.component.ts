@@ -48,6 +48,40 @@ export class StepN3AssessedExpertWorkshopComponent implements OnInit {
     this.GETAllClarisaInnovationUseLevels();
   }
 
+  /**
+   * P2-3573 (epic P2-3243). The label above the radio group, which the story calls "the main
+   * question". From the 2026 phase it stops asking WHAT was assessed and instructs the user to
+   * provide the levels; phases <= 2025 keep the original wording verbatim.
+   *
+   * ⚠️ The story also asks to remove the radio buttons themselves, but marks that part as "I'm
+   * validating this with Nicoleta, pls wait for the answer from her side" — so the group stays and
+   * only its label changes. Once that answer arrives the two are one change, not two: with the
+   * Potential columns gone (see {@link showPotentialSituation}) options 1 and 2 of the group render
+   * an identical table, which is very likely why the removal was raised in the first place.
+   */
+  mainQuestionLabel(): string {
+    return this.api.fieldsManagerSE.isIpsrScalingReadiness2026()
+      ? 'Provide the readiness and use levels of the core innovation and complementary enablers following the expert workshop.'
+      : 'What was assessed during the expert workshop?';
+  }
+
+  /**
+   * P2-3573 (epic P2-3243). True while the "Potential situation (12 months later)" pair of columns
+   * must be painted: the user picked option 2 ("Current and Potential ... were self-assessed") AND
+   * the package is not on the 2026+ form, which drops the pair.
+   *
+   * 🛑 Display only. `potential_innovation_readiness_level` / `potential_innovation_use_level` stay
+   * in `attrList`, keep their stored values and keep travelling in the save payload — point 2 of the
+   * PO instruction on this epic ("'Remove' never means delete the data") and the story's own
+   * acceptance criterion both require that phases <= 2025 keep showing the column with its data.
+   *
+   * Gated on the phase YEAR, never on `isP25()`: the P25 portfolio starts in 2025, so a portfolio
+   * gate would strip the column from the 2025 packages this epic must leave untouched.
+   */
+  showPotentialSituation(): boolean {
+    return this.body?.result_innovation_package?.assessed_during_expert_workshop_id == 2 && !this.api.fieldsManagerSE.isIpsrScalingReadiness2026();
+  }
+
   useLevelDelfAssessment() {
     return `<a href="https://drive.google.com/file/d/1RFDAx3m5ziisZPcFgYdyBYH9oTzOYLvC/view"  class="open_route" target="_blank">Click here</a> to see all innovation use levels`;
   }
