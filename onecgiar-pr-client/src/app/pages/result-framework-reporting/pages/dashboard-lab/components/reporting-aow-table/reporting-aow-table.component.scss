@@ -91,6 +91,12 @@ $pr-reporting-pad: 8px 16px 8px 24px;
   }
 }
 
+/* Merge note 2026-09-04 (performance-refactor → qa-development-2026): the RTA sticky-pin rules
+   (`.pr-pin-actions` / `.pr-pin-menu` / `.pr-hlo-pin-*`, `bugfix/reporting-table-actions-clipped`) were
+   NOT carried over — this branch's tabular redesign (shared `$pr-reporting-tracks`, no "Next pending"
+   button, in-card popovers) has no pinned tracks and no `min-width: 1048px` grid. Revisit that bugfix
+   against this layout before re-adding anything. */
+
 /* ── Status mark — the design's concentric bullseye (archery target), 18×18, always violet.
    Outer ring + mid ring + filled centre. Not a half-fill circle; not a progress arc.
    SVG is in the template; this only hosts size/color. ── */

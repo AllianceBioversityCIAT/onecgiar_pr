@@ -377,13 +377,14 @@ export class InnovationDevelopmentDetailsDto {
   @Type(() => InnovationTypologyDto)
   innovation_typology: InnovationTypologyDto;
 
-  @ApiProperty({
-    description: 'Comma separated list (or text) of innovation developers',
+  @ApiPropertyOptional({
+    description:
+      'Optional since 2026-09-03: the Lead contact person of the result is the innovation developer, so this field is no longer requested. When omitted, the lead contact person name is stored.',
     example: 'John Doe; Marie Curie; Nikola Tesla',
   })
   @IsString()
-  @IsNotEmpty()
-  innovation_developers: string;
+  @IsOptional()
+  innovation_developers?: string;
 
   @ApiProperty({
     description:

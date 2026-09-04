@@ -86,6 +86,13 @@ export class RdGeographicLocationComponent {
    * names the question with the same words the user reads, instead of a second hard-coded wording.
    */
   readonly extraGeoScopeHeader = computed<string>(() => this.extraGeoScopeField()?.label ?? '');
+
+  /**
+   * GEO-T-1 (GEO-R-3): the `[isComplete]` predicate for the "other geographic areas" question.
+   * `null` (unanswered) must read as incomplete, same as `undefined`; `true`/`false` (a real
+   * answer) must both read as complete — hence `!= null`, not `!== undefined`.
+   */
+  hasExtraGeoScopeAnswered = () => this.extraGeographicLocationBody.has_extra_geo_scope != null;
   geographic_focus = [
     {
       name: 'Global',
@@ -169,7 +176,9 @@ export class RdGeographicLocationComponent {
     this.extraGeographicLocationBody.has_countries = response.has_extra_countries;
     this.extraGeographicLocationBody.countries = response.extra_countries;
     this.extraGeographicLocationBody.regions = response.extra_regions;
-    this.extraGeographicLocationBody.has_extra_geo_scope = Boolean(response.has_extra_geo_scope);
+    // GEO-DD-1: preserve null (unanswered) as-is — Boolean() coerced it to false ("No"),
+    // making an unanswered question look already answered and never flagged as missing.
+    this.extraGeographicLocationBody.has_extra_geo_scope = response.has_extra_geo_scope;
     const legacyCountries = 4;
     this.extraGeographicLocationBody.geo_scope_id =
       this.extraGeographicLocationBody?.geo_scope_id == legacyCountries ? GeoScopeEnum.COUNTRY : this.extraGeographicLocationBody.geo_scope_id;

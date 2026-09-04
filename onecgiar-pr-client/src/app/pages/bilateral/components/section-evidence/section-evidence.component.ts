@@ -60,29 +60,40 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
   readonly maxDescriptionWords = 50;
 
   /**
-   * P2-3375: the per-evidence tags, ported from W1/W2 (rd-evidences.component.ts:29-42) with the same
-   * field names and labels, because the endpoint is shared.
-   *
-   * ⚠️ The Climate row binds `youth_related`. That is the existing W1/W2 binding and the column the
-   * API expects — its own comment says so. Not a typo to tidy.
+   * W1/W2's option lists (evidence-item.component.ts), on the boolean the model already carries.
+   * No per-evidence impact-area / result-type checkboxes here: they are not MDS for bilateral
+   * results and the fields stay optional on the shared endpoint (Juan, 2026-09-03).
    */
-  readonly impactAreaTags: { field: keyof BilateralEvidenceItem; label: string }[] = [
-    { field: 'gender_related', label: 'Gender equality, youth and social inclusion' },
-    { field: 'youth_related', label: 'Climate adaptation and mitigation' },
-    { field: 'nutrition_related', label: 'Nutrition, health and food security' },
-    { field: 'environmental_biodiversity_related', label: 'Environmental health and biodiversity' },
-    { field: 'poverty_related', label: 'Poverty reduction, livelihoods and jobs' }
+  readonly evidencesType = [
+    { id: false, name: 'Link' },
+    { id: true, name: 'Upload file' }
   ];
 
-  readonly resultTypeTags: { field: keyof BilateralEvidenceItem; label: string }[] = [
-    { field: 'innovation_readiness_related', label: 'Innovation Development' },
-    { field: 'innovation_use_related', label: 'Innovation Use' },
-    { field: 'policy_change_related', label: 'Policy Change' },
-    { field: 'capacity_sharing_related', label: 'Capacity Sharing for Development' },
-    { field: 'knowledge_product_metadata_related', label: 'Knowledge Product' },
-    { field: 'other_output_related', label: 'Other Output' },
-    { field: 'other_outcome_related', label: 'Other Outcome' }
+  readonly isPublicFileOptions = [
+    { id: false, name: 'No' },
+    { id: true, name: 'Yes' }
   ];
+
+  /** W1/W2's "Incorrect format" state for the dropzone (evidence-item `incorrectFile`). */
+  readonly incorrectFile = signal(false);
+
+  /** Same copy W1/W2 shows under the public/private answer (`dynamicAlertStatusBasedOnVisibility`). */
+  publicFileNote(): string {
+    if (this.draftItem().is_public_file) {
+      return `
+        <b>If you indicate that the file being uploaded to the PRMS repository is public:</b>
+        <li>You confirm that the file is publicly accessible.</li>
+        <li>You confirm that all intellectual property rights related to the file have been observed. This includes any rights relevant to the document owner’s Center affiliation and any specific rights tied to content within the document, such as images.</li>
+        <li>Evidence marked 'Yes' to this question will be displayed in the Results Dashboard and included in technical reporting products.</li>
+      `;
+    }
+    return `
+      <b>If you indicate that the file being uploaded to the PRMS repository is NOT public:</b>
+      <li>You confirm that the file should not be publicly accessible.</li>
+      <li>The file will not be accessible through the CGIAR Results Dashboard.</li>
+      <li>The file will be stored in the PRMS repository and will only be accessible by CGIAR staff with the repository link.</li>
+    `;
+  }
 
   countWords(text: string | undefined | null): number {
     return (text ?? '').trim().split(/\s+/).filter(Boolean).length;
@@ -92,38 +103,9 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
     return this.countWords(this.draftItem().description);
   }
 
-  toggleDraftTag(field: keyof BilateralEvidenceItem): void {
-    this.draftItem.update(d => ({ ...d, [field]: !d[field] }));
-  }
-
-  /**
-   * P2-3375: an impact area scored Principal must have at least one evidence tagged for it. Ported
-   * from W1/W2 (rd-evidences.component.ts:277-305): the tag level arrives as a STRING and Principal
-   * is level '3' — the catalogue id, not the score. `2 - Principal` is the label; 3 is its id.
-   *
-   * Returns the uncovered tag names so the template can list them. Empty means covered.
-   */
-  /** Same sentence W1/W2 uses (rd-evidences.component.ts:291), one line per uncovered tag. */
-  get principalWarningHtml(): string {
-    const items = this.principalTagsWithoutEvidence
-      .map(tag => `<li>A principal contribution score (2) has been recorded for ${tag} tag. Please provide evidence to support this claim.</li>`)
-      .join('');
-    return items ? `<ul>${items}</ul>` : '';
-  }
-
-  get principalTagsWithoutEvidence(): string[] {
-    const body = this.evidenceBody();
-    const levels: { label: string; level: unknown; field: keyof BilateralEvidenceItem }[] = [
-      { label: 'Gender equality, youth and social inclusion', level: body?.gender_tag_level, field: 'gender_related' },
-      { label: 'Climate adaptation and mitigation', level: body?.climate_change_tag_level, field: 'youth_related' },
-      { label: 'Nutrition, health and food security', level: body?.nutrition_tag_level, field: 'nutrition_related' },
-      { label: 'Environmental health and biodiversity', level: body?.environmental_biodiversity_tag_level, field: 'environmental_biodiversity_related' },
-      { label: 'Poverty reduction, livelihoods and jobs', level: body?.poverty_tag_level, field: 'poverty_related' }
-    ];
-    const covered = (field: keyof BilateralEvidenceItem) => this.evidences.some(e => e[field]);
-    return levels.filter(({ level, field }) => String(level) === '3' && !covered(field)).map(({ label }) => label);
-  }
-
+  // The W1/W2 "Principal score needs evidence" warning (P2-3375) is deliberately NOT ported here:
+  // Impact Area scores are not part of the bilateral MDS, so no evidence is asked for them
+  // (Nicoleta Trifa via Ángel Jarrín, 2026-09-03).
 
   get evidences(): BilateralEvidenceItem[] {
     return this.evidenceBody().evidences ?? [];
@@ -155,7 +137,10 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadEvidences();
-    this.manualSaveSub = this.autoSave.manualSave$.subscribe(() => {
+    // Confirm/delete already persist (W1/W2 behaviour, below). Save draft re-runs the save so a
+    // section left in `'error'` — a file that did not reach SharePoint — has a way back.
+    this.manualSaveSub = this.autoSave.manualSave$.subscribe(section => {
+      if (section !== 'evidence') return;
       if (this.evidences.length > 0 || this.showDraft()) {
         void this.saveSection();
       }
@@ -276,29 +261,45 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
   // ── Draft Field Updates ─────────────────────────────────────────────
 
   setDraftLinkMode(): void {
-    this.draftItem.update(d => ({ ...d, is_sharepoint: false, file: undefined, sp_file_name: undefined }));
+    this.draftItem.update(d => ({ ...d, is_sharepoint: false, file: undefined, sp_file_name: undefined, is_public_file: null }));
   }
 
   setDraftFileMode(): void {
     this.draftItem.update(d => ({ ...d, is_sharepoint: true, link: undefined }));
   }
 
-  onDraftLinkInput(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
+  /** "Source of the evidence" radio (W1/W2 `cleanSource`): switching clears the other source's data. */
+  onSourceChange(isSharepoint: boolean): void {
+    this.incorrectFile.set(false);
+    if (isSharepoint) this.setDraftFileMode();
+    else this.setDraftLinkMode();
+  }
+
+  setDraftLink(value: string): void {
     this.draftItem.update(d => ({ ...d, link: value }));
+  }
+
+  setDraftPublic(value: boolean | null): void {
+    this.draftItem.update(d => ({ ...d, is_public_file: value }));
+  }
+
+  setDraftDescription(value: string): void {
+    this.draftItem.update(d => ({ ...d, description: value }));
+  }
+
+  onDraftLinkInput(event: Event): void {
+    this.setDraftLink((event.target as HTMLInputElement).value);
   }
 
   onDraftDescriptionInput(event: Event): void {
     const el = event.target as HTMLTextAreaElement;
-    // P2-3375: the story caps the description at 50 WORDS. The control had maxlength="500", a
-    // character cap, which neither enforces nor communicates the real rule. Extra words are refused
-    // rather than truncated mid-word, and the value is pushed back so the textarea cannot drift from
-    // the model.
+    // P2-3375: the description is capped at 50 WORDS. Extra words are refused rather than truncated
+    // mid-word, and the value is pushed back so the control cannot drift from the model.
     if (this.countWords(el.value) > this.maxDescriptionWords) {
       el.value = this.draftItem().description ?? '';
       return;
     }
-    this.draftItem.update(d => ({ ...d, description: el.value }));
+    this.setDraftDescription(el.value);
   }
 
   // ── File Handling ───────────────────────────────────────────────────
@@ -309,8 +310,10 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
     if (!file) return;
     if (this.validateFileTypes(file)) {
       this.draftItem.update(d => ({ ...d, file, sp_file_name: file.name }));
+      this.incorrectFile.set(false);
     } else {
-      alert('Unsupported file type. Accepted: jpg, png, doc, pptx, xlsx, pdf. Max 1 GB.');
+      // W1/W2 shows the "Incorrect format" line under the dropzone instead of a browser alert.
+      this.incorrectFile.set(true);
     }
     input.value = '';
   }
@@ -322,6 +325,10 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
     if (!file) return;
     if (this.validateFileTypes(file)) {
       this.draftItem.update(d => ({ ...d, file, sp_file_name: file.name }));
+      this.incorrectFile.set(false);
+    } else {
+      this.incorrectFile.set(true);
+      setTimeout(() => this.incorrectFile.set(false), 3000);
     }
   }
 
@@ -446,14 +453,18 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
       resultId,
       flow: 'evidences',
       skipAlreadyUploaded: true,
-      trackProgress: false,
+      trackProgress: true,
       logLabel: 'section-evidence'
     });
 
     return failed.length;
   }
 
-  // ── Confirm draft (add to local list, then persist) ─────────────────
+  // ── Confirm draft ───────────────────────────────────────────────────
+  // W1/W2 behaviour (rd-evidences `confirmCreateEvidence` / `deleteEvidenceWithConfirm`): confirming
+  // the modal or a delete persists at once — upload + POST + reload — so nothing is lost by
+  // navigating away. Decided over the staged-only variant on 2026-09-03 (Juan): the W1/W2
+  // functionality prevails for Evidence. Save draft in the footer re-runs the same save.
 
   confirmDraft(): void {
     if (!this.isDraftValid) return;
@@ -513,6 +524,19 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
 
   isFileEvidence(e: BilateralEvidenceItem): boolean {
     return Boolean(e.is_sharepoint);
+  }
+
+  evidenceTypeLabel(e: BilateralEvidenceItem): string {
+    return this.isFileEvidence(e) ? 'File Evidence' : 'Link Evidence';
+  }
+
+  /** A file evidence is "uploading" while the section saves and its link has not landed yet. */
+  isEvidenceUploading(e: BilateralEvidenceItem): boolean {
+    return Boolean(this.isSaving() && e?.is_sharepoint && e?.file && !e?.link);
+  }
+
+  evidenceUploadingName(e: BilateralEvidenceItem): string {
+    return e?.file?.name || e?.sp_file_name || 'Uploading file…';
   }
 
   private updateTracker(): void {

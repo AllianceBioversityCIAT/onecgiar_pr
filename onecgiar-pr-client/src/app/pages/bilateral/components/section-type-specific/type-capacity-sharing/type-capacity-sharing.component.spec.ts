@@ -528,7 +528,6 @@ describe('TypeCapacitySharingComponent', () => {
         status: read(d.componentInstance.status),
         description: read(d.componentInstance.description),
       }));
-    const saveButton = (): HTMLButtonElement => fixture.nativeElement.querySelector('.tsf-actions button');
     const render = () => {
       build();
       fixture.detectChanges();
@@ -574,15 +573,15 @@ describe('TypeCapacitySharingComponent', () => {
       expect(alerts().map(a => a.status)).toEqual(['info']);
     });
 
-    it('disables the Save button when the section could not load', () => {
-      bilateralApi.GET_capacityDevelopment.mockReturnValue(throwError(() => new Error('HTTP 500')));
-      render();
-      expect(saveButton().disabled).toBe(true);
-    });
 
-    it('leaves the Save button enabled on the happy path', () => {
+    // Explicit-save model (2026-09-03): the footer's Save draft persists the section, so the form
+    // renders no Save of its own — it only re-staged what every change had already staged.
+    it('renders no in-section Save button', () => {
       render();
-      expect(saveButton().disabled).toBe(false);
+      const saveButtons = Array.from(fixture.nativeElement.querySelectorAll('button')).filter(
+        (b: any) => ['Save', 'Saving...'].includes(b.textContent.trim())
+      );
+      expect(saveButtons).toHaveLength(0);
     });
   });
 });

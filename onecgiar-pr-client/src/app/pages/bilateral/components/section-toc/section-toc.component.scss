@@ -11,12 +11,12 @@
   gap: 8px;
 }
 
+// Same look as the custom-fields header (pr-field-header): sentence case, 14px, weight 600. The
+// uppercase 11px eyebrow read as a different form from W1/W2's.
 .st-label {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: #607D8B;
+  color: var(--pr-text-heading);
 }
 
 .st-label-hint {
@@ -26,48 +26,6 @@
   letter-spacing: 0.2px;
   margin-left: 4px;
   font-style: italic;
-}
-
-.st-toggle-group {
-  display: flex;
-  gap: 0;
-  border: 1.5px solid #CFD8DC;
-  border-radius: 8px;
-  overflow: hidden;
-  width: fit-content;
-}
-
-.st-toggle-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 18px;
-  background: #FFFFFF;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  color: #607D8B;
-  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
-  border-right: 1.5px solid #CFD8DC;
-
-  &:last-child {
-    border-right: none;
-  }
-
-  &--active {
-    background: var(--pr-color-primary-50);
-    color: var(--pr-color-primary-400);
-    font-weight: 600;
-  }
-
-  &:hover:not(&--active) {
-    background: #F5F7FA;
-  }
-}
-
-.st-toggle-icon {
-  font-size: 16px;
 }
 
 .st-empty {
@@ -292,31 +250,6 @@
 
 .st-field--narrative {
   margin-top: 4px;
-}
-
-.st-textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 12px 14px;
-  border: 1.5px solid #CFD8DC;
-  border-radius: 8px;
-  // Was bare 'Poppins' — that skips Manrope entirely instead of falling back to it.
-  font-family: 'Manrope', 'Poppins', sans-serif;
-  font-size: 12px;
-  color: var(--pr-color-secondary-400);
-  resize: vertical;
-  background: #FFFFFF;
-  transition: border-color 200ms ease;
-  outline: none;
-
-  &:hover {
-    border-color: #90A4AE;
-  }
-
-  &:focus {
-    border-color: var(--pr-color-primary-300);
-    box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb), 0.12);
-  }
 }
 
 .st-label--sub {

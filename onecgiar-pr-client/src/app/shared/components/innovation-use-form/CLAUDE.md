@@ -53,6 +53,72 @@ The shared Innovation Use questionnaire: use level (0-9), narrative/actors block
 - `getUseLevelIndex()` returns `-1` (not `0`) when the level is unset or the catalogue hasn't loaded.
   Comparisons must tolerate `-1`.
 
+## Section 7 of P2-3537 — the age-only fallback and the 50/50 split
+
+From the 2026 phase, the **Current use** actor rows offer a second tick, `Age disaggregation not
+available`, next to the existing `Sex and age disaggregation does not apply`. Ticking it splits youth
+/ non-youth 50/50 from the Women and Men totals and **stamps that the system did it**.
+
+| Field | Meaning |
+|---|---|
+| `age_disaggregation_not_available` | the reporter's answer for THIS row. `null` ≠ `false` |
+| `youth_split_applied_by_system` | the youth figures were computed, not reported |
+
+- 🥇 **`youth_split_applied_by_system` is the point of the whole section.** The story requires any
+  downstream report or export to tell a system estimate from a reported figure. 🛑 Do NOT try to
+  derive it by comparing `women_youth` against half of `women`: a reporter whose real split happens
+  to be half — a common, round answer — would be recorded as an estimate.
+- **Unticking clears the halves AND the stamp.** Leaving the computed values behind would turn an
+  estimate into what reads as the reporter's own answer, which is the confusion the stamp prevents.
+- **Ticking "sex and age" wipes both**, since that one switches sex AND age off; keeping the age-only
+  answer alongside it would send the server a contradiction. `cleanActor` does it, and a spec pins it.
+- 🛑 **Not offered inside IPSR**, gated explicitly through `!isIpsr` and not by omission — this
+  template is shared with Innovation Package step 1, which the story does not cover. Same lesson
+  P2-3295 left on this component.
+- ⚠️ **The `Actor` model that types this template is `Ipsr-step-1-body.model.ts`, not the
+  Innovation Development one** — `@Input() body` is an `IpsrStep1Body`. Declaring the two new
+  properties only in `innovationDevInfoBody.ts` still fails the build with `TS2339`, which is exactly
+  what happened while building this (and what caused two red Jenkins builds on 2 Sep, in that same
+  file). `tsc --noEmit` and Jest both pass on that mistake; only `npm run build` catches it.
+- ⚠️ **Every spec that renders this component needs `isInnovationUseAgeFallback2026` in its
+  `FieldsManagerService` mock** — the template calls the gate on each render, so a mock without it
+  throws before any assertion runs, **even in specs that have nothing to do with this block**. Four
+  places provide that service today: two describes in `innovation-use-form.component.spec.ts`, the
+  `zoneless` spec, and `innovation-use-info.component.spec.ts` — that last one bit after the fact:
+  its own suite was green and only the full run caught it.
+- Rounding is safe by construction: non-youth is the remainder, so the halves always add to the
+  total whatever the parity (7 → 4 + 3).
+
+## §4 — the Current Use Update block (P2-3537)
+
+Rendered immediately above the actor-type fields, and only when **all three** hold: phase ≥ 2026,
+not IPSR, and `body.current_use_previous` is not null.
+
+| Field | Where it comes from |
+|---|---|
+| Previous reported use | `current_use_previous.total_actors`, read from the previous phase by the server |
+| New users added | typed by the reporter, `body.new_users_added` |
+| Total cumulative use | **calculated**, `previous + new`. Never typed |
+| Narrative | `body.use_expansion_narrative`, 100-word cap |
+
+- 🥇 **`current_use_previous === null` means the block is ABSENT, not empty.** The server sends null
+  both for a first report and for a previous phase that reported organisations but no actors.
+  Rendering it in the second case would show a reconciliation against zero actors that nothing the
+  reporter does can fix — they could never submit (Yeck, 3 Sep 2026). Two specs pin it.
+- 🥇 **`actorsTotal()` counts ACTORS only.** Not organisations, not other measures — Yeck's Q4
+  decision, so next year's "previous use" stays a figure whose meaning can be read. A spec fails if
+  organisations ever get folded in.
+- **A reported 0 is a valid answer** and still requires the narrative (§5: use was verified and did
+  not grow). Completion therefore tests "answered", never "greater than zero" — a spec fails on the
+  stricter version.
+- The mismatch error is driven off a **getter**, which is what gives §5's "the error appears as soon
+  as the totals diverge, not only on submit" for free.
+- Deleted actor rows (`is_active === false`) are excluded from the sum.
+- ⚠️ **The evidence for the increment (field 4) is NOT built.** It goes in the existing Evidence
+  section behind one more marker (Yeck's Q3), and it is blocked by a real defect: the phase rollover
+  drops 8 of the 14 evidence markers (`W-20260903-12`), so the trail would break on that side while
+  the figure stayed perfect.
+
 ## Children without their own file
 | Component | What it does | Trap |
 |---|---|---|

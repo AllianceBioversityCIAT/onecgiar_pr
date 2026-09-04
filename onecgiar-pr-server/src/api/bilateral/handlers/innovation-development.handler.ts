@@ -52,11 +52,14 @@ export class InnovationDevelopmentBilateralHandler
       innovation.innovation_readiness_level,
     );
 
-    if (!innovation.innovation_developers?.trim()) {
-      throw new BadRequestException(
-        'innovation_developers is required for INNOVATION_DEVELOPMENT results.',
-      );
-    }
+    // The Innovation Developer is the result's Lead contact person (Nicoleta Trifa via Ángel
+    // Jarrín, 2026-09-03): the field is no longer asked for — not on the bilateral form, not on
+    // POST /create. A payload may still send it; otherwise the lead contact's name is stored so
+    // the summary's `innovation_developers` keeps a value.
+    const innovationDevelopers =
+      innovation.innovation_developers?.trim() ||
+      bilateralDto.lead_contact_person?.name?.trim() ||
+      null;
 
     const existing = await this._resultsInnovationsDevRepository.findOne({
       where: { result_object: { id: resultId } },
@@ -67,7 +70,7 @@ export class InnovationDevelopmentBilateralHandler
         innovationNatureId == null
           ? null
           : ({ code: innovationNatureId } as any);
-      existing.innovation_developers = innovation.innovation_developers;
+      existing.innovation_developers = innovationDevelopers;
       existing.innovation_readiness_level =
         readinessLevelId == null ? null : ({ id: readinessLevelId } as any);
       existing.last_updated_by = userId;
@@ -83,9 +86,13 @@ export class InnovationDevelopmentBilateralHandler
       result_object: { id: resultId } as any,
       created_by: userId,
       is_active: true,
-      short_title: bilateralDto.title,
+      // `short_title` is deliberately NOT seeded from the result title. Short title is full
+      // metadata, not MDS (P2-3122 AC1/AC2, P2-3391 AC8): neither the ingest DTO nor the AI
+      // extraction carries one, and a 30-word result title is never a valid 10-word short name.
+      // Copying it produced results that looked complete and failed the ceiling on Submit
+      // (NOST-456 QA, result 9005). It stays null until a user writes it.
       innovation_nature: { code: innovationNatureId } as any,
-      innovation_developers: innovation.innovation_developers,
+      innovation_developers: innovationDevelopers,
       innovation_readiness_level: { id: readinessLevelId } as any,
     });
     await this._resultsInnovationsDevRepository.save(newRecord);

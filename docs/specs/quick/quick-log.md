@@ -41,9 +41,4 @@ One-line record of trivial, fast-tracked changes made with `/akili-quick`.
 | 2026-09-03 | quick/result-sidebar-code-type — pin result code and type at the top of the result-detail sections rail and remove them from the scrolling header identity strip | result-sections-sidebar.{html,spec.ts}, result-sections.service.{ts,spec.ts}, result-header.{html,ts,spec.ts}, result-detail.component.html | scoped Jest 113/113 passed (sidebar + header) | [SPEC:quick/result-sidebar-code-type] |
 | 2026-09-03 | quick/result-sidebar-code-type (follow-up) — `Result code #`, uppercase type, status pill above Sections; ⓘ beside smaller 20px title; status removed from header | result-sections-sidebar.{html,spec.ts}, result-sections.service.{ts,spec.ts}, result-header.{html,ts,spec.ts} | scoped Jest 113/113 passed | [SPEC:quick/result-sidebar-code-type] |
 | 2026-09-03 | quick/result-header-identity-skeleton — skeleton the result-detail identity strip (level / funding / submitter / AoW) while `GET_resultById` and the AoW mapping GET are in flight | result-header.{html,ts,spec.ts}, result-detail/CLAUDE.md | scoped Jest result-header | [SPEC:quick/result-header-identity-skeleton] |
-
-
-
-
-
-
+| 2026-09-03 | quick/emerging-result-text — reworded the "Report result" guidance in the emerging-result reporting pathway from "...simply map it to your Science Program/Accelerator instead of creating a new one." to "...you will not be able to create a new one to your science program accelerator." | onecgiar-pr-client/src/app/pages/results/pages/result-creator/components/report-result-form/report-result-form.component.html | `ng lint` clean | [SPEC:quick/emerging-result-text] |

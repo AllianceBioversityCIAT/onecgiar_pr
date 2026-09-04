@@ -1044,7 +1044,33 @@ describe('InnovationDevInfoComponent', () => {
     it('leaves the blocks outside the epic untouched', () => {
       const el = render(true);
       expect(el.querySelector('app-innovation-team-diversity')).toBeTruthy();
+    });
+  });
+
+  /**
+   * P2-3272 / P2-3513, same epic P2-3243. From the 2026 phase the four Intellectual Property
+   * questions are replaced by one consolidated question. Earlier phases must keep the four with
+   * their stored answers — the epic's governing rule — so the two blocks are mutually exclusive
+   * and neither may ever render alongside the other.
+   */
+  describe('2026 IPR consolidation (P2-3272 / P2-3513)', () => {
+    const render = (reduced: boolean) => {
+      jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(reduced as any);
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    };
+
+    it('keeps the four questions on a pre-2026 phase', () => {
+      const el = render(false);
       expect(el.querySelector('app-intellectual-property-rights')).toBeTruthy();
+      expect(el.querySelector('app-intellectual-property-considerations')).toBeNull();
+    });
+
+    it('serves the single consolidated question from the 2026 phase', () => {
+      const el = render(true);
+      expect(el.querySelector('app-intellectual-property-considerations')).toBeTruthy();
+      expect(el.querySelector('app-intellectual-property-rights')).toBeNull();
     });
   });
 

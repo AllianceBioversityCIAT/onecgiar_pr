@@ -24,6 +24,7 @@ import { AssumptionsExaminationComponent } from './components/assumptions-examin
 import { PartnersPoliciesSafeguardsComponent } from './components/partners-policies-safeguards/partners-policies-safeguards.component';
 import { SectionBottomBarComponent } from '../../../components/section-bottom-bar/section-bottom-bar.component';
 import { StageAssessmentComponent } from './components/stage-assessment/stage-assessment.component';
+import { IntellectualPropertyConsiderationsComponent } from './components/intellectual-property-considerations/intellectual-property-considerations.component';
 
 @NgModule({
   declarations: [
@@ -41,7 +42,8 @@ import { StageAssessmentComponent } from './components/stage-assessment/stage-as
     AssumptionsExaminationComponent,
     PartnersPoliciesSafeguardsComponent,
     NonPooledInfoP25Component,
-    StageAssessmentComponent
+    StageAssessmentComponent,
+    IntellectualPropertyConsiderationsComponent
   ],
   imports: [SectionBottomBarComponent,
     CommonModule,

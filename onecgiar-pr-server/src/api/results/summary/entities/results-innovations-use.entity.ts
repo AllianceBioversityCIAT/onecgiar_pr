@@ -69,6 +69,46 @@ export class ResultsInnovationsUse {
   })
   readiness_level_explanation: string;
 
+  /**
+   * P2-3295 §3 — why a 2030 projection inherited from the previous phase was changed. Distinct from
+   * `readiness_level_explanation` (which justifies a DROP in readiness level): same shape, different
+   * question, so they cannot share a column.
+   */
+  @Column({
+    name: 'innov_use_2030_justification',
+    type: 'text',
+    nullable: true,
+  })
+  innov_use_2030_justification: string;
+
+  /**
+   * P2-3537 §4 — users added during THIS reporting period. Not the cumulative total: the actor rows
+   * hold that. Nullable with no default, because a `0` would state that nobody was added when the
+   * truth is that the question was never answered.
+   *
+   * 🥇 Per-cycle without a child table: the rollover INSERTS a new row per phase
+   * (`createQueries` + `UNIQUE (results_id)`) and does NOT copy this column, so the previous
+   * phase's figure survives untouched on its own row. That is the "not overwritten" the story asks
+   * for.
+   */
+  @Column({
+    name: 'new_users_added',
+    type: 'int',
+    nullable: true,
+  })
+  new_users_added: number | null;
+
+  /**
+   * P2-3537 §4 — how the use expanded this period. Same shape and same 100-word cap as
+   * `innov_use_2030_justification`, different question, so they cannot share a column.
+   */
+  @Column({
+    name: 'use_expansion_narrative',
+    type: 'text',
+    nullable: true,
+  })
+  use_expansion_narrative: string | null;
+
   @Column({
     name: 'innov_use_to_be_determined',
     type: 'tinyint',

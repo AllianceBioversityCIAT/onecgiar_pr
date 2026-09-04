@@ -361,10 +361,5 @@
   }
 </div>
 
-<div class="tsf-actions">
-  <!-- Disabled until the body has loaded: the button must not promise a save that `queueTypeSave` refuses. -->
-  <button class="tsf-save-btn" [disabled]="saving() || loaded() !== true" (click)="onSave()">
-    <i class="material-icons-round">{{ saving() ? 'hourglass_empty' : 'save' }}</i>
-    {{ saving() ? 'Saving...' : 'Save' }}
-  </button>
-</div>
+<!-- No in-section Save: every change is staged and the footer's Save draft persists the section
+     (explicit-save model, 2026-09-03). The old button only re-staged what was already staged. -->

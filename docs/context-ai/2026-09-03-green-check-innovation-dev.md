@@ -1,0 +1,1 @@
+ls -la docs/context-ai/2026-09-03-green-check-innovation-dev.md 2>/dev/null || ls -la onecgiar_pr/docs/context-ai/2026-09-03-green-check-innovation-dev.md

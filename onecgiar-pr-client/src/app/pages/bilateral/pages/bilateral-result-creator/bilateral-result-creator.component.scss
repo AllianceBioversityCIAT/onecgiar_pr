@@ -5,6 +5,395 @@
   transition: opacity 0.2s ease;
 }
 
+// ─── Editor frame ───────────────────────────────────────────────────────────────────────────
+// Same geometry as the W1/W2 result detail (`pages/results/.../result-detail.component.scss`),
+// rebuilt here: the two shells share tokens and primitives, never components — that page owns
+// W1/W2 services, routes and green checks. Wizard mode keeps `.bilateral-creator` below.
+//
+// The editor pins itself to the page slot instead of chaining heights. `main` is only
+// `min-h-svh`, so on a long form a `height: 100%` chain resolves to the content height, the
+// scroller never scrolls and the footer rides off-screen. Out-of-flow content lets the slot keep
+// its real viewport height: the rail and the form scroll on their own and the footer sits on the
+// floor. The containing block is the `relative` slot in app.component.html; the class is bound to
+// `!isCreating()` because the wizard stays in the document flow.
+:host.bcr-host--editor {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.bcr-layout {
+  display: flex;
+  // `stretch` so the rail reaches the floor; otherwise its right-hand rule stops mid-air.
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+// Sections rail: 240px, white, 1px right rule, 24/20 padding, 44px rows — the W1/W2 numbers.
+.bcr-rail {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px 20px;
+  border-right: 1px solid var(--pr-border);
+  background: var(--pr-surface-card);
+}
+
+.bcr-rail__eyebrow {
+  margin: 0;
+  padding: 0 10px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pr-text-muted);
+}
+
+.bcr-rail__nav {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bcr-rail__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--pr-text-secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover { background: var(--pr-surface-app); color: var(--pr-text-heading); }
+  &:focus-visible { outline: 2px solid var(--pr-color-primary-300); outline-offset: 2px; }
+}
+
+.bcr-rail__item--active {
+  background: var(--pr-color-primary-50);
+  color: var(--pr-color-primary-400);
+  font-weight: 600;
+}
+
+.bcr-rail__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Done: check on a green pill (the approved status pair). Pending: empty ring, no icon.
+// Dirty: orange dot — the one indicator W1/W2 has no counterpart for, because it autosaves.
+.bcr-rail__done {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--pr-status-approved-bg);
+
+  .material-icons-round { font-size: 10px; line-height: 1; color: var(--pr-status-approved-fg); }
+}
+
+.bcr-rail__pending {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--pr-border-strong);
+}
+
+.bcr-rail__dirty {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin: 0 3px;
+  border-radius: 50%;
+  background: var(--pr-color-orange-300);
+}
+
+.bcr-rail__progress {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--pr-border);
+}
+
+.bcr-rail__bar {
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--pr-border);
+}
+
+.bcr-rail__fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--pr-color-primary-300);
+  transition: width 0.3s;
+}
+
+.bcr-rail__progress-label {
+  font-size: 13px;
+  color: var(--pr-text-secondary);
+}
+
+// Content column: the scroller takes the free height, the footer sits under it.
+.bcr-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.bcr-scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  // 32/40 — the padding the W1/W2 content column uses; it is what aligns header, phases and card.
+  padding: 32px 40px;
+}
+
+.bcr-phase-switcher {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+// The white card. No shadow: 1px rule + radius 12, full column width — the padding of
+// `.bcr-scroll` already puts the air around it.
+.bcr-editor-card {
+  border: 1px solid var(--pr-border);
+  border-radius: 12px;
+  background: var(--pr-surface-card);
+}
+
+// Card head: number pill + section name + green check when complete.
+.bcr-section-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 24px 0;
+}
+
+.bcr-section-num {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--pr-color-primary-100);
+  color: var(--pr-color-primary-400);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bcr-section-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--pr-text-heading);
+}
+
+.bcr-section-done {
+  flex: none;
+  margin-left: auto;
+  font-size: 16px;
+  color: var(--pr-status-approved-fg);
+}
+
+.bcr-section-body {
+  padding: 24px;
+}
+
+// Footer strip: full column width with an edge-to-edge top rule; the inner box keeps the
+// controls at the column's 40px padding so Back and Save line up with the card edges.
+.bcr-editor-footer {
+  flex: none;
+  width: 100%;
+  border-top: 1px solid var(--pr-border);
+  background: var(--pr-surface-card);
+}
+
+.bcr-editor-footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 40px;
+}
+
+.bcr-editor-footer__group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bcr-editor-footer__divider {
+  width: 1px;
+  height: 20px;
+  background: var(--pr-border);
+}
+
+.bcr-editor-footer__position {
+  font-size: 14px;
+  color: var(--pr-text-secondary);
+}
+
+.bcr-editor-footer__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pr-text-secondary);
+
+  .material-icons-round { font-size: 18px; }
+}
+
+.bcr-editor-footer__state--dirty { color: var(--pr-color-orange-700); }
+.bcr-editor-footer__state--done { color: var(--pr-status-approved-fg); }
+
+// "N fields missing": a button that opens the list, anchored above the strip.
+.bcr-editor-footer__pending { position: relative; }
+
+.bcr-editor-footer__state--missing {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pr-color-orange-700);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover { text-decoration: underline; }
+  &:focus-visible { outline: 2px solid var(--pr-color-primary-300); outline-offset: 2px; }
+}
+
+.bcr-pending-list {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  z-index: 30;
+  width: 300px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--pr-border);
+  border-radius: 12px;
+  background: var(--pr-surface-card);
+  box-shadow: var(--pr-shadow-2);
+}
+
+.bcr-pending-list__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pr-text-muted);
+}
+
+.bcr-pending-list__close {
+  display: flex;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pr-text-muted);
+  cursor: pointer;
+
+  .material-icons-round { font-size: 16px; }
+}
+
+.bcr-pending-list__items {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: disc;
+
+  li { font-size: 13px; line-height: 1.45; color: var(--pr-text); }
+}
+
+// Buttons straight off the W1/W2 bar. Violet goes on the ONE primary action of a group (Next);
+// everything else is the neutral secondary with a neutral hover.
+.bcr-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+
+  &:disabled { cursor: not-allowed; }
+  &:focus-visible { outline: 2px solid var(--pr-color-primary-300); outline-offset: 2px; }
+}
+
+.bcr-btn--secondary {
+  border: 1px solid var(--pr-border);
+  background: var(--pr-surface-card);
+  color: var(--pr-text);
+  font-weight: 500;
+
+  &:enabled:hover { border-color: var(--pr-border-strong); background: var(--pr-surface-app); }
+  &:disabled { opacity: 0.45; }
+}
+
+.bcr-btn--primary {
+  border: 0;
+  background: var(--pr-color-primary-300);
+  color: #fff;
+  font-weight: 600;
+
+  &:enabled:hover { background: var(--pr-color-primary-400); }
+  &:disabled { opacity: 0.35; }
+}
+
+@media (max-width: 900px) {
+  .bcr-rail { width: 200px; padding: 16px 12px; }
+  .bcr-scroll { padding: 20px 16px; }
+  .bcr-editor-footer__inner { padding: 10px 16px; }
+}
+
+// Wizard column only: the editor has its own full-width frame above.
 .bilateral-creator {
   // Plain auto-centering within `main` (the Spartan sidebar is a flex sibling,
   // not part of this box's width) — matches .bil-home. Don't reintroduce a
@@ -13,19 +402,6 @@
   max-width: 1100px;
   margin: 0 auto;
   padding: 36px 28px 100px;
-
-  // Once a result exists, app-bilateral-progress-aside renders as a fixed
-  // 280px-wide panel just right of the sidebar (see its left: max(...) calc).
-  // At viewport widths where auto-centering alone wouldn't leave enough room,
-  // it can slide under this column's left edge. Reserve a floor here so the
-  // two never overlap. This is relative to `main` (this element's own
-  // containing block via plain margin:auto above), so — unlike the aside's
-  // own calc — it needs no --sidebar-width term to stay sidebar-agnostic.
-  &--with-aside {
-    @media (min-width: 1679px) {
-      margin-left: max(316px, calc((100% - 1100px) / 2));
-    }
-  }
 }
 
 .bcr-type-section {
@@ -301,115 +677,8 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-.bcr-floating-save-wrapper {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  z-index: 1000;
-}
-
-.bcr-floating-btn-save {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 20px;
-  height: 40px;
-  border-radius: 24px;
-  background: var(--pr-color-primary-300);
-  border: none;
-  color: #FFFFFF;
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: 0 4px 20px rgba(var(--pr-color-primary-rgb), 0.25), 0 1px 3px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: all 250ms ease;
-
-  .material-icons-round {
-    font-size: 16px;
-  }
-
-  &:hover {
-    background: var(--pr-color-primary-400);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 24px rgba(var(--pr-color-primary-rgb), 0.35), 0 2px 4px rgba(0, 0, 0, 0.12);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-}
-
-.bcr-floating-save {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 20px;
-  height: 40px;
-  border-radius: 24px;
-  background: #FFFFFF;
-  border: 1.5px solid #E0E0E0;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06);
-  transition: border-color 300ms ease, background 300ms ease, box-shadow 300ms ease;
-  pointer-events: none;
-  user-select: none;
-  box-sizing: border-box;
-
-  &--saving {
-    background: #FFF8E1;
-    border-color: #FFCA28;
-    box-shadow: 0 4px 20px rgba(255, 143, 0, 0.15);
-
-    .bcr-floating-save-icon {
-      color: var(--pr-color-yellow-300);
-      animation: bcr-save-spin 1.2s linear infinite;
-    }
-    .bcr-floating-save-text { color: #F57F17; }
-  }
-
-  &--saved {
-    background: #E8F5E9;
-    border-color: #A5D6A7;
-    box-shadow: 0 4px 20px rgba(67, 160, 71, 0.15);
-
-    .bcr-floating-save-icon { color: var(--pr-color-green-500); }
-    .bcr-floating-save-text { color: #2E7D32; }
-  }
-
-  &--error {
-    background: #FFEBEE;
-    border-color: #EF9A9A;
-    box-shadow: 0 4px 20px rgba(229, 57, 53, 0.15);
-
-    .bcr-floating-save-icon { color: var(--pr-color-red-300); }
-    .bcr-floating-save-text { color: var(--pr-color-red-300); }
-  }
-}
-
-.bcr-floating-save-icon {
-  font-size: 18px;
-  color: #90A4AE;
-  flex-shrink: 0;
-}
-
-.bcr-floating-save-text {
-  font-size: 12px;
-  font-weight: 600;
-  color: #607D8B;
-  letter-spacing: 0.2px;
-  white-space: nowrap;
-}
-
 .bcr-ai-section {
   margin: 32px 0 24px;
-}
-
-@keyframes bcr-save-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-360deg); }
 }
 
 // `bcr-create-btn` is full-width because it closes a form that spans the page. Inside the error

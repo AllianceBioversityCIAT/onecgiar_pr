@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { Brackets, DataSource } from 'typeorm';
 import { Result } from './entities/result.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { DepthSearch } from './dto/depth-search.dto';
@@ -18,6 +18,12 @@ import {
 import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../shared/extendsGlobalDTO/base-repository';
+import {
+  CONSOLIDATED_IPR_QUESTION_TEXT,
+  CONSOLIDATED_IPR_TRIGGER_OPTION_TEXTS,
+  INNOVATION_DEV_FORM_REDUCTION_YEAR,
+  LEGACY_IP_EXPERT_SUPPORT_OPTION_ID,
+} from './result-questions/innovation-dev-questions.const';
 import { ReportParametersDto } from './dto/report-parameters.dto';
 import { BasicReportFiltersNormalized } from './dto/basic-report-filters.dto';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
@@ -1504,6 +1510,7 @@ WHERE
     r.environmental_biodiversity_tag_level_id,
     r.poverty_tag_level_id,
     r.version_id,
+    v.phase_year,
     r.result_type_id,
     IF(r.source = 'Result', 'W1/W2', 'W3/Bilaterals') as source_name,
     r.status,
@@ -2899,11 +2906,32 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
+  /**
+   * True when the reporter asked for Intellectual Property support, which is what
+   * triggers the IP focal-point notification on submission (P2-3272 Part 3).
+   *
+   * The question that carries that request changes with the reporting phase, so the
+   * trigger has to change with it:
+   *
+   * - Up to the 2025 phase it is option 110 ("Yes, please contact me") of question
+   *   103 ("Would you like to receive support from an Intellectual Property
+   *   expert?"), matched by id as before.
+   * - From the 2026 phase those four questions are replaced by the single
+   *   consolidated one, whose "Yes" and "Not sure" options carry the request
+   *   (P2-3513). They are matched by TEXT, under their parent, because their ids
+   *   come from an AUTO_INCREMENT and differ across environments — and because
+   *   "Yes" on its own is the text of half a dozen unrelated options.
+   *
+   * Branching on the phase and not just OR-ing the two matters: a 2026 result that
+   * inherited an answer on 110 from its previous phase would otherwise send the
+   * email without anyone having answered the question the 2026 form actually shows.
+   */
   async getResultInnovationDevelopmentByResultId(
     resultId: number,
   ): Promise<boolean> {
     try {
       return await this.createQueryBuilder('r')
+        .innerJoin('version', 'v', 'v.id = r.version_id')
         .innerJoin(
           'result_answers',
           'ra',
@@ -2914,10 +2942,34 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
           'rq',
           'rq.result_question_id = ra.result_question_id',
         )
-        .where('rq.result_question_id = :questionId', { questionId: 110 }) // "Yes, please contact me"
-        .andWhere('r.is_active = true')
+        .leftJoin(
+          'result_questions',
+          'rqp',
+          'rqp.result_question_id = rq.parent_question_id',
+        )
+        .where('r.is_active = true')
         .andWhere('ra.answer_boolean = true')
         .andWhere('r.id = :resultId', { resultId })
+        .andWhere(
+          new Brackets((qb) =>
+            qb
+              .where(
+                '(v.phase_year IS NULL OR v.phase_year < :reductionYear) AND rq.result_question_id = :legacyOptionId',
+                {
+                  reductionYear: INNOVATION_DEV_FORM_REDUCTION_YEAR,
+                  legacyOptionId: LEGACY_IP_EXPERT_SUPPORT_OPTION_ID,
+                },
+              )
+              .orWhere(
+                'v.phase_year >= :reductionYear AND TRIM(rqp.question_text) = :consolidatedQuestion AND TRIM(rq.question_text) IN (:...triggerOptions)',
+                {
+                  reductionYear: INNOVATION_DEV_FORM_REDUCTION_YEAR,
+                  consolidatedQuestion: CONSOLIDATED_IPR_QUESTION_TEXT,
+                  triggerOptions: CONSOLIDATED_IPR_TRIGGER_OPTION_TEXTS,
+                },
+              ),
+          ),
+        )
         .getExists();
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

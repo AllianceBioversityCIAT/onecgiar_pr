@@ -12,3 +12,7 @@
         (ngModelChange)="this.options.innovation_team_diversity['radioButtonValue'] = $event">
     </app-pr-radio-button>
 </div>
+
+<div appFeedbackValidation
+    labelText="Innovation team diversity - Have concrete actions been taken to promote diversity in the composition of the CGIAR and partner innovation team?"
+    [isComplete]="isComplete"></div>

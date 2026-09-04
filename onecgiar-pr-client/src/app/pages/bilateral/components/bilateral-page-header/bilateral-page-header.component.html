@@ -1,4 +1,54 @@
 @if (ctx.centerAcronym()) {
+  @if (variant() === 'detail') {
+    <!-- Result-editor header, in flow (it scrolls with the form). Same shape as the W1/W2 result
+         detail header — way back · title · identity strip — so a bilateral result reads like any
+         other result. The band below stays for the tabbed pages and the wizard. -->
+    <header class="mb-[16px] flex w-full flex-col gap-[8px]" data-testid="bilateral-detail-header">
+      <button
+        type="button"
+        class="inline-flex h-[20px] w-fit cursor-pointer items-center gap-[5px] border-0 bg-transparent p-0 text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:opacity-80"
+        [attr.aria-label]="backLabel()"
+        data-testid="bilateral-header-back-btn"
+        (click)="goBack()">
+        <i class="material-icons-round text-[14px] leading-none" aria-hidden="true">chevron_left</i>
+        {{ backLabel() }}
+      </button>
+
+      <!-- Clamped to two lines like the W1/W2 title: a long name must not push the form below the fold. -->
+      <h1
+        class="m-0 line-clamp-2 min-w-0 text-pretty text-[26px] font-bold leading-[1.35] tracking-[-0.01em] text-[var(--pr-text-heading)]"
+        [title]="pageTitle() ?? ''">
+        {{ pageTitle() }}
+      </h1>
+
+      @if (hasIdentityStrip()) {
+        <!-- Identity strip: plain text separated by rules, and ONE pill — the status. The funding
+             tag used to be the pill here; W1/W2 spends the pill on the state, which is the thing
+             that changes, and lists funding as text. -->
+        <div class="flex flex-wrap items-center gap-[10px] text-[12px] font-normal text-[var(--pr-text-secondary)]">
+          @if (resultCode() != null) {
+            <span class="font-mono text-[12px] font-medium text-[var(--pr-text)]">{{ resultCode() }}</span>
+          }
+          @if (resultTypeName(); as typeName) {
+            <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
+            <span>{{ typeName }}</span>
+          }
+          @if (isW3Bilateral()) {
+            <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
+            <span>W3/Bilateral</span>
+          }
+          @if (statusBadge(); as badge) {
+            <span
+              class="rounded-full px-[9px] py-[2px] text-[12px] font-medium"
+              [class]="badge.classes"
+              data-testid="bilateral-status-badge">
+              {{ badge.label }}
+            </span>
+          }
+        </div>
+      }
+    </header>
+  } @else {
   <div class="sticky top-0 z-20 flex-none bg-[var(--pr-surface-band)]">
     <div class="relative flex h-[88px] flex-col justify-center gap-[6px] px-[32px]">
       @if (pageTitle(); as title) {
@@ -136,4 +186,5 @@
       </nav>
     }
   </div>
+  }
 }

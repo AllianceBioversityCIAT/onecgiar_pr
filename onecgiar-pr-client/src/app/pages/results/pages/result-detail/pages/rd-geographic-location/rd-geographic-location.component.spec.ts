@@ -278,6 +278,62 @@ describe('RdGeographicLocationComponent', () => {
     });
   });
 
+  // ----- GEO-T-1: unanswered "other geographic areas" question stays unanswered -----
+  describe('fillExtraGeographicLocationBody() — has_extra_geo_scope null-vs-boolean (GEO-R-1..2)', () => {
+    const baseResponse = {
+      extra_geo_scope_id: null,
+      has_extra_regions: false,
+      has_extra_countries: false,
+      extra_countries: [],
+      extra_regions: []
+    };
+
+    it('preserves null (unanswered) instead of coercing it to false', () => {
+      component.fillExtraGeographicLocationBody({ ...baseResponse, has_extra_geo_scope: null });
+
+      expect(component.extraGeographicLocationBody.has_extra_geo_scope).toBeNull();
+    });
+
+    it('keeps a real "No" answer (false) unchanged', () => {
+      component.fillExtraGeographicLocationBody({ ...baseResponse, has_extra_geo_scope: false });
+
+      expect(component.extraGeographicLocationBody.has_extra_geo_scope).toBe(false);
+    });
+
+    it('keeps a real "Yes" answer (true) unchanged', () => {
+      component.fillExtraGeographicLocationBody({ ...baseResponse, has_extra_geo_scope: true });
+
+      expect(component.extraGeographicLocationBody.has_extra_geo_scope).toBe(true);
+    });
+  });
+
+  // ----- GEO-T-1: the [isComplete] predicate must treat null the same as undefined (GEO-R-3) -----
+  describe('[isComplete] predicate for has_extra_geo_scope (component.hasExtraGeoScopeAnswered, bound in the template)', () => {
+    it('is false when unanswered (null)', () => {
+      component.extraGeographicLocationBody.has_extra_geo_scope = null;
+
+      expect(component.hasExtraGeoScopeAnswered()).toBe(false);
+    });
+
+    it('is false when never set (undefined)', () => {
+      component.extraGeographicLocationBody.has_extra_geo_scope = undefined;
+
+      expect(component.hasExtraGeoScopeAnswered()).toBe(false);
+    });
+
+    it('is true when answered "No" (false)', () => {
+      component.extraGeographicLocationBody.has_extra_geo_scope = false;
+
+      expect(component.hasExtraGeoScopeAnswered()).toBe(true);
+    });
+
+    it('is true when answered "Yes" (true)', () => {
+      component.extraGeographicLocationBody.has_extra_geo_scope = true;
+
+      expect(component.hasExtraGeoScopeAnswered()).toBe(true);
+    });
+  });
+
   // ----- P2-3371: the "other geographic areas" question and its completeness entry -----
   describe('P2-3371 — extra geo scope question is only tracked while it is on screen', () => {
     const withField = (field: any) => {

@@ -156,6 +156,192 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     actorItem.men_youth = null;
     actorItem.men_non_youth = null;
     actorItem.how_many = null;
+    // P2-3537: "sex and age" switches BOTH off, so the age-only fallback has no meaning
+    // while it is ticked. Leaving it set would send a contradiction to the server.
+    actorItem.age_disaggregation_not_available = null;
+    actorItem.youth_split_applied_by_system = null;
+  }
+
+  /**
+   * P2-3537 section 7 — the age-only fallback.
+   *
+   * Shown from the 2026 phase, per actor row, and only while "Sex and age disaggregation
+   * does not apply" is NOT ticked: that one already switches both off, so offering an
+   * age-only option next to it would be two answers to the same question.
+   *
+   * 🛑 Not offered inside IPSR. This template is shared with Innovation Package step 1,
+   * and the story scopes itself to Innovation Use results. Gating IPSR out explicitly
+   * rather than by omission is the lesson P2-3295 left on this same component.
+   */
+  showAgeFallback(actorItem): boolean {
+    return this.fieldsManagerSE.isInnovationUseAgeFallback2026() && !this.isIpsr && !actorItem?.sex_and_age_disaggregation;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // P2-3537 §4 — the Current Use Update block
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /** Hard limit on the expansion narrative, per the story. */
+  readonly maxNarrativeWords = 100;
+
+  /**
+   * True when the Current Use Update block is rendered at all.
+   *
+   * Three conditions, and every one of them is a way this would have gone wrong:
+   *
+   * - From the 2026 phase only. Earlier rounds keep the section exactly as it is today.
+   * - Not inside IPSR: this template is shared with Innovation Package step 1, which the story
+   *   does not cover.
+   * - 🥇 Only when the previous phase actually reported actors (`current_use_previous`). The server
+   *   returns `null` both for a first report and for a previous phase that reported organisations
+   *   but no actors — and in both cases the block must be ABSENT, not merely empty. Yeck's decision
+   *   of 3 Sep 2026: reconciling against zero actors is an error the reporter could never resolve,
+   *   so they would never be able to submit.
+   */
+  showCurrentUseUpdate(): boolean {
+    return (
+      this.fieldsManagerSE.isInnovationUseAgeFallback2026() &&
+      !this.isIpsr &&
+      !!this.body?.current_use_previous
+    );
+  }
+
+  /** The figure reported in the previous phase, as a number. */
+  previousReportedUse(): number {
+    return Number(this.body?.current_use_previous?.total_actors) || 0;
+  }
+
+  /** The round that figure comes from, for the "(FY2025)" label. `null` when unknown. */
+  previousUsePhaseYear(): number | null {
+    const year = Number(this.body?.current_use_previous?.phase_year);
+    return Number.isFinite(year) && year > 0 ? year : null;
+  }
+
+  /**
+   * Total cumulative use to date = previous + new. Never typed by anyone, which is why the control
+   * is read-only: the story makes it field 3, auto-calculated from fields 1 and 2.
+   */
+  totalCumulativeUse(): number {
+    return this.previousReportedUse() + (Number(this.body?.new_users_added) || 0);
+  }
+
+  /**
+   * The sum of the actor rows, which is what has to match the cumulative total (§4.1).
+   *
+   * ⚠️ Counts ACTORS only — not organisations, not other measures. Yeck's decision (Q4): the total
+   * means PEOPLE, so that next year's "previous use" stays a number whose meaning can be read
+   * instead of "523 users" made of people, organisations and hectares.
+   *
+   * Reads `how_many`, which the form keeps as `women + men` on disaggregated rows and as the typed
+   * value where disaggregation does not apply — summing the gender columns would drop the second kind.
+   */
+  actorsTotal(): number {
+    return (this.body?.innovatonUse?.actors || [])
+      .filter((a: any) => a?.is_active !== false)
+      .reduce((sum: number, a: any) => sum + (Number(a?.how_many) || 0), 0);
+  }
+
+  /** The gap between what the actor rows add up to and the cumulative total. 0 means reconciled. */
+  currentUseDifference(): number {
+    return this.actorsTotal() - this.totalCumulativeUse();
+  }
+
+  /**
+   * True while the actor rows do not add up to the cumulative total.
+   *
+   * §4.1 requires submission to be blocked with an error naming the difference, and §5 requires the
+   * error to appear as soon as the figures diverge — not only on submit. Rendering it off this
+   * getter is what gives the "immediately" part for free.
+   */
+  hasCurrentUseMismatch(): boolean {
+    return this.showCurrentUseUpdate() && this.currentUseDifference() !== 0;
+  }
+
+  /** The message §6.1 asks for: names the figures and states the exact gap. */
+  currentUseMismatchMessage(): string {
+    const diff = this.currentUseDifference();
+    const direction = diff > 0 ? 'more than' : 'fewer than';
+    return `The user categories add up to ${this.actorsTotal()}, which is ${Math.abs(diff)} ${direction} the total cumulative use of ${this.totalCumulativeUse()} (${this.previousReportedUse()} previously reported + ${Number(this.body?.new_users_added) || 0} added this period). Adjust the categories or the number of new users.`;
+  }
+
+  /**
+   * Completion rule for the block, fed to the mandatory-field scan.
+   *
+   * §5: "New users added = 0" is allowed and still requires the narrative — the reporter is stating
+   * that use was verified and did not grow, and that statement needs its explanation. So the test is
+   * "answered", not "greater than zero".
+   */
+  isCurrentUseUpdateComplete(): boolean {
+    if (!this.showCurrentUseUpdate()) return true;
+    const answered =
+      this.body?.new_users_added !== null && this.body?.new_users_added !== undefined;
+    const narrated = !!String(this.body?.use_expansion_narrative || '').trim();
+    return answered && narrated && !this.hasCurrentUseMismatch();
+  }
+
+  /** Keeps the derived figures fresh while the reporter types the increment. */
+  onNewUsersAddedChange(): void {
+    if (Number(this.body?.new_users_added) < 0) {
+      // §5: a negative increment is not permitted by the input. Use cannot decrease through this
+      // field; a downward correction is explicitly out of scope for this story.
+      this.body.new_users_added = 0;
+    }
+    this.cdr.markForCheck();
+  }
+
+  /** True when the youth figures on this row were computed rather than typed. */
+  isYouthSplitBySystem(actorItem): boolean {
+    return !!actorItem?.youth_split_applied_by_system;
+  }
+
+  /**
+   * Applies — or undoes — the 50/50 split when the reporter ticks the age-only fallback.
+   *
+   * Half of Women goes to youth and the remainder to non-youth; same for Men. Rounding
+   * cannot break the arithmetic because Non-youth is always derived as the difference, so
+   * the two halves add up to the total whatever the parity.
+   *
+   * 🥇 It stamps `youth_split_applied_by_system`, which is what lets any later report tell
+   * an estimate from a reported figure — the story asks for that explicitly. Unticking
+   * clears the youth values as well as the stamp: leaving the computed halves behind
+   * would turn a system estimate into what looks like the reporter's own answer, which is
+   * the exact confusion the stamp exists to prevent.
+   */
+  applyAgeDisaggregationFallback(actorItem): void {
+    if (!actorItem?.age_disaggregation_not_available) {
+      actorItem.women_youth = null;
+      actorItem.men_youth = null;
+      actorItem.women_non_youth = null;
+      actorItem.men_non_youth = null;
+      actorItem.youth_split_applied_by_system = null;
+      this.calculateTotalField(actorItem);
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const half = (total: any) => {
+      const n = Number(total);
+      return Number.isFinite(n) && n > 0 ? Math.round(n / 2) : 0;
+    };
+
+    actorItem.women_youth = half(actorItem.women);
+    actorItem.men_youth = half(actorItem.men);
+    actorItem.women_non_youth = (Number(actorItem.women) || 0) - actorItem.women_youth;
+    actorItem.men_non_youth = (Number(actorItem.men) || 0) - actorItem.men_youth;
+    actorItem.youth_split_applied_by_system = true;
+
+    this.calculateTotalField(actorItem);
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Re-runs the split when Women or Men change while the fallback is on — otherwise the
+   * halves would go stale and stop matching the total the reporter just typed.
+   */
+  recalculateAgeFallback(actorItem): void {
+    if (actorItem?.age_disaggregation_not_available) {
+      this.applyAgeDisaggregationFallback(actorItem);
+    }
   }
 
   reloadSelect(organizationItem) {
@@ -173,6 +359,78 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
   addOther() {
     this.body.innovatonUse.measures.push(new Measure());
   }
+
+  /**
+   * ── P2-3295 §3 — reviewing a 2030 projection inherited from the previous reporting phase ──────
+   *
+   * Scenario A (no previous phase): `innovation_use_2030_previous` arrives as null, nothing below
+   * fires, and the four sub-fields stay blank and editable — the behaviour that existed before.
+   *
+   * Scenario B: the inherited projection is shown LOCKED. Answering "Yes" unlocks it, and a
+   * justification is asked for only once a value has actually changed.
+   *
+   * ⚠️ The wording of the Yes/No question is NOT in the story — the story only gives the table of
+   * behaviours for "Yes" and "No". Written here so the flow can exist, and flagged in the ticket as
+   * copy to confirm with business; the two behaviours it drives are the specified part.
+   */
+  reviewing2030Projection = false;
+
+  readonly projection2030ReviseQuestion = 'Do you need to revise the 2030 projection reported in the previous phase?';
+
+  readonly projection2030JustificationLabel = 'Please justify the change to the 2030 projection';
+
+  readonly projection2030PreviousNote =
+    'These values are the 2030 projection reported for this result in the previous reporting phase. They stay as they were reported unless you choose to revise them.';
+
+  /** Scenario B is on only when the server actually sent a previous-phase projection. */
+  get has2030PreviousProjection(): boolean {
+    return !!(this.body as any)?.innovation_use_2030_previous;
+  }
+
+  /** Locked = inherited and not being revised. Never locked in Scenario A. */
+  get projection2030Locked(): boolean {
+    return this.has2030PreviousProjection && !this.reviewing2030Projection;
+  }
+
+  /**
+   * A change against what the previous phase reported — not "the user typed something", which would
+   * ask for a justification after a change that was undone.
+   */
+  get projection2030Changed(): boolean {
+    if (!this.has2030PreviousProjection) return false;
+    const previous = (this.body as any).innovation_use_2030_previous;
+    return this.projection2030Signature(this.body?.innovation_use_2030) !== this.projection2030Signature(previous);
+  }
+
+  get projection2030JustificationRequired(): boolean {
+    return this.reviewing2030Projection && this.projection2030Changed;
+  }
+
+  /**
+   * Only the values a reporter can edit, in a stable order: ids, timestamps and `is_active` differ
+   * between two phases by construction and would report a change nobody made.
+   */
+  private projection2030Signature(projection: any): string {
+    const actors = (projection?.actors ?? [])
+      .filter((a: any) => a?.is_active !== false)
+      .map((a: any) =>
+        [a?.actor_type_id, a?.other_actor_type, a?.women, a?.women_youth, a?.men, a?.men_youth, a?.how_many, a?.sex_and_age_disaggregation].join('~')
+      )
+      .sort();
+    const organizations = (projection?.organization ?? [])
+      .filter((o: any) => o?.is_active !== false)
+      .map((o: any) => [o?.institution_types_id, o?.other_institution, o?.how_many, o?.graduate_students].join('~'))
+      .sort();
+    const measures = (projection?.measures ?? [])
+      .filter((m: any) => m?.is_active !== false)
+      .map((m: any) => [m?.unit_of_measure, m?.quantity].join('~'))
+      .sort();
+    return JSON.stringify({ actors, organizations, measures });
+  }
+
+  /** Verbatim from P2-3295 §2 — QA reads the question back word for word, do not paraphrase. */
+
+  readonly innovationUse2030ProjectionQuestion = 'What is the projected innovation use by end of 2030?';
 
   addActor2030() {
     const body = this.body as any;
@@ -427,5 +685,4 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     if (level < 0) return false;
     return level >= 6;
   }
-
 }

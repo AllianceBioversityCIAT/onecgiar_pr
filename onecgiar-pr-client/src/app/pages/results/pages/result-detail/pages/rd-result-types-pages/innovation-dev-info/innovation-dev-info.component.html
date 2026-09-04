@@ -103,7 +103,18 @@
     }
   </div>
 
-  <app-intellectual-property-rights [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-intellectual-property-rights>
+  <!-- P2-3272 / P2-3513: from the 2026 phase the four IPR questions become one. Gated on the PHASE
+       year, never on isP25(): the P25 portfolio also holds phase-2025 results, which must keep
+       rendering their four original questions with the answers already given. -->
+  @if (this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
+    <app-intellectual-property-considerations
+      [body]="innovationDevInfoBody"
+      [options]="innovationDevelopmentQuestions"></app-intellectual-property-considerations>
+  } @else {
+    <app-intellectual-property-rights
+      [body]="innovationDevInfoBody"
+      [options]="innovationDevelopmentQuestions"></app-intellectual-property-rights>
+  }
 
   <app-pr-textarea
     placeholder="Contact persons info goes here..."

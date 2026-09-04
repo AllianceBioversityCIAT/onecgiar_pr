@@ -1,24 +1,27 @@
 <div class="st-fields" data-section="toc">
-  <div class="st-field">
-    <label class="st-label">Can this result be mapped to a ToC KPI?</label>
-    <div class="st-toggle-group">
-      <button type="button" class="st-toggle-btn" [class.st-toggle-btn--active]="isPlanned() === true" (click)="onPlannedChange(true)">
-        <i class="material-icons-round st-toggle-icon">event_repeat</i>
-        <span>Yes</span>
-      </button>
-      <button type="button" class="st-toggle-btn" [class.st-toggle-btn--active]="isPlanned() === false" (click)="onPlannedChange(false)">
-        <i class="material-icons-round st-toggle-icon">event_busy</i>
-        <span>No</span>
-      </button>
-    </div>
+  <!-- Same control W1/W2 uses for this question (rd-contributors-and-partners → app-pr-yes-or-not):
+       standard header + the Yes/No chips. UI only — the handler and the wording (P2-3142) are unchanged. -->
+  <div class="st-field" data-testid="toc-planned-question">
+    <app-pr-yes-or-not
+      label="Can this result be mapped to a ToC KPI?"
+      [required]="true"
+      [hideDescription]="true"
+      [ngModel]="isPlanned()"
+      (selectOptionEvent)="onPlannedChange($event)">
+    </app-pr-yes-or-not>
   </div>
 
   @if (showWhyReported()) {
     <div class="st-field">
-      <label class="st-label">Why is this result being reported? <span class="text-(--pr-color-red-300)">*</span></label>
-      <textarea class="st-textarea" rows="3" [ngModel]="whyReported()"
-        placeholder="Explain why this unplanned result is being reported (max 30 words)…"
-        (input)="onWhyReportedInput($any($event.target).value)"></textarea>
+      <app-pr-textarea
+        label="Why is this result being reported?"
+        placeholder="Enter reason"
+        [required]="true"
+        [rows]="2"
+        [maxWords]="30"
+        [ngModel]="whyReported()"
+        (ngModelChange)="onWhyReportedInput($event)">
+      </app-pr-textarea>
     </div>
   }
 
@@ -125,10 +128,15 @@
         }
 
         <div class="st-field st-field--narrative">
-          <label class="st-label">Explanation of how the result aligns with the ToC pathway</label>
-          <textarea class="st-textarea" rows="4" autocomplete="off" [ngModel]="narrative()"
-            placeholder="Describe how this result contributes to the selected ToC element (max 150 words)…"
-            (input)="onNarrativeInput($any($event.target).value)"></textarea>
+          <app-pr-textarea
+            label="Explanation of how the result aligns with the ToC pathway"
+            placeholder="Describe how this result contributes to the selected ToC element"
+            [required]="false"
+            [rows]="4"
+            [maxWords]="150"
+            [ngModel]="narrative()"
+            (ngModelChange)="onNarrativeInput($event)">
+          </app-pr-textarea>
         </div>
       }
     } @else {

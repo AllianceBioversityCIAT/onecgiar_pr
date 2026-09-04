@@ -1,0 +1,465 @@
+@use '../../../../styles/fonts' as fonts;
+
+/* Sizes are in absolute px and the type comes from the pr-typography mixin, on
+   purpose: this app authors its scale in px (styles.scss:477 — 200+ hardcoded
+   sites) and drives accessibility with `zoom` on :root, so rem does not
+   cascade. An earlier pass used rem here and rendered the labels at 9.75px. */
+
+:host {
+  display: contents;
+}
+
+.rf-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(480px, 82vw);
+}
+
+.rf-intro {
+  margin: 0;
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-5, #5b6472);
+}
+
+.rf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rf-label {
+  @include fonts.pr-typography('body-2');
+  font-weight: 600;
+  color: var(--pr-color-secondary-400, #1f2733);
+}
+
+/* Segmented control (Bug / Adjustment) */
+.rf-segment {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.rf-segment__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--pr-color-accents-3, #d7dbe2);
+  border-radius: 8px;
+  background: var(--pr-color-white, #fff);
+  color: var(--pr-color-accents-5, #5b6472);
+  @include fonts.pr-typography('body-2');
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  i {
+    font-size: 16px;
+  }
+
+  &--active {
+    border-color: var(--pr-color-primary-300, #6b46e5);
+    background: var(--pr-color-primary-50, #f3f0ff);
+    color: var(--pr-color-primary-300, #6b46e5);
+  }
+}
+
+.rf-input,
+.rf-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--pr-color-accents-3, #d7dbe2);
+  border-radius: 8px;
+  @include fonts.pr-typography('body-1');
+  color: var(--pr-color-secondary-400, #1f2733);
+  background: var(--pr-color-white, #fff);
+
+  &::placeholder {
+    color: var(--pr-color-accents-4, #8b93a1);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--pr-color-primary-300, #6b46e5);
+    box-shadow: 0 0 0 3px var(--pr-color-primary-50, #f3f0ff);
+  }
+}
+
+.rf-textarea {
+  resize: vertical;
+  min-height: 104px;
+}
+
+.rf-error {
+  margin: 0;
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-red-400, #dc2626);
+}
+
+.rf-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  /* The footer projects OUTSIDE .pr-dialog__body (pr-dialog.component.html),
+     so it inherits none of its padding: without this the buttons sit flush
+     against the dialog edge. Measured on screen, the body resolves to
+     `12px 18px 18px`, so the sides must be 18px too or the buttons do not
+     line up with the fields above them. */
+  padding: 4px 18px 18px;
+}
+
+.rf-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  @include fonts.pr-typography('body-1');
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+
+  &--ghost {
+    background: transparent;
+    border-color: var(--pr-color-accents-3, #d7dbe2);
+    color: var(--pr-color-accents-5, #5b6472);
+  }
+
+  &--primary {
+    background: var(--pr-color-primary-300, #6b46e5);
+    color: var(--pr-color-white, #fff);
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.rf-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 20px 8px 8px;
+  width: min(400px, 82vw);
+
+  &__icon {
+    font-size: 40px;
+    color: var(--pr-color-green-400, #16a34a);
+  }
+
+  &__title {
+    margin: 0;
+    @include fonts.pr-typography('h4');
+    font-weight: 600;
+    color: var(--pr-color-secondary-400, #1f2733);
+  }
+
+  &__ref {
+    margin: 0;
+    @include fonts.pr-typography('body-2');
+    color: var(--pr-color-accents-5, #5b6472);
+  }
+}
+
+/* Report / My reports switch */
+.rf-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--pr-color-accents-2, #f1f2f5);
+  align-self: flex-start;
+}
+
+.rf-tab {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--pr-color-accents-5, #5b6472);
+  @include fonts.pr-typography('body-2');
+  font-weight: 600;
+  cursor: pointer;
+
+  &--active {
+    background: var(--pr-color-white, #fff);
+    color: var(--pr-color-secondary-400, #1f2733);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+}
+
+/* Possible duplicates */
+.rf-similar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--pr-color-yellow-200, #fde68a);
+  border-radius: 8px;
+  background: var(--pr-color-yellow-50, #fffbeb);
+
+  &__title {
+    @include fonts.pr-typography('body-2');
+    font-weight: 700;
+    color: var(--pr-color-secondary-400, #1f2733);
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__summary {
+    @include fonts.pr-typography('body-2');
+    color: var(--pr-color-secondary-400, #1f2733);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__stage {
+    @include fonts.pr-typography('body-3');
+    color: var(--pr-color-accents-5, #5b6472);
+  }
+
+  &__hint {
+    @include fonts.pr-typography('body-3');
+    color: var(--pr-color-accents-5, #5b6472);
+  }
+}
+
+/* Screenshots */
+.rf-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-5, #5b6472);
+  cursor: pointer;
+}
+
+.rf-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 6px 12px;
+  border: 1px dashed var(--pr-color-accents-3, #d7dbe2);
+  border-radius: 8px;
+  @include fonts.pr-typography('body-2');
+  font-weight: 600;
+  color: var(--pr-color-accents-5, #5b6472);
+  cursor: pointer;
+
+  input[type='file'] {
+    display: none;
+  }
+
+  i {
+    font-size: 16px;
+  }
+
+  &:hover {
+    border-color: var(--pr-color-primary-300, #6b46e5);
+    color: var(--pr-color-primary-300, #6b46e5);
+  }
+}
+
+.rf-files {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  &__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: var(--pr-color-accents-2, #f1f2f5);
+  }
+
+  &__name {
+    @include fonts.pr-typography('body-3');
+    color: var(--pr-color-secondary-400, #1f2733);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__remove {
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--pr-color-accents-5, #5b6472);
+    display: inline-flex;
+
+    i {
+      font-size: 14px;
+    }
+  }
+
+  &__error {
+    @include fonts.pr-typography('body-3');
+    color: var(--pr-color-red-400, #dc2626);
+  }
+}
+
+/* My reports */
+.rf-reports {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 320px;
+  overflow-y: auto;
+
+  &__item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 1px solid var(--pr-color-accents-3, #d7dbe2);
+    border-radius: 8px;
+  }
+
+  &__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  &__title {
+    @include fonts.pr-typography('body-2');
+    font-weight: 600;
+    color: var(--pr-color-secondary-400, #1f2733);
+  }
+
+  &__meta {
+    @include fonts.pr-typography('body-3');
+    color: var(--pr-color-accents-5, #5b6472);
+  }
+}
+
+.rf-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: var(--pr-color-accents-2, #f1f2f5);
+  color: var(--pr-color-accents-5, #5b6472);
+  @include fonts.pr-typography('body-3');
+  font-weight: 600;
+  white-space: nowrap;
+
+  &--done {
+    background: var(--pr-color-green-50, #ecfdf5);
+    color: var(--pr-color-green-400, #16a34a);
+  }
+}
+
+.rf-muted {
+  margin: 0;
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-5, #5b6472);
+}
+
+.rf-btn--tiny {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  @include fonts.pr-typography('body-3');
+  font-weight: 600;
+  background: var(--pr-color-white, #fff);
+  border-color: var(--pr-color-accents-3, #d7dbe2);
+  color: var(--pr-color-secondary-400, #1f2733);
+}
+
+.rf-success__hint {
+  margin: 0;
+  @include fonts.pr-typography('body-3');
+  color: var(--pr-color-accents-5, #5b6472);
+}
+
+/* The screenshot toggle reuses the segment chip, but spans the row and wraps:
+   its label is a full sentence, not a one-word option. */
+.rf-shot {
+  align-self: stretch;
+  justify-content: flex-start;
+  text-align: left;
+  line-height: 1.4;
+}
+
+/* Preview of the automatic capture. Always rendered when a capture exists, even
+   with the box unticked: the user has to be able to see what they would attach
+   before deciding (Yeck, 3-sep-2026 — nothing personal should go up unnoticed). */
+.rf-preview {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--pr-color-accents-3, #d7dbe2);
+  border-radius: 8px;
+  background: var(--pr-color-accents-1, #fafafa);
+  cursor: zoom-in;
+  overflow: hidden;
+
+  img {
+    display: block;
+    width: 100%;
+    /* Collapsed: a legible strip rather than a full page of pixels. */
+    max-height: 110px;
+    object-fit: cover;
+    object-position: top left;
+  }
+
+  &__hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px;
+    @include fonts.pr-typography('body-3');
+    font-weight: 600;
+    color: var(--pr-color-accents-5, #5b6472);
+    background: var(--pr-color-white, #fff);
+    border-top: 1px solid var(--pr-color-accents-3, #d7dbe2);
+
+    i {
+      font-size: 14px;
+    }
+  }
+
+  &--expanded {
+    cursor: zoom-out;
+
+    img {
+      max-height: 420px;
+      object-fit: contain;
+    }
+  }
+
+  &:hover {
+    border-color: var(--pr-color-primary-300, #6b46e5);
+  }
+
+  &__warn {
+    @include fonts.pr-typography('body-3');
+    color: var(--pr-color-accents-5, #5b6472);
+  }
+}

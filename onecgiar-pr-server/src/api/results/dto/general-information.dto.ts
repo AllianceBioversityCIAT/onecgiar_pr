@@ -33,4 +33,7 @@ export class GeneralInformationDto {
   public phase_year: number;
   public is_discontinued: boolean;
   public discontinued_options: ResultsInvestmentDiscontinuedOption[];
+
+  /** P2-3292: where the discontinued innovation continued. Empty when nothing was declared. */
+  public merge_split_targets?: any[];
 }

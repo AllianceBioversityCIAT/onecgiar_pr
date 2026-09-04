@@ -32,6 +32,13 @@ export class BilateralPageHeaderComponent {
   readonly pageTitle = input<string | null>(null);
 
   /**
+   * `band` is the sticky centre band the tabbed pages and the wizard use. `detail` is the in-flow
+   * header of the result editor: way back, title, identity strip — the same shape the W1/W2
+   * result detail draws, rebuilt here because that page's header belongs to `pages/results/`.
+   */
+  readonly variant = input<'band' | 'detail'>('band');
+
+  /**
    * P2-3352: identity of the result being edited — code, type, funding tag and status. Passed in
    * rather than read from BilateralCreationService so this header stays usable by the three tabbed
    * pages, which have no result loaded. All are optional; the strip renders only what is present.

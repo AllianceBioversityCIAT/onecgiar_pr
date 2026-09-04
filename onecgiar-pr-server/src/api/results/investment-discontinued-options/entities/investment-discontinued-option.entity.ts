@@ -39,6 +39,24 @@ export class InvestmentDiscontinuedOption {
   })
   result_type_id: number;
 
+  /**
+   * P2-3292 — phase year this reason was introduced for. `NULL` on the six rows
+   * that predate the axis (the base generation). The service serves exactly one
+   * generation per request: the newest whose value is at or below the result's
+   * phase year, which is what keeps a 2025-phase result on its original reasons
+   * without rewriting or de-activating a single row.
+   */
+  @Column({ name: 'phase_year_from', type: 'int', nullable: true })
+  phase_year_from: number | null;
+
+  /**
+   * P2-3292 — `1` when this reason needs its free-text box ("Other"). The legacy
+   * row is still recognised by `investment_discontinued_option_id == 6` in the
+   * client, because flagging it would have meant an UPDATE on a live catalogue row.
+   */
+  @Column({ name: 'requires_description', type: 'boolean', nullable: true })
+  requires_description: boolean | null;
+
   //audit fields
   @Column({
     name: 'is_active',

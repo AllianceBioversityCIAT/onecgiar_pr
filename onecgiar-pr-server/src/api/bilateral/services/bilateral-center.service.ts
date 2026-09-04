@@ -455,6 +455,9 @@ export class BilateralCenterService {
       savedPartners: Array<Record<string, unknown>>;
       failedPartners: Array<Record<string, unknown>>;
       deactivatedPartners: number[];
+      savedPrograms: string[];
+      failedPrograms: string[];
+      deactivatedPrograms: number[];
     } = {
       savedCenters: [],
       failedCenters: [],
@@ -464,6 +467,9 @@ export class BilateralCenterService {
       savedPartners: [],
       failedPartners: [],
       deactivatedPartners: [],
+      savedPrograms: [],
+      failedPrograms: [],
+      deactivatedPrograms: [],
     };
 
     try {
@@ -507,17 +513,27 @@ export class BilateralCenterService {
         await this.syncExternalPartners(resultId, dto, user, result);
       }
 
+      if (dto.contributing_programs !== undefined) {
+        await this.syncContributingPrograms(
+          resultId,
+          dto.contributing_programs,
+          user,
+          result,
+        );
+      }
+
       const failedCount =
         result.failedCenters.length +
         result.failedProjects.length +
-        result.failedPartners.length;
+        result.failedPartners.length +
+        result.failedPrograms.length;
 
       return {
         response: { resultId, ...result },
         message:
           failedCount === 0
             ? 'Contributors saved successfully'
-            : `Contributors saved with ${result.failedCenters.length} failed centers, ${result.failedProjects.length} failed projects and ${result.failedPartners.length} failed partners`,
+            : `Contributors saved with ${result.failedCenters.length} failed centers, ${result.failedProjects.length} failed projects, ${result.failedPartners.length} failed partners and ${result.failedPrograms.length} failed programs`,
       };
     } catch (error) {
       return {
@@ -528,6 +544,100 @@ export class BilateralCenterService {
             : 'Failed to save contributors',
         status: 500,
       };
+    }
+  }
+
+  /**
+   * Contributing Science Programs / Accelerators of the bilateral Contributors section (Nicoleta
+   * Trifa via Ángel Jarrín, 2026-09-03: the question must be available whatever the project's
+   * mapping, and it must persist — it used to live in a component signal and vanish on reload).
+   *
+   * Stored as `results_by_inititiative` rows with `initiative_role_id = 2`: the same rows W1/W2
+   * keeps for an accepted contributing program, and what the bilateral detail endpoint already
+   * reads back as `contributing_and_primary_initiative` / `accepted_contributing_initiatives`. The
+   * ingest path (`POST /create`) records the same intent as `share_result_request` rows with
+   * status 4 — deliberately not mirrored here, because nothing reads those back into the form.
+   *
+   * Sending the key replaces the set: rows for programs no longer listed are deactivated. The
+   * primary program (role 1) is excluded from the list and never deactivated from here.
+   */
+  private async syncContributingPrograms(
+    resultId: number,
+    programs: Array<{ science_program_id?: string }>,
+    user: TokenDto,
+    result: {
+      savedPrograms: string[];
+      failedPrograms: string[];
+      deactivatedPrograms: number[];
+    },
+  ) {
+    const owner =
+      await this.resultByInitiativesRepository.getOwnerInitiativeByResult(
+        resultId,
+      );
+    const ownerId = owner?.id != null ? Number(owner.id) : null;
+
+    const wanted = new Map<number, string>();
+    for (const program of programs ?? []) {
+      const code = String(program?.science_program_id ?? '')
+        .trim()
+        .toUpperCase();
+      if (!code) continue;
+      const init = await this.clarisaInitiativesRepository.findOne({
+        where: { official_code: code },
+      });
+      if (!init?.id) {
+        result.failedPrograms.push(code);
+        continue;
+      }
+      if (ownerId != null && Number(init.id) === ownerId) continue;
+      wanted.set(Number(init.id), code);
+    }
+
+    const current = await this.resultByInitiativesRepository.find({
+      where: { result_id: resultId, initiative_role_id: 2, is_active: true },
+    });
+    for (const row of current ?? []) {
+      if (wanted.has(Number(row.initiative_id))) continue;
+      await this.resultByInitiativesRepository.update(
+        { id: row.id },
+        {
+          is_active: false,
+          last_updated_by: user.id,
+          last_updated_date: new Date(),
+        },
+      );
+      result.deactivatedPrograms.push(Number(row.initiative_id));
+    }
+
+    for (const [initiativeId, code] of wanted) {
+      const existing = await this.resultByInitiativesRepository.findOne({
+        where: { result_id: resultId, initiative_id: initiativeId },
+      });
+      if (existing) {
+        if (Number(existing.initiative_role_id) === 1 && existing.is_active) {
+          continue;
+        }
+        await this.resultByInitiativesRepository.update(
+          { id: existing.id },
+          {
+            initiative_role_id: 2,
+            is_active: true,
+            last_updated_by: user.id,
+            last_updated_date: new Date(),
+          },
+        );
+      } else {
+        await this.resultByInitiativesRepository.save({
+          result_id: resultId,
+          initiative_id: initiativeId,
+          initiative_role_id: 2,
+          is_active: true,
+          created_by: user.id,
+          last_updated_by: user.id,
+        });
+      }
+      result.savedPrograms.push(code);
     }
   }
 
