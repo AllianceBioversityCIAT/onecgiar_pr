@@ -51,3 +51,25 @@
 
 **Gate:** auto-approved (pre-approved mode) → continue to IRR-T-3.
 
+### `IRR-T-3` — Client: the table, header strip, row actions, search and error UI — **PASS** (2026-09-03, 1 attempt)
+
+| Field | Value |
+|---|---|
+| Implementer | `akili-implementer` wrapper, model override `opus`, effort high, skills `angular-developer` + `ui-ux-pro-max` |
+| Reviewer | `akili-reviewer` wrapper (`opus`), lens checklist mode |
+| Files (4, +991/−21, all in `components/indicator-drawer/`) | `.ts` (+253/−4: `STATUS_TOKENS` copy + no-DRY note, `SEARCH_VISIBLE_ABOVE = 8`, `searchText`/`showSearch`/`visibleRows`, `contributionSum`/`targetValue`/`reportedCountLabel`/`stripTitle()`/`statusSplit`, `statusFg/Bg`, `sortArrow/Color`, row menu state + `@HostListener('document:click')` + `onEscape()`, `resultRoute`/`openResult`/`onRowClick`/`onRowAuxClick`/`onRowKeydown`/`resultLink`/`copyLink` (CDK `Clipboard`), `retryLoad()`; reset clears `searchText` + `openMenuKey`) · `.html` (+178/−16: `@case ('results')` = skeletons → error + Retry → strip / status split / search / `app-pr-table` → empty CTA; `<th scope="col">` ×7 with `prSortableColumn` on Code/Status/Contribution/Phase; rows `tabindex=0 role=button`; kebab `role="menu"`; Report-tab preview gated on `loadError()`) · `.scss` (+196: grid tracks per design §6.3, 44 px rows, `.irr-actions--open { z-index: 10 }`, copied `.pr-row-menu` rules with promote-to-shared note, `::ng-deep` for `pr-table`'s header skin) · `.spec.ts` (+369, 22 DOM `it`s) |
+| Verification | `npx jest …/components/indicator-drawer --silent` → **51/51 passed**; `npx ng lint --quiet` clean; `ng build --configuration development` complete, zero errors. 0 removed `expect`/`it` |
+| Requirements covered | IRR-R-2, R-2.1, R-2.4, R-2.5, R-4, R-4.1, R-5, R-6, R-6.1, R-7 (UI), R-10, **R-11 and R-12 (both landed)**, IRR-AC-2, AC-4, AC-5, AC-6; scenarios *The table shows the pipeline*, *A way in*, *States* — all clauses |
+
+**Evidence detail:** full 3×6 cell `toEqual`; strip exactly `3 results reported · Σ contribution 5 of target 8`; disclosure `Achieved on the row: 3 — it counts reviewed results only; this list sums 5 across every status.` and absent when equal; null contribution → `—`, Σ 4 not 5; `status_id 99` → not-started pair; search hidden at 8 / shown at 9; `88` → `#8871` only; `zzz` → table empty template; Enter/click/Open result → `router.navigate(['/result','result-detail','8871','general-information'], { queryParams: { phase: 11 } })`; kebab click does not navigate; Copy link → `${origin}/result/result-detail/9006/general-information?phase=11` + toast `{ key: 'globalUserNotification', severity: 'success', summary: 'Result link copied' }`; ctrl/cmd-click → `window.open(…, '_blank', 'noopener')`; Escape closes menu only; 404 → empty + CTA → report; 500 → error, Retry → second call → rows.
+
+**Decisions (Reviewer adjudicated):** (a) pill pair asserted via `statusFg/statusBg` on rendered ids + template-source binding — jsdom's `cssstyle` drops `var()` values, so a computed-style read is impossible there; **recorded gap, closed by the T-4 Cypress CT**. (b) CDK `Clipboard.copy()` as in `programme-results`. (c) R-4.1 uses the single design §6.2 sentence — the second reason class in requirements has no defined wording and the payload cannot distinguish it (spec wording gap, recorded). (d) R-11 rendered on its own line to keep the AC-2 sentence verbatim. (e) `::ng-deep` required for `pr-table`'s `thead th` skin (same as `programme-results`).
+
+**Reviewer PASS summary:** implements IRR-T-3 as specified — grid, pills, `—` rules, exact strip + disclosure, error-before-empty with a working Retry, menu semantics, absolute Copy link + toast; only the four allowed files; every `--pr-*` token used is defined in `colors.scss`.
+
+**ADVISORY (4R — recorded):** *Risk / real data:* `STATUS_TOKENS` (verbatim copy, as mandated) maps only 1/2/3, so **Approved (6)** and **Pending Review (5)** rows render in the grey not-started pair — spec-conformant (R-2.1 fallback, identical to the Results tab) but it dulls the pipeline R-3 wants read → **T-5 must read an Approved row's pill live and raise it as a spec gap if grey** (candidate `/akili-quick` extending the map in both copies). *Reliability of evidence:* the HTML comment claims `track row.id ?? row.code` but `PrTableComponent` tracks by `$index`; `rowKey()` only keys the menu → reword (forward pointer to T-4, which edits the template). *A11y:* `scope="col"`/`<table>` assertions are presence-only in jsdom; `display: grid` on `tr` + `role="button"` may strip row/cell roles in a real browser → **T-4's CT to read the pill computed style and one `aria-sort`/role** (forward pointer). *Readability:* no `keydown.space` test.
+
+**Cut point reached (tasks.md §0):** the feature is usable after T-3; T-4 is layout polish behind a CT gate and T-5 is docs + live check. Continuing under pre-approved mode; stopping here is a valid choice for the user.
+
+**Gate:** auto-approved (pre-approved mode) → continue to IRR-T-4.
+
