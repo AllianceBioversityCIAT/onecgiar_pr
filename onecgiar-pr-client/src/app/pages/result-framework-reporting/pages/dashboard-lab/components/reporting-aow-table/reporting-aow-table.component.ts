@@ -786,16 +786,29 @@ export class ReportingAowTableComponent {
     const selCenter = this.selectedCenterOf(group);
     const selType = this.selectedTypeOf(group);
 
+    // quick/reporting-search-all-levels (2026-09-04): the search box says "indicators" but users
+    // type any level of the tree. A hit on the CARD itself (AoW code or name) keeps every row of
+    // that card — filtering its rows by the AoW's own name would empty the very card that matched.
+    const groupHit =
+      !!q && [group.aow?.code, group.aow?.name].some(v => (v ?? '').toLowerCase().includes(q));
+
     return (group.indicators ?? []).filter(row => {
       if (status !== 'all' && this.statusOf(row) !== status) return false;
       if (selCenter && row.center_acronym?.trim() !== selCenter) return false;
       if (selType && row.result_type_name?.trim() !== selType) return false;
-      if (!q) return true;
-      // Both name fields are searched: the visible meta line is the indicator name now, but users
-      // still type categories ("innovation use"), which only live in `result_type_name`.
-      return [row.indicator_description, row.__hlo, this.indicatorNameOf(row), row.result_type_name].some(v =>
-        (v ?? '').toLowerCase().includes(q)
-      );
+      if (!q || groupHit) return true;
+      // Every level a row belongs to is searchable: its own description and name, the category
+      // ("innovation use" only lives in `result_type_name`), the HLO / outcome node it hangs from
+      // (`__hlo`), the AoW it sits in (`__aowCode` / `__aowName`) and its Center.
+      return [
+        row.indicator_description,
+        row.__hlo,
+        this.indicatorNameOf(row),
+        row.result_type_name,
+        row.__aowCode,
+        row.__aowName,
+        row.center_acronym
+      ].some(v => (v ?? '').toLowerCase().includes(q));
     });
   }
 

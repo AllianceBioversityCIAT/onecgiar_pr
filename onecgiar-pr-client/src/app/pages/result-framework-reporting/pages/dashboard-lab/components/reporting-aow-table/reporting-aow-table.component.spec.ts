@@ -773,6 +773,49 @@ describe('ReportingAowTableComponent', () => {
       expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([1]);
     });
 
+    // quick/reporting-search-all-levels (2026-09-04): "search should find every level" — AoW code
+    // and name, the HLO / outcome node, the Center — not only the indicator's own fields.
+    it('keeps EVERY row of a card whose AoW code or name matches (a card-level hit is not a row filter)', async () => {
+      const g = group([row({ indicator_id: 1, indicator_description: 'cassava' }), row({ indicator_id: 2, indicator_description: 'barley' })], {
+        aow: { id: 1, code: 'AOW01', name: 'Market Intelligence', progress: 0 }
+      });
+      await build([g], { search: 'aow01', filtersActive: true });
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([1, 2]);
+      expect(component.visibleGroups().length).toBe(1);
+
+      fixture.componentRef.setInput('search', 'market intel');
+      fixture.detectChanges();
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([1, 2]);
+
+      fixture.componentRef.setInput('search', 'zzz-no-match');
+      fixture.detectChanges();
+      expect(component.visibleRows(g)).toEqual([]);
+    });
+
+    it('matches the AoW a row sits in and its Center on the row itself (flat and By-AOW rows)', async () => {
+      const g = group([
+        row({ indicator_id: 1, indicator_description: 'cassava', __aowCode: 'AOW02', __aowName: 'Accelerated Breeding', center_acronym: 'CIAT' }),
+        row({ indicator_id: 2, indicator_description: 'barley', __aowCode: 'AOW03', __aowName: 'Seed Systems', center_acronym: 'ICARDA' })
+      ]);
+      await build([g], { search: 'accelerated' });
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([1]);
+      fixture.componentRef.setInput('search', 'icarda');
+      fixture.detectChanges();
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([2]);
+      fixture.componentRef.setInput('search', 'aow03');
+      fixture.detectChanges();
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([2]);
+    });
+
+    it('matches the outcome / HLO node title the row hangs from', async () => {
+      const g = group([
+        row({ indicator_id: 1, indicator_description: 'cassava', __hlo: 'Foster motivations' }),
+        row({ indicator_id: 2, indicator_description: 'barley', __hlo: 'Equitable seed systems adopted' })
+      ]);
+      await build([g], { search: 'seed systems adopted' });
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([2]);
+    });
+
     it('filters by status', async () => {
       const g = group([row({ indicator_id: 1, progress_percentage: 0 }), row({ indicator_id: 2, progress_percentage: 100 })]);
       await build([g], { statusFilter: 'achieved' });
