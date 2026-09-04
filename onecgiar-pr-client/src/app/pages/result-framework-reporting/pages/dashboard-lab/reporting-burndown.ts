@@ -183,3 +183,154 @@ export function countNewlyReported<T extends BurndownIndicator>(prev: T[], next:
   }
   return count;
 }
+
+// ── Program KPI partition (`bugfix/kpi-count-reconciliation`) ────────────────────────────────
+
+/**
+ * An `indicatorsByAow()` row: a `BurndownIndicator` plus the two stamps that host computed adds.
+ * `__isIntermediateCrosscut` IS the payload's group-level `is_aow` reading — `indicatorsByAow`
+ * stamps it as `tier === 'outcome' && g?.is_aow !== true` (RES-R-3). Bucket membership is decided
+ * from that stamp ONLY, never by cross-referencing `indicator_id` against another endpoint
+ * (KCR-R-1.1): the same `indicator_id` may be AoW-own in one payload and cross-cut in another.
+ *
+ * @akili-spec bugfix/kpi-count-reconciliation
+ */
+export interface PartitionIndicator extends BurndownIndicator {
+  __tier?: unknown;
+  __isIntermediateCrosscut?: unknown;
+}
+
+/** One AoW's slice of the partition. @akili-spec bugfix/kpi-count-reconciliation */
+export interface ProgramKpiAowSlice<T extends PartitionIndicator = PartitionIndicator> {
+  code: string;
+  name: string;
+  /** AoW-own KPIs: output tier, plus outcome rows the payload marked `is_aow: true` (KCR §6 Glossary). */
+  own: T[];
+  /**
+   * How many cross-cut Intermediate-Outcome rows this AoW's payload repeats. They are NOT in `own`
+   * — they belong to the Intermediate bucket and are counted there exactly once (KCR-R-1). Kept as
+   * a count for the zero-target/dedupe disclosures and for tests that prove the split happened.
+   */
+  crosscut: number;
+  loading: boolean;
+}
+
+/** A program-level bucket (Intermediate outcomes / 2030 outcomes). @akili-spec bugfix/kpi-count-reconciliation */
+export interface ProgramKpiBucket<T extends PartitionIndicator = PartitionIndicator> {
+  indicators: T[];
+  loading: boolean;
+}
+
+/** The one deduplicated KPI universe every shell surface counts over (KCR-R-1, KCR-R-3). */
+export interface ProgramKpiPartition<T extends PartitionIndicator = PartitionIndicator> {
+  aows: ProgramKpiAowSlice<T>[];
+  /** Consumers that resolve by AoW code (banner, table) use this map — never an array index. */
+  aowByCode: Map<string, ProgramKpiAowSlice<T>>;
+  intermediate: ProgramKpiBucket<T>;
+  outcomes2030: ProgramKpiBucket<T>;
+}
+
+/** One `indicatorsByAow()` bundle, structurally. @akili-spec bugfix/kpi-count-reconciliation */
+export interface ProgramKpiAowBundle<T extends PartitionIndicator = PartitionIndicator> {
+  aow: { code: string; name?: string };
+  indicators?: T[];
+  loading?: boolean;
+}
+
+/** A bucket's already-flattened indicators plus its loading flag. */
+export interface ProgramKpiBucketInput<T extends PartitionIndicator = PartitionIndicator> {
+  indicators?: T[];
+  loading?: boolean;
+}
+
+/** KCR-R-1/R-1.1: an AoW row is a cross-cut iff it is outcome-tier AND stamped `is_aow !== true`. */
+function isCrosscutRow(ind: PartitionIndicator | null | undefined): boolean {
+  return ind?.__tier === 'outcome' && ind?.__isIntermediateCrosscut === true;
+}
+
+/** First occurrence of each `indicator_id` wins; rows without an id are never collapsed. */
+function dedupeById<T extends BurndownIndicator>(inds: T[]): T[] {
+  const seen = new Set<number | string>();
+  const out: T[] = [];
+  for (const ind of inds) {
+    const id = ind?.indicator_id;
+    if (id === undefined || id === null) {
+      out.push(ind);
+      continue;
+    }
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push(ind);
+  }
+  return out;
+}
+
+/**
+ * Places every indicator of a program+phase in exactly one bucket (KCR-R-1): AoW-own rows on their
+ * AoW, cross-cut Intermediate-Outcome rows nowhere (they are served once by the Intermediate
+ * bucket), bucket rows on their bucket, deduplicated by `indicator_id` within the bucket.
+ *
+ * Pure — no Angular, no signals. The single home of the count-once rule: no consumer may
+ * re-implement the predicate (KCR-DD-1, same single-home rule MRF established for `buildRatio`).
+ *
+ * @akili-spec bugfix/kpi-count-reconciliation
+ */
+export function partitionProgramKpis<T extends PartitionIndicator>(
+  bundles: ProgramKpiAowBundle<T>[] | null | undefined,
+  intermediate?: ProgramKpiBucketInput<T> | null,
+  outcomes2030?: ProgramKpiBucketInput<T> | null
+): ProgramKpiPartition<T> {
+  const aows: ProgramKpiAowSlice<T>[] = (bundles ?? []).map(bundle => {
+    const own: T[] = [];
+    let crosscut = 0;
+    for (const ind of bundle?.indicators ?? []) {
+      if (isCrosscutRow(ind)) crosscut++;
+      else own.push(ind);
+    }
+    return {
+      code: bundle?.aow?.code ?? '',
+      name: bundle?.aow?.name ?? '',
+      own,
+      crosscut,
+      loading: bundle?.loading === true
+    };
+  });
+
+  return {
+    aows,
+    aowByCode: new Map(aows.map(entry => [entry.code, entry])),
+    intermediate: {
+      indicators: dedupeById(intermediate?.indicators ?? []),
+      loading: intermediate?.loading === true
+    },
+    outcomes2030: {
+      indicators: dedupeById(outcomes2030?.indicators ?? []),
+      loading: outcomes2030?.loading === true
+    }
+  };
+}
+
+/**
+ * Program-wide totals over the partition (KCR-R-2, R-8, R-9): `planned` = every KPI counted once;
+ * `zeroTarget` = how many the MRF-R-7 rule excludes; `counted` = the only denominator the shell may
+ * show; `reported` = counted KPIs with `achieved > 0` — `achieved > 0` ONLY, never
+ * `progress_percentage` (KCR-R-9: that clause read a `'1500%'` string and was dead).
+ *
+ * @akili-spec bugfix/kpi-count-reconciliation
+ */
+export function summarisePartition<T extends PartitionIndicator>(
+  partition: ProgramKpiPartition<T>
+): { planned: number; zeroTarget: number; counted: number; reported: number } {
+  const all: T[] = [
+    ...partition.aows.flatMap(entry => entry.own),
+    ...partition.intermediate.indicators,
+    ...partition.outcomes2030.indicators
+  ];
+  const { counted, zeroTarget } = applyZeroTargetRule(all);
+  return {
+    planned: all.length,
+    zeroTarget,
+    counted: counted.length,
+    reported: counted.filter(ind => achievedOf(ind) > 0).length
+  };
+}
