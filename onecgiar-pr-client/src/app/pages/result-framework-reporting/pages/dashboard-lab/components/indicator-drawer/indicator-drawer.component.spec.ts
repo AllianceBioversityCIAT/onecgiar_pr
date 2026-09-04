@@ -387,7 +387,10 @@ describe('IndicatorDrawerComponent — Reported results tab DOM (IRR-R-1, IRR-R-
 
   it('removes the Reported results card list from the Info tab, keeping Target and the split (IRR-R-9, IRR-AC-8)', async () => {
     const fixture = await mount('info');
-    const text: string = fixture.nativeElement.textContent;
+    // The report pane stays mounted (hidden) so the form survives tab switches — measure only what
+    // the Info tab shows.
+    const pane: HTMLElement | null = fixture.nativeElement.querySelector('[data-testid="irr-report-pane"]');
+    const text: string = fixture.nativeElement.textContent.replace(pane?.textContent ?? '', '');
 
     expect(text).not.toContain('Reported results');
     expect(text).not.toContain('QA one');
@@ -404,19 +407,100 @@ describe('IndicatorDrawerComponent — Reported results tab DOM (IRR-R-1, IRR-R-
     expect(text.indexOf('9006')).toBeLessThan(text.indexOf('8871'));
   });
 
-  it('sends "See them in detail" on the Report tab to the results tab, not to info (IRR-R-9)', async () => {
+  it('sends "See all N in detail" on the Report tab to the results tab, not to info (IRR-R-9)', async () => {
     const fixture = await mount('report');
-    const link: HTMLButtonElement = Array.from(fixture.nativeElement.querySelectorAll('button')).find(
-      (b: any) => b.textContent?.trim() === 'See them in detail'
-    ) as HTMLButtonElement;
+    const link = seeAllLink(fixture);
 
     expect(link).toBeTruthy();
+    expect(link.textContent?.replace(/\s+/g, ' ').trim()).toBe(`See all ${CONTRIBUTORS.length} in detail`);
     link.click();
     fixture.detectChanges();
 
     expect(fixture.componentInstance.tab()).toBe('results');
     expect(headerText(fixture)).toBe('Reported results');
   });
+
+  // Follow-up 2026-09-04 (quick/indicator-reported-results-followups) — three field findings on the
+  // shipped tab: the preview grew without bound, "See them in detail" was a one-way trip that also
+  // unmounted the form being filled, and the table added a second scroller (scss, not testable here).
+  describe('follow-ups: capped preview, back link, form survives the round trip', () => {
+    const NINE = Array.from({ length: 9 }, (_, i) => ({
+      result_id: 100 + i,
+      result_code: String(9000 + i),
+      title: `Result ${i}`,
+      status_id: 1,
+      status_name: 'Editing',
+      version_id: 11,
+      contributing_indicator: 1,
+      result_type_name: 'Knowledge product'
+    }));
+
+    it('lists at most three results in the Report-tab preview and counts the rest', async () => {
+      const fixture = await mount('report', NINE);
+      const items: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('ul li'));
+      const more: HTMLElement | null = fixture.nativeElement.querySelector('[data-testid="irr-preview-more"]');
+
+      expect(items.length).toBe(4); // 3 rows + the "…and N more" line
+      expect(more?.textContent?.trim()).toBe('…and 6 more');
+      expect(fixture.nativeElement.textContent).toContain('9000');
+      expect(fixture.nativeElement.textContent).not.toContain('9003');
+      expect(seeAllLink(fixture).textContent?.replace(/\s+/g, ' ').trim()).toBe('See all 9 in detail');
+    });
+
+    it('offers "Back to Report result" only when the table was reached from the Report tab', async () => {
+      const direct = await mount('results');
+      expect(direct.nativeElement.querySelector('[data-testid="irr-back"]')).toBeNull();
+      TestBed.resetTestingModule();
+
+      const viaReport = await mount('report');
+      seeAllLink(viaReport).click();
+      viaReport.detectChanges();
+      const back: HTMLButtonElement | null = viaReport.nativeElement.querySelector('[data-testid="irr-back"]');
+      expect(back?.textContent?.replace(/\s+/g, ' ').trim()).toBe('arrow_back Back to Report result');
+
+      back!.click();
+      viaReport.detectChanges();
+      expect(viaReport.componentInstance.tab()).toBe('report');
+      expect(headerText(viaReport)).toBe('Report result');
+      expect(viaReport.componentInstance.returnTab()).toBeNull();
+    });
+
+    it('keeps the report form mounted (and its unsaved state) while the table is shown', async () => {
+      const fixture = await mount('report');
+      const component = fixture.componentInstance;
+      const formBefore = fixture.nativeElement.querySelector('app-lab-report-form');
+      component.onDirtyChange(true);
+
+      seeAllLink(fixture).click();
+      fixture.detectChanges();
+      const pane: HTMLElement = fixture.nativeElement.querySelector('[data-testid="irr-report-pane"]');
+      expect(pane.style.display).toBe('none');
+      expect(fixture.nativeElement.querySelector('app-lab-report-form')).toBe(formBefore);
+      expect(component.formDirty()).toBe(true);
+
+      fixture.nativeElement.querySelector('[data-testid="irr-back"]').click();
+      fixture.detectChanges();
+      expect(pane.style.display).toBe('');
+      expect(component.formDirty()).toBe(true);
+    });
+
+    it('forgets the return tab when another indicator is shown', async () => {
+      const fixture = await mount('report');
+      seeAllLink(fixture).click();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.returnTab()).toBe('report');
+
+      fixture.componentRef.setInput('indicator', { toc_result_id: 'toc-2', related_node_id: 'IND-99', indicator_description: 'HL05', target_value_sum: 3 });
+      fixture.detectChanges();
+      expect(fixture.componentInstance.returnTab()).toBeNull();
+    });
+  });
+
+  function seeAllLink(fixture: any): HTMLButtonElement {
+    return Array.from(fixture.nativeElement.querySelectorAll('button')).find((b: any) =>
+      b.textContent?.replace(/\s+/g, ' ').trim().startsWith('See all ')
+    ) as HTMLButtonElement;
+  }
 });
 
 // @akili-spec changes/indicator-reported-results
