@@ -61,7 +61,7 @@
   - *Input that fails:* the same fixture with the two zero-target KPIs given `target = 1` (planned stays 11, zero-target 0) → band `title` must be exactly `11 planned` with no `excludes` fragment; and with exactly one zero-target KPI → `… excludes 1 zero-target KPI` (singular).
 - **Done:** three titles render with exact text; the reconciliation spec is fully green; existing `ratioTitle` counts only own zero-targets.
 
-### `KCR-T-4` — Move the pinned fixtures to the new basis (no assertion deleted)
+### `KCR-T-4` — Move the pinned fixtures to the new basis (no assertion deleted) `[x]`
 - **Type:** `tests`
 - **Description:** Update expected numbers in `dashboard-lab.hub.spec.ts`, `dashboard-lab.oah-rows.spec.ts`, `dashboard-lab.scope.spec.ts`, `dashboard-lab.toc-map.spec.ts`, `program-overview.oah-hero.spec.ts`, `reporting-aow-table.component.spec.ts`, `reporting-program-band.component.spec.ts` where they encode the superseded basis (outputs-only, unfiltered chips, cross-cut-inclusive ratios, card 4 unfiltered aggregate). Each changed literal gets a one-line comment `// KCR: <old> → <new>, <rule design §6.2 row>`. The **only** sanctioned assertion *change* (not just a literal) is the TCM-DD-5 Program-level-branch expectation when the fixture also carries IO-endpoint data (KCR-DD-7) — comment it `// KCR-DD-7`.
 - **Implements:** regression safety for `KCR-R-5`, `KCR-R-6`, `KCR-R-10` against MRF / OSF / REH / TCM behaviour; supports `KCR-AC-4`.

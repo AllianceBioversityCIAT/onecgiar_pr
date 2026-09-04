@@ -82,3 +82,29 @@
 
 **Gate:** auto-approved (pre-approved mode) → continue to KCR-T-4.
 
+### `KCR-T-4` — Move the pinned fixtures to the new basis (no assertion deleted) — **PASS** (2026-09-03, 1 attempt)
+
+| Field | Value |
+|---|---|
+| Implementer | `akili-implementer` wrapper, model override `opus`, effort high, skill `tdd` |
+| Reviewer | `akili-reviewer` wrapper (`opus`), lens checklist mode — every literal re-derived by hand |
+| Files (6 of 7, +242/−38) | `dashboard-lab.toc-map.spec.ts` · `dashboard-lab.oah-rows.spec.ts` · `dashboard-lab.hub.spec.ts` · `dashboard-lab.scope.spec.ts` · `program-overview.oah-hero.spec.ts` · `reporting-aow-table.component.spec.ts`. `reporting-program-band.component.spec.ts` untouched — presentational component fed `ReportingSummaryStats` inputs, cannot encode a basis; T-3 already pins its `title` copy (Reviewer agreed) |
+| Verification | `npx jest src/app/pages/result-framework-reporting/pages/dashboard-lab --silent` → **24 suites / 848 tests passed** (was 2 failed suites / 5 failed tests). `npx ng lint --quiet` clean |
+| Integrity | per-file `expect(`/`it(` counts HEAD → tree never fell (hub 120→121/49→50; oah-rows 10/4; scope 50→53/23; toc-map 42→47/12; oah-hero 71→73/20; aow-table 347/125; band 158/66). The two `-expect` lines are the one-line literal moves `aow01.total 6→7`, `aow02.total 7→8`. No `xit`/`.skip`/`.only`; no `it` title edited; no production file in the diff |
+
+**Literals old → new (with derivation, all Reviewer-confirmed):**
+- *toc-map:* `aow01.total` 6 → **7** (outputs counted 6 + owned `IO-A1` planned 2 − 1 zero-target; fixture extended with the zero-target indicator so 6/7/8 bases diverge — KCR-DD-2/DD-5); `aow02.total` 7 → **8** (7 + owned `IO-B1` 0/1; `IO-B1` added so AOW01's new 7 ≠ AOW02, keeping the pre-existing `not.toBe` distinctness meaningful); branch-order array drops `'program:PROGRAM'` (`// KCR-DD-7`, the one sanctioned assertion change). Dedupe + tier-scoping tests read `programBranch` from the fallback model (`intermediateOutcomes: null`) with their original `expect` lines byte-identical, plus a new `some(kind === 'program') === false` on the IO-populated fixture. `aowCardRow()` independent re-derivation moved to AoW-own + zero-target. New DD-5 pin: owned leaf `indicators` 2 / `total` 1 / `done` 0.
+- *oah-rows:* AOW01 gains cross-cut `#901 (5,5)` beside owned `#99`; `complete` 1 → **2**, `reported` 3 → **4**, `total` 4 → **5** (old 1/3/4, cross-cut-inclusive 3/5/6).
+- *hub:* new test seeding the ToC payload (only fixture in the suite that can see the basis): `{ done: 1, total: 3, zeroTarget: 1 }`.
+- *scope:* OSF-R-11 AOW01 extended; new pins `total 2`, `zeroTarget 1`, `reported 1` (old 1, cross-cut-inclusive 3).
+- *oah-hero:* thin rows gain `zeroTarget`; card 4 pinned Counted 10 / 30 % via `not.toBe(13)` / `not.toBe(23)` (Planned basis) — supersedes OAH DD-4 "numbers do not move".
+- *aow-table:* `__allIndicators` side-channel fixture gains cross-cut `#901`; unchanged `1 of 2 · 50%` now discriminates (unfiltered side channel would read `2 of 3 · 67%`).
+
+**Reviewer PASS summary:** every changed and newly pinned literal re-derives by hand from fixture + working-tree rules; nothing deleted or weakened; the single sanctioned assertion change is commented `// KCR-DD-7` as design §12 prescribes.
+
+**ADVISORY (4R — recorded, no rework):** *Readability:* the new hub test sits inside `describe('By-AoW section collapse/expand')` though its subject is the row basis. *Reliability:* oah-hero pins are negative and component-scoped; the positive card-4 identity (`rail = Σ rows = card 4`, KCR-R-3) is asserted only in the KCR regression spec.
+
+**Environment note:** the other session's spec (`changes/reporting-by-aow-tabular-consistency`) began editing `dashboard-lab.component.{html,scss,spec.ts}` in this folder mid-task; excluded from the T-4 diff and commit by explicit paths.
+
+**Gate:** auto-approved (pre-approved mode) → continue to KCR-T-5.
+
