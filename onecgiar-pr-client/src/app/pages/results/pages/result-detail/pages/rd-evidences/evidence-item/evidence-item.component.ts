@@ -42,9 +42,14 @@ export class EvidenceItemComponent {
     this._incorrectFile.set(value);
   }
 
+  // `id` MUST match `evidence.is_sharepoint`'s own type (boolean) — the radio's `[(ngModel)]`
+  // binds straight to `is_sharepoint`, and `pr-radio-button` checks an option via strict equality
+  // (`value === option[optionValue]`). Numeric ids (0/1) never match a boolean default/value, so
+  // neither option ever showed as selected, even with `draftEvidence = { is_sharepoint: false }`
+  // (bugfix/evidence-modal-sticky-actions follow-up, 2026-09-03).
   evidencesType = [
-    { id: 0, name: 'Link' },
-    { id: 1, name: 'Upload file' }
+    { id: false, name: 'Link' },
+    { id: true, name: 'Upload file' }
   ];
 
   isPubilcFileOptions = [

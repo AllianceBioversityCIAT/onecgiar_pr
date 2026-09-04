@@ -2,6 +2,9 @@ import { Component, ViewChild, inject, signal, computed, Input, Output, EventEmi
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs/operators';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideX, lucideCirclePlus } from '@ng-icons/lucide';
+import { HlmTabsImports } from '@spartan/tabs';
 import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
@@ -39,11 +42,14 @@ type AssignmentTab = 'science-program' | 'center';
   imports: [
     CommonModule,
     FormsModule,
+    NgIcon,
+    HlmTabsImports,
     PrDialogComponent,
     CustomFieldsModule,
     SearchUserSelectComponent,
     UserRolesInfoModalComponent
   ],
+  providers: [provideIcons({ lucideX, lucideCirclePlus })],
   templateUrl: './manage-user-modal.component.html',
   styleUrl: './manage-user-modal.component.scss'
 })
@@ -75,6 +81,11 @@ export class ManageUserModalComponent {
   });
   activeAssignmentTab = signal<AssignmentTab>('science-program');
   isLoading = signal<boolean>(false);
+
+  readonly cgiarOptions: { label: string; value: boolean }[] = [
+    { label: 'Yes', value: true },
+    { label: 'No', value: false }
+  ];
 
   entities = computed(() => this.initiativesService.allInitiatives());
   loadingRoleAssignment = signal<boolean>(true);

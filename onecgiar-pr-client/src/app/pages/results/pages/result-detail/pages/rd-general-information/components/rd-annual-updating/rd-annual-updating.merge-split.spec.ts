@@ -208,4 +208,71 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
       expect(component.mergeSplitCatalogueLoading).toBe(false);
     });
   });
+
+  /**
+   * 🛑 EL CANDADO DEL NG0103, y el único de este archivo que habría cazado el defecto.
+   *
+   * Los demás tests de este archivo llaman a los métodos directamente y **pasaron igual antes y
+   * después del arreglo** — no cubren nada de esto. El defecto vivía en la interacción entre el
+   * binding y la detección de cambios de Angular: `selectedTargets()` devolvía un array NUEVO en
+   * cada llamada, el multi-select veía otra referencia en cada ciclo, hacía `writeValue`, marcaba
+   * la vista sucia, y volvía a empezar. En prtest el control se pintaba con los datos correctos y
+   * al hacer clic **no seleccionaba nada**, con `NG0103` en consola.
+   *
+   * `build:dev`, `ng lint` y 8451 tests estaban en verde. Lo encontró abrir la pantalla.
+   *
+   * Lo que se afirma aquí es la **estabilidad de la referencia**, que es exactamente lo que la
+   * detección de cambios necesita: mismo contenido ⇒ mismo array.
+   */
+  describe('la referencia debe ser estable (candado NG0103)', () => {
+    it('devuelve LA MISMA instancia mientras el contenido no cambia', () => {
+      const component = build([ticked(MERGE_REASON)]);
+      component.onTargetsChange('merge', [900, 901]);
+
+      const first = component.selectedTargets('merge');
+      const second = component.selectedTargets('merge');
+      const third = component.selectedTargets('merge');
+
+      // toBe, no toEqual: toEqual pasa con arrays distintos de igual contenido, que es
+      // precisamente el bug.
+      expect(second).toBe(first);
+      expect(third).toBe(first);
+    });
+
+    it('devuelve una instancia NUEVA cuando el contenido sí cambió', () => {
+      const component = build([ticked(MERGE_REASON)]);
+      component.onTargetsChange('merge', [900]);
+      const before = component.selectedTargets('merge');
+
+      component.onTargetsChange('merge', [900, 901]);
+      const after = component.selectedTargets('merge');
+
+      expect(after).not.toBe(before);
+      expect(after).toEqual([900, 901]);
+    });
+
+    it('mantiene estable la referencia de cada tipo por separado', () => {
+      const component = build([ticked(MERGE_REASON), ticked(SPLIT_REASON)]);
+      component.onTargetsChange('merge', [900]);
+      component.onTargetsChange('split', [701]);
+
+      const mergeRef = component.selectedTargets('merge');
+      const splitRef = component.selectedTargets('split');
+
+      // Cambiar un tipo no debe invalidar la referencia del otro: si lo hiciera, el dropdown
+      // intacto entraría en el mismo bucle.
+      component.onTargetsChange('merge', [900, 902]);
+
+      expect(component.selectedTargets('split')).toBe(splitRef);
+      expect(component.selectedTargets('merge')).not.toBe(mergeRef);
+    });
+
+    it('es estable también con la selección vacía', () => {
+      const component = build([ticked(MERGE_REASON)]);
+
+      const first = component.selectedTargets('merge');
+      expect(component.selectedTargets('merge')).toBe(first);
+      expect(first).toEqual([]);
+    });
+  });
 });

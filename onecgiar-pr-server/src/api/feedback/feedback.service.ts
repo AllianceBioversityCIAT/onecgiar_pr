@@ -41,7 +41,20 @@ export class FeedbackService {
   private readonly jiraEmail = process.env.JIRA_EMAIL_JC;
   private readonly jiraToken = process.env.JIRA_TOKEN_JC;
   private readonly projectKey = process.env.JIRA_FEEDBACK_PROJECT_KEY || 'P2';
-  private readonly epicKey = process.env.JIRA_FEEDBACK_EPIC_KEY || 'P2-3472';
+  /**
+   * Where the reports the button files land. `P2-3584` on purpose (Yeck,
+   * 4-sep-2026): `P2-3472` is the feedback FEATURE's own backlog — 17 curated
+   * requirements — and raw user submissions dropping in beside them mixed
+   * triaged work with untriaged reports. A `TeST` submission landed among the
+   * real requirements that morning and had to be deleted by hand.
+   *
+   * 🛑 This key is also the `parent =` of the three JQLs below (`my-reports`,
+   * `similar`, `me-too`), so it moves all four at once: anything still parked
+   * under the old epic stops showing in the reporter's own list. Safe here —
+   * the 18 children of `P2-3472` were checked and the 17 that remain are the
+   * hand-written list, not submissions.
+   */
+  private readonly epicKey = process.env.JIRA_FEEDBACK_EPIC_KEY || 'P2-3584';
   private readonly reporterId =
     process.env.JIRA_FEEDBACK_REPORTER_ID ||
     '712020:ed59efaa-46e7-439b-9dd1-702edad6bc10';
