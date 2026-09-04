@@ -4,7 +4,7 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { LabReportFormComponent } from '../lab-report-form/lab-report-form.component';
-import { IndicatorDrawerComponent, initialDrawerWidth, toReportedResultRow } from './indicator-drawer.component';
+import { DrawerTab, IndicatorDrawerComponent, initialDrawerWidth, toReportedResultRow } from './indicator-drawer.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { PrToastService } from '../../../../../../shared/components/pr-toast';
@@ -782,5 +782,206 @@ describe('IndicatorDrawerComponent — Reported results table (IRR-T-3)', () => 
     expect(headers.every(th => th.getAttribute('scope') === 'col')).toBe(true);
     const rows: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('tr.irr-data-row'));
     expect(rows.every(tr => tr.getAttribute('tabindex') === '0')).toBe(true);
+  });
+});
+
+
+// @akili-spec changes/indicator-reported-results
+// ─────────────────────────────────────────────────────────────────────────────
+// IRR-T-4 — the width floor, its restore, and the card fallback (IRR-R-8, IRR-R-8.1, IRR-DD-5).
+//
+// These tests prove the SIGNAL: what `width()` holds, what `widthChange` emits, which branch of the
+// template renders. They do NOT prove the layout — jsdom lays nothing out, so an assertion here
+// that "760 px is enough room for the table" would be worthless. The real-layout gate for
+// `IRR-AC-7` is `indicator-drawer.reported-results.cy.ts`, in Chromium.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('IndicatorDrawerComponent — width floor, restore and card fallback (IRR-R-8, IRR-R-8.1)', () => {
+  const CONTRIBUTORS = [
+    { result_id: 9006, result_code: '9006', title: 'QA one', status_name: 'Quality assessed', status_id: 2, contributing_indicator: 3, version_id: 11 },
+    { result_id: 8871, result_code: '8871', title: 'Submitted one', status_name: 'Submitted', status_id: 3, contributing_indicator: 1, version_id: 11 }
+  ];
+
+  const INDICATOR = { toc_result_id: 'toc-1', related_node_id: 'IND-55', target_value_sum: 8, actual_achieved_value_sum: 3 };
+
+  const setViewport = (w: number) => Object.defineProperty(window, 'innerWidth', { configurable: true, value: w });
+  const originalWidth = window.innerWidth;
+  afterEach(() => setViewport(originalWidth));
+
+  /**
+   * Mounts with the REAL template (the create form stubbed): the card-vs-table assertion is a
+   * template-branch assertion and a `template: ''` mount cannot see either branch.
+   *
+   * `widthChange` is subscribed BEFORE the first `detectChanges()` so a mount-time emission — the
+   * floor firing because `initialTab` is already `results` — is captured rather than missed.
+   */
+  async function mount(initialTab: DrawerTab = 'report', indicator: Record<string, any> = INDICATOR) {
+    const getExisting = jest.fn().mockReturnValue(of({ response: { contributors: CONTRIBUTORS } }));
+
+    await TestBed.configureTestingModule({
+      imports: [IndicatorDrawerComponent],
+      providers: [
+        { provide: ApiService, useValue: { resultsSE: { GET_ExistingResultsContributors: getExisting } } },
+        { provide: PhasesService, useValue: { phases: { reporting: [{ id: 11, phase_name: 'Reporting 2026' }] } } },
+        { provide: Router, useValue: { navigate: jest.fn(), createUrlTree: jest.fn(), serializeUrl: jest.fn(() => '') } }
+      ]
+    })
+      .overrideComponent(IndicatorDrawerComponent, { remove: { imports: [LabReportFormComponent] }, add: { imports: [LabReportFormStub] } })
+      .compileComponents();
+
+    const fixture = TestBed.createComponent(IndicatorDrawerComponent);
+    const emitted: number[] = [];
+    fixture.componentInstance.widthChange.subscribe(w => emitted.push(w));
+    fixture.componentRef.setInput('indicator', indicator);
+    fixture.componentRef.setInput('initialTab', initialTab);
+    fixture.detectChanges();
+    return { fixture, component: fixture.componentInstance, emitted };
+  }
+
+  /** A real drag: mousedown on the handle, one move, mouseup — the listeners live on `window`. */
+  function dragTo(component: IndicatorDrawerComponent, targetWidth: number, viewport: number): void {
+    component.startResize(new MouseEvent('mousedown'));
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: viewport - targetWidth }));
+    window.dispatchEvent(new MouseEvent('mouseup'));
+  }
+
+  it('raises a 520 px drawer to the 760 px floor on entering the tab and emits widthChange once (IRR-R-8)', async () => {
+    setViewport(1440);
+    const { fixture, component, emitted } = await mount('report');
+    component.width.set(520);
+    fixture.detectChanges();
+    emitted.length = 0;
+
+    component.setTab('results');
+    fixture.detectChanges();
+
+    expect(component.width()).toBe(760);
+    expect(emitted).toEqual([760]);
+  });
+
+  it('restores the width the user had when the tab is left (IRR-R-8)', async () => {
+    setViewport(1440);
+    const { fixture, component, emitted } = await mount('report');
+    component.width.set(520);
+    fixture.detectChanges();
+    emitted.length = 0;
+
+    component.setTab('results');
+    fixture.detectChanges();
+    component.setTab('info');
+    fixture.detectChanges();
+
+    expect(component.width()).toBe(520);
+    expect(emitted).toEqual([760, 520]);
+  });
+
+  it('leaves a drawer that is ALREADY wide enough exactly where it is, and emits nothing (IRR-R-8)', async () => {
+    setViewport(1440);
+    const { fixture, component, emitted } = await mount('report');
+    component.width.set(900);
+    fixture.detectChanges();
+    emitted.length = 0;
+
+    component.setTab('results');
+    fixture.detectChanges();
+
+    // A FLOOR, not a set: 900 must not shrink to 760, and an unchanged width must not emit.
+    expect(component.width()).toBe(900);
+    expect(emitted).toEqual([]);
+
+    component.setTab('info');
+    fixture.detectChanges();
+    expect(component.width()).toBe(900);
+    expect(emitted).toEqual([]);
+  });
+
+  it('a drag ON the tab outranks the remembered width — leaving does not undo it (IRR-R-8)', async () => {
+    setViewport(1440);
+    const { fixture, component } = await mount('report');
+    component.width.set(520);
+    fixture.detectChanges();
+
+    component.setTab('results');
+    fixture.detectChanges();
+    expect(component.width()).toBe(760);
+
+    dragTo(component, 900, 1440);
+    fixture.detectChanges();
+    expect(component.width()).toBe(900);
+
+    component.setTab('info');
+    fixture.detectChanges();
+
+    expect(component.width()).toBe(900);
+  });
+
+  it('never exceeds the viewport clamp: on a 1000 px window the floor is 680, not 760 (IRR-R-8)', async () => {
+    setViewport(1000);
+    const { fixture, component, emitted } = await mount('report');
+    component.width.set(520);
+    fixture.detectChanges();
+    emitted.length = 0;
+
+    component.setTab('results');
+    fixture.detectChanges();
+
+    // min(1100, 1000 - 320, 1000) = 680 — the same clamp the drag obeys.
+    expect(component.width()).toBe(680);
+    expect(emitted).toEqual([680]);
+  });
+
+  it('forgets the remembered width when the drawer is re-armed for another indicator (reset-effect trap)', async () => {
+    setViewport(1440);
+    const { fixture, component } = await mount('report');
+    component.width.set(520);
+    fixture.detectChanges();
+    component.setTab('results');
+    fixture.detectChanges();
+    expect(component.width()).toBe(760);
+
+    fixture.componentRef.setInput('indicator', { toc_result_id: 'toc-2', related_node_id: 'IND-56' });
+    fixture.detectChanges();
+    component.setTab('info');
+    fixture.detectChanges();
+
+    // The 520 belonged to the previous indicator; nothing is owed, so nothing is restored.
+    expect(component.width()).toBe(760);
+  });
+
+  it('switches the template from the table to the card stack under 640 px (IRR-R-8.1)', async () => {
+    setViewport(1440);
+    const { fixture, component } = await mount('results');
+
+    component.width.set(760);
+    fixture.detectChanges();
+    expect(component.tableLayout()).toBe(true);
+    expect(fixture.nativeElement.querySelector('table')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.irr-card').length).toBe(0);
+
+    // 640 is the boundary and belongs to the TABLE side of it.
+    component.width.set(640);
+    fixture.detectChanges();
+    expect(component.tableLayout()).toBe(true);
+    expect(fixture.nativeElement.querySelector('table')).not.toBeNull();
+
+    component.width.set(600);
+    fixture.detectChanges();
+    expect(component.tableLayout()).toBe(false);
+    expect(fixture.nativeElement.querySelector('table')).toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.irr-card').length).toBe(CONTRIBUTORS.length);
+  });
+
+  it('keeps the strip and the row actions in the card layout — only the ROWS change shape (IRR-R-8.1)', async () => {
+    setViewport(1440);
+    const { fixture, component } = await mount('results');
+    component.width.set(600);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="irr-strip"]')).not.toBeNull();
+    const kebabs: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.irr-card button[aria-label="Open row actions"]'));
+    expect(kebabs.length).toBe(CONTRIBUTORS.length);
+
+    kebabs[0].click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.irr-card .pr-row-menu[role="menu"]').length).toBe(1);
   });
 });

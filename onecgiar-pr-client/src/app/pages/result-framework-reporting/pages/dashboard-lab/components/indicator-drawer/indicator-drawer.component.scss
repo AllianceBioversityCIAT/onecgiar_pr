@@ -236,3 +236,32 @@
     animation: none;
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// @akili-spec changes/indicator-reported-results — narrow fallback (IRR-R-8.1, IRR-T-4)
+//
+// Under 640 px the row IS the card, so it has to carry the row's affordances: the same pointer,
+// the same hover wash and — the part that is not decoration — the same visible focus ring, or the
+// keyboard path the table rows have (`tabindex="0"` + Enter/Space) becomes invisible below the
+// breakpoint. No `::ng-deep` here: unlike the table's templates, this markup is instantiated in
+// the drawer's OWN view, so the emulated-encapsulation attribute already matches.
+// ─────────────────────────────────────────────────────────────────────────────
+:host .irr-card {
+  cursor: pointer;
+  transition: background 0.2s ease-out;
+}
+
+:host .irr-card:hover {
+  background: var(--pr-surface-subtle);
+}
+
+:host .irr-card:focus-visible {
+  outline: 2px solid var(--pr-color-primary-300);
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host .irr-card {
+    transition: none;
+  }
+}

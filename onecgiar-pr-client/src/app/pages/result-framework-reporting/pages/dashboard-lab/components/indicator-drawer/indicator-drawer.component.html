@@ -218,116 +218,184 @@
             </div>
           }
 
-          <app-pr-table #tbl styleClass="irr-table" [value]="visibleRows()">
-            <!-- HEADER — Code · Result · Category · Status · Contribution · Phase · actions.
-                 `aria-sort` is host-bound by prSortableColumn; never set it here too. -->
-            <ng-template prTableHeader>
-              <tr class="irr-row irr-head">
-                <th
-                  class="irr-th irr-th--sortable"
-                  scope="col"
-                  tabindex="0"
-                  prSortableColumn="code"
-                  [style.color]="sortColor(tbl, 'code')"
-                  (keydown.enter)="tbl.sort('code')">
-                  Code {{ sortArrow(tbl, 'code') }}
-                </th>
-                <th class="irr-th" scope="col">Result</th>
-                <th class="irr-th" scope="col">Category</th>
-                <th
-                  class="irr-th irr-th--sortable"
-                  scope="col"
-                  tabindex="0"
-                  prSortableColumn="statusName"
-                  [style.color]="sortColor(tbl, 'statusName')"
-                  (keydown.enter)="tbl.sort('statusName')">
-                  Status {{ sortArrow(tbl, 'statusName') }}
-                </th>
-                <th
-                  class="irr-th irr-th--sortable irr-th--num"
-                  scope="col"
-                  tabindex="0"
-                  prSortableColumn="contribution"
-                  [style.color]="sortColor(tbl, 'contribution')"
-                  (keydown.enter)="tbl.sort('contribution')">
-                  Contribution {{ sortArrow(tbl, 'contribution') }}
-                </th>
-                <th
-                  class="irr-th irr-th--sortable"
-                  scope="col"
-                  tabindex="0"
-                  prSortableColumn="phaseName"
-                  [style.color]="sortColor(tbl, 'phaseName')"
-                  (keydown.enter)="tbl.sort('phaseName')">
-                  Phase {{ sortArrow(tbl, 'phaseName') }}
-                </th>
-                <th class="irr-th irr-th--actions" scope="col"><span class="sr-only">Row actions</span></th>
-              </tr>
-            </ng-template>
+          <!-- @akili-spec changes/indicator-reported-results
+               IRR-R-8.1 — the SAME rows, two layouts. Above 640 px the seven-track grid is a real
+               table; below it the Code track alone is 84 px of a panel that no longer has them to
+               spend, so the rows fall back to the card stack that used to live on *Info* — now
+               carrying the status pill and the row menu the table gave them. The strip, the split
+               and the search box sit above this switch and are unaffected (IRR-R-8.1). -->
+          @if (tableLayout()) {
+            <app-pr-table #tbl styleClass="irr-table" [value]="visibleRows()">
+              <!-- HEADER — Code · Result · Category · Status · Contribution · Phase · actions.
+                   `aria-sort` is host-bound by prSortableColumn; never set it here too. -->
+              <ng-template prTableHeader>
+                <tr class="irr-row irr-head">
+                  <th
+                    class="irr-th irr-th--sortable"
+                    scope="col"
+                    tabindex="0"
+                    prSortableColumn="code"
+                    [style.color]="sortColor(tbl, 'code')"
+                    (keydown.enter)="tbl.sort('code')">
+                    Code {{ sortArrow(tbl, 'code') }}
+                  </th>
+                  <th class="irr-th" scope="col">Result</th>
+                  <th class="irr-th" scope="col">Category</th>
+                  <th
+                    class="irr-th irr-th--sortable"
+                    scope="col"
+                    tabindex="0"
+                    prSortableColumn="statusName"
+                    [style.color]="sortColor(tbl, 'statusName')"
+                    (keydown.enter)="tbl.sort('statusName')">
+                    Status {{ sortArrow(tbl, 'statusName') }}
+                  </th>
+                  <th
+                    class="irr-th irr-th--sortable irr-th--num"
+                    scope="col"
+                    tabindex="0"
+                    prSortableColumn="contribution"
+                    [style.color]="sortColor(tbl, 'contribution')"
+                    (keydown.enter)="tbl.sort('contribution')">
+                    Contribution {{ sortArrow(tbl, 'contribution') }}
+                  </th>
+                  <th
+                    class="irr-th irr-th--sortable"
+                    scope="col"
+                    tabindex="0"
+                    prSortableColumn="phaseName"
+                    [style.color]="sortColor(tbl, 'phaseName')"
+                    (keydown.enter)="tbl.sort('phaseName')">
+                    Phase {{ sortArrow(tbl, 'phaseName') }}
+                  </th>
+                  <th class="irr-th irr-th--actions" scope="col"><span class="sr-only">Row actions</span></th>
+                </tr>
+              </ng-template>
 
-            <!-- ROWS — `track row.id ?? row.code`: a contributor with no code would collide with
-                 every other codeless one and Angular would recycle the wrong DOM. -->
-            <ng-template prTableBody let-row>
-              <tr
-                class="irr-row irr-data-row"
-                tabindex="0"
-                role="button"
-                [attr.aria-label]="'Open result ' + row.code"
-                (click)="onRowClick($event, row)"
-                (auxclick)="onRowAuxClick($event, row)"
-                (keydown.enter)="onRowKeydown($event, row)"
-                (keydown.space)="onRowKeydown($event, row)">
-                <td class="irr-td font-mono text-[12px] font-semibold tabular-nums text-[var(--pr-color-primary-300)]">#{{ row.code }}</td>
-                <!-- IRR-R-2.5 — two lines, then the full title in `title`. -->
-                <td class="irr-td">
-                  <span class="irr-clamp text-[13px] font-medium text-[var(--pr-color-secondary-400)]" [attr.title]="row.title">{{ row.title }}</span>
-                </td>
-                <td class="irr-td truncate text-[12px] text-[var(--pr-color-accents-5)]" [attr.title]="row.category">{{ row.category }}</td>
-                <!-- IRR-R-2.1 — pill from the fixed --pr-status-* fg/bg PAIR; never recombined. -->
-                <td class="irr-td">
-                  <span
-                    class="inline-block whitespace-nowrap rounded-full px-[8px] py-[2px] text-[11.5px] font-semibold"
-                    [style.color]="statusFg(row.statusId)"
-                    [style.background]="statusBg(row.statusId)">
-                    {{ row.statusName }}
-                  </span>
-                </td>
-                <!-- IRR-R-2.4 — right, tabular, em dash for null (a missing figure is not a zero). -->
-                <td class="irr-td irr-td--num text-[13px] font-semibold tabular-nums text-[var(--pr-color-secondary-400)]">
-                  {{ row.contribution ?? '\u2014' }}
-                </td>
-                <td class="irr-td truncate text-[12px] text-[var(--pr-color-accents-5)]" [attr.title]="row.phaseName">{{ row.phaseName }}</td>
-                <!-- The open row's CELL is elevated, not the popup: every actions cell shares a
-                     stacking context, so the rows below would paint over an open menu. -->
-                <td class="irr-td irr-actions" [class.irr-actions--open]="isMenuOpen(row)">
-                  <button
-                    type="button"
-                    class="flex size-[26px] items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-color-accents-5)] transition-colors hover:bg-[var(--pr-color-accents-1)]"
-                    aria-label="Open row actions"
-                    aria-haspopup="menu"
-                    [attr.aria-expanded]="isMenuOpen(row)"
-                    (click)="toggleRowMenu(row, $event)">
-                    <span class="material-icons-round text-[18px]">more_horiz</span>
-                  </button>
+              <!-- ROWS — the @for that instantiates this template lives inside `app-pr-table` and
+                   tracks by `$index` (`pr-table.component.html:21`); this template has no say in it.
+                   `rowKey()` is NOT the track key — it keys the open ROW MENU, where `id ?? code`
+                   matters because a contributor with no `result_code` would otherwise share a key
+                   with every other codeless one and open their menus together. -->
+              <ng-template prTableBody let-row>
+                <tr
+                  class="irr-row irr-data-row"
+                  tabindex="0"
+                  role="button"
+                  [attr.aria-label]="'Open result ' + row.code"
+                  (click)="onRowClick($event, row)"
+                  (auxclick)="onRowAuxClick($event, row)"
+                  (keydown.enter)="onRowKeydown($event, row)"
+                  (keydown.space)="onRowKeydown($event, row)">
+                  <td class="irr-td font-mono text-[12px] font-semibold tabular-nums text-[var(--pr-color-primary-300)]">#{{ row.code }}</td>
+                  <!-- IRR-R-2.5 — two lines, then the full title in `title`. -->
+                  <td class="irr-td">
+                    <span class="irr-clamp text-[13px] font-medium text-[var(--pr-color-secondary-400)]" [attr.title]="row.title">{{ row.title }}</span>
+                  </td>
+                  <td class="irr-td truncate text-[12px] text-[var(--pr-color-accents-5)]" [attr.title]="row.category">{{ row.category }}</td>
+                  <!-- IRR-R-2.1 — pill from the fixed --pr-status-* fg/bg PAIR; never recombined. -->
+                  <td class="irr-td">
+                    <span
+                      class="inline-block whitespace-nowrap rounded-full px-[8px] py-[2px] text-[11.5px] font-semibold"
+                      [style.color]="statusFg(row.statusId)"
+                      [style.background]="statusBg(row.statusId)">
+                      {{ row.statusName }}
+                    </span>
+                  </td>
+                  <!-- IRR-R-2.4 — right, tabular, em dash for null (a missing figure is not a zero). -->
+                  <td class="irr-td irr-td--num text-[13px] font-semibold tabular-nums text-[var(--pr-color-secondary-400)]">
+                    {{ row.contribution ?? '\u2014' }}
+                  </td>
+                  <td class="irr-td truncate text-[12px] text-[var(--pr-color-accents-5)]" [attr.title]="row.phaseName">{{ row.phaseName }}</td>
+                  <!-- The open row's CELL is elevated, not the popup: every actions cell shares a
+                       stacking context, so the rows below would paint over an open menu. -->
+                  <td class="irr-td irr-actions" [class.irr-actions--open]="isMenuOpen(row)">
+                    <button
+                      type="button"
+                      class="flex size-[26px] items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-color-accents-5)] transition-colors hover:bg-[var(--pr-color-accents-1)]"
+                      aria-label="Open row actions"
+                      aria-haspopup="menu"
+                      [attr.aria-expanded]="isMenuOpen(row)"
+                      (click)="toggleRowMenu(row, $event)">
+                      <span class="material-icons-round text-[18px]">more_horiz</span>
+                    </button>
 
-                  @if (isMenuOpen(row)) {
-                    <div class="pr-row-menu" role="menu" (click)="$event.stopPropagation()">
-                      <button type="button" role="menuitem" class="pr-row-menu_item" (click)="openResult(row)">Open result</button>
-                      <button type="button" role="menuitem" class="pr-row-menu_item" (click)="copyLink(row)">Copy link</button>
-                    </div>
-                  }
-                </td>
-              </tr>
-            </ng-template>
+                    @if (isMenuOpen(row)) {
+                      <div class="pr-row-menu" role="menu" (click)="$event.stopPropagation()">
+                        <button type="button" role="menuitem" class="pr-row-menu_item" (click)="openResult(row)">Open result</button>
+                        <button type="button" role="menuitem" class="pr-row-menu_item" (click)="copyLink(row)">Copy link</button>
+                      </div>
+                    }
+                  </td>
+                </tr>
+              </ng-template>
 
-            <!-- The SEARCH empty state. Distinct from "nothing reported": the rows exist, the
-                 filter hid them, and offering "Report the first result" here would be wrong. -->
-            <ng-template prTableEmpty>
-              <tr>
-                <td colspan="7" class="px-3 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No results match your search.</td>
-              </tr>
-            </ng-template>
-          </app-pr-table>
+              <!-- The SEARCH empty state. Distinct from "nothing reported": the rows exist, the
+                   filter hid them, and offering "Report the first result" here would be wrong. -->
+              <ng-template prTableEmpty>
+                <tr>
+                  <td colspan="7" class="px-3 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No results match your search.</td>
+                </tr>
+              </ng-template>
+            </app-pr-table>
+          } @else {
+            <div class="flex flex-col gap-2" data-testid="irr-cards">
+              @for (row of visibleRows(); track $index) {
+                <div
+                  class="irr-card relative rounded-xl border border-[rgba(30,32,47,0.08)] bg-white p-3.5"
+                  tabindex="0"
+                  role="button"
+                  [attr.aria-label]="'Open result ' + row.code"
+                  (click)="onRowClick($event, row)"
+                  (auxclick)="onRowAuxClick($event, row)"
+                  (keydown.enter)="onRowKeydown($event, row)"
+                  (keydown.space)="onRowKeydown($event, row)">
+                  <div class="flex items-start gap-2">
+                    <!-- IRR-R-2.5 — the card has the room the table cell did not; the full string
+                         still rides in `title` so a long one is readable either way. -->
+                    <p class="m-0 flex-1 text-[13px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]" [attr.title]="row.title">
+                      {{ row.title }}
+                    </p>
+                    <!-- The menu is `position: absolute`, so it needs its OWN positioning context
+                         here — anchored to the card it would drift to the card's top-right. -->
+                    <span class="relative shrink-0">
+                      <button
+                        type="button"
+                        class="flex size-[26px] items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-color-accents-5)] transition-colors hover:bg-[var(--pr-color-accents-1)]"
+                        aria-label="Open row actions"
+                        aria-haspopup="menu"
+                        [attr.aria-expanded]="isMenuOpen(row)"
+                        (click)="toggleRowMenu(row, $event)">
+                        <span class="material-icons-round text-[18px]">more_horiz</span>
+                      </button>
+                      @if (isMenuOpen(row)) {
+                        <div class="pr-row-menu" role="menu" (click)="$event.stopPropagation()">
+                          <button type="button" role="menuitem" class="pr-row-menu_item" (click)="openResult(row)">Open result</button>
+                          <button type="button" role="menuitem" class="pr-row-menu_item" (click)="copyLink(row)">Copy link</button>
+                        </div>
+                      }
+                    </span>
+                  </div>
+                  <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px] text-[var(--pr-color-accents-5)]">
+                    <span class="rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 font-mono font-semibold text-[var(--pr-color-primary-300)]">#{{ row.code }}</span>
+                    <!-- IRR-R-2.1 — the same fg/bg PAIR the table cell uses; never recombined. -->
+                    <span
+                      class="inline-block whitespace-nowrap rounded-full px-[8px] py-[2px] font-semibold"
+                      [style.color]="statusFg(row.statusId)"
+                      [style.background]="statusBg(row.statusId)">
+                      {{ row.statusName }}
+                    </span>
+                    <span>contribution <b class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ row.contribution ?? '\u2014' }}</b></span>
+                    <span class="truncate">{{ row.phaseName }}</span>
+                  </div>
+                </div>
+              } @empty {
+                <!-- The SEARCH empty state, same distinction the table draws: the rows exist, the
+                     filter hid them, so "Report the first result" would be the wrong offer. -->
+                <p class="m-0 px-3 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No results match your search.</p>
+              }
+            </div>
+          }
         } @else {
           <div class="rounded-xl border border-dashed border-[rgba(30,32,47,0.14)] bg-white px-5 py-8 text-center">
             <span class="material-icons-round text-[24px] text-[var(--pr-color-accents-3)]">inbox</span>

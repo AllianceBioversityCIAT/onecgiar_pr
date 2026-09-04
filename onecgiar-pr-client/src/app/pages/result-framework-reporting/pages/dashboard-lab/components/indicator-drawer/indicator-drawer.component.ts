@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Router } from '@angular/router';
@@ -158,6 +158,63 @@ export class IndicatorDrawerComponent {
   readonly TWO_COLUMN_AT = 720;
   readonly columns = computed<1 | 2>(() => (this.width() >= this.TWO_COLUMN_AT ? 2 : 1));
 
+  // @akili-spec changes/indicator-reported-results
+  // ── Width floor for the Reported results table (IRR-R-8, IRR-R-8.1, IRR-DD-5) ──────────────
+  /**
+   * The narrowest drawer the seven-column grid is still a TABLE in (§6.3: 84 + 180 + 128 + 118 +
+   * 96 + 110 + 36 of tracks, plus the panel's own 24px gutters). A FLOOR, never a set width: a
+   * drawer already wider than this is left exactly where the user put it.
+   */
+  readonly TABLE_FLOOR = 760;
+
+  /**
+   * Below this the fixed tracks stop fitting at all and the table would scroll sideways inside the
+   * panel, so the same rows render as cards instead (IRR-R-8.1).
+   */
+  readonly CARD_LAYOUT_BELOW = 640;
+  readonly tableLayout = computed(() => this.width() >= this.CARD_LAYOUT_BELOW);
+
+  /**
+   * The width the user had before the floor raised it, so leaving the tab gives it back. `null`
+   * means there is nothing to give back — either the floor never fired, or the user has since
+   * dragged the panel by hand and their width now outranks the remembered one.
+   */
+  private widthBeforeResults: number | null = null;
+
+  /**
+   * The drawer's existing viewport clamp, in ONE place: the drag and the floor must agree, or the
+   * floor could set a width the very next drag frame refuses to reproduce (IRR-R-8: "never exceed
+   * the existing clamp").
+   */
+  private widthClamp(): number {
+    const vw = typeof window === 'undefined' ? 1440 : window.innerWidth;
+    return Math.min(1100, Math.max(vw - 320, 340), vw);
+  }
+
+  /**
+   * Entering the tab: raise a too-narrow drawer to the floor and remember where it was.
+   *
+   * `current >= floor` returns EARLY and emits nothing — a 900px drawer must not shrink to 760
+   * (a floor, not a set), and `widthChange` must not fire for a width that did not change.
+   */
+  private applyTableFloor(): void {
+    const floor = Math.min(this.TABLE_FLOOR, this.widthClamp());
+    const current = this.width();
+    if (current >= floor) return;
+    this.widthBeforeResults = current;
+    this.width.set(floor);
+    this.widthChange.emit(floor);
+  }
+
+  /** Leaving the tab: give the remembered width back, once, and only if it is still owed. */
+  private restoreWidthBeforeResults(): void {
+    const stored = this.widthBeforeResults;
+    this.widthBeforeResults = null;
+    if (stored == null || stored === this.width()) return;
+    this.width.set(stored);
+    this.widthChange.emit(stored);
+  }
+
   /**
    * Context header (deliverable + chips) collapsed state. On small screens the block
    * eats most of the viewport before the form starts, so it opens collapsed there;
@@ -182,8 +239,12 @@ export class IndicatorDrawerComponent {
       if (!this.dragging) return;
       // Dragged from the left edge: the further left, the wider the panel.
       // Clamp to the viewport so the drag can never push the panel off-screen on small windows.
-      const maxW = Math.min(1100, Math.max(window.innerWidth - 320, 340), window.innerWidth);
+      const maxW = this.widthClamp();
       const next = Math.min(Math.max(window.innerWidth - e.clientX, Math.min(380, window.innerWidth)), maxW);
+      // @akili-spec changes/indicator-reported-results
+      // IRR-R-8 — the drag keeps working ON the tab, and a width the user set by hand OUTRANKS the
+      // one the floor remembered: forget it, so leaving the tab cannot undo the drag they just did.
+      if (this.tab() === 'results') this.widthBeforeResults = null;
       this.width.set(next);
       this.widthChange.emit(next);
     };
@@ -276,7 +337,21 @@ export class IndicatorDrawerComponent {
       // a search typed against indicator A would silently hide indicator B's rows.
       this.searchText.set('');
       this.openMenuKey.set(null);
+      // The remembered width belongs to the indicator that was on screen when the floor fired; a
+      // different indicator has no claim on it (IRR-DD-5 / design §6.2 "Reset effect").
+      this.widthBeforeResults = null;
       if (ind) this.loadExisting(ind);
+    });
+
+    // @akili-spec changes/indicator-reported-results
+    // IRR-R-8 / IRR-DD-5 — the floor is a TAB effect, not a new default width.
+    //
+    // `width()` is read through `untracked` on purpose. If this effect depended on the width it
+    // would re-run on every drag frame and shove the panel straight back up to 760 — the "silent,
+    // sticky resize" IRR-DD-5 exists to prevent. It reacts to the TAB and to nothing else.
+    effect(() => {
+      const tab = this.tab();
+      untracked(() => (tab === 'results' ? this.applyTableFloor() : this.restoreWidthBeforeResults()));
     });
   }
 
