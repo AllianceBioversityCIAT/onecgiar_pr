@@ -3,7 +3,7 @@
 - **Module:** `result-framework-reporting`
 - **Sub-feature:** `kp-cgspace-search-retry`
 - **Type:** Change (reliability)
-- **Status:** `approved`
+- **Status:** `shipped`
 - **Depth:** Lite
 - **Spec Path:** `docs/specs/changes/kp-cgspace-search-retry/`
 - **Requirements:** `./requirements.md`

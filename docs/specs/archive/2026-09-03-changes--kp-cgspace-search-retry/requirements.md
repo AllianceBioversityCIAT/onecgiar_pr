@@ -4,7 +4,7 @@
 - **Sub-feature:** `kp-cgspace-search-retry`
 - **Type:** Change (reliability)
 - **Owner:** Result Framework Reporting
-- **Status:** `approved`
+- **Status:** `shipped`
 - **Depth:** Lite
 - **Spec Path:** `docs/specs/changes/kp-cgspace-search-retry/`
 - **Branch:** `qa-development-2026`

@@ -7,7 +7,7 @@
 - **Depth:** Lite · **Budget (from design):** 1 task · ~170 LOC incl. tests · 1 review round — `/akili-execute` stops and escalates when exceeded
 - **Approval Mode:** interactive
 - **Owner / driver:** Result Framework Reporting
-- **Status:** `complete`
+- **Status:** `shipped`
 - **Execution rule:** scoped Jest only — never the full client suite.
 
 ---
