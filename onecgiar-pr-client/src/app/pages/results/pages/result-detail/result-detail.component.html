@@ -3,7 +3,12 @@
      sidebar; they now live in their own white 240px rail, which is why this page owns a row
      layout instead of being a single full-width column. -->
 <div class="rd_layout">
-  <app-result-sections-sidebar />
+  <!-- Rail, header and phase switcher are all ABOUT a result. When the code/phase pair in the URL
+       has no result, they have nothing to say (the rail would skeleton its rows forever, waiting
+       for a portfolio that never arrives), so the failure screen owns the whole column. -->
+  @if (!currentResultSE.resultLoadFailure()) {
+    <app-result-sections-sidebar />
+  }
 
   <div class="rd_content">
     <!-- The scrolling half of the column (the mockup's `#pg-scroll`). The header and the phase
@@ -13,11 +18,13 @@
       <!-- Title, way back, result-level actions and the identity strip (level · funding ·
            submitter · AoW · status). Code and type live in the sections rail. Extra metadata
            stays behind the ⓘ. -->
-      <app-result-header />
+      @if (!currentResultSE.resultLoadFailure()) {
+        <app-result-header />
 
-      <div class="phase_switcher_container">
-        <app-phase-switcher></app-phase-switcher>
-      </div>
+        <div class="phase_switcher_container">
+          <app-phase-switcher></app-phase-switcher>
+        </div>
+      }
 
       <div class="section_container">
         <!-- Encabezado de la card: pastilla con el NÚMERO de la sección + su nombre, y el check
@@ -26,7 +33,7 @@
              el número y el nombre salen de `ResultSectionsService`, que ya es dueño de la lista
              filtrada por portafolio y tipo de resultado, así que se mantiene solo.
              Oculto en rutas que no son una sección listada, donde no habría número que mostrar. -->
-        @if (sectionsSE.hasCurrentSection()) {
+        @if (sectionsSE.hasCurrentSection() && !currentResultSE.resultLoadFailure()) {
           <div class="rd_section_head" data-testid="result-section-heading">
             <span class="rd_section_num" aria-hidden="true">{{ sectionsSE.currentPosition() }}</span>
             <h2 class="rd_section_title">{{ sectionsSE.currentSectionName() }}</h2>
@@ -57,24 +64,115 @@
 
         <router-outlet *ngIf="this.currentResultSE.resultIdIsconverted"></router-outlet>
 
-        <!-- The result code → id conversion (GET_resultIdToCode) gates the outlet above. Without this
-           placeholder the freshly created result lands on an empty page — the "nothing is loading"
-           gap reported after hitting Create. -->
-        <div
-          *ngIf="!this.currentResultSE.resultIdIsconverted"
-          class="flex flex-col gap-4 py-2"
-          role="status"
-          aria-live="polite"
-          aria-busy="true"
-          data-testid="result-detail-loading">
-          <span class="sr-only">Loading result...</span>
-          <div class="pr-skeleton" style="width: 40%; height: 24px"></div>
-          <div class="pr-skeleton" style="width: 100%; height: 14px"></div>
-          <div class="pr-skeleton" style="width: 85%; height: 14px"></div>
-          <div class="pr-skeleton" style="width: 100%; height: 180px"></div>
-          <div class="pr-skeleton" style="width: 60%; height: 14px"></div>
-          <div class="pr-skeleton" style="width: 100%; height: 120px"></div>
-        </div>
+        <!-- The result code → id conversion (GET_resultIdToCode) gates the outlet above, and it has
+             THREE outcomes, not two. The skeleton covers only the first one: it was put here so a
+             freshly created result does not land on an empty page ("nothing is loading" after
+             Create). The other two — the pair simply does not exist, or the call failed — used to
+             fall into the same branch and leave the skeleton pulsing forever with no way out. -->
+        @if (!this.currentResultSE.resultIdIsconverted) {
+          @if (currentResultSE.resultLoadFailure() === 'not-found') {
+            <div
+              class="mx-auto flex w-full max-w-[520px] flex-col items-center gap-[10px] py-[28px] text-center"
+              role="status"
+              aria-live="polite"
+              data-testid="result-detail-not-found">
+              <span
+                class="flex h-[44px] w-[44px] items-center justify-center rounded-full bg-[var(--pr-surface-sunken)]"
+                aria-hidden="true">
+                <i class="material-icons-round text-[22px] leading-none text-[var(--pr-text-muted)]">event_busy</i>
+              </span>
+
+              <h2 class="m-0 text-[16px] font-bold leading-[1.35] tracking-[-0.01em] text-[var(--pr-text-heading)]">
+                Not reported in {{ requestedPhaseName || 'this phase' }}
+              </h2>
+
+              @if (availablePhases().length) {
+                <p class="m-0 max-w-[440px] text-[14px] font-normal leading-[1.5] text-[var(--pr-text-secondary)]">
+                  Result <span class="pr-code">#{{ api.resultsSE.currentResultCode }}</span> has no version for
+                  {{ requestedPhaseName || 'the phase in this link' }}. It was reported in the phases below — open one of
+                  them, or go back to the results list.
+                </p>
+
+                <div class="mt-[4px] flex flex-wrap justify-center gap-[8px]" data-testid="result-detail-not-found-phases">
+                  @for (phase of availablePhases(); track phase.id) {
+                    <a
+                      [href]="phaseLink(phase.id)"
+                      class="inline-flex h-[32px] items-center gap-[8px] rounded-full border border-[var(--pr-border)] bg-white px-[12px] text-[13px] font-medium text-[var(--pr-text)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-300)]">
+                      {{ phase.phase_name }}
+                      <span
+                        class="text-[11px] font-semibold uppercase tracking-[0.04em]"
+                        [class]="phase.status ? 'text-[var(--pr-status-approved-fg)]' : 'text-[var(--pr-text-muted)]'">
+                        {{ phase.status ? 'Open' : 'Closed' }}
+                      </span>
+                    </a>
+                  }
+                </div>
+              } @else {
+                <p class="m-0 max-w-[440px] text-[14px] font-normal leading-[1.5] text-[var(--pr-text-secondary)]">
+                  We could not find any reported version of result
+                  <span class="pr-code">#{{ api.resultsSE.currentResultCode }}</span>. The code in this link may be wrong, or
+                  the result may have been removed.
+                </p>
+              }
+
+              <a
+                routerLink="/result/results-outlet/results-list"
+                class="mt-[8px] inline-flex h-[38px] items-center gap-[6px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[16px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
+                data-testid="result-detail-not-found-back">
+                <i class="material-icons-round text-[16px] leading-none" aria-hidden="true">chevron_left</i>
+                Back to results
+              </a>
+            </div>
+          } @else if (currentResultSE.resultLoadFailure() === 'error') {
+            <!-- Deliberately NOT the "not reported" copy: a 500 or a dropped connection says nothing
+                 about whether the result exists, and telling the user it does not is a lie the phase
+                 chips would then contradict. -->
+            <div
+              class="mx-auto flex w-full max-w-[520px] flex-col items-center gap-[10px] py-[28px] text-center"
+              role="alert"
+              data-testid="result-detail-load-error">
+              <span
+                class="flex h-[44px] w-[44px] items-center justify-center rounded-full bg-[var(--pr-danger-soft)]"
+                aria-hidden="true">
+                <i class="material-icons-round text-[22px] leading-none text-[var(--pr-field-required-fg)]">cloud_off</i>
+              </span>
+
+              <h2 class="m-0 text-[16px] font-bold leading-[1.35] tracking-[-0.01em] text-[var(--pr-text-heading)]">
+                This result could not be opened
+              </h2>
+              <p class="m-0 max-w-[440px] text-[14px] font-normal leading-[1.5] text-[var(--pr-text-secondary)]">
+                Something went wrong while loading result <span class="pr-code">#{{ api.resultsSE.currentResultCode }}</span>.
+                Try again — if it keeps failing, report it with that code.
+              </p>
+
+              <div class="mt-[8px] flex flex-wrap items-center justify-center gap-[8px]">
+                <button
+                  type="button"
+                  class="inline-flex h-[38px] items-center gap-[6px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[16px] text-[14px] font-semibold text-white transition-colors hover:bg-[var(--pr-color-primary-400)]"
+                  (click)="reload()"
+                  data-testid="result-detail-load-error-retry">
+                  <i class="material-icons-round text-[16px] leading-none" aria-hidden="true">refresh</i>
+                  Try again
+                </button>
+                <a
+                  routerLink="/result/results-outlet/results-list"
+                  class="inline-flex h-[38px] items-center rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-semibold text-[var(--pr-text)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-300)]">
+                  Back to results
+                </a>
+              </div>
+            </div>
+          } @else {
+            <div class="flex flex-col gap-4 py-2" role="status" aria-live="polite" aria-busy="true" data-testid="result-detail-loading">
+              <span class="sr-only">Loading result...</span>
+              <div class="pr-skeleton" style="width: 40%; height: 24px"></div>
+              <div class="pr-skeleton" style="width: 100%; height: 14px"></div>
+              <div class="pr-skeleton" style="width: 85%; height: 14px"></div>
+              <div class="pr-skeleton" style="width: 100%; height: 180px"></div>
+              <div class="pr-skeleton" style="width: 60%; height: 14px"></div>
+              <div class="pr-skeleton" style="width: 100%; height: 120px"></div>
+            </div>
+          }
+        }
 
         <!-- The dark "Loading section..." veil used to live here. It was driven by the boolean
            `saveButtonSE.isGettingSection()`, so on a multi-GET section it cleared when the FIRST

@@ -31,6 +31,7 @@ import { environment } from '../../../../../environments/environment';
 import { ResultMetadataListComponent } from '../../../../shared/components/result-metadata/result-metadata-list.component';
 import { ResultMetadataWindowComponent } from '../../../../shared/components/result-metadata/result-metadata-window.component';
 import { ResultMetadataPanelService } from '../../../../shared/components/result-metadata/result-metadata-panel.service';
+import { PhasesService } from '../../../../shared/services/global/phases.service';
 
 jest.useFakeTimers();
 
@@ -45,6 +46,11 @@ describe('ResultDetailComponent', () => {
   let mockResultLevelService:any;
   const mockGET_resultIdToCodeResponse = 1;
   const mockGET_versioningResultResponse = [];
+  const mockGET_versioningByCodeResponse = [
+    { id: 34, phase_name: 'Reporting 2025', phase_year: 2025, status: false },
+    { id: 36, phase_name: 'Reporting 2026', phase_year: 2026, status: true }
+  ];
+  let mockPhasesService: any;
 
 
   beforeEach(async () => {
@@ -56,6 +62,7 @@ describe('ResultDetailComponent', () => {
         GET_AllCLARISACountries: () => of({response: [] }),
         GET_resultIdToCode: () => of({ response: mockGET_resultIdToCodeResponse }),
         GET_versioningResult: () => of({ response: mockGET_versioningResultResponse}),
+        GET_versioningResultByCode: () => of({ response: mockGET_versioningByCodeResponse }),
         GET_allInstitutions: () => of({ response: [] }),
         GET_allInstitutionTypes: () => of({ response: [] }),
         GET_allChildlessInstitutionTypes:() => of({response: [] }),
@@ -88,6 +95,17 @@ describe('ResultDetailComponent', () => {
 
     mockCurrentResultService = {
       GET_resultById: jest.fn(),
+      resultLoadFailure: signal<'not-found' | 'error' | null>(null)
+    }
+
+    mockPhasesService = {
+      phases: {
+        reporting: [
+          { id: '30', phase_name: 'Reporting 2024' },
+          { id: '36', phase_name: 'Reporting 2026' }
+        ],
+        ipsr: []
+      }
     }
 
     mockGreenChecksService = {
@@ -151,6 +169,10 @@ describe('ResultDetailComponent', () => {
         {
           provide: ResultLevelService,
           useValue: mockResultLevelService
+        },
+        {
+          provide: PhasesService,
+          useValue: mockPhasesService
         },
       ]
     }).compileComponents();
@@ -241,6 +263,102 @@ describe('ResultDetailComponent', () => {
 
       await expect(promise).resolves.toBeNull();
       expect(spy).toHaveBeenCalled();
+    });
+
+    // The 404 vs anything-else split is the whole point of the fix: a 404 is the server answering
+    // that this code has no row in this phase, and it is the ONLY case the screen may report as
+    // "not reported in this year".
+    it('flags a 404 as not-found', async () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_resultIdToCode').mockReturnValue(throwError(() => ({ status: 404 })));
+
+      await component.GET_resultIdToCode();
+
+      expect(mockCurrentResultService.resultLoadFailure()).toBe('not-found');
+      expect(mockCurrentResultService.resultIdIsconverted).toBeFalsy();
+    });
+
+    it('flags any other failure as an error, never as not-found', async () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_resultIdToCode').mockReturnValue(throwError(() => ({ status: 500 })));
+
+      await component.GET_resultIdToCode();
+
+      expect(mockCurrentResultService.resultLoadFailure()).toBe('error');
+    });
+
+    it('clears a previous failure before asking again', async () => {
+      mockCurrentResultService.resultLoadFailure.set('not-found');
+
+      await component.GET_resultIdToCode();
+
+      expect(mockCurrentResultService.resultLoadFailure()).toBeNull();
+    });
+  });
+
+  /**
+   * P2-3574 — a saved link pointing at a phase the result was never carried over to used to leave
+   * the screen on its loading skeleton forever, plus a `results/get/null` 400 in the console.
+   */
+  describe('result missing in the requested phase', () => {
+    beforeEach(() => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_resultIdToCode').mockReturnValue(throwError(() => ({ status: 404 })));
+    });
+
+    it('stops the flow instead of asking for get/null', async () => {
+      const spyGET_resultById = jest.spyOn(mockCurrentResultService, 'GET_resultById');
+      const spyGetGreenChecks = jest.spyOn(mockGreenChecksService, 'getGreenChecks');
+      const spyGET_versioningResult = jest.spyOn(mockApiService.resultsSE, 'GET_versioningResult');
+
+      await component.getData();
+
+      expect(spyGET_resultById).not.toHaveBeenCalled();
+      expect(spyGetGreenChecks).not.toHaveBeenCalled();
+      expect(spyGET_versioningResult).not.toHaveBeenCalled();
+    });
+
+    it('lists the phases the code does exist in, newest first', async () => {
+      await component.getData();
+
+      expect(component.availablePhases().map(phase => phase.phase_name)).toEqual(['Reporting 2026', 'Reporting 2025']);
+      expect(mockApiService.dataControlSE.resultPhaseList).toEqual(component.availablePhases());
+    });
+
+    it('leaves the list empty when the code exists nowhere', async () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_versioningResultByCode').mockReturnValue(of({ response: [] }));
+
+      await component.getData();
+
+      expect(component.availablePhases()).toEqual([]);
+    });
+
+    it('survives a failing phases lookup', async () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_versioningResultByCode').mockReturnValue(throwError(() => ({ status: 500 })));
+
+      await component.getData();
+
+      expect(component.availablePhases()).toEqual([]);
+    });
+
+    it('does not look up phases when the failure was not a 404', async () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_resultIdToCode').mockReturnValue(throwError(() => ({ status: 500 })));
+      const spyByCode = jest.spyOn(mockApiService.resultsSE, 'GET_versioningResultByCode');
+
+      await component.getData();
+
+      expect(spyByCode).not.toHaveBeenCalled();
+    });
+
+    it('names the phase the URL asked for', () => {
+      mockApiService.resultsSE.currentResultPhase = 36;
+      expect(component.requestedPhaseName).toBe('Reporting 2026');
+    });
+
+    it('names nothing when the requested phase is unknown', () => {
+      mockApiService.resultsSE.currentResultPhase = '999';
+      expect(component.requestedPhaseName).toBe('');
+    });
+
+    it('keeps the route and swaps only the phase in the recovery links', () => {
+      expect(component.phaseLink(34)).toBe(`${(component as any).router.url.split('?')[0]}?phase=34`);
     });
   });
 

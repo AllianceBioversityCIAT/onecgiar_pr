@@ -1235,6 +1235,15 @@ export class ResultsApiService {
     );
   }
 
+  /**
+   * Phases in which a result CODE exists. `GET_versioningResult()` answers the same question but
+   * needs the internal id, which is exactly what the result-detail screen does NOT have when the
+   * code/phase pair in the URL was never reported (the "no 2026 version" case).
+   */
+  GET_versioningResultByCode(resultCode: string | number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning/result/code/${resultCode}`);
+  }
+
   PATCH_versioningAnnually(replicateIPSR = false) {
     return this.http.patch<any>(
       `${environment.apiBaseUrl}api/versioning/execute/annual/replicate/${replicateIPSR ? 'innovation-package' : 'result'}`,
