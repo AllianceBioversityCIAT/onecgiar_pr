@@ -167,6 +167,13 @@ lands in the same tables the pool-funding forms use, and MUST mirror how those f
 
 - Contributing centres → `results_center` (`syncContributingCenters`).
 - Contributing projects → `results_by_projects` (`ResultsByProjectsService.syncBilateralProjects`).
+- **Contributing Science Programs → `share_result_request` DRAFTS (`request_status_id = 4`), the
+  exact rows `POST /create` writes — NEVER `results_by_inititiative` role-2 rows**
+  (`syncContributingPrograms`, 2026-09-04). Role 2 means "already accepted": writing it from the
+  form skipped the contributor's consent and the SP's approval wiped it
+  (`updateResultByInitiative` deactivates role-2 rows with no backing request). The approval
+  converts the draft into a pending request (email + in-app card, P2-3187); acceptance creates the
+  role-2 row.
 - **External partners → `results_by_institution` + `result.no_applicable_partner` /
   `result.is_lead_by_partner`** (`syncExternalPartners`, P2-3443). The role id is resolved exactly
   as `ResultsByInstitutionsService` resolves it: `KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS` (8)
