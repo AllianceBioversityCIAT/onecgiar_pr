@@ -587,6 +587,40 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
       expect((component as unknown as { pendingOverviewScope: string | null }).pendingOverviewScope).toBeNull();
     });
 
+    it('restoreFromUrl() hydrates Overview Section from ?section= (survives Overview ↔ Reporting remount)', async () => {
+      const { component } = await createTickableComponent();
+      const qp = { get: (name: string) => ({ section: 'w1w2' } as Record<string, string>)[name] ?? null };
+      (component as unknown as { route: { snapshot: { queryParamMap: unknown } } }).route.snapshot.queryParamMap = qp;
+
+      (component as unknown as { restoreFromUrl(): void }).restoreFromUrl();
+
+      expect(component.overviewSection()).toBe('w1w2');
+    });
+
+    it('restoreFromUrl() treats an unknown ?section= as All', async () => {
+      const { component } = await createTickableComponent();
+      const qp = { get: (name: string) => ({ section: 'not-a-section' } as Record<string, string>)[name] ?? null };
+      (component as unknown as { route: { snapshot: { queryParamMap: unknown } } }).route.snapshot.queryParamMap = qp;
+
+      (component as unknown as { restoreFromUrl(): void }).restoreFromUrl();
+
+      expect(component.overviewSection()).toBe('all');
+    });
+
+    it('writes ?section= with replaceUrl: true via the URL-mirror effect', async () => {
+      const { component, router } = await createTickableComponent();
+      component.selectedId.set(PROGRAM_A.initiativeId);
+      TestBed.tick();
+      router.navigate.mockClear();
+
+      component.setOverviewSection('bilateral');
+      TestBed.tick();
+
+      const call = router.navigate.mock.calls.find(([, opts]) => opts?.queryParams?.section === 'bilateral');
+      expect(call).toBeDefined();
+      expect(call![1]).toMatchObject({ queryParamsHandling: 'merge', replaceUrl: true });
+    });
+
     it('writes ?scope= with replaceUrl: true via the URL-mirror effect', async () => {
       const { component, router } = await createTickableComponent();
       component.selectedId.set(PROGRAM_A.initiativeId);
