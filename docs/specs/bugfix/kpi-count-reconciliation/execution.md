@@ -42,3 +42,24 @@
 
 **Gate:** auto-approved (pre-approved mode) → continue to KCR-T-2.
 
+### `KCR-T-2` — Rewire the host computeds to the partition — **PASS** (2026-09-03, 1 attempt)
+
+| Field | Value |
+|---|---|
+| Implementer | `akili-implementer` wrapper, model override `opus`, effort high, skills `angular-developer` + `tdd` |
+| Reviewer | `akili-reviewer` wrapper (`opus`), lens checklist mode |
+| Files (+231/−92) | `dashboard-lab.component.ts` (+176: `programKpiPartition` computed; `plannedReportingSummaryStats`, `plannedReportingStatsLoading`, `bandPlannedResultsCount`, `overviewAowProgress`, `overviewAowProgressRich`, `overviewXcutProgress`, `plannedAowBanner`, `reportingGroups` aow `count` rewired) · `dashboard-lab.toc-map.ts` (+100/−: `buildLeaf` via `buildRatio`, AoW branch sums all leaves, Program-level branch suppressed iff IO branch non-empty, `isAchieved` removed, docblocks) · `components/reporting-aow-table/reporting-aow-table.component.ts` (`ratioBase` drops `__isIntermediateCrosscut` after `__allIndicators ?? indicators`) · `reporting-burndown.ts` (header docblock) · `components/program-overview/program-overview.component.ts` (`AowProgressRow.zeroTarget?`, OAH DD-4 comment) |
+| Verification | `npx jest …/dashboard-lab.kcr-reconciliation.spec.ts --silent` → **16/16 PASS** (baseline 13 failed / 3 passed). No `*.spec.ts` in the diff (`git diff 6b4100bfd --stat -- '*.spec.ts'` empty). Folder run: `2 failed, 22 passed` suites · `5 failed, 820 passed` tests — expected reds for T-4: `dashboard-lab.toc-map.spec.ts` ×4 (Program-level dedupe ×2 → KCR-DD-7; `aow01.total` 6→7 → KCR-DD-2; branch order lost `program:PROGRAM` → KCR-DD-7), `dashboard-lab.oah-rows.spec.ts` ×1 (`is_aow: true` node now AoW-own: complete 1→2, reported 3→4, total 4→5 → KCR-DD-2). `npx ng lint --quiet` clean; `ng build --configuration development` OK; Leader `tsc --noEmit -p tsconfig.app.json` on HEAD clean |
+| Grep (Done clause) | `__tier !== 'outcome'` → L3226 (`reportingGroups` Type tier selection, exempt) and L4577 (`splitIndicatorsByTier`, By-AOW display split, not a denominator). 0 hits in rewired computeds |
+| Requirements covered | KCR-R-2, R-4, R-5, R-5.1, R-6, R-8, R-9, R-10; KCR-AC-1, AC-3, AC-4 |
+
+**Decisions / adjudications (Reviewer agreed):** (1) `zeroTarget?` lives on `program-overview`'s `AowProgressRow` because the host's `OverviewAowProgressRow` is an alias import — one type, satisfies §6.2 + §6.3. (2) `toc-map.ts` importing `buildRatio` from `./reporting-burndown` does not break the file's "no imports from the component / program-overview" rule; §6.3 mandates it. (3) `ReportingSummaryStats` interface edit deferred to T-3 (structural typing accepts the extra fields; build green).
+
+**Reviewer PASS summary:** every §6.2 row, §6.3 component change and DD-2/DD-3/DD-5/DD-7 decision implemented as written inside the five allowed files, no spec touched — the 16 green tests are earned behaviour.
+
+**ADVISORY (4R — recorded, no rework):** *Readability:* `overviewAowProgressRich` docblock lacks the `bugfix/kpi-count-reconciliation` tag; `sentenceCaseOutcomes()` on the two host literals is now inert. *Reliability:* `bandPlannedResultsCount`'s second fallback (`Σ indicatorsByAow().count`) still counts cross-cuts — unreachable unless every AoW row is a cross-cut and both buckets empty; design pins the chain "unchanged".
+
+**Issues encountered (environment):** a second session in this worktree committed `a1d82cf7e` (KCR-labelled) while the Implementer was mid-edit — the snapshot did not compile (`TS2451` duplicated `intermediateBranch`) and swept the spec folder in. Leader restored a compiling HEAD with follow-up commit `a6a98e18b` from the completed working tree; `a1d82cf7e` was not amended because `c41656b7a` (other spec) already sat on top. Violates the "one AKILI session per checkout" rule in root `CLAUDE.md` — flagged to the user.
+
+**Gate:** auto-approved (pre-approved mode) → continue to KCR-T-3.
+
