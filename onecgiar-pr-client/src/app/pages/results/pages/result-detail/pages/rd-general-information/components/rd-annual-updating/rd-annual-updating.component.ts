@@ -122,13 +122,23 @@ export class RdAnnualUpdatingComponent implements OnInit {
     this.getAlertNarrative();
     this.generalInfoBody.merge_split_targets ??= [];
 
-    // 🛑 Eager ONLY when a transition reason arrives already ticked — which is the reload case, and
-    // the one that matters: `selectedTargets` resolves stored ids against the catalogue, so with an
-    // empty catalogue a saved selection would paint as nothing and the reporter would believe their
-    // answer was lost. Its own guard returns immediately when neither dropdown is shown, leaving
-    // `mergeSplitCatalogueRequested` false, so the lazy `(click)` path is untouched for everyone
-    // else — which is the whole reason the catalogue was lazy to begin with.
-    this.ensureMergeSplitCatalogue();
+    // 🛑 Se dispara con `is_discontinued`, NO con la razón tildada, y esa distinción es el arreglo.
+    //
+    // La versión anterior llamaba a `ensureMergeSplitCatalogue()` a secas, cuya guarda exige que una
+    // razón de transición esté tildada. Pero las razones NO están aquí todavía: el padre las pide en
+    // una SEGUNDA petición, disparada en el callback de la principal
+    // (`rd-general-information.component.ts:214` → `:304` las reemplaza). Así que en `ngOnInit` la
+    // guarda siempre decía "no hay transición" y el catálogo no se cargaba nunca por esta vía.
+    //
+    // Medido en prtest el 4-sep-2026: tras recargar, la razón salía tildada (había llegado) y el
+    // desplegable decía "No information found" con la selección guardada invisible — el reportero
+    // ve su respuesta como perdida aunque esté a salvo en la base.
+    //
+    // `is_discontinued` sí viaja en el cuerpo principal, y el `*ngIf="is_replicated"` del padre
+    // garantiza que ese cuerpo ya llegó cuando este componente se monta. El coste es una petición
+    // en resultados ya marcados como inactivos; el `(click)` sigue cubriendo al reportero que tilda
+    // la razón durante la visita.
+    if (this.generalInfoBody.is_discontinued) this.loadMergeSplitCatalogue();
   }
 
   /**
@@ -157,8 +167,19 @@ export class RdAnnualUpdatingComponent implements OnInit {
    * the dropdown says there is nothing to pick — so the failure is not silent to the user either.
    */
   ensureMergeSplitCatalogue(): void {
-    if (this.mergeSplitCatalogueRequested) return;
     if (!this.showsMergeTargets && !this.showsSplitTargets) return;
+    this.loadMergeSplitCatalogue();
+  }
+
+  /**
+   * Fetches the catalogue once, with no opinion about whether a dropdown is visible.
+   *
+   * 🛑 Split from `ensureMergeSplitCatalogue` on purpose: the visibility guard depends on the
+   * reasons, which arrive in a LATER request than the body (see `ngOnInit`). Anything that needs the
+   * catalogue before the reasons land must call this, not the guarded version.
+   */
+  private loadMergeSplitCatalogue(): void {
+    if (this.mergeSplitCatalogueRequested) return;
 
     const resultId = Number(this.api.dataControlSE.currentResult?.id);
     if (!Number.isInteger(resultId) || resultId <= 0) return;
@@ -234,7 +255,8 @@ export class RdAnnualUpdatingComponent implements OnInit {
    * unchanged. It also means the parent replacing the whole `generalInfoBody` after the API responds
    * is picked up on the next pass, with no setter needed.
    *
-   * ⚠️ An id with no option in the catalogue is dropped from what the dropdown SHOWS, never from
+   * ⚠️ It resolves by `option.id`, not by `result_code` — what is stored is the id (see
+   * `onTargetsChange`). An id with no option in the catalogue is dropped from what the dropdown SHOWS, never from
    * what is stored: `onTargetsChange` is the only writer, so a catalogue that failed to load cannot
    * erase a saved answer — it can only fail to display it, which is why `ngOnInit` loads it eagerly
    * when a transition reason arrives already ticked.
@@ -253,7 +275,7 @@ export class RdAnnualUpdatingComponent implements OnInit {
 
   selectedTargets(type: 'merge' | 'split'): any[] {
     const wanted = this.storedTargets(type)
-      .map(target => this.mergeSplitCatalogue.find(option => Number(option?.result_code) === Number(target.target_result_id)))
+      .map(target => this.mergeSplitCatalogue.find(option => Number(option?.id) === Number(target.target_result_id)))
       .filter(option => !!option);
 
     const cached = this.selectionCache[type];
@@ -277,11 +299,19 @@ export class RdAnnualUpdatingComponent implements OnInit {
     // The dropdown now hands back catalogue OBJECTS (see `selectedTargets`), while what we store is
     // the id. A raw id is still accepted on purpose: `optionValue` is a template detail, and a caller
     // that passes ids must not end up storing `NaN` silently.
-    const codes = (selection ?? [])
-      .map(entry => Number(entry && typeof entry === 'object' ? entry.result_code : entry))
-      .filter(code => Number.isFinite(code) && code > 0);
+    // 🛑 SE GUARDA EL `id`, NUNCA EL `result_code`, y esto es un bug de DATOS si se confunde.
+    // `target_result_id` es FK a `result.id`. El 4-sep-2026 esto guardaba `result_code` y el reportero
+    // eligió "test bilateral JD" (id 11438, code 8970): se almacenó **8970 como id**, que resultó ser
+    // OTRO resultado existente, así que al releerlo salía "Unraveling the genetic architecture of
+    // stripe rust resistance in ICARDA spring wheat". ⚠️ Y el FK **no protegió**: aceptó 8970 porque
+    // ese id existe. Un FK solo caza los ids inexistentes, no los ids equivocados.
+    // La etiqueta sigue mostrando `result_code - título`, que es lo que pide la historia; lo que viaja
+    // al servidor es el `id`.
+    const ids = (selection ?? [])
+      .map(entry => Number(entry && typeof entry === 'object' ? entry.id : entry))
+      .filter(id => Number.isFinite(id) && id > 0);
 
-    this.generalInfoBody.merge_split_targets = [...others, ...codes.map(code => ({ target_result_id: code, transition_type: type }))];
+    this.generalInfoBody.merge_split_targets = [...others, ...ids.map(id => ({ target_result_id: id, transition_type: type }))];
   }
 
   /**
