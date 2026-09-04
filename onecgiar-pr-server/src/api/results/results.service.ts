@@ -4018,6 +4018,24 @@ export class ResultsService {
         };
       }
 
+      // P2-3154 BR1: the Minimum Data Standard fields belong to the reporting Centre. The client
+      // stopped rendering this edit surface for non-admin reviewers (commit f142b8309), but the
+      // ownership rule has to hold on the server too — otherwise any reviewer with a token could
+      // still rewrite what the Centre reported. Platform administrators keep their existing
+      // correction ability, exactly as the client does. The ToC-metadata endpoint is deliberately
+      // NOT gated like this: AC2 keeps ToC alignment editable for the SP Leader.
+      const isPlatformAdmin = await this._roleByUserRepository.isUserAdmin(
+        user.id,
+      );
+      if (!isPlatformAdmin) {
+        return {
+          response: {},
+          message:
+            'Only platform administrators can modify the Minimum Data Standard fields of a bilateral result under review.',
+          status: HttpStatus.FORBIDDEN,
+        };
+      }
+
       const currentCommonFields =
         await this._resultRepository.getCommonFieldsBilateralResultById(
           parsedResultId,
