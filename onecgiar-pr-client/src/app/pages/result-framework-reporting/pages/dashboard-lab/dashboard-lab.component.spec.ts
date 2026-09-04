@@ -1720,6 +1720,21 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(component.byAowSelectedType()).toBeNull();
       expect(component.reportingFiltersActive()).toBe(false);
     });
+
+    // quick/reporting-clear-filters-only-pending (2026-09-04): the band badge counts Only-pending as
+    // a filter, so Clear filters must switch it off — and forget the persisted value, or the next
+    // visit would restore the toggle the user just cleared.
+    it('clearReportingFilters also switches Only-pending off and clears its persisted value', async () => {
+      const component = await createComponent();
+      component.setOnlyPending(true);
+      expect(component.onlyPending()).toBe(true);
+      expect(sessionStorage.getItem('pr.burndown.onlyPending')).toBe('1');
+
+      component.clearReportingFilters();
+
+      expect(component.onlyPending()).toBe(false);
+      expect(sessionStorage.getItem('pr.burndown.onlyPending')).toBe('0');
+    });
   });
 
   describe('By-AoW tabular layout (BTC-R-2, BTC-R-3)', () => {

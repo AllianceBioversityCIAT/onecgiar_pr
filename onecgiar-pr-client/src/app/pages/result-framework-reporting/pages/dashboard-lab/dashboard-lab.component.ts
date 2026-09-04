@@ -3511,6 +3511,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.reportingStatusFilter.set('all');
     this.byAowSelectedCenter.set(null);
     this.byAowSelectedType.set(null);
+    // quick/reporting-clear-filters-only-pending (2026-09-04): the band's badge counts Only-pending
+    // as a filter, so "Clear filters" must switch it off too — through `setOnlyPending` so the
+    // persisted sessionStorage value is cleared as well, not just the signal.
+    this.setOnlyPending(false);
   }
 
   /**
