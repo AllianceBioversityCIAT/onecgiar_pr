@@ -72,23 +72,21 @@ describe('SectionZeroDashboardComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should emit submitRequested on submit', () => {
-    const emitSpy = jest.spyOn(component.submitRequested, 'emit');
-    component.onSubmit();
-    expect(emitSpy).toHaveBeenCalled();
-  });
-
   it('should show empty project hint when no project selected', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Select a project');
   });
 
-  it('should label unavailable actions and keep submit status visible', () => {
+  // Submit for review lives in the editor's sections rail since 2026-09-04 — this card only keeps
+  // the Coming-soon actions, and the stale "In progress" badge left with the button.
+  it('should label unavailable actions and carry NO submit button here', () => {
     const el = fixture.nativeElement as HTMLElement;
     const statuses = Array.from(el.querySelectorAll('.bp-action-status'))
       .map(status => status.textContent?.trim());
 
-    expect(statuses).toEqual(['Coming soon', 'Coming soon', 'Coming soon', 'In progress']);
+    expect(statuses).toEqual(['Coming soon', 'Coming soon', 'Coming soon']);
+    expect(el.querySelector('.bp-action-btn--submit')).toBeNull();
+    expect(el.textContent).not.toContain('In progress');
   });
 
   it('should show the AI Result badge when the result was generated with AI', () => {

@@ -559,6 +559,15 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     return this.isKnowledgeProductType() ? !!this.kpSyncedTitle()?.trim() : true;
   }
 
+  /**
+   * UI gate of the rail's Submit for review (moved there from the Overview card, 2026-09-04):
+   * every MDS-tracked section complete, no request in flight, and the centre still owns the result.
+   * `submitResult()` re-checks its own guards — this computed is only what greys the button.
+   */
+  readonly canSubmitFromRail = computed(
+    () => this.mdsTracker.overallStatus() === 'complete' && !this.isSubmitting() && !this.isFormReadOnly()
+  );
+
   submitResult(): void {
     const rid = this.resultId();
     if (!rid) return;

@@ -1,17 +1,18 @@
 # section-zero-dashboard (bilateral)
 
-**Verified:** 2026-09-02 · branch performance-refactor · 2de8884cd
+**Verified:** 2026-09-04 · branch performance-refactor (Submit for review moved to the editor rail)
 
 ## What it is
 Section 0 of the bilateral form: the read-mostly card that identifies the result (code, type,
-reporting phase, funding source) and its W3/Bilateral project, plus the Actions column that owns
-**Submit for Review**. It is the only section that is not inside an accordion.
+reporting phase, funding source) and its W3/Bilateral project, plus the Actions column of
+Coming-soon actions. It is the only section that is not inside an accordion.
+**Submit for review is NOT here since 2026-09-04** — it lives in the editor's sections rail
+(`bilateral-result-creator`, `.bcr-rail__submit`), the same slot the W1/W2 result-detail rail gives
+its Submit; the stale "In progress" badge left with it.
 
 ## Contract
-- Inputs: `isSubmitting` (Submit request in flight), `readOnly` (`isFormReadOnly()` of the editor).
-- Output: `submitRequested` — the editor runs the actual PATCH.
-- State: `BilateralCreationService` owns every value on screen; `BilateralMdsTrackerService`
-  owns `overallStatus()`, which gates Submit.
+- Input: `readOnly` (`isFormReadOnly()` of the editor) — gates the editable project field only.
+- State: `BilateralCreationService` owns every value on screen.
 - `BilateralAutoSaveService` is injected for the project change only. It is provided **by the editor
   component**, so this card cannot be mounted outside `bilateral-result-creator` without providing it.
 - Editable project field (P2-3518): `canChangeProject()` = `!readOnly()` **and**
@@ -52,8 +53,9 @@ reporting phase, funding source) and its W3/Bilateral project, plus the Actions 
   of the user's own centre, so in practice the centre does not move; persisting a centre change would
   go through `contributing_center`, which deactivates the `is_leading_result` row when sent empty
   (see `section-contributors/CLAUDE.md`).
-- Submit is gated on `overallStatus() === 'complete' || isSubmitting() || readOnly()` — three
-  conditions, and the read-only one is the P2-3520 lock.
+- The Submit gate (`overallStatus() === 'complete'` + not submitting + not read-only, the last one
+  being the P2-3520 lock) moved with the button: it is `canSubmitFromRail()` in
+  `bilateral-result-creator`, and `submitResult()` re-checks its own guards regardless.
 - Every spec assertion about the project field reads the **rendered DOM** on purpose: the client runs
   zoneless, so asserting a class property passes with the defect still on screen.
 
