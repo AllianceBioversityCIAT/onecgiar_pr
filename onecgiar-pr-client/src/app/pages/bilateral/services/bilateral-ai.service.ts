@@ -213,7 +213,16 @@ export class BilateralAiService implements OnDestroy {
         this.uploadState.update(s => ({ ...s, status: 'promoted' }));
         this.draftList.update(list => list.filter(d => d.id !== draftId));
         const resultId = response?.resultId ?? response?.result_id;
-        if (resultId) {
+        // Canonical editor URL is result_code + ?phase (the shape the results list opens): the
+        // backend resolves `:id` by code+version when `phase` travels, and by internal id only as
+        // the fallback. Navigating with the bare id produced /result/11514 instead of
+        // /result/9046?phase=36. Older servers do not send resultCode/versionId — keep the fallback.
+        const resultCode = response?.resultCode ?? response?.result_code;
+        const versionId = response?.versionId ?? response?.version_id;
+        if (resultCode && versionId) {
+          this.creationService.isAiGenerated.set(true);
+          void this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'result', resultCode], { queryParams: { phase: versionId } });
+        } else if (resultId) {
           this.creationService.isAiGenerated.set(true);
           void this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'result', resultId]);
         } else {
