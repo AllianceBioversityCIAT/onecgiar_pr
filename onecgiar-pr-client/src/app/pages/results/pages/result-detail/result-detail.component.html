@@ -82,8 +82,15 @@
                 <i class="material-icons-round text-[22px] leading-none text-[var(--pr-text-muted)]">event_busy</i>
               </span>
 
+              <!-- The heading has to follow the body: naming the year the link asked for only reads as
+                   an answer when the result exists SOMEWHERE else. With no version anywhere, "Not
+                   reported in Reporting 2024" is true and useless — the code itself is the problem. -->
               <h2 class="m-0 text-[16px] font-bold leading-[1.35] tracking-[-0.01em] text-[var(--pr-text-heading)]">
-                Not reported in {{ requestedPhaseName || 'this phase' }}
+                @if (availablePhases().length) {
+                  Not reported in {{ requestedPhaseName || 'this phase' }}
+                } @else {
+                  Result not found
+                }
               </h2>
 
               @if (availablePhases().length) {
