@@ -18,18 +18,18 @@
 
 ## 1. Scope of this task list
 - **Module / feature:** `result-framework-reporting` / Results tab Area of Work column, Section filter, Overview scope deep link.
-- **Status:** `not-started`.
+- **Status:** `in-progress` (T-1 done).
 
 ## 2. Pre-flight checklist
 - ✅ `requirements.md` approved (auto-approved, pre-approved mode).
 - ✅ `design.md` approved (auto-approved, pre-approved mode).
 - ✅ Open questions resolved (proposal OQ-1..3 → RAC-R-1; approach deviation recorded).
-- ☐ No in-flight spec editing `programme-results/*` or `program-overview/*` (check `docs/specs/changes/` at execution start).
+- ✅ No in-flight spec editing `programme-results/*` or `program-overview/*` (checked 2026-09-04: none).
 - ✅ No migration, no CLARISA dependency beyond the existing units read.
 
 ## 3. Task list
 
-### `RAC-T-1` — Server: shared scope query + `GET results-scope`
+### `RAC-T-1` — Server: shared scope query + `GET results-scope` — [x]
 - **Type:** `server` + `tests`
 - **Description:** In `results-framework-reporting.service.ts` extract the `result_scope` CTE from `getScopeBuckets` into `private queryResultScopeRows(initiativeId, tocContext, { sourceFilter?: string[] })` returning per-result rows `{ result_id, status_id, aow_acronym, has_intermediate, has_eoi, aow_codes }` (`GROUP_CONCAT(DISTINCT UPPER(wp.acronym) ORDER BY UPPER(wp.acronym))`); make `getScopeBuckets` aggregate those rows in TypeScript with **unchanged output** (OSF-T-3 fixtures re-shaped, `// RAC-DD-2`). Add `getResultsScope(programId, versionId)`: resolve initiative + `resolveByVersionId`, run the query **without** the source filter, left-join against the version's `results_by_inititiative` population so unlinked results appear as `UNTAGGED`, map through pure `toResultScopeDto` (`application/queries/results-scope/results-scope.mapper.ts` + `.dto.ts`). Controller `@Get('results-scope')` with `@ApiQuery` docs, 400 on non-numeric `versionId` (reuse `resolveTocContextForRequest`), 404 unknown program. Design §4.1, §5, RAC-DD-1, DD-2.
 - **Implements:** `RAC-R-1`, `R-1.1`, `R-1.2`, `RAC-AC-1`; scenario *One bucket per result* (all clauses incl. BUT not under AOW02, AND IT MUST ignore other initiatives).

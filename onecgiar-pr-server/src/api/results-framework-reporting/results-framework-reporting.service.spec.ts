@@ -533,11 +533,28 @@ describe('ResultsFrameworkReportingService', () => {
         // Named buckets only account for 2 of them (one AoW, one
         // Intermediate) — the third has no ToC link at all and must land in
         // UNTAGGED via the residual, never a direct count (OSF-DD-3).
+        // RAC-DD-2 — reshaped from grouped `{ bucket_key, status_id,
+        // result_count }` rows to per-result rows (`queryResultScopeRows`
+        // now returns one row per result); totals below are unchanged.
         mockQueriesByKind({
           total: [{ status_id: 1, result_count: 3 }],
           scope: [
-            { bucket_key: 'AOW01', status_id: 1, result_count: 1 },
-            { bucket_key: 'INTERMEDIATE', status_id: 1, result_count: 1 },
+            {
+              result_id: 101,
+              status_id: 1,
+              aow_acronym: 'AOW01',
+              has_intermediate: 0,
+              has_eoi: 0,
+              aow_codes: 'AOW01',
+            },
+            {
+              result_id: 102,
+              status_id: 1,
+              aow_acronym: null,
+              has_intermediate: 1,
+              has_eoi: 0,
+              aow_codes: null,
+            },
           ],
         });
 
@@ -656,9 +673,18 @@ describe('ResultsFrameworkReportingService', () => {
 
         // Program total under-counts relative to the named buckets — the
         // two populations have drifted apart (a defect signal per OSF-DD-3).
+        // RAC-DD-2 — five per-result rows (one row = one result) reproduce
+        // the old grouped fixture's `result_count: 5`.
         mockQueriesByKind({
           total: [{ status_id: 1, result_count: 1 }],
-          scope: [{ bucket_key: 'AOW01', status_id: 1, result_count: 5 }],
+          scope: [201, 202, 203, 204, 205].map((resultId) => ({
+            result_id: resultId,
+            status_id: 1,
+            aow_acronym: 'AOW01',
+            has_intermediate: 0,
+            has_eoi: 0,
+            aow_codes: 'AOW01',
+          })),
         });
 
         const result = await service.getGlobalUnitsByProgram(user, 'SP01');
@@ -675,6 +701,180 @@ describe('ResultsFrameworkReportingService', () => {
 
         warnSpy.mockRestore();
       });
+    });
+  });
+
+  // @akili-spec changes/results-aow-column-filter (RAC-T-1)
+  describe('getResultsScope', () => {
+    const resultsScopeTocContext = {
+      reportingYear: 2025,
+      phaseUuid: 'PHASE-SCOPE',
+      versionId: 36,
+    };
+
+    beforeEach(() => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValue({
+        id: 42,
+        official_code: 'SP01',
+        name: 'Science Program One',
+      });
+      mockReportingTocContextService.resolveByVersionId.mockResolvedValue(
+        resultsScopeTocContext,
+      );
+    });
+
+    /** Routes `dataSource.query` calls to a fixture by their distinctive SQL text. */
+    const mockQueriesByKind = (fixtures: {
+      scope?: any[];
+      population?: any[];
+    }) => {
+      mockDataSource.query.mockImplementation((query: string) => {
+        if (query.includes('results_by_inititiative')) {
+          return Promise.resolve(fixtures.population ?? []);
+        }
+        if (query.includes('result_scope')) {
+          return Promise.resolve(fixtures.scope ?? []);
+        }
+        return Promise.resolve([]);
+      });
+    };
+
+    it('RAC-R-1 scenario: #9006 (AOW02+AOW01 links) → AOW01 tie-break with both codes, #8871 (Intermediate node) → INTERMEDIATE, #8702 (no ToC link) → UNTAGGED', async () => {
+      mockQueriesByKind({
+        scope: [
+          {
+            result_id: 9006,
+            status_id: 1,
+            aow_acronym: 'AOW01',
+            has_intermediate: 0,
+            has_eoi: 0,
+            aow_codes: 'AOW01,AOW02',
+          },
+          {
+            result_id: 8871,
+            status_id: 1,
+            aow_acronym: null,
+            has_intermediate: 1,
+            has_eoi: 0,
+            aow_codes: null,
+          },
+        ],
+        // #8702 is a member of the program (in the population query) but
+        // never produced a `result_scope` row — no ToC link at all
+        // (RAC-R-1.1).
+        population: [
+          { result_id: 9006, status_id: 1 },
+          { result_id: 8871, status_id: 1 },
+          { result_id: 8702, status_id: 1 },
+        ],
+      });
+
+      const result = await service.getResultsScope('SP01', 36);
+
+      expect(result.status).toBe(200);
+      expect((result.response as any).programId).toBe('SP01');
+      expect((result.response as any).versionId).toBe(36);
+
+      const buckets = (result.response as any).buckets as Array<{
+        result_id: number;
+        key: string;
+        kind: string;
+        codes: string[];
+      }>;
+      const byId = new Map(buckets.map((b) => [b.result_id, b]));
+
+      expect(byId.get(9006)).toEqual({
+        result_id: 9006,
+        key: 'AOW01',
+        kind: 'aow',
+        codes: ['AOW01', 'AOW02'],
+      });
+      expect(byId.get(8871)).toEqual({
+        result_id: 8871,
+        key: 'INTERMEDIATE',
+        kind: 'outcome',
+        codes: [],
+      });
+      expect(byId.get(8702)).toEqual({
+        result_id: 8702,
+        key: 'UNTAGGED',
+        kind: 'untagged',
+        codes: [],
+      });
+    });
+
+    it('collapses a result with two active memberships (owner + contributor) into exactly one bucket, and the population query selects DISTINCT', async () => {
+      mockQueriesByKind({
+        // Two `results_by_inititiative` rows for the same result (e.g. one
+        // owner row and one contributor row) — the join must not surface it
+        // twice (RAC-R-1: one bucket per result, RAC-DD-6).
+        population: [
+          { result_id: 9006, status_id: 1 },
+          { result_id: 9006, status_id: 1 },
+        ],
+      });
+
+      const result = await service.getResultsScope('SP01', 36);
+
+      const populationCall = mockDataSource.query.mock.calls.find(([q]) =>
+        q.includes('results_by_inititiative'),
+      );
+      expect(populationCall![0]).toContain('DISTINCT');
+
+      const buckets = (result.response as any).buckets as Array<{
+        result_id: number;
+      }>;
+      expect(buckets.filter((b) => b.result_id === 9006)).toHaveLength(1);
+    });
+
+    it('passes no source filter for the scope-row query (Results tab lists every source, RAC A-3) while getGlobalUnitsByProgram still passes W1/W2', async () => {
+      mockTocResultsRepository.findWorkPackagesByProgram.mockResolvedValue([
+        {
+          id: 1,
+          code: 'AOW01',
+          name: 'Area One',
+          composeCode: 'AOW01',
+          year: 2025,
+        },
+      ]);
+      mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
+        new Map(),
+      );
+      mockTocResultsRepository.countProgramLevelOutcomes.mockResolvedValue({
+        intermediateCount: 0,
+        eoi2030Count: 0,
+      });
+      mockReportingTocContextService.resolve.mockResolvedValue(
+        resultsScopeTocContext,
+      );
+      mockQueriesByKind({});
+
+      await service.getResultsScope('SP01', 36);
+      const resultsScopeCall = mockDataSource.query.mock.calls.find(([q]) =>
+        q.includes('result_scope'),
+      );
+
+      mockDataSource.query.mockClear();
+      await service.getGlobalUnitsByProgram(user, 'SP01');
+      const bucketsCall = mockDataSource.query.mock.calls.find(([q]) =>
+        q.includes('result_scope'),
+      );
+
+      expect(resultsScopeCall![0]).not.toContain('r.source IN');
+      expect(resultsScopeCall![1]).not.toContain('Result');
+      expect(bucketsCall![0]).toContain('r.source IN');
+      expect(bucketsCall![1]).toEqual(expect.arrayContaining(['Result']));
+    });
+
+    it('returns 400 when versionId is non-numeric (versionId=abc)', async () => {
+      const result = await service.getResultsScope('SP01', NaN);
+      expect(result.status).toBe(400);
+    });
+
+    it('returns 404 when the program is unknown', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce(null);
+      const result = await service.getResultsScope('NOPE', 36);
+      expect(result.status).toBe(404);
     });
   });
 
