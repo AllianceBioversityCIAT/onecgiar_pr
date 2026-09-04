@@ -1455,10 +1455,17 @@
             (typeChange)="reportingTypeFilter.set($event)"
             (typologyChange)="reportingTypologyFilter.set($event)"
             (viewModeChange)="reportingViewMode.set($event)"
+            [centerOptions]="byAowCenterFilterOptions()"
+            [centerValue]="byAowSelectedCenter()"
+            (centerChange)="setByAowCenterFilter($event)"
+            [byAowTypeOptions]="byAowTypeFilterOptions()"
+            [byAowTypeValue]="byAowSelectedType()"
+            (byAowTypeChange)="setByAowTypeFilter($event)"
             [onlyPending]="onlyPending()"
             [burndownSort]="burndownSort()"
             (onlyPendingChange)="setOnlyPending($event)"
-            (burndownSortChange)="setBurndownSort($event)" />
+            (burndownSortChange)="setBurndownSort($event)"
+            (allAowsClick)="setPlannedBrowseView('aows')" />
 
           <!-- The old filter strip (72 lines: its own search plus the AoW / typology selects)
                was removed — the band above now owns search, filters and the grouping toggle,
@@ -1580,13 +1587,6 @@
                           {{ narrativeCopy.trigger }}
                         </button>
                       }
-                      <button
-                        type="button"
-                        (click)="setPlannedBrowseView('aows')"
-                        class="inline-flex h-[30px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
-                        <span class="material-icons-round text-[16px]" aria-hidden="true">grid_view</span>
-                        All Areas of Work
-                      </button>
                     </div>
                   </div>
                   <!-- @akili-spec changes/mass-reporting-flow — MRF-R-4: the session counter joins the
@@ -1632,165 +1632,6 @@
                   </div>
                 </section>
 
-                <!-- In-card Breakdown Filters by Center and Result Type for By-AoW mode -->
-                @let centers = byAowCenterCounts();
-                @let visibleCenters = byAowVisibleCenters();
-                @let overflowCenters = byAowOverflowCenters();
-                @let types = byAowTypeCounts();
-                @let visibleTypes = byAowVisibleTypes();
-                @let overflowTypes = byAowOverflowTypes();
-                @let selCenter = byAowSelectedCenter();
-                @let selType = byAowSelectedType();
-                @let hasOverflow = byAowHasOverflowFilters();
-                @let isOverActive = byAowActiveOverflowCount() > 0;
-                @let overCount = byAowActiveOverflowCount();
-
-                @if (centers.length > 1 || types.length > 1) {
-                  <div
-                    class="relative flex h-[32px] min-h-[32px] items-center justify-between rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-subtle)] px-[14px] sm:px-[20px] shadow-xs">
-                    <div class="flex items-center gap-[12px] overflow-hidden min-w-0">
-                      <!-- Centers Section -->
-                      @if (centers.length > 1) {
-                        <div class="flex shrink-0 items-center gap-[5px]">
-                          <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[2px]">
-                            Centers:
-                          </span>
-                          <button
-                            type="button"
-                            class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                            [class]="!selCenter ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
-                            (click)="setByAowCenterFilter(null)">
-                            All <span class="opacity-75 tabular-nums">({{ banner.total }})</span>
-                          </button>
-                          @for (c of visibleCenters; track c.center) {
-                            <button
-                              type="button"
-                              class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                              [class]="selCenter === c.center ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
-                              (click)="setByAowCenterFilter(c.center)">
-                              {{ c.center }} <span class="opacity-75 tabular-nums">({{ c.count }})</span>
-                            </button>
-                          }
-                        </div>
-                      }
-
-                      @if (centers.length > 1 && types.length > 1) {
-                        <div class="h-[14px] w-px shrink-0 bg-[var(--pr-border-divider)]" aria-hidden="true"></div>
-                      }
-
-                      <!-- Types Section -->
-                      @if (types.length > 1) {
-                        <div class="flex shrink-0 items-center gap-[5px]">
-                          <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[2px]">
-                            Types:
-                          </span>
-                          <button
-                            type="button"
-                            class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                            [class]="!selType ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
-                            (click)="setByAowTypeFilter(null)">
-                            All Types
-                          </button>
-                          @for (t of visibleTypes; track t.type) {
-                            <button
-                              type="button"
-                              class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                              [class]="selType === t.type ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
-                              (click)="setByAowTypeFilter(t.type)">
-                              {{ t.type }} <span class="opacity-75 tabular-nums">({{ t.count }})</span>
-                            </button>
-                          }
-                        </div>
-                      }
-                    </div>
-
-                    <!-- Overflow [ ⠚ Filter ] button -->
-                    @if (hasOverflow) {
-                      <div class="relative shrink-0 ml-[8px] pr-by-aow-filter-container">
-                        <button
-                          type="button"
-                          (click)="toggleByAowFilterPopover($event)"
-                          class="inline-flex h-[22px] cursor-pointer items-center gap-[4px] rounded-[5px] border px-[8px] text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
-                          [class]="isOverActive
-                            ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] font-semibold'
-                            : 'border-[var(--pr-border)] bg-white text-slate-700 font-medium hover:bg-slate-50'"
-                          aria-label="More filters"
-                          aria-haspopup="true"
-                          [attr.aria-expanded]="byAowFilterPopoverOpen()">
-                          <span class="material-icons-round text-[14px]" [class.text-[var(--pr-color-primary-600)]]="isOverActive" [class.text-slate-500]="!isOverActive">filter_list</span>
-                          <span>Filter</span>
-                          @if (overCount > 0) {
-                            <span class="flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[3px] text-[9.5px] font-bold text-white tabular-nums">
-                              {{ overCount }}
-                            </span>
-                          }
-                        </button>
-
-                        @if (byAowFilterPopoverOpen()) {
-                          <div
-                            class="absolute right-0 top-[26px] z-30 w-[300px] max-h-[360px] overflow-y-auto rounded-[10px] border border-[var(--pr-border)] bg-white p-[12px] shadow-xl text-left"
-                            (click)="$event.stopPropagation()">
-                            <div class="mb-[8px] flex items-center justify-between border-b border-[var(--pr-border-divider)] pb-[6px]">
-                              <span class="text-[12px] font-bold text-[var(--pr-text-heading)]">Additional Filters</span>
-                              @if (isOverActive) {
-                                <button
-                                  type="button"
-                                  class="text-[11px] font-medium text-[var(--pr-color-primary-600)] hover:underline cursor-pointer"
-                                  (click)="byAowIsOverflowCenterActive() ? setByAowCenterFilter(null) : null; byAowIsOverflowTypeActive() ? setByAowTypeFilter(null) : null">
-                                  Reset
-                                </button>
-                              }
-                            </div>
-
-                            <!-- Overflow Centers (Compact Chip Cloud) -->
-                            @if (overflowCenters.length > 0) {
-                              <div class="mb-[12px]">
-                                <p class="m-0 mb-[6px] text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)]">
-                                  More Centers ({{ overflowCenters.length }}):
-                                </p>
-                                <div class="flex flex-wrap gap-[4px]">
-                                  @for (c of overflowCenters; track c.center) {
-                                    <button
-                                      type="button"
-                                      class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                                      [class]="selCenter === c.center ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-slate-50 text-slate-700 border-[var(--pr-border)] hover:bg-slate-100'"
-                                      (click)="setByAowCenterFilter(c.center)">
-                                      {{ c.center }} <span class="opacity-75 tabular-nums">({{ c.count }})</span>
-                                    </button>
-                                  }
-                                </div>
-                              </div>
-                            }
-
-                            <!-- Overflow Types (Vertical List for Long Names) -->
-                            @if (overflowTypes.length > 0) {
-                              <div>
-                                <p class="m-0 mb-[6px] text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)]">
-                                  More Types ({{ overflowTypes.length }}):
-                                </p>
-                                <div class="flex flex-col gap-[3px]">
-                                  @for (t of overflowTypes; track t.type) {
-                                    <button
-                                      type="button"
-                                      class="flex w-full items-center justify-between rounded-[6px] px-[8px] py-[4px] text-[11.5px] transition-colors cursor-pointer border text-left"
-                                      [class]="selType === t.type ? 'bg-[var(--pr-color-primary-50)] border-[var(--pr-color-primary-300)] text-[var(--pr-color-primary-700)] font-semibold' : 'border-transparent text-slate-700 hover:bg-slate-50'"
-                                      (click)="setByAowTypeFilter(t.type)">
-                                      <span class="truncate pr-[8px]" [title]="t.type">{{ t.type }}</span>
-                                      <span class="shrink-0 rounded-full bg-slate-100 px-[6px] py-px text-[10px] font-semibold text-slate-600 tabular-nums">
-                                        {{ t.count }}
-                                      </span>
-                                    </button>
-                                  }
-                                </div>
-                              </div>
-                            }
-                          </div>
-                        }
-                      </div>
-                    }
-                  </div>
-                }
-
                 <!-- @akili-spec changes/mass-reporting-flow — MRF-R-9: same double gate; the panel
                      runs in-browser and writes nothing, so closing it discards the draft. -->
                 @if (narrativeGateOpen() && narrativePanelOpen()) {
@@ -1812,25 +1653,27 @@
                 <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No indicators match the current filters for this Area of Work.</p>
               } @else {
                 @for (sec of plannedByAowSections(); track sec.label) {
-                <div class="flex items-center justify-between gap-[8px] pt-2 pb-1">
-                  <div class="flex items-center gap-[8px]">
-                    <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">{{ sec.label }}</span>
-                    <span class="font-mono text-[11px] font-semibold text-[var(--pr-color-accents-4)]">{{ sec.kpis }} KPIs</span>
-                  </div>
-                  @if (sec.groups.length > 0) {
-                    <button
-                      type="button"
-                      class="inline-flex items-center gap-[4px] rounded-[6px] border border-transparent bg-transparent px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-600)] transition-colors hover:bg-[var(--pr-color-primary-50)] hover:text-[var(--pr-color-primary-700)] cursor-pointer"
-                      [attr.aria-expanded]="isByAowSectionAllExpanded(sec)"
-                      (click)="toggleByAowSection(sec)">
-                      <span class="material-icons-round text-[15px]" aria-hidden="true">
-                        {{ isByAowSectionAllExpanded(sec) ? 'unfold_less' : 'unfold_more' }}
-                      </span>
-                      <span>{{ isByAowSectionAllExpanded(sec) ? 'Collapse all' : 'Expand all' }}</span>
-                    </button>
-                  }
-                </div>
-                @for (hlo of sec.groups; track hlo.title) {
+                  <div class="flex flex-col gap-[8px]">
+                    <div class="flex items-center justify-between gap-[8px] pt-1">
+                      <div class="flex items-center gap-[8px]">
+                        <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">{{ sec.label }}</span>
+                        <span class="font-mono text-[11px] font-semibold text-[var(--pr-color-accents-4)]">{{ sec.kpis }} KPIs</span>
+                      </div>
+                      @if (sec.groups.length > 0) {
+                        <button
+                          type="button"
+                          class="inline-flex items-center gap-[4px] rounded-[6px] border border-transparent bg-transparent px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-600)] transition-colors hover:bg-[var(--pr-color-primary-50)] hover:text-[var(--pr-color-primary-700)] cursor-pointer"
+                          [attr.aria-expanded]="isByAowSectionAllExpanded(sec)"
+                          (click)="toggleByAowSection(sec)">
+                          <span class="material-icons-round text-[15px]" aria-hidden="true">
+                            {{ isByAowSectionAllExpanded(sec) ? 'unfold_less' : 'unfold_more' }}
+                          </span>
+                          <span>{{ isByAowSectionAllExpanded(sec) ? 'Collapse all' : 'Expand all' }}</span>
+                        </button>
+                      }
+                    </div>
+                    <div class="flex flex-col gap-[8px]">
+                      @for (hlo of sec.groups; track hlo.title) {
                   <section class="overflow-hidden rounded-xl border border-[var(--pr-border)] bg-white shadow-xs transition-shadow hover:shadow-sm">
                     <button
                       type="button"
@@ -2085,6 +1928,8 @@
                     }
                   </section>
                 }
+                    </div>
+                  </div>
                 }
               }
             } @else {

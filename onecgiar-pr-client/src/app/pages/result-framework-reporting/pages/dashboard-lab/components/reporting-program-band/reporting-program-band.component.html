@@ -350,8 +350,55 @@
             </div>
           </div>
 
-          <!-- Section (AoW) -->
-          @if (!compactFilters()) {
+          @if (compactFilters()) {
+            <!-- Center -->
+            @if (centerOptions().length > 0) {
+              <div class="pr-band-filter mb-[12px]" aria-label="Filter by center">
+                <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                  Center
+                </label>
+                <app-pr-filter-select
+                  [options]="centerOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="All centers"
+                  emptyValue="all"
+                  [ngModel]="centerValue() || 'all'"
+                  (changed)="centerChange.emit($event === 'all' ? null : $event)"></app-pr-filter-select>
+              </div>
+            }
+
+            <!-- Result Type & Status in 2 columns -->
+            <div class="mb-[12px] grid grid-cols-2 gap-[10px]">
+              <div class="pr-band-filter" aria-label="Filter by result type">
+                <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                  Result Type
+                </label>
+                <app-pr-filter-select
+                  [options]="byAowTypeOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="All types"
+                  emptyValue="all"
+                  [ngModel]="byAowTypeValue() || 'all'"
+                  (changed)="byAowTypeChange.emit($event === 'all' ? null : $event)"></app-pr-filter-select>
+              </div>
+              <div class="pr-band-filter" aria-label="Filter by status">
+                <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                  Status
+                </label>
+                <app-pr-filter-select
+                  [options]="statusOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="All statuses"
+                  emptyValue="all"
+                  [ngModel]="statusValue()"
+                  (changed)="statusChange.emit($event)"></app-pr-filter-select>
+              </div>
+            </div>
+          } @else {
+            <!-- Section (AoW) -->
             <div class="pr-band-filter mb-[12px]" aria-label="Filter by section">
               <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                 Section / Area of Work
@@ -368,10 +415,8 @@
                 [ngModel]="aowValue()"
                 (changed)="aowChange.emit($event)"></app-pr-filter-multiselect>
             </div>
-          }
 
-          <!-- Type & Category in 2 columns -->
-          @if (!compactFilters()) {
+            <!-- Type & Category in 2 columns -->
             <div class="mb-[12px] grid grid-cols-2 gap-[10px]">
               <div class="pr-band-filter" aria-label="Filter by type">
                 <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
@@ -417,46 +462,75 @@
       </div>
 
       <!-- Active Filter Chips -->
-      @for (chip of activeAowChips(); track chip.value) {
-        <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
-          <span class="text-slate-500 font-normal">Section:</span>
-          <span class="font-semibold max-w-[140px] truncate" [title]="chip.label">{{ chip.label }}</span>
-          <button
-            type="button"
-            (click)="removeAowChip(chip.value)"
-            class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
-            aria-label="Remove section filter">
-            <span class="material-icons-round text-[13px]">close</span>
-          </button>
-        </span>
-      }
+      @if (compactFilters()) {
+        @if (activeCenterLabel(); as centerLbl) {
+          <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+            <span class="text-slate-500 font-normal">Center:</span>
+            <span class="font-semibold max-w-[140px] truncate" [title]="centerLbl">{{ centerLbl }}</span>
+            <button
+              type="button"
+              (click)="removeCenterChip()"
+              class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Remove center filter">
+              <span class="material-icons-round text-[13px]">close</span>
+            </button>
+          </span>
+        }
+        @if (activeByAowTypeLabel(); as aowTypeLbl) {
+          <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+            <span class="text-slate-500 font-normal">Type:</span>
+            <span class="font-semibold max-w-[140px] truncate" [title]="aowTypeLbl">{{ aowTypeLbl }}</span>
+            <button
+              type="button"
+              (click)="removeByAowTypeChip()"
+              class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Remove type filter">
+              <span class="material-icons-round text-[13px]">close</span>
+            </button>
+          </span>
+        }
+      } @else {
+        @for (chip of activeAowChips(); track chip.value) {
+          <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+            <span class="text-slate-500 font-normal">Section:</span>
+            <span class="font-semibold max-w-[140px] truncate" [title]="chip.label">{{ chip.label }}</span>
+            <button
+              type="button"
+              (click)="removeAowChip(chip.value)"
+              class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Remove section filter">
+              <span class="material-icons-round text-[13px]">close</span>
+            </button>
+          </span>
+        }
 
-      @if (activeTypeLabel(); as typeLbl) {
-        <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
-          <span class="text-slate-500 font-normal">Type:</span>
-          <span class="font-semibold max-w-[120px] truncate">{{ typeLbl }}</span>
-          <button
-            type="button"
-            (click)="removeTypeChip()"
-            class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
-            aria-label="Remove type filter">
-            <span class="material-icons-round text-[13px]">close</span>
-          </button>
-        </span>
-      }
+        @if (activeTypeLabel(); as typeLbl) {
+          <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+            <span class="text-slate-500 font-normal">Type:</span>
+            <span class="font-semibold max-w-[120px] truncate">{{ typeLbl }}</span>
+            <button
+              type="button"
+              (click)="removeTypeChip()"
+              class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Remove type filter">
+              <span class="material-icons-round text-[13px]">close</span>
+            </button>
+          </span>
+        }
 
-      @if (activeTypologyLabel(); as typLbl) {
-        <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
-          <span class="text-slate-500 font-normal">Category:</span>
-          <span class="font-semibold max-w-[140px] truncate">{{ typLbl }}</span>
-          <button
-            type="button"
-            (click)="removeTypologyChip()"
-            class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
-            aria-label="Remove category filter">
-            <span class="material-icons-round text-[13px]">close</span>
-          </button>
-        </span>
+        @if (activeTypologyLabel(); as typLbl) {
+          <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+            <span class="text-slate-500 font-normal">Category:</span>
+            <span class="font-semibold max-w-[140px] truncate">{{ typLbl }}</span>
+            <button
+              type="button"
+              (click)="removeTypologyChip()"
+              class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Remove category filter">
+              <span class="material-icons-round text-[13px]">close</span>
+            </button>
+          </span>
+        }
       }
 
       @if (activeStatusLabel(); as statLbl) {
@@ -536,6 +610,16 @@
 
     <!-- Right side controls: Expand all + Segmented view switch -->
     <div class="ml-auto flex items-center gap-[10px]">
+      @if (compactFilters()) {
+        <button
+          type="button"
+          (click)="allAowsClick.emit()"
+          class="inline-flex h-[32px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs transition-colors">
+          <span class="material-icons-round text-[16px]" aria-hidden="true">grid_view</span>
+          All Areas of Work
+        </button>
+      }
+
       @if (viewMode() === 'grouped' && canExpandAll()) {
         <button
           type="button"

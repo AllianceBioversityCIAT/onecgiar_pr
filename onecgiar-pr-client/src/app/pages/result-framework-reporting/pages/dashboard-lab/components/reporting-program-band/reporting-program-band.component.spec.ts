@@ -542,16 +542,61 @@ describe('ReportingProgramBandComponent', () => {
   });
 
   describe('compactFilters (By-AOW mode)', () => {
-    it('hides Type/Category/Status and the grouping toggle, keeping Search and Section', async () => {
-      await build({ showToolbar: true, activeTab: 'reporting', compactFilters: true });
+    it('provides By-AoW popover filters (Center, Result Type, Status) and hides grouped-mode Category, Section multiselect, and Grouping toggle', async () => {
+      await build({
+        showToolbar: true,
+        activeTab: 'reporting',
+        compactFilters: true,
+        centerOptions: [{ value: 'CIAT', label: 'CIAT (5)' }]
+      });
       const el = fixture.nativeElement as HTMLElement;
-      expect(el.querySelector('[aria-label="Filter by type"]')).toBeNull();
+      expect(el.querySelector('[aria-label="Filter by center"]')).not.toBeNull();
+      expect(el.querySelector('[aria-label="Filter by result type"]')).not.toBeNull();
+      expect(el.querySelector('[aria-label="Filter by status"]')).not.toBeNull();
       expect(el.querySelector('[aria-label="Filter by category"]')).toBeNull();
-      expect(el.querySelector('[aria-label="Filter by status"]')).toBeNull();
       expect(el.querySelector('[aria-label="Grouping"]')).toBeNull();
       expect(el.querySelector('app-pr-filter-multiselect')).toBeNull();
       expect(el.querySelector('[aria-label="Switch Area of Work"] app-pr-filter-select')).not.toBeNull();
-      expect(el.querySelector('[aria-label="Filter by section"], .pr-band-filter')).not.toBeNull();
+    });
+
+    it('displays active filter chips for Center and Result Type in By-AoW mode', async () => {
+      await build({
+        showToolbar: true,
+        activeTab: 'reporting',
+        compactFilters: true,
+        centerOptions: [{ value: 'CIAT', label: 'CIAT (5)' }],
+        centerValue: 'CIAT',
+        byAowTypeOptions: [{ value: 'KP', label: 'Knowledge product (3)' }],
+        byAowTypeValue: 'KP'
+      });
+      const textContent = fixture.nativeElement.textContent;
+      expect(textContent).toContain('Center:');
+      expect(textContent).toContain('CIAT');
+      expect(textContent).toContain('Type:');
+      expect(textContent).toContain('Knowledge product');
+      expect(component.activeFilterCount()).toBe(2);
+    });
+
+    it('emits centerChange and byAowTypeChange when removing active chips', async () => {
+      await build({
+        showToolbar: true,
+        activeTab: 'reporting',
+        compactFilters: true,
+        centerOptions: [{ value: 'CIAT', label: 'CIAT (5)' }],
+        centerValue: 'CIAT',
+        byAowTypeOptions: [{ value: 'KP', label: 'Knowledge product (3)' }],
+        byAowTypeValue: 'KP'
+      });
+      const centerEmitted: (string | null)[] = [];
+      const typeEmitted: (string | null)[] = [];
+      component.centerChange.subscribe(v => centerEmitted.push(v));
+      component.byAowTypeChange.subscribe(v => typeEmitted.push(v));
+
+      component.removeCenterChip();
+      component.removeByAowTypeChip();
+
+      expect(centerEmitted).toEqual([null]);
+      expect(typeEmitted).toEqual([null]);
     });
   });
 
@@ -679,6 +724,26 @@ describe('ReportingProgramBandComponent', () => {
     it('falls back to contextual description for unknown program codes', async () => {
       await build({ programCode: 'SP99', programName: 'Special Pioneer Initiative' });
       expect(component.resolvedDescription()).toContain('Special Pioneer Initiative is a CGIAR research program delivering science');
+    });
+  });
+
+  describe('All Areas of Work button (compactFilters mode)', () => {
+    it('renders All Areas of Work button when compactFilters is true and emits allAowsClick when clicked', async () => {
+      await build({ showToolbar: true, compactFilters: true });
+      const spy = jest.fn();
+      component.allAowsClick.subscribe(spy);
+
+      const btn = Array.from(root().querySelectorAll('button')).find(b => b.textContent?.includes('All Areas of Work'));
+      expect(btn).toBeTruthy();
+
+      btn?.click();
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not render All Areas of Work button when compactFilters is false', async () => {
+      await build({ showToolbar: true, compactFilters: false });
+      const btn = Array.from(root().querySelectorAll('button')).find(b => b.textContent?.includes('All Areas of Work'));
+      expect(btn).toBeUndefined();
     });
   });
 });

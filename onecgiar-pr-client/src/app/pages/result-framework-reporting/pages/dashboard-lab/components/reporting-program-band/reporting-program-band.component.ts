@@ -158,6 +158,14 @@ export class ReportingProgramBandComponent {
   readonly compactFilters = input<boolean>(false);
   /** Any reporting filter active — shows the Clear-filters button. @akili-spec changes/reporting-entry-hub */
   readonly filtersActive = input<boolean>(false);
+  /** By-AoW mode: center filter options and selected center */
+  readonly centerOptions = input<BandFilterOption[]>([]);
+  readonly centerValue = input<string | null>(null);
+  readonly centerChange = output<string | null>();
+  /** By-AoW mode: result type filter options and selected type */
+  readonly byAowTypeOptions = input<BandFilterOption[]>([]);
+  readonly byAowTypeValue = input<string | null>(null);
+  readonly byAowTypeChange = output<string | null>();
   /**
    * Only-pending toggle (MRF-R-1): hides `complete` and zero-target KPIs. Visible in BOTH
    * reporting modes (grouped table + By-AOW), unlike Type/Category/Status — rendered outside the
@@ -209,6 +217,7 @@ export class ReportingProgramBandComponent {
   readonly aowSwitch = output<string>();
   /** Expand all / Collapse all was pressed. The host flips the switch; the band stays stateless. */
   readonly toggleExpandAll = output<void>();
+  readonly allAowsClick = output<void>();
   readonly whereToReport = output<void>();
   readonly reportEmerging = output<void>();
 
@@ -435,15 +444,36 @@ export class ReportingProgramBandComponent {
 
   readonly activeFilterCount = computed(() => {
     let count = 0;
-    if (this.aowValue() && this.aowValue().length > 0) count += this.aowValue().length;
-    if (this.typeValue() && this.typeValue() !== 'all') count++;
-    if (this.typologyValue() && this.typologyValue() !== 'all') count++;
-    if (this.statusValue() && this.statusValue() !== 'all') count++;
-    if (this.onlyPending()) count++;
+    if (this.compactFilters()) {
+      if (this.centerValue() && this.centerValue() !== 'all') count++;
+      if (this.byAowTypeValue() && this.byAowTypeValue() !== 'all') count++;
+      if (this.statusValue() && this.statusValue() !== 'all') count++;
+      if (this.onlyPending()) count++;
+    } else {
+      if (this.aowValue() && this.aowValue().length > 0) count += this.aowValue().length;
+      if (this.typeValue() && this.typeValue() !== 'all') count++;
+      if (this.typologyValue() && this.typologyValue() !== 'all') count++;
+      if (this.statusValue() && this.statusValue() !== 'all') count++;
+      if (this.onlyPending()) count++;
+    }
     return count;
   });
 
   readonly hasActiveFilters = computed(() => this.activeFilterCount() > 0 || !!this.search());
+
+  readonly activeCenterLabel = computed(() => {
+    const val = this.centerValue();
+    if (!val || val === 'all') return '';
+    const match = this.centerOptions().find(o => o.value === val);
+    return match ? match.label.replace(/\s*\(\d+\)$/, '') : val;
+  });
+
+  readonly activeByAowTypeLabel = computed(() => {
+    const val = this.byAowTypeValue();
+    if (!val || val === 'all') return '';
+    const match = this.byAowTypeOptions().find(o => o.value === val);
+    return match ? match.label.replace(/\s*\(\d+\)$/, '') : val;
+  });
 
   readonly activeAowChips = computed(() => {
     const vals = this.aowValue() || [];
@@ -475,6 +505,14 @@ export class ReportingProgramBandComponent {
     if (!val || val === 'all') return '';
     return this.statusOptions.find(o => o.value === val)?.label || val;
   });
+
+  removeCenterChip(): void {
+    this.centerChange.emit(null);
+  }
+
+  removeByAowTypeChip(): void {
+    this.byAowTypeChange.emit(null);
+  }
 
   removeAowChip(code: string): void {
     const next = (this.aowValue() || []).filter(v => v !== code);

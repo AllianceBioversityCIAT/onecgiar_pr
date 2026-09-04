@@ -24,7 +24,7 @@ import { GuidedCreationComponent } from './components/guided-creation/guided-cre
 import { IndicatorDrawerComponent } from './components/indicator-drawer/indicator-drawer.component';
 import { ReportingAowTableComponent, ReportingAowGroup, ReportingIndicator } from './components/reporting-aow-table/reporting-aow-table.component';
 import { buildReportModalNode } from './components/reporting-aow-table/report-modal-context.util';
-import { ReportingProgramBandComponent } from './components/reporting-program-band/reporting-program-band.component';
+import { ReportingProgramBandComponent, BandFilterOption } from './components/reporting-program-band/reporting-program-band.component';
 import { AowHloCreateModalComponent } from '../entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/aow-hlo-create-modal.component';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
@@ -3391,7 +3391,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       this.reportingAowFilter().length > 0 ||
       this.reportingTypeFilter() !== 'all' ||
       this.reportingTypologyFilter() !== 'all' ||
-      this.reportingStatusFilter() !== 'all'
+      this.reportingStatusFilter() !== 'all' ||
+      !!this.byAowSelectedCenter() ||
+      !!this.byAowSelectedType()
   );
 
   /** `Clear filters` in the Reporting tab's empty state. Resets the same five signals, together. */
@@ -3401,6 +3403,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.reportingTypeFilter.set('all');
     this.reportingTypologyFilter.set('all');
     this.reportingStatusFilter.set('all');
+    this.byAowSelectedCenter.set(null);
+    this.byAowSelectedType.set(null);
   }
 
   /**
@@ -3720,6 +3724,22 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
   });
 
+  readonly byAowCenterFilterOptions = computed<BandFilterOption[]>(() => {
+    const counts = this.byAowCenterCounts();
+    return [
+      { value: 'all', label: 'All centers' },
+      ...counts.map(c => ({ value: c.center, label: `${c.center} (${c.count})` }))
+    ];
+  });
+
+  readonly byAowTypeFilterOptions = computed<BandFilterOption[]>(() => {
+    const counts = this.byAowTypeCounts();
+    return [
+      { value: 'all', label: 'All types' },
+      ...counts.map(t => ({ value: t.type, label: `${t.type} (${t.count})` }))
+    ];
+  });
+
   readonly byAowVisibleCenters = computed<{ center: string; count: number }[]>(() => {
     const list = this.byAowCenterCounts();
     return list.length > 4 ? list.slice(0, 3) : list;
@@ -3781,7 +3801,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   setByAowCenterFilter(center: string | null): void {
-    if (this.byAowSelectedCenter() === center) {
+    if (center === 'all' || !center || this.byAowSelectedCenter() === center) {
       this.byAowSelectedCenter.set(null);
     } else {
       this.byAowSelectedCenter.set(center);
@@ -3789,7 +3809,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   setByAowTypeFilter(type: string | null): void {
-    if (this.byAowSelectedType() === type) {
+    if (type === 'all' || !type || this.byAowSelectedType() === type) {
       this.byAowSelectedType.set(null);
     } else {
       this.byAowSelectedType.set(type);
@@ -3814,6 +3834,18 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     }
     if (selType) {
       allInds = allInds.filter(i => (i?.result_type_name?.trim() || i?.type_name?.trim()) === selType);
+    }
+    const statusKey = this.reportingStatusFilter();
+    if (statusKey && statusKey !== 'all') {
+      const targetLabel = {
+        'not-started': 'Not started',
+        'in-progress': 'In progress',
+        'achieved': 'Achieved',
+        'overachieved': 'Overachieved'
+      }[statusKey];
+      if (targetLabel) {
+        allInds = allInds.filter(i => this.statusLabel(i?.progress_percentage) === targetLabel);
+      }
     }
 
     const { outputs, outcomes } = splitIndicatorsByTier(allInds);

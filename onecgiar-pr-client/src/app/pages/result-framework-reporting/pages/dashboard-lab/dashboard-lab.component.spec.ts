@@ -1653,4 +1653,42 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(component.cleanHloCode(undefined)).toBe('');
     });
   });
+
+  describe('By-AoW popover filters and active filters', () => {
+    it('generates options with counts and resets in clearReportingFilters', async () => {
+      const component = await createComponent();
+      component.plannedHloAowCode.set('AOW01');
+      const mockInds = [
+        { indicator_id: 1, center_acronym: 'CIAT', result_type_name: 'Knowledge product', __tier: 'output' },
+        { indicator_id: 2, center_acronym: 'CIAT', result_type_name: 'Innovation use', __tier: 'output' },
+        { indicator_id: 3, center_acronym: 'IITA', result_type_name: 'Knowledge product', __tier: 'output' }
+      ];
+      jest.spyOn(component, 'indicatorsForAow').mockReturnValue({ aow: { code: 'AOW01', name: 'Test' }, indicators: mockInds } as any);
+
+      const centerOptions = component.byAowCenterFilterOptions();
+      expect(centerOptions).toEqual([
+        { value: 'all', label: 'All centers' },
+        { value: 'CIAT', label: 'CIAT (2)' },
+        { value: 'IITA', label: 'IITA (1)' }
+      ]);
+
+      const typeOptions = component.byAowTypeFilterOptions();
+      expect(typeOptions).toEqual([
+        { value: 'all', label: 'All types' },
+        { value: 'Knowledge product', label: 'Knowledge product (2)' },
+        { value: 'Innovation use', label: 'Innovation use (1)' }
+      ]);
+
+      component.setByAowCenterFilter('CIAT');
+      component.setByAowTypeFilter('Knowledge product');
+      expect(component.byAowSelectedCenter()).toBe('CIAT');
+      expect(component.byAowSelectedType()).toBe('Knowledge product');
+      expect(component.reportingFiltersActive()).toBe(true);
+
+      component.clearReportingFilters();
+      expect(component.byAowSelectedCenter()).toBeNull();
+      expect(component.byAowSelectedType()).toBeNull();
+      expect(component.reportingFiltersActive()).toBe(false);
+    });
+  });
 });
