@@ -196,30 +196,24 @@
                 </div>
               </div>
 
-              <!-- Row 4: Section (Coming soon) -->
+              <!-- Row 4: Section — RAC-T-3 (P2-3398 closed): live multi-select over the bucket-key
+                   vocabulary, grouped Areas of work / Program-level with counts (RAC-R-3). -->
               <div>
                 <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                   Section
                 </label>
-                <div class="flex items-center gap-[6px]">
-                  <div
-                    class="pgr-filter pgr-filter--section flex-1 cursor-not-allowed opacity-60"
-                    aria-disabled="true"
-                    title="Filtering by section is not available yet: the results feed does not carry the area of work.">
-                    <app-pr-filter-multiselect
-                      [options]="sectionOptions()"
-                      [group]="true"
-                      optionGroupLabel="label"
-                      optionGroupChildren="items"
-                      optionLabel="label"
-                      optionValue="value"
-                      placeholder="Section"
-                      countLabel="sections"
-                      [disabled]="true"
-                      [ngModel]="filter.selectedSections()"
-                      (changed)="filter.selectedSections.set($event)"></app-pr-filter-multiselect>
-                  </div>
-                  <ng-container [ngTemplateOutlet]="comingSoon"></ng-container>
+                <div class="pgr-filter pgr-filter--section" aria-label="Filter by section">
+                  <app-pr-filter-multiselect
+                    [options]="sectionOptions()"
+                    [group]="true"
+                    optionGroupLabel="label"
+                    optionGroupChildren="items"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Section"
+                    countLabel="sections"
+                    [ngModel]="filter.selectedSections()"
+                    (changed)="filter.selectedSections.set($event)"></app-pr-filter-multiselect>
                 </div>
               </div>
             </div>

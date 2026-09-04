@@ -94,3 +94,30 @@ Verification: same jest command → 474/474 green (4 suites); `npx ng lint --qui
 
 **User decision (2026-09-04):** *Continue all tasks* — T-3, T-4, T-5 run as specified; projected final total ≈ 2 000–2 200 LOC accepted. Budget line in `design.md` §14 is superseded by this record (not edited on the spec branch).
 
+### `RAC-T-3` — Client: Section filter live + `?section=` — **PASS** (attempt 1)
+
+| Field | Value |
+|---|---|
+| Date | 2026-09-04 |
+| Attempts | 1 Implementer attempt (+ 1 Leader-requested remainder before review, see below) · 1 Reviewer round |
+| Requirements covered | `RAC-R-3`, `R-3.1`, `R-4.1`, `R-7`, `RAC-AC-3`, `AC-5`; scenario *Column and filter* (WHEN/THEN/BUT/AND IT MUST clauses) |
+| Skills / effort | Implementer: `angular-developer` + `tdd` (as listed), `high`. Reviewer: checklist mode, `high`. Diff (638 lines) handed as a scratchpad file path |
+| LOC | src +172 · test +151 (insertions) |
+
+**Implementer report (attempt 1):** replaced the dormant `intermediate-outcomes` / `2030-outcomes` constants with bucket-key vocabulary (`PROGRAMME_LEVEL_SECTION_KEYS`); `sectionOptions()` computes live counts from `data.rows()` — *Areas of work* (codes present) + *Program-level* (three fixed keys, zero allowed); Section control enabled (removed `aria-disabled`, `cursor-not-allowed`, `opacity-60`, `title`, `#comingSoon`); `PROGRAMME_RESULTS_SECTION_QUERY_PARAM = 'section'` + dimension + `PROGRAMME_RESULTS_QUERY_PARAM_MAP.section`; URL bridge hydrate (comma-split, raw values, anti-loop guarded by `sameSectionValues`) and mirror (comma-join, `null` when empty, merge + `replaceUrl`); chips `Section: <label>` via `sectionLabel()`; comment housekeeping in the filter service and `cellText` `case 'section'`.
+`Not Done / Assumptions` carried in verbatim: (1) *"badge 1" asserted as `badgeBefore + 1` (== `activeChips().length`) because the default Phase chip is always present — same pattern as the file's Created-by/Category tests* → accepted by the Leader (fixture reality, not a weakening). (2) *R-7 (SHOULD — unit name beside the code) not implemented: this component has no path to `clarisa-global-units`* → **rejected as a gap**: the Leader found `ResultsApiService.GET_ClarisaGlobalUnits(entityId)` already exists (`results-api.service.ts:1423`) and sent the remainder before review. (3) *dead `case 'section'` branch left in place, comment fixed* → accepted.
+**Remainder (same Implementer, before review):** `ProgrammeResultsService.loadUnits(programId)` — token-guarded, fail-soft (`unitNames = signal<Map<string,string>>`, empty on error, no error signal), called from a separate constructor effect keyed on `programmeCode()` only; *Areas of work* labels `AOW01 · Market Intelligence (12)` when a name resolves, else `AOW01 (12)`; chips unchanged (R-7 is options-only).
+Files: `programme-results.component.{ts,html,spec.ts}`, `services/programme-results-filter.service.ts`, `services/programme-results-query-params.ts`, `services/programme-results.service.ts`.
+Verification: `npx jest src/app/pages/result-framework-reporting/pages/programme-results --silent` → 3 suites, 186 passed; `npx ng lint --quiet` → clean; `npx ng build --configuration development` → succeeds (pre-existing unrelated warnings only). New `it`s: grouped options with counts; select AOW01 → row/chip/badge/navigate params; select AOW02 → 0 rows; Clear → 3 rows + `section: null`; hydrate `?section=AOW01,INTERMEDIATE` two chips, no navigate; `?section=aow01` matches with raw chip; `?section=NOPE` chip + empty state; Section control LIVE (no disabled attrs, no "Coming soon", old sentinels absent); R-7 happy path (`AOW01 · Market Intelligence (1)`, `GET_ClarisaGlobalUnits('SP01')`, chip stays code-only); R-7 fail-soft (`AOW01 (1)`, cell/`error()`/`scopeError()` unaffected). 5 pre-existing mirror-effect assertions gained the new `section: null` key only.
+
+**Reviewer: `STATUS: PASS`** — "RAC-T-3 conforms. Vocabulary is bucket keys only; the two dormant constants are deleted; `sectionOptions` counts from `rows().section` so `AOW02` yields 0 rows for `#9006`. Options match RAC-R-3 and R-7 appends the unit name only when `unitNames()` resolves, `loadUnits()` token-guarded and fail-soft (the failure test asserts cell, `error()` and `scopeError()` untouched — a real effect check). URL bridge matches design §6.1/§6.2 and the folder guide's (a)–(g). Control is live. The 5 edited mirror assertions only add the new key; `badgeBefore + 1` is legitimate. Scope clean: 6 files under `programme-results/`; T-2's cell logic changed by comment only."
+
+**ADVISORY (4R, recorded — no rework, no new task):**
+- RISK: `sectionLabel()` / `PROGRAMME_RESULTS_FIXED_SECTION_LABELS[key]` use plain object lookup, now fed raw URL values — `?section=constructor` returns a prototype member (garbage chip label, mis-grouped option). Suggest `Object.hasOwn()` or `Object.create(null)` in `programme-results-section-labels.ts`.
+- RELIABILITY: `toSectionValues` does not dedupe (`?section=AOW01,AOW01` → two identical chips) and `?section=A, B` normalises on hydrate, firing one `replaceUrl` navigate the anti-loop tests do not cover. Both benign.
+- READABILITY: the `sectionLabel` chip change in the filter service has no assertion in its own spec; one `it` with `INTERMEDIATE` would pin it at unit level.
+- READABILITY: `aria-label` on the non-interactive wrapper `div` is ignored by AT; the `<label>` above already names the control.
+*Leader note:* the RISK item is a one-line hardening in a file this spec created; surfaced to the user as a follow-up candidate (not absorbed — advisories never widen a task).
+
+**Decisions:** R-7 treated as owed scope (SHOULD, but named in T-3's description) and closed before review rather than deferred. **Issues:** none. **Final verification:** 186/186 green, lint clean, dev build clean. Gate: *auto-approved (pre-approved mode)*; the spec's cut point after T-3 is covered by the user's tripwire decision (*continue all tasks*).
+

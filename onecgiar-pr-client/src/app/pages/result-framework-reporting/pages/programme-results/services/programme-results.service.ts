@@ -3,6 +3,8 @@ import { switchMap } from 'rxjs/operators';
 import { Observable, of } from 'rxjs';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { SPProgress } from '../../../../../shared/interfaces/SP-progress.interface';
+// @akili-spec changes/results-aow-column-filter (RAC-T-3, R-7)
+import { Unit } from '../../entity-details/interfaces/entity-details.interface';
 
 /**
  * One row of the programme Results table.
@@ -136,6 +138,14 @@ interface ResultsScopeEnvelope {
     versionId?: number;
     buckets?: Array<{ result_id: number | string; key: string; kind: 'aow' | 'outcome' | 'untagged'; codes: string[] }>;
   };
+}
+
+// @akili-spec changes/results-aow-column-filter (RAC-T-3, R-7)
+/** Envelope of `GET /api/results-framework-reporting/clarisa-global-units` — same request the
+ *  Overview already makes (`dashboard-lab.component.ts` `cacheAows`), read here ONLY for
+ *  `response.units[].{code,name}` (RAC-R-7's AoW display names). */
+interface ClarisaGlobalUnitsEnvelope {
+  response?: { units?: Unit[] };
 }
 
 /** `0_AOW01` … `3_UNTAGGED`, alphabetical within `aow` (RAC-R-2.2). `''`/unset sorts last. */
@@ -287,6 +297,17 @@ export class ProgrammeResultsService {
   /** The phase `scope()` was fetched for — the join's version guard (A-1). */
   private readonly scopeVersionId = signal<number | null>(null);
 
+  // @akili-spec changes/results-aow-column-filter (RAC-T-3, R-7)
+  /** Discards a late unit-names response when `loadUnits()` was called again for another programme. */
+  private unitsRequestToken = 0;
+  /**
+   * `AoW code (upper-case) -> display name`, for `sectionOptions()`'s R-7 "name beside the code"
+   * (SHOULD, not blocking). FAIL-SOFT by design: this is decoration on an option label, not data
+   * the table or the filter depends on, so a failed/slow request just leaves the map empty and
+   * every option falls back to its code alone — no error state, no `—`, nothing else reacts.
+   */
+  readonly unitNames = signal<Map<string, string>>(new Map());
+
   /**
    * Rows the table renders: the base rows joined with the currently held scope state
    * (`joinResultScope`, RAC-T-2). Public API unchanged — still a `Signal<ProgrammeResultRow[]>`
@@ -401,12 +422,14 @@ export class ProgrammeResultsService {
   reset(): void {
     this.requestToken++;
     this.scopeRequestToken++;
+    this.unitsRequestToken++;
     this.rawRows.set([]);
     this.initiativeId.set(null);
     this.scope.set(null);
     this.scopeVersionId.set(null);
     this.scopeLoading.set(false);
     this.scopeError.set(null);
+    this.unitNames.set(new Map());
     this.totalReported.set(0);
     this.isPartial.set(false);
     this.loading.set(false);
@@ -461,6 +484,44 @@ export class ProgrammeResultsService {
         this.scopeVersionId.set(null);
         this.scopeLoading.set(false);
         this.scopeError.set('The Area of Work buckets could not be loaded.');
+      }
+    });
+  }
+
+  // @akili-spec changes/results-aow-column-filter (RAC-T-3, R-7)
+  /**
+   * Loads this programme's AoW display names for the Section filter's option labels (R-7,
+   * SHOULD). Token-guarded like `load()`/`loadScope()`, but FAIL-SOFT where those two are not:
+   * an empty/failed response just leaves `unitNames` at `{}` — every option label falls back to
+   * its bare code, nothing else in the tab observes this signal. Same request the Overview
+   * already makes for its scope breakdown (`dashboard-lab.component.ts` `cacheAows`), by the
+   * programme's official code — no phase dimension, so callers need not refetch on phase change.
+   */
+  loadUnits(programId: string): void {
+    const code = text(programId);
+    const token = ++this.unitsRequestToken;
+
+    if (!code) {
+      this.unitNames.set(new Map());
+      return;
+    }
+
+    (this.api.resultsSE.GET_ClarisaGlobalUnits(code) as Observable<ClarisaGlobalUnitsEnvelope>).subscribe({
+      next: envelope => {
+        if (token !== this.unitsRequestToken) return;
+
+        const units = envelope?.response?.units ?? [];
+        const map = new Map<string, string>();
+        for (const unit of units) {
+          const code = text(unit?.code).toUpperCase();
+          const name = text(unit?.name);
+          if (code && name) map.set(code, name);
+        }
+        this.unitNames.set(map);
+      },
+      error: () => {
+        if (token !== this.unitsRequestToken) return;
+        this.unitNames.set(new Map());
       }
     });
   }

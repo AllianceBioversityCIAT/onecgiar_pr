@@ -162,8 +162,8 @@ export function matchesProgrammeResultFilters(
 ): boolean {
   if (!matchesProgrammeResultSearch(row, state.searchText)) return false;
 
-  // Section is multi-select (OR within the dimension). Always passes in v1: every row's
-  // `section` is '' because no endpoint exposes the AoW for the full result set (P2-3399).
+  // Section is multi-select (OR within the dimension), exact bucket-key match, case-insensitive
+  // (RAC-R-3, RAC-T-3) — `row.section` is the Overview's bucket key since RAC-T-2's join.
   if (state.selectedSections?.length && !state.selectedSections.some(section => normalize(section) === normalize(row?.section))) {
     return false;
   }
@@ -234,9 +234,9 @@ export class ProgrammeResultsFilterService {
   readonly searchText = signal<string>('');
 
   /**
-   * MULTI-select (checkboxes in the design). Present but INERT in v1 — the rows carry no
-   * section, so the dropdown has nothing honest to offer yet (P2-3399). Kept so the
-   * template, the chips and `clearAll()` do not have to change when the field lands.
+   * MULTI-select (checkboxes in the design), matched against `row.section` (the Overview's
+   * bucket key — RAC-T-2's join, RAC-T-3's live filter). Values are the bucket-key vocabulary:
+   * an AoW code (`AOW01`) or one of `INTERMEDIATE` / `EOI_2030` / `UNTAGGED`.
    */
   readonly selectedSections = signal<string[]>([]);
 
@@ -277,7 +277,13 @@ export class ProgrammeResultsFilterService {
 
     if (search) chips.push({ label: `Search: ${search}`, dimension: 'search', value: search });
     for (const section of this.selectedSections()) {
-      if (section) chips.push({ label: `Section: ${section}`, dimension: 'section', value: section });
+      // @akili-spec changes/results-aow-column-filter (RAC-T-3) — the chip shows the DISPLAY
+      // label (design.md §6.2 "activeChips label via sectionLabel(key)"): `AOW01` for an AoW code
+      // (no dictionary entry, `sectionLabel` returns it as-is — including a raw, mixed-case value
+      // straight off the URL, RAC-R-4.1's "raw value in chip" rule) and `Intermediate outcomes` /
+      // `2030 outcomes` / `Not tagged` for the three fixed keys. `value` stays the raw key —
+      // `clearChip`/the predicate must keep matching exactly what is stored, never the label.
+      if (section) chips.push({ label: `Section: ${sectionLabel(section)}`, dimension: 'section', value: section });
     }
     const phase = this.selectedPhase();
     if (phase) chips.push({ label: `Phase: ${phase}`, dimension: 'phase', value: phase });

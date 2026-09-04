@@ -18,7 +18,7 @@
 
 ## 1. Scope of this task list
 - **Module / feature:** `result-framework-reporting` / Results tab Area of Work column, Section filter, Overview scope deep link.
-- **Status:** `in-progress` (T-1, T-2 done; budget tripwire pending user decision).
+- **Status:** `in-progress` (T-1..T-3 done; tripwire: user chose continue all).
 
 ## 2. Pre-flight checklist
 - ✅ `requirements.md` approved (auto-approved, pre-approved mode).
@@ -51,7 +51,7 @@
   - *Input that fails:* a bucket keyed by a string id (`"9006"`) while rows carry numbers must still join (normalise with `Number`); a row with `versionId` `35` against a scope loaded for `36` must render `—` with a version-mismatch `title` (not a skeleton, not `Not tagged`) — assert it.
 - **Done:** column visible by default on SP01 (T-5 confirms), CSV carries it, lint clean.
 
-### `RAC-T-3` — Client: Section filter live + `?section=`
+### `RAC-T-3` — Client: Section filter live + `?section=` — [x]
 - **Type:** `client` + `tests`
 - **Description:** Replace the Results tab's dormant constants with the bucket-key vocabulary (`RAC-DD-3`); `sectionOptions` = *Areas of work* (codes present in rows, `AOW01 (12)`, name appended when units are loaded — R-7) + *Program-level* (`INTERMEDIATE`, `EOI_2030`, `UNTAGGED` with counts, labels *Intermediate outcomes / 2030 outcomes / Not tagged*); remove `aria-disabled`, `opacity-60`, `cursor-not-allowed`, the `title` and the `#comingSoon` outlet from the Section control; `PROGRAMME_RESULTS_SECTION_QUERY_PARAM = 'section'` + dimension + map entry; URL bridge hydrates `?section=A,B` into `selectedSections` (no rewrite) and mirrors selections back (comma list, merge + replaceUrl); chips `Section: <label>`; `activeFilterCount` counts sections; Clear filters clears them (already); `matchesProgrammeResultFilters` exact key match. Design §6.1, §6.2.
 - **Implements:** `RAC-R-3`, `R-3.1`, `R-4.1`, `R-7`, `RAC-AC-3`, `AC-5`; scenario *Column and filter* (WHEN select → THEN row/chip/badge/URL; BUT not `#9006` under AOW02; AND IT MUST restore on Clear and drop the param).

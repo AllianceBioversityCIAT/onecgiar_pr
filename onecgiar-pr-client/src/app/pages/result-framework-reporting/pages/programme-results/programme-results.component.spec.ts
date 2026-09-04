@@ -228,6 +228,7 @@ describe('ProgrammeResultsComponent', () => {
   let router: Router;
   let getAllResults: jest.Mock;
   let getResultsScope: jest.Mock;
+  let getClarisaGlobalUnits: jest.Mock;
   /**
    * The two halves a real `ActivatedRoute` keeps in sync: the observable `toSignal()` reads and
    * the `snapshot` the mirror effect diffs against. `pushQueryParams` is the only way a test
@@ -250,12 +251,18 @@ describe('ProgrammeResultsComponent', () => {
     scopeBuckets: Array<{ result_id: number | string; key: string; kind: 'aow' | 'outcome' | 'untagged'; codes: string[] }> = [],
     // Escape hatch for the loading/error states, which need the mock to hang or throw instead
     // of answering synchronously.
-    scopeOverride?: jest.Mock
+    scopeOverride?: jest.Mock,
+    // @akili-spec changes/results-aow-column-filter (RAC-T-3, R-7) — AoW display names
+    // `GET_ClarisaGlobalUnits` answers with, and an escape hatch to force it to fail (the
+    // request is fail-soft — a failure must never touch the table or the scope join).
+    units: Array<{ code: string; name: string }> = [],
+    unitsOverride?: jest.Mock
   ): void {
     localStorage.clear();
 
     getAllResults = jest.fn(() => of({ response: { items, meta: { total: String(items.length) } } }));
     getResultsScope = scopeOverride ?? jest.fn(() => of({ response: { programId: 'SP01', versionId: 11, buckets: scopeBuckets } }));
+    getClarisaGlobalUnits = unitsOverride ?? jest.fn(() => of({ response: { units } }));
 
     const initialMap = convertToParamMap(initialQueryParams);
     routeSnapshotQueryParamMap = initialMap;
@@ -275,6 +282,9 @@ describe('ProgrammeResultsComponent', () => {
         GET_AllResultsWithUseRole: getAllResults,
         // RAC-T-2 — Area of Work buckets, empty unless `setup()`'s third argument says otherwise.
         GET_ResultsScope: getResultsScope,
+        // RAC-T-3 (R-7) — AoW display names, empty unless `setup()`'s fifth/sixth arguments say
+        // otherwise.
+        GET_ClarisaGlobalUnits: getClarisaGlobalUnits,
         currentResultId: null as number | null
       },
       // P2-3508 — "Update result" delegates eligibility to ApiService instead of re-deriving it, so
@@ -613,7 +623,8 @@ describe('ProgrammeResultsComponent', () => {
       category: 'Policy change',
       origin: null,
       center: null,
-      createdBy: null
+      createdBy: null,
+      section: null
     });
   });
 
@@ -632,7 +643,8 @@ describe('ProgrammeResultsComponent', () => {
       category: null,
       origin: null,
       center: null,
-      createdBy: null
+      createdBy: null,
+      section: null
     });
   });
 
@@ -836,7 +848,8 @@ describe('ProgrammeResultsComponent', () => {
       category: null,
       origin: null,
       center: 'CIAT',
-      createdBy: 'Angel Jarrin'
+      createdBy: 'Angel Jarrin',
+      section: null
     });
   });
 
@@ -859,7 +872,8 @@ describe('ProgrammeResultsComponent', () => {
       category: null,
       origin: null,
       center: null,
-      createdBy: null
+      createdBy: null,
+      section: null
     });
     expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
   });
@@ -885,7 +899,8 @@ describe('ProgrammeResultsComponent', () => {
       category: null,
       origin: null,
       center: null,
-      createdBy: null
+      createdBy: null,
+      section: null
     });
     expect(extras.replaceUrl).toBe(true);
     expect(extras.queryParamsHandling).toBe('merge');
@@ -1016,16 +1031,20 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.visibleColumns().map(column => column.key)).not.toContain('select');
   });
 
-  it('ships the Section filter visible but DISABLED, with its grouped options wired (P2-3398)', () => {
+  // ── Section filter (RAC-T-3, closes P2-3398) ──────────────────────────────────────────────
+  it('ships the Section filter LIVE, with no aria-disabled and no "Coming soon" tag', () => {
     const wrapper = fixture.debugElement.query(By.css('.pgr-filter--section')).nativeElement as HTMLElement;
-    expect(wrapper.getAttribute('aria-disabled')).toBe('true');
-    expect(wrapper.className).toContain('cursor-not-allowed');
-    expect(wrapper.getAttribute('title')).toContain('not available yet');
-    // Enabling it later is one flag: the grouped options are already built.
-    expect(component.sectionOptions().map(group => group.label)).toEqual(['Areas of work', 'Program-level']);
-    expect(component.sectionOptions()[1].items.map(item => item.value)).toEqual(['intermediate-outcomes', '2030-outcomes']);
-    // The tag sits beside the trigger, in the filter row, where the design puts the control.
-    expect((wrapper.parentElement as HTMLElement).textContent).toContain('Coming soon');
+    expect(wrapper.getAttribute('aria-disabled')).toBeNull();
+    expect(wrapper.className).not.toContain('cursor-not-allowed');
+    expect(wrapper.className).not.toContain('opacity-60');
+    expect(wrapper.getAttribute('title')).toBeNull();
+    expect((wrapper.parentElement as HTMLElement).textContent).not.toContain('Coming soon');
+    // The two never-live placeholder constants are gone (RAC-R-3.1) — the bucket-key vocabulary
+    // (`INTERMEDIATE` / `EOI_2030`) is what the Program-level group offers now.
+    const allValues = component.sectionOptions().flatMap(group => group.items.map(item => item.value));
+    expect(allValues).not.toContain('intermediate-outcomes');
+    expect(allValues).not.toContain('2030-outcomes');
+    expect(allValues).toEqual(expect.arrayContaining(['INTERMEDIATE', 'EOI_2030', 'UNTAGGED']));
   });
 
   it('ships the indicator subtitle with the design geometry and no value (P2-3399)', () => {
@@ -1152,6 +1171,123 @@ describe('ProgrammeResultsComponent', () => {
 
       expect(component.filteredRows().map(row => row.code)).toEqual(['9006']);
     }));
+  });
+
+  // ── Section filter live (RAC-T-3, closes P2-3398) ─────────────────────────────────────────
+  describe('Section filter live (RAC-T-3)', () => {
+    it('offers grouped options with live counts: AOW01 (1), Intermediate outcomes (1), 2030 outcomes (0), Not tagged (1)', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
+
+      const options = component.sectionOptions();
+      expect(options.map(group => group.label)).toEqual(['Areas of work', 'Program-level']);
+      expect(options[0].items.map(item => item.label)).toEqual(['AOW01 (1)']);
+      expect(options[1].items.map(item => item.label)).toEqual([
+        'Intermediate outcomes (1)',
+        '2030 outcomes (0)',
+        'Not tagged (1)'
+      ]);
+    });
+
+    // ── AoW display names (R-7, SHOULD) ─────────────────────────────────────────────────────
+    it('appends the AoW unit name beside its code once GET_ClarisaGlobalUnits resolves (R-7)', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS, undefined, [{ code: 'AOW01', name: 'Market Intelligence' }]);
+
+      expect(getClarisaGlobalUnits).toHaveBeenCalledWith('SP01');
+      expect(component.sectionOptions()[0].items.map(item => item.label)).toEqual(['AOW01 · Market Intelligence (1)']);
+      // Chips stay code-only — R-7 is options-only (design.md §6.2, requirements.md R-7).
+      component.filter.selectedSections.set(['AOW01']);
+      expect(filterService().activeChips().map(chip => chip.label)).toContain('Section: AOW01');
+    });
+
+    it('falls back to the bare code when GET_ClarisaGlobalUnits fails, and nothing else observes the failure', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS, undefined, [], jest.fn(() => throwError(() => new Error('boom'))));
+      fixture.detectChanges();
+
+      expect(component.sectionOptions()[0].items.map(item => item.label)).toEqual(['AOW01 (1)']);
+      // Fail-soft: the AoW column, the row list and the scope join are all unaffected.
+      const row9006 = component.data.rows().find(row => row.id === 9006)!;
+      expect(component.cellText(row9006, 'aow')).toBe('AOW01 +1');
+      expect(component.data.error()).toBeNull();
+      expect(component.data.scopeError()).toBeNull();
+    });
+
+    it('selecting AOW01 filters to one row, shows its chip, increments the badge by 1, and mirrors ?section=AOW01', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
+      const badgeBefore = component.activeFilterCount(); // 1: the default Phase chip
+      (router.navigate as jest.Mock).mockClear();
+
+      component.filter.selectedSections.set(['AOW01']);
+      fixture.detectChanges();
+
+      expect(component.filteredRows().map(row => row.code)).toEqual(['9006']);
+      expect(filterService().activeChips()).toEqual(
+        expect.arrayContaining([{ label: 'Section: AOW01', dimension: 'section', value: 'AOW01' }])
+      );
+      expect(text()).toContain('Section: AOW01');
+      expect(component.activeFilterCount()).toBe(badgeBefore + 1);
+      expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
+
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+      const [commands, extras] = (router.navigate as jest.Mock).mock.calls[0];
+      expect(commands).toEqual([]);
+      expect(extras.queryParamsHandling).toBe('merge');
+      expect(extras.replaceUrl).toBe(true);
+      expect(extras.queryParams).toEqual(expect.objectContaining({ section: 'AOW01' }));
+    });
+
+    it('selecting AOW02 filters to zero rows (#9006 is bucketed AOW01, not AOW02)', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
+
+      component.filter.selectedSections.set(['AOW02']);
+      fixture.detectChanges();
+
+      expect(component.filteredRows()).toEqual([]);
+    });
+
+    it('Clear filters restores all three rows and mirrors section: null', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
+      component.filter.selectedSections.set(['AOW01']);
+      fixture.detectChanges();
+      (router.navigate as jest.Mock).mockClear();
+
+      component.clearAll();
+      fixture.detectChanges();
+
+      expect(component.filteredRows().length).toBe(3);
+      expect(filterService().selectedSections()).toEqual([]);
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+      const [, extras] = (router.navigate as jest.Mock).mock.calls[0];
+      expect(extras.queryParams).toEqual(expect.objectContaining({ section: null }));
+    });
+
+    it('hydrates ?section=AOW01,INTERMEDIATE into two chips, filters the rows, and does not navigate (anti-loop)', () => {
+      // `phase` is included in the initial URL, same as every other anti-loop hydrate test in
+      // this file ((a), the createdBy ones): otherwise the default-phase hydrate ALSO changes
+      // the URL on the same tick and the mirror effect legitimately fires for THAT reason.
+      setup(AOW_RAW_ITEMS, { phase: 'Reporting 2026', section: 'AOW01,INTERMEDIATE' }, AOW_SCOPE_BUCKETS);
+
+      expect(filterService().selectedSections()).toEqual(['AOW01', 'INTERMEDIATE']);
+      expect(filterService().activeChips().map(chip => chip.label)).toEqual(
+        expect.arrayContaining(['Section: AOW01', 'Section: Intermediate outcomes'])
+      );
+      expect(component.filteredRows().map(row => row.code).sort()).toEqual(['8871', '9006']);
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('?section=aow01 (lower-case) still matches, case-insensitively, and keeps the raw value in the chip', () => {
+      setup(AOW_RAW_ITEMS, { section: 'aow01' }, AOW_SCOPE_BUCKETS);
+
+      expect(component.filteredRows().map(row => row.code)).toEqual(['9006']);
+      expect(filterService().activeChips().map(chip => chip.label)).toContain('Section: aow01');
+    });
+
+    it('?section=NOPE shows its chip and the filtered-empty state without throwing', () => {
+      expect(() => setup(AOW_RAW_ITEMS, { section: 'NOPE' }, AOW_SCOPE_BUCKETS)).not.toThrow();
+
+      expect(filterService().activeChips().map(chip => chip.label)).toContain('Section: NOPE');
+      expect(component.isFilteredEmpty()).toBe(true);
+      expect(text()).toContain('No results match these filters.');
+    });
   });
 
   it('ships View indicator DISABLED and the other three live (P2-3395; P2-3396 closed 2026-08-24)', () => {
