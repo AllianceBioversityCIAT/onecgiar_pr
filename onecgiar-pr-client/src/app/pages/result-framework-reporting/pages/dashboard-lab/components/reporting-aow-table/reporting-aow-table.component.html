@@ -124,10 +124,10 @@
               class="block border-0 bg-transparent p-0 text-center cursor-pointer group/tgt"
               (click)="emitAndStop(openTarget, row, $event)">
               <span
-                class="pr-figure block text-[15px] font-bold tabular-nums text-[var(--pr-text-heading)] group-hover/tgt:text-[var(--pr-color-primary-600)] transition-colors">
+                class="pr-figure-sm block text-[13px] font-semibold tabular-nums text-[var(--pr-text-heading)] group-hover/tgt:text-[var(--pr-color-primary-600)] transition-colors">
                 {{ targetText(row) }}
               </span>
-              <span class="block text-[9.5px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-muted)]">Target</span>
+              <span class="block text-[8.5px] font-medium uppercase tracking-[0.05em] text-[var(--pr-text-muted)] mt-[1px]">Target</span>
             </button>
           </td>
 
@@ -139,11 +139,11 @@
               [prTooltip]="achievedTooltip(row)"
               (click)="emitAndStop(openAchieved, row, $event)">
               <span
-                class="pr-figure block text-[15px] font-bold tabular-nums group-hover/ach:text-[var(--pr-color-primary-600)] transition-colors"
+                class="pr-figure-sm block text-[13px] font-semibold tabular-nums group-hover/ach:text-[var(--pr-color-primary-600)] transition-colors"
                 [class]="achievedIsEmpty(row) ? 'text-[var(--pr-text-muted)]' : 'text-[var(--pr-text-heading)]'">
                 {{ achievedText(row) }}
               </span>
-              <span class="block text-[9.5px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-muted)]">Achieved</span>
+              <span class="block text-[8.5px] font-medium uppercase tracking-[0.05em] text-[var(--pr-text-muted)] mt-[1px]">Achieved</span>
             </button>
           </td>
 
@@ -689,20 +689,20 @@
 
                       <!-- 3. Target -->
                       <div class="text-center">
-                        <span class="pr-figure block text-[13px] font-bold tabular-nums text-[var(--pr-text-heading)]">
+                        <span class="pr-figure-sm block text-[13px] font-semibold tabular-nums leading-tight text-[var(--pr-text-heading)]">
                           {{ hloTargetSum(hlo) }}
                         </span>
-                        <span class="block text-[9px] font-medium uppercase tracking-[0.04em] text-[var(--pr-text-subtle)]">
+                        <span class="block text-[8.5px] font-medium uppercase tracking-[0.05em] leading-tight text-[var(--pr-text-muted)] mt-[1px]">
                           Target
                         </span>
                       </div>
 
                       <!-- 4. Achieved -->
                       <div class="text-center">
-                        <span class="pr-figure block text-[13px] font-bold tabular-nums text-[var(--pr-color-green-500)]">
+                        <span class="pr-figure-sm block text-[13px] font-semibold tabular-nums leading-tight text-[var(--pr-color-green-500)]">
                           {{ hloAchievedSum(hlo) }}
                         </span>
-                        <span class="block text-[9px] font-medium uppercase tracking-[0.04em] text-[var(--pr-text-subtle)]">
+                        <span class="block text-[8.5px] font-medium uppercase tracking-[0.05em] leading-tight text-[var(--pr-text-muted)] mt-[1px]">
                           Achieved
                         </span>
                       </div>
@@ -879,7 +879,7 @@
         [prTooltip]="(isIntermediateRow(bucketKind) || isCrossCuttingIntermediate(row)) ? intermediateTargetTooltip : ''"
         (click)="emitAndStop(openTarget, row, $event)">
         <span
-          class="pr-figure block text-[13px] font-bold tabular-nums text-[var(--pr-text-heading)] group-hover/target:text-[var(--pr-color-primary-600)] transition-colors">
+          class="pr-figure-sm block text-[13px] font-semibold tabular-nums text-[var(--pr-text-heading)] group-hover/target:text-[var(--pr-color-primary-600)] transition-colors">
           {{ targetText(row) }}
         </span>
       </button>
@@ -893,7 +893,7 @@
         [prTooltip]="achievedTooltip(row)"
         (click)="emitAndStop(openAchieved, row, $event)">
         <span
-          class="pr-figure block text-[13px] font-bold tabular-nums group-hover/achieved:text-[var(--pr-color-primary-600)] transition-colors"
+          class="pr-figure-sm block text-[13px] font-semibold tabular-nums group-hover/achieved:text-[var(--pr-color-primary-600)] transition-colors"
           [class]="achievedIsEmpty(row) ? 'text-[var(--pr-text-muted)]' : 'text-[var(--pr-text-heading)]'">
           {{ achievedText(row) }}
         </span>
