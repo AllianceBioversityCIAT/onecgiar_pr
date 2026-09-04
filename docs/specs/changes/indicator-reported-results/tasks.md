@@ -18,7 +18,7 @@
 
 ## 1. Scope of this task list
 - **Module / feature:** `result-framework-reporting` / indicator drawer *Reported results* tab.
-- **Status:** `in-progress` (execution started 2026-09-03).
+- **Status:** `complete` — 5/5 PASS 2026-09-04; see `execution.md`.
 
 ## 2. Pre-flight checklist
 - ✅ `requirements.md` approved (auto-approved, pre-approved mode).
@@ -73,7 +73,7 @@
   - *Input that fails:* a drawer already at 900 px must **not** shrink on entering the tab (it is a floor, not a set); `widthChange` must not emit when nothing changed.
 - **Done:** Jest + CT green; existing `initialDrawerWidth` tests unchanged and green.
 
-### `IRR-T-5` — Docs + live SP01 check
+### `IRR-T-5` — Docs + live SP01 check `[x]`
 - **Type:** `docs` + manual verification
 - **Description:** Update `components/indicator-drawer/CLAUDE.md` (three tabs, `scope=all`, the width floor, the reset list, the pill-copy note; re-stamp `Verified:`) and `dashboard-lab/CLAUDE.md` if it names the drawer tabs. Live check in the authenticated Orca browser (`orca-cli` skill; capture and restore the tab URL): SP01 Reporting tab → an indicator with ACHIEVED > 0 → menu → **View reported results** → read the rendered rows (code, category name, pill text, contribution, phase) and the strip via `orca eval`; then one indicator with nothing reported → empty state. Record both reads in `execution.md`.
 - **Implements:** defect class *fixture-shaped blindness*; confirms assumptions A-1 (`related_node_id` present on Reporting rows), A-2, and `IRR-R-2.2` with real type names.

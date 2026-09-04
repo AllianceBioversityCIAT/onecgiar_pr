@@ -92,3 +92,37 @@
 
 **Gate:** auto-approved (pre-approved mode) → continue to IRR-T-5.
 
+### `IRR-T-5` — Docs + live SP01 check — **PASS** (2026-09-04, 1 attempt)
+
+| Field | Value |
+|---|---|
+| Implementer | `akili-implementer` wrapper (`sonnet`), effort medium, skill `orca-cli` |
+| Reviewer | none — `docs` + manual-verification task; Leader adjudicated the pasted `orca eval` reads against the tasks.md Verification list |
+| Files | `…/components/indicator-drawer/CLAUDE.md` (three tabs, `initialTab` union, `scope=all` single request, width floor 760 / cards < 640 / `widthBeforeResults`, reset list incl. `loadError`/`searchText`/`openMenuKey`/`widthBeforeResults`, `STATUS_TOKENS` 1/2/3-only note, dormant auto-switch note; `Verified: 2026-09-04 · qa-development-2026 · fa3f06a90`) · `…/dashboard-lab/CLAUDE.md` (line 19 `manageIndicator` tab union widened; `Verified:` re-stamped) |
+| Backend | `nest start --watch` from this worktree → served the T-1 fields (`result_type_name` present in every row) |
+
+**Live read A — SP01 · AOW01 indicator `7297::46::AOW01`, ACHIEVED 2, target 1** (double-read, stable): drawer opened directly on *Reported results*, width 759.99 (floor). 6 rows: `#8677`, `#8753`, `#8942`, `#8977` **Editing** (pill `rgb(180,83,9)` / `rgb(254,243,199)` = `--pr-status-in-progress-*`), `#8968` **Quality Assessed** (`rgb(4,120,87)` / `rgb(209,250,229)` = approved pair), `#8970` **Approved** (`rgb(75,85,99)` / `rgb(243,244,246)` = not-started pair); every Category `Innovation development` (server name, never digits); every Phase `Reporting 2026` (name, never digits); contribution `1` ×5 and `—` ×1. Strip `6 results reported · Σ contribution 5 of target 1`; disclosure `title` `Achieved on the row: 2 — it counts reviewed results only; this list sums 5 across every status.`; split line `4 editing · 1 quality assessed · 1 approved`; no search box (≤ 8 rows). Editing rows present ⇒ `scope=all` reached the server (default scope would have returned 2 rows).
+
+**Live read B — virgin indicator `10939::1279::AOW01`** (ICARDA, target 1): no `<table>`; empty block `Nothing reported against this indicator yet.` + CTA `Report the first result`. (A first candidate with ACHIEVED 0, `7208::46::AOW01`, returned 8 unreviewed rows under `scope=all` — incidental proof that the wider population is real.)
+
+**Assumptions confirmed:** A-1 (`related_node_id` resolves on real Reporting rows), A-2 (all-scope statuses on real data), `IRR-R-2.2`/`R-2.3` (names, never ids). Tab restored to its original URL.
+
+**Spec gap surfaced (from the T-3 advisory, now confirmed live):** an **Approved (6)** result renders in the grey not-started pair because `STATUS_TOKENS` (a verbatim copy of the Results-tab map, as design §6.2 mandates) maps only statuses 1/2/3. Spec-conformant (IRR-R-2.1 fallback) and identical to the Results tab, but it dulls the pipeline this tab exists to show. **Not fixed here — recorded for the user as a follow-up** (extend the map to 5/6 in both copies via `/akili-quick`, or decide the pairs in `docs/ux-ui/design.md`). No Pending Review (5) instance found on SP01; same code path.
+
+**Gate:** auto-approved (pre-approved mode) → all tasks complete.
+
+## Summary — all tasks complete (2026-09-04)
+
+| Task | Status | Attempts | Reviewer |
+|---|---|---|---|
+| IRR-T-1 server `scope` + `result_type_name` | PASS | 1 | PASS |
+| IRR-T-2 tab shell, data path, host wiring | PASS | 1 | PASS |
+| IRR-T-3 table, strip, row actions, search, states | PASS | 1 | PASS (R-11, R-12 also landed) |
+| IRR-T-4 width floor, restore, card fallback (CT gate) | PASS | 1 | PASS (4th spawn — 1 usage-limit death, 2 pane timeouts, user chose retry) |
+| IRR-T-5 docs + live SP01 check | PASS | 1 | n/a (manual, Leader-adjudicated) |
+
+- **Budget:** 5 tasks (= 5) · 0 rework rounds (cap 1) · source ≈ 40 server + ≈ 440 client ≈ 480 LOC (estimate 320) · tests ≈ 1 100 LOC incl. the 337-line CT (estimate 450) → total ≈ 1 600 vs the 1 000 trip. **Tripwire exceeded on test LOC only** (`KZ-REH-1` recurrence, third time); source overran by ≈ 160 lines because R-11/R-12 (SHOULD/MAY) were delivered and the card fallback was rebuilt with pill + kebab rather than moved verbatim. Surfaced here rather than mid-run because no task or review-round limit tripped and the overrun accrued in T-3/T-4.
+- **Verification (final):** server 6 suites / 118 tests; client `dashboard-lab` 25 suites / 914 tests; Cypress CT 6/6 twice; lint clean both packages; dev build clean; live SP01 reads PASS.
+- **Commits (this spec):** `2fb2c64f9` T-1 · `4a1db18f1` T-2 · `5c36fbe77` T-3 · `a2269fbdd` T-4 · T-5 guides (next commit) · `📝 docs(specs)` log commits.
+- **Follow-ups for `/akili-archive`:** grey pill for Approved/Pending Review (spec gap → `/akili-quick` extending `STATUS_TOKENS` in both copies, or a design.md §7 decision); `cypress/results/` to `.gitignore`; window-resize while on the tab can leave `width()` above the clamp (pre-existing drag behaviour); IRR-DD-4 accepted gap (bilateral routing); fourth copy of the pill pairs and of the `.pr-row-menu` rules (extraction PR).
+- **Process issues for kaizen:** agent-pane creation timed out repeatedly (judgment-day judges ×4, T-4 Reviewer ×2) and one Reviewer died on the account usage limit; a second session kept committing in this checkout (`KZ-MRF-3` recurrence); zsh unquoted `$FILES` gave an empty diff once.
