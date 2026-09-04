@@ -62,7 +62,7 @@
   - *Input that fails:* a row with `contribution: null` must render `—` and be excluded from Σ; a row with `status_id: 99` must use the not-started pair; a search of `zzz` must render the table's empty template, not the "nothing reported" block.
 - **Done:** all listed assertions green; `npx ng lint --quiet` clean; `ng build --configuration development` clean (new template bindings).
 
-### `IRR-T-4` — Client: width floor, restore, and the card fallback — real-layout gate
+### `IRR-T-4` — Client: width floor, restore, and the card fallback — real-layout gate `[x]`
 - **Type:** `client` + `tests`
 - **Description:** `TABLE_FLOOR = 760`; effect on `tab()`: entering `results` with `width() < min(760, clamp)` stores the prior width, sets the floor and emits `widthChange`; leaving restores the stored width unless the user dragged on the tab (a drag clears the memory); `tableLayout = computed(() => width() >= 640)` switches the template between the table and the card layout (cards = the moved markup + pill + kebab). The reset effect clears the memory per indicator. Design §6.2, IRR-DD-5.
 - **Implements:** `IRR-R-8`, `IRR-R-8.1`, `IRR-AC-7`; scenario *Room for a table* (all clauses).

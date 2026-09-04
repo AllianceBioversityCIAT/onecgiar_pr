@@ -73,3 +73,22 @@
 
 **Gate:** auto-approved (pre-approved mode) → continue to IRR-T-4.
 
+### `IRR-T-4` — Client: width floor, restore, and the card fallback — **PASS** (2026-09-04, 1 Implementer attempt; Reviewer on the 4th spawn)
+
+| Field | Value |
+|---|---|
+| Implementer | `akili-implementer` wrapper, model override `opus`, effort high, skill `angular-developer` — **complete**, working tree uncommitted |
+| Files (5, +820/−110, all in `components/indicator-drawer/`) | `.ts` (+79: `TABLE_FLOOR = 760`, `CARD_LAYOUT_BELOW = 640`, `tableLayout`, `widthBeforeResults`, shared `widthClamp()`, tab effect reading `width()` under `untracked`, drag on the tab clears memory, reset effect clears memory) · `.html` (+282/−110, mostly re-indent: table under `@if (tableLayout())`, `@else` card stack with pill + kebab + `@empty`; `track` comment corrected — `pr-table` tracks by `$index`) · `.scss` (+29 `.irr-card`) · `.spec.ts` (+203, 8 `it`) · new `indicator-drawer.reported-results.cy.ts` (337) |
+| Implementer verification | Jest `npx jest …/components/indicator-drawer --silent` → **59/59**; `dashboard-lab` tree 25 suites / 914 tests. Cypress CT (`CT_DEV_SERVER_PORT=8090 …reported-results.cy.ts`) → **6/6 on two runs**, measurement file byte-identical: aside 520 → 760 → 520 (`widthChange [760, 520]`); 900 stays 900, no emit; viewport 1000 → 680; width 600 → 3 `.irr-card`, no `<table>`; pill status 2 computed `rgb(4,120,87)`/`rgb(209,250,229)` = live `var(--pr-status-approved-*)` probe, status 99 = not-started pair; `th[scope="col"]` ×7; `aria-sort` → `ascending`. Known harness noise printed (primeicons, `ct-utils` TS2322). Lint clean |
+| Implementer notes | tab effect reads `width()` under `untracked` (a drag frame must not re-trigger the floor — IRR-DD-5); CT mounts from `info` (the `report` branch instantiates the real form → unstubbed `ResultLevelService` call); reset clears `widthBeforeResults` per design (a re-armed drawer at the floor keeps 760 — flagged); folder guide → T-5; untracked `cypress/results/irr-t4-ct-measurements.json` |
+| Reviewer | **not yet run.** Spawn 1 (`rev-irr-t4`) died on an account usage limit before reading; spawn 2 (`rev-irr-t4b`) and spawn 3 (`rev-irr-t4c`) failed on the harness (`Failed to create teammate pane: Timed out waiting for the Orca runtime` / `tmux: Timed out waiting for split pane handle`). Per `/akili-execute` *Runtime-failure fallback*, the Reviewer is never run by the Leader inline; escalated to the user, who chose **retry** — spawn 4 (`rev-irr-t4d`) ran and returned the verdict below |
+
+
+**Reviewer PASS summary:** floor, restore, clamp and the 640 px card fallback implemented exactly per IRR-R-8/R-8.1 and design §6.2 / IRR-DD-5; AC-7 gated by a real-Chromium CT that measures rendered `offsetWidth` *change* (520 → 760 → 520, 900 untouched, 680 clamp, cards at 600), compares pill colours against a live `var()` probe with a transparent-guard, and reads `th[scope="col"]` ×7 + `aria-sort`; the `track` comment verified truthful against `pr-table.component.html:21`; five allowed files only; no new tokens.
+
+**Decisions (Reviewer adjudicated):** `untracked` read of `width()` in the tab effect is required by IRR-DD-5 (a width-tracking effect would fight every drag frame); shared `widthClamp()` is the direct expression of "never exceed the existing clamp"; CT mounting from `info` is the scenario's own restore target; the reset effect clearing `widthBeforeResults` is the spec's consequence, not the Implementer's.
+
+**ADVISORY (4R — recorded):** *Reliability:* the floor is computed once on tab entry — a window resize while on the tab can leave `width()` above the new clamp (pre-existing drag behaviour). *Resilience:* "drag keeps working on the tab" is proven in jsdom only. *Risk:* `cypress/results/irr-t4-ct-measurements.json` is written into an untracked directory — add `cypress/results/` to `.gitignore` (follow-up; not committed here). (Report tail truncated after a *Readability* item — not requested again; STATUS and gate content complete.)
+
+**Gate:** auto-approved (pre-approved mode) → continue to IRR-T-5.
+
