@@ -87,6 +87,34 @@ describe('BilateralAiService', () => {
     expect(service.uploadState().status).toBe('idle');
   });
 
+  // ── promoteDraft: lands on the canonical editor URL ──────────────────────
+  describe('promoteDraft', () => {
+    it('navigates with the result CODE and the phase — the URL the results list opens (2026-09-04)', () => {
+      bilateralApi.POST_promoteBilateralAiDraft.mockReturnValue(of({ response: { resultId: 11514, resultCode: 9046, versionId: 36 } }));
+
+      service.promoteDraft(1);
+
+      expect(router.navigate).toHaveBeenCalledWith(['/bilateral', 'ALLIANCE', 'result', 9046], { queryParams: { phase: 36 } });
+      expect(creation.isAiGenerated()).toBe(true);
+    });
+
+    it('falls back to the internal id when an older server omits code/version', () => {
+      bilateralApi.POST_promoteBilateralAiDraft.mockReturnValue(of({ response: { resultId: 11514 } }));
+
+      service.promoteDraft(1);
+
+      expect(router.navigate).toHaveBeenCalledWith(['/bilateral', 'ALLIANCE', 'result', 11514]);
+    });
+
+    it('returns to the drafts list when the response carries no result at all', () => {
+      bilateralApi.POST_promoteBilateralAiDraft.mockReturnValue(of({ response: {} }));
+
+      service.promoteDraft(1);
+
+      expect(router.navigate).toHaveBeenCalledWith(['/bilateral', 'ALLIANCE', 'drafts']);
+    });
+  });
+
   // ── startJob: the machine boots and polls straight away ─────────────────
 
   describe('startJob', () => {

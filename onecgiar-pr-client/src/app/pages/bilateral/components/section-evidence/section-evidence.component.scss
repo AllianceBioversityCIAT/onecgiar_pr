@@ -167,11 +167,12 @@
 }
 
 // ─── Add / edit modal (rd-evidences `.evidence_modal` + evidence-item fields) ────────────────
-// Same 720px dialog W1/W2 uses; without it the dialog follows its content and stretches wide.
+// Compacted 2026-09-04 (feedback): the 720px/32-40px/24px-gap geometry read oversized and
+// overflowed small screens. 640px with tighter rhythm holds the same fields comfortably.
 ::ng-deep app-pr-dialog .evidence-create-dialog {
   &.pr-dialog {
-    width: 720px;
-    max-width: 95vw;
+    width: 640px;
+    max-width: 92vw;
   }
 
   .pr-dialog__body {
@@ -182,8 +183,8 @@
 .evidence_modal {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 32px 40px;
+  gap: 14px;
+  padding: 20px 24px;
   max-height: 85vh;
   overflow-y: auto;
 
@@ -195,7 +196,7 @@
 
   .modal_title {
     font-weight: 700;
-    font-size: 20px;
+    font-size: 16px;
     color: var(--pr-color-primary-300);
     font-family: 'Manrope', 'Poppins', sans-serif;
   }
@@ -214,10 +215,10 @@
   }
 
   .evidence_fields {
-    margin-top: 6px;
+    margin-top: 0;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 14px;
 
     .inputfieldHidden { display: none; }
 
@@ -269,7 +270,8 @@
     .incorrect-file {
       color: var(--pr-color-red-300);
       font-weight: 500;
-      margin-top: -16px;
+      // Pulls the message toward the dropzone; keyed to the fields' 14px gap.
+      margin-top: -8px;
     }
 
     .drag-and-drop-field {
@@ -280,7 +282,7 @@
       align-items: center;
       justify-content: center;
       flex-direction: column;
-      padding: 40px 0;
+      padding: 22px 0;
       transition: all 0.3s ease-in-out;
 
       .content {

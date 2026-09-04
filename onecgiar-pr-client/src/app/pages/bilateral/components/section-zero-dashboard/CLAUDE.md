@@ -4,11 +4,12 @@
 
 ## What it is
 Section 0 of the bilateral form: the read-mostly card that identifies the result (code, type,
-reporting phase, funding source) and its W3/Bilateral project, plus the Actions column of
-Coming-soon actions. It is the only section that is not inside an accordion.
-**Submit for review is NOT here since 2026-09-04** — it lives in the editor's sections rail
-(`bilateral-result-creator`, `.bcr-rail__submit`), the same slot the W1/W2 result-detail rail gives
-its Submit; the stale "In progress" badge left with it.
+reporting phase, funding source) and its W3/Bilateral project, single-column since 2026-09-04.
+It is the only section that is not inside an accordion.
+**The Actions card is GONE (2026-09-04)** — Submit for review lives in the editor's sections rail
+(`bilateral-result-creator`, `.bcr-rail__submit`, same slot as the W1/W2 result-detail rail) and the
+disabled Coming-soon buttons (Generate Narrative / Download PDF / AI Review) were removed with the
+card; bring it back only when one of those actions actually ships.
 
 ## Contract
 - Input: `readOnly` (`isFormReadOnly()` of the editor) — gates the editable project field only.
@@ -60,7 +61,8 @@ its Submit; the stale "In progress" badge left with it.
   zoneless, so asserting a class property passes with the defect still on screen.
 
 ## Pending / Coming soon
-- `Generate Narrative`, `Download PDF`, `AI Review` — visible but disabled, per the mockup.
+- `Generate Narrative`, `Download PDF`, `AI Review` — **not rendered at all since 2026-09-04** (the
+  Actions card was removed); when one ships, it needs a new home, not a resurrection of the card as-was.
 - **Out of scope of P2-3518, deliberately not built:**
   - the consequence of a project change on the **Science Program** (the ticket's own requirements
     contradict each other; pending business). Today the Science Program is left exactly as it was.

@@ -93,6 +93,28 @@ export class PrSelectComponent implements ControlValueAccessor {
     }
   }
 
+  /**
+   * Clear the fixed-overlay styles the moment focus leaves the control. Without this, blurring by
+   * clicking elsewhere on the page (the `.remove_focus` shield only covers the trigger) left the
+   * `.options` panel with `position: fixed; z-index: 10000` and `opacity: 0` — an INVISIBLE
+   * click-shield floating over whatever sat under the open panel, typically the editor's footer.
+   * The panel lives inside the focusable `<a class="field">`, so the next click on that area
+   * (e.g. Save draft) landed on the shield, re-focused the trigger through the ancestor chain and
+   * "spontaneously" reopened the dropdown instead of pressing the button.
+   *
+   * `focusout` bubbles from the search input too; the relatedTarget guard keeps focus moves WITHIN
+   * the control (trigger → search box) from collapsing the open panel. Clicking an option never
+   * blurs the trigger at all (the option divs are not focusable, so focus stays on their `<a>`
+   * ancestor), which is why this cannot break option selection.
+   */
+  @HostListener('focusout', ['$event'])
+  onFocusOut(event: FocusEvent): void {
+    if (!this.overlayToBody()) return;
+    const next = event.relatedTarget as Node | null;
+    if (next && this.elementRef.nativeElement.contains(next)) return;
+    this.overlayStyles.set('');
+  }
+
   get value(): any {
     return this._sig();
   }

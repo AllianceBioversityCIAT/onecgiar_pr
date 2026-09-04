@@ -573,6 +573,33 @@ describe('BilateralAiService (unit)', () => {
       ).toHaveBeenCalledWith(100, 'CLIMATE', 42);
     });
 
+    // 2026-09-04: the client lands on /bilateral/:center/result/:result_code?phase=:versionId —
+    // the same URL shape the results list opens — instead of the bare internal id.
+    it('returns resultCode and versionId alongside resultId for the canonical editor URL', async () => {
+      const { service, stubs } = makeService();
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 5,
+        is_discarded: false,
+        result_id: 100,
+        job: { program_code: null, user_id: 42, center_id: 7 },
+        extracted_mds: null,
+      });
+      stubs.evidenceRepository.find.mockResolvedValue([]);
+      stubs.resultRepository.findOneOrFail.mockResolvedValue({
+        id: 100,
+        result_code: 9046,
+        version_id: 36,
+      });
+
+      const res = await service.promoteDraft(5, 42);
+
+      expect(res.response).toEqual({
+        resultId: 100,
+        resultCode: 9046,
+        versionId: 36,
+      });
+    });
+
     it('should throw BadRequestException when non-DOCUMENT formal evidence exists', async () => {
       const { service, stubs } = makeService();
       stubs.draftRepository.findOne.mockResolvedValue({
