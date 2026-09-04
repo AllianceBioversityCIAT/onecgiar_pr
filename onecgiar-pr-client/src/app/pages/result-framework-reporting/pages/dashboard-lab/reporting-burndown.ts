@@ -5,14 +5,17 @@
  * Only-pending (visible == counted — MRF-R-1/R-7 precedence). No Angular imports — pure functions
  * only, testable in isolation and safe to call from any Reporting-tab surface.
  *
- * Scope: Reporting-tab surfaces, PLUS one sanctioned Overview caller — the hero's
- * `overviewAowProgressRich` computed (`changes/overview-aow-progress-hero`, OAH-R-3/DD-1), which
- * delegates to `stateOf`/`applyZeroTargetRule` for its per-AoW glossary counts and zero-target
- * exclusion. Every OTHER Overview computed — `overviewAowProgress`, `overviewXcutProgress`, and
- * KPI card 4's `aowStats` — plus the ToC map, keep TODAY'S rule (unfiltered, no zero-target
- * exclusion): an accepted, disclosed divergence from the hero (MRF-R-7, OAH-DD-1).
+ * Scope: the WHOLE Program shell. `bugfix/kpi-count-reconciliation` ended the divergence this
+ * paragraph used to record — that only the hero's `overviewAowProgressRich` delegated here while
+ * `overviewAowProgress`, `overviewXcutProgress`, KPI card 4's `aowStats`, the band and the ToC map
+ * each kept their own unfiltered rule. Every one of them now derives from `partitionProgramKpis`
+ * (below) and reads its ratio through `buildRatio` / `applyZeroTargetRule`, so no surface computes
+ * a denominator by hand and none can drift from another (KCR-R-2, KCR-R-3, KCR-DD-1). The rule for
+ * *which* rows enter a denominator lives in `partitionProgramKpis`; the rule for how they are
+ * counted lives in the helpers above it. Both live here, once.
  *
  * @akili-spec changes/mass-reporting-flow
+ * @akili-spec bugfix/kpi-count-reconciliation
  */
 
 /** Structural shape every helper here needs — matches `ReportingIndicator` without importing it. */

@@ -199,8 +199,10 @@ function buildProgramLevelBranch(
 /**
  * Builds the `TocMapModel` for the Theory-of-Change map (`TCM-R-2`/`TCM-R-3`). Pure: consumes the
  * ALREADY-LOADED `tocByKey`/units data the Overview holds (no HTTP, no throw), owns dedupe of
- * shared `is_aow: false` nodes into ONE "Program-level" branch (`TCM-DD-5`), and mirrors the exact
- * `overviewAowProgress` counting rule for each AoW branch's own progress (`TCM-DD-4`/TCM-R-3).
+ * shared `is_aow: false` nodes into ONE "Program-level" branch (`TCM-DD-5`) — which is itself
+ * suppressed while the Intermediate-outcomes branch exists (`KCR-DD-7`, see below) — and mirrors
+ * the exact `overviewAowProgress` counting rule for each AoW branch's own progress
+ * (`TCM-DD-4`/TCM-R-3, on the AoW-own basis `KCR-DD-2` moved it to).
  *
  * Branch order: AoWs by code → "Program-level" → "Intermediate outcomes" → "2030 outcomes"
  * (`OQ-2`); a branch with zero leaves is omitted. `null`/empty inputs → `null` (no chart, no throw).
@@ -305,21 +307,6 @@ export function buildTocMapModel(input: TocMapBuildInput | null | undefined): To
         leaves: programLeaves
       }
     : null;
-
-  const intermediateBranch = buildProgramLevelBranch(
-    input.intermediateOutcomes,
-    'intermediate',
-    DEFAULT_INTERMEDIATE_LABEL,
-    input.intermediateOutcomesLabel,
-    parseTitle
-  );
-  const outcomes2030Branch = buildProgramLevelBranch(
-    input.outcomes2030,
-    '2030',
-    DEFAULT_2030_LABEL,
-    input.outcomes2030Label,
-    parseTitle
-  );
 
   const branches: TocBranch[] = [
     ...aowBranches,

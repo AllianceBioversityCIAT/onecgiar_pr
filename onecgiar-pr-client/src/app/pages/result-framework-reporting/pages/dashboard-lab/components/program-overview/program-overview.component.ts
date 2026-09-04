@@ -78,6 +78,13 @@ export interface AowProgressRow {
   done: number;
   total: number;
   /**
+   * How many KPIs the zero-target rule (MRF-R-7) excluded from `total` on this row — the number the
+   * `excludes N zero-target KPIs` disclosure states (KCR-R-2.1). Optional: a caller that has no
+   * figure to disclose simply omits it, and `0`/absent means the denominator hid nothing.
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  zeroTarget?: number;
+  /**
    * P2-3296 AC3 — the ToC achievement of this Area of Work, computed server-side.
    *
    * Distinct from `done` / `total`, which count how many KPIs have SOMETHING reported. Both are
@@ -214,10 +221,17 @@ export class ProgramOverviewComponent {
    * design.md §3/§6). Feeds the summary rail (`richStats` below — the rail's OWN sum of these
    * rows, OAH-R-1 "internal coherence") and, for now, the pre-existing row markup (the segmented-
    * bar row anatomy is OAH-T-4's rebuild — this task keeps the existing row fed from the rich
-   * rows' `code`/`name`/`reported`/`total`). The thin `aowProgress`/`xcutProgress` inputs above
-   * stay UNTOUCHED (design DD-4) — they keep feeding KPI card 4, the section-tab badge and
-   * `aowStats`; their numbers do not move.
+   * rows' `code`/`name`/`reported`/`total`).
+   *
+   * ⚠️ OAH DD-4's "the thin `aowProgress`/`xcutProgress` inputs stay UNTOUCHED — their numbers do
+   * not move" is SUPERSEDED by `bugfix/kpi-count-reconciliation` (KCR-DD-2, KCR-R-2/R-5). The host
+   * now builds all three inputs from one `programKpiPartition()`: the thin rows carry the same
+   * AoW-own basis and the same zero-target rule as `richRows`, so KPI card 4, the section-tab badge
+   * (`aowStats`) and the chips agree with the rail instead of standing at a disclosed divergence.
+   * The rail is still Σ `richRows` and still sums AoW rows ONLY — program-level KPIs are the chips
+   * beneath it (KCR-R-3) — so `band = rail + chips`, not `band = rail`.
    * @akili-spec changes/overview-aow-progress-hero
+   * @akili-spec bugfix/kpi-count-reconciliation
    */
   readonly richRows = input<OverviewAowProgressRowRich[]>([]);
   /**
