@@ -40,6 +40,7 @@ One-line record of trivial, fast-tracked changes made with `/akili-quick`.
 | 2026-09-03 | quick/sidebar-other-sps-default-open — Auto-expand 'Other science programs' by default in vertical sidebar when user has no science programs of their own | reporting-nav-sidebar.component.{ts,spec.ts} | `ng lint` pass, Jest 69/69 passed | [SPEC:quick/sidebar-other-sps-default-open] |
 | 2026-09-03 | quick/result-sidebar-code-type — pin result code and type at the top of the result-detail sections rail and remove them from the scrolling header identity strip | result-sections-sidebar.{html,spec.ts}, result-sections.service.{ts,spec.ts}, result-header.{html,ts,spec.ts}, result-detail.component.html | scoped Jest 113/113 passed (sidebar + header) | [SPEC:quick/result-sidebar-code-type] |
 | 2026-09-03 | quick/result-sidebar-code-type (follow-up) — `Result code #`, uppercase type, status pill above Sections; ⓘ beside smaller 20px title; status removed from header | result-sections-sidebar.{html,spec.ts}, result-sections.service.{ts,spec.ts}, result-header.{html,ts,spec.ts} | scoped Jest 113/113 passed | [SPEC:quick/result-sidebar-code-type] |
+| 2026-09-03 | quick/result-header-identity-skeleton — skeleton the result-detail identity strip (level / funding / submitter / AoW) while `GET_resultById` and the AoW mapping GET are in flight | result-header.{html,ts,spec.ts}, result-detail/CLAUDE.md | scoped Jest result-header | [SPEC:quick/result-header-identity-skeleton] |
 
 
 
