@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { catchError, debounceTime, distinctUntilChanged, finalize, map, of, Subject, Subscription, switchMap, tap, timer } from 'rxjs';
+import { catchError, debounceTime, defer, distinctUntilChanged, finalize, map, of, retry, Subject, Subscription, switchMap, tap, timer } from 'rxjs';
 import { ResultsApiService } from 'src/app/shared/services/api/results-api.service';
 import { CustomFieldsModule } from 'src/app/custom-fields/custom-fields.module';
 
@@ -160,6 +160,12 @@ export const DEFAULT_CGSPACE_CENTERS: FacetOption[] = [
 })
 export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   readonly resultsApiSE = inject(ResultsApiService);
+
+  // @akili-spec changes/kp-cgspace-search-retry
+  /** KCSR-DD-1: one initial call + two re-subscriptions = three total HTTP calls. */
+  static readonly RETRY_COUNT = 2;
+  /** KCSR-DD-2: production delay between retry attempts (ms). Override in tests. */
+  retryDelayMs = 600;
 
   // Inputs
   readonly busy = input<boolean>(false);
@@ -337,7 +343,20 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
           }
           this.page.set(req.page);
 
-          return this.resultsApiSE.GET_cgspaceSearch(params).pipe(
+          // @akili-spec changes/kp-cgspace-search-retry
+          return defer(() => this.resultsApiSE.GET_cgspaceSearch(params)).pipe(
+            map(res => {
+              // KCSR-R-1: proxy returns HTTP 200 with body { status: 502 } — treat as failure
+              const bodyStatus: number | undefined = (res as any)?.response?.status ?? (res as any)?.response?.statusCode ?? (res as any)?.status ?? (res as any)?.statusCode;
+              if (bodyStatus !== undefined && bodyStatus >= 400) {
+                throw new Error(`CGSpace proxy error: ${bodyStatus}`);
+              }
+              return res;
+            }),
+            retry({
+              count: KpCgspaceBrowseComponent.RETRY_COUNT,
+              delay: () => timer(this.retryDelayMs)
+            }),
             map(res => ({ res, req, error: null })),
             catchError(err => of({ res: null, req, error: err }))
           );

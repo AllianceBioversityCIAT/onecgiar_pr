@@ -1,4 +1,4 @@
-import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, flush, TestBed, tick } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { By } from '@angular/platform-browser';
 import { of, Subject, throwError } from 'rxjs';
@@ -100,6 +100,8 @@ describe('KpCgspaceBrowseComponent', () => {
 
     fixture = TestBed.createComponent(KpCgspaceBrowseComponent);
     component = fixture.componentInstance;
+    // Override so fakeAsync tests do not wait 600 ms per retry (KCSR-DD-2)
+    component.retryDelayMs = 0;
   });
 
   it('should create and load facets on init', () => {
@@ -249,7 +251,8 @@ describe('KpCgspaceBrowseComponent', () => {
 
       component.query.set('maize');
       component.runSearch(0);
-      tick();
+      tick(0); // drain timer(0) → retry 2
+      tick(0); // drain timer(0) → retry 3 (exhausted → error)
       fixture.detectChanges();
 
       expect(component.status()).toBe('error');
@@ -578,6 +581,256 @@ describe('KpCgspaceBrowseComponent', () => {
       expect(component.items().length).toBe(2);
       expect(component.items()[0].handle).toBe('10568/128401');
       expect(component.items()[1].handle).toBe('10568/99999');
+    }));
+  });
+
+  // ─── KCSR-T-1: Retry failed CGSpace searches ────────────────────────────────
+  describe('Search Retry (KCSR-T-1)', () => {
+    const successResponse = (items: unknown[] = [{ handle: '10568/1' }]) => ({
+      response: { items, page: { totalElements: items.length, number: 0, size: 10 } }
+    });
+    const alwaysFail = () => throwError(() => new Error('CGSpace timeout'));
+
+    it('KCSR-TEST-1: recovers on second attempt (fail → succeed)', fakeAsync(() => {
+      let calls = 0;
+      mockResultsApiService.GET_cgspaceSearch = jest.fn(() => {
+        calls++;
+        if (calls === 1) return throwError(() => new Error('CGSpace timeout'));
+        return of(successResponse());
+      });
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      component.query.set('rice');
+      component.runSearch(0);
+      tick(0); // drain timer(0) → retry attempt 2 (succeeds)
+      fixture.detectChanges();
+
+      expect(mockResultsApiService.GET_cgspaceSearch).toHaveBeenCalledTimes(2);
+      expect(component.status()).toBe('results');
+      expect(component.items().length).toBe(1);
+    }));
+
+    it('KCSR-TEST-2: shows error only after all 3 attempts exhaust', fakeAsync(() => {
+      mockResultsApiService.GET_cgspaceSearch = jest.fn(() => alwaysFail());
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      component.query.set('wheat');
+      component.runSearch(0);
+      tick(0); // drain timer(0) → retry attempt 2
+      tick(0); // drain timer(0) → retry attempt 3 (all exhausted → error)
+      fixture.detectChanges();
+
+      expect(mockResultsApiService.GET_cgspaceSearch).toHaveBeenCalledTimes(3);
+      expect(component.status()).toBe('error');
+    }));
+
+    it('KCSR-TEST-3: empty 200 response does NOT trigger retry', fakeAsync(() => {
+      mockResultsApiService.GET_cgspaceSearch = jest.fn(() =>
+        of({ response: { statusCode: 200, status: 200, result: { items: [], numFound: 0 } } })
+      );
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      component.query.set('maize');
+      component.runSearch(0);
+      flush();
+      fixture.detectChanges();
+
+      expect(mockResultsApiService.GET_cgspaceSearch).toHaveBeenCalledTimes(1);
+      expect(component.status()).toBe('empty');
+      expect(component.items().length).toBe(0);
+    }));
+
+    it('KCSR-TEST-4: loading state is maintained throughout all retry attempts (no error flash)', fakeAsync(() => {
+      component.retryDelayMs = 50;
+      const statuses: string[] = [];
+      let calls = 0;
+      mockResultsApiService.GET_cgspaceSearch = jest.fn(() => {
+        calls++;
+        if (calls < 3) return throwError(() => new Error('CGSpace timeout'));
+        return of(successResponse());
+      });
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      component.query.set('bean');
+      component.runSearch(0);
+
+      // After first failure, delay ticking — status must NOT be 'error'
+      tick(0);
+      fixture.detectChanges();
+      statuses.push(component.status());
+
+      tick(50); // allow retry 2
+      tick(0);
+      fixture.detectChanges();
+      statuses.push(component.status());
+
+      tick(50); // allow retry 3 (succeeds)
+      fixture.detectChanges();
+      statuses.push(component.status());
+
+      // All intermediate states must be loading/loadingMore, never 'error'
+      expect(statuses.slice(0, 2).every(s => s === 'loading' || s === 'loadingMore')).toBe(true);
+      // Final state is results
+      expect(component.status()).toBe('results');
+    }));
+
+    it('KCSR-TEST-5: new query cancels leftover retries', fakeAsync(() => {
+      component.retryDelayMs = 200;
+      let firstQueryCalls = 0;
+      mockResultsApiService.GET_cgspaceSearch = jest.fn(params => {
+        if ((params as { query: string }).query === 'old') {
+          firstQueryCalls++;
+          return throwError(() => new Error('timeout'));
+        }
+        return of(successResponse([{ handle: '10568/new' }]));
+      });
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      component.query.set('old');
+      component.runSearch(0);
+      tick(0); // first attempt fires, fails
+
+      // Before retry fires, issue new query
+      component.query.set('new');
+      component.runSearch(0);
+      flush();
+      fixture.detectChanges();
+
+      // Old query should not have retried after cancellation
+      expect(firstQueryCalls).toBe(1);
+      expect(component.status()).toBe('results');
+      expect(component.items()[0].handle).toBe('10568/new');
+    }));
+
+    it('KCSR-TEST-5b: A\'s late success does not paint B — switchMap discard is observable', fakeAsync(() => {
+      // Non-zero delay so B can be fired while A's retry is still pending (200ms window)
+      component.retryDelayMs = 200;
+      let oldQueryCalls = 0;
+
+      mockResultsApiService.GET_cgspaceSearch = jest.fn(params => {
+        if ((params as { query: string }).query === 'old') {
+          oldQueryCalls++;
+          if (oldQueryCalls === 1) {
+            // Attempt 1 for A fails → retry scheduled after 200ms
+            return throwError(() => new Error('CGSpace timeout'));
+          }
+          // Attempt 2 for A (retry) WOULD succeed with a distinguishable handle —
+          // but switchMap must cancel it before it fires.
+          return of(successResponse([{ handle: '10568/old' }]));
+        }
+        // Query B: always succeeds immediately
+        return of(successResponse([{ handle: '10568/new' }]));
+      });
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      // Start A — fires immediately (runSearch → immediate:true)
+      component.query.set('old');
+      component.runSearch(0);
+      // A's first attempt fires and fails; the retry timer (200ms) is now armed
+      tick(0);
+
+      // Start B BEFORE the 200ms retry fires:
+      // the outer switchMap unsubscribes from A's inner sequence, cancelling the 200ms timer.
+      component.query.set('new');
+      component.runSearch(0);
+      // drain all remaining timers — A's 200ms retry must NOT have fired
+      flush();
+      fixture.detectChanges();
+
+      // B painted:
+      expect(component.items()[0].handle).toBe('10568/new');
+      // A's late success was discarded (never applied to items):
+      expect(component.items().every((i: CgspaceItemDto) => i.handle !== '10568/old')).toBe(true);
+      // A's retry never ran — the switchMap cancellation is confirmed by call count:
+      expect(oldQueryCalls).toBe(1);
+      expect(component.status()).toBe('results');
+      // Last API call used B's query params — further proof A was abandoned:
+      const lastCallParams = mockResultsApiService.GET_cgspaceSearch.mock.calls.slice(-1)[0][0];
+      expect((lastCallParams as { query: string }).query).toBe('new');
+    }));
+
+    it('KCSR-TEST-6: manual "Try again" starts a fresh retry cycle', fakeAsync(() => {
+      mockResultsApiService.GET_cgspaceSearch = jest.fn(() => alwaysFail());
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      component.query.set('sorghum');
+      component.runSearch(0);
+      tick(0); // drain timer(0) → retry 2
+      tick(0); // drain timer(0) → retry 3 (exhausted → error)
+      fixture.detectChanges();
+
+      // First cycle exhausted: 3 calls, error state
+      expect(mockResultsApiService.GET_cgspaceSearch).toHaveBeenCalledTimes(3);
+      expect(component.status()).toBe('error');
+
+      // User clicks "Try again" → new full retry cycle
+      const retryBtn = fixture.debugElement.query(By.css('[data-test="cgspace-retry-btn"]'));
+      expect(retryBtn).toBeTruthy();
+      retryBtn.nativeElement.click();
+      tick(0); // drain timer(0) → retry 2
+      tick(0); // drain timer(0) → retry 3 (exhausted → error)
+      fixture.detectChanges();
+
+      // 3 more attempts (total 6) — still error (always fails)
+      expect(mockResultsApiService.GET_cgspaceSearch).toHaveBeenCalledTimes(6);
+      expect(component.status()).toBe('error');
+    }));
+
+    it('KCSR-TEST-7: HTTP 200 body with status:502 counts as failure', fakeAsync(() => {
+      let calls = 0;
+      mockResultsApiService.GET_cgspaceSearch = jest.fn(() => {
+        calls++;
+        if (calls < 3) {
+          // HTTP 200 wrapper but body signals gateway error (KCSR-R-1)
+          return of({ response: { status: 502, items: [], page: { totalElements: 0 } } });
+        }
+        return of(successResponse());
+      });
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      component.query.set('cassava');
+      component.runSearch(0);
+      tick(0); // drain timer(0) → retry 2 (still 502 body)
+      tick(0); // drain timer(0) → retry 3 (succeeds)
+      fixture.detectChanges();
+
+      expect(mockResultsApiService.GET_cgspaceSearch).toHaveBeenCalledTimes(3);
+      expect(component.status()).toBe('results');
+      expect(component.items().length).toBe(1);
+    }));
+
+    it('KCSR-TEST-8: facet calls are unaffected by search retries', fakeAsync(() => {
+      mockResultsApiService.GET_cgspaceSearch = jest.fn(() => alwaysFail());
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      // Record facet call count after init
+      const facetCallsAfterInit = mockResultsApiService.GET_cgspaceFacet.mock.calls.length;
+
+      component.query.set('teff');
+      component.runSearch(0);
+      flush();
+      fixture.detectChanges();
+
+      // Facet call count must not change during search retries
+      expect(mockResultsApiService.GET_cgspaceFacet.mock.calls.length).toBe(facetCallsAfterInit);
     }));
   });
 
