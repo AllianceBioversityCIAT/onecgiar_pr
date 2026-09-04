@@ -35,6 +35,21 @@ const LEGACY_HEADER_LABEL = 'Please indicate if the investment for this innovati
  */
 const REASONS_HEADER_LABEL = 'What are the main reasons this innovation is inactive?';
 
+/**
+ * P2-3292 Steps 3A / 3B — the two reasons that ask WHERE the innovation continued.
+ *
+ * Recognised by TEXT, not by id, and that is deliberate: the 2026 catalogue rows are inserted with
+ * whatever `AUTO_INCREMENT` hands them, so no literal id can be relied on — the same reason
+ * `requires_description` exists instead of matching the legacy "Other" id 6. Same pattern the
+ * consolidated IPR question uses (`isConsolidatedIprQuestion`).
+ *
+ * 🛑 Must stay byte-identical to the strings inserted by migration
+ * `1788442000000-AddPhaseAxisToDiscontinuedOptions`. If a row's wording is ever reworded, this
+ * breaks silently: the dropdown simply stops appearing, with no error anywhere.
+ */
+const MERGE_REASON_TEXT = 'Discontinued: merging with another innovation';
+const SPLIT_REASON_TEXT = 'Discontinued: splitting into multiple innovations';
+
 /** Hint printed under the Step 2 prompt, worded as the story writes it. */
 const REASONS_HEADER_HINT = '(select all that apply)';
 
@@ -93,10 +108,106 @@ export class RdAnnualUpdatingComponent implements OnInit {
 
   alertText: string = '';
 
+  /** P2-3292 Step 3 — the catalogue the two dropdowns offer. Loaded once, on demand. */
+  mergeSplitCatalogue: any[] = [];
+
+  mergeSplitCatalogueLoading = false;
+
+  /** Loaded lazily: most discontinuations are not a merge or a split, so most reporters never need it. */
+  private mergeSplitCatalogueRequested = false;
+
   constructor(public api: ApiService) {}
 
   ngOnInit(): void {
     this.getAlertNarrative();
+    this.generalInfoBody.merge_split_targets ??= [];
+  }
+
+  /**
+   * P2-3292 Steps 3A / 3B — is the reason that demands a target currently ticked?
+   *
+   * Reads the reason the reporter has selected right now (`generalInfoBody`), NOT the stored flag:
+   * the dropdown has to appear the moment they tick the reason, before saving.
+   */
+  private isReasonTicked(reasonText: string): boolean {
+    return (this.generalInfoBody.discontinued_options ?? []).some(option => option?.value && (option?.option ?? '').trim() === reasonText);
+  }
+
+  get showsMergeTargets(): boolean {
+    return !!this.generalInfoBody.is_discontinued && this.isReasonTicked(MERGE_REASON_TEXT);
+  }
+
+  get showsSplitTargets(): boolean {
+    return !!this.generalInfoBody.is_discontinued && this.isReasonTicked(SPLIT_REASON_TEXT);
+  }
+
+  /**
+   * Fetches the catalogue the first time either dropdown becomes visible.
+   *
+   * Fails soft: a catalogue that cannot be read must not cost the reporter the rest of General
+   * Information, which is a whole screen of unrelated fields. An empty list is visible on screen —
+   * the dropdown says there is nothing to pick — so the failure is not silent to the user either.
+   */
+  ensureMergeSplitCatalogue(): void {
+    if (this.mergeSplitCatalogueRequested) return;
+    if (!this.showsMergeTargets && !this.showsSplitTargets) return;
+
+    const resultId = Number(this.api.dataControlSE.currentResult?.id);
+    if (!Number.isInteger(resultId) || resultId <= 0) return;
+
+    this.mergeSplitCatalogueRequested = true;
+    this.mergeSplitCatalogueLoading = true;
+
+    this.api.resultsSE.GET_mergeSplitTargetInnovations(resultId).subscribe({
+      next: ({ response }) => {
+        this.mergeSplitCatalogue = (response ?? []).map(innovation => ({
+          ...innovation,
+          // The story asks the option to read "Innovation ID + Innovation title".
+          label: `${innovation.result_code} - ${innovation.title}`
+        }));
+        this.mergeSplitCatalogueLoading = false;
+      },
+      error: () => {
+        this.mergeSplitCatalogue = [];
+        this.mergeSplitCatalogueLoading = false;
+      }
+    });
+  }
+
+  /**
+   * The ids currently declared for one transition type, for the multi-select to bind to.
+   *
+   * The two dropdowns share one stored collection, told apart by `transition_type`, because the
+   * server keeps them in one table with that discriminator.
+   */
+  selectedTargets(type: 'merge' | 'split'): number[] {
+    return (this.generalInfoBody.merge_split_targets ?? [])
+      .filter(target => target.transition_type === type)
+      .map(target => Number(target.target_result_id));
+  }
+
+  /**
+   * Replaces the selection for ONE transition type, leaving the other untouched.
+   *
+   * 🛑 Rebuilding the whole array from one dropdown would wipe the other's answers: a reporter who
+   * ticked both "merging" and "splitting" would lose whichever they filled first.
+   */
+  onTargetsChange(type: 'merge' | 'split', ids: number[]): void {
+    const others = (this.generalInfoBody.merge_split_targets ?? []).filter(target => target.transition_type !== type);
+
+    this.generalInfoBody.merge_split_targets = [...others, ...(ids ?? []).map(id => ({ target_result_id: Number(id), transition_type: type }))];
+  }
+
+  /**
+   * P2-3292 Step 3 — a declared merge or split is incomplete until it names at least one target.
+   *
+   * "It merged" without saying with what is exactly the state this story exists to stop being
+   * possible, so it reports through the same completeness channel as the reasons above.
+   */
+  get mergeSplitIsComplete(): boolean {
+    if (this.showsMergeTargets && this.selectedTargets('merge').length === 0) return false;
+    if (this.showsSplitTargets && this.selectedTargets('split').length === 0) return false;
+    return true;
   }
 
   /** When true, pr-radio / pr-checkbox treat the field as editable despite global read-only (see P2-2923). */
@@ -156,11 +267,7 @@ export class RdAnnualUpdatingComponent implements OnInit {
    * stored as inactive, in the 2026 phase or later.
    */
   get canReopenDiscontinuation(): boolean {
-    return (
-      this.usesStatusTriggerWording &&
-      this.api.rolesSE.isAdmin &&
-      this.api.dataControlSE.currentResult?.is_discontinued === true
-    );
+    return this.usesStatusTriggerWording && this.api.rolesSE.isAdmin && this.api.dataControlSE.currentResult?.is_discontinued === true;
   }
 
   /**
