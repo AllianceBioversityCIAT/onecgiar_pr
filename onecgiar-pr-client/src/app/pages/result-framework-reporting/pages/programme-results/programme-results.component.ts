@@ -326,6 +326,29 @@ function formatDate(value: string): string {
         max-height: 320px;
       }
 
+      /* quick/results-filter-popover-polish (2026-09-04): grouped-panel polish copied from
+         'reporting-program-band.component.scss' '.pr-band-filter' so the two Section panels
+         cannot drift — group headers, group divider, checkbox accent. Tokens only. */
+      .pgr-filter--section ::ng-deep .pr-ms-group + .pr-ms-group {
+        margin-top: 6px;
+        border-top: 1px solid var(--pr-border-divider);
+        padding-top: 6px;
+      }
+
+      .pgr-filter--section ::ng-deep .pr-ms-group-label {
+        padding: 6px 10px 2px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--pr-text-muted);
+      }
+
+      .pgr-filter--section ::ng-deep .option .pr-native-check {
+        flex-shrink: 0;
+        accent-color: var(--pr-color-primary-300);
+      }
+
       /* ── Filter chips ─────────────────────────────────────────────────────────────────────
          The global '.pr-chip' / '.pr-chip-remove' (styles.scss:569) carry the app's chip
          contract; the design's chip is 26px / 999px / brand-100. '.pr-chip' is declared OUTSIDE
