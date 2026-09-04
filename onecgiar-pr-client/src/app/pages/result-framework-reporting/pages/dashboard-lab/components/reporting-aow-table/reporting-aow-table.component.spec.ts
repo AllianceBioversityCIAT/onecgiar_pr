@@ -349,6 +349,26 @@ describe('ReportingAowTableComponent', () => {
       expect(component.hloTargetSum(hloGroup)).toBe('8.5');
       expect(component.hloAchievedSum(hloGroup)).toBe('20.5');
     });
+
+    it('sorts HLO groups numerically by code (e.g. HL01, HL02, HL03, HL04, HL05)', async () => {
+      const g = group([
+        row({ indicator_id: 4, __tier: 'output', __hlo: 'HL04 Foster motivations' }),
+        row({ indicator_id: 5, __tier: 'output', __hlo: 'HL05 Investment cases' }),
+        row({ indicator_id: 2, __tier: 'output', __hlo: 'HL02 Target markets' }),
+        row({ indicator_id: 1, __tier: 'output', __hlo: 'HL01 Steer to impact' }),
+        row({ indicator_id: 3, __tier: 'output', __hlo: 'HL03 Design concepts' })
+      ]);
+      await build([g]);
+      const bands = component.bandsOf(g);
+      expect(bands[0].groups.map(grp => grp.code)).toEqual(['HL01', 'HL02', 'HL03', 'HL04', 'HL05']);
+      expect(bands[0].groups.map(grp => grp.name)).toEqual([
+        'Steer to impact',
+        'Target markets',
+        'Design concepts',
+        'Foster motivations',
+        'Investment cases'
+      ]);
+    });
   });
 
   // ── RAJ-T-2: HLO headers, tabular metrics & quick filters ─────────────────

@@ -528,10 +528,10 @@ export class ReportingAowTableComponent {
     const byKey = new Map<string, HloGroup>();
     for (const row of rows) {
       const raw = row.__hlo?.trim() || 'Unassigned';
-      const match = /^((?:HLO|HL|I-OC|OC|IO|EOI)(?:[-\s]?\d[\w.\-]*)?)\.?\s*[-–:]?\s+(.+)$/i.exec(raw);
-      const name = (match?.[2] || raw).trim() || raw;
+      const match = /^((?:HLO|HL|I-OC|OC|IO|EOI)(?:[-\s]?\d[\w.\-]*)?)\.?\s*[\-–—:·•]?\s+(.+)$/i.exec(raw);
+      const name = (match?.[2] || raw).replace(/^[·•\-–—:\s]+/, '').trim() || raw;
       const rawCode = match?.[1] || '';
-      const code = this.cleanHloCode(rawCode) || undefined;
+      const code = this.cleanHloCode(rawCode || raw) || undefined;
       const key = `${keyPrefix}::${raw}`;
       if (!byKey.has(key)) {
         // Every row of a group comes from the same ToC node, so the first one carries the group's
@@ -541,7 +541,27 @@ export class ReportingAowTableComponent {
       }
       byKey.get(key)!.rows.push(row);
     }
-    return [...byKey.values()];
+    return [...byKey.values()].sort((a, b) => this.compareHloGroups(a, b));
+  }
+
+  /**
+   * Sort HLO and Outcome groups by their code token numerically (e.g. HL01, HL02, HL03... I-OC 1.1, I-OC 1.2),
+   * placing coded groups first in numerical order, followed by uncoded groups sorted alphabetically by name.
+   */
+  compareHloGroups(a: { code?: string; name?: string; key?: string }, b: { code?: string; name?: string; key?: string }): number {
+    const codeA = (a.code || '').trim();
+    const codeB = (b.code || '').trim();
+    if (codeA && codeB) {
+      const cmp = codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+      if (cmp !== 0) return cmp;
+    } else if (codeA) {
+      return -1;
+    } else if (codeB) {
+      return 1;
+    }
+    const nameA = a.name || a.key || '';
+    const nameB = b.name || b.key || '';
+    return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
   }
 
   /** KPI count for a band header (`4 KPIs`). */

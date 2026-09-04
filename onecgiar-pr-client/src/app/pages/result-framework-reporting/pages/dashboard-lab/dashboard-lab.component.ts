@@ -4120,12 +4120,37 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(ind);
     }
-    return [...map.entries()].map(([title, inds]) => ({
-      title,
-      indicators: inds,
-      split: this.splitGroupTitle(title),
-      achievement: (inds[0] as any)?.__hloNode?.progress ?? null
-    }));
+    return [...map.entries()]
+      .map(([title, inds]) => ({
+        title,
+        indicators: inds,
+        split: this.splitGroupTitle(title),
+        achievement: (inds[0] as any)?.__hloNode?.progress ?? null
+      }))
+      .sort((a, b) => this.comparePlannedHloGroup(a, b));
+  }
+
+  /**
+   * Sort HLO and Outcome groups by their code token numerically (e.g. HL01, HL02, HL03... I-OC 1.1, I-OC 1.2),
+   * placing coded groups first in numerical order, followed by uncoded groups sorted alphabetically by name.
+   */
+  comparePlannedHloGroup(
+    a: { split: { code: string | null; name: string }; title: string },
+    b: { split: { code: string | null; name: string }; title: string }
+  ): number {
+    const codeA = (this.cleanHloCode(a.split.code || a.title) || '').trim();
+    const codeB = (this.cleanHloCode(b.split.code || b.title) || '').trim();
+    if (codeA && codeB) {
+      const cmp = codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+      if (cmp !== 0) return cmp;
+    } else if (codeA) {
+      return -1;
+    } else if (codeB) {
+      return 1;
+    }
+    const nameA = a.split.name || a.title || '';
+    const nameB = b.split.name || b.title || '';
+    return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
   }
 
   isPlannedHloExpanded(title: string): boolean {
@@ -4270,13 +4295,23 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    */
   splitGroupTitle(title: string | null | undefined): { code: string | null; name: string } {
     const text = String(title ?? '').trim();
-    const prefixed = /^((?:HLO|HL|I-OC|OC|IO|EOI)(?:[-\s]?\d[\w.\-]*)?)\.?\s*[-–:]?\s+(.+)$/i.exec(text);
+    const prefixed = /^((?:HLO|HL|I-OC|OC|IO|EOI)(?:[-\s]?\d[\w.\-]*)?)\.?\s*[\-–—:·•]?\s+(.+)$/i.exec(text);
     if (prefixed) {
-      return { code: prefixed[1].replace(/\.+$/, '').trim(), name: prefixed[2].trim() };
+      return {
+        code: prefixed[1].replace(/\.+$/, '').trim(),
+        name: prefixed[2].replace(/^[·•\-–—:\s]+/, '').trim()
+      };
     }
-    const numeric = /^([\d.]+)\s*[:–-]\s*(.+)$/.exec(text);
+    const numeric = /^([\d.]+)\s*[\-–—:·•]\s*(.+)$/.exec(text);
     if (numeric) {
-      return { code: numeric[1].trim(), name: numeric[2].trim() };
+      return {
+        code: numeric[1].trim(),
+        name: numeric[2].replace(/^[·•\-–—:\s]+/, '').trim()
+      };
+    }
+    const codeOnly = /^((?:HLO|HL|I-OC|OC|IO|EOI)(?:[-\s]?\d[\w.\-]*)?)\.?$/i.exec(text);
+    if (codeOnly) {
+      return { code: codeOnly[1].replace(/\.+$/, '').trim(), name: text };
     }
     return { code: null, name: text };
   }
