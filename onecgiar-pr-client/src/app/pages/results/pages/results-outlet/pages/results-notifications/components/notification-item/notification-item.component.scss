@@ -176,3 +176,25 @@ p {
     text-align: right;
   }
 }
+
+/* P2-3187 AC4 — optional ToC mapping step for bilateral contribution requests.
+   The dialog panel class must pierce the view boundary (same pattern as .share-request-dialog). */
+::ng-deep app-pr-dialog .toc-mapping-dialog {
+  width: min(760px, 92vw);
+}
+
+.toc-mapping-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 32px 32px 8px;
+  background-color: var(--pr-color-white);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.toc-mapping-title {
+  margin: 0 !important;
+  @include fonts.pr-typography('h2');
+  font-weight: 700 !important;
+}

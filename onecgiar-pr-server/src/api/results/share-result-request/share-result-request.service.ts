@@ -1486,6 +1486,17 @@ export class ShareResultRequestService {
         createShareResultsRequestDto,
       );
 
+      // P2-3188 / P2-3187: the reporting centre is told what the SP contributor decided on BOTH
+      // endpoint versions. Until 2026-09-04 only V1 emitted, which made the notification depend on
+      // which version the client happened to route to (an accident of global state — see the
+      // client-side notification-item trap notes). Last thing in the flow and non-blocking on
+      // purpose — the decision is already persisted.
+      await this.emitContributionDecisionNotification(
+        findShare,
+        request_status_id,
+        user,
+      );
+
       return {
         response: 'requestData',
         message: 'The requests have been updated successfully',
