@@ -1202,7 +1202,9 @@ describe('SectionContributorsComponent', () => {
 
       component.onSecondarySpsModelChange([{ programId: 7 }]);
 
-      expect(creation.selectedSecondarySps()).toEqual([{ programId: 7, programCode: 'SP07', allocation: '' }]);
+      // `name` rides along so the selected chip can read "CODE - Name" like the dropdown option
+      // (feedback 2026-09-04); the project fallback has no name, so it is empty here.
+      expect(creation.selectedSecondarySps()).toEqual([{ programId: 7, programCode: 'SP07', allocation: '', name: '' }]);
       expect(autoSave.saveContributors).toHaveBeenCalledWith(
         expect.objectContaining({ contributing_programs: [{ science_program_id: 'SP07' }] })
       );

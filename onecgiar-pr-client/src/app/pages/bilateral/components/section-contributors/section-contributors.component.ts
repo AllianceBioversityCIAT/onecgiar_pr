@@ -128,6 +128,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       .map(sp => ({
         programId: Number(sp.programId),
         programCode: sp.programCode,
+        name: sp.name ?? '',
         allocation: sp.allocation ?? '',
         full_name: `${sp.programCode}${sp.name ? ' - ' + sp.name : ''}`
       }));
@@ -505,7 +506,8 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     const next = ids
       .map(id => options.find(o => o.programId === id))
       .filter(Boolean)
-      .map(o => ({ programId: o!.programId, programCode: o!.programCode, allocation: o!.allocation }));
+      // `name` rides along so the selected chip can show "CODE - Name" like the dropdown option did.
+      .map(o => ({ programId: o!.programId, programCode: o!.programCode, allocation: o!.allocation, name: o!.name ?? '' }));
     this.creationService.selectedSecondarySps.set(next);
     // Persisted since 2026-09-03 (`contributing_programs[]` on SaveBilateralContributorsDto); staged
     // like every other contributor change and written by Save draft.
