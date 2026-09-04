@@ -1,8 +1,8 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { ProgrammeResultRow } from './programme-results.service';
 
-/** The seven filter dimensions of the Results tab toolbar, left to right. */
-export type ProgrammeResultsFilterDimension = 'search' | 'section' | 'phase' | 'status' | 'category' | 'origin' | 'center';
+/** The eight filter dimensions of the Results tab toolbar, left to right. */
+export type ProgrammeResultsFilterDimension = 'search' | 'section' | 'phase' | 'status' | 'category' | 'origin' | 'center' | 'createdBy';
 
 /** One entry of the chip row. `value` is what `clearChip()` needs to remove just this one. */
 export interface ProgrammeResultsFilterChip {
@@ -27,6 +27,7 @@ export interface ProgrammeResultsFilterState {
   selectedCategory: string | null;
   selectedOrigin: string | null;
   selectedCenter: string | null;
+  selectedCreatedBy: string | null;
 }
 
 /** Which dimensions to skip. Used for the status counters, which must ignore the status filter. */
@@ -177,6 +178,8 @@ export function matchesProgrammeResultFilters(
   if (!matchesProgrammeResultCategory(row, state.selectedCategory)) return false;
   if (state.selectedOrigin && normalize(state.selectedOrigin) !== normalize(row?.origin)) return false;
   if (state.selectedCenter && normalize(state.selectedCenter) !== normalize(row?.center)) return false;
+  // @akili-spec result-framework-reporting/programme-results-created-by-filter
+  if (state.selectedCreatedBy && normalize(state.selectedCreatedBy) !== normalize(row?.createdBy)) return false;
 
   return true;
 }
@@ -235,8 +238,11 @@ export class ProgrammeResultsFilterService {
   readonly selectedOrigin = signal<string | null>(null);
   /** SINGLE-select, matched against `row.center` (`lead_center`). */
   readonly selectedCenter = signal<string | null>(null);
+  // @akili-spec result-framework-reporting/programme-results-created-by-filter
+  /** SINGLE-select, matched against `row.createdBy` (`create_first_name` + `create_last_name`). */
+  readonly selectedCreatedBy = signal<string | null>(null);
 
-  /** Plain snapshot of all seven dimensions — what the pure predicates take. */
+  /** Plain snapshot of all eight dimensions — what the pure predicates take. */
   readonly state = computed<ProgrammeResultsFilterState>(() => ({
     searchText: this.searchText(),
     selectedSections: this.selectedSections(),
@@ -244,7 +250,8 @@ export class ProgrammeResultsFilterService {
     selectedStatus: this.selectedStatus(),
     selectedCategory: this.selectedCategory(),
     selectedOrigin: this.selectedOrigin(),
-    selectedCenter: this.selectedCenter()
+    selectedCenter: this.selectedCenter(),
+    selectedCreatedBy: this.selectedCreatedBy()
   }));
 
   /** True when at least one dimension is narrowing the list. Drives the chip row and the
@@ -274,6 +281,8 @@ export class ProgrammeResultsFilterService {
     if (origin) chips.push({ label: `Funding source: ${origin}`, dimension: 'origin', value: origin });
     const center = this.selectedCenter();
     if (center) chips.push({ label: `Center: ${center}`, dimension: 'center', value: center });
+    const createdBy = this.selectedCreatedBy();
+    if (createdBy) chips.push({ label: `Created by: ${createdBy}`, dimension: 'createdBy', value: createdBy });
 
     return chips;
   });
@@ -328,6 +337,10 @@ export class ProgrammeResultsFilterService {
     this.selectedCenter.set(null);
   }
 
+  clearCreatedBy(): void {
+    this.selectedCreatedBy.set(null);
+  }
+
   /** Removes exactly the filter a chip stands for. Wire it to the chip's X button. */
   clearChip(chip: ProgrammeResultsFilterChip): void {
     switch (chip?.dimension) {
@@ -352,12 +365,15 @@ export class ProgrammeResultsFilterService {
       case 'center':
         this.clearCenter();
         return;
+      case 'createdBy':
+        this.clearCreatedBy();
+        return;
       default:
         return;
     }
   }
 
-  /** Resets all seven dimensions. Shared by "Clear all" and the filtered empty state's button. */
+  /** Resets all eight dimensions. Shared by "Clear all" and the filtered empty state's button. */
   clearAll(): void {
     this.searchText.set('');
     this.selectedSections.set([]);
@@ -366,5 +382,6 @@ export class ProgrammeResultsFilterService {
     this.selectedCategory.set(null);
     this.selectedOrigin.set(null);
     this.selectedCenter.set(null);
+    this.selectedCreatedBy.set(null);
   }
 }

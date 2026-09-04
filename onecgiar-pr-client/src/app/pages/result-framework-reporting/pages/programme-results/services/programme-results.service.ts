@@ -208,6 +208,7 @@ export class ProgrammeResultsService {
   readonly categoryOptions = computed(() => optionsOf(this.rows(), row => row.category));
   readonly originOptions = computed(() => optionsOf(this.rows(), row => row.origin));
   readonly centerOptions = computed(() => optionsOf(this.rows(), row => row.center));
+  readonly createdByOptions = computed(() => optionsOf(this.rows(), row => row.createdBy));
 
   /**
    * Loads the programme's results. Safe to call again: a second call supersedes the first.
