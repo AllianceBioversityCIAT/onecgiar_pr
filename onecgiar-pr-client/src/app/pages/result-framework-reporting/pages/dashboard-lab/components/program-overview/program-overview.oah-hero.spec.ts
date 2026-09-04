@@ -67,10 +67,19 @@ describe('ProgramOverviewComponent — OAH hero (rail + chips + skeletons + empt
     { code: 'AOW02', name: 'Accelerated Breeding', complete: 0, inProgress: 1, notStarted: 136, zeroTarget: 0, reported: 1, total: 137, remaining: 136 }
   ];
 
-  /** Thin-input fixture (DD-4) — untouched by the hero rebuild; feeds KPI card 4 / `aowStats`. */
+  /**
+   * Thin-input fixture — untouched by the hero rebuild; feeds KPI card 4 / `aowStats`.
+   *
+   * KCR fixture extension: the rows now carry `zeroTarget`, the optional field the host's
+   * `overviewAowProgress` fills since `bugfix/kpi-count-reconciliation`. Without it every candidate
+   * card-4 basis reads the same on this fixture; with it, *Counted* (Σ `total` = 10, pct 30) and
+   * the superseded unfiltered *Planned* aggregate (Σ `total + zeroTarget` = 13, pct 23) differ, so
+   * the assertions below actually choose one (KCR-R-2 lists `aowStats` among the denominators that
+   * must be Counted; KCR-DD-2 supersedes OAH DD-4's "their numbers do not move").
+   */
   const aows: AowProgressRow[] = [
-    { code: 'AOW06', name: 'Data', done: 0, total: 2 },
-    { code: 'AOW01', name: 'Market', done: 3, total: 8 }
+    { code: 'AOW06', name: 'Data', done: 0, total: 2, zeroTarget: 2 },
+    { code: 'AOW01', name: 'Market', done: 3, total: 8, zeroTarget: 1 }
   ];
 
   beforeEach(async () => {
@@ -227,6 +236,13 @@ describe('ProgramOverviewComponent — OAH hero (rail + chips + skeletons + empt
     expect(component.aowStats().pct).toBe(30);
     expect(component.aowStats().totalDone).toBe(3);
     expect(component.aowStats().totalPlanned).toBe(10);
+    // KCR — card 4's aggregate is the rows' *Counted* sum and must NOT add the excluded KPIs back:
+    // the fixture's 3 zero-target KPIs would make it 13 (pct 23) under the superseded unfiltered
+    // basis. design §6.2 `overviewAowProgress` row / KCR-R-2 (`aowStats` is a listed denominator).
+    // What DD-4 still buys is the WIRING asserted above — card 4 reads `aowProgress`, not
+    // `richRows`; what KCR-DD-2 superseded is DD-4's promise that its numbers would not move.
+    expect(component.aowStats().totalPlanned).not.toBe(10 + 3);
+    expect(component.aowStats().pct).not.toBe(23);
   });
 
   it('the rail CTA emits continueReporting — the host performs the actual navigation (OAH-R-1 CTA)', () => {

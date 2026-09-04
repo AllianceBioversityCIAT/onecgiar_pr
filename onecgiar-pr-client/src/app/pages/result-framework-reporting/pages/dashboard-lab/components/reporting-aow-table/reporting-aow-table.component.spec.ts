@@ -642,7 +642,19 @@ describe('ReportingAowTableComponent', () => {
     it('reads __allIndicators over the narrowed indicators while Only-pending is on', async () => {
       const all = [
         row({ indicator_id: 1, actual_achieved_value_sum: 4, target_value_sum: '4' }), // complete
-        row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '4' }) // pending
+        row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '4' }), // pending
+        // KCR fixture extension — a cross-cut IO row on the SIDE-CHANNEL path. `ratioBase` drops
+        // `__isIntermediateCrosscut` rows from `__allIndicators` as well as from `indicators`
+        // (design §6.3 `reporting-aow-table` bullet, KCR-R-1 / KCR-DD-3); with only the two rows
+        // above, an implementation that filtered `indicators` but not the side channel would still
+        // have passed this test. Counting it here would read `2 of 3 · 67%`.
+        row({
+          indicator_id: 901,
+          actual_achieved_value_sum: 6,
+          target_value_sum: '6',
+          __tier: 'outcome',
+          __isIntermediateCrosscut: true
+        })
       ];
       // What Only-pending leaves behind, plus the pre-toggle set on the side-channel field.
       const g = { ...group([all[1]]), __allIndicators: all } as ReportingAowGroup;

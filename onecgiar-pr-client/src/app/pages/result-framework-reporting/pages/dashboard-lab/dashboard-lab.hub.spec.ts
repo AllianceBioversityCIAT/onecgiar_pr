@@ -968,6 +968,52 @@ describe('By-AoW section collapse/expand', () => {
       ]);
     });
 
+    /**
+     * The hub's AoW half of the same wiring. `[aowRows]` is bound straight to
+     * `overviewAowProgress()` (dashboard-lab.component.html), so REH-R-2's row basis IS that
+     * computed's — and `bugfix/kpi-count-reconciliation` moved it to the AoW-**own** set under the
+     * zero-target rule (design §6.2 `overviewAowProgress` row; KCR-R-5, KCR-DD-2, superseding the
+     * REH-R-2 basis). Every OTHER fixture in this suite hands the hub already-built rows, so none
+     * of them can tell which basis produced those rows; this one seeds the ToC payload instead.
+     * @akili-spec bugfix/kpi-count-reconciliation
+     */
+    it('feeds the hub AoW rows the AoW-own basis — owned outcome in, cross-cut IO and zero-target out (KCR-R-5)', async () => {
+      const { component } = await createComponent(apiMock());
+      const key = (aow: string): string => (component as any).tocCacheKey(PROGRAM.initiativeCode, aow);
+      const ind = (id: number, target: number, achieved = 0) => ({
+        indicator_id: id,
+        target_value_sum: target,
+        actual_achieved_value_sum: achieved
+      });
+
+      component.aowsByCode.set(new Map([[PROGRAM.initiativeCode, [{ code: 'AOW01', name: 'Market Intelligence' } as any]]]));
+      component.tocByKey.set(
+        new Map<string, { outputs: any[]; outcomes: any[] }>([
+          [
+            key('AOW01'),
+            {
+              outputs: [
+                // #1 reported, #2 not started, #3 zero-target.
+                { toc_result_id: 1, result_title: 'HLO', is_aow: true, indicators: [ind(1, 10, 4), ind(2, 10), ind(3, 0)] }
+              ],
+              outcomes: [
+                // AoW-owned (`is_aow: true`) → belongs to this row since KCR-DD-2.
+                { toc_result_id: 2, result_title: 'Owned outcome', is_aow: true, indicators: [ind(4, 6)] },
+                // Cross-cut (`is_aow: false`) → the Intermediate bucket's, never this row (KCR-R-1).
+                { toc_result_id: 901, result_title: 'Cross-cutting IO', is_aow: false, indicators: [ind(901, 5, 5)] }
+              ]
+            }
+          ]
+        ])
+      );
+
+      // Own set = #1, #2, #3, #4; #3 is zero-target → counted 3, reported 1 → `1 of 3` excluding 1.
+      // The superseded output-tier-only basis reads `1 of 2`; a cross-cut-inclusive one, `2 of 4`.
+      expect(component.overviewAowProgress()).toEqual([
+        { code: 'AOW01', name: 'Market Intelligence', done: 1, total: 3, zeroTarget: 1, achievement: null }
+      ]);
+    });
+
     it('omits the attribute for a caller that never sets the optional field (no "undefined" leak)', async () => {
       await buildHub(
         [{ code: 'AOW01', name: 'Market Intelligence', done: 0, total: 3 }],

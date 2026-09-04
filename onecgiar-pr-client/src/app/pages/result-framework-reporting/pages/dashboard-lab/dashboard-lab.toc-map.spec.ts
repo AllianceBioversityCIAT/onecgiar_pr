@@ -27,15 +27,23 @@ function node(overrides: Partial<TocMapNodeInput> & { toc_result_id: string }): 
 }
 
 /**
- * Independent re-derivation of `overviewAowProgress`'s rule (dashboard-lab.component.ts:944) over
- * ONLY output-tier nodes — the same fixture's OTHER source of truth for "Progress by area of
- * work". Kept deliberately separate from `buildTocMapModel` (never calls it) so the agreement
- * assertion below is not tautological: two independent computations over the same raw data.
+ * Independent re-derivation of `overviewAowProgress`'s rule (dashboard-lab.component.ts) over the
+ * AoW-**own** set — output-tier nodes PLUS the outcome nodes the payload marks `is_aow: true` —
+ * with the zero-target rule applied (`target = 0 AND achieved = 0` never enters a denominator).
+ * That is the same fixture's OTHER source of truth for "Progress by area of work" since
+ * `bugfix/kpi-count-reconciliation` moved the row basis (KCR-R-5 / KCR-DD-2 supersede the
+ * output-tier-only rule; KCR-DD-5 puts the zero-target rule on the leaf). Hand-written on purpose:
+ * it calls NEITHER `buildTocMapModel` NOR `buildRatio`, so the agreement assertion below stays two
+ * independent computations over the same raw data rather than a tautology.
  */
 function aowCardRow(bucket: TocMapBucketInput | undefined) {
-  const indicators = (bucket?.outputs ?? []).flatMap(n => n.indicators ?? []);
-  const done = indicators.filter(i => Number(i.actual_achieved_value_sum ?? 0) > 0).length;
-  return { done, total: indicators.length };
+  const ownNodes = [...(bucket?.outputs ?? []), ...(bucket?.outcomes ?? []).filter(n => n?.is_aow === true)];
+  const indicators = ownNodes.flatMap(n => n.indicators ?? []);
+  const counted = indicators.filter(
+    i => !(Number(i.target_value_sum ?? 0) === 0 && Number(i.actual_achieved_value_sum ?? 0) === 0)
+  );
+  const done = counted.filter(i => Number(i.actual_achieved_value_sum ?? 0) > 0).length;
+  return { done, total: counted.length };
 }
 
 describe('buildTocMapModel (TCM-T-1)', () => {
@@ -66,7 +74,13 @@ describe('buildTocMapModel (TCM-T-1)', () => {
           category: 'OUTCOME',
           result_title: 'HLO9.AOW1.IO1 - Owned outcome for AOW01',
           is_aow: true,
-          indicators: [indicator(10, 0)]
+          // KCR fixture extension — a SECOND, zero-target indicator on the AoW-owned outcome.
+          // Without it this node's planned (1) and counted (1) counts coincide, the branch reads 7
+          // under both the old leaf rule (count every indicator) and `buildRatio`, and the
+          // assertion could not tell KCR-DD-5 from its predecessor. With it the three candidate
+          // bases are distinct: 6 (outputs only), 8 (owned outcome folded in, unfiltered),
+          // 7 (AoW-own + zero-target rule — the design's).
+          indicators: [indicator(10, 0), indicator(0, 0)]
         })
       ]
     };
@@ -85,6 +99,17 @@ describe('buildTocMapModel (TCM-T-1)', () => {
           result_title: 'Shared intermediate outcome',
           is_aow: false,
           indicators: [indicator(20, 5)]
+        }),
+        // KCR fixture extension — AOW02 gets an owned outcome too (planned 2, one zero-target →
+        // counted 1). Two reasons: AOW01's total moved onto AOW02's old value (7), which would
+        // have made the "distinct per AoW" assertions below vacuous; and the AoW-own basis is now
+        // pinned on BOTH AoWs, not just one.
+        node({
+          toc_result_id: 'IO-B1',
+          category: 'OUTCOME',
+          result_title: 'HLO9.AOW2.IO1 - Owned outcome for AOW02',
+          is_aow: true,
+          indicators: [indicator(4, 0), indicator(0, 0)]
         })
       ]
     };
@@ -110,19 +135,31 @@ describe('buildTocMapModel (TCM-T-1)', () => {
   };
 
   it('dedupes a shared is_aow:false node repeated under 2 AoWs into exactly one Program-level leaf', () => {
-    const model = buildTocMapModel(baseInput())!;
+    // KCR-DD-7: the deduped Program-level branch (TCM-DD-5) is now the FALLBACK — it is built only
+    // while the Intermediate-outcomes branch is empty, because RES-R-3 makes the two the SAME
+    // population and rendering both gives every cross-cut IO two denominators (KCR-R-1/R-5.1).
+    // `baseInput()` carries IO-endpoint data, so the DEDUPE is proven here on the fallback input
+    // and the suppression is asserted at the end of this same test.
+    const model = buildTocMapModel({ ...baseInput(), intermediateOutcomes: null })!;
     const programBranch = model.branches.find(b => b.kind === 'program')!;
 
     expect(programBranch).toBeDefined();
     expect(programBranch.leaves.filter(l => l.code === 'SHARED-1' || l.title.includes('Shared intermediate'))).toHaveLength(1);
     expect(programBranch.leaves).toHaveLength(1);
+    // KCR-DD-7: the same fixture WITH the IO endpoint populated drops the branch entirely.
+    expect(buildTocMapModel(baseInput())!.branches.some(b => b.kind === 'program')).toBe(false);
   });
 
   it('sharedness is scoped to the OUTCOME tier: dedupe only ever pulls from outcomes, output-tier nodes always stay on their AoW regardless of is_aow', () => {
     const model = buildTocMapModel(baseInput())!;
     const aow01 = model.branches.find(b => b.kind === 'aow' && b.code === 'AOW01')!;
     const aow02 = model.branches.find(b => b.kind === 'aow' && b.code === 'AOW02')!;
-    const programBranch = model.branches.find(b => b.kind === 'program')!;
+    // KCR-DD-7: the Program-level branch exists only on the fallback path (no IO-endpoint data).
+    // The AoW branches are identical either way, so only this one lookup moves to that model —
+    // the tier-scoping rule under test is unchanged.
+    const programBranch = buildTocMapModel({ ...baseInput(), intermediateOutcomes: null })!.branches.find(
+      b => b.kind === 'program'
+    )!;
 
     // The shared OUTCOME-tier node never leaks into either AoW branch.
     expect(aow01.leaves.some(l => l.title.includes('Shared intermediate'))).toBe(false);
@@ -143,16 +180,24 @@ describe('buildTocMapModel (TCM-T-1)', () => {
     const aow01 = model.branches.find(b => b.kind === 'aow' && b.code === 'AOW01')!;
     const aow02 = model.branches.find(b => b.kind === 'aow' && b.code === 'AOW02')!;
 
-    // Exact values (not "is a number") — AOW01: A1(1/2)+A2(0/1)+A3(0/0)+A4(1/2)+A5(0/1) = 2/6.
+    // Exact values (not "is a number") — AOW01 output leaves A1(1/2)+A2(0/1)+A3(0/0)+A4(1/2)+
+    // A5(0/1) = 2/6, PLUS the AoW-owned outcome IO-A1 — indicators (10,0) and (0,0), the latter
+    // zero-target → counted 1, done 0 — for 2/7.
     // A4/A5 are the attempt-1 fixture hole: is_aow:false / absent output-tier nodes. Under the
     // REJECTED attempt-1 partition (both tiers filtered by is_aow:true) these two would have been
     // stripped from the AoW branch entirely, making this assertion read 1/3 instead of 2/6 — this
     // is the red-on-old / green-on-fix proof the review demanded.
     expect(aow01.done).toBe(2);
-    expect(aow01.total).toBe(6);
-    // AOW02: 3 of 7 (mirrors the requirements.md TCM-R-3 "3/7" worked example).
+    // KCR: 6 → 7, design §6.2 `overviewAowProgress` row (KCR-DD-2) + §6.3 toc-map (KCR-DD-5).
+    // 6 = output-tier leaves only, unfiltered (the superseded TCM-R-3 basis); 8 = outputs + the
+    // owned outcome's 2 PLANNED indicators (folded in, but no zero-target rule); 7 = outputs
+    // (6 counted) + the owned outcome's 1 COUNTED indicator = the AoW-own set.
+    expect(aow01.total).toBe(7);
+    // AOW02: B1(2/4) + B2(1/3) = 3/7 output-tier, PLUS the owned outcome IO-B1 — indicators (4,0)
+    // and (0,0) → counted 1, done 0 — for 3/8. (Old basis: 3/7; owned-but-unfiltered: 3/9.)
     expect(aow02.done).toBe(3);
-    expect(aow02.total).toBe(7);
+    // KCR: 7 → 8, design §6.2 `overviewAowProgress` row (KCR-DD-2) + §6.3 toc-map (KCR-DD-5).
+    expect(aow02.total).toBe(8);
     // Distinct per AoW (asymmetric fixture).
     expect(aow01.done).not.toBe(aow02.done);
     expect(aow01.total).not.toBe(aow02.total);
@@ -168,8 +213,18 @@ describe('buildTocMapModel (TCM-T-1)', () => {
     expect(aow02.done).toBe(card02.done);
     expect(aow02.total).toBe(card02.total);
 
-    // The AoW-owned outcome-tier IO (target 10, achieved 0) does NOT get folded into the branch's
-    // own done/total (that would break the agreement above) — only into the leaf-level Σ figures.
+    // KCR-DD-5: a leaf states BOTH figures and they differ — `indicators` is PLANNED (2, the
+    // zero-target one included), `total` is COUNTED (1, via `buildRatio`). Before KCR-DD-5 the
+    // leaf's `total` WAS the planned count, so this pair was indistinguishable.
+    const ownedLeaf = aow01.leaves.find(l => l.title.includes('Owned outcome for AOW01'))!;
+    expect(ownedLeaf.indicators).toBe(2);
+    expect(ownedLeaf.total).toBe(1);
+    expect(ownedLeaf.done).toBe(0);
+
+    // Σtarget/Σachieved roll up EVERY leaf under the branch, the AoW-owned outcome-tier IO
+    // included — which since KCR-DD-2 is also folded into the branch's own done/total above, so
+    // these are no longer "leaf-level only". The shared cross-cut node (target 20) is still absent:
+    // it went to the program pool. IO-A1's added (0, 0) indicator moves neither sum.
     expect(aow01.target).toBe(6 + 2 + 4 + 7 + 2 + 5 + 10);
     expect(aow01.achieved).toBe(0 + 5 + 0 + 3 + 0 + 0 + 0);
   });
@@ -200,9 +255,16 @@ describe('buildTocMapModel (TCM-T-1)', () => {
     expect(model.branches.map(b => `${b.kind}:${b.code}`)).toEqual([
       'aow:AOW01',
       'aow:AOW02',
-      'program:PROGRAM',
+      // KCR-DD-7: `'program:PROGRAM'` stood here. `baseInput()` carries IO-endpoint data, so the
+      // deduped Program-level branch is suppressed (KCR-R-5.1) — the fallback assertion below
+      // keeps its "AoWs → Program-level" position pinned.
       'intermediate:intermediate-outcomes'
     ]);
+    // KCR-DD-7 fallback: with no IO-endpoint data the Program-level branch is back, still after
+    // the AoWs and before any program-level bucket.
+    expect(
+      buildTocMapModel({ ...baseInput(), intermediateOutcomes: null })!.branches.map(b => `${b.kind}:${b.code}`)
+    ).toEqual(['aow:AOW01', 'aow:AOW02', 'program:PROGRAM']);
   });
 
   it('null input → null model, no throw', () => {
