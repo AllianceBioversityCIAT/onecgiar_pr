@@ -15,17 +15,16 @@
       <!-- Is CGIAR Question -->
       @if (!editingMode()) {
         <div class="form-field">
-          <div class="field-label" id="cgiar-question-label">Is CGIAR?<span class="required">*</span></div>
-          <div class="cgiar-radio-group" role="radiogroup" aria-labelledby="cgiar-question-label">
-            <label class="radio-option">
-              <input type="radio" name="is-cgiar" [checked]="addUserForm().is_cgiar" (change)="onModalCgiarChange(true)" class="radio-input" />
-              <span class="radio-label">Yes</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="is-cgiar" [checked]="!addUserForm().is_cgiar" (change)="onModalCgiarChange(false)" class="radio-input" />
-              <span class="radio-label">No</span>
-            </label>
-          </div>
+          <app-pr-radio-button
+            label="Is CGIAR?"
+            [options]="cgiarOptions"
+            optionLabel="label"
+            optionValue="value"
+            variant="segmented"
+            [ngModel]="addUserForm().is_cgiar"
+            (ngModelChange)="onModalCgiarChange($event)"
+            [required]="true">
+          </app-pr-radio-button>
         </div>
       }
       <!-- CGIAR User Search -->
@@ -46,7 +45,7 @@
 
             @if (!editingMode()) {
               <button type="button" class="remove-user-btn" aria-label="Remove selected user" (click)="removeUser()">
-                <i class="pi pi-times" aria-hidden="true"></i>
+                <ng-icon name="lucideX" size="16" aria-hidden="true"></ng-icon>
               </button>
             }
           </div>
@@ -100,22 +99,12 @@
           <app-user-roles-info-modal type="text"></app-user-roles-info-modal>
         </div>
 
-        <div class="assignment-tabs">
-          <button
-            type="button"
-            class="assignment-tab"
-            [class.assignment-tab--active]="activeAssignmentTab() === 'science-program'"
-            (click)="setAssignmentTab('science-program')">
-            Science Program
-          </button>
-          <button
-            type="button"
-            class="assignment-tab"
-            [class.assignment-tab--active]="activeAssignmentTab() === 'center'"
-            (click)="setAssignmentTab('center')">
-            Center
-          </button>
-        </div>
+        <hlm-tabs [tab]="activeAssignmentTab()" (tabActivated)="setAssignmentTab($any($event))" class="mb-4">
+          <hlm-tabs-list>
+            <button hlmTabsTrigger="science-program">Science Program</button>
+            <button hlmTabsTrigger="center">Center</button>
+          </hlm-tabs-list>
+        </hlm-tabs>
 
         @if (activeAssignmentTab() === 'science-program') {
           <div class="assignments-headers">
@@ -157,7 +146,7 @@
 
               <div style="width: 10%" class="remove-button-container">
                 <button type="button" class="remove-role-btn" (click)="removeRoleAssignment($index)" title="Remove role">
-                  <i class="pi pi-times"></i>
+                  <ng-icon name="lucideX" size="12"></ng-icon>
                 </button>
               </div>
             </div>
@@ -165,7 +154,7 @@
           }
 
           <button type="button" class="add-role-assignment" (click)="addRoleAssignment()">
-            <i class="pi pi-plus-circle" aria-hidden="true"></i>
+            <ng-icon name="lucideCirclePlus" size="16" aria-hidden="true"></ng-icon>
             {{ addUserForm().role_assignments.length ? 'Add other role' : 'Add role' }}
           </button>
         } @else {
@@ -201,7 +190,7 @@
 
               <div style="width: 10%" class="remove-button-container">
                 <button type="button" class="remove-role-btn" (click)="removeCenterAssignment($index)" title="Remove center">
-                  <i class="pi pi-times"></i>
+                  <ng-icon name="lucideX" size="12"></ng-icon>
                 </button>
               </div>
             </div>
@@ -209,7 +198,7 @@
           }
 
           <button type="button" class="add-role-assignment" (click)="addCenterAssignment()">
-            <i class="pi pi-plus-circle" aria-hidden="true"></i>
+            <ng-icon name="lucideCirclePlus" size="16" aria-hidden="true"></ng-icon>
             {{ addUserForm().center_assignments.length ? 'Add other center' : 'Add center' }}
           </button>
         }
@@ -250,25 +239,27 @@
 
   <div pr-dialog-footer>
     <div class="modal-footer">
-      <button type="button" class="cancel-btn" (click)="onCancelAddUser()" [disabled]="isLoading()">
-        Cancel
-      </button>
-      <button
-        type="button"
-        class="save-btn"
-        [class.save-btn--loading]="isLoading()"
+      <app-pr-button
+        text="Cancel"
+        colorType="secondary"
+        variant="outlined"
+        [disabled]="isLoading()"
+        (clickEvent)="onCancelAddUser()">
+      </app-pr-button>
+      <app-pr-button
+        [text]="userActivatorMode() ? 'Activate' : editingMode() ? 'Update' : 'Save'"
+        colorType="primary"
+        variant="filled"
+        [loading]="isLoading()"
         [disabled]="
           userActivatorMode()
             ? (!isFormValid() ||
                 (this.addUserForm().role_assignments.length <= 0 &&
-                  this.addUserForm().center_assignments.length <= 0) ||
-                isLoading())
-            : !isFormValid() || isLoading()
+                  this.addUserForm().center_assignments.length <= 0))
+            : !isFormValid()
         "
-        (click)="manageUser()">
-        <span class="save-btn__label">{{ userActivatorMode() ? 'Activate' : editingMode() ? 'Update' : 'Save' }}</span>
-        <i class="pi pi-spin pi-spinner save-btn__spinner" aria-hidden="true"></i>
-      </button>
+        (clickEvent)="manageUser()">
+      </app-pr-button>
     </div>
   </div>
 </app-pr-dialog>

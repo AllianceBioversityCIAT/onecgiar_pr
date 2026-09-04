@@ -327,6 +327,81 @@
         min-width: 200px; // Entity filter needs more space for multi-select
       }
 
+      // Dropdown look aligned with the Results Center toolbar (results-list-filters):
+      // plain white 40px field, muted border, no purple bar chrome.
+      .status-filter,
+      .cgiar-filter,
+      .entity-filter {
+        ::ng-deep .custom_select,
+        ::ng-deep .pr-filter-ms {
+          width: 100%;
+
+          .field {
+            min-height: 40px;
+            height: 40px;
+            padding: 0 36px 0 12px;
+            border: 1px solid var(--pr-border, #e3e3e8);
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: none;
+            gap: 8px;
+
+            &:hover {
+              border-color: #d5d5dc;
+            }
+
+            &:focus-within {
+              border-color: var(--pr-color-primary-200, #a78bfa);
+              box-shadow: 0 0 0 3px rgba(107, 70, 229, 0.12);
+            }
+
+            .text {
+              padding-right: 0;
+              font-size: 14px;
+              font-weight: 400;
+              color: var(--pr-text-heading, #191524);
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+
+              &.select_placeholder {
+                color: var(--pr-text-subtle, #9691a8);
+              }
+            }
+
+            .icon_container {
+              display: none !important;
+            }
+
+            .icon_dropdown {
+              position: absolute;
+              right: 12px;
+              top: 50%;
+              transform: translateY(-50%);
+              z-index: 2;
+              font-size: 12px;
+              color: var(--pr-text-secondary, #5d5872) !important;
+              pointer-events: none;
+            }
+
+            .options {
+              top: calc(100% + 4px);
+              bottom: auto;
+              left: 0;
+              min-width: 100%;
+              width: max-content;
+              max-width: 320px;
+              max-height: 320px;
+              border: 1px solid var(--pr-border, #e3e3e8);
+              border-radius: 8px;
+              box-shadow: 0 8px 24px rgba(25, 21, 36, 0.1);
+              overflow: hidden;
+              transform-origin: top center;
+            }
+          }
+        }
+      }
+
       .clear-filter {
         margin-top: -6px;
       }
@@ -340,14 +415,58 @@
   }
 }
 
-// Table container
+// Table container — aligned with the Results Center table (results-list.component.scss .table.rc-table)
 .table-container {
   background: var(--pr-color-white);
+  border: 1px solid var(--pr-border, #e3e3e8);
   border-radius: 12px;
-  box-shadow:
-    0 1px 3px 0 rgba(var(--pr-color-black-rgb), 0.1),
-    0 1px 2px 0 rgba(var(--pr-color-black-rgb), 0.06);
   position: relative;
+
+  // Restore compact fixed-width columns + automatic horizontal scroll (pre-redesign behavior).
+  // The Spartan app-pr-table renders with table-layout:auto, which ignores the defined column
+  // widths and stretches each column to its content; `fixed` honors the widths and `min-width`
+  // makes the wrapper's overflow-x kick in once the viewport can't fit the whole table.
+  ::ng-deep .pr-table {
+    table-layout: fixed;
+    min-width: 1340px;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+
+    thead th {
+      white-space: normal;
+      background: #f7f7f9 !important;
+      color: #6b6580;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      height: 40px;
+      padding: 0 12px !important;
+      border-bottom: 1px solid #e3e3e8 !important;
+      vertical-align: middle;
+    }
+
+    tbody tr {
+      height: 44px;
+
+      &:hover {
+        background: #fafafb;
+      }
+
+      &:last-child td {
+        border-bottom: none !important;
+      }
+    }
+
+    tbody td {
+      border-bottom: 1px solid #eeeef1 !important;
+      font-size: 13px;
+      padding: 6px 12px !important;
+      vertical-align: middle;
+      color: var(--pr-text, #2b2838);
+    }
+  }
 
   .counter {
     @include fonts.pr-typography('body-2');
@@ -376,110 +495,6 @@
   width: 100%;
   display: flex;
   justify-content: flex-end;
-}
-
-::ng-deep {
-  .p-paginator {
-    display: flex !important;
-    justify-content: center !important;
-
-    .p-dropdown .p-dropdown-panel {
-      z-index: 1000 !important;
-    }
-  }
-
-  .p-datatable-footer {
-    text-align: center;
-  }
-
-  .p-datatable-header {
-    background: var(--pr-color-primary-25);
-    border-bottom: 1px solid var(--pr-color-accents-2);
-  }
-
-  .p-datatable-thead > tr > th {
-    background: var(--pr-color-primary-800) !important;
-    color: var(--pr-color-white) !important;
-    font-weight: 600;
-    @include fonts.pr-typography('body-1');
-    padding: 8px 16px;
-    border: none;
-
-    .header-content {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .p-sortable-column-icon {
-      color: var(--pr-color-white) !important;
-    }
-
-    &:nth-child(3),
-    &:nth-child(4),
-    &:nth-child(5),
-    &:nth-child(6) {
-      .header-content {
-        justify-content: center;
-      }
-    }
-  }
-
-  .p-datatable-tbody > tr {
-    transition: background-color 0.2s ease;
-
-    &:hover {
-      background-color: var(--pr-color-primary-25) !important;
-    }
-
-    > td {
-      padding: 8px 16px;
-      border-bottom: 1px solid var(--pr-color-primary-50);
-      color: var(--pr-color-secondary-400);
-      vertical-align: middle;
-
-      &:nth-child(3),
-      &:nth-child(4),
-      &:nth-child(5),
-      &:nth-child(6) {
-        text-align: center;
-      }
-    }
-  }
-
-  .p-datatable-emptymessage > td {
-    text-align: center;
-    padding: 24px 16px;
-    color: var(--pr-color-secondary-200);
-    font-style: italic;
-  }
-
-  .p-multiselect-dropdown {
-    position: absolute;
-    right: 0;
-    background-color: var(--pr-color-primary-300) !important;
-    width: 43px !important;
-    z-index: 1;
-    pointer-events: none;
-    border-radius: 3px;
-    height: 36px;
-    color: white !important;
-  }
-
-  .p-multiselect .p-multiselect-label {
-    display: flex;
-    align-items: center;
-    height: 36px;
-  }
-
-  .p-multiselect-panel .p-multiselect-items .p-multiselect-item {
-    @include fonts.pr-typography('body-1');
-  }
-
-  .p-datatable-thead > tr > th:last-child,
-  .p-datatable-tbody > tr > td:last-child {
-    text-align: center !important;
-  }
 }
 
 .status-active {
@@ -595,15 +610,3 @@
   }
 }
 
-/* Restore compact fixed-width columns + automatic horizontal scroll (pre-redesign behavior).
-   The Spartan app-pr-table renders with table-layout:auto, which ignores the defined column
-   widths and stretches each column to its content; `fixed` honors the widths and `min-width`
-   makes the wrapper's overflow-x kick in once the viewport can't fit the whole table. */
-:host ::ng-deep .pr-table {
-  table-layout: fixed;
-  min-width: 1340px;
-
-  thead th {
-    white-space: normal;
-  }
-}

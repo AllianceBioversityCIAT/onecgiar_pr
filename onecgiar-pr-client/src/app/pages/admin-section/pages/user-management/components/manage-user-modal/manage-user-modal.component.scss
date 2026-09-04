@@ -35,28 +35,6 @@
     padding: 0;
     border-top: none;
   }
-
-  .p-select-dropdown {
-    position: absolute;
-    right: 0;
-    background-color: var(--pr-color-primary-300) !important;
-    width: 43px !important;
-    z-index: 1;
-    pointer-events: none;
-    border-radius: 3px;
-    height: 36px;
-    color: white !important;
-  }
-
-  .p-select .p-select-label {
-    display: flex;
-    align-items: center;
-    height: 36px;
-  }
-
-  .p-select-panel .p-select-items .p-select-item {
-    @include fonts.pr-typography('body-1');
-  }
 }
 
 .loading-user-role {
@@ -191,56 +169,6 @@
     gap: 16px;
   }
 
-  .cgiar-radio-group {
-    display: flex;
-    gap: 12px;
-
-    .radio-option {
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-      padding: 5px 15px;
-      border: 2px solid var(--pr-color-neutral-1000);
-      background-color: var(--pr-color-white);
-      color: var(--pr-color-secondary-400);
-      border-radius: 6px;
-      @include fonts.pr-typography('body-2');
-      font-weight: 500;
-      transition: all 0.2s ease;
-      position: relative;
-
-      &:hover {
-        border-color: var(--pr-color-primary-300);
-        background-color: var(--pr-color-primary-25);
-      }
-
-      .radio-input {
-        position: absolute;
-        opacity: 0;
-        width: 0;
-        height: 0;
-        margin: 0;
-        padding: 0;
-      }
-
-      .radio-label {
-        pointer-events: none;
-      }
-
-      // When radio is checked, style the label
-      .radio-input:checked + .radio-label {
-        color: var(--pr-color-white);
-      }
-
-      // When radio is checked, style the container
-      &:has(.radio-input:checked) {
-        border-color: var(--pr-color-primary-300);
-        background-color: var(--pr-color-primary-300);
-        color: var(--pr-color-white);
-      }
-    }
-  }
-
   .form-input {
     width: 100%;
     padding: 10px 12px;
@@ -285,9 +213,10 @@
 
   .remove-user-btn {
     cursor: pointer;
-    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
     margin-left: 10px;
-    color: #374151;
+    color: var(--pr-color-secondary-400);
     transition: all 0.2s ease;
     border: none;
     background: transparent;
@@ -295,7 +224,7 @@
     line-height: 1;
 
     &:hover {
-      color: #dc2626;
+      color: var(--pr-color-red-400);
     }
   }
 
@@ -317,89 +246,6 @@
   justify-content: flex-end;
   gap: 12px;
   width: 100%;
-
-  .cancel-btn {
-    padding: 8px 15px;
-    border: 1px solid var(--pr-color-neutral-1000);
-    background-color: var(--pr-color-white);
-    color: var(--pr-color-secondary-400);
-    border-radius: 6px;
-    cursor: pointer;
-    @include fonts.pr-typography('body-2');
-    font-weight: 500;
-    transition: all 0.2s ease;
-
-    &:hover {
-      background-color: var(--pr-color-primary-50);
-      border-color: var(--pr-color-secondary-100);
-    }
-  }
-
-  .save-btn {
-    padding: 8px 15px;
-    min-width: 110px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    border: 1px solid var(--pr-color-primary-300);
-    background-color: var(--pr-color-primary-300);
-    color: var(--pr-color-white);
-    border-radius: 6px;
-    cursor: pointer;
-    @include fonts.pr-typography('body-2');
-    font-weight: 500;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-
-    &__spinner {
-      display: none;
-      font-size: 14px;
-    }
-
-    &--loading {
-      pointer-events: none;
-
-      .save-btn__spinner {
-        display: inline-block;
-      }
-    }
-
-    &:hover:not(:disabled):not(.save-btn--loading) {
-      background-color: var(--pr-color-primary-300);
-      border-color: var(--pr-color-primary-300);
-    }
-
-    &:disabled {
-      background-color: var(--pr-color-secondary-100);
-      border-color: var(--pr-color-secondary-100);
-      cursor: not-allowed;
-      opacity: 0.6;
-    }
-  }
-}
-
-.assignment-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.assignment-tab {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid var(--pr-color-neutral-1000);
-  background-color: var(--pr-color-white);
-  color: var(--pr-color-secondary-400);
-  border-radius: 6px;
-  cursor: pointer;
-  @include fonts.pr-typography('body-2');
-  font-weight: 600;
-
-  &--active {
-    border-color: var(--pr-color-primary-300);
-    background-color: var(--pr-color-primary-300);
-    color: var(--pr-color-white);
-  }
 }
 
 .center-tab-headers .center-header-item {
@@ -423,11 +269,4 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
-}
-
-::ng-deep {
-  .entity-select-panel,
-  .add-user-modal .p-select-panel {
-    max-width: calc(600px - 48px) !important;
-  }
 }
