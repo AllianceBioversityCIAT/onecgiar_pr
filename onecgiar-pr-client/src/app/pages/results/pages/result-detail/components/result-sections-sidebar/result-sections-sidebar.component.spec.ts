@@ -45,6 +45,9 @@ describe('ResultSectionsSidebarComponent', () => {
       sectionQueryParams: () => ({ phase: 7 }),
       resultCode: signal('9006'),
       resultTypeName: signal('Capacity sharing for development'),
+      statusLabel: signal('Editing'),
+      statusFg: signal('var(--pr-status-in-progress-fg)'),
+      statusBg: signal('var(--pr-status-in-progress-bg)'),
       showAiReview: true,
       aiReviewDisabled: false,
       aiReviewLabel: 'AI review',
@@ -69,18 +72,20 @@ describe('ResultSectionsSidebarComponent', () => {
     expect(html().querySelector('[data-testid="result-sections-sidebar"]')).toBeTruthy();
   });
 
-  it('pins the result code and type above the section list', async () => {
+  it('pins the result code, type and status above the section list', async () => {
     await build();
 
-    expect(html().querySelector('[data-testid="result-sections-code"]')?.textContent?.trim()).toBe('9006');
+    expect(html().querySelector('[data-testid="result-sections-code"]')?.textContent?.trim()).toBe('Result code #9006');
     expect(html().querySelector('[data-testid="result-sections-type"]')?.textContent?.trim()).toBe(
       'Capacity sharing for development'
     );
+    expect(html().querySelector('[data-testid="result-sections-status"]')?.textContent?.trim()).toBe('Editing');
   });
 
-  it('hides the identity block when the open result has no code or type', async () => {
+  it('hides the identity block when the open result has no code, type or status', async () => {
     sectionsMock.resultCode = signal('');
     sectionsMock.resultTypeName = signal('');
+    sectionsMock.statusLabel = signal('');
     await build();
 
     expect(html().querySelector('[data-testid="result-sections-identity"]')).toBeNull();

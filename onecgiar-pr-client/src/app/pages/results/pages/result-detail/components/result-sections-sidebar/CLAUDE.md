@@ -3,11 +3,11 @@
 **Verified:** 2026-09-03 · branch qa-development-2026 · 6963df5af
 
 ## Qué es
-Segundo riel (240px, blanco) del detalle de resultado: identidad (result code + type), lista de
-secciones con su green check, barra de progreso y los tres botones de nivel resultado
-(AI review / Submit / Unsubmit). Reemplaza al `panel-menu` legacy y al subárbol de secciones
-que vivía dentro del nav oscuro. Code y type se movieron aquí desde la tira del header para
-que no desaparezcan al scrollear el formulario.
+Segundo riel (240px, blanco) del detalle de resultado: identidad (Result code #, type, status
+pill), lista de secciones con su green check, barra de progreso y los tres botones de nivel
+resultado (AI review / Submit / Unsubmit). Reemplaza al `panel-menu` legacy y al subárbol de
+secciones que vivía dentro del nav oscuro. Code, type y status se movieron aquí desde la tira
+del header para que no desaparezcan al scrollear el formulario.
 
 ## Contrato
 - `ResultSectionsService` (`providedIn: 'root'`) es **el dueño de todo el estado** de esta carpeta.

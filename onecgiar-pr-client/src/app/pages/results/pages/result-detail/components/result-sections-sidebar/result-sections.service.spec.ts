@@ -47,6 +47,7 @@ describe('ResultSectionsService', () => {
         version_id: 7,
         result_type_id: 1,
         status_id: 1,
+        status_name: 'Editing',
         initiative_id: 9
       },
       currentResultSignal: signal({ portfolio: 'P25' }),
@@ -162,11 +163,32 @@ describe('ResultSectionsService', () => {
   });
 
   describe('identity', () => {
-    it('exposes the open result code and type', () => {
+    it('exposes the open result code, type and status', () => {
       build();
 
       expect(service.resultCode()).toBe('1234');
       expect(service.resultTypeName()).toBe('Policy change');
+      expect(service.statusLabel()).toBe('Editing');
+      expect(service.statusFg()).toBe('var(--pr-status-in-progress-fg)');
+      expect(service.statusBg()).toBe('var(--pr-status-in-progress-bg)');
+    });
+
+    it('uses the approved pair for a quality assessed result', () => {
+      dataControl.currentResult.status_id = 2;
+      dataControl.currentResult.status_name = 'Quality Assessed';
+      build();
+
+      expect(service.statusLabel()).toBe('Quality Assessed');
+      expect(service.statusFg()).toBe('var(--pr-status-approved-fg)');
+      expect(service.statusBg()).toBe('var(--pr-status-approved-bg)');
+    });
+
+    it('falls back to the neutral pair on an unknown status', () => {
+      dataControl.currentResult.status_id = 99;
+      build();
+
+      expect(service.statusFg()).toBe('var(--pr-status-not-started-fg)');
+      expect(service.statusBg()).toBe('var(--pr-status-not-started-bg)');
     });
 
     it('falls back to the results API code when the loaded result has none', () => {

@@ -132,17 +132,10 @@ function mapAowFromCatalog(lookup: AowCatalogLookup, catalogResp: any): AowMappi
   return toAowMapping(resolveAowCatalogCode(node), lookup.name, lookup.ids);
 }
 
-/** Palette per `status_id`, from the status token pairs in `styles/colors.scss`. */
-const STATUS_TOKENS: Record<string, { fg: string; bg: string }> = {
-  1: { fg: 'var(--pr-status-in-progress-fg)', bg: 'var(--pr-status-in-progress-bg)' },
-  2: { fg: 'var(--pr-status-approved-fg)', bg: 'var(--pr-status-approved-bg)' },
-  3: { fg: 'var(--pr-status-submitted-fg)', bg: 'var(--pr-status-submitted-bg)' }
-};
-
 /**
- * Result-detail header: the way back, the result's title, the result-level actions (PDF export and
- * the ⋮ menu) and a one-line identity strip — level, funding, submitter, AoW and the status chip.
- * Result code and type sit in the sections sidebar so they stay visible while this header scrolls.
+ * Result-detail header: the way back, the result's title (with the ⓘ metadata trigger beside it),
+ * the result-level actions (PDF export and the ⋮ menu) and a one-line identity strip — level,
+ * funding, submitter and AoW. Result code, type and status sit in the sections sidebar.
  *
  * Built from the approved mockup ("PRMS Reporting.dc.html", the `pageOpen` header). It replaces the
  * docked "RESULT METADATA" card: the same six fields now live behind the ⓘ next to the code, which
@@ -226,23 +219,11 @@ export class ResultHeaderComponent implements DoCheck {
     return params;
   }
 
-  get statusLabel(): string {
-    return this.dataControlSE.currentResult?.status_name ?? '';
-  }
-
-  get statusFg(): string {
-    return STATUS_TOKENS[String(this.dataControlSE.currentResult?.status_id)]?.fg ?? 'var(--pr-status-not-started-fg)';
-  }
-
-  get statusBg(): string {
-    return STATUS_TOKENS[String(this.dataControlSE.currentResult?.status_id)]?.bg ?? 'var(--pr-status-not-started-bg)';
-  }
-
   /**
    * Las filas que el mockup pone en este popover: Center, Phase, Portfolio, Origin, Created by.
    *
-   * Ya NO repite Status / Level / Funding: esos siguen a la vista en la tira. Code y Category
-   * viven en el riel de secciones; el ⓘ queda como ancla del popover.
+   * Ya NO repite Status / Level / Funding. Level y Funding siguen en la tira; Status, Code y
+   * Category viven en el riel de secciones; el ⓘ va al lado del título.
    *
    * Tres de las cinco no tienen dato en `GET /api/results/get/:id` y van marcadas `pending`:
    *  · Center — el payload trae la Science Program (`initiative_*`), que es otra cosa;

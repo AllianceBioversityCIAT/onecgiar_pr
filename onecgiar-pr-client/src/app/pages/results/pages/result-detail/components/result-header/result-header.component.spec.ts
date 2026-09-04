@@ -88,8 +88,11 @@ describe('ResultHeaderComponent', () => {
   describe('identity', () => {
     it('shows the result title', async () => {
       await build();
+      const title = q('[data-testid="result-header-title"]');
 
-      expect(q('[data-testid="result-header-title"]').textContent.trim()).toContain('Genetic basis of yield');
+      expect(title.textContent.trim()).toContain('Genetic basis of yield');
+      expect(title.className).toContain('text-[20px]');
+      expect(title.nextElementSibling?.getAttribute('data-testid')).toBe('result-header-meta-wrap');
     });
 
     it('links back to the results table', async () => {
@@ -108,32 +111,10 @@ describe('ResultHeaderComponent', () => {
       expect(strip).toContain('W3/Bilaterals');
     });
 
-    it('colours the status chip from the status_id token pair', async () => {
-      await build();
-      const chip = q('[data-testid="result-header-status"]');
-
-      expect(chip.textContent.trim()).toBe('Editing');
-      // The rendered colour is asserted on the getters the style bindings read: jsdom refuses a
-      // `var(...)` value on [style.color] / [style.background-color] and writes nothing, so the
-      // DOM says nothing useful here. Verified in a real browser instead.
-      expect(component.statusFg).toBe('var(--pr-status-in-progress-fg)');
-      expect(component.statusBg).toBe('var(--pr-status-in-progress-bg)');
-    });
-
-    it('uses the approved pair for a quality assessed result', async () => {
-      dataControlMock.currentResult.status_id = 2;
+    it('does not show the status chip (it lives in the sections sidebar)', async () => {
       await build();
 
-      expect(component.statusFg).toBe('var(--pr-status-approved-fg)');
-      expect(component.statusBg).toBe('var(--pr-status-approved-bg)');
-    });
-
-    it('falls back to the neutral pair on an unknown status', async () => {
-      dataControlMock.currentResult.status_id = 99;
-      await build();
-
-      expect(component.statusFg).toBe('var(--pr-status-not-started-fg)');
-      expect(component.statusBg).toBe('var(--pr-status-not-started-bg)');
+      expect(q('[data-testid="result-header-status"]')).toBeNull();
     });
 
     it('omits an inline field the result does not carry', async () => {

@@ -39,6 +39,7 @@ One-line record of trivial, fast-tracked changes made with `/akili-quick`.
 | 2026-09-03 | quick/program-band-compact-title-and-height — Reduce program band title from 30px to 21px bold and compact identity block height from 88px to 64px, vertically centering right actions to reclaim screen space | reporting-program-band.component.{html,ts,spec.ts} | `ng build` 0 errors, 64/64 unit tests pass | [SPEC:quick/program-band-compact-title-and-height] |
 | 2026-09-03 | quick/sidebar-other-sps-default-open — Auto-expand 'Other science programs' by default in vertical sidebar when user has no science programs of their own | reporting-nav-sidebar.component.{ts,spec.ts} | `ng lint` pass, Jest 69/69 passed | [SPEC:quick/sidebar-other-sps-default-open] |
 | 2026-09-03 | quick/result-sidebar-code-type — pin result code and type at the top of the result-detail sections rail and remove them from the scrolling header identity strip | result-sections-sidebar.{html,spec.ts}, result-sections.service.{ts,spec.ts}, result-header.{html,ts,spec.ts}, result-detail.component.html | scoped Jest 113/113 passed (sidebar + header) | [SPEC:quick/result-sidebar-code-type] |
+| 2026-09-03 | quick/result-sidebar-code-type (follow-up) — `Result code #`, uppercase type, status pill above Sections; ⓘ beside smaller 20px title; status removed from header | result-sections-sidebar.{html,spec.ts}, result-sections.service.{ts,spec.ts}, result-header.{html,ts,spec.ts} | scoped Jest 113/113 passed | [SPEC:quick/result-sidebar-code-type] |
 
 
 
