@@ -436,6 +436,7 @@ function formatDate(value: string): string {
 
       /* Strip pr-table's navy header skin and its padded cells. */
       :host ::ng-deep .pgr-table .pr-table thead th.pgr-th {
+        position: relative;
         min-width: 0;
         padding: 0 12px;
         border: none;
@@ -471,6 +472,24 @@ function formatDate(value: string): string {
 
       :host ::ng-deep .pgr-table .pr-table thead th.pgr-th--sortable:hover {
         background: rgba(0, 0, 0, 0.025);
+      }
+
+      :host ::ng-deep .pgr-table .pr-table thead th .pgr-col-resizer {
+        position: absolute;
+        right: -1px;
+        top: 0;
+        bottom: 0;
+        width: 8px;
+        cursor: col-resize;
+        z-index: 2;
+        touch-action: none;
+        user-select: none;
+        transition: background-color 150ms ease;
+      }
+
+      :host ::ng-deep .pgr-table .pr-table thead th .pgr-col-resizer:hover,
+      :host ::ng-deep .pgr-table .pr-table thead th .pgr-col-resizer--active {
+        background-color: var(--pr-color-primary-400);
       }
 
       :host ::ng-deep .pgr-table .pr-table thead th.pgr-th--soon {

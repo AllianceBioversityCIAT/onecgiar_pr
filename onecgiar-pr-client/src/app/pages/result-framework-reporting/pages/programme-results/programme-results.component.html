@@ -276,6 +276,17 @@
                   {{ column.label }}
                 </button>
               }
+              @if (hasCustomWidths()) {
+                <div class="mt-[6px] border-t border-[var(--pr-border-divider)] pt-[6px]">
+                  <button
+                    type="button"
+                    class="flex h-[32px] w-full items-center gap-[8px] rounded-[6px] border-0 bg-transparent px-[10px] text-left text-[12px] font-medium text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
+                    (click)="resetAllColumnWidths()">
+                    <span class="material-icons-round text-[15px]">restart_alt</span>
+                    <span>Reset column widths</span>
+                  </button>
+                </div>
+              }
             </div>
           }
         </div>
@@ -355,13 +366,23 @@
             <tr class="pgr-row pgr-head" [style.grid-template-columns]="grid()" [style.min-width]="minWidth()">
               @for (column of visibleColumns(); track column.key) {
                 <th
-                  class="pgr-th pgr-th--sortable"
+                  #thEl
+                  class="pgr-th pgr-th--sortable relative"
                   scope="col"
                   tabindex="0"
                   [prSortableColumn]="column.sortField"
                   [style.color]="sortColor(tbl, column.sortField)"
                   (keydown.enter)="tbl.sort(column.sortField)">
-                  {{ column.label }} {{ sortArrow(tbl, column.sortField) }}
+                  <span class="truncate">{{ column.label }} {{ sortArrow(tbl, column.sortField) }}</span>
+                  <div
+                    class="pgr-col-resizer"
+                    role="separator"
+                    aria-orientation="vertical"
+                    [attr.aria-label]="'Resize ' + column.label + ' column'"
+                    title="Drag to resize column. Double-click to reset."
+                    (mousedown)="onResizeStart($event, column, thEl)"
+                    (dblclick)="onResizeReset(column, $event)"
+                    (click)="$event.stopPropagation()"></div>
                 </th>
               }
               <th class="pgr-sticky-head" scope="col" aria-hidden="true"></th>

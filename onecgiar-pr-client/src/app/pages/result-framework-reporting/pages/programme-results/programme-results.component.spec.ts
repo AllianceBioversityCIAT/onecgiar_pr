@@ -5,7 +5,13 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import { ActivatedRoute, ParamMap, Router, convertToParamMap } from '@angular/router';
 import { BehaviorSubject, of } from 'rxjs';
 
-import { PGR_COLUMN_STORAGE_KEY, ProgrammeResultsComponent } from './programme-results.component';
+import {
+  PGR_COLUMN_STORAGE_KEY,
+  PGR_COLUMN_WIDTHS_STORAGE_KEY,
+  ProgrammeResultsComponent,
+  readStoredColumnWidths,
+  writeStoredColumnWidths
+} from './programme-results.component';
 import { PROGRAMME_RESULTS_OTHER_CATEGORY, ProgrammeResultsFilterService } from './services/programme-results-filter.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
@@ -1052,5 +1058,123 @@ describe('ProgrammeResultsComponent', () => {
     component.data.totalReported.set(476);
     component.data.isPartial.set(true);
     expect(component.totalLabel()).toBe('0 of 476 results');
+  });
+
+  // ── column resizing (TRC-R-1..4) ────────────────────────────────────────────────────────
+  describe('column resizing (TRC-R-1..4)', () => {
+    afterEach(() => {
+      localStorage.removeItem(PGR_COLUMN_WIDTHS_STORAGE_KEY);
+    });
+
+    it('computes grid() and minWidth() with custom widths when set', () => {
+      component.customWidths.set({ title: 500, status: 160 });
+      expect(component.hasCustomWidths()).toBe(true);
+
+      const grid = component.grid();
+      expect(grid).toContain('500px');
+      expect(grid).toContain('160px');
+      // Verify other columns keep their default tracks
+      expect(grid).toContain('92px'); // code
+      expect(grid).toContain('minmax(140px,1fr)'); // category
+
+      const minWidthNum = parseInt(component.minWidth(), 10);
+      // Custom widths increase minWidth accordingly
+      expect(minWidthNum).toBeGreaterThan(900);
+    });
+
+    it('safely reads and writes to localStorage', () => {
+      writeStoredColumnWidths({ code: 120, title: 400 });
+      const read = readStoredColumnWidths();
+      expect(read).toEqual({ code: 120, title: 400 });
+
+      // Corrupted JSON fallback
+      localStorage.setItem(PGR_COLUMN_WIDTHS_STORAGE_KEY, 'invalid json{');
+      expect(readStoredColumnWidths()).toEqual({});
+    });
+
+    it('clamps column width to column.minPx on drag', () => {
+      const titleCol = component.visibleColumns().find(c => c.key === 'title')!;
+      const fakeTh = document.createElement('th');
+      Object.defineProperty(fakeTh, 'getBoundingClientRect', {
+        value: () => ({ width: 300 })
+      });
+
+      const mousedownEvent = new MouseEvent('mousedown', { clientX: 300 });
+      jest.spyOn(mousedownEvent, 'preventDefault');
+      jest.spyOn(mousedownEvent, 'stopPropagation');
+
+      component.onResizeStart(mousedownEvent, titleCol, fakeTh);
+      expect(mousedownEvent.preventDefault).toHaveBeenCalled();
+      expect(mousedownEvent.stopPropagation).toHaveBeenCalled();
+      expect(component.isResizing()).toBe(true);
+
+      // Drag left by 200px (300 - 200 = 100, which is below minPx of 240)
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 100 }));
+      expect(component.customWidths()['title']).toBe(titleCol.minPx); // clamped at 240px
+
+      // Drag right by 150px (300 + 150 = 450)
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 450 }));
+      expect(component.customWidths()['title']).toBe(450);
+
+      // Release mouse
+      window.dispatchEvent(new MouseEvent('mouseup'));
+      expect(component.isResizing()).toBe(false);
+      expect(readStoredColumnWidths()['title']).toBe(450);
+    });
+
+    it('resets an individual column width on double-click', () => {
+      component.customWidths.set({ code: 150, title: 500 });
+      const dblClickEvent = new MouseEvent('dblclick');
+      jest.spyOn(dblClickEvent, 'preventDefault');
+      jest.spyOn(dblClickEvent, 'stopPropagation');
+
+      const titleCol = component.visibleColumns().find(c => c.key === 'title')!;
+      component.onResizeReset(titleCol, dblClickEvent);
+
+      expect(component.customWidths()['title']).toBeUndefined();
+      expect(component.customWidths()['code']).toBe(150);
+      expect(readStoredColumnWidths()['title']).toBeUndefined();
+    });
+
+    it('resets all custom column widths and clears storage', () => {
+      component.customWidths.set({ code: 150, title: 500 });
+      expect(component.hasCustomWidths()).toBe(true);
+
+      component.resetAllColumnWidths();
+      expect(component.customWidths()).toEqual({});
+      expect(component.hasCustomWidths()).toBe(false);
+      expect(readStoredColumnWidths()).toEqual({});
+    });
+
+    it('renders the reset button in Columns popover only when custom widths exist', () => {
+      component.columnsOpen.set(true);
+      component.customWidths.set({});
+      fixture.detectChanges();
+
+      let resetBtn = fixture.debugElement.query(By.css('.pgr-pop button:has(span.material-icons-round)'));
+      expect(resetBtn).toBeNull();
+
+      component.customWidths.set({ title: 600 });
+      fixture.detectChanges();
+
+      resetBtn = fixture.debugElement.query(By.css('.pgr-pop button:has(span.material-icons-round)'));
+      expect(resetBtn).toBeTruthy();
+      expect(resetBtn.nativeElement.textContent).toContain('Reset column widths');
+
+      resetBtn.nativeElement.click();
+      fixture.detectChanges();
+      expect(component.customWidths()).toEqual({});
+    });
+
+    it('does not trigger sorting when clicking the resizer handle', () => {
+      const resizerEl = fixture.debugElement.query(By.css('th .pgr-col-resizer'));
+      expect(resizerEl).toBeTruthy();
+
+      const sortSpy = jest.spyOn(table(), 'sort');
+      resizerEl.nativeElement.click();
+      fixture.detectChanges();
+
+      expect(sortSpy).not.toHaveBeenCalled();
+    });
   });
 });

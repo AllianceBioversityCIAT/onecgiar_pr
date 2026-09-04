@@ -34,7 +34,7 @@
 
 ---
 
-- [ ] **TRC-T-2: HTML Template & CSS Resizer Handles and Reset Action**
+- [x] **TRC-T-2: HTML Template & CSS Resizer Handles and Reset Action**
   - **Requirements**: `TRC-R-1`, `TRC-AC-1.1`, `TRC-AC-1.2`, `TRC-AC-1.3`, `TRC-AC-1.4`, `TRC-AC-4.2`
   - **Design**: `TRC-DD-4`, `TRC-DD-5`
   - **Files to edit**:
@@ -55,7 +55,7 @@
 
 ---
 
-- [ ] **TRC-T-3: Unit & Regression Test Suite**
+- [x] **TRC-T-3: Unit & Regression Test Suite**
   - **Requirements**: `TRC-AC-1.3`, `TRC-AC-2.1`, `TRC-AC-2.2`, `TRC-AC-3.1`, `TRC-AC-4.1`, `TRC-AC-4.2`, `TRC-AC-4.3`
   - **Design**: Section 4 (Testing Strategy)
   - **Files to edit**:
