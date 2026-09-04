@@ -1,6 +1,6 @@
 # context-ai — contexto vivo del trabajo en curso
 
-**Verified:** 2026-08-31 · branch `performance-refactor` · `d380a8e4d`
+**Verified:** 2026-09-04 16:15 · branch `performance-refactor` · `f38c13161`
 **Ticket espejo en Jira:** [P2-3432](https://cgiarmel.atlassian.net/browse/P2-3432) — Context AI. Su comentario del 24-ago es el índice de preguntas abiertas y por dónde revisar.
 
 ## Qué es esta carpeta
@@ -51,6 +51,22 @@ sigue trabajando en lo que no depende de la respuesta.
 **6. Tope 150 líneas por archivo.** Pasado eso: borrar lo derivable o partir un hijo. Un documento
 que nadie lee porque es largo es un documento que no existe.
 
+**7. 🛑 Lo que no está en el índice de abajo, se ARCHIVA — no se deja suelto en la carpeta.**
+Un archivo que sigue en la raíz pero fuera del índice es la peor combinación posible: nadie lo
+mantiene y aun así un `ls` lo encuentra y un agente lo lee como vigente. El 4-sep-2026 la carpeta
+tenía **31 archivos y el índice listaba 9**; los 22 huérfanos eran snapshots de estados y censos de
+días anteriores, o sea **información falsa esperando a que alguien la citara**. Se movieron a
+[`archivo/`](archivo/).
+
+> 🛑 **`archivo/` NO SE LEE para trabajar.** Es historia: estados, censos, barridos y verificaciones
+> de días pasados. Nada de ahí describe el presente. Si necesitas saber cómo se llegó a algo, está
+> ahí; si necesitas saber **qué pasa hoy**, está en `estado-<fecha>` más reciente y en el índice.
+
+**8. Al archivar, revisa que el vigente no se contradiga consigo mismo.** El mismo 4-sep,
+`estado-2026-09-04.md` decía arriba que el alcance de P2-3292 ya estaba decidido y abajo lo listaba
+como *"decisión de Yeck pendiente"*. Un documento que se contradice es peor que uno viejo: el lector
+elige la mitad que le conviene.
+
 ## Cómo llega esto a un agente (y por qué no se autocarga)
 
 Ninguno de estos archivos se llama `CLAUDE.md` **a propósito**: Claude Code solo autocarga ese
@@ -85,4 +101,9 @@ Si un disparador debería haber funcionado y no lo hizo, se arregla en el mismo 
 | `fase-vs-portafolio.md` | Qué fase es la nueva, los 11 gates que existen y por qué `isP25()` no sirve para separarlas |
 | **`estado-2026-09-04.md`** | 🥇 **Empieza por aquí si vienes de otro chat.** Los tres bloqueos que cayeron el 3-sep y que otras sesiones siguen citando como abiertos, los dos resultados de prueba de 2026 y qué queda |
 | `2026-09-04-verificaciones.md` | La evidencia de las verificaciones en pantalla del 4-sep (cifras, cabeceras, celdas DOM vs visibles). El padre lleva solo el veredicto |
-| `2026-09-03-green-check-innovation-dev.md` | El green check de Innovation Development: resuelto, las dos causas reales, y por qué la ruta **v1** de green checks no sirve para medir |
+| `2026-09-03-green-check-innovation-dev.md` | El green check de Innovation Development: **resuelto el 3-sep**, las dos causas reales, y por qué la ruta **v1** de green checks no sirve para medir |
+| `2026-09-03-decisiones-yeck.md` · `2026-09-02-scope-nuevo.md` · `2026-09-02-reparto-y-clarificaciones.md` | Decisiones de Yeck y del PO que siguen vigentes: alcance, reparto y clarificaciones. **No caducan con la fecha del nombre** |
+| `como-validar-un-despliegue-en-prtest.md` | Cómo se comprueba que algo llegó de verdad al ambiente. 🥇 El sello `APP_VERSION` es del **cliente** y no dice nada del server |
+| `pendiente-defectos-formularios.md` | Los defectos de formularios pendientes del blindaje pre-producción (épico `P2-3558`, valida **Santi**) |
+| `handover-toc-user-feedback.md` | Theory of Change. 🛑 **No se toca** — es de Juan David Delgado (R18) |
+| `archivo/` | 🛑 **Historia. No se lee para trabajar.** Estados, censos, barridos y verificaciones de días pasados — ver regla 7 |

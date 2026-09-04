@@ -1,6 +1,6 @@
 # Fase ≠ portafolio — cómo se gatea lo nuevo del ciclo 2026
 
-**Verified:** 2026-08-31 · branch `performance-refactor` · auditoría de los 71 tickets que tocaron formularios desde el 1-jul-2026
+**Verified:** 2026-09-01 · branch `performance-refactor` · auditoría de los 71 tickets que tocaron formularios desde el 1-jul-2026
 **Regla madre:** `~/Desktop/reporting/CLAUDE.md` § regla 9. Este archivo es su **evidencia**: qué se auditó, qué salió bien y qué falta.
 
 ## 1. Cuál es la fase nueva
@@ -52,6 +52,7 @@ return typeof year === 'number' && year >= ReportingDesignYear.<Umbral>;
 - `.../ipsr-innovation-use-pathway/pages/step-n4/` (P2-3426)
 - `shared/services/global/qa-innovation-development-results.service.ts`
 - `pages/bilateral/components/section-type-specific/type-innovation-use/type-innovation-use.component.ts:44`
+- `.../rd-result-types-pages/policy-change-info/policy-change-info.component.ts` (P2-3261, añadido el 1-sep — ver § 5)
 
 ## 4. Tickets verificados uno por uno — CON gate
 
@@ -68,15 +69,30 @@ así que el diff del commit no muestra el gate:
 📌 **Lección de método:** grepear el diff del commit **da falsos huecos**. Hay que mirar el estado
 actual del archivo y buscar el `@if` que lo envuelve.
 
-## 5. 🔴 Hueco confirmado — P2-3261
+## 5. ✅ Hueco cerrado — P2-3261 (1-sep-2026)
 
-`pages/results/.../rd-result-types-pages/policy-change-info/policy-change-info.component.ts` no
-tiene **ningún** gate: ni de fase ni de portafolio. El commit `f58084fd6` reescribió las
-definiciones de *"Policy or strategy"* y *"Program, budget or investment"*.
+**El hueco era real.** `policy-change-info.component.ts` no tenía **ningún** gate: ni de fase ni de
+portafolio. El commit `f58084fd6` (18-ago) reescribió las definiciones de *"Policy or strategy"* y
+*"Program, budget or investment"*, y desde ese día **cualquier** resultado — fase 2025 o P22 — leía
+el texto de 2026. Es texto de guía, no un campo: no se perdió ningún dato, pero rompía la regla de
+retrocompatibilidad del épico durante 14 días.
 
-**Consecuencia:** quien abra hoy un resultado de fase 2025 o de P22 ve el texto de 2026.
-Es texto de guía, no un campo — **no se pierde ningún dato**, pero rompe la regla de
-retrocompatibilidad del épico.
+**Cerrado** con el patrón del § 9, el mismo que P2-3292:
+
+- `POLICY_TYPE_GUIDANCE_FROM_PHASE_YEAR = 2026` — constante **local**, no miembro de
+  `ReportingDesignYear`: ese enum es para umbrales de **rediseño de UI** y éste es de **texto de
+  guía** (§ 9 punto 1).
+- `usesPolicyTypeGuidance2026()` lee `currentResultSignal()?.phase_year` con el guard
+  `typeof === 'number'` y cae a `reportingCurrentPhase.phaseYear`.
+- Dos constantes de texto: `POLICY_TYPE_GUIDANCE_2026` (lo aprobado en P2-3261) y
+  `LEGACY_POLICY_TYPE_GUIDANCE` (el texto anterior, restaurado **literal** del padre de
+  `f58084fd6`). La entrada *"Legal instrument"* es idéntica en las dos ramas: P2-3261 nunca la tocó.
+- 7 tests nuevos que leen el **DOM renderizado** (`.alert_text`), no el retorno del método —
+  con CD zoneless un test sobre el string pasa aunque la caja no se repinte. 3 de los 7 fallan
+  sin el gate (verificado quitándolo).
+
+⚠️ **La copia bilateral (`section-type-specific/type-policy-change`) sigue sin gate.** No se tocó:
+bilateral es módulo 2026 por construcción y esa carpeta es de otro frente.
 
 ## 6. ⚠️ NO VERIFICADO — siete pendientes
 
