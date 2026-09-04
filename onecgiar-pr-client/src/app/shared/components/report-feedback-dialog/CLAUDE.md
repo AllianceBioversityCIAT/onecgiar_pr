@@ -10,21 +10,27 @@ Modal global detrás del botón 🐛 del topbar, con **dos modos** (Yeck, 3-sep-
 ## Contrato
 - Standalone. Visibilidad por `[visible]` + `(visibleChange)`; el pr-dialog usa `@Input/@Output`
   clásico, NO `model()` → desde un signal host **no** se liga con `[(visible)]="sig"`.
-- `autoScreenshot` es un **signal input**: el host abre el modal primero y la captura llega ~2 s
-  después. Con un `@Input` plano la casilla no repinta bajo zoneless.
 - Estado interno con signals. Envía al server: type, title, description, `priority` (id de Jira
   1–5), `attachments` (base64), `consoleLogs`, y el contexto auto (`location.href`, `userAgent`).
 - API: `FeedbackApiService` → `POST feedback`, `GET feedback/my-reports`,
   `GET feedback/similar?q=`, `POST feedback/me-too`.
 
-## Privacidad de la captura — decidido, no accidental
-🛑 **La casilla de adjuntar la captura va DESMARCADA por defecto** (Yeck, 3-sep-2026: *"espero que
-no subas nada personal mío"*). La foto lleva **todo lo que hubiera en pantalla** — resultados de
-otros centros, nombres, cifras — así que adjuntarla tiene que ser una decisión, no un default que
-nadie vio. Hay test-candado: *"does NOT attach the screenshot unless the user ticks the box"*.
+## 🛑 NO HAY captura automática de pantalla — se quitó, no se olvidó
+**Retirada el 4-sep-2026 por orden de Yeck: rasterizar el viewport se comía la máquina del que
+reporta y CONGELABA la página.** Se eliminaron `ScreenshotService`, el `autoScreenshot`, la casilla
+*"Attach the screen as it looked…"*, la miniatura ampliable y sus estilos.
 
-Y la **miniatura se muestra siempre** que exista captura, marcada o no, ampliable al clic: nadie
-debería adjuntar una foto de su pantalla sin haberla visto antes.
+⚠️ **El coste no era nuestro: lo pagaba el usuario, y en el peor momento** — justo cuando ya está
+intentando reportar que algo va mal. Un modal que congela la página al abrirse convierte el botón de
+reportar bugs en un bug.
+
+🥇 **Si alguien vuelve a querer imagen: que la adjunte el usuario, nunca que la pinte la app.** El
+`Add an image` ya lo cubre. Nada de `html2canvas`, `modern-screenshot`, `domToPng` ni
+`canvas.drawWindow`. Test-candado: *"sends no attachments when the user picked no file"*.
+
+⚠️ La dependencia `modern-screenshot` sigue en `package.json` **sin ningún consumidor**: se dejó a
+propósito para no tocar `package-lock.json` con cuatro sesiones sobre el mismo checkout. Se puede
+quitar cuando el árbol esté tranquilo.
 
 ## Nada se guarda en base de datos
 La lista de "My reports" se resuelve **en vivo contra Jira** en cada apertura, filtrando por el
@@ -40,7 +46,7 @@ en su lista.
 
 ## Dónde se usa
 - `shared/components/shell-topbar/shell-topbar.component.html` — el botón (`lucideBug`) llama a
-  `openReportFeedback()`, que abre el modal y lanza la captura sin bloquear.
+  `openReportFeedback()`, que solo abre el modal — ya no dispara ninguna captura.
 
 ## Trampas (⚠️ = ya rompió algo)
 - ⚠️ `[pr-dialog-footer]` NO puede ir dentro de `@if/@else` con más de un nodo raíz (NG8011):

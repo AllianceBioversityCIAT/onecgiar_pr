@@ -77,28 +77,33 @@ describe('ReportFeedbackDialogComponent', () => {
     expect(component.createdIssueKey()).toBe('P2-9');
   });
 
-  it('does NOT attach the screenshot unless the user ticks the box', () => {
-    // The guard for "espero que no subas nada personal mio" (Yeck, 3-sep-2026):
-    // a capture exists, but an untouched form must not ship it.
-    fixture.componentRef.setInput('autoScreenshot', 'data:image/png;base64,AAA');
+  /**
+   * Regression lock, 4-sep-2026. The automatic screen capture was REMOVED
+   * (Yeck: rasterising the viewport froze the reporters' machines). A report
+   * with no file picked must go out with no attachments at all — nothing may
+   * be captured on the user's behalf, ever.
+   */
+  it('sends no attachments when the user picked no file', () => {
     component.title.set('t');
     component.description.set('d');
-
-    expect(component.includeScreenshot()).toBe(false);
     component.submit();
+
     expect(api.POST_reportFeedback.mock.calls[0][0].attachments).toHaveLength(0);
   });
 
-  it('attaches it once the user ticks the box', () => {
-    fixture.componentRef.setInput('autoScreenshot', 'data:image/png;base64,AAA');
+  it('sends only the files the user attached themselves', () => {
     component.title.set('t');
     component.description.set('d');
-    component.includeScreenshot.set(true);
+    component.userFiles.set([
+      { name: 'mine.png', mimeType: 'image/png', dataBase64: 'data:image/png;base64,AAA' },
+      // Still being read by FileReader — must not be sent half-empty.
+      { name: 'pending.png', mimeType: 'image/png', dataBase64: '' }
+    ]);
     component.submit();
 
     const sent = api.POST_reportFeedback.mock.calls[0][0].attachments;
     expect(sent).toHaveLength(1);
-    expect(sent![0].name).toBe('screen-at-report-time.png');
+    expect(sent![0].name).toBe('mine.png');
   });
 
   it('surfaces a message when the report fails, and stops spinning', () => {
@@ -180,8 +185,7 @@ describe('ReportFeedbackDialogComponent', () => {
     component.title.set('old');
     component.description.set('old');
     component.priority.set('1');
-    component.includeScreenshot.set(true);
-    component.shotExpanded.set(true);
+    component.userFiles.set([{ name: 'old.png', mimeType: 'image/png', dataBase64: 'x' }]);
     component.createdIssueKey.set('P2-9');
     component.setMode('view');
 
@@ -194,7 +198,6 @@ describe('ReportFeedbackDialogComponent', () => {
     expect(component.priority()).toBe('3');
     expect(component.createdIssueKey()).toBeNull();
     expect(component.similar()).toEqual([]);
-    expect(component.includeScreenshot()).toBe(false);
-    expect(component.shotExpanded()).toBe(false);
+    expect(component.userFiles()).toEqual([]);
   });
 });
