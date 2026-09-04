@@ -1,6 +1,6 @@
 # result-creator
 
-**Verified:** 2026-09-02 · branch performance-refactor · 2de8884cd
+**Verified:** 2026-09-04 · branch performance-refactor · f38c13161
 
 ## Qué es
 La pantalla de **Report new result** del flujo Pool Funding (W1/W2): elegir nivel, escribir el
@@ -85,8 +85,16 @@ lee un documento y propone resultados candidatos — hoy solo los propone (ver T
 ## P2-3421 — link to a QA'd Innovation Development result (English, per the repo rule)
 `report-result-form` renders TWO surfaces: the standalone legacy creator (its own route) and the
 **emergent (non-ToC) modal** hosted by `result-framework-reporting`. The link question belongs to
-the emergent one ONLY, so it is opt-in via `@Input() showInnovationLinkQuestion`
-(`entity-details.component.html:198` passes `true`). Default `false` — never make it default `true`.
+the emergent one ONLY, so it is opt-in via `@Input() showInnovationLinkQuestion`. Default `false` —
+never make it default `true`.
+
+🛑 **The host that ships it is `dashboard-lab.component.html` (the "Report emerging result" modal),
+not `entity-details`.** P2-3569: the flag was originally wired ONLY on `entity-details`, which is
+**retired and unrouted** — `routing-data.ts` loads `DashboardLabComponent` for `emerging`,
+`entity-details/:entityId`, `overview` and `planned-toc` alike — so the mandatory question never
+reached a live screen and QA reproduced its absence three times before anyone checked whether the
+host still shipped. Static guard against the repeat: `innovation-link-surfaces.spec.ts` fails if any
+host of the form omits the input without an entry in its `OMITTED_ON_PURPOSE` list.
 
 - Three gates, all of them load-bearing: the surface opt-in · `result_type_id === 2` (Innovation
   use) · **phase year ≥ 2026**. 🛑 The year gate is `showsInnovationLinkQuestion()` from
@@ -97,7 +105,9 @@ the emergent one ONLY, so it is opt-in via `@Input() showInnovationLinkQuestion`
   `innovation_use_level_id`, which a result created a second ago does not have.
 - The dropdown reads `QaInnovationDevelopmentResultsService` — the single client-side owner of the
   catalogue, shared with the two ToC creation surfaces. Do not fetch it here.
-- ⚠️ `dashboard-lab.component.html:1643` hosts this same component as ITS emergent modal and does
-  **not** pass the flag yet — out of scope of P2-3421, reported. Add the input there when the
-  story that owns that surface says so.
+- ✅ **`dashboard-lab.component.html` passes the flag since P2-3569 (4-Sep-2026).** The earlier note
+  here called that surface "out of scope, add it when the story that owns it says so" — written on
+  the false premise that `entity-details` still shipped. It does not, so that omission was the whole
+  defect, not a nice-to-have. When a note says a surface is out of scope, **check that the in-scope
+  one is routed.**
 

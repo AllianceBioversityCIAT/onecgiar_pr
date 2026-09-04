@@ -2162,9 +2162,16 @@
         <i class="material-icons-round" style="font-size: 20px">close</i>
       </button>
     </div>
+    <!-- P2-3569: `[showInnovationLinkQuestion]` was wired ONLY on `entity-details`, which is
+         retired and unrouted, so the mandatory "is this the use of a QA'd innovation?" question
+         never reached a live screen — QA reproduced its absence three times here. This modal IS
+         the emergent pathway today (routes `emerging`, `entity-details/:entityId`, `overview`,
+         `planned-toc` all load this component), so the flag belongs here. The three gates inside
+         the form still apply: opt-in surface, Innovation use only, phase year >= 2026. -->
     <app-report-result-form
       [selectedInitiativeId]="selected()?.initiativeId"
       [disableInitiativeSelect]="true"
+      [showInnovationLinkQuestion]="true"
       (resultCreated)="closeReportModal()">
     </app-report-result-form>
   </app-pr-dialog>
