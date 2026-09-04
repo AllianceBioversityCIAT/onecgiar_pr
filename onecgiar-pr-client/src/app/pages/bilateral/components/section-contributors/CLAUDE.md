@@ -1,6 +1,6 @@
 # section-contributors
 
-**Verified:** 2026-08-26 · branch performance-refactor · 75d56f2cd
+**Verified:** 2026-09-04 · branch performance-refactor (contributing programs stage share-request drafts; SP chips carry the full name)
 
 ## Qué es
 Sección 2 del formulario bilateral (W3/Bilateral): a quién se atribuye el resultado — centro líder,
@@ -132,12 +132,24 @@ renderizaba; en un resultado guardado tampoco (`sciencePrograms: []` al cargar).
 - **Card siempre visible** (se quitó el `@if` exterior y el tag `Coming soon` del bloque de SPs).
   `unpersistedFieldsComingSoon` sigue existiendo pero ya sólo cubre enlazado/agrupado.
 - **Guardado:** `buildContributorsPayload()` manda `contributing_programs: [{ science_program_id: programCode }]`
-  cuando `contributorsHydrated()`; `onSecondarySpsModelChange` llama `persistContributors()`. El server
-  (`bilateral-center.service.ts` → `syncContributingPrograms`) escribe filas rol 2 en
-  `results_by_inititiative`, desactiva las que ya no estén y nunca toca el rol 1.
-- **Lectura:** `BilateralCreationService.loadResult` hidrata `selectedSecondarySps` con las filas
-  `initiative_role_id === 2` de `contributing_and_primary_initiative`, y el primario ahora se busca por
-  rol 1 (antes era `[0]`, correcto sólo por suerte).
+  cuando `contributorsHydrated()`; `onSecondarySpsModelChange` llama `persistContributors()`.
+  🛑 **Desde 2026-09-04 el server (`syncContributingPrograms`) escribe DRAFTS de `share_result_request`
+  (status 4, la misma forma del ingest), NO filas rol 2.** Rol 2 significa "el programa ya aceptó":
+  escribirlo desde el form saltaba el consentimiento del contribuidor y el approve del SP
+  (`updateResultByInitiative`) lo BORRABA por no tener solicitud que lo respalde. Con drafts, el
+  approve los convierte en solicitudes pending (email + card accept/decline, P2-3187) y la aceptación
+  del SP es la que crea el rol 2. Quitar un programa del form cancela su draft/pending y desactiva un
+  rol 2 ya aceptado (igual que antes).
+- **Lectura:** `BilateralCreationService.loadResult` hidrata `selectedSecondarySps` con la UNIÓN de las
+  filas rol 2 (`contributing_and_primary_initiative`) y las solicitudes draft/pending
+  (`pending_contributing_initiatives`, que el detalle expone también en Editing/Draft desde
+  2026-09-04), deduplicada por id. El primario se busca por rol 1 (antes era `[0]`, correcto sólo
+  por suerte).
+- **Chips con nombre completo (feedback 2026-09-04):** el chip seleccionado muestra `CODE - Name`,
+  igual que la opción del dropdown (`full_name`). El `name` viaja en `selectedSecondarySps` desde
+  `onSecondarySpsModelChange` (opciones del catálogo) y desde la hidratación de `loadResult`
+  (`initiative_name || short_name`); el fallback de SPs del proyecto no trae nombre y el chip degrada
+  a solo el código.
 - ⚠️ El ingest (`POST /create`) sigue guardando los programas contribuyentes como
   `share_result_request` con status 4, no como rol 2: un resultado creado por API no muestra sus
   programas en el formulario hasta que alguien los guarde desde aquí. Anotado en el change log del

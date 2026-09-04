@@ -15,57 +15,30 @@
 }
 
 /* ── Animated disclosure (AoW + HLO).
-   grid 0fr→1fr animates height without measuring content. Avoids @if mount/unmount pop. ── */
-.pr-collapse {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 280ms cubic-bezier(0.4, 0, 0.2, 1);
+   `RGS-T-3` (changes/aow-row-gesture-split): the `.pr-collapse` / `.pr-collapse-inner` rule that
+   used to live HERE moved to the shared `src/styles/collapse.scss` — `program-overview`'s AoW
+   progress section now reuses it too. Do not re-add a local copy; extend the shared file instead.
+   @akili-spec changes/aow-row-gesture-split ── */
 
-  &.is-open {
-    grid-template-rows: 1fr;
-  }
-
-  > .pr-collapse-inner {
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  /* Card level only. The card no longer clips (the ⓘ popover has to escape it), so the bottom
-     corners are rounded HERE — this element already has `overflow: hidden` for the animation, so a
-     radius on it clips the last row for free. Sub-group collapses must stay square: they sit in the
-     middle of a card. */
-  &.pr-collapse--card > .pr-collapse-inner {
-    border-bottom-right-radius: 12px;
-    border-bottom-left-radius: 12px;
-  }
-}
-
-/* RTA-DD-1: the HLO-level collapse's fixed-width row grid (see `.pr-reporting-row` below) clips its
-   rightmost action controls under ~1048px. Split the axes instead of removing the clip outright —
-   `overflow-y: hidden` stays so the 0fr→1fr grid-template-rows collapse animation above still works;
-   only the x axis opens, mirroring the existing `.pr-flat-scroll` pattern in this same file. */
-.pr-collapse--rows > .pr-collapse-inner {
-  overflow-x: auto;
-  overflow-y: hidden;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pr-collapse {
-    transition: none;
-  }
-}
+/* ── Shared Reporting Grid Definition ──
+   Used identically by .pr-hlo-head, .pr-hlo-row, and .pr-reporting-row so all headers, HLO
+   metric totals, and indicator rows align with pixel precision. */
+$pr-reporting-tracks: 24px minmax(280px, 1fr) 72px 72px 104px 124px 108px 28px;
+$pr-reporting-gap: 12px;
+$pr-reporting-pad: 8px 16px 8px 24px;
 
 /* ── Subgroup table column header ── */
 .pr-hlo-head {
   display: grid;
-  grid-template-columns: 28px minmax(280px, 1fr) 80px 80px 112px 132px 136px 36px;
-  min-width: 1048px;
+  grid-template-columns: $pr-reporting-tracks;
   align-items: center;
-  gap: 16px;
-  height: 30px;
-  padding: 0 20px 0 32px;
+  gap: $pr-reporting-gap;
+  height: 32px;
+  padding: 0 16px 0 24px;
   background: var(--pr-surface-subtle);
   border-top: 1px solid var(--pr-border-divider);
+  border-left: 3px solid transparent;
+  box-sizing: border-box;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -74,24 +47,35 @@
   user-select: none;
 }
 
+/* ── HLO row (tabular tree-table node) ── */
+.pr-hlo-row {
+  display: grid;
+  grid-template-columns: $pr-reporting-tracks;
+  align-items: center;
+  gap: $pr-reporting-gap;
+  min-height: 48px;
+  padding: $pr-reporting-pad;
+  box-sizing: border-box;
+  width: 100%;
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: -2px;
+  }
+}
+
 /* ── The row. Grid + pad are the design verbatim (spacers keep Target / Achieved / action aligned). ── */
 .pr-reporting-row {
   display: grid;
-  /* status (28px) | title (1fr) | target (80px) | achieved (80px) | status (112px) | Progress
-     (132px) | action (136px, fits copy-link + Report; Next pending wraps above) | menu (36px)
-     P2-3296: the Progress track is new. It sits after the status figures because it is derived
-     from them, and its 132px is the narrowest width that fits "Overachieved" without wrapping —
-     the label an indicator with no usable target shows in place of a percentage. The action track
-     stays 136px (MRF-R-3.1/R-5: copy-link icon + Report, with "Next pending" wrapping above it) —
-     narrowing it back to 96px would clip that control now that Progress sits beside it. */
-  grid-template-columns: 28px minmax(280px, 1fr) 80px 80px 112px 132px 136px 36px;
-  min-width: 1048px;
+  grid-template-columns: $pr-reporting-tracks;
   align-items: center;
-  gap: 16px;
-  min-height: 58px;
-  padding: 10px 20px 10px 32px;
+  gap: $pr-reporting-gap;
+  min-height: 48px;
+  padding: $pr-reporting-pad;
   border-top: 1px solid var(--pr-border-divider);
   background: var(--pr-surface-card);
+  box-sizing: border-box;
+  width: 100%;
   cursor: pointer;
   transition: background 150ms ease;
 
@@ -107,106 +91,11 @@
   }
 }
 
-/* RTA-DD-2: tracks 7 (actions) and 8 ("···") stop scrolling with tracks 1-6. `position: sticky`,
-   right-anchored against `.pr-collapse-inner` (the scroll container `.pr-collapse--rows` sets up
-   above) — offsets are measured from THAT ancestor, not the row.
-
-   RTA-T-1 rework (2026-09-01, round 2) fixes two Reviewer-found defects:
-
-   1. Full-height coverage. `align-items: center` on `.pr-reporting-row` / `.pr-hlo-head` sizes grid
-      items to CONTENT height, centred in the track — an empty `.pr-pin-actions` (no copy-link, no
-      Report/Continue: every Intermediate/2030-Outcomes bucket row, or an `achieved`/`overachieved`
-      row) has height 0 and paints nothing at all, so track 6 (Progress bars) shows through the
-      whole column as it scrolls past. `align-self: stretch` makes each pinned cell fill the
-      row/header track regardless of content; the `.pr-hlo-*` cells are `<span>`s, so blockifying a
-      stretched span still top-aligns its text unless it becomes a flex container itself.
-
-   2. Gutter coverage. The two pinned cells only ever covered their own 136px/36px track boxes —
-      nothing covered the 16px grid `gap` between them or the row's own 20px right padding outboard
-      of the "···" cell, so Progress bars/labels scrolled visibly THROUGH those two slots (see this
-      folder's CLAUDE.md, "El gutter horizontal vive en las pistas..." — the same defect class,
-      recurring). Each cell now absorbs its own trailing gutter with `padding-right` + an equal
-      negative `margin-right`: grid's `stretch` alignment (the default `justify-items`) keeps the
-      item's MARGIN box pinned to the track width, so `marginBox = trackWidth` ⇒
-      `borderBox = trackWidth − marginRight` — a negative right margin inflates the border box by
-      that amount on the right, and the matching `padding-right` reclaims the same amount as
-      padding, so the flex content (`justify-end` on actions, centered on menu) still renders at
-      its ORIGINAL position — only the paint area grows. Track 8 (menu) now sits flush at
-      `right: 0` (its 56px box = 36px content + 20px absorbed row padding); track 7 (actions) sits
-      at `right: 56px` — flush against track 8's now-widened box — and its 152px box (136px content
-      + 16px absorbed gap) covers the gap between them. Together the two boxes paint one
-      contiguous 208px region (136 + 16 + 36 + 20) with no gap, from the action cell's left edge to
-      the row's true right edge.
-
-   No `z-index` needed: a sticky cell already paints above the row's non-positioned data tracks in
-   DOM order, and `.pr-row-menu`'s existing z-index: 30 already outranks every row's pinned cells,
-   so an open menu is never occluded by the next row's pin. */
-.pr-pin-actions,
-.pr-hlo-pin-actions,
-.pr-pin-menu,
-.pr-hlo-pin-menu {
-  align-self: stretch; // RTA-R-4 rework: fill the track's full height, not just content height
-}
-
-.pr-hlo-pin-actions,
-.pr-hlo-pin-menu {
-  display: flex; // a stretched <span> still top-aligns text; make it a flex container to centre
-  align-items: center;
-}
-
-.pr-hlo-pin-actions {
-  justify-content: center; // supersedes the template's `text-center` (text-align is inert on flex)
-}
-
-.pr-pin-actions,
-.pr-hlo-pin-actions {
-  position: sticky;
-  right: 56px; // = 20 (row padding, absorbed by track 8 below) + 36 (track 8's content width)
-  padding-right: 16px; // absorbs the 16px grid gap to track 8
-  margin-right: -16px; // …without shifting the `justify-end` content (see comment above)
-  box-shadow: 1px 0 0 var(--pr-border-divider) inset; // RTA-R-11: left-edge pinned separator
-}
-
-.pr-pin-menu,
-.pr-hlo-pin-menu {
-  position: sticky;
-  right: 0;
-  padding-right: 20px; // absorbs the row's own 20px right padding
-  margin-right: -20px; // …without shifting the centered "···" button (see comment above)
-}
-
-// RTA-R-12 rework fix: `.pr-pin-menu`'s `padding-right: 20px` above moved its padding-box right
-// edge 20px inboard of its border-box edge. `.pr-row-menu` is absolutely positioned and resolves
-// `right` against that padding box, so without this it would sit 20px off its production position.
-// Re-anchor it to the border-box edge (the "···" track edge), matching production.
-.pr-pin-menu .pr-row-menu {
-  right: 20px;
-}
-
-.pr-pin-actions,
-.pr-pin-menu {
-  background: var(--pr-surface-card); // RTA-R-4: opaque, or track 6 (Progress) bleeds through
-}
-
-.pr-hlo-pin-actions,
-.pr-hlo-pin-menu {
-  background: var(--pr-surface-subtle); // matches `.pr-hlo-head`'s own background
-}
-
-.pr-reporting-row:hover .pr-pin-actions,
-.pr-reporting-row:hover .pr-pin-menu {
-  background: var(--pr-surface-ground); // RTA-R-4: the row swaps bg on :hover, pins must follow
-}
-
-/* RTA-T-1 rework: the Next-pending highlight (template `[class]` binding on `.pr-reporting-row`)
-   swaps the row to `--pr-color-primary-50` via a Tailwind utility; the pinned cells must follow or
-   they read as a light patch on a highlighted row. Lower specificity than the `:hover` rule above
-   (2 classes vs. class+pseudo+class) so hovering a highlighted row still shows the hover
-   background — matching how the row's own background already resolves that overlap. */
-.pr-row-highlighted .pr-pin-actions,
-.pr-row-highlighted .pr-pin-menu {
-  background: var(--pr-color-primary-50);
-}
+/* Merge note 2026-09-04 (performance-refactor → qa-development-2026): the RTA sticky-pin rules
+   (`.pr-pin-actions` / `.pr-pin-menu` / `.pr-hlo-pin-*`, `bugfix/reporting-table-actions-clipped`) were
+   NOT carried over — this branch's tabular redesign (shared `$pr-reporting-tracks`, no "Next pending"
+   button, in-card popovers) has no pinned tracks and no `min-width: 1048px` grid. Revisit that bugfix
+   against this layout before re-adding anything. */
 
 /* ── Status mark — the design's concentric bullseye (archery target), 18×18, always violet.
    Outer ring + mid ring + filled centre. Not a half-fill circle; not a progress arc.
@@ -258,12 +147,12 @@
    under the WCAG 1.4.11 3:1 floor. A deliberate, decided deviation — recorded in
    docs/DESIGN-DEVIATIONS.md; do not "correct" it back. ── */
 .pr-row-action {
-  height: 32px;
-  padding: 0 14px;
+  height: 26px;
+  padding: 0 10px;
   border: 1px solid var(--pr-color-primary-300);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--pr-surface-card);
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--pr-color-primary-400);
   cursor: pointer;
@@ -317,70 +206,8 @@
   animation: prPop 120ms ease-out;
 }
 
-/* Row overflow menu — 220px, right-aligned to the ··· button. */
-.pr-row-menu {
-  position: absolute;
-  top: 36px;
-  right: 0;
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  /* Wider than the design's 220px: the disabled item carries a `Coming soon` badge beside its
-     label, and at 220px "Copy indicator code" wrapped onto three lines. */
-  width: 268px;
-  padding: 6px;
-  cursor: default;
-  background: var(--pr-surface-card);
-  border: 1px solid var(--pr-border);
-  border-radius: 12px;
-  box-shadow: var(--pr-shadow-2);
-  animation: prPop 120ms ease-out;
-}
-
-.pr-row-menu_item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 36px;
-  padding: 0 10px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--pr-text);
-  text-align: left;
-  white-space: nowrap;
-  cursor: pointer;
-  background: none;
-  border: 0;
-  border-radius: 8px;
-
-  &:hover:not(:disabled) {
-    background: var(--pr-color-primary-50);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--pr-color-primary-300);
-    outline-offset: -2px;
-  }
-
-  /* Visible but inert — the control the design shows, without pretending it works. */
-  &--disabled {
-    color: var(--pr-text-subtle);
-    cursor: not-allowed;
-  }
-}
-
-.pr-row-menu_soon {
-  margin-left: auto;
-  padding: 1px 6px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  background: var(--pr-surface-subtle);
-  border-radius: 6px;
-}
+/* Row overflow menu styles moved to src/styles/row-menu.scss so CDK Connected Overlay panels
+   (attached to document.body outside this component host) receive styling cleanly. */
 
 /* Empty-state recovery. Ghost button, per the design's `Clear filters`. */
 .pr-clear-filters {
@@ -406,14 +233,13 @@
 
 /* ── ALL INDICATORS table.
    Header row and body rows are ONE grid built from the same track list.
-   Tracks: [indicator minmax] [aow] [type] [center] [target] [achieved] [status] [actions] ── */
-$pr-flat-tracks: minmax(240px, 1fr) 56px 130px 68px 60px 60px 92px 140px;
-$pr-flat-gap: 12px;
+   Tracks: [indicator minmax] [aow] [target] [achieved] [progress] [actions] ── */
+$pr-flat-tracks: minmax(240px, 1fr) 72px 80px 84px 104px 150px;
 
 .pr-flat-scroll {
   width: 100%;
   max-width: 100%;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: hidden;
 }
 
@@ -436,40 +262,66 @@ $pr-flat-gap: 12px;
 .pr-flat-row {
   display: grid;
   grid-template-columns: $pr-flat-tracks;
-  gap: $pr-flat-gap;
-  align-items: center;
+  gap: 0;
+  align-items: stretch;
   width: 100%;
-  min-width: 820px;
-  padding: 0 20px 0 28px;
+  padding: 0;
   box-sizing: border-box;
+
+  @media (min-width: 1200px) {
+    grid-template-columns: minmax(300px, 1fr) 96px 116px 124px 150px 176px;
+  }
+
+  @media (min-width: 1500px) {
+    grid-template-columns: minmax(360px, 1fr) 110px 130px 140px 170px 190px;
+  }
 }
 
 .pr-flat-head {
   position: sticky;
   top: 0;
   z-index: 12;
-  height: 42px;
+  height: 38px;
   background: var(--pr-surface-subtle);
   border-bottom: 1px solid var(--pr-border);
-  padding: 0 20px 0 28px;
+  padding: 0;
   box-sizing: border-box;
 
   .pr-flat-cell {
-    padding: 0;
+    border-right: 1px solid var(--pr-border);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    height: 100%;
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
     color: var(--pr-text-secondary);
     text-transform: uppercase;
     white-space: nowrap;
-    background: var(--pr-surface-subtle);
-    border: 0;
+    background: transparent;
+    border-top: 0;
+    border-left: 0;
+    border-bottom: 0;
     cursor: pointer;
     user-select: none;
-    transition: color 150ms ease;
+    box-sizing: border-box;
+    transition: color 150ms ease, background 150ms ease;
 
-    &:hover {
+    &:first-child {
+      padding-left: 20px;
+      padding-right: 12px;
+    }
+
+    &:last-child {
+      border-right: none;
+      padding-right: 16px;
+      cursor: default;
+    }
+
+    &:hover:not(:last-child) {
       color: var(--pr-color-primary-500);
+      background: rgba(0, 0, 0, 0.025);
 
       ::ng-deep .pr-sort-icon {
         color: var(--pr-color-primary-500);
@@ -484,13 +336,17 @@ $pr-flat-gap: 12px;
 }
 
 .pr-flat-body {
-  min-height: 58px;
-  padding: 12px 20px 12px 28px;
+  min-height: 54px;
+  padding: 0;
   box-sizing: border-box;
   cursor: pointer;
   background: var(--pr-surface-card);
-  border-top: 1px solid var(--pr-border-divider);
+  border-top: 1px solid var(--pr-border);
   transition: background 150ms ease;
+
+  &:first-child {
+    border-top: none;
+  }
 
   &:hover {
     background: var(--pr-surface-ground);
@@ -500,22 +356,41 @@ $pr-flat-gap: 12px;
     outline: 2px solid var(--pr-color-primary-300);
     outline-offset: -2px;
   }
+
+  .pr-flat-cell {
+    border-right: 1px solid var(--pr-border);
+    padding: 10px 10px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: 100%;
+    background: transparent;
+
+    &:first-child {
+      padding-left: 20px;
+      padding-right: 14px;
+      align-items: flex-start;
+    }
+
+    &:last-child {
+      border-right: none;
+      padding-right: 16px;
+      padding-left: 8px;
+    }
+  }
 }
 
 .pr-flat-cell {
   min-width: 0;
   display: block;
-  padding: 0;
   text-align: left;
-  border: 0;
 
   &.text-center {
     text-align: center;
   }
 }
 
-.pr-flat-body .pr-flat-cell {
-  padding: 0;
-  background: transparent;
-  border: 0;
+/* ── Clean HLO badge (RAJ-R-1, RAJ-DD-2) ── */
+.pr-hlo-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }

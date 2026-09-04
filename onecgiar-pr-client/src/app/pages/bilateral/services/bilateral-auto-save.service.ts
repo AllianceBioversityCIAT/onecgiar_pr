@@ -258,6 +258,27 @@ export class BilateralAutoSaveService {
     });
   }
 
+  /**
+   * The server's own explanation of the last failed save for this section, or null. A bare
+   * "Save failed" told a QA user nothing when the general-info PATCH answered 400 with
+   * "At least one field must be provided" (an emptied required title travelling alone) — the reason
+   * was in the response body all along, it just never reached the alert.
+   */
+  lastErrorMessageFor(section: BilateralEditorSection): string | null {
+    for (const key of this.getEndpointKeys(section)) {
+      const message = this._lastErrorMessages.get(key);
+      if (message) return message;
+    }
+    return null;
+  }
+
+  private readonly _lastErrorMessages = new Map<EndpointKey, string>();
+
+  private extractErrorMessage(err: unknown): string | null {
+    const message = (err as { error?: { message?: unknown } })?.error?.message;
+    return typeof message === 'string' && message.trim() ? message.trim() : null;
+  }
+
   markDirty(statusKey: string): void {
     if (this.isReadOnly()) return;
     this.setFieldStatuses([statusKey], 'dirty');
@@ -272,6 +293,7 @@ export class BilateralAutoSaveService {
     this._payloadExecutors.clear();
     this._queuedPayloads.clear();
     this._inFlight.clear();
+    this._lastErrorMessages.clear();
     this.fieldStatus.set({});
     this.hasPendingSaves.set(false);
     this._hasSavedOnce.set(false);
@@ -368,16 +390,20 @@ export class BilateralAutoSaveService {
             return;
           }
           this._inFlight.set(endpointKey, false);
+          this._lastErrorMessages.delete(endpointKey);
           this.markFieldsSavedThenIdle(statusKeys);
           this.drainQueuedPayload(endpointKey);
           this.refreshPendingFlag();
         },
-        error: () => {
+        error: (err: unknown) => {
           if (generation !== this._generation) {
             this._inFlight.set(endpointKey, false);
             return;
           }
           this._inFlight.set(endpointKey, false);
+          const message = this.extractErrorMessage(err);
+          if (message) this._lastErrorMessages.set(endpointKey, message);
+          else this._lastErrorMessages.delete(endpointKey);
           this.setFieldStatuses(statusKeys, 'error');
           this.drainQueuedPayload(endpointKey);
           this.refreshPendingFlag();

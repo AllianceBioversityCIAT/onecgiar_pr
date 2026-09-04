@@ -23,6 +23,7 @@ import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByU
 import { ResultStatusData } from '../../../shared/constants/result-status.enum';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultsKnowledgeProductsRepository } from '../../results/results-knowledge-products/repositories/results-knowledge-products.repository';
+import { ShareResultRequestRepository } from '../../results/share-result-request/share-result-request.repository';
 import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
 
 describe('BilateralCenterService', () => {
@@ -125,6 +126,17 @@ describe('BilateralCenterService', () => {
           provide: ClarisaInitiativesRepository,
           useValue: {
             findOne: jest.fn(),
+          },
+        },
+        // 2026-09-04: the centre form stages contributing programs as share-request DRAFTS
+        // (status 4) so the approval can convert them into the accept/decline request (P2-3187).
+        {
+          provide: ShareResultRequestRepository,
+          useValue: {
+            find: jest.fn().mockResolvedValue([]),
+            findOne: jest.fn().mockResolvedValue(null),
+            save: jest.fn().mockResolvedValue({}),
+            update: jest.fn().mockResolvedValue({}),
           },
         },
         {
@@ -496,7 +508,9 @@ describe('BilateralCenterService', () => {
      * with "The result has no lead center assigned".
      */
     // Nicoleta Trifa via Ángel Jarrín, 2026-09-03: contributing programs must persist and be pickable
-    // whatever the project maps to. Stored as role-2 `results_by_inititiative` rows, like W1/W2.
+    // whatever the project maps to. Since 2026-09-04 they are staged as share-request DRAFTS
+    // (status 4, the ingest shape) — NOT role-2 rows, which meant "already accepted", skipped the
+    // contributor's consent and were wiped by the approval's updateResultByInitiative.
     describe('contributing_programs', () => {
       const user2: TokenDto = {
         id: 7,
@@ -515,7 +529,11 @@ describe('BilateralCenterService', () => {
         const clarisa = module.get<ClarisaInitiativesRepository>(
           ClarisaInitiativesRepository,
         ) as any;
+        const shareRepo = module.get<ShareResultRequestRepository>(
+          ShareResultRequestRepository,
+        ) as any;
         rbi.getOwnerInitiativeByResult = jest.fn().mockResolvedValue({ id: 1 });
+        // SP03 (id 3) is an already-ACCEPTED contribution (active role-2 row).
         rbi.find = jest.fn().mockResolvedValue([
           {
             id: 501,
@@ -527,18 +545,27 @@ describe('BilateralCenterService', () => {
         rbi.findOne = jest.fn().mockResolvedValue(null);
         rbi.update = jest.fn().mockResolvedValue({});
         rbi.save = jest.fn().mockResolvedValue({});
+        shareRepo.find = jest.fn().mockResolvedValue([]);
+        shareRepo.findOne = jest.fn().mockResolvedValue(null);
+        shareRepo.save = jest.fn().mockResolvedValue({});
+        shareRepo.update = jest.fn().mockResolvedValue({});
         clarisa.findOne = jest.fn(({ where }) =>
           Promise.resolve(
-            ({ SP01: { id: 1 }, SP02: { id: 2 }, SP03: { id: 3 } } as any)[
-              where.official_code
-            ] ?? null,
+            (
+              {
+                SP01: { id: 1 },
+                SP02: { id: 2 },
+                SP03: { id: 3 },
+                SP05: { id: 5 },
+              } as any
+            )[where.official_code] ?? null,
           ),
         );
-        return { rbi, clarisa };
+        return { rbi, clarisa, shareRepo };
       };
 
-      it('stores the listed programs as role-2 rows, deactivates the ones no longer listed and skips the primary', async () => {
-        const { rbi } = arrange();
+      it('stages a new program as a DRAFT request, never as a role-2 row, and skips the primary', async () => {
+        const { rbi, shareRepo } = arrange();
 
         const response = await service.saveContributors(
           10,
@@ -546,31 +573,122 @@ describe('BilateralCenterService', () => {
             contributing_programs: [
               { science_program_id: 'sp02' },
               { science_program_id: 'SP01' },
+              { science_program_id: 'SP03' },
             ],
           },
           user2,
         );
 
-        // SP02 is new → saved as role 2; SP01 is the owner (role 1) → untouched; SP03 was stored → deactivated.
-        expect(rbi.save).toHaveBeenCalledWith(
+        // SP02 is new → a draft request, mirroring the ingest shape exactly.
+        expect(shareRepo.save).toHaveBeenCalledWith(
           expect.objectContaining({
             result_id: 10,
-            initiative_id: 2,
-            initiative_role_id: 2,
+            owner_initiative_id: 1,
+            shared_inititiative_id: 2,
+            approving_inititiative_id: 2,
+            request_status_id: 4,
+            requested_by: 7,
             is_active: true,
-            created_by: 7,
           }),
         );
+        // No role-2 row is ever written from here — acceptance is the SP's move (P2-3187).
+        expect(rbi.save).not.toHaveBeenCalled();
+        // SP03 is already accepted and still listed → untouched. SP01 is the owner → skipped.
+        expect(rbi.update).not.toHaveBeenCalled();
+        expect(response.response).toEqual(
+          expect.objectContaining({
+            savedPrograms: expect.arrayContaining(['SP02', 'SP03']),
+            deactivatedPrograms: [],
+            failedPrograms: [],
+          }),
+        );
+      });
+
+      it('deactivates an accepted contribution and cancels a live request when the program is removed', async () => {
+        const { rbi, shareRepo } = arrange();
+        // SP05 (id 5) has a live draft request; SP03 (id 3) is accepted. The payload lists neither.
+        shareRepo.find = jest.fn().mockResolvedValue([
+          {
+            share_result_request_id: 900,
+            shared_inititiative_id: 5,
+            request_status_id: 4,
+            is_active: true,
+          },
+        ]);
+
+        const response = await service.saveContributors(
+          10,
+          { contributing_programs: [] },
+          user2,
+        );
+
         expect(rbi.update).toHaveBeenCalledWith(
           { id: 501 },
           expect.objectContaining({ is_active: false, last_updated_by: 7 }),
         );
+        expect(shareRepo.update).toHaveBeenCalledWith(
+          { share_result_request_id: 900 },
+          { is_active: false },
+        );
         expect(response.response).toEqual(
           expect.objectContaining({
-            savedPrograms: ['SP02'],
-            deactivatedPrograms: [3],
-            failedPrograms: [],
+            deactivatedPrograms: expect.arrayContaining([3, 5]),
           }),
+        );
+      });
+
+      it('reactivates a dormant draft instead of piling up rows', async () => {
+        const { shareRepo } = arrange();
+        rbiEmpty();
+        shareRepo.findOne = jest.fn().mockResolvedValue({
+          share_result_request_id: 901,
+          shared_inititiative_id: 2,
+          request_status_id: 4,
+          is_active: false,
+        });
+
+        await service.saveContributors(
+          10,
+          { contributing_programs: [{ science_program_id: 'SP02' }] },
+          user2,
+        );
+
+        expect(shareRepo.update).toHaveBeenCalledWith(
+          { share_result_request_id: 901 },
+          { is_active: true, requested_by: 7 },
+        );
+        expect(shareRepo.save).not.toHaveBeenCalled();
+
+        function rbiEmpty() {
+          const rbi = module.get<ResultByInitiativesRepository>(
+            ResultByInitiativesRepository,
+          ) as any;
+          rbi.find = jest.fn().mockResolvedValue([]);
+        }
+      });
+
+      it('does not rewrite a program that already has a live request', async () => {
+        const { rbi, shareRepo } = arrange();
+        rbi.find = jest.fn().mockResolvedValue([]);
+        shareRepo.find = jest.fn().mockResolvedValue([
+          {
+            share_result_request_id: 902,
+            shared_inititiative_id: 2,
+            request_status_id: 1,
+            is_active: true,
+          },
+        ]);
+
+        const response = await service.saveContributors(
+          10,
+          { contributing_programs: [{ science_program_id: 'SP02' }] },
+          user2,
+        );
+
+        expect(shareRepo.save).not.toHaveBeenCalled();
+        expect(shareRepo.update).not.toHaveBeenCalled();
+        expect(response.response).toEqual(
+          expect.objectContaining({ savedPrograms: ['SP02'] }),
         );
       });
 

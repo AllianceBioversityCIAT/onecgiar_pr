@@ -1,6 +1,14 @@
 import { Injectable } from '@angular/core';
 import { driver, DriveStep, Driver } from 'driver.js';
-import 'driver.js/dist/driver.css';
+
+export const SP_TOUR_STORAGE_KEY = 'pr.tour.sp.completed';
+
+export interface SpTourOptions {
+  onTabNavigate?: (tab: 'overview' | 'reporting' | 'results') => void | Promise<void>;
+  programName?: string;
+  cycleYear?: number | string;
+  activeTab?: 'overview' | 'reporting' | 'results';
+}
 
 /** What the tutorials need to know about the screen they are about to explain. */
 export interface GuideContext {
@@ -81,6 +89,196 @@ export class ReportingGuideService {
       length: '3 stops'
     }
   ];
+
+  isSpTourCompleted(): boolean {
+    try {
+      return localStorage.getItem(SP_TOUR_STORAGE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  resetSpTourState(): void {
+    try {
+      localStorage.removeItem(SP_TOUR_STORAGE_KEY);
+    } catch {
+      // ignore storage access errors
+    }
+  }
+
+  startSpTour(options: SpTourOptions = {}): void {
+    this.instance?.destroy();
+
+    const program = options.programName || 'Science Program';
+    const cycle = options.cycleYear ? ` (${options.cycleYear})` : '';
+    const identityTitle = `${program}${cycle}`;
+
+    const steps: DriveStep[] = [
+      {
+        element: '[data-guide="sp-identity"]',
+        popover: {
+          title: identityTitle,
+          description:
+            'Welcome to your Science Program workspace. Follow this tour to learn how to track portfolio progress, report against planned indicators, and review submitted results.',
+          side: 'bottom',
+          align: 'start'
+        }
+      },
+      {
+        element: '[data-guide="sp-tabs"]',
+        popover: {
+          title: 'Main Navigation Tabs',
+          description:
+            'Switch between the Overview (burndown analytics), Reporting (Theory of Change indicators), and Results (reported deliverables registry) views.',
+          side: 'bottom',
+          align: 'center'
+        }
+      },
+      {
+        element: '[data-guide="tab-overview-view"]',
+        popover: {
+          title: 'Overview & Burndown',
+          description:
+            'Monitor portfolio health, burndown progress, and High-Level Output (HLO) milestones across the reporting period.',
+          side: 'bottom',
+          align: 'start'
+        }
+      },
+      {
+        element: '[data-guide="tab-reporting-view"]',
+        popover: {
+          title: 'Reporting by Area of Work',
+          description:
+            'Browse Theory of Change indicators structured by Areas of Work and High-Level Outputs, check progress badges, and launch result reporting.',
+          side: 'top',
+          align: 'start'
+        }
+      },
+      {
+        element: '[data-guide="tab-results-view"]',
+        popover: {
+          title: 'Results Registry',
+          description:
+            'Inspect all submitted results with resizable table columns, verify review statuses, and export data directly to Excel.',
+          side: 'top',
+          align: 'start'
+        }
+      },
+      {
+        element: '[data-guide="sp-actions-toolbar"]',
+        popover: {
+          title: 'Filters & Quick Actions',
+          description:
+            'Search indicators and results, filter by Center or Typology, and access the "Where to report" guidance at any time.',
+          side: 'bottom',
+          align: 'end'
+        }
+      }
+    ];
+
+    const initialTab = options.activeTab ?? 'overview';
+
+    const stepTabs: Array<'overview' | 'reporting' | 'results'> = [
+      initialTab,
+      initialTab,
+      'overview',
+      'reporting',
+      'results',
+      'reporting'
+    ];
+
+    const onNext = (_element?: Element, _step?: DriveStep, opts?: { driver: Driver; index?: number }) => {
+      const d = opts?.driver ?? this.instance;
+      if (!d) return;
+
+      const currentIndex = d.getActiveIndex() ?? opts?.index ?? 0;
+      if (d.isLastStep() || currentIndex >= steps.length - 1) {
+        d.destroy();
+        return;
+      }
+
+      const targetIndex = currentIndex + 1;
+      const currentTab = stepTabs[currentIndex];
+      const targetTab = stepTabs[targetIndex];
+
+      if (currentTab !== targetTab && options.onTabNavigate) {
+        const navResult = options.onTabNavigate(targetTab);
+        if (navResult && typeof (navResult as Promise<void>).then === 'function') {
+          navResult.then(() => {
+            setTimeout(() => {
+              d.drive(targetIndex);
+            }, 100);
+          });
+        } else {
+          setTimeout(() => {
+            d.drive(targetIndex);
+          }, 100);
+        }
+      } else {
+        d.drive(targetIndex);
+      }
+    };
+
+    const onPrev = (_element?: Element, _step?: DriveStep, opts?: { driver: Driver; index?: number }) => {
+      const d = opts?.driver ?? this.instance;
+      if (!d) return;
+
+      const currentIndex = d.getActiveIndex() ?? opts?.index ?? 0;
+      if (currentIndex <= 0) return;
+
+      const targetIndex = currentIndex - 1;
+      const currentTab = stepTabs[currentIndex];
+      const targetTab = stepTabs[targetIndex];
+
+      if (currentTab !== targetTab && options.onTabNavigate) {
+        const navResult = options.onTabNavigate(targetTab);
+        if (navResult && typeof (navResult as Promise<void>).then === 'function') {
+          navResult.then(() => {
+            setTimeout(() => {
+              d.drive(targetIndex);
+            }, 100);
+          });
+        } else {
+          setTimeout(() => {
+            d.drive(targetIndex);
+          }, 100);
+        }
+      } else {
+        d.drive(targetIndex);
+      }
+    };
+
+    this.instance = driver({
+      showProgress: true,
+      progressText: 'Step {{current}} of {{total}}',
+      nextBtnText: 'Next',
+      prevBtnText: 'Back',
+      doneBtnText: 'Got it',
+      overlayColor: '#1e202f',
+      overlayOpacity: 0.65,
+      stagePadding: 6,
+      stageRadius: 10,
+      popoverClass: 'pr-guide',
+      allowClose: true,
+      onDestroyed: () => {
+        try {
+          localStorage.setItem(SP_TOUR_STORAGE_KEY, 'true');
+        } catch {
+          // ignore storage errors
+        }
+        this.instance = null;
+      },
+      onNextClick: onNext,
+      onPrevClick: onPrev,
+      onDoneClick: (_element, _step, opts) => {
+        const d = opts?.driver ?? this.instance;
+        d?.destroy();
+      },
+      steps
+    });
+
+    this.instance.drive();
+  }
 
   start(id: TutorialId, ctx: GuideContext): void {
     this.current = id;

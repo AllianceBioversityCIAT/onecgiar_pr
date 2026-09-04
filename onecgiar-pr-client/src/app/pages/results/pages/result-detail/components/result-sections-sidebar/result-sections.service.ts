@@ -17,6 +17,13 @@ export type RdSection = PrRoute & { validation?: number };
 /** Tooltip shown on the disabled Submit / AI review buttons. Same copy the old panel-menu used. */
 export const SECTIONS_INCOMPLETE_TOOLTIP = 'This button will become available once all sections are completed.';
 
+/** Palette per `status_id`, from the status token pairs in `styles/colors.scss`. */
+const STATUS_TOKENS: Record<string, { fg: string; bg: string }> = {
+  1: { fg: 'var(--pr-status-in-progress-fg)', bg: 'var(--pr-status-in-progress-bg)' },
+  2: { fg: 'var(--pr-status-approved-fg)', bg: 'var(--pr-status-approved-bg)' },
+  3: { fg: 'var(--pr-status-submitted-fg)', bg: 'var(--pr-status-submitted-bg)' }
+};
+
 /**
  * Sections of the open result, their completion progress, and the result-level actions
  * (AI review / Submit / Unsubmit) with their gating.
@@ -86,6 +93,37 @@ export class ResultSectionsService {
   });
 
   readonly progressLabel = computed(() => `${this.doneCount()} of ${this.totalCount()} sections complete`);
+
+  /**
+   * Identity pinned at the top of the sections rail so the code and type stay visible while the
+   * header identity strip scrolls away. Same fields the header used to show inline.
+   */
+  readonly resultCode = computed(() => {
+    this.dataControlSE.currentResultSignal();
+    const fromResult = this.dataControlSE.currentResult?.result_code;
+    const code = fromResult != null && `${fromResult}`.trim() !== '' ? fromResult : this.api.resultsSE?.currentResultCode;
+    return code != null && `${code}`.trim() !== '' ? String(code) : '';
+  });
+
+  readonly resultTypeName = computed(() => {
+    this.dataControlSE.currentResultSignal();
+    return this.dataControlSE.currentResult?.result_type_name ?? '';
+  });
+
+  readonly statusLabel = computed(() => {
+    this.dataControlSE.currentResultSignal();
+    return this.dataControlSE.currentResult?.status_name ?? '';
+  });
+
+  readonly statusFg = computed(() => {
+    this.dataControlSE.currentResultSignal();
+    return STATUS_TOKENS[String(this.dataControlSE.currentResult?.status_id)]?.fg ?? 'var(--pr-status-not-started-fg)';
+  });
+
+  readonly statusBg = computed(() => {
+    this.dataControlSE.currentResultSignal();
+    return STATUS_TOKENS[String(this.dataControlSE.currentResult?.status_id)]?.bg ?? 'var(--pr-status-not-started-bg)';
+  });
 
   /** Router link for a section (needs the open result's code). */
   sectionLink(section: RdSection): string {

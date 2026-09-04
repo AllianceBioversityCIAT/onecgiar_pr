@@ -49,6 +49,7 @@ describe('ProgrammeResultsFilterService', () => {
     expect(service.selectedCategory()).toBeNull();
     expect(service.selectedOrigin()).toBeNull();
     expect(service.selectedCenter()).toBeNull();
+    expect(service.selectedCreatedBy()).toBeNull();
     expect(service.hasActiveFilters()).toBe(false);
     expect(service.activeChips()).toEqual([]);
   });
@@ -185,6 +186,7 @@ describe('ProgrammeResultsFilterService', () => {
       service.selectedCategory.set('Policy change');
       service.selectedOrigin.set('W1/W2');
       service.selectedCenter.set('IITA');
+      service.selectedCreatedBy.set('Angel Jarrin');
 
       expect(service.activeChips()).toEqual([
         { label: 'Search: maize', dimension: 'search', value: 'maize' },
@@ -193,8 +195,9 @@ describe('ProgrammeResultsFilterService', () => {
         { label: 'Phase: Phase 2026', dimension: 'phase', value: 'Phase 2026' },
         { label: 'Status: Submitted', dimension: 'status', value: 'Submitted' },
         { label: 'Category: Policy change', dimension: 'category', value: 'Policy change' },
-        { label: 'Origin: W1/W2', dimension: 'origin', value: 'W1/W2' },
-        { label: 'Center: IITA', dimension: 'center', value: 'IITA' }
+        { label: 'Funding source: W1/W2', dimension: 'origin', value: 'W1/W2' },
+        { label: 'Center: IITA', dimension: 'center', value: 'IITA' },
+        { label: 'Created by: Angel Jarrin', dimension: 'createdBy', value: 'Angel Jarrin' }
       ]);
       expect(service.hasActiveFilters()).toBe(true);
     });
@@ -218,6 +221,7 @@ describe('ProgrammeResultsFilterService', () => {
       service.selectedCategory.set('Policy change');
       service.selectedOrigin.set('W1/W2');
       service.selectedCenter.set('IITA');
+      service.selectedCreatedBy.set('Angel Jarrin');
     });
 
     it('clears one dimension at a time', () => {
@@ -238,6 +242,9 @@ describe('ProgrammeResultsFilterService', () => {
 
       service.clearCenter();
       expect(service.selectedCenter()).toBeNull();
+
+      service.clearCreatedBy();
+      expect(service.selectedCreatedBy()).toBeNull();
 
       expect(service.selectedSections()).toEqual(['AoW1', 'AoW2']);
     });
@@ -266,16 +273,19 @@ describe('ProgrammeResultsFilterService', () => {
 
       service.clearChip(chips.find(chip => chip.dimension === 'center')!);
       expect(service.selectedCenter()).toBeNull();
+
+      service.clearChip(chips.find(chip => chip.dimension === 'createdBy')!);
+      expect(service.selectedCreatedBy()).toBeNull();
     });
 
     it('clearChip() is a no-op on an unknown dimension', () => {
       service.clearChip({ label: 'x', dimension: 'nope' as any, value: 'x' });
-      expect(service.activeChips()).toHaveLength(8);
+      expect(service.activeChips()).toHaveLength(9);
       service.clearChip(undefined as any);
-      expect(service.activeChips()).toHaveLength(8);
+      expect(service.activeChips()).toHaveLength(9);
     });
 
-    it('clearAll() resets all seven dimensions at once', () => {
+    it('clearAll() resets all eight dimensions at once', () => {
       service.clearAll();
 
       expect(service.searchText()).toBe('');
@@ -285,6 +295,7 @@ describe('ProgrammeResultsFilterService', () => {
       expect(service.selectedCategory()).toBeNull();
       expect(service.selectedOrigin()).toBeNull();
       expect(service.selectedCenter()).toBeNull();
+      expect(service.selectedCreatedBy()).toBeNull();
       expect(service.hasActiveFilters()).toBe(false);
       expect(service.activeChips()).toEqual([]);
     });
@@ -447,6 +458,67 @@ describe('ProgrammeResultsFilterService', () => {
       expect(service.activeChips()).toEqual([{ label: 'Category: Other', dimension: 'category', value: PROGRAMME_RESULTS_OTHER_CATEGORY }]);
       service.clearChip(service.activeChips()[0]);
       expect(service.selectedCategory()).toBeNull();
+    });
+  });
+
+  // CBF-T-1 — Created by dimension. Two-author + blank fixture is the CBF-R-1 evidence
+  // (a presence-only assert on selectedCreatedBy is not behavioral proof).
+  describe('Created by dimension (CBF-T-1)', () => {
+    const authorRows = [
+      row({ code: '1', createdBy: 'Angel Jarrin', statusName: 'Editing' }),
+      row({ code: '2', createdBy: 'Angel Jarrin', statusName: 'Submitted' }),
+      row({ code: '3', createdBy: 'Santiago Sanchez', statusName: 'Submitted' }),
+      row({ code: '4', createdBy: '', statusName: 'Editing' })
+    ];
+
+    it('selecting a person leaves only that person’s rows and hides the blank-name row (CBF-R-1, CBF-AC-1)', () => {
+      service.selectedCreatedBy.set('Angel Jarrin');
+
+      expect(service.filterRows(authorRows).map(r => r.code)).toEqual(['1', '2']);
+      expect(service.filterRows(authorRows).some(r => r.createdBy === 'Santiago Sanchez')).toBe(false);
+      expect(service.filterRows(authorRows).some(r => !r.createdBy)).toBe(false);
+    });
+
+    it('matches Created by case-insensitively (CBF-R-1)', () => {
+      service.selectedCreatedBy.set('angel jarrin');
+
+      expect(service.filterRows(authorRows).map(r => r.code)).toEqual(['1', '2']);
+    });
+
+    it('AND-combines with Status and keeps both chips (CBF-R-1 combine)', () => {
+      service.selectedCreatedBy.set('Angel Jarrin');
+      service.selectedStatus.set('Submitted');
+
+      expect(service.filterRows(authorRows).map(r => r.code)).toEqual(['2']);
+      expect(service.activeChips()).toEqual([
+        { label: 'Status: Submitted', dimension: 'status', value: 'Submitted' },
+        { label: 'Created by: Angel Jarrin', dimension: 'createdBy', value: 'Angel Jarrin' }
+      ]);
+    });
+
+    it('clearChip on Created by leaves Status set (CBF-R-2, CBF-AC-2)', () => {
+      service.selectedCreatedBy.set('Angel Jarrin');
+      service.selectedStatus.set('Submitted');
+
+      const createdByChip = service.activeChips().find(chip => chip.dimension === 'createdBy')!;
+      expect(createdByChip.label).toBe('Created by: Angel Jarrin');
+
+      service.clearChip(createdByChip);
+
+      expect(service.selectedCreatedBy()).toBeNull();
+      expect(service.selectedStatus()).toBe('Submitted');
+      expect(service.activeChips()).toEqual([{ label: 'Status: Submitted', dimension: 'status', value: 'Submitted' }]);
+    });
+
+    it('clearAll nulls Created by and Status (CBF-R-2)', () => {
+      service.selectedCreatedBy.set('Angel Jarrin');
+      service.selectedStatus.set('Submitted');
+
+      service.clearAll();
+
+      expect(service.selectedCreatedBy()).toBeNull();
+      expect(service.selectedStatus()).toBeNull();
+      expect(service.activeChips()).toEqual([]);
     });
   });
 });

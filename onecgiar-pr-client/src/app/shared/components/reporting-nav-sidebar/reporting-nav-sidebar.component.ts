@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
@@ -244,6 +244,7 @@ export class ReportingNavSidebarComponent {
   readonly adminModuleExpanded = signal(this.router.url.startsWith('/admin-module'));
   /** Which program groups are open. "My programs" starts open, the rest collapsed. */
   readonly openGroups = signal<Set<string>>(new Set(['mine']));
+  private otherAutoOpened = false;
   /** Ensures the (lazy) programs fetch is triggered at most once. */
   private rfrLoadTriggered = false;
 
@@ -456,6 +457,23 @@ export class ReportingNavSidebarComponent {
       if (this.router.url.startsWith('/result-framework-reporting')) this.ensureRfrLoaded();
       if (this.router.url.startsWith('/init-admin-module')) this.myAdminExpanded.set(true);
       if (this.router.url.startsWith('/admin-module')) this.adminModuleExpanded.set(true);
+    });
+
+    // When the user has no SPs of their own, expand "Other science programs" by default so programs are visible.
+    effect(() => {
+      const myCount = this.homeSE.mySPsList()?.length ?? 0;
+      const otherCount = this.homeSE.otherSPsList()?.length ?? 0;
+      if (myCount === 0 && otherCount > 0 && !this.otherAutoOpened) {
+        this.otherAutoOpened = true;
+        this.openGroups.update(set => {
+          if (!set.has('other')) {
+            const next = new Set(set);
+            next.add('other');
+            return next;
+          }
+          return set;
+        });
+      }
     });
   }
 

@@ -89,3 +89,20 @@
     margin-top: 6px;
   }
 }
+
+// P2-3292 Steps 3A/3B — the "where did it continue" dropdowns. Indented to read as derived from the
+// reason that revealed them, matching the sub-option grouping P2-3291 established for pr-radio-button.
+.merge_split_targets {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 12px;
+  margin-left: 28px;
+  padding-left: 16px;
+  border-left: 1px solid var(--pr-border-strong);
+
+  &--hint {
+    font-size: 13px;
+    color: var(--text-color-secondary);
+  }
+}

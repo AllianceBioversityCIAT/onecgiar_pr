@@ -172,7 +172,24 @@ describe('InnovationPathwayStepTwoService', () => {
     ]);
     const res = await service.findInnovationsAndComplementary();
     expect(res.status).toBe(HttpStatus.OK);
-    expect(mockResultRepository.getResultByTypes).toHaveBeenCalledWith([7, 11]);
+    // P2-3572 (epic P2-3243). Step 2 of Innovation Packages offers, as candidate enablers:
+    //   1 Policy Change · 2 Innovation Use · 5 Capacity Sharing for Development ·
+    //   7 Innovation Development · 11 Complementary innovation (the ad-hoc modal entries).
+    // The client decides which of them a given package actually lists, by reporting phase year.
+    expect(mockResultRepository.getResultByTypes).toHaveBeenCalledWith([
+      1, 2, 5, 7, 11,
+    ]);
+  });
+
+  // 🛑 Its own assertion, on purpose. In the array above an absent 6 is indistinguishable from
+  // someone forgetting it; here the exclusion is the subject of the test. P2-3572 excludes
+  // Knowledge Products from Step 2 explicitly, "regardless of their association with the package".
+  it('never asks for Knowledge Products (type 6) — excluded by P2-3572', async () => {
+    (mockResultRepository.getResultByTypes as jest.Mock).mockResolvedValueOnce([]);
+    await service.findInnovationsAndComplementary();
+    const [requestedTypes] = (mockResultRepository.getResultByTypes as jest.Mock)
+      .mock.calls[0];
+    expect(requestedTypes).not.toContain(6);
   });
 
   it('getStepTwoOne returns complementary innovations', async () => {

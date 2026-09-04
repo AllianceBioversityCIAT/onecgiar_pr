@@ -56,6 +56,34 @@ import { ResultStatusData } from '../../shared/constants/result-status.enum';
  *
  * Change THIS constant — and nothing else — if the set moves again.
  */
+/**
+ * P2-3292 Step 3 — statuses an innovation may have to be offered as a MERGE or SPLIT target.
+ *
+ * 🛑 Deliberately NOT `QA_LINKABLE_INNOVATION_STATUS_IDS`: that set includes Discontinued(4) on
+ * purpose, and Step 3 says "Not discontinued" in writing. An innovation that is itself closed
+ * cannot be where another one continued.
+ *
+ * Includes Approved(6) alongside QualityAssessed(2) for the same reason its sibling does: a
+ * W3/bilateral innovation completes the same quality process and lands on 6, so leaving it out
+ * would make every bilateral innovation invisible as a target. **Confirmed live on 4 Sep 2026**:
+ * result 8970 "test bilateral JD" comes back in status 6, so with status 2 alone a reporter who
+ * merged into it would have no way to say so. If business means status 2 alone, this constant is
+ * the only thing to change.
+ *
+ * 🛑 DO NOT "UNIFY" THIS WITH THE ENABLERS FILTER OF P2-3572. `getResultByTypes` (used by
+ * Innovation Packages Step 2) filters to statuses 2 and 3 and deliberately leaves Approved OUT —
+ * and that is also correct, because ITS story says "Quality Assessed and Submitted" verbatim while
+ * this one says "QA'd" without qualification. Two stories, two filters; the difference lives in
+ * each story's text, not in a technical preference. Measured on 4 Sep: 6 Policy change, 16
+ * Innovation use, 15 Capacity sharing and 14 Innovation development sit in status 6 and are
+ * excluded there — the last figure since before P2-3572 existed, so it is a pre-existing rule
+ * awaiting a business decision, not a gap. Making the two constants agree breaks one of them.
+ */
+export const MERGE_SPLIT_TARGET_STATUS_IDS: number[] = [
+  ResultStatusData.QualityAssessed.value, // 2 — QAed
+  ResultStatusData.Approved.value, // 6 — Approved (W3/bilateral)
+];
+
 export const QA_LINKABLE_INNOVATION_STATUS_IDS: number[] = [
   ResultStatusData.QualityAssessed.value, // 2 — QAed
   ResultStatusData.Approved.value, // 6 — Approved (W3/bilateral and W1/W2 alike)
@@ -2847,6 +2875,137 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         previousPhaseYear,
         ...QA_LINKABLE_INNOVATION_STATUS_IDS,
       ]);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * P2-3292 Step 3A/3B — the innovations a discontinued innovation may declare as its continuation,
+   * when the reporter says it MERGED into another one or was SPLIT into several.
+   *
+   * 🛑 A NEW method, and it has to be. `getQaEdInnovationDevelopmentResults` above looks like the
+   * same query and is the opposite in two ways that matter here:
+   *   - it is pinned to ONE phase (`= previousPhaseYear`), closed by Ángel on 31-Aug for P2-3421;
+   *   - it deliberately offers DISCONTINUED innovations (`QA_LINKABLE_INNOVATION_STATUS_IDS`
+   *     includes status 4), because a retired innovation stays linkable there.
+   * Step 3 asks for the exact reverse: every phase, and **never a discontinued one** — you cannot
+   * declare that your innovation continued inside one that is itself closed. Widening that method
+   * in place would silently change the Innovation Use link dropdown.
+   *
+   * ## What the story fixes, verbatim (P2-3292, Steps 3A and 3B)
+   *   - "one or more innovations from the full PRMS portfolio"  → no phase filter, multi-select
+   *   - "Status = QA'd (completed QA process)"                  → see the status note below
+   *   - "Not discontinued"                                      → status 4 excluded, explicitly
+   *   - "Innovation ID + Innovation title"                      → `result_code` and `title`
+   *
+   * ⚠️ **What "QA'd" means here is a business nuance, not a code detail.** In PRMS it is result
+   * status 2 (`quality-assessed`), but W3/bilateral innovations complete the same process and land
+   * on status 6 (`approved`) — which is why `QA_LINKABLE_INNOVATION_STATUS_IDS` treats 2 and 6 as
+   * equivalent. This method follows that precedent and offers both, so a bilateral innovation is
+   * not invisible as a merge target. If business means status 2 alone, this is the one constant to
+   * change. Ángel also quoted Nicoleta with "reported/QA'ed/updated", which is wider still.
+   *
+   * ⚠️ ONE ROW PER INNOVATION. A result is replicated into every phase keeping its `result_code`
+   * and title, so without the `NOT EXISTS` the reporter sees the same innovation once per phase
+   * with an identical label and cannot tell which to pick (measured on the sibling method: 79 of
+   * 868 codes duplicated). This collapses each code to its most recent eligible row.
+   *
+   * @param search    optional type-ahead over id and title. The story asks for a *searchable*
+   *                  dropdown and the list is portfolio-wide, so filtering server-side keeps the
+   *                  payload sane instead of shipping every innovation to the browser.
+   * @param excludeResultCode the innovation being discontinued: it must never offer itself as its
+   *                  own continuation. Passed as CODE, not id, so every phase of it is excluded.
+   * @param ownerInitiativeId when given, narrows the list to innovations whose PRIMARY submitter
+   *                  (role 1) is that Science Program / Accelerator. Left undefined the list is
+   *                  portfolio-wide, which is what Step 3 asks for; the parameter exists because
+   *                  narrowing it to the reporter's own programme is one call-site decision away.
+   */
+  async getMergeSplitTargetInnovations(options: {
+    search?: string;
+    excludeResultCode?: number;
+    ownerInitiativeId?: number;
+    limit?: number;
+  }) {
+    const statusPlaceholders = MERGE_SPLIT_TARGET_STATUS_IDS.map(
+      () => '?',
+    ).join(', ');
+
+    const params: any[] = [...MERGE_SPLIT_TARGET_STATUS_IDS];
+    const conditions: string[] = [];
+
+    if (options?.excludeResultCode) {
+      conditions.push('AND r.result_code <> ?');
+      params.push(options.excludeResultCode);
+    }
+
+    if (options?.ownerInitiativeId) {
+      // Role 1 is the owner/primary submitter; a contributor must not make the innovation count
+      // as belonging to that programme.
+      conditions.push(`AND EXISTS (
+        SELECT 1 FROM results_by_inititiative rbi
+        WHERE rbi.result_id = r.id
+          AND rbi.is_active > 0
+          AND rbi.initiative_role_id = 1
+          AND rbi.inititiative_id = ?
+      )`);
+      params.push(options.ownerInitiativeId);
+    }
+
+    const trimmedSearch = options?.search?.trim();
+    if (trimmedSearch) {
+      conditions.push(
+        'AND (r.title LIKE ? OR CAST(r.result_code AS CHAR) LIKE ?)',
+      );
+      params.push(`%${trimmedSearch}%`, `%${trimmedSearch}%`);
+    }
+
+    // The de-duplication subquery repeats the status set.
+    params.push(...MERGE_SPLIT_TARGET_STATUS_IDS);
+
+    const limit = Number.isInteger(options?.limit) ? options.limit : 50;
+    params.push(limit);
+
+    const query = `
+    SELECT
+      r.id,
+      r.result_code,
+      r.title,
+      r.status_id,
+      rs.status_name,
+      v.phase_year,
+      v.phase_name
+    FROM result r
+    INNER JOIN version v ON v.id = r.version_id
+      AND v.is_active = TRUE
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id
+    WHERE r.is_active = TRUE
+      AND r.result_type_id = ${ResultTypeEnum.INNOVATION_DEVELOPMENT}
+      AND r.status_id IN (${statusPlaceholders})
+      AND (r.is_discontinued IS NULL OR r.is_discontinued = FALSE)
+      ${conditions.join('\n      ')}
+      AND NOT EXISTS (
+        SELECT 1
+        FROM result newer
+        INNER JOIN version newer_v ON newer_v.id = newer.version_id
+          AND newer_v.is_active = TRUE
+        WHERE newer.result_code = r.result_code
+          AND newer.is_active = TRUE
+          AND newer.result_type_id = ${ResultTypeEnum.INNOVATION_DEVELOPMENT}
+          AND newer.status_id IN (${statusPlaceholders})
+          AND (newer.is_discontinued IS NULL OR newer.is_discontinued = FALSE)
+          AND newer.id > r.id
+      )
+    ORDER BY r.result_code DESC
+    LIMIT ?;
+    `;
+
+    try {
+      return await this.query(query, params);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

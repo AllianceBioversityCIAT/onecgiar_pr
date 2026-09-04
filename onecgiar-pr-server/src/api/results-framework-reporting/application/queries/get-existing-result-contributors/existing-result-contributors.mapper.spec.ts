@@ -93,6 +93,8 @@ describe('existing-result-contributors.mapper', () => {
           status_id: 2,
           role_id: 4,
           contributing_indicator: 2,
+          result_type_id: null,
+          result_type_name: null,
         },
       ]);
     });
@@ -120,6 +122,63 @@ describe('existing-result-contributors.mapper', () => {
           result_id: 501,
           role_id: 1,
           contributing_indicator: null,
+        }),
+      ]);
+    });
+
+    // @akili-spec changes/indicator-reported-results (IRR-R-2.2)
+    it('should emit result_type_id and result_type_name when obj_result_type is present', () => {
+      const contributors = [
+        {
+          result_toc_result_id: 41,
+          result_id: 601,
+          toc_result_id: 9,
+          obj_results: {
+            title: 'Result Epsilon',
+            result_code: 'RES-601',
+            result_type_id: 6,
+            version_id: 12,
+            status_id: 2,
+            obj_status: { status_name: 'Quality assessed' },
+            obj_result_type: { id: 6, name: 'Knowledge product' },
+          },
+        },
+      ];
+
+      expect(
+        mapContributorRecords(contributors as any, new Map(), null, 'IND-1'),
+      ).toEqual([
+        expect.objectContaining({
+          result_type_id: 6,
+          result_type_name: 'Knowledge product',
+        }),
+      ]);
+    });
+
+    // @akili-spec changes/indicator-reported-results (IRR-R-2.2) — never the numeric id when the name is absent
+    it('should emit result_type_name null (never the numeric id) when obj_result_type is absent', () => {
+      const contributors = [
+        {
+          result_toc_result_id: 42,
+          result_id: 602,
+          toc_result_id: 9,
+          obj_results: {
+            title: 'Result Zeta',
+            result_code: 'RES-602',
+            result_type_id: 3,
+            version_id: 12,
+            status_id: 2,
+            obj_status: { status_name: 'Quality assessed' },
+          },
+        },
+      ];
+
+      expect(
+        mapContributorRecords(contributors as any, new Map(), null, 'IND-1'),
+      ).toEqual([
+        expect.objectContaining({
+          result_type_id: 3,
+          result_type_name: null,
         }),
       ]);
     });

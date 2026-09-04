@@ -88,6 +88,7 @@ describe('GetExistingResultContributorsToIndicatorsHandler', () => {
     expect(mockLoaderService.loadContributions).toHaveBeenCalledWith(
       5,
       'IND-55',
+      'reviewed',
     );
     expect(mockRoleResolverService.resolve).toHaveBeenCalledWith(user, [101]);
     expect(result).toEqual({
@@ -102,6 +103,8 @@ describe('GetExistingResultContributorsToIndicatorsHandler', () => {
             status_id: 2,
             role_id: 4,
             contributing_indicator: 3.5,
+            result_type_id: null,
+            result_type_name: null,
           },
         ],
         resultTocResultId: 5,
@@ -174,5 +177,86 @@ describe('GetExistingResultContributorsToIndicatorsHandler', () => {
         contributing_indicator: null,
       }),
     );
+  });
+
+  // @akili-spec changes/indicator-reported-results (IRR-R-3.1)
+  describe('scope normalisation', () => {
+    const stubContributions = () => {
+      mockLoaderService.parseResultTocResultId.mockReturnValue(5);
+      mockLoaderService.validateTocResultIndicatorId.mockReturnValue('IND-55');
+      mockLoaderService.loadContributions.mockResolvedValue([]);
+      mockLoaderService.filterContributorsWithIndicator.mockResolvedValue(null);
+    };
+
+    it('should pass scope="all" through unchanged', async () => {
+      stubContributions();
+
+      await handler.execute(
+        new GetExistingResultContributorsToIndicatorsQuery(
+          user,
+          5,
+          'IND-55',
+          'all',
+        ),
+      );
+
+      expect(mockLoaderService.loadContributions).toHaveBeenCalledWith(
+        5,
+        'IND-55',
+        'all',
+      );
+    });
+
+    it('should normalise an omitted scope to "reviewed"', async () => {
+      stubContributions();
+
+      await handler.execute(
+        new GetExistingResultContributorsToIndicatorsQuery(user, 5, 'IND-55'),
+      );
+
+      expect(mockLoaderService.loadContributions).toHaveBeenCalledWith(
+        5,
+        'IND-55',
+        'reviewed',
+      );
+    });
+
+    it('should normalise scope="reviewed" to "reviewed"', async () => {
+      stubContributions();
+
+      await handler.execute(
+        new GetExistingResultContributorsToIndicatorsQuery(
+          user,
+          5,
+          'IND-55',
+          'reviewed',
+        ),
+      );
+
+      expect(mockLoaderService.loadContributions).toHaveBeenCalledWith(
+        5,
+        'IND-55',
+        'reviewed',
+      );
+    });
+
+    it('should normalise an unknown scope value ("foo") to "reviewed"', async () => {
+      stubContributions();
+
+      await handler.execute(
+        new GetExistingResultContributorsToIndicatorsQuery(
+          user,
+          5,
+          'IND-55',
+          'foo',
+        ),
+      );
+
+      expect(mockLoaderService.loadContributions).toHaveBeenCalledWith(
+        5,
+        'IND-55',
+        'reviewed',
+      );
+    });
   });
 });

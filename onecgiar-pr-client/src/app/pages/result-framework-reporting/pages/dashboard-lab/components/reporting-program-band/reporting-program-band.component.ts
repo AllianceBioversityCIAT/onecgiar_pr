@@ -11,12 +11,12 @@ import {
   signal
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { ReportingGuideService } from '../../services/reporting-guide.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideArrowLeft, lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap } from '@ng-icons/lucide';
+import { lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap } from '@ng-icons/lucide';
 import { PrFilterMultiselectModule } from '../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { PrFilterSelectComponent } from '../../../../../../shared/components/pr-filter-select/pr-filter-select.component';
-import { SmartNavigationService } from '../../../../../../shared/services/smart-navigation.service';
 
 export interface BandFilterOption {
   value: string;
@@ -34,6 +34,19 @@ export interface ReportingSummaryStats {
   aowsCount: number;
   totalKpis: number;
   reportedKpis: number;
+  /**
+   * Program **Planned** — every KPI the ToC plans, zero-target ones included. `totalKpis` is
+   * *Counted* (the zero-target rule already applied, `KCR-R-8`), so the two differ by exactly
+   * `zeroTargetKpis`; the pair is what `totalKpisTitle` discloses. Optional: a caller with no
+   * planned figure to state simply omits both and the figure carries no `title`.
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  plannedKpis?: number;
+  /**
+   * How many planned KPIs the zero-target rule (`MRF-R-7`) removed from `totalKpis`.
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  zeroTargetKpis?: number;
 }
 
 /**
@@ -48,21 +61,69 @@ export interface ReportingSummaryStats {
  * Info popover (`ⓘ` next to the title): reference :345-358 — click (not hover), "About this
  * program", body = program description, footer = "N areas of work · M planned results".
  */
-import { PrTabIntroComponent } from '../../../../../../shared/components/pr-tab-intro/pr-tab-intro.component';
+export const SCIENCE_PROGRAM_DESCRIPTIONS: Record<string, string> = {
+  SP01:
+    'Breeding for Tomorrow modernizes CGIAR and national breeding programs so that farmers get ' +
+    'climate-resilient, market-preferred varieties faster. The program connects market intelligence, ' +
+    'breeding pipelines, trait discovery, genetic innovation and seed systems into one delivery chain, ' +
+    'and works with national agricultural research systems and private seed partners across South Asia, ' +
+    'sub-Saharan Africa and Latin America. Reporting covers products delivered to partners, the outcomes ' +
+    'those products enable, and progress toward the 2030 outcomes agreed with donors.',
+  SP02:
+    'Sustainable Farming accelerates the transition to resilient, productive, and sustainable agricultural systems. ' +
+    'The program integrates agronomic best practices, digital advisory services, and soil and water management solutions ' +
+    'to improve yields, optimize input use, and enhance ecosystem services for farming communities.',
+  SP03:
+    'Climate Action provides science-based innovations, policy analyses, and investment roadmaps to foster climate ' +
+    'resilience and low-emission development. The program focuses on climate-smart agricultural technologies, early warning ' +
+    'and disaster risk management systems, and climate finance alignment across vulnerable agri-food regions.',
+  SP04:
+    'Multifunctional Landscapes advances systemic, landscape-scale solutions to reconcile agricultural production ' +
+    'with biodiversity conservation, land restoration, and climate resilience. The program works with communities, ' +
+    'national authorities, and private partners across living landscapes to co-design and implement sustainable resource ' +
+    'management plans, agroecological innovations, and inclusive governance models that deliver shared ecological and ' +
+    'livelihood benefits.',
+  SP05:
+    'Sustainable Animal & Aquatic Foods advances innovations across livestock and aquaculture value chains. ' +
+    'The program develops improved feeds, animal health diagnostics, and sustainable production technologies that ' +
+    'enhance productivity, support livelihoods, and reduce environmental footprints.',
+  SP06:
+    'Better Diets and Nutrition focuses on transforming food environments and consumption patterns to improve nutrition ' +
+    'and public health. The program leverages biofortified crops, dietary diversity interventions, and supply chain ' +
+    'improvements to make safe, healthy, and affordable diets accessible to vulnerable populations.',
+  SP07:
+    'Policy Innovations delivers data-driven economic research, policy analysis, and foresight modeling to support national ' +
+    'and regional policymakers. The program helps design and evaluate policy incentives, social protection schemes, and ' +
+    'agricultural trade strategies for equitable rural growth.',
+  SP08:
+    'Food Frontiers and Security anticipates and navigates emerging systemic disruptions in global and regional food systems. ' +
+    'The program investigates next-generation agricultural technologies, frontier food solutions, and resilience mechanisms ' +
+    'to protect long-term food security.',
+  SP09:
+    'Scaling for Impact bridges research and practice by accelerating the adoption of proven CGIAR innovations through ' +
+    'robust partnerships with public, private, and development sector actors.',
+  'SGP-02':
+    'Accelerating Varietal Improvement in Seed Systems in Africa works with regional and national partners to modernize ' +
+    'seed systems and expand access to high-performing, climate-adapted seed varieties.',
+  SGP02:
+    'Accelerating Varietal Improvement in Seed Systems in Africa works with regional and national partners to modernize ' +
+    'seed systems and expand access to high-performing, climate-adapted seed varieties.'
+};
 
 @Component({
   selector: 'app-reporting-program-band',
   standalone: true,
-  imports: [RouterLink, NgIcon, FormsModule, PrFilterMultiselectModule, PrFilterSelectComponent, PrTabIntroComponent],
+  imports: [RouterLink, NgIcon, FormsModule, PrFilterMultiselectModule, PrFilterSelectComponent],
   templateUrl: './reporting-program-band.component.html',
   styleUrls: ['./reporting-program-band.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [provideIcons({ lucideArrowLeft, lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap })]
+  providers: [provideIcons({ lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap })]
 })
 export class ReportingProgramBandComponent {
   private readonly zone = inject(NgZone);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly navSE = inject(SmartNavigationService);
+  private readonly router = inject(Router);
+  private readonly guideSE = inject(ReportingGuideService);
 
   readonly programCode = input<string>('');
   readonly programName = input<string>('');
@@ -113,6 +174,14 @@ export class ReportingProgramBandComponent {
   readonly compactFilters = input<boolean>(false);
   /** Any reporting filter active — shows the Clear-filters button. @akili-spec changes/reporting-entry-hub */
   readonly filtersActive = input<boolean>(false);
+  /** By-AoW mode: center filter options and selected center */
+  readonly centerOptions = input<BandFilterOption[]>([]);
+  readonly centerValue = input<string | null>(null);
+  readonly centerChange = output<string | null>();
+  /** By-AoW mode: result type filter options and selected type */
+  readonly byAowTypeOptions = input<BandFilterOption[]>([]);
+  readonly byAowTypeValue = input<string | null>(null);
+  readonly byAowTypeChange = output<string | null>();
   /**
    * Only-pending toggle (MRF-R-1): hides `complete` and zero-target KPIs. Visible in BOTH
    * reporting modes (grouped table + By-AOW), unlike Type/Category/Status — rendered outside the
@@ -164,11 +233,31 @@ export class ReportingProgramBandComponent {
   readonly aowSwitch = output<string>();
   /** Expand all / Collapse all was pressed. The host flips the switch; the band stays stateless. */
   readonly toggleExpandAll = output<void>();
-  /**
-   * The emerging pathway is a MODAL owned by the host, not a page. The band only announces the
-   * intent so both CTA copies (expanded + condensed) stay a single behaviour.
-   */
+  readonly allAowsClick = output<void>();
+  readonly whereToReport = output<void>();
   readonly reportEmerging = output<void>();
+
+  onWhereToReportClick(): void {
+    this.whereToReport.emit();
+    this.reportEmerging.emit();
+  }
+
+  startSpTour(): void {
+    this.guideSE.startSpTour({
+      programName: this.programName(),
+      cycleYear: this.cycleYear() ?? undefined,
+      activeTab: this.activeTab(),
+      onTabNavigate: (tab: 'overview' | 'reporting' | 'results') => {
+        const targetPath =
+          tab === 'overview'
+            ? this.overviewPath()
+            : tab === 'results'
+              ? this.resultsPath()
+              : this.reportingPath();
+        return this.router.navigate([targetPath], { queryParamsHandling: 'preserve' }).then(() => {});
+      }
+    });
+  }
 
   /**
    * Overview is its OWN surface now (`/overview`), not the retired bento at `/home` — sending the
@@ -196,38 +285,26 @@ export class ReportingProgramBandComponent {
    */
   readonly emergingPath = '/result-framework-reporting/emerging';
 
-  /** Optional explicit override for the back button label. */
-  readonly backLabelOverride = input<string>('');
-
-  /** Dynamic context-aware back button label derived from navigation history. */
-  readonly backLabel = computed(() => {
-    const override = this.backLabelOverride()?.trim();
-    if (override) return override;
-    return this.navSE.getBackTarget(undefined, this.programCode()).label;
-  });
-
-  /** Navigates back intelligently to the previous surface or logical parent. */
-  goBack(): void {
-    this.navSE.back(undefined, this.programCode());
-  }
-
   /** ⓘ popover open state — click toggles, Escape / outside click close (reference :348). */
   readonly infoOpen = signal(false);
   /** Guards the document click that fires in the same tick as the open toggle. */
   private skipNextDocumentClick = false;
 
+  /** Allows callers/tests to opt into collapsing behavior. Default is false (band stays fixed/expanded). */
+  readonly collapsible = input<boolean>(false);
+  /** Indicates whether document is scrolled down from top (for subtle elevation shadow). */
+  readonly isScrolled = signal(false);
+
   /**
-   * Scroll offset at which the band condenses. 88px is the exact height of the identity block
-   * (reference :329) — the moment it would have scrolled away is the moment the reference swaps to
-   * its `bandCollapsed` bar (:383): dot + programme name + tabs + `Report emerging result`, 48px.
+   * Scroll offset at which the band condenses. 64px is the height of the compact identity block.
    */
-  private static readonly COLLAPSE_THRESHOLD_PX = 88;
+  private static readonly COLLAPSE_THRESHOLD_PX = 64;
 
   /** True while the page is scrolled past the identity block. Drives the compact band. */
   readonly bandCollapsed = signal(false);
 
   constructor() {
-    // The DOCUMENT is the scroller here (the band is `sticky top-[56px]`, not inside an overflow
+    // The DOCUMENT is the scroller here (the band is `sticky`, not inside an overflow
     // box), so the offset comes from `window`. The listener is registered OUTSIDE Angular and only
     // re-enters the zone on the single frame where the threshold is crossed: a zone-bound
     // `@HostListener('window:scroll')` would tick change detection on EVERY scroll frame to
@@ -245,6 +322,18 @@ export class ReportingProgramBandComponent {
   /** Cheap: one `scrollY` read + a compare. Nothing happens unless the threshold is crossed. */
   private syncBandCollapsed(): void {
     const offset = window.scrollY || document.documentElement?.scrollTop || 0;
+    const isScrolled = offset > 10;
+    if (isScrolled !== this.isScrolled()) {
+      this.zone.run(() => this.isScrolled.set(isScrolled));
+    }
+
+    if (!this.collapsible()) {
+      if (this.bandCollapsed()) {
+        this.zone.run(() => this.bandCollapsed.set(false));
+      }
+      return;
+    }
+
     const collapsed = offset > ReportingProgramBandComponent.COLLAPSE_THRESHOLD_PX;
     if (collapsed === this.bandCollapsed()) return;
     this.zone.run(() => {
@@ -284,20 +373,32 @@ export class ReportingProgramBandComponent {
   });
 
   /**
-   * Body copy for the popover. Prefer the explicit description; otherwise the SP01 mock from the
-   * reference (:1677) so the surface matches the design until the SP payload carries a real field.
+   * Body copy for the popover. Prefer explicit description; otherwise look up from the
+   * Science Program catalogue by program code/name, falling back to a contextual statement.
    */
   readonly resolvedDescription = computed(() => {
     const explicit = this.programDescription()?.trim();
     if (explicit) return explicit;
-    // Verbatim from PRMS-Shell.dc.html:1677 — placeholder until NEEDS-BACKEND description lands.
+
+    const code = this.programCode()?.trim().toUpperCase();
+    if (code && SCIENCE_PROGRAM_DESCRIPTIONS[code]) {
+      return SCIENCE_PROGRAM_DESCRIPTIONS[code];
+    }
+
+    const name = this.programName()?.trim();
+    if (name) {
+      const normalizedName = name.toLowerCase();
+      for (const [spCode, desc] of Object.entries(SCIENCE_PROGRAM_DESCRIPTIONS)) {
+        if (desc.toLowerCase().startsWith(normalizedName)) {
+          return desc;
+        }
+      }
+      return `${name} is a CGIAR research program delivering science, innovations, and partnerships to advance food, land, and water systems transformation and contribute to CGIAR 2030 targets.`;
+    }
+
     return (
-      'Breeding for Tomorrow modernizes CGIAR and national breeding programs so that farmers get ' +
-      'climate-resilient, market-preferred varieties faster. The program connects market intelligence, ' +
-      'breeding pipelines, trait discovery, genetic innovation and seed systems into one delivery chain, ' +
-      'and works with national agricultural research systems and private seed partners across South Asia, ' +
-      'sub-Saharan Africa and Latin America. Reporting covers products delivered to partners, the outcomes ' +
-      'those products enable, and progress toward the 2030 outcomes agreed with donors.'
+      'This program works with partners across the CGIAR portfolio to deliver research, innovations, ' +
+      'and outcomes contributing to the 2030 targets.'
     );
   });
 
@@ -308,6 +409,30 @@ export class ReportingProgramBandComponent {
     const aowLabel = aows === 1 ? '1 area of work' : `${aows} areas of work`;
     const resultLabel = results === 1 ? '1 planned result' : `${results} planned results`;
     return `${aowLabel} · ${resultLabel}`;
+  });
+
+  readonly activeTabInfo = computed(() => {
+    switch (this.activeTab()) {
+      case 'overview':
+        return {
+          title: 'Overview',
+          description:
+            'Displays the overall progress of results reporting for this Science Program or Accelerator across funding types (W1/W2 and W3/Bilateral), reporting status, and geographic areas of work.'
+        };
+      case 'results':
+        return {
+          title: 'Results',
+          description:
+            'View and manage all reported results linked to this Science Program or Accelerator. Use the filters to explore results by status, type, or contributing centers.'
+        };
+      case 'reporting':
+      default:
+        return {
+          title: 'Theory of Change Reporting',
+          description:
+            'The Theory of Change reporting framework for your Science Program. Browse planned Indicators and High-Level Outputs by Area of Work, track progress against targets, and submit new or continuing result reports for the current cycle.'
+        };
+    }
   });
 
   /**
@@ -338,6 +463,140 @@ export class ReportingProgramBandComponent {
     { value: 'outcome_2030', label: '2030 outcome' }
   ];
 
+  // ── Reporting JIRA-style Top-Bar Filter State ──
+  readonly filterPopoverOpen = signal(false);
+
+  toggleFilterPopover(event: Event): void {
+    event.stopPropagation();
+    this.filterPopoverOpen.update(v => !v);
+  }
+
+  closeFilterPopover(): void {
+    this.filterPopoverOpen.set(false);
+  }
+
+  readonly activeFilterCount = computed(() => {
+    let count = 0;
+    if (this.compactFilters()) {
+      if (this.centerValue() && this.centerValue() !== 'all') count++;
+      if (this.byAowTypeValue() && this.byAowTypeValue() !== 'all') count++;
+      if (this.statusValue() && this.statusValue() !== 'all') count++;
+      if (this.onlyPending()) count++;
+    } else {
+      if (this.aowValue() && this.aowValue().length > 0) count += this.aowValue().length;
+      if (this.typeValue() && this.typeValue() !== 'all') count++;
+      if (this.typologyValue() && this.typologyValue() !== 'all') count++;
+      if (this.statusValue() && this.statusValue() !== 'all') count++;
+      if (this.onlyPending()) count++;
+    }
+    return count;
+  });
+
+  readonly hasActiveFilters = computed(() => this.activeFilterCount() > 0 || !!this.search());
+
+  readonly activeCenterLabel = computed(() => {
+    const val = this.centerValue();
+    if (!val || val === 'all') return '';
+    const match = this.centerOptions().find(o => o.value === val);
+    return match ? match.label.replace(/\s*\(\d+\)$/, '') : val;
+  });
+
+  readonly activeByAowTypeLabel = computed(() => {
+    const val = this.byAowTypeValue();
+    if (!val || val === 'all') return '';
+    const match = this.byAowTypeOptions().find(o => o.value === val);
+    return match ? match.label.replace(/\s*\(\d+\)$/, '') : val;
+  });
+
+  readonly activeAowChips = computed(() => {
+    const vals = this.aowValue() || [];
+    if (!vals.length) return [];
+    const groups = this.aowOptions() || [];
+    const map = new Map<string, string>();
+    for (const g of groups) {
+      for (const item of g.items || []) {
+        map.set(item.value, item.label);
+      }
+    }
+    return vals.map(v => ({ value: v, label: map.get(v) || v }));
+  });
+
+  readonly activeTypeLabel = computed(() => {
+    const val = this.typeValue();
+    if (!val || val === 'all') return '';
+    return this.typeOptions.find(o => o.value === val)?.label || val;
+  });
+
+  readonly activeTypologyLabel = computed(() => {
+    const val = this.typologyValue();
+    if (!val || val === 'all') return '';
+    return this.typologyOptions().find(o => o.value === val)?.label || val;
+  });
+
+  readonly activeStatusLabel = computed(() => {
+    const val = this.statusValue();
+    if (!val || val === 'all') return '';
+    return this.statusOptions.find(o => o.value === val)?.label || val;
+  });
+
+  removeCenterChip(): void {
+    this.centerChange.emit(null);
+  }
+
+  removeByAowTypeChip(): void {
+    this.byAowTypeChange.emit(null);
+  }
+
+  removeAowChip(code: string): void {
+    const next = (this.aowValue() || []).filter(v => v !== code);
+    this.aowChange.emit(next);
+  }
+
+  removeTypeChip(): void {
+    this.typeChange.emit('all');
+  }
+
+  removeTypologyChip(): void {
+    this.typologyChange.emit('all');
+  }
+
+  removeStatusChip(): void {
+    this.statusChange.emit('all');
+  }
+
+  removeOnlyPendingChip(): void {
+    this.onlyPendingChange.emit(false);
+  }
+
+  /**
+   * `title` for the **Total KPIs** figure (`KCR-R-2.1`, `KCR-DD-4`). The figure itself is *Counted*;
+   * this states the *Planned* count it was derived from and, when the zero-target rule removed at
+   * least one KPI, how many — `11 planned · excludes 2 zero-target KPIs`, or plain `11 planned`
+   * when nothing was excluded. Built here rather than in the template: `KCR` design §6.3 forbids
+   * template arithmetic, and the pluralisation has to match `reporting-aow-table.countLabel`
+   * exactly so the band and the grouped table never disagree on the same sentence.
+   *
+   * `null` (not `''`) when the host carries no `plannedKpis` — `[attr.title]` then omits the
+   * attribute instead of rendering an empty tooltip.
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  totalKpisTitle(stats: ReportingSummaryStats): string | null {
+    const planned = stats.plannedKpis;
+    if (planned === null || planned === undefined) return null;
+    const zeroTarget = stats.zeroTargetKpis ?? 0;
+    if (zeroTarget <= 0) return `${planned} planned`;
+    return `${planned} planned · excludes ${this.countLabel(zeroTarget, 'zero-target KPI')}`;
+  }
+
+  /** Same body as `reporting-aow-table.countLabel` — the pluralisation `KCR-R-2.1` pins. */
+  private countLabel(n: number, noun: string): string {
+    return `${n} ${noun}${n === 1 ? '' : 's'}`;
+  }
+
+  evidencePercentage(stats: ReportingSummaryStats): number {
+    return stats.totalKpis > 0 ? Math.round((stats.reportedKpis / stats.totalKpis) * 100) : 0;
+  }
+
   toggleInfo(event: Event): void {
     event.stopPropagation();
     this.skipNextDocumentClick = true;
@@ -348,18 +607,30 @@ export class ReportingProgramBandComponent {
     this.infoOpen.set(false);
   }
 
-  @HostListener('document:click')
-  onDocumentClick(): void {
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event?: MouseEvent): void {
     if (this.skipNextDocumentClick) {
       this.skipNextDocumentClick = false;
       return;
     }
     if (this.infoOpen()) this.infoOpen.set(false);
+
+    const target = event?.target as HTMLElement | null;
+    if (
+      target?.closest('.pr-reporting-filter-container') ||
+      target?.closest('.p-multiselect-panel') ||
+      target?.closest('.p-dropdown-panel')
+    ) {
+      return;
+    }
+    if (this.filterPopoverOpen()) {
+      this.filterPopoverOpen.set(false);
+    }
   }
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
     if (this.infoOpen()) this.infoOpen.set(false);
+    if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
   }
-
 }

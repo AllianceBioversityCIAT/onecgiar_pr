@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { ResultLevelService } from '../../pages/results/pages/result-creator/services/result-level.service';
 import { ApiService } from './api/api.service';
 import { RolesService } from './global/roles.service';
@@ -11,6 +11,17 @@ import { isAvisaInitiative } from '../utils/avisa-initiative.util';
 })
 export class CurrentResultService {
   resultIdIsconverted = false;
+
+  /**
+   * The second half of the load state. `resultIdIsconverted` can only say "the id is not ready
+   * yet", so a result code that has no row in the requested phase (a saved link pointing at a year
+   * the result was never carried over to) looked exactly like "still loading" and the screen
+   * skeletoned forever with nothing on it.
+   *
+   * `'not-found'` = the server answered 404 for this code/phase pair · `'error'` = the conversion
+   * failed for any other reason · `null` = nothing has gone wrong (yet).
+   */
+  readonly resultLoadFailure = signal<'not-found' | 'error' | null>(null);
   constructor(
     private readonly resultLevelSE: ResultLevelService,
     private readonly api: ApiService,

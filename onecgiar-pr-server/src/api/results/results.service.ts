@@ -3116,6 +3116,51 @@ export class ResultsService {
     }
   }
 
+  /**
+   * P2-3292 Step 3A/3B — the innovations offered as MERGE or SPLIT targets when a reporter closes
+   * an innovation and says where it continued.
+   *
+   * The result being discontinued is excluded by CODE, so no phase of itself can be picked as its
+   * own continuation.
+   *
+   * ⚠️ `ownerInitiativeId` is left undefined here on purpose: Step 3 says "from the full PRMS
+   * portfolio" in writing, so portfolio-wide is the specified behaviour. Narrowing the list to the
+   * reporter's own Science Program is a one-argument change, kept available because it was raised
+   * as a scope option — if it is taken, it must be written into the ticket as a reduction of what
+   * Ángel specified, not applied silently.
+   */
+  async getMergeSplitTargetInnovations(
+    resultId: number,
+    search?: string,
+    limit?: number,
+  ) {
+    try {
+      const result = await this._resultRepository.getResultById(resultId);
+      if (!result) {
+        throw {
+          response: {},
+          message: `Result ID: ${resultId} not found`,
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const results =
+        await this._resultRepository.getMergeSplitTargetInnovations({
+          search,
+          limit,
+          excludeResultCode: Number(result.result_code),
+        });
+
+      return {
+        response: results,
+        message: 'Results retrieved successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   async getAllResultsForInnovUse() {
     try {
       const results = await this._resultRepository.getResultsForInnovUse();
@@ -3715,7 +3760,14 @@ export class ResultsService {
         this._resultByInitiativesRepository.getContributorInitiativeByResult(
           resultId,
         ),
-        this._resultByInitiativesRepository.getDraftInit(resultId),
+        // Editing/Draft included (2026-09-04): the centre form stages its contributing programs as
+        // DRAFT requests (status 4), so the form must see them again on reload — not only once the
+        // result reaches Pending Review, which is all the default covers.
+        this._resultByInitiativesRepository.getDraftInit(resultId, [
+          ResultStatusData.Editing.value,
+          ResultStatusData.Draft.value,
+          ResultStatusData.PendingReview.value,
+        ]),
         this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
           resultId,
         ),
@@ -4015,6 +4067,24 @@ export class ResultsService {
           message:
             'The result ID in commonFields must match the URL parameter.',
           status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      // P2-3154 BR1: the Minimum Data Standard fields belong to the reporting Centre. The client
+      // stopped rendering this edit surface for non-admin reviewers (commit f142b8309), but the
+      // ownership rule has to hold on the server too — otherwise any reviewer with a token could
+      // still rewrite what the Centre reported. Platform administrators keep their existing
+      // correction ability, exactly as the client does. The ToC-metadata endpoint is deliberately
+      // NOT gated like this: AC2 keeps ToC alignment editable for the SP Leader.
+      const isPlatformAdmin = await this._roleByUserRepository.isUserAdmin(
+        user.id,
+      );
+      if (!isPlatformAdmin) {
+        return {
+          response: {},
+          message:
+            'Only platform administrators can modify the Minimum Data Standard fields of a bilateral result under review.',
+          status: HttpStatus.FORBIDDEN,
         };
       }
 
@@ -5192,7 +5262,11 @@ export class ResultsService {
       ) {
         return {
           response: {},
-          message: 'At least one field must be provided.',
+          // This message reaches the editor's Save-draft alert verbatim, so it has to explain the
+          // rule, not just state the rejection: the common way to land here is clearing the title
+          // (or description) and saving — empty text for a required field is ignored, never stored.
+          message:
+            'Nothing was saved: title and description are required and cannot be emptied — the stored text is kept. Provide at least one field with a value.',
           status: HttpStatus.BAD_REQUEST,
         };
       }

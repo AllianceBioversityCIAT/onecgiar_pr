@@ -233,4 +233,88 @@ describe('ShareResultRequestService — contribution decision notification (P2-3
       expect(notificationService.emitResultNotification).not.toHaveBeenCalled();
     });
   });
+
+  /**
+   * P2-3187 — V2 parity. Until 2026-09-04 only `updateResultRequestByUser` (V1) emitted the
+   * contribution-decision notification; the V2 method silently skipped it, so whether the centre
+   * was told depended on which endpoint version the client happened to route to. These tests pin
+   * the emission into the V2 flow for both terminal decisions.
+   *
+   * The V2 orchestration is exercised with its collaborators stubbed at the instance level: what
+   * matters here is the call sequence (approval handled, THEN the emission with the share row and
+   * the decision), not the repository internals, which belong to their own suites.
+   */
+  describe('V2 emits the decision notification too (P2-3187)', () => {
+    const dtoFor = (statusId: number) =>
+      ({
+        result_request: { result_id: 555, share_result_request_id: 42 },
+        result_toc_result: { planned_result: null, result_toc_results: [] },
+        request_status_id: statusId,
+      }) as any;
+
+    let svc: any;
+    let emitSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      svc = service;
+      svc._resultRepository = {
+        findOne: jest.fn().mockResolvedValue({ id: 555, obj_version: {} }),
+      };
+      svc._shareResultRequestRepository = {
+        findOne: jest.fn().mockResolvedValue(findShare),
+      };
+      jest
+        .spyOn(svc, 'updateShareResultRequestV2')
+        .mockResolvedValue(undefined);
+      jest.spyOn(svc, 'handleRequestApprovalV2').mockResolvedValue(undefined);
+      emitSpy = jest
+        .spyOn(svc, 'emitContributionDecisionNotification')
+        .mockResolvedValue(undefined);
+    });
+
+    it('emits on a V2 accept, after the approval was handled', async () => {
+      const res = await service.updateResultRequestByUserV2(
+        dtoFor(ACCEPTED),
+        user,
+      );
+
+      expect(emitSpy).toHaveBeenCalledWith(findShare, ACCEPTED, user);
+      expect(res.status).toBe(200);
+    });
+
+    it('emits on a V2 decline as well', async () => {
+      await service.updateResultRequestByUserV2(dtoFor(DECLINED), user);
+
+      expect(emitSpy).toHaveBeenCalledWith(findShare, DECLINED, user);
+    });
+
+    it('does not emit when the result does not exist', async () => {
+      svc._resultRepository.findOne.mockResolvedValue(null);
+
+      const res = await service.updateResultRequestByUserV2(
+        dtoFor(ACCEPTED),
+        user,
+      );
+
+      expect(emitSpy).not.toHaveBeenCalled();
+      expect(res.status).toBe(400);
+    });
+
+    it('hands the optional ToC mapping to the V2 approval path on accept (P2-3187 AC4)', async () => {
+      const rtr = {
+        planned_result: true,
+        result_toc_results: [{ toc_result_id: 901, initiative_id: 88 }],
+      };
+      const dto = { ...dtoFor(ACCEPTED), result_toc_result: rtr };
+
+      await service.updateResultRequestByUserV2(dto, user);
+
+      expect(svc.handleRequestApprovalV2).toHaveBeenCalledWith(
+        findShare,
+        rtr,
+        user,
+        dto,
+      );
+    });
+  });
 });

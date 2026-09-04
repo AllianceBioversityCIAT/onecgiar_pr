@@ -274,3 +274,116 @@
       [ngClass]="{ globalDisabled: invalidateRequest() || requestingReject }"></app-pr-button>
   </div>
 </app-pr-dialog>
+
+<!-- P2-3187 AC4 (Option A) — after the contributor chooses to accept a bilateral contribution, the ToC
+     mapping is offered as an OPTIONAL step. Both dialogs live in this card and feed ONE accept PATCH:
+     the mapping (when given) travels with the accept, which is the contract approveRequest/V2 were
+     built for. Never reopen <app-share-request-modal> here — see the trap list in ./CLAUDE.md. -->
+<app-pr-dialog
+  [(visible)]="showTocPromptDialog"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  styleClass="confirmation-modal">
+  <i class="pi pi-times modal-close-icon" (click)="showTocPromptDialog.set(false)"></i>
+  <div class="modal-body">
+    <div class="modal-icon">
+      <i class="pi pi-sitemap" style="font-size: 40px; margin-bottom: 10px; color: var(--pr-color-primary-300)"></i>
+    </div>
+    <h2 class="modal-title">MAP TO YOUR THEORY OF CHANGE?</h2>
+    <p class="modal-message">Would you like to map this result to your Theory of Change now? This step is optional.</p>
+
+    <p class="notification_content_body_text" style="margin-top: 10px; max-width: 500px">
+      <span style="text-decoration: underline; color: var(--pr-color-black)">
+        {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
+      </span>
+    </p>
+  </div>
+  <div class="modal-actions">
+    <app-pr-button
+      text="Not now — just accept"
+      colorType="secondary"
+      padding="big"
+      (click)="acceptOrReject(true)"
+      [icon]="requestingAccept ? 'loop' : ''"
+      [rotating]="requestingAccept"
+      [disabled]="invalidateRequest()"
+      [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
+    <app-pr-button
+      text="Map it"
+      padding="big"
+      (click)="openTocMappingStep()"
+      [disabled]="requestingAccept"
+      [ngClass]="{ globalDisabled: requestingAccept }"></app-pr-button>
+  </div>
+</app-pr-dialog>
+
+<!-- The mapping step: the same composition the bilateral review drawer ships (planned-result question +
+     app-cp-multiple-wps with forceP25), pointed at the CONTRIBUTOR initiative. "Skip and accept" is
+     always available, so an unfinishable mapping never blocks the acceptance (AC3/AC5). -->
+<app-pr-dialog
+  [(visible)]="showTocMappingDialog"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="false"
+  styleClass="toc-mapping-dialog">
+  <i class="pi pi-times modal-close-icon" (click)="showTocMappingDialog.set(false)"></i>
+  @if (tocInitiative) {
+    <div class="toc-mapping-body">
+      <h2 class="toc-mapping-title">Map to your Theory of Change</h2>
+      <p class="notification_content_body_text" style="max-width: 640px">
+        <span style="text-decoration: underline; color: var(--pr-color-black)">
+          {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
+        </span>
+        as <b>{{ notification?.obj_shared_inititiative?.official_code }}</b>
+      </p>
+
+      <app-pr-yes-or-not
+        label="Does this result align with the Program's planned TOC indicators?"
+        [required]="false"
+        [editable]="true"
+        [(ngModel)]="tocInitiative.planned_result"
+        (selectOptionEvent)="onTocPlannedResultChange()">
+      </app-pr-yes-or-not>
+
+      @if (tocInitiative.planned_result !== null && tocMappingConsumed()) {
+        <div style="z-index: 1; position: relative">
+          <app-cp-multiple-wps
+            [editable]="true"
+            [initiative]="tocInitiative"
+            [initiativeId]="tocInitiative?.initiative_id"
+            [resultLevelId]="notification?.obj_result?.obj_result_level?.id"
+            [isIpsr]="false"
+            [isContributor]="false"
+            [isNotifications]="false"
+            [isUnplanned]="!tocInitiative.planned_result"
+            [showMultipleWPsContent]="tocMappingConsumed()"
+            [hidden]="true"
+            [forceP25]="true">
+          </app-cp-multiple-wps>
+        </div>
+      }
+    </div>
+  }
+  <div class="modal-actions">
+    <app-pr-button
+      text="Skip and accept"
+      colorType="secondary"
+      padding="big"
+      (click)="acceptOrReject(true)"
+      [icon]="requestingAccept ? 'loop' : ''"
+      [rotating]="requestingAccept"
+      [disabled]="invalidateRequest()"
+      [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
+    <app-pr-button
+      text="Accept with mapping"
+      padding="big"
+      (click)="acceptOrReject(true, true)"
+      [icon]="requestingAccept ? 'loop' : ''"
+      [rotating]="requestingAccept"
+      [disabled]="invalidateRequest() || !isTocMappingComplete()"
+      [ngClass]="{ globalDisabled: invalidateRequest() || !isTocMappingComplete() }"></app-pr-button>
+  </div>
+</app-pr-dialog>

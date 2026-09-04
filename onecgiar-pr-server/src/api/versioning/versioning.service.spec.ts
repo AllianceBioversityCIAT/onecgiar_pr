@@ -834,4 +834,43 @@ describe('VersioningService', () => {
       expect(update).not.toHaveBeenCalled();
     });
   });
+  /**
+   * The result-detail screen calls this when the code/phase pair in the URL has no row, so it can
+   * name the years in which the result DOES exist. An empty version list must never reach
+   * `In([])` — TypeORM would emit `IN (NULL)` and the intent would be lost in the log.
+   */
+  describe('getVersionsOfAResultCode', () => {
+    it('returns the phases the code lives in', async () => {
+      const phases = [
+        { id: 34, phase_name: 'Reporting 2025' },
+        { id: 36, phase_name: 'Reporting 2026' },
+      ];
+      const $_getVersionsOfAResultCode = jest.fn().mockResolvedValue([34, 36]);
+      const find = jest.fn().mockResolvedValue(phases);
+      (service as any)._versionRepository = {
+        $_getVersionsOfAResultCode,
+        find,
+      };
+
+      const res = await service.getVersionsOfAResultCode(6432);
+
+      expect($_getVersionsOfAResultCode).toHaveBeenCalledWith(6432);
+      expect(res.response).toEqual(phases);
+      expect(res.statusCode).toBe(HttpStatus.OK);
+    });
+
+    it('answers an empty list without querying for the phases', async () => {
+      const find = jest.fn();
+      (service as any)._versionRepository = {
+        $_getVersionsOfAResultCode: jest.fn().mockResolvedValue([]),
+        find,
+      };
+
+      const res = await service.getVersionsOfAResultCode(999999);
+
+      expect(find).not.toHaveBeenCalled();
+      expect(res.response).toEqual([]);
+      expect(res.statusCode).toBe(HttpStatus.OK);
+    });
+  });
 });

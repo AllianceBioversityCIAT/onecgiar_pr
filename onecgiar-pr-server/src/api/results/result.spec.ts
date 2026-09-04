@@ -373,6 +373,10 @@ describe('ResultsService (unit, pure mocks)', () => {
   const mockRoleByUserRepository = {
     find: jest.fn().mockResolvedValue([]),
     validationRolePermissions: jest.fn().mockResolvedValue(0),
+    // P2-3154: the Data Standards review-update is admin-gated on the server. The suite's
+    // pre-existing update tests exercise the admin path, so the default is true; the guard
+    // test flips it per-case.
+    isUserAdmin: jest.fn().mockResolvedValue(true),
   } as any;
 
   const mockResultInitiativeBudgetRepository = {
@@ -2051,6 +2055,31 @@ describe('ResultsService (unit, pure mocks)', () => {
       result_description: 'Original description',
       result_type_id: ResultTypeEnum.POLICY_CHANGE,
     };
+
+    /**
+     * P2-3154 BR1 — the MDS lock is now enforced on the server, not only hidden in the UI.
+     * A reviewer who is not a platform admin gets a 403 before anything is read or written;
+     * the ToC-metadata endpoint stays open to SP Leaders (AC2) and is not touched by this gate.
+     */
+    it('refuses a non-admin reviewer with 403 before touching anything (P2-3154 BR1)', async () => {
+      mockRoleByUserRepository.isUserAdmin.mockResolvedValueOnce(false);
+      (
+        mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
+      ).mockClear();
+      mockDataSource.transaction.mockClear();
+
+      const res = await resultService.updateBilateralResultReview(
+        100,
+        { commonFields: { id: 100 } } as ReviewUpdateDto,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.FORBIDDEN);
+      expect(
+        mockResultRepository.getCommonFieldsBilateralResultById,
+      ).not.toHaveBeenCalled();
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
+    });
 
     it('should successfully update contributingCenters', async () => {
       const reviewUpdateDto: ReviewUpdateDto = {

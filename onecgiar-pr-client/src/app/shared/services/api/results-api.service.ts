@@ -186,18 +186,16 @@ export class ResultsApiService {
     if (type) params['type'] = type;
     if (limit !== undefined && limit !== null) params['limit'] = String(limit);
 
-    return this.http
-      .get<{ response: any[] }>(`${this.apiBaseUrl}get/depth-search/${encodeURIComponent(title ?? '')}`, { params })
-      .pipe(
-        map(resp =>
-          (resp?.response ?? []).map(item => ({
-            ...item,
-            version_id: item?.version_id === null || item?.version_id === undefined ? null : Number(item.version_id),
-            is_legacy: Number(item?.legacy) === 1
-          }))
-        ),
-        catchError(err => (err?.status === 404 ? of([]) : throwError(() => err)))
-      );
+    return this.http.get<{ response: any[] }>(`${this.apiBaseUrl}get/depth-search/${encodeURIComponent(title ?? '')}`, { params }).pipe(
+      map(resp =>
+        (resp?.response ?? []).map(item => ({
+          ...item,
+          version_id: item?.version_id === null || item?.version_id === undefined ? null : Number(item.version_id),
+          is_legacy: Number(item?.legacy) === 1
+        }))
+      ),
+      catchError(err => (err?.status === 404 ? of([]) : throwError(() => err)))
+    );
   }
 
   GET_ostMeliaStudiesByResultId() {
@@ -462,6 +460,23 @@ export class ResultsApiService {
    */
   GET_qaInnovationDevelopmentResults() {
     return this.http.get<any>(`${this.apiBaseUrlV2}get/qa-innovation-development-results`);
+  }
+
+  /**
+   * P2-3292 Steps 3A / 3B — the innovations offered when a reporter closes an innovation and says
+   * it merged into another one, or was split into several.
+   *
+   * 🛑 NOT `GET_qaInnovationDevelopmentResults` above, even though the names read alike. That one
+   * backs the Innovation Use link dropdown and its catalogue deliberately INCLUDES discontinued
+   * innovations, pinned to one phase. Step 3 asks for the reverse: every phase, and never a
+   * discontinued one — you cannot declare that your innovation continued inside a closed one.
+   *
+   * `search` filters server-side on purpose: the list is portfolio-wide, so shipping every
+   * innovation to the browser is what the story's "searchable" is trying to avoid.
+   */
+  GET_mergeSplitTargetInnovations(resultId: number, search?: string) {
+    const query = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
+    return this.http.get<any>(`${this.apiBaseUrlV2}get/merge-split-target-innovations/${resultId}${query}`);
   }
   GET_innovationUseP25() {
     return this.http
@@ -1222,9 +1237,7 @@ export class ResultsApiService {
    */
   GET_investmentDiscontinuedOptions(result_type_id, phase_year?: number) {
     const phaseYearParam = typeof phase_year === 'number' ? `?phaseYear=${phase_year}` : '';
-    return this.http.get<any>(
-      `${environment.apiBaseUrl}api/results/investment-discontinued-options/${result_type_id}${phaseYearParam}`
-    );
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/investment-discontinued-options/${result_type_id}${phaseYearParam}`);
   }
 
   GET_versioningResult() {
@@ -1233,6 +1246,15 @@ export class ResultsApiService {
         this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId
       }`
     );
+  }
+
+  /**
+   * Phases in which a result CODE exists. `GET_versioningResult()` answers the same question but
+   * needs the internal id, which is exactly what the result-detail screen does NOT have when the
+   * code/phase pair in the URL was never reported (the "no 2026 version" case).
+   */
+  GET_versioningResultByCode(resultCode: string | number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning/result/code/${resultCode}`);
   }
 
   PATCH_versioningAnnually(replicateIPSR = false) {
@@ -1478,9 +1500,12 @@ export class ResultsApiService {
     return this.http.post<any>(`${environment.apiBaseUrl}api/results-framework-reporting/create`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
 
-  GET_ExistingResultsContributors(resultTocResultId: string, tocResultIndicatorId: string) {
+  // @akili-spec changes/indicator-reported-results
+  // `scope` is OPT-IN (IRR-R-3 / IRR-DD-2): the server defaults to today's reviewed-only population,
+  // so the param is appended only when a caller asks for it and every existing URL stays byte-identical.
+  GET_ExistingResultsContributors(resultTocResultId: string, tocResultIndicatorId: string, scope?: 'reviewed' | 'all') {
     return this.http.get<any>(
-      `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=${resultTocResultId}&tocResultIndicatorId=${tocResultIndicatorId}`
+      `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=${resultTocResultId}&tocResultIndicatorId=${tocResultIndicatorId}${scope ? `&scope=${scope}` : ''}`
     );
   }
   // /api/results-framework-reporting/dashboard
@@ -1530,12 +1555,7 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
   }
 
-  GET_ResultToReview(
-    programId: string,
-    centerIds?: string[],
-    versionId?: string | number,
-    statusIds?: string,
-  ) {
+  GET_ResultToReview(programId: string, centerIds?: string[], versionId?: string | number, statusIds?: string) {
     let url = `${environment.apiBaseUrl}api/results/by-program-and-centers?programId=${programId}`;
     if (centerIds?.length === 1) {
       url += `&centerIds=${centerIds.join(',')}`;

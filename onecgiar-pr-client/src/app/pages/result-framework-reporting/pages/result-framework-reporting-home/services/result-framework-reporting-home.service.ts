@@ -56,6 +56,11 @@ export class ResultFrameworkReportingHomeService {
   // widget AND the status breakdown inside every Science Program card.
   compactView = signal<boolean>(localStorage.getItem(COMPACT_STORAGE_KEY) === '1');
 
+  // Overview tab phase selection shared with the Results tab
+  overviewSelectedPhase = signal<string | null>(null);
+  overviewSelectedProgram = signal<string | null>(null);
+  overviewSelectedVersionId = signal<number | null>(null);
+
   toggleCompactView() {
     const next = !this.compactView();
     this.compactView.set(next);

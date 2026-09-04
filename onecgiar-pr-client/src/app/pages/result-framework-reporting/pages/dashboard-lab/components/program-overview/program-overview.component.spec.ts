@@ -153,7 +153,6 @@ describe('ProgramOverviewComponent', () => {
     // "Progress by area of work" promoted to the hero position, directly after "About this
     // program" — above the W1/W2 and W3/Bilateral status groups. ToC map remains last.
     expect(headings).toEqual([
-      'About this program',
       'Progress by area of work',
       'W1/W2 Reporting Status',
       'W1/W2 results by category and status',
@@ -685,9 +684,9 @@ describe('ProgramOverviewComponent', () => {
     });
 
     /** FAIL input: a separator promoted to a real heading turns this red (breaks the pinned pin). */
-    it('adds no screen-reader noise and does not touch the pinned 8-heading assertion (TCM-R-1)', () => {
+    it('adds no screen-reader noise and does not touch the pinned 7-heading assertion (TCM-R-1)', () => {
       const headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
-      expect(headings.length).toBe(8);
+      expect(headings.length).toBe(7);
       expect(headings).not.toContain('W1/W2');
       expect(headings).not.toContain('W3/Bilateral');
     });
@@ -880,14 +879,14 @@ describe('ProgramOverviewComponent', () => {
       headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
       // TCM-R-1: the ToC map card shares the AoW filter's gate — it appears alongside
       // "Progress by area of work", directly below it.
-      expect(headings).toEqual(['About this program', 'Progress by area of work', 'Theory of Change map']);
+      expect(headings).toEqual(['Progress by area of work', 'Theory of Change map']);
 
       // Reset to all
       component.setActiveSection('all');
       fixture.detectChanges();
       expect(component.activeSection()).toBe('all');
       headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
-      expect(headings.length).toBe(8);
+      expect(headings.length).toBe(7);
     });
 
     it('toggles section to "all" when clicking the currently active section', () => {
@@ -929,10 +928,20 @@ describe('ProgramOverviewComponent', () => {
       expect(component.activeSection()).toBe('bilateral');
     });
 
-    it('(b) clicking a row\'s Report button yields exactly one openAow("AOW02") emission — the row\'s own click must not ALSO fire', () => {
+    it('(b) clicking a row\'s Report button yields exactly one openAow("AOW02") emission (its own stopPropagation guard, preserved verbatim)', () => {
       // @akili-spec changes/overview-aow-progress-hero — OAH-T-3 deliberate edit: the hero row is
       // now fed by `richRows` (design DD-4), not the thin `aowProgress` input, which stays wired
       // only to KPI card 4 / the section badge / `aowStats` and no longer drives this row.
+      //
+      // `KZ-OAH-3` note (`RGS-T-2`, `docs/specs/changes/aow-row-gesture-split`): this title's
+      // original premise — "the row's own click must not ALSO fire [openAow]" — is now VACUOUS.
+      // `RGS-T-2` reverted the row's own click from `openAow.emit` to `selectScope`, so the row no
+      // longer emits `openAow` at all; there is nothing left for `Report`'s click to duplicate on
+      // THIS output. What still holds, and what this test still proves, is narrower: `Report`'s
+      // own `stopPropagation()` guard is untouched, so its click never double-fires `openAow` on
+      // itself. The broader cross-output invariant this test used to also carry — "exactly one of
+      // scopeChange/openAow fires, never both" — now lives in `program-overview.scope.spec.ts`,
+      // describe "AoW row gestures split, and the selected state (RGS-T-2)".
       fixture.componentRef.setInput('richRows', [
         { code: 'AOW02', name: 'Genetic Innovation', complete: 0, inProgress: 1, notStarted: 3, zeroTarget: 0, reported: 1, total: 4, remaining: 3 }
       ]);
@@ -997,6 +1006,65 @@ describe('ProgramOverviewComponent', () => {
         expect(card.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
         expect(card.querySelector('.pr-figure')).toBeNull();
       }
+    });
+  });
+
+  describe('AoW row skeleton ↔ real-row token parity (AIS-DD-4, AIS-R-5 string half, AIS-AC-3 jsdom half)', () => {
+    /** `grid-cols-[…]` (with or without a leading `@min-[…]:`/`@max-[…]:` container-variant prefix),
+     *  a bare `@min-[…]:…`/`@max-[…]:…` token (any utility), `[grid-column:…]`, `[grid-row:…]`, or
+     *  `gap-y-…` — the exact category list `tasks.md` `AIS-T-3` names. A token matching more than one
+     *  category (e.g. `@max-[630px]:hidden` is both an `@max-[…]:` token and hides a track) is still
+     *  ONE set entry — this is a set of token STRINGS, not a tally per category. */
+    const RESPONSIVE_TOKEN = /^(grid-cols-\[|@min-\[|@max-\[|\[grid-column:|\[grid-row:|gap-y-)/;
+
+    /** The token set of `el` AND its direct children only — never grandchildren (the achievement
+     *  cell's own inner QA/Prel restack span, or the ⓘ fallback button nested inside the identity
+     *  cell, are both one level too deep and deliberately excluded, same as the row's own `AIS-DD-4`
+     *  scope: "root and its direct cells"). Deliberately NOT `min-w-0` or any other non-responsive
+     *  token — the Reviewer noted the real identity cell carries `min-w-0` and the skeleton's
+     *  disabled-button identity wrapper does not; that is a pre-existing, unrelated difference
+     *  outside this set's definition. */
+    function responsiveTokens(root: Element): Set<string> {
+      const tokens = new Set<string>();
+      const collect = (el: Element) =>
+        el.className
+          .split(/\s+/)
+          .filter(token => RESPONSIVE_TOKEN.test(token))
+          .forEach(token => tokens.add(token));
+      collect(root);
+      Array.from(root.children).forEach(collect);
+      return tokens;
+    }
+
+    function diffSets(a: Set<string>, b: Set<string>, aLabel: string, bLabel: string): string {
+      const onlyA = [...a].filter(t => !b.has(t));
+      const onlyB = [...b].filter(t => !a.has(t));
+      return [...onlyA.map(t => `only in ${aLabel}: ${t}`), ...onlyB.map(t => `only in ${bLabel}: ${t}`)].join('\n');
+    }
+
+    it('the skeleton row root + direct cells carry the SAME responsive token set as the real row root + direct cells', () => {
+      // Real row first — needs at least one row so the `@for` renders a row root to read.
+      fixture.componentRef.setInput('richLoading', false);
+      fixture.componentRef.setInput('richRows', [{ code: 'AOW01', name: 'Market Intelligence', complete: 1, inProgress: 2, notStarted: 3, zeroTarget: 0, reported: 3, total: 6, remaining: 3 }]);
+      fixture.detectChanges();
+      const realRoot = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="aow-rows"] > div');
+      if (!realRoot) throw new Error('real row root not found — [data-testid="aow-rows"] > div');
+      const realTokens = responsiveTokens(realRoot);
+
+      // Skeleton — same fixture instance, flip `richLoading` and re-run change detection.
+      fixture.componentRef.setInput('richLoading', true);
+      fixture.detectChanges();
+      const skeletonRoot = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="aow-rows-skeleton"] > div');
+      if (!skeletonRoot) throw new Error('skeleton row root not found — [data-testid="aow-rows-skeleton"] > div');
+      const skeletonTokens = responsiveTokens(skeletonRoot);
+
+      // Disqualifier guard (`tasks.md` AIS-T-3): a set the regex missed everything on is a vacuous
+      // pass, not evidence of parity.
+      expect(realTokens.size).toBeGreaterThanOrEqual(6);
+      expect(skeletonTokens.size).toBeGreaterThanOrEqual(6);
+
+      const diff = diffSets(realTokens, skeletonTokens, 'real row', 'skeleton');
+      expect(diff).toBe('');
     });
   });
 });

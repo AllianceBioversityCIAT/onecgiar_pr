@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, OnDestroy, computed, effect, inject, signal, untracked } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { FormsModule } from '@angular/forms';
@@ -37,7 +37,8 @@ import {
   ProgrammeResultsFilterChip,
   ProgrammeResultsFilterService,
   buildCategoryFilterOptions,
-  buildStatusCounts
+  buildStatusCounts,
+  normalize
 } from './services/programme-results-filter.service';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from './services/programme-results-query-params';
 
@@ -74,19 +75,18 @@ export interface PgrColumnDef {
 
 /**
  * Column catalog, in design order:
- * select · CODE · RESULT · SECTION · CATEGORY · STATUS · (CREATED BY · CREATED · ORIGIN · CENTER) ·
- * UPDATED, plus the sticky actions track appended by `grid()`.
+ * CODE · RESULT · CATEGORY · STATUS · (CREATED BY · CREATED · ORIGIN · CENTER) · UPDATED,
+ * plus the sticky actions track appended by `grid()`.
+ * No select-checkbox track — P2-3397 has no bulk action, so the empty column is omitted.
  */
 export const PGR_COLUMNS: readonly PgrColumnDef[] = [
-  { key: 'select', label: '', sortField: '', track: '16px', minPx: 16, optional: false },
   { key: 'code', label: 'Code', sortField: 'code', track: '92px', minPx: 92, optional: false },
   { key: 'title', label: 'Result', sortField: 'title', track: 'minmax(240px,2fr)', minPx: 240, optional: false },
-  { key: 'section', label: 'Section', sortField: '', track: 'minmax(200px,1.4fr)', minPx: 200, optional: false },
   { key: 'category', label: 'Category', sortField: 'category', track: 'minmax(140px,1fr)', minPx: 140, optional: false },
   { key: 'status', label: 'Status', sortField: 'statusName', track: '120px', minPx: 120, optional: false },
   { key: 'createdBy', label: 'Created by', sortField: 'createdBy', track: 'minmax(140px,1fr)', minPx: 140, optional: true },
   { key: 'created', label: 'Created', sortField: 'created', track: '100px', minPx: 100, optional: true },
-  { key: 'origin', label: 'Origin', sortField: 'origin', track: '120px', minPx: 120, optional: true },
+  { key: 'origin', label: 'Funding source', sortField: 'origin', track: '140px', minPx: 140, optional: true },
   { key: 'center', label: 'Center', sortField: 'center', track: 'minmax(140px,1fr)', minPx: 140, optional: true },
   { key: 'updated', label: 'Updated', sortField: 'updated', track: '100px', minPx: 100, optional: false }
 ];
@@ -99,6 +99,24 @@ const PGR_GRID_GAP = 12;
 const PGR_ROW_PADDING = 40;
 
 export const PGR_COLUMN_STORAGE_KEY = 'pr.programmeResults.visibleColumns';
+export const PGR_COLUMN_WIDTHS_STORAGE_KEY = 'pr.programmeResults.columnWidths';
+
+export function readStoredColumnWidths(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(PGR_COLUMN_WIDTHS_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, number>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function writeStoredColumnWidths(widths: Record<string, number>): void {
+  try {
+    localStorage.setItem(PGR_COLUMN_WIDTHS_STORAGE_KEY, JSON.stringify(widths));
+  } catch {
+    // Ignore storage quota / private browsing errors
+  }
+}
 
 /**
  * `status_id` → the `--pr-status-*` fg/bg token PAIRS. Copied verbatim from
@@ -139,8 +157,6 @@ function formatDate(value: string): string {
  * ⚠️ `html` is 12px, so rem-based Tailwind type/size utilities land 25% short of the mockup —
  * every measurement in the template is an arbitrary px value (client `CLAUDE.md` §5, UI-RULES §1.3).
  */
-import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/pr-tab-intro.component';
-
 @Component({
   selector: 'app-programme-results',
   standalone: true,
@@ -158,8 +174,7 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
     PrSortableColumnDirective,
     PrFilterSelectComponent,
     PrFilterMultiselectModule,
-    ChangePhaseModalModule,
-    PrTabIntroComponent
+    ChangePhaseModalModule
   ],
   providers: [
     ProgrammeResultsService,
@@ -377,13 +392,13 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
 
       :host ::ng-deep .pgr-table .pr-table tr.pgr-row {
         display: grid;
-        gap: 12px;
-        align-items: center;
+        gap: 0;
+        align-items: stretch;
       }
 
       :host ::ng-deep .pgr-table .pr-table tr.pgr-head {
         height: 40px;
-        padding: 0 20px;
+        padding: 0;
         background: var(--pr-surface-app);
         border-bottom: 1px solid var(--pr-border);
         /* 11px, not 12px: it nests inside the shell's 1px border. */
@@ -393,7 +408,7 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
       :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row {
         /* min-height, not height — the two-line RESULT cell has to be able to grow. */
         min-height: 52px;
-        padding: 8px 20px;
+        padding: 0;
         /* Lighter than the header's border, per the design. */
         border-bottom: 1px solid var(--pr-border-divider);
         cursor: pointer;
@@ -421,13 +436,18 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
 
       /* Strip pr-table's navy header skin and its padded cells. */
       :host ::ng-deep .pgr-table .pr-table thead th.pgr-th {
+        position: relative;
         min-width: 0;
-        padding: 0;
+        padding: 0 12px;
         border: none;
+        border-right: 1px solid var(--pr-border);
         border-radius: 0;
         background: none;
         text-align: left;
-        vertical-align: middle;
+        display: flex;
+        align-items: center;
+        height: 100%;
+        box-sizing: border-box;
         font-size: 11px;
         font-weight: 600;
         line-height: 1.2;
@@ -439,8 +459,37 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
         text-overflow: ellipsis;
       }
 
+      :host ::ng-deep .pgr-table .pr-table thead th.pgr-th:first-child {
+        padding: 0;
+        justify-content: center;
+      }
+
       :host ::ng-deep .pgr-table .pr-table thead th.pgr-th--sortable {
         cursor: pointer;
+        user-select: none;
+        transition: color 150ms ease, background 150ms ease;
+      }
+
+      :host ::ng-deep .pgr-table .pr-table thead th.pgr-th--sortable:hover {
+        background: rgba(0, 0, 0, 0.025);
+      }
+
+      :host ::ng-deep .pgr-table .pr-table thead th .pgr-col-resizer {
+        position: absolute;
+        right: -1px;
+        top: 0;
+        bottom: 0;
+        width: 8px;
+        cursor: col-resize;
+        z-index: 2;
+        touch-action: none;
+        user-select: none;
+        transition: background-color 150ms ease;
+      }
+
+      :host ::ng-deep .pgr-table .pr-table thead th .pgr-col-resizer:hover,
+      :host ::ng-deep .pgr-table .pr-table thead th .pgr-col-resizer--active {
+        background-color: var(--pr-color-primary-400);
       }
 
       :host ::ng-deep .pgr-table .pr-table thead th.pgr-th--soon {
@@ -453,10 +502,20 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
 
       :host ::ng-deep .pgr-table .pr-table tbody td.pgr-td {
         min-width: 0;
-        padding: 0;
+        padding: 8px 12px;
         border: none;
-        vertical-align: middle;
+        border-right: 1px solid var(--pr-border-divider);
+        display: flex;
+        align-items: center;
+        min-height: 52px;
+        height: 100%;
         color: inherit;
+        box-sizing: border-box;
+      }
+
+      :host ::ng-deep .pgr-table .pr-table tbody td.pgr-td:first-child {
+        padding: 0;
+        justify-content: center;
       }
 
       /* Sticky right: the header's empty spacer paints the header grey so content scrolls behind
@@ -479,7 +538,8 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
         align-self: stretch;
         display: flex;
         align-items: center;
-        justify-content: flex-end;
+        justify-content: center;
+        padding: 0 8px;
         background: inherit;
       }
 
@@ -493,7 +553,7 @@ import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/
     `
   ]
 })
-export class ProgrammeResultsComponent {
+export class ProgrammeResultsComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dataControlSE = inject(DataControlService);
@@ -508,7 +568,7 @@ export class ProgrammeResultsComponent {
 
   /** Full catalog, for the header/cell loops. */
   readonly allColumns = PGR_COLUMNS;
-  /** Only the four the Columns picker offers (Created by · Created · Origin · Center). */
+  /** Only the four the Columns picker offers (Created by · Created · Funding source · Center). */
   readonly optionalColumns = PGR_COLUMNS.filter(column => column.optional);
 
   /** Programme official code from the route (`entity-details/:entityId/results`). */
@@ -523,12 +583,32 @@ export class ProgrammeResultsComponent {
 
   // ── Toolbar / popover state ─────────────────────────────────────────────────────────────
   readonly columnsOpen = signal(false);
+  readonly filterPopoverOpen = signal(false);
   /** Which row's kebab menu is open — one at a time (design: `r.menuOpen` is per row). */
   readonly openMenuKey = signal<string | null>(null);
   /** Undebounced mirror of the search box, so typing does not fight the 300ms debounce. */
   readonly searchDraft = signal('');
 
+  toggleFilterPopover(event: Event): void {
+    event.stopPropagation();
+    this.columnsOpen.set(false);
+    this.openMenuKey.set(null);
+    this.filterPopoverOpen.update(v => !v);
+  }
+
+  closeFilterPopover(): void {
+    this.filterPopoverOpen.set(false);
+  }
+
+  readonly activeFilterCount = computed(() => {
+    return this.filter.activeChips().length;
+  });
+
   private readonly searchInput = new Subject<string>();
+
+  readonly customWidths = signal<Record<string, number>>(readStoredColumnWidths());
+  readonly hasCustomWidths = computed(() => Object.keys(this.customWidths()).length > 0);
+  readonly isResizing = signal(false);
 
   readonly columnVisibility = signal<Record<string, boolean>>({
     ...defaultColumnVisibility(),
@@ -542,7 +622,14 @@ export class ProgrammeResultsComponent {
   });
 
   /** `grid-template-columns` shared by the header row and every data row. */
-  readonly grid = computed(() => [...this.visibleColumns().map(column => column.track), PGR_ACTIONS_TRACK].join(' '));
+  readonly grid = computed(() => {
+    const custom = this.customWidths();
+    const tracks = this.visibleColumns().map(column => {
+      const w = custom[column.key];
+      return w ? `${w}px` : column.track;
+    });
+    return [...tracks, PGR_ACTIONS_TRACK].join(' ');
+  });
 
   /**
    * The `min-width` both rows carry — that shared value is what keeps header and cells aligned
@@ -550,9 +637,13 @@ export class ProgrammeResultsComponent {
    * toggle can never leave one of the three out of step.
    */
   readonly minWidth = computed(() => {
+    const custom = this.customWidths();
     const columns = this.visibleColumns();
     const tracks = columns.length + 1;
-    const content = columns.reduce((total, column) => total + column.minPx, 0) + PGR_ACTIONS_MIN_PX;
+    const content = columns.reduce((total, column) => {
+      const w = custom[column.key];
+      return total + (w || column.minPx);
+    }, 0) + PGR_ACTIONS_MIN_PX;
     return `${content + PGR_GRID_GAP * (tracks - 1) + PGR_ROW_PADDING}px`;
   });
 
@@ -577,8 +668,8 @@ export class ProgrammeResultsComponent {
 
   /** The three states are MUTUALLY EXCLUSIVE, unlike the mockup's three independent blocks. */
   readonly hasRows = computed(() => this.filteredRows().length > 0);
-  readonly isFilteredEmpty = computed(() => !this.data.loading() && !this.filteredRows().length && this.filter.hasActiveFilters());
-  readonly isNothingYet = computed(() => !this.data.loading() && !this.filteredRows().length && !this.filter.hasActiveFilters());
+  readonly isFilteredEmpty = computed(() => !this.data.loading() && this.data.rows().length > 0 && !this.filteredRows().length);
+  readonly isNothingYet = computed(() => !this.data.loading() && this.data.rows().length === 0);
   readonly isFirstLoad = computed(() => this.data.loading() && !this.filteredRows().length);
 
   // ── Filter options ──────────────────────────────────────────────────────────────────────
@@ -594,6 +685,7 @@ export class ProgrammeResultsComponent {
   readonly categorySelectOptions = computed(() => buildCategoryFilterOptions(this.data.categoryOptions(), this.filter.selectedCategory()));
   readonly originSelectOptions = computed(() => this.data.originOptions().map(value => ({ value, label: value })));
   readonly centerSelectOptions = computed(() => this.data.centerOptions().map(value => ({ value, label: value })));
+  readonly createdBySelectOptions = computed(() => this.data.createdByOptions().map(value => ({ value, label: value })));
 
   /**
    * Section options, grouped "Areas of work" / "Programme-level" exactly like
@@ -634,6 +726,12 @@ export class ProgrammeResultsComponent {
     this.router.navigateByUrl(this.reportingPath());
   }
 
+  openWhereToReport(): void {
+    this.router.navigate(['/result-framework-reporting', 'entity-details', this.programmeCode()], {
+      queryParams: { whereToReport: 'true', returnTab: 'results' }
+    });
+  }
+
   get cycleYear(): string | number | null {
     return this.dataControlSE.reportingCurrentPhase?.phaseYear ?? null;
   }
@@ -641,6 +739,53 @@ export class ProgrammeResultsComponent {
   get cyclePhase(): string {
     return this.dataControlSE.reportingCurrentPhase?.portfolioAcronym ?? '';
   }
+
+  /**
+   * Default phase to filter by: the phase selected in Overview (if matching this programme),
+   * or the active reporting phase from DataControlService / phaseOptions.
+   */
+  readonly defaultPhase = computed<string | null>(() => {
+    this.dataControlSE?.reportingPhaseVersion?.();
+    const code = this.programmeCode();
+    const overviewProgram = this.homeSE?.overviewSelectedProgram?.();
+    const isOverviewForThisProgram = overviewProgram && code && overviewProgram.toUpperCase() === code.toUpperCase();
+    const overviewPhase = isOverviewForThisProgram ? this.homeSE?.overviewSelectedPhase?.() : null;
+
+    const available = this.data.phaseOptions();
+
+    // 1. Overview selection if present for this program
+    if (overviewPhase) {
+      const match = available.find(p =>
+        normalize(p) === normalize(overviewPhase) ||
+        (overviewPhase && normalize(p).includes(normalize(overviewPhase))) ||
+        (overviewPhase && normalize(overviewPhase).includes(normalize(p)))
+      );
+      if (match) return match;
+      return overviewPhase;
+    }
+
+    // 2. Active reporting phase
+    const activePhaseName = this.dataControlSE?.reportingCurrentPhase?.phaseName;
+    const activePhaseYear = this.dataControlSE?.reportingCurrentPhase?.phaseYear;
+
+    if (available.length > 0) {
+      if (activePhaseName) {
+        const matchName = available.find(p => normalize(p) === normalize(activePhaseName));
+        if (matchName) return matchName;
+      }
+      if (activePhaseYear) {
+        const matchYear = available.find(p =>
+          normalize(p) === normalize(activePhaseYear) ||
+          normalize(p).includes(String(activePhaseYear)) ||
+          normalize(p) === normalize(`Phase ${activePhaseYear}`)
+        );
+        if (matchYear) return matchYear;
+      }
+      return available[0];
+    }
+
+    return activePhaseName || (activePhaseYear ? `Phase ${activePhaseYear}` : null);
+  });
 
   constructor() {
     effect(() => {
@@ -667,19 +812,23 @@ export class ProgrammeResultsComponent {
     // back, reopening the exact hydrate ↔ mirror loop the equality guard exists to close.
     effect(() => {
       const params = this.queryParams();
+      const defPhase = this.defaultPhase();
 
       untracked(() => {
-        const phase = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase);
+        const urlPhase = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase);
+        const phase = urlPhase !== null ? this.toFilterValue(urlPhase) : defPhase;
         const status = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.status);
         const category = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.category);
         const origin = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin);
         const center = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.center);
+        const createdBy = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy);
 
         if (phase !== this.filter.selectedPhase()) this.filter.selectedPhase.set(phase);
         if (status !== this.filter.selectedStatus()) this.filter.selectedStatus.set(status);
         if (category !== this.filter.selectedCategory()) this.filter.selectedCategory.set(category);
         if (origin !== this.filter.selectedOrigin()) this.filter.selectedOrigin.set(origin);
         if (center !== this.filter.selectedCenter()) this.filter.selectedCenter.set(center);
+        if (createdBy !== this.filter.selectedCreatedBy()) this.filter.selectedCreatedBy.set(createdBy);
       });
     });
 
@@ -695,6 +844,7 @@ export class ProgrammeResultsComponent {
       const category = this.filter.selectedCategory();
       const origin = this.filter.selectedOrigin();
       const center = this.filter.selectedCenter();
+      const createdBy = this.filter.selectedCreatedBy();
 
       untracked(() => {
         const current = this.route.snapshot.queryParamMap;
@@ -703,7 +853,8 @@ export class ProgrammeResultsComponent {
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.status]: status,
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.category]: category,
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin]: origin,
-          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.center]: center
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.center]: center,
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy]: createdBy
         };
         const changed = Object.entries(next).some(([key, value]) => (current.get(key) ?? null) !== (value ?? null));
         if (!changed) return;
@@ -725,12 +876,17 @@ export class ProgrammeResultsComponent {
   // ── Chips ───────────────────────────────────────────────────────────────────────────────
   clearChip(chip: ProgrammeResultsFilterChip): void {
     if (chip?.dimension === 'search') this.searchDraft.set('');
+    if (chip?.dimension === 'phase') {
+      this.filter.selectedPhase.set(this.defaultPhase());
+      return;
+    }
     this.filter.clearChip(chip);
   }
 
   clearAll(): void {
     this.searchDraft.set('');
     this.filter.clearAll();
+    this.filter.selectedPhase.set(this.defaultPhase());
   }
 
   // ── Single-select filters ───────────────────────────────────────────────────────────────
@@ -744,7 +900,8 @@ export class ProgrammeResultsComponent {
   }
 
   onPhaseChange(value: unknown): void {
-    this.filter.selectedPhase.set(this.toFilterValue(value));
+    const nextVal = this.toFilterValue(value);
+    this.filter.selectedPhase.set(nextVal ?? this.defaultPhase());
   }
 
   onStatusChange(value: unknown): void {
@@ -761,6 +918,11 @@ export class ProgrammeResultsComponent {
 
   onCenterChange(value: unknown): void {
     this.filter.selectedCenter.set(this.toFilterValue(value));
+  }
+
+  // @akili-spec result-framework-reporting/programme-results-created-by-filter
+  onCreatedByChange(value: unknown): void {
+    this.filter.selectedCreatedBy.set(this.toFilterValue(value));
   }
 
   // ── Status counters ─────────────────────────────────────────────────────────────────────
@@ -806,6 +968,74 @@ export class ProgrammeResultsComponent {
     event?.stopPropagation();
     this.openMenuKey.set(null);
     this.columnsOpen.update(open => !open);
+  }
+
+  // ── Column resizing (TRC-R-1..4) ────────────────────────────────────────────────────────
+  private activeResize: {
+    columnKey: string;
+    startX: number;
+    startWidth: number;
+    minPx: number;
+  } | null = null;
+
+  private readonly onWindowMouseMove = (event: MouseEvent): void => {
+    if (!this.activeResize) return;
+    const deltaX = event.clientX - this.activeResize.startX;
+    const newWidth = Math.max(this.activeResize.minPx, Math.round(this.activeResize.startWidth + deltaX));
+    this.customWidths.update(prev => ({ ...prev, [this.activeResize!.columnKey]: newWidth }));
+  };
+
+  private readonly onWindowMouseUp = (): void => {
+    if (!this.activeResize) return;
+    this.activeResize = null;
+    this.isResizing.set(false);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    window.removeEventListener('mousemove', this.onWindowMouseMove);
+    window.removeEventListener('mouseup', this.onWindowMouseUp);
+    writeStoredColumnWidths(this.customWidths());
+  };
+
+  onResizeStart(event: MouseEvent, column: PgrColumnDef, thElement: HTMLElement): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const startWidth = thElement.getBoundingClientRect().width;
+    this.activeResize = {
+      columnKey: column.key,
+      startX: event.clientX,
+      startWidth,
+      minPx: column.minPx
+    };
+    this.isResizing.set(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', this.onWindowMouseMove);
+    window.addEventListener('mouseup', this.onWindowMouseUp);
+  }
+
+  onResizeReset(column: PgrColumnDef, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.customWidths.update(prev => {
+      const next = { ...prev };
+      delete next[column.key];
+      writeStoredColumnWidths(next);
+      return next;
+    });
+  }
+
+  resetAllColumnWidths(): void {
+    this.customWidths.set({});
+    writeStoredColumnWidths({});
+  }
+
+  ngOnDestroy(): void {
+    if (this.activeResize) {
+      window.removeEventListener('mousemove', this.onWindowMouseMove);
+      window.removeEventListener('mouseup', this.onWindowMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
   }
 
   // ── Sorting (owned by app-pr-table) ─────────────────────────────────────────────────────
@@ -1031,7 +1261,7 @@ export class ProgrammeResultsComponent {
    * would hand the user a spreadsheet under a CSV label.
    */
   exportCsv(): void {
-    const columns = this.visibleColumns().filter(column => column.key !== 'select');
+    const columns = this.visibleColumns();
     const rows = this.filteredRows();
     if (!rows.length) return;
 
@@ -1050,16 +1280,31 @@ export class ProgrammeResultsComponent {
   }
 
   // ── Dismissal ───────────────────────────────────────────────────────────────────────────
-  /** Outside click closes the Columns popover and any open row menu (the mockup draws neither). */
-  @HostListener('document:click')
-  onDocumentClick(): void {
+  /** Outside click closes the Columns popover, Filter popover and any open row menu. */
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event?: MouseEvent): void {
     if (this.columnsOpen()) this.columnsOpen.set(false);
     if (this.openMenuKey()) this.openMenuKey.set(null);
+
+    const target = event?.target as HTMLElement | null;
+    if (typeof target?.closest === 'function') {
+      if (
+        target.closest('.pr-results-filter-container') ||
+        target.closest('.p-multiselect-panel') ||
+        target.closest('.p-dropdown-panel')
+      ) {
+        return;
+      }
+    }
+    if (this.filterPopoverOpen()) {
+      this.filterPopoverOpen.set(false);
+    }
   }
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
     this.onDocumentClick();
+    if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
   }
 }
 

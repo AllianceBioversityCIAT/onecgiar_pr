@@ -99,6 +99,72 @@ describe('ExistingResultContributorsLoaderService', () => {
         status: HttpStatus.NOT_FOUND,
       });
     });
+
+    // @akili-spec changes/indicator-reported-results (IRR-R-3.1, IRR-AC-3)
+    it('should default to the reviewed scope status set when scope is omitted', async () => {
+      mockResultsTocResultRepository.find.mockResolvedValueOnce([
+        { result_toc_result_id: 11, result_id: 101 },
+      ]);
+
+      await service.loadContributions(5, 'IND-55');
+
+      const statusWhere =
+        mockResultsTocResultRepository.find.mock.calls[0][0].where.obj_results
+          .status_id;
+      expect(statusWhere._type).toBe('in');
+      expect([...statusWhere._value].sort((a, b) => a - b)).toEqual([2, 6]);
+    });
+
+    // @akili-spec changes/indicator-reported-results (IRR-R-3, IRR-AC-3)
+    it('should use the reviewed scope status set ([QualityAssessed, Approved]) for scope="reviewed"', async () => {
+      mockResultsTocResultRepository.find.mockResolvedValueOnce([
+        { result_toc_result_id: 11, result_id: 101 },
+      ]);
+
+      await service.loadContributions(5, 'IND-55', 'reviewed');
+
+      const statusWhere =
+        mockResultsTocResultRepository.find.mock.calls[0][0].where.obj_results
+          .status_id;
+      expect(statusWhere._type).toBe('in');
+      expect([...statusWhere._value].sort((a, b) => a - b)).toEqual([2, 6]);
+    });
+
+    // @akili-spec changes/indicator-reported-results (IRR-R-3, IRR-R-3.1, IRR-AC-3)
+    it('should use the explicit all-scope status set (Editing, QualityAssessed, Submitted, PendingReview, Approved) for scope="all", excluding Discontinued/Rejected/Draft', async () => {
+      mockResultsTocResultRepository.find.mockResolvedValueOnce([
+        { result_toc_result_id: 11, result_id: 101 },
+      ]);
+
+      await service.loadContributions(5, 'IND-55', 'all');
+
+      const statusWhere =
+        mockResultsTocResultRepository.find.mock.calls[0][0].where.obj_results
+          .status_id;
+      expect(statusWhere._type).toBe('in');
+      const statusIds = [...statusWhere._value].sort((a, b) => a - b);
+      expect(statusIds).toEqual([1, 2, 3, 5, 6]);
+      // Discontinued (4), Rejected (7), Draft (8) must be absent
+      expect(statusIds).not.toContain(4);
+      expect(statusIds).not.toContain(7);
+      expect(statusIds).not.toContain(8);
+    });
+
+    // @akili-spec changes/indicator-reported-results
+    it('should include obj_result_type in relations and select', async () => {
+      mockResultsTocResultRepository.find.mockResolvedValueOnce([
+        { result_toc_result_id: 11, result_id: 101 },
+      ]);
+
+      await service.loadContributions(5, 'IND-55', 'all');
+
+      const callArgs = mockResultsTocResultRepository.find.mock.calls[0][0];
+      expect(callArgs.relations.obj_results.obj_result_type).toBe(true);
+      expect(callArgs.select.obj_results.obj_result_type).toEqual({
+        id: true,
+        name: true,
+      });
+    });
   });
 
   describe('filterContributorsWithIndicator', () => {

@@ -261,6 +261,47 @@
   }
 }
 
+/* ── By-AoW View Tabular Layout (BTC-R-2) ──
+   6-column grid: [Chevron 28px] [Title 1fr] [Target 76px] [Achieved 76px] [KPIs 64px] [Progress 130px] */
+$pr-by-aow-tracks: 28px minmax(240px, 1fr) 76px 76px 64px 130px;
+$pr-by-aow-gap: 12px;
+$pr-by-aow-pad: 8px 16px;
+
+.pr-by-aow-head {
+  display: grid;
+  grid-template-columns: $pr-by-aow-tracks;
+  align-items: center;
+  gap: $pr-by-aow-gap;
+  height: 32px;
+  padding: 0 16px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pr-text-muted);
+  user-select: none;
+  box-sizing: border-box;
+  min-width: 680px;
+}
+
+.pr-by-aow-row {
+  display: grid;
+  grid-template-columns: $pr-by-aow-tracks;
+  align-items: center;
+  gap: $pr-by-aow-gap;
+  min-height: 48px;
+  padding: $pr-by-aow-pad;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 680px;
+  text-align: left;
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: -2px;
+  }
+}
+
 // ─── Legacy "Report emerging result" dialog ───────────────────────────────────
 // Moved AS-IS from entity-details.component.scss (the retired host of this same modal).
 // Deliberately NOT re-authored in Tailwind: `::ng-deep` is component-scoped, so without this
@@ -320,6 +361,23 @@
       right: 24px !important;
       bottom: 20px !important;
       margin: 0 !important;
+    }
+  }
+
+  .where-to-report-dialog {
+    width: 85vw !important;
+    max-width: 1140px !important;
+    max-height: 90vh !important;
+    border-radius: 16px !important;
+
+    @media screen and (max-width: 1100px) {
+      width: 95vw !important;
+      max-width: none !important;
+    }
+
+    .pr-dialog__body {
+      padding: 0 !important;
+      overflow-y: hidden;
     }
   }
 }

@@ -67,10 +67,19 @@ describe('ProgramOverviewComponent — OAH hero (rail + chips + skeletons + empt
     { code: 'AOW02', name: 'Accelerated Breeding', complete: 0, inProgress: 1, notStarted: 136, zeroTarget: 0, reported: 1, total: 137, remaining: 136 }
   ];
 
-  /** Thin-input fixture (DD-4) — untouched by the hero rebuild; feeds KPI card 4 / `aowStats`. */
+  /**
+   * Thin-input fixture — untouched by the hero rebuild; feeds KPI card 4 / `aowStats`.
+   *
+   * KCR fixture extension: the rows now carry `zeroTarget`, the optional field the host's
+   * `overviewAowProgress` fills since `bugfix/kpi-count-reconciliation`. Without it every candidate
+   * card-4 basis reads the same on this fixture; with it, *Counted* (Σ `total` = 10, pct 30) and
+   * the superseded unfiltered *Planned* aggregate (Σ `total + zeroTarget` = 13, pct 23) differ, so
+   * the assertions below actually choose one (KCR-R-2 lists `aowStats` among the denominators that
+   * must be Counted; KCR-DD-2 supersedes OAH DD-4's "their numbers do not move").
+   */
   const aows: AowProgressRow[] = [
-    { code: 'AOW06', name: 'Data', done: 0, total: 2 },
-    { code: 'AOW01', name: 'Market', done: 3, total: 8 }
+    { code: 'AOW06', name: 'Data', done: 0, total: 2, zeroTarget: 2 },
+    { code: 'AOW01', name: 'Market', done: 3, total: 8, zeroTarget: 1 }
   ];
 
   beforeEach(async () => {
@@ -175,6 +184,50 @@ describe('ProgramOverviewComponent — OAH hero (rail + chips + skeletons + empt
     expect(emitted).toEqual(['intermediate-outcomes']);
   });
 
+  // ── KCR-T-3 · chip disclosure (KCR-R-2.1 / KCR-R-6, KCR-AC-2) ──────────────
+  /**
+   * Chip denominators are *Counted*, so a bucket that plans more than it counts has to say so.
+   * Asserted as the FULL string on the chip that owns the exclusion, and asserted ABSENT on the
+   * one that has none — a chip that titled everything would pass a `toContain` check and still be
+   * wrong (requirements.md §9, defect class "a `title` present with wrong text").
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  const outcomeChips = (): HTMLElement[] =>
+    fixture.debugElement
+      .queryAll(By.css('button'))
+      .filter(b => /Intermediate outcomes|2030 outcomes/.test(b.nativeElement.textContent))
+      .map(b => b.nativeElement as HTMLElement);
+
+  it('discloses the chip exclusion in the singular and only on the chip that has one (KCR-AC-2)', () => {
+    fixture.componentRef.setInput('richRows', richRows);
+    // requirements.md §7 fixture: Intermediate plans #901 + #902, #902 is zero-target → 0/1.
+    fixture.componentRef.setInput('xcutProgress', [
+      { code: 'intermediate-outcomes', name: 'Intermediate outcomes', done: 0, total: 1, zeroTarget: 1 },
+      { code: '2030-outcomes', name: '2030 outcomes', done: 0, total: 1, zeroTarget: 0 }
+    ]);
+    fixture.detectChanges();
+
+    const [intermediate, outcomes2030] = outcomeChips();
+    expect(intermediate.textContent).toContain('0/1');
+    expect(intermediate.getAttribute('title')).toBe('excludes 1 zero-target KPI');
+    expect(outcomes2030.textContent).toContain('0/1');
+    expect(outcomes2030.getAttribute('title')).toBeNull();
+  });
+
+  it('pluralises the chip exclusion past one, and omits it when the row carries no zeroTarget field', () => {
+    fixture.componentRef.setInput('richRows', richRows);
+    fixture.componentRef.setInput('xcutProgress', [
+      { code: 'intermediate-outcomes', name: 'Intermediate outcomes', done: 0, total: 5, zeroTarget: 3 },
+      // A pre-KCR caller that never sets the optional field: no disclosure, no `undefined` leak.
+      { code: '2030-outcomes', name: '2030 outcomes', done: 0, total: 5 }
+    ]);
+    fixture.detectChanges();
+
+    const [intermediate, outcomes2030] = outcomeChips();
+    expect(intermediate.getAttribute('title')).toBe('excludes 3 zero-target KPIs');
+    expect(outcomes2030.getAttribute('title')).toBeNull();
+  });
+
   it('leaves the thin aowProgress consumers untouched — card 4 / aowStats still derive from aowProgress, not richRows (DD-4)', () => {
     fixture.componentRef.setInput('richRows', richRows);
     fixture.detectChanges();
@@ -183,6 +236,13 @@ describe('ProgramOverviewComponent — OAH hero (rail + chips + skeletons + empt
     expect(component.aowStats().pct).toBe(30);
     expect(component.aowStats().totalDone).toBe(3);
     expect(component.aowStats().totalPlanned).toBe(10);
+    // KCR — card 4's aggregate is the rows' *Counted* sum and must NOT add the excluded KPIs back:
+    // the fixture's 3 zero-target KPIs would make it 13 (pct 23) under the superseded unfiltered
+    // basis. design §6.2 `overviewAowProgress` row / KCR-R-2 (`aowStats` is a listed denominator).
+    // What DD-4 still buys is the WIRING asserted above — card 4 reads `aowProgress`, not
+    // `richRows`; what KCR-DD-2 superseded is DD-4's promise that its numbers would not move.
+    expect(component.aowStats().totalPlanned).not.toBe(10 + 3);
+    expect(component.aowStats().pct).not.toBe(23);
   });
 
   it('the rail CTA emits continueReporting — the host performs the actual navigation (OAH-R-1 CTA)', () => {
@@ -376,10 +436,19 @@ describe('ProgramOverviewComponent — OAH hero rows (segmented bar + figures + 
     expect(emitted).toEqual(['AOW01']);
   });
 
-  it('openAow receives the row code from the row click, the Report button, and the open icon — exactly one emission each (OAH-R-4 single output)', () => {
+  it('openAow still receives the row code from the Report button and the open icon — exactly one emission each, and never ALSO scopeChange (OAH-R-4 single output; row click reverted by RGS-T-2)', () => {
     fixture.componentRef.setInput('richRows', [honestAt1Percent]);
     fixture.detectChanges();
 
+    // REWRITTEN (`RGS-T-2`, `docs/specs/changes/aow-row-gesture-split`, tasks.md DoD bullet named
+    // this file+line explicitly): this test used to assert `rowEl.click()` emits `openAow` — that
+    // premise is DELIBERATELY REVERTED (execution.md §7 reversion challenge: the row body now
+    // filters via `selectScope`, not `openAow`; see `program-overview.scope.spec.ts`, describe
+    // "AoW row gestures split, and the selected state (RGS-T-2)" for the row's new coverage). The
+    // coverage this test owns is re-pointed, not deleted: `Report` and `→` still emit `openAow`,
+    // and — now that the row body emits a DIFFERENT output — the disqualifying case worth guarding
+    // is that neither of them ALSO emits `scopeChange`.
+    //
     // Deliberate edit (T-6 live finding, 2026-09-01): the fixed `1fr 260px 120px 170px` tracks
     // starved the row's identity column in the real layout — replaced with responsive tracks that
     // protect the name first (program-overview.component.html row grid). Selected by `.group.grid`
@@ -393,26 +462,35 @@ describe('ProgramOverviewComponent — OAH hero rows (segmented bar + figures + 
     expect(reportButton).toBeTruthy();
     expect(iconButton).toBeTruthy();
 
-    // Row click.
-    let emitted: string[] = [];
-    let sub = component.openAow.subscribe(code => emitted.push(code));
-    rowEl.click();
-    expect(emitted).toEqual(['AOW02']);
-    sub.unsubscribe();
-
-    // Report button — must not ALSO trigger the row's own click (stopPropagation).
-    emitted = [];
-    sub = component.openAow.subscribe(code => emitted.push(code));
+    // Report button — must not ALSO trigger the row's own click (stopPropagation, RGS-R-2), and
+    // must not ALSO change the scope.
+    let openEmitted: string[] = [];
+    let scopeEmitted: (string | null)[] = [];
+    let openSub = component.openAow.subscribe(code => openEmitted.push(code));
+    let scopeSub = component.scopeChange.subscribe(key => scopeEmitted.push(key));
     reportButton!.nativeElement.click();
-    expect(emitted).toEqual(['AOW02']);
-    sub.unsubscribe();
+    expect(openEmitted).toEqual(['AOW02']);
+    expect(scopeEmitted).toEqual([]);
+    openSub.unsubscribe();
+    scopeSub.unsubscribe();
 
-    // Open icon — same single path.
-    emitted = [];
-    sub = component.openAow.subscribe(code => emitted.push(code));
+    // Open icon — same single path, same guard.
+    openEmitted = [];
+    scopeEmitted = [];
+    openSub = component.openAow.subscribe(code => openEmitted.push(code));
+    scopeSub = component.scopeChange.subscribe(key => scopeEmitted.push(key));
     iconButton!.nativeElement.click();
-    expect(emitted).toEqual(['AOW02']);
-    sub.unsubscribe();
+    expect(openEmitted).toEqual(['AOW02']);
+    expect(scopeEmitted).toEqual([]);
+    openSub.unsubscribe();
+    scopeSub.unsubscribe();
+
+    // Row body — reverted premise: clicking it no longer emits openAow at all.
+    openEmitted = [];
+    openSub = component.openAow.subscribe(code => openEmitted.push(code));
+    rowEl.click();
+    expect(openEmitted).toEqual([]);
+    openSub.unsubscribe();
   });
 
   it('canReportW1W2=false disables the rebuilt Report button with aria-disabled and the exact tooltip, while keeping it keyboard-reachable (REH-R-8, pinned contract)', () => {

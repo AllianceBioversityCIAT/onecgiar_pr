@@ -2743,6 +2743,8 @@ describe('ResultsFrameworkReportingService', () => {
           status_id: 2,
           role_id: 4,
           contributing_indicator: 3.5,
+          result_type_id: 2,
+          result_type_name: null,
         },
       ]);
       expect(mockHandlersError.returnErrorRes).not.toHaveBeenCalled();
@@ -2879,6 +2881,102 @@ describe('ResultsFrameworkReportingService', () => {
         }),
         debug: true,
       });
+    });
+
+    // @akili-spec changes/indicator-reported-results (IRR-R-3, IRR-R-3.1, IRR-AC-3)
+    it('should request the explicit all-scope status set (excluding Discontinued/Rejected/Draft) when scope="all"', async () => {
+      mockResultsTocResultRepository.find.mockResolvedValueOnce([
+        {
+          result_toc_result_id: 11,
+          result_id: 101,
+          toc_result_id: 5,
+          obj_results: {
+            title: 'Result Alpha',
+            result_code: 'RES-101',
+            result_type_id: 6,
+            version_id: 30,
+            status_id: 3,
+            obj_status: { status_name: 'Submitted' },
+            obj_result_type: { id: 6, name: 'Knowledge product' },
+          },
+        },
+      ]);
+      mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([
+        { results_toc_results_id: 11 },
+      ]);
+      mockRoleByUserRepository.find.mockResolvedValueOnce([]);
+      mockResultRepository.getUserRolesForResults.mockResolvedValueOnce([]);
+
+      const result: any =
+        await service.getExistingResultContributorsToIndicators(
+          user,
+          5,
+          'IND-55',
+          'all',
+        );
+
+      const statusWhere =
+        mockResultsTocResultRepository.find.mock.calls[0][0].where.obj_results
+          .status_id;
+      expect(statusWhere._type).toBe('in');
+      const statusIds = [...statusWhere._value].sort((a, b) => a - b);
+      expect(statusIds).toEqual([1, 2, 3, 5, 6]);
+      expect(statusIds).not.toContain(4);
+      expect(statusIds).not.toContain(7);
+      expect(statusIds).not.toContain(8);
+      expect(result.status).toBe(200);
+      expect(result.response.contributors[0]).toEqual(
+        expect.objectContaining({
+          result_type_id: 6,
+          result_type_name: 'Knowledge product',
+        }),
+      );
+    });
+
+    // @akili-spec changes/indicator-reported-results (IRR-R-3.1, IRR-AC-3) — default endpoint behaviour unchanged
+    it('should normalise an unknown scope value ("foo") to the reviewed-scope status set', async () => {
+      mockResultsTocResultRepository.find.mockResolvedValueOnce([
+        {
+          result_toc_result_id: 11,
+          result_id: 101,
+          toc_result_id: 5,
+          obj_results: {
+            title: 'Result Alpha',
+            result_code: 'RES-101',
+            result_type_id: 6,
+            version_id: 30,
+            status_id: 2,
+            obj_status: { status_name: 'Quality assessed' },
+          },
+        },
+      ]);
+      mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([
+        { results_toc_results_id: 11 },
+      ]);
+      mockRoleByUserRepository.find.mockResolvedValueOnce([]);
+      mockResultRepository.getUserRolesForResults.mockResolvedValueOnce([]);
+
+      const result: any =
+        await service.getExistingResultContributorsToIndicators(
+          user,
+          5,
+          'IND-55',
+          'foo',
+        );
+
+      const statusWhere =
+        mockResultsTocResultRepository.find.mock.calls[0][0].where.obj_results
+          .status_id;
+      expect(statusWhere._type).toBe('in');
+      expect([...statusWhere._value].sort((a, b) => a - b)).toEqual([2, 6]);
+      expect(result.status).toBe(200);
+      // never the numeric id when obj_result_type is absent
+      expect(result.response.contributors[0]).toEqual(
+        expect.objectContaining({
+          result_type_id: 6,
+          result_type_name: null,
+        }),
+      );
     });
   });
 

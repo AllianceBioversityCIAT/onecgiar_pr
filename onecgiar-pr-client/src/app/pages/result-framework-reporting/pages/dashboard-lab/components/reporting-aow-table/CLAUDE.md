@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-09-03 · branch qa-development-2026-ss · 9b9c032ba (RTA-T-1 sticky pin + RTA-T-2 CT regression, landed; cherry-picked to performance-refactor as d5cf496be)
+**Verified:** 2026-09-04 · branch qa-development-2026-ss · merge of origin/performance-refactor 85fdfc8c3 into 9b9c032ba (RTA-T-1's sticky-pin grid was superseded by this branch's tabular redesign — see the RTA-T-1 note below)
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjetas colapsables por Area
@@ -49,6 +49,11 @@ ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio
   Category llegaba idéntica a un AoW sin nada planeado, y el estado vacío afirmaba *"this area of work
   has no planned indicators yet"* sobre una tarjeta llena (P2-3405). Si añades un sexto filtro,
   actualiza `dashboard-lab.reportingFiltersActive()`.
+- ⚠️ **`.pr-collapse`/`.pr-collapse-inner` moved OUT of this file's `.scss`** (`changes/aow-row-gesture-split`,
+  `RGS-T-3`): now shared at `src/styles/collapse.scss`, reused by `program-overview`'s AoW hero.
+  Don't re-add a local copy here. That spec also logs (not fixed here) that THIS card's collapse
+  has zero `inert` — 20 buttons stay tabbable-but-`aria-hidden` while closed; `program-overview`'s
+  NEW collapse does not copy that gap.
 - ⚠️ **La tarjeta NO lleva `overflow-hidden`.** Lo llevaba, y recortaba el popover de la ⓘ a una tira
   de 6px. El clip de la animación lo hace `.pr-collapse-inner`; las esquinas inferiores las redondea
   `.pr-collapse--card > .pr-collapse-inner`. No devuelvas el `overflow` a la `<section>`.
@@ -62,9 +67,7 @@ ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio
   debajo. Las celdas fijas van a `left: 0` / `right: 0`.
 - ⚠️ **No pongas un segundo scroller.** `app-pr-table` ya renderiza `.pr-table-wrap` con
   `overflow-x: auto`; envolverlo en otro daba dos barras para un solo eje.
-- **RTA-T-1 (2026-09-01, sticky pivot + gutter/height rework):** `.pr-collapse--rows > .pr-collapse-inner` sigue scrolleando SOLO 1-6 (`min-width: 1048px` en ambas).
-  Pistas 7-8 `position: sticky` + `align-self: stretch` (una celda vacía —AoW sin copy-link ni action label— ya no da altura 0); `.pr-pin-actions` `right: 56px` y `.pr-pin-menu` `right: 0`, cada una con `padding-right`/`margin-right` negativo igual para pintar el gap de 16px y el padding de 20px de la fila (RTA-R-4/R-11 intactos).
-  Fondo cubre `:hover` Y `.pr-row-highlighted` (Next-pending) — antes solo el primero.
+- ⚠️ **RTA-T-1 (sticky pins, `bugfix/reporting-table-actions-clipped`) — superseded, confirmed on disk after the 2026-09-04 merge.** The `.scss`'s own merge note (top of the file) confirms `.pr-pin-actions` / `.pr-pin-menu` / `.pr-hlo-pin-*`, `.pr-collapse--rows` and `min-width: 1048px` were NOT carried over: the tabular redesign (`$pr-reporting-tracks`, no *Next pending* button, in-card popovers) is what's live. If clipping under ~1000px reappears, re-derive the fix against this grid — do not restore the RTA rules verbatim.
 - ⚠️ **`app-pr-table` ordena con `<`/`>` sobre el valor crudo y no acepta comparador.** Por eso
   `flatTableRows()` precalcula `__sortTarget` / `__sortAchieved` / `__sortStatus`:
   `target_value_sum` llega como STRING y ordenaba `"9" > "100"`. "Nada reportado" es

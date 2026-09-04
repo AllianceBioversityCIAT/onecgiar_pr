@@ -45,6 +45,20 @@ export class ComplementaryInnovationComponent implements OnInit {
   complementaries = false;
   informationComplentary: any;
 
+  /**
+   * P2-3572 (epic P2-3243) — which result types Step 2 lists as candidate enablers.
+   *
+   * Local constants because the client has no shared ResultTypeEnum; same choice, and for the same
+   * reason, as `pages/bilateral/components/section-geography/section-geography.component.ts:15`.
+   * Ids mirror the server's `shared/constants/result-type.enum.ts`.
+   *
+   * ❌ Knowledge Product (6) is absent on purpose — the story excludes it explicitly, "regardless of
+   * their association with the package". Complementary innovation (11) is absent too: those are the
+   * ad-hoc entries created from the modal below, never rows of this table.
+   */
+  private static readonly ENABLER_TYPE_IDS_LEGACY = [7];
+  private static readonly ENABLER_TYPE_IDS_2026 = [1, 2, 5, 7];
+
   constructor(
     public api: ApiService,
     public ipsrDataControlSE: IpsrDataControlService,
@@ -244,6 +258,26 @@ export class ComplementaryInnovationComponent implements OnInit {
     }
   }
 
+  /**
+   * P2-3572. From the 2026 phase the table also lists Innovation Use, Policy Change and Capacity
+   * Sharing for Development; phases <= 2025 keep the Innovation-Development-only table they have
+   * today. The status filter is the server's and is unchanged — only these types widen.
+   *
+   * The gate is the phase year of the PACKAGE BEING EDITED, not of the listed results: the story
+   * lists results "from all phases", it is the form that is versioned by phase (point 4 of the PO
+   * instruction on this epic). Phase year, never `isP25()` — the P25 portfolio starts in 2025.
+   *
+   * No load race to guard against: `innovation-package-detail.component.html:64` only activates the
+   * `<router-outlet>` once `porfolioExists()` is truthy, and `portfolio` and `phase_year` arrive in
+   * the same `GETInnovationPackageDetail` payload — so this component cannot mount before the year
+   * is known. And `isPhaseYearAtLeast` fails to the legacy list if it ever were unknown.
+   */
+  private enablerTypeIds(): number[] {
+    return this.api.fieldsManagerSE.isIpsrStepTwoEnablerTypes2026()
+      ? ComplementaryInnovationComponent.ENABLER_TYPE_IDS_2026
+      : ComplementaryInnovationComponent.ENABLER_TYPE_IDS_LEGACY;
+  }
+
   loadInformationComplementaryInnovations(): void {
     this.api.resultsSE.GETinnovationpathwayStepTwo().subscribe((resp: any) => {
       resp.response.forEach(inno => {
@@ -252,7 +286,7 @@ export class ComplementaryInnovationComponent implements OnInit {
         inno.permissos = this.isInitiative;
       });
 
-      this.informationInnovationDevelopments = resp.response.filter((element: any) => element.result_type_id === 7);
+      this.informationInnovationDevelopments = resp.response.filter((element: any) => this.enablerTypeIds().includes(element.result_type_id));
 
       this.innovationPackageCreatorBody.forEach(selected => {
         const foundDevelopment = this.informationInnovationDevelopments.find(item => item.result_id === selected.result_id);

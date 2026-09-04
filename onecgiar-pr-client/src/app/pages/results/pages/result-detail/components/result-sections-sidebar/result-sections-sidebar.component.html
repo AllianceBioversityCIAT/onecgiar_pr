@@ -12,6 +12,34 @@
 <aside
   class="pr-light-scroll flex h-full w-[240px] shrink-0 flex-col overflow-y-auto border-r border-[var(--pr-border)] bg-white px-[20px] py-[24px]"
   data-testid="result-sections-sidebar">
+  @if (sectionsSE.resultCode() || sectionsSE.resultTypeName() || sectionsSE.statusLabel()) {
+    <div class="mb-[16px] flex shrink-0 flex-col gap-[6px] border-b border-[var(--pr-border)] px-[10px] pb-[16px]" data-testid="result-sections-identity">
+      @if (sectionsSE.resultCode()) {
+        <span class="text-[12px] font-normal text-[var(--pr-text-muted)]" data-testid="result-sections-code"
+          >Result code #{{ sectionsSE.resultCode() }}</span
+        >
+      }
+      @if (sectionsSE.resultTypeName()) {
+        <span
+          class="text-[12px] font-semibold uppercase leading-[1.35] tracking-[0.02em] text-[var(--pr-text)]"
+          [title]="sectionsSE.resultTypeName()"
+          data-testid="result-sections-type"
+          >{{ sectionsSE.resultTypeName() }}</span
+        >
+      }
+      @if (sectionsSE.statusLabel()) {
+        <span
+          class="mt-[4px] w-fit rounded-full border bg-white px-[10px] py-[3px] text-[11px] font-semibold uppercase tracking-[0.06em]"
+          [style.color]="sectionsSE.statusFg()"
+          [style.border-color]="sectionsSE.statusFg()"
+          [style.background-color]="sectionsSE.statusBg()"
+          data-testid="result-sections-status">
+          {{ sectionsSE.statusLabel() }}
+        </span>
+      }
+    </div>
+  }
+
   <p class="m-0 px-[10px] pb-[8px] text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--pr-text-muted)]">Sections</p>
 
   <nav class="flex shrink-0 flex-col gap-[2px]" aria-label="Result sections">

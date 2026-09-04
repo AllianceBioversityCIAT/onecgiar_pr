@@ -35,7 +35,23 @@
   @if (isPlanned() === true) {
     @if (isLoading()) {
       <app-form-skeleton [rows]="3" [hasLabel]="true" [hasExtra]="true" [extraRows]="4" />
-    } @else if (initiativeId()) {
+    } @else if (!initiativeId()) {
+      <!-- The Level → node → indicator chain is scoped to the PRIMARY Science Program's ToC, and
+           `initiativeId` only exists once that program is persisted on the result (loadResult reads
+           the role-1 row). Without this note, answering "Yes" before the first save rendered nothing
+           at all — and the mapping form "appearing" after Save draft looked like a glitch. -->
+      <div class="st-empty" data-testid="toc-waiting-primary-sp">
+        <i class="material-icons-round st-empty-icon">info_outline</i>
+        <span>
+          The Level options come from the primary Science Program's Theory of Change
+          @if (programCode()) {
+            ({{ programCode() }}), which has not been stored on this result yet — use Save draft and they will load here.
+          } @else {
+            — select the primary Science Program and save the draft, then they will load here.
+          }
+        </span>
+      </div>
+    } @else {
       @if (showLevelSelector()) {
         <div class="st-field">
           <label class="st-label">Level <span class="text-(--pr-color-red-300)">*</span></label>
@@ -139,11 +155,6 @@
           </app-pr-textarea>
         </div>
       }
-    } @else {
-      <div class="st-empty">
-        <i class="material-icons-round st-empty-icon">info</i>
-        <span>Initiative not found for program code {{ programCode() }}. ToC alignment is unavailable.</span>
-      </div>
     }
   }
 </div>

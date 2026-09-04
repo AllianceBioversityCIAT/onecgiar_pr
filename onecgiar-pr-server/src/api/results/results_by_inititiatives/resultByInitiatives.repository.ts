@@ -255,7 +255,17 @@ export class ResultByInitiativesRepository
     }
   }
 
-  async getDraftInit(resultId: number) {
+  /**
+   * Contribution requests for a result, picking WHICH kind by the result's lifecycle stage: while a
+   * result sits in one of `draftVisibleStatuses` the DRAFT requests (status 4 — the centre's intent,
+   * invisible to the contributor SP) are returned; anywhere else the live PENDING requests (status 1).
+   *
+   * `draftVisibleStatuses` defaults to Pending Review only — the historical behaviour every W1/W2
+   * caller relies on. The bilateral detail passes Editing/Draft too (2026-09-04): the centre form
+   * now stages its contributing programs as drafts, and hydrating the form after a reload has to
+   * see them before the result is ever submitted.
+   */
+  async getDraftInit(resultId: number, draftVisibleStatuses: number[] = [5]) {
     try {
       // Get result status_id
       const statusQuery = `
@@ -271,7 +281,7 @@ export class ResultByInitiativesRepository
       }
 
       const statusId = Number(statusResult[0]?.status_id);
-      const requestStatusId = statusId === 5 ? 4 : 1;
+      const requestStatusId = draftVisibleStatuses.includes(statusId) ? 4 : 1;
 
       const queryData = `
         SELECT
