@@ -175,6 +175,22 @@
           </div>
           <span class="bcr-rail__progress-label" data-testid="bilateral-sections-progress">{{ progressLabel() }}</span>
         </div>
+
+        <!-- The form's one primary action, moved here from the Overview card (feedback 2026-09-04) —
+             same placement as the W1/W2 result-detail rail. submitResult() carries its own guards
+             (read-only lock, unsaved sections, invalid fields); the disabled state is only the UI half. -->
+        <button
+          type="button"
+          class="bcr-btn bcr-btn--primary bcr-rail__submit"
+          data-testid="bilateral-rail-submit"
+          [disabled]="!canSubmitFromRail()"
+          [attr.aria-busy]="isSubmitting()"
+          (click)="submitResult()">
+          <i class="material-icons-round" [class.animate-spin]="isSubmitting()" aria-hidden="true">
+            {{ isSubmitting() ? 'progress_activity' : 'send' }}
+          </i>
+          {{ isSubmitting() ? 'Submitting…' : 'Submit for review' }}
+        </button>
       }
     </aside>
 
@@ -208,10 +224,7 @@
             </div>
 
             <section class="bcr-section-body" data-section="section-zero" [hidden]="!isActiveSection('section-zero')">
-              <app-section-zero-dashboard
-                [isSubmitting]="isSubmitting()"
-                [readOnly]="isFormReadOnly()"
-                (submitRequested)="submitResult()"></app-section-zero-dashboard>
+              <app-section-zero-dashboard [readOnly]="isFormReadOnly()"></app-section-zero-dashboard>
             </section>
 
             <section class="bcr-section-body" data-section="general-info" [hidden]="!isActiveSection('general-info')">

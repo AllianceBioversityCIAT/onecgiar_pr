@@ -3760,7 +3760,14 @@ export class ResultsService {
         this._resultByInitiativesRepository.getContributorInitiativeByResult(
           resultId,
         ),
-        this._resultByInitiativesRepository.getDraftInit(resultId),
+        // Editing/Draft included (2026-09-04): the centre form stages its contributing programs as
+        // DRAFT requests (status 4), so the form must see them again on reload — not only once the
+        // result reaches Pending Review, which is all the default covers.
+        this._resultByInitiativesRepository.getDraftInit(resultId, [
+          ResultStatusData.Editing.value,
+          ResultStatusData.Draft.value,
+          ResultStatusData.PendingReview.value,
+        ]),
         this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
           resultId,
         ),

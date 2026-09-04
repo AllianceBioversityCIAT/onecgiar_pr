@@ -140,15 +140,7 @@
       <span>AI Review</span>
       <span class="bp-action-status">Coming soon</span>
     </button>
-    <button
-      class="bp-action-btn bp-action-btn--primary bp-action-btn--submit"
-      [disabled]="overallStatus() !== 'complete' || isSubmitting() || readOnly()"
-      [attr.aria-busy]="isSubmitting()"
-      type="button"
-      (click)="onSubmit()">
-      <i class="material-icons-round" [class.animate-spin]="isSubmitting()">{{ isSubmitting() ? 'progress_activity' : 'send' }}</i>
-      <span>{{ isSubmitting() ? 'Submitting…' : 'Submit for Review' }}</span>
-      <span class="bp-action-status">In progress</span>
-    </button>
+    <!-- Submit for review moved to the editor's sections rail (feedback 2026-09-04): it is the form's
+         one primary action, not an Overview card entry — and its stale "In progress" badge went with it. -->
   </div>
 </div>

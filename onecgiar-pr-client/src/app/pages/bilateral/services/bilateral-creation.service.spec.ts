@@ -428,6 +428,32 @@ describe('BilateralCreationService', () => {
       });
     });
 
+    // 2026-09-04: programs the centre listed but the SP has not accepted yet travel as
+    // share-request rows (pending_contributing_initiatives), not as role-2 initiatives — without
+    // the union a saved-but-not-yet-accepted program vanished from the form on reload.
+    it('hydrates the contributing SPs from the role-2 rows UNION the pending/draft requests', () => {
+      respondWith({
+        contributingInitiatives: {
+          contributing_and_primary_initiative: [
+            { id: 100, official_code: 'P11', initiative_name: 'Primary', short_name: 'P', initiative_role_id: 1 },
+            { id: 200, official_code: 'SP02', initiative_name: 'Accepted program', short_name: 'A', initiative_role_id: 2 },
+          ],
+          pending_contributing_initiatives: [
+            // Duplicate of the accepted row — must not double up.
+            { id: 200, official_code: 'SP02', initiative_name: 'Accepted program', short_name: 'A' },
+            { id: 300, official_code: 'SP06', initiative_name: 'Requested program', short_name: 'R' },
+          ],
+        },
+      });
+
+      service.loadResult(10);
+
+      expect(service.selectedSecondarySps()).toEqual([
+        { programId: 200, programCode: 'SP02', allocation: '', name: 'Accepted program' },
+        { programId: 300, programCode: 'SP06', allocation: '', name: 'Requested program' },
+      ]);
+    });
+
     it('falls back to the short name when the initiative has no full name', () => {
       respondWith({
         contributingInitiatives: {

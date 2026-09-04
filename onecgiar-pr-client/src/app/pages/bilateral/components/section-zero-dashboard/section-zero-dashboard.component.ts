@@ -1,7 +1,6 @@
-import { Component, computed, inject, input, output } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
-import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralProjectSelectorComponent } from '../bilateral-project-selector/bilateral-project-selector.component';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
@@ -14,17 +13,10 @@ import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.modu
 })
 export class SectionZeroDashboardComponent {
   readonly creationService = inject(BilateralCreationService);
-  readonly mdsTracker = inject(BilateralMdsTrackerService);
   private readonly autoSave = inject(BilateralAutoSaveService);
 
-  /** Submit request in flight — owned by BilateralResultCreatorComponent. */
-  isSubmitting = input<boolean>(false);
-  /** P2-3520 — the result already left Editing, so it must not be submitted again. */
+  /** P2-3520 — the result already left Editing; gates the editable project field. */
   readOnly = input<boolean>(false);
-
-  submitRequested = output<void>();
-
-  overallStatus = this.mdsTracker.overallStatus;
 
   /**
    * P2-3518 — the W3/Bilateral project used to be painted as static text here, so a draft created
@@ -76,8 +68,4 @@ export class SectionZeroDashboardComponent {
     });
   }
 
-  onSubmit(): void {
-    if (this.isSubmitting() || this.readOnly()) return;
-    this.submitRequested.emit();
-  }
 }
