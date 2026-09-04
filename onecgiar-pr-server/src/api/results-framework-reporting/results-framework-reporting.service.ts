@@ -892,10 +892,12 @@ export class ResultsFrameworkReportingService {
     }
   }
 
+  // @akili-spec changes/indicator-reported-results (IRR-R-3, IRR-R-3.1)
   async getExistingResultContributorsToIndicators(
     user: TokenDto,
     resultTocResultId: string | number,
     tocResultIndicatorId: string,
+    scope?: string,
   ) {
     try {
       return await this._getExistingResultContributorsToIndicatorsHandler.execute(
@@ -903,6 +905,7 @@ export class ResultsFrameworkReportingService {
           user,
           resultTocResultId,
           tocResultIndicatorId,
+          scope,
         ),
       );
     } catch (error) {

@@ -3,7 +3,10 @@ import { In } from 'typeorm';
 import { ResultsTocResultRepository } from '../../../../results/results-toc-results/repositories/results-toc-results.repository';
 import { ResultsTocResultIndicatorsRepository } from '../../../../results/results-toc-results/repositories/results-toc-results-indicators.repository';
 import { ResultStatusData } from '../../../../../shared/constants/result-status.enum';
-import type { ExistingResultContributorRecord } from './existing-result-contributors.types';
+import type {
+  ExistingResultContributorRecord,
+  ExistingResultContributorsScope,
+} from './existing-result-contributors.types';
 import { throwServiceError } from '../../../../../shared/utils/service-error.util';
 
 @Injectable()
@@ -31,15 +34,39 @@ export class ExistingResultContributorsLoaderService {
     return tocResultIndicatorId;
   }
 
+  // @akili-spec changes/indicator-reported-results — status set built from ResultStatusData members, never numeric literals (IRR-DD-2)
+  private static readonly REVIEWED_SCOPE_STATUS_IDS = [
+    ResultStatusData.QualityAssessed.value,
+    ResultStatusData.Approved.value,
+  ];
+
+  // @akili-spec changes/indicator-reported-results — Discontinued (4), Rejected (7) and Draft (8) stay out (assumption A-2)
+  private static readonly ALL_SCOPE_STATUS_IDS = [
+    ResultStatusData.Editing.value,
+    ResultStatusData.QualityAssessed.value,
+    ResultStatusData.Submitted.value,
+    ResultStatusData.PendingReview.value,
+    ResultStatusData.Approved.value,
+  ];
+
   async loadContributions(
     parsedResultTocResultId: number,
     tocResultIndicatorId: string,
+    // @akili-spec changes/indicator-reported-results
+    scope: ExistingResultContributorsScope = 'reviewed',
   ): Promise<ExistingResultContributorRecord[]> {
+    const statusIds =
+      scope === 'all'
+        ? ExistingResultContributorsLoaderService.ALL_SCOPE_STATUS_IDS
+        : ExistingResultContributorsLoaderService.REVIEWED_SCOPE_STATUS_IDS;
+
     const resultContributionExists =
       await this._resultsTocResultRepository.find({
         relations: {
           obj_results: {
             obj_status: true,
+            // @akili-spec changes/indicator-reported-results
+            obj_result_type: true,
           },
           obj_results_toc_result_indicators: {
             obj_result_indicator_targets: true,
@@ -50,10 +77,7 @@ export class ExistingResultContributorsLoaderService {
           is_active: true,
           obj_results: {
             is_active: true,
-            status_id: In([
-              ResultStatusData.QualityAssessed.value,
-              ResultStatusData.Approved.value,
-            ]),
+            status_id: In(statusIds),
           },
           obj_results_toc_result_indicators: {
             toc_results_indicator_id: tocResultIndicatorId,
@@ -78,6 +102,11 @@ export class ExistingResultContributorsLoaderService {
               result_status_id: true,
               status_name: true,
               status_description: true,
+            },
+            // @akili-spec changes/indicator-reported-results
+            obj_result_type: {
+              id: true,
+              name: true,
             },
           },
           obj_results_toc_result_indicators: {
