@@ -505,7 +505,12 @@ export class ReportingAowTableComponent {
     if (!hloOrRaw) return '';
     if (typeof hloOrRaw === 'object' && hloOrRaw.code) return hloOrRaw.code;
     const raw = typeof hloOrRaw === 'string' ? hloOrRaw : (hloOrRaw.name || hloOrRaw.key || '');
-    const match = /^((?:HLO|HL|IO|EOI)[\w.\-]*)/i.exec(raw.trim());
+    const trimmed = raw.trim();
+    const iocMatch = /^((?:I-OC|OC)\s*\d+(?:\.\d+)*)\.?/i.exec(trimmed);
+    if (iocMatch) {
+      return iocMatch[1].toUpperCase().replace(/\s+/, ' ');
+    }
+    const match = /^((?:HLO|HL|IO|EOI)[\w.\-]*)/i.exec(trimmed);
     if (!match) return '';
     const rawCode = match[1];
     const codeMatch = /^(HLO\d+|IO\d+|EOI\d+|HL\d+)/i.exec(rawCode);
@@ -521,11 +526,10 @@ export class ReportingAowTableComponent {
     const byKey = new Map<string, HloGroup>();
     for (const row of rows) {
       const raw = row.__hlo?.trim() || 'Unassigned';
-      const match = /^((?:HLO|HL|IO|EOI)[\w.\-]*)\s*(.*)$/i.exec(raw);
+      const match = /^((?:HLO|HL|I-OC|OC|IO|EOI)(?:[-\s]?\d[\w.\-]*)?)\.?\s*[-–:]?\s+(.+)$/i.exec(raw);
       const name = (match?.[2] || raw).trim() || raw;
       const rawCode = match?.[1] || '';
-      const codeMatch = /^(HLO\d+|IO\d+|EOI\d+|HL\d+)/i.exec(rawCode);
-      const code = codeMatch ? codeMatch[1].toUpperCase() : (rawCode ? rawCode.split('.')[0].toUpperCase() : undefined);
+      const code = this.cleanHloCode(rawCode) || undefined;
       const key = `${keyPrefix}::${raw}`;
       if (!byKey.has(key)) {
         // Every row of a group comes from the same ToC node, so the first one carries the group's

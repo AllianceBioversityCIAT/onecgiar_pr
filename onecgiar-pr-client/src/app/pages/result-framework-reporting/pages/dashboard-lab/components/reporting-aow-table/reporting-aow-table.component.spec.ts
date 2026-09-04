@@ -353,12 +353,16 @@ describe('ReportingAowTableComponent', () => {
 
   // ── RAJ-T-2: HLO headers, tabular metrics & quick filters ─────────────────
   describe('RAJ-T-2 — HLO headers, tabular metrics & quick filters', () => {
-    it('cleanHloCode extracts clean badge token from raw codes and strings (RAJ-DD-2)', async () => {
+    it('cleanHloCode extracts clean badge token from raw codes and strings (RAJ-DD-2, BTC-R-1)', async () => {
       await build([group([row()])]);
       expect(component.cleanHloCode('HLO4.AOW1.IO1 Foster motivations')).toBe('HLO4');
       expect(component.cleanHloCode('HLO-04 Some Title')).toBe('HLO-04');
       expect(component.cleanHloCode('IO2.1 Intermediate')).toBe('IO2');
       expect(component.cleanHloCode('EOI3.1 Early outcome')).toBe('EOI3');
+      expect(component.cleanHloCode('I-OC 3.5. Women, men, youth')).toBe('I-OC 3.5');
+      expect(component.cleanHloCode('I-OC 3.5.')).toBe('I-OC 3.5');
+      expect(component.cleanHloCode('OC 3.1. Some title')).toBe('OC 3.1');
+      expect(component.cleanHloCode('OC 3.1.')).toBe('OC 3.1');
       expect(component.cleanHloCode('Foster motivations')).toBe('');
       expect(component.cleanHloCode({ code: 'HLO4', name: 'Foster motivations' })).toBe('HLO4');
     });
@@ -375,6 +379,20 @@ describe('ReportingAowTableComponent', () => {
       const titleEl = (fixture.nativeElement as HTMLElement).querySelector('span[title="Foster motivations"]');
       expect(titleEl).toBeTruthy();
       expect(titleEl!.textContent).toContain('Foster motivations');
+    });
+
+    it('Outcome header renders standardized pr-hlo-code badge and clean name for I-OC (BTC-R-1, BTC-AC-1.3)', async () => {
+      const g = group([row({ __tier: 'outcome', __hlo: 'I-OC 3.5. Women, men, youth and vulnerable groups' })]);
+      await build([g]);
+      openAow();
+
+      const badge = (fixture.nativeElement as HTMLElement).querySelector('.pr-hlo-code');
+      expect(badge).toBeTruthy();
+      expect(badge!.textContent?.trim()).toBe('I-OC 3.5');
+
+      const titleEl = (fixture.nativeElement as HTMLElement).querySelector('span[title="Women, men, youth and vulnerable groups"]');
+      expect(titleEl).toBeTruthy();
+      expect(titleEl!.textContent).toContain('Women, men, youth and vulnerable groups');
     });
 
     it('HLO header displays tabular metrics cluster with clean count badge and green achieved value (RAJ-R-2, RAJ-AC-2.1)', async () => {
@@ -928,6 +946,86 @@ describe('ReportingAowTableComponent', () => {
       await build([group([row({ __tier: 'outcome', __isIntermediateCrosscut: false })], { kind: 'aow' })]);
       openAow();
       expect(targetTooltipText()).toBe('');
+    });
+  });
+
+  // ── KCR-T-3 · KCR-AC-5 — the reconciliation must not cost visibility ───────
+  /**
+   * `KCR-R-7` / `KCR-AC-5`: dropping the cross-cut Intermediate-Outcome rows out of the AoW's
+   * DENOMINATOR must not drop them out of the CARD. A presence check alone would pass on a row
+   * that lost its RES-R-3 disclosure, so the tooltip text is asserted too — and the header is
+   * asserted as the full pair the AC names (`4 KPIs` from AoW-own Planned, `0 of 3` from its
+   * Counted set), not just one half of it.
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  describe('cross-cut IO rows stay visible in the AoW Outcomes band (KCR-AC-5)', () => {
+    /** requirements.md §7 fixture, AoW A: 4 output KPIs (`a4` zero-target) + the two cross-cut IOs. */
+    const kpi = (id: string | number, description: string, over: Partial<ReportingIndicator> = {}): ReportingIndicator =>
+      row({ indicator_id: id as any, indicator_description: description, actual_achieved_value_sum: 0, ...over });
+
+    const crosscut = (id: number, description: string, target: string | number): ReportingIndicator =>
+      kpi(id, description, {
+        target_value_sum: target as any,
+        __tier: 'outcome',
+        __isIntermediateCrosscut: true,
+        __hlo: description
+      });
+
+    const groupA = (): ReportingAowGroup =>
+      group(
+        [
+          kpi('a1', 'A output KPI one', { target_value_sum: '10' }),
+          kpi('a2', 'A output KPI two', { target_value_sum: '10' }),
+          kpi('a3', 'A output KPI three', { target_value_sum: '10' }),
+          kpi('a4', 'A output KPI four, zero target', { target_value_sum: 0 as any }),
+          crosscut(901, 'IO-1 Cross-cutting outcome one', '5'),
+          crosscut(902, 'IO-2 Cross-cutting outcome two', 0)
+        ],
+        // `count` is AoW-own Planned (4) — the host's KCR-T-2 basis, cross-cut rows excluded.
+        { aow: { id: 1, code: 'A', name: 'Area A' }, count: 4, kind: 'aow' }
+      );
+
+    /** The rows container that follows a band's eyebrow label (`High level outputs` / `Outcomes`). */
+    const bandBody = (eyebrow: string): HTMLElement => {
+      const root = fixture.nativeElement as HTMLElement;
+      const label = Array.from(root.querySelectorAll('span')).find(el => el.textContent?.trim() === eyebrow);
+      return label!.parentElement!.parentElement!.nextElementSibling as HTMLElement;
+    };
+
+    const targetTooltipOf = (rowEl: Element): string => {
+      const button = rowEl.querySelector('.relative button') as HTMLElement;
+      return fixture.debugElement.query(de => de.nativeElement === button).injector.get(PrTooltipDirective).text;
+    };
+
+    it('A header reads "4 KPIs" and "0 of 3" — own Planned beside its own Counted ratio', async () => {
+      await build([groupA()]);
+
+      const header = (fixture.nativeElement as HTMLElement).querySelector('section > button') as HTMLElement;
+      const headerText = (header.textContent ?? '').replace(/\s+/g, ' ');
+      expect(headerText).toContain('4 KPIs');
+      expect(headerText).toContain('0 of 3');
+    });
+
+    it('still renders #901 and #902 in the Outcomes band, each with the RES-R-3 cross-cut tooltip', async () => {
+      await build([groupA()]);
+      openAow('A');
+
+      const outcomeRows = Array.from(bandBody('Outcomes').querySelectorAll('.pr-reporting-row'));
+      expect(outcomeRows.map(el => el.getAttribute('aria-label'))).toEqual([
+        'IO-1 Cross-cutting outcome one',
+        'IO-2 Cross-cutting outcome two'
+      ]);
+      outcomeRows.forEach(el => expect(targetTooltipOf(el)).toBe('This target is not exclusive to that AoW.'));
+      expect(component.intermediateTargetTooltip).toBe('This target is not exclusive to that AoW.');
+    });
+
+    it('leaves the AoW-own output rows undisclosed — the tooltip marks cross-cuts, not every row', async () => {
+      await build([groupA()]);
+      openAow('A');
+
+      const outputRows = Array.from(bandBody('High level outputs').querySelectorAll('.pr-reporting-row'));
+      expect(outputRows.length).toBe(4);
+      outputRows.forEach(el => expect(targetTooltipOf(el)).toBe(''));
     });
   });
 

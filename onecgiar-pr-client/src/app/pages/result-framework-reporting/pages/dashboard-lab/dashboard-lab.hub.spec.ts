@@ -1,7 +1,7 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { DashboardLabComponent, buildAowBannerStats, splitIndicatorsByTier, buildIndicatorCardMeta } from './dashboard-lab.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -12,7 +12,13 @@ import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
 import { BilateralCreationService } from '../../../bilateral/services/bilateral-creation.service';
 import { SPProgress } from '../../../../shared/interfaces/SP-progress.interface';
-import { HubCenterProjects, HubProject } from './components/reporting-entry-hub/reporting-entry-hub.component';
+import {
+  HubAowRow,
+  HubCenterProjects,
+  HubProgramLevelRow,
+  HubProject,
+  ReportingEntryHubComponent
+} from './components/reporting-entry-hub/reporting-entry-hub.component';
 // @akili-spec changes/mass-reporting-flow
 import { GlobalVariables } from '../../../../shared/services/global-variables.service';
 import { environment } from '../../../../../environments/environment';
@@ -859,4 +865,118 @@ describe('By-AoW section collapse/expand', () => {
     expect(getProjects).toHaveBeenCalledWith('SP02');
   });
 });
+  // ── KCR-T-3 · hub row disclosure (KCR-R-2.1 / KCR-R-6) ──────────────────────
+  /**
+   * Hub figures are *Counted* like every other denominator on the shell, so a row whose bucket lost
+   * KPIs to the zero-target rule states it in a `title`. Full strings only — a `title` present with
+   * the wrong text is invisible to a `toContain` check (requirements.md §9).
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  describe('ReportingEntryHubComponent — zero-target disclosure (KCR-R-2.1)', () => {
+    let hub: ComponentFixture<ReportingEntryHubComponent>;
+
+    const buildHub = async (aowRows: HubAowRow[], programLevelRows: HubProgramLevelRow[] = []) => {
+      await TestBed.configureTestingModule({
+        imports: [ReportingEntryHubComponent],
+        providers: [provideRouter([])]
+      }).compileComponents();
+      hub = TestBed.createComponent(ReportingEntryHubComponent);
+      // The standalone hub opens collapsed outside the modal (`defaultCollapsed`), and a collapsed
+      // hub renders a one-line summary instead of the rows.
+      hub.componentRef.setInput('isModal', true);
+      hub.componentRef.setInput('aowRows', aowRows);
+      hub.componentRef.setInput('programLevelRows', programLevelRows);
+      hub.detectChanges();
+    };
+
+    /** The `done/total` figure span of the row whose code chip or name reads `label`. */
+    const figure = (label: string): HTMLElement => {
+      const root = hub.nativeElement as HTMLElement;
+      const marker = Array.from(root.querySelectorAll('span')).find(el => el.textContent?.trim() === label);
+      const row = marker!.closest('div.flex.flex-wrap') as HTMLElement;
+      return Array.from(row.querySelectorAll('span')).find(el =>
+        /^\d+\/\d+$/.test((el.textContent ?? '').replace(/\s+/g, ''))
+      ) as HTMLElement;
+    };
+
+    it('discloses the plural exclusion on the AoW row that has one, and nothing on the row that does not', async () => {
+      await buildHub([
+        { code: 'AOW01', name: 'Market Intelligence', done: 1, total: 110, zeroTarget: 4 },
+        { code: 'AOW02', name: 'Accelerated Breeding', done: 0, total: 12, zeroTarget: 0 }
+      ]);
+
+      expect(figure('AOW01').textContent?.replace(/\s+/g, '')).toBe('1/110');
+      expect(figure('AOW01').getAttribute('title')).toBe('excludes 4 zero-target KPIs');
+      expect(figure('AOW02').getAttribute('title')).toBeNull();
+    });
+
+    it('uses the singular noun for one, on AoW rows and program-level rows alike (KCR-R-6)', async () => {
+      // The requirements.md §7 fixture's program-level side: Intermediate plans #901 + #902, #902 is
+      // zero-target → `0/1` with one exclusion; 2030 plans #950 alone → `0/1` with none.
+      await buildHub(
+        [{ code: 'AOW01', name: 'Market Intelligence', done: 0, total: 3, zeroTarget: 1 }],
+        [
+          { kind: 'intermediate', name: 'Intermediate outcomes', done: 0, total: 1, zeroTarget: 1 },
+          { kind: '2030', name: '2030 outcomes', done: 0, total: 1, zeroTarget: 0 }
+        ]
+      );
+
+      expect(figure('AOW01').getAttribute('title')).toBe('excludes 1 zero-target KPI');
+      expect(figure('Intermediate outcomes').getAttribute('title')).toBe('excludes 1 zero-target KPI');
+      expect(figure('2030 outcomes').getAttribute('title')).toBeNull();
+    });
+
+    /**
+     * The host half of the same disclosure: `hubProgramLevelRows` maps the Overview chip rows, so
+     * the program-level row must arrive carrying the chip's own `zeroTarget` (design §6.3 —
+     * "Program-level rows reuse the chip row's `zeroTarget`"), not recompute one.
+     */
+    it('threads the chip row zeroTarget into hubProgramLevelRows rather than dropping it', async () => {
+      const { component } = await createComponent(apiMock());
+      const key = (aow: string): string => (component as any).tocCacheKey(PROGRAM.initiativeCode, aow);
+      const ind = (id: number, target: number) => ({
+        indicator_id: id,
+        target_value_sum: target,
+        actual_achieved_value_sum: 0
+      });
+
+      component.tocByKey.set(
+        new Map<string, { outputs: any[]; outcomes: any[] }>([
+          // Intermediate plans #901 + #902; #902 is zero-target → counted 1, excluded 1.
+          [
+            key('intermediate-outcomes'),
+            {
+              outputs: [
+                { toc_result_id: 901, category: 'OUTCOME', result_title: 'IO-1', is_aow: false, indicators: [ind(901, 5), ind(902, 0)] }
+              ],
+              outcomes: []
+            }
+          ],
+          [
+            key('2030-outcomes'),
+            {
+              outputs: [{ toc_result_id: 950, category: 'EOI', result_title: '2030-1', is_aow: false, indicators: [ind(950, 3)] }],
+              outcomes: []
+            }
+          ]
+        ])
+      );
+
+      expect(component.hubProgramLevelRows()).toEqual([
+        { kind: 'intermediate', name: 'Intermediate outcomes', done: 0, total: 1, zeroTarget: 1 },
+        { kind: '2030', name: '2030 outcomes', done: 0, total: 1, zeroTarget: 0 }
+      ]);
+    });
+
+    it('omits the attribute for a caller that never sets the optional field (no "undefined" leak)', async () => {
+      await buildHub(
+        [{ code: 'AOW01', name: 'Market Intelligence', done: 0, total: 3 }],
+        [{ kind: 'intermediate', name: 'Intermediate outcomes', done: 0, total: 1 }]
+      );
+
+      expect(figure('AOW01').getAttribute('title')).toBeNull();
+      expect(figure('Intermediate outcomes').getAttribute('title')).toBeNull();
+    });
+  });
+
 });

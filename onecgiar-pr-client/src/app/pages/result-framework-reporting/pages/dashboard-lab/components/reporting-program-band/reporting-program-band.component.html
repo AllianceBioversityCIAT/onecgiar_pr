@@ -750,7 +750,11 @@
             <div class="h-[12px] w-[140px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
           } @else {
             <div class="flex items-baseline gap-[8px]">
-              <span class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
+              <!-- @akili-spec bugfix/kpi-count-reconciliation — KCR-R-2.1: the figure is *Counted*,
+                   so it discloses the Planned count and the zero-target exclusion behind it. -->
+              <span
+                class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums"
+                [attr.title]="totalKpisTitle(stats)">
                 {{ stats.totalKpis }}
               </span>
               <span class="text-[12px] font-medium text-[var(--pr-text-muted)]">indicators</span>

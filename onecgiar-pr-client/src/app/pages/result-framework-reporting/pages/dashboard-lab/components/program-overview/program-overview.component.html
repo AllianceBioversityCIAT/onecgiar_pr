@@ -910,9 +910,12 @@
         <div class="mt-auto flex flex-wrap items-center gap-[12px] border-t border-[var(--pr-border)] bg-[var(--pr-surface-subtle)] px-[20px] py-[14px]">
           <span class="text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">Strategic outcomes</span>
           @for (row of xcutProgress(); track row.code) {
+            <!-- @akili-spec bugfix/kpi-count-reconciliation — KCR-R-2.1: the chip figure is
+                 *Counted*, so it discloses what the zero-target rule took out of it. -->
             <button
               type="button"
               (click)="openAow.emit(row.code || 'xcut')"
+              [attr.title]="chipZeroTargetTitle(row)"
               class="inline-flex cursor-pointer items-center gap-[8px] rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] py-[5px] text-[12.5px] text-[var(--pr-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
               {{ row.name }}
               <span class="pr-figure-sm font-bold">{{ row.done }}/{{ row.total }}</span>

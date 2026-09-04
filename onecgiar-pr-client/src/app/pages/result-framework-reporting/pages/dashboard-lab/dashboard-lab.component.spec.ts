@@ -1641,16 +1641,44 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
     expect(component.reportingExpandNonce()).toBe(1);
   });
 
-  describe('cleanHloCode (RAJ-R-1, RAJ-DD-2)', () => {
+  describe('cleanHloCode (RAJ-R-1, RAJ-DD-2, BTC-R-1)', () => {
     it('extracts clean badge token from raw codes and strings in dashboard-lab', async () => {
       const component = await createComponent();
       expect(component.cleanHloCode('HLO4.AOW1.IO1 Foster motivations')).toBe('HLO4');
       expect(component.cleanHloCode('HLO-04 Some Title')).toBe('HLO-04');
       expect(component.cleanHloCode('IO2.1 Intermediate')).toBe('IO2');
       expect(component.cleanHloCode('EOI3.1 Early outcome')).toBe('EOI3');
+      expect(component.cleanHloCode('I-OC 3.5. Women, men, youth')).toBe('I-OC 3.5');
+      expect(component.cleanHloCode('I-OC 1.1. Breeding network')).toBe('I-OC 1.1');
+      expect(component.cleanHloCode('OC 3.1. Some title')).toBe('OC 3.1');
       expect(component.cleanHloCode('Foster motivations')).toBe('');
       expect(component.cleanHloCode('')).toBe('');
       expect(component.cleanHloCode(undefined)).toBe('');
+    });
+  });
+
+  describe('splitGroupTitle (BTC-R-1, BTC-AC-1.1)', () => {
+    it('splits I-OC outcome titles into clean code and sanitized name', async () => {
+      const component = await createComponent();
+      const res = component.splitGroupTitle('I-OC 3.5. Women, men, youth and vulnerable groups');
+      expect(res.code).toBe('I-OC 3.5');
+      expect(res.name).toBe('Women, men, youth and vulnerable groups');
+    });
+
+    it('splits HLO and numeric titles correctly', async () => {
+      const component = await createComponent();
+      expect(component.splitGroupTitle('HLO4.AOW1.IO1 Foster motivations')).toEqual({
+        code: 'HLO4.AOW1.IO1',
+        name: 'Foster motivations'
+      });
+      expect(component.splitGroupTitle('2.2.2: Policy engagement')).toEqual({
+        code: '2.2.2',
+        name: 'Policy engagement'
+      });
+      expect(component.splitGroupTitle('Plain title without code')).toEqual({
+        code: null,
+        name: 'Plain title without code'
+      });
     });
   });
 

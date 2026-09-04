@@ -1711,13 +1711,20 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   // empty on a cold load; the server derives centre membership from the token). Deferred with
   // `setTimeout(0)` so it never blocks first paint (design.md §6.2 `DashboardLabComponent` row).
 
-  /** `HubProgramLevelRow[]` — `overviewXcutProgress()` mapped code → kind (REH-R-2.1). */
+  /**
+   * `HubProgramLevelRow[]` — `overviewXcutProgress()` mapped code → kind (REH-R-2.1).
+   *
+   * @akili-spec bugfix/kpi-count-reconciliation — the chip row's `zeroTarget` travels with it
+   * (design §6.3, "Program-level rows reuse the chip row's `zeroTarget`"): the hub row and the
+   * Overview chip are two readings of ONE number, so they must carry one disclosure (KCR-R-2.1,
+   * KCR-R-6). Recomputing it here would be a second derivation of the same denominator.
+   */
   readonly hubProgramLevelRows = computed<HubProgramLevelRow[]>(() =>
     this.overviewXcutProgress()
-      .map(row => {
+      .map((row): HubProgramLevelRow | null => {
         const kind: HubProgramLevelKind | null =
           row.code === OUTCOMES_2030_CODE ? '2030' : row.code === INTERMEDIATE_OUTCOMES_CODE ? 'intermediate' : null;
-        return kind ? ({ kind, name: row.name, done: row.done, total: row.total } satisfies HubProgramLevelRow) : null;
+        return kind ? { kind, name: row.name, done: row.done, total: row.total, zeroTarget: row.zeroTarget } : null;
       })
       .filter((row): row is HubProgramLevelRow => row !== null)
   );
@@ -4137,10 +4144,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Helper to extract a clean HLO code token (e.g. 'HLO4', 'IO1', 'EOI2') for By-AOW HLO headers (RAJ-R-1, RAJ-DD-2). */
+  /** Helper to extract a clean HLO or Outcome code token (e.g. 'HLO4', 'HL013', 'I-OC 3.5', 'OC 3.1') for By-AOW group headers (BTC-R-1, BTC-AC-1.1). */
   cleanHloCode(raw: string | undefined): string {
     if (!raw) return '';
-    const match = /^((?:HLO|HL|IO|EOI)[\w.\-]*)/i.exec(raw.trim());
+    const trimmed = raw.trim();
+    const iocMatch = /^((?:I-OC|OC)\s*\d+(?:\.\d+)*)\.?/i.exec(trimmed);
+    if (iocMatch) {
+      return iocMatch[1].toUpperCase().replace(/\s+/, ' ');
+    }
+    const match = /^((?:HLO|HL|IO|EOI)[\w.\-]*)/i.exec(trimmed);
     if (!match) return '';
     const rawCode = match[1];
     const codeMatch = /^(HLO\d+|IO\d+|EOI\d+|HL\d+)/i.exec(rawCode);
@@ -4230,19 +4242,23 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Split an HLO group title into code + name. The API is not consistent about the
-   * shape, so three forms are handled:
-   *   "HLO4.AOW1.IO1 Foster motivations"        → HLO4.AOW1.IO1 | Foster motivations
-   *   "HLO 3.1 - Targeted innovations…"         → HLO 3.1       | Targeted innovations…
-   *   "2.2.2: Policy engagement…"               → 2.2.2         | Policy engagement…
-   * Anything else keeps the whole string as the name (no invented code).
+   * Split an HLO or Outcome group title into code + name. Handles:
+   *   "I-OC 3.5. Women, men..."          → I-OC 3.5      | Women, men...
+   *   "HLO4.AOW1.IO1 Foster motivations" → HLO4.AOW1.IO1 | Foster motivations
+   *   "HL013 Power seed scaling"         → HL013         | Power seed scaling
+   *   "2.2.2: Policy engagement…"        → 2.2.2         | Policy engagement…
    */
   splitGroupTitle(title: string | null | undefined): { code: string | null; name: string } {
     const text = String(title ?? '').trim();
-    const hlo = /^(HLO[^\s]*(?:\s*\d[\d.]*)?)\s*[-–:]?\s+(.+)$/i.exec(text);
-    if (hlo) return { code: hlo[1].trim(), name: hlo[2].trim() };
+    const prefixed = /^((?:HLO|HL|I-OC|OC|IO|EOI)(?:[-\s]?\d[\w.\-]*)?)\.?\s*[-–:]?\s+(.+)$/i.exec(text);
+    if (prefixed) {
+      return { code: prefixed[1].replace(/\.+$/, '').trim(), name: prefixed[2].trim() };
+    }
     const numeric = /^([\d.]+)\s*[:–-]\s*(.+)$/.exec(text);
-    return numeric ? { code: numeric[1], name: numeric[2] } : { code: null, name: text };
+    if (numeric) {
+      return { code: numeric[1].trim(), name: numeric[2].trim() };
+    }
+    return { code: null, name: text };
   }
 
   /**

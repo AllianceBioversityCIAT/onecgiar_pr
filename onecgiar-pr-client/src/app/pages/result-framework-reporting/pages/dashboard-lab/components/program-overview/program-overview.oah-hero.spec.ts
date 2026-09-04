@@ -175,6 +175,50 @@ describe('ProgramOverviewComponent — OAH hero (rail + chips + skeletons + empt
     expect(emitted).toEqual(['intermediate-outcomes']);
   });
 
+  // ── KCR-T-3 · chip disclosure (KCR-R-2.1 / KCR-R-6, KCR-AC-2) ──────────────
+  /**
+   * Chip denominators are *Counted*, so a bucket that plans more than it counts has to say so.
+   * Asserted as the FULL string on the chip that owns the exclusion, and asserted ABSENT on the
+   * one that has none — a chip that titled everything would pass a `toContain` check and still be
+   * wrong (requirements.md §9, defect class "a `title` present with wrong text").
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  const outcomeChips = (): HTMLElement[] =>
+    fixture.debugElement
+      .queryAll(By.css('button'))
+      .filter(b => /Intermediate outcomes|2030 outcomes/.test(b.nativeElement.textContent))
+      .map(b => b.nativeElement as HTMLElement);
+
+  it('discloses the chip exclusion in the singular and only on the chip that has one (KCR-AC-2)', () => {
+    fixture.componentRef.setInput('richRows', richRows);
+    // requirements.md §7 fixture: Intermediate plans #901 + #902, #902 is zero-target → 0/1.
+    fixture.componentRef.setInput('xcutProgress', [
+      { code: 'intermediate-outcomes', name: 'Intermediate outcomes', done: 0, total: 1, zeroTarget: 1 },
+      { code: '2030-outcomes', name: '2030 outcomes', done: 0, total: 1, zeroTarget: 0 }
+    ]);
+    fixture.detectChanges();
+
+    const [intermediate, outcomes2030] = outcomeChips();
+    expect(intermediate.textContent).toContain('0/1');
+    expect(intermediate.getAttribute('title')).toBe('excludes 1 zero-target KPI');
+    expect(outcomes2030.textContent).toContain('0/1');
+    expect(outcomes2030.getAttribute('title')).toBeNull();
+  });
+
+  it('pluralises the chip exclusion past one, and omits it when the row carries no zeroTarget field', () => {
+    fixture.componentRef.setInput('richRows', richRows);
+    fixture.componentRef.setInput('xcutProgress', [
+      { code: 'intermediate-outcomes', name: 'Intermediate outcomes', done: 0, total: 5, zeroTarget: 3 },
+      // A pre-KCR caller that never sets the optional field: no disclosure, no `undefined` leak.
+      { code: '2030-outcomes', name: '2030 outcomes', done: 0, total: 5 }
+    ]);
+    fixture.detectChanges();
+
+    const [intermediate, outcomes2030] = outcomeChips();
+    expect(intermediate.getAttribute('title')).toBe('excludes 3 zero-target KPIs');
+    expect(outcomes2030.getAttribute('title')).toBeNull();
+  });
+
   it('leaves the thin aowProgress consumers untouched — card 4 / aowStats still derive from aowProgress, not richRows (DD-4)', () => {
     fixture.componentRef.setInput('richRows', richRows);
     fixture.detectChanges();

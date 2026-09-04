@@ -22,6 +22,13 @@ export interface HubAowRow {
   name: string;
   done: number;
   total: number;
+  /**
+   * How many planned KPIs the zero-target rule (`MRF-R-7`) removed from `total` on this row — the
+   * number `zeroTargetTitle` discloses (`KCR-R-2.1`). Optional and additive: a caller with nothing
+   * to disclose omits it, and `0`/absent renders no `title` at all.
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  zeroTarget?: number;
 }
 
 export type HubProgramLevelKind = 'intermediate' | '2030';
@@ -32,6 +39,13 @@ export interface HubProgramLevelRow {
   name: string;
   done: number;
   total: number;
+  /**
+   * How many planned KPIs the zero-target rule (`MRF-R-7`) removed from `total` on this row — the
+   * number `zeroTargetTitle` discloses (`KCR-R-2.1`). Optional and additive: a caller with nothing
+   * to disclose omits it, and `0`/absent renders no `title` at all.
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  zeroTarget?: number;
 }
 
 /**
@@ -238,6 +252,19 @@ export class ReportingEntryHubComponent {
   visibleProjectsFor(center: HubCenterProjects): HubProject[] {
     const projects = this.matchingProjectsFor(center);
     return this.isCenterShowAll(center) ? projects : projects.slice(0, 3);
+  }
+
+  /**
+   * `title` for a lane row's `done/total` figure (`KCR-R-2.1`, `KCR-R-6`). The figure is *Counted*,
+   * so a row whose bucket lost KPIs to the zero-target rule says how many — the SAME sentence the
+   * Overview chips carry, pluralised exactly as `reporting-aow-table.countLabel` does, because the
+   * hub row and the chip are two readings of one number (`KCR-R-3`). `null` (not `''`) so
+   * `[attr.title]` drops the attribute rather than rendering an empty tooltip.
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  zeroTargetTitle(row: HubAowRow | HubProgramLevelRow): string | null {
+    const n = row.zeroTarget ?? 0;
+    return n > 0 ? `excludes ${n} zero-target KPI${n === 1 ? '' : 's'}` : null;
   }
 
   percentOf(row: HubAowRow | HubProgramLevelRow): number {

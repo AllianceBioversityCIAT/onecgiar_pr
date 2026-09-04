@@ -366,6 +366,19 @@ export class ProgramOverviewComponent {
     return { complete, inProgress, notStarted, zeroTarget, total, reported, pct };
   });
 
+  /**
+   * Per-chip `title` disclosure for the Strategic-outcomes footer (`KCR-R-2.1` / `KCR-R-6`). The
+   * chip's `total` is *Counted*, so a bucket that plans more than it counts states the difference —
+   * `excludes 1 zero-target KPI` / `excludes 3 zero-target KPIs`, pluralised exactly as
+   * `reporting-aow-table.countLabel` does. `null` (not `''`) omits the attribute: a chip that
+   * excluded nothing must carry no tooltip at all (`KCR-AC-2`'s "2030 `0/1` no title").
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  chipZeroTargetTitle(row: AowProgressRow): string | null {
+    const n = row.zeroTarget ?? 0;
+    return n > 0 ? `excludes ${n} zero-target KPI${n === 1 ? '' : 's'}` : null;
+  }
+
   /** Rail `title` disclosure for the zero-target exclusion (OAH-R-1) — `null` omits the attribute. */
   readonly zeroTargetTitle = computed(() => {
     const n = this.richStats().zeroTarget;

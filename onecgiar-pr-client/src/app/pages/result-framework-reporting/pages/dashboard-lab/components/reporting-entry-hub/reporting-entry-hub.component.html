@@ -84,7 +84,11 @@
                     class="block h-full rounded-full bg-gradient-to-r from-[var(--pr-color-primary-500)] to-[var(--pr-color-primary-400)]"
                     [style.width.%]="percentOf(row)"></span>
                 </span>
-                <span class="w-[56px] text-right text-[12.5px] font-medium tabular-nums text-[var(--pr-text-secondary)]">
+                <!-- @akili-spec bugfix/kpi-count-reconciliation — KCR-R-2.1: the figure is
+                     *Counted*, so it discloses what the zero-target rule took out of it. -->
+                <span
+                  class="w-[56px] text-right text-[12.5px] font-medium tabular-nums text-[var(--pr-text-secondary)]"
+                  [attr.title]="zeroTargetTitle(row)">
                   <strong class="font-bold text-[var(--pr-text-heading)]">{{ row.done }}</strong
                   ><span class="text-[var(--pr-text-muted)]">/{{ row.total }}</span>
                 </span>
@@ -140,7 +144,11 @@
                       class="block h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
                       [style.width.%]="percentOf(row)"></span>
                   </span>
-                  <span class="w-[56px] text-right text-[12.5px] font-medium tabular-nums text-[var(--pr-text-secondary)]">
+                  <!-- @akili-spec bugfix/kpi-count-reconciliation — KCR-R-2.1 / KCR-R-6: the same
+                       disclosure as the Overview chip this row mirrors. -->
+                  <span
+                    class="w-[56px] text-right text-[12.5px] font-medium tabular-nums text-[var(--pr-text-secondary)]"
+                    [attr.title]="zeroTargetTitle(row)">
                     <strong class="font-bold text-[var(--pr-text-heading)]">{{ row.done }}</strong
                     ><span class="text-[var(--pr-text-muted)]">/{{ row.total }}</span>
                   </span>
