@@ -190,6 +190,39 @@ describe('LabReportFormComponent', () => {
     });
   });
 
+  // quick/category-picker-kp-reset (2026-09-04) — field bug: picking "Knowledge product" in the
+  // category picker snapped back to "Select a category" while every other category stuck.
+  describe('picking Knowledge product in the category picker', () => {
+    it('keeps the choice, switches to KP mode and defaults the contribution to 1', async () => {
+      await setup({ indicator: indicator({ result_type_id: null, type_name: 'Number of services' }), tocNode: { result_level_id: OUTPUT_LEVEL } });
+      expect(component.needsCategoryChoice()).toBe(true);
+
+      component.onCategoryChange(6);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(component.createResultBody().result_type_id).toBe(6);
+      expect(component.currentResultIsKnowledgeProduct()).toBe(true);
+      expect(component.createResultBody().contribution_to_indicator_target).toBe(1);
+      expect(component.missingFields()).not.toContain('Indicator category');
+    });
+
+    it('does not re-arm the form when the body changes — only a new indicator does', async () => {
+      await setup({ indicator: indicator({ result_type_id: null, type_name: 'Number of services' }), tocNode: { result_level_id: OUTPUT_LEVEL } });
+      component.patch('result_name', 'kept');
+      component.onCategoryChange(6);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(component.createResultBody().result_name).toBe('kept');
+
+      fixture.componentRef.setInput('indicator', indicator({ indicator_id: 2, result_type_id: null, type_name: 'Number of services' }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(component.createResultBody().result_type_id).toBeNull();
+      expect(component.createResultBody().result_name).toBe('');
+    });
+  });
+
   describe('changing category away from Knowledge product', () => {
     it('discards the synced metadata, handle and title so they cannot be submitted under another type', async () => {
       await setup({ indicator: indicator({ result_type_id: null }), tocNode: { result_level_id: OUTPUT_LEVEL } });

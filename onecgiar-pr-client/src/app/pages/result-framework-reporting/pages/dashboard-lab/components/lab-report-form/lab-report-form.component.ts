@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -285,17 +285,25 @@ export class LabReportFormComponent {
       const ind = this.indicator();
       const emerging = this.emergingCategory();
       if (!ind && !emerging) return;
-      this.resetForm();
-      if (this.currentResultIsKnowledgeProduct()) {
-        this.createResultBody.update(body => ({ ...body, contribution_to_indicator_target: 1 }));
-      }
-      this.loadInitiatives();
-      this.loadBilateral();
-      this.preselectCentersP = this.preselectTocCenters();
-      if (emerging) {
-        // Emerging: the category is fixed, so lock the result type and skip the picker.
-        this.createResultBody.update(b => ({ ...b, result_type_id: emerging.id }));
-      }
+      // Field bug 2026-09-04 (quick/category-picker-kp-reset): everything below runs UNTRACKED.
+      // This effect used to read `currentResultIsKnowledgeProduct()`, which depends on the form body
+      // — so the moment a user picked "Knowledge product" in the category picker, the boolean
+      // flipped, the effect re-ran and `resetForm()` wiped the choice back to "Select a category"
+      // (any other category stuck, because it did not flip the boolean). The re-arm must react to
+      // the indicator / emerging category only, never to what the user types or picks.
+      untracked(() => {
+        this.resetForm();
+        if (this.currentResultIsKnowledgeProduct()) {
+          this.createResultBody.update(body => ({ ...body, contribution_to_indicator_target: 1 }));
+        }
+        this.loadInitiatives();
+        this.loadBilateral();
+        this.preselectCentersP = this.preselectTocCenters();
+        if (emerging) {
+          // Emerging: the category is fixed, so lock the result type and skip the picker.
+          this.createResultBody.update(b => ({ ...b, result_type_id: emerging.id }));
+        }
+      });
     });
 
     // P2-3420 — fetch the linkable-innovation catalogue only once the question is actually on
@@ -415,6 +423,14 @@ export class LabReportFormComponent {
   onCategoryChange(resultTypeId: number | null): void {
     const wasKnowledgeProduct = this.currentResultIsKnowledgeProduct();
     this.patch('result_type_id', resultTypeId);
+    // A knowledge product contributes 1 by definition (KPAC-R-1) — the same default the re-arm
+    // applies to KP indicators, now also when the category is picked by hand.
+    if (resultTypeId === KNOWLEDGE_PRODUCT_TYPE_ID && !wasKnowledgeProduct) {
+      const current = this.createResultBody().contribution_to_indicator_target;
+      if (current == null || `${current}`.trim() === '' || Number(current) === 0) {
+        this.createResultBody.update(body => ({ ...body, contribution_to_indicator_target: 1 }));
+      }
+    }
     // P2-3420: the question only exists for Innovation use — dropping the answer keeps a hidden
     // "Yes" (and its link) from travelling in the payload of a result of another category.
     this.hasInnovationLink.set(false);
