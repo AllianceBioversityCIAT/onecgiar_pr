@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, OnDestroy, computed, effect, inject, signal, untracked } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { FormsModule } from '@angular/forms';
@@ -99,6 +99,24 @@ const PGR_GRID_GAP = 12;
 const PGR_ROW_PADDING = 40;
 
 export const PGR_COLUMN_STORAGE_KEY = 'pr.programmeResults.visibleColumns';
+export const PGR_COLUMN_WIDTHS_STORAGE_KEY = 'pr.programmeResults.columnWidths';
+
+export function readStoredColumnWidths(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(PGR_COLUMN_WIDTHS_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, number>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function writeStoredColumnWidths(widths: Record<string, number>): void {
+  try {
+    localStorage.setItem(PGR_COLUMN_WIDTHS_STORAGE_KEY, JSON.stringify(widths));
+  } catch {
+    // Ignore storage quota / private browsing errors
+  }
+}
 
 /**
  * `status_id` → the `--pr-status-*` fg/bg token PAIRS. Copied verbatim from
@@ -516,7 +534,7 @@ function formatDate(value: string): string {
     `
   ]
 })
-export class ProgrammeResultsComponent {
+export class ProgrammeResultsComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dataControlSE = inject(DataControlService);
@@ -569,6 +587,10 @@ export class ProgrammeResultsComponent {
 
   private readonly searchInput = new Subject<string>();
 
+  readonly customWidths = signal<Record<string, number>>(readStoredColumnWidths());
+  readonly hasCustomWidths = computed(() => Object.keys(this.customWidths()).length > 0);
+  readonly isResizing = signal(false);
+
   readonly columnVisibility = signal<Record<string, boolean>>({
     ...defaultColumnVisibility(),
     ...readStoredColumnVisibility()
@@ -581,7 +603,14 @@ export class ProgrammeResultsComponent {
   });
 
   /** `grid-template-columns` shared by the header row and every data row. */
-  readonly grid = computed(() => [...this.visibleColumns().map(column => column.track), PGR_ACTIONS_TRACK].join(' '));
+  readonly grid = computed(() => {
+    const custom = this.customWidths();
+    const tracks = this.visibleColumns().map(column => {
+      const w = custom[column.key];
+      return w ? `${w}px` : column.track;
+    });
+    return [...tracks, PGR_ACTIONS_TRACK].join(' ');
+  });
 
   /**
    * The `min-width` both rows carry — that shared value is what keeps header and cells aligned
@@ -589,9 +618,13 @@ export class ProgrammeResultsComponent {
    * toggle can never leave one of the three out of step.
    */
   readonly minWidth = computed(() => {
+    const custom = this.customWidths();
     const columns = this.visibleColumns();
     const tracks = columns.length + 1;
-    const content = columns.reduce((total, column) => total + column.minPx, 0) + PGR_ACTIONS_MIN_PX;
+    const content = columns.reduce((total, column) => {
+      const w = custom[column.key];
+      return total + (w || column.minPx);
+    }, 0) + PGR_ACTIONS_MIN_PX;
     return `${content + PGR_GRID_GAP * (tracks - 1) + PGR_ROW_PADDING}px`;
   });
 
@@ -906,6 +939,74 @@ export class ProgrammeResultsComponent {
     event?.stopPropagation();
     this.openMenuKey.set(null);
     this.columnsOpen.update(open => !open);
+  }
+
+  // ── Column resizing (TRC-R-1..4) ────────────────────────────────────────────────────────
+  private activeResize: {
+    columnKey: string;
+    startX: number;
+    startWidth: number;
+    minPx: number;
+  } | null = null;
+
+  private readonly onWindowMouseMove = (event: MouseEvent): void => {
+    if (!this.activeResize) return;
+    const deltaX = event.clientX - this.activeResize.startX;
+    const newWidth = Math.max(this.activeResize.minPx, Math.round(this.activeResize.startWidth + deltaX));
+    this.customWidths.update(prev => ({ ...prev, [this.activeResize!.columnKey]: newWidth }));
+  };
+
+  private readonly onWindowMouseUp = (): void => {
+    if (!this.activeResize) return;
+    this.activeResize = null;
+    this.isResizing.set(false);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    window.removeEventListener('mousemove', this.onWindowMouseMove);
+    window.removeEventListener('mouseup', this.onWindowMouseUp);
+    writeStoredColumnWidths(this.customWidths());
+  };
+
+  onResizeStart(event: MouseEvent, column: PgrColumnDef, thElement: HTMLElement): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const startWidth = thElement.getBoundingClientRect().width;
+    this.activeResize = {
+      columnKey: column.key,
+      startX: event.clientX,
+      startWidth,
+      minPx: column.minPx
+    };
+    this.isResizing.set(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', this.onWindowMouseMove);
+    window.addEventListener('mouseup', this.onWindowMouseUp);
+  }
+
+  onResizeReset(column: PgrColumnDef, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.customWidths.update(prev => {
+      const next = { ...prev };
+      delete next[column.key];
+      writeStoredColumnWidths(next);
+      return next;
+    });
+  }
+
+  resetAllColumnWidths(): void {
+    this.customWidths.set({});
+    writeStoredColumnWidths({});
+  }
+
+  ngOnDestroy(): void {
+    if (this.activeResize) {
+      window.removeEventListener('mousemove', this.onWindowMouseMove);
+      window.removeEventListener('mouseup', this.onWindowMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
   }
 
   // ── Sorting (owned by app-pr-table) ─────────────────────────────────────────────────────
