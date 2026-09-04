@@ -11,7 +11,8 @@ import {
   signal
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { ReportingGuideService } from '../../services/reporting-guide.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap } from '@ng-icons/lucide';
 import { PrFilterMultiselectModule } from '../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
@@ -121,6 +122,8 @@ export const SCIENCE_PROGRAM_DESCRIPTIONS: Record<string, string> = {
 export class ReportingProgramBandComponent {
   private readonly zone = inject(NgZone);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
+  private readonly guideSE = inject(ReportingGuideService);
 
   readonly programCode = input<string>('');
   readonly programName = input<string>('');
@@ -237,6 +240,22 @@ export class ReportingProgramBandComponent {
   onWhereToReportClick(): void {
     this.whereToReport.emit();
     this.reportEmerging.emit();
+  }
+
+  startSpTour(): void {
+    this.guideSE.startSpTour({
+      programName: this.programName(),
+      cycleYear: this.cycleYear() ?? undefined,
+      onTabNavigate: (tab: 'overview' | 'reporting' | 'results') => {
+        const targetPath =
+          tab === 'overview'
+            ? this.overviewPath()
+            : tab === 'results'
+              ? this.resultsPath()
+              : this.reportingPath();
+        return this.router.navigate([targetPath], { queryParamsHandling: 'preserve' }).then(() => {});
+      }
+    });
   }
 
   /**

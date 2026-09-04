@@ -1373,6 +1373,7 @@
         </div>
 
         <app-program-overview
+          data-guide="tab-overview-view"
           [programCode]="selected()?.initiativeCode || ''"
           [programName]="selected()?.initiativeShortName || selected()?.initiativeName || ''"
           [(activeSection)]="overviewSection"
@@ -1472,7 +1473,7 @@
                and having two search boxes on one screen was the visible symptom. -->
 
           <!-- Content pad: 32px horizontal, 20px top, 32px bottom. 20px between AoW cards. -->
-          <div class="flex flex-col gap-[20px] px-[32px] pt-[20px] pb-[32px]">
+          <div class="flex flex-col gap-[20px] px-[32px] pt-[20px] pb-[32px]" data-guide="tab-reporting-view">
             @if (loadingAows()) {
               @for (s of [1, 2, 3, 4]; track s) {
                 <div class="h-14 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>

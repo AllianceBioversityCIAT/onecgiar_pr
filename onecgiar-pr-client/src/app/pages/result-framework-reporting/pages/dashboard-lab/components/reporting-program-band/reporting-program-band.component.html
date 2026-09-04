@@ -51,7 +51,7 @@
     </div>
 
     <!-- Title row + ⓘ popover (reference :343-358). Click, not hover. -->
-    <div class="relative flex min-w-0 items-center gap-[8px] pr-[420px]">
+    <div class="relative flex min-w-0 items-center gap-[8px] pr-[420px]" data-guide="sp-identity">
       <h1
         class="m-0 min-w-0 truncate text-[21px] font-bold leading-[1.25] tracking-[-0.015em] text-[var(--pr-text-heading)]">
         {{ programName() }}
@@ -132,8 +132,19 @@
 
     <!-- Top-right action: Where to report. Smart Back was removed — after sibling-skip
          it always read “Back to Science programs” and did not return Overview ↔ Reporting. -->
-    @if (canReport()) {
-      <div class="absolute right-[32px] top-1/2 z-[22] flex -translate-y-1/2 items-center gap-[10px]">
+    <!-- Top-right actions: Guided Tour + Where to report -->
+    <div class="absolute right-[32px] top-1/2 z-[22] flex -translate-y-1/2 items-center gap-[10px]">
+      <button
+        type="button"
+        class="flex h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] text-[13px] font-semibold text-[var(--pr-text-secondary)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+        (click)="startSpTour()"
+        data-guide="sp-tour-trigger"
+        aria-label="Start guided tour">
+        <span class="material-icons-round text-[16px] text-[var(--pr-color-primary-500)]">explore</span>
+        <span>Tour</span>
+      </button>
+
+      @if (canReport()) {
         <button
           type="button"
           class="flex h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[14px] text-[13.5px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
@@ -142,15 +153,16 @@
           <span class="material-icons-round text-[18px]">explore</span>
           <span>Where to report</span>
         </button>
-      </div>
-    }
+      }
+    </div>
   </div>
 
   <!-- ── Tabs: 48px + full-width hairline. Active tab paints a 2px violet line that
        overlaps the hairline (mb-[-1px]) so you never see grey under the violet. ── -->
   <nav
     class="flex h-[48px] items-stretch gap-[24px] border-b border-[var(--pr-border-band)] px-[32px]"
-    aria-label="Program sections">
+    aria-label="Program sections"
+    data-guide="sp-tabs">
     @if (bandCollapsed()) {
       <!-- Collapsed identity — reference :384-386: dot + name at 15px/600, then 24px to the tabs
            (16px gap + the 8px the reference puts on the tab strip). Lives INSIDE the tabs row so the
@@ -231,15 +243,18 @@
       <div
         class="ml-auto flex min-w-0 items-center gap-[8px] self-center"
         data-testid="program-band-collapsed-actions">
+        <button
+          type="button"
+          class="group relative flex h-[32px] min-w-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12px] font-semibold text-[var(--pr-text-secondary)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+          (click)="startSpTour()"
+          aria-label="Start guided tour">
+          <span class="material-icons-round shrink-0 text-[15px] text-[var(--pr-color-primary-500)]">explore</span>
+          <span class="min-w-0 truncate">Tour</span>
+        </button>
+
+        @if (canReport()) {
           <!-- The 36px CTA of the identity block is clipped away with it, so the collapsed bar
                carries its own 32px copy (reference :396-399). Same action, same label, same tooltip. -->
-          <!-- `shrink-0` on this button (and the plain text node) was the OSF-DD-15 defect: the
-               action group's box shrinks correctly under the nav's squeeze, but a non-shrinking
-               child can't follow it and overflows the group — and the page — to the right. This CTA
-               truncates first (OSF-DD-15 option 2 — option 1, `shrink-0` on the group, was rejected:
-               the tab labels and the collapsed program name are single unbreakable tokens with no
-               truncation of their own, so they can't absorb the squeeze that would free up). The
-               icon stays `shrink-0` so it never gets clipped. -->
           <button
             type="button"
             class="pr-band-fade group relative flex h-[32px] min-w-0 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[12px] text-[13px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] shadow-2xs"
@@ -252,6 +267,7 @@
               Find the right reporting pathway or report achievements that emerged during the year.
             </span>
           </button>
+        }
       </div>
     }
   </nav>
@@ -263,7 +279,8 @@
   <div
     class="flex flex-wrap items-center justify-between gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[32px] py-[10px]"
     role="search"
-    aria-label="Reporting controls">
+    aria-label="Reporting controls"
+    data-guide="sp-actions-toolbar">
     <div class="flex flex-wrap items-center gap-[10px]">
       <!-- Search Input -->
       <div class="relative h-[34px] w-[220px] max-sm:w-full">

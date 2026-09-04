@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { ReportingProgramBandComponent, ReportingSummaryStats } from './reporting-program-band.component';
+import { ReportingGuideService } from '../../services/reporting-guide.service';
 
 /**
  * The band renders the whole programme shell chrome, so these tests go through the real template:
@@ -804,6 +805,59 @@ describe('ReportingProgramBandComponent', () => {
       await build({ showToolbar: true, compactFilters: false });
       const btn = Array.from(root().querySelectorAll('button')).find(b => b.textContent?.includes('All Areas of Work'));
       expect(btn).toBeUndefined();
+    });
+  });
+
+  // ── SP Guided Tour (SPTOUR-R-1, SPTOUR-T-2) ──────────────────────────────
+  describe('SP guided tour launcher', () => {
+    it('renders the tour button in the header actions block', async () => {
+      await build();
+
+      const tourBtn = root().querySelector('[data-guide="sp-tour-trigger"]') as HTMLButtonElement;
+      expect(tourBtn).toBeTruthy();
+      expect(tourBtn.textContent).toContain('Tour');
+    });
+
+    it('renders the tour button in the condensed bar when scrolled', async () => {
+      await build();
+      scrollTo(100);
+
+      const condensedActions = root().querySelector('[data-testid="program-band-collapsed-actions"]');
+      expect(condensedActions).toBeTruthy();
+
+      const tourBtn = Array.from(condensedActions!.querySelectorAll('button')).find(b => b.textContent?.includes('Tour'));
+      expect(tourBtn).toBeTruthy();
+    });
+
+    it('invokes startSpTour on the guide service with correct parameters when tour button is clicked', async () => {
+      await build({ cycleYear: 2026 });
+
+      const guideSE = TestBed.inject(ReportingGuideService);
+      const startSpy = jest.spyOn(guideSE, 'startSpTour').mockImplementation();
+      const router = TestBed.inject(Router);
+      const navSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+
+      const tourBtn = root().querySelector('[data-guide="sp-tour-trigger"]') as HTMLButtonElement;
+      tourBtn.click();
+
+      expect(startSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          programName: 'Breeding for Tomorrow',
+          cycleYear: 2026,
+          onTabNavigate: expect.any(Function)
+        })
+      );
+
+      // Verify onTabNavigate handler
+      const opts = startSpy.mock.calls[0][0];
+      opts.onTabNavigate('overview');
+      expect(navSpy).toHaveBeenCalledWith(['/result-framework-reporting/entity-details/SP01/overview'], { queryParamsHandling: 'preserve' });
+
+      opts.onTabNavigate('results');
+      expect(navSpy).toHaveBeenCalledWith(['/result-framework-reporting/entity-details/SP01/results'], { queryParamsHandling: 'preserve' });
+
+      opts.onTabNavigate('reporting');
+      expect(navSpy).toHaveBeenCalledWith(['/result-framework-reporting/entity-details/SP01'], { queryParamsHandling: 'preserve' });
     });
   });
 });
