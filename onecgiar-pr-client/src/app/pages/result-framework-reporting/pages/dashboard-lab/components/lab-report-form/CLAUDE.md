@@ -1,6 +1,6 @@
 # lab-report-form
 
-**Verified:** 2026-08-31 · branch performance-refactor · b224c27e4
+**Verified:** 2026-09-05 · qa-development-2026 · b2d5f1c31
 
 ## Qué es
 El formulario de creación de resultado que vive **dentro del aside** (`indicator-drawer`). Copia
@@ -9,15 +9,18 @@ leer `EntityAowService`. El modal sigue sirviendo todas las demás entradas.
 
 ## Contrato
 ```
-inputs   tocNode · indicator · initiativeId (required) · programCode · emergingCategory
+inputs   tocNode · indicator · initiativeId (required) · programCode · emergingMode · emergingCategory
          columns (1|2) · canReport (gate del botón) · fundingSource ('w1w2' | 'w3bilateral')
 outputs  created · dirtyChange
-signals  canSave · currentResultIsKnowledgeProduct · needsCategoryChoice · categoryUnavailable
-         resultTypes · kpEntryMode
+signals  canSave · currentResultIsKnowledgeProduct · needsResultLevelChoice · chosenResultLevelId
+         needsCategoryChoice · categoryUnavailable · resultTypes · kpEntryMode
 ```
 - Payload: **no se arma aquí** → `../../../../shared/report-result/create-result-payload.util`.
 - Handle: **no se valida aquí** → `../../../../shared/report-result/kp-handle.validator`.
 - Catálogo de categorías: `ResultLevelService.resultLevelListSig` (signal).
+- `emergingMode=true` arma sin indicador ni categoría preseleccionada. Primero se elige
+  Output/Outcome desde `ResultLevelService.outputOutcomeLevelsSig`, luego la categoría; el phase
+  sigue siendo `dataControlSE.reportingCurrentPhase` y no hay selector local.
 
 ## Dónde se usa
 - `../indicator-drawer/indicator-drawer.component.html:69` — tab `report` del aside.
@@ -39,6 +42,10 @@ signals  canSave · currentResultIsKnowledgeProduct · needsCategoryChoice · ca
   objeto plano: leerlo desde un `computed` memoiza la primera lectura vacía y **350 indicadores sin
   categoría quedan imposibles de reportar**. Inyectar `ResultLevelService` además garantiza que la
   carga se dispare (la lanza su constructor).
+- ⚠️ **Emergente sin categoría necesita el flag explícito `emergingMode`.** `emergingCategory=null`
+  por sí solo es el camino planned vacío y no arma el formulario. El nivel elegido es estado local;
+  al crear se entrega al payload canónico junto con la categoría que el usuario ya escogió, sin
+  `indicator` ni `toc_result_id`.
 - ⚠️ **Cambiar de categoría saliendo de Knowledge product limpia `mqapJson`, `handler` y título**
   (`onCategoryChange`). Sin eso se envía metadata de KP bajo otro tipo y el servidor la descarta sin
   avisar.

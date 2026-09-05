@@ -8,7 +8,7 @@
   class="pr-drawer fixed inset-y-0 right-0 z-[141] flex max-w-[100vw] flex-col border-l border-[rgba(30,32,47,0.1)] bg-white shadow-[-18px_0_44px_rgba(30,32,47,0.14)]"
   [style.width.px]="width()"
   role="complementary"
-  aria-label="Manage indicator"
+  [attr.aria-label]="drawerAriaLabel()"
   (keydown.escape)="onEscape()"
   tabindex="-1">
   <!-- drag the left edge to widen; past a threshold the form goes two-column -->
@@ -35,7 +35,8 @@
     </button>
   </div>
 
-  <!-- Context header: Indicator details -->
+  <!-- Context header: Indicator details (planned KPI only — hidden in emerging mode) -->
+  @if (!emerging()) {
   <header class="shrink-0 border-b border-[rgba(30,32,47,0.08)] px-6 py-3 bg-white">
     <div class="flex items-center gap-2 mb-2 flex-wrap">
       <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[13px] font-bold bg-[#6461bc]/10 text-[var(--pr-color-primary-300)] tracking-wide">
@@ -73,7 +74,7 @@
         }
       </div>
     } @else {
-      <div id="drawer-context-details">
+      <div id="drawer-context-details" class="rounded-xl border border-[var(--pr-border)] bg-[var(--pr-surface-app)] p-3.5 shadow-2xs">
         <div class="flex flex-col">
           <h2
             class="m-0 text-[13.5px] font-semibold leading-snug text-gray-900 tracking-tight"
@@ -99,33 +100,40 @@
           }
         </div>
 
-        <div class="mt-2.5 flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100">
-          @if (indicator()?.type_name) {
-            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-50 border border-gray-200 text-[12px]">
-              <span class="font-medium text-gray-500">Indicator type:</span>
-              <span class="font-bold text-gray-800">{{ indicator()?.type_name }}</span>
+        <div class="mt-2.5 flex flex-wrap items-center gap-2 pt-2 border-t border-[var(--pr-border)]">
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-violet-50 text-[var(--pr-color-primary-400)] border border-violet-200 text-[12px] font-semibold">
+            <span class="text-violet-700">2026 Target:</span>
+            <span class="font-bold text-[var(--pr-color-primary-400)] tabular-nums">{{ indicator()?.target_value_sum ?? 0 }}</span>
+          </div>
+          @if (indicator()?.center_acronym) {
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-50 text-gray-700 border border-gray-200 text-[12px] font-medium">
+              <span class="text-gray-500">Center:</span>
+              <span class="font-bold text-gray-800">{{ indicator()?.center_acronym }}</span>
             </div>
           }
           @if (indicator()?.unit_messurament) {
-            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-50 border border-gray-200 text-[12px]">
-              <span class="font-medium text-gray-500">Unit:</span>
-              <span class="font-bold text-gray-800">{{ indicator()?.unit_messurament }}</span>
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-50 text-slate-700 border border-slate-200 text-[12px] font-medium">
+              <span class="text-slate-500">Unit:</span>
+              <span class="font-bold text-slate-800">{{ indicator()?.unit_messurament }}</span>
             </div>
           }
-          <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-violet-50/80 border border-violet-200 text-[12px]">
-            <span class="font-medium text-violet-700">2026 Target:</span>
-            <span class="font-bold text-[var(--pr-color-primary-300)] tabular-nums">{{ indicator()?.target_value_sum ?? 0 }}</span>
-          </div>
-          @if (indicator()?.center_acronym) {
-            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-50 border border-gray-200 text-[12px]">
-              <span class="font-medium text-gray-500">Center:</span>
-              <span class="font-bold text-gray-800">{{ indicator()?.center_acronym }}</span>
+          @if (indicator()?.type_name) {
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-50 text-gray-700 border border-gray-200 text-[12px] font-medium">
+              <span class="text-gray-500">Indicator type:</span>
+              <span class="font-bold text-gray-800">{{ indicator()?.type_name }}</span>
             </div>
           }
         </div>
       </div>
     }
   </header>
+  } @else {
+  <header class="shrink-0 border-b border-[rgba(30,32,47,0.08)] px-6 py-3 bg-white">
+    <p class="m-0 text-[13px] text-[var(--pr-text-secondary)]">
+      For achievements that were not planned in this program’s Theory of Change.
+    </p>
+  </header>
+  }
 
   <!-- ---------- panel ---------- -->
   <div class="custom_scroll flex-1 overflow-y-auto px-6 pt-5 pb-0 flex flex-col">
@@ -135,6 +143,7 @@
     <div class="flex flex-1 min-h-0 flex-col" [style.display]="tab() === 'report' ? null : 'none'" data-testid="irr-report-pane">
         <!-- What is already reported here, visible WHILE the form is being filled: recognising a
              duplicate after creating it is too late. Compact on purpose — the form is the job. -->
+        @if (!emerging()) {
         @if (loadingExisting()) {
           <div class="mb-4 h-[38px] animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
         } @else if (existing()?.length) {
@@ -178,13 +187,21 @@
             </button>
           </p>
         } @else {
-          <p class="m-0 mb-4 text-[13px] text-[var(--pr-color-accents-5)] font-medium">Nothing has been reported against this indicator yet.</p>
+          <div data-testid="irr-micro-empty-card" class="mb-4 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <span class="material-icons-round text-[20px] text-[var(--pr-color-primary-300)] shrink-0">flag</span>
+            <p class="m-0 text-[12.5px] leading-snug font-medium text-slate-700">
+              No results reported against this indicator yet. Your report will be the first recorded toward the 2026 target.
+            </p>
+          </div>
+        }
         }
 
         <app-lab-report-form
           class="flex flex-col flex-1 min-h-0"
           [tocNode]="tocNode()"
           [indicator]="indicator()"
+          [emergingMode]="emerging()"
+          [emergingCategory]="null"
           [initiativeId]="initiativeId()"
           [programCode]="programCode()"
           [columns]="columns()"
@@ -202,7 +219,7 @@
            table, then "nothing here". Error before empty is the whole point (IRR-R-7): a 500 that
            renders the empty state tells the user this indicator has no results, which is a lie.
            A search that matches nothing is NOT this branch — it is the table's own empty template. -->
-      @if (tab() === 'results') {
+      @if (!emerging() && tab() === 'results') {
         @if (returnTab()) {
           <button
             type="button"
@@ -459,7 +476,7 @@
         }
       }
 
-      @if (tab() === 'info') {
+      @if (!emerging() && tab() === 'info') {
         <!-- ---- Target ---- -->
         <p class="m-0 mb-3 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">
           <span class="material-icons-round text-[16px]">flag</span> Target

@@ -864,18 +864,21 @@ describe('By-AoW section collapse/expand', () => {
     expect(getProjects).toHaveBeenCalledWith('SP02');
   });
 
-  it('opens emerging result modal on onHubReportEmerging and closes Where to report modal', async () => {
+  it('opens emerging aside on onHubReportEmerging and closes Where to report modal', async () => {
     const { component } = await createComponent(apiMock());
     component.openWhereToReportModal();
     expect(component.showWhereToReportModal()).toBe(true);
     expect(component.showReportModal()).toBe(false);
+    expect(component.managed()).toBeNull();
 
     component.onHubReportEmerging();
     expect(component.showWhereToReportModal()).toBe(false);
-    expect(component.showReportModal()).toBe(true);
+    expect(component.showReportModal()).toBe(false);
+    expect(component.managed()?.emerging).toBe(true);
+    expect(component.managed()?.indicator).toBeNull();
   });
 
-  it('navigates back to my-work on closeReportModal when pendingReturnTab was my-work', async () => {
+  it('navigates back to my-work on closeManage when pendingReturnTab was my-work', async () => {
     const navigate = jest.fn().mockResolvedValue(true);
     const { component } = await createComponent(apiMock(), { navigate });
     (component as any).route = {
@@ -891,10 +894,10 @@ describe('By-AoW section collapse/expand', () => {
 
     component.openWhereToReportModal();
     component.onHubReportEmerging();
-    expect(component.showReportModal()).toBe(true);
+    expect(component.managed()?.emerging).toBe(true);
 
-    component.closeReportModal();
-    expect(component.showReportModal()).toBe(false);
+    component.closeManage();
+    expect(component.managed()).toBeNull();
     expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP02', 'my-work']);
   });
 
@@ -913,7 +916,7 @@ describe('By-AoW section collapse/expand', () => {
     };
 
     component.onHubReportEmerging();
-    expect(component.showReportModal()).toBe(true);
+    expect(component.managed()?.emerging).toBe(true);
 
     navigate.mockClear();
     component.onResultCreated();

@@ -20,6 +20,7 @@ import { ScienceProgramIdService } from '../../services/science-program-id.servi
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
 import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
+import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 
 /** The band is chrome, not this tab: stubbed so the spec exercises the board surface only. */
 @Component({ selector: 'app-reporting-program-band', standalone: true, template: '' })
@@ -31,11 +32,13 @@ class BandStubComponent {
   @Input() activeTab = '';
   @Input() myWorkCount: number | null = null;
   @Input() canReport = false;
+  @Input() canReportEmerging = false;
   @Input() showToolbar = false;
   @Input() frameLocked = false;
   @Input() scrollHost: HTMLElement | null = null;
   /** `MWB-T-8` (2) — the stub carries the output so the page's own binding is exercised. */
   @Output() whereToReport = new EventEmitter<void>();
+  @Output() reportEmerging = new EventEmitter<void>();
 }
 
 @Component({
@@ -498,6 +501,28 @@ describe('MyWorkBoardComponent', () => {
       expect(router.navigate).not.toHaveBeenCalled();
     });
 
+    // @akili-spec changes/emerging-result-cta-placement (ERC-T-5)
+    it('hops with reportEmerging and returnTab=my-work after persisting Smart Back origin', () => {
+      const remember = jest.spyOn(TestBed.inject(SmartNavigationService), 'rememberResultDetailOrigin');
+      const band = fixture.debugElement.query(By.directive(BandStubComponent)).componentInstance as BandStubComponent;
+      router.navigate.mockClear();
+
+      band.reportEmerging.emit();
+
+      expect(remember).toHaveBeenCalled();
+      expect(router.navigate).toHaveBeenCalledWith(
+        ['/result-framework-reporting', 'entity-details', 'SP01'],
+        { queryParams: { reportEmerging: 'true', returnTab: 'my-work' } }
+      );
+    });
+
+    it('does not hop when canReportEmerging is false', () => {
+      jest.spyOn(component, 'canReportEmerging').mockReturnValue(false);
+      router.navigate.mockClear();
+      component.openEmergingReport();
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
     it('renders a board-shaped skeleton (5 columns + card placeholders) while loading, and none once rows land', () => {
       service.loading.set(true);
       service.rows.set([]);
@@ -747,7 +772,7 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     expect(cardCount()).toBe(5);
   }));
 
-  it('the Filter badge always equals the number of chips — one per SELECTED value (MWB-T-12)', () => {
+  it('the Filter badge always equals the number of SELECTED VALUES, never the number of chips (MWB-T-12, MWB-T-14)', () => {
     build();
     expect(filterBadge()).toBe(String(chipLabels().length));
 
@@ -847,9 +872,10 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     build({ origin: 'W3/Bilateral' });
 
     expect(component.selectedOrigins()).toEqual(['W3/Bilateral']);
-    // `MWB-T-12`: the shared single-select twin stays untouched — filtering it twice would hide
-    // rows the chips still promise.
-    expect(filter.selectedOrigin()).toBeNull();
+    // `MWB-T-12`: the shared service's own origin dimension stays untouched — filtering it twice
+    // would hide rows the chips still promise. (Minimally adapted to the multi-value API the
+    // concurrent `MWB-T-13` change gave `ProgrammeResultsFilterService`; the claim is unchanged.)
+    expect(filter.selectedOrigins()).toEqual([]);
     expect(chipLabels()).toContain('Funding source: W3/Bilateral');
     expect(cardTitles().sort()).toEqual(['Policy dialogue note', 'Water accounting tool']);
   });
@@ -1110,8 +1136,9 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
       expect(component.selectedCategories()).toEqual(['Knowledge product', 'Innovation development']);
       expect(chipLabels()).toEqual(['Phase: Reporting 2026', 'Category: Knowledge product', 'Category: Innovation development']);
       expect(cardCount()).toBe(5);
-      // The shared single-select twin is never written — one source of truth per dimension.
-      expect(filter.selectedCategory()).toBeNull();
+      // The shared service's own category dimension is never written — one source of truth per
+      // dimension. (Adapted to the multi-value API from the concurrent `MWB-T-13` change.)
+      expect(filter.selectedCategories()).toEqual([]);
     });
 
     it('hydrates ?origin= and ?center= the same way, trimming blanks and duplicates', () => {
@@ -1164,6 +1191,155 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     document.body.click();
     fixture.detectChanges();
     expect(popover.classList.contains('hidden')).toBe(true);
+  });
+
+  // @akili-spec changes/my-work-board (MWB-T-14)
+  //
+  // Chip aggregation. The measured defect (live page, 2026-09-05): 8 centers + 3 categories +
+  // 2 origins + phase produced 14 chips on FOUR lines, a 171px filter row. From three values a
+  // dimension collapses into one summary chip; one and two values keep the individual chips,
+  // which are still the fastest way to drop one of them.
+  //
+  // The multiselect's own "stays open while ticking" behaviour is NOT provable here: jsdom applies
+  // no `:focus-within` styling and lays nothing out, so the panel is neither open nor closed. That
+  // claim belongs to `my-work-board.cy.ts` and to the real-browser read in `execution.md`.
+  describe('MWB-T-14 — chip aggregation', () => {
+    const chipNamed = (prefix: string) =>
+      Array.from(root().querySelectorAll('[data-testid="my-work-chip"]')).find(chip =>
+        (chip.textContent ?? '').replace(/\s+/g, ' ').trim().startsWith(prefix)
+      ) as HTMLElement;
+
+    it('collapses a dimension into ONE summary chip at three values, and its × empties the dimension', () => {
+      build();
+
+      component.selectedCenters.set(['CIAT', 'IWMI', 'ICARDA']);
+      fixture.detectChanges();
+
+      expect(chipLabels()).toEqual(['Phase: Reporting 2026', 'Center: 3 centers']);
+      const summary = chipNamed('Center: 3 centers');
+      expect(summary.getAttribute('data-summary')).toBe('true');
+      // The label is a real button (it reopens the popover); the × is the one that clears.
+      expect((summary.querySelector('[data-testid="my-work-chip-open"]') as HTMLElement).tagName).toBe('BUTTON');
+
+      (summary.querySelector('[data-testid="my-work-chip-remove"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(component.selectedCenters()).toEqual([]);
+      expect(chipLabels()).toEqual(['Phase: Reporting 2026']);
+    });
+
+    it('keeps individual chips at two values — the threshold is three, not two', () => {
+      build();
+
+      component.selectedCenters.set(['CIAT', 'IWMI']);
+      fixture.detectChanges();
+
+      expect(chipLabels()).toEqual(['Phase: Reporting 2026', 'Center: CIAT', 'Center: IWMI']);
+      expect(root().querySelectorAll('[data-testid="my-work-chip-open"]').length).toBe(0);
+    });
+
+    it('aggregates each dimension on its own: 3 categories summarised, 2 funding sources still individual', () => {
+      build();
+
+      component.selectedCategories.set(['Knowledge product', 'Innovation development', 'Policy change']);
+      component.selectedOrigins.set(['W1/W2', 'W3/Bilateral']);
+      fixture.detectChanges();
+
+      expect(chipLabels()).toEqual([
+        'Phase: Reporting 2026',
+        'Category: 3 categories',
+        'Funding source: W1/W2',
+        'Funding source: W3/Bilateral'
+      ]);
+    });
+
+    it('the badge keeps counting individual VALUES, not chips', () => {
+      build();
+
+      component.selectedCenters.set(['CIAT', 'IWMI', 'ICARDA']);
+      fixture.detectChanges();
+
+      // Two chips on the row (phase + summary), but four values are narrowing the board.
+      expect(chipLabels().length).toBe(2);
+      expect(filterBadge()).toBe('4');
+
+      component.selectedCategories.set(['Knowledge product', 'Innovation development', 'Policy change']);
+      fixture.detectChanges();
+      expect(chipLabels().length).toBe(3);
+      expect(filterBadge()).toBe('7');
+    });
+
+    it('clicking a summary chip label opens the Filter popover', () => {
+      build();
+      component.selectedCenters.set(['CIAT', 'IWMI', 'ICARDA']);
+      fixture.detectChanges();
+
+      const popover = root().querySelector('[data-testid="my-work-filter-popover"]') as HTMLElement;
+      expect(popover.classList.contains('hidden')).toBe(true);
+
+      (chipNamed('Center: 3 centers').querySelector('[data-testid="my-work-chip-open"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(component.filterPopoverOpen()).toBe(true);
+      expect(popover.classList.contains('hidden')).toBe(false);
+      // The chip sits OUTSIDE `.mwb-filter-container`, so without `stopPropagation` the same click
+      // would reach `onDocumentClick` and shut the popover again.
+      expect(popover.querySelector('.mwb-filter[data-dimension="center"]')).toBeTruthy();
+    });
+
+    it('Clear filters still empties every dimension behind a summary chip', () => {
+      build();
+      component.selectedCategories.set(['Knowledge product', 'Innovation development', 'Policy change']);
+      component.selectedCenters.set(['CIAT', 'IWMI', 'ICARDA']);
+      fixture.detectChanges();
+      expect(chipLabels().length).toBe(3);
+
+      (root().querySelector('[data-testid="my-work-clear-filters"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(component.selectedCategories()).toEqual([]);
+      expect(component.selectedCenters()).toEqual([]);
+      expect(chipLabels()).toEqual(['Phase: Reporting 2026']);
+    });
+
+    it('keeps ONE array instance for an option list whose values did not change (the panel-closing defect)', () => {
+      build();
+
+      const before = component.centerSelectOptions();
+      // A row-set change that leaves the center vocabulary identical must not emit a new array:
+      // the shared multiselect renders its rows with `*ngFor` over exactly this array, so a new
+      // instance detaches the focused checkbox and `:focus-within` drops the panel.
+      component.selectedOrigins.set(['W1/W2']);
+      fixture.detectChanges();
+      expect(component.centerSelectOptions()).toBe(before);
+
+      // Selecting a center that IS in the list must not change the list either.
+      component.selectedCenters.set(['CIAT']);
+      fixture.detectChanges();
+      expect(component.centerSelectOptions()).toBe(before);
+
+      // A value no rows carry is appended by `withSelectedOptions` — a genuine change, new array.
+      component.selectedCenters.set(['CIAT', 'NOWHERE']);
+      fixture.detectChanges();
+      expect(component.centerSelectOptions()).not.toBe(before);
+      expect(component.centerSelectOptions().map(option => option.value)).toContain('NOWHERE');
+    });
+
+    it('a document click whose target has already been detached does not close the popover', () => {
+      build();
+      (root().querySelector('[data-testid="my-work-filter-button"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(component.filterPopoverOpen()).toBe(true);
+
+      // What the multiselect does to its own option rows when the option set legitimately changes:
+      // the node the click started on is gone by the time the document listener runs, and
+      // `closest()` on a detached tree can never reach `.mwb-filter-container`.
+      const detached = document.createElement('div');
+      component.onDocumentClick({ target: detached } as unknown as Event);
+      fixture.detectChanges();
+
+      expect(component.filterPopoverOpen()).toBe(true);
+    });
   });
 });
 

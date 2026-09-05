@@ -1161,9 +1161,10 @@
           [programDotColor]="accentTheme().solid"
           activeTab="overview"
           [myWorkCount]="myWorkCount()"
-          [canReport]="canReportEmerging()"
+          [canReport]="true"
+          [canReportEmerging]="canReportEmerging()"
           (whereToReport)="openWhereToReportModal()"
-          (reportEmerging)="openWhereToReportModal()"
+          (reportEmerging)="openEmergingReport()"
           [showToolbar]="false"
           [frameLocked]="true"
           [scrollHost]="workAreaEl()" />
@@ -1456,9 +1457,10 @@
             [programDotColor]="accentTheme().solid"
             activeTab="reporting"
             [myWorkCount]="myWorkCount()"
-            [canReport]="canReportEmerging()"
+            [canReport]="true"
+            [canReportEmerging]="canReportEmerging()"
             (whereToReport)="openWhereToReportModal()"
-            (reportEmerging)="openWhereToReportModal()"
+            (reportEmerging)="openEmergingReport()"
             [search]="plannedSearch()"
             [statusValue]="reportingStatusFilter()"
             [aowOptions]="reportingSectionOptions()"
@@ -2158,6 +2160,7 @@
 @if (managed(); as m) {
   <app-indicator-drawer
     [indicator]="m.indicator"
+    [emerging]="!!m.emerging"
     [tocNode]="m.node"
     [initiativeId]="selected()?.initiativeId || 0"
     [groupTitle]="m.groupTitle"

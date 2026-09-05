@@ -320,7 +320,7 @@ describe('MyWorkBoardService', () => {
       loadSixRows();
       expect(service.visibleRows().length).toBe(6);
 
-      filter.selectedCategory.set('Knowledge product');
+      filter.selectedCategories.set(['Knowledge product']);
       httpMock.expectNone(req => req.url.includes('get/all/roles/filter'));
 
       expect(service.visibleRows().map(row => row.code)).toEqual(['5101', '5102', '5103']);
@@ -329,8 +329,8 @@ describe('MyWorkBoardService', () => {
     it('combines two dimensions with AND, not OR', () => {
       loadSixRows();
 
-      filter.selectedCategory.set('Knowledge product');
-      filter.selectedOrigin.set('W1/W2');
+      filter.selectedCategories.set(['Knowledge product']);
+      filter.selectedOrigins.set(['W1/W2']);
 
       // OR would yield five rows (three KP + three W1/W2 minus the two shared); AND yields two.
       expect(service.visibleRows().map(row => row.code)).toEqual(['5101', '5102']);
@@ -350,7 +350,7 @@ describe('MyWorkBoardService', () => {
       expect(service.badge()).toBe(5); // five Editing rows in Reporting 2026
       expect(service.scopeTotals()).toEqual({ mine: 6, all: null });
 
-      filter.selectedCategory.set('Policy change');
+      filter.selectedCategories.set(['Policy change']);
       service.setPhase('Reporting 2026');
 
       expect(service.visibleRows().length).toBe(1);

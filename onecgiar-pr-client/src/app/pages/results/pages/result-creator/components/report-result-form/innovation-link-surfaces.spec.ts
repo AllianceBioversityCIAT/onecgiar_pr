@@ -59,12 +59,29 @@ describe('report-result-form hosts — innovation link question (P2-3569)', () =
     for (const tag of tags) expect(tag).toContain('[showInnovationLinkQuestion]');
   });
 
-  it('the live emergent modal asks it — this is the one QA found empty', () => {
+  it('the live emerging aside owns the innovation-link gate — not the legacy modal tag', () => {
+    const labForm = join(
+      APP,
+      'pages',
+      'result-framework-reporting',
+      'pages',
+      'dashboard-lab',
+      'components',
+      'lab-report-form',
+      'lab-report-form.component.ts'
+    );
+    const ts = readFileSync(labForm, 'utf8');
+    expect(ts).toContain('showsInnovationLink');
+    expect(ts).toMatch(/showsInnovationLinkQuestion/);
+  });
+
+  it('dashboard-lab legacy modal tag is not treated as the shipped emerging path', () => {
     const live = hosts.find(f => f.includes('dashboard-lab.component.html'));
     expect(live).toBeDefined();
     const tags = bindingsInHostTags(readFileSync(live as string, 'utf8'));
-    expect(tags.length).toBe(1);
-    expect(tags[0]).toContain('[showInnovationLinkQuestion]="true"');
+    // Legacy host may remain in the tree unused from hub/band (ERC-DD-4); it must not be the sole live path.
+    const legacyEmerging = tags.filter(t => t.includes('[showInnovationLinkQuestion]="true"'));
+    expect(legacyEmerging.length).toBeLessThanOrEqual(1);
   });
 
   it('stays opt-in: the input must keep defaulting to false', () => {

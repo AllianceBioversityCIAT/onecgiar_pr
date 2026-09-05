@@ -7,7 +7,7 @@ import { LabReportFormComponent } from './lab-report-form.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { ResultLevelService } from '../../../../../results/pages/result-creator/services/result-level.service';
-import { WritableSignal, signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, WritableSignal, computed, signal } from '@angular/core';
 
 /**
  * The template is replaced with an empty one on purpose: these tests are about the rules the form
@@ -54,6 +54,10 @@ describe('LabReportFormComponent', () => {
       typeof phaseYearOrOptions === 'number' ? { phaseYear: phaseYearOrOptions } : (phaseYearOrOptions ?? {});
     api = makeApiMock(options.phaseYear);
     resultLevelSig = signal<any[]>([]);
+    const outputOutcomeLevelsSig = computed(() => {
+      const levels = resultLevelSig();
+      return levels.length < 4 ? [] : levels.slice(2, 4).reverse();
+    });
     // P2-3554: the component reads `centers()`, the signal. The service writes it together with
     // `centersList`, so a mock that carries only the plain array is not the service — and that gap is what
     // let the stale-cache bug through unnoticed here.
@@ -64,7 +68,7 @@ describe('LabReportFormComponent', () => {
       providers: [
         { provide: ApiService, useValue: api },
         { provide: CentersService, useValue: centersMock },
-        { provide: ResultLevelService, useValue: { resultLevelListSig: resultLevelSig } },
+        { provide: ResultLevelService, useValue: { resultLevelListSig: resultLevelSig, outputOutcomeLevelsSig } },
         { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
       ]
     })
@@ -82,6 +86,92 @@ describe('LabReportFormComponent', () => {
   function indicator(overrides: Record<string, any> = {}) {
     return { indicator_id: 1, result_type_id: 7, result_level_id: OUTPUT_LEVEL, type_name: 'Number of innovations', ...overrides };
   }
+
+  describe('ERC-T-2: explicit emerging mode', () => {
+    const resultLevels = [
+      { id: 1, name: 'Impact', result_type: [] },
+      { id: 2, name: 'Other', result_type: [] },
+      { id: 3, name: 'Outcome', result_type: [{ id: 2, name: 'Innovation use' }, { id: 4, name: 'Other outcome' }] },
+      { id: 4, name: 'Output', result_type: [{ id: 6, name: 'Knowledge product' }, { id: 7, name: 'Innovation development' }] }
+    ];
+
+    it('arms with no indicator or preselected category, while leaving the result type empty', async () => {
+      await setup({ emergingMode: true, emergingCategory: null, indicator: null, tocNode: null });
+      await fixture.whenStable();
+
+      expect(component.isEmerging()).toBe(true);
+      expect(api.resultsSE.GET_AllInitiatives).toHaveBeenCalledTimes(1);
+      expect(component.preselectCentersP).toBeDefined();
+      expect(component.createResultBody().result_type_id).toBeNull();
+    });
+
+    it('keeps category unavailable until the user chooses Output or Outcome', async () => {
+      await setup({ emergingMode: true, emergingCategory: null, indicator: null, tocNode: null });
+      resultLevelSig.set(resultLevels);
+
+      expect(component.needsResultLevelChoice()).toBe(true);
+      expect(component.chosenResultLevelId()).toBeNull();
+      expect(component.resultTypes()).toEqual([]);
+      expect(component.categoryUnavailable()).toBe(true);
+    });
+
+    it('uses the legacy ResultLevelService Output/Outcome levels, then allows a category choice', async () => {
+      await setup({ emergingMode: true, emergingCategory: null, indicator: null, tocNode: null });
+      resultLevelSig.set(resultLevels);
+
+      expect(component.outputOutcomeLevels().map((level: any) => level.id)).toEqual([4, 3]);
+
+      component.onResultLevelChange(OUTPUT_LEVEL);
+      expect(component.resultLevelId()).toBe(OUTPUT_LEVEL);
+      expect(component.resultTypes().length).toBeGreaterThan(0);
+
+      component.onCategoryChange(7);
+      expect(component.createResultBody().result_type_id).toBe(7);
+    });
+
+    it('submits an emerging payload with the chosen level, no ToC indicator, and the shell phase year', async () => {
+      await setup({ emergingMode: true, emergingCategory: null, indicator: null, tocNode: null }, 2027);
+      resultLevelSig.set(resultLevels);
+      component.onResultLevelChange(OUTPUT_LEVEL);
+      component.onCategoryChange(7);
+      component.patch('result_name', 'Emerging innovation');
+      component.patch('contribution_to_indicator_target', 1);
+
+      component.createResult();
+
+      const body = api.resultsSE.POST_createResult.mock.calls[0][0];
+      expect(component.phaseYear()).toBe(2027);
+      expect(body.result.result_level_id).toBe(OUTPUT_LEVEL);
+      expect(body.indicators).toEqual([]);
+      expect(body.toc_result_id).toBeUndefined();
+    });
+
+    it('does not offer the level chooser on the planned indicator path', async () => {
+      await setup({ indicator: indicator(), tocNode: { result_level_id: OUTPUT_LEVEL } });
+
+      expect(component.isEmerging()).toBe(false);
+      expect(component.needsResultLevelChoice()).toBe(false);
+    });
+
+    it('shows the innovation-link question only after Innovation use is picked in a 2026+ phase', async () => {
+      await setup({ emergingMode: true, emergingCategory: null, indicator: null, tocNode: null }, 2026);
+      resultLevelSig.set(resultLevels);
+
+      component.onResultLevelChange(3);
+      expect(component.showsInnovationLink()).toBe(false);
+
+      component.onCategoryChange(2);
+      expect(component.showsInnovationLink()).toBe(true);
+    });
+
+    it('renders the level chooser only for unseeded emerging mode and adds no phase picker', () => {
+      const template = readFileSync(join(__dirname, 'lab-report-form.component.html'), 'utf8');
+
+      expect(template).toContain('@if (needsResultLevelChoice())');
+      expect(template).toContain('data-testid="emerging-result-level-chooser"');
+      expect(template).not.toMatch(/reporting phase|phase picker|name="phase"/i);
+    });
+  });
 
   describe('the category picker appears whenever the indicator has none', () => {
     it('is asked for when the indicator declares no category', async () => {
@@ -678,3 +768,488 @@ describe('LabReportFormComponent', () => {
     });
   });
 });
+
+// @akili-spec changes/report-result-form-ux (RFUX-T-2, RFUX-R-2, RFUX-AC-2)
+describe('LabReportFormComponent — Form 3-Card Architecture DOM Rendering (RFUX-T-2)', () => {
+  let fixture: ComponentFixture<LabReportFormComponent>;
+
+  async function mount(inputs: Record<string, any> = {}) {
+    const api = makeApiMock();
+    const resultLevelSig = signal<any[]>([]);
+    const centersMock = { getData: () => Promise.resolve(), centersList: [], centers: signal<any[]>([]) };
+
+    await TestBed.configureTestingModule({
+      imports: [LabReportFormComponent],
+      providers: [
+        { provide: ApiService, useValue: api },
+        { provide: CentersService, useValue: centersMock },
+        { provide: ResultLevelService, useValue: { resultLevelListSig: resultLevelSig } },
+        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(LabReportFormComponent);
+    fixture.componentRef.setInput('initiativeId', 42);
+    fixture.componentRef.setInput('canReport', true);
+    for (const [key, value] of Object.entries(inputs)) fixture.componentRef.setInput(key, value);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('renders all 3 semantic card sections in the DOM for a standard result (RFUX-R-2, RFUX-AC-2)', async () => {
+    const fix = await mount({
+      indicator: { indicator_id: 1, result_type_id: 7, result_level_id: OUTPUT_LEVEL, type_name: 'Number of innovations' },
+      tocNode: { result_level_id: OUTPUT_LEVEL }
+    });
+
+    const card1: HTMLElement | null = fix.nativeElement.querySelector('[data-testid="card-result-identity"]');
+    const card2: HTMLElement | null = fix.nativeElement.querySelector('[data-testid="card-target-contribution"]');
+    const card3: HTMLElement | null = fix.nativeElement.querySelector('[data-testid="card-collaboration"]');
+
+    expect(card1).toBeTruthy();
+    expect(card2).toBeTruthy();
+    expect(card3).toBeTruthy();
+
+    expect(card1?.tagName.toLowerCase()).toBe('section');
+    expect(card2?.tagName.toLowerCase()).toBe('section');
+    expect(card3?.tagName.toLowerCase()).toBe('section');
+
+    expect(card1?.textContent).toContain('1. Result Identity');
+    expect(card1?.textContent).toContain('edit_note');
+
+    expect(card2?.textContent).toContain('2. Target Contribution');
+    expect(card2?.textContent).toContain('track_changes');
+
+    expect(card3?.textContent).toContain('3. Collaboration & Attribution');
+    expect(card3?.textContent).toContain('groups');
+
+    expect(card1?.classList.contains('border')).toBe(true);
+    expect(card1?.classList.contains('rounded-xl')).toBe(true);
+    expect(card2?.classList.contains('border')).toBe(true);
+    expect(card2?.classList.contains('rounded-xl')).toBe(true);
+    expect(card3?.classList.contains('border')).toBe(true);
+    expect(card3?.classList.contains('rounded-xl')).toBe(true);
+
+    expect(fix.nativeElement.textContent).not.toContain('The result');
+  });
+
+  it('preserves Knowledge Product browse flow: renders only Card 1 before item selection', async () => {
+    const fix = await mount({
+      indicator: { indicator_id: 2, result_type_id: 6, result_level_id: OUTPUT_LEVEL, type_name: 'Number of knowledge products' },
+      tocNode: {}
+    });
+
+    const card1: HTMLElement | null = fix.nativeElement.querySelector('[data-testid="card-result-identity"]');
+    const card2: HTMLElement | null = fix.nativeElement.querySelector('[data-testid="card-target-contribution"]');
+    const card3: HTMLElement | null = fix.nativeElement.querySelector('[data-testid="card-collaboration"]');
+
+    expect(card1).toBeTruthy();
+    // Cards 2 and 3 must not render while in browse mode without a selected item
+    expect(card2).toBeNull();
+    expect(card3).toBeNull();
+  });
+
+  it('renders Cards 2 and 3 once a Knowledge Product is selected', async () => {
+    const fix = await mount({
+      indicator: { indicator_id: 2, result_type_id: 6, result_level_id: OUTPUT_LEVEL, type_name: 'Number of knowledge products' },
+      tocNode: {}
+    });
+
+    fix.componentInstance.patch('handler', 'https://cgspace.cgiar.org/items/123');
+    fix.detectChanges();
+
+    const card1: HTMLElement | null = fix.nativeElement.querySelector('[data-testid="card-result-identity"]');
+    const card2: HTMLElement | null = fix.nativeElement.querySelector('[data-testid="card-target-contribution"]');
+    const card3: HTMLElement | null = fix.nativeElement.querySelector('[data-testid="card-collaboration"]');
+
+    expect(card1).toBeTruthy();
+    expect(card2).toBeTruthy();
+    expect(card3).toBeTruthy();
+  });
+});
+
+// @akili-spec changes/report-result-form-ux (RFUX-T-3, RFUX-R-3, RFUX-R-5, RFUX-AC-3, RFUX-AC-4)
+describe('LabReportFormComponent — Auto-resizing Textarea & Dynamic Word Gauge (RFUX-T-3)', () => {
+  let fixture: ComponentFixture<LabReportFormComponent>;
+  let component: LabReportFormComponent;
+
+  beforeEach(async () => {
+    const apiMock = makeApiMock();
+    await TestBed.configureTestingModule({
+      imports: [LabReportFormComponent],
+      providers: [
+        { provide: ApiService, useValue: apiMock },
+        { provide: CentersService, useValue: { getData: () => Promise.resolve(), centersList: [], centers: signal<any[]>([]) } },
+        { provide: ResultLevelService, useValue: { resultLevelListSig: signal<any[]>([]) } },
+        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(LabReportFormComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('initiativeId', 42);
+    fixture.componentRef.setInput('indicator', { indicator_id: 1, result_type_id: 7, result_level_id: 4, type_name: 'Number of innovations' });
+    fixture.componentRef.setInput('canReport', true);
+    fixture.detectChanges();
+  });
+
+  function makeWords(count: number): string {
+    return Array.from({ length: count }, (_, i) => `word${i + 1}`).join(' ');
+  }
+
+  it('word count initializes at 0 with neutral class (RFUX-R-3, RFUX-AC-3)', () => {
+    const badge: HTMLElement | null = fixture.nativeElement.querySelector('[data-testid="title-word-gauge"]');
+    expect(badge).toBeTruthy();
+    expect(badge?.textContent?.trim()).toBe('0 / 30 words');
+    expect(badge?.className).toContain('bg-gray-100');
+    expect(badge?.className).toContain('text-gray-600');
+  });
+
+  it('switches badge to amber warning when entering 26 words (25..29 ramp) (RFUX-R-3, RFUX-AC-3)', () => {
+    component.patch('result_name', makeWords(26));
+    fixture.detectChanges();
+
+    const badge: HTMLElement | null = fixture.nativeElement.querySelector('[data-testid="title-word-gauge"]');
+    expect(badge?.textContent?.trim()).toBe('26 / 30 words');
+    expect(badge?.className).toContain('bg-amber-50');
+    expect(badge?.className).toContain('text-amber-700');
+  });
+
+  it('switches badge to violet brand accent when entering exactly 30 words (RFUX-R-3, RFUX-AC-4)', () => {
+    component.patch('result_name', makeWords(30));
+    fixture.detectChanges();
+
+    const badge: HTMLElement | null = fixture.nativeElement.querySelector('[data-testid="title-word-gauge"]');
+    expect(badge?.textContent?.trim()).toBe('30 / 30 max words');
+    expect(badge?.className).toContain('bg-violet-50');
+    expect(badge?.className).toContain('text-[var(--pr-color-primary-400)]');
+    expect(badge?.className).toContain('font-bold');
+  });
+
+  it('switches badge to red error, labels limit exceeded, and invalidates canSave when entering 31 words (RFUX-R-3, RFUX-AC-4)', () => {
+    component.patch('contribution_to_indicator_target', 5);
+    component.patch('result_name', makeWords(30));
+    expect(component.canSave()).toBe(true);
+
+    component.patch('result_name', makeWords(31));
+    fixture.detectChanges();
+
+    const badge: HTMLElement | null = fixture.nativeElement.querySelector('[data-testid="title-word-gauge"]');
+    expect(badge?.textContent?.trim()).toBe('31 / 30 (Limit exceeded)');
+    expect(badge?.className).toContain('bg-red-50');
+    expect(badge?.className).toContain('text-red-700');
+
+    expect(component.missingFields()).toContain('Result title exceeds 30 words');
+    expect(component.canSave()).toBe(false);
+
+    const textarea: HTMLTextAreaElement | null = fixture.nativeElement.querySelector('#result-title-input');
+    expect(textarea?.classList.contains('border-red-400')).toBe(true);
+  });
+
+  it('renders persistent inline helper text directly in the DOM (RFUX-R-5)', () => {
+    const helper: HTMLElement | null = fixture.nativeElement.querySelector('#title-helper');
+    expect(helper).toBeTruthy();
+    expect(helper?.textContent?.trim()).toBe('Provide a clear, concise title describing the output or outcome. Maximum 30 words.');
+
+    const textarea: HTMLTextAreaElement | null = fixture.nativeElement.querySelector('#result-title-input');
+    expect(textarea?.getAttribute('aria-describedby')).toBe('title-helper');
+  });
+
+  it('adjustTextareaHeight updates element height between min and max bounds', () => {
+    const textarea: HTMLTextAreaElement | null = fixture.nativeElement.querySelector('#result-title-input');
+    expect(textarea).toBeTruthy();
+    if (!textarea) return;
+
+    Object.defineProperty(textarea, 'scrollHeight', { value: 100, configurable: true });
+    component.adjustTextareaHeight({ target: textarea } as unknown as Event);
+    expect(textarea.style.height).toBe('100px');
+
+    Object.defineProperty(textarea, 'scrollHeight', { value: 200, configurable: true });
+    component.adjustTextareaHeight({ target: textarea } as unknown as Event);
+    expect(textarea.style.height).toBe('140px');
+
+    Object.defineProperty(textarea, 'scrollHeight', { value: 40, configurable: true });
+    component.adjustTextareaHeight({ target: textarea } as unknown as Event);
+    expect(textarea.style.height).toBe('68px');
+  });
+});
+
+// @akili-spec changes/report-result-form-ux (RFUX-T-4, RFUX-R-4, RFUX-R-5, RFUX-AC-5)
+describe('LabReportFormComponent — Contextual Contribution Input (RFUX-T-4)', () => {
+  let fixture: ComponentFixture<LabReportFormComponent>;
+  let component: LabReportFormComponent;
+
+  async function mountForm(indicatorOverrides: Record<string, any> = {}) {
+    const apiMock = makeApiMock();
+    await TestBed.configureTestingModule({
+      imports: [LabReportFormComponent],
+      providers: [
+        { provide: ApiService, useValue: apiMock },
+        { provide: CentersService, useValue: { getData: () => Promise.resolve(), centersList: [], centers: signal<any[]>([]) } },
+        { provide: ResultLevelService, useValue: { resultLevelListSig: signal<any[]>([]) } },
+        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(LabReportFormComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('initiativeId', 42);
+    fixture.componentRef.setInput('indicator', {
+      indicator_id: 1,
+      result_type_id: 7,
+      result_level_id: 4,
+      type_name: 'Number of innovations',
+      target_value_sum: 15,
+      actual_achieved_value_sum: 3,
+      unit_messurament: 'varieties',
+      ...indicatorOverrides
+    });
+    fixture.componentRef.setInput('canReport', true);
+    fixture.detectChanges();
+  }
+
+  it('input defaults to empty/null with placeholder "e.g. 5" (RFUX-R-4, RFUX-AC-5)', async () => {
+    await mountForm();
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('#contribution-input');
+
+    expect(input).toBeTruthy();
+    expect(input.placeholder).toBe('e.g. 5');
+    expect(component.createResultBody().contribution_to_indicator_target).toBeNull();
+    expect(input.value).toBe('');
+  });
+
+  it('renders unit suffix when unit_messurament is provided (RFUX-R-4, RFUX-AC-5)', async () => {
+    await mountForm({ unit_messurament: 'varieties' });
+    const suffix: HTMLElement = fixture.nativeElement.querySelector('[data-testid="contribution-unit-suffix"]');
+
+    expect(suffix).toBeTruthy();
+    expect(suffix.textContent?.trim()).toBe('varieties');
+  });
+
+  it('hides unit suffix when unit_messurament is not provided', async () => {
+    await mountForm({ unit_messurament: null });
+    const suffix: HTMLElement = fixture.nativeElement.querySelector('[data-testid="contribution-unit-suffix"]');
+
+    expect(suffix).toBeNull();
+  });
+
+  it('renders target reference with 2026 Target and achieved so far (RFUX-R-4, RFUX-AC-5)', async () => {
+    await mountForm({ target_value_sum: 15, actual_achieved_value_sum: 3 });
+    const ref: HTMLElement = fixture.nativeElement.querySelector('[data-testid="contribution-target-reference"]');
+
+    expect(ref).toBeTruthy();
+    expect(ref.textContent?.replace(/\s+/g, ' ').trim()).toContain('2026 Target: 15 · Achieved so far: 3');
+  });
+
+  it('renders persistent helper text and connects it via aria-describedby (RFUX-R-5)', async () => {
+    await mountForm();
+    const helper: HTMLElement = fixture.nativeElement.querySelector('#contribution-helper');
+    expect(helper).toBeTruthy();
+    expect(helper.textContent?.trim()).toBe('Enter the numerical amount this specific result contributes toward the target.');
+
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('#contribution-input');
+    expect(input.getAttribute('aria-describedby')).toContain('contribution-helper');
+    expect(input.getAttribute('aria-describedby')).toContain('contribution-target-reference');
+  });
+
+  it('updates contribution_to_indicator_target when numeric value is entered', async () => {
+    await mountForm();
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('#contribution-input');
+
+    input.value = '8';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    component.patch('contribution_to_indicator_target', 8);
+    expect(component.createResultBody().contribution_to_indicator_target).toBe(8);
+  });
+});
+
+// @akili-spec changes/report-result-form-ux (RFUX-T-5, RFUX-R-7, RFUX-AC-7)
+describe('LabReportFormComponent — Lead Center Protection & Layout Stability (RFUX-T-5)', () => {
+  let fixture: ComponentFixture<LabReportFormComponent>;
+  let component: LabReportFormComponent;
+
+  const IRRI = { code: 'IRRI', acronym: 'IRRI', name: 'International Rice Research Institute' };
+  const CIP = { code: 'CIP', acronym: 'CIP', name: 'International Potato Center' };
+
+  beforeEach(async () => {
+    const apiMock = makeApiMock();
+    await TestBed.configureTestingModule({
+      imports: [LabReportFormComponent],
+      providers: [
+        { provide: ApiService, useValue: apiMock },
+        { provide: CentersService, useValue: { getData: () => Promise.resolve(), centersList: [IRRI, CIP], centers: signal<any[]>([IRRI, CIP]) } },
+        { provide: ResultLevelService, useValue: { resultLevelListSig: signal<any[]>([]) } },
+        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(LabReportFormComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('initiativeId', 42);
+    fixture.componentRef.setInput('indicator', {
+      indicator_id: 1,
+      result_type_id: 7,
+      result_level_id: 4,
+      type_name: 'Number of innovations',
+      center_acronym: 'IRRI'
+    });
+    fixture.componentRef.setInput('canReport', true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await component.preselectCentersP;
+
+    component.contributingCenters.set([IRRI, CIP]);
+    fixture.detectChanges();
+  });
+
+  it('renders lead center chip with Lead badge and no remove button (RFUX-R-7, RFUX-AC-7)', () => {
+    const leadChip: HTMLElement = fixture.nativeElement.querySelector('[data-testid="lead-center-chip"]');
+    expect(leadChip).toBeTruthy();
+    expect(leadChip.textContent).toContain('IRRI');
+    expect(leadChip.textContent).toContain('Lead');
+
+    const removeBtn = leadChip.querySelector('button');
+    expect(removeBtn).toBeNull();
+  });
+
+  it('renders standard dismissible chip with close button for non-lead centers (RFUX-R-7)', () => {
+    const chipsContainer: HTMLElement = fixture.nativeElement.querySelector('[data-testid="contributing-centers-chips"]');
+    const cipBtn: HTMLButtonElement | null = chipsContainer.querySelector('button[aria-label="Remove CIP"]');
+
+    expect(cipBtn).toBeTruthy();
+  });
+
+  it('isLeadCenter returns true for lead center acronym and false for other centers', () => {
+    expect(component.isLeadCenter(IRRI)).toBe(true);
+    expect(component.isLeadCenter(CIP)).toBe(false);
+    expect(component.isLeadCenter({ code: 'irri' })).toBe(true);
+  });
+
+  it('calling removeCenter on lead center is a no-op and preserves the lead center (RFUX-R-7, RFUX-AC-7)', () => {
+    component.removeCenter(IRRI);
+    fixture.detectChanges();
+
+    expect(component.contributingCenters().some(c => c.code === 'IRRI')).toBe(true);
+    expect(component.contributingCenters().length).toBe(2);
+  });
+
+  it('calling removeCenter on non-lead center removes it from contributingCenters', () => {
+    component.removeCenter(CIP);
+    fixture.detectChanges();
+
+    expect(component.contributingCenters().some(c => c.code === 'CIP')).toBe(false);
+    expect(component.contributingCenters().length).toBe(1);
+    expect(component.contributingCenters()[0].code).toBe('IRRI');
+  });
+
+  it('centers chip container has min-h-[32px] class for layout stability (CLS prevention)', () => {
+    const container: HTMLElement = fixture.nativeElement.querySelector('[data-testid="contributing-centers-chips"]');
+    expect(container).toBeTruthy();
+    expect(container.classList.contains('min-h-[32px]')).toBe(true);
+  });
+});
+
+// @akili-spec changes/report-result-form-ux (RFUX-T-6, RFUX-R-6, RFUX-AC-6, RFUX-AC-8)
+describe('LabReportFormComponent — Interactive Readiness Action & Brand CTA (RFUX-T-6)', () => {
+  let fixture: ComponentFixture<LabReportFormComponent>;
+  let component: LabReportFormComponent;
+
+  beforeEach(async () => {
+    const apiMock = makeApiMock();
+    await TestBed.configureTestingModule({
+      imports: [LabReportFormComponent],
+      providers: [
+        { provide: ApiService, useValue: apiMock },
+        { provide: CentersService, useValue: { getData: () => Promise.resolve(), centersList: [], centers: signal<any[]>([]) } },
+        { provide: ResultLevelService, useValue: { resultLevelListSig: signal<any[]>([]) } },
+        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(LabReportFormComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('initiativeId', 42);
+    fixture.componentRef.setInput('indicator', {
+      indicator_id: 1,
+      result_type_id: 7,
+      result_level_id: 4,
+      type_name: 'Number of innovations'
+    });
+    fixture.componentRef.setInput('canReport', true);
+    window.HTMLElement.prototype.scrollIntoView = jest.fn();
+    fixture.detectChanges();
+  });
+
+  it('renders missing fields as an interactive button when required fields are missing (RFUX-R-6, RFUX-AC-6)', () => {
+    const button: HTMLButtonElement | null = fixture.nativeElement.querySelector('[data-testid="missing-fields-button"]');
+    expect(button).toBeTruthy();
+    expect(button?.tagName.toLowerCase()).toBe('button');
+    expect(button?.textContent).toContain('left before you can create');
+  });
+
+  it('clicking missing fields button focuses title input when title is missing (RFUX-R-6, RFUX-AC-6)', () => {
+    const titleEl: HTMLTextAreaElement = fixture.nativeElement.querySelector('#result-title-input');
+    const focusSpy = jest.spyOn(titleEl, 'focus');
+    const scrollSpy = jest.spyOn(titleEl, 'scrollIntoView').mockImplementation(() => {});
+
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="missing-fields-button"]');
+    button.click();
+
+    expect(focusSpy).toHaveBeenCalled();
+    expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+  });
+
+  it('clicking missing fields button focuses contribution input when only contribution is missing (RFUX-R-6, RFUX-AC-6)', () => {
+    component.patch('result_name', 'Valid scientific result title');
+    fixture.detectChanges();
+
+    const contribEl: HTMLInputElement = fixture.nativeElement.querySelector('#contribution-input');
+    const focusSpy = jest.spyOn(contribEl, 'focus');
+    const scrollSpy = jest.spyOn(contribEl, 'scrollIntoView').mockImplementation(() => {});
+
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="missing-fields-button"]');
+    button.click();
+
+    expect(focusSpy).toHaveBeenCalled();
+    expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+  });
+
+  it('displays Ready to create indicator when all required fields are filled (RFUX-AC-8)', () => {
+    component.patch('result_name', 'Valid title');
+    component.patch('contribution_to_indicator_target', 10);
+    fixture.detectChanges();
+
+    const readyEl: HTMLElement = fixture.nativeElement.querySelector('[data-testid="ready-to-create-indicator"]');
+    expect(readyEl).toBeTruthy();
+    expect(readyEl.textContent).toContain('Ready to create');
+    expect(fixture.nativeElement.querySelector('[data-testid="missing-fields-button"]')).toBeNull();
+  });
+
+  it('submit CTA button has brand gradient classes and is enabled when form is complete (RFUX-AC-8)', () => {
+    const submitBtn: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="create-result-submit-btn"]');
+    expect(submitBtn).toBeTruthy();
+    expect(submitBtn.className).toContain('bg-gradient-to-r');
+    expect(submitBtn.className).toContain('from-[var(--pr-color-primary-300)]');
+    expect(submitBtn.className).toContain('to-[var(--pr-color-primary-400)]');
+    expect(submitBtn.disabled).toBe(true);
+
+    component.patch('result_name', 'Valid title');
+    component.patch('contribution_to_indicator_target', 10);
+    fixture.detectChanges();
+
+    expect(submitBtn.disabled).toBe(false);
+  });
+});
+
+
+
+
+
+

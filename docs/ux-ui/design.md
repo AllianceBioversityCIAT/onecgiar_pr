@@ -287,6 +287,45 @@ Each `pages/<feature>` module owns its own `components/` folder for feature-only
 6. **Buttons:** primary = `--pr-color-primary-300`; destructive = `--pr-color-red-300`; secondary/ghost via PrimeNG severities mapped in the theme.
 7. **Custom alerts** use `src/styles/custom-alert.scss`; do not import alternate alert styles.
 
+### PRMS Form UX Pattern (Standardized Reporting Forms)
+
+Established 2026-09 (`docs/specs/changes/report-result-form-ux/`). All entity reporting forms, drawers, and modal editors MUST follow these standardized patterns:
+
+1. **Cognitive Card Chunking (`RFUX-R-2`)**:
+   - Forms with >4 inputs MUST NOT be presented as a flat, unchunked list of inputs.
+   - Group related inputs into distinct visual `<section>` cards with subtle borders (`border-[var(--pr-border)]`), card surface (`bg-white` / `bg-[var(--pr-surface-card)]`), 4/8px spacing rhythm (`p-4.5 gap-4`), and semantic section subheadings (`h4` with icons).
+   - Use a single continuous scannable scroll rather than multi-step wizard clicks for short to medium reporting shells (typically 4–8 fields).
+
+2. **Persistent Accessible Inline Helper Copy (`RFUX-R-5`)**:
+   - Never hide critical calculation instructions or field constraints inside hover `<span title="...">info</span>` tooltips, which fail completely on touch devices and screen readers.
+   - Helper copy MUST be persistently visible directly below the field label in `text-[12px] text-gray-500` and programmatically linked to the input via `aria-describedby`.
+
+3. **Multi-line Title Control & Dynamic Word Gauge (`RFUX-R-3`)**:
+   - Scientific result titles averaging 15–25 words MUST use an auto-resizing multi-line `<textarea>` (clamped between 68px and 140px) rather than single-line inputs with hidden horizontal scroll.
+   - Accompany the title with a reactive word-counter badge with standard color warning ramps:
+     - `0..24 words`: Neutral muted (`bg-gray-100 text-gray-600 border border-gray-200`).
+     - `25..29 words`: Amber warning (`bg-amber-50 text-amber-700 border border-amber-200`).
+     - `30 words`: Brand violet accent (`bg-violet-50 text-[var(--pr-color-primary-400)] border border-violet-300 font-bold`).
+     - `>30 words`: Red error boundary (`bg-red-50 text-red-700 border border-red-300 font-bold`), marking the form invalid and showing `(Limit exceeded)`.
+
+4. **Contextual Quantitative Inputs (`RFUX-R-4`)**:
+   - Numeric contribution fields MUST initialize with clean placeholders (e.g. `placeholder="e.g. 5"`) and default to empty (`null`/`undefined`), avoiding confusing pre-filled `0` defaults.
+   - Adorn inputs with an inline suffix badge indicating the indicator's measurement unit (`data-testid="contribution-unit-suffix"`).
+   - Display contextual reference micro-copy directly beneath the input: `2026 Target: X · Achieved so far: Y`.
+
+5. **Lead Institution Protection & CLS Prevention (`RFUX-R-7`)**:
+   - In multiselect chip lists, the submitting/lead institution (e.g., Lead Center) MUST be visually distinguished with a distinct pill style (`bg-violet-50 border-violet-200 text-violet-800` with `Lead` badge) and MUST NOT have a dismiss/remove button (`x`).
+   - Multiselect chip wrapper containers MUST maintain `min-h-[32px] items-center` to eliminate Cumulative Layout Shift (CLS) when items are selected or removed.
+
+6. **Interactive Readiness Action & Brand CTA (`RFUX-R-6`)**:
+   - The sticky footer's missing fields status (`• N fields left before you can create`) MUST be an interactive button.
+   - Clicking it triggers `focusFirstMissingField()`, which locates the first incomplete required field (`category` $\rightarrow$ `title` $\rightarrow$ `contribution`), smoothly scrolls it into view (`scrollIntoView({ behavior: 'smooth', block: 'center' })`), and focuses the control.
+   - When all fields are complete, the footer transitions to `Ready to create` with a green indicator.
+   - Primary submit CTA buttons MUST use the official OneCGIAR brand gradient (`bg-gradient-to-r from-[var(--pr-color-primary-300)] to-[var(--pr-color-primary-400)] text-white shadow-xs hover:opacity-95`).
+
+7. **Verbatim Domain Text Preservation (`RFUX-R-1`)**:
+   - Upstream text authored by scientists or project teams (e.g., indicator descriptions containing delimiter characters like `.---` or `------`) MUST be rendered verbatim without automated sanitization or regex character stripping.
+
 ---
 
 ## 9. Responsive Behavior

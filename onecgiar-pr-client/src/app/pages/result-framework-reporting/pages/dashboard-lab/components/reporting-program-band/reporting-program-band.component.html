@@ -149,6 +149,26 @@
         <span class="hidden sm:inline">Tour</span>
       </button>
 
+      <!-- `@akili-spec changes/emerging-result-cta-placement` ERC-T-1, ERC-DD-3, §6.2/§6.3 — a
+           THIRD, distinct outline control between Tour and Where to report. Tour's own chrome
+           (outline, 32/36px), never the filled-brand treatment of Where to report (UI-RULES §1: one
+           brand button per screen). `aria-label` is unconditional so the accessible name stays
+           "Report emerging result" even once the visible label collapses (ERC-R-1 narrow
+           viewport). Fail-closed: `canReportEmerging` defaults false, so a forgetful host hides
+           this entirely rather than leaking create chrome on AVISA (ERC-R-5, KZ-REH-2 — no native
+           `[disabled]`). Click emits ONLY `reportEmerging` (ERC-R-2) via `onReportEmergingClick`. -->
+      @if (canReportEmerging()) {
+        <button
+          type="button"
+          class="flex h-[32px] sm:h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[8px] sm:px-[12px] text-[12px] sm:text-[13px] font-semibold text-[var(--pr-text-secondary)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+          (click)="onReportEmergingClick()"
+          data-testid="program-band-report-emerging-btn"
+          aria-label="Report emerging result">
+          <span class="material-icons-round text-[16px] sm:text-[18px] text-[var(--pr-color-primary-500)]">add_circle</span>
+          <span class="hidden sm:inline">Report emerging result</span>
+        </button>
+      }
+
       @if (canReport()) {
         <button
           type="button"
@@ -268,11 +288,14 @@
          variant (:439-443), this nav is shared by the expanded and condensed band, so a tab added
          here appears in both. -->
 
-    @if (bandCollapsed() && canReport()) {
+    @if (bandCollapsed() && (canReport() || canReportEmerging())) {
       <!-- `min-w-0` here is the OSF-T-10 fix: this group had no automatic-minimum override of its
            own, so as a nested flex item it kept a min-content width equal to the sum of its
            children even while `ml-auto` let it shrink visually. Smart Back was removed from this
-           group (it no longer shared the 900px budget with the CTA). -->
+           group (it no longer shared the 900px budget with the CTA).
+           `@akili-spec changes/emerging-result-cta-placement` ERC-T-1 — the outer gate was widened
+           to `canReport() || canReportEmerging()` so the collapsed bar still renders when only the
+           emerging control is enabled (e.g. AVISA with no programme CTA). -->
       <div
         class="ml-auto flex min-w-0 items-center gap-[6px] sm:gap-[8px] self-center"
         data-testid="program-band-collapsed-actions">
@@ -284,6 +307,24 @@
           <span class="material-icons-round shrink-0 text-[15px] text-[var(--pr-color-primary-500)]">explore</span>
           <span class="hidden sm:inline min-w-0 truncate">Tour</span>
         </button>
+
+        <!-- `@akili-spec changes/emerging-result-cta-placement` ERC-T-1, ERC-R-20 — collapsed copy
+             of the standalone emerging control, between Tour and Where to report (same tab order as
+             the expanded cluster). `ERC-R-20` permits shortening the VISIBLE label to "Emerging" in
+             this 32px bar; `aria-label` keeps the accessible name full so AT users hear the same
+             control name in both states. Same fail-closed gate, same split emit
+             (`onReportEmergingClick`, ERC-R-2) — no `[disabled]` fallback. -->
+        @if (canReportEmerging()) {
+          <button
+            type="button"
+            class="group relative flex h-[32px] min-w-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[8px] sm:px-[10px] text-[12px] font-semibold text-[var(--pr-text-secondary)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+            (click)="onReportEmergingClick()"
+            data-testid="program-band-report-emerging-btn-condensed"
+            aria-label="Report emerging result">
+            <span class="material-icons-round shrink-0 text-[15px] text-[var(--pr-color-primary-500)]">add_circle</span>
+            <span class="hidden sm:inline min-w-0 truncate">Emerging</span>
+          </button>
+        }
 
         @if (canReport()) {
           <!-- The 36px CTA of the identity block is clipped away with it, so the collapsed bar

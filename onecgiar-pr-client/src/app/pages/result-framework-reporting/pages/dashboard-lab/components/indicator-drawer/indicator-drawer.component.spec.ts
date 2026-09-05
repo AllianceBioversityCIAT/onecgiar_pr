@@ -363,6 +363,8 @@ describe('IndicatorDrawerComponent', () => {
 class LabReportFormStub {
   readonly tocNode = input<any>(null);
   readonly indicator = input<any>(null);
+  readonly emergingMode = input<boolean>(false);
+  readonly emergingCategory = input<{ id: number; name: string; levelId: number } | null>(null);
   readonly initiativeId = input<number>(0);
   readonly programCode = input<string>('');
   readonly columns = input<number>(1);
@@ -1106,3 +1108,120 @@ describe('IndicatorDrawerComponent — width floor, restore and card fallback (I
     expect(fixture.nativeElement.querySelectorAll('.irr-card .pr-row-menu[role="menu"]').length).toBe(1);
   });
 });
+
+// @akili-spec changes/report-result-form-ux (RFUX-T-1, RFUX-R-1, RFUX-R-8)
+describe('IndicatorDrawerComponent — Verbatim Context Card & Empty State Micro-Card (RFUX-T-1)', () => {
+  const VERBATIM_DESC = '.--- IRRI - (GloMIP) ------ Multi-Crop --..-------- KEY ACTIVITIES...';
+
+  async function mountDrawer(indicator: Record<string, any>, initialTab: DrawerTab = 'report', contributors: any[] = []) {
+    await TestBed.configureTestingModule({
+      imports: [IndicatorDrawerComponent],
+      providers: [
+        {
+          provide: ApiService,
+          useValue: { resultsSE: { GET_ExistingResultsContributors: jest.fn().mockReturnValue(of({ response: { contributors } })) } }
+        },
+        { provide: PhasesService, useValue: { phases: { reporting: [{ id: 11, phase_name: 'Reporting 2026' }] } } },
+        { provide: Router, useValue: { navigate: jest.fn(), createUrlTree: jest.fn(), serializeUrl: jest.fn(() => '') } }
+      ]
+    })
+      .overrideComponent(IndicatorDrawerComponent, { remove: { imports: [LabReportFormComponent] }, add: { imports: [LabReportFormStub] } })
+      .compileComponents();
+
+    const fixture = TestBed.createComponent(IndicatorDrawerComponent);
+    fixture.componentRef.setInput('indicator', indicator);
+    fixture.componentRef.setInput('initialTab', initialTab);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('renders indicator description verbatim without stripping punctuation or characters (RFUX-R-1, RFUX-AC-1)', async () => {
+    const fixture = await mountDrawer({
+      toc_result_id: 'toc-1',
+      related_node_id: 'IND-55',
+      indicator_description: VERBATIM_DESC,
+      target_value_sum: 15,
+      center_acronym: 'IRRI',
+      unit_messurament: 'varieties',
+      type_name: 'Output'
+    });
+
+    const descEl: HTMLElement | null = fixture.nativeElement.querySelector('#drawer-context-details h2');
+    expect(descEl).toBeTruthy();
+    expect(descEl?.textContent?.trim()).toBe(VERBATIM_DESC);
+
+    const contextEl: HTMLElement | null = fixture.nativeElement.querySelector('#drawer-context-details');
+    expect(contextEl?.textContent).toContain('2026 Target:');
+    expect(contextEl?.textContent).toContain('15');
+    expect(contextEl?.textContent).toContain('Center:');
+    expect(contextEl?.textContent).toContain('IRRI');
+    expect(contextEl?.textContent).toContain('Unit:');
+    expect(contextEl?.textContent).toContain('varieties');
+    expect(contextEl?.textContent).toContain('Indicator type:');
+    expect(contextEl?.textContent).toContain('Output');
+  });
+
+  it('renders structured micro-empty-state card when reportedRows and existing results are 0 (RFUX-R-8)', async () => {
+    const fixture = await mountDrawer({
+      toc_result_id: 'toc-1',
+      related_node_id: 'IND-55',
+      indicator_description: 'Test Indicator',
+      target_value_sum: 10
+    }, 'report', []);
+
+    const emptyCard: HTMLElement | null = fixture.nativeElement.querySelector('[data-testid="irr-micro-empty-card"]');
+    expect(emptyCard).toBeTruthy();
+    expect(emptyCard?.textContent).toContain('No results reported against this indicator yet. Your report will be the first recorded toward the 2026 target.');
+    expect(emptyCard?.textContent).toContain('flag');
+    expect(fixture.nativeElement.textContent).not.toContain('Nothing has been reported against this indicator yet.');
+  });
+});
+
+// @akili-spec changes/emerging-result-cta-placement (ERC-T-3)
+describe('IndicatorDrawerComponent — emerging mode (ERC-T-3)', () => {
+  let getExisting: jest.Mock;
+
+  async function mountEmerging() {
+    getExisting = jest.fn().mockReturnValue(of({ response: { contributors: [{ result_code: 'R-1' }] } }));
+    await TestBed.configureTestingModule({
+      imports: [IndicatorDrawerComponent],
+      providers: [
+        { provide: ApiService, useValue: { resultsSE: { GET_ExistingResultsContributors: getExisting } } },
+        { provide: PhasesService, useValue: { phases: { reporting: [{ id: 11, phase_name: 'Reporting 2026' }] } } },
+        { provide: Router, useValue: { navigate: jest.fn(), createUrlTree: jest.fn(), serializeUrl: jest.fn(() => '') } }
+      ]
+    })
+      .overrideComponent(IndicatorDrawerComponent, { remove: { imports: [LabReportFormComponent] }, add: { imports: [LabReportFormStub] } })
+      .compileComponents();
+
+    const fixture = TestBed.createComponent(IndicatorDrawerComponent);
+    fixture.componentRef.setInput('emerging', true);
+    fixture.componentRef.setInput('indicator', null);
+    fixture.componentRef.setInput('initialTab', 'report');
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('does not fetch existing contributors when emerging', async () => {
+    await mountEmerging();
+    expect(getExisting).not.toHaveBeenCalled();
+  });
+
+  it('shows Report emerging result chrome and passes emergingMode to the form', async () => {
+    const fixture = await mountEmerging();
+    expect(fixture.nativeElement.textContent).toContain('Report emerging result');
+    const form = fixture.debugElement.query(de => de.name === 'app-lab-report-form');
+    expect(form).toBeTruthy();
+    expect(form.componentInstance.emergingMode()).toBe(true);
+    expect(form.componentInstance.emergingCategory()).toBeNull();
+  });
+
+  it('keeps the report tab when info/results are requested in emerging mode', async () => {
+    const fixture = await mountEmerging();
+    fixture.componentInstance.setTab('info');
+    fixture.detectChanges();
+    expect(fixture.componentInstance.tab()).toBe('report');
+    expect(getExisting).not.toHaveBeenCalled();
+  });
+});
+

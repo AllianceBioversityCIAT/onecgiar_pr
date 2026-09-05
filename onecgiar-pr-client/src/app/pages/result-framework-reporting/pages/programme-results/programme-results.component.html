@@ -29,10 +29,12 @@
       activeTab="results"
       [myWorkCount]="myWorkCount()"
       [canReport]="true"
+      [canReportEmerging]="canReportEmerging()"
       [showToolbar]="false"
       [frameLocked]="true"
       [scrollHost]="workAreaEl()"
-      (whereToReport)="openWhereToReport()" />
+      (whereToReport)="openWhereToReport()"
+      (reportEmerging)="openEmergingReport()" />
 
     <!-- #workArea: the only scroller ≥ 900px (`SAV-DD-1`, `SAV-DD-7`) — filter row, counters and
          table all scroll together; below `md` the mixin is inert and this stays a plain block. -->

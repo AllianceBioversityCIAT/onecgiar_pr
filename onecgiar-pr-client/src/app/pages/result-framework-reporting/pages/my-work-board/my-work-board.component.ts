@@ -40,6 +40,8 @@ import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from '../programme-results/services
 import { MyWorkBoardService } from './services/my-work-board.service';
 import { MyWorkColumnComponent } from './components/my-work-column/my-work-column.component';
 import { MyWorkColumn, MyWorkScope } from './my-work.view-model';
+import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
+import { isAvisaInitiative } from '../../../../shared/utils/avisa-initiative.util';
 
 // @akili-spec changes/my-work-board (MWB-T-11)
 /**
@@ -93,6 +95,35 @@ function withSelectedOptions(options: MyWorkFilterOption[], selected: readonly s
   return missing.length ? [...options, ...missing.map(value => ({ value, label: labelOf(value) }))] : options;
 }
 
+// @akili-spec changes/my-work-board (MWB-T-14)
+/**
+ * Value equality for a filter dropdown's option list — the `equal` of every `*SelectOptions`
+ * computed below, and the whole fix for "the multiselect closes after every tick".
+ *
+ * `app-pr-filter-multiselect` has no overlay: its panel is a child of the trigger `<a tabindex="0">`
+ * and is shown by `.field:focus-within` (`custom-fields.scss`). A real mouse click on an option row
+ * lands on that row's `<input type="checkbox">`, so the checkbox — not the anchor — holds focus
+ * while the selection is applied. The control renders its rows with `*ngFor` over `filteredOptions`,
+ * which is `this.options` verbatim; so the moment the `[options]` INPUT gets a new array (or new
+ * item objects) Angular destroys and rebuilds every row, the focused checkbox is detached, focus
+ * falls to `<body>`, `:focus-within` goes false and the panel closes.
+ *
+ * That is exactly what these computeds used to do: `withSelectedOptions()` reads the selection, so
+ * ticking an option invalidated the computed, and its `optionsOf(...).map(...)` rebuilt a fresh
+ * array of fresh objects even when the option SET was identical. Measured in the Orca browser
+ * (2026-09-05): after one tick, 0 of the 13 previous `.option` nodes were still attached,
+ * `document.activeElement` was `BODY` and the panel's computed opacity was `0`; with the array
+ * identity pinned, all 13 survived and two centers could be ticked in a row with the panel open.
+ *
+ * Angular's `computed({ equal })` keeps the PREVIOUS value (and therefore the previous array
+ * instance) whenever this returns true, which is what makes the identity stable without a manual
+ * cache. Compared by value, so a genuine change — rows landing, a URL value appearing — still emits
+ * a new array and the panel legitimately re-renders.
+ */
+function sameFilterOptions(a: MyWorkFilterOption[], b: MyWorkFilterOption[]): boolean {
+  return a.length === b.length && a.every((option, index) => option.value === b[index].value && option.label === b[index].label);
+}
+
 /** The `Other` bucket travels as a sentinel (P2-3312) — it must never be shown raw. */
 function categoryOptionLabel(value: string): string {
   return value === PROGRAMME_RESULTS_OTHER_CATEGORY ? PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL : value;
@@ -112,6 +143,51 @@ function parseListParam(raw: string | null): string[] {
   }
   return [...seen];
 }
+
+// @akili-spec changes/my-work-board (MWB-T-14)
+/**
+ * A chip on the filter row. Extends the shared `ProgrammeResultsFilterChip` (same `dimension` /
+ * `value` pair, so `clearChip()` stays one method) with the summary form: ONE chip standing for a
+ * whole multi dimension once it carries `MWB_CHIP_SUMMARY_THRESHOLD` values or more.
+ */
+export interface MyWorkBoardChip extends ProgrammeResultsFilterChip {
+  /** True for the aggregated `Center: 8 centers` form; false/absent for a single-value chip. */
+  summary: boolean;
+}
+
+// @akili-spec changes/my-work-board (MWB-T-14)
+/**
+ * At how many selected values a multi dimension collapses into one summary chip. Two values still
+ * read faster as two chips (each one removable in a single click); from three the row starts
+ * wrapping, and with 8 centers it reached FOUR lines on the live page (measured 2026-09-05: 14
+ * chips at four distinct `top` offsets, filter row 171px tall).
+ *
+ * Aggregation ALONE does not discharge the task's two-line rule, and this constant does not claim it
+ * does. Two fixtures were measured in the CT (`my-work-board.cy.ts`), at 1280×720 and 1440×900,
+ * 2026-09-05:
+ *
+ *  - *Aggregated worst case* — 8 centers + 3 categories + 2 origins + phase + `Created by` + a
+ *    39-character search, i.e. seven chips, two of them summaries: TWO lines (chip tops [70, 110]).
+ *    This is the case aggregation was introduced for, and it holds.
+ *  - *Widest reachable case* — every multi dimension parked at TWO values (one below the threshold,
+ *    so nothing aggregates) carrying the longest real labels in the vocabulary, plus `Created by`
+ *    and the same search: nine chips, THREE lines (chip tops [70, 110, 150]). Nine is the ceiling —
+ *    a third value in any dimension collapses it to one short chip — but three lines still breaks
+ *    the rule.
+ *
+ * So the `+N more` overflow chip the task describes is NOT dead code: there is a reachable state
+ * that needs it. It is not implemented here, and the CT pins the widest case to the measured three
+ * lines so the gap stays visible. Do not restate "the row can no longer exceed two lines" — the
+ * measurement says otherwise.
+ */
+export const MWB_CHIP_SUMMARY_THRESHOLD = 3;
+
+/** Plural noun each aggregated dimension counts in (`Center: 8 centers`). */
+const MWB_CHIP_SUMMARY_NOUN: Record<'category' | 'origin' | 'center', { label: string; noun: string }> = {
+  category: { label: 'Category', noun: 'categories' },
+  origin: { label: 'Funding source', noun: 'sources' },
+  center: { label: 'Center', noun: 'centers' }
+};
 
 /** `['a', 'b']` → `'a,b'`; an empty selection is `null`, which REMOVES the key under `merge`. */
 function joinListParam(values: readonly string[]): string | null {
@@ -153,6 +229,7 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
 export class MyWorkBoardComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly smartNav = inject(SmartNavigationService);
   private readonly dataControlSE = inject(DataControlService);
   private readonly homeSE = inject(ResultFrameworkReportingHomeService);
   private readonly destroyRef = inject(DestroyRef);
@@ -252,27 +329,50 @@ export class MyWorkBoardComponent {
    * The multi chips reuse `ProgrammeResultsFilterChip` verbatim (same `dimension`/`value` pair),
    * which is what lets `clearChip()` stay one method for both kinds.
    */
-  readonly boardChips = computed<ProgrammeResultsFilterChip[]>(() => {
-    const base = this.filter.activeChips();
-    const multi: ProgrammeResultsFilterChip[] = [
-      ...this.selectedCategories().map(value => ({ label: `Category: ${categoryOptionLabel(value)}`, dimension: 'category' as const, value })),
-      ...this.selectedOrigins().map(value => ({ label: `Funding source: ${value}`, dimension: 'origin' as const, value })),
-      ...this.selectedCenters().map(value => ({ label: `Center: ${value}`, dimension: 'center' as const, value }))
+  readonly boardChips = computed<MyWorkBoardChip[]>(() => {
+    const base: MyWorkBoardChip[] = this.filter.activeChips().map(chip => ({ ...chip, summary: false }));
+    const multi: MyWorkBoardChip[] = [
+      ...this.dimensionChips('category', this.selectedCategories(), categoryOptionLabel),
+      ...this.dimensionChips('origin', this.selectedOrigins(), value => value),
+      ...this.dimensionChips('center', this.selectedCenters(), value => value)
     ];
     if (!multi.length) return base;
     const createdByAt = base.findIndex(chip => chip.dimension === 'createdBy');
     return createdByAt < 0 ? [...base, ...multi] : [...base.slice(0, createdByAt), ...multi, ...base.slice(createdByAt)];
   });
 
-  /** Badge on the Filter button = number of chips, phase included — the same rule the Results tab
-   *  applies, so the two toolbars never disagree about what "1 filter" means. `MWB-T-12`: a
-   *  multi-select contributes one chip PER selected value, and the badge counts each. */
-  readonly activeFilterCount = computed(() => this.boardChips().length);
+  // @akili-spec changes/my-work-board (MWB-T-14)
+  /**
+   * One dimension's contribution to the chip row: individual chips below the threshold, ONE summary
+   * chip at or above it. The summary chip's `value` is empty — its × clears the whole dimension —
+   * which is also what keeps the `@for` track key (`dimension|value`) unique against the individual
+   * chips it replaces.
+   */
+  private dimensionChips(
+    dimension: 'category' | 'origin' | 'center',
+    values: readonly string[],
+    labelOf: (value: string) => string
+  ): MyWorkBoardChip[] {
+    const meta = MWB_CHIP_SUMMARY_NOUN[dimension];
+    if (values.length >= MWB_CHIP_SUMMARY_THRESHOLD) {
+      return [{ label: `${meta.label}: ${values.length} ${meta.noun}`, dimension, value: '', summary: true }];
+    }
+    return values.map(value => ({ label: `${meta.label}: ${labelOf(value)}`, dimension, value, summary: false }));
+  }
+
+  /** Badge on the Filter button = number of ACTIVE VALUES, phase included — the same rule the
+   *  Results tab applies, so the two toolbars never disagree about what "1 filter" means.
+   *  `MWB-T-14`: deliberately NOT `boardChips().length` any more — a summary chip stands for many
+   *  values, and a badge that dropped from 8 to 1 because the row got tidier would misreport how
+   *  much the board is filtered. Counted from the selections themselves. */
+  readonly activeFilterCount = computed(
+    () => this.filter.activeChips().length + this.selectedCategories().length + this.selectedOrigins().length + this.selectedCenters().length
+  );
 
   /** Whether anything at all is narrowing the board — the Filter button's active styling and the
    *  chip row's own `@if`. Not `filter.hasActiveFilters()`: that service no longer knows about the
    *  three board-local dimensions (`MWB-T-12`). */
-  readonly hasActiveFilters = computed(() => this.boardChips().length > 0);
+  readonly hasActiveFilters = computed(() => this.activeFilterCount() > 0);
 
   /** `Clear filters` only shows when something OTHER than the phase would be removed: `clearAll()`
    *  deliberately restores the default phase rather than dropping it (design.md §6.6), so a button
@@ -284,36 +384,49 @@ export class MyWorkBoardComponent {
   readonly showCreatedByFilter = computed(() => this.data.scope() === 'all');
 
   // ── Filter option lists (`MWB-T-9` (4)) — derived from the LOADED rows, never a static catalog ──
-  readonly phaseSelectOptions = computed(() => this.data.phaseOptions().map(value => ({ value, label: value })));
+  // `MWB-T-14`: every one of these carries `{ equal: sameFilterOptions }`. See the helper's own
+  // comment — a fresh array on a tick detaches the focused option row and slams the panel shut.
+  readonly phaseSelectOptions = computed(() => this.data.phaseOptions().map(value => ({ value, label: value })), { equal: sameFilterOptions });
   /** Category is the one dimension that is NOT the raw value list: the Results tab collapses every
    *  non-RF `result_type` into a single `Other` bucket carried by the `__other__` sentinel
    *  (P2-3312), and `filterRows` already understands it. `buildCategoryFilterOptions` is that
    *  rule's exported single definition — reused here rather than re-implemented (`MWB-T-9`). */
-  readonly categorySelectOptions = computed(() =>
-    withSelectedOptions(
-      // `null`, not a selected value: the multi-select's own selection is topped up by
-      // `withSelectedOptions` below, which handles ALL of them rather than just the first
-      // (`buildCategoryFilterOptions` takes a single-select value — `MWB-T-12`).
-      buildCategoryFilterOptions(optionsOf(this.data.rows(), row => row.category), null),
-      this.selectedCategories(),
-      categoryOptionLabel
-    )
+  readonly categorySelectOptions = computed(
+    () =>
+      withSelectedOptions(
+        // `null`, not a selected value: the multi-select's own selection is topped up by
+        // `withSelectedOptions` below, which handles ALL of them rather than just the first
+        // (`buildCategoryFilterOptions` takes a single-select value — `MWB-T-12`).
+        buildCategoryFilterOptions(
+          optionsOf(this.data.rows(), row => row.category),
+          null
+        ),
+        this.selectedCategories(),
+        categoryOptionLabel
+      ),
+    { equal: sameFilterOptions }
   );
-  readonly originSelectOptions = computed(() =>
-    withSelectedOptions(
-      optionsOf(this.data.rows(), row => row.origin).map(value => ({ value, label: value })),
-      this.selectedOrigins(),
-      value => value
-    )
+  readonly originSelectOptions = computed(
+    () =>
+      withSelectedOptions(
+        optionsOf(this.data.rows(), row => row.origin).map(value => ({ value, label: value })),
+        this.selectedOrigins(),
+        value => value
+      ),
+    { equal: sameFilterOptions }
   );
-  readonly centerSelectOptions = computed(() =>
-    withSelectedOptions(
-      optionsOf(this.data.rows(), row => row.center).map(value => ({ value, label: value })),
-      this.selectedCenters(),
-      value => value
-    )
+  readonly centerSelectOptions = computed(
+    () =>
+      withSelectedOptions(
+        optionsOf(this.data.rows(), row => row.center).map(value => ({ value, label: value })),
+        this.selectedCenters(),
+        value => value
+      ),
+    { equal: sameFilterOptions }
   );
-  readonly createdBySelectOptions = computed(() => optionsOf(this.data.rows(), row => row.createdBy).map(value => ({ value, label: value })));
+  readonly createdBySelectOptions = computed(() => optionsOf(this.data.rows(), row => row.createdBy).map(value => ({ value, label: value })), {
+    equal: sameFilterOptions
+  });
 
   // ── Skeleton shape (`MWB-T-8` (4)) ─────────────────────────────────────────────────────────
   /** Card-placeholder counts per group and the two Closed rails. Plain arrays, not signals: the
@@ -589,9 +702,32 @@ export class MyWorkBoardComponent {
   /** In-place modal visibility signal for Where to report */
   readonly showWhereToReportModal = signal(false);
 
+  /** Fail-closed gate for the band emerging CTA (`ERC-R-5`). */
+  readonly canReportEmerging = computed(() => {
+    const code = this.programmeCode();
+    const programme = this.programme();
+    return (
+      !!code &&
+      !isAvisaInitiative({
+        official_code: code,
+        initiativeCode: code,
+        initiativeId: programme?.initiativeId
+      })
+    );
+  });
+
   /** Band CTA: opens the Where to report modal directly on top of the My work board. */
   openWhereToReport(): void {
     this.showWhereToReportModal.set(true);
+  }
+
+  /** Hop to dashboard-lab host; persist Smart Back origin before navigate (`ERC-R-4`). */
+  openEmergingReport(): void {
+    if (!this.canReportEmerging()) return;
+    this.smartNav.rememberResultDetailOrigin();
+    this.router.navigate(['/result-framework-reporting', 'entity-details', this.programmeCode()], {
+      queryParams: { reportEmerging: 'true', returnTab: 'my-work' }
+    });
   }
 
   // ── Filter popover (`MWB-T-9` (2)) ─────────────────────────────────────────────────────────
@@ -609,6 +745,12 @@ export class MyWorkBoardComponent {
     const target = event?.target as HTMLElement | null;
     // The popover's own subtree (and the inline `.custom_select` panels it hosts) must not close it.
     if (typeof target?.closest === 'function' && target.closest('.mwb-filter-container')) return;
+    // `MWB-T-14`: a target that is no longer in the document cannot be an outside click — it is a
+    // node one of the popover's own controls re-rendered out from under the event (the multiselect
+    // rebuilds its option rows on a genuine option-set change). `closest()` on a detached node
+    // walks a detached tree and never reaches `.mwb-filter-container`, so without this guard that
+    // re-render would read as "clicked outside" and close the popover mid-interaction.
+    if (target && typeof document !== 'undefined' && document.contains && !document.contains(target)) return;
     if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
   }
 
@@ -624,7 +766,7 @@ export class MyWorkBoardComponent {
   }
 
   // ── Chips ──────────────────────────────────────────────────────────────────────────────────
-  clearChip(chip: ProgrammeResultsFilterChip): void {
+  clearChip(chip: MyWorkBoardChip | ProgrammeResultsFilterChip): void {
     if (chip?.dimension === 'search') this.searchDraft.set('');
     // Removing the phase chip means "back to the default", not "no phase": a board with no phase
     // would show every reporting cycle at once (design.md §6.6).
@@ -633,13 +775,40 @@ export class MyWorkBoardComponent {
       return;
     }
     // `MWB-T-12`: a multi chip's × drops ONLY its own value — the other picks of the same
-    // dimension keep filtering.
+    // dimension keep filtering. `MWB-T-14`: a SUMMARY chip stands for the whole dimension, so its
+    // × empties it (the individual values are not on the row to be removed one by one).
     const multi = this.multiDimension(chip?.dimension);
     if (multi) {
-      multi.update(values => values.filter(value => value !== chip.value));
+      if ((chip as MyWorkBoardChip)?.summary) multi.set([]);
+      else multi.update(values => values.filter(value => value !== chip.value));
       return;
     }
     this.filter.clearChip(chip);
+  }
+
+  // @akili-spec changes/my-work-board (MWB-T-14)
+  /**
+   * A summary chip's LABEL is a button: it reopens the Filter popover on the dimension it stands
+   * for, which is the only place the individual values can still be unticked one by one.
+   *
+   * `stopPropagation` is load-bearing — the chips sit OUTSIDE `.mwb-filter-container`, so without
+   * it this click would bubble to `onDocumentClick` and close the popover it just opened.
+   *
+   * Focusing the control's trigger is the cheap half of "focus/scroll that control": the shared
+   * `.custom_select` opens its own panel on `:focus-within`, so one `focus()` both reveals the list
+   * and puts the keyboard there. Deferred one macrotask because the panel is `[class.hidden]` until
+   * the signal write is rendered, and `focus()` on a `display:none` subtree is a no-op. Everything
+   * is optional-chained: the focus is a nicety, the popover opening is the contract.
+   */
+  openFilterForChip(chip: MyWorkBoardChip, event: Event): void {
+    event.stopPropagation();
+    this.filterPopoverOpen.set(true);
+    const dimension = chip?.dimension;
+    setTimeout(() => {
+      const host = this.workAreaEl()?.querySelector<HTMLElement>(`.mwb-filter[data-dimension="${dimension}"]`);
+      host?.scrollIntoView?.({ block: 'nearest' });
+      host?.querySelector<HTMLElement>('a.field')?.focus?.();
+    });
   }
 
   clearAll(): void {

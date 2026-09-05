@@ -229,6 +229,14 @@ export class ReportingProgramBandComponent {
    * button that refuses to act.
    */
   readonly canReport = input<boolean>(true);
+  /**
+   * `@akili-spec changes/emerging-result-cta-placement` (`ERC-T-1`, `ERC-DD-3`, `ERC-R-5`) — gates
+   * the standalone **Report emerging result** control, distinct from `canReport` / *Where to
+   * report*. Defaults `false` (fail-closed, same class as `canReport`): a host that forgets to
+   * bind this cannot leak create chrome on AVISA / no-programme. Unset or explicitly `false` hides
+   * BOTH the expanded and collapsed copies — it does NOT use native `[disabled]` (KZ-REH-2).
+   */
+  readonly canReportEmerging = input<boolean>(false);
 
   readonly searchChange = output<string>();
   readonly statusChange = output<string>();
@@ -250,6 +258,14 @@ export class ReportingProgramBandComponent {
 
   onWhereToReportClick(): void {
     this.whereToReport.emit();
+  }
+
+  /**
+   * `@akili-spec changes/emerging-result-cta-placement` (`ERC-T-1`, `ERC-R-2`, `ERC-DD-3`) — emits
+   * ONLY `reportEmerging`. Distinct from `onWhereToReportClick`: the two controls MUST NOT share a
+   * click, so neither handler triggers the other's output.
+   */
+  onReportEmergingClick(): void {
     this.reportEmerging.emit();
   }
 

@@ -24,8 +24,9 @@ de TS): trátalo como host, no como pantalla.
   los desplegables de centros y SP vacíos **sin ningún error**.
 - **El botón `Report` de la tabla de Reporting abre el ASIDE**, no el modal viejo
   (`onReportingRowReport` → `primeEntityAowContext()` + `manageIndicator(..., 'report', __hloNode)`).
-  Los otros seis puntos de entrada de este archivo y las páginas `entity-aow` **siguen con el
-  modal**: eso es deliberado, no una migración a medias.
+  **Report emerging result** (band ×2, hub card, `?reportEmerging=true`) abre el aside en modo
+  `emerging` (`openEmergingReport()`). Los puntos de entrada legacy de `entity-aow` **siguen con el
+  modal** donde no se migraron — no confundir con emerging.
 
 ## Layout: viewport lock (spec `changes/sp-shell-app-viewport`, SAV-T-6)
 - `≥ md`: host binds `[class.pr-viewport-page]="isProgramShell()"` (Overview + Reporting only;
@@ -52,15 +53,20 @@ de TS): trátalo como host, no como pantalla.
 | `indicator-drawer/` | El aside: Target (`info`) y creación de resultado (`report`) | **Tiene `CLAUDE.md` propio** |
 | `lab-report-form/` | El formulario de creación que monta el aside | **Tiene `CLAUDE.md` propio** |
 
-## Trampa: este componente es el host VIVO de la pantalla emergente (2026-09-04, P2-3569)
-- El modal "Report emerging result" (`<app-report-result-form>`) **es** la vía emergente real:
-  `entity-details` (de donde se copió) está **retirado y sin ruta** — `routing-data.ts` carga
-  `DashboardLabComponent` para `emerging`, `entity-details/:entityId`, `overview` y `planned-toc`.
-- ⚠️ **Y eso ya costó un requisito entero.** P2-3421 ("¿reporta el uso de una innovación ya
-  evaluada?") se cableó con `[showInnovationLinkQuestion]="true"` **solo en `entity-details`**, con
-  nota "fuera de alcance"; nunca se vio en pantalla (QA reprodujo su ausencia 3 veces). Corregido
-  aquí, candado `report-result-form/innovation-link-surfaces.spec.ts`.
-- ⇒ **Al leer una nota que dice "esa otra superficie es la que importa", comprueba que esté enrutada.**
+## Trampa: emerging create ya NO usa el modal viejo (2026-09-05, spec `changes/emerging-result-cta-placement`)
+- **Report emerging result** (band, hub card, hop desde Results / My results) abre el **aside**
+  (`openEmergingReport()` → `managed.emerging` + `indicator-drawer` en modo `emerging`). El hub
+  cierra y **no** llama `openReportModal()` / `showReportModal`.
+- El tag `<app-report-result-form>` puede quedar en el árbol como legado; **no** es la vía viva para
+  emerging. La pregunta P2-3421 la decide `lab-report-form` (`showsInnovationLink`); candado
+  `innovation-link-surfaces.spec.ts`.
+- Hop desde Results / My results: `rememberResultDetailOrigin()` **antes** de navegar con
+  `?reportEmerging=true&returnTab=…`; cancel cierra y vuelve al tab de origen; create **no**
+  sobrescribe el origen con la URL de dashboard-lab.
+
+## Trampa: este componente sigue siendo host del modal legado (2026-09-04, P2-3569)
+- El modal `<app-report-result-form>` permanece en el HTML por compatibilidad, pero **emerging** y el
+  hub card ya no lo abren. `entity-details` (de donde se copió) está **retirado y sin ruta**.
 
 ## Trampas (⚠️ = ya rompió algo)
 - ⚠️ **`filtersActive` hay que pasarlo a `reporting-aow-table`.** El hijo no ve tres de los cinco

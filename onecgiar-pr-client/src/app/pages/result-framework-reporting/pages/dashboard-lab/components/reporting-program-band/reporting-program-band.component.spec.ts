@@ -286,57 +286,187 @@ describe('ReportingProgramBandComponent', () => {
     });
   });
 
-  // ── Emerging-result CTA — a MODAL on the host, not a route ────────────────
-  describe('report emerging result', () => {
-    /** Both copies of the CTA carry the same label; index 0 is the identity block's. */
-    const ctas = () =>
+  // ── Emerging-result CTA — standalone control, split emits ─────────────────
+  // `@akili-spec changes/emerging-result-cta-placement` ERC-T-1 (ERC-R-1, ERC-R-2, ERC-R-5,
+  // ERC-R-11, ERC-R-20, ERC-AC-1/2/3). Where to report and Report emerging result used to be one
+  // click emitting both outputs; they are now two distinct controls with two distinct emits, and
+  // the new one is fail-closed behind `canReportEmerging` (default false).
+  describe('report emerging result (ERC-T-1)', () => {
+    /** Where to report — both copies (expanded + condensed) share this label. */
+    const wtrCtas = () =>
       Array.from(root().querySelectorAll('button')).filter(b => b.textContent?.includes('Where to report'));
+    /** The standalone emerging control — both copies (expanded + condensed) carry the aria-label. */
+    const emergingCtas = () =>
+      Array.from(root().querySelectorAll('button')).filter(b => b.getAttribute('aria-label') === 'Report emerging result');
+    const tourCtas = () => Array.from(root().querySelectorAll('button')).filter(b => b.getAttribute('data-guide') === 'sp-tour-trigger' || b.textContent?.trim().includes('Tour'));
 
-    it('emits instead of navigating when the expanded CTA is clicked', async () => {
+    // ── ERC-R-5 fail-closed: unset / false → absent ──
+    it('renders no emerging control when canReportEmerging is unset (default false)', async () => {
       await build({ showToolbar: true });
-      const emitted = jest.fn();
-      const whereEmitted = jest.fn();
-      component.reportEmerging.subscribe(emitted);
-      component.whereToReport.subscribe(whereEmitted);
 
-      ctas()[0].click();
-
-      expect(emitted).toHaveBeenCalledTimes(1);
-      expect(whereEmitted).toHaveBeenCalledTimes(1);
+      expect(emergingCtas()).toHaveLength(0);
+      expect(text()).not.toContain('Report emerging result');
+      // Tour + Where to report are unaffected.
+      expect(wtrCtas().length).toBeGreaterThan(0);
     });
 
-    it('emits from the condensed bar copy too — one behaviour, two renders', async () => {
-      await build({ showToolbar: true });
-      const emitted = jest.fn();
+    it('renders no emerging control when canReportEmerging is explicitly false, in expanded and collapsed', async () => {
+      await build({ showToolbar: true, canReportEmerging: false });
+      expect(emergingCtas()).toHaveLength(0);
+
+      scrollTo(200);
+
+      expect(emergingCtas()).toHaveLength(0);
+      expect(text()).not.toContain('Report emerging result');
+      // Tour + Where to report still present in the collapsed bar.
+      expect(text()).toContain('Tour');
+      expect(text()).toContain('Where to report');
+    });
+
+    // ── ERC-R-1 / ERC-AC-1: present, outline, in both chrome states when true ──
+    it('renders exactly one labelled emerging control in the expanded cluster when canReportEmerging is true', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+
+      expect(emergingCtas()).toHaveLength(1);
+      const btn = emergingCtas()[0];
+      expect(btn.getAttribute('data-testid')).toBe('program-band-report-emerging-btn');
+      // Outline chrome (Tour's own class of button) — not the filled-brand class Where to report uses.
+      expect(btn.className).toContain('border');
+      expect(btn.className).toContain('bg-[var(--pr-surface-card)]');
+      expect(btn.className).not.toContain('bg-[var(--pr-color-primary-300)]');
+    });
+
+    it('renders exactly one REACHABLE labelled emerging control in the collapsed 48px bar when canReportEmerging is true', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+      scrollTo(200);
+
+      // The identity block's copy is still in the DOM but `inert` (clipped, out of the a11y/tab
+      // tree) once collapsed — the same pattern the band already uses for Tour / Where to report.
+      // "Reachable" excludes anything inside that inert ancestor.
+      const reachable = emergingCtas().filter(b => !b.closest('[inert]'));
+      expect(reachable).toHaveLength(1);
+      const btn = reachable[0];
+      expect(btn.getAttribute('data-testid')).toBe('program-band-report-emerging-btn-condensed');
+      expect(btn.className).not.toContain('bg-[var(--pr-color-primary-300)]');
+    });
+
+    it('does not replace or hide Tour or Where to report when the emerging control is shown', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+
+      expect(tourCtas().length).toBeGreaterThan(0);
+      expect(wtrCtas().length).toBeGreaterThan(0);
+      expect(emergingCtas()).toHaveLength(1);
+    });
+
+    // ── ERC-R-2 / ERC-AC-2 / ERC-AC-3: split, isolated emits ──
+    it('Where to report click emits ONLY whereToReport — not reportEmerging', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+      const emergingEmitted = jest.fn();
       const whereEmitted = jest.fn();
-      component.reportEmerging.subscribe(emitted);
+      component.reportEmerging.subscribe(emergingEmitted);
+      component.whereToReport.subscribe(whereEmitted);
+
+      wtrCtas()[0].click();
+
+      expect(whereEmitted).toHaveBeenCalledTimes(1);
+      expect(emergingEmitted).not.toHaveBeenCalled();
+    });
+
+    it('the emerging control click emits ONLY reportEmerging — not whereToReport', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+      const emergingEmitted = jest.fn();
+      const whereEmitted = jest.fn();
+      component.reportEmerging.subscribe(emergingEmitted);
+      component.whereToReport.subscribe(whereEmitted);
+
+      emergingCtas()[0].click();
+
+      expect(emergingEmitted).toHaveBeenCalledTimes(1);
+      expect(whereEmitted).not.toHaveBeenCalled();
+    });
+
+    it('the condensed emerging control click also emits ONLY reportEmerging', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+      const emergingEmitted = jest.fn();
+      const whereEmitted = jest.fn();
+      component.reportEmerging.subscribe(emergingEmitted);
       component.whereToReport.subscribe(whereEmitted);
       scrollTo(200);
 
-      // Only the condensed copy is left once the identity block collapses away.
-      const condensed = ctas().find(b => b.className.includes('pr-band-fade')) as HTMLButtonElement;
-      condensed.click();
+      emergingCtas()[0].click();
 
-      expect(emitted).toHaveBeenCalledTimes(1);
-      expect(whereEmitted).toHaveBeenCalledTimes(1);
+      expect(emergingEmitted).toHaveBeenCalledTimes(1);
+      expect(whereEmitted).not.toHaveBeenCalled();
+    });
+
+    // ── ERC-R-1 narrow viewport / ERC-R-20: accessible name stays full ──
+    it('keeps the accessible name "Report emerging result" even where the visible label is allowed to shorten', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+
+      const expanded = emergingCtas()[0];
+      expect(expanded.getAttribute('aria-label')).toBe('Report emerging result');
+
+      scrollTo(200);
+      const condensed = emergingCtas()[0];
+      expect(condensed.getAttribute('aria-label')).toBe('Report emerging result');
     });
 
     it('is not a link — the /emerging route is no longer the entry point', async () => {
-      await build({ showToolbar: true });
+      await build({ showToolbar: true, canReportEmerging: true });
 
-      const links = Array.from(root().querySelectorAll('a')).filter(a => a.textContent?.includes('Report emerging result'));
+      const links = Array.from(root().querySelectorAll('a')).filter(a => a.getAttribute('aria-label') === 'Report emerging result');
       expect(links).toHaveLength(0);
-      expect(ctas()).toHaveLength(1);
     });
 
-    it('hides both copies when the programme cannot report (AVISA)', async () => {
-      await build({ showToolbar: true, canReport: false });
-      expect(ctas()).toHaveLength(0);
+    // ── ERC-R-5: does not use native [disabled] ──
+    it('is absent rather than disabled — no [disabled] attribute anywhere when false', async () => {
+      await build({ showToolbar: true, canReportEmerging: false });
+
+      const disabledButtons = Array.from(root().querySelectorAll('button[disabled]'));
+      expect(disabledButtons).toHaveLength(0);
+    });
+
+    // ── ERC-R-11: DOM / tab order Tour → Emerging → Where to report ──
+    it('orders the expanded cluster Tour, then the emerging control, then Where to report', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+
+      const cluster = root().querySelector('[data-guide="sp-tour-trigger"]')?.parentElement as HTMLElement;
+      const buttons = Array.from(cluster.querySelectorAll('button'));
+      const labels = buttons.map(b => (b.getAttribute('data-guide') === 'sp-tour-trigger' ? 'tour' : b.getAttribute('aria-label') === 'Report emerging result' ? 'emerging' : b.getAttribute('data-testid') === 'program-band-where-to-report-btn' ? 'wtr' : 'other'));
+
+      expect(labels).toEqual(['tour', 'emerging', 'wtr']);
+    });
+
+    it('orders the collapsed bar Tour, then the emerging control, then Where to report', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+      scrollTo(200);
+
+      const group = root().querySelector('[data-testid="program-band-collapsed-actions"]') as HTMLElement;
+      const buttons = Array.from(group.querySelectorAll('button'));
+      const labels = buttons.map(b => (b.getAttribute('aria-label') === 'Start guided tour' ? 'tour' : b.getAttribute('aria-label') === 'Report emerging result' ? 'emerging' : b.getAttribute('data-testid')?.includes('where-to-report') ? 'wtr' : 'other'));
+
+      expect(labels).toEqual(['tour', 'emerging', 'wtr']);
+    });
+
+    // ── canReport=false / canReportEmerging=true: emerging still shows independently ──
+    it('still shows the collapsed emerging control when canReport is false but canReportEmerging is true', async () => {
+      await build({ showToolbar: true, canReport: false, canReportEmerging: true });
+      scrollTo(200);
+
+      const reachable = emergingCtas().filter(b => !b.closest('[inert]'));
+      expect(reachable).toHaveLength(1);
+      expect(wtrCtas().filter(b => !b.closest('[inert]'))).toHaveLength(0);
+    });
+
+    it('hides both copies of the emerging control when the programme cannot report it (AVISA)', async () => {
+      await build({ showToolbar: true, canReport: false, canReportEmerging: false });
+      expect(emergingCtas()).toHaveLength(0);
+      expect(wtrCtas()).toHaveLength(0);
 
       scrollTo(200);
 
       expect(text()).not.toContain('Report emerging result');
-      // Only the collapsed identity (dot + name) fades in — the action group is gone with canReport false.
+      // Only the collapsed identity (dot + name) fades in — the action group is gone with both flags false.
       expect(collapsedParts().length).toBe(1);
     });
   });

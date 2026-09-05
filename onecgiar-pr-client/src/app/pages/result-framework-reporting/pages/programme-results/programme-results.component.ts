@@ -64,6 +64,7 @@ import {
 import { PROGRAMME_RESULTS_FIXED_SECTION_LABELS, sectionLabel } from './services/programme-results-section-labels';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from './services/programme-results-query-params';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
+import { isAvisaInitiative } from '../../../../shared/utils/avisa-initiative.util';
 
 /**
  * Router commands + query params for one result. Same shape as
@@ -919,8 +920,23 @@ export class ProgrammeResultsComponent implements OnDestroy {
 
   readonly showWhereToReportModal = signal(false);
 
+  /** Fail-closed gate for the band emerging CTA (`ERC-R-5`). */
+  readonly canReportEmerging = computed(() => {
+    const code = this.programmeCode();
+    return !!code && !isAvisaInitiative({ official_code: code, initiativeCode: code });
+  });
+
   openWhereToReport(): void {
     this.showWhereToReportModal.set(true);
+  }
+
+  /** Hop to dashboard-lab host; persist Smart Back origin before navigate (`ERC-R-4`). */
+  openEmergingReport(): void {
+    if (!this.canReportEmerging()) return;
+    this.smartNav.rememberResultDetailOrigin();
+    this.router.navigate(['/result-framework-reporting', 'entity-details', this.programmeCode()], {
+      queryParams: { reportEmerging: 'true', returnTab: 'results' }
+    });
   }
 
   get cycleYear(): string | number | null {

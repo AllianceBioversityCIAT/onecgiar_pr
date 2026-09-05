@@ -197,7 +197,7 @@ function buildFixtureRows(): ProgrammeResultRow[] {
  *  BEFORE `cy.mount` compiles the component — both statements are synchronous JS, so this ordering
  *  holds even though `cy.mount` itself does the `TestBed.configureTestingModule` + `createComponent`
  *  pair internally. */
-function mountBoard() {
+function mountBoard(customize?: (fake: FakeMyWorkBoardService) => void, queryParams: Record<string, string> = {}) {
   const rows = buildFixtureRows();
   const columns = groupByColumn(rows);
   const totalsValue = totals(rows);
@@ -211,6 +211,9 @@ function mountBoard() {
   fake.badge.set(badgeCount(columns, 'mine'));
   fake.readyCount.set(readyCountOf(editingRows));
   fake.scopeTotals.set({ mine: totalsValue.all, all: null });
+  // `MWB-T-14`: the chip-overflow case needs a richer filter vocabulary than the layout fixture
+  // carries. Applied BEFORE mount so the first render is already the state under measurement.
+  customize?.(fake);
 
   TestBed.overrideComponent(MyWorkBoardComponent, {
     remove: { imports: [ReportingProgramBandComponent] },
@@ -229,8 +232,8 @@ function mountBoard() {
         provide: ActivatedRoute,
         useValue: {
           paramMap: of(convertToParamMap({ entityId: 'SP01' })),
-          snapshot: { paramMap: convertToParamMap({ entityId: 'SP01' }), queryParamMap: convertToParamMap({}) },
-          queryParamMap: of(convertToParamMap({}))
+          snapshot: { paramMap: convertToParamMap({ entityId: 'SP01' }), queryParamMap: convertToParamMap(queryParams) },
+          queryParamMap: of(convertToParamMap(queryParams))
         }
       },
       { provide: Router, useValue: { navigate: () => Promise.resolve(true) } },
@@ -618,6 +621,311 @@ describe('MyWorkBoardComponent — Cypress CT (MWB-T-5)', () => {
 
       assertNoDragAndDrop(label);
       assertStructuralAccessibility(label);
+    });
+  });
+});
+
+// @akili-spec changes/my-work-board (MWB-T-14)
+//
+// The two halves of the reported defect, both of which are LAYOUT/FOCUS facts jsdom cannot produce:
+//
+//  1. the chips row grew to three-plus lines with 15 active values (measured on the live page,
+//     2026-09-05: 14 chips at four distinct `top` offsets, filter row 171px);
+//  2. the Contributing Center multiselect closed after every tick.
+//
+// (2)'s mechanism, read in the Orca browser before the fix: `app-pr-filter-multiselect` shows its
+// panel with `.field:focus-within` and renders its option rows with `*ngFor` over the `[options]`
+// array; a real mouse click lands on the row's `<input type="checkbox">`, which takes focus. The
+// board's option computeds read the SELECTION, so each tick handed the control a brand-new array,
+// every row was destroyed and rebuilt, the focused checkbox was detached, focus fell to `<body>`
+// and `:focus-within` went false. Measured then: 0 of 13 rows still attached, activeElement BODY,
+// panel opacity 0. The fix is `computed({ equal })` on the option lists. This spec is what keeps it
+// fixed — a `computed` that emits a fresh array again fails the first tick below.
+//
+// WHERE THE TICK MUST BE AIMED (this cost the first version of this spec its evidence value).
+// Cypress does NOT focus the element you pass to `.click()`. On `mousedown` it focuses
+// `getFirstFocusableEl(el)`, which walks el and then its ANCESTORS. In
+// `pr-filter-multiselect.component.html` the `<input type="checkbox" class="pr-native-check">` is a
+// CHILD of `.option`, and `.option`'s centre — where a plain `.option.click()` lands — is the
+// `.label` div. Neither is focusable, so the walk climbs to `<a class="field" tabindex="0">`, which
+// wraps the whole control and is NEVER re-rendered: `:focus-within` stays true, `opacity` stays
+// '1', and the case passes with and without the fix. So the tick below clicks the CHECKBOX itself
+// (focusable, and its own `(click)="$event.preventDefault()"` cancels only the native toggle — the
+// event still bubbles to `.option`'s `toggle()`, and `preventDefault` on `click` cannot undo a
+// focus that already happened on `mousedown`). The assertions then read the mechanism directly:
+// the clicked checkbox node is still CONNECTED and still `document.activeElement` after the tick.
+// Verified RED with the guard removed — see the FAIL-input run recorded in `execution.md`.
+describe('MyWorkBoardComponent — filter chips and multiselect (MWB-T-14)', () => {
+  const CENTERS = ['AfricaRice', 'Bioversity (Alliance)', 'CIAT (Alliance)', 'CIFOR', 'CIMMYT', 'CIP', 'ICARDA', 'IFPRI'];
+  const CATEGORIES = ['Knowledge product', 'Innovation development', 'Policy change'];
+  const ORIGINS = ['W1/W2', 'W3/Bilateral'];
+
+  // The widest vocabulary the three multi dimensions can actually carry, used by the two worst-case
+  // layout fixtures below. Real CGIAR strings — the point of a worst case is that it is reachable.
+  const LONG_CENTERS = ['Alliance of Bioversity International and CIAT', 'International Water Management Institute'];
+  const LONG_CATEGORIES = ['Capacity sharing for development', 'Innovation development'];
+  const LONG_CREATED_BY = 'Maria Fernanda Gutierrez Restrepo';
+  /** 39 characters of free-text — the one chip label with NO upper bound (it is whatever the user
+   *  typed), which is exactly why it belongs in a worst case rather than the happy fixture. */
+  const LONG_SEARCH = 'climate resilient maize varieties adapt';
+
+  /** The task's fixture: 8 centers + 3 categories + 2 origins selected, on rows that genuinely
+   *  carry that vocabulary (the option lists derive from `rows()`, never a static catalog). */
+  function mountWithManyFilters() {
+    return mountBoard(
+      fake =>
+        fake.rows.set(
+          fake.rows().map((r, i) => ({
+            ...r,
+            center: CENTERS[i % CENTERS.length],
+            category: CATEGORIES[i % CATEGORIES.length],
+            origin: ORIGINS[i % ORIGINS.length]
+          }))
+        ),
+      // The selection arrives through the URL, not through the fake: the component's URL→state
+      // effect runs on the first change detection and writes the query params into the three multi
+      // dimensions, so anything set on the service beforehand is overwritten by it. Hydrating is
+      // also the real path a shared/bookmarked filtered board takes (`MWB-T-12` URL bridge).
+      { center: CENTERS.join(','), category: CATEGORIES.join(','), origin: ORIGINS.join(',') }
+    );
+  }
+
+  /** The reviewer's worst case for the AGGREGATED row: everything the happy fixture has, plus the
+   *  two dimensions it was missing — `Created by` (which needs `scope: 'all'`, since `setScope`
+   *  clears it under Mine) and the unbounded free-text `Search` chip. Seven chips, two of them
+   *  summaries. */
+  function mountAggregatedWorstCase() {
+    return mountBoard(
+      fake => {
+        fake.scope.set('all');
+        fake.rows.set(
+          fake.rows().map((r, i) => ({
+            ...r,
+            center: CENTERS[i % CENTERS.length],
+            category: CATEGORIES[i % CATEGORIES.length],
+            origin: ORIGINS[i % ORIGINS.length],
+            createdBy: LONG_CREATED_BY
+          }))
+        );
+      },
+      { center: CENTERS.join(','), category: CATEGORIES.join(','), origin: ORIGINS.join(','), createdBy: LONG_CREATED_BY }
+    );
+  }
+
+  /** The worst case by WIDTH rather than by value count: every multi dimension parked at TWO values
+   *  (one below the summary threshold, so nothing aggregates) carrying the longest real labels the
+   *  vocabulary has, plus `Created by` and the 39-char search. NINE chips — the most the board's six
+   *  dimensions can put on the row at once, since a third value in any of them collapses that
+   *  dimension to one short summary chip. This is the fixture that decides whether `+N more` is
+   *  dead code or not, so it is measured rather than argued. */
+  function mountWidestWorstCase() {
+    return mountBoard(
+      fake => {
+        fake.scope.set('all');
+        fake.rows.set(
+          fake.rows().map((r, i) => ({
+            ...r,
+            center: LONG_CENTERS[i % LONG_CENTERS.length],
+            category: LONG_CATEGORIES[i % LONG_CATEGORIES.length],
+            origin: ORIGINS[i % ORIGINS.length],
+            createdBy: LONG_CREATED_BY
+          }))
+        );
+      },
+      {
+        center: LONG_CENTERS.join(','),
+        category: LONG_CATEGORIES.join(','),
+        origin: ORIGINS.join(','),
+        createdBy: LONG_CREATED_BY
+      }
+    );
+  }
+
+  /** Types into the real search box and waits for the debounced `Search:` chip to land, so the
+   *  measurement below runs against the settled row rather than mid-debounce. */
+  function typeLongSearch(expectedChipCount: number) {
+    cy.get('[data-testid="my-work-search"]').type(LONG_SEARCH, { delay: 0 });
+    cy.get('[data-testid="my-work-chip"]').should('have.length', expectedChipCount);
+  }
+
+  /** How many distinct baselines the chips actually occupy — the only measurement of "lines" that
+   *  means anything, and the one the live-page reading (four `top` offsets) was taken with. */
+  function chipLineTops($chips: JQuery<HTMLElement>): number[] {
+    return [...new Set(Array.from($chips).map(chip => Math.round(chip.getBoundingClientRect().top)))].sort((a, b) => a - b);
+  }
+
+  const centerFilter = () => cy.get('.mwb-filter[data-dimension="center"]');
+  const centerPanelOpacity = ($filter: JQuery<HTMLElement>) => getComputedStyle($filter[0].querySelector('.options') as HTMLElement).opacity;
+
+  ([
+    [1280, 720],
+    [1440, 900]
+  ] as const).forEach(([width, height]) => {
+    it(`${width}×${height} — 8 centers + 3 categories + 2 origins keep the chips row within two lines, and no body horizontal scroll`, () => {
+      cy.viewport(width, height);
+      mountWithManyFilters();
+
+      cy.window().should(win => {
+        expect(win.innerWidth, `${width}×${height}: window.innerWidth`).to.eq(width);
+      });
+
+      // Aggregation: 8 centers and 3 categories collapse to ONE chip each; 2 origins stay
+      // individual (the threshold is three). Phase + Category + Center + 2 origins = 5 chips.
+      cy.get('[data-testid="my-work-chip"]').should($chips => {
+        const chips = Array.from($chips) as HTMLElement[];
+        const labels = chips.map(chip => (chip.textContent ?? '').replace(/\s+/g, ' ').trim());
+        expect(labels, `${width}×${height}: aggregated chip row`).to.deep.eq([
+          'Phase: Reporting 2026',
+          'Category: 3 categories',
+          'Funding source: W1/W2',
+          'Funding source: W3/Bilateral',
+          'Center: 8 centers'
+        ]);
+
+        // "Two lines" measured the only way that means anything: how many distinct baselines the
+        // chips actually occupy. Before the fix this fixture produced four.
+        const lines = chipLineTops($chips);
+        expect(lines.length, `${width}×${height}: chips occupy ${lines.length} line(s) — tops [${lines.join(', ')}]`).to.be.at.most(2);
+      });
+
+      // `Clear filters` survives the aggregation.
+      cy.get('[data-testid="my-work-clear-filters"]').should('exist');
+      assertNoBodyHorizontalOverflow(`${width}×${height} chips`, width);
+    });
+
+    // ── The two worst cases, which is what licenses shipping NO `+N more` chip ──────────────────
+    // The task makes `+N more` conditional on the row still exceeding two lines after aggregation.
+    // "It doesn't" is only a defensible claim if the row's actual worst case was measured, so both
+    // of them are, at both viewports, and the doc comment on `MWB_CHIP_SUMMARY_THRESHOLD` cites
+    // exactly these two fixtures and nothing else.
+    it(`${width}×${height} — aggregated worst case (8 centers + 3 categories + 2 origins + Created by + 39-char search) stays within two lines`, () => {
+      cy.viewport(width, height);
+      mountAggregatedWorstCase();
+
+      // Six dimensions active; three of them (search, phase, created by) are one chip each, the two
+      // aggregated ones one chip each, and origin stays two. Seven chips.
+      typeLongSearch(7);
+
+      cy.get('[data-testid="my-work-chip"]').should($chips => {
+        const labels = Array.from($chips).map(chip => (chip.textContent ?? '').replace(/\s+/g, ' ').trim());
+        expect(labels, `${width}×${height}: aggregated worst-case chip row`).to.deep.eq([
+          `Search: ${LONG_SEARCH}`,
+          'Phase: Reporting 2026',
+          'Category: 3 categories',
+          'Funding source: W1/W2',
+          'Funding source: W3/Bilateral',
+          'Center: 8 centers',
+          `Created by: ${LONG_CREATED_BY}`
+        ]);
+
+        const lines = chipLineTops($chips);
+        expect(lines.length, `${width}×${height}: aggregated worst case occupies ${lines.length} line(s) — tops [${lines.join(', ')}]`).to.be.at.most(
+          2
+        );
+      });
+
+      assertNoBodyHorizontalOverflow(`${width}×${height} aggregated worst case`, width);
+    });
+
+    it(`${width}×${height} — widest worst case (nine chips: every multi dimension at two long values + Created by + 39-char search) still needs THREE lines — the open '+N more' gap`, () => {
+      cy.viewport(width, height);
+      mountWidestWorstCase();
+
+      // Two values in each multi dimension is BELOW the summary threshold, so nothing aggregates —
+      // nine chips, the most the board can produce, carrying the longest labels in the vocabulary.
+      typeLongSearch(9);
+
+      cy.get('[data-testid="my-work-chip"]').should($chips => {
+        const labels = Array.from($chips).map(chip => (chip.textContent ?? '').replace(/\s+/g, ' ').trim());
+        expect(labels, `${width}×${height}: widest worst-case chip row`).to.deep.eq([
+          `Search: ${LONG_SEARCH}`,
+          'Phase: Reporting 2026',
+          `Category: ${LONG_CATEGORIES[0]}`,
+          `Category: ${LONG_CATEGORIES[1]}`,
+          'Funding source: W1/W2',
+          'Funding source: W3/Bilateral',
+          `Center: ${LONG_CENTERS[0]}`,
+          `Center: ${LONG_CENTERS[1]}`,
+          `Created by: ${LONG_CREATED_BY}`
+        ]);
+
+        // CHARACTERISATION, NOT AN ENDORSEMENT. `MWB-T-14` allows the chip row at most two lines and
+        // makes `+N more` conditional on it exceeding them. This fixture DOES exceed them (measured
+        // 2026-09-05: three lines, chip tops [70, 110, 150], identical at 1280×720 and 1440×900), so
+        // `+N more` is NOT dead code and the aggregation alone does not discharge the requirement.
+        // The overflow chip is not implemented — this rework was scoped to evidence only — so the
+        // case is pinned to the MEASURED value rather than the required one, which is what keeps the
+        // gap visible instead of silently absent. Implementing `+N more` must turn this into
+        // `to.be.at.most(2)`; a layout change that fixes it by other means will also turn this red,
+        // which is the point.
+        const lines = chipLineTops($chips);
+        expect(lines.length, `${width}×${height}: widest worst case occupies ${lines.length} line(s) — tops [${lines.join(', ')}]`).to.eq(3);
+      });
+
+      assertNoBodyHorizontalOverflow(`${width}×${height} widest worst case`, width);
+    });
+
+    it(`${width}×${height} — the Center multiselect stays open while ticking, and Escape closes the popover`, () => {
+      cy.viewport(width, height);
+      // Nothing preselected: the panel has to survive the FIRST tick, which is the tick that used
+      // to close it (the selection went from empty to one value, invalidating the option computed).
+      mountBoard(fake => {
+        fake.rows.set(fake.rows().map((r, i) => ({ ...r, center: CENTERS[i % CENTERS.length] })));
+      });
+
+      cy.get('[data-testid="my-work-filter-button"]').click();
+      cy.get('[data-testid="my-work-filter-popover"]').should('not.have.class', 'hidden');
+
+      // Open the control's own panel the way a user does — the shared `.custom_select` shows it on
+      // `.field:focus-within`, so a click on the trigger is what reveals the option list.
+      centerFilter().find('a.field').click();
+      centerFilter().should($filter => {
+        expect(centerPanelOpacity($filter), 'center panel is open before the first tick').to.eq('1');
+      });
+
+      // First tick — the regression. Aimed at the CHECKBOX, not the row: see the block comment above
+      // this describe. The node is captured in a closure (not a Cypress alias, which re-queries and
+      // would quietly hand back a replacement) so the assertion afterwards is about THIS element.
+      let firstCheckbox!: HTMLInputElement;
+      centerFilter()
+        .find('.option')
+        .eq(0)
+        .find('input[type="checkbox"]')
+        .then($checkbox => {
+          firstCheckbox = $checkbox[0] as HTMLInputElement;
+        })
+        .click();
+
+      cy.window().should(win => {
+        // The mechanism, stated directly: with a fresh option array the row is destroyed, so this
+        // node is detached and `document.activeElement` falls back to `<body>`.
+        expect(firstCheckbox.isConnected, 'the ticked option row survived the tick (option array identity held)').to.eq(true);
+        expect(win.document.activeElement, 'focus is still on the ticked checkbox, so `.field:focus-within` still holds').to.eq(firstCheckbox);
+      });
+      centerFilter().should($filter => {
+        const filterEl = $filter[0];
+        expect(centerPanelOpacity($filter), 'center panel STILL open after the first tick').to.eq('1');
+        expect(filterEl.querySelectorAll('input[type="checkbox"]:checked').length, 'one option ticked').to.eq(1);
+      });
+      cy.get('[data-testid="my-work-filter-popover"]').should('not.have.class', 'hidden');
+
+      // Second tick — both selected, panel still open, so a multi-selection is actually possible.
+      centerFilter().find('.option').eq(1).find('input[type="checkbox"]').click();
+      centerFilter().should($filter => {
+        expect(centerPanelOpacity($filter), 'center panel still open after the second tick').to.eq('1');
+        expect($filter[0].querySelectorAll('input[type="checkbox"]:checked').length, 'two options ticked').to.eq(2);
+      });
+
+      // Both values reached the board's state, and the row now shows them as two individual chips
+      // (two is below the summary threshold).
+      cy.get('[data-testid="my-work-chip"]').should($chips => {
+        const labels = Array.from($chips).map(chip => (chip.textContent ?? '').replace(/\s+/g, ' ').trim());
+        expect(labels.filter(label => label.startsWith('Center:')), 'two center chips').to.have.length(2);
+      });
+
+      // Escape closes the popover (hard UI rule 4, client CLAUDE.md §5).
+      cy.get('body').type('{esc}');
+      cy.get('[data-testid="my-work-filter-popover"]').should('have.class', 'hidden');
     });
   });
 });

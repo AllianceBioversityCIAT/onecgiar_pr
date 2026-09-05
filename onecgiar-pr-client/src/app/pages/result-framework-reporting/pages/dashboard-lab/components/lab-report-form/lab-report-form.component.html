@@ -1,7 +1,7 @@
-<!-- Layout follows the Claude Design "Report result" panel: one section heading, full-width fields
-     stacked with generous spacing, every multi-value field showing its selection as removable
-     chips underneath, and a sticky footer that counts down what is still missing. -->
-<form class="relative flex flex-col gap-[22px] flex-1 min-h-0" (ngSubmit)="createResult()" [attr.aria-busy]="creatingResult()">
+<!-- Layout follows the PRMS Form UX Pattern (RFUX-R-2, RFUX-AC-2): 3 distinct semantic cards
+     (Result Identity, Target Contribution, Collaboration & Attribution) with 4/8px spacing rhythm,
+     WCAG AA contrast, and sticky footer with readiness indicator. -->
+<form class="relative flex flex-col gap-4 flex-1 min-h-0" (ngSubmit)="createResult()" [attr.aria-busy]="creatingResult()">
   @if (creatingResult()) {
     <div
       class="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2.5 bg-[color-mix(in_srgb,white_80%,transparent)]"
@@ -11,8 +11,33 @@
       <span class="text-[13.5px] font-semibold text-[var(--pr-color-secondary-400)]">Creating result…</span>
     </div>
   }
-  @if (!currentResultIsKnowledgeProduct()) {
-    <h3 class="m-0 text-[19px] font-bold leading-tight text-[var(--pr-color-secondary-400)]">The result</h3>
+
+  <!-- ==================== CARD 1: RESULT IDENTITY ==================== -->
+  <section
+    data-testid="card-result-identity"
+    class="rounded-xl border border-[var(--pr-border)] bg-white p-4.5 shadow-2xs flex flex-col gap-4">
+    <div class="flex items-center gap-2 border-b border-[var(--pr-border)] pb-3">
+      <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">edit_note</span>
+      <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">1. Result Identity</h4>
+    </div>
+
+  @if (needsResultLevelChoice()) {
+    <div data-testid="emerging-result-level-chooser">
+      <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+        Result level <span class="text-[var(--pr-color-red-300)]">*</span>
+      </p>
+      <app-pr-select
+        [options]="outputOutcomeLevels()"
+        optionLabel="name"
+        optionValue="id"
+        placeholder="Select Output or Outcome"
+        [editable]="true"
+        [required]="true"
+        [ngModel]="chosenResultLevelId()"
+        [ngModelOptions]="{ standalone: true }"
+        (selectOptionEvent)="onResultLevelChange($event?.id ?? null)"
+        name="resultLevel" />
+    </div>
   }
 
   <!-- indicator category: a picker only when the ToC node does not fix it -->
@@ -27,17 +52,19 @@
           The indicator category cannot be determined for this indicator. Please report it from the Area of Work view or contact support.
         </p>
       } @else {
-        <app-pr-select
-          [options]="resultTypes()"
-          optionLabel="name"
-          optionValue="id"
-          placeholder="Select a category"
-          [editable]="true"
-          [required]="true"
-          [ngModel]="createResultBody().result_type_id"
-          [ngModelOptions]="{ standalone: true }"
-          (selectOptionEvent)="onCategoryChange($event?.id ?? null)"
-          name="resultType" />
+        <div #categoryContainer>
+          <app-pr-select
+            [options]="resultTypes()"
+            optionLabel="name"
+            optionValue="id"
+            placeholder="Select a category"
+            [editable]="true"
+            [required]="true"
+            [ngModel]="createResultBody().result_type_id"
+            [ngModelOptions]="{ standalone: true }"
+            (selectOptionEvent)="onCategoryChange($event?.id ?? null)"
+            name="resultType" />
+        </div>
       }
     </div>
   } @else if (!currentResultIsKnowledgeProduct()) {
@@ -176,21 +203,45 @@
     <!-- result title. For a knowledge product it is filled by the sync and stays locked: `disabled`
          is the lever that does that — `readOnly` is inert while `isStatic` is on. -->
     <div>
-    <p class="m-0 mb-2 flex items-center gap-1.5 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
-      {{ titleLabel() }} <span class="text-[var(--pr-color-red-300)]">*</span>
-      <span class="material-icons-round text-[15px] text-[var(--pr-color-accents-4)]" [title]="titleHint()">info</span>
-    </p>
-    <app-pr-input
-      [ngModel]="createResultBody().result_name"
-      [ngModelOptions]="{ standalone: true }"
-      (ngModelChange)="patch('result_name', $event)"
-      [maxWords]="30"
-      [disabled]="creatingResult() || currentResultIsKnowledgeProduct()"
-      [autogenerate]="currentResultIsKnowledgeProduct()"
-      [placeholder]="currentResultIsKnowledgeProduct() ? 'Retrieved from the repository…' : ''"
-      [isStatic]="true"
-      name="resultName" />
-  </div>
+      <div class="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+        <label for="result-title-input" class="m-0 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+          {{ titleLabel() }} <span class="text-[var(--pr-color-red-300)]">*</span>
+        </label>
+        @if (!currentResultIsKnowledgeProduct()) {
+          <span
+            data-testid="title-word-gauge"
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11.5px] font-semibold transition-colors"
+            [ngClass]="titleWordCountClass()">
+            {{ titleWordCountLabel() }}
+          </span>
+        }
+      </div>
+
+      <p id="title-helper" class="m-0 mb-2 text-[12px] leading-normal text-gray-500">
+        {{ titleHint() }}
+      </p>
+
+      @if (currentResultIsKnowledgeProduct()) {
+        <div
+          class="flex min-h-[46px] items-center rounded-[10px] border border-[rgba(30,32,47,0.14)] bg-[var(--pr-color-accents-1)] px-3.5 py-2 text-[13.5px] text-[var(--pr-color-secondary-400)]">
+          {{ createResultBody().result_name || 'Retrieved from the repository…' }}
+        </div>
+      } @else {
+        <textarea
+          #titleInput
+          id="result-title-input"
+          name="resultName"
+          rows="2"
+          [ngModel]="createResultBody().result_name"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="patch('result_name', $event)"
+          placeholder="Brief, descriptive title for this result…"
+          class="w-full rounded-[10px] border border-[var(--pr-border)] p-3 text-[13.5px] leading-relaxed resize-none transition-all focus:border-[var(--pr-color-primary-300)] focus:ring-2 focus:ring-[var(--pr-color-primary-100)] focus:outline-none"
+          [class.border-red-400]="titleWordCount() > 30"
+          aria-describedby="title-helper"
+          (input)="adjustTextareaHeight($event)"></textarea>
+      }
+    </div>
 
   <!-- P2-3420 — link to a QA'd Innovation Development result. Innovation use only, 2026 phase
        onwards only. Sits directly below the title, exactly where the story puts it. -->
@@ -233,34 +284,73 @@
       }
     </div>
   }
+}
+  </section>
 
-  <!-- contribution to the indicator target -->
-  <div>
-    <p class="m-0 mb-2 flex items-center gap-1.5 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
-      Contribution to indicator target <span class="text-[var(--pr-color-red-300)]">*</span>
-      <span
-        class="material-icons-round text-[15px] text-[var(--pr-color-accents-4)]"
-        title="The numerical value this result contributes toward the indicator target. If the target is 200 people trained and your result evidences 90, enter 90.">
-        info
-      </span>
-    </p>
-    <div class="max-w-[230px]">
-      <app-pr-input
-        type="number"
-        placeholder="0"
-        [ngModel]="createResultBody().contribution_to_indicator_target"
-        [ngModelOptions]="{ standalone: true }"
-        (ngModelChange)="patch('contribution_to_indicator_target', $event)"
-        [isStatic]="true"
-        [disabled]="creatingResult() || currentResultIsKnowledgeProduct()"
-        name="contribution" />
-    </div>
-  </div>
+  @if (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler) {
+    <!-- ==================== CARD 2: TARGET CONTRIBUTION ==================== -->
+    <section
+      data-testid="card-target-contribution"
+      class="rounded-xl border border-[var(--pr-border)] bg-white p-4.5 shadow-2xs flex flex-col gap-4">
+      <div class="flex items-center gap-2 border-b border-[var(--pr-border)] pb-3">
+        <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">track_changes</span>
+        <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">2. Target Contribution</h4>
+      </div>
 
-  <!-- Contributing CGIAR Centers. `optionValue` is the identity key pr-multi-select compares on: without it
-       every option matches every value and each click deselects index 0 instead of adding. -->
-  <div>
-    <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">Contributing CGIAR Centers</p>
+      <!-- contribution to the indicator target -->
+      <div>
+        <label for="contribution-input" class="m-0 mb-1.5 block text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+          Contribution to indicator target <span class="text-[var(--pr-color-red-300)]">*</span>
+        </label>
+        <p id="contribution-helper" class="m-0 mb-2.5 text-[12px] leading-normal text-gray-500">
+          Enter the numerical amount this specific result contributes toward the target.
+        </p>
+        <div class="relative flex items-center max-w-[260px]">
+          <input
+            #contributionInput
+            id="contribution-input"
+            type="number"
+            min="0"
+            placeholder="e.g. 5"
+            name="contribution"
+            [ngModel]="createResultBody().contribution_to_indicator_target"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="patch('contribution_to_indicator_target', $event)"
+            [disabled]="creatingResult() || currentResultIsKnowledgeProduct()"
+            aria-describedby="contribution-helper contribution-target-reference"
+            class="w-full rounded-[10px] border border-[var(--pr-border)] pl-3 pr-16 py-2.5 text-[14px] font-semibold text-gray-900 transition-all focus:border-[var(--pr-color-primary-300)] focus:ring-2 focus:ring-[var(--pr-color-primary-100)] focus:outline-none disabled:bg-gray-50 disabled:text-gray-400" />
+          @if (unitMeasurement()) {
+            <span
+              data-testid="contribution-unit-suffix"
+              class="pointer-events-none absolute right-3 text-xs font-semibold text-gray-500 truncate max-w-[90px]"
+              [title]="unitMeasurement()">
+              {{ unitMeasurement() }}
+            </span>
+          }
+        </div>
+        <p
+          id="contribution-target-reference"
+          data-testid="contribution-target-reference"
+          class="m-0 mt-2 flex items-center gap-1.5 text-[12px] text-gray-500">
+          <span class="material-icons-round text-[14px] text-gray-400">flag</span>
+          <span>2026 Target: <strong class="font-semibold text-gray-700">{{ targetValueSum() }}</strong> · Achieved so far: <strong class="font-semibold text-gray-700">{{ achievedValueSum() }}</strong></span>
+        </p>
+      </div>
+    </section>
+
+    <!-- ==================== CARD 3: COLLABORATION & ATTRIBUTION ==================== -->
+    <section
+      data-testid="card-collaboration"
+      class="rounded-xl border border-[var(--pr-border)] bg-white p-4.5 shadow-2xs flex flex-col gap-4">
+      <div class="flex items-center gap-2 border-b border-[var(--pr-border)] pb-3">
+        <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">groups</span>
+        <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">3. Collaboration & Attribution</h4>
+      </div>
+
+      <!-- Contributing CGIAR Centers. `optionValue` is the identity key pr-multi-select compares on: without it
+           every option matches every value and each click deselects index 0 instead of adding. -->
+      <div>
+        <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">Contributing CGIAR Centers</p>
     <app-pr-multi-select
       [options]="dropdown1Options()"
       optionLabel="name"
@@ -273,18 +363,29 @@
       [isStatic]="true" />
 
     @if (contributingCenters().length) {
-      <div class="mt-2.5 flex flex-wrap gap-2">
+      <div class="mt-2.5 flex flex-wrap gap-2 min-h-[32px] items-center" data-testid="contributing-centers-chips">
         @for (center of contributingCenters(); track center.code) {
-          <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
-            {{ centerChipLabel(center) }}
-            <button
-              type="button"
-              (click)="removeCenter(center)"
-              [attr.aria-label]="'Remove ' + centerChipLabel(center)"
-              class="inline-flex size-[22px] shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--pr-color-accents-5)] transition-colors hover:bg-[rgba(30,32,47,0.08)] hover:text-[var(--pr-color-secondary-400)]">
-              <span class="material-icons-round text-[17px] leading-none">close</span>
-            </button>
-          </span>
+          @if (isLeadCenter(center)) {
+            <span
+              data-testid="lead-center-chip"
+              class="inline-flex items-center gap-1.5 rounded-full bg-violet-50 border border-violet-200 py-1.5 pl-3.5 pr-3 text-[13px] font-semibold text-violet-800 shadow-2xs">
+              <span>{{ centerChipLabel(center) }}</span>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-violet-200/60 text-violet-900">
+                Lead
+              </span>
+            </span>
+          } @else {
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
+              {{ centerChipLabel(center) }}
+              <button
+                type="button"
+                (click)="removeCenter(center)"
+                [attr.aria-label]="'Remove ' + centerChipLabel(center)"
+                class="inline-flex size-[22px] shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--pr-color-accents-5)] transition-colors hover:bg-[rgba(30,32,47,0.08)] hover:text-[var(--pr-color-secondary-400)] cursor-pointer">
+                <span class="material-icons-round text-[17px] leading-none">close</span>
+              </button>
+            </span>
+          }
         }
       </div>
     }
@@ -303,7 +404,7 @@
           [isStatic]="true" />
 
         @if (otherCentersSelected().length) {
-          <div class="mt-2.5 flex flex-wrap gap-2">
+          <div class="mt-2.5 flex flex-wrap gap-2 min-h-[32px] items-center">
             @for (center of otherCentersSelected(); track center.code) {
               <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
                 {{ centerChipLabel(center) }}
@@ -337,7 +438,7 @@
       [isStatic]="true" />
 
     @if (selectedScience().length) {
-      <div class="mt-2.5 flex flex-wrap gap-2">
+      <div class="mt-2.5 flex flex-wrap gap-2 min-h-[32px] items-center">
         @for (sp of selectedScience(); track sp.id) {
           <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
             {{ scienceChipLabel(sp) }}
@@ -367,7 +468,7 @@
           [isStatic]="true" />
 
         @if (otherScienceSelected().length) {
-          <div class="mt-2.5 flex flex-wrap gap-2">
+          <div class="mt-2.5 flex flex-wrap gap-2 min-h-[32px] items-center">
             @for (sp of otherScienceSelected(); track sp.id) {
               <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
                 {{ scienceChipLabel(sp) }}
@@ -402,7 +503,7 @@
         [isStatic]="true" />
 
       @if (selectedBilateral().length) {
-        <div class="mt-2.5 flex flex-wrap gap-2">
+        <div class="mt-2.5 flex flex-wrap gap-2 min-h-[32px] items-center">
           @for (project of selectedBilateral(); track $index) {
             <span class="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
               <span class="truncate">{{ project?.project_name }}</span>
@@ -419,6 +520,7 @@
       }
     </div>
   }
+  </section>
 
   @if (autoCreateHint()) {
     <p
@@ -436,14 +538,19 @@
   <!-- sticky footer: anchored to bottom: 0 with NO space below it -->
   <div class="sticky bottom-0 -mx-6 mt-auto flex items-center justify-between gap-4 border-t border-[rgba(30,32,47,0.1)] bg-white px-6 py-3.5 z-30 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
     @if (missingFields().length) {
-      <span class="flex items-center gap-2 text-[13px] text-[var(--pr-color-accents-6)]" [title]="missingFields().join(' · ')">
+      <button
+        type="button"
+        (click)="focusFirstMissingField()"
+        data-testid="missing-fields-button"
+        class="inline-flex items-center gap-2 text-[13px] text-[var(--pr-color-accents-6)] bg-transparent border-0 p-0 cursor-pointer hover:text-[var(--pr-color-primary-400)] transition-colors text-left"
+        [title]="'Click to focus missing field: ' + missingFields().join(' · ')">
         <span class="size-[7px] shrink-0 rounded-full bg-[var(--pr-color-orange-500)]"></span>
         <span class="underline decoration-dotted underline-offset-4">
           {{ missingFields().length }} field{{ missingFields().length === 1 ? '' : 's' }} left before you can create
         </span>
-      </span>
+      </button>
     } @else {
-      <span class="flex items-center gap-2 text-[13px] text-[var(--pr-color-accents-6)]">
+      <span data-testid="ready-to-create-indicator" class="flex items-center gap-2 text-[13px] text-[var(--pr-color-accents-6)] font-medium">
         <span class="size-[7px] shrink-0 rounded-full bg-[var(--pr-color-green-500)]"></span> Ready to create
       </span>
     }
@@ -458,8 +565,9 @@
       @if (canReport()) {
         <button
           type="submit"
+          data-testid="create-result-submit-btn"
           [disabled]="!canSave() || creatingResult()"
-          class="inline-flex appearance-none items-center gap-2 rounded-[10px] border-0 bg-[var(--pr-color-primary-300)] px-5 py-2.5 text-[13.5px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#e7e1fb] disabled:text-[#b3a4e8] cursor-pointer">
+          class="inline-flex appearance-none items-center gap-2 rounded-[10px] border-0 bg-gradient-to-r from-[var(--pr-color-primary-300)] to-[var(--pr-color-primary-400)] px-5 py-2.5 text-[13.5px] font-semibold text-white shadow-xs hover:opacity-95 disabled:cursor-not-allowed disabled:bg-none disabled:bg-[#e7e1fb] disabled:text-[#b3a4e8] disabled:shadow-none cursor-pointer transition-all">
           {{ creatingResult() ? 'Creating…' : 'Create and continue' }}
           @if (creatingResult()) {
             <i class="pi pi-spin pi-spinner text-[16px]" aria-hidden="true"></i>

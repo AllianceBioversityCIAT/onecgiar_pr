@@ -32,11 +32,13 @@ class BandStubComponent {
   @Input() cyclePhase = '';
   @Input() activeTab = '';
   @Input() canReport = false;
+  @Input() canReportEmerging = false;
   @Input() showToolbar = false;
   /** `SAV-T-4` viewport-lock bindings — mirrors the real band's signal inputs as plain `@Input()`s. */
   @Input() frameLocked = false;
   @Input() scrollHost: HTMLElement | null = null;
   @Output() whereToReport = new EventEmitter<void>();
+  @Output() reportEmerging = new EventEmitter<void>();
 }
 
 @Component({ selector: 'app-where-to-report-modal', standalone: true, template: '' })
@@ -520,6 +522,30 @@ describe('ProgrammeResultsComponent', () => {
       band.whereToReport.emit();
 
       expect(component.showWhereToReportModal()).toBe(true);
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+  });
+
+  // @akili-spec changes/emerging-result-cta-placement (ERC-T-5)
+  describe('Emerging hop (ERC-T-5)', () => {
+    it('hops with reportEmerging and returnTab=results after persisting Smart Back origin', () => {
+      const remember = jest.spyOn(TestBed.inject(SmartNavigationService), 'rememberResultDetailOrigin');
+      const band = fixture.debugElement.query(By.directive(BandStubComponent)).componentInstance as BandStubComponent;
+      (router.navigate as jest.Mock).mockClear();
+
+      band.reportEmerging.emit();
+
+      expect(remember).toHaveBeenCalled();
+      expect(router.navigate).toHaveBeenCalledWith(
+        ['/result-framework-reporting', 'entity-details', 'SP01'],
+        { queryParams: { reportEmerging: 'true', returnTab: 'results' } }
+      );
+    });
+
+    it('does not hop when canReportEmerging is false', () => {
+      jest.spyOn(component, 'canReportEmerging').mockReturnValue(false);
+      (router.navigate as jest.Mock).mockClear();
+      component.openEmergingReport();
       expect(router.navigate).not.toHaveBeenCalled();
     });
   });

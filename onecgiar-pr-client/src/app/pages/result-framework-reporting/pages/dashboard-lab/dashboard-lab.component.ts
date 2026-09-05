@@ -706,8 +706,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   // ---- Manage drawer (one indicator) ----
-  /** The indicator being managed, with the HLO it belongs to for context. */
-  readonly managed = signal<{ indicator: any; groupTitle: string; node: any } | null>(null);
+  /** The indicator being managed, with the HLO it belongs to for context. Emerging uses null indicator. */
+  readonly managed = signal<{ indicator: any | null; groupTitle: string; node: any; emerging?: boolean } | null>(null);
   /** Which tab the drawer should land on — chosen by the card button that opened it. */
   // @akili-spec changes/indicator-reported-results — `results` = the Reported results table (IRR-R-1)
   readonly manageTab = signal<'report' | 'info' | 'results'>('report');
@@ -739,6 +739,39 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const captured = this.drawerReportKpi;
     this.drawerReportKpi = null;
     if (captured) this.publishReportedKpi(captured);
+
+    const returnTab = this.pendingReturnTab || this.route?.snapshot?.queryParamMap?.get('returnTab');
+    this.pendingReturnTab = null;
+    if (returnTab === 'results' || returnTab === 'my-work') {
+      const code = this.selected()?.initiativeCode || this.route?.snapshot?.paramMap?.get('entityId');
+      this.router.navigate(['/result-framework-reporting', 'entity-details', code, returnTab]);
+    } else if (this.route?.snapshot?.queryParamMap?.get('reportEmerging') === 'true') {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { reportEmerging: null, returnTab: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    }
+  }
+
+  /** Hub card + band CTA: open the Reporting aside in emerging mode (not the legacy dialog). */
+  openEmergingReport(): void {
+    if (!this.canReportEmerging()) return;
+    this.primeEntityAowContext();
+    this.manageTab.set('report');
+    this.managed.set({ indicator: null, groupTitle: '', node: null, emerging: true });
+  }
+
+  /** Drop `reportEmerging` from the URL once consumed; keep `returnTab` for cancel restore. */
+  private consumeEmergingQueryParam(): void {
+    if (this.route?.snapshot?.queryParamMap?.get('reportEmerging') !== 'true') return;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { reportEmerging: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 
   // ---- Legacy report surfaces (the ones the users actually get) ----
@@ -2309,7 +2342,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         replaceUrl: true
       });
     }
-    this.openReportModal();
+    this.openEmergingReport();
+    this.consumeEmergingQueryParam();
   }
 
   onHubReportAow(code: string): void {
@@ -2763,7 +2797,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       }
       if (qp.get('reportEmerging') === 'true') {
         this.pendingReturnTab = qp.get('returnTab');
-        this.openReportModal();
+        this.openEmergingReport();
+        this.consumeEmergingQueryParam();
       }
       // Browser back/forward on Planned ToC browse mode.
       if (this.rfrView() === 'planned') {
@@ -2843,7 +2878,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     }
     if (qp.get('reportEmerging') === 'true') {
       this.pendingReturnTab = qp.get('returnTab');
-      this.openReportModal();
+      this.openEmergingReport();
+      this.consumeEmergingQueryParam();
     }
     this.restorePlannedBrowseFromQuery(qp);
   }

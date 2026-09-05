@@ -51,10 +51,12 @@
       activeTab="my-work"
       [myWorkCount]="data.badge()"
       [canReport]="true"
+      [canReportEmerging]="canReportEmerging()"
       [showToolbar]="false"
       [frameLocked]="true"
       [scrollHost]="workAreaEl()"
-      (whereToReport)="openWhereToReport()" />
+      (whereToReport)="openWhereToReport()"
+      (reportEmerging)="openEmergingReport()" />
 
     <!-- #workArea: the only scroller ≥ 900px (`SAV-DD-1`, `MWB-R-9`) — explainer, toolbar and the
          board all scroll together; the band stays visible while a column scrolls internally. -->
@@ -222,7 +224,7 @@
                    NO Status dimension — the columns already ARE the status (`MWB-T-9` FAIL input). -->
               <div class="flex flex-col gap-[12px]">
                 <div class="grid grid-cols-1 gap-[10px] sm:grid-cols-2">
-                  <div class="mwb-filter relative" aria-label="Filter by phase">
+                  <div class="mwb-filter relative" data-dimension="phase" aria-label="Filter by phase">
                     <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]"> Phase </label>
                     <app-pr-filter-select
                       [options]="phaseSelectOptions()"
@@ -235,7 +237,7 @@
                   <!-- `MWB-T-12`: Category is MULTI-select — the same `app-pr-filter-multiselect` the
                        Results tab mounts for Areas of Work, inside the same `.mwb-filter` wrapper so
                        the T-8 reshape of the shared `.custom_select` shell applies unchanged. -->
-                  <div class="mwb-filter relative" aria-label="Filter by category">
+                  <div class="mwb-filter relative" data-dimension="category" aria-label="Filter by category">
                     <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]"> Category </label>
                     <app-pr-filter-multiselect
                       [options]="categorySelectOptions()"
@@ -249,7 +251,7 @@
                 </div>
 
                 <div class="grid grid-cols-1 gap-[10px] sm:grid-cols-2">
-                  <div class="mwb-filter relative" aria-label="Filter by funding source">
+                  <div class="mwb-filter relative" data-dimension="origin" aria-label="Filter by funding source">
                     <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                       Funding source
                     </label>
@@ -262,7 +264,7 @@
                       [ngModel]="selectedOrigins()"
                       (changed)="selectedOrigins.set($event)"></app-pr-filter-multiselect>
                   </div>
-                  <div class="mwb-filter relative" aria-label="Filter by center">
+                  <div class="mwb-filter relative" data-dimension="center" aria-label="Filter by center">
                     <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                       Contributing Center
                     </label>
@@ -281,7 +283,7 @@
                      is already the current user's, so the dimension would be a no-op control. -->
                 @if (showCreatedByFilter()) {
                   <div class="grid grid-cols-1 gap-[10px] sm:grid-cols-2">
-                    <div class="mwb-filter relative" aria-label="Filter by created by">
+                    <div class="mwb-filter relative" data-dimension="createdBy" aria-label="Filter by created by">
                       <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                         Created by
                       </label>
@@ -304,12 +306,34 @@
           <!-- Active chips, inline in the row (`MWB-T-9` (2)) — one per active dimension, `×`
                removes just that one. The phase chip's `×` restores the DEFAULT phase, never "no
                phase" (design.md §6.6), which is also why `Clear filters` hides while the phase is
-               the only chip. -->
+               the only chip.
+               `MWB-T-14`: from three values a multi dimension collapses into ONE summary chip
+               (`Center: 8 centers`). Its label is a real `<button>` that reopens the popover on
+               that control — the only place the individual values can still be unticked — and its
+               × empties the whole dimension. Below the threshold nothing changed: plain text plus
+               the single × button, which is what keeps `chip.querySelector('button')` pointing at
+               the remove control for every one-value chip. -->
           @if (hasActiveFilters()) {
             @for (chip of boardChips(); track chip.dimension + '|' + chip.value) {
-              <span class="pr-chip mwb-chip max-[899px]:order-4" data-testid="my-work-chip">
-                {{ chip.label }}
-                <button type="button" class="mwb-chip-remove" aria-label="Remove filter" (click)="clearChip(chip)">
+              <span class="pr-chip mwb-chip max-[899px]:order-4" data-testid="my-work-chip" [attr.data-summary]="chip.summary || null">
+                @if (chip.summary) {
+                  <button
+                    type="button"
+                    class="mwb-chip-label"
+                    data-testid="my-work-chip-open"
+                    [attr.aria-label]="chip.label + ' — open filters to change'"
+                    (click)="openFilterForChip(chip, $event)">
+                    {{ chip.label }}
+                  </button>
+                } @else {
+                  {{ chip.label }}
+                }
+                <button
+                  type="button"
+                  class="mwb-chip-remove"
+                  data-testid="my-work-chip-remove"
+                  [attr.aria-label]="'Remove filter: ' + chip.label"
+                  (click)="clearChip(chip)">
                   <ng-icon name="lucideX" size="10px" strokeWidth="2.6" />
                 </button>
               </span>
