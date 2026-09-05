@@ -1,8 +1,83 @@
 // Panel list only — the trigger, the open/close behaviour and the chevron come from the shared
 // `.custom_select` block in `custom-fields/custom-fields.scss`.
 .pr-filter-select {
+  .search_input_container {
+    width: 100%;
+    padding: 6px 8px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--pr-border-divider, #e2e8f0);
+    box-sizing: border-box;
+    flex-shrink: 0;
+
+    .search_icon {
+      position: absolute;
+      left: 16px;
+      font-size: 16px;
+      color: var(--pr-text-muted, #94a3b8);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    input {
+      width: 100%;
+      height: 32px;
+      padding-left: 28px;
+      padding-right: 28px;
+      font-size: 13px;
+      border-radius: 6px;
+      border: 1px solid var(--pr-border, #cbd5e1);
+      background-color: var(--pr-surface-app, #f8fafc);
+      color: var(--pr-text-main, #1e293b);
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+
+      &:focus {
+        border-color: var(--pr-color-primary-400, #5733c4);
+        background-color: var(--pr-surface-card, #ffffff);
+        box-shadow: 0 0 0 2px var(--pr-color-primary-100, #ede9fe);
+      }
+
+      &::placeholder {
+        color: var(--pr-text-placeholder, #94a3b8);
+      }
+    }
+
+    .pr-fs-reset-btn {
+      position: absolute;
+      right: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      color: var(--pr-text-muted, #94a3b8);
+      cursor: pointer;
+      border-radius: 50%;
+      transition: color 0.15s, background-color 0.15s;
+
+      &:hover {
+        color: var(--pr-text-heading, #0f172a);
+        background-color: var(--pr-surface-subtle, #f1f5f9);
+      }
+
+      i {
+        font-size: 11px;
+      }
+    }
+  }
+
   .pr-fs-list {
-    max-height: 260px;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 240px;
     overflow-y: auto;
     padding: 4px 0;
 

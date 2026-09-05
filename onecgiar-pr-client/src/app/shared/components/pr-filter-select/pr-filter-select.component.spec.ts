@@ -97,4 +97,78 @@ describe('PrFilterSelectComponent', () => {
     expect(rows[1].classList).toContain('is-active');
     expect(rows[0].classList).not.toContain('is-active');
   });
+
+  describe('filter search', () => {
+    beforeEach(() => {
+      fixture.componentRef.setInput('filter', true);
+      fixture.componentRef.setInput('filterPlaceholder', 'Search item...');
+      fixture.detectChanges();
+    });
+
+    it('renders search input when filter is enabled', () => {
+      const searchContainer = fixture.nativeElement.querySelector('.search_input_container');
+      expect(searchContainer).toBeTruthy();
+
+      const input: HTMLInputElement = searchContainer.querySelector('input');
+      expect(input).toBeTruthy();
+      expect(input.placeholder).toBe('Search item...');
+    });
+
+    it('filters options case-insensitively based on searchText', () => {
+      component.searchText = 'knowledge';
+      expect(component.filteredOptions.length).toBe(1);
+      expect(component.filteredOptions[0].value).toBe('kp');
+
+      component.searchText = 'INNOVATION';
+      expect(component.filteredOptions.length).toBe(1);
+      expect(component.filteredOptions[0].value).toBe('iu');
+
+      component.searchText = 'non-existent';
+      expect(component.filteredOptions.length).toBe(0);
+
+      fixture.detectChanges();
+      const noInfo = fixture.nativeElement.querySelector('.no_info');
+      expect(noInfo).toBeTruthy();
+      expect(noInfo.textContent).toContain('No information found');
+    });
+
+    it('clears searchText and restores all options with clearSearch', () => {
+      component.searchText = 'knowledge';
+      component.clearSearch();
+
+      expect(component.searchText).toBe('');
+      expect(component.filteredOptions.length).toBe(2);
+    });
+
+    it('picks single matching option on Enter key press', () => {
+      const emitSpy = jest.spyOn(component.changed, 'emit');
+      component.searchText = 'knowledge';
+
+      component.onSearchEnter();
+      expect(component.value).toBe('kp');
+      expect(emitSpy).toHaveBeenCalledWith('kp');
+      expect(component.searchText).toBe('');
+    });
+
+    it('does not pick option on Enter if there are multiple matches or zero matches', () => {
+      const emitSpy = jest.spyOn(component.changed, 'emit');
+      component.searchText = ''; // 2 matches
+      component.onSearchEnter();
+      expect(emitSpy).not.toHaveBeenCalled();
+
+      component.searchText = 'xyz'; // 0 matches
+      component.onSearchEnter();
+      expect(emitSpy).not.toHaveBeenCalled();
+    });
+
+    it('clears searchText when an option is picked or removeFocus is called', () => {
+      component.searchText = 'knowledge';
+      component.pick(OPTIONS[0]);
+      expect(component.searchText).toBe('');
+
+      component.searchText = 'something';
+      component.removeFocus();
+      expect(component.searchText).toBe('');
+    });
+  });
 });

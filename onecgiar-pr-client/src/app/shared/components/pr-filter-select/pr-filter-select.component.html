@@ -5,15 +5,38 @@
     <i class="pi pi-chevron-down icon_dropdown"></i>
     <div class="remove_focus" (click)="removeFocus(trigger)"></div>
     <div class="options">
+      <div class="search_input_container" *ngIf="filter" (click)="$event.stopPropagation()">
+        <span class="material-icons-round search_icon" aria-hidden="true">search</span>
+        <input
+          type="text"
+          hlmInput
+          [placeholder]="filterPlaceholder"
+          [(ngModel)]="searchText"
+          (ngModelChange)="onSearchChange()"
+          (click)="$event.stopPropagation()"
+          (keydown)="$event.stopPropagation()"
+          (keydown.escape)="removeFocus(trigger)"
+          (keydown.enter)="onSearchEnter(trigger)"
+          style="width: 100%" />
+        @if (searchText) {
+          <button
+            type="button"
+            class="pr-fs-reset-btn"
+            (click)="clearSearch($event)"
+            aria-label="Clear search">
+            <i class="pi pi-times"></i>
+          </button>
+        }
+      </div>
       <div class="pr-fs-list custom_scroll">
         <div
           class="option pr-body-2"
-          *ngFor="let option of options"
+          *ngFor="let option of filteredOptions"
           [class.is-active]="isSelected(option)"
           (click)="pick(option, trigger); $event.stopPropagation()">
           {{ labelOf(option) }}
         </div>
-        <div class="no_info" *ngIf="!options?.length">No information found</div>
+        <div class="no_info" *ngIf="!filteredOptions?.length">No information found</div>
       </div>
     </div>
   </a>
