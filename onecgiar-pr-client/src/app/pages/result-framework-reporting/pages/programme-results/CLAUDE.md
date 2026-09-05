@@ -25,8 +25,7 @@
   `parseListParam` / `joinListParam` / `sameListParam` exports (`?category=a,b`; an empty selection
   joins to `null`, which REMOVES the key under `merge`) — a legacy single-value deep link hydrates as
   a one-element array, which is why the Overview's `RFD-*` links needed no change. **The My results
-  board (`pages/my-work-board/`) consumes these same three signals and the same codecs** — it used to
-  keep a board-local copy (`my-work-board.service.ts` — same three signals and codec); binding the board to this service is `changes/my-work-board` `MWB-T-13` phase 2, deferred on 2026-09-05. Until then both copies must stay behaviourally identical (OR within / AND across, `a,b` URL lists).
+  board (`pages/my-work-board/`) still keeps a board-local copy** (`my-work-board.service.ts` — same three signals and codec); binding the board to this service is `changes/my-work-board` `MWB-T-13` phase 2, deferred on 2026-09-05. Until then both copies must stay behaviourally identical (OR within / AND across, `a,b` URL lists).
 - **Sorting belongs to `app-pr-table`.** The component only renders the glyph and colour
   (`sortArrow()` / `sortColor()`); `prSortableColumn` host-binds `aria-sort` — never set it yourself.
 - The component is the only place that joins them: `filteredRows()` (`:521`), `totalLabel()` (`:530`)
