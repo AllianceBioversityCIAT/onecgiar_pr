@@ -749,10 +749,20 @@ describe('MyWorkBoardComponent — filter chips and multiselect (MWB-T-14)', () 
   }
 
   /** How many distinct baselines the chips actually occupy — the only measurement of "lines" that
-   *  means anything, and the one the live-page reading (four `top` offsets) was taken with. */
+   *  means anything, and the one the live-page reading (four `top` offsets) was taken with.
+   *
+   *  `MWB-T-14` attempt 3: chips the two-line cap took out of the row stay in the DOM (that is what
+   *  the component's measurement pass measures), so they arrive here with a 0×0 rect and would
+   *  otherwise contribute a phantom baseline at 0. Only laid-out chips are counted — which is also
+   *  the honest reading of "how many lines does the user see". */
   function chipLineTops($chips: JQuery<HTMLElement>): number[] {
-    return [...new Set(Array.from($chips).map(chip => Math.round(chip.getBoundingClientRect().top)))].sort((a, b) => a - b);
+    const rendered = Array.from($chips).filter(chip => chip.getClientRects().length > 0);
+    return [...new Set(rendered.map(chip => Math.round(chip.getBoundingClientRect().top)))].sort((a, b) => a - b);
   }
+
+  /** Chips actually in the row (`+N more` hides the rest with `display: none`). */
+  const chipsInRow = () => cy.get('[data-testid="my-work-chip"]').filter(':visible');
+  const moreChip = () => cy.get('[data-testid="my-work-chip-more"]');
 
   const centerFilter = () => cy.get('.mwb-filter[data-dimension="center"]');
   const centerPanelOpacity = ($filter: JQuery<HTMLElement>) => getComputedStyle($filter[0].querySelector('.options') as HTMLElement).opacity;
@@ -790,14 +800,17 @@ describe('MyWorkBoardComponent — filter chips and multiselect (MWB-T-14)', () 
 
       // `Clear filters` survives the aggregation.
       cy.get('[data-testid="my-work-clear-filters"]').should('exist');
+      // Two lines is within the cap, so the overflow chip stays out of the row entirely.
+      moreChip().should('not.be.visible');
       assertNoBodyHorizontalOverflow(`${width}×${height} chips`, width);
     });
 
-    // ── The two worst cases, which is what licenses shipping NO `+N more` chip ──────────────────
+    // ── The two worst cases ─────────────────────────────────────────────────────────────────────
     // The task makes `+N more` conditional on the row still exceeding two lines after aggregation.
-    // "It doesn't" is only a defensible claim if the row's actual worst case was measured, so both
-    // of them are, at both viewports, and the doc comment on `MWB_CHIP_SUMMARY_THRESHOLD` cites
-    // exactly these two fixtures and nothing else.
+    // Both worst cases are measured, at both viewports, and the doc comment on
+    // `MWB_CHIP_SUMMARY_THRESHOLD` cites exactly these two fixtures and nothing else: the
+    // aggregated one fits (so no overflow chip appears at all) and the widest one does not (so the
+    // cap and the `+N more` chip are what hold it to two lines).
     it(`${width}×${height} — aggregated worst case (8 centers + 3 categories + 2 origins + Created by + 39-char search) stays within two lines`, () => {
       cy.viewport(width, height);
       mountAggregatedWorstCase();
@@ -824,15 +837,26 @@ describe('MyWorkBoardComponent — filter chips and multiselect (MWB-T-14)', () 
         );
       });
 
+      // Every chip fits, so nothing is hidden and the overflow chip must not appear — an `+N more`
+      // here would mean the measurement is hiding chips it did not need to.
+      chipsInRow().should('have.length', 7);
+      moreChip().should('not.be.visible');
       assertNoBodyHorizontalOverflow(`${width}×${height} aggregated worst case`, width);
     });
 
-    it(`${width}×${height} — widest worst case (nine chips: every multi dimension at two long values + Created by + 39-char search) still needs THREE lines — the open '+N more' gap`, () => {
+    it(`${width}×${height} — widest worst case (nine chips: every multi dimension at two long values + Created by + 39-char search) is held to two lines by '+N more', which expands and collapses inline`, () => {
       cy.viewport(width, height);
       mountWidestWorstCase();
 
       // Two values in each multi dimension is BELOW the summary threshold, so nothing aggregates —
       // nine chips, the most the board can produce, carrying the longest labels in the vocabulary.
+      // This is the fixture that used to lay out on THREE lines (measured 2026-09-05, chip tops
+      // [70, 110, 150] at both viewports), which is what made `+N more` a requirement rather than
+      // dead code. `have.length` counts the DOM, where the hidden chips still are — the row itself
+      // is measured below. Measured with the cap in place (2026-09-05): six chips in the row plus
+      // `+3 more`, at 1280 and at 1440. The count is asserted RELATIVELY (`9 - visibleCount`) on
+      // purpose — pinning "6" would turn any future font or label change into a failure about the
+      // wrong thing; what must hold is the cap, and that the button counts exactly what it hid.
       typeLongSearch(9);
 
       cy.get('[data-testid="my-work-chip"]').should($chips => {
@@ -848,21 +872,50 @@ describe('MyWorkBoardComponent — filter chips and multiselect (MWB-T-14)', () 
           `Center: ${LONG_CENTERS[1]}`,
           `Created by: ${LONG_CREATED_BY}`
         ]);
-
-        // CHARACTERISATION, NOT AN ENDORSEMENT. `MWB-T-14` allows the chip row at most two lines and
-        // makes `+N more` conditional on it exceeding them. This fixture DOES exceed them (measured
-        // 2026-09-05: three lines, chip tops [70, 110, 150], identical at 1280×720 and 1440×900), so
-        // `+N more` is NOT dead code and the aggregation alone does not discharge the requirement.
-        // The overflow chip is not implemented — this rework was scoped to evidence only — so the
-        // case is pinned to the MEASURED value rather than the required one, which is what keeps the
-        // gap visible instead of silently absent. Implementing `+N more` must turn this into
-        // `to.be.at.most(2)`; a layout change that fixes it by other means will also turn this red,
-        // which is the point.
-        const lines = chipLineTops($chips);
-        expect(lines.length, `${width}×${height}: widest worst case occupies ${lines.length} line(s) — tops [${lines.join(', ')}]`).to.eq(3);
       });
 
-      assertNoBodyHorizontalOverflow(`${width}×${height} widest worst case`, width);
+      // THE GATE (`MWB-T-14` (1), `MWB-R-9` *chips row bounded*). Collapsed, the row shows only
+      // what fits on two lines; the rest are behind the overflow chip, and the two numbers add up
+      // to the nine chips that exist.
+      let visibleCount = 0;
+      chipsInRow().should($chips => {
+        visibleCount = $chips.length;
+        const lines = chipLineTops($chips);
+        expect(lines.length, `${width}×${height}: collapsed row occupies ${lines.length} line(s) — tops [${lines.join(', ')}]`).to.be.at.most(2);
+        expect(visibleCount, `${width}×${height}: at least some chips are still shown`).to.be.greaterThan(0);
+      });
+      moreChip()
+        .should('be.visible')
+        .should($more => {
+          expect($more.text().trim(), `${width}×${height}: '+N more' counts the chips the row could not fit`).to.eq(`+${9 - visibleCount} more`);
+          expect($more.attr('aria-expanded'), `${width}×${height}: collapsed`).to.eq('false');
+          expect($more.attr('aria-controls'), `${width}×${height}: points at the chip row`).to.eq('my-work-chip-row');
+        });
+      // `Clear filters` is reachable while collapsed — hiding chips must not hide the way out.
+      cy.get('[data-testid="my-work-clear-filters"]').should('be.visible');
+      assertNoBodyHorizontalOverflow(`${width}×${height} widest worst case, collapsed`, width);
+
+      // Expanded: every chip is back in the row (the line count is free to exceed two here — that
+      // is what the user asked for by clicking), the button flips to `Show less`, and the document
+      // still does not scroll horizontally.
+      moreChip().click();
+      chipsInRow().should('have.length', 9);
+      moreChip().should($more => {
+        expect($more.text().trim(), `${width}×${height}: expanded label`).to.eq('Show less');
+        expect($more.attr('aria-expanded'), `${width}×${height}: expanded`).to.eq('true');
+      });
+      cy.get('[data-testid="my-work-clear-filters"]').should('be.visible');
+      assertNoBodyHorizontalOverflow(`${width}×${height} widest worst case, expanded`, width);
+
+      // And back: `Show less` returns the row to the cap, with the same chips hidden as before.
+      moreChip().click();
+      chipsInRow().should($chips => {
+        expect($chips.length, `${width}×${height}: collapsed back to the same visible count`).to.eq(visibleCount);
+        const lines = chipLineTops($chips);
+        expect(lines.length, `${width}×${height}: re-collapsed row occupies ${lines.length} line(s) — tops [${lines.join(', ')}]`).to.be.at.most(2);
+      });
+      moreChip().should('have.attr', 'aria-expanded', 'false');
+      assertNoBodyHorizontalOverflow(`${width}×${height} widest worst case, re-collapsed`, width);
     });
 
     it(`${width}×${height} — the Center multiselect stays open while ticking, and Escape closes the popover`, () => {

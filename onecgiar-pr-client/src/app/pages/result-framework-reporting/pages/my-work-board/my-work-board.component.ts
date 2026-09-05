@@ -6,6 +6,8 @@ import {
   ElementRef,
   HostListener,
   WritableSignal,
+  afterNextRender,
+  afterRenderEffect,
   computed,
   effect,
   inject,
@@ -168,19 +170,59 @@ export interface MyWorkBoardChip extends ProgrammeResultsFilterChip {
  *
  *  - *Aggregated worst case* — 8 centers + 3 categories + 2 origins + phase + `Created by` + a
  *    39-character search, i.e. seven chips, two of them summaries: TWO lines (chip tops [70, 110]).
- *    This is the case aggregation was introduced for, and it holds.
+ *    This is the case aggregation was introduced for, and it holds — no `+N more` chip appears.
  *  - *Widest reachable case* — every multi dimension parked at TWO values (one below the threshold,
  *    so nothing aggregates) carrying the longest real labels in the vocabulary, plus `Created by`
- *    and the same search: nine chips, THREE lines (chip tops [70, 110, 150]). Nine is the ceiling —
- *    a third value in any dimension collapses it to one short chip — but three lines still breaks
- *    the rule.
+ *    and the same search: nine chips, which laid out on THREE lines (chip tops [70, 110, 150]).
+ *    Nine is the ceiling — a third value in any dimension collapses it to one short chip — but
+ *    three lines still broke the rule.
  *
- * So the `+N more` overflow chip the task describes is NOT dead code: there is a reachable state
- * that needs it. It is not implemented here, and the CT pins the widest case to the measured three
- * lines so the gap stays visible. Do not restate "the row can no longer exceed two lines" — the
- * measurement says otherwise.
+ * That second measurement is why the `+N more` overflow chip below exists: aggregation narrows the
+ * common case, `MWB_CHIP_MAX_LINES` bounds the reachable worst one. Re-measured in the same CT once
+ * the cap shipped (2026-09-05): the widest case now puts SIX chips on two lines behind a `+3 more`,
+ * identically at 1280 and 1440, and disabling the cap reproduces the old three lines
+ * (tops [70, 110, 150]) — the FAIL-input run recorded in `execution.md`.
  */
 export const MWB_CHIP_SUMMARY_THRESHOLD = 3;
+
+// @akili-spec changes/my-work-board (MWB-T-14)
+/** How many wrapped lines the collapsed chip row may occupy (task item (1): "at most two lines"). */
+export const MWB_CHIP_MAX_LINES = 2;
+
+/**
+ * The class that takes a chip (or the overflow button itself) out of the row.
+ *
+ * `display: none` and not `[hidden]`: the global `.pr-chip` (`styles.scss`) sets
+ * `display: inline-flex` outside every `@layer`, so the UA's `[hidden] { display: none }` — and a
+ * Tailwind `hidden` utility, which lives in `@layer utilities` — both lose to it. The component
+ * stylesheet carries the rule with `!important` for the same reason.
+ *
+ * It is toggled from BOTH sides: Angular binds it from `isChipHidden()` / `hasChipOverflow()`, and
+ * `measureChipOverflow()` flips it directly during its measurement pass. That is safe because the
+ * measurement always leaves the DOM in exactly the state the bindings would produce for the limit
+ * it just computed (see the method).
+ */
+const MWB_CHIP_HIDDEN_CLASS = 'mwb-chip-hidden';
+
+// @akili-spec changes/my-work-board (MWB-T-14)
+/**
+ * How many distinct wrapped lines a set of row items occupies, measured from their VERTICAL
+ * CENTRES rather than their tops: the chips are 26px and `Clear filters` is 34px, and the row is
+ * `items-center`, so two items on the same line share a centre but not a top.
+ *
+ * Items that are not laid out (a `display: none` chip, or anything in jsdom, which lays nothing
+ * out) report a 0×0 rect and are skipped — which is what makes this return 0 under Jest and leaves
+ * the measurement a no-op there. The overflow behaviour is proven in the CT, never in jsdom.
+ */
+function occupiedLineCount(items: readonly HTMLElement[]): number {
+  const centres = new Set<number>();
+  for (const item of items) {
+    const rect = item.getBoundingClientRect?.();
+    if (!rect || (!rect.width && !rect.height)) continue;
+    centres.add(Math.round(rect.top + rect.height / 2));
+  }
+  return centres.size;
+}
 
 /** Plural noun each aggregated dimension counts in (`Center: 8 centers`). */
 const MWB_CHIP_SUMMARY_NOUN: Record<'category' | 'origin' | 'center', { label: string; noun: string }> = {
@@ -379,6 +421,145 @@ export class MyWorkBoardComponent {
    *  that appeared for the phase chip alone would be permanently visible and do nothing. */
   readonly hasClearableFilters = computed(() => this.boardChips().some(chip => chip.dimension !== 'phase'));
 
+  // ── `MWB-T-14` (1) — the two-line cap and the `+N more` overflow chip ───────────────────────
+  /** The filter row itself: the element the chips live in, the `ResizeObserver`'s target, and the
+   *  `aria-controls` target of the `+N more` button. */
+  readonly chipRow = viewChild<ElementRef<HTMLElement>>('chipRow');
+
+  /**
+   * How many chips the row shows while collapsed. Written ONLY by `measureChipOverflow()` — there
+   * is no width arithmetic here and no guess about label lengths: the browser lays the real chips
+   * out and this is the count that survived within `MWB_CHIP_MAX_LINES`.
+   *
+   * The initial value shows everything, which is also the value jsdom keeps (nothing is laid out
+   * there, so the measurement can never conclude that a chip overflowed). Tests that need the
+   * overflow state in Jest set this signal directly — that is the seam.
+   */
+  readonly visibleChipLimit = signal(Number.MAX_SAFE_INTEGER);
+
+  /** Volatile, exactly like `closedCollapsed`: expanding the row is a glance, not a preference.
+   *  Reset by `setScope`, `onPhaseChange` and `clearAll` — the three writes that change what the
+   *  chips even are, after which "showing all 9" would be showing a different 9. */
+  readonly chipsExpanded = signal(false);
+
+  /** Chips the collapsed row cannot fit. Independent of `chipsExpanded()` — expanding reveals them
+   *  but does not change the measurement, which is what keeps `Show less` on screen and stops the
+   *  expand/collapse pair from oscillating. */
+  readonly hiddenChipCount = computed(() => Math.max(0, this.boardChips().length - this.visibleChipLimit()));
+  readonly hasChipOverflow = computed(() => this.hiddenChipCount() > 0);
+
+  /** `+3 more` collapsed, `Show less` expanded. The accessible name (template) is this label plus
+   *  `filter chips`, so it CONTAINS the visible label — WCAG 2.5.3 *Label in Name*. */
+  readonly chipOverflowLabel = computed(() => (this.chipsExpanded() ? 'Show less' : `+${this.hiddenChipCount()} more`));
+
+  /** Whether chip `index` is currently out of the row. Hidden chips stay in the DOM (they are what
+   *  the measurement pass measures) but `display: none` keeps them out of layout AND out of the
+   *  accessibility tree, so the collapsed row does not announce chips it is not showing. */
+  isChipHidden(index: number): boolean {
+    return !this.chipsExpanded() && index >= this.visibleChipLimit();
+  }
+
+  toggleChipsExpanded(event: Event): void {
+    // The chips sit OUTSIDE `.mwb-filter-container`; without this the click would bubble to
+    // `onDocumentClick`. Harmless for the row itself, but it would close an open Filter popover
+    // that the user is expanding the chips to cross-check.
+    event.stopPropagation();
+    this.chipsExpanded.update(expanded => !expanded);
+  }
+
+  /** Width the `ResizeObserver` last measured at, so a HEIGHT change — which is what hiding a chip
+   *  causes — cannot feed itself back into another measurement. */
+  private lastChipRowWidth = -1;
+  /** Re-entrancy guard: the measurement writes classes, and a class write can wake the observer. */
+  private measuringChips = false;
+
+  /**
+   * Decides how many chips the collapsed row shows, by measuring the real layout.
+   *
+   * WHY MEASURE AND NOT CALCULATE. The labels are unbounded (`Search:` carries whatever the user
+   * typed) and the row shares its flex lines with the scope control, the search box and the Filter
+   * button, so where a chip lands is a wrapping outcome, not a sum of widths. The browser already
+   * computes it; this reads the answer.
+   *
+   * WHY THE ROW IS MEASURED FULLY EXPANDED. A measurement taken on the COLLAPSED row would say
+   * "two lines, nothing overflows" — and unhiding on that basis would overflow again, hide again,
+   * forever. So every pass first puts all the chips back, and the limit it derives is therefore a
+   * pure function of the geometry, identical whether the row is collapsed or expanded. That is
+   * also why toggling `chipsExpanded` cannot move it.
+   *
+   * The unhide/measure/restore happens inside ONE synchronous callback with no `await` and no
+   * yielded frame, so the browser never paints an intermediate state: the user cannot see the row
+   * flash to three lines. Restoring is not "put back what was there" but "apply the state the
+   * template bindings would produce for the limit just computed" — the two are the same thing, and
+   * writing it that way is what lets Angular's class-binding diff agree with the DOM afterwards.
+   */
+  private measureChipOverflow(): void {
+    const row = this.chipRow()?.nativeElement;
+    if (!row || this.measuringChips || typeof row.querySelectorAll !== 'function') return;
+    // Nothing is laid out — jsdom, or a row that is not displayed. There is no measurement to be
+    // had, so the limit is left exactly as it is (which is what lets a Jest test set it by hand and
+    // keep it across change detection: `visibleChipLimit` is the seam, per the task's test plan).
+    if (!occupiedLineCount([row])) return;
+
+    const chips = Array.from(row.querySelectorAll<HTMLElement>('[data-testid="my-work-chip"]'));
+    if (!chips.length) {
+      this.visibleChipLimit.set(Number.MAX_SAFE_INTEGER);
+      return;
+    }
+
+    this.measuringChips = true;
+    try {
+      const more = row.querySelector<HTMLElement>('[data-testid="my-work-chip-more"]');
+      // `Clear filters` is part of the row and must stay reachable in both states, so it counts
+      // towards the two lines rather than being allowed to fall onto a third.
+      const tail = Array.from(row.querySelectorAll<HTMLElement>('[data-testid="my-work-clear-filters"]'));
+
+      // Pass 1 — every chip, no overflow button. If the row already fits, the button must not
+      // appear at all, so it is measured WITHOUT it: its own width could otherwise be the only
+      // reason the row looked like it needed one.
+      chips.forEach(chip => chip.classList.remove(MWB_CHIP_HIDDEN_CLASS));
+      more?.classList.add(MWB_CHIP_HIDDEN_CLASS);
+
+      let limit = chips.length;
+      if (occupiedLineCount([...chips, ...tail]) > MWB_CHIP_MAX_LINES) {
+        // Pass 2 — the button is in the row now (it costs a slot), so drop one chip at a time from
+        // the END until what is left fits. At most `chips.length` iterations, and the vocabulary
+        // tops out at nine chips.
+        more?.classList.remove(MWB_CHIP_HIDDEN_CLASS);
+        const overflowItems = more ? [more, ...tail] : tail;
+        for (limit = chips.length - 1; limit > 0; limit--) {
+          chips.forEach((chip, index) => chip.classList.toggle(MWB_CHIP_HIDDEN_CLASS, index >= limit));
+          if (occupiedLineCount([...chips.slice(0, limit), ...overflowItems]) <= MWB_CHIP_MAX_LINES) break;
+        }
+      }
+
+      // Leave the DOM exactly where the bindings will: hidden chips only while collapsed, and the
+      // overflow button present only when something is actually hidden.
+      const expanded = this.chipsExpanded();
+      chips.forEach((chip, index) => chip.classList.toggle(MWB_CHIP_HIDDEN_CLASS, !expanded && index >= limit));
+      more?.classList.toggle(MWB_CHIP_HIDDEN_CLASS, limit >= chips.length);
+      this.visibleChipLimit.set(limit);
+    } finally {
+      this.measuringChips = false;
+    }
+  }
+
+  /** Re-measures when the row's WIDTH changes — the sidebar opening, a window resize, the
+   *  `min-[900px]:` breakpoint crossing. Guarded on the width itself because hiding a chip changes
+   *  the row's height, and reacting to that would be a loop. */
+  private observeChipRow(): void {
+    const row = this.chipRow()?.nativeElement;
+    if (!row || typeof ResizeObserver !== 'function') return;
+    const observer = new ResizeObserver(entries => {
+      const width = Math.round(entries[0]?.contentRect?.width ?? 0);
+      if (width === this.lastChipRowWidth) return;
+      this.lastChipRowWidth = width;
+      this.measureChipOverflow();
+    });
+    observer.observe(row);
+    this.destroyRef.onDestroy(() => observer.disconnect());
+  }
+
   /** `Created by` is only meaningful under *All program results* — under *Mine* every row is the
    *  current user's, so the dimension is hidden (and cleared by `setScope`). */
   readonly showCreatedByFilter = computed(() => this.data.scope() === 'all');
@@ -526,6 +707,21 @@ export class MyWorkBoardComponent {
       }
     }
 
+    // `MWB-T-14` (1): the chip row's two-line cap. `afterNextRender` attaches the width observer
+    // once the row exists; `afterRenderEffect` re-measures after every render that changed the
+    // chips or the expanded state — the after-render phase is the only place a layout read is
+    // valid, and the only place a DOM write is allowed to answer one.
+    afterNextRender(() => {
+      this.observeChipRow();
+      this.measureChipOverflow();
+    });
+    afterRenderEffect(() => {
+      this.boardChips();
+      this.chipsExpanded();
+      this.isNarrow();
+      untracked(() => this.measureChipOverflow());
+    });
+
     // `MWB-T-3` forward pointer (d): `currentPhaseName` set BEFORE `load()` — both happen in this
     // one effect body, in this order, every time the programme code (re)resolves or the current
     // reporting phase itself resolves/changes (`reportingPhaseVersion` is the dedicated bump
@@ -634,6 +830,8 @@ export class MyWorkBoardComponent {
     // `Created by` is hidden under Mine — leaving a stale value selected would keep narrowing the
     // board through a control the user can no longer see (`MWB-T-9` (1)).
     if (scope === 'mine') this.filter.clearCreatedBy();
+    // `MWB-T-14`: the expanded chip row is volatile — a scope switch changes which chips there are.
+    this.chipsExpanded.set(false);
     this.data.setScope(scope);
   }
 
@@ -813,6 +1011,8 @@ export class MyWorkBoardComponent {
 
   clearAll(): void {
     this.searchDraft.set('');
+    // `MWB-T-14`: nothing is left to expand, and the row must not come back expanded next time.
+    this.chipsExpanded.set(false);
     this.filter.clearAll();
     // `MWB-T-12`: the three board-local dimensions are not the shared service's to clear.
     this.data.clearMultiFilters();
@@ -845,6 +1045,8 @@ export class MyWorkBoardComponent {
    * synchronous turn (`MWB-T-9` FAIL input: two phase sources make badge and columns disagree).
    */
   onPhaseChange(value: unknown): void {
+    // `MWB-T-14`: same volatility rule as `setScope` — a phase switch re-groups the whole board.
+    this.chipsExpanded.set(false);
     this.data.setPhase(this.toFilterValue(value));
     this.syncFilterPhase();
   }

@@ -81,7 +81,15 @@
              the Filter button and the chips flow onto the next line(s) in that reading order. The
              `order-*` utilities are `max-[899px]:` only, so >= 900px the row is byte-identical to
              `MWB-T-9`'s single line. -->
-        <div class="flex flex-wrap items-center gap-[10px] max-[899px]:w-full" role="group" aria-label="My results board controls">
+        <!-- `MWB-T-14` (1): `#chipRow` / `id` — this element IS the chip row (the chips wrap inside
+             it, after the controls), so it is what the two-line measurement reads and what the
+             `+N more` button points `aria-controls` at. -->
+        <div
+          #chipRow
+          id="my-work-chip-row"
+          class="flex flex-wrap items-center gap-[10px] max-[899px]:w-full"
+          role="group"
+          aria-label="My results board controls">
           <div
             role="tablist"
             aria-label="Scope"
@@ -315,7 +323,11 @@
                the remove control for every one-value chip. -->
           @if (hasActiveFilters()) {
             @for (chip of boardChips(); track chip.dimension + '|' + chip.value) {
-              <span class="pr-chip mwb-chip max-[899px]:order-4" data-testid="my-work-chip" [attr.data-summary]="chip.summary || null">
+              <span
+                class="pr-chip mwb-chip max-[899px]:order-4"
+                data-testid="my-work-chip"
+                [class.mwb-chip-hidden]="isChipHidden($index)"
+                [attr.data-summary]="chip.summary || null">
                 @if (chip.summary) {
                   <button
                     type="button"
@@ -338,6 +350,28 @@
                 </button>
               </span>
             }
+            <!-- `MWB-T-14` (1) — the overflow chip. Rendered whenever the row has chips at all, and
+                 taken OUT of the row with the same `mwb-chip-hidden` class the chips use, rather
+                 than with an `@if`: `measureChipOverflow()` has to be able to put it back for one
+                 synchronous layout read (it costs a slot on the second line, so the count of chips
+                 that fit depends on it), and an `@if` would leave nothing to measure. `display:
+                 none` keeps it out of the accessibility tree while it is not needed.
+                 Its position is between the last chip and `Clear filters`, which keeps both the
+                 chip order and `Clear filters` exactly where `MWB-T-9` put them, in both states.
+                 No animation: expanding re-wraps a flex row, and a height transition on the row
+                 would animate the whole board below it — so there is nothing here for
+                 `prefers-reduced-motion` to reduce. -->
+            <button
+              type="button"
+              data-testid="my-work-chip-more"
+              class="mwb-chip-more inline-flex h-[26px] shrink-0 cursor-pointer items-center rounded-full border border-dashed border-[var(--pr-color-primary-300)] bg-transparent px-[10px] text-[12px] font-semibold text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] max-[899px]:order-4"
+              [class.mwb-chip-hidden]="!hasChipOverflow()"
+              [attr.aria-expanded]="chipsExpanded()"
+              [attr.aria-label]="chipOverflowLabel() + ' filter chips'"
+              aria-controls="my-work-chip-row"
+              (click)="toggleChipsExpanded($event)">
+              {{ chipOverflowLabel() }}
+            </button>
             @if (hasClearableFilters()) {
               <button
                 type="button"

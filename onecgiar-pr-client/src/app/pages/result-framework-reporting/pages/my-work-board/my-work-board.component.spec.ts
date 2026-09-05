@@ -1340,6 +1340,138 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
 
       expect(component.filterPopoverOpen()).toBe(true);
     });
+
+    // ── `MWB-T-14` (1) — the two-line cap and the `+N more` overflow chip ─────────────────────
+    //
+    // WHICH HALF LIVES HERE. Deciding how many chips fit is a LAYOUT question, and jsdom lays
+    // nothing out: `measureChipOverflow()` reads a 0×0 row and returns without writing anything,
+    // by design. So `visibleChipLimit` is the seam these cases drive — they prove everything that
+    // hangs off the measurement (when the chip appears, what it counts, what the click does, what
+    // resets it) with the measurement itself faked. The arithmetic — that nine long chips really
+    // do overflow two lines at 1280 and 1440, and how many survive — is measured in
+    // `my-work-board.cy.ts` and nowhere else. A Jest run saying "+N more works" is not evidence
+    // that the row is two lines tall.
+    describe('the +N more overflow chip', () => {
+      const moreChip = () => root().querySelector('[data-testid="my-work-chip-more"]') as HTMLButtonElement;
+      const outOfRow = (element: Element | null) => !!element?.classList.contains('mwb-chip-hidden');
+      const chipsInRow = () =>
+        Array.from(root().querySelectorAll('[data-testid="my-work-chip"]'))
+          .filter(chip => !outOfRow(chip))
+          .map(chip => (chip.textContent ?? '').replace(/\s+/g, ' ').trim());
+
+      /** Four chips — phase + two funding sources + one category — so a limit of two leaves a
+       *  meaningful remainder on both sides of the boundary. */
+      function buildFourChips(): void {
+        build();
+        component.selectedOrigins.set(['W1/W2', 'W3/Bilateral']);
+        component.selectedCategories.set(['Knowledge product']);
+        fixture.detectChanges();
+        expect(chipLabels().length).toBe(4);
+      }
+
+      it('stays out of the row while every chip fits', () => {
+        buildFourChips();
+
+        expect(component.hasChipOverflow()).toBe(false);
+        expect(outOfRow(moreChip())).toBe(true);
+        expect(chipsInRow().length).toBe(4);
+      });
+
+      it('appears counting exactly the chips the row could not fit', () => {
+        buildFourChips();
+        component.visibleChipLimit.set(2);
+        fixture.detectChanges();
+
+        expect(component.hasChipOverflow()).toBe(true);
+        expect(outOfRow(moreChip())).toBe(false);
+        expect(moreChip().textContent?.trim()).toBe('+2 more');
+        expect(moreChip().getAttribute('aria-expanded')).toBe('false');
+        expect(moreChip().getAttribute('aria-controls')).toBe('my-work-chip-row');
+        // WCAG 2.5.3: the accessible name contains the visible label.
+        expect(moreChip().getAttribute('aria-label')).toBe('+2 more filter chips');
+        // The chips that stay are the FIRST ones, in row order — the row does not reshuffle.
+        expect(chipsInRow()).toEqual(chipLabels().slice(0, 2));
+      });
+
+      it('expands the row inline on click, and collapses it again', () => {
+        buildFourChips();
+        component.visibleChipLimit.set(2);
+        fixture.detectChanges();
+
+        moreChip().click();
+        fixture.detectChanges();
+
+        expect(component.chipsExpanded()).toBe(true);
+        expect(moreChip().getAttribute('aria-expanded')).toBe('true');
+        expect(moreChip().textContent?.trim()).toBe('Show less');
+        expect(chipsInRow()).toEqual(chipLabels());
+
+        moreChip().click();
+        fixture.detectChanges();
+
+        expect(component.chipsExpanded()).toBe(false);
+        expect(moreChip().textContent?.trim()).toBe('+2 more');
+        expect(chipsInRow().length).toBe(2);
+      });
+
+      it('keeps Clear filters in the row in both states', () => {
+        buildFourChips();
+        component.visibleChipLimit.set(2);
+        fixture.detectChanges();
+        expect(outOfRow(root().querySelector('[data-testid="my-work-clear-filters"]'))).toBe(false);
+
+        moreChip().click();
+        fixture.detectChanges();
+        expect(outOfRow(root().querySelector('[data-testid="my-work-clear-filters"]'))).toBe(false);
+      });
+
+      it('is volatile: Clear filters collapses it again', () => {
+        buildFourChips();
+        component.visibleChipLimit.set(2);
+        fixture.detectChanges();
+        moreChip().click();
+        fixture.detectChanges();
+        expect(component.chipsExpanded()).toBe(true);
+
+        (root().querySelector('[data-testid="my-work-clear-filters"]') as HTMLButtonElement).click();
+        fixture.detectChanges();
+
+        expect(component.chipsExpanded()).toBe(false);
+        // One chip left against a limit of two — nothing overflows any more either.
+        expect(component.hasChipOverflow()).toBe(false);
+        expect(outOfRow(moreChip())).toBe(true);
+      });
+
+      it('is volatile: a scope switch collapses it again', () => {
+        buildFourChips();
+        component.visibleChipLimit.set(2);
+        fixture.detectChanges();
+        moreChip().click();
+        fixture.detectChanges();
+        expect(component.chipsExpanded()).toBe(true);
+
+        component.setScope('all');
+        fixture.detectChanges();
+        httpMock.expectOne(req => req.url.includes(`get/all/roles/filter/${userId}`)).flush({ response: { items: FIXTURE } });
+        fixture.detectChanges();
+
+        expect(component.chipsExpanded()).toBe(false);
+      });
+
+      it('is volatile: a phase switch collapses it again', () => {
+        buildFourChips();
+        component.visibleChipLimit.set(2);
+        fixture.detectChanges();
+        moreChip().click();
+        fixture.detectChanges();
+        expect(component.chipsExpanded()).toBe(true);
+
+        component.onPhaseChange('Reporting 2025');
+        fixture.detectChanges();
+
+        expect(component.chipsExpanded()).toBe(false);
+      });
+    });
   });
 });
 

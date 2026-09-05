@@ -159,6 +159,20 @@
   border-radius: 4px;
 }
 
+/* `MWB-T-14` (1) — the two-line cap. A chip past the measured limit (and the `+N more` button
+   while nothing is hidden) leaves the row through THIS class and no other.
+
+   `!important` is load-bearing, not defensive: the global `.pr-chip` sets `display: inline-flex`
+   from OUTSIDE every `@layer` (`styles.scss`), which beats both the UA's `[hidden]` rule and any
+   Tailwind `hidden` utility (`@layer utilities`). One `!important` here is the whole reason the
+   chips can be taken out of layout at all — and `display: none` (rather than `visibility`) is what
+   also takes them out of the accessibility tree, so the collapsed row never announces a chip it is
+   not showing. `measureChipOverflow()` toggles this same class directly during its measurement
+   pass; see that method for why that is safe. */
+.mwb-chip-hidden {
+  display: none !important;
+}
+
 /**
  * `MWB-T-7` (4) — one short fade on the board container itself (never on individual cards) for a
  * scope/phase re-group or the skeleton→content swap. Angular view encapsulation scopes SCSS per
