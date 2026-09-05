@@ -10,7 +10,7 @@
 | Type | **Change** · Depth **Standard** |
 | Approval Mode | `gated` (inherited from `proposal.md`) |
 | Date | 2026-09-05 |
-| Status | `approved` (Phase 1 Continue + Phase 3 HITL, 2026-09-05) |
+| Status | `shipped` (archived 2026-09-05) |
 | Ticket(s) | none yet (`ERC-OQ-1`) |
 | Depends on | none · Parallel-safe: **no** vs. specs editing `reporting-program-band` or dashboard-lab hub/emerging handlers |
 | Visual reference | Four user screenshots (chat 2026-09-05): hub CTA, band cluster, legacy dialog, Reporting aside. Not persisted in-repo. |
