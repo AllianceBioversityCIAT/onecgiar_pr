@@ -6,7 +6,7 @@
 - **Linked spec:** `./requirements.md` (`MWB-R-1`…`R-11`, `MWB-AC-1`…`AC-9`) · `./design.md` (`MWB-DD-1`…`DD-13`, §5 maps, §6.3 tokens, §6.6 phase) · `./judgment.md` (round 1 applied)
 - **Owner / driver:** session Leader (`/akili-execute`)
 - **Status:** `approved` (Phase 3 auto-approved, pre-approved mode, 2026-09-04; rewritten after Judgment Day round 1)
-- **Depth:** Standard · **Budget:** 6 tasks / ~1,350 LOC / ≤ 1 Reviewer round per task (`design.md` §1)
+- **Depth:** Standard · **Budget:** 6 tasks / ~1,350 LOC / ≤ 1 Reviewer round per task (`design.md` §1) · **+ `MWB-T-7` (~120 LOC) added 2026-09-05 on explicit user request — budget 7 / ~1,470**
 - **YOLO limits (inherited, `feedback-pragmatic-akili-execution`):** pre-approved gates logged as `auto-approved (pre-approved mode)`; one Reviewer round per task, a second FAIL escalates; verification = targeted `npx jest <path>` only, never a full client run; pointer briefs; workers never `git add -A` (shared worktree); close each worker right after its task commits (Reviewers via `TaskStop`); a plain-language progress line at every task boundary.
 - **Branch:** `qa-development-2026` (shared — explicit-path diffs and commits; `git log --oneline -3` + `git status --short` before every commit).
 
@@ -157,7 +157,7 @@
   - [ ] CT green at 1280×720 and 1440×900
   - [ ] Commit `✅ test(my-work-board) [SPEC:changes/my-work-board]: viewport, overflow and no-drag component tests`
 
-### `MWB-T-6` — Real-browser evidence, timing, docs sync `[~]`
+### `MWB-T-6` — Real-browser evidence, timing, docs sync `[x]`
 
 - **Type:** `docs` (+ HITL evidence)
 - **Description:** Local client against the local server with T-1 (if the local stack is not available, use the QA API and state that completeness is `null` everywhere → *Open to check*). Orca embedded browser (`orca-cli`; viewport set **after** `goto`; root zoom ×1.2 → request 1067 for an effective 1280 and 1200 for 1440): open `entity-details/SP01/my-work?phase=…`, screenshots at both widths, compare with `mockup/Main.dc.html` (T6 visual review naming the tab/badge, status pills and card chip/bar), click Continue on one Editing card and confirm the detail opens on the first missing section. If the local server runs: time the flagged vs default request 3× each and report the spread. Write `execution.md` evidence and `pending-archive.md` (TRD `W1` ids, `design.md` §5 rule 2 clarification, §4/§5 inventory, TRD §4 flag row) — never edit those baseline docs on the spec branch.
@@ -224,3 +224,28 @@ Coverage stays above server 5/20/35/40 and client 50/60/60/60; targeted suites o
 ## Required cross-references
 
 `./requirements.md` · `./design.md` · `./proposal.md` · `./judgment.md` · `docs/prd.md` · `docs/ux-ui/design.md` · `docs/trd/trd.md` · archived `changes/sp-shell-app-viewport` (viewport contract) · `changes/sp-tab-explainer-panels` (`<app-pr-tab-intro>`).
+
+---
+
+### `MWB-T-7` — Motion polish: card hover / press feedback, rail collapse, state transitions `[ ]`
+
+- **Type:** `client` · **Added 2026-09-05 by user request** ("revisa también las animaciones que se vea cuando estoy en una card, cuando presiono click … que se vean fluidas las transiciones") — approved scope addition, not an advisory.
+- **Description:** Add fluid, token-aligned motion to the board without changing layout, copy or behaviour: (1) card hover elevation + border tint and a subtle lift (`transition-[transform,box-shadow,border-color] duration-150 ease-out`), press feedback on **Continue** / **Review and submit** / **Open** (`active:` scale/translate, `hover:` brightness or shadow), visible `focus-visible` ring on every action; (2) completeness bar width animates (`transition-[width] duration-300 ease-out`); (3) Closed-group rails expand/collapse with a width + opacity transition and the expanded column's content fades in (reuse the app's `prmsFade` keyframe / `collapse.scss` pattern where it fits); (4) scope / phase re-group and skeleton → content use one short fade (~160 ms) so cards do not pop; (5) every transition honours `prefers-reduced-motion` (global rule in `styles.scss` ~:779; add `motion-reduce:` variants where the global rule does not cover a property). Tailwind-first; SCSS only for keyframes not already global.
+- **Implements:** user request (above); NFR *Accessibility* (reduced motion, focus visibility); `MWB-R-6` unchanged (no new controls, no DnD); `MWB-R-9` unchanged (no layout change).
+- **Design:** `design.md` §6.3 tokens (colours only from `--pr-*`), `MWB-DD-6`, `MWB-DD-9`; `docs/ux-ui/design.md` §7 (`DD-12` Tailwind-first).
+- **Files (expected):** `my-work-board/components/my-work-card/my-work-card.component.{html,scss}`, `my-work-board/components/my-work-column/my-work-column.component.{html,scss}`, `my-work-board/my-work-board.component.{html,scss}`; specs only if a class assertion needs updating.
+- **Depends on:** `MWB-T-4` · **Blocks:** —
+- **Estimate:** S (~120 LOC)
+- **Skills:** `angular-developer` · `frontend-design`
+- **Tests:** existing Jest suites stay green; CT spec stays green (layout invariants unchanged); one Jest case per component asserting the `motion-reduce:` / reduced-motion handling is present is acceptable as presence-only **only** alongside the CT layout gate.
+- **Verification:**
+  ```bash
+  cd onecgiar-pr-client && npx jest src/app/pages/result-framework-reporting/pages/my-work-board --silent --reporters=summary --no-coverage && npx ng lint --quiet && CT_DEV_SERVER_PORT=8090 npx cypress run --component --spec src/app/pages/result-framework-reporting/pages/my-work-board/my-work-board.cy.ts
+  ```
+  - **Pass:** all green; no change to scroll/overflow/no-DnD assertions.
+  - **FAIL input:** a `transform` on the column list wrapper or a `will-change`/`contain` on an ancestor that breaks the viewport lock → CT `position: absolute` / overflow assertions fail; a transition on `height` of the list → scroll assertion may flake.
+  - **Disqualifier:** "it looks smooth" is not evidence; the real-browser look (HITL by the user) is the only gate for fluidity, and this task only guarantees the mechanics (durations, easing, reduced-motion) plus unchanged layout invariants.
+- **Definition of done:**
+  - [ ] Jest + lint + CT green
+  - [ ] No hardcoded hex; durations ≤ 300 ms; `prefers-reduced-motion` respected
+  - [ ] Commit `🎨 style(my-work-board) [SPEC:changes/my-work-board]: fluid hover, press and collapse transitions`

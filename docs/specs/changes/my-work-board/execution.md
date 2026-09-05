@@ -288,3 +288,25 @@ Original captured before any navigation and restored at the end: page `1ba0a9e0-
 - **Screenshots:** `orca screenshot` / `full-screenshot` time out (`Page.captureScreenshot` — tab not visible/focused in the Orca app) on 7 attempts across both passes; no PNGs. Needs the tab focused in the app, or a human look — the human visual gate (`requirements.md` §9) is still owed.
 - **Orca tab restored** to `…/entity-details/SP02?tocView=aows`, viewport back to 1273×1187 effective.
 - **Task status:** `[~]` — docs deliverables done (`pending-archive.md` `MWB-PA-1`…`PA-5`, evidence sections), shell-level real-page evidence done, data-level evidence blocked on the environment. Gate: escalated to the user (environment blocker; pre-approval does not cover it).
+
+#### `MWB-T-6` — data-level evidence after the DB became reachable (Leader inline, real browser + in-page fetch) · 2026-09-05 → task **PASS** (`[x]`)
+
+Page `…/entity-details/SP02/my-work` (Orca browser, proxy origin of the local client; API `localhost:3400` on T-1 code; MySQL reachable again).
+
+| Check | Result |
+|---|---|
+| Mine scope | 3 rows → Editing 2 (`8959` *0 of 5 sections*, missing General information · Geographic location · Evidence · Contributing partners · Innovation development; `8956` *4 of 5*, missing Contributing partners), Submitted 1 (`8960`, **Open** → `/result/result-detail/8960/general-information?phase=36`); tab badge **2**; segments `Mine 3 / All program results –` |
+| Requests per load | `orca reload` delta: **+1** `GET …/roles/filter?…&filter_created_by_me=true&include_completeness=true`, **0** `green-checks` (earlier cumulative counts spanned several navigations). +3 `science-programs` lookups on reload come from the SP shell, not the board (pre-existing) |
+| Continue (default section) | `8959` → `/result/result-detail/8959/general-information?phase=36` (first missing = General information) |
+| Continue (non-default section) | `8956` → **`/result/result-detail/8956/contributor-partners?phase=36`** — P25 section route resolved from the server's `missing[0]` (`MWB-AC-6` real navigation ✔) |
+| All program results | one more `GET …/roles/filter?…&submitter_id=51` (no `filter_created_by_me`, no flag); segments `Mine 3 / All 84`; badge still **2**; 83 cards + Approved rail 1 (= 84); 69 Editing cards all *Open to check completeness* (`MWB-R-4` All-scope rule ✔) |
+| Live payload, key-for-key | default response items carry **no** `completeness` key (3/3), flagged response carries it on 3/3 items (`null` on the Submitted one) — closes T-1's live comparison at key level |
+| Timing (in-page `fetch`, same JWT, 3 runs each, ms) | no flag **229 · 253 · 272** (spread 43) · flag **478 · 443 · 477** (spread 35) → **+~215 ms for 2 eligible items** (2 procedure calls, one chunk). Spread < difference → conclusive |
+| Screenshot | `evidence/my-work-all-1440.png` (All scope, effective 1440×900; captured once the tab was focused by the earlier navigation) |
+| No-DnD | `[draggable],[dropzone],[ondrop]` = 0 on the live page |
+
+**Performance finding (record, not a gate):** the §7 target "+150 ms at 200 rows" was written for a join; the v2 procedure costs ~100–200 ms per eligible item, so the cap-60 / concurrency-5 worst case is ~12 waves ≈ **2–3 s** added for a user with 60 Editing results in Mine scope. Typical submitters (a handful of Editing rows) pay one wave (~200 ms). Options for a follow-up (outside this spec): lower the cap to ~30, raise concurrency to 10, or add a batch procedure. Accepted for now; noted in `pending-archive.md` follow-ups.
+
+**Still owed (human):** the visual look against the mockup — divergences already recorded by T-6 (date format `dd MMM yyyy`, waiting cards say *Created* not *Submitted … · in QA*, low-contrast Pending/Submitted pills on the app surface). User-facing gate.
+
+- **Gate:** auto-approved (pre-approved mode) — evidence complete except the human visual look, which is the user's by definition.

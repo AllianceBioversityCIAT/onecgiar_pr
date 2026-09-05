@@ -107,3 +107,8 @@ So `MWB-PA-4` is an **add**, not an edit. Suggested bullet under `## 5. Navigati
 ## Not recorded here
 
 - `design.md` §13 *Open Gaps & Follow-ups* (cross-program My work page, `last_updated_by` in the list payload, a sort control, retiring the legacy v1 green-checks path) are **product follow-ups**, not baseline-doc drift. They belong in the kaizen entry / a new proposal, not in this file.
+
+## Follow-ups surfaced by `MWB-T-6` timing (not doc syncs)
+
+- Completeness fold cost ≈ 100–200 ms per eligible item (v2 procedure); worst case at cap 60 / concurrency 5 ≈ 2–3 s. Candidate changes for a separate proposal: cap 30, concurrency 10, or a batch procedure `validate_sections_mapped_batch` over many ids.
+- `cypress-axe` is not installed → `MWB-T-5` a11y gate is structural only (see `requirements.md` §9).
