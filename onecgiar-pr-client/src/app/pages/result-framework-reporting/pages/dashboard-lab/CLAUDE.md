@@ -1,6 +1,6 @@
 # dashboard-lab
 
-**Verified:** 2026-09-04 · merge `performance-refactor` → `qa-development-2026` · qa 6a9a45b5e (adds `onOverviewLink` scope stamping note, spec `changes/results-aow-column-filter` RAC-T-5) + perf f38c13161 (P2-3569: el modal emergente vivo ahora pasa `showInnovationLinkQuestion`); prior: fa3f06a90 fixes stale `manageIndicator` tab union — now `'report' | 'info' | 'results'`, spec `changes/indicator-reported-results`; before that 2026-09-03 f0c0f68ba adds `partitionProgramKpis` / `summarisePartition` note, spec `bugfix/kpi-count-reconciliation`; before that 52ddf00af merged with performance-refactor · 4c2c0c69f — ToC achievement rollup, P2-3296
+**Verified:** 2026-09-04 · qa-development-2026 · 2b7232fff (adds the viewport-lock layout contract below — host class keyed on `isProgramShell()`, `#workArea` scroller, band `frameLocked`/`scrollHost`; spec `changes/sp-shell-app-viewport` SAV-T-6); prior: merge `performance-refactor` → `qa-development-2026` · qa 6a9a45b5e (adds `onOverviewLink` scope stamping note, spec `changes/results-aow-column-filter` RAC-T-5) + perf f38c13161 (P2-3569: el modal emergente vivo ahora pasa `showInnovationLinkQuestion`); before that fa3f06a90 fixes stale `manageIndicator` tab union — now `'report' | 'info' | 'results'`, spec `changes/indicator-reported-results`; before that 2026-09-03 f0c0f68ba adds `partitionProgramKpis` / `summarisePartition` note, spec `bugfix/kpi-count-reconciliation`; before that 52ddf00af merged with performance-refactor · 4c2c0c69f — ToC achievement rollup, P2-3296
 
 ## Qué es
 El shell de un Science Program. Un solo componente que sirve varias vistas según `rfrView`, y que es
@@ -27,6 +27,19 @@ de TS): trátalo como host, no como pantalla.
   Los otros seis puntos de entrada de este archivo y las páginas `entity-aow` **siguen con el
   modal**: eso es deliberado, no una migración a medias.
 
+## Layout: viewport lock (spec `changes/sp-shell-app-viewport`, SAV-T-6)
+- `≥ md`: host binds `[class.pr-viewport-page]="isProgramShell()"` (Overview + Reporting only;
+  `emerging`/`centers`/`dashboard` unaffected) → shared `pr-viewport-page` mixin
+  (`src/styles/_viewport-page.scss`): absolute inset-0, flex col, overflow hidden.
+- `#workArea` (`workAreaEl()`) is the ONE scroller for both tabs (AOW mode: no band, `section` itself
+  scrolls). Between `section` and the tab `article` sits a `div` (html ~L740-747) carrying
+  `min-[900px]:min-h-0 min-[900px]:flex-1` — load-bearing for the flex chain, not decorative. Band:
+  `[frameLocked]="true" [scrollHost]="workAreaEl()"` **drops `sticky` at ≥900** and reads
+  `scrollHost.scrollTop + window.scrollY`. Reporting's toolbar (search/4 filtros/Grouped/
+  Expand-all) lives inside the band component, above `#workArea` (outside the sticky tinted box), so it stays on screen; only the body scrolls.
+- **`< md`:** unchanged — document scrolls, band stays `sticky`; `workAreaEl()` resolves but
+  contributes `scrollTop 0`.
+
 ## Dónde se usa
 - `shared/routing/routing-data.ts` — rutas de `entity-details/:entityId`.
 - Hijos propios: `reporting-program-band` (toolbar), `reporting-aow-table` (cuerpo de Reporting),
@@ -40,19 +53,14 @@ de TS): trátalo como host, no como pantalla.
 | `lab-report-form/` | El formulario de creación que monta el aside | **Tiene `CLAUDE.md` propio** |
 
 ## Trampa: este componente es el host VIVO de la pantalla emergente (2026-09-04, P2-3569)
-
-El modal "Report emerging result" de este archivo (`<app-report-result-form>`) **es** la vía
-emergente que la gente usa. `entity-details` — de donde se copió el modal — está **retirado y sin
-ruta**: `routing-data.ts` carga `DashboardLabComponent` para `emerging`, `entity-details/:entityId`,
-`overview` y `planned-toc`.
-
-⚠️ **Y eso ya costó un requisito entero.** La pregunta obligatoria de P2-3421 ("¿reporta el uso de
-una innovación ya evaluada?") se cableó con `[showInnovationLinkQuestion]="true"` **solo en
-`entity-details`**, con una nota que declaraba esta superficie "fuera de alcance". Nunca se vio en
-pantalla; QA reprodujo su ausencia tres veces. Corregido aquí y con candado estático:
-`report-result-form/innovation-link-surfaces.spec.ts`.
-
-⇒ **Al leer una nota que dice "esa otra superficie es la que importa", comprueba que esté enrutada.**
+- El modal "Report emerging result" (`<app-report-result-form>`) **es** la vía emergente real:
+  `entity-details` (de donde se copió) está **retirado y sin ruta** — `routing-data.ts` carga
+  `DashboardLabComponent` para `emerging`, `entity-details/:entityId`, `overview` y `planned-toc`.
+- ⚠️ **Y eso ya costó un requisito entero.** P2-3421 ("¿reporta el uso de una innovación ya
+  evaluada?") se cableó con `[showInnovationLinkQuestion]="true"` **solo en `entity-details`**, con
+  nota "fuera de alcance"; nunca se vio en pantalla (QA reprodujo su ausencia 3 veces). Corregido
+  aquí, candado `report-result-form/innovation-link-surfaces.spec.ts`.
+- ⇒ **Al leer una nota que dice "esa otra superficie es la que importa", comprueba que esté enrutada.**
 
 ## Trampas (⚠️ = ya rompió algo)
 - ⚠️ **`filtersActive` hay que pasarlo a `reporting-aow-table`.** El hijo no ve tres de los cinco
@@ -84,32 +92,30 @@ pantalla; QA reprodujo su ausencia tres veces. Corregido aquí y con candado est
   P2-3296). No cambiar el código hasta que respondan.
 
 ## Añadidos 2026-08-29 (specs reporting-entry-hub / mass-reporting-flow)
-
 - `components/reporting-entry-hub/` — hub "Where to report" (lanes W1/W2 + W3; strings en `hub-copy.ts`).
 - `components/narrative-panel/` — panel de narrativa IA in-browser (WebLLM vía `ASSISTANT_ENGINE`); doble gate `environment.aiAssistant.enabled` && `ai_narrative_enabled` (global parameter); el consentimiento del panel es la ÚNICA puerta a `engine.init` (descarga del modelo).
 - `reporting-burndown.ts` — helpers puros del burn-down; `buildRatio` es el ÚNICO hogar de la regla zero-target (banner + `ratioOf` de la tabla delegan). `partitionProgramKpis` / `summarisePartition` son el ÚNICO hogar de la partición cuenta-una-vez que lee toda cifra de KPI del shell (band, hero, chips, hub, ToC map, tabla, banner — design §6.1, KCR-DD-1; spec `bugfix/kpi-count-reconciliation`). ⚠️ `__allIndicators` (side-channel escrito solo con Only-pending ON) trae Section/Type/Category ya aplicados, Only-pending no.
 - Deep-link `?kpi=` (siempre con `tocAow`; los ids de indicador se repiten entre AoWs) + contador de sesión + Next pending (tarjetas By-AOW **y** filas de la tabla agrupada/flat — `lastReportedKpi` lo publican AMBOS cierres: el modal legacy (`openLegacyReportModal`+efecto) y el drawer (`onReportingRowReport` captura → `closeManage` publica vía `publishReportedKpi`; filas bucket publican sin force-refresh).
 
 ## Alineación de vistas (2026-08-30)
-- Las vistas agrupada (`aows`) y enfocada (`byAow`) son los mismos datos a dos zooms y navegan entre
-  sí: header de tarjeta "By AOW" → `openAowFocused(code)` (no-op para buckets) ↔ banner "All Areas
-  of Work" → `setPlannedBrowseView('aows')`. Recetas compartidas: Report = `.pr-row-action`
-  (32px/14px/borde -300, la desviación WCAG), link 30×30 material `link`, categoría violeta
-  `#6b46e51f`, chip de centro neutro, "Show more" (regla UI §4.16 — nunca "Read more").
+- Vistas agrupada (`aows`) y enfocada (`byAow`): mismos datos, dos zooms, navegables entre sí —
+  header de tarjeta "By AOW" → `openAowFocused(code)` (no-op para buckets) ↔ banner "All Areas of
+  Work" → `setPlannedBrowseView('aows')`. Recetas: Report = `.pr-row-action` (32px/14px/borde -300,
+  la desviación WCAG), link 30×30 material `link`, categoría violeta `#6b46e51f`, chip de centro
+  neutro, "Show more" (regla UI §4.16 — nunca "Read more").
 
 ## Añadido 2026-09-01 (spec overview-aow-progress-hero)
-- `program-overview`'s "Progress by area of work" section is now the Overview HERO (moved right
-  after "About this program"). Fed by two NEW host bindings: `[richRows]` (`overviewAowProgressRich`
-  computed) and `[continueReporting]` output (`continueReporting()` = `setOnlyPending(true)` +
-  navigate to Reporting with `?tocView=aows`). The thin `aowProgress`/`xcutProgress` inputs are
-  untouched (DD-4).
+- `program-overview`'s "Progress by area of work" is now the Overview HERO (moved right after "About
+  this program"). Fed by two NEW host bindings: `[richRows]` (`overviewAowProgressRich` computed) +
+  `[continueReporting]` output (`continueReporting()` = `setOnlyPending(true)` + navigate to
+  Reporting with `?tocView=aows`). Thin `aowProgress`/`xcutProgress` inputs untouched (DD-4).
 
 ## Trampa: tokens fantasma (2026-08-31)
 - ⚠️ **Un `var(--pr-*)` sin definición pinta transparente sin ningún error** — `--pr-surface-ground`
-  se usó ~50 veces (todas las barras de skeleton del hub/banner/tabla) sin existir en
-  `colors.scss`: la página parecía cargada-y-vacía mientras cargaba. Ahora está definido
-  (`#efeef3`) y `design-tokens.spec.ts` barre el módulo entero y falla si aparece otro token
-  usado-pero-no-definido. Si añades un token, decláralo en `src/styles/colors.scss` PRIMERO.
+  se usó ~50 veces (skeletons de hub/banner/tabla) sin existir en `colors.scss`: la página parecía
+  cargada-y-vacía mientras cargaba. Ahora está definido (`#efeef3`) y `design-tokens.spec.ts` barre
+  el módulo entero y falla si aparece otro token usado-pero-no-definido. Si añades un token, decláralo
+  en `src/styles/colors.scss` PRIMERO.
 
 ## Añadido 2026-09-04 (spec `changes/results-aow-column-filter`, RAC-T-4/T-5)
 - `onOverviewLink(link)` (`:2375`) is the ONE seam every `OverviewLink` a chart/card/breakdown row
