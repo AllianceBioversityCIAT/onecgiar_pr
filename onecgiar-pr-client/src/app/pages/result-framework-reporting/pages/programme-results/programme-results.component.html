@@ -150,31 +150,35 @@
                 </div>
               </div>
 
-              <!-- Row 2: Category & Funding source -->
+              <!-- Row 2: Category & Funding source — MWB-T-13: both MULTI-select, the same
+                   `app-pr-filter-multiselect` this popover already mounts for Section, inside the
+                   unchanged `.pgr-filter` wrapper so the popover's shell styling still applies. -->
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
                 <div class="pgr-filter" aria-label="Filter by category">
                   <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                     Category
                   </label>
-                  <app-pr-filter-select
+                  <app-pr-filter-multiselect
                     [options]="categorySelectOptions()"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Category"
-                    [ngModel]="selectValue(filter.selectedCategory())"
-                    (changed)="onCategoryChange($event)"></app-pr-filter-select>
+                    countLabel="categories"
+                    [ngModel]="filter.selectedCategories()"
+                    (changed)="filter.selectedCategories.set($event)"></app-pr-filter-multiselect>
                 </div>
                 <div class="pgr-filter" aria-label="Filter by funding source">
                   <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                     Funding source
                   </label>
-                  <app-pr-filter-select
+                  <app-pr-filter-multiselect
                     [options]="originSelectOptions()"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Funding source"
-                    [ngModel]="selectValue(filter.selectedOrigin())"
-                    (changed)="onOriginChange($event)"></app-pr-filter-select>
+                    countLabel="sources"
+                    [ngModel]="filter.selectedOrigins()"
+                    (changed)="filter.selectedOrigins.set($event)"></app-pr-filter-multiselect>
                 </div>
               </div>
 
@@ -184,13 +188,14 @@
                   <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                     Contributing Center
                   </label>
-                  <app-pr-filter-select
+                  <app-pr-filter-multiselect
                     [options]="centerSelectOptions()"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Center"
-                    [ngModel]="selectValue(filter.selectedCenter())"
-                    (changed)="onCenterChange($event)"></app-pr-filter-select>
+                    countLabel="centers"
+                    [ngModel]="filter.selectedCenters()"
+                    (changed)="filter.selectedCenters.set($event)"></app-pr-filter-multiselect>
                 </div>
                 <div class="pgr-filter" aria-label="Filter by created by">
                   <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">

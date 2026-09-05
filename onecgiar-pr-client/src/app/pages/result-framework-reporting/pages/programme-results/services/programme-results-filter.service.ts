@@ -25,9 +25,11 @@ export interface ProgrammeResultsFilterState {
   selectedSections: string[];
   selectedPhase: string | null;
   selectedStatus: string | null;
-  selectedCategory: string | null;
-  selectedOrigin: string | null;
-  selectedCenter: string | null;
+  // @akili-spec changes/my-work-board (MWB-T-13) — the three dimensions the Results tab and the
+  // My results board share are MULTI-value: OR within, AND across. `[]` is "no filter".
+  selectedCategories: string[];
+  selectedOrigins: string[];
+  selectedCenters: string[];
   selectedCreatedBy: string | null;
 }
 
@@ -38,6 +40,43 @@ export interface ProgrammeResultsFilterOptions {
 
 export function normalize(value: unknown): string {
   return value === null || value === undefined ? '' : String(value).trim().toLowerCase();
+}
+
+// @akili-spec changes/my-work-board (MWB-T-13)
+/**
+ * `?category=a,b` → `['a', 'b']` — the comma-separated list shape every multi-value filter param
+ * on this route uses (`?section=` first, now `?category=` / `?origin=` / `?center=` too).
+ *
+ * A SINGLE legacy value hydrates as a one-element array, which is what keeps the Overview →
+ * Results deep links working unchanged (`sp-overview-echarts/results-tab-filter-deeplink`,
+ * `RFD-*`, which emit one exact `category`/`origin`/`center`). Blanks are dropped and duplicates
+ * collapsed so a hand-typed `?origin=W1/W2,,W1/W2` cannot produce two identical chips. Values are
+ * kept RAW (never upper-cased): the predicates are case-insensitive, and the chip must echo what
+ * the URL actually said.
+ *
+ * Lives here rather than on a page component because both hosts of these dimensions — the Results
+ * tab and the My results board — bridge the same params and must not drift apart.
+ */
+export function parseListParam(raw: string | null): string[] {
+  if (!raw) return [];
+  const seen = new Set<string>();
+  for (const value of raw.split(',')) {
+    const trimmed = value.trim();
+    if (trimmed) seen.add(trimmed);
+  }
+  return [...seen];
+}
+
+// @akili-spec changes/my-work-board (MWB-T-13)
+/** `['a', 'b']` → `'a,b'`; an empty selection is `null`, which REMOVES the key under `merge`. */
+export function joinListParam(values: readonly string[]): string | null {
+  return values?.length ? values.join(',') : null;
+}
+
+// @akili-spec changes/my-work-board (MWB-T-13)
+/** Order-sensitive list equality — the guard that keeps the URL hydrate from stomping state. */
+export function sameListParam(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
 /**
@@ -187,9 +226,21 @@ export function matchesProgrammeResultFilters(
   }
 
   if (!options.ignoreStatus && state.selectedStatus && normalize(state.selectedStatus) !== normalize(row?.statusName)) return false;
-  if (!matchesProgrammeResultCategory(row, state.selectedCategory)) return false;
-  if (state.selectedOrigin && normalize(state.selectedOrigin) !== normalize(row?.origin)) return false;
-  if (state.selectedCenter && normalize(state.selectedCenter) !== normalize(row?.center)) return false;
+
+  // @akili-spec changes/my-work-board (MWB-T-13) — Category / Funding source / Center are
+  // multi-select: OR inside a dimension, AND across them (the exact semantics the My results
+  // board already applied board-locally, now the one shared definition). An empty array is "no
+  // filter". Category keeps going through `matchesProgrammeResultCategory` so the `__other__`
+  // bucket stays a selectable VALUE — `['Knowledge product', '__other__']` is RF-KPs OR every
+  // non-RF row, not a contradiction.
+  const categories = state.selectedCategories ?? [];
+  if (categories.length && !categories.some(value => matchesProgrammeResultCategory(row, value))) return false;
+
+  const origins = state.selectedOrigins ?? [];
+  if (origins.length && !origins.some(value => normalize(value) === normalize(row?.origin))) return false;
+
+  const centers = state.selectedCenters ?? [];
+  if (centers.length && !centers.some(value => normalize(value) === normalize(row?.center))) return false;
   // @akili-spec result-framework-reporting/programme-results-created-by-filter
   if (state.selectedCreatedBy && normalize(state.selectedCreatedBy) !== normalize(row?.createdBy)) return false;
 
@@ -244,12 +295,27 @@ export class ProgrammeResultsFilterService {
   readonly selectedPhase = signal<string | null>(null);
   /** SINGLE-select, matched against `row.statusName`. `null` = no status filter. */
   readonly selectedStatus = signal<string | null>(null);
-  /** SINGLE-select, matched against `row.category` (`result_type`). */
-  readonly selectedCategory = signal<string | null>(null);
-  /** SINGLE-select, matched against `row.origin` (`source_name`). */
-  readonly selectedOrigin = signal<string | null>(null);
-  /** SINGLE-select, matched against `row.center` (`lead_center`). */
-  readonly selectedCenter = signal<string | null>(null);
+
+  // @akili-spec changes/my-work-board (MWB-T-13)
+  /**
+   * The three MULTI-select dimensions shared by the Results tab and the My results board.
+   *
+   * OR inside a dimension, AND across them; `[]` is "no filter". They replace the single-value
+   * `selectedCategory` / `selectedOrigin` / `selectedCenter` this service used to expose — the
+   * board had already grown its own array-shaped copy of exactly these three, and one screen
+   * offering "Category: Knowledge product OR Innovation use" while its sibling offered only one
+   * value at a time is the drift this collapses.
+   *
+   * A legacy single-value deep link (`?category=Knowledge%20product`, still emitted by the
+   * Overview cards and heatmap — `RFD-*`) hydrates as a one-element array via `parseListParam`,
+   * so nothing upstream had to change.
+   */
+  /** Matched against `row.category` (`result_type`); `__other__` is a selectable value. */
+  readonly selectedCategories = signal<string[]>([]);
+  /** Matched against `row.origin` (`source_name`). */
+  readonly selectedOrigins = signal<string[]>([]);
+  /** Matched against `row.center` (`lead_center`). */
+  readonly selectedCenters = signal<string[]>([]);
   // @akili-spec result-framework-reporting/programme-results-created-by-filter
   /** SINGLE-select, matched against `row.createdBy` (`create_first_name` + `create_last_name`). */
   readonly selectedCreatedBy = signal<string | null>(null);
@@ -260,9 +326,9 @@ export class ProgrammeResultsFilterService {
     selectedSections: this.selectedSections(),
     selectedPhase: this.selectedPhase(),
     selectedStatus: this.selectedStatus(),
-    selectedCategory: this.selectedCategory(),
-    selectedOrigin: this.selectedOrigin(),
-    selectedCenter: this.selectedCenter(),
+    selectedCategories: this.selectedCategories(),
+    selectedOrigins: this.selectedOrigins(),
+    selectedCenters: this.selectedCenters(),
     selectedCreatedBy: this.selectedCreatedBy()
   }));
 
@@ -289,16 +355,21 @@ export class ProgrammeResultsFilterService {
     if (phase) chips.push({ label: `Phase: ${phase}`, dimension: 'phase', value: phase });
     const status = this.selectedStatus();
     if (status) chips.push({ label: `Status: ${status}`, dimension: 'status', value: status });
-    const category = this.selectedCategory();
-    if (category) {
+    // @akili-spec changes/my-work-board (MWB-T-13) — ONE chip per selected value, in selection
+    // order, for each of the three multi dimensions. `value` stays the raw stored string so
+    // `clearChip()` removes exactly this one and leaves the dimension's other values alone.
+    for (const category of this.selectedCategories()) {
+      if (!category) continue;
       // The `Other` bucket travels as a sentinel (P2-3312) — the chip must read "Other", not it.
       const categoryLabel = category === PROGRAMME_RESULTS_OTHER_CATEGORY ? PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL : category;
       chips.push({ label: `Category: ${categoryLabel}`, dimension: 'category', value: category });
     }
-    const origin = this.selectedOrigin();
-    if (origin) chips.push({ label: `Funding source: ${origin}`, dimension: 'origin', value: origin });
-    const center = this.selectedCenter();
-    if (center) chips.push({ label: `Center: ${center}`, dimension: 'center', value: center });
+    for (const origin of this.selectedOrigins()) {
+      if (origin) chips.push({ label: `Funding source: ${origin}`, dimension: 'origin', value: origin });
+    }
+    for (const center of this.selectedCenters()) {
+      if (center) chips.push({ label: `Center: ${center}`, dimension: 'center', value: center });
+    }
     const createdBy = this.selectedCreatedBy();
     if (createdBy) chips.push({ label: `Created by: ${createdBy}`, dimension: 'createdBy', value: createdBy });
 
@@ -313,8 +384,23 @@ export class ProgrammeResultsFilterService {
 
   /** Adds or removes one section from the multi-select. */
   toggleSection(section: string): void {
-    const current = this.selectedSections();
-    this.selectedSections.set(current.includes(section) ? current.filter(value => value !== section) : [...current, section]);
+    this.selectedSections.update(current => toggleInList(current, section));
+  }
+
+  // @akili-spec changes/my-work-board (MWB-T-13)
+  /** Adds or removes one category from the multi-select. `__other__` toggles like any value. */
+  toggleCategory(category: string): void {
+    this.selectedCategories.update(current => toggleInList(current, category));
+  }
+
+  /** Adds or removes one funding source from the multi-select. */
+  toggleOrigin(origin: string): void {
+    this.selectedOrigins.update(current => toggleInList(current, origin));
+  }
+
+  /** Adds or removes one center from the multi-select. */
+  toggleCenter(center: string): void {
+    this.selectedCenters.update(current => toggleInList(current, center));
   }
 
   /** Sets the status filter; passing the value already selected clears it (pill toggling). */
@@ -343,16 +429,33 @@ export class ProgrammeResultsFilterService {
     this.selectedStatus.set(null);
   }
 
-  clearCategory(): void {
-    this.selectedCategory.set(null);
+  // @akili-spec changes/my-work-board (MWB-T-13) — same shape as `clearSections`: one value, or
+  // the whole dimension when called with no argument (what `clearAll` and the popover use).
+  /** Removes one category, or all of them when called with no argument. */
+  clearCategory(category?: string): void {
+    if (category === undefined) {
+      this.selectedCategories.set([]);
+      return;
+    }
+    this.selectedCategories.update(current => current.filter(value => value !== category));
   }
 
-  clearOrigin(): void {
-    this.selectedOrigin.set(null);
+  /** Removes one funding source, or all of them when called with no argument. */
+  clearOrigin(origin?: string): void {
+    if (origin === undefined) {
+      this.selectedOrigins.set([]);
+      return;
+    }
+    this.selectedOrigins.update(current => current.filter(value => value !== origin));
   }
 
-  clearCenter(): void {
-    this.selectedCenter.set(null);
+  /** Removes one center, or all of them when called with no argument. */
+  clearCenter(center?: string): void {
+    if (center === undefined) {
+      this.selectedCenters.set([]);
+      return;
+    }
+    this.selectedCenters.update(current => current.filter(value => value !== center));
   }
 
   clearCreatedBy(): void {
@@ -374,14 +477,15 @@ export class ProgrammeResultsFilterService {
       case 'status':
         this.clearStatus();
         return;
+      // @akili-spec changes/my-work-board (MWB-T-13) — one value, not the dimension.
       case 'category':
-        this.clearCategory();
+        this.clearCategory(chip.value);
         return;
       case 'origin':
-        this.clearOrigin();
+        this.clearOrigin(chip.value);
         return;
       case 'center':
-        this.clearCenter();
+        this.clearCenter(chip.value);
         return;
       case 'createdBy':
         this.clearCreatedBy();
@@ -397,9 +501,14 @@ export class ProgrammeResultsFilterService {
     this.selectedSections.set([]);
     this.selectedPhase.set(null);
     this.selectedStatus.set(null);
-    this.selectedCategory.set(null);
-    this.selectedOrigin.set(null);
-    this.selectedCenter.set(null);
+    this.selectedCategories.set([]);
+    this.selectedOrigins.set([]);
+    this.selectedCenters.set([]);
     this.selectedCreatedBy.set(null);
   }
+}
+
+/** Shared body of the four `toggle*` methods — add when absent, remove when present. */
+function toggleInList(current: string[], value: string): string[] {
+  return current.includes(value) ? current.filter(item => item !== value) : [...current, value];
 }

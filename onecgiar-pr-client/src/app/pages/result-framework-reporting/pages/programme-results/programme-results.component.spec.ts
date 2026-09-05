@@ -431,6 +431,9 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.filteredRows().map(row => row.code)).toEqual(['5002']);
   }));
 
+  // @akili-spec changes/my-work-board (MWB-T-13) — Category / Funding source / Center are now
+  // multi-select, so the popover writes the signals directly (an array) instead of going through
+  // a single-select `on*Change` sentinel handler. Status stays single-select.
   it('filters by status, category and origin', () => {
     component.onStatusChange('Submitted');
     expect(component.filteredRows().map(row => row.code)).toEqual(['5002', '5003']);
@@ -438,20 +441,52 @@ describe('ProgrammeResultsComponent', () => {
     component.onStatusChange('all'); // the select's empty sentinel clears the filter
     expect(filterService().selectedStatus()).toBeNull();
 
-    component.onCategoryChange('Policy change');
+    filterService().selectedCategories.set(['Policy change']);
     expect(component.filteredRows().map(row => row.code)).toEqual(['5002']);
-    component.onCategoryChange(null);
+    filterService().selectedCategories.set([]);
 
-    component.onOriginChange('W3/Bilaterals');
+    filterService().selectedOrigins.set(['W3/Bilaterals']);
     expect(component.filteredRows().map(row => row.code)).toEqual(['5003']);
-    component.onOriginChange('all');
+    filterService().selectedOrigins.set([]);
 
-    component.onCenterChange('IITA');
+    filterService().selectedCenters.set(['IITA']);
     expect(component.filteredRows().map(row => row.code)).toEqual(['5002']);
 
-    component.onCenterChange('all');
-    expect(filterService().selectedCenter()).toBeNull();
+    filterService().selectedCenters.set([]);
+    expect(filterService().selectedCenters()).toEqual([]);
     expect(component.filteredRows().length).toBe(3);
+  });
+
+  // @akili-spec changes/my-work-board (MWB-T-13)
+  it('ORs several values inside one dimension and ANDs across the three', () => {
+    filterService().selectedCategories.set(['Policy change', 'Innovation development']);
+    expect(component.filteredRows().map(row => row.code)).toEqual(['5001', '5002']);
+
+    filterService().selectedCenters.set(['CIAT']);
+    expect(component.filteredRows().map(row => row.code)).toEqual(['5001']);
+  });
+
+  // @akili-spec changes/my-work-board (MWB-T-13)
+  it('mounts a multiselect for Category, Funding source and Center', () => {
+    const filterBtn = fixture.debugElement.query(By.css('button[aria-label="Filter results"]')).nativeElement as HTMLButtonElement;
+    filterBtn.click();
+    fixture.detectChanges();
+
+    for (const label of ['Filter by category', 'Filter by funding source', 'Filter by center']) {
+      const wrapper = fixture.debugElement.query(By.css(`[aria-label="${label}"]`));
+      expect(wrapper).toBeTruthy();
+      expect(wrapper.query(By.css('app-pr-filter-multiselect'))).toBeTruthy();
+      expect(wrapper.query(By.css('app-pr-filter-select'))).toBeNull();
+    }
+  });
+
+  // @akili-spec changes/my-work-board (MWB-T-13) — a value only the URL knows about must stay
+  // tickable, or the chip says "filtered" while the panel shows nothing selected.
+  it('keeps a selected-but-absent value in the option list', () => {
+    setup(RAW_ITEMS, { center: 'NOWHERE' });
+
+    expect(component.centerSelectOptions().map(option => option.value)).toContain('NOWHERE');
+    expect(component.isFilteredEmpty()).toBe(true);
   });
 
   it('offers only option values that exist in the loaded rows', () => {
@@ -518,7 +553,7 @@ describe('ProgrammeResultsComponent', () => {
       expect(options.some(option => option.value === 'Other output')).toBe(false);
       expect(options.some(option => option.value === 'Impact contribution')).toBe(false);
 
-      component.onCategoryChange(PROGRAMME_RESULTS_OTHER_CATEGORY);
+      filterService().selectedCategories.set([PROGRAMME_RESULTS_OTHER_CATEGORY]);
       expect(component.filteredRows().map(row => row.code)).toEqual(['5004', '5005']);
     });
   });
@@ -542,7 +577,7 @@ describe('ProgrammeResultsComponent', () => {
   }));
 
   it('renders a Center chip when the center filter is set', () => {
-    component.onCenterChange('IITA');
+    filterService().selectedCenters.set(['IITA']);
     fixture.detectChanges();
 
     expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026', 'Center: IITA']);
@@ -553,18 +588,18 @@ describe('ProgrammeResultsComponent', () => {
     component.onSearchInput('maize');
     tick(300);
     component.onStatusChange('Editing');
-    component.onCategoryChange('Policy change');
-    component.onOriginChange('W1/W2');
-    component.onCenterChange('IITA');
+    filterService().selectedCategories.set(['Policy change']);
+    filterService().selectedOrigins.set(['W1/W2']);
+    filterService().selectedCenters.set(['IITA']);
 
     component.clearAll();
     tick(300);
 
     expect(component.searchDraft()).toBe('');
-    expect(filterService().selectedCenter()).toBeNull();
+    expect(filterService().selectedCenters()).toEqual([]);
     expect(filterService().selectedStatus()).toBeNull();
-    expect(filterService().selectedCategory()).toBeNull();
-    expect(filterService().selectedOrigin()).toBeNull();
+    expect(filterService().selectedCategories()).toEqual([]);
+    expect(filterService().selectedOrigins()).toEqual([]);
     expect(filterService().selectedPhase()).toBe('Reporting 2026');
     expect(component.filteredRows().length).toBe(3);
   }));
@@ -588,7 +623,7 @@ describe('ProgrammeResultsComponent', () => {
   });
 
   it('counters respect the other dimensions', () => {
-    component.onOriginChange('W1/W2');
+    filterService().selectedOrigins.set(['W1/W2']);
     expect(component.statusCounts()).toEqual([
       { statusId: 1, statusName: 'Editing', count: 1 },
       { statusId: 3, statusName: 'Submitted', count: 1 }
@@ -603,7 +638,7 @@ describe('ProgrammeResultsComponent', () => {
       { ...RAW_ITEMS[0], id: 4, result_code: '4', status_id: '3', status_name: 'Submitted', lead_center: 'IWMI' }
     ]);
 
-    component.onCenterChange('IITA');
+    filterService().selectedCenters.set(['IITA']);
     expect(component.filteredRows().map(row => row.code)).toEqual(['1', '2']);
     expect(component.statusCounts()).toEqual([
       { statusId: 1, statusName: 'Editing', count: 1 },
@@ -616,7 +651,9 @@ describe('ProgrammeResultsComponent', () => {
     setup(RAW_ITEMS, { phase: 'Reporting 2026', category: 'Policy change', status: 'Submitted', center: 'IITA' });
 
     expect(filterService().state()).toEqual(
-      expect.objectContaining({ selectedStatus: 'Submitted', selectedCategory: 'Policy change', selectedCenter: 'IITA' })
+      // @akili-spec changes/my-work-board (MWB-T-13) — a single legacy value hydrates as a
+      // one-element array, which is exactly what keeps the Overview deep links working.
+      expect.objectContaining({ selectedStatus: 'Submitted', selectedCategories: ['Policy change'], selectedCenters: ['IITA'] })
     );
     expect(filterService().activeChips().map(chip => chip.label)).toEqual([
       'Phase: Reporting 2026',
@@ -650,7 +687,7 @@ describe('ProgrammeResultsComponent', () => {
     setup(RAW_ITEMS, {});
     (router.navigate as jest.Mock).mockClear();
 
-    component.onCategoryChange('Policy change');
+    filterService().selectedCategories.set(['Policy change']);
     fixture.detectChanges();
 
     expect(router.navigate).toHaveBeenCalledTimes(1);
@@ -687,6 +724,77 @@ describe('ProgrammeResultsComponent', () => {
       createdBy: null,
       section: null
     });
+  });
+
+  // ── Multi-value URL bridge (MWB-T-13) ────────────────────────────────────────────────────
+  // @akili-spec changes/my-work-board (MWB-T-13)
+  it('(e2) hydrates `?center=CIAT,IWMI` into two values and two chips', () => {
+    setup(RAW_ITEMS, { phase: 'Reporting 2026', center: 'CIAT,IWMI' });
+
+    expect(filterService().selectedCenters()).toEqual(['CIAT', 'IWMI']);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual([
+      'Phase: Reporting 2026',
+      'Center: CIAT',
+      'Center: IWMI'
+    ]);
+    // Only CIAT exists in the fixture; IWMI simply contributes nothing (OR within the dimension).
+    expect(component.filteredRows().map(row => row.code)).toEqual(['5001']);
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  // @akili-spec changes/my-work-board (MWB-T-13) — the Overview → Results deep-link shape
+  // (`sp-overview-echarts/results-tab-filter-deeplink`, RFD-*) is a SINGLE value and must not
+  // have regressed: one chip, and the table actually narrows.
+  it('(e3) a legacy single `?category=Knowledge product` deep link still filters, as one chip', () => {
+    setup([...RAW_ITEMS, { ...RAW_ITEMS[0], id: 5, result_code: '5005', result_type: 'Knowledge product' }], {
+      phase: 'Reporting 2026',
+      category: 'Knowledge product'
+    });
+
+    expect(filterService().selectedCategories()).toEqual(['Knowledge product']);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual([
+      'Phase: Reporting 2026',
+      'Category: Knowledge product'
+    ]);
+    expect(component.filteredRows().map(row => row.code)).toEqual(['5005']);
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  // @akili-spec changes/my-work-board (MWB-T-13)
+  it('(e4) mirrors a multi selection back as a comma list, with merge + replaceUrl', () => {
+    setup(RAW_ITEMS, {});
+    (router.navigate as jest.Mock).mockClear();
+
+    filterService().selectedCenters.set(['CIAT', 'IITA']);
+    filterService().selectedOrigins.set(['W1/W2']);
+    fixture.detectChanges();
+
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    const [, extras] = (router.navigate as jest.Mock).mock.calls[0];
+    expect(extras.queryParamsHandling).toBe('merge');
+    expect(extras.replaceUrl).toBe(true);
+    expect(extras.queryParams).toEqual({
+      phase: 'Reporting 2026',
+      status: null,
+      category: null,
+      origin: 'W1/W2',
+      center: 'CIAT,IITA',
+      createdBy: null,
+      section: null
+    });
+  });
+
+  // @akili-spec changes/my-work-board (MWB-T-13)
+  it('(e5) emptying a multi-select drops its key from the URL', () => {
+    setup(RAW_ITEMS, { center: 'CIAT,IITA' });
+    (router.navigate as jest.Mock).mockClear();
+
+    filterService().clearCenter();
+    fixture.detectChanges();
+
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    const [, extras] = (router.navigate as jest.Mock).mock.calls[0];
+    expect(extras.queryParams.center).toBeNull();
   });
 
   it('(f) a param pushed through the route updates state and does NOT trigger a mirror navigate (anti-loop)', () => {
@@ -831,7 +939,7 @@ describe('ProgrammeResultsComponent', () => {
     setup(CBF_ITEMS, { phase: 'Reporting 2026', createdBy: 'Angel Jarrin' });
 
     expect(filterService().selectedCreatedBy()).toBe('Angel Jarrin');
-    expect(filterService().selectedCenter()).toBeNull();
+    expect(filterService().selectedCenters()).toEqual([]);
     expect(filterService().activeChips().map(chip => chip.label)).toEqual([
       'Phase: Reporting 2026',
       'Created by: Angel Jarrin'
@@ -965,7 +1073,7 @@ describe('ProgrammeResultsComponent', () => {
     const originCol = component.optionalColumns.find(c => c.key === 'origin');
     expect(originCol?.label).toBe('Funding source');
 
-    component.onOriginChange('W1/W2');
+    filterService().selectedOrigins.set(['W1/W2']);
     fixture.detectChanges();
 
     expect(filterService().activeChips().map(c => c.label)).toContain('Funding source: W1/W2');

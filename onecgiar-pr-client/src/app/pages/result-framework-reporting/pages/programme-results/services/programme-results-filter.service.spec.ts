@@ -8,7 +8,10 @@ import {
   matchesProgrammeResultSearch,
   PROGRAMME_RESULTS_OTHER_CATEGORY,
   ProgrammeResultsFilterService,
-  STANDARD_RF_CATEGORIES
+  STANDARD_RF_CATEGORIES,
+  // @akili-spec changes/my-work-board (MWB-T-13)
+  joinListParam,
+  parseListParam
 } from './programme-results-filter.service';
 import { ProgrammeResultRow } from './programme-results.service';
 
@@ -46,9 +49,9 @@ describe('ProgrammeResultsFilterService', () => {
     expect(service.selectedSections()).toEqual([]);
     expect(service.selectedPhase()).toBeNull();
     expect(service.selectedStatus()).toBeNull();
-    expect(service.selectedCategory()).toBeNull();
-    expect(service.selectedOrigin()).toBeNull();
-    expect(service.selectedCenter()).toBeNull();
+    expect(service.selectedCategories()).toEqual([]);
+    expect(service.selectedOrigins()).toEqual([]);
+    expect(service.selectedCenters()).toEqual([]);
     expect(service.selectedCreatedBy()).toBeNull();
     expect(service.hasActiveFilters()).toBe(false);
     expect(service.activeChips()).toEqual([]);
@@ -128,10 +131,10 @@ describe('ProgrammeResultsFilterService', () => {
       service.selectedStatus.set('Submitted');
       expect(service.filterRows(rows).map(r => r.code)).toEqual(['2', '3']);
 
-      service.selectedOrigin.set('W1/W2');
+      service.selectedOrigins.set(['W1/W2']);
       expect(service.filterRows(rows).map(r => r.code)).toEqual(['3']);
 
-      service.selectedCategory.set('Policy change');
+      service.selectedCategories.set(['Policy change']);
       expect(service.filterRows(rows)).toEqual([]);
     });
 
@@ -142,11 +145,66 @@ describe('ProgrammeResultsFilterService', () => {
         row({ code: '3', center: '' })
       ];
 
-      service.selectedCenter.set('IITA');
+      service.selectedCenters.set(['IITA']);
       expect(service.filterRows(centerRows).map(r => r.code)).toEqual(['1']);
 
-      service.selectedCenter.set('IWMI');
+      service.selectedCenters.set(['IWMI']);
       expect(service.filterRows(centerRows).map(r => r.code)).toEqual(['2']);
+    });
+
+    // @akili-spec changes/my-work-board (MWB-T-13) — the three dimensions the Results tab shares
+    // with the My results board are multi-value: OR inside one, AND across them.
+    describe('multi-select Category / Funding source / Center (MWB-T-13)', () => {
+      /** Values are deliberately shared ACROSS dimensions: '4' matches the selected category but
+       *  not the selected center, '3' the reverse — so an AND bug cannot pass by accident. Row
+       *  '5' is the non-RF row that gives the `__other__` bucket something to select. */
+      const multiRows = [
+        row({ code: '1', category: 'Knowledge product', origin: 'W1/W2', center: 'CIAT' }),
+        row({ code: '2', category: 'Innovation use', origin: 'W3/Bilaterals', center: 'IWMI' }),
+        row({ code: '3', category: 'Policy change', origin: 'W1/W2', center: 'CIAT' }),
+        row({ code: '4', category: 'Knowledge product', origin: 'W1/W2', center: 'ILRI' }),
+        row({ code: '5', category: 'Other output', origin: 'Pooled', center: 'IWMI' })
+      ];
+
+      it('ORs the values inside the Category dimension', () => {
+        service.selectedCategories.set(['Knowledge product', 'Innovation use']);
+        expect(service.filterRows(multiRows).map(r => r.code)).toEqual(['1', '2', '4']);
+      });
+
+      it('ORs the values inside the Funding source dimension', () => {
+        service.selectedOrigins.set(['W3/Bilaterals', 'Pooled']);
+        expect(service.filterRows(multiRows).map(r => r.code)).toEqual(['2', '5']);
+      });
+
+      it('ORs the values inside the Center dimension, case-insensitively', () => {
+        service.selectedCenters.set(['ciat', 'ILRI']);
+        expect(service.filterRows(multiRows).map(r => r.code)).toEqual(['1', '3', '4']);
+      });
+
+      it('ANDs across the three dimensions', () => {
+        service.selectedCategories.set(['Knowledge product', 'Policy change']);
+        service.selectedCenters.set(['CIAT']);
+        // '4' is a Knowledge product but at ILRI; '3' is at CIAT and a Policy change — both
+        // dimensions must hold at once.
+        expect(service.filterRows(multiRows).map(r => r.code)).toEqual(['1', '3']);
+
+        service.selectedOrigins.set(['W1/W2']);
+        expect(service.filterRows(multiRows).map(r => r.code)).toEqual(['1', '3']);
+
+        service.selectedOrigins.set(['W3/Bilaterals']);
+        expect(service.filterRows(multiRows)).toEqual([]);
+      });
+
+      it('keeps the Other bucket a selectable VALUE alongside a real category', () => {
+        service.selectedCategories.set(['Innovation use', PROGRAMME_RESULTS_OTHER_CATEGORY]);
+        // '2' is the RF value, '5' (`Other output`) is the non-RF row the bucket stands for.
+        expect(service.filterRows(multiRows).map(r => r.code)).toEqual(['2', '5']);
+      });
+
+      it('an unknown value simply matches nothing instead of throwing', () => {
+        service.selectedCenters.set(['NOWHERE']);
+        expect(service.filterRows(multiRows)).toEqual([]);
+      });
     });
 
     it('filters by phase, matching row phaseName, phaseYear, or versionId', () => {
@@ -165,15 +223,15 @@ describe('ProgrammeResultsFilterService', () => {
     it('combines every dimension with AND', () => {
       service.searchText.set('a');
       service.selectedStatus.set('Editing');
-      service.selectedCategory.set('Innovation development');
-      service.selectedOrigin.set('W1/W2');
+      service.selectedCategories.set(['Innovation development']);
+      service.selectedOrigins.set(['W1/W2']);
 
       expect(service.filterRows(rows).map(r => r.code)).toEqual(['1']);
     });
 
     it('ignores the status dimension when asked, so the counters can stay honest', () => {
       service.selectedStatus.set('Editing');
-      service.selectedOrigin.set('W1/W2');
+      service.selectedOrigins.set(['W1/W2']);
 
       expect(service.filterRows(rows).map(r => r.code)).toEqual(['1']);
       expect(service.filterRows(rows, { ignoreStatus: true }).map(r => r.code)).toEqual(['1', '3']);
@@ -203,9 +261,9 @@ describe('ProgrammeResultsFilterService', () => {
       service.selectedSections.set(['AoW1', 'AoW2']);
       service.selectedPhase.set('Phase 2026');
       service.selectedStatus.set('Submitted');
-      service.selectedCategory.set('Policy change');
-      service.selectedOrigin.set('W1/W2');
-      service.selectedCenter.set('IITA');
+      service.selectedCategories.set(['Policy change']);
+      service.selectedOrigins.set(['W1/W2']);
+      service.selectedCenters.set(['IITA']);
       service.selectedCreatedBy.set('Angel Jarrin');
 
       expect(service.activeChips()).toEqual([
@@ -220,6 +278,22 @@ describe('ProgrammeResultsFilterService', () => {
         { label: 'Created by: Angel Jarrin', dimension: 'createdBy', value: 'Angel Jarrin' }
       ]);
       expect(service.hasActiveFilters()).toBe(true);
+    });
+
+    // @akili-spec changes/my-work-board (MWB-T-13)
+    it('builds ONE chip per value of each multi dimension, grouped in toolbar order', () => {
+      service.selectedCategories.set(['Knowledge product', PROGRAMME_RESULTS_OTHER_CATEGORY]);
+      service.selectedOrigins.set(['W1/W2', 'W3/Bilaterals']);
+      service.selectedCenters.set(['CIAT', 'IWMI']);
+
+      expect(service.activeChips()).toEqual([
+        { label: 'Category: Knowledge product', dimension: 'category', value: 'Knowledge product' },
+        { label: 'Category: Other', dimension: 'category', value: PROGRAMME_RESULTS_OTHER_CATEGORY },
+        { label: 'Funding source: W1/W2', dimension: 'origin', value: 'W1/W2' },
+        { label: 'Funding source: W3/Bilaterals', dimension: 'origin', value: 'W3/Bilaterals' },
+        { label: 'Center: CIAT', dimension: 'center', value: 'CIAT' },
+        { label: 'Center: IWMI', dimension: 'center', value: 'IWMI' }
+      ]);
     });
 
     it('trims the search chip and skips a whitespace-only search', () => {
@@ -238,9 +312,9 @@ describe('ProgrammeResultsFilterService', () => {
       service.selectedSections.set(['AoW1', 'AoW2']);
       service.selectedPhase.set('Phase 2026');
       service.selectedStatus.set('Submitted');
-      service.selectedCategory.set('Policy change');
-      service.selectedOrigin.set('W1/W2');
-      service.selectedCenter.set('IITA');
+      service.selectedCategories.set(['Policy change']);
+      service.selectedOrigins.set(['W1/W2']);
+      service.selectedCenters.set(['IITA']);
       service.selectedCreatedBy.set('Angel Jarrin');
     });
 
@@ -255,13 +329,13 @@ describe('ProgrammeResultsFilterService', () => {
       expect(service.selectedStatus()).toBeNull();
 
       service.clearCategory();
-      expect(service.selectedCategory()).toBeNull();
+      expect(service.selectedCategories()).toEqual([]);
 
       service.clearOrigin();
-      expect(service.selectedOrigin()).toBeNull();
+      expect(service.selectedOrigins()).toEqual([]);
 
       service.clearCenter();
-      expect(service.selectedCenter()).toBeNull();
+      expect(service.selectedCenters()).toEqual([]);
 
       service.clearCreatedBy();
       expect(service.selectedCreatedBy()).toBeNull();
@@ -275,6 +349,44 @@ describe('ProgrammeResultsFilterService', () => {
 
       service.clearSections();
       expect(service.selectedSections()).toEqual([]);
+    });
+
+    // @akili-spec changes/my-work-board (MWB-T-13) — same `clearSections` shape on the three.
+    it('clears one category / origin / center or the whole dimension', () => {
+      service.selectedCategories.set(['Policy change', 'Knowledge product']);
+      service.selectedOrigins.set(['W1/W2', 'W3/Bilaterals']);
+      service.selectedCenters.set(['IITA', 'CIAT']);
+
+      service.clearCategory('Policy change');
+      expect(service.selectedCategories()).toEqual(['Knowledge product']);
+      service.clearOrigin('W3/Bilaterals');
+      expect(service.selectedOrigins()).toEqual(['W1/W2']);
+      service.clearCenter('IITA');
+      expect(service.selectedCenters()).toEqual(['CIAT']);
+
+      service.clearCategory();
+      service.clearOrigin();
+      service.clearCenter();
+      expect(service.selectedCategories()).toEqual([]);
+      expect(service.selectedOrigins()).toEqual([]);
+      expect(service.selectedCenters()).toEqual([]);
+    });
+
+    // @akili-spec changes/my-work-board (MWB-T-13)
+    it('clearChip() removes only the chip’s own value, leaving its dimension’s others', () => {
+      service.selectedCategories.set(['Policy change', 'Knowledge product']);
+      service.selectedCenters.set(['IITA', 'CIAT']);
+
+      const chips = service.activeChips();
+      service.clearChip(chips.find(chip => chip.dimension === 'category' && chip.value === 'Policy change')!);
+      expect(service.selectedCategories()).toEqual(['Knowledge product']);
+
+      service.clearChip(chips.find(chip => chip.dimension === 'center' && chip.value === 'CIAT')!);
+      expect(service.selectedCenters()).toEqual(['IITA']);
+
+      // The other dimensions are untouched by either removal.
+      expect(service.selectedOrigins()).toEqual(['W1/W2']);
+      expect(service.selectedStatus()).toBe('Submitted');
     });
 
     it('clearChip() removes exactly the filter behind the chip', () => {
@@ -292,7 +404,7 @@ describe('ProgrammeResultsFilterService', () => {
       expect(service.selectedPhase()).toBeNull();
 
       service.clearChip(chips.find(chip => chip.dimension === 'center')!);
-      expect(service.selectedCenter()).toBeNull();
+      expect(service.selectedCenters()).toEqual([]);
 
       service.clearChip(chips.find(chip => chip.dimension === 'createdBy')!);
       expect(service.selectedCreatedBy()).toBeNull();
@@ -312,11 +424,27 @@ describe('ProgrammeResultsFilterService', () => {
       expect(service.selectedSections()).toEqual([]);
       expect(service.selectedPhase()).toBeNull();
       expect(service.selectedStatus()).toBeNull();
-      expect(service.selectedCategory()).toBeNull();
-      expect(service.selectedOrigin()).toBeNull();
-      expect(service.selectedCenter()).toBeNull();
+      expect(service.selectedCategories()).toEqual([]);
+      expect(service.selectedOrigins()).toEqual([]);
+      expect(service.selectedCenters()).toEqual([]);
       expect(service.selectedCreatedBy()).toBeNull();
       expect(service.hasActiveFilters()).toBe(false);
+      expect(service.activeChips()).toEqual([]);
+    });
+
+    // @akili-spec changes/my-work-board (MWB-T-13)
+    it('clearAll() empties a MULTI-valued Category / Funding source / Center in one go', () => {
+      service.selectedCategories.set(['Policy change', 'Knowledge product']);
+      service.selectedOrigins.set(['W1/W2', 'W3/Bilaterals']);
+      service.selectedCenters.set(['IITA', 'CIAT']);
+      // search + 2 sections + phase + status + 2 categories + 2 origins + 2 centers + createdBy
+      expect(service.activeChips()).toHaveLength(12);
+
+      service.clearAll();
+
+      expect(service.selectedCategories()).toEqual([]);
+      expect(service.selectedOrigins()).toEqual([]);
+      expect(service.selectedCenters()).toEqual([]);
       expect(service.activeChips()).toEqual([]);
     });
   });
@@ -342,6 +470,55 @@ describe('ProgrammeResultsFilterService', () => {
 
       service.toggleStatus('Editing');
       expect(service.selectedStatus()).toBeNull();
+    });
+
+    // @akili-spec changes/my-work-board (MWB-T-13)
+    it('toggleCategory/Origin/Center add then remove a single value', () => {
+      service.toggleCategory('Knowledge product');
+      service.toggleCategory(PROGRAMME_RESULTS_OTHER_CATEGORY);
+      expect(service.selectedCategories()).toEqual(['Knowledge product', PROGRAMME_RESULTS_OTHER_CATEGORY]);
+      service.toggleCategory('Knowledge product');
+      expect(service.selectedCategories()).toEqual([PROGRAMME_RESULTS_OTHER_CATEGORY]);
+
+      service.toggleOrigin('W1/W2');
+      expect(service.selectedOrigins()).toEqual(['W1/W2']);
+      service.toggleOrigin('W1/W2');
+      expect(service.selectedOrigins()).toEqual([]);
+
+      service.toggleCenter('CIAT');
+      expect(service.selectedCenters()).toEqual(['CIAT']);
+      service.toggleCenter('CIAT');
+      expect(service.selectedCenters()).toEqual([]);
+    });
+  });
+
+  // @akili-spec changes/my-work-board (MWB-T-13) — the URL codec both hosts of these three
+  // dimensions share. The legacy case is the load-bearing one: the Overview's heatmap and card
+  // links still emit ONE exact value (`RFD-*`).
+  describe('parseListParam() / joinListParam()', () => {
+    it('hydrates a single legacy value as a one-element array', () => {
+      expect(parseListParam('Knowledge product')).toEqual(['Knowledge product']);
+    });
+
+    it('splits a comma list, trimming blanks and collapsing duplicates', () => {
+      expect(parseListParam('CIAT,IWMI')).toEqual(['CIAT', 'IWMI']);
+      expect(parseListParam('W1/W2, ,W1/W2')).toEqual(['W1/W2']);
+    });
+
+    it('treats an absent or empty param as no filter', () => {
+      expect(parseListParam(null)).toEqual([]);
+      expect(parseListParam('')).toEqual([]);
+    });
+
+    it('joins back to the same string, and to null when nothing is selected', () => {
+      expect(joinListParam(['CIAT', 'IWMI'])).toBe('CIAT,IWMI');
+      expect(joinListParam(['Knowledge product'])).toBe('Knowledge product');
+      expect(joinListParam([])).toBeNull();
+    });
+
+    it('round-trips a selection through the URL unchanged', () => {
+      const selection = ['Knowledge product', PROGRAMME_RESULTS_OTHER_CATEGORY];
+      expect(parseListParam(joinListParam(selection))).toEqual(selection);
     });
   });
 
@@ -378,7 +555,7 @@ describe('ProgrammeResultsFilterService', () => {
         row({ code: '3', statusName: 'Submitted', origin: 'W3/Bilaterals' })
       ];
       service.selectedStatus.set('Editing');
-      service.selectedOrigin.set('W1/W2');
+      service.selectedOrigins.set(['W1/W2']);
 
       expect(buildStatusCounts(service.filterRows(rows, { ignoreStatus: true }))).toEqual([
         { statusId: 1, statusName: 'Editing', count: 1 },
@@ -466,18 +643,18 @@ describe('ProgrammeResultsFilterService', () => {
         row({ code: '2', category: 'Other output' }),
         row({ code: '3', category: 'Capacity change' })
       ];
-      service.selectedCategory.set(PROGRAMME_RESULTS_OTHER_CATEGORY);
+      service.selectedCategories.set([PROGRAMME_RESULTS_OTHER_CATEGORY]);
 
       expect(service.filterRows(rows).map(r => r.code)).toEqual(['2', '3']);
       expect(matchesProgrammeResultFilters(rows[0], service.state())).toBe(false);
     });
 
     it('labels the bucket chip "Other" instead of leaking the sentinel', () => {
-      service.selectedCategory.set(PROGRAMME_RESULTS_OTHER_CATEGORY);
+      service.selectedCategories.set([PROGRAMME_RESULTS_OTHER_CATEGORY]);
 
       expect(service.activeChips()).toEqual([{ label: 'Category: Other', dimension: 'category', value: PROGRAMME_RESULTS_OTHER_CATEGORY }]);
       service.clearChip(service.activeChips()[0]);
-      expect(service.selectedCategory()).toBeNull();
+      expect(service.selectedCategories()).toEqual([]);
     });
   });
 

@@ -53,7 +53,13 @@ import {
   ProgrammeResultsFilterService,
   buildCategoryFilterOptions,
   buildStatusCounts,
-  normalize
+  normalize,
+  // @akili-spec changes/my-work-board (MWB-T-13) — the shared comma-list URL codec.
+  joinListParam,
+  parseListParam,
+  sameListParam,
+  PROGRAMME_RESULTS_OTHER_CATEGORY,
+  PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL
 } from './services/programme-results-filter.service';
 import { PROGRAMME_RESULTS_FIXED_SECTION_LABELS, sectionLabel } from './services/programme-results-section-labels';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from './services/programme-results-query-params';
@@ -170,9 +176,54 @@ function toSectionValues(param: string | null): string[] {
     .filter(Boolean);
 }
 
-/** Order-sensitive equality — enough to guard the hydrate write and keep the anti-loop intact. */
-function sameSectionValues(a: string[], b: string[]): boolean {
-  return a.length === b.length && a.every((value, index) => value === b[index]);
+// @akili-spec changes/my-work-board (MWB-T-13)
+/** One option of a filter dropdown. */
+interface ProgrammeResultsFilterOption {
+  value: string;
+  label: string;
+}
+
+// @akili-spec changes/my-work-board (MWB-T-13)
+/**
+ * Keeps every SELECTED value tickable even when no loaded row carries it.
+ *
+ * The option lists derive from the rows, so a value that arrived on the URL (`?center=NOWHERE`,
+ * or an Overview deep link into a category this phase has none of) would otherwise be absent from
+ * the panel: the chip would say the table is filtered while the multiselect showed nothing ticked
+ * and the user could not untick it there. Appended after the row-derived options, in selection
+ * order. Single-select had the same need and solved it inside `buildCategoryFilterOptions`; with
+ * three multi dimensions it is one helper for all of them.
+ */
+function withSelectedOptions(
+  options: ProgrammeResultsFilterOption[],
+  selected: readonly string[],
+  labelOf: (value: string) => string
+): ProgrammeResultsFilterOption[] {
+  const missing = selected.filter(value => !options.some(option => option.value === value));
+  return missing.length ? [...options, ...missing.map(value => ({ value, label: labelOf(value) }))] : options;
+}
+
+// @akili-spec changes/my-work-board (MWB-T-13, carrying MWB-T-14's finding)
+/**
+ * Value equality for a multiselect's `[options]` array — the `equal` of the three computeds below.
+ *
+ * `app-pr-filter-multiselect` has no overlay: its panel is a child of the trigger and is shown by
+ * `.field:focus-within`, and its rows are `*ngFor`-ed over the `[options]` input verbatim. A new
+ * ARRAY INSTANCE therefore destroys and rebuilds every row, detaching the checkbox that currently
+ * holds focus — focus falls to `<body>`, `:focus-within` goes false and the panel snaps shut after
+ * a single tick. `withSelectedOptions()` above reads the selection, so without this guard ticking
+ * an option would invalidate the computed and rebuild an identical list, reproducing exactly the
+ * defect the board hit and fixed in `MWB-T-14`. Angular keeps the PREVIOUS array whenever this
+ * returns true, so the identity only changes when the option SET genuinely does.
+ */
+function sameFilterOptions(a: ProgrammeResultsFilterOption[], b: ProgrammeResultsFilterOption[]): boolean {
+  return a.length === b.length && a.every((option, index) => option.value === b[index].value && option.label === b[index].label);
+}
+
+// @akili-spec changes/my-work-board (MWB-T-13)
+/** The `Other` bucket travels as a sentinel (P2-3312) — it must never be shown raw. */
+function categoryOptionLabel(value: string): string {
+  return value === PROGRAMME_RESULTS_OTHER_CATEGORY ? PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL : value;
 }
 
 /** `dd MMM yyyy`, the format the other three results tables already use. '' stays ''. */
@@ -768,9 +819,31 @@ export class ProgrammeResultsComponent implements OnDestroy {
    * `Impact contribution`, which is what end users asked us to stop doing. See
    * `buildCategoryFilterOptions` for why the selected value is threaded in.
    */
-  readonly categorySelectOptions = computed(() => buildCategoryFilterOptions(this.data.categoryOptions(), this.filter.selectedCategory()));
-  readonly originSelectOptions = computed(() => this.data.originOptions().map(value => ({ value, label: value })));
-  readonly centerSelectOptions = computed(() => this.data.centerOptions().map(value => ({ value, label: value })));
+  // @akili-spec changes/my-work-board (MWB-T-13) — `null`, not a selected value:
+  // `buildCategoryFilterOptions` takes a SINGLE value, and the multi-select's whole selection is
+  // topped up by `withSelectedOptions` below, which handles all of them rather than just the first.
+  readonly categorySelectOptions = computed(
+    () => withSelectedOptions(buildCategoryFilterOptions(this.data.categoryOptions(), null), this.filter.selectedCategories(), categoryOptionLabel),
+    { equal: sameFilterOptions }
+  );
+  readonly originSelectOptions = computed(
+    () =>
+      withSelectedOptions(
+        this.data.originOptions().map(value => ({ value, label: value })),
+        this.filter.selectedOrigins(),
+        value => value
+      ),
+    { equal: sameFilterOptions }
+  );
+  readonly centerSelectOptions = computed(
+    () =>
+      withSelectedOptions(
+        this.data.centerOptions().map(value => ({ value, label: value })),
+        this.filter.selectedCenters(),
+        value => value
+      ),
+    { equal: sameFilterOptions }
+  );
   readonly createdBySelectOptions = computed(() => this.data.createdByOptions().map(value => ({ value, label: value })));
 
   /**
@@ -994,9 +1067,13 @@ export class ProgrammeResultsComponent implements OnDestroy {
         const urlPhase = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase);
         const phase = urlPhase !== null ? this.toFilterValue(urlPhase) : defPhase;
         const status = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.status);
-        const category = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.category);
-        const origin = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin);
-        const center = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.center);
+        // @akili-spec changes/my-work-board (MWB-T-13) — the three multi dimensions travel as
+        // comma-separated lists. Splitting on `,` is the whole decode (the router has already
+        // percent-decoded each value), and a legacy SINGLE value from an Overview deep link
+        // (`?category=Knowledge product`, `RFD-*`) simply yields a one-element array.
+        const categories = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.category));
+        const origins = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin));
+        const centers = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.center));
         const createdBy = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy);
         // @akili-spec changes/results-aow-column-filter (RAC-T-3) — multi-value, comma list.
         // Raw values, not upper-cased: `?section=aow01` must still show `aow01` in its chip
@@ -1006,11 +1083,13 @@ export class ProgrammeResultsComponent implements OnDestroy {
 
         if (phase !== this.filter.selectedPhase()) this.filter.selectedPhase.set(phase);
         if (status !== this.filter.selectedStatus()) this.filter.selectedStatus.set(status);
-        if (category !== this.filter.selectedCategory()) this.filter.selectedCategory.set(category);
-        if (origin !== this.filter.selectedOrigin()) this.filter.selectedOrigin.set(origin);
-        if (center !== this.filter.selectedCenter()) this.filter.selectedCenter.set(center);
+        // An unknown value is applied as-is: the predicates are pure and case-insensitive, so it
+        // simply matches nothing and stays visible as a chip the user can remove.
+        if (!sameListParam(categories, this.filter.selectedCategories())) this.filter.selectedCategories.set(categories);
+        if (!sameListParam(origins, this.filter.selectedOrigins())) this.filter.selectedOrigins.set(origins);
+        if (!sameListParam(centers, this.filter.selectedCenters())) this.filter.selectedCenters.set(centers);
         if (createdBy !== this.filter.selectedCreatedBy()) this.filter.selectedCreatedBy.set(createdBy);
-        if (!sameSectionValues(sections, this.filter.selectedSections())) this.filter.selectedSections.set(sections);
+        if (!sameListParam(sections, this.filter.selectedSections())) this.filter.selectedSections.set(sections);
       });
     });
 
@@ -1023,9 +1102,12 @@ export class ProgrammeResultsComponent implements OnDestroy {
     effect(() => {
       const phase = this.filter.selectedPhase();
       const status = this.filter.selectedStatus();
-      const category = this.filter.selectedCategory();
-      const origin = this.filter.selectedOrigin();
-      const center = this.filter.selectedCenter();
+      // @akili-spec changes/my-work-board (MWB-T-13) — `null` when nothing is selected: under
+      // `queryParamsHandling: 'merge'` that is what REMOVES the key, so an emptied multi-select
+      // leaves no `?category=` behind.
+      const category = joinListParam(this.filter.selectedCategories());
+      const origin = joinListParam(this.filter.selectedOrigins());
+      const center = joinListParam(this.filter.selectedCenters());
       const createdBy = this.filter.selectedCreatedBy();
       // @akili-spec changes/results-aow-column-filter (RAC-T-3) — comma list, `null` (not '')
       // when empty so the param drops from the URL entirely on Clear filters (RAC-R-3).
@@ -1094,17 +1176,11 @@ export class ProgrammeResultsComponent implements OnDestroy {
     this.filter.selectedStatus.set(this.toFilterValue(value));
   }
 
-  onCategoryChange(value: unknown): void {
-    this.filter.selectedCategory.set(this.toFilterValue(value));
-  }
-
-  onOriginChange(value: unknown): void {
-    this.filter.selectedOrigin.set(this.toFilterValue(value));
-  }
-
-  onCenterChange(value: unknown): void {
-    this.filter.selectedCenter.set(this.toFilterValue(value));
-  }
+  // @akili-spec changes/my-work-board (MWB-T-13) — Category / Funding source / Center are
+  // multi-select now; the template writes `filter.selectedCategories.set($event)` straight from
+  // `app-pr-filter-multiselect`'s `(changed)` (an array), exactly like the Section control above
+  // it and like the My results board. No `toFilterValue` sentinel is involved: the multiselect's
+  // "nothing picked" is an empty array, not `'all'`.
 
   // @akili-spec result-framework-reporting/programme-results-created-by-filter
   onCreatedByChange(value: unknown): void {
