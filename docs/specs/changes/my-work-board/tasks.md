@@ -6,7 +6,7 @@
 - **Linked spec:** `./requirements.md` (`MWB-R-1`…`R-11`, `MWB-AC-1`…`AC-9`) · `./design.md` (`MWB-DD-1`…`DD-13`, §5 maps, §6.3 tokens, §6.6 phase) · `./judgment.md` (round 1 applied)
 - **Owner / driver:** session Leader (`/akili-execute`)
 - **Status:** `approved` (Phase 3 auto-approved, pre-approved mode, 2026-09-04; rewritten after Judgment Day round 1)
-- **Depth:** Standard · **Budget:** 6 tasks / ~1,350 LOC / ≤ 1 Reviewer round per task (`design.md` §1) · **+ `MWB-T-7` (~120), `MWB-T-8` (~180), `MWB-T-9` (~320), `MWB-T-10` (~200), `MWB-T-11` (~260), `MWB-T-12` (~260), `MWB-T-13` (~350) added 2026-09-05 on explicit user request — budget 13 / ~3,040**
+- **Depth:** Standard · **Budget:** 6 tasks / ~1,350 LOC / ≤ 1 Reviewer round per task (`design.md` §1) · **+ `MWB-T-7` (~120), `MWB-T-8` (~180), `MWB-T-9` (~320), `MWB-T-10` (~200), `MWB-T-11` (~260), `MWB-T-12` (~260), `MWB-T-13` (~350), `MWB-T-14` (~220) added 2026-09-05 on explicit user request — budget 14 / ~3,260**
 - **YOLO limits (inherited, `feedback-pragmatic-akili-execution`):** pre-approved gates logged as `auto-approved (pre-approved mode)`; one Reviewer round per task, a second FAIL escalates; verification = targeted `npx jest <path>` only, never a full client run; pointer briefs; workers never `git add -A` (shared worktree); close each worker right after its task commits (Reviewers via `TaskStop`); a plain-language progress line at every task boundary.
 - **Branch:** `qa-development-2026` (shared — explicit-path diffs and commits; `git log --oneline -3` + `git status --short` before every commit).
 
@@ -374,3 +374,23 @@ Coverage stays above server 5/20/35/40 and client 50/60/60/60; targeted suites o
 - **Definition of done:**
   - [ ] Jest + tsc + lint + CT green; real-browser check on both tabs (Leader)
   - [ ] Commit `✨ feat(programme-results) [SPEC:changes/my-work-board]: multi-select Category, Funding source and Center filters shared by Results and My results`
+
+### `MWB-T-14` — Filter chips overflow and multiselect closing on every selection `[ ]`
+
+- **Type:** `client` · **Added 2026-09-05 by user request** (two screenshots: chips row grown to three lines with 15 active values; the Center multiselect closes after each tick — "si quiero seleccionar varias cosas se cierra, revisa bien el UX UI de esto").
+- **Description:** (1) **Chip aggregation**: when a multi dimension has **3 or more** selected values, render ONE summary chip for that dimension (`Center: 8 centers ×`, `Category: 3 categories ×`; × clears the whole dimension; clicking the chip label opens the Filter popover with that control focused); with 1–2 values keep individual chips. The Filter badge keeps counting individual values. Target: the chips row stays on one line in the common case; if it still wraps, allow at most two lines and put the remaining chips behind a `+N more` chip that expands inline (volatile). Keep `Clear filters`. (2) **Multiselect stays open while ticking**: diagnose in the real browser why `app-pr-filter-multiselect` closes on each selection inside the board popover — candidates: the popover's document-click handler treating the option click as outside, the option list `computed` (`withSelectedOptions`) returning a new array on every tick so the control remounts/re-inits, or the control's own close-on-select — compare with the Results tab's Areas of Work multiselect (which stays open). Fix on the board side (stable option arrays via memoisation by value, `@if` structure that does not remount the control, popover outside-click guard that treats the control's panel as inside); do NOT modify the shared `pr-filter-multiselect` (another session is editing shared filter components) unless the defect is provably in the control and you STOP and report it. (3) Popover: keep the popover open while interacting with any control inside it; Escape closes; clicking outside closes.
+- **Implements:** user request; `MWB-R-9` unchanged (no body overflow; chips row bounded); NFR Accessibility (summary chip is a `<button>` with `aria-label` naming the dimension and count; × has its own label).
+- **Files (expected):** `my-work-board/my-work-board.component.{ts,html,scss,spec.ts}`, `services/my-work-board.service.ts` if the aggregation needs a helper; `my-work-board.cy.ts` (one case: 8 centers + 3 categories selected → chips row height ≤ 2 lines, no body overflow; tick two options in the Center multiselect → panel still open after the first tick).
+- **Depends on:** `MWB-T-12` · **Blocks:** —
+- **Estimate:** M (~220 LOC)
+- **Skills:** `angular-developer` · `onecgiar-pr-client:spartan` · `tdd` · `frontend-design`
+- **Tests:** page spec — 3 centers → one `Center: 3 centers` chip whose × empties `selectedCenters`; 2 centers → two chips; badge = individual count (e.g. 3 + 1 phase = 4); `+N more` appears only when the row would exceed two lines (jsdom cannot measure → CT); clicking the summary chip opens the popover; multiselect panel open state survives a selection (CT: tick → `aria-expanded`/panel present → tick again → still present).
+- **Verification:**
+  ```bash
+  cd onecgiar-pr-client && npx jest src/app/pages/result-framework-reporting/pages/my-work-board --silent --reporters=summary --no-coverage && npx tsc --noEmit -p tsconfig.app.json && npx ng lint --quiet && CT_DEV_SERVER_PORT=8090 npx cypress run --component --spec src/app/pages/result-framework-reporting/pages/my-work-board/my-work-board.cy.ts
+  ```
+  - **FAIL input:** aggregation threshold applied to the badge too (badge drops to per-dimension count) → badge test fails; a `computed` returning a fresh array each tick → CT "panel still open" fails.
+  - **Disqualifier:** "it stays open in jsdom" is not evidence — only the CT click sequence and the real-browser check are.
+- **Definition of done:**
+  - [ ] Jest + tsc + lint + CT green; real-browser check (Leader): 8 centers + 3 categories → one or two lines of chips; ticking three options without the panel closing
+  - [ ] Commit `🔧 fix(my-work-board) [SPEC:changes/my-work-board]: aggregate filter chips per dimension and keep the multiselect open while ticking`
