@@ -654,6 +654,26 @@
         Only pending
       </button>
 
+      <!-- Favorites-only switch, hidden in the By-AOW compact view (no stars rendered there). @akili-spec changes/reporting-favorite-indicators -->
+      @if (!compactFilters()) {
+        <button
+          type="button"
+          role="switch"
+          [attr.aria-checked]="favoritesOnly()"
+          data-testid="favorites-switch"
+          class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] font-medium transition-colors"
+          [class]="
+            favoritesOnly()
+              ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
+              : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]'
+          "
+          (click)="favoritesOnlyChange.emit(!favoritesOnly())">
+          <span class="material-icons-round text-[16px]" aria-hidden="true">{{ favoritesOnly() ? 'star' : 'star_outline' }}</span>
+          Favorites
+          <span class="tabular-nums text-[12px] text-[var(--pr-text-subtle)]">({{ favoritesCount() }})</span>
+        </button>
+      }
+
       <!-- Sort tablist directly in top bar -->
       <div
         role="tablist"

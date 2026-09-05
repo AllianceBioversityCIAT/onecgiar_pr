@@ -178,6 +178,14 @@ export class ReportingProgramBandComponent {
    * Same visibility as `onlyPending`. @akili-spec changes/mass-reporting-flow
    */
   readonly burndownSort = input<'catalogue' | 'remaining'>('catalogue');
+  /**
+   * Favorites-only switch (RFI-R-2.1): filters the Reporting table down to the programme's pinned
+   * indicators. Hidden in the By-AOW compact view (`compactFilters`), where no stars render
+   * (RFI-R-2.2). @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly favoritesOnly = input<boolean>(false);
+  /** Live count of the programme's favorites, rendered as `Favorites (N)`. @akili-spec changes/reporting-favorite-indicators */
+  readonly favoritesCount = input<number>(0);
   /** By-AOW mode: the active AoW + flat options for the single-select switcher (a multiselect is meaningless when exactly one AoW renders). @akili-spec changes/reporting-entry-hub */
   readonly activeAowCode = input<string | null>(null);
   readonly aowSingleOptions = input<{ label: string; value: string }[]>([]);
@@ -221,6 +229,8 @@ export class ReportingProgramBandComponent {
   readonly onlyPendingChange = output<boolean>();
   /** @akili-spec changes/mass-reporting-flow */
   readonly burndownSortChange = output<'catalogue' | 'remaining'>();
+  /** @akili-spec changes/reporting-favorite-indicators */
+  readonly favoritesOnlyChange = output<boolean>();
   readonly viewModeChange = output<'grouped' | 'flat'>();
   readonly clearAllFilters = output<void>();
   readonly aowSwitch = output<string>();

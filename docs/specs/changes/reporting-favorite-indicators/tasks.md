@@ -80,7 +80,7 @@
 ### `RFI-T-3` — Favorites switch in `reporting-program-band`
 - **Type:** `client | tests`
 - **Estimate:** `S`
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Depends on:** `RFI-T-1` (ordering only — no import)
 - **Blocks:** `RFI-T-4`
 - **Skills:** `angular-developer`, `ui-ux-pro-max`
@@ -94,7 +94,7 @@
 - **Verification:** `cd onecgiar-pr-client && npx jest src/app/pages/result-framework-reporting/pages/dashboard-lab/components/reporting-program-band/reporting-program-band.favorites.spec.ts src/app/pages/result-framework-reporting/pages/dashboard-lab/components/reporting-program-band/reporting-program-band.component.spec.ts --silent --reporters=summary --no-coverage`
 - **Disqualifiers:** asserting only that text "Favorites" exists somewhere is not evidence (AC-11 needs the `role="switch"`, `aria-checked`, count and emitted value). Failing input: `compactFilters: true` must yield zero `[data-testid="favorites-switch"]`.
 - **Definition of done:**
-  - [ ] AC-11 / AC-12 green; existing band spec green.
+  - [x] AC-11 / AC-12 green; existing band spec green.
 
 ---
 

@@ -42,3 +42,21 @@
 - PERFORMANCE — `setOf()` allocates a `Set` per call; T-4 must hoist it into one `computed()` per programme (design §6.3 already does).
 
 Auto-approved (pre-approved mode) → proceed to `RFI-T-2` ∥ `RFI-T-3`.
+
+### `RFI-T-3` — Favorites switch in `reporting-program-band` — **PASS** (2026-09-05, 1 attempt)
+
+| Field | Value |
+|---|---|
+| Implementer | `akili-implementer` (sonnet), skills `angular-developer`, `ui-ux-pro-max`, effort medium |
+| Reviewer | `akili-reviewer` (opus) |
+| Files (3) | `reporting-program-band.component.ts`, `reporting-program-band.component.html`, `reporting-program-band.favorites.spec.ts` (new) |
+| Verification | `npx jest …/reporting-program-band.favorites.spec.ts …/reporting-program-band.component.spec.ts --silent --reporters=summary --no-coverage` → **2 suites, 93/93 passed** |
+| Requirements covered | `RFI-R-2.1`, `RFI-R-2.2`, `RFI-AC-11`, `RFI-AC-12`, `RFI-DD-4` |
+
+**Implementer decisions:** toolbar block is gated only by `showToolbar()`; `compactFilters()` is the sole gate for the new switch; `activeFilterCount` / `hasActiveFilters` untouched.
+
+**Reviewer PASS summary:** markup byte-identical to design §6.2; switch is the literal `nextElementSibling` of *Only pending* inside the single un-gated toolbar flex row (renders for grouped and flat); all seven `--pr-*` tokens resolve in `colors.scss`; AC-11/12 proved behaviourally with a genuine failing input.
+
+**ADVISORY (recorded):** no `focus-visible` ring on the switch — consistent with the sibling *Only pending* switch; toolbar-wide consistency debt, not a T-3 gap.
+
+Auto-approved (pre-approved mode) → `RFI-T-2` in flight; `RFI-T-4` next.
