@@ -31,7 +31,7 @@ This spec adds a personal layer on top of that pipeline without changing any exi
 
 ### In scope
 - Star toggle on every indicator row in the grouped cards and in the flat *All indicators* table.
-- `★ Favorites (N)` switch in the Reporting toolbar (grouped browse view only).
+- `★ Favorites (N)` switch in the Reporting toolbar — Grouped and All-indicators browse views; hidden in the By AOW focused view.
 - Favorites-only filtering composed with the existing filters; active-filter semantics; empty state.
 - Persistence: pins in `localStorage` per user + programme; the switch in `sessionStorage`.
 - Unit tests in new spec files; child `CLAUDE.md` guide updates for the two components touched.
@@ -67,7 +67,7 @@ This spec adds a personal layer on top of that pipeline without changing any exi
 - **`RFI-R-2.2`** The switch MUST be hidden in the *By AOW* focused view (`compactFilters() === true`), where no stars are rendered.
 - **`RFI-R-2.3`** When the switch is on, the table MUST list only rows whose favorite key is in the programme's favorite set; a settled card (`loading === false`) left with zero rows MUST be hidden; a card still `loading` MUST stay visible.
 - **`RFI-R-2.4`** When the switch is on, each AoW header ratio (`ratioOf`, `x of y · z%`) MUST keep counting the pre-focus set — the same `__allIndicators` side-channel Only-pending uses. AND IT MUST NOT recompute the ratio rule itself (`buildRatio` stays the single home).
-- **`RFI-R-2.5`** The switch MUST count as an active Reporting filter: `reportingFiltersActive()` is `true` while on, and `clearReportingFilters()` turns it off. BUT it MUST NOT delete any pin.
+- **`RFI-R-2.5`** The switch MUST count as an active Reporting filter **in the views where it filters** (`plannedBrowseView() === 'aows'`, i.e. Grouped and All indicators): `reportingFiltersActive()` is `true` while on there, and `clearReportingFilters()` turns it off from any view. BUT it MUST NOT delete any pin, AND IT MUST NOT report the switch as an active filter in the By AOW view, where no favorites filtering is applied (JD-1).
 - **`RFI-R-2.6`** With the switch on and zero favorites for the programme, the table MUST show the copy `No favorite indicators yet. Use the ★ on any indicator row to build your focus list.` with a `Show all indicators` button that turns the switch off. With the switch on and favorites that are all hidden by other filters, the generic `No indicators match your filters.` + *Clear filters* state applies.
 - **`RFI-R-2.7`** The switch state MUST persist for the browser session (`sessionStorage`, key `pr.reporting.favoritesOnly`, `'1'`/`'0'`), mirroring `pr.burndown.onlyPending`; default off.
 
@@ -78,11 +78,11 @@ This spec adds a personal layer on top of that pipeline without changing any exi
 - **`RFI-R-3.4`** The stored payload MUST contain only programme codes and favorite keys — no names, e-mails, or tokens (`.cursorrules`, PRD AC-9).
 
 #### `RFI-R-4` — Composition with existing filters
-- **`RFI-R-4.1`** Favorites-only MUST compose with search, Section, Type, Category, Status and Only-pending by intersection (AND) and MUST be applied **after** `applyBurndownFilterAndSort`, so the Remaining-work order and the `__allIndicators` semantics are preserved.
+- **`RFI-R-4.1`** Favorites-only MUST compose by intersection (AND) with every other Reporting filter: at the host, with Section / Type / Category (already applied in `reportingGroups()`) and Only-pending — the favorites step runs **after** `applyBurndownFilterAndSort`, so the Remaining-work order and the `__allIndicators` semantics are preserved; at the table, the child's own search, Status and in-card Center / Type filters keep applying to the favorites subset through `visibleRows` (nothing bypasses them).
 - **`RFI-R-4.2`** With the switch off, `reportingGroupsForTable()` MUST be byte-identical to today's output (no silent default change — same rule as MRF).
 
 ### Should (SHOULD)
-- **`RFI-R-10`** The star SHOULD be 28px in the flat table and 26px in the grouped rows, matching the adjacent *Copy link* control; the action grid tracks SHOULD widen by 32px so nothing wraps at ≥1280px.
+- **`RFI-R-10`** The star SHOULD be 28px in the flat table and 26px in the grouped rows, matching the adjacent *Copy link* control; the action grid tracks SHOULD widen by exactly the control + gap (32px grouped, 34px flat) and the grouped sub-header floor (`.pr-hlo-head` min-width) by the same 32px, so nothing wraps or overflows at 1280 / 1024 / 900 / 768px.
 
 ### Could (MAY)
 - **`RFI-R-20`** A future spec MAY replace the `localStorage` store with a backend preferences endpoint behind the same service API (RFI-DD-2).
@@ -116,6 +116,8 @@ This spec adds a personal layer on top of that pipeline without changing any exi
 | `RFI-AC-12` | Band with `compactFilters = true` | Renders | No `[role="switch"]` labelled Favorites in the DOM. |
 | `RFI-AC-13` | `sessionStorage['pr.reporting.favoritesOnly'] = '1'` | Host is created | `favoritesOnly()` is `true`; `setFavoritesOnly(false)` writes `'0'`. |
 | `RFI-AC-14` | Any `ReportingIndicator` fixture | `favoriteKeyOf(row)` vs `component.rowKey(row)` | Strings are identical. |
+| `RFI-AC-15` | Host with switch on, favorites = {a}, card AoW01 rows a,b | `component.toggleFavorite(b)` | `reportingGroupsForTable()` now lists `a` and `b` for AoW01 (the service `Set` is signal-reactive end to end). |
+| `RFI-AC-16` | Table with `favoritesOnly = true`, `favoriteKeys = {a}`, `filtersActive = true`, and `statusFilter` that hides `a` | Renders | The generic `No indicators match your filters.` + *Clear filters* state shows — not the RFI-R-2.6 "No favorite indicators yet" copy. |
 
 Cross-cutting PRD ACs that apply unchanged: AC-3 (authorization — client-only, no new surface), AC-9 (security and secrets).
 

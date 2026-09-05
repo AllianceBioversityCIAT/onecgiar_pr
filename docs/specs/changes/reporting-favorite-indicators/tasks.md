@@ -57,8 +57,8 @@
 - **Depends on:** `RFI-T-1` (imports `favoriteKeyOf` in the spec for AC-14 only; the component itself imports nothing new)
 - **Blocks:** `RFI-T-4`
 - **Skills:** `angular-developer`, `ui-ux-pro-max`
-- **Description:** Per `design.md` §6.1: add inputs `favoriteKeys`, `favoritesOnly`, outputs `toggleFavorite`, `exitFavoritesOnly`, helpers `isFavorite`, `favoriteLabel`; insert the star button first in BOTH action cells (grouped `#indicatorRow` "7 — Report / Continue" block, flat `<td class="pr-flat-cell … justify-end">`), wired through `emitAndStop`; add the favorites-only empty-state branch to the two table-level empty blocks; widen the grid tracks in the `.scss` (`108→140`, `150→182`, `176→208`, `190→222`). Do not touch `statusOf` / `ratioOf` / disclosure logic. Update `components/reporting-aow-table/CLAUDE.md` Contract (inputs/outputs) and the event-isolation bullet to list the star.
-- **Implements:** `RFI-R-1.1`, `RFI-R-1.2`, `RFI-R-1.3`, `RFI-R-1.4`, `RFI-R-2.6` (table half), `RFI-R-10`, `RFI-AC-1`, `RFI-AC-2`, `RFI-AC-10`, `RFI-AC-14`
+- **Description:** Per `design.md` §6.1: add inputs `favoriteKeys`, `favoritesOnly`, outputs `toggleFavorite`, `exitFavoritesOnly`, helpers `isFavorite`, `favoriteLabel`; insert the star button first in BOTH action cells (grouped `#indicatorRow` "7 — Report / Continue" block, flat `<td class="pr-flat-cell … justify-end">`), wired through `emitAndStop`; add the favorites-only empty-state branch to the two table-level empty blocks; guard the per-card empty block with `!group.loading` (design §6.1, JD-5); widen the grid tracks in the `.scss` (`108→140`, flat `150→184`, `176→210`, `190→224`, `.pr-hlo-head` min-width `820→852`). Do not touch `statusOf` / `ratioOf` / disclosure logic. Update `components/reporting-aow-table/CLAUDE.md`: Contract (new inputs/outputs), the event-isolation bullet (list the star), and correct the stale track numbers in the *Next pending + Copy link* bullet (live values were 108px grouped / 150px flat before this task; now 140 / 184).
+- **Implements:** `RFI-R-1.1`, `RFI-R-1.2`, `RFI-R-1.3`, `RFI-R-1.4`, `RFI-R-2.6` (table half, both sentences), `RFI-R-4.1` (child-side composition), `RFI-R-10`, `RFI-AC-1`, `RFI-AC-2`, `RFI-AC-10`, `RFI-AC-14`, `RFI-AC-16`
 - **Design Ref:** `design.md` §6.1, §6.4, `RFI-DD-1`, `RFI-DD-4`
 - **Files:**
   - `…/components/reporting-aow-table/reporting-aow-table.component.ts`
@@ -72,6 +72,8 @@
   - [ ] Both cells render `[data-testid="favorite-toggle"]` with correct `aria-pressed` / glyph for favorite and non-favorite rows.
   - [ ] Existing `reporting-aow-table.component.spec.ts` still green (contract unchanged for old consumers).
   - [ ] `favoriteKeyOf(row) === component.rowKey(row)` asserted.
+  - [ ] AC-16 green (favorites present but hidden by `statusFilter` → generic empty state, not the favorites copy); a `loading` card with no rows renders no empty-state text.
+  - [ ] Reviewer confirms the component file has no import from `services/reporting-favorites.service` (RFI-R-1.4; honest presence check — JD-8).
 
 ---
 
@@ -103,18 +105,18 @@
 - **Depends on:** `RFI-T-1`, `RFI-T-2`, `RFI-T-3`
 - **Blocks:** `—`
 - **Skills:** `angular-developer`, `tdd`
-- **Description:** Per `design.md` §6.3: inject `ReportingFavoritesService`; `favoritesOnly` signal seeded from `sessionStorage` + `setFavoritesOnly`; `programFavoriteKeys`, `programFavoritesCount`, `toggleFavorite`; `applyFavoritesFilter` after `applyBurndownFilterAndSort` in `reportingGroupsForTable`; extend `reportingFiltersActive` and `clearReportingFilters`; bind the table and the Reporting band in `dashboard-lab.component.html`. Update `dashboard-lab/CLAUDE.md` Contrato ("cinco filtros" → six, name the favorites step and its position after burndown) — this file is a named deliverable of the spec.
-- **Implements:** `RFI-R-2.3`, `RFI-R-2.4`, `RFI-R-2.5`, `RFI-R-2.7`, `RFI-R-4.1`, `RFI-R-4.2`, `RFI-R-3.2` (programme scope at the host), `RFI-AC-6`, `RFI-AC-7`, `RFI-AC-8`, `RFI-AC-9`, `RFI-AC-13`
+- **Description:** Per `design.md` §6.3: inject `ReportingFavoritesService`; `favoritesOnly` signal seeded from `sessionStorage` + `setFavoritesOnly`; `programFavoriteKeys`, `programFavoritesCount`, `toggleFavorite`; `applyFavoritesFilter` (return type `(G & { __allIndicators?: any[] })[]`, JD-10) after `applyBurndownFilterAndSort` in `reportingGroupsForTable`; extend `reportingFiltersActive` with the **view-gated** clause `(favoritesOnly() && plannedBrowseView() === 'aows')` (JD-1) and `clearReportingFilters`; bind the table and the Reporting band in `dashboard-lab.component.html`. Update `dashboard-lab/CLAUDE.md` Contrato ("cinco filtros" → six, name the favorites step and its position after burndown) — this file is a named deliverable of the spec.
+- **Implements:** `RFI-R-2.3`, `RFI-R-2.4`, `RFI-R-2.5` (both clauses — active in `aows`, NOT active in `byAow`), `RFI-R-2.7`, `RFI-R-4.1` (host side), `RFI-R-4.2`, `RFI-R-3.2` (programme scope at the host), `RFI-AC-6`, `RFI-AC-7`, `RFI-AC-8`, `RFI-AC-9`, `RFI-AC-13`, `RFI-AC-15`
 - **Design Ref:** `design.md` §6.3, `RFI-DD-1`, `RFI-DD-3`
 - **Files:**
   - `…/dashboard-lab/dashboard-lab.component.ts`
   - `…/dashboard-lab/dashboard-lab.component.html`
   - `…/dashboard-lab/dashboard-lab.favorites.spec.ts` (new)
   - `…/dashboard-lab/CLAUDE.md`
-- **Verification:** `cd onecgiar-pr-client && npx jest src/app/pages/result-framework-reporting/pages/dashboard-lab/dashboard-lab.favorites.spec.ts src/app/pages/result-framework-reporting/pages/dashboard-lab/dashboard-lab.mrf-burndown-session.spec.ts --silent --reporters=summary --no-coverage && npx tsc --noEmit -p tsconfig.app.json`
+- **Verification:** `cd onecgiar-pr-client && npx jest src/app/pages/result-framework-reporting/pages/dashboard-lab/dashboard-lab.favorites.spec.ts src/app/pages/result-framework-reporting/pages/dashboard-lab/dashboard-lab.mrf-burndown-session.spec.ts src/app/pages/result-framework-reporting/pages/dashboard-lab/design-tokens.spec.ts --silent --reporters=summary --no-coverage && npx tsc --noEmit -p tsconfig.app.json`
 - **Disqualifiers:** AC-7 asserted with `toEqual` on a *copied* array is fine, but AC-7's stronger claim is identity — assert `toBe` on the array when the switch is off. AC-8 that turns Only-pending on with rows that are all pending proves nothing — at least one favorite row must be *non-pending* so it is dropped by burndown and `__allIndicators` still lists it. Failing input: swap the pipeline order (favorites before burndown) → AC-8 must go red.
 - **Definition of done:**
-  - [ ] AC-6..9, AC-13 green; `mrf-burndown-session` suite still green; `tsc` clean.
+  - [ ] AC-6..9, AC-13, AC-15 green; RFI-R-2.5 negative case green (switch on + `plannedBrowseView() === 'byAow'` → `reportingFiltersActive()` false with every other filter idle); `mrf-burndown-session` and `design-tokens` suites still green; `tsc` clean.
   - [ ] Template bindings present on both `<app-reporting-aow-table>` and the Reporting `<app-reporting-program-band>`.
   - [ ] `dashboard-lab/CLAUDE.md` updated.
 
@@ -141,14 +143,18 @@ T-2 ∥ T-3 (disjoint files) — spawn two Implementers in one wave.
 | R-2.2 hidden in By AOW | T-3 | AC-12 |
 | R-2.3 rows/cards filtering, loading kept | T-4 | `dashboard-lab.favorites.spec.ts` AC-6 |
 | R-2.4 ratio over full set (`__allIndicators`) | T-4 | AC-6, AC-8 |
-| R-2.5 active filter + clear keeps pins | T-4 | AC-9 |
+| R-2.5 active filter in `aows` + clear keeps pins + NOT active in `byAow` | T-4 | AC-9 + negative case |
 | R-2.6 empty copy + button (table) / host turns off | T-2 / T-4 | AC-10 / binding check |
+| R-2.6 second sentence (favorites present, all hidden → generic state) | T-2 | AC-16 |
+| R-2.3 loading card kept shows no empty text | T-2 | loading-guard test |
+| Signal reactivity end to end (`setOf` inside `computed`) | T-4 | AC-15 |
 | R-2.7 session persistence of the switch | T-4 | AC-13 |
 | R-3.1 reload persistence | T-1 | AC-3 |
 | R-3.2 key format + programme scope | T-1 / T-2 / T-4 | AC-3, AC-14, AC-6 |
 | R-3.3 storage failure / corrupt JSON | T-1 | AC-4, AC-5 |
 | R-3.4 payload contents | T-1 | AC-3 (exact JSON) |
-| R-4.1 AND composition after burndown | T-4 | AC-8 |
+| R-4.1 host-side AND (Only-pending) after burndown | T-4 | AC-8 |
+| R-4.1 child-side AND (search / Status / in-card filters still apply) | T-2 | AC-16 |
 | R-4.2 identity when off | T-4 | AC-7 (`toBe`) |
 | R-10 sizes / tracks | T-2 | presence only → HITL §5 |
 
@@ -156,10 +162,10 @@ T-2 ∥ T-3 (disjoint files) — spawn two Implementers in one wave.
 | Test ID | Type | Covers | Location |
 |---|---|---|---|
 | `RFI-TEST-1` | unit | R-3.*, AC-3..5 | `services/reporting-favorites.service.spec.ts` |
-| `RFI-TEST-2` | unit (DOM) | R-1.*, R-2.6, AC-1/2/10/14 | `reporting-aow-table.favorites.spec.ts` |
+| `RFI-TEST-2` | unit (DOM) | R-1.*, R-2.6, R-4.1 (child), AC-1/2/10/14/16 | `reporting-aow-table.favorites.spec.ts` |
 | `RFI-TEST-3` | unit (DOM) | R-2.1/2.2, AC-11/12 | `reporting-program-band.favorites.spec.ts` |
-| `RFI-TEST-4` | unit (state) | R-2.3..2.5, 2.7, R-4.*, AC-6..9/13 | `dashboard-lab.favorites.spec.ts` |
-| `RFI-HITL-1` | visual, at merge | R-10 (no wrap of the action cell at 1280/1024; star aligned with Copy link) | Real page, SP01 Reporting tab, grouped + All indicators |
+| `RFI-TEST-4` | unit (state) | R-2.3..2.5, 2.7, R-4.*, AC-6..9/13/15 | `dashboard-lab.favorites.spec.ts` |
+| `RFI-HITL-1` | visual, at merge | R-10 (no wrap / overflow of the action cell and no page overflow at 1280 / 1024 / **900 / 768**px — every past overflow regression of this component sat at 768–900; star aligned with Copy link) | Real page, SP01 Reporting tab, grouped + All indicators |
 
 ## 6. Rollout & verification
 - [ ] Per-task commits on `feat/reporting-favorite-indicators` with `[SPEC:changes/reporting-favorite-indicators]`.

@@ -100,7 +100,7 @@ Template — star button inserted as the **first** child of both action cells (g
 ```
 Flat cell uses `h-[28px] w-[28px] rounded-[8px]` to match its *Copy link*. Angular merges static `class` with `[class]` string bindings — the shared utilities stay in the static attribute, the state-dependent ones in the binding (same pattern as the band's *Only pending* button).
 
-Grid tracks (`reporting-aow-table.component.scss`): `$pr-reporting-tracks` action track `108px → 140px`; `$pr-flat-tracks` last track `150px → 182px`, and its two wider breakpoint overrides `176px → 208px`, `190px → 222px`. (Only numeric edits to existing variables — no new SCSS blocks, brand rule §7.1.)
+Grid tracks (`reporting-aow-table.component.scss`): `$pr-reporting-tracks` action track `108px → 140px` (26px star + 6px gap); `$pr-flat-tracks` last track `150px → 184px`, and its two wider breakpoint overrides `176px → 210px`, `190px → 224px` (28px star + 6px gap = 34px, JD-3); `.pr-hlo-head { min-width: 820px }` → `852px` so the sub-header's floor grows with the row (JD-4). Only numeric edits to existing rules — no new SCSS blocks, brand rule §7.1.
 
 Empty state — both table-level blocks (`prTableEmpty` and `@if (!visibleGroups().length)`): add a first branch
 ```html
@@ -109,7 +109,7 @@ Empty state — both table-level blocks (`prTableEmpty` and `@if (!visibleGroups
   <button type="button" class="pr-clear-filters" (click)="exitFavoritesOnly.emit()">Show all indicators</button>
 } @else if (filtersActive()) { …existing… } @else { …existing… }
 ```
-The per-card empty block (`This area of work has no planned indicators yet.`) is unreachable under favorites-only because the host drops empty settled cards (RFI-R-2.3); leave it unchanged.
+The per-card empty block (`@if (!bands.length)`, ~line 598) IS reachable under favorites-only (JD-5): (a) a still-`loading` card kept by RFI-R-2.3 has no bands yet, and (b) a card kept for one favorite whose rows the child's own search / Status / Center / Type filters then hide. Guard it: `@if (!bands.length && !group.loading)` so case (a) shows nothing while the data arrives; case (b) correctly falls into the existing `filtersActive()` branch ("No indicators match the current filters.") because the host sets `filtersActive` while the switch is on.
 
 ### 6.2 `reporting-program-band`
 ```ts
@@ -149,7 +149,9 @@ readonly reportingGroupsForTable = computed(() => this.applyFavoritesFilter(this
 `applyFavoritesFilter<G extends { indicators: any[]; count: number; loading?: boolean; __allIndicators?: any[] }>(groups: G[]): G[]`:
 - `if (!this.favoritesOnly()) return groups;` (RFI-R-4.2 — identity, same array reference).
 - Else for each group: `kept = g.indicators.filter(r => keys.has(favoriteKeyOf(r)))`; return `{ ...g, indicators: kept, count: kept.length, __allIndicators: g.__allIndicators ?? g.indicators }`; then drop `kept.length === 0 && !g.loading`.
-- `reportingFiltersActive` adds `|| this.favoritesOnly()`; `clearReportingFilters()` adds `this.setFavoritesOnly(false)`.
+- `reportingFiltersActive` adds `|| (this.favoritesOnly() && this.plannedBrowseView() === 'aows')` — the favorites step only wraps `reportingGroupsForTable`, not `plannedByAowSections`, and the switch is hidden in By AOW (RFI-R-2.2); an ungated clause would light *Clear filters* and the "match your filters" empty states in a view where nothing is filtered (JD-1, the P2-3405 defect class). `clearReportingFilters()` adds `this.setFavoritesOnly(false)` unconditionally.
+- Return type of `applyFavoritesFilter` mirrors `applyBurndownFilterAndSort`: `(G & { __allIndicators?: any[] })[]`, not `G[]` — the object spread does not narrow back to `G` (JD-10).
+- Accepted precedent (JD-13): with the switch on, the card's KPI pill (`countLabel(group.count)`), the in-card Center/Type chip counts (built from `group.indicators`) and the Remaining-work order (`groupPendingCount` runs in the burndown step, before favorites) all describe the favorites subset or the pre-favorites set exactly as they do under Only-pending today; only the header ratio is pinned to the full set (RFI-R-2.4).
 - Template (`dashboard-lab.component.html`): table gets `[favoriteKeys]="programFavoriteKeys()" [favoritesOnly]="favoritesOnly()" (toggleFavorite)="toggleFavorite($event)" (exitFavoritesOnly)="setFavoritesOnly(false)"`; the Reporting band (the second `<app-reporting-program-band` instance, the one with `[search]`) gets `[favoritesOnly]="favoritesOnly()" [favoritesCount]="programFavoritesCount()" (favoritesOnlyChange)="setFavoritesOnly($event)"`.
 - Add `// @akili-spec changes/reporting-favorite-indicators` on the new members.
 
@@ -157,6 +159,7 @@ readonly reportingGroupsForTable = computed(() => this.applyFavoritesFilter(this
 - Icons `material-icons-round` (`star`, `star_outline`) — §7 brand line "always".
 - Active state = violet accent tokens (`--pr-color-primary-50/200/300/400/500`), mirroring the *Only pending* active look — one visual language for "personal filter on".
 - Focus ring `ring-[var(--pr-color-primary-300)]`; state conveyed by glyph + `aria-pressed`, never colour alone.
+- Known, amplified gap (JD-11): the card collapse has no `inert` (`reporting-aow-table/CLAUDE.md`), so the star is one more tabbable-but-`aria-hidden` control per row while a card is closed. Not introduced here; recorded in §13, not fixed in this spec.
 
 ## 7. Security & Authorization
 No new endpoint. Storage payload contains programme codes and composite numeric keys only (RFI-R-3.4). Nothing logged.
@@ -203,11 +206,37 @@ All new inputs default; outputs unbound elsewhere are inert. Unknown `localStora
 - **Alternatives:** yellow (semantic collision with warnings); emoji (mixed icon set, brand rule).
 - **Consequences:** consistent "personal filter" language across star and switch.
 
+### `RFI-DD-5` — The focus switch is session-global, pins are programme-scoped
+- **Context:** `pr.reporting.favoritesOnly` is one scalar (RFI-R-2.7) while favorites live per programme (RFI-R-3.2); switching programme with the switch on lands on a programme with no pins (JD-12).
+- **Decision:** accept it. The user sees the RFI-R-2.6 empty state ("No favorite indicators yet … Show all indicators") with a one-click way out, and the switch stays visible in the toolbar. Mirrors *Only pending*, which is also session-global.
+- **Alternatives:** scope the session key by programme (more state, and a user who focuses usually works one programme at a time); auto-disable on programme change (silent state change — rejected, same rule as MRF).
+- **Consequences:** documented behaviour, covered by the empty-state AC.
+
 ## 13. Open Gaps & Follow-ups
 - Stars in the *By AOW* view rows and in the indicator drawer header (follow-up spec).
 - Backend preferences endpoint (`changes/user-preferences-api`).
 - URL parameter `fav=1` once RHSF-T-5's URL sync effect has landed.
 - Kaizen candidate: RHSF and RFI touch the same three components concurrently — record the worktree-per-spec practice.
+- `inert` on `.pr-collapse` (shared `src/styles/collapse.scss`) — closes the tabbable-but-hidden gap for all 20+ controls per closed card (JD-11).
+- Cross-tab sync of pins (`storage` event) and per-entry array validation in `load()` — Reviewer advisories from RFI-T-1.
+
+## 15. Judgment pass (single T3 review, 2026-09-05)
+| ID | Severity | Disposition |
+|---|---|---|
+| JD-1 | BLOCKER | Fixed — `reportingFiltersActive` clause gated on `plannedBrowseView() === 'aows'` (§6.3, RFI-R-2.5) |
+| JD-2 | MAJOR | Fixed — `RFI-AC-15` (toggle through the host with the switch on updates the table pipeline) added to T-4 |
+| JD-3 | MAJOR | Fixed — flat tracks +34px (`184/210/224`), RFI-R-10 reworded |
+| JD-4 | MAJOR | Fixed — `.pr-hlo-head` min-width `852px`; HITL-1 now covers 1280 / 1024 / 900 / 768 |
+| JD-5 | MAJOR | Fixed — per-card empty block guarded with `!group.loading` (§6.1) |
+| JD-6 | MINOR | Fixed — RFI-R-4.1 restated (host vs child filters); table-level composition test added to T-2 |
+| JD-7 | MINOR | Fixed — `RFI-AC-16` (favorites present, all hidden → generic empty state) added to T-2 |
+| JD-8 | MINOR | Accepted as a Reviewer check ("no import of `reporting-favorites.service` in the component"); a TestBed assertion cannot falsify a root-provided service |
+| JD-9 | MINOR | Fixed — requirements §3 wording |
+| JD-10 | MINOR | Fixed — return type mirrors `applyBurndownFilterAndSort` |
+| JD-11 | MINOR | Recorded (§6.4, §13) |
+| JD-12 | MINOR | Recorded as `RFI-DD-5` |
+| JD-13 | MINOR | Recorded (§6.3 accepted precedent) |
+| JD-14 | MINOR | Fixed — T-2 corrects the stale track numbers in `reporting-aow-table/CLAUDE.md`; `design-tokens.spec.ts` added to T-4's verification |
 
 ## 14. Sizing & Tripwire Budget
 | Metric | Expected |
