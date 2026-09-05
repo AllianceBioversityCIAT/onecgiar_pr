@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   HostListener,
   inject,
   input,
@@ -296,6 +297,22 @@ export class ReportingProgramBandComponent {
   readonly isScrolled = signal(false);
 
   /**
+   * `changes/sp-shell-app-viewport` `SAV-DD-2`: true once the host page is viewport-locked (≥ `md`).
+   * Drops `sticky` on the band's own box (`SAV-DD-5`) — inside an `overflow: hidden` locked host the
+   * host itself is the sticky scrollport, so a `sticky` band would be shoved down by its own `top`
+   * offset and open a gap. Below `md`, and on any page that never passes this input, nothing changes.
+   */
+  readonly frameLocked = input(false);
+  /**
+   * `SAV-R-6` / `SAV-DD-4`: the work area element the locked page hands the band, so the band's
+   * scroll-driven state (`isScrolled`, `bandCollapsed`) tracks the ACTUAL scroller at ≥ `md` instead
+   * of the document (which never moves once locked). `null` (default, and every < `md` / unlocked
+   * consumer) keeps the window listener as the sole source — byte-identical to before this input
+   * existed.
+   */
+  readonly scrollHost = input<HTMLElement | null>(null);
+
+  /**
    * Scroll offset at which the band condenses. 64px is the height of the compact identity block.
    */
   private static readonly COLLAPSE_THRESHOLD_PX = 64;
@@ -304,24 +321,48 @@ export class ReportingProgramBandComponent {
   readonly bandCollapsed = signal(false);
 
   constructor() {
-    // The DOCUMENT is the scroller here (the band is `sticky`, not inside an overflow
-    // box), so the offset comes from `window`. The listener is registered OUTSIDE Angular and only
-    // re-enters the zone on the single frame where the threshold is crossed: a zone-bound
+    // < `md` fallback (`SAV-DD-4`): with no work area handed to the band, the DOCUMENT is the
+    // scroller, so the offset comes from `window`. Kept unconditionally — this is the ONE documented
+    // window listener the band owns (`SAV-AC-11`). Registered OUTSIDE Angular and only re-enters the
+    // zone on the single frame where the threshold is crossed: a zone-bound
     // `@HostListener('window:scroll')` would tick change detection on EVERY scroll frame to
     // maintain a boolean that flips twice per page. Passive: we never preventDefault.
     this.zone.runOutsideAngular(() => {
-      const onScroll = () => this.syncBandCollapsed();
-      window.addEventListener('scroll', onScroll, { passive: true });
-      this.destroyRef.onDestroy(() => window.removeEventListener('scroll', onScroll));
+      const onWindowScroll = () => this.syncBandCollapsed();
+      window.addEventListener('scroll', onWindowScroll, { passive: true });
+      this.destroyRef.onDestroy(() => window.removeEventListener('scroll', onWindowScroll));
     });
+
+    // ≥ `md` (locked frame, `SAV-R-6`): the work area itself is the real scroller. Re-attaches
+    // whenever `scrollHost` changes (a tab switch can hand the band a brand-new element) and detaches
+    // the previous element's listener via the effect's own cleanup — covers both re-attachment and
+    // destroy, no separate `destroyRef.onDestroy` needed here.
+    effect(onCleanup => {
+      const host = this.scrollHost();
+      if (!host) return;
+      const onHostScroll = () => this.syncBandCollapsed();
+      this.zone.runOutsideAngular(() => host.addEventListener('scroll', onHostScroll, { passive: true }));
+      onCleanup(() => host.removeEventListener('scroll', onHostScroll));
+      // First read on (re)attach — a page mounting the band against an already-scrolled work area
+      // (or a tab switch re-creating it) must not wait for the next scroll frame to reflect reality
+      // (`SAV-R-6`, `SAV-AC-6`).
+      this.syncBandCollapsed();
+    });
+
     // A tab switch (Overview ⇄ Reporting) re-creates the band on an already-scrolled document —
-    // without this first read the band would render expanded until the next scroll event.
+    // without this first read the band would render expanded until the next scroll event. Covers the
+    // < `md` / no-`scrollHost` case; the effect above covers the ≥ `md` case.
     this.syncBandCollapsed();
   }
 
-  /** Cheap: one `scrollY` read + a compare. Nothing happens unless the threshold is crossed. */
+  /**
+   * Cheap: one `scrollTop`/`scrollY` read + a compare. Nothing happens unless the threshold is
+   * crossed. `scrollHost` (the work area, ≥ `md`) and `window` (the document, < `md`) are SUMMED
+   * rather than switched on with `matchMedia` in TS (`SAV-DD-4`) — the CSS breakpoint decides which
+   * one is actually scrolling at any given width, and the other always contributes 0.
+   */
   private syncBandCollapsed(): void {
-    const offset = window.scrollY || document.documentElement?.scrollTop || 0;
+    const offset = (this.scrollHost()?.scrollTop ?? 0) + (window.scrollY || document.documentElement?.scrollTop || 0);
     const isScrolled = offset > 10;
     if (isScrolled !== this.isScrolled()) {
       this.zone.run(() => this.isScrolled.set(isScrolled));

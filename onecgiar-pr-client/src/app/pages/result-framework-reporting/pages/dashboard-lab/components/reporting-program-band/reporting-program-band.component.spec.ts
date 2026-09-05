@@ -31,6 +31,8 @@ describe('ReportingProgramBandComponent', () => {
   const text = () => root().textContent ?? '';
   /** The sticky band is the host's only top-level box; the identity block is its first child. */
   const identity = () => root().firstElementChild?.firstElementChild as HTMLElement;
+  /** The sticky box itself — the element `frameLocked` mutates. */
+  const stickyBox = () => root().firstElementChild as HTMLElement;
   /** Everything that only exists while the band is condensed carries the fade class. */
   const collapsedParts = () => root().querySelectorAll('.pr-band-fade');
 
@@ -214,6 +216,73 @@ describe('ReportingProgramBandComponent', () => {
       window.dispatchEvent(new Event('scroll'));
 
       expect(component.bandCollapsed()).toBe(false);
+    });
+  });
+
+  // ── SAV-T-2 · frameLocked + scrollHost, dual scroll source ────────────────
+  // `docs/specs/changes/sp-shell-app-viewport/` SAV-R-6, SAV-R-8, SAV-AC-6, SAV-AC-11 (band clause).
+  describe('frame-locked scroll source (SAV-T-2)', () => {
+    let hostEl: HTMLDivElement;
+
+    beforeEach(() => {
+      hostEl = document.createElement('div');
+      document.body.appendChild(hostEl);
+    });
+
+    afterEach(() => {
+      hostEl.remove();
+    });
+
+    it('flips isScrolled from the element scroll listener alone — no window event dispatched', async () => {
+      await build({ showToolbar: true, scrollHost: hostEl });
+      expect(component.isScrolled()).toBe(false);
+
+      hostEl.scrollTop = 11;
+      hostEl.dispatchEvent(new Event('scroll'));
+      fixture.detectChanges();
+
+      expect(component.isScrolled()).toBe(true);
+    });
+
+    it('flips bandCollapsed past the 64px threshold via the element alone', async () => {
+      await build({ showToolbar: true, collapsible: true, scrollHost: hostEl });
+
+      hostEl.scrollTop = 65;
+      hostEl.dispatchEvent(new Event('scroll'));
+      fixture.detectChanges();
+
+      expect(component.bandCollapsed()).toBe(true);
+    });
+
+    it('falls back to the window listener when scrollHost is null', async () => {
+      await build({ showToolbar: true, scrollHost: null });
+
+      Object.defineProperty(window, 'scrollY', { configurable: true, value: 11 });
+      window.dispatchEvent(new Event('scroll'));
+      fixture.detectChanges();
+
+      expect(component.isScrolled()).toBe(true);
+    });
+
+    it('evaluates once on attach against a pre-scrolled host, before any event fires', async () => {
+      hostEl.scrollTop = 20;
+      await build({ showToolbar: true, scrollHost: hostEl });
+
+      expect(component.isScrolled()).toBe(true);
+    });
+  });
+
+  describe('frameLocked sticky override (SAV-T-2, SAV-DD-5)', () => {
+    it('adds the static/top-auto utilities to the sticky box when frameLocked', async () => {
+      await build({ showToolbar: true, frameLocked: true });
+
+      expect(stickyBox().classList.contains('min-[900px]:static')).toBe(true);
+    });
+
+    it('does not add them when frameLocked is false (default)', async () => {
+      await build({ showToolbar: true, frameLocked: false });
+
+      expect(stickyBox().classList.contains('min-[900px]:static')).toBe(false);
     });
   });
 

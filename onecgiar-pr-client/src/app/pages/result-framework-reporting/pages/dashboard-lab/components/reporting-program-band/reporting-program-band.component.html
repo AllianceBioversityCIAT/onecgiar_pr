@@ -19,7 +19,10 @@
 <div
   class="sticky z-20 flex-none -mt-px bg-[var(--pr-surface-band)] transition-shadow duration-[180ms] ease-out"
   style="top: calc(var(--pr-shell-header-height, 56px) - 1px);"
-  [class]="isScrolled() || bandCollapsed() ? 'shadow-[0_2px_8px_rgba(25,21,36,0.08)]' : 'shadow-none'">
+  [class]="
+    (isScrolled() || bandCollapsed() ? 'shadow-[0_2px_8px_rgba(25,21,36,0.08)]' : 'shadow-none') +
+    (frameLocked() ? ' min-[900px]:static min-[900px]:!top-auto' : '')
+  ">
   <!-- ── Identity: 88px, pad 0 32px, gap 6px (reference :329).
        Scrolled past (bandCollapsed) it animates to 0 and the band is just the 48px tabs row —
        the reference's `bandCollapsed` variant (:383). Height is animated instead of swapping
