@@ -79,4 +79,18 @@ describe('ScienceProgramIdService', () => {
     expect(result).toBeNull();
     httpMock.expectNone(url);
   });
+
+  // @akili-spec changes/my-work-board (MWB-T-3) — MWB-T-2's forward pointer: a failed emission
+  // must NOT be cached, so a retry after an error re-issues the HTTP request.
+  it('does not cache a failed request: a later resolve() after an error re-issues it', () => {
+    let firstError: unknown;
+    service.resolve('SP01').subscribe({ error: err => (firstError = err) });
+    httpMock.expectOne(url).flush('server error', { status: 500, statusText: 'Server Error' });
+    expect(firstError).toBeTruthy();
+
+    let second: number | null | undefined;
+    service.resolve('SP01').subscribe(value => (second = value));
+    httpMock.expectOne(url).flush(progressResponse());
+    expect(second).toBe(50);
+  });
 });

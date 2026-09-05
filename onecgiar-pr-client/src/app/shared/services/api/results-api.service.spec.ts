@@ -3831,6 +3831,31 @@ describe('ResultsApiService', () => {
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
+
+    // @akili-spec changes/my-work-board (MWB-T-3, MWB-R-8)
+    it('should send include_completeness=true only when the flag is truthy', done => {
+      const userId = 'userId';
+
+      mockResponse = { response: { items: [] } };
+
+      service.GET_AllResultsWithUseRole(userId, { submitter_id: 'sub1', include_completeness: true } as any).subscribe(() => done());
+
+      const req = httpMock.expectOne(r => r.url.includes(`get/all/roles/filter/${userId}`) && r.url.includes('submitter_id=sub1') && r.url.includes('include_completeness=true'));
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should not send include_completeness when the flag is falsy', done => {
+      const userId = 'userId';
+
+      mockResponse = { response: { items: [] } };
+
+      service.GET_AllResultsWithUseRole(userId, { submitter_id: 'sub1', include_completeness: false } as any).subscribe(() => done());
+
+      const req = httpMock.expectOne(r => r.url.includes(`get/all/roles/filter/${userId}`) && r.url.includes('submitter_id=sub1'));
+      expect(req.request.url.includes('include_completeness')).toBe(false);
+      req.flush(mockResponse);
+    });
   });
 
   describe('GET_meliaStudiesByToc', () => {

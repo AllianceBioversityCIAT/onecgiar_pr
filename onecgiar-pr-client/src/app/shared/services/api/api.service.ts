@@ -37,6 +37,11 @@ export interface SearchParams {
   version_id?: string;
   filter_created_by_me?: boolean;
   filter_submitted_by_me?: boolean;
+  // @akili-spec changes/my-work-board (MWB-T-3, MWB-R-8)
+  /** Opt-in flag so the My work board's list request gets `completeness` per eligible row. Never
+   *  sent by the Results tab or any other existing caller (`MWB-R-8` "flag absent keeps the
+   *  contract"). */
+  include_completeness?: boolean;
 }
 
 @Injectable({

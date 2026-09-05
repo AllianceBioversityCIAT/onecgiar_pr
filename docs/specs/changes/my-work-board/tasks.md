@@ -76,10 +76,10 @@
   - [ ] No Angular import in the two pure files
   - [ ] Commit `✨ feat(my-work-board) [SPEC:changes/my-work-board]: SP-id service, row mapper, section map and view-model`
 
-### `MWB-T-3` — Client data: `MyWorkBoardService` + `MyWorkCountService` `[ ]`
+### `MWB-T-3` — Client data: `MyWorkBoardService` + `MyWorkCountService` `[x]`
 
 - **Type:** `client`
-- **Description:** Page-scoped `MyWorkBoardService` (signals `scope`, `phase`, `rows`, `loading`, `error`; computed `phaseOptions`, `visibleRows`, `columns`, `totals`, `badge` via the view-model; request token; one `GET_AllResultsWithUseRole(userId, { submitter_id, limit: PROGRAMME_RESULTS_PAGE_LIMIT, page: 1, filter_created_by_me: mine, include_completeness: mine })` per scope change; **404 → `rows = []`**, other errors → `error`; `retry()`), root `MyWorkCountService` (`ensure(code, phaseLabel)`: `ScienceProgramIdService.resolve` + one `submitter_id`-scoped `filter_created_by_me=true&status_id=1` request counted by phase label, 404 → 0; `set(code, phaseLabel, n)` from the page) (`MWB-DD-5`, `DD-13`). Add `include_completeness` to `results-api.service.ts` search params.
+- **Description:** Page-scoped `MyWorkBoardService` (signals `scope`, `phase`, `rows`, `loading`, `error`; computed `phaseOptions`, `visibleRows`, `columns`, `totals`, `badge` via the view-model; request token; one `GET_AllResultsWithUseRole(userId, { submitter_id, limit: PROGRAMME_RESULTS_PAGE_LIMIT, page: 1, filter_created_by_me: mine, include_completeness: mine })` per scope change; **404 → `rows = []`**, other errors → `error`; `retry()`), root `MyWorkCountService` (`ensure(code, phaseLabel)`: `ScienceProgramIdService.resolve` + one `submitter_id`-scoped `filter_created_by_me=true&status_id=1,8` request (Editing column = ids 1 and 8; the endpoint accepts a comma-separated list) counted by phase label, 404 → 0; `set(code, phaseLabel, n)` from the page) (`MWB-DD-5`, `DD-13`). Add `include_completeness` to `results-api.service.ts` search params.
 - **Implements:**
   - `MWB-R-3` — *Switch scope*: one request with/without `filter_created_by_me`; flag only in Mine; **BUT NOT** change the badge; **AND IT MUST** make exactly one list request per scope change and none per card (no per-result method exists). *Switch phase*: THEN re-group without a request.
   - `MWB-R-7` (state half): `loading` during flight; `error` + `retry()`; **BUT NOT** report empty while loading; **AND IT MUST** treat HTTP 404 as an empty list.
@@ -89,7 +89,7 @@
 - **Depends on:** `MWB-T-2` · **Blocks:** `MWB-T-4`
 - **Estimate:** M (~240 LOC incl. specs)
 - **Skills:** `angular-developer` · `tdd` · `error-handling-patterns`
-- **Tests:** HttpTesting with `ScienceProgramIdService` stubbed: load Mine → exactly one request containing `filter_created_by_me=true` and `include_completeness=true`; switch to All → one more request with neither; switch phase → `httpMock.expectNone`; 404 → `rows = []`, `error` null; 500 → `error` set, `rows` unchanged, `retry()` re-issues; stale token ignored; count service: cold key → one request with `submitter_id` + `filter_created_by_me=true` + `status_id=1`, count = rows matching the phase label; warm key → no request; 404 → 0; `httpMock.verify()` in every test.
+- **Tests:** HttpTesting with `ScienceProgramIdService` stubbed: load Mine → exactly one request containing `filter_created_by_me=true` and `include_completeness=true`; switch to All → one more request with neither; switch phase → `httpMock.expectNone`; 404 → `rows = []`, `error` null; 500 → `error` set, `rows` unchanged, `retry()` re-issues; stale token ignored; count service: cold key → one request with `submitter_id` + `filter_created_by_me=true` + `status_id=1,8`, count = rows matching the phase label; warm key → no request; 404 → 0; `httpMock.verify()` in every test.
 - **Verification:**
   ```bash
   cd onecgiar-pr-client && npx jest src/app/pages/result-framework-reporting/pages/my-work-board/services src/app/shared/services/api/results-api.service.spec.ts --silent --reporters=summary --no-coverage

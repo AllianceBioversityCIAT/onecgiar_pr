@@ -62,6 +62,8 @@ export class ResultsApiService {
       if (searchParams.version_id) queryParams.push(`version_id=${searchParams.version_id}`);
       if (searchParams.filter_created_by_me) queryParams.push('filter_created_by_me=true');
       if (searchParams.filter_submitted_by_me) queryParams.push('filter_submitted_by_me=true');
+      // @akili-spec changes/my-work-board (MWB-T-3, MWB-R-8)
+      if (searchParams.include_completeness) queryParams.push('include_completeness=true');
     }
 
     const qs = queryParams.length ? `?${queryParams.join('&')}` : '';

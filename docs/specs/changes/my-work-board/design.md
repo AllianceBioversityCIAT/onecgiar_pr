@@ -51,7 +51,7 @@ onecgiar-pr-server/src/api/results
 | 3 | `MyWorkBoardService` | `ScienceProgramIdService.resolve(code)` (memoised) → `GET_AllResultsWithUseRole(userId, { submitter_id, limit: PROGRAMME_RESULTS_PAGE_LIMIT, page: 1, filter_created_by_me: scope === 'mine', include_completeness: scope === 'mine' })`. HTTP 404 → `rows = []` (DD-13) |
 | 4 | Server | Existing filter path builds items. If the flag is true: pick eligible items (`status_id` ∈ {1, 8}, `result_type_id` not an IPSR package), newest `created_date` first, take 60, run `validateResultById(id)` in chunks of 5, `completeness = foldCompleteness(rows)`; a rejected call → `null` + one warning log; every other item `null` |
 | 5 | View-model | Phase filter (label = URL `phase` or default rule) → status→column table (DD-1b) → Editing ordered by ratio asc (null first) then created desc; others created desc → counts, `ready`, badge |
-| 6 | `MyWorkCountService` | Cache `(code, phaseLabel) → count`; the page writes it after a Mine load; the band on the other tabs reads it or triggers `resolve(code)` + one `roles/filter?submitter_id&filter_created_by_me=true&status_id=1&limit=…` request and counts rows whose phase label matches (404 → 0) |
+| 6 | `MyWorkCountService` | Cache `(code, phaseLabel) → count`; the page writes it after a Mine load; the band on the other tabs reads it or triggers `resolve(code)` + one `roles/filter?submitter_id&filter_created_by_me=true&status_id=1,8&limit=…` request and counts rows whose phase label matches (404 → 0) |
 | 7 | Card action | `Continue` → `router.navigate(['/result','result-detail', code, firstMissingRoute ?? 'general-information'], { queryParams: { phase: versionId } })`; `Open` → `general-information` |
 
 ## 3. Data Model Changes
@@ -206,7 +206,7 @@ Additive only. Rollback = revert the client PR (route + tab disappear) and, inde
 - **Decision:** add `resultTypeId` and optional `completeness`; export the mapper. **Alternatives:** a `MyWorkRow` type (rejected: two mappings of one payload).
 
 ### `MWB-DD-5` — Badge count via a scoped root service
-- **Decision:** `MyWorkCountService` per (code, phaseLabel) with a `submitter_id`-scoped, `filter_created_by_me`, `status_id=1` request counted by phase label client-side (Draft rows counted too when present); 404 → 0. **Alternatives:** unscoped `limit=1` total (rejected: `L-8` — counts every programme and phase); badge only on the My work tab (rejected: `MWB-R-1`).
+- **Decision:** `MyWorkCountService` per (code, phaseLabel) with a `submitter_id`-scoped, `filter_created_by_me`, `status_id=1,8` request counted by phase label client-side (Editing column = ids 1 and 8); 404 → 0. **Alternatives:** unscoped `limit=1` total (rejected: `L-8` — counts every programme and phase); badge only on the My work tab (rejected: `MWB-R-1`).
 
 ### `MWB-DD-6` — Read-only board, native controls
 - **Decision:** no DnD library, no `draggable`; CT asserts absence. **Alternatives:** CDK drag with no-op drop (rejected: signals a forbidden capability, `W1`).

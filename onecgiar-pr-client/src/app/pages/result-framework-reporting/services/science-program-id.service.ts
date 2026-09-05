@@ -1,7 +1,7 @@
-// @akili-spec changes/my-work-board (MWB-T-2, MWB-DD-3)
+// @akili-spec changes/my-work-board (MWB-T-2, MWB-T-3, MWB-DD-3)
 import { inject, Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { map, shareReplay } from 'rxjs/operators';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError, map, shareReplay } from 'rxjs/operators';
 import { ApiService } from '../../../shared/services/api/api.service';
 import { SPProgress } from '../../../shared/interfaces/SP-progress.interface';
 
@@ -27,13 +27,31 @@ export class ScienceProgramIdService {
   private readonly api = inject(ApiService);
 
   /**
-   * The one shared request. A class-field initializer, not a method: it runs once, at
-   * construction, and `shareReplay(1)` keeps it cold (no HTTP call) until the first `resolve()`
-   * subscribes — after that every subscriber, present or future, shares the same response.
+   * The one shared request, lazily (re)built by the `progress$` getter below.
+   *
+   * `null` until the first `resolve()` subscribes — `shareReplay(1)` then keeps it cold (no HTTP
+   * call) until that first subscription, after which every subscriber, present or future, shares
+   * the same response. `MWB-T-3` forward pointer (`MWB-T-2` advisory): a `shareReplay(1)` applied
+   * directly to the source would replay a FAILED emission forever too, so a transient failure
+   * would permanently poison every later `resolve()` call. The `catchError` below resets this
+   * field to `null` on error before rethrowing, so the next `resolve()` rebuilds a fresh shared
+   * observable (a real retry) instead of replaying the cached error — while a successful response
+   * is still cached for the session exactly as before.
    */
-  private readonly progress$: Observable<ScienceProgramsEnvelope> = (
-    this.api.resultsSE.GET_ScienceProgramsProgress() as Observable<ScienceProgramsEnvelope>
-  ).pipe(shareReplay(1));
+  private cached$: Observable<ScienceProgramsEnvelope> | null = null;
+
+  private get progress$(): Observable<ScienceProgramsEnvelope> {
+    if (!this.cached$) {
+      this.cached$ = (this.api.resultsSE.GET_ScienceProgramsProgress() as Observable<ScienceProgramsEnvelope>).pipe(
+        catchError(error => {
+          this.cached$ = null;
+          return throwError(() => error);
+        }),
+        shareReplay(1)
+      );
+    }
+    return this.cached$;
+  }
 
   /**
    * Resolves one official code to its numeric initiative id. `null` when the code is blank or not
