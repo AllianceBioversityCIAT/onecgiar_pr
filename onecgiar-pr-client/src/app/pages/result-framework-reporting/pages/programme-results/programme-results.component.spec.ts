@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testin
 import { By } from '@angular/platform-browser';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { ActivatedRoute, ParamMap, Router, convertToParamMap } from '@angular/router';
-import { BehaviorSubject, of } from 'rxjs';
+import { BehaviorSubject, of, Subject, throwError } from 'rxjs';
 
 import {
   PGR_COLUMN_STORAGE_KEY,
@@ -18,6 +18,7 @@ import { DataControlService } from '../../../../shared/services/data-control.ser
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { BilateralResultsService } from '../bilateral-results/bilateral-results.service';
 import { PrToastService } from '../../../../shared/components/pr-toast';
+import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
 import { PrTableComponent } from '../../../../shared/components/pr-table';
 
@@ -110,11 +111,124 @@ const RAW_ITEMS: Record<string, unknown>[] = [
   }
 ];
 
+/**
+ * @akili-spec changes/results-aow-column-filter (RAC-T-2)
+ * The `RAC-R-1` scenario fixture (requirements.md) — result `#9006` linked to `AOW02` AND
+ * `AOW01` (tie-break `AOW01`), `#8871` an Intermediate outcome, `#8702` unlinked → `UNTAGGED`,
+ * plus `#7000` on an OLDER phase (`version_id: '12'`) so a version-mismatch row sits alongside
+ * real joins in the same table. All in `Reporting 2026` / version `11` unless noted.
+ */
+const AOW_RAW_ITEMS: Record<string, unknown>[] = [
+  {
+    id: 9006,
+    result_code: '9006',
+    title: 'Aflatoxin-resistant maize released',
+    result_type: 'Innovation development',
+    status_id: '1',
+    status_name: 'Editing',
+    create_first_name: 'Ada',
+    create_last_name: 'Lovelace',
+    created_date: '2026-02-10T00:00:00.000Z',
+    source_name: 'W1/W2',
+    lead_center: 'CIAT',
+    version_id: '11',
+    phase_name: 'Reporting 2026',
+    phase_year: 2026,
+    submitter: 'SP01'
+  },
+  {
+    id: 8871,
+    result_code: '8871',
+    title: 'Farmer training programme',
+    result_type: 'Capacity sharing for development',
+    status_id: '1',
+    status_name: 'Editing',
+    create_first_name: 'Grace',
+    create_last_name: 'Hopper',
+    created_date: '2026-01-05T00:00:00.000Z',
+    source_name: 'W1/W2',
+    lead_center: 'IITA',
+    version_id: '11',
+    phase_name: 'Reporting 2026',
+    phase_year: 2026,
+    submitter: 'SP01'
+  },
+  {
+    id: 8702,
+    result_code: '8702',
+    title: 'Untagged legacy result',
+    result_type: 'Other output',
+    status_id: '1',
+    status_name: 'Editing',
+    create_first_name: 'Alan',
+    create_last_name: 'Turing',
+    created_date: '2026-03-01T00:00:00.000Z',
+    source_name: 'W1/W2',
+    lead_center: 'ILRI',
+    version_id: '11',
+    phase_name: 'Reporting 2026',
+    phase_year: 2026,
+    submitter: 'SP01'
+  },
+  {
+    id: 7000,
+    result_code: '7000',
+    title: 'Older-phase result',
+    result_type: 'Other output',
+    status_id: '1',
+    status_name: 'Editing',
+    create_first_name: 'Marie',
+    create_last_name: 'Curie',
+    created_date: '2024-01-01T00:00:00.000Z',
+    source_name: 'W1/W2',
+    lead_center: 'ILRI',
+    version_id: '12',
+    phase_name: 'Reporting 2024',
+    phase_year: 2024,
+    submitter: 'SP01'
+  }
+];
+
+/** Buckets for the `AOW_RAW_ITEMS` fixture — no entry for `#7000` (it belongs to version `12`). */
+const AOW_SCOPE_BUCKETS: Array<{ result_id: number | string; key: string; kind: 'aow' | 'outcome' | 'untagged'; codes: string[] }> = [
+  { result_id: 9006, key: 'AOW01', kind: 'aow', codes: ['AOW01', 'AOW02'] },
+  { result_id: 8871, key: 'INTERMEDIATE', kind: 'outcome', codes: [] },
+  { result_id: 8702, key: 'UNTAGGED', kind: 'untagged', codes: [] }
+];
+
+/** Five rows, one per bucket kind, scrambled — RAC-R-2.2's sort-order proof. */
+const AOW_SORT_ITEMS: Record<string, unknown>[] = [1, 2, 3, 4, 5].map(n => ({
+  id: n,
+  result_code: `100${n}`,
+  title: `Sort fixture result ${n}`,
+  result_type: 'Other output',
+  status_id: '1',
+  status_name: 'Editing',
+  create_first_name: 'A',
+  create_last_name: 'B',
+  created_date: '2026-01-01T00:00:00.000Z',
+  source_name: 'W1/W2',
+  lead_center: 'ILRI',
+  version_id: '11',
+  phase_name: 'Reporting 2026',
+  phase_year: 2026,
+  submitter: 'SP01'
+}));
+const AOW_SORT_BUCKETS: Array<{ result_id: number | string; key: string; kind: 'aow' | 'outcome' | 'untagged'; codes: string[] }> = [
+  { result_id: 1, key: 'EOI_2030', kind: 'outcome', codes: [] },
+  { result_id: 2, key: 'AOW02', kind: 'aow', codes: ['AOW02'] },
+  { result_id: 3, key: 'UNTAGGED', kind: 'untagged', codes: [] },
+  { result_id: 4, key: 'AOW01', kind: 'aow', codes: ['AOW01'] },
+  { result_id: 5, key: 'INTERMEDIATE', kind: 'outcome', codes: [] }
+];
+
 describe('ProgrammeResultsComponent', () => {
   let fixture: ComponentFixture<ProgrammeResultsComponent>;
   let component: ProgrammeResultsComponent;
   let router: Router;
   let getAllResults: jest.Mock;
+  let getResultsScope: jest.Mock;
+  let getClarisaGlobalUnits: jest.Mock;
   /**
    * The two halves a real `ActivatedRoute` keeps in sync: the observable `toSignal()` reads and
    * the `snapshot` the mirror effect diffs against. `pushQueryParams` is the only way a test
@@ -129,10 +243,26 @@ describe('ProgrammeResultsComponent', () => {
     queryParamMapSubject.next(map);
   }
 
-  function setup(items: Record<string, unknown>[] = RAW_ITEMS, initialQueryParams: Record<string, string> = {}): void {
+  function setup(
+    items: Record<string, unknown>[] = RAW_ITEMS,
+    initialQueryParams: Record<string, string> = {},
+    // @akili-spec changes/results-aow-column-filter (RAC-T-2) — buckets `GET_ResultsScope` answers
+    // with, shaped exactly like the endpoint's `ResultScopeDto[]` (RAC-T-1).
+    scopeBuckets: Array<{ result_id: number | string; key: string; kind: 'aow' | 'outcome' | 'untagged'; codes: string[] }> = [],
+    // Escape hatch for the loading/error states, which need the mock to hang or throw instead
+    // of answering synchronously.
+    scopeOverride?: jest.Mock,
+    // @akili-spec changes/results-aow-column-filter (RAC-T-3, R-7) — AoW display names
+    // `GET_ClarisaGlobalUnits` answers with, and an escape hatch to force it to fail (the
+    // request is fail-soft — a failure must never touch the table or the scope join).
+    units: Array<{ code: string; name: string }> = [],
+    unitsOverride?: jest.Mock
+  ): void {
     localStorage.clear();
 
     getAllResults = jest.fn(() => of({ response: { items, meta: { total: String(items.length) } } }));
+    getResultsScope = scopeOverride ?? jest.fn(() => of({ response: { programId: 'SP01', versionId: 11, buckets: scopeBuckets } }));
+    getClarisaGlobalUnits = unitsOverride ?? jest.fn(() => of({ response: { units } }));
 
     const initialMap = convertToParamMap(initialQueryParams);
     routeSnapshotQueryParamMap = initialMap;
@@ -150,6 +280,11 @@ describe('ProgrammeResultsComponent', () => {
           })
         ),
         GET_AllResultsWithUseRole: getAllResults,
+        // RAC-T-2 — Area of Work buckets, empty unless `setup()`'s third argument says otherwise.
+        GET_ResultsScope: getResultsScope,
+        // RAC-T-3 (R-7) — AoW display names, empty unless `setup()`'s fifth/sixth arguments say
+        // otherwise.
+        GET_ClarisaGlobalUnits: getClarisaGlobalUnits,
         currentResultId: null as number | null
       },
       // P2-3508 — "Update result" delegates eligibility to ApiService instead of re-deriving it, so
@@ -328,13 +463,9 @@ describe('ProgrammeResultsComponent', () => {
     });
 
     it('collapses non-RF categories into one Other option that selects exactly them', () => {
-      const rows = component.data.rows();
-      component.data.rows.set([
-        ...rows,
-        { ...rows[0], id: 4, code: '5004', category: 'Other output' },
-        { ...rows[0], id: 5, code: '5005', category: 'Impact contribution' }
-      ]);
-      fixture.detectChanges();
+      // RAC-T-2 — `rows()` is now a computed (joined) signal, not writable; feed the two extra
+      // categories through the same payload path every other row takes.
+      setup([...RAW_ITEMS, { ...RAW_ITEMS[0], id: 4, result_code: '5004', result_type: 'Other output' }, { ...RAW_ITEMS[0], id: 5, result_code: '5005', result_type: 'Impact contribution' }]);
 
       const options = component.categorySelectOptions();
       expect(options.map(option => option.label)).toEqual([
@@ -492,7 +623,8 @@ describe('ProgrammeResultsComponent', () => {
       category: 'Policy change',
       origin: null,
       center: null,
-      createdBy: null
+      createdBy: null,
+      section: null
     });
   });
 
@@ -511,7 +643,8 @@ describe('ProgrammeResultsComponent', () => {
       category: null,
       origin: null,
       center: null,
-      createdBy: null
+      createdBy: null,
+      section: null
     });
   });
 
@@ -715,7 +848,8 @@ describe('ProgrammeResultsComponent', () => {
       category: null,
       origin: null,
       center: 'CIAT',
-      createdBy: 'Angel Jarrin'
+      createdBy: 'Angel Jarrin',
+      section: null
     });
   });
 
@@ -738,7 +872,8 @@ describe('ProgrammeResultsComponent', () => {
       category: null,
       origin: null,
       center: null,
-      createdBy: null
+      createdBy: null,
+      section: null
     });
     expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
   });
@@ -764,7 +899,8 @@ describe('ProgrammeResultsComponent', () => {
       category: null,
       origin: null,
       center: null,
-      createdBy: null
+      createdBy: null,
+      section: null
     });
     expect(extras.replaceUrl).toBe(true);
     expect(extras.queryParamsHandling).toBe('merge');
@@ -840,6 +976,7 @@ describe('ProgrammeResultsComponent', () => {
       'code',
       'title',
       'category',
+      'aow',
       'status',
       'updated'
     ]);
@@ -894,16 +1031,20 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.visibleColumns().map(column => column.key)).not.toContain('select');
   });
 
-  it('ships the Section filter visible but DISABLED, with its grouped options wired (P2-3398)', () => {
+  // ── Section filter (RAC-T-3, closes P2-3398) ──────────────────────────────────────────────
+  it('ships the Section filter LIVE, with no aria-disabled and no "Coming soon" tag', () => {
     const wrapper = fixture.debugElement.query(By.css('.pgr-filter--section')).nativeElement as HTMLElement;
-    expect(wrapper.getAttribute('aria-disabled')).toBe('true');
-    expect(wrapper.className).toContain('cursor-not-allowed');
-    expect(wrapper.getAttribute('title')).toContain('not available yet');
-    // Enabling it later is one flag: the grouped options are already built.
-    expect(component.sectionOptions().map(group => group.label)).toEqual(['Areas of work', 'Program-level']);
-    expect(component.sectionOptions()[1].items.map(item => item.value)).toEqual(['intermediate-outcomes', '2030-outcomes']);
-    // The tag sits beside the trigger, in the filter row, where the design puts the control.
-    expect((wrapper.parentElement as HTMLElement).textContent).toContain('Coming soon');
+    expect(wrapper.getAttribute('aria-disabled')).toBeNull();
+    expect(wrapper.className).not.toContain('cursor-not-allowed');
+    expect(wrapper.className).not.toContain('opacity-60');
+    expect(wrapper.getAttribute('title')).toBeNull();
+    expect((wrapper.parentElement as HTMLElement).textContent).not.toContain('Coming soon');
+    // The two never-live placeholder constants are gone (RAC-R-3.1) — the bucket-key vocabulary
+    // (`INTERMEDIATE` / `EOI_2030`) is what the Program-level group offers now.
+    const allValues = component.sectionOptions().flatMap(group => group.items.map(item => item.value));
+    expect(allValues).not.toContain('intermediate-outcomes');
+    expect(allValues).not.toContain('2030-outcomes');
+    expect(allValues).toEqual(expect.arrayContaining(['INTERMEDIATE', 'EOI_2030', 'UNTAGGED']));
   });
 
   it('ships the indicator subtitle with the design geometry and no value (P2-3399)', () => {
@@ -916,10 +1057,237 @@ describe('ProgrammeResultsComponent', () => {
     expect(subtitles[0].nativeElement.getAttribute('title')).toContain('not in the results feed yet');
     expect(component.data.rows().every(row => row.indicator === '')).toBe(true);
 
-    // The SECTION column is omitted from the table; the value in data rows remains empty.
+    // The dormant 'section' column key never became a real column (RAC-T-2 added a DIFFERENT
+    // key, 'aow' — see "Area of Work column (RAC-T-2)" below for its coverage).
     expect(component.visibleColumns().map(column => column.key)).not.toContain('section');
-    expect(component.data.rows().every(row => row.section === '')).toBe(true);
-    expect(component.cellText(component.data.rows()[0], 'section')).toBe('');
+  });
+
+  // ── Area of Work column (RAC-T-2) ─────────────────────────────────────────────────────────
+  describe('Area of Work column (RAC-T-2)', () => {
+    function rowFor(id: number) {
+      return component.data.rows().find(r => r.id === id)!;
+    }
+
+    /** The `aow` cell's rendered `<td>` for the row whose CODE column shows `resultCode`. */
+    function aowCellEl(resultCode: string): HTMLElement {
+      const aowIndex = component.visibleColumns().findIndex(c => c.key === 'aow');
+      const row = dataRows().find(r => (r.nativeElement as HTMLElement).textContent?.includes(resultCode))!;
+      return row.queryAll(By.css('td'))[aowIndex].nativeElement as HTMLElement;
+    }
+
+    it('fetches the scope buckets for the programme and the current phase', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
+      expect(getResultsScope).toHaveBeenCalledWith('SP01', 11);
+    });
+
+    it('renders AOW01 +1 (title lists both codes), Intermediate outcomes and Not tagged (RAC-R-2)', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
+
+      expect(component.cellText(rowFor(9006), 'aow')).toBe('AOW01 +1');
+      expect(component.aowTitle(rowFor(9006))).toBe('AOW01, AOW02');
+      expect(component.cellText(rowFor(8871), 'aow')).toBe('Intermediate outcomes');
+      expect(component.cellText(rowFor(8702), 'aow')).toBe('Not tagged');
+    });
+
+    it('renders the code in the heading colour and +N in --pr-text-muted, textContent still "AOW01 +1" (design.md §6.3)', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
+      fixture.detectChanges();
+
+      const cell = aowCellEl('9006');
+      expect(cell.textContent?.replace(/\s+/g, ' ').trim()).toBe('AOW01 +1');
+      const suffix = Array.from(cell.querySelectorAll('span')).find(el => el.textContent?.trim() === '+1');
+      expect(suffix).toBeDefined();
+      expect(suffix!.className).toContain('text-[var(--pr-text-muted)]');
+    });
+
+    it("renders '' + sectionState 'version-mismatch' for a row of another phase than the loaded buckets (A-1)", () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
+
+      const other = rowFor(7000);
+      expect(other.sectionState).toBe('version-mismatch');
+      expect(component.cellText(other, 'aow')).toBe('—');
+      expect(component.aowTitle(other)).toContain('different phase');
+    });
+
+    it('shows a skeleton while the scope request is in flight, never a dash (RAC-R-2.1)', () => {
+      const slow = new Subject<any>();
+      setup(AOW_RAW_ITEMS, {}, [], jest.fn(() => slow.asObservable()));
+      fixture.detectChanges();
+
+      const cell = aowCellEl('9006');
+      expect(cell.querySelector('.animate-pulse')).not.toBeNull();
+      expect(cell.textContent).not.toContain('—');
+    });
+
+    it("shows '—' with a title explaining the buckets could not be loaded, on a failed request (RAC-R-2.1)", () => {
+      setup(AOW_RAW_ITEMS, {}, [], jest.fn(() => throwError(() => new Error('boom'))));
+      fixture.detectChanges();
+
+      const cell = aowCellEl('9006');
+      expect(cell.textContent?.trim()).toBe('—');
+      expect(cell.querySelector('span')?.getAttribute('title')).toContain('could not be loaded');
+    });
+
+    it('computes sectionSort so AoWs sort alphabetically, then INTERMEDIATE, EOI_2030, UNTAGGED (RAC-R-2.2)', () => {
+      setup(AOW_SORT_ITEMS, {}, AOW_SORT_BUCKETS);
+
+      const sorted = [...component.data.rows()].sort((a, b) => (a.sectionSort ?? '').localeCompare(b.sectionSort ?? ''));
+      expect(sorted.map(r => r.section)).toEqual(['AOW01', 'AOW02', 'INTERMEDIATE', 'EOI_2030', 'UNTAGGED']);
+    });
+
+    it('includes "Area of Work" in the CSV header and the rendered label in the row cell (RAC-AC-8)', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
+
+      // jsdom's `Blob` has no `.text()` — capture the CSV string the same way `exportCsv()`
+      // builds it, from what is actually handed to the `Blob` constructor.
+      let csv = '';
+      const OriginalBlob = globalThis.Blob;
+      (globalThis as unknown as { Blob: unknown }).Blob = class {
+        constructor(parts: string[]) {
+          csv = parts.join('');
+        }
+      };
+      const createObjectURL = jest.fn(() => 'blob:csv');
+      (URL as unknown as { createObjectURL: unknown }).createObjectURL = createObjectURL;
+      (URL as unknown as { revokeObjectURL: unknown }).revokeObjectURL = jest.fn();
+      const click = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+      component.exportCsv();
+
+      expect(csv).toContain('"Area of Work"');
+      expect(csv).toContain('"AOW01 +1"');
+
+      click.mockRestore();
+      (globalThis as unknown as { Blob: unknown }).Blob = OriginalBlob;
+    });
+
+    it('search matches the Area of Work bucket via every code the result touches, not just the tie-broken key (RAC-R-6)', fakeAsync(() => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
+
+      // #9006's bucket key is AOW01 (tie-break); AOW02 only shows up in its `codes` list.
+      component.onSearchInput('aow02');
+      tick(300);
+      fixture.detectChanges();
+
+      expect(component.filteredRows().map(row => row.code)).toEqual(['9006']);
+    }));
+  });
+
+  // ── Section filter live (RAC-T-3, closes P2-3398) ─────────────────────────────────────────
+  describe('Section filter live (RAC-T-3)', () => {
+    it('offers grouped options with live counts: AOW01 (1), Intermediate outcomes (1), 2030 outcomes (0), Not tagged (1)', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
+
+      const options = component.sectionOptions();
+      expect(options.map(group => group.label)).toEqual(['Areas of work', 'Program-level']);
+      expect(options[0].items.map(item => item.label)).toEqual(['AOW01 (1)']);
+      expect(options[1].items.map(item => item.label)).toEqual([
+        'Intermediate outcomes (1)',
+        '2030 outcomes (0)',
+        'Not tagged (1)'
+      ]);
+    });
+
+    // ── AoW display names (R-7, SHOULD) ─────────────────────────────────────────────────────
+    it('appends the AoW unit name beside its code once GET_ClarisaGlobalUnits resolves (R-7)', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS, undefined, [{ code: 'AOW01', name: 'Market Intelligence' }]);
+
+      expect(getClarisaGlobalUnits).toHaveBeenCalledWith('SP01');
+      expect(component.sectionOptions()[0].items.map(item => item.label)).toEqual(['AOW01 · Market Intelligence (1)']);
+      // Chips stay code-only — R-7 is options-only (design.md §6.2, requirements.md R-7).
+      component.filter.selectedSections.set(['AOW01']);
+      expect(filterService().activeChips().map(chip => chip.label)).toContain('Section: AOW01');
+    });
+
+    it('falls back to the bare code when GET_ClarisaGlobalUnits fails, and nothing else observes the failure', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS, undefined, [], jest.fn(() => throwError(() => new Error('boom'))));
+      fixture.detectChanges();
+
+      expect(component.sectionOptions()[0].items.map(item => item.label)).toEqual(['AOW01 (1)']);
+      // Fail-soft: the AoW column, the row list and the scope join are all unaffected.
+      const row9006 = component.data.rows().find(row => row.id === 9006)!;
+      expect(component.cellText(row9006, 'aow')).toBe('AOW01 +1');
+      expect(component.data.error()).toBeNull();
+      expect(component.data.scopeError()).toBeNull();
+    });
+
+    it('selecting AOW01 filters to one row, shows its chip, increments the badge by 1, and mirrors ?section=AOW01', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
+      const badgeBefore = component.activeFilterCount(); // 1: the default Phase chip
+      (router.navigate as jest.Mock).mockClear();
+
+      component.filter.selectedSections.set(['AOW01']);
+      fixture.detectChanges();
+
+      expect(component.filteredRows().map(row => row.code)).toEqual(['9006']);
+      expect(filterService().activeChips()).toEqual(
+        expect.arrayContaining([{ label: 'Section: AOW01', dimension: 'section', value: 'AOW01' }])
+      );
+      expect(text()).toContain('Section: AOW01');
+      expect(component.activeFilterCount()).toBe(badgeBefore + 1);
+      expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
+
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+      const [commands, extras] = (router.navigate as jest.Mock).mock.calls[0];
+      expect(commands).toEqual([]);
+      expect(extras.queryParamsHandling).toBe('merge');
+      expect(extras.replaceUrl).toBe(true);
+      expect(extras.queryParams).toEqual(expect.objectContaining({ section: 'AOW01' }));
+    });
+
+    it('selecting AOW02 filters to zero rows (#9006 is bucketed AOW01, not AOW02)', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
+
+      component.filter.selectedSections.set(['AOW02']);
+      fixture.detectChanges();
+
+      expect(component.filteredRows()).toEqual([]);
+    });
+
+    it('Clear filters restores all three rows and mirrors section: null', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
+      component.filter.selectedSections.set(['AOW01']);
+      fixture.detectChanges();
+      (router.navigate as jest.Mock).mockClear();
+
+      component.clearAll();
+      fixture.detectChanges();
+
+      expect(component.filteredRows().length).toBe(3);
+      expect(filterService().selectedSections()).toEqual([]);
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+      const [, extras] = (router.navigate as jest.Mock).mock.calls[0];
+      expect(extras.queryParams).toEqual(expect.objectContaining({ section: null }));
+    });
+
+    it('hydrates ?section=AOW01,INTERMEDIATE into two chips, filters the rows, and does not navigate (anti-loop)', () => {
+      // `phase` is included in the initial URL, same as every other anti-loop hydrate test in
+      // this file ((a), the createdBy ones): otherwise the default-phase hydrate ALSO changes
+      // the URL on the same tick and the mirror effect legitimately fires for THAT reason.
+      setup(AOW_RAW_ITEMS, { phase: 'Reporting 2026', section: 'AOW01,INTERMEDIATE' }, AOW_SCOPE_BUCKETS);
+
+      expect(filterService().selectedSections()).toEqual(['AOW01', 'INTERMEDIATE']);
+      expect(filterService().activeChips().map(chip => chip.label)).toEqual(
+        expect.arrayContaining(['Section: AOW01', 'Section: Intermediate outcomes'])
+      );
+      expect(component.filteredRows().map(row => row.code).sort()).toEqual(['8871', '9006']);
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('?section=aow01 (lower-case) still matches, case-insensitively, and keeps the raw value in the chip', () => {
+      setup(AOW_RAW_ITEMS, { section: 'aow01' }, AOW_SCOPE_BUCKETS);
+
+      expect(component.filteredRows().map(row => row.code)).toEqual(['9006']);
+      expect(filterService().activeChips().map(chip => chip.label)).toContain('Section: aow01');
+    });
+
+    it('?section=NOPE shows its chip and the filtered-empty state without throwing', () => {
+      expect(() => setup(AOW_RAW_ITEMS, { section: 'NOPE' }, AOW_SCOPE_BUCKETS)).not.toThrow();
+
+      expect(filterService().activeChips().map(chip => chip.label)).toContain('Section: NOPE');
+      expect(component.isFilteredEmpty()).toBe(true);
+      expect(text()).toContain('No results match these filters.');
+    });
   });
 
   it('ships View indicator DISABLED and the other three live (P2-3395; P2-3396 closed 2026-08-24)', () => {
@@ -1158,7 +1526,9 @@ describe('ProgrammeResultsComponent', () => {
       queryParams: { phase: '11' }
     });
 
+    const rememberOrigin = jest.spyOn(TestBed.inject(SmartNavigationService), 'rememberResultDetailOrigin');
     component.openResult(row);
+    expect(rememberOrigin).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/result', 'result-detail', '5001', 'general-information'], {
       queryParams: { phase: '11' }
     });
@@ -1288,8 +1658,9 @@ describe('ProgrammeResultsComponent', () => {
   });
 
   it('says so when the server holds more rows than the page we asked for', () => {
-    getAllResults = jest.fn(() => of({ response: { items: RAW_ITEMS, meta: { total: '476' } } }));
-    component.data.rows.set([]);
+    // RAC-T-2 — `rows()` is now a computed (joined) signal, not writable; `reset()` empties the
+    // base rows it joins from, then the two counters are forced independently of it.
+    component.data.reset();
     component.data.totalReported.set(476);
     component.data.isPartial.set(true);
     expect(component.totalLabel()).toBe('0 of 476 results');

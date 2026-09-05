@@ -1,7 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 import { ApiService } from '../../../../../shared/services/api/api.service';
-import { PROGRAMME_RESULTS_PAGE_LIMIT, ProgrammeResultsService, toProgrammeResultRow } from './programme-results.service';
+import {
+  joinResultScope,
+  PROGRAMME_RESULTS_PAGE_LIMIT,
+  ProgrammeResultsService,
+  ResultScope,
+  toProgrammeResultRow
+} from './programme-results.service';
 
 /** One raw item as `GET /api/results/get/all/roles/filter/{userId}` really returns it. */
 function rawResult(partial: Record<string, any> = {}): Record<string, any> {
@@ -40,10 +46,16 @@ function resultsResponse(items: Record<string, any>[], total = items.length) {
   return { response: { items, meta: { total: String(total), page: 1, limit: PROGRAMME_RESULTS_PAGE_LIMIT, totalPages: 1 } } };
 }
 
+/** Envelope of `GET results-framework-reporting/results-scope` (RAC-T-1). */
+function scopeResponse(buckets: Array<{ result_id: number | string; key: string; kind: 'aow' | 'outcome' | 'untagged'; codes: string[] }>) {
+  return { response: { programId: 'SP01', versionId: 36, buckets } };
+}
+
 describe('ProgrammeResultsService', () => {
   let service: ProgrammeResultsService;
   let GET_ScienceProgramsProgress: jest.Mock;
   let GET_AllResultsWithUseRole: jest.Mock;
+  let GET_ResultsScope: jest.Mock;
   let localStorageUser: { id: number } | null;
 
   function build() {
@@ -54,7 +66,7 @@ describe('ProgrammeResultsService', () => {
         {
           provide: ApiService,
           useValue: {
-            resultsSE: { GET_ScienceProgramsProgress, GET_AllResultsWithUseRole },
+            resultsSE: { GET_ScienceProgramsProgress, GET_AllResultsWithUseRole, GET_ResultsScope },
             authSE: {
               get localStorageUser() {
                 return localStorageUser;
@@ -71,6 +83,7 @@ describe('ProgrammeResultsService', () => {
     localStorageUser = { id: 2 };
     GET_ScienceProgramsProgress = jest.fn().mockReturnValue(of(progressResponse()));
     GET_AllResultsWithUseRole = jest.fn().mockReturnValue(of(resultsResponse([rawResult()])));
+    GET_ResultsScope = jest.fn().mockReturnValue(of(scopeResponse([])));
     build();
   });
 
@@ -123,7 +136,13 @@ describe('ProgrammeResultsService', () => {
           center: '',
           updated: '',
           indicator: '',
-          section: '',
+          // RAC-T-2 — `service.rows()` is the JOINED signal. `loadScope()` was never called in
+          // this test, so `joinResultScope`'s fallback (no scope held, not loading) applies:
+          // every row reads as the residual bucket, not as "unknown".
+          section: 'UNTAGGED',
+          aowCodes: [],
+          sectionState: 'ready',
+          sectionSort: '3_UNTAGGED',
           versionId: '34',
           phaseName: '',
           phaseYear: null,
@@ -337,6 +356,157 @@ describe('ProgrammeResultsService', () => {
 
       expect(service.createdByOptions()).toEqual(['Angel Jarrin', 'Santiago Sanchez']);
       expect(service.createdByOptions().some(option => option.trim() === '')).toBe(false);
+    });
+  });
+
+  describe('loadScope() — Area of Work join (RAC-T-2)', () => {
+    beforeEach(() => {
+      // The shared fixture's `version_id` is '34' — buckets are fetched for that same phase
+      // unless a test says otherwise (version-mismatch test below).
+      service.load('SP01');
+    });
+
+    it('calls GET_ResultsScope with the programme code and the phase versionId', () => {
+      service.loadScope('SP01', 36);
+      expect(GET_ResultsScope).toHaveBeenCalledWith('SP01', 36);
+    });
+
+    it('joins a bucket by numeric result_id and carries every AoW code (RAC-R-1)', () => {
+      GET_ResultsScope.mockReturnValue(of(scopeResponse([{ result_id: 8101, key: 'AOW01', kind: 'aow', codes: ['AOW01', 'AOW02'] }])));
+      service.loadScope('SP01', 34);
+
+      const row = service.rows()[0];
+      expect(row.section).toBe('AOW01');
+      expect(row.aowCodes).toEqual(['AOW01', 'AOW02']);
+      expect(row.sectionState).toBe('ready');
+      expect(row.sectionSort).toBe('0_AOW01');
+    });
+
+    it('normalises a string-keyed bucket result_id to join by Number', () => {
+      GET_ResultsScope.mockReturnValue(of(scopeResponse([{ result_id: '8101', key: 'INTERMEDIATE', kind: 'outcome', codes: [] }])));
+      service.loadScope('SP01', 34);
+
+      expect(service.rows()[0].section).toBe('INTERMEDIATE');
+      expect(service.rows()[0].sectionSort).toBe('1_INTERMEDIATE');
+    });
+
+    it('defaults an unmatched row (no bucket for its id) to UNTAGGED, not a silent blank', () => {
+      // The bucket set is real, just for a DIFFERENT result — id 8101 (this row) has none.
+      GET_ResultsScope.mockReturnValue(of(scopeResponse([{ result_id: 999999, key: 'AOW01', kind: 'aow', codes: ['AOW01'] }])));
+      service.loadScope('SP01', 34);
+
+      const row = service.rows()[0];
+      expect(row.section).toBe('UNTAGGED');
+      expect(row.aowCodes).toEqual([]);
+      expect(row.sectionState).toBe('ready');
+    });
+
+    it('renders the loading state while the request is in flight — never a stale bucket (RAC-R-2.1)', () => {
+      const slow = new Subject<any>();
+      GET_ResultsScope.mockReturnValue(slow.asObservable());
+      service.loadScope('SP01', 34);
+
+      expect(service.scopeLoading()).toBe(true);
+      const row = service.rows()[0];
+      expect(row.sectionState).toBe('loading');
+      expect(row.section).toBe('');
+    });
+
+    it('surfaces a failed scope request as section \'\' + sectionState \'error\' (RAC-R-2.1)', () => {
+      GET_ResultsScope.mockReturnValue(throwError(() => new Error('boom')));
+      service.loadScope('SP01', 34);
+
+      expect(service.scopeError()).toBe('The Area of Work buckets could not be loaded.');
+      const row = service.rows()[0];
+      expect(row.sectionState).toBe('error');
+      expect(row.section).toBe('');
+    });
+
+    it("flags a row as 'version-mismatch' when its phase differs from the loaded buckets' phase (A-1)", () => {
+      GET_ResultsScope.mockReturnValue(of(scopeResponse([{ result_id: 8101, key: 'AOW01', kind: 'aow', codes: ['AOW01'] }])));
+      // This programme's only row carries version_id '34' — fetch buckets for phase 36 instead.
+      service.loadScope('SP01', 36);
+
+      const row = service.rows()[0];
+      expect(row.sectionState).toBe('version-mismatch');
+      expect(row.section).toBe('');
+    });
+
+    it('ignores a superseded scope response so a stale call cannot overwrite the current one', () => {
+      const slowFirst = new Subject<any>();
+      GET_ResultsScope.mockReturnValueOnce(slowFirst.asObservable());
+      GET_ResultsScope.mockReturnValueOnce(of(scopeResponse([{ result_id: 8101, key: 'AOW03', kind: 'aow', codes: ['AOW03'] }])));
+
+      service.loadScope('SP01', 34);
+      service.loadScope('SP01', 34);
+
+      // The first request answers only now, with a bucket belonging to the superseded call.
+      slowFirst.next(scopeResponse([{ result_id: 8101, key: 'AOW02', kind: 'aow', codes: ['AOW02'] }]));
+      slowFirst.complete();
+
+      expect(service.rows()[0].section).toBe('AOW03');
+    });
+
+    it('skips the request and clears any held scope when versionId is not resolved yet', () => {
+      GET_ResultsScope.mockReturnValue(of(scopeResponse([{ result_id: 8101, key: 'AOW01', kind: 'aow', codes: ['AOW01'] }])));
+      service.loadScope('SP01', 34);
+      expect(service.scope()).not.toBeNull();
+
+      service.loadScope('SP01', null);
+
+      expect(GET_ResultsScope).toHaveBeenCalledTimes(1);
+      expect(service.scope()).toBeNull();
+      expect(service.scopeLoading()).toBe(false);
+    });
+
+    it('clears the scope state on reset()', () => {
+      GET_ResultsScope.mockReturnValue(of(scopeResponse([{ result_id: 8101, key: 'AOW01', kind: 'aow', codes: ['AOW01'] }])));
+      service.loadScope('SP01', 34);
+
+      service.reset();
+
+      expect(service.scope()).toBeNull();
+      expect(service.scopeLoading()).toBe(false);
+      expect(service.scopeError()).toBeNull();
+    });
+  });
+
+  describe('joinResultScope() (RAC-T-2)', () => {
+    const base = toProgrammeResultRow(rawResult({ id: '9006', version_id: '36' }));
+
+    it('joins the bucket matching the row id when the versions agree', () => {
+      const scope = new Map<number, ResultScope>([[9006, { key: 'AOW01', kind: 'aow', codes: ['AOW01', 'AOW02'] }]]);
+      const joined = joinResultScope(base, scope, 36, false, null);
+      expect(joined).toEqual(
+        expect.objectContaining({ section: 'AOW01', aowCodes: ['AOW01', 'AOW02'], sectionState: 'ready', sectionSort: '0_AOW01' })
+      );
+    });
+
+    it('prefers loading over a held scope', () => {
+      const scope = new Map<number, ResultScope>([[9006, { key: 'AOW01', kind: 'aow', codes: ['AOW01'] }]]);
+      const joined = joinResultScope(base, scope, 36, true, null);
+      expect(joined.sectionState).toBe('loading');
+      expect(joined.section).toBe('');
+    });
+
+    it('prefers a scope error over a held scope', () => {
+      const scope = new Map<number, ResultScope>([[9006, { key: 'AOW01', kind: 'aow', codes: ['AOW01'] }]]);
+      const joined = joinResultScope(base, scope, 36, false, 'boom');
+      expect(joined.sectionState).toBe('error');
+    });
+
+    it("flags a version mismatch when the row's phase differs from the scope's (A-1)", () => {
+      const scope = new Map<number, ResultScope>([[9006, { key: 'AOW01', kind: 'aow', codes: ['AOW01'] }]]);
+      const joined = joinResultScope(base, scope, 35, false, null);
+      expect(joined.sectionState).toBe('version-mismatch');
+      expect(joined.section).toBe('');
+    });
+
+    it('defaults to UNTAGGED when the scope has no bucket for this row (unmatched row)', () => {
+      const scope = new Map<number, ResultScope>();
+      const joined = joinResultScope(base, scope, 36, false, null);
+      expect(joined.section).toBe('UNTAGGED');
+      expect(joined.sectionState).toBe('ready');
     });
   });
 

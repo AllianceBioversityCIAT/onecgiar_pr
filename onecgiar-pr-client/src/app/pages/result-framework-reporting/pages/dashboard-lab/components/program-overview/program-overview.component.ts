@@ -55,6 +55,15 @@ export interface OverviewLink {
   origin?: string;
   center?: string;
   phase?: string;
+  /**
+   * The active Overview scope (AoW code or `INTERMEDIATE`/`EOI_2030`/`UNTAGGED`) to carry into the
+   * Results tab's `?section=` filter. Left undefined by every existing builder — the host
+   * (`dashboard-lab.onOverviewLink`) stamps it from `overviewScope()` when absent; a builder that
+   * already knows its own scope (the breakdown rows) sets it explicitly and the host never
+   * overwrites that (`RAC-DD-4`).
+   */
+  // @akili-spec changes/results-aow-column-filter
+  section?: string;
 }
 
 /** One segment of the Reporting-status meter. `fg` doubles as the legend dot colour. */
@@ -1020,6 +1029,19 @@ export class ProgramOverviewComponent {
   selectScope(key: string | null): void {
     this.scopeChange.emit(key);
     this.closeScopePopover();
+  }
+
+  /**
+   * `RAC-R-4` — per-row "View results" action on the unfiltered scope breakdown: opens Results
+   * scoped to THIS row's key directly, without first requiring `selectScope`. The row's own
+   * select button and this one are SIBLINGS in the template (a `<button>` cannot legally contain
+   * interactive content, so this is never nested inside it) — `stopPropagation` is kept per the
+   * task contract even though there is no enclosing click handler on this markup to guard against.
+   * @akili-spec changes/results-aow-column-filter
+   */
+  viewBreakdownResults(row: OverviewScopeOption, event: Event): void {
+    event.stopPropagation();
+    this.emitLink({ section: row.key });
   }
 
   // ── Clear filters control (`changes/clear-filters`, `CF-T-1`) ──────────────────────────────────

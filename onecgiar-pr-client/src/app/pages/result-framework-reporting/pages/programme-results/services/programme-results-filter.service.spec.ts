@@ -83,6 +83,26 @@ describe('ProgrammeResultsFilterService', () => {
       expect(matchesProgrammeResultSearch(target, 'Guest')).toBe(false);
       expect(matchesProgrammeResultSearch(target, 'W1/W2')).toBe(false);
     });
+
+    // @akili-spec changes/results-aow-column-filter (RAC-T-2, RAC-R-6)
+    it('matches the Area of Work bucket KEY for the fixed keys, which have no aowCodes', () => {
+      const untagged = row({ section: 'UNTAGGED' });
+      expect(matchesProgrammeResultSearch(untagged, 'untagged')).toBe(true);
+      expect(matchesProgrammeResultSearch(untagged, 'UNTAGGED')).toBe(true);
+    });
+
+    it('matches the Area of Work bucket LABEL as well as its key', () => {
+      const untagged = row({ section: 'UNTAGGED' });
+      expect(matchesProgrammeResultSearch(untagged, 'not tagged')).toBe(true);
+
+      const intermediate = row({ section: 'INTERMEDIATE' });
+      expect(matchesProgrammeResultSearch(intermediate, 'intermediate outcomes')).toBe(true);
+    });
+
+    it('matches an Area of Work code via aowCodes, not just the tie-broken section', () => {
+      const multiCode = row({ section: 'AOW01', aowCodes: ['AOW01', 'AOW02'] });
+      expect(matchesProgrammeResultSearch(multiCode, 'aow02')).toBe(true);
+    });
   });
 
   describe('filterRows()', () => {

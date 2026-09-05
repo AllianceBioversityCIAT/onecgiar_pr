@@ -1106,41 +1106,59 @@
           </div>
 
           @for (row of group.options; track row.key) {
-            <button
-              type="button"
-              (click)="selectScope(row.key)"
-              class="grid w-full cursor-pointer grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[14px] border-0 border-b border-[var(--pr-border-divider)] bg-transparent px-[4px] py-[9px] text-left transition-colors duration-150 hover:bg-[var(--pr-surface-ground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
-              <!--
-                `OSF-T-14`: every row now renders a short, user-facing code — `overviewScopeDisplayCode`
-                (single-homed, also used by `scopeTriggerCode()`) maps the non-AoW internal enum keys
-                (`INTERMEDIATE`/`EOI_2030`/`UNTAGGED`) to the mockup's own short codes (`INT`/`2030`/`—`);
-                AoW keys (`AOW01`...) pass through unchanged. `aria-hidden`: the row's name span (below,
-                NOT hidden) already carries the full accessible meaning, so the untagged bucket's bare
-                `—` glyph is never announced on its own.
-              -->
-              <span
-                class="pr-code text-[11px] font-bold"
-                aria-hidden="true"
-                [class]="row.kind === 'aow' ? 'text-[var(--pr-color-primary-600)]' : 'text-[var(--pr-text-muted)]'">{{ overviewScopeDisplayCode(row) }}</span>
-              <span class="min-w-0 truncate text-[13px] text-[var(--pr-text)]" [title]="row.name">{{ row.name }}</span>
-              <!--
-                `OSF-T-13`: the mockup's segmented status bar (editing/submitted/QA), restored — `OSF-T-7`
-                shipped a 3-track row and dropped this 150px column entirely. Widths COMPUTED IN TS from
-                the bucket's own `byStatus` (never template arithmetic — `OAH-R-3`, same discipline as the
-                AoW row bar above). `role="img"` + `aria-label` (`OAH-N-1` precedent): a roleless `<span>`
-                is not exposed as a text-alternative-bearing element.
-              -->
-              <span
-                role="img"
-                class="flex h-[8px] overflow-hidden rounded-[999px] bg-[var(--pr-border-divider)]"
-                [attr.title]="breakdownBarTitle(row)"
-                [attr.aria-label]="breakdownBarTitle(row)">
-                <span class="block h-full bg-[var(--pr-status-in-progress-fg)]" [style.width.%]="breakdownEditingWidth(row)"></span>
-                <span class="block h-full bg-[var(--pr-status-submitted-fg)]" [style.width.%]="breakdownSubmittedWidth(row)"></span>
-                <span class="block h-full bg-[var(--pr-status-in-qa-fg)]" [style.width.%]="breakdownQaWidth(row)"></span>
-              </span>
-              <span class="pr-figure-sm text-right font-bold text-[var(--pr-text-heading)]">{{ row.count }}</span>
-            </button>
+            <!--
+              @akili-spec changes/results-aow-column-filter (`RAC-R-4`): the row is now a non-interactive
+              wrapper holding TWO sibling buttons — the pre-existing select button (unchanged click,
+              unchanged content) plus a new "View results" icon button. Never nested: a `<button>`
+              cannot legally contain interactive content, so the new action sits beside it instead of
+              inside it.
+            -->
+            <div class="flex w-full items-stretch gap-[4px] border-0 border-b border-[var(--pr-border-divider)]">
+              <button
+                type="button"
+                (click)="selectScope(row.key)"
+                class="grid flex-1 cursor-pointer grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[14px] border-0 bg-transparent px-[4px] py-[9px] text-left transition-colors duration-150 hover:bg-[var(--pr-surface-ground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                <!--
+                  `OSF-T-14`: every row now renders a short, user-facing code — `overviewScopeDisplayCode`
+                  (single-homed, also used by `scopeTriggerCode()`) maps the non-AoW internal enum keys
+                  (`INTERMEDIATE`/`EOI_2030`/`UNTAGGED`) to the mockup's own short codes (`INT`/`2030`/`—`);
+                  AoW keys (`AOW01`...) pass through unchanged. `aria-hidden`: the row's name span (below,
+                  NOT hidden) already carries the full accessible meaning, so the untagged bucket's bare
+                  `—` glyph is never announced on its own.
+                -->
+                <span
+                  class="pr-code text-[11px] font-bold"
+                  aria-hidden="true"
+                  [class]="row.kind === 'aow' ? 'text-[var(--pr-color-primary-600)]' : 'text-[var(--pr-text-muted)]'">{{ overviewScopeDisplayCode(row) }}</span>
+                <span class="min-w-0 truncate text-[13px] text-[var(--pr-text)]" [title]="row.name">{{ row.name }}</span>
+                <!--
+                  `OSF-T-13`: the mockup's segmented status bar (editing/submitted/QA), restored — `OSF-T-7`
+                  shipped a 3-track row and dropped this 150px column entirely. Widths COMPUTED IN TS from
+                  the bucket's own `byStatus` (never template arithmetic — `OAH-R-3`, same discipline as the
+                  AoW row bar above). `role="img"` + `aria-label` (`OAH-N-1` precedent): a roleless `<span>`
+                  is not exposed as a text-alternative-bearing element.
+                -->
+                <span
+                  role="img"
+                  class="flex h-[8px] overflow-hidden rounded-[999px] bg-[var(--pr-border-divider)]"
+                  [attr.title]="breakdownBarTitle(row)"
+                  [attr.aria-label]="breakdownBarTitle(row)">
+                  <span class="block h-full bg-[var(--pr-status-in-progress-fg)]" [style.width.%]="breakdownEditingWidth(row)"></span>
+                  <span class="block h-full bg-[var(--pr-status-submitted-fg)]" [style.width.%]="breakdownSubmittedWidth(row)"></span>
+                  <span class="block h-full bg-[var(--pr-status-in-qa-fg)]" [style.width.%]="breakdownQaWidth(row)"></span>
+                </span>
+                <span class="pr-figure-sm text-right font-bold text-[var(--pr-text-heading)]">{{ row.count }}</span>
+              </button>
+              <!-- @akili-spec changes/results-aow-column-filter (`RAC-R-4`) -->
+              <button
+                type="button"
+                (click)="viewBreakdownResults(row, $event)"
+                [attr.aria-label]="'View results for ' + row.name"
+                title="View results"
+                class="inline-flex h-[28px] w-[28px] shrink-0 cursor-pointer items-center justify-center self-center rounded-[6px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                <span class="material-icons-round text-[14px]" aria-hidden="true">arrow_forward</span>
+              </button>
+            </div>
           }
 
           @if (group.kind === 'aow') {

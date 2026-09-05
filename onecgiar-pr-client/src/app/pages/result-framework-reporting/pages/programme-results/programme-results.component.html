@@ -84,7 +84,7 @@
 
           <!-- Popover Modal -->
           <div
-            class="absolute left-0 top-[40px] z-30 w-[420px] max-w-[90vw] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+            class="absolute left-0 md:left-auto md:right-0 lg:left-0 lg:right-auto top-[40px] z-30 w-[420px] max-w-[90vw] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
             [class.hidden]="!filterPopoverOpen()"
             (click)="$event.stopPropagation()">
             <!-- Popover Header -->
@@ -196,30 +196,24 @@
                 </div>
               </div>
 
-              <!-- Row 4: Section (Coming soon) -->
-              <div>
-                <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
-                  Section
-                </label>
-                <div class="flex items-center gap-[6px]">
-                  <div
-                    class="pgr-filter pgr-filter--section flex-1 cursor-not-allowed opacity-60"
-                    aria-disabled="true"
-                    title="Filtering by section is not available yet: the results feed does not carry the area of work.">
-                    <app-pr-filter-multiselect
-                      [options]="sectionOptions()"
-                      [group]="true"
-                      optionGroupLabel="label"
-                      optionGroupChildren="items"
-                      optionLabel="label"
-                      optionValue="value"
-                      placeholder="Section"
-                      countLabel="sections"
-                      [disabled]="true"
-                      [ngModel]="filter.selectedSections()"
-                      (changed)="filter.selectedSections.set($event)"></app-pr-filter-multiselect>
-                  </div>
-                  <ng-container [ngTemplateOutlet]="comingSoon"></ng-container>
+              <!-- Row 4: Section — RAC-T-3 (P2-3398 closed): live multi-select over the bucket-key
+                   vocabulary, grouped Areas of work / Program-level with counts (RAC-R-3). -->
+              <div class="grid grid-cols-2 gap-[10px]">
+                <div class="pgr-filter pgr-filter--section" aria-label="Filter by section">
+                  <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                    Section
+                  </label>
+                  <app-pr-filter-multiselect
+                    [options]="sectionOptions()"
+                    [group]="true"
+                    optionGroupLabel="label"
+                    optionGroupChildren="items"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Section"
+                    countLabel="sections"
+                    [ngModel]="filter.selectedSections()"
+                    (changed)="filter.selectedSections.set($event)"></app-pr-filter-multiselect>
                 </div>
               </div>
             </div>
@@ -448,6 +442,43 @@
                     <!-- 5 · CATEGORY — truncated + native tooltip. -->
                     <td class="pgr-td truncate text-[13px] font-normal text-[var(--pr-text)]" [attr.title]="row.category">
                       {{ row.category }}
+                    </td>
+                  }
+                  @case ('aow') {
+                    <!-- @akili-spec changes/results-aow-column-filter (RAC-T-2)
+                         AREA OF WORK (RAC-R-2 / R-2.1) — code / fixed label / `+N` with every
+                         code in `title`; skeleton while the scope request is in flight; `—` +
+                         explanatory `title` on error or a phase mismatch (A-1). -->
+                    <td class="pgr-td">
+                      @switch (row.sectionState) {
+                        @case ('loading') {
+                          <span class="sr-only">Loading area of work</span>
+                          <span
+                            class="inline-block h-[14px] w-[64px] animate-pulse rounded-[4px] bg-[var(--pr-surface-app)]"
+                            aria-hidden="true"></span>
+                        }
+                        @case ('error') {
+                          <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]" [attr.title]="aowTitle(row)">—</span>
+                        }
+                        @case ('version-mismatch') {
+                          <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]" [attr.title]="aowTitle(row)">—</span>
+                        }
+                        @default {
+                          @if ((row.aowCodes ?? []).length > 1) {
+                            <!-- RAC-DD-3 / design.md §6.3 — the code in the mono heading colour,
+                                 `+N` in `--pr-text-muted`. The suffix span's own text starts with
+                                 the space, so the cell's textContent still reads `AOW01 +1`. -->
+                            <span class="truncate" [attr.title]="aowTitle(row)">
+                              <span class="font-mono text-[12px] font-medium text-[var(--pr-text-heading)]">{{ row.section }}</span
+                              ><span class="text-[12px] font-medium text-[var(--pr-text-muted)]"> +{{ (row.aowCodes ?? []).length - 1 }}</span>
+                            </span>
+                          } @else if (row.section && (row.aowCodes ?? []).length === 1) {
+                            <span class="truncate font-mono text-[12px] font-medium text-[var(--pr-text-heading)]">{{ row.section }}</span>
+                          } @else {
+                            <span class="truncate text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ cellText(row, 'aow') }}</span>
+                          }
+                        }
+                      }
                     </td>
                   }
                   @case ('status') {

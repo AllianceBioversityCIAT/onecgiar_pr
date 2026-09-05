@@ -62,6 +62,12 @@ días anteriores, o sea **información falsa esperando a que alguien la citara**
 > de días pasados. Nada de ahí describe el presente. Si necesitas saber cómo se llegó a algo, está
 > ahí; si necesitas saber **qué pasa hoy**, está en `estado-<fecha>` más reciente y en el índice.
 
+> ⚠️ **Y se archiva por la fecha en que se MODIFICÓ, no por la del nombre.** El 4-sep archivé
+> `p2-3472-feedback-verificacion-2026-09-03.md` por su nombre, y su dueño lo había actualizado **esa
+> misma mañana** con la verificación posdespliegue: dentro estaba la única receta de las tres sondas
+> de diagnóstico sin escritura. Un `git log -1 --format=%ad -- <archivo>` cuesta un segundo y es la
+> única fecha que dice algo.
+
 **8. Al archivar, revisa que el vigente no se contradiga consigo mismo.** El mismo 4-sep,
 `estado-2026-09-04.md` decía arriba que el alcance de P2-3292 ya estaba decidido y abajo lo listaba
 como *"decisión de Yeck pendiente"*. Un documento que se contradice es peor que uno viejo: el lector
@@ -101,9 +107,11 @@ Si un disparador debería haber funcionado y no lo hizo, se arregla en el mismo 
 | `fase-vs-portafolio.md` | Qué fase es la nueva, los 11 gates que existen y por qué `isP25()` no sirve para separarlas |
 | **`estado-2026-09-04.md`** | 🥇 **Empieza por aquí si vienes de otro chat.** Los tres bloqueos que cayeron el 3-sep y que otras sesiones siguen citando como abiertos, los dos resultados de prueba de 2026 y qué queda |
 | `2026-09-04-verificaciones.md` | La evidencia de las verificaciones en pantalla del 4-sep (cifras, cabeceras, celdas DOM vs visibles). El padre lleva solo el veredicto |
+| **`2026-09-04-verificacion-pantalla-p2-3292.md`** | 🛑 **Léelo antes de tocar el guardado de General Information.** El `NG0103` de los desplegables quedó resuelto y medido; pero el guardado devuelve **500** (`Property "0" was not found in "Result"`) y **no es del campo nuevo** — se reproduce sin ningún target. Trae las tres trampas del flujo (el modal de confirmación que hay que confirmar, y que tapa el botón) |
 | `2026-09-03-green-check-innovation-dev.md` | El green check de Innovation Development: **resuelto el 3-sep**, las dos causas reales, y por qué la ruta **v1** de green checks no sirve para medir |
 | `2026-09-03-decisiones-yeck.md` · `2026-09-02-scope-nuevo.md` · `2026-09-02-reparto-y-clarificaciones.md` | Decisiones de Yeck y del PO que siguen vigentes: alcance, reparto y clarificaciones. **No caducan con la fecha del nombre** |
 | `como-validar-un-despliegue-en-prtest.md` | Cómo se comprueba que algo llegó de verdad al ambiente. 🥇 El sello `APP_VERSION` es del **cliente** y no dice nada del server |
 | `pendiente-defectos-formularios.md` | Los defectos de formularios pendientes del blindaje pre-producción (épico `P2-3558`, valida **Santi**) |
 | `handover-toc-user-feedback.md` | Theory of Change. 🛑 **No se toca** — es de Juan David Delgado (R18) |
+| `p2-3472-feedback-verificacion-2026-09-03.md` | El módulo de reportes: la verificación posdespliegue y 🥇 **la receta de las tres sondas de diagnóstico SIN escritura**. ⚠️ Su nombre lleva fecha del 3-sep pero se actualizó el 4 — **no es histórico** |
 | `archivo/` | 🛑 **Historia. No se lee para trabajar.** Estados, censos, barridos y verificaciones de días pasados — ver regla 7 |

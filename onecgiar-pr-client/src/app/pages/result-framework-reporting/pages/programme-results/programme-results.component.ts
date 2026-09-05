@@ -40,7 +40,9 @@ import {
   buildStatusCounts,
   normalize
 } from './services/programme-results-filter.service';
+import { PROGRAMME_RESULTS_FIXED_SECTION_LABELS, sectionLabel } from './services/programme-results-section-labels';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from './services/programme-results-query-params';
+import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 
 /**
  * Router commands + query params for one result. Same shape as
@@ -83,6 +85,11 @@ export const PGR_COLUMNS: readonly PgrColumnDef[] = [
   { key: 'code', label: 'Code', sortField: 'code', track: '92px', minPx: 92, optional: false },
   { key: 'title', label: 'Result', sortField: 'title', track: 'minmax(240px,2fr)', minPx: 240, optional: false },
   { key: 'category', label: 'Category', sortField: 'category', track: 'minmax(140px,1fr)', minPx: 140, optional: false },
+  // @akili-spec changes/results-aow-column-filter (RAC-T-2)
+  // Area of Work, default on, after Category (design.md §6.2). Sorts by the
+  // precomputed rank string (`sectionSort`), never the raw key, so `INTERMEDIATE` /
+  // `EOI_2030` / `UNTAGGED` land after the alphabetically-sorted AoW codes (RAC-R-2.2).
+  { key: 'aow', label: 'Area of Work', sortField: 'sectionSort', track: '132px', minPx: 132, optional: false },
   { key: 'status', label: 'Status', sortField: 'statusName', track: '120px', minPx: 120, optional: false },
   { key: 'createdBy', label: 'Created by', sortField: 'createdBy', track: 'minmax(140px,1fr)', minPx: 140, optional: true },
   { key: 'created', label: 'Created', sortField: 'created', track: '100px', minPx: 100, optional: true },
@@ -130,9 +137,28 @@ const STATUS_TOKENS: Record<string, { fg: string; bg: string }> = {
   3: { fg: 'var(--pr-status-submitted-fg)', bg: 'var(--pr-status-submitted-bg)' }
 };
 
-/** Programme-level Section buckets — same codes as `dashboard-lab.component.ts:164-165`. */
-const INTERMEDIATE_OUTCOMES_CODE = 'intermediate-outcomes';
-const OUTCOMES_2030_CODE = '2030-outcomes';
+// @akili-spec changes/results-aow-column-filter (RAC-T-3)
+/** The three fixed, program-level bucket keys, in the design's display order. */
+const PROGRAMME_LEVEL_SECTION_KEYS: readonly string[] = ['INTERMEDIATE', 'EOI_2030', 'UNTAGGED'];
+
+// @akili-spec changes/results-aow-column-filter (RAC-T-3)
+/**
+ * `?section=A,B` → `['A', 'B']`. `null` / `''` → `[]`. Values are kept EXACTLY as they arrive
+ * (no trim-casing beyond whitespace, no upper-casing) — RAC-R-4.1's "raw value in chip" rule
+ * depends on the stored value being the one the URL actually carried.
+ */
+function toSectionValues(param: string | null): string[] {
+  if (!param) return [];
+  return param
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean);
+}
+
+/** Order-sensitive equality — enough to guard the hydrate write and keep the anti-loop intact. */
+function sameSectionValues(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
 
 /** `dd MMM yyyy`, the format the other three results tables already use. '' stays ''. */
 function formatDate(value: string): string {
@@ -298,6 +324,29 @@ function formatDate(value: string): string {
       /* The Section panel is taller than the other three (design: 320px vs 280px). */
       .pgr-filter--section ::ng-deep .custom_select .field .options {
         max-height: 320px;
+      }
+
+      /* quick/results-filter-popover-polish (2026-09-04): grouped-panel polish copied from
+         'reporting-program-band.component.scss' '.pr-band-filter' so the two Section panels
+         cannot drift — group headers, group divider, checkbox accent. Tokens only. */
+      .pgr-filter--section ::ng-deep .pr-ms-group + .pr-ms-group {
+        margin-top: 6px;
+        border-top: 1px solid var(--pr-border-divider);
+        padding-top: 6px;
+      }
+
+      .pgr-filter--section ::ng-deep .pr-ms-group-label {
+        padding: 6px 10px 2px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--pr-text-muted);
+      }
+
+      .pgr-filter--section ::ng-deep .option .pr-native-check {
+        flex-shrink: 0;
+        accent-color: var(--pr-color-primary-300);
       }
 
       /* ── Filter chips ─────────────────────────────────────────────────────────────────────
@@ -562,6 +611,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
   private readonly bilateralSE = inject(BilateralResultsService);
   private readonly clipboard = inject(Clipboard);
   private readonly toastSE = inject(PrToastService);
+  private readonly smartNav = inject(SmartNavigationService);
 
   readonly data = inject(ProgrammeResultsService);
   readonly filter = inject(ProgrammeResultsFilterService);
@@ -696,23 +746,43 @@ export class ProgrammeResultsComponent implements OnDestroy {
   readonly createdBySelectOptions = computed(() => this.data.createdByOptions().map(value => ({ value, label: value })));
 
   /**
-   * Section options, grouped "Areas of work" / "Programme-level" exactly like
-   * `dashboard-lab.component.ts:1600 reportingSectionOptions()`.
+   * Section options, grouped "Areas of work" / "Program-level" exactly like
+   * `dashboard-lab.component.ts:1600 reportingSectionOptions()` — same grouping, same
+   * bucket-key vocabulary (RAC-DD-3), now live (RAC-R-3, closing P2-3398).
    *
-   * P2-3398 — the control ships DISABLED: no endpoint returns a programme's full result set with
-   * an AoW/Section field, so every row's `section` is ''. The options stay wired (and the
-   * Areas-of-work group fills itself the moment rows carry a section) so enabling it is one flag.
+   * "Areas of work" offers only the AoW codes present in the loaded rows (RAC-DD-5: while the
+   * scope buckets are loading/erroring every row's `section` is `''`, so this group is empty and
+   * only the three fixed Program-level keys are offered); "Program-level" always offers all
+   * three fixed keys, counted, even at zero (RAC-R-3 scenario: `2030 outcomes (0)`).
+   *
+   * R-7 (SHOULD) — the AoW's unit name is appended beside the code (`AOW01 · Market
+   * Intelligence`) once `data.unitNames()` resolves; until then (loading, or a failed request —
+   * `loadUnits()` is fail-soft) the option falls back to the bare code. Chips are unaffected:
+   * `sectionLabel()` never gained unit-name lookup, so a selected chip still reads `Section:
+   * AOW01` — R-7 is options-only per requirements.md.
    */
   readonly sectionOptions = computed<BandFilterGroup[]>(() => {
-    const codes = [...new Set(this.data.rows().map(row => row.section).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const counts = new Map<string, number>();
+    for (const row of this.data.rows()) {
+      if (!row.section) continue;
+      counts.set(row.section, (counts.get(row.section) ?? 0) + 1);
+    }
+
+    const aowCodes = [...counts.keys()]
+      .filter(key => !PROGRAMME_RESULTS_FIXED_SECTION_LABELS[key])
+      .sort((a, b) => a.localeCompare(b));
+
+    const unitNames = this.data.unitNames();
+    const aowLabel = (code: string): string => {
+      const name = unitNames.get(code.toUpperCase());
+      return name ? `${code} · ${name}` : code;
+    };
+
     return [
-      { label: 'Areas of work', items: codes.map(code => ({ value: code, label: code })) },
+      { label: 'Areas of work', items: aowCodes.map(code => ({ value: code, label: `${aowLabel(code)} (${counts.get(code) ?? 0})` })) },
       {
         label: 'Program-level',
-        items: [
-          { value: INTERMEDIATE_OUTCOMES_CODE, label: 'Intermediate outcomes' },
-          { value: OUTCOMES_2030_CODE, label: '2030 outcomes' }
-        ]
+        items: PROGRAMME_LEVEL_SECTION_KEYS.map(key => ({ value: key, label: `${sectionLabel(key)} (${counts.get(key) ?? 0})` }))
       }
     ];
   });
@@ -795,11 +865,61 @@ export class ProgrammeResultsComponent implements OnDestroy {
     return activePhaseName || (activePhaseYear ? `Phase ${activePhaseYear}` : null);
   });
 
+  // @akili-spec changes/results-aow-column-filter (RAC-T-2)
+  /**
+   * Numeric `versionId` of the phase currently selected in the toolbar — the phase the Area of
+   * Work buckets must be pinned to (RAC-T-2, A-1). This screen holds every phase's rows in one
+   * flat list and filters client-side, so there is no separate phase→versionId catalog to read;
+   * resolved here the same way `defaultPhase()` matches a phase label against the loaded rows.
+   * `null` while rows have not loaded yet or the selection matches nothing — `loadScope()`
+   * treats that as "skip the request".
+   */
+  readonly currentPhaseVersionId = computed<number | null>(() => {
+    const phase = this.filter.selectedPhase();
+    if (!phase) return null;
+    const target = normalize(phase);
+
+    const match = this.data.rows().find(row => {
+      const pName = normalize(row.phaseName);
+      const pYear = normalize(row.phaseYear);
+      const pPhaseYear = normalize(`Phase ${row.phaseYear}`);
+      const vId = normalize(row.versionId);
+      return (
+        target === pName ||
+        target === pYear ||
+        target === vId ||
+        target === pPhaseYear ||
+        (!!pName && (target.includes(pName) || pName.includes(target)))
+      );
+    });
+
+    const id = match ? Number(match.versionId) : null;
+    return id !== null && Number.isFinite(id) ? id : null;
+  });
+
   constructor() {
     effect(() => {
       const code = this.programmeCode();
       if (code) this.data.load(code);
       else this.data.reset();
+    });
+
+    // RAC-T-2 — the Area of Work buckets are pinned to one phase (A-1); refetch whenever the
+    // programme or the toolbar's selected phase resolves to a different versionId.
+    // `loadScope()` self-guards an empty code / unresolved versionId, so no `else` branch here.
+    effect(() => {
+      const code = this.programmeCode();
+      const versionId = this.currentPhaseVersionId();
+      this.data.loadScope(code, versionId);
+    });
+
+    // @akili-spec changes/results-aow-column-filter (RAC-T-3, R-7) — AoW display names for the
+    // Section filter's option labels. Only the PROGRAMME dimension, not the phase: unlike the
+    // scope buckets, the unit catalog is not pinned to one version, so this does not belong in
+    // the effect above and must not refetch on every phase change.
+    effect(() => {
+      const code = this.programmeCode();
+      if (code) this.data.loadUnits(code);
     });
 
     // Controlled input + 300ms debounce: the signal stays the single source of truth for both the
@@ -830,6 +950,11 @@ export class ProgrammeResultsComponent implements OnDestroy {
         const origin = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin);
         const center = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.center);
         const createdBy = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy);
+        // @akili-spec changes/results-aow-column-filter (RAC-T-3) — multi-value, comma list.
+        // Raw values, not upper-cased: `?section=aow01` must still show `aow01` in its chip
+        // (RAC-R-4.1's "raw value in chip" rule) while `matchesProgrammeResultFilters` matches
+        // it case-insensitively.
+        const sections = toSectionValues(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.section));
 
         if (phase !== this.filter.selectedPhase()) this.filter.selectedPhase.set(phase);
         if (status !== this.filter.selectedStatus()) this.filter.selectedStatus.set(status);
@@ -837,6 +962,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
         if (origin !== this.filter.selectedOrigin()) this.filter.selectedOrigin.set(origin);
         if (center !== this.filter.selectedCenter()) this.filter.selectedCenter.set(center);
         if (createdBy !== this.filter.selectedCreatedBy()) this.filter.selectedCreatedBy.set(createdBy);
+        if (!sameSectionValues(sections, this.filter.selectedSections())) this.filter.selectedSections.set(sections);
       });
     });
 
@@ -853,6 +979,9 @@ export class ProgrammeResultsComponent implements OnDestroy {
       const origin = this.filter.selectedOrigin();
       const center = this.filter.selectedCenter();
       const createdBy = this.filter.selectedCreatedBy();
+      // @akili-spec changes/results-aow-column-filter (RAC-T-3) — comma list, `null` (not '')
+      // when empty so the param drops from the URL entirely on Clear filters (RAC-R-3).
+      const sections = this.filter.selectedSections();
 
       untracked(() => {
         const current = this.route.snapshot.queryParamMap;
@@ -862,7 +991,8 @@ export class ProgrammeResultsComponent implements OnDestroy {
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.category]: category,
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin]: origin,
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.center]: center,
-          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy]: createdBy
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy]: createdBy,
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.section]: sections.length ? sections.join(',') : null
         };
         const changed = Object.entries(next).some(([key, value]) => (current.get(key) ?? null) !== (value ?? null));
         if (!changed) return;
@@ -1177,6 +1307,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
       return;
     }
 
+    this.smartNav.rememberResultDetailOrigin();
     this.router.navigate(commands, { queryParams });
   }
 
@@ -1234,9 +1365,21 @@ export class ProgrammeResultsComponent implements OnDestroy {
         return row?.code ?? '';
       case 'title':
         return row?.title ?? '';
-      // Always '' in v1 — no endpoint exposes the AoW for a programme's full result set.
+      // Not a real column (the AoW column is 'aow', below) — the raw bucket key, unused by any
+      // catalog entry today. Kept only so a stray caller gets the real value instead of ''.
       case 'section':
         return row?.section ?? '';
+      // RAC-R-2 / RAC-AC-8 — Area of Work cell text, also used verbatim by CSV export
+      // (`exportCsv()` calls this same switch). Loading has no text (the DOM shows a
+      // skeleton instead); error/version-mismatch render the same dash the cell shows.
+      case 'aow': {
+        const state = row?.sectionState;
+        if (state === 'loading') return '';
+        if (state === 'error' || state === 'version-mismatch') return '—';
+        const label = sectionLabel(row?.section);
+        const extra = (row?.aowCodes?.length ?? 0) > 1 ? ` +${(row?.aowCodes?.length ?? 0) - 1}` : '';
+        return `${label}${extra}`;
+      }
       case 'category':
         return row?.category ?? '';
       case 'status':
@@ -1257,6 +1400,20 @@ export class ProgrammeResultsComponent implements OnDestroy {
       default:
         return '';
     }
+  }
+
+  /**
+   * `title` for the Area of Work cell (RAC-R-2 `+N`, RAC-R-2.1 error/mismatch explanation).
+   * Empty for the loading state (a skeleton has nothing to explain) and for a single-code /
+   * fixed-label cell (nothing more to say than the visible text).
+   */
+  aowTitle(row: ProgrammeResultRow): string {
+    if (row?.sectionState === 'error') return 'The Area of Work buckets could not be loaded.';
+    if (row?.sectionState === 'version-mismatch') {
+      return "This result belongs to a different phase than the Area of Work data currently loaded.";
+    }
+    if ((row?.aowCodes?.length ?? 0) > 1) return row.aowCodes.join(', ');
+    return '';
   }
 
   // ── Export ──────────────────────────────────────────────────────────────────────────────

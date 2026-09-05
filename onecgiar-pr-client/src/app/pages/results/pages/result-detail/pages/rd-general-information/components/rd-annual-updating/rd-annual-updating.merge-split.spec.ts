@@ -39,8 +39,24 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
   /** The codes every test can select. Real-looking six-digit result codes, as PRMS issues them. */
   const CATALOGUE_CODES = [900, 901, 902, 701, 702, 703];
 
+  /**
+   * 🛑 `id` y `result_code` son DELIBERADAMENTE DISTINTOS, y de eso depende que estos candados
+   * puedan fallar. Hasta el 4-sep-2026 el catálogo de prueba solo traía `result_code`, así que
+   * guardar el código en lugar del id **no era distinguible** y los 35 tests pasaban con un defecto
+   * que en prtest hacía que el reportero eligiera una innovación y se guardara OTRA.
+   * El desplazamiento (+2500) es arbitrario y existe exactamente para eso: si algún día se igualan,
+   * estos candados dejan de vigilar sin avisar.
+   */
   const asCatalogue = (codes: number[]) =>
-    codes.map(code => ({ result_code: code, title: `Innovation ${code}`, label: `${code} - Innovation ${code}` }));
+    codes.map(code => ({
+      id: code + 2500,
+      result_code: code,
+      title: `Innovation ${code}`,
+      label: `${code} - Innovation ${code}`
+    }));
+
+  /** El id interno que corresponde a un código del catálogo de prueba. */
+  const idOf = (code: number) => code + 2500;
 
   /**
    * A component with the 2026 Innovation Development context the story scopes.
@@ -114,8 +130,8 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
     it('keeps the split targets when the merge selection changes', () => {
       const component = build([ticked(MERGE_REASON), ticked(SPLIT_REASON)]);
 
-      component.onTargetsChange('split', [701, 702]);
-      component.onTargetsChange('merge', [900]);
+      component.onTargetsChange('split', [idOf(701), idOf(702)]);
+      component.onTargetsChange('merge', [idOf(900)]);
 
       expect(shownCodes(component, 'split')).toEqual([701, 702]);
       expect(shownCodes(component, 'merge')).toEqual([900]);
@@ -124,10 +140,10 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
 
     it('replaces only its own type when a selection is reduced', () => {
       const component = build([ticked(MERGE_REASON), ticked(SPLIT_REASON)]);
-      component.onTargetsChange('merge', [900, 901]);
-      component.onTargetsChange('split', [701]);
+      component.onTargetsChange('merge', [idOf(900), idOf(901)]);
+      component.onTargetsChange('split', [idOf(701)]);
 
-      component.onTargetsChange('merge', [901]);
+      component.onTargetsChange('merge', [idOf(901)]);
 
       expect(shownCodes(component, 'merge')).toEqual([901]);
       expect(shownCodes(component, 'split')).toEqual([701]);
@@ -135,8 +151,8 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
 
     it('clears its own type when the selection is emptied, leaving the other', () => {
       const component = build([ticked(MERGE_REASON), ticked(SPLIT_REASON)]);
-      component.onTargetsChange('merge', [900]);
-      component.onTargetsChange('split', [701]);
+      component.onTargetsChange('merge', [idOf(900)]);
+      component.onTargetsChange('split', [idOf(701)]);
 
       component.onTargetsChange('merge', []);
 
@@ -147,12 +163,12 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
     it('stores every entry with its transition type, which is how the server tells them apart', () => {
       const component = build([ticked(SPLIT_REASON)]);
 
-      component.onTargetsChange('split', [701, 702, 703]);
+      component.onTargetsChange('split', [idOf(701), idOf(702), idOf(703)]);
 
       expect(component.generalInfoBody.merge_split_targets).toEqual([
-        { target_result_id: 701, transition_type: 'split' },
-        { target_result_id: 702, transition_type: 'split' },
-        { target_result_id: 703, transition_type: 'split' }
+        { target_result_id: idOf(701), transition_type: 'split' },
+        { target_result_id: idOf(702), transition_type: 'split' },
+        { target_result_id: idOf(703), transition_type: 'split' }
       ]);
     });
 
@@ -170,16 +186,16 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
 
     it('becomes complete once a target is named', () => {
       const component = build([ticked(MERGE_REASON)]);
-      component.onTargetsChange('merge', [900]);
+      component.onTargetsChange('merge', [idOf(900)]);
       expect(component.mergeSplitIsComplete).toBe(true);
     });
 
     it('requires a target for EACH declared transition, not just one of them', () => {
       const component = build([ticked(MERGE_REASON), ticked(SPLIT_REASON)]);
-      component.onTargetsChange('merge', [900]);
+      component.onTargetsChange('merge', [idOf(900)]);
       expect(component.mergeSplitIsComplete).toBe(false);
 
-      component.onTargetsChange('split', [701]);
+      component.onTargetsChange('split', [idOf(701)]);
       expect(component.mergeSplitIsComplete).toBe(true);
     });
 
@@ -250,7 +266,7 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
   describe('la referencia debe ser estable (candado NG0103)', () => {
     it('devuelve LA MISMA instancia mientras el contenido no cambia', () => {
       const component = build([ticked(MERGE_REASON)]);
-      component.onTargetsChange('merge', [900, 901]);
+      component.onTargetsChange('merge', [idOf(900), idOf(901)]);
 
       const first = component.selectedTargets('merge');
       const second = component.selectedTargets('merge');
@@ -264,10 +280,10 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
 
     it('devuelve una instancia NUEVA cuando el contenido sí cambió', () => {
       const component = build([ticked(MERGE_REASON)]);
-      component.onTargetsChange('merge', [900]);
+      component.onTargetsChange('merge', [idOf(900)]);
       const before = component.selectedTargets('merge');
 
-      component.onTargetsChange('merge', [900, 901]);
+      component.onTargetsChange('merge', [idOf(900), idOf(901)]);
       const after = component.selectedTargets('merge');
 
       expect(after).not.toBe(before);
@@ -276,15 +292,15 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
 
     it('mantiene estable la referencia de cada tipo por separado', () => {
       const component = build([ticked(MERGE_REASON), ticked(SPLIT_REASON)]);
-      component.onTargetsChange('merge', [900]);
-      component.onTargetsChange('split', [701]);
+      component.onTargetsChange('merge', [idOf(900)]);
+      component.onTargetsChange('split', [idOf(701)]);
 
       const mergeRef = component.selectedTargets('merge');
       const splitRef = component.selectedTargets('split');
 
       // Cambiar un tipo no debe invalidar la referencia del otro: si lo hiciera, el dropdown
       // intacto entraría en el mismo bucle.
-      component.onTargetsChange('merge', [900, 902]);
+      component.onTargetsChange('merge', [idOf(900), idOf(902)]);
 
       expect(component.selectedTargets('split')).toBe(splitRef);
       expect(component.selectedTargets('merge')).not.toBe(mergeRef);
@@ -315,7 +331,7 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
   describe('lo que se entrega al multi-select deben ser OBJETOS (candado NG0103, 2ª mitad)', () => {
     it('entrega objetos del catálogo, nunca ids crudos', () => {
       const component = build([ticked(MERGE_REASON)]);
-      component.onTargetsChange('merge', [900, 901]);
+      component.onTargetsChange('merge', [idOf(900), idOf(901)]);
 
       const delivered = component.selectedTargets('merge');
 
@@ -329,11 +345,11 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
 
     it('entrega LA MISMA instancia que está en el catálogo, no una copia', () => {
       const component = build([ticked(MERGE_REASON)]);
-      component.onTargetsChange('merge', [901]);
+      component.onTargetsChange('merge', [idOf(901)]);
 
       // Una copia serviría para el tipo pero no para las chips: el control compara contra las
       // opciones que le pasamos en [options].
-      expect(component.selectedTargets('merge')[0]).toBe(component.mergeSplitCatalogue.find(o => o.result_code === 901));
+      expect(component.selectedTargets('merge')[0]).toBe(component.mergeSplitCatalogue.find(o => o.id === idOf(901)));
     });
 
     it('acepta los OBJETOS que el control emite y guarda el id', () => {
@@ -342,24 +358,70 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
       // Lo que `pr-multi-select` emite de verdad: copias con `new`/`is_active` encima (línea 362
       // de pr-multi-select.component.ts), no los ids.
       component.onTargetsChange('merge', [
-        { result_code: 900, title: 'Innovation 900', new: true, is_active: true },
-        { result_code: 902, title: 'Innovation 902', new: true, is_active: true }
+        { id: idOf(900), result_code: 900, title: 'Innovation 900', new: true, is_active: true },
+        { id: idOf(902), result_code: 902, title: 'Innovation 902', new: true, is_active: true }
       ] as any);
 
-      expect(storedFor(component, 'merge')).toEqual([900, 902]);
+      expect(storedFor(component, 'merge')).toEqual([idOf(900), idOf(902)]);
       expect(shownCodes(component, 'merge')).toEqual([900, 902]);
     });
 
     it('sigue aceptando ids crudos, para que un llamador no guarde NaN en silencio', () => {
       const component = build([ticked(MERGE_REASON)]);
-      component.onTargetsChange('merge', [900, '901' as any]);
-      expect(storedFor(component, 'merge')).toEqual([900, 901]);
+      component.onTargetsChange('merge', [idOf(900), String(idOf(901)) as any]);
+      expect(storedFor(component, 'merge')).toEqual([idOf(900), idOf(901)]);
     });
 
     it('descarta la basura en vez de guardarla como NaN', () => {
       const component = build([ticked(MERGE_REASON)]);
-      component.onTargetsChange('merge', [900, null, undefined, {}, 'x'] as any);
-      expect(storedFor(component, 'merge')).toEqual([900]);
+      component.onTargetsChange('merge', [idOf(900), null, undefined, {}, 'x'] as any);
+      expect(storedFor(component, 'merge')).toEqual([idOf(900)]);
+    });
+  });
+
+  /**
+   * 🛑 EL CANDADO DEL BUG DE DATOS — el defecto más silencioso de todo P2-3292.
+   *
+   * `target_result_id` es FK a `result.id`. El 4-sep-2026 se guardaba el `result_code`, y el efecto
+   * no fue un error: fue **guardar otra innovación**. Medido en prtest: el reportero eligió
+   * "test bilateral JD" (id **11438**, code **8970**), se almacenó **8970 como id** — que resultó ser
+   * el id de OTRO resultado real — y al releerlo la pantalla mostraba *"Unraveling the genetic
+   * architecture of stripe rust resistance in ICARDA spring wheat"*.
+   *
+   * ⚠️ **Y el FK no protegió.** Aceptó 8970 porque ese id existe. Un FK caza los ids inexistentes,
+   * nunca los ids equivocados — y con 11.000 resultados en la tabla, casi cualquier código es
+   * también el id de algo. Por eso este candado compara **valores distintos a propósito**
+   * (`idOf(code) = code + 2500`): con id y código iguales, no habría nada que detectar.
+   */
+  describe('lo que se GUARDA es el id, nunca el result_code (candado del bug de datos)', () => {
+    it('guarda el id interno del objeto elegido, no su código visible', () => {
+      const component = build([ticked(MERGE_REASON)]);
+      const opcion = component.mergeSplitCatalogue.find((o: any) => o.result_code === 900);
+
+      component.onTargetsChange('merge', [opcion] as any);
+
+      expect(storedFor(component, 'merge')).toEqual([idOf(900)]);
+      // La aserción que de verdad importa: NO el código.
+      expect(storedFor(component, 'merge')).not.toContain(900);
+    });
+
+    it('sigue MOSTRANDO el código y el título, que es lo que la historia pide ver', () => {
+      const component = build([ticked(MERGE_REASON)]);
+      component.onTargetsChange('merge', [idOf(900)]);
+
+      const mostrado = component.selectedTargets('merge')[0];
+      expect(mostrado.result_code).toBe(900);
+      expect(mostrado.label).toBe('900 - Innovation 900');
+      // …pero guardado va el id.
+      expect(storedFor(component, 'merge')).toEqual([idOf(900)]);
+    });
+
+    it('la plantilla entrega el id al desplegable, no el código', () => {
+      // Sin esto, el componente puede estar perfecto y la pantalla seguir rota: `optionValue` decide
+      // qué valor emite el control, y un test unitario que llama al método directamente no lo ve.
+      const html = require('fs').readFileSync(__dirname + '/rd-annual-updating.component.html', 'utf8');
+      expect(html).not.toContain('optionValue="result_code"');
+      expect((html.match(/optionValue="id"/g) ?? []).length).toBe(2);
     });
   });
 
@@ -370,12 +432,12 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
   describe('el catálogo no manda sobre lo guardado', () => {
     it('no borra lo guardado cuando el catálogo todavía no llegó', () => {
       const component = build([ticked(MERGE_REASON)], true, []);
-      component.onTargetsChange('merge', [900]);
+      component.onTargetsChange('merge', [idOf(900)]);
 
       // No se puede PINTAR lo que no está en el catálogo...
       expect(component.selectedTargets('merge')).toEqual([]);
       // ...pero sigue guardado, y es lo que viaja al servidor.
-      expect(storedFor(component, 'merge')).toEqual([900]);
+      expect(storedFor(component, 'merge')).toEqual([idOf(900)]);
     });
 
     it('la completitud se mide sobre lo guardado, no sobre lo que el catálogo puede resolver', () => {
@@ -383,7 +445,7 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
       // abrir un resultado ya guardado marcaba la sección en rojo hasta que llegara el catálogo —
       // y para siempre si la petición fallaba.
       const component = build([ticked(MERGE_REASON)], true, []);
-      component.onTargetsChange('merge', [900]);
+      component.onTargetsChange('merge', [idOf(900)]);
 
       expect(component.selectedTargets('merge')).toEqual([]);
       expect(component.mergeSplitIsComplete).toBe(true);
@@ -391,13 +453,13 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
 
     it('pinta la selección en cuanto el catálogo aparece, sin volver a guardar nada', () => {
       const component = build([ticked(MERGE_REASON)], true, []);
-      component.onTargetsChange('merge', [902]);
+      component.onTargetsChange('merge', [idOf(902)]);
       expect(component.selectedTargets('merge')).toEqual([]);
 
       component.mergeSplitCatalogue = asCatalogue([902]);
 
       expect(shownCodes(component, 'merge')).toEqual([902]);
-      expect(storedFor(component, 'merge')).toEqual([902]);
+      expect(storedFor(component, 'merge')).toEqual([idOf(902)]);
     });
 
     it('ignora un id que ya no está en el catálogo sin tirar los demás', () => {
@@ -405,12 +467,12 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
       // deja de ofrecerlo. La respuesta guardada no se toca.
       const component = build([ticked(MERGE_REASON)], true, [900]);
       component.generalInfoBody.merge_split_targets = [
-        { target_result_id: 900, transition_type: 'merge' },
-        { target_result_id: 9999, transition_type: 'merge' }
+        { target_result_id: idOf(900), transition_type: 'merge' },
+        { target_result_id: 999999, transition_type: 'merge' }
       ];
 
       expect(shownCodes(component, 'merge')).toEqual([900]);
-      expect(storedFor(component, 'merge')).toEqual([900, 9999]);
+      expect(storedFor(component, 'merge')).toEqual([idOf(900), 999999]);
     });
   });
 
@@ -436,25 +498,43 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
       expect(component.mergeSplitCatalogue[0].label).toBe('900 - Innovation 900');
     });
 
-    it('NO lo pide al montar cuando no hay transición declarada — sigue siendo perezoso para todos los demás', () => {
+    it('lo pide al montar por is_discontinued, SIN esperar a que lleguen las razones', () => {
+      // 🛑 Éste es el candado del defecto: el criterio NO puede ser "una razón está tildada", porque
+      // las razones llegan en una petición POSTERIOR (`rd-general-information.component.ts:214`).
+      // Con el criterio viejo, en la recarga el catálogo no se pedía nunca y la selección guardada
+      // se pintaba vacía — el reportero veía su respuesta como perdida.
+      const spy = jest
+        .spyOn(api.resultsSE, 'GET_mergeSplitTargetInnovations')
+        .mockReturnValue(of({ response: [{ id: 3400, result_code: 900, title: 'Innovation 900' }] }) as any);
+
+      // discontinued_options VACÍO a propósito: es el estado real en ngOnInit.
+      const component = build([], true, []);
+      stubNarrative(component);
+      component.ngOnInit();
+
+      expect(spy).toHaveBeenCalledWith(11494);
+    });
+
+    it('NO lo pide cuando la innovación está activa — no hay transición posible que declarar', () => {
       const spy = jest.spyOn(api.resultsSE, 'GET_mergeSplitTargetInnovations');
 
-      const component = build([ticked('Discontinued: limited W1/W2 resource availability')], true, []);
+      const component = build([], false, []);
       stubNarrative(component);
       component.ngOnInit();
 
       expect(spy).not.toHaveBeenCalled();
     });
 
-    it('el montar sin transición no consume el intento: el clic posterior sí lo pide', () => {
+    it('montar con la innovación activa no consume el intento: el clic posterior sí lo pide', () => {
       const spy = jest.spyOn(api.resultsSE, 'GET_mergeSplitTargetInnovations').mockReturnValue(of({ response: [] }) as any);
 
-      const component = build([], true, []);
+      const component = build([], false, []);
       stubNarrative(component);
       component.ngOnInit();
       expect(spy).not.toHaveBeenCalled();
 
-      // El reportero tilda la razón durante la visita y abre el dropdown.
+      // El reportero la marca inactiva y tilda la razón durante la visita.
+      component.generalInfoBody.is_discontinued = true;
       component.generalInfoBody.discontinued_options = [ticked(MERGE_REASON)];
       component.ensureMergeSplitCatalogue();
 

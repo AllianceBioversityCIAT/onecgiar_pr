@@ -10,7 +10,7 @@
 // Escape, and the emitted `scopeChange`.
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { ProgramOverviewComponent, HeatmapModel, TocAchievement, overviewScopeDisplayCode } from './program-overview.component';
+import { ProgramOverviewComponent, HeatmapModel, TocAchievement, overviewScopeDisplayCode, OverviewLink } from './program-overview.component';
 import type { OverviewScopeOption, OverviewScopeBreakdown, OverviewAowProgressRowRich } from '../../dashboard-lab.component';
 
 // `OSF-T-14` — the single-homed short-code mapping, unit-tested directly (both call sites —
@@ -549,6 +549,28 @@ describe('ProgramOverviewComponent — overview states (OSF-T-7)', () => {
       aow02Row.click();
 
       expect(emitted).toEqual(['AOW02']);
+    });
+
+    // @akili-spec changes/results-aow-column-filter (`RAC-R-4`, `RAC-AC-4`)
+    it('the new "View results" button emits openResults with { section: row.key } and does NOT call selectScope — sibling buttons, never nested', () => {
+      fixture.componentRef.setInput('scopeBreakdown', breakdown);
+      fixture.componentRef.setInput('selectedScope', null);
+      detect();
+
+      const scopeChanges: (string | null)[] = [];
+      component.scopeChange.subscribe(v => scopeChanges.push(v));
+      const openedLinks: OverviewLink[] = [];
+      component.openResults.subscribe(l => openedLinks.push(l));
+
+      const viewResultsButton = fixture.nativeElement.querySelector(
+        'button[aria-label="View results for 2030 outcomes"]'
+      ) as HTMLButtonElement;
+      expect(viewResultsButton).toBeTruthy();
+
+      viewResultsButton.click();
+
+      expect(openedLinks).toEqual([{ section: 'EOI_2030' }]);
+      expect(scopeChanges).toEqual([]);
     });
 
     // `OSF-T-14` — SUPERSEDES `OSF-T-11`'s "no code chip" fix (updated in place, per the task's own

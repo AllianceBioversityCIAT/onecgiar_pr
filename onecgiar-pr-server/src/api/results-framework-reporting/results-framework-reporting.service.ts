@@ -24,6 +24,12 @@ import type { TocResultResponse } from '../results/results-toc-results/repositor
 import { rollUpChildren } from '../results/results-toc-results/repositories/toc-progress-rollup';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { W1_W2_RESULT_SOURCE_FILTER } from '../../shared/constants/w1-w2-result-source-filter.constant';
+// @akili-spec changes/results-aow-column-filter (RAC-T-1)
+import { toResultScopeDto } from './application/queries/results-scope/results-scope.mapper';
+import type {
+  ResultScopeDto,
+  ResultScopeRow,
+} from './application/queries/results-scope/results-scope.dto';
 
 /** One entry of the additive `scopeBuckets[]` partition (design.md §5). */
 export interface ScopeBucketDto {
@@ -1000,6 +1006,13 @@ export class ResultsFrameworkReportingService {
    * `versionId`, same `r.source` predicate (OSF-DD-2c) — rather than a
    * different endpoint's total, which is what the judgment round found
    * disagreeing.
+   *
+   * // RAC-DD-2 — the row→bucket_key aggregation used to happen inside the
+   * SQL (`GROUP BY bucket_key, status_id`); it now happens here in
+   * TypeScript over the per-result rows `queryResultScopeRows` returns, so
+   * the same rows can also feed `getResultsScope` (RAC-T-1). Output
+   * (`ScopeBucketDto[]`) is unchanged — this method's callers see no
+   * difference.
    */
   private async getScopeBuckets(
     initiativeId: number,
@@ -1009,68 +1022,6 @@ export class ResultsFrameworkReportingService {
     const sourcePlaceholders = W1_W2_RESULT_SOURCE_FILTER.map(() => '?').join(
       ',',
     );
-
-    // One result can touch more than one AoW (OSF-A-1, measured: 3.7%).
-    // `MIN(...)` is the deterministic tie-break OSF-DD-2d requires — the
-    // lowest acronym, stated rather than an accidental `MAX()`.
-    const scopeQuery = `
-      WITH result_scope AS (
-        SELECT
-          r.id AS result_id,
-          r.status_id AS status_id,
-          MIN(UPPER(wp.acronym)) AS aow_acronym,
-          MAX(CASE
-                WHEN wp.acronym IS NULL AND tr.wp_id IS NULL
-                  AND UPPER(tr.category) IN ('OUTPUT', 'OUTCOME')
-                THEN 1 ELSE 0
-              END) AS has_intermediate,
-          MAX(CASE
-                WHEN wp.acronym IS NULL AND tr.wp_id IS NULL
-                  AND UPPER(tr.category) = 'EOI'
-                THEN 1 ELSE 0
-              END) AS has_eoi
-        FROM
-          result r
-        INNER JOIN
-          results_toc_result rtr ON rtr.results_id = r.id
-            AND rtr.is_active = 1
-            AND rtr.initiative_id = ?
-        LEFT JOIN
-          ${env.DB_TOC}.toc_results tr ON tr.id = rtr.toc_result_id
-            AND tr.is_active = 1
-            AND tr.phase = ?
-        LEFT JOIN
-          ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
-            AND wp.year = ?
-        WHERE
-          r.is_active = 1
-          AND r.source IN (${sourcePlaceholders})
-          AND r.version_id = ?
-        GROUP BY
-          r.id, r.status_id
-      )
-      SELECT
-        CASE
-          WHEN aow_acronym IS NOT NULL THEN aow_acronym
-          WHEN has_intermediate = 1 THEN 'INTERMEDIATE'
-          WHEN has_eoi = 1 THEN 'EOI_2030'
-          ELSE NULL
-        END AS bucket_key,
-        status_id,
-        COUNT(*) AS result_count
-      FROM
-        result_scope
-      GROUP BY
-        bucket_key, status_id
-    `;
-
-    const scopeParams: (string | number)[] = [
-      initiativeId,
-      tocContext.phaseUuid,
-      tocContext.reportingYear,
-      ...W1_W2_RESULT_SOURCE_FILTER,
-      tocContext.versionId,
-    ];
 
     // The program total, independent of any ToC link — the population the
     // residual is subtracted against. `results_by_inititiative` is the true
@@ -1101,28 +1052,34 @@ export class ResultsFrameworkReportingService {
     ];
 
     const [scopeRows, totalRows] = await Promise.all([
-      this.dataSource.query(scopeQuery, scopeParams),
+      this.queryResultScopeRows(initiativeId, tocContext, {
+        sourceFilter: W1_W2_RESULT_SOURCE_FILTER,
+      }),
       this.dataSource.query(totalQuery, totalParams),
     ]);
 
     const namedBucketCounts = new Map<string, Map<number, number>>();
-    for (const row of scopeRows as Array<{
-      bucket_key: string | null;
-      status_id: number | string;
-      result_count: number | string;
-    }>) {
-      const bucketKey = row.bucket_key;
+    for (const row of scopeRows) {
+      // RAC-DD-2 — the same precedence the SQL `CASE` used to apply, now
+      // over one row per result: a named AoW wins, else the residual flags,
+      // else the row is not a named bucket (falls into the UNTAGGED
+      // residual below, same as a result with no ToC link at all,
+      // OSF-DD-2b).
+      const bucketKey = row.aow_acronym
+        ? String(row.aow_acronym).toUpperCase()
+        : Number(row.has_intermediate) === 1
+          ? 'INTERMEDIATE'
+          : Number(row.has_eoi) === 1
+            ? 'EOI_2030'
+            : null;
+
       if (!bucketKey) {
-        // Has a `results_toc_result` row (so it is part of the matched
-        // population) but resolves to none of AoW/Intermediate/EOI. It is
-        // not a named bucket — it falls into the UNTAGGED residual below,
-        // same as a result with no ToC link at all (OSF-DD-2b).
         continue;
       }
+
       const statusId = Number(row.status_id);
-      const count = Number(row.result_count) || 0;
       const byStatus = namedBucketCounts.get(bucketKey) ?? new Map();
-      byStatus.set(statusId, (byStatus.get(statusId) ?? 0) + count);
+      byStatus.set(statusId, (byStatus.get(statusId) ?? 0) + 1);
       namedBucketCounts.set(bucketKey, byStatus);
     }
 
@@ -1199,6 +1156,201 @@ export class ResultsFrameworkReportingService {
         total: untaggedTotal,
       },
     ];
+  }
+
+  /**
+   * RAC-DD-1/RAC-DD-2 — the shared `result_scope` CTE lifted out of
+   * `getScopeBuckets`: one row per result touching this initiative's ToC
+   * links, extended with `aow_codes` (every AoW acronym the result touches,
+   * `GROUP_CONCAT(DISTINCT UPPER(acronym) ORDER BY UPPER(acronym))`, RAC-R-1)
+   * so both `getScopeBuckets` (passing `sourceFilter:
+   * W1_W2_RESULT_SOURCE_FILTER`) and `getResultsScope` (passing no filter —
+   * the Results tab lists every source, RAC A-3) read the exact same
+   * population and tie-break. `sourceFilter` is the only difference between
+   * the two callers' queries.
+   */
+  // @akili-spec changes/results-aow-column-filter (RAC-T-1)
+  private async queryResultScopeRows(
+    initiativeId: number,
+    tocContext: ReportingTocContext,
+    { sourceFilter }: { sourceFilter?: readonly string[] } = {},
+  ): Promise<ResultScopeRow[]> {
+    const sourceClause = sourceFilter?.length
+      ? `AND r.source IN (${sourceFilter.map(() => '?').join(',')})`
+      : '';
+
+    // One result can touch more than one AoW (OSF-A-1, measured: 3.7%).
+    // `MIN(...)` is the deterministic tie-break OSF-DD-2d requires — the
+    // lowest acronym, stated rather than an accidental `MAX()`. `aow_codes`
+    // lists every acronym touched, sorted the same way, so
+    // `aow_acronym === aow_codes.split(',')[0]` always holds.
+    const query = `
+      WITH result_scope AS (
+        SELECT
+          r.id AS result_id,
+          r.status_id AS status_id,
+          MIN(UPPER(wp.acronym)) AS aow_acronym,
+          MAX(CASE
+                WHEN wp.acronym IS NULL AND tr.wp_id IS NULL
+                  AND UPPER(tr.category) IN ('OUTPUT', 'OUTCOME')
+                THEN 1 ELSE 0
+              END) AS has_intermediate,
+          MAX(CASE
+                WHEN wp.acronym IS NULL AND tr.wp_id IS NULL
+                  AND UPPER(tr.category) = 'EOI'
+                THEN 1 ELSE 0
+              END) AS has_eoi,
+          GROUP_CONCAT(DISTINCT UPPER(wp.acronym) ORDER BY UPPER(wp.acronym)) AS aow_codes
+        FROM
+          result r
+        INNER JOIN
+          results_toc_result rtr ON rtr.results_id = r.id
+            AND rtr.is_active = 1
+            AND rtr.initiative_id = ?
+        LEFT JOIN
+          ${env.DB_TOC}.toc_results tr ON tr.id = rtr.toc_result_id
+            AND tr.is_active = 1
+            AND tr.phase = ?
+        LEFT JOIN
+          ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
+            AND wp.year = ?
+        WHERE
+          r.is_active = 1
+          ${sourceClause}
+          AND r.version_id = ?
+        GROUP BY
+          r.id, r.status_id
+      )
+      SELECT
+        result_id,
+        status_id,
+        aow_acronym,
+        has_intermediate,
+        has_eoi,
+        aow_codes
+      FROM
+        result_scope
+    `;
+
+    const params: (string | number)[] = [
+      initiativeId,
+      tocContext.phaseUuid,
+      tocContext.reportingYear,
+      ...(sourceFilter ?? []),
+      tocContext.versionId,
+    ];
+
+    return this.dataSource.query(query, params);
+  }
+
+  /**
+   * RAC-R-1 — `GET results-framework-reporting/results-scope`: one bucket
+   * per result of the program at this version, computed by the exact same
+   * `queryResultScopeRows` the Overview's `scopeBuckets` uses, **without**
+   * the W1/W2 source filter (RAC A-3). The population is
+   * `results_by_inititiative` membership for the version — any
+   * `initiative_role_id` (RAC-DD-6/A-5), the same membership
+   * `getScopeBuckets`' program total reads — so a result present in the
+   * program but with no ToC link at all still appears, mapped to
+   * `UNTAGGED` (RAC-R-1.1) rather than dropped by the join.
+   */
+  // @akili-spec changes/results-aow-column-filter (RAC-T-1)
+  async getResultsScope(programId?: string, versionId?: number) {
+    try {
+      const { initiative } = await this.resolveInitiative(programId ?? '');
+      const tocContext = await this.resolveTocContextForRequest(versionId);
+
+      const [scopeRows, populationRows] = await Promise.all([
+        this.queryResultScopeRows(initiative.id, tocContext),
+        this.queryProgramResultPopulation(initiative.id, tocContext.versionId),
+      ]);
+
+      const scopeByResultId = new Map<number, ResultScopeRow>();
+      for (const row of scopeRows) {
+        scopeByResultId.set(Number(row.result_id), row);
+      }
+
+      // Defense-in-depth alongside `queryProgramResultPopulation`'s `SELECT
+      // DISTINCT`: a result can carry more than one active membership row
+      // (owner + contributor), so guard the one-bucket-per-result contract
+      // here too rather than trust the SQL alone (RAC-R-1).
+      const buckets: ResultScopeDto[] = [];
+      const seenResultIds = new Set<number>();
+      for (const row of populationRows) {
+        const resultId = Number(row.result_id);
+        if (seenResultIds.has(resultId)) {
+          continue;
+        }
+        seenResultIds.add(resultId);
+
+        const scopeRow = scopeByResultId.get(resultId);
+
+        // RAC-R-1.1 — no `result_scope` row at all (never had a ToC link):
+        // synthesize the untagged shape rather than drop the result.
+        buckets.push(
+          toResultScopeDto(
+            scopeRow ?? {
+              result_id: resultId,
+              status_id: row.status_id,
+              aow_acronym: null,
+              has_intermediate: 0,
+              has_eoi: 0,
+              aow_codes: null,
+            },
+          ),
+        );
+      }
+
+      return {
+        response: {
+          programId: initiative.official_code,
+          versionId: tocContext.versionId,
+          buckets,
+        },
+        message: 'Results scope retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * RAC-DD-6/A-5 — every result the program has as a member (any
+   * `initiative_role_id`), for one version, with no source filter — the
+   * superset population `getResultsScope` needs so its join never drops an
+   * owned row (the Results tab lists owner-only results, but this endpoint
+   * returns buckets for every program-linked result).
+   */
+  // @akili-spec changes/results-aow-column-filter (RAC-T-1)
+  private async queryProgramResultPopulation(
+    initiativeId: number,
+    versionId: number,
+  ): Promise<
+    Array<{ result_id: number | string; status_id: number | string }>
+  > {
+    // DISTINCT — a result can carry more than one active
+    // `results_by_inititiative` membership row (e.g. contributor + owner);
+    // without it the join emits duplicate rows for the same result, one per
+    // membership. `getScopeBuckets`' sibling total query on this exact join
+    // guards the same thing with `COUNT(DISTINCT r.id)` — this query must
+    // count the same population the same way (RAC-DD-6).
+    const query = `
+      SELECT DISTINCT
+        r.id AS result_id,
+        r.status_id AS status_id
+      FROM
+        result r
+      INNER JOIN
+        results_by_inititiative rbi ON rbi.result_id = r.id
+          AND rbi.is_active = 1
+          AND rbi.inititiative_id = ?
+      WHERE
+        r.is_active = 1
+        AND r.version_id = ?
+    `;
+
+    return this.dataSource.query(query, [initiativeId, versionId]);
   }
 
   /** Builds a `Record<statusId, number>` covering every known status. */

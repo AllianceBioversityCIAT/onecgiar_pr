@@ -1913,7 +1913,7 @@ describe('ReportingAowTableComponent', () => {
       expect(title?.className).toContain('text-[12.5px]');
       expect(title?.className).toContain('font-medium');
 
-      const target = el.querySelector('.pr-figure');
+      const target = el.querySelector('.pr-reporting-row .pr-figure-sm');
       expect(target?.className).toContain('text-[13px]');
 
       const reportBtn = el.querySelector('.pr-row-action');

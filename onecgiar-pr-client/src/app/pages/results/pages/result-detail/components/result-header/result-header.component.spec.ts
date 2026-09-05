@@ -8,6 +8,7 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { PdfExportService } from '../../../../../../shared/services/pdf-export.service';
 import { ResultMetadataPanelService } from '../../../../../../shared/components/result-metadata/result-metadata-panel.service';
+import { RESULT_DETAIL_ORIGIN_STORAGE_KEY, SmartNavigationService } from '../../../../../../shared/services/smart-navigation.service';
 
 describe('ResultHeaderComponent', () => {
   let fixture: ComponentFixture<ResultHeaderComponent>;
@@ -21,7 +22,8 @@ describe('ResultHeaderComponent', () => {
   const html = () => fixture.nativeElement as HTMLElement;
   const q = (sel: string) => html().querySelector(sel) as HTMLElement;
 
-  const build = async (url = '/result/result-detail/1234/general-information?phase=7') => {
+  const build = async (url = '/result/result-detail/1234/general-information?phase=7', setup?: () => void) => {
+    sessionStorage.removeItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY);
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [ResultHeaderComponent],
@@ -36,6 +38,7 @@ describe('ResultHeaderComponent', () => {
     }).compileComponents();
 
     jest.spyOn(TestBed.inject(Router), 'url', 'get').mockReturnValue(url);
+    setup?.();
 
     fixture = TestBed.createComponent(ResultHeaderComponent);
     component = fixture.componentInstance;
@@ -99,6 +102,22 @@ describe('ResultHeaderComponent', () => {
       await build();
 
       expect(q('[data-testid="result-detail-back-link"]').getAttribute('href')).toBe('/result/results-outlet/results-list');
+      expect(q('[data-testid="result-detail-back-link"]').getAttribute('title')).toBe('Back to all results');
+    });
+
+    it('links back to the programme Results tab when that is where the user came from', async () => {
+      const detail = '/result/result-detail/9042/general-information?phase=36';
+      await build(detail, () => {
+        const nav = TestBed.inject(SmartNavigationService);
+        nav.recordUrl('/result-framework-reporting/entity-details/SP12/results?phase=36&createdBy=42');
+        nav.recordUrl(detail);
+      });
+
+      const href = q('[data-testid="result-detail-back-link"]').getAttribute('href') ?? '';
+      expect(href).toContain('/result-framework-reporting/entity-details/SP12/results');
+      expect(href).toContain('phase=36');
+      expect(href).toContain('createdBy=42');
+      expect(q('[data-testid="result-detail-back-link"]').getAttribute('title')).toBe('Back to programme results');
     });
 
     it('shows the level and funding inline (code and type live in the sections sidebar)', async () => {

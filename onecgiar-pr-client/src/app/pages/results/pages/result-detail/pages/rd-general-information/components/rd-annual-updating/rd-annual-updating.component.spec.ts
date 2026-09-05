@@ -332,7 +332,12 @@ describe('RdAnnualUpdatingComponent', () => {
       jest.spyOn(rendered.componentInstance.api.resultsSE, 'GET_globalNarratives').mockReturnValue(of({ response: { value: '' } }));
       rendered.componentInstance.generalInfoBody.is_discontinued = true;
       rendered.componentInstance.generalInfoBody.discontinued_options = [
-        { investment_discontinued_option_id: 40, option: 'Discontinued: limited design / testing / validation progress', requires_description: false, value: false },
+        {
+          investment_discontinued_option_id: 40,
+          option: 'Discontinued: limited design / testing / validation progress',
+          requires_description: false,
+          value: false
+        },
         { investment_discontinued_option_id: 46, option: 'Other (please specify)', requires_description: true, value: false }
       ];
       rendered.detectChanges();

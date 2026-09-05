@@ -18,6 +18,7 @@ describe('ResultsFrameworkReportingController', () => {
           provide: ResultsFrameworkReportingService,
           useValue: {
             getGlobalUnitsByProgram: jest.fn(),
+            getResultsScope: jest.fn(),
             getWorkPackagesByProgramAndArea: jest.fn(),
             getIntermediateOutcomes: jest.fn(),
             getToc2030Outcomes: jest.fn(),
@@ -169,6 +170,38 @@ describe('ResultsFrameworkReportingController', () => {
       controller.getIntermediateOutcomes('SP01', 'not-a-number');
 
       const call = reportingService.getIntermediateOutcomes.mock.calls[0];
+      expect(call[0]).toBe('SP01');
+      expect(call[1]).toBeNaN();
+    });
+  });
+
+  // @akili-spec changes/results-aow-column-filter (RAC-T-1)
+  describe('getResultsScope', () => {
+    it('should delegate to reporting service with undefined versionId when not provided', () => {
+      reportingService.getResultsScope.mockResolvedValueOnce({} as any);
+
+      controller.getResultsScope('SP01');
+
+      expect(reportingService.getResultsScope).toHaveBeenCalledWith(
+        'SP01',
+        undefined,
+      );
+    });
+
+    it('should forward programId and normalize a numeric versionId query param to a number', () => {
+      reportingService.getResultsScope.mockResolvedValueOnce({} as any);
+
+      controller.getResultsScope('SP01', '36');
+
+      expect(reportingService.getResultsScope).toHaveBeenCalledWith('SP01', 36);
+    });
+
+    it('should pass NaN through for a non-numeric versionId (400 is the service’s call)', () => {
+      reportingService.getResultsScope.mockResolvedValueOnce({} as any);
+
+      controller.getResultsScope('SP01', 'abc');
+
+      const call = reportingService.getResultsScope.mock.calls[0];
       expect(call[0]).toBe('SP01');
       expect(call[1]).toBeNaN();
     });

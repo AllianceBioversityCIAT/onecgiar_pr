@@ -96,6 +96,44 @@ export class ResultsFrameworkReportingController {
     );
   }
 
+  @Get('results-scope')
+  @ApiOperation({
+    summary: "Get each result's scope bucket for a program and phase",
+    description:
+      "Returns, for one program at one phase (versionId), every result's scope bucket — the same partition and tie-break rule the Overview's clarisa-global-units scopeBuckets uses, but without the W1/W2 source filter (the Results tab lists every source). A result with no ToC link at all is returned as UNTAGGED rather than omitted.",
+  })
+  @ApiQuery({
+    name: 'programId',
+    type: String,
+    required: true,
+    description: 'Initiative official code to resolve the program (e.g. SP01).',
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: Number,
+    required: true,
+    description:
+      'Phase/version identifier to resolve the ToC context for. Non-numeric values return 400.',
+  })
+  @ApiOkResponse({
+    description: 'Results scope retrieved successfully.',
+  })
+  // @akili-spec changes/results-aow-column-filter (RAC-T-1)
+  getResultsScope(
+    @Query('programId') programId: string,
+    @Query('versionId') versionId?: string,
+  ) {
+    const parsedVersion =
+      versionId !== undefined && versionId !== null
+        ? Number(versionId)
+        : undefined;
+
+    return this.resultsFrameworkReportingService.getResultsScope(
+      programId,
+      parsedVersion,
+    );
+  }
+
   @Get('toc-results')
   @ApiOperation({
     summary: 'List ToC results by program and area of work',

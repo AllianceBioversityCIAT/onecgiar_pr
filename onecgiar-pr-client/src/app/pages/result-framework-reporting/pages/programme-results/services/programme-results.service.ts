@@ -3,6 +3,8 @@ import { switchMap } from 'rxjs/operators';
 import { Observable, of } from 'rxjs';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { SPProgress } from '../../../../../shared/interfaces/SP-progress.interface';
+// @akili-spec changes/results-aow-column-filter (RAC-T-3, R-7)
+import { Unit } from '../../entity-details/interfaces/entity-details.interface';
 
 /**
  * One row of the programme Results table.
@@ -50,11 +52,34 @@ export interface ProgrammeResultRow {
    */
   indicator: string;
   /**
-   * The SECTION column (AoW code + name). ALWAYS EMPTY: this endpoint has no AoW field,
-   * and the only endpoint that does (`by-program-and-centers`) is server-hard-filtered to
-   * the bilateral review queue. Known, ticketed gap — P2-3399.
+   * The SECTION column — the Overview's scope-bucket key (`AOW01`, `INTERMEDIATE`, `EOI_2030`,
+   * `UNTAGGED`) joined client-side from `GET results-framework-reporting/results-scope`
+   * (RAC-T-2, `programme-results.service.ts` `joinResultScope`). `''` while the buckets are
+   * loading/errored or when this row's phase differs from the loaded buckets' phase (A-1) —
+   * see `sectionState`.
    */
   section: string;
+  /**
+   * Every AoW code the result's active ToC links touch (`kind: 'aow'` buckets only, RAC-R-1);
+   * `[]` for the fixed keys and while unset. Drives the `+N` / `title` on the Area of Work cell
+   * (RAC-R-2). Optional so a `ProgrammeResultRow` literal built elsewhere (tests, RAC-T-3's own
+   * fixtures) does not have to name it — `ProgrammeResultsService.rows()` always sets it.
+   */
+  aowCodes?: string[];
+  /**
+   * Whether `section`/`aowCodes` reflect a real join (`'ready'`), the scope request is still in
+   * flight (`'loading'`), it failed (`'error'`), or this row's `versionId` differs from the
+   * phase the loaded buckets were fetched for (`'version-mismatch'`, A-1). Drives the Area of
+   * Work cell's skeleton / `—`+title / normal rendering (RAC-R-2.1). Optional for the same
+   * reason as `aowCodes`.
+   */
+  sectionState?: 'ready' | 'loading' | 'error' | 'version-mismatch';
+  /**
+   * Sort rank for the Area of Work column (RAC-R-2.2): `0_<code>` for an AoW (alphabetical by
+   * code), then `1_INTERMEDIATE`, `2_EOI_2030`, `3_UNTAGGED`; `9_` while there is no section to
+   * rank (loading/error/mismatch). Optional for the same reason as `aowCodes`.
+   */
+  sectionSort?: string;
 
   // --- raw fields the "Open result" route needs -------------------------------------
   // Mirrors results-list.component.ts:634 `getResultRoute()`, whose branch reads exactly
@@ -94,6 +119,81 @@ interface AllResultsEnvelope {
 /** Envelope of `GET /api/results-framework-reporting/get/science-programs/progress`. */
 interface ScienceProgramsEnvelope {
   response?: { mySciencePrograms?: SPProgress[]; otherSciencePrograms?: SPProgress[] };
+}
+
+// @akili-spec changes/results-aow-column-filter (RAC-T-2)
+// ── Area of Work scope join ─────────────────────────────────────────────────────────────────
+
+/** One result's scope bucket, held in the map `loadScope()` builds. */
+export interface ResultScope {
+  key: string;
+  kind: 'aow' | 'outcome' | 'untagged';
+  codes: string[];
+}
+
+/** Envelope of `GET /api/results-framework-reporting/results-scope` (RAC-T-1). */
+interface ResultsScopeEnvelope {
+  response?: {
+    programId?: string;
+    versionId?: number;
+    buckets?: Array<{ result_id: number | string; key: string; kind: 'aow' | 'outcome' | 'untagged'; codes: string[] }>;
+  };
+}
+
+// @akili-spec changes/results-aow-column-filter (RAC-T-3, R-7)
+/** Envelope of `GET /api/results-framework-reporting/clarisa-global-units` — same request the
+ *  Overview already makes (`dashboard-lab.component.ts` `cacheAows`), read here ONLY for
+ *  `response.units[].{code,name}` (RAC-R-7's AoW display names). */
+interface ClarisaGlobalUnitsEnvelope {
+  response?: { units?: Unit[] };
+}
+
+/** `0_AOW01` … `3_UNTAGGED`, alphabetical within `aow` (RAC-R-2.2). `''`/unset sorts last. */
+function sectionSortRank(key: string): string {
+  if (!key) return '9_';
+  if (key === 'INTERMEDIATE') return `1_${key}`;
+  if (key === 'EOI_2030') return `2_${key}`;
+  if (key === 'UNTAGGED') return `3_${key}`;
+  return `0_${key}`;
+}
+
+/**
+ * Joins one base row with the currently held scope state (design.md §6.2, RAC-DD-5, A-1).
+ * Pure — exported for the spec.
+ *
+ * Precedence: a request in flight always renders as loading (never a stale bucket); a failed
+ * request always renders as an error; only once both are clear does a phase mismatch matter —
+ * comparing against a scope this row does not belong to would otherwise misreport a mismatch
+ * while the *next* phase's buckets are still loading.
+ */
+export function joinResultScope(
+  row: ProgrammeResultRow,
+  scope: Map<number, ResultScope> | null,
+  scopeVersionId: number | null,
+  scopeLoading: boolean,
+  scopeError: string | null
+): ProgrammeResultRow {
+  if (scopeLoading) {
+    return { ...row, section: '', aowCodes: [], sectionState: 'loading', sectionSort: sectionSortRank('') };
+  }
+  if (scopeError) {
+    return { ...row, section: '', aowCodes: [], sectionState: 'error', sectionSort: sectionSortRank('') };
+  }
+  if (scope && scopeVersionId !== null) {
+    const rowVersionId = num(row.versionId);
+    if (rowVersionId === null || rowVersionId !== scopeVersionId) {
+      return { ...row, section: '', aowCodes: [], sectionState: 'version-mismatch', sectionSort: sectionSortRank('') };
+    }
+  }
+  const bucket = scope?.get(num(row.id) ?? NaN);
+  const key = bucket?.key ?? 'UNTAGGED';
+  return {
+    ...row,
+    section: key,
+    aowCodes: bucket?.codes ?? [],
+    sectionState: 'ready',
+    sectionSort: sectionSortRank(key)
+  };
 }
 
 /**
@@ -176,15 +276,50 @@ export class ProgrammeResultsService {
 
   /** Discards a late response when `load()` was called again with a different programme. */
   private requestToken = 0;
+  /** Discards a late scope response when `loadScope()` was called again for another phase. */
+  private scopeRequestToken = 0;
 
   /** The programme code (official code, e.g. `SP01`) the current rows belong to. */
   readonly programmeCode = signal<string>('');
   /** The resolved numeric initiative id used as `submitter_id`. */
   readonly initiativeId = signal<number | null>(null);
 
-  readonly rows = signal<ProgrammeResultRow[]>([]);
+  /** Base rows from `get/all/roles/filter` — no Area of Work join applied yet. */
+  private readonly rawRows = signal<ProgrammeResultRow[]>([]);
   readonly loading = signal<boolean>(false);
   readonly error = signal<string | null>(null);
+
+  // @akili-spec changes/results-aow-column-filter (RAC-T-2) — Area of Work scope
+  /** `result_id -> ResultScope`, keyed by `Number(result_id)` (buckets may arrive string-keyed). */
+  readonly scope = signal<Map<number, ResultScope> | null>(null);
+  readonly scopeLoading = signal<boolean>(false);
+  readonly scopeError = signal<string | null>(null);
+  /** The phase `scope()` was fetched for — the join's version guard (A-1). */
+  private readonly scopeVersionId = signal<number | null>(null);
+
+  // @akili-spec changes/results-aow-column-filter (RAC-T-3, R-7)
+  /** Discards a late unit-names response when `loadUnits()` was called again for another programme. */
+  private unitsRequestToken = 0;
+  /**
+   * `AoW code (upper-case) -> display name`, for `sectionOptions()`'s R-7 "name beside the code"
+   * (SHOULD, not blocking). FAIL-SOFT by design: this is decoration on an option label, not data
+   * the table or the filter depends on, so a failed/slow request just leaves the map empty and
+   * every option falls back to its code alone — no error state, no `—`, nothing else reacts.
+   */
+  readonly unitNames = signal<Map<string, string>>(new Map());
+
+  /**
+   * Rows the table renders: the base rows joined with the currently held scope state
+   * (`joinResultScope`, RAC-T-2). Public API unchanged — still a `Signal<ProgrammeResultRow[]>`
+   * callers read with `rows()`; only its `WritableSignal` internals moved to `rawRows`.
+   */
+  readonly rows = computed<ProgrammeResultRow[]>(() => {
+    const scope = this.scope();
+    const scopeVersionId = this.scopeVersionId();
+    const scopeLoading = this.scopeLoading();
+    const scopeError = this.scopeError();
+    return this.rawRows().map(row => joinResultScope(row, scope, scopeVersionId, scopeLoading, scopeError));
+  });
 
   /** `meta.total` as reported by the server for this programme (already a number). */
   readonly totalReported = signal<number>(0);
@@ -256,7 +391,7 @@ export class ProgrammeResultsService {
 
           if (envelope === null) {
             // resolveInitiativeId already decided what went wrong.
-            this.rows.set([]);
+            this.rawRows.set([]);
             this.totalReported.set(0);
             this.isPartial.set(false);
             this.loading.set(false);
@@ -267,14 +402,14 @@ export class ProgrammeResultsService {
           const items = envelope?.response?.items ?? [];
           const total = num(envelope?.response?.meta?.total) ?? items.length;
 
-          this.rows.set(items.map(toProgrammeResultRow));
+          this.rawRows.set(items.map(toProgrammeResultRow));
           this.totalReported.set(total);
           this.isPartial.set(total > items.length);
           this.loading.set(false);
         },
         error: () => {
           if (token !== this.requestToken) return;
-          this.rows.set([]);
+          this.rawRows.set([]);
           this.totalReported.set(0);
           this.isPartial.set(false);
           this.loading.set(false);
@@ -286,12 +421,109 @@ export class ProgrammeResultsService {
   /** Drops every row and flag. Call when leaving the tab. */
   reset(): void {
     this.requestToken++;
-    this.rows.set([]);
+    this.scopeRequestToken++;
+    this.unitsRequestToken++;
+    this.rawRows.set([]);
     this.initiativeId.set(null);
+    this.scope.set(null);
+    this.scopeVersionId.set(null);
+    this.scopeLoading.set(false);
+    this.scopeError.set(null);
+    this.unitNames.set(new Map());
     this.totalReported.set(0);
     this.isPartial.set(false);
     this.loading.set(false);
     this.error.set(null);
+  }
+
+  // @akili-spec changes/results-aow-column-filter (RAC-T-2)
+  /**
+   * Loads this programme's Area of Work scope buckets for one phase (RAC-T-2). Token-guarded
+   * like `load()`: a call in flight is superseded by a later one, never merged with it. Safe to
+   * call with an unresolved phase (`versionId: null`, e.g. before the rows have loaded) — the
+   * request is skipped and any previously held scope is cleared.
+   *
+   * @param programId the programme's official code (e.g. `SP01`) — the endpoint resolves it
+   *   itself, same as `GET_ClarisaGlobalUnits` / `GET_DashboardData`.
+   * @param versionId the phase's numeric version id the buckets must be pinned to (A-1).
+   */
+  loadScope(programId: string, versionId: number | null): void {
+    const code = text(programId);
+    const token = ++this.scopeRequestToken;
+
+    if (!code || versionId === null || !Number.isFinite(versionId)) {
+      this.scope.set(null);
+      this.scopeVersionId.set(null);
+      this.scopeLoading.set(false);
+      this.scopeError.set(null);
+      return;
+    }
+
+    this.scopeLoading.set(true);
+    this.scopeError.set(null);
+
+    (this.api.resultsSE.GET_ResultsScope(code, versionId) as Observable<ResultsScopeEnvelope>).subscribe({
+      next: envelope => {
+        if (token !== this.scopeRequestToken) return;
+
+        const buckets = envelope?.response?.buckets ?? [];
+        const map = new Map<number, ResultScope>();
+        for (const bucket of buckets) {
+          const id = num(bucket?.result_id);
+          if (id === null) continue;
+          map.set(id, { key: bucket.key, kind: bucket.kind, codes: bucket.codes ?? [] });
+        }
+
+        this.scope.set(map);
+        this.scopeVersionId.set(versionId);
+        this.scopeLoading.set(false);
+      },
+      error: () => {
+        if (token !== this.scopeRequestToken) return;
+        this.scope.set(null);
+        this.scopeVersionId.set(null);
+        this.scopeLoading.set(false);
+        this.scopeError.set('The Area of Work buckets could not be loaded.');
+      }
+    });
+  }
+
+  // @akili-spec changes/results-aow-column-filter (RAC-T-3, R-7)
+  /**
+   * Loads this programme's AoW display names for the Section filter's option labels (R-7,
+   * SHOULD). Token-guarded like `load()`/`loadScope()`, but FAIL-SOFT where those two are not:
+   * an empty/failed response just leaves `unitNames` at `{}` — every option label falls back to
+   * its bare code, nothing else in the tab observes this signal. Same request the Overview
+   * already makes for its scope breakdown (`dashboard-lab.component.ts` `cacheAows`), by the
+   * programme's official code — no phase dimension, so callers need not refetch on phase change.
+   */
+  loadUnits(programId: string): void {
+    const code = text(programId);
+    const token = ++this.unitsRequestToken;
+
+    if (!code) {
+      this.unitNames.set(new Map());
+      return;
+    }
+
+    (this.api.resultsSE.GET_ClarisaGlobalUnits(code) as Observable<ClarisaGlobalUnitsEnvelope>).subscribe({
+      next: envelope => {
+        if (token !== this.unitsRequestToken) return;
+
+        const units = envelope?.response?.units ?? [];
+        const map = new Map<string, string>();
+        for (const unit of units) {
+          const code = text(unit?.code).toUpperCase();
+          const name = text(unit?.name);
+          if (code && name) map.set(code, name);
+        }
+        this.unitNames.set(map);
+      },
+      error: () => {
+        if (token !== this.unitsRequestToken) return;
+        this.unitNames.set(new Map());
+      }
+    });
   }
 
   /**

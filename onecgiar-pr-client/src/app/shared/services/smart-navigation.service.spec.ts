@@ -1,14 +1,21 @@
 import { TestBed } from '@angular/core/testing';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { SmartNavigationService } from './smart-navigation.service';
+import { RESULT_DETAIL_ORIGIN_STORAGE_KEY, SmartNavigationService } from './smart-navigation.service';
 
 describe('SmartNavigationService', () => {
   let service: SmartNavigationService;
   let routerEvents$: Subject<unknown>;
-  let mockRouter: Partial<Router> & { events: Subject<unknown>; navigateByUrl: jest.Mock; url: string };
+  let mockRouter: Partial<Router> & {
+    events: Subject<unknown>;
+    navigateByUrl: jest.Mock;
+    url: string;
+    getCurrentNavigation?: jest.Mock;
+    serializeUrl?: jest.Mock;
+  };
 
   beforeEach(() => {
+    sessionStorage.removeItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY);
     routerEvents$ = new Subject<unknown>();
     mockRouter = {
       url: '/result-framework-reporting/home',
@@ -223,6 +230,88 @@ describe('SmartNavigationService', () => {
       service.back('/custom-fallback');
 
       expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/custom-fallback');
+    });
+  });
+
+  describe('getResultDetailBackTarget', () => {
+    const detail = '/result/result-detail/9042/general-information?phase=36';
+    const contributors = '/result/result-detail/9042/rd-contributors-and-partners?phase=36';
+    const programmeResults = '/result-framework-reporting/entity-details/SP12/results?phase=Reporting%202026&createdBy=42';
+    const resultsCenter = '/result/results-outlet/results-list?phase=36';
+    const overview = '/result-framework-reporting/entity-details/SP12/overview';
+    const resultsReview = '/result-framework-reporting/entity-details/SP12/results-review';
+
+    it('returns the Science Program Results tab when that is the first non-detail origin', () => {
+      service.recordUrl(programmeResults);
+      service.recordUrl(detail);
+
+      const target = service.getResultDetailBackTarget(detail);
+
+      expect(target.url).toBe(programmeResults);
+      expect(target.label).toBe('Back to results');
+    });
+
+    it('skips sibling result-detail section hops and still finds the programme Results tab', () => {
+      service.recordUrl(programmeResults);
+      service.recordUrl(detail);
+      service.recordUrl(contributors);
+
+      expect(service.getResultDetailBackTarget(contributors).url).toBe(programmeResults);
+    });
+
+    it('preserves Results Center query params when that is the origin', () => {
+      service.recordUrl(resultsCenter);
+      service.recordUrl(detail);
+
+      expect(service.getResultDetailBackTarget(detail).url).toBe(resultsCenter);
+    });
+
+    it('falls back to Results Center when the origin is Overview', () => {
+      service.recordUrl(overview);
+      service.recordUrl(detail);
+
+      expect(service.getResultDetailBackTarget(detail).url).toBe('/result/results-outlet/results-list');
+    });
+
+    it('does not treat results-review as the programme Results tab', () => {
+      service.recordUrl(resultsReview);
+      service.recordUrl(detail);
+
+      expect(service.getResultDetailBackTarget(detail).url).toBe('/result/results-outlet/results-list');
+    });
+
+    it('falls back to Results Center when history is empty or only the current detail URL', () => {
+      mockRouter.url = detail;
+      expect(service.getResultDetailBackTarget(detail).url).toBe('/result/results-outlet/results-list');
+    });
+
+    it('seeds the in-flight previous URL so Back still works when first constructed on result-detail', () => {
+      TestBed.resetTestingModule();
+      mockRouter.url = detail;
+      mockRouter.getCurrentNavigation = jest.fn(() => ({
+        previousNavigation: { finalUrl: programmeResults }
+      }));
+      mockRouter.serializeUrl = jest.fn((tree: unknown) => String(tree));
+      TestBed.configureTestingModule({
+        providers: [SmartNavigationService, { provide: Router, useValue: mockRouter }]
+      });
+
+      const lateService = TestBed.inject(SmartNavigationService);
+
+      expect(lateService.getHistory()).toEqual([programmeResults, detail]);
+      expect(lateService.getResultDetailBackTarget(detail).url).toBe(programmeResults);
+    });
+
+    it('reads a persisted programme Results origin after a fresh construct (full page load)', () => {
+      sessionStorage.setItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY, programmeResults);
+      TestBed.resetTestingModule();
+      mockRouter.url = detail;
+      mockRouter.getCurrentNavigation = jest.fn(() => null);
+      TestBed.configureTestingModule({
+        providers: [SmartNavigationService, { provide: Router, useValue: mockRouter }]
+      });
+
+      expect(TestBed.inject(SmartNavigationService).getResultDetailBackTarget(detail).url).toBe(programmeResults);
     });
   });
 });

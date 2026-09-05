@@ -1,6 +1,6 @@
 # programme-results
 
-**Verified:** 2026-08-28 · branch performance-refactor · 11ba9ab1c (+ uncommitted P2-3312)
+**Verified:** 2026-09-04 · branch qa-development-2026 · 6a9a45b5e (spec `changes/results-aow-column-filter`, RAC-T-1..T-5 — Area of Work column, live Section filter, `results-scope` join; prior: 2026-08-28 · branch performance-refactor · 11ba9ab1c, P2-3312)
 
 **What this owns:** the **Results** tab of the programme shell (`entity-details/:entityId/results`) — one flat, searchable table of every result that programme reported, plus its filter row, clickable status counters, Columns picker and CSV export.
 
@@ -32,6 +32,53 @@
   Result Detail with `?phase=versionId` (`resultRoute()`, `:746`).
 - Column visibility persists in `localStorage` (`PGR_COLUMN_STORAGE_KEY`, `:91`); the four optional columns default **off**, per the design.
 
+## Area of Work column + live Section filter (`changes/results-aow-column-filter`, RAC-T-1..T-5)
+
+- **One extra request, joined client-side by id.** `ProgrammeResultsService.loadScope(programId,
+  versionId)` calls `GET_ResultsScope` (`results-api.service.ts`) against the server's new
+  `results-framework-reporting/results-scope` endpoint — the SAME `result_scope` CTE the Overview's
+  `getScopeBuckets` reduces to counts (`RAC-DD-1`/`DD-2`), returning one `{ result_id, key, kind,
+  codes[] }` row per program-linked result, **any role, no funding-source filter**. Token-guarded
+  like `load()`, refetched when the selected phase's `versionId` changes. State: `scope` (a
+  `Map<number, ResultScope>` or `null`), `scopeLoading`, `scopeError`.
+- **`joinResultScope(row, scope, scopeVersionId, scopeLoading, scopeError)`** (module-level pure
+  function, `services/programme-results.service.ts:169`) is the ONLY place a row's `section` /
+  `aowCodes` / `sectionState` / `sectionSort` are derived — `rows()` maps every raw row through it.
+  `sectionState` is one of `'ready' | 'loading' | 'error' | 'version-mismatch'`: loading → skeleton
+  cell (never `—`); error → `—` + a `title` explaining the buckets could not be loaded; a row whose
+  OWN `versionId` differs from the phase the loaded buckets were fetched for → `'version-mismatch'`
+  (A-1) — rendered like an error, not silently mis-bucketed. Only `'ready'` carries a real `section`.
+- **Bucket-key vocabulary is shared with the Overview's `?scope=`** (`RAC-DD-3`): `AOW<nn>` (upper-case
+  work-package acronym) · `INTERMEDIATE` · `EOI_2030` · `UNTAGGED`. `sectionLabel()`
+  (`services/programme-results-section-labels.ts`) maps the three fixed keys to *Intermediate
+  outcomes* / *2030 outcomes* / *Not tagged*; AoW keys render as their raw code. The two placeholder
+  constants this file used to reference (`intermediate-outcomes` / `2030-outcomes`) are gone —
+  replaced by the real fixed keys, never live before this spec.
+- **`?section=`** (`services/programme-results-query-params.ts`,
+  `PROGRAMME_RESULTS_SECTION_QUERY_PARAM`) is a comma-separated list of bucket keys, deliberately NOT
+  namespaced — it is the exact same string the Overview's `?scope=` carries (`RAC-DD-3`), so an
+  Overview breakdown row's *View results* button or a scope-active chart click lands here already
+  filtered (`RAC-R-4`, see `pages/dashboard-lab/CLAUDE.md`'s `onOverviewLink`). Hydrates like every
+  other param — chip, filter, badge — without rewriting the URL (anti-loop rule, `RAC-R-4.1`).
+- **R-7 (SHOULD), fail-soft:** `ProgrammeResultsService.loadUnits(programId)`
+  (`programme-results.service.ts:500`) fetches `clarisa-global-units` to append the AoW name beside
+  its code in `sectionOptions()` (`AOW01 · Market Intelligence`). Token-guarded like
+  `load()`/`loadScope()` but NOT the same failure contract — an empty/failed response just leaves
+  `unitNames` at `{}` and every option label falls back to the bare code. Never treat a missing name
+  as an error state the way `scopeError` does.
+- **Live-verified (RAC-T-5, 2026-09-04, SP01 + SP12, phase "Reporting 2026" / `versionId` 36).** For
+  every bucket key, the Results tab's count under `?section=<key>&origin=W1/W2` equals the Overview
+  breakdown's total for that key on the **owner** population (`result.repository.ts` `submitter_id`
+  filter, `initiative_role_id = 1`). Where they differ, the delta is exactly the count of
+  `results-scope` ids that belong to the bucket but never appear in this programme's owned rows at
+  all (contributor-only, `RAC-DD-6` / A-5) — confirmed by diffing the raw `results-scope` payload
+  against `rows()`, not asserted. SP01: AOW01 (33 vs 32, Δ1), AOW03 (6 vs 4, Δ2), AOW04 (2 vs 1, Δ1)
+  all explained by contributor-only ids; AOW02/AOW05/INTERMEDIATE/EOI_2030/UNTAGGED matched exactly.
+  SP12: only AOW01 (5 vs 3, Δ2) had a contributor-only delta; every other key matched exactly. Median
+  `results-scope` latency: SP01 61 ms, SP12 123 ms (3 runs each, target p95 < 300 ms). The Area of
+  Work column renders real codes/labels (`AOW01`, `AOW02`, `Not tagged`, …) and the search box finds
+  rows by AoW code (`AOW02` → 4 rows on SP01, 5 on SP12).
+
 ## Where it is used
 
 - `src/app/shared/routing/routing-data.ts:582-593` — the route entry (`prName: 'Program results'`,
@@ -46,15 +93,16 @@
 
 ## Gotchas
 
-- ⚠️ **Four controls ship visible-but-disabled with a `Coming soon` tag** — real design controls with
-  no honest data behind them. One `#comingSoon` template (`...component.html:10`); do not "finish"
-  one without its ticket:
+- ⚠️ **Three controls (down from four) still ship visible-but-disabled with a `Coming soon` tag** —
+  real design controls with no honest data behind them. One `#comingSoon` template
+  (`...component.html:10`); do not "finish" one without its ticket. The *Section* filter row that
+  used to be in this table is GONE — closed by `changes/results-aow-column-filter` (P2-3398), see
+  "Area of Work column + live Section filter" below:
   | Control | Why disabled | Ticket |
   |---|---|---|
   | Row menu → *View indicator* | no payload carries `toc_result_id` / indicator id, so there is nothing to open | P2-3395 |
   | Row checkbox (`select` column) | `PrTableComponent.selectionMode` only toggles a class, and the design has no select-all and no bulk-action bar | P2-3397 |
-  | *Section* filter (multi-select) | every row's `section` is `''`, so the filter could only ever hide everything | P2-3398 |
-  | Indicator line under the result title | no results payload carries a ToC indicator; filling it with the result level would be fabricated data | P2-3399 |
+  | Indicator line under the result title | no results payload carries a ToC indicator; filling it with the result level would be fabricated data | P2-3399 (other half — the AoW half is now the column below) |
 - ⚠️ **Row-menu labels carry `whitespace-nowrap`; the popup is `w-[248px]`, not 200px** — at 200px `View indicator` wrapped. Measure before adding a longer label.
 - ⚠️ **The open row's actions cell needs `pgr-actions--open` (`z-index: 10`).** Every `td.pgr-actions`
   is sticky at `z-index: 3`, so DOM order wins and the rows BELOW painted their opaque background over
@@ -64,11 +112,13 @@
   `serializeUrl`, not string concat like `pdfHref` (the review branch has query params to encode).
   🛑 Its toast key must be **`globalUserNotification`**: a `<app-pr-toast>` host only renders its own
   key, and that is the one `app.component.html:83` always mounts.
-- ⚠️ **`section` and `indicator` are absent from the payload, not merely empty.** `toProgrammeResultRow`
-  hardcodes both to `''` (`programme-results.service.ts:134-135`): `get/all/roles/filter` has no AoW
-  field, and the only endpoint that does (`by-program-and-centers`) is server-hard-filtered to the
-  bilateral review queue. `updated` is mapped defensively and is also blank today. Read the field
-  inventory in the interface docstring before re-litigating this.
+- ⚠️ **`indicator` is absent from the payload, not merely empty.** `toProgrammeResultRow` hardcodes it
+  to `''` (`programme-results.service.ts:134-135`): `get/all/roles/filter` has no ToC-indicator field,
+  and the only endpoint that does (`by-program-and-centers`) is server-hard-filtered to the bilateral
+  review queue. `updated` is mapped defensively and is also blank today. `section` is DIFFERENT since
+  `changes/results-aow-column-filter` (RAC-T-2) — see "Area of Work column + live Section filter"
+  below; it is no longer a hardcoded `''`, it is `joinResultScope`'s output. Read the field inventory
+  in the interface docstring before re-litigating either.
 - ⚠️ **The ticket ids in the two service docstrings are swapped** — Jira and the template are right:
   **3398 = Section filter, 3399 = indicator line**.
 - **Filtering, sorting and counting are all client-side over ONE request** (`limit` 2000,
