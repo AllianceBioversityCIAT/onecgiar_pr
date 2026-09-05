@@ -10,20 +10,27 @@
       </div>
     }
     <div class="report-result-content_left_content">
-      <app-pr-select
-        [group]="true"
-        groupName="name"
-        [options]="availableInitiativesSig()"
-        label="Report for"
-        [isStatic]="true"
-        optionLabel="full_name"
-        optionValue="initiative_id"
-        [placeholder]="'Select ' + ('term.entity.singular' | term: this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym)"
-        [(ngModel)]="this.resultLevelSE.resultBody.initiative_id"
-        [disabled]="disableInitiativeSelect"
-        [readOnly]="disableInitiativeSelect"
-        (ngModelChange)="onSelectInit()">
-      </app-pr-select>
+      @if (disableInitiativeSelect) {
+        <div class="report-for" data-testid="emerging-report-for">
+          <p class="report-for__label">
+            Report for <span class="report-for__req" aria-hidden="true">*</span>
+          </p>
+          <div class="report-for__value" role="status">{{ reportForDisplay }}</div>
+        </div>
+      } @else {
+        <app-pr-select
+          [group]="true"
+          groupName="name"
+          [options]="availableInitiativesSig()"
+          label="Report for"
+          [isStatic]="true"
+          optionLabel="full_name"
+          optionValue="initiative_id"
+          [placeholder]="'Select ' + ('term.entity.singular' | term: this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym)"
+          [(ngModel)]="this.resultLevelSE.resultBody.initiative_id"
+          (ngModelChange)="onSelectInit()">
+        </app-pr-select>
+      }
 
       <app-result-level-cards [currentResultType]="this.currentResultType" [hideAlert]="true"></app-result-level-cards>
 

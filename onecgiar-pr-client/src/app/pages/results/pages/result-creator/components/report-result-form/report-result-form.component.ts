@@ -227,6 +227,27 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     return this.resultLevelSE.resultBody.result_type_id == 6;
   }
 
+  /** Locked “Report for” label — official code + short name, without the duplicated full_name. */
+  get reportForDisplay(): string {
+    const id = this.resultLevelSE.resultBody.initiative_id;
+    const match = this.availableInitiativesSig().find(item => !item?.isLabel && (item?.id ?? item?.initiative_id) == id);
+    if (!match) return '';
+
+    const code = match.official_code || match.officialCode || match.initiative_official_code || '';
+    const name = match.short_name || match.shortName || match.name || '';
+    if (code && name) return `${code} · ${name}`;
+
+    const full = String(match.full_name || '').trim();
+    if (full) {
+      const parts = full.split(/\s+-\s+/).filter(Boolean);
+      if (parts.length >= 2 && parts[1] === parts[parts.length - 1]) {
+        return `${parts[0]} · ${parts[1]}`;
+      }
+      return full;
+    }
+    return String(code);
+  }
+
   onCgspaceItemSelected(item: CgspaceItemDto): void {
     const url = item.itemUrl || item.handleUrl || item.handle;
     this.validating = true;

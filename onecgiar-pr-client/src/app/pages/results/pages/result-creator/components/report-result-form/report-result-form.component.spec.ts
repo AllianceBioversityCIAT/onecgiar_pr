@@ -232,6 +232,24 @@ describe('ReportResultFormComponent', () => {
     });
   });
 
+  describe('reportForDisplay getter', () => {
+    it('joins official code and short name', () => {
+      mockResultLevelService.resultBody.initiative_id = 1;
+      component.availableInitiativesSig.set([
+        { id: 1, official_code: 'SP02', short_name: 'Sustainable Farming', full_name: 'SP02 - Sustainable Farming - Sustainable Farming' }
+      ]);
+      expect(component.reportForDisplay).toBe('SP02 · Sustainable Farming');
+    });
+
+    it('collapses a duplicated full_name when short name is missing', () => {
+      mockResultLevelService.resultBody.initiative_id = 1;
+      component.availableInitiativesSig.set([
+        { id: 1, full_name: 'SP02 - Sustainable Farming - Sustainable Farming' }
+      ]);
+      expect(component.reportForDisplay).toBe('SP02 · Sustainable Farming');
+    });
+  });
+
   describe('resultTypeNamePlaceholder getter', () => {
     it('should return type name with "title..." suffix when type exists', () => {
       mockResultLevelService.currentResultTypeList = [{ id: 1, name: 'Innovation' }];
@@ -313,6 +331,7 @@ describe('ReportResultFormComponent', () => {
       expect(template).toContain('Manual entry');
       expect(template).toContain('app-kp-cgspace-browse');
       expect(template).toContain('emerging-kp-entry');
+      expect(template).toContain('emerging-report-for');
       expect(template).toContain('kp-manual-row');
       expect(template).toContain('kp-manual-sync');
     });
