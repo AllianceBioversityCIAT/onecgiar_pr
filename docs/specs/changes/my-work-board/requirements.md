@@ -65,7 +65,7 @@ Two building blocks exist: the results list endpoint accepts `filter_created_by_
 
 ### Required (MUST)
 
-- **`MWB-R-1` Fourth tab and route.** The SP band MUST show a fourth tab **My work** after Results, routed to `entity-details/:entityId/my-work`, with the same tab anatomy as the existing three (icon + label, 2px brand underline when active, `queryParamsHandling: 'preserve'`). The tab MUST carry a count badge equal to the number of cards in the *Editing* column under the **Mine** scope for the selected phase; on the other three tabs the badge MUST show the same number for that programme and phase (computed by one scoped list request, cached per programme + phase). The tab MUST honour the `phase` query param exactly like Results (`DD-7`).
+- **`MWB-R-1` Fourth tab and route.** The SP band MUST show a fourth tab **My results** (renamed from *My work* on 2026-09-05 by user decision; URL segment stays `my-work`) after Results, routed to `entity-details/:entityId/my-work`, with the same tab anatomy as the existing three (icon + label, 2px brand underline when active, `queryParamsHandling: 'preserve'`). The tab MUST carry a count badge equal to the number of cards in the *Editing* column under the **Mine** scope for the selected phase; on the other three tabs the badge MUST show the same number for that programme and phase (computed by one scoped list request, cached per programme + phase). The tab MUST honour the `phase` query param exactly like Results (`DD-7`).
 
 #### Scenario: Open the tab with phase context
 

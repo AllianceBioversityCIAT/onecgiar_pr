@@ -486,7 +486,7 @@ describe('ReportingProgramBandComponent', () => {
     it('renders the four programme tabs in the order the design shows', async () => {
       await build({ showToolbar: true });
 
-      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results', 'My work']);
+      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results', 'My results']);
     });
 
     it('points Results at the `/results` route under the programme', async () => {
@@ -541,7 +541,7 @@ describe('ReportingProgramBandComponent', () => {
 
       scrollTo(200);
 
-      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results', 'My work']);
+      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results', 'My results']);
       expect(tab('Results').getAttribute('aria-current')).toBe('page');
     });
 
@@ -560,13 +560,13 @@ describe('ReportingProgramBandComponent', () => {
     const tabs = () => Array.from((root().querySelector('nav') as HTMLElement).querySelectorAll('a'));
     const tabText = (a: HTMLAnchorElement) => a.querySelector('.pr-tab-label')?.textContent?.trim() || a.textContent?.trim();
     const tab = (label: string) => tabs().find(a => tabText(a) === label) as HTMLAnchorElement;
-    const badge = () => tab('My work').querySelector('[aria-label$="results in editing"]') as HTMLElement | null;
+    const badge = () => tab('My results').querySelector('[aria-label$="results in editing"]') as HTMLElement | null;
 
     it('points My work at the `/my-work` route under the programme (`myWorkPath()`)', async () => {
       await build({ showToolbar: true });
 
       expect(component.myWorkPath()).toBe('/result-framework-reporting/entity-details/SP01/my-work');
-      expect(tab('My work').getAttribute('href')).toBe('/result-framework-reporting/entity-details/SP01/my-work');
+      expect(tab('My results').getAttribute('href')).toBe('/result-framework-reporting/entity-details/SP01/my-work');
     });
 
     it('follows the programme code instead of freezing the href', async () => {
@@ -574,19 +574,19 @@ describe('ReportingProgramBandComponent', () => {
       fixture.componentRef.setInput('programCode', 'SP07');
       fixture.detectChanges();
 
-      expect(tab('My work').getAttribute('href')).toBe('/result-framework-reporting/entity-details/SP07/my-work');
+      expect(tab('My results').getAttribute('href')).toBe('/result-framework-reporting/entity-details/SP07/my-work');
     });
 
     it('preserves query params like the other three tabs', async () => {
       await build({ showToolbar: true });
 
-      expect(tab('My work').getAttribute('queryParamsHandling')).toBe('preserve');
+      expect(tab('My results').getAttribute('queryParamsHandling')).toBe('preserve');
     });
 
     it('underlines and announces My work when it is the active tab', async () => {
       await build({ showToolbar: true, activeTab: 'my-work' });
 
-      const myWork = tab('My work');
+      const myWork = tab('My results');
       expect(myWork.className).toContain('border-[var(--pr-color-primary-300)]');
       expect(myWork.className).toContain('font-semibold');
       expect(myWork.getAttribute('aria-current')).toBe('page');
@@ -595,7 +595,7 @@ describe('ReportingProgramBandComponent', () => {
     it('leaves My work neutral while another tab is active', async () => {
       await build({ showToolbar: true, activeTab: 'results' });
 
-      const myWork = tab('My work');
+      const myWork = tab('My results');
       expect(myWork.className).toContain('border-transparent');
       expect(myWork.getAttribute('aria-current')).toBeNull();
     });

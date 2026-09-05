@@ -341,3 +341,8 @@ Page `…/entity-details/SP02/my-work` (Orca browser, proxy origin of the local 
 
 - **Card hover shading** ("que cuando ponga el mouse sobre la card se sombree"): `hover:bg-[var(--pr-surface-subtle-hover)]` added to the card `<article>` and `background-color` to its transition list (150 ms ease-out). Card spec green (12 tests). Live stylesheet contains the generated `:hover` rule (checked via `document.styleSheets`).
 - **Explainer removed** ("quita esto de aquí"): `<app-pr-tab-intro>` and `MY_WORK_EXPLAINER_DESCRIPTION` dropped from the page; spec rewritten (no explainer, no hint line). `MWB-R-10` (SHOULD) is **withdrawn by the user**; `requirements.md` amended. Jest `7 suites / 87 tests`, tsc, lint green.
+
+### Rename "My work" → "My results" (user decision 2026-09-05, "perfecto adelante") · quick track
+
+- Rationale (Leader): PRMS's unit is the *result*; "My results" parallels the neighbouring **Results** tab and reads the badge as "N of my results need attention". URL segment `my-work`, component/service names and spec prefix `MWB` stay unchanged (internal identifiers; no user impact).
+- Band: tab label, `activeTabInfo` title and spec expectations; `routing-data.ts` `prName: 'Program my results'`. Board-page accessible names (`aria-label="My work …"`) follow in the T-9 close-out (same files T-9 is editing).

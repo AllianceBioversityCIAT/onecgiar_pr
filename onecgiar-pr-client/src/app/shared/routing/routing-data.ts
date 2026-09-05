@@ -614,7 +614,7 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
     // Fourth SP tab — the submitter's own results for this programme + phase, grouped by status.
     // Own component, sibling of `results`: same reasoning, this surface reads a scoped results
     // list and folds a pure view-model over it, it does not drive the ToC reporting tables.
-    prName: 'Program my work',
+    prName: 'Program my results',
     path: 'entity-details/:entityId/my-work',
     data: { sidebar: { width: 300 }, rfrView: 'my-work' },
     loadComponent: () =>

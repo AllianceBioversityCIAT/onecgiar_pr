@@ -490,7 +490,7 @@ export class ReportingProgramBandComponent {
       case 'my-work':
         // @akili-spec changes/my-work-board (MWB-R-10)
         return {
-          title: 'My work',
+          title: 'My results',
           description:
             'Your results in this Science Program, grouped by status. The board is read-only: open a result to complete it or submit it; quality assessment happens in QA.'
         };
