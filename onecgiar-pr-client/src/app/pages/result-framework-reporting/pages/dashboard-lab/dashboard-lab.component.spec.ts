@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 import { signal, WritableSignal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { DashboardLabComponent } from './dashboard-lab.component';
@@ -575,7 +575,12 @@ describe('DashboardLabComponent — overview heatmap matrices (OVW-T-3)', () => 
     const component = await createComponent();
     component.summariesByCode.set(
       // Same `code::default` key as above — see note there.
-      new Map([['SP02::default', [{ resultTypeId: 7, resultTypeName: 'Innovation development', editing: 0, qualityAssessed: 0, submitted: 0, others: 0, totalResults: 0 }]]])
+      new Map([
+        [
+          'SP02::default',
+          [{ resultTypeId: 7, resultTypeName: 'Innovation development', editing: 0, qualityAssessed: 0, submitted: 0, others: 0, totalResults: 0 }]
+        ]
+      ])
     );
 
     const heatmap = component.overviewW12Heatmap();
@@ -765,7 +770,8 @@ describe('DashboardLabComponent — loadSummaries() / summariesByCode cache (W12
         {
           provide: EntityAowService,
           useValue: {
-            onCloseReportResultModal: () => undefined, showReportResultModal: signal(false),
+            onCloseReportResultModal: () => undefined,
+            showReportResultModal: signal(false),
             // Needed once effects are flushed: `primeEntityAowContext()` (called from the same
             // effect as `loadAows`) reads/writes `entityId` and calls `getAllDetailsData`.
             entityId: signal(''),
@@ -948,8 +954,24 @@ describe('DashboardLabComponent — loadSummaries() / summariesByCode cache (W12
 
     component.summariesByCode.set(
       new Map([
-        ['SP04::20', [{ resultTypeId: 1, resultTypeName: 'Knowledge product', editing: 1, submitted: 0, qualityAssessed: 0, others: 0, totalResults: 1 } as any]],
-        ['SP04::10', [{ resultTypeId: 2, resultTypeName: 'Innovation development', editing: 1, submitted: 0, qualityAssessed: 0, others: 0, totalResults: 1 } as any]]
+        [
+          'SP04::20',
+          [{ resultTypeId: 1, resultTypeName: 'Knowledge product', editing: 1, submitted: 0, qualityAssessed: 0, others: 0, totalResults: 1 } as any]
+        ],
+        [
+          'SP04::10',
+          [
+            {
+              resultTypeId: 2,
+              resultTypeName: 'Innovation development',
+              editing: 1,
+              submitted: 0,
+              qualityAssessed: 0,
+              others: 0,
+              totalResults: 1
+            } as any
+          ]
+        ]
       ])
     );
 
@@ -1060,7 +1082,12 @@ describe('DashboardLabComponent — phase filter resolver + loaders (OPF-T-3)', 
         { provide: PhasesService, useValue: { phases: { reporting: [] } } },
         {
           provide: EntityAowService,
-          useValue: { onCloseReportResultModal: () => undefined, showReportResultModal: signal(false), entityId: signal(''), getAllDetailsData: jest.fn() }
+          useValue: {
+            onCloseReportResultModal: () => undefined,
+            showReportResultModal: signal(false),
+            entityId: signal(''),
+            getAllDetailsData: jest.fn()
+          }
         },
         { provide: ResultLevelService, useValue: {} }
       ]
@@ -1315,7 +1342,15 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
     entityTypeName: 'Science Program',
     totalResults: 11,
     progress: 0,
-    versions: [{ versionId: 36, phaseName: 'Reporting 2026', phaseYear: 2026, totalResults: 11, statuses: [{ statusId: 5, statusName: 'Submitted', count: 11 }] }]
+    versions: [
+      {
+        versionId: 36,
+        phaseName: 'Reporting 2026',
+        phaseYear: 2026,
+        totalResults: 11,
+        statuses: [{ statusId: 5, statusName: 'Submitted', count: 11 }]
+      }
+    ]
   };
 
   // `PhasesService.phases.reporting` fixture: 2 phases of SP04's own portfolio (34 closed, 36
@@ -1366,7 +1401,13 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
           useValue: {
             focusMode: signal(false),
             slimNav: signal(false),
-            reportingCurrentPhase: { phaseId: openPhaseId, phaseYear: 2026, phaseName: 'Reporting 2026', portfolioAcronym: 'P25', portfolioId: PORTFOLIO_ID },
+            reportingCurrentPhase: {
+              phaseId: openPhaseId,
+              phaseYear: 2026,
+              phaseName: 'Reporting 2026',
+              portfolioAcronym: 'P25',
+              portfolioId: PORTFOLIO_ID
+            },
             reportingPhaseVersion: signal(0)
           }
         },
@@ -1379,7 +1420,12 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
         { provide: PhasesService, useValue: { phases: { reporting: phases } } },
         {
           provide: EntityAowService,
-          useValue: { onCloseReportResultModal: () => undefined, showReportResultModal: signal(false), entityId: signal(''), getAllDetailsData: jest.fn() }
+          useValue: {
+            onCloseReportResultModal: () => undefined,
+            showReportResultModal: signal(false),
+            entityId: signal(''),
+            getAllDetailsData: jest.fn()
+          }
         },
         { provide: ResultLevelService, useValue: {} }
       ]
@@ -1397,7 +1443,7 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
   // which the server pins to one row) — at least the 2 phases of SP04's portfolio, sorted
   // `phase_year` desc, labeled "«phase_name» · «phase_year»" — and the foreign-portfolio phase
   // (12, a different portfolio) is excluded (OPF-R-1 BUT clause).
-  it('(a) options list every phase of the program\'s own portfolio, newest year first, excluding foreign portfolios', async () => {
+  it("(a) options list every phase of the program's own portfolio, newest year first, excluding foreign portfolios", async () => {
     const component = await createComponent(apiMock());
     const options = component.phaseSelectorOptions();
 
@@ -2032,14 +2078,7 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
         .map(s => s.textContent?.trim().toUpperCase())
         .filter(Boolean);
 
-      expect(labels).toEqual([
-        'INDICATOR TITLE & TAXONOMY',
-        'TARGET',
-        'ACHIEVED',
-        'STATUS',
-        'PROGRESS',
-        'ACTION'
-      ]);
+      expect(labels).toEqual(['INDICATOR TITLE & TAXONOMY', 'TARGET', 'ACHIEVED', 'STATUS', 'PROGRESS', 'ACTION']);
 
       const headerText = subhead?.textContent?.toUpperCase() ?? '';
       expect(headerText).toContain('INDICATOR TITLE & TAXONOMY');
@@ -2138,3 +2177,82 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
   });
 });
 
+// @akili-spec changes/my-work-board (MWB-T-8)
+describe('DashboardLabComponent — Where-to-report return tab (MWB-T-8)', () => {
+  const PROGRAM: SPProgress = {
+    initiativeId: 7,
+    initiativeCode: 'SP02',
+    initiativeName: 'Science Program 02',
+    initiativeShortName: 'SP02',
+    portfolioId: 1,
+    portfolioName: 'Portfolio',
+    portfolioAcronym: 'P26',
+    entityTypeCode: 'SP',
+    entityTypeName: 'Science Program',
+    totalResults: 0,
+    progress: 0,
+    versions: []
+  };
+
+  async function createComponent(queryParams: Record<string, string>) {
+    const navigate = jest.fn().mockResolvedValue(true);
+    const route = {
+      data: of({}),
+      snapshot: { data: {}, queryParamMap: convertToParamMap(queryParams) }
+    };
+
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [DashboardLabComponent],
+      providers: [
+        {
+          provide: ResultFrameworkReportingHomeService,
+          useValue: {
+            mySPsList: signal([]),
+            otherSPsList: signal([PROGRAM]),
+            otherProjectsList: signal([]),
+            overviewSelectedPhase: signal<string | null>(null)
+          }
+        },
+        { provide: ApiService, useValue: {} },
+        { provide: DataControlService, useValue: { focusMode: signal(false), slimNav: signal(false) } },
+        { provide: ReportingGuideService, useValue: {} },
+        { provide: Router, useValue: { navigate } },
+        { provide: ActivatedRoute, useValue: route },
+        { provide: PhasesService, useValue: { phases: { reporting: [] } } },
+        { provide: EntityAowService, useValue: { onCloseReportResultModal: () => undefined, showReportResultModal: signal(false) } },
+        { provide: ResultLevelService, useValue: {} }
+      ]
+    })
+      .overrideComponent(DashboardLabComponent, { set: { template: '' } })
+      .compileComponents();
+
+    const component = TestBed.createComponent(DashboardLabComponent).componentInstance;
+    component.selectedId.set(PROGRAM.initiativeId);
+    return { component, navigate };
+  }
+
+  it('returns to the My work tab when returnTab is "my-work"', async () => {
+    const { component, navigate } = await createComponent({ whereToReport: 'true', returnTab: 'my-work' });
+
+    component.closeWhereToReportModal();
+
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP02', 'my-work']);
+  });
+
+  it('still returns to the Results tab when returnTab is "results"', async () => {
+    const { component, navigate } = await createComponent({ whereToReport: 'true', returnTab: 'results' });
+
+    component.closeWhereToReportModal();
+
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP02', 'results']);
+  });
+
+  it('only cleans the query params for an unknown returnTab', async () => {
+    const { component, navigate } = await createComponent({ whereToReport: 'true' });
+
+    component.closeWhereToReportModal();
+
+    expect(navigate).toHaveBeenCalledWith([], expect.objectContaining({ queryParams: { whereToReport: null, returnTab: null } }));
+  });
+});

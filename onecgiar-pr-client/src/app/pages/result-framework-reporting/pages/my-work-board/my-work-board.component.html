@@ -2,11 +2,47 @@
   "My work" board — 4th SP tab (`MWB-T-4`). Mockup: docs/specs/changes/my-work-board/mockup/Main.dc.html.
   `html`/`body` is 12px — every measurement below is an explicit px value (client CLAUDE.md §5).
 -->
+
+<!--
+  `MWB-T-8` (4) — one skeleton column shell, reused by all three groups (same trick as the Results
+  tab's `#comingSoon`): header (dot + label + count-pill placeholders) over N card placeholders
+  (code line, two title lines, the 4px completeness bar). Declared at the root of the view so the
+  `@if (showSkeleton())` branch can reference it. Metrics are copied from `my-work-column` /
+  `my-work-card` so the skeleton→content swap does not move anything.
+-->
+<ng-template #skeletonColumn let-cards>
+  <div
+    class="flex flex-1 min-h-0 animate-pulse flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] shadow-[0_1px_2px_rgba(25,21,36,0.04)] motion-reduce:animate-none"
+    data-testid="my-work-skeleton-column">
+    <div class="flex items-center gap-[8px] border-b border-[var(--pr-border-divider)] px-[14px] py-[10px]">
+      <span class="h-[8px] w-[8px] flex-none rounded-full bg-[var(--pr-surface-ground)]"></span>
+      <span class="h-[10px] w-[88px] rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+      <span class="h-[18px] w-[18px] flex-none rounded-full bg-[var(--pr-surface-ground)]"></span>
+    </div>
+    <div class="flex flex-1 min-h-0 flex-col gap-[10px] p-[12px]">
+      @for (card of cards; track card) {
+        <div
+          class="flex flex-none flex-col gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px_12px_10px] shadow-[0_1px_2px_rgba(25,21,36,0.05)]"
+          data-testid="my-work-skeleton-card">
+          <span class="h-[10px] w-[64px] rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+          <span class="h-[10px] w-full rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+          <span class="h-[10px] w-[70%] rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+          <span class="h-[4px] w-full rounded-full bg-[var(--pr-surface-ground)]"></span>
+        </div>
+      }
+    </div>
+  </div>
+</ng-template>
+
 <section class="min-h-screen bg-[var(--pr-surface-app)] p-0 min-[900px]:min-h-0 min-[900px]:flex-1 min-[900px]:flex min-[900px]:flex-col">
   <article class="flex w-full min-w-0 flex-col min-[900px]:flex-1 min-[900px]:min-h-0">
     <!-- Same band, same tab strip, 4th tab active. `data.badge()` already IS the Mine Editing
          count this tab's own badge shows (`MWB-R-1`) — it is written by the board's own load, so
          no extra `MyWorkCountService.ensure()` round trip is needed on this page. -->
+    <!-- `MWB-T-8` (2): `canReport` ON — the *Where to report* CTA is band chrome the user expects on
+         every programme tab (it was the one difference from the Results tab's band). The click goes
+         back to `entity-details/:code` with `returnTab=my-work`, which `dashboard-lab` maps back to
+         this tab when the modal closes. -->
     <app-reporting-program-band
       [programCode]="programmeCode()"
       [programName]="programmeName()"
@@ -14,65 +50,68 @@
       [cyclePhase]="cyclePhase()"
       activeTab="my-work"
       [myWorkCount]="data.badge()"
-      [canReport]="false"
+      [canReport]="true"
       [showToolbar]="false"
       [frameLocked]="true"
-      [scrollHost]="workAreaEl()" />
+      [scrollHost]="workAreaEl()"
+      (whereToReport)="openWhereToReport()" />
 
     <!-- #workArea: the only scroller ≥ 900px (`SAV-DD-1`, `MWB-R-9`) — explainer, toolbar and the
          board all scroll together; the band stays visible while a column scrolls internally. -->
     <div #workArea class="flex flex-1 flex-col min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll">
-      <div class="px-[16px] pt-[14px] sm:px-[32px]">
-        <app-pr-tab-intro title="What does this tab show?" [description]="explainerDescription" icon="view_kanban" />
-      </div>
-
-      <!-- Toolbar: scope segmented control (cached totals) + read-only hint + phase select. -->
+      <!-- ═══════════ FILTER ROW (`MWB-T-8` (1)) ═══════════
+           First child of `#workArea`, same chrome as the Results tab's filter row
+           (`programme-results.component.html`): the row directly under the tab strip is where every
+           programme tab puts its controls, so the explainer moved BELOW it. Left = scope segmented
+           control (its `aria-label="My work board controls"` is load-bearing — `MWB-T-5`'s CT reads
+           it), right = the Phase select with the Results tab's label treatment. -->
       <div
-        class="flex flex-wrap items-center gap-[16px] px-[16px] pt-[14px] sm:px-[32px]"
-        role="group"
-        aria-label="My work board controls">
-        <div
-          role="tablist"
-          aria-label="Scope"
-          class="inline-flex h-[30px] items-center gap-[2px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[2px]">
-          <button
-            type="button"
-            role="tab"
-            [attr.aria-selected]="data.scope() === 'mine'"
-            class="flex h-full items-center gap-[6px] rounded-[6px] px-[12px] text-[12px] font-medium transition-colors"
-            [class]="
-              data.scope() === 'mine'
-                ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
-                : 'text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
-            "
-            (click)="setScope('mine')">
-            <span>Mine</span>
-            <span class="text-[var(--pr-text-subtle)] tabular-nums">{{ data.scopeTotals().mine ?? '–' }}</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            [attr.aria-selected]="data.scope() === 'all'"
-            class="flex h-full items-center gap-[6px] rounded-[6px] px-[12px] text-[12px] font-medium transition-colors"
-            [class]="
-              data.scope() === 'all'
-                ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
-                : 'text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
-            "
-            (click)="setScope('all')">
-            <span>All program results</span>
-            <span class="text-[var(--pr-text-subtle)] tabular-nums">{{ data.scopeTotals().all ?? '–' }}</span>
-          </button>
+        class="flex flex-wrap items-center justify-between gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] py-[10px] sm:px-[32px]"
+        role="search"
+        aria-label="My work filters">
+        <div class="flex flex-wrap items-center gap-[10px]" role="group" aria-label="My work board controls">
+          <div
+            role="tablist"
+            aria-label="Scope"
+            class="inline-flex h-[30px] items-center gap-[2px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[2px]">
+            <button
+              type="button"
+              role="tab"
+              [attr.aria-selected]="data.scope() === 'mine'"
+              class="flex h-full items-center gap-[6px] rounded-[6px] px-[12px] text-[12px] font-medium transition-colors"
+              [class]="
+                data.scope() === 'mine'
+                  ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
+                  : 'text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+              "
+              (click)="setScope('mine')">
+              <span>Mine</span>
+              <span class="text-[var(--pr-text-subtle)] tabular-nums">{{ data.scopeTotals().mine ?? '–' }}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              [attr.aria-selected]="data.scope() === 'all'"
+              class="flex h-full items-center gap-[6px] rounded-[6px] px-[12px] text-[12px] font-medium transition-colors"
+              [class]="
+                data.scope() === 'all'
+                  ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
+                  : 'text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+              "
+              (click)="setScope('all')">
+              <span>All program results</span>
+              <span class="text-[var(--pr-text-subtle)] tabular-nums">{{ data.scopeTotals().all ?? '–' }}</span>
+            </button>
+          </div>
         </div>
 
-        <div class="flex items-center gap-[8px] text-[12px] text-[var(--pr-text-secondary)]">
-          <span class="material-icons-round text-[14px] text-[var(--pr-text-subtle)]" aria-hidden="true">lock</span>
-          <span>Read-only board. Open a result to update it. Status changes still happen inside the result and in QA.</span>
-        </div>
-
-        <span class="flex-1"></span>
-
-        <div class="w-[220px]" aria-label="Filter by phase">
+        <!-- Phase (`MWB-T-8` (3)). `relative` makes THIS wrapper the positioning context, and
+             `.mwb-filter` (component SCSS) re-shapes the shared `.custom_select` shell exactly the
+             way the Results tab's `.pgr-filter` does: the violet `.icon_container` block is hidden
+             and the panel is pinned to `top: calc(100% + 4px)` instead of the base shell's
+             `bottom: -255px`, which is what dropped it under the Closed rails. -->
+        <div class="mwb-filter relative w-[220px] max-sm:w-full" aria-label="Filter by phase">
+          <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]"> Phase </label>
           <app-pr-filter-select
             [options]="phaseSelectOptions()"
             optionLabel="label"
@@ -83,14 +122,55 @@
         </div>
       </div>
 
+      <!-- Explainer (`MWB-R-10`) — BELOW the filter row now, collapsed by default. The read-only
+           hint that used to sit in the toolbar lives in `explainerDescription`. -->
+      <div class="px-[16px] pt-[14px] sm:px-[32px]">
+        <app-pr-tab-intro title="What does this tab show?" [description]="explainerDescription" icon="view_kanban" />
+      </div>
+
       <!-- Board body: skeleton / error+Retry / whole-board empty / groups (`MWB-R-7`, mutually exclusive). -->
       <div class="flex flex-1 min-h-0 flex-col">
         @if (showSkeleton()) {
-          <div class="flex flex-1 gap-[16px] px-[16px] py-[14px] sm:px-[32px]" aria-live="polite" aria-busy="true">
+          <!-- ═══════════ BOARD-SHAPED SKELETON (`MWB-T-8` (4)) ═══════════
+               Same container, same group widths and same column/card metrics as the `showBoard()`
+               branch below, so the swap to real content does not shift the layout. The three group
+               labels are real text (structure is knowable before the data is); everything inside a
+               column is a placeholder. `animate-pulse` sits on each column/rail shell — it animates
+               `opacity` only, so nothing here transitions a transform or a height, and the pulse
+               cascades to the card placeholders through the shell's own opacity. -->
+          <div class="flex flex-1 min-h-0 gap-[16px] overflow-x-auto px-[16px] py-[14px] sm:px-[32px]" aria-live="polite" aria-busy="true">
             <span class="sr-only">Loading your board</span>
-            @for (skeleton of [1, 2, 3]; track skeleton) {
-              <div class="h-full flex-1 animate-pulse rounded-[12px] bg-[var(--pr-surface-card)]"></div>
-            }
+
+            <!-- Needs my action — `w-[360px]`, same as the real Editing column. -->
+            <div class="flex w-[360px] flex-none flex-col gap-[8px]">
+              <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-primary-400)]">Needs my action</span>
+              <ng-container *ngTemplateOutlet="skeletonColumn; context: { $implicit: skeletonEditingCards }" />
+            </div>
+
+            <!-- Waiting on others — the same two-up grid the real group uses. -->
+            <div class="flex min-w-0 flex-1 flex-col gap-[8px]">
+              <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">Waiting on others</span>
+              <div class="grid flex-1 min-h-0 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-[12px]">
+                @for (column of skeletonWaitingColumns; track column) {
+                  <ng-container *ngTemplateOutlet="skeletonColumn; context: { $implicit: skeletonWaitingCards }" />
+                }
+              </div>
+            </div>
+
+            <!-- Closed — two 44px rails, matching the collapsed default (`MWB-DD-8`). -->
+            <div class="flex flex-none flex-col gap-[8px]">
+              <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">Closed</span>
+              <div class="flex flex-1 min-h-0 gap-[8px]">
+                @for (rail of skeletonRails; track rail) {
+                  <div
+                    class="flex w-[44px] flex-1 min-h-0 animate-pulse flex-col items-center gap-[10px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] py-[12px] motion-reduce:animate-none"
+                    data-testid="my-work-skeleton-column">
+                    <span class="h-[20px] w-[20px] flex-none rounded-full bg-[var(--pr-surface-ground)]"></span>
+                    <span class="h-[76px] w-[10px] flex-none rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+                  </div>
+                }
+              </div>
+            </div>
           </div>
         } @else if (showError()) {
           <div
@@ -162,7 +242,11 @@
                            states resolve to `width: auto` under flex, so nothing transitions; the
                            delivered part of (3) is the expanded `section`'s entrance fade below. -->
                       <div [class]="closedItemClass()">
-                        <app-my-work-column [column]="col" [rail]="closedCollapsed()" [collapsed]="closedCollapsed()" (expandToggle)="toggleClosed()" />
+                        <app-my-work-column
+                          [column]="col"
+                          [rail]="closedCollapsed()"
+                          [collapsed]="closedCollapsed()"
+                          (expandToggle)="toggleClosed()" />
                       </div>
                     }
                   </div>

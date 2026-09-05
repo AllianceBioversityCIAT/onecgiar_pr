@@ -10,6 +10,90 @@
   @include vp.pr-viewport-page;
 }
 
+/* ── Phase filter pill (`MWB-T-8` (3)) ───────────────────────────────────────────────────────
+   `app-pr-filter-select` renders the shared `.custom_select` shell (`custom-fields.scss`), whose
+   defaults are wrong for a filter row: `.icon_container` is a 43px violet block (the "violet
+   chevron block" in the user's screenshot) and `.options` is pinned to `bottom: -255px`, which
+   is what dropped the open panel far below the trigger, under the Closed rails.
+
+   Same reshape the Results tab applies through `.pgr-filter`
+   (`programme-results.component.ts` styles) — copied rather than shared because Angular view
+   encapsulation scopes `::ng-deep` per component, so there is no global `.pgr-filter` to reuse.
+   Deltas vs. that copy: 34px trigger (this row's control height, next to the 30px scope segments)
+   instead of the popover's 40px. Targeting a child component's projected `.custom_select` DOM is
+   the documented exception to Tailwind-first (`MWB-R-*` Styling / client CLAUDE.md §5). */
+.mwb-filter ::ng-deep .custom_select {
+  width: 100%;
+}
+
+.mwb-filter ::ng-deep .custom_select .field {
+  min-height: 34px;
+  height: 34px;
+  padding: 0 32px 0 12px;
+  border: 1px solid var(--pr-border);
+  border-radius: 8px;
+  background: var(--pr-surface-card);
+  box-shadow: none;
+  gap: 8px;
+  transition: border-color 150ms ease;
+}
+
+.mwb-filter ::ng-deep .custom_select .field:hover {
+  border-color: var(--pr-border-strong);
+}
+
+.mwb-filter ::ng-deep .custom_select .field:focus-within {
+  border-color: var(--pr-color-primary-200);
+  box-shadow: 0 0 0 3px rgba(107, 70, 229, 0.12);
+}
+
+.mwb-filter ::ng-deep .custom_select .field .text {
+  padding-right: 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--pr-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mwb-filter ::ng-deep .custom_select .field .text.select_placeholder {
+  color: var(--pr-text-subtle);
+}
+
+/* The violet block the user saw — it belongs to the legacy form shell, not to a filter pill. */
+.mwb-filter ::ng-deep .custom_select .field .icon_container {
+  display: none !important;
+}
+
+.mwb-filter ::ng-deep .custom_select .field .icon_dropdown {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  font-size: 12px;
+  color: var(--pr-text-muted) !important;
+  pointer-events: none;
+}
+
+/* The placement fix: the panel is inline-absolute (no CDK overlay) and `.field` is its positioned
+   ancestor, so pinning `top` to the trigger's own bottom is what keeps the two together. */
+.mwb-filter ::ng-deep .custom_select .field .options {
+  top: calc(100% + 4px);
+  bottom: auto;
+  left: 0;
+  min-width: 100%;
+  width: max-content;
+  max-width: 320px;
+  max-height: 280px;
+  border: 1px solid var(--pr-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(25, 21, 36, 0.1);
+  overflow: hidden;
+  transform-origin: top center;
+}
+
 /**
  * `MWB-T-7` (4) — one short fade on the board container itself (never on individual cards) for a
  * scope/phase re-group or the skeleton→content swap. Angular view encapsulation scopes SCSS per

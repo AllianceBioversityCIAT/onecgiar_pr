@@ -2248,8 +2248,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.showWhereToReportModal.set(false);
     if (this.route?.snapshot?.queryParamMap?.get('whereToReport') === 'true') {
       const returnTab = this.route.snapshot.queryParamMap.get('returnTab');
-      if (returnTab === 'results') {
-        this.router.navigate(['/result-framework-reporting', 'entity-details', this.selected()?.initiativeCode, 'results']);
+      // @akili-spec changes/my-work-board (MWB-T-8) — `my-work` joins `results`: both are tabs that
+      // live on their own route, so closing the modal navigates back to that route (which drops
+      // `whereToReport`/`returnTab` with the old URL). Any other value stays on this page and only
+      // cleans the two query params.
+      if (returnTab === 'results' || returnTab === 'my-work') {
+        this.router.navigate(['/result-framework-reporting', 'entity-details', this.selected()?.initiativeCode, returnTab]);
       } else {
         this.router.navigate([], {
           relativeTo: this.route,

@@ -1,6 +1,7 @@
-// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7)
-import { Component, Input, signal } from '@angular/core';
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-T-8)
+import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ActivatedRoute, ParamMap, Router, convertToParamMap } from '@angular/router';
 import { BehaviorSubject, of } from 'rxjs';
 
@@ -25,6 +26,8 @@ class BandStubComponent {
   @Input() showToolbar = false;
   @Input() frameLocked = false;
   @Input() scrollHost: HTMLElement | null = null;
+  /** `MWB-T-8` (2) — the stub carries the output so the page's own binding is exercised. */
+  @Output() whereToReport = new EventEmitter<void>();
 }
 
 function row(partial: Partial<ProgrammeResultRow> = {}): ProgrammeResultRow {
@@ -319,6 +322,66 @@ describe('MyWorkBoardComponent', () => {
   // `MWB-T-7` (4, 5): presence-only — the board container's re-group fade is a local `@keyframes`
   // neutralised under `prefers-reduced-motion` in the component's own SCSS (not a Tailwind class),
   // so it's asserted by class name; jsdom does not evaluate the media query itself.
+  // ── Page row layout, band CTA and the board-shaped skeleton (`MWB-T-8`) ─────────────────────
+  describe('MWB-T-8 — filter row, Where to report, skeleton', () => {
+    const workArea = () => component.workAreaEl() as HTMLElement;
+
+    it('makes the filter row the first element child of #workArea and puts the explainer after it', () => {
+      const filterRow = workArea().firstElementChild as HTMLElement;
+
+      expect(filterRow.getAttribute('role')).toBe('search');
+      expect(filterRow.getAttribute('aria-label')).toBe('My work filters');
+      expect(filterRow.querySelector('[aria-label="My work board controls"] [role="tablist"]')).toBeTruthy();
+      expect(filterRow.querySelector('app-pr-filter-select')).toBeTruthy();
+      expect(filterRow.textContent).toContain('Phase');
+
+      // The explainer is rendered, and it comes AFTER the filter row in document order.
+      const explainer = root().querySelector('app-pr-tab-intro') as HTMLElement;
+      expect(explainer).toBeTruthy();
+      expect(filterRow.compareDocumentPosition(explainer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(filterRow.contains(explainer)).toBe(false);
+    });
+
+    it('drops the standalone read-only hint line and keeps the copy in the explainer description', () => {
+      expect(text()).not.toContain('Read-only board.');
+      expect(component.explainerDescription).toContain('read-only');
+      expect(component.explainerDescription).toContain('Status changes still happen inside the result');
+    });
+
+    it('enables the band CTA and navigates with returnTab=my-work when it fires', () => {
+      const band = fixture.debugElement.query(By.directive(BandStubComponent));
+      expect((band.componentInstance as BandStubComponent).canReport).toBe(true);
+
+      (band.componentInstance as BandStubComponent).whereToReport.emit();
+
+      expect(router.navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP01'], {
+        queryParams: { whereToReport: 'true', returnTab: 'my-work' }
+      });
+    });
+
+    it('renders a board-shaped skeleton (5 columns + card placeholders) while loading, and none once rows land', () => {
+      service.loading.set(true);
+      service.rows.set([]);
+      fixture.detectChanges();
+
+      const busy = root().querySelector('[aria-busy="true"]') as HTMLElement;
+      expect(busy).toBeTruthy();
+      expect(busy.querySelector('.sr-only')?.textContent).toContain('Loading your board');
+      expect(root().querySelectorAll('[data-testid="my-work-skeleton-column"]').length).toBe(5);
+      expect(root().querySelectorAll('[data-testid="my-work-skeleton-card"]').length).toBeGreaterThan(0);
+      // The filter row stays mounted while the board is loading.
+      expect(workArea().firstElementChild?.getAttribute('role')).toBe('search');
+
+      service.loading.set(false);
+      service.visibleRows.set([row()]);
+      service.columns.set([{ key: 'editing', label: 'Editing', group: 'action', rows: [row()] }]);
+      fixture.detectChanges();
+
+      expect(root().querySelectorAll('[data-testid="my-work-skeleton-column"]').length).toBe(0);
+      expect(root().querySelectorAll('[data-testid="my-work-skeleton-card"]').length).toBe(0);
+    });
+  });
+
   it('carries the board re-group entrance-fade class when the board renders (MWB-T-7)', () => {
     service.visibleRows.set([row()]);
     service.columns.set([{ key: 'editing', label: 'Editing', group: 'action', rows: [row()] }]);

@@ -158,7 +158,7 @@ Each card MUST show the payload's `status_name` as its status chip so Draft, App
 - BUT it must NOT expose a draggable handle, `draggable="true"`, or any drop target on cards or columns
 - AND IT MUST keep the whole card keyboard reachable (the action is a real `<button>` / `<a>` with a visible focus ring)
 
-- **`MWB-R-7` UI states.** The board MUST render: a skeleton of three columns while loading; an error panel with a **Retry** action when the list request fails; a per-column empty message when a column has no cards; a whole-board empty state (*Nothing on your board yet* + **Go to Reporting** + *See all program results*) when the active scope + phase has zero rows.
+- **`MWB-R-7` UI states.** The board MUST render: a board-shaped skeleton while loading (filter row visible; group labels, five column shells with header and card placeholders, two rails — `MWB-T-8`, user request 2026-09-05); an error panel with a **Retry** action when the list request fails; a per-column empty message when a column has no cards; a whole-board empty state (*Nothing on your board yet* + **Go to Reporting** + *See all program results*) when the active scope + phase has zero rows.
 
 #### Scenario: Whole-board empty
 

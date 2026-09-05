@@ -1,5 +1,6 @@
-// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-R-1, R-3, R-7, R-9, R-10, design.md §2.2, §6.1-6.6)
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-T-8, MWB-R-1, R-3, R-7, R-9, R-10, design.md §2.2, §6.1-6.6)
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -14,9 +15,12 @@ import { MyWorkBoardService } from './services/my-work-board.service';
 import { MyWorkColumnComponent } from './components/my-work-column/my-work-column.component';
 import { MyWorkScope } from './my-work.view-model';
 
-/** Explainer copy (`MWB-R-10`, design.md §6.5). */
+/** Explainer copy (`MWB-R-10`, design.md §6.5). `MWB-T-8` (1): absorbs the read-only hint sentence
+ *  that used to sit as a standalone line in the toolbar — the row under the tabs is the filter row
+ *  now, so the hint lives in the one place the tab already reserves for "what is this?" copy. */
 const MY_WORK_EXPLAINER_DESCRIPTION =
-  'Your results in this Science Program, grouped by status. The board is read-only: open a result to complete it or submit it; quality assessment happens in QA.';
+  'Your results in this Science Program, grouped by status. The board is read-only: open a result to complete it or submit it. ' +
+  'Status changes still happen inside the result, and quality assessment happens in QA.';
 
 @Component({
   selector: 'app-my-work-board',
@@ -27,7 +31,7 @@ const MY_WORK_EXPLAINER_DESCRIPTION =
   templateUrl: './my-work-board.component.html',
   styleUrls: ['./my-work-board.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, RouterLink, ReportingProgramBandComponent, PrTabIntroComponent, PrFilterSelectComponent, MyWorkColumnComponent],
+  imports: [NgTemplateOutlet, FormsModule, RouterLink, ReportingProgramBandComponent, PrTabIntroComponent, PrFilterSelectComponent, MyWorkColumnComponent],
   providers: [MyWorkBoardService]
 })
 export class MyWorkBoardComponent {
@@ -68,6 +72,15 @@ export class MyWorkBoardComponent {
 
   // ── Toolbar option lists ────────────────────────────────────────────────────────────────────
   readonly phaseSelectOptions = computed(() => this.data.phaseOptions().map(value => ({ value, label: value })));
+
+  // ── Skeleton shape (`MWB-T-8` (4)) ─────────────────────────────────────────────────────────
+  /** Card-placeholder counts per group and the two Closed rails. Plain arrays, not signals: the
+   *  skeleton's shape is fixed — it mirrors the board's own layout (one 360px Editing column, a
+   *  two-up waiting grid, two 44px rails) so the swap to real content does not shift anything. */
+  readonly skeletonEditingCards = [1, 2, 3];
+  readonly skeletonWaitingCards = [1, 2];
+  readonly skeletonWaitingColumns = [1, 2];
+  readonly skeletonRails = [1, 2];
 
   // ── Board layout groups (design.md §6.3) ───────────────────────────────────────────────────
   readonly editingColumn = computed(() => this.data.columns().find(column => column.key === 'editing') ?? null);
@@ -141,5 +154,14 @@ export class MyWorkBoardComponent {
   /** `MWB-R-7` whole-board empty — *See all program results*. */
   seeAllResults(): void {
     this.data.setScope('all');
+  }
+
+  /** `MWB-T-8` (2) — band CTA. Identical to `ProgrammeResultsComponent.openWhereToReport()` except
+   *  for `returnTab`: the modal lives on `dashboard-lab` (`entity-details/:code`), and that page
+   *  reads `returnTab` on close to send the user back to the tab they came from. */
+  openWhereToReport(): void {
+    this.router.navigate(['/result-framework-reporting', 'entity-details', this.programmeCode()], {
+      queryParams: { whereToReport: 'true', returnTab: 'my-work' }
+    });
   }
 }
