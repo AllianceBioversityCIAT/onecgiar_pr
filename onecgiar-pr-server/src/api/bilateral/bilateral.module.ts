@@ -72,6 +72,8 @@ import { BilateralAiProcessingQueueModule } from '../../shared/microservices/bil
 import { RoleByUserModule } from '../../auth/modules/role-by-user/role-by-user.module';
 import { AdUsersModule } from '../ad_users/ad_users.module';
 import { WebhookOutboxModule } from '../results/webhook/webhook-outbox.module';
+import { EmailNotificationManagementModule } from '../../shared/microservices/email-notification-management/email-notification-management.module';
+import { TemplateRepository } from '../platform-report/repositories/template.repository';
 import { BilateralWebhookController } from './bilateral-webhook.controller';
 import { BilateralWebhookService } from './services/bilateral-webhook.service';
 
@@ -128,6 +130,8 @@ import { BilateralWebhookService } from './services/bilateral-webhook.service';
     // P2-3166: the endpoint repository, for registering a platform's callback destination. Safe to
     // import — that module has no service dependencies, so it cannot close a cycle back into here.
     WebhookOutboxModule,
+    // 2026-09-04: the AI results-ready mail (BilateralAiService.sendResultsReadyEmail).
+    EmailNotificationManagementModule,
   ],
   controllers: [
     BilateralWebhookController,
@@ -154,6 +158,7 @@ import { BilateralWebhookService } from './services/bilateral-webhook.service';
     ResultsPolicyChangesRepository,
     NonPooledProjectBudgetRepository,
     ActorTypeRepository,
+    TemplateRepository,
     BilateralVersioningService,
     BilateralAiService,
     BilateralAiFileStorageService,
