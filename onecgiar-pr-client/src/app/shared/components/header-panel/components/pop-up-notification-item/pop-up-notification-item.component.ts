@@ -7,8 +7,10 @@ import { ResultsApiService } from '../../../../services/api/results-api.service'
 import {
   buildResultNotificationText,
   getNotificationActionVerb,
+  getProgramCode,
   getResultNotificationTextParts,
   isBilateralReviewNotification,
+  isBilateralSubmittedNotification,
   isContributionDecisionNotification,
   isResultTaggedNotification
 } from '../../../../constants/notification-type.constants';
@@ -90,6 +92,21 @@ export class PopUpNotificationItemComponent {
    */
   onNotificationClick(event: MouseEvent): void {
     const notification = this.notification;
+
+    // 2026-09-05 — "submitted for your review" takes the SP member straight to their review queue,
+    // where the pending result waits. The SP code is the role-1 initiative the payload carries.
+    if (isBilateralSubmittedNotification(notification)) {
+      const programCode = getProgramCode(notification);
+      if (!programCode) {
+        this.itemSelected.emit();
+        return;
+      }
+      event.preventDefault();
+      this.markAsRead(notification);
+      this.itemSelected.emit();
+      this.router.navigateByUrl(`/result-framework-reporting/entity-details/${programCode}/results-review`);
+      return;
+    }
 
     // P2-3214 AC4 + AC5, and P2-3188 which shares the same destination.
     if (this.isResultTagged(notification) || this.isContributionDecision(notification)) {

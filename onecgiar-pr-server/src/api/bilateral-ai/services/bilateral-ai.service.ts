@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -33,6 +34,12 @@ import {
 } from '../entities/draft-evidence.entity';
 import { CreateBilateralAiJobDto } from '../dto/create-bilateral-ai-job.dto';
 import { BilateralService } from '../../bilateral/bilateral.service';
+import * as handlebars from 'handlebars';
+import { env } from 'node:process';
+import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
+import { TemplateRepository } from '../../platform-report/repositories/template.repository';
+import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
+import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
 
 const TYPE_BY_INDICATOR: Record<string, { type: number; level: number }> = {
   'Policy Change': { type: 1, level: 3 },
@@ -70,6 +77,10 @@ export class BilateralAiService {
     private readonly userRepository: UserRepository,
     private readonly roleByUserRepository: RoleByUserRepository,
     private readonly clarisaCentersRepository: ClarisaCentersRepository,
+    private readonly clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
+    private readonly templateRepository: TemplateRepository,
+    @Optional()
+    private readonly emailService?: EmailNotificationManagementService,
   ) {}
 
   async createJob(
@@ -334,7 +345,7 @@ export class BilateralAiService {
     try {
       const user = await this.userRepository.findOne({
         where: { id: job.user_id },
-        select: { email: true },
+        select: { email: true, first_name: true },
       });
       if (!user?.email) {
         throw new Error(
@@ -372,6 +383,13 @@ export class BilateralAiService {
         response_snapshot: response,
         completed_date: new Date(),
       });
+
+      // Processing can take minutes and the uploader has usually moved on; the client no longer
+      // force-redirects on completion (2026-09-04), so the mail is what tells them the drafts are
+      // ready. After the status update and never blocking: a mail failure must not fail the job.
+      if (resultCount > 0) {
+        await this.sendResultsReadyEmail(job, user, resultCount);
+      }
     } catch (error: any) {
       const status = error?.status;
       const retryable = !status || status >= 500;
@@ -384,6 +402,83 @@ export class BilateralAiService {
         completed_date: new Date(),
       });
       if (retryable) throw error;
+    }
+  }
+
+  /**
+   * Mails the uploader that their AI job finished and where the drafts wait. Follows the
+   * established lookup-only email path (`WebhookAlertService`, `UserService`): body from the
+   * `template` table, rendered with handlebars, handed to `sendEmail` as `socketFile`.
+   *
+   * Never throws — the job is already COMPLETED and a notification failure must not undo that.
+   * A missing template or email service downgrades to a warn, same posture as the webhook alert.
+   */
+  private async sendResultsReadyEmail(
+    job: BilateralAiJob,
+    user: { email: string; first_name?: string },
+    resultCount: number,
+  ): Promise<void> {
+    try {
+      if (!this.emailService) {
+        this.logger.warn(
+          `Email service unavailable; AI results-ready mail skipped for job ${job.job_id}`,
+        );
+        return;
+      }
+
+      const templateRow = await this.templateRepository.findOne({
+        where: { name: EmailTemplate.BILATERAL_AI_RESULTS_READY },
+      });
+      if (!templateRow?.template) {
+        this.logger.warn(
+          `Email template ${EmailTemplate.BILATERAL_AI_RESULTS_READY} not found; AI results-ready mail skipped for job ${job.job_id}`,
+        );
+        return;
+      }
+
+      // The drafts route is /bilateral/:acronym/drafts; the acronym comes from the centre's
+      // CLARISA institution. Same frontend-base derivation `attachResultLinks` already uses.
+      const institution = await this.clarisaInstitutionsRepository.findOne({
+        where: { id: job.center_id },
+      });
+      const pdfBase = (
+        env.FRONT_END_PDF_ENDPOINT ??
+        'https://reporting.cgiar.org/reports/result-details/'
+      ).replace(/\/+$/, '');
+      const frontendBase =
+        pdfBase.replace(/\/reports\/result-details$/, '') ||
+        'https://reporting.cgiar.org';
+      const draftsUrl = institution?.acronym
+        ? `${frontendBase}/bilateral/${institution.acronym}/drafts`
+        : frontendBase;
+
+      const compiled = handlebars.compile(templateRow.template);
+      const body = compiled({
+        user_name: user.first_name || 'there',
+        result_count: resultCount,
+        result_plural: resultCount === 1 ? '' : 's',
+        center_acronym: institution?.acronym ?? 'your centre',
+        drafts_url: draftsUrl,
+      });
+
+      this.emailService.sendEmail({
+        from: { email: env.EMAIL_SENDER, name: 'PRMS Reporting Tool -' },
+        emailBody: {
+          subject: `[PRMS] Your AI-identified result${resultCount === 1 ? ' is' : 's are'} ready for review`,
+          to: [user.email],
+          cc: [],
+          bcc: '',
+          message: {
+            text: `The AI processing finished: ${resultCount} result draft${resultCount === 1 ? '' : 's'} ready for review.`,
+            socketFile: body,
+          },
+        },
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to send the AI results-ready mail for job ${job.job_id}`,
+        error as Error,
+      );
     }
   }
 

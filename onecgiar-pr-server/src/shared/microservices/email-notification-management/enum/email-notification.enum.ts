@@ -24,4 +24,11 @@ export enum EmailTemplate {
    * `template` and rendered with handlebars by `WebhookAlertService`, not through `buildEmailData`.
    */
   WEBHOOK_DELIVERY_FAILED = 'email_template_webhook_delivery_failed',
+  /**
+   * 2026-09-04. Tells the uploader their AI text-mining job finished and how many result drafts it
+   * produced, with a link to the centre's Drafts list. Lookup-only, rendered with handlebars by
+   * `BilateralAiService.sendResultsReadyEmail` — the in-app half is the client toast (the forced
+   * post-completion redirect was removed the same day).
+   */
+  BILATERAL_AI_RESULTS_READY = 'email_template_bilateral_ai_results_ready',
 }

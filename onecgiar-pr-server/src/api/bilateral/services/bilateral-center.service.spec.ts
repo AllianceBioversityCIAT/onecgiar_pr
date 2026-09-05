@@ -51,6 +51,10 @@ describe('BilateralCenterService', () => {
           provide: BilateralService,
           useValue: {
             handleLeadCenter: jest.fn().mockResolvedValue(undefined),
+            // 2026-09-05: submitForReview announces the arrival to the primary SP post-commit.
+            emitBilateralSubmittedNotification: jest
+              .fn()
+              .mockResolvedValue(undefined),
           },
         },
         {
@@ -1098,6 +1102,19 @@ describe('BilateralCenterService', () => {
         ResultStatusData.PendingReview.value,
       );
       expect(resultRepository.manager.transaction).toHaveBeenCalled();
+    });
+
+    // 2026-09-05 — the primary SP's members are told the result is waiting for them, post-commit.
+    it('announces the arrival to the primary Science Program after the transaction', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const bilateral = module.get<BilateralService>(BilateralService) as any;
+
+      await service.submitForReview(user, 77);
+
+      expect(bilateral.emitBilateralSubmittedNotification).toHaveBeenCalledWith(
+        77,
+        user.id,
+      );
     });
 
     it('stamps the submission date the review queue shows', async () => {

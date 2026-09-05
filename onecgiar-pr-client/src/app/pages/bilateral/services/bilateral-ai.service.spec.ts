@@ -57,7 +57,8 @@ describe('BilateralAiService', () => {
       GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
       GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] }))
     };
-    router = { navigate: jest.fn().mockResolvedValue(true) };
+    // Defaults to the AI upload flow (the create wizard): completion may auto-redirect only there.
+    router = { navigate: jest.fn().mockResolvedValue(true), url: '/bilateral/ALLIANCE/create' };
     ctx = { centerInstitutionId: signal<number | null>(null), centerAcronym: signal('ALLIANCE') };
     creation = { isAiGenerated: signal(false) };
     toast = { add: jest.fn() };
@@ -159,6 +160,27 @@ describe('BilateralAiService', () => {
       const callsAtCompletion = bilateralApi.GET_bilateralAiJob.mock.calls.length;
       await advance(POLL_INTERVAL * 5);
       expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(callsAtCompletion);
+    });
+
+    // The service is root-provided and polling survives navigation; completing used to yank the
+    // user out of whatever result they had moved on to (reported 2026-09-04). Away from the upload
+    // flow, a toast announces the drafts instead — and the server mails the uploader a link.
+    it('does NOT redirect when the user moved on — it announces the drafts with a toast', async () => {
+      router.url = '/bilateral/ALLIANCE/result/9046';
+      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'COMPLETED', result_count: 2 }) }));
+
+      service.startJob('job-1');
+      await flush();
+
+      expect(service.uploadState().status).toBe('completed');
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(toast.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          summary: 'AI results ready',
+          detail: expect.stringContaining('2 results identified')
+        })
+      );
     });
 
     it('replaces a running job instead of stacking a second interval', async () => {

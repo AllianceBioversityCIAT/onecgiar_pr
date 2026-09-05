@@ -122,7 +122,15 @@ describe('SectionZeroDashboardComponent', () => {
    * Every assertion below reads the RENDERED DOM on purpose: the client runs zoneless, so a spec
    * that asserted a class property would pass with the defect still on screen.
    */
-  describe('changing the lead W3/Bilateral project (P2-3518)', () => {
+  /**
+   * 2026-09-05 (Juan David) — the primary W3/Bilateral project is the result's identity and must
+   * NOT be changeable from the editor. This REVERSES the P2-3518 inline picker: the field is plain
+   * text in every state, editable results included. A draft created against the wrong project is
+   * discarded and recreated, not re-pointed. Every assertion reads the RENDERED DOM on purpose:
+   * the client runs zoneless, so a spec that asserted a class property would pass with the defect
+   * still on screen.
+   */
+  describe('the primary W3/Bilateral project is never editable', () => {
     const openEditableResultOn = (current: BilateralProject) => {
       (creationService.currentResultId as any).set(41);
       (creationService.selectedProject as any).set(current);
@@ -130,16 +138,15 @@ describe('SectionZeroDashboardComponent', () => {
       fixture.detectChanges();
     };
 
-    it('renders the project picker inside the Project field while the result is editable', () => {
+    it('renders the project as plain text even while the result is editable', () => {
       openEditableResultOn(project(12, 'OLDPROJ'));
 
       const el = fixture.nativeElement as HTMLElement;
-      expect(el.querySelector('.bp-meta-field--project app-bilateral-project-selector')).not.toBeNull();
+      expect(el.querySelector('app-bilateral-project-selector')).toBeNull();
+      expect(el.querySelector('.bp-meta-field-value--project')?.textContent).toContain('OLDPROJ full name');
     });
 
-    // ⚠️ Regression lock (a). A result that already left Editing is the Science Program's, not the
-    // centre's: the field must fall back to plain text with no way to open a dropdown.
-    it('keeps the project as plain text, with no picker, once the result is no longer editable', () => {
+    it('renders plain text once the result is no longer editable, exactly the same', () => {
       openEditableResultOn(project(12, 'OLDPROJ'));
       (creationService.isEditableByCenterUser as any).set(false);
       fixture.detectChanges();
@@ -149,67 +156,8 @@ describe('SectionZeroDashboardComponent', () => {
       expect(el.querySelector('.bp-meta-field-value--project')?.textContent).toContain('OLDPROJ full name');
     });
 
-    it('keeps the project as plain text when the editor passes readOnly', () => {
+    it('never writes to the contributors endpoint from this card', () => {
       openEditableResultOn(project(12, 'OLDPROJ'));
-      fixture.componentRef.setInput('readOnly', true);
-      fixture.detectChanges();
-
-      const el = fixture.nativeElement as HTMLElement;
-      expect(el.querySelector('app-bilateral-project-selector')).toBeNull();
-      expect(el.querySelector('.bp-meta-field-value--project')?.textContent).toContain('OLDPROJ full name');
-    });
-
-    it('never offers the picker on the create wizard, where no result exists yet', () => {
-      (creationService.currentResultId as any).set(null);
-      (creationService.selectedProject as any).set(project(12, 'OLDPROJ'));
-      fixture.detectChanges();
-
-      expect((fixture.nativeElement as HTMLElement).querySelector('app-bilateral-project-selector')).toBeNull();
-    });
-
-    // ⚠️ Regression lock (b). The save goes through the contributors endpoint that already exists,
-    // and its `contributing_bilateral_projects` array is a SYNC-REPLACE that also carries `is_lead`
-    // — so the whole list has to travel, with the new project flagged as the lead.
-    it('saves the picked project as the new lead through the existing contributors endpoint', () => {
-      const next = project(77, 'NEWPROJ');
-      (creationService.projects as any).set([project(12, 'OLDPROJ'), next]);
-      (creationService.leadProjectSyncPayload as jest.Mock).mockReturnValue([
-        { project_id: 77, is_lead: true },
-        { project_id: 30, is_lead: false }
-      ]);
-      openEditableResultOn(project(12, 'OLDPROJ'));
-
-      const el = fixture.nativeElement as HTMLElement;
-      (el.querySelector('app-bilateral-project-selector .bps-field') as HTMLElement).click();
-      fixture.detectChanges();
-
-      const option = Array.from(el.querySelectorAll('app-bilateral-project-selector .bps-option')).find(o =>
-        o.textContent?.includes('NEWPROJ')
-      ) as HTMLElement;
-      option.click();
-      fixture.detectChanges();
-
-      // The picker re-points the lead WITHOUT clearing the Science Program: `selectProject` (the
-      // wizard's entry point) wipes it, and what a project change should do to the Science Program
-      // is still an open requirement question.
-      expect(creationService.setLeadProject).toHaveBeenCalledWith(next);
-      expect(creationService.selectProject).not.toHaveBeenCalled();
-      expect(autoSave.saveContributors).toHaveBeenCalledWith({
-        contributing_bilateral_projects: [
-          { project_id: 77, is_lead: true },
-          { project_id: 30, is_lead: false }
-        ]
-      });
-    });
-
-    it('does not write anything when the picker somehow fires on a read-only result', () => {
-      const next = project(77, 'NEWPROJ');
-      (creationService.projects as any).set([next]);
-      openEditableResultOn(project(12, 'OLDPROJ'));
-      (creationService.isEditableByCenterUser as any).set(false);
-      fixture.detectChanges();
-
-      component.onProjectChanged();
 
       expect(autoSave.saveContributors).not.toHaveBeenCalled();
     });
