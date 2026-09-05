@@ -1,15 +1,22 @@
-// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-T-8)
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-T-8, MWB-T-9)
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { By } from '@angular/platform-browser';
 import { ActivatedRoute, ParamMap, Router, convertToParamMap } from '@angular/router';
 import { BehaviorSubject, of } from 'rxjs';
 
 import { MyWorkBoardComponent } from './my-work-board.component';
 import { MyWorkBoardService } from './services/my-work-board.service';
+import { MyWorkCountService } from './services/my-work-count.service';
 import { MyWorkColumn, MyWorkTotals } from './my-work.view-model';
 import { ProgrammeResultRow } from '../programme-results/services/programme-results.service';
+import { PROGRAMME_RESULTS_OTHER_CATEGORY, ProgrammeResultsFilterService } from '../programme-results/services/programme-results-filter.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
+import { ApiService } from '../../../../shared/services/api/api.service';
+import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
+import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
+import { ScienceProgramIdService } from '../../services/science-program-id.service';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
 
@@ -134,7 +141,11 @@ describe('MyWorkBoardComponent', () => {
       remove: { imports: [ReportingProgramBandComponent] },
       add: { imports: [BandStubComponent] }
     });
-    TestBed.overrideComponent(MyWorkBoardComponent, { set: { providers: [{ provide: MyWorkBoardService, useValue: service }] } });
+    // `set` REPLACES the component's providers array — `ProgrammeResultsFilterService` is
+    // page-provided since `MWB-T-9`, so it has to be re-listed or the toolbar cannot be injected.
+    TestBed.overrideComponent(MyWorkBoardComponent, {
+      set: { providers: [ProgrammeResultsFilterService, { provide: MyWorkBoardService, useValue: service }] }
+    });
 
     fixture = TestBed.createComponent(MyWorkBoardComponent);
     component = fixture.componentInstance;
@@ -300,13 +311,20 @@ describe('MyWorkBoardComponent', () => {
       expect(text()).toContain('Reporting 2026');
     });
 
+    // `MWB-T-9`: the phase moved into the Filter popover and the URL write moved into the shared
+    // five-param mirror effect, so the navigate call now carries the whole param map. The
+    // assertion's substance is unchanged: `phase` reaches the URL with `merge` + `replaceUrl`.
     it('re-groups (no request) and mirrors the URL with replaceUrl + merge on change', () => {
       component.onPhaseChange('Reporting 2025');
-
       expect(service.setPhase).toHaveBeenCalledWith('Reporting 2025');
+
+      // The real service resolves the new label inside `setPhase()`; the fake needs it spelled out.
+      service.effectivePhase.set('Reporting 2025');
+      fixture.detectChanges();
+
       expect(router.navigate).toHaveBeenCalledWith([], {
         relativeTo: expect.anything(),
-        queryParams: { phase: 'Reporting 2025' },
+        queryParams: expect.objectContaining({ phase: 'Reporting 2025' }),
         queryParamsHandling: 'merge',
         replaceUrl: true
       });
@@ -330,8 +348,8 @@ describe('MyWorkBoardComponent', () => {
       const filterRow = workArea().firstElementChild as HTMLElement;
 
       expect(filterRow.getAttribute('role')).toBe('search');
-      expect(filterRow.getAttribute('aria-label')).toBe('My work filters');
-      expect(filterRow.querySelector('[aria-label="My work board controls"] [role="tablist"]')).toBeTruthy();
+      expect(filterRow.getAttribute('aria-label')).toBe('My results filters');
+      expect(filterRow.querySelector('[aria-label="My results board controls"] [role="tablist"]')).toBeTruthy();
       expect(filterRow.querySelector('app-pr-filter-select')).toBeTruthy();
       expect(filterRow.textContent).toContain('Phase');
 
@@ -380,5 +398,432 @@ describe('MyWorkBoardComponent', () => {
     fixture.detectChanges();
 
     expect(root().querySelector('.pr-board-fade')).toBeTruthy();
+  });
+});
+
+// @akili-spec changes/my-work-board (MWB-T-9)
+/**
+ * Filter row parity with the Results tab: search · Filter popover · chips · URL bridge.
+ *
+ * Unlike the suite above, this one runs the REAL `MyWorkBoardService` + the REAL
+ * `ProgrammeResultsFilterService` over `HttpTestingController`: "re-groups WITHOUT a request" and
+ * "one source of truth for the phase" are only provable at the HTTP seam, and the AND-vs-OR
+ * question is only provable against real predicates. The fixture deliberately shares values
+ * across dimensions (three Knowledge products, three `W1/W2`, but only two rows carrying both) —
+ * a one-row-per-value fixture cannot tell an AND from an OR (`MWB-T-9` disqualifier).
+ */
+describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
+  let fixture: ComponentFixture<MyWorkBoardComponent>;
+  let component: MyWorkBoardComponent;
+  let board: MyWorkBoardService;
+  let filter: ProgrammeResultsFilterService;
+  let httpMock: HttpTestingController;
+  let router: { navigate: jest.Mock };
+  let snapshotQueryParamMap: ParamMap;
+  const userId = 7;
+
+  function rawResult(partial: Record<string, any> = {}): Record<string, any> {
+    return {
+      id: '1',
+      result_code: '5101',
+      title: 'Seed systems brief',
+      result_type: 'Knowledge product',
+      status_id: '1',
+      status_name: 'Editing',
+      result_type_id: '6',
+      created_date: '2025-08-29T16:37:46.000Z',
+      create_first_name: 'Ana',
+      create_last_name: 'Ruiz',
+      source_name: 'W1/W2',
+      lead_center: 'CIAT',
+      version_id: '36',
+      phase_name: 'Reporting 2026',
+      submitter: 'SP01',
+      ...partial
+    };
+  }
+
+  /** 5 rows in *Reporting 2026* + 1 in *Reporting 2025*; all Editing so every card renders in the
+   *  one expanded column (the Closed group is collapsed to rails by default, `MWB-DD-8`). */
+  const FIXTURE = [
+    rawResult(),
+    rawResult({ id: '2', result_code: '5102', title: 'Seed multiplication guide', lead_center: 'IWMI' }),
+    rawResult({
+      id: '3',
+      result_code: '5103',
+      title: 'Policy dialogue note',
+      source_name: 'W3/Bilateral',
+      create_first_name: 'Bo',
+      create_last_name: 'Chen'
+    }),
+    rawResult({
+      id: '4',
+      result_code: '5104',
+      title: 'Drought tolerant maize',
+      result_type: 'Innovation development',
+      create_first_name: 'Bo',
+      create_last_name: 'Chen'
+    }),
+    rawResult({
+      id: '5',
+      result_code: '5105',
+      title: 'Water accounting tool',
+      result_type: 'Innovation development',
+      source_name: 'W3/Bilateral',
+      lead_center: 'IWMI'
+    }),
+    rawResult({
+      id: '6',
+      result_code: '5106',
+      title: 'Legacy irrigation study',
+      result_type: 'Policy change',
+      source_name: 'W3/Bilateral',
+      lead_center: 'IWMI',
+      create_first_name: 'Bo',
+      create_last_name: 'Chen',
+      phase_name: 'Reporting 2025',
+      version_id: '30'
+    })
+  ];
+
+  /** `items` overrides `FIXTURE` for the cases that need one extra row (the non-RF category). */
+  function build(initialQueryParams: Record<string, string> = {}, items: Record<string, any>[] = FIXTURE): void {
+    router = { navigate: jest.fn().mockResolvedValue(true) };
+    snapshotQueryParamMap = convertToParamMap(initialQueryParams);
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [MyWorkBoardComponent, HttpClientTestingModule],
+      providers: [
+        ResultsApiService,
+        {
+          provide: SaveButtonService,
+          useValue: {
+            isCreatingPipe: jest.fn(),
+            isGettingSectionPipe: jest.fn(),
+            isSavingPipe: jest.fn(),
+            showSaveSpinner: jest.fn(),
+            isSavingPipeNextStep: jest.fn()
+          }
+        },
+        {
+          provide: ApiService,
+          useFactory: (resultsApi: ResultsApiService) => ({ resultsSE: resultsApi, authSE: { localStorageUser: { id: userId } } }),
+          deps: [ResultsApiService]
+        },
+        { provide: ScienceProgramIdService, useValue: { resolve: () => of(50) } },
+        { provide: MyWorkCountService, useValue: { set: jest.fn(), ensure: jest.fn(), count: jest.fn() } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            paramMap: of(convertToParamMap({ entityId: 'SP01' })),
+            snapshot: {
+              paramMap: convertToParamMap({ entityId: 'SP01' }),
+              get queryParamMap() {
+                return snapshotQueryParamMap;
+              }
+            },
+            queryParamMap: new BehaviorSubject<ParamMap>(snapshotQueryParamMap)
+          }
+        },
+        { provide: Router, useValue: router },
+        {
+          provide: DataControlService,
+          useValue: {
+            reportingCurrentPhase: { phaseYear: 2026, phaseName: 'Reporting 2026', portfolioAcronym: 'P26' },
+            reportingPhaseVersion: signal(0)
+          }
+        },
+        {
+          provide: ResultFrameworkReportingHomeService,
+          useValue: {
+            mySPsList: () => [{ initiativeCode: 'SP01', initiativeShortName: 'Sustainable Farming', initiativeName: 'SP01 long' }],
+            otherSPsList: () => [],
+            otherProjectsList: () => []
+          }
+        }
+      ]
+    });
+
+    TestBed.overrideComponent(MyWorkBoardComponent, {
+      remove: { imports: [ReportingProgramBandComponent] },
+      add: { imports: [BandStubComponent] }
+    });
+
+    fixture = TestBed.createComponent(MyWorkBoardComponent);
+    component = fixture.componentInstance;
+    board = fixture.debugElement.injector.get(MyWorkBoardService);
+    filter = fixture.debugElement.injector.get(ProgrammeResultsFilterService);
+    httpMock = TestBed.inject(HttpTestingController);
+
+    fixture.detectChanges();
+    httpMock.expectOne(req => req.url.includes(`get/all/roles/filter/${userId}`)).flush({ response: { items } });
+    fixture.detectChanges();
+  }
+
+  const root = () => fixture.nativeElement as HTMLElement;
+  const cardTitles = () =>
+    Array.from(root().querySelectorAll('app-my-work-column article')).map(card => (card.querySelector('h3, h4, p')?.textContent ?? '').trim());
+  const cardCount = () => root().querySelectorAll('app-my-work-column article').length;
+  const chipLabels = () =>
+    Array.from(root().querySelectorAll('[data-testid="my-work-chip"]')).map(chip => (chip.textContent ?? '').replace(/\s+/g, ' ').trim());
+  const filterBadge = () => (root().querySelector('[data-testid="my-work-filter-count"]')?.textContent ?? '').trim();
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it('renders one filter row with search, the Filter button and the phase chip — one control line, no stacked Phase select', () => {
+    build();
+    const filterRow = (component.workAreaEl() as HTMLElement).firstElementChild as HTMLElement;
+
+    expect(filterRow.getAttribute('aria-label')).toBe('My results filters');
+    expect(filterRow.querySelector('[aria-label="My results board controls"] [role="tablist"]')).toBeTruthy();
+    expect(filterRow.querySelector('[data-testid="my-work-search"]')).toBeTruthy();
+    expect(filterRow.querySelector('[data-testid="my-work-filter-button"]')).toBeTruthy();
+    // The `MWB-T-8` bare select is gone: the only `app-pr-filter-select`s left are inside the popover.
+    expect(filterRow.querySelectorAll('[data-testid="my-work-filter-popover"] app-pr-filter-select').length).toBe(
+      filterRow.querySelectorAll('app-pr-filter-select').length
+    );
+    expect(chipLabels()).toEqual(['Phase: Reporting 2026']);
+  });
+
+  it('never offers a Status dimension — the columns already are the status', () => {
+    build();
+    expect(root().querySelector('[aria-label="Filter by status"]')).toBeNull();
+  });
+
+  it('search narrows the cards by title and by code', fakeAsync(() => {
+    build();
+    expect(cardCount()).toBe(5);
+
+    component.onSearchInput('seed');
+    tick(300);
+    fixture.detectChanges();
+    expect(cardTitles().sort()).toEqual(['Seed multiplication guide', 'Seed systems brief']);
+
+    component.onSearchInput('5103');
+    tick(300);
+    fixture.detectChanges();
+    expect(cardTitles()).toEqual(['Policy dialogue note']);
+    expect(chipLabels()).toContain('Search: 5103');
+
+    component.onSearchInput('');
+    tick(300);
+    fixture.detectChanges();
+    expect(cardCount()).toBe(5);
+  }));
+
+  it('the Filter badge always equals the number of chips', () => {
+    build();
+    expect(filterBadge()).toBe(String(chipLabels().length));
+
+    component.onCategoryChange('Knowledge product');
+    fixture.detectChanges();
+    expect(chipLabels().length).toBe(2);
+    expect(filterBadge()).toBe('2');
+
+    component.onOriginChange('W3/Bilateral');
+    fixture.detectChanges();
+    expect(chipLabels().length).toBe(3);
+    expect(filterBadge()).toBe('3');
+  });
+
+  it('Category, Funding source and Center each narrow the board and add a chip — combined with AND', () => {
+    build();
+
+    component.onCategoryChange('Knowledge product');
+    fixture.detectChanges();
+    expect(cardCount()).toBe(3);
+    expect(chipLabels()).toContain('Category: Knowledge product');
+
+    // OR over the two dimensions would leave four cards (3 KP ∪ 3 W1/W2 minus the 2 shared).
+    component.onOriginChange('W1/W2');
+    fixture.detectChanges();
+    expect(cardTitles().sort()).toEqual(['Seed multiplication guide', 'Seed systems brief']);
+    expect(chipLabels()).toContain('Funding source: W1/W2');
+
+    component.onCenterChange('IWMI');
+    fixture.detectChanges();
+    expect(cardTitles()).toEqual(['Seed multiplication guide']);
+    expect(chipLabels()).toContain('Center: IWMI');
+  });
+
+  it("a chip's × removes just that filter and Clear all restores the whole board (keeping the default phase)", () => {
+    build();
+    component.onCategoryChange('Knowledge product');
+    component.onOriginChange('W3/Bilateral');
+    fixture.detectChanges();
+    expect(cardCount()).toBe(1);
+
+    const originChip = Array.from(root().querySelectorAll('[data-testid="my-work-chip"]')).find(chip =>
+      chip.textContent?.includes('Funding source')
+    ) as HTMLElement;
+    (originChip.querySelector('button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(cardCount()).toBe(3);
+    expect(chipLabels()).not.toContain('Funding source: W3/Bilateral');
+
+    (root().querySelector('[data-testid="my-work-clear-filters"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(cardCount()).toBe(5);
+    expect(chipLabels()).toEqual(['Phase: Reporting 2026']);
+    expect(board.effectivePhase()).toBe('Reporting 2026');
+  });
+
+  it('changing the phase in the popover re-groups with NO request and keeps the badge on the visible phase', () => {
+    build();
+    expect(board.badge()).toBe(5);
+
+    component.onPhaseChange('Reporting 2025');
+    fixture.detectChanges();
+
+    httpMock.expectNone(req => req.url.includes('get/all/roles/filter'));
+    expect(board.effectivePhase()).toBe('Reporting 2025');
+    expect(cardTitles()).toEqual(['Legacy irrigation study']);
+    // One phase source: the chip, the columns and the badge all read the same resolved label.
+    expect(chipLabels()).toEqual(['Phase: Reporting 2025']);
+    expect(board.badge()).toBe(1);
+    expect(filter.selectedPhase()).toBe('Reporting 2025');
+  });
+
+  it('mirrors a category choice to the URL with merge + replaceUrl', () => {
+    build();
+    router.navigate.mockClear();
+
+    component.onCategoryChange('Knowledge product');
+    fixture.detectChanges();
+
+    expect(router.navigate).toHaveBeenCalledWith([], {
+      relativeTo: expect.anything(),
+      queryParams: expect.objectContaining({ category: 'Knowledge product' }),
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+  });
+
+  it('landing on ?origin=W3/Bilateral hydrates the chip and the board', () => {
+    build({ origin: 'W3/Bilateral' });
+
+    expect(filter.selectedOrigin()).toBe('W3/Bilateral');
+    expect(chipLabels()).toContain('Funding source: W3/Bilateral');
+    expect(cardTitles().sort()).toEqual(['Policy dialogue note', 'Water accounting tool']);
+  });
+
+  // @akili-spec changes/my-work-board (MWB-R-1 "BUT it must NOT drop or rewrite `phase`", MWB-DD-11)
+  /**
+   * Deep link to a phase that is NOT the current reporting one. On the very first flush the rows
+   * have not arrived, so `phaseOptions()` is empty and `effectivePhase()` cannot resolve (it is
+   * `null`). A mirror that published that unresolved `null` under `queryParamsHandling: 'merge'`
+   * would DELETE `phase` from the URL — and the re-emitted param map would then make the hydrate
+   * effect discard the deep-linked label. The mirror must fall back to the URL's own label until
+   * the resolution is real.
+   */
+  it('keeps a deep-linked phase that is not the current reporting phase and never publishes a null phase', () => {
+    build({ phase: 'Reporting 2025' });
+
+    const publishedPhases = router.navigate.mock.calls.map(call => (call[1] as { queryParams?: Record<string, unknown> })?.queryParams?.['phase']);
+    expect(publishedPhases).not.toContain(null);
+
+    expect(board.effectivePhase()).toBe('Reporting 2025');
+    expect(filter.selectedPhase()).toBe('Reporting 2025');
+    expect(chipLabels()).toEqual(['Phase: Reporting 2025']);
+    expect(cardTitles()).toEqual(['Legacy irrigation study']);
+  });
+
+  it('an unknown URL value stays as a chip and simply matches nothing', () => {
+    build({ category: 'Not a category' });
+
+    expect(chipLabels()).toContain('Category: Not a category');
+    expect(cardCount()).toBe(0);
+    expect(root().querySelector('[data-testid="my-work-filtered-empty"]')).toBeTruthy();
+  });
+
+  it('offers Created by only under All program results', () => {
+    build();
+    expect(root().querySelector('[aria-label="Filter by created by"]')).toBeNull();
+
+    // `MWB-R-3` *Switch scope*: exactly ONE list request per scope change — `expectOne` fails if
+    // the page's load effect re-fires alongside `setScope()`'s own request.
+    component.setScope('all');
+    fixture.detectChanges();
+    httpMock.expectOne(req => req.url.includes(`get/all/roles/filter/${userId}`)).flush({ response: { items: FIXTURE } });
+    fixture.detectChanges();
+
+    expect(root().querySelector('[aria-label="Filter by created by"]')).toBeTruthy();
+
+    component.onCreatedByChange('Ana Ruiz');
+    fixture.detectChanges();
+    expect(cardTitles().sort()).toEqual(['Seed multiplication guide', 'Seed systems brief', 'Water accounting tool']);
+    expect(chipLabels()).toContain('Created by: Ana Ruiz');
+
+    // Going back to Mine hides the control, so its value must not keep narrowing the board.
+    component.setScope('mine');
+    fixture.detectChanges();
+    httpMock.expectOne(req => req.url.includes(`get/all/roles/filter/${userId}`)).flush({ response: { items: FIXTURE } });
+    fixture.detectChanges();
+
+    expect(root().querySelector('[aria-label="Filter by created by"]')).toBeNull();
+    expect(filter.selectedCreatedBy()).toBeNull();
+    expect(cardCount()).toBe(5);
+  });
+
+  it('builds each option list from the loaded rows — sorted, no blanks', () => {
+    build();
+
+    expect(component.categorySelectOptions().map(option => option.value)).toEqual(['Innovation development', 'Knowledge product', 'Policy change']);
+    expect(component.originSelectOptions().map(option => option.value)).toEqual(['W1/W2', 'W3/Bilateral']);
+    expect(component.centerSelectOptions().map(option => option.value)).toEqual(['CIAT', 'IWMI']);
+    expect(component.createdBySelectOptions().map(option => option.value)).toEqual(['Ana Ruiz', 'Bo Chen']);
+  });
+
+  // @akili-spec changes/my-work-board (MWB-T-9 "parity with Results … reuse rather than re-implementing")
+  /**
+   * Category parity: the Results tab does not offer every raw `result_type`. Non-RF types
+   * (`Capacity change`, `Other outcome`, `Other output`, `Impact contribution`) collapse into one
+   * `Other` bucket carried by the `__other__` sentinel — `buildCategoryFilterOptions` is the
+   * exported single definition of that rule and the predicate already understands the sentinel.
+   */
+  it('collapses non-RF categories into the single Other bucket, exactly like the Results tab', () => {
+    build({}, [
+      ...FIXTURE,
+      rawResult({ id: '7', result_code: '5107', title: 'Capacity change note', result_type: 'Capacity change', result_type_id: '3' })
+    ]);
+
+    const options = component.categorySelectOptions();
+
+    // RF order (not alphabetical), then the single bucket — never the raw non-RF `result_type`.
+    expect(options.map(option => option.value)).toEqual([
+      'Innovation development',
+      'Knowledge product',
+      'Policy change',
+      PROGRAMME_RESULTS_OTHER_CATEGORY
+    ]);
+    expect(options.find(option => option.value === PROGRAMME_RESULTS_OTHER_CATEGORY)?.label).toBe('Other');
+
+    // …and picking it narrows the board to exactly the non-RF rows.
+    component.onCategoryChange(PROGRAMME_RESULTS_OTHER_CATEGORY);
+    fixture.detectChanges();
+    expect(cardTitles()).toEqual(['Capacity change note']);
+    expect(chipLabels()).toContain('Category: Other');
+  });
+
+  it('opens and closes the Filter popover, and a document click outside closes it', () => {
+    build();
+    const button = root().querySelector('[data-testid="my-work-filter-button"]') as HTMLButtonElement;
+    const popover = root().querySelector('[data-testid="my-work-filter-popover"]') as HTMLElement;
+
+    expect(popover.classList.contains('hidden')).toBe(true);
+
+    button.click();
+    fixture.detectChanges();
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(popover.classList.contains('hidden')).toBe(false);
+
+    document.body.click();
+    fixture.detectChanges();
+    expect(popover.classList.contains('hidden')).toBe(true);
   });
 });

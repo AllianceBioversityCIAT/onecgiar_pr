@@ -31,6 +31,7 @@ import { MyWorkBoardComponent } from './my-work-board.component';
 import { MyWorkBoardService } from './services/my-work-board.service';
 import { MyWorkColumn, MyWorkTotals, badgeCount, groupByColumn, readyCount as readyCountOf, totals } from './my-work.view-model';
 import { ProgrammeResultRow } from '../programme-results/services/programme-results.service';
+import { ProgrammeResultsFilterService } from '../programme-results/services/programme-results-filter.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
@@ -205,8 +206,11 @@ function mountBoard() {
     remove: { imports: [ReportingProgramBandComponent] },
     add: { imports: [BandStubComponent] }
   });
+  // `set` REPLACES the component's own providers array, so `ProgrammeResultsFilterService`
+  // (page-provided since `MWB-T-9` — the template binds `filter.activeChips()` etc.) has to be
+  // re-listed here or the toolbar cannot be injected.
   TestBed.overrideComponent(MyWorkBoardComponent, {
-    set: { providers: [{ provide: MyWorkBoardService, useValue: fake }] }
+    set: { providers: [ProgrammeResultsFilterService, { provide: MyWorkBoardService, useValue: fake }] }
   });
 
   return cy.mount(MyWorkBoardHarnessComponent, {
@@ -276,7 +280,7 @@ function assertBandAndToolbarStayInViewport(label: string, viewportHeight: numbe
     expect(rect.top, `${label}: band top(${rect.top}) >= 0`).to.be.at.least(0);
     expect(rect.bottom, `${label}: band bottom(${rect.bottom}) <= innerHeight(${viewportHeight})`).to.be.at.most(viewportHeight + 1);
   });
-  cy.get('[aria-label="My work board controls"]').should($toolbar => {
+  cy.get('[aria-label="My results board controls"]').should($toolbar => {
     const rect = ($toolbar[0] as HTMLElement).getBoundingClientRect();
     expect(rect.top, `${label}: toolbar top(${rect.top}) >= 0`).to.be.at.least(0);
     expect(rect.bottom, `${label}: toolbar bottom(${rect.bottom}) <= innerHeight(${viewportHeight})`).to.be.at.most(viewportHeight + 1);

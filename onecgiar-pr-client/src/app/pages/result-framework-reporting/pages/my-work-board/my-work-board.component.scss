@@ -10,7 +10,7 @@
   @include vp.pr-viewport-page;
 }
 
-/* ── Phase filter pill (`MWB-T-8` (3)) ───────────────────────────────────────────────────────
+/* ── Filter pills (`MWB-T-8` (3); reused by every popover dimension since `MWB-T-9`) ─────────
    `app-pr-filter-select` renders the shared `.custom_select` shell (`custom-fields.scss`), whose
    defaults are wrong for a filter row: `.icon_container` is a 43px violet block (the "violet
    chevron block" in the user's screenshot) and `.options` is pinned to `bottom: -255px`, which
@@ -19,9 +19,11 @@
    Same reshape the Results tab applies through `.pgr-filter`
    (`programme-results.component.ts` styles) — copied rather than shared because Angular view
    encapsulation scopes `::ng-deep` per component, so there is no global `.pgr-filter` to reuse.
-   Deltas vs. that copy: 34px trigger (this row's control height, next to the 30px scope segments)
-   instead of the popover's 40px. Targeting a child component's projected `.custom_select` DOM is
-   the documented exception to Tailwind-first (`MWB-R-*` Styling / client CLAUDE.md §5). */
+   Deltas vs. that copy: a 34px trigger (this board's control height) instead of the Results
+   popover's 40px. Since `MWB-T-9` the five dimensions all live inside the Filter popover and each
+   one carries `.mwb-filter`, so this single reshape covers Phase, Category, Funding source, Center
+   and Created by. Targeting a child component's projected `.custom_select` DOM is the documented
+   exception to Tailwind-first (`MWB-R-*` Styling / client CLAUDE.md §5). */
 .mwb-filter ::ng-deep .custom_select {
   width: 100%;
 }
@@ -92,6 +94,42 @@
   box-shadow: 0 8px 24px rgba(25, 21, 36, 0.1);
   overflow: hidden;
   transform-origin: top center;
+}
+
+/* ── Active-filter chips (`MWB-T-9`) ─────────────────────────────────────────────────────────
+   The global `.pr-chip` / `.pr-chip-remove` (`styles.scss`) carry the app's chip contract; the
+   filter-row chip is the 26px / 999px / brand-100 variant the Results tab uses. `.pr-chip` is
+   declared OUTSIDE every `@layer`, so a Tailwind utility (which lives in `@layer utilities`)
+   can never win against it — the reshape has to be a real rule. Copied rather than shared:
+   Angular view encapsulation scopes `.pgr-chip` to `programme-results`, so there is no global
+   class to reuse (same reasoning as `.mwb-filter` above). */
+.pr-chip.mwb-chip {
+  height: 26px;
+  gap: 6px;
+  padding: 0 6px 0 10px;
+  border-radius: 999px;
+  background: var(--pr-color-primary-100);
+  color: var(--pr-color-primary-400);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.pr-chip .mwb-chip-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--pr-color-primary-400);
+  cursor: pointer;
+}
+
+.pr-chip .mwb-chip-remove:hover {
+  background: var(--pr-color-primary-200);
 }
 
 /**

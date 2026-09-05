@@ -1,18 +1,37 @@
-// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-T-8, MWB-R-1, R-3, R-7, R-9, R-10, design.md §2.2, §6.1-6.6)
-import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-T-8, MWB-T-9, MWB-R-1, R-3, R-7, R-9, R-10, design.md §2.2, §6.1-6.6, MWB-DD-11)
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { map } from 'rxjs/operators';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { Subject } from 'rxjs';
+import { debounceTime, map } from 'rxjs/operators';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideSearch, lucideX } from '@ng-icons/lucide';
 
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
+import { ProgrammeResultRow } from '../programme-results/services/programme-results.service';
+import { ProgrammeResultsFilterChip, ProgrammeResultsFilterService, buildCategoryFilterOptions } from '../programme-results/services/programme-results-filter.service';
+import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from '../programme-results/services/programme-results-query-params';
 import { MyWorkBoardService } from './services/my-work-board.service';
 import { MyWorkColumnComponent } from './components/my-work-column/my-work-column.component';
 import { MyWorkScope } from './my-work.view-model';
+
+// @akili-spec changes/my-work-board (MWB-T-9)
+/**
+ * Distinct, non-blank values of one row dimension, alphabetical — the same shape (and the same
+ * name) as `programme-results.service.ts`'s `optionsOf`. Restated rather than imported because
+ * that one is a module-private function there (and its owning service is not on this page's
+ * injector). Everything the Results tab *does* export is imported instead — see
+ * `buildCategoryFilterOptions` below, which turns this raw list into the Category dropdown.
+ */
+function optionsOf(rows: ProgrammeResultRow[], pick: (row: ProgrammeResultRow) => string): string[] {
+  const unique = new Set(rows.map(pick).filter(value => !!value));
+  return [...unique].sort((a, b) => a.localeCompare(b));
+}
 
 @Component({
   selector: 'app-my-work-board',
@@ -23,8 +42,11 @@ import { MyWorkScope } from './my-work.view-model';
   templateUrl: './my-work-board.component.html',
   styleUrls: ['./my-work-board.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgTemplateOutlet, FormsModule, RouterLink, ReportingProgramBandComponent, PrFilterSelectComponent, MyWorkColumnComponent],
-  providers: [MyWorkBoardService]
+  imports: [NgTemplateOutlet, FormsModule, RouterLink, NgIcon, ReportingProgramBandComponent, PrFilterSelectComponent, MyWorkColumnComponent],
+  // `MWB-T-9`: `ProgrammeResultsFilterService` is page-scoped exactly like on the Results tab —
+  // filters must not survive navigating to another programme. `MyWorkBoardService` injects it.
+  providers: [ProgrammeResultsFilterService, MyWorkBoardService],
+  viewProviders: [provideIcons({ lucideSearch, lucideX })]
 })
 export class MyWorkBoardComponent {
   private readonly route = inject(ActivatedRoute);
@@ -35,6 +57,10 @@ export class MyWorkBoardComponent {
   /** Page-scoped board data (`MWB-T-3`) — providing it HERE, not root, drops the rows on leaving
    *  the tab instead of leaking one programme into the next (same reasoning as `ProgrammeResultsService`). */
   readonly data = inject(MyWorkBoardService);
+
+  /** `MWB-T-9` — the Results tab's filter state, shared verbatim (same `ProgrammeResultRow`, same
+   *  chips, same predicates). The template binds to it directly, as `programme-results` does. */
+  readonly filter = inject(ProgrammeResultsFilterService);
 
   /** Viewport lock (`SAV-T-4`): the work area is the only scroller ≥ 900px. */
   readonly workArea = viewChild<ElementRef<HTMLElement>>('workArea');
@@ -60,8 +86,37 @@ export class MyWorkBoardComponent {
   /** Closed group collapsed by default, volatile — a page signal, not a service one (`MWB-DD-8`). */
   readonly closedCollapsed = signal(true);
 
-  // ── Toolbar option lists ────────────────────────────────────────────────────────────────────
+  // ── Toolbar: search · Filter popover · chips (`MWB-T-9`) ───────────────────────────────────
+  readonly filterPopoverOpen = signal(false);
+  /** Undebounced mirror of the search box, so typing does not fight the 300ms debounce. */
+  readonly searchDraft = signal('');
+  private readonly searchInput = new Subject<string>();
+
+  /** Badge on the Filter button = number of chips, phase included — the same rule the Results tab
+   *  applies, so the two toolbars never disagree about what "1 filter" means. */
+  readonly activeFilterCount = computed(() => this.filter.activeChips().length);
+
+  /** `Clear filters` only shows when something OTHER than the phase would be removed: `clearAll()`
+   *  deliberately restores the default phase rather than dropping it (design.md §6.6), so a button
+   *  that appeared for the phase chip alone would be permanently visible and do nothing. */
+  readonly hasClearableFilters = computed(() => this.filter.activeChips().some(chip => chip.dimension !== 'phase'));
+
+  /** `Created by` is only meaningful under *All program results* — under *Mine* every row is the
+   *  current user's, so the dimension is hidden (and cleared by `setScope`). */
+  readonly showCreatedByFilter = computed(() => this.data.scope() === 'all');
+
+  // ── Filter option lists (`MWB-T-9` (4)) — derived from the LOADED rows, never a static catalog ──
   readonly phaseSelectOptions = computed(() => this.data.phaseOptions().map(value => ({ value, label: value })));
+  /** Category is the one dimension that is NOT the raw value list: the Results tab collapses every
+   *  non-RF `result_type` into a single `Other` bucket carried by the `__other__` sentinel
+   *  (P2-3312), and `filterRows` already understands it. `buildCategoryFilterOptions` is that
+   *  rule's exported single definition — reused here rather than re-implemented (`MWB-T-9`). */
+  readonly categorySelectOptions = computed(() =>
+    buildCategoryFilterOptions(optionsOf(this.data.rows(), row => row.category), this.filter.selectedCategory())
+  );
+  readonly originSelectOptions = computed(() => optionsOf(this.data.rows(), row => row.origin).map(value => ({ value, label: value })));
+  readonly centerSelectOptions = computed(() => optionsOf(this.data.rows(), row => row.center).map(value => ({ value, label: value })));
+  readonly createdBySelectOptions = computed(() => optionsOf(this.data.rows(), row => row.createdBy).map(value => ({ value, label: value })));
 
   // ── Skeleton shape (`MWB-T-8` (4)) ─────────────────────────────────────────────────────────
   /** Card-placeholder counts per group and the two Closed rails. Plain arrays, not signals: the
@@ -83,8 +138,16 @@ export class MyWorkBoardComponent {
   // ── View states (`MWB-R-7`) — mutually exclusive ───────────────────────────────────────────
   readonly showSkeleton = computed(() => this.data.loading() && this.data.rows().length === 0);
   readonly showError = computed(() => !!this.data.error());
-  readonly showWholeBoardEmpty = computed(() => !this.data.loading() && !this.data.error() && this.data.visibleRows().length === 0);
-  readonly showBoard = computed(() => !this.showSkeleton() && !this.showError() && !this.showWholeBoardEmpty());
+  /** `MWB-T-9`: "nothing on your board" is now the NOT-FILTERED empty — a board emptied by a
+   *  category/search choice gets its own copy below, or the two states would tell the user to go
+   *  report results they already have. */
+  readonly showWholeBoardEmpty = computed(
+    () => !this.data.loading() && !this.data.error() && this.data.visibleRows().length === 0 && !this.hasClearableFilters()
+  );
+  readonly showFilteredEmpty = computed(
+    () => !this.data.loading() && !this.data.error() && this.data.visibleRows().length === 0 && this.hasClearableFilters()
+  );
+  readonly showBoard = computed(() => !this.showSkeleton() && !this.showError() && !this.showWholeBoardEmpty() && !this.showFilteredEmpty());
 
   /** `MWB-T-7` (4): identity for the board's single re-group fade. Changes only when `columns()`
    *  is regrouped over a new scope/phase — NOT on every change-detection pass — so it is consumed
@@ -103,33 +166,103 @@ export class MyWorkBoardComponent {
     effect(() => {
       const code = this.programmeCode();
       this.dataControlSE.reportingPhaseVersion();
-      this.data.currentPhaseName.set(this.dataControlSE?.reportingCurrentPhase?.phaseName ?? null);
-      if (code) this.data.load(code);
+      // `MWB-T-9`: the body runs `untracked`. `MyWorkBoardService.load()` reads `scope()` on its
+      // way to the `filter_created_by_me` flag, so without this the effect would ALSO depend on
+      // the scope — and `setScope()`, which issues its own request, would re-trigger the effect
+      // into a second one. `MWB-R-3` *Switch scope* says exactly one list request per change.
+      untracked(() => {
+        this.data.currentPhaseName.set(this.dataControlSE?.reportingCurrentPhase?.phaseName ?? null);
+        if (code) this.data.load(code);
+      });
     });
 
-    // URL `phase` → board phase (deep link / Back-Forward). The mirror direction is explicit, in
-    // `onPhaseChange()` below — this page has one filter dimension, not five, so the anti-loop
-    // machinery `ProgrammeResultsComponent` needs does not apply: writing the same value back is
-    // itself the guard (`data.setPhase` sets a signal, which no-ops a same-value write's re-render
-    // but not the URL round-trip, so the comparison below is what actually stops the loop).
+    // Controlled input + 300ms debounce (`MWB-T-9`): the filter service's `searchText` stays the
+    // single source of truth for both the cards and the chip, but every keystroke does not
+    // re-filter the whole programme. Same wiring as `programme-results.component.ts`.
+    this.searchInput.pipe(debounceTime(300), takeUntilDestroyed()).subscribe(value => this.filter.searchText.set(value));
+
+    // ── URL → state (`MWB-T-9` (3), same bridge as the Results tab) ──────────────────────────
+    // Runs on init and on every param change (Back/Forward, external navigation). Each write is
+    // guarded by an inequality so this cannot fight the mirror effect below, and the whole
+    // comparison happens inside `untracked` so `queryParams()` stays this effect's ONLY
+    // dependency — reading a filter signal outside it would make a dropdown change re-run the
+    // hydrate with a still-stale param and stomp the value straight back.
+    //
+    // Phase is deliberately NOT hydrated into the filter service directly: `data.setPhase()` owns
+    // it (it also re-freezes the badge and the segment totals), and `syncFilterPhase()` copies the
+    // RESOLVED value across in the same synchronous turn, so the two can never disagree.
     effect(() => {
       const params = this.queryParams();
       untracked(() => {
-        const urlPhase = params.get('phase');
+        const urlPhase = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase);
         if (urlPhase !== this.data.phase()) this.data.setPhase(urlPhase);
+        this.syncFilterPhase();
+
+        const category = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.category);
+        const origin = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin);
+        const center = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.center);
+        const createdBy = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy);
+
+        // An unknown value is applied as-is: the predicates are pure and case-insensitive, so it
+        // simply matches nothing and stays visible as a chip the user can remove (Results parity).
+        if (category !== this.filter.selectedCategory()) this.filter.selectedCategory.set(category);
+        if (origin !== this.filter.selectedOrigin()) this.filter.selectedOrigin.set(origin);
+        if (center !== this.filter.selectedCenter()) this.filter.selectedCenter.set(center);
+        if (createdBy !== this.filter.selectedCreatedBy()) this.filter.selectedCreatedBy.set(createdBy);
+      });
+    });
+
+    // The default-phase rule (design.md §6.6) resolves only once rows land — `effectivePhase()`
+    // goes from `null` to a real label with nobody having touched the URL. This is the one path
+    // that moves the phase without `setPhase()`, so the chip is topped up here.
+    effect(() => {
+      this.data.effectivePhase();
+      untracked(() => this.syncFilterPhase());
+    });
+
+    // ── State → URL (`MWB-T-9` (3)) ─────────────────────────────────────────────────────────
+    // Reads the five dimensions (tracked), then diffs against the route's OWN snapshot inside
+    // `untracked`: hydrating a value the URL already carries recomputes an identical `next` and
+    // skips `navigate` entirely, which is what breaks the hydrate ↔ mirror cycle.
+    effect(() => {
+      // `MWB-R-1` ("must NOT drop or rewrite `phase`"): publish the RESOLVED label, but never a
+      // not-yet-resolved one. `effectivePhase()` is `null` until the rows land (`phaseOptions()`
+      // derives from `rows()`), and under `queryParamsHandling: 'merge'` a `null` value REMOVES
+      // the key — a deep link to `?phase=Reporting 2025` would lose its label on the very first
+      // flush and the hydrate effect would then discard it. Falling back to `data.phase()` (the
+      // URL's own label, which the hydrate has already written) republishes an identical value,
+      // so nothing navigates until the resolution is real. After `clearAll()`/`onPhaseChange(null)`
+      // both are `null` only while rows are absent; once they land the resolved default is written.
+      const phase = this.data.effectivePhase() ?? this.data.phase();
+      const category = this.filter.selectedCategory();
+      const origin = this.filter.selectedOrigin();
+      const center = this.filter.selectedCenter();
+      const createdBy = this.filter.selectedCreatedBy();
+
+      untracked(() => {
+        const current = this.route.snapshot.queryParamMap;
+        const next: Record<string, string | null> = {
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase]: phase,
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.category]: category,
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin]: origin,
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.center]: center,
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy]: createdBy
+        };
+        const changed = Object.entries(next).some(([key, value]) => (current.get(key) ?? null) !== (value ?? null));
+        if (!changed) return;
+
+        // `merge` preserves the other params on this route; `replaceUrl` keeps a filter tweak from
+        // becoming a Back-button trap (RFD-DD-4, same stance as the Results tab).
+        this.router.navigate([], { relativeTo: this.route, queryParams: next, queryParamsHandling: 'merge', replaceUrl: true });
       });
     });
   }
 
   setScope(scope: MyWorkScope): void {
+    // `Created by` is hidden under Mine — leaving a stale value selected would keep narrowing the
+    // board through a control the user can no longer see (`MWB-T-9` (1)).
+    if (scope === 'mine') this.filter.clearCreatedBy();
     this.data.setScope(scope);
-  }
-
-  /** Phase select change (`MWB-R-3` *Switch phase*): re-groups in memory AND mirrors the URL. */
-  onPhaseChange(value: unknown): void {
-    const label = value && value !== 'all' ? String(value) : null;
-    this.data.setPhase(label);
-    this.router.navigate([], { relativeTo: this.route, queryParams: { phase: label }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
   toggleClosed(): void {
@@ -143,7 +276,7 @@ export class MyWorkBoardComponent {
 
   /** `MWB-R-7` whole-board empty — *See all program results*. */
   seeAllResults(): void {
-    this.data.setScope('all');
+    this.setScope('all');
   }
 
   /** `MWB-T-8` (2) — band CTA. Identical to `ProgrammeResultsComponent.openWhereToReport()` except
@@ -153,5 +286,96 @@ export class MyWorkBoardComponent {
     this.router.navigate(['/result-framework-reporting', 'entity-details', this.programmeCode()], {
       queryParams: { whereToReport: 'true', returnTab: 'my-work' }
     });
+  }
+
+  // ── Filter popover (`MWB-T-9` (2)) ─────────────────────────────────────────────────────────
+  toggleFilterPopover(event: Event): void {
+    event.stopPropagation();
+    this.filterPopoverOpen.update(open => !open);
+  }
+
+  closeFilterPopover(): void {
+    this.filterPopoverOpen.set(false);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event?: Event): void {
+    const target = event?.target as HTMLElement | null;
+    // The popover's own subtree (and the inline `.custom_select` panels it hosts) must not close it.
+    if (typeof target?.closest === 'function' && target.closest('.mwb-filter-container')) return;
+    if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
+  }
+
+  // ── Search (`MWB-T-9` (2)) — title + code, exactly the Results tab's predicate ──────────────
+  onSearchInput(value: string): void {
+    this.searchDraft.set(value);
+    this.searchInput.next(value);
+  }
+
+  // ── Chips ──────────────────────────────────────────────────────────────────────────────────
+  clearChip(chip: ProgrammeResultsFilterChip): void {
+    if (chip?.dimension === 'search') this.searchDraft.set('');
+    // Removing the phase chip means "back to the default", not "no phase": a board with no phase
+    // would show every reporting cycle at once (design.md §6.6).
+    if (chip?.dimension === 'phase') {
+      this.onPhaseChange(null);
+      return;
+    }
+    this.filter.clearChip(chip);
+  }
+
+  clearAll(): void {
+    this.searchDraft.set('');
+    this.filter.clearAll();
+    this.onPhaseChange(null);
+  }
+
+  // ── Single-select filters ──────────────────────────────────────────────────────────────────
+  /** `app-pr-filter-select`'s empty sentinel is `'all'`; the filter service's is `null`. */
+  private toFilterValue(value: unknown): string | null {
+    return !value || value === 'all' ? null : String(value);
+  }
+
+  selectValue(value: string | null): string {
+    return value ?? 'all';
+  }
+
+  /**
+   * Phase select change (`MWB-R-3` *Switch phase*): re-groups in memory, and the mirror effect
+   * writes the URL. `MyWorkBoardService.phase` is the ONLY writer of the phase — the filter
+   * service's `selectedPhase` is copied from the resolved `effectivePhase()` in the same
+   * synchronous turn (`MWB-T-9` FAIL input: two phase sources make badge and columns disagree).
+   */
+  onPhaseChange(value: unknown): void {
+    this.data.setPhase(this.toFilterValue(value));
+    this.syncFilterPhase();
+  }
+
+  onCategoryChange(value: unknown): void {
+    this.filter.selectedCategory.set(this.toFilterValue(value));
+  }
+
+  onOriginChange(value: unknown): void {
+    this.filter.selectedOrigin.set(this.toFilterValue(value));
+  }
+
+  onCenterChange(value: unknown): void {
+    this.filter.selectedCenter.set(this.toFilterValue(value));
+  }
+
+  onCreatedByChange(value: unknown): void {
+    this.filter.selectedCreatedBy.set(this.toFilterValue(value));
+  }
+
+  /** Copies the RESOLVED phase into the filter service, which owns the chip and the select's
+   *  model. Called synchronously from every phase write so the two never drift apart. */
+  private syncFilterPhase(): void {
+    const phase = this.data.effectivePhase();
+    if (this.filter.selectedPhase() !== phase) this.filter.selectedPhase.set(phase);
   }
 }

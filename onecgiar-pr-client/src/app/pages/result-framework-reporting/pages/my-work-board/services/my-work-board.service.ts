@@ -1,10 +1,11 @@
-// @akili-spec changes/my-work-board (MWB-T-3, MWB-R-1, R-3, R-7, R-8, DD-5, DD-13, design.md §2.2 steps 3 & 6, §6.2)
+// @akili-spec changes/my-work-board (MWB-T-3, MWB-T-9, MWB-R-1, R-3, R-7, R-8, DD-5, DD-11, DD-13, design.md §2.2 steps 3 & 6, §6.2, §6.6)
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { ScienceProgramIdService } from '../../../services/science-program-id.service';
+import { ProgrammeResultsFilterService } from '../../programme-results/services/programme-results-filter.service';
 import { PROGRAMME_RESULTS_PAGE_LIMIT, ProgrammeResultRow, toProgrammeResultRow } from '../../programme-results/services/programme-results.service';
 import {
   badgeCount,
@@ -42,6 +43,13 @@ export class MyWorkBoardService {
   private readonly scienceProgramIdSE = inject(ScienceProgramIdService);
   private readonly countSE = inject(MyWorkCountService);
 
+  // @akili-spec changes/my-work-board (MWB-T-9) — the Results tab's own filter state object,
+  // page-provided beside this service (`MyWorkBoardComponent.providers`). Injecting it here rather
+  // than filtering in the page is what keeps ONE definition of "the rows the board shows": the
+  // columns, the per-column empties and the whole-board states all read `visibleRows()`, so a
+  // category/origin/center/created-by selection cannot narrow one of them and miss another.
+  private readonly filter = inject(ProgrammeResultsFilterService);
+
   /** Discards a late response when `load()`/`setScope()` was called again for another request. */
   private requestToken = 0;
 
@@ -72,10 +80,32 @@ export class MyWorkBoardService {
   /** design.md §6.6: URL label -> current reporting phase -> newest option. */
   readonly effectivePhase = computed<string | null>(() => resolveDefaultPhase(this.phaseOptions(), this.currentPhaseName(), this.phase()));
 
-  /** The loaded rows re-grouped over the effective phase — no request (`MWB-R-3` *Switch phase*). */
-  readonly visibleRows = computed<ProgrammeResultRow[]>(() => filterByPhase(this.rows(), this.effectivePhase()));
+  /** The loaded rows narrowed to the effective phase — no request (`MWB-R-3` *Switch phase*).
+   *  This is the PHASE-ONLY view: the tab badge (`MWB-R-1`) and the segment totals (`MWB-R-3`
+   *  "its total count for the selected phase") are defined on it, so a toolbar filter never
+   *  rewrites either of those two numbers. */
+  readonly phaseRows = computed<ProgrammeResultRow[]>(() => filterByPhase(this.rows(), this.effectivePhase()));
+
+  // @akili-spec changes/my-work-board (MWB-T-9, MWB-DD-11)
+  /**
+   * What the board actually renders: the phase rows minus the toolbar's other dimensions
+   * (search · category · origin · center · created by). `ignoreStatus: true` because the COLUMNS
+   * already are the status — offering a Status dimension would let the filter and the grouping
+   * fight each other (`MWB-T-9` FAIL input).
+   *
+   * The filter service's own `selectedPhase` is mirrored to `effectivePhase()` by the page, so its
+   * phase predicate re-asserts a narrowing `phaseRows()` has already applied — a deliberate no-op
+   * that keeps ONE phase source (`MyWorkBoardService.phase` → `effectivePhase`) while still
+   * producing the `Phase: …` chip from the same `activeChips()` the other dimensions use.
+   */
+  readonly visibleRows = computed<ProgrammeResultRow[]>(() => this.filter.filterRows(this.phaseRows(), { ignoreStatus: true }));
 
   readonly columns = computed<MyWorkColumn[]>(() => groupByColumn(this.visibleRows()));
+
+  // @akili-spec changes/my-work-board (MWB-T-9) — grouping of the PHASE-ONLY rows, read by
+  // `syncMineBadge()` alone: `MWB-R-1` defines the tab badge as the Mine Editing count of the
+  // selected phase, which must not move when someone narrows the board by category.
+  private readonly phaseColumns = computed<MyWorkColumn[]>(() => groupByColumn(this.phaseRows()));
 
   readonly totals = computed<MyWorkTotals>(() => totalsOf(this.visibleRows()));
 
@@ -210,7 +240,7 @@ export class MyWorkBoardService {
    *  value instead of being coalesced or cleared. */
   private syncMineBadge(): void {
     if (this.scope() !== 'mine') return;
-    const value = badgeCount(this.columns(), 'mine') ?? 0;
+    const value = badgeCount(this.phaseColumns(), 'mine') ?? 0;
     this.badge.set(value);
     const code = this.programmeCode();
     // A zero-row Mine load leaves `phaseOptions()` empty, so `effectivePhase()` resolves to
@@ -224,10 +254,12 @@ export class MyWorkBoardService {
 
   // @akili-spec changes/my-work-board (MWB-T-4, MWB-R-3 "Switch scope" — segment counts)
   /** Freezes the just-loaded scope's total for the CURRENT phase into `scopeTotals` — read after
-   *  `rows` is set so `totals()` already reflects the new load. */
+   *  `rows` is set so `phaseRows()` already reflects the new load. Counted over the PHASE-ONLY
+   *  rows (`MWB-T-9`): `MWB-R-3` defines a segment as "its total count for the selected phase",
+   *  so the two segment numbers stay comparable while the board itself is filtered. */
   private recordScopeTotal(): void {
     const scope = this.scope();
-    const total = this.totals().all;
+    const total = totalsOf(this.phaseRows()).all;
     this.scopeTotals.update(prev => ({ ...prev, [scope]: total }));
   }
 }

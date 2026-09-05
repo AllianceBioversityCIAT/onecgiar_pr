@@ -6,7 +6,7 @@
 - **Linked spec:** `./requirements.md` (`MWB-R-1`…`R-11`, `MWB-AC-1`…`AC-9`) · `./design.md` (`MWB-DD-1`…`DD-13`, §5 maps, §6.3 tokens, §6.6 phase) · `./judgment.md` (round 1 applied)
 - **Owner / driver:** session Leader (`/akili-execute`)
 - **Status:** `approved` (Phase 3 auto-approved, pre-approved mode, 2026-09-04; rewritten after Judgment Day round 1)
-- **Depth:** Standard · **Budget:** 6 tasks / ~1,350 LOC / ≤ 1 Reviewer round per task (`design.md` §1) · **+ `MWB-T-7` (~120) and `MWB-T-8` (~180) added 2026-09-05 on explicit user request — budget 8 / ~1,650**
+- **Depth:** Standard · **Budget:** 6 tasks / ~1,350 LOC / ≤ 1 Reviewer round per task (`design.md` §1) · **+ `MWB-T-7` (~120), `MWB-T-8` (~180), `MWB-T-9` (~320), `MWB-T-10` (~200), `MWB-T-11` (~260) added 2026-09-05 on explicit user request — budget 11 / ~2,430**
 - **YOLO limits (inherited, `feedback-pragmatic-akili-execution`):** pre-approved gates logged as `auto-approved (pre-approved mode)`; one Reviewer round per task, a second FAIL escalates; verification = targeted `npx jest <path>` only, never a full client run; pointer briefs; workers never `git add -A` (shared worktree); close each worker right after its task commits (Reviewers via `TaskStop`); a plain-language progress line at every task boundary.
 - **Branch:** `qa-development-2026` (shared — explicit-path diffs and commits; `git log --oneline -3` + `git status --short` before every commit).
 
@@ -271,3 +271,66 @@ Coverage stays above server 5/20/35/40 and client 50/60/60/60; targeted suites o
   - [ ] Jest + tsc + lint green; CT (`MWB-T-5`) re-run green (layout row changed)
   - [ ] Real-browser rect read recorded in `execution.md`
   - [ ] Commit `🔧 fix(my-work-board) [SPEC:changes/my-work-board]: filter row, where-to-report CTA and phase select placement`
+
+### `MWB-T-9` — Filter row parity with Results: search, Filter popover, chips `[x]`
+
+- **Type:** `client` · **Added 2026-09-05 by user request** ("adicionemos un buscador y más filtros aquí" + screenshot of the Results tab row: search box · **Filter** button with count badge · active-filter chips with ×).
+- **Description:** Make the My work filter row the same surface as the Results tab, minus Columns / Export CSV (a board has neither): `[scope segmented control] · [search input "Search results…"] · [Filter button + badge] · [active chips + Clear all]`. The **Filter** popover holds **Phase** (moved out of the bare select — same as Results), **Category**, **Origin**, **Center**, **Created by** (Created by only meaningful under *All program results*; hide or disable it under *Mine*). **No Status dimension** — the columns already are the status. Search matches title and code (same rule as Results). All filtering is client-side over the loaded rows (`MWB-DD-11` model). Reuse `ProgrammeResultsFilterService` (page-provided; same `ProgrammeResultRow` type; `filterRows(rows, { ignoreStatus: true })`) and the Results tab's popover/chip markup rather than re-implementing; keep **one source of truth for phase** (the filter service's `selectedPhase` drives `MyWorkBoardService.setPhase` so badge, totals and default rule stay correct). URL bridge exactly like Results: same param names from `programme-results-query-params.ts` (`phase`, `category`, `origin`, `center`, `createdBy`; search stays in memory as on Results), `replaceUrl: true` + `queryParamsHandling: 'merge'`, hydrate on load.
+- **Implements:** user request; `MWB-R-3` (phase select now inside the popover; scope unchanged); `MWB-R-9` unchanged (row height stays a single 34px control line — no stacked label); `MWB-R-1` parity with Results.
+- **Design:** exemplar `programme-results.component.html` lines 40–130 (row, search input, Filter button, popover grid, chips) + `.ts` (`toggleFilterPopover`, `activeFilterCount`, `onPhaseChange`, hydrate/mirror effects ~965–1010) + `programme-results-filter.service.ts` + `programme-results-query-params.ts`; `design.md` §6.2.
+- **Files (expected):** `my-work-board/my-work-board.component.{ts,html,scss,spec.ts}`; possibly `my-work-board/services/my-work-board.service.{ts,spec.ts}` (phase driven from the filter); no change to `programme-results/**` or shared components.
+- **Depends on:** `MWB-T-8` · **Blocks:** —
+- **Estimate:** M (~320 LOC incl. specs)
+- **Skills:** `angular-developer` · `onecgiar-pr-client:spartan` · `tdd`
+- **Tests:** page spec — search narrows cards by title and by code; Filter badge = number of active chips (phase counts when set explicitly, as on Results); selecting Category/Origin/Center/Created by narrows the columns and adds a chip; chip × and Clear all restore; phase change via the popover re-groups without a request (`httpMock.expectNone`) and keeps the badge/totals phase-aware; URL mirrors `?category=…` etc. with `replaceUrl`; landing on `?origin=W3/Bilateral` hydrates the chip; Created by hidden under Mine. CT re-run (row still one line high; lock intact).
+- **Verification:**
+  ```bash
+  cd onecgiar-pr-client && npx jest src/app/pages/result-framework-reporting/pages/my-work-board --silent --reporters=summary --no-coverage && npx tsc --noEmit -p tsconfig.app.json && npx ng lint --quiet && CT_DEV_SERVER_PORT=8090 npx cypress run --component --spec src/app/pages/result-framework-reporting/pages/my-work-board/my-work-board.cy.ts
+  ```
+  - **FAIL input:** two phase sources (filter + board) → badge and columns disagree after a phase change (test: badge equals Editing count of the visible phase); popover positioned inside a clipping ancestor → real-browser check fails; Status offered → the columns and the filter fight.
+  - **Disqualifier:** a filter test whose fixture has one row per dimension value cannot detect an AND-vs-OR defect — use ≥ 3 rows sharing values across dimensions.
+- **Definition of done:**
+  - [ ] Jest + tsc + lint + CT green
+  - [ ] Real-browser check (Leader, Orca): popover opens under the button, chips render, search narrows live
+  - [ ] Commit `✨ feat(my-work-board) [SPEC:changes/my-work-board]: search, Filter popover and chips on the board filter row`
+
+### `MWB-T-10` — "Quality assessed" as a visible Done column `[ ]`
+
+- **Type:** `client` · **Added 2026-09-05 by user request** ("hay un estado que es importante y es cuando el resultado fue sometido y ya pasó por QA" — Quality Assessed, `status_id` 2; user confirmed the plan: "a ok ok entendí").
+- **Description:** Rename the merged `approved` column to **Quality assessed** and move it out of the collapsed *Closed* group into an expanded **Done** group with the approved (green) status tokens; ids 2 (Quality Assessed) and 6 (Approved, bilateral API) still land there, each card showing its real `status_name` chip. *Closed* keeps **Discontinued** (4, 7 Rejected) and the conditional **Other** rail, collapsed by default. Final order: Editing · Pending review · Submitted · **Quality assessed** · [Discontinued] · [Other]. Badge unchanged (Editing count). Skeleton mirrors the new layout (four expanded column shells + one rail). Update the `MWB-R-2` table, `MWB-DD-1b`/`DD-7` wording and the mockup note in `execution.md`. **Plus two defects from the user's screenshot (2026-09-05, "cuando uno abre todo no tiene cómo comprimirlo nuevamente"):** (a) an expanded *Closed* column has no way back — add a collapse control in the expanded column header (icon button `chevron_left`, `aria-expanded="true"`, `aria-label="Collapse <label>"`) that returns the column to its rail; the rail keeps its expand button; (b) width distribution — when a rail expands, the expanded column must take **the same width as the other non-Editing columns**, never twice as much, and Pending review / Submitted must never shrink below a readable minimum: give every expanded non-Editing column `flex-1 min-w-[260px] basis-0` inside a board that scrolls horizontally when the sum exceeds the viewport (`MWB-R-9` already allows horizontal scroll inside the board container); the card's category chip and title must not break mid-word at that minimum.
+- **Implements:** user request; amends `MWB-R-2` (column label + grouping) — `requirements.md` table updated by the Leader; `MWB-R-9` unchanged (four expanded columns must still fit: Editing `w-[360px]`, the other three share the flex space as a 3-column grid; horizontal scroll inside the board below its natural width).
+- **Files (expected):** `my-work-board/my-work.view-model.ts` (+ spec: column defs/labels/groups), `my-work-board/my-work-board.component.{html,spec.ts}` (groups, skeleton), `components/my-work-column/*` only if a token depends on the column key; `my-work-board.cy.ts` (fixed-order assertion: 5 columns, 1 rail collapsed).
+- **Depends on:** `MWB-T-9` · **Blocks:** —
+- **Estimate:** M (~200 LOC)
+- **Skills:** `angular-developer` · `tdd`
+- **Tests:** view-model: column defs in the new order/groups; page spec: expanding Discontinued shows a collapse control that returns it to a rail (`aria-expanded` true → false), and all expanded non-Editing columns share the same computed flex basis; CT: with Discontinued expanded at 1280 no column is narrower than 260 px and the body has no horizontal overflow (the board container may); ids 2 and 6 → `qaed` (key rename or label only — keep the key stable if the CT/tests reference it) with labels; page spec: Quality assessed rendered expanded with cards, Discontinued rail collapsed, Other conditional; CT: 4 expanded + 1 rail, still no body horizontal overflow at 1280.
+- **Verification:**
+  ```bash
+  cd onecgiar-pr-client && npx jest src/app/pages/result-framework-reporting/pages/my-work-board --silent --reporters=summary --no-coverage && npx tsc --noEmit -p tsconfig.app.json && npx ng lint --quiet && CT_DEV_SERVER_PORT=8090 npx cypress run --component --spec src/app/pages/result-framework-reporting/pages/my-work-board/my-work-board.cy.ts
+  ```
+  - **FAIL input:** four expanded columns overflow the body at 1280 → CT `scrollWidth` assertion fails; id 6 left in Closed → view-model test fails.
+  - **Disqualifier:** a label-only rename that keeps the column in the collapsed group does not satisfy the request.
+- **Definition of done:**
+  - [ ] Jest + tsc + lint + CT green; real-browser look (Leader) at 1280 shows four columns + one rail without body scroll
+  - [ ] Commit `✨ feat(my-work-board) [SPEC:changes/my-work-board]: Quality assessed as a visible Done column`
+
+### `MWB-T-11` — Responsive board below the viewport-lock breakpoint `[ ]`
+
+- **Type:** `client` · **Added 2026-09-05 by user request** ("también debemos trabajar en el responsive").
+- **Description:** Below `900px` (where the `pr-viewport-page` mixin is inert and the document scrolls — `SAV-DD-1`) the board becomes a **horizontal snap strip**: each column `w-[min(85vw,360px)] shrink-0 snap-start`, board `overflow-x-auto snap-x snap-mandatory` with `-webkit-overflow-scrolling: touch`, group labels rendered above their first column, rails rendered as normal columns (the collapsed state applies only ≥ 900px), each column's list no longer scrolls internally (page scroll instead, `max-h-none`). A **sticky column jumper** under the filter row (segmented chips `Editing 112 · Pending 22 · Submitted 8 · QAed 3 · Discontinued 2`, `role="tablist"` semantics, `aria-controls` → the column) scrolls the strip to that column (`scrollIntoView({ inline: 'start', behavior: 'smooth' })`, `motion-reduce` → `auto`). Filter row wraps: search full width, then scope control + Filter button + chips on the next line. Cards full width of their column; Continue / Open hit targets ≥ 44px. Between `900px` and `1279px` keep the locked layout with `min-w-[260px]` columns and the board's own horizontal scroll (`MWB-T-10`). Skeleton follows the same breakpoints. `docs/ux-ui/design.md` `OG-3` (no mobile *editing* strategy) is respected: the board is read-only and Continue hands off to the result detail as today.
+- **Implements:** user request; `MWB-R-9` extended below 900px (body scroll allowed there, horizontal scroll only inside the strip — `documentElement.scrollWidth <= innerWidth` still holds); NFR Accessibility (jumper semantics, hit targets).
+- **Files (expected):** `my-work-board/my-work-board.component.{html,scss,ts,spec.ts}`, `components/my-work-column/*` (breakpoint classes), `components/my-work-card/*` (hit targets only if needed), `my-work-board.cy.ts` (+ one mobile viewport case).
+- **Depends on:** `MWB-T-10` · **Blocks:** —
+- **Estimate:** M (~260 LOC)
+- **Skills:** `angular-developer` · `frontend-design` · `tdd`
+- **Tests:** CT at **390×844** (phone) and **768×1024** (tablet): `documentElement.scrollWidth <= innerWidth`; the strip's `scrollWidth > clientWidth`; each column width ≤ 85vw; jumper click scrolls the strip so the target column's `left` is within 8px of the strip's `left`; Continue button height ≥ 44px; at 1280 nothing changes vs T-10. Page spec: jumper renders one chip per visible column with counts; rails rendered as columns below the breakpoint is a CSS concern → CT only.
+- **Verification:**
+  ```bash
+  cd onecgiar-pr-client && npx jest src/app/pages/result-framework-reporting/pages/my-work-board --silent --reporters=summary --no-coverage && npx tsc --noEmit -p tsconfig.app.json && npx ng lint --quiet && CT_DEV_SERVER_PORT=8090 npx cypress run --component --spec src/app/pages/result-framework-reporting/pages/my-work-board/my-work-board.cy.ts
+  ```
+  - **FAIL input:** a column without `shrink-0` → columns compress instead of scrolling (width assertion fails); body overflow at 390 → `scrollWidth` assertion fails; hit target < 44px → height assertion fails.
+  - **Disqualifier:** jsdom cannot measure any of this — only the CT at the phone/tablet viewports (and the Leader's real-browser look via Orca `set viewport`, effective width = requested × 1.2 → request 325 for 390) is evidence.
+- **Definition of done:**
+  - [ ] Jest + tsc + lint + CT (1280, 1440, 768, 390) green
+  - [ ] Real-browser look at effective 390 and 768 recorded in `execution.md`
+  - [ ] Commit `✨ feat(my-work-board) [SPEC:changes/my-work-board]: responsive snap strip and column jumper below 900px`

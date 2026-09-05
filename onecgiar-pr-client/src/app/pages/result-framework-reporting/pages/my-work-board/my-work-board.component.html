@@ -59,17 +59,22 @@
     <!-- #workArea: the only scroller ≥ 900px (`SAV-DD-1`, `MWB-R-9`) — explainer, toolbar and the
          board all scroll together; the band stays visible while a column scrolls internally. -->
     <div #workArea class="flex flex-1 flex-col min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll">
-      <!-- ═══════════ FILTER ROW (`MWB-T-8` (1)) ═══════════
-           First child of `#workArea`, same chrome as the Results tab's filter row
-           (`programme-results.component.html`): the row directly under the tab strip is where every
-           programme tab puts its controls, so the explainer moved BELOW it. Left = scope segmented
-           control (its `aria-label="My work board controls"` is load-bearing — `MWB-T-5`'s CT reads
-           it), right = the Phase select with the Results tab's label treatment. -->
+      <!-- ═══════════ FILTER ROW (`MWB-T-8` (1), `MWB-T-9`) ═══════════
+           First child of `#workArea`, same chrome AND now the same controls as the Results tab's
+           filter row (`programme-results.component.html` lines 40-130): scope segmented control ·
+           search · Filter button with a count badge · active chips + Clear filters. Minus Columns
+           and Export CSV — a board has neither. Every control is one 34px line high, so the row
+           never grows a second line at desktop widths (`MWB-R-9`); the Phase select moved INTO the
+           popover, which is what removed the stacked label the row used to carry.
+           `aria-label="My results board controls"` is load-bearing — `MWB-T-5`'s CT reads it.
+           NOTE (`MWB-R-9`): the popover below is an inline `absolute` panel, exactly as on the
+           Results tab. Nothing here adds `transform`, `overflow` or `contain` between this row and
+           `#workArea`, so the viewport lock's single-scroller chain is untouched. -->
       <div
         class="flex flex-wrap items-center justify-between gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] py-[10px] sm:px-[32px]"
         role="search"
-        aria-label="My work filters">
-        <div class="flex flex-wrap items-center gap-[10px]" role="group" aria-label="My work board controls">
+        aria-label="My results filters">
+        <div class="flex flex-wrap items-center gap-[10px]" role="group" aria-label="My results board controls">
           <div
             role="tablist"
             aria-label="Scope"
@@ -103,28 +108,207 @@
               <span class="text-[var(--pr-text-subtle)] tabular-nums">{{ data.scopeTotals().all ?? '–' }}</span>
             </button>
           </div>
-        </div>
 
-        <!-- Phase (`MWB-T-8` (3)). `relative` makes THIS wrapper the positioning context, and
-             `.mwb-filter` (component SCSS) re-shapes the shared `.custom_select` shell exactly the
-             way the Results tab's `.pgr-filter` does: the violet `.icon_container` block is hidden
-             and the panel is pinned to `top: calc(100% + 4px)` instead of the base shell's
-             `bottom: -255px`, which is what dropped it under the Closed rails. -->
-        <div class="mwb-filter relative w-[220px] max-sm:w-full" aria-label="Filter by phase">
-          <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]"> Phase </label>
-          <app-pr-filter-select
-            [options]="phaseSelectOptions()"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Phase"
-            [ngModel]="data.effectivePhase()"
-            (changed)="onPhaseChange($event)"></app-pr-filter-select>
+          <div class="mx-[2px] hidden h-[22px] w-[1px] bg-[var(--pr-border-divider)] sm:block"></div>
+
+          <!-- Search (`MWB-T-9` (2)) — 240 × 34, title + code, same predicate as the Results tab
+               (`matchesProgrammeResultSearch`). Debounced 300ms in the component; `searchDraft()`
+               is the undebounced mirror so typing stays responsive. Memory only, no query param. -->
+          <div class="relative h-[34px] w-[240px] max-sm:w-full">
+            <span class="pointer-events-none absolute left-[10px] top-1/2 flex -translate-y-1/2 text-[var(--pr-text-subtle)]">
+              <ng-icon name="lucideSearch" class="text-[15px]" />
+            </span>
+            <input
+              type="text"
+              class="h-[34px] w-full rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-app)] pl-[32px] pr-[28px] text-[13px] text-[var(--pr-text-heading)] outline-none transition-colors placeholder:text-[var(--pr-text-subtle)] focus-visible:border-[var(--pr-color-primary-300)] focus-visible:bg-[var(--pr-surface-card)]"
+              placeholder="Search results…"
+              aria-label="Search results"
+              data-testid="my-work-search"
+              [value]="searchDraft()"
+              (input)="onSearchInput($any($event.target).value)" />
+            @if (searchDraft()) {
+              <button
+                type="button"
+                (click)="onSearchInput('')"
+                class="absolute right-[8px] top-1/2 flex h-[18px] w-[18px] -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:text-slate-700"
+                aria-label="Clear search">
+                <span class="material-icons-round text-[14px]">close</span>
+              </button>
+            }
+          </div>
+
+          <div class="mx-[2px] hidden h-[22px] w-[1px] bg-[var(--pr-border-divider)] sm:block"></div>
+
+          <!-- Filter button + popover (`MWB-T-9` (2)). `.mwb-filter-container` is what the page's
+               `document:click` listener checks before closing, so a click inside the panel (or
+               inside one of its inline `.custom_select` option lists) keeps it open. -->
+          <div class="mwb-filter-container relative">
+            <button
+              type="button"
+              (click)="toggleFilterPopover($event)"
+              class="inline-flex h-[34px] cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] shadow-2xs transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+              [class]="
+                filter.hasActiveFilters()
+                  ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] font-semibold'
+                  : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] font-medium hover:border-slate-400 hover:bg-slate-50'
+              "
+              aria-label="Filter results"
+              data-testid="my-work-filter-button"
+              [attr.aria-expanded]="filterPopoverOpen()">
+              <span
+                class="material-icons-round text-[18px]"
+                [class.text-[var(--pr-color-primary-600)]]="filter.hasActiveFilters()"
+                [class.text-slate-500]="!filter.hasActiveFilters()"
+                >filter_list</span
+              >
+              <span>Filter</span>
+              @if (activeFilterCount() > 0) {
+                <span
+                  class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold tabular-nums text-white"
+                  data-testid="my-work-filter-count">
+                  {{ activeFilterCount() }}
+                </span>
+              }
+            </button>
+
+            <!-- Popover panel — inline `absolute`, NOT a CDK overlay: same technique as the Results
+                 tab, and the reason no clipping/transform ancestor is introduced (`MWB-R-9`). -->
+            <div
+              class="absolute left-0 top-[40px] z-30 w-[420px] max-w-[calc(100vw-32px)] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] text-left shadow-[0_12px_32px_rgba(25,21,36,0.12)] md:left-auto md:right-0 lg:left-0 lg:right-auto"
+              data-testid="my-work-filter-popover"
+              [class.hidden]="!filterPopoverOpen()"
+              (click)="$event.stopPropagation()">
+              <div class="mb-[14px] flex items-center justify-between border-b border-[var(--pr-border-divider)] pb-[10px]">
+                <span class="text-[13.5px] font-bold text-[var(--pr-text-heading)]">Filters</span>
+                <div class="flex items-center gap-[10px]">
+                  @if (hasClearableFilters()) {
+                    <button
+                      type="button"
+                      (click)="clearAll()"
+                      class="inline-flex cursor-pointer items-center gap-[3px] border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:underline">
+                      <span class="material-icons-round text-[14px]" aria-hidden="true">filter_alt_off</span>
+                      Clear all
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    (click)="closeFilterPopover()"
+                    class="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[5px] border-0 bg-transparent p-0 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                    aria-label="Close filters">
+                    <span class="material-icons-round text-[16px]">close</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Each dimension keeps the `.mwb-filter` wrapper: the component SCSS re-shapes the
+                   shared `.custom_select` shell there (34px trigger, no violet `.icon_container`,
+                   panel pinned under its own trigger instead of the base shell's `bottom: -255px`).
+                   NO Status dimension — the columns already ARE the status (`MWB-T-9` FAIL input). -->
+              <div class="flex flex-col gap-[12px]">
+                <div class="grid grid-cols-1 gap-[10px] sm:grid-cols-2">
+                  <div class="mwb-filter relative" aria-label="Filter by phase">
+                    <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]"> Phase </label>
+                    <app-pr-filter-select
+                      [options]="phaseSelectOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Phase"
+                      [ngModel]="selectValue(filter.selectedPhase())"
+                      (changed)="onPhaseChange($event)"></app-pr-filter-select>
+                  </div>
+                  <div class="mwb-filter relative" aria-label="Filter by category">
+                    <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]"> Category </label>
+                    <app-pr-filter-select
+                      [options]="categorySelectOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Category"
+                      [ngModel]="selectValue(filter.selectedCategory())"
+                      (changed)="onCategoryChange($event)"></app-pr-filter-select>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-[10px] sm:grid-cols-2">
+                  <div class="mwb-filter relative" aria-label="Filter by funding source">
+                    <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                      Funding source
+                    </label>
+                    <app-pr-filter-select
+                      [options]="originSelectOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Funding source"
+                      [ngModel]="selectValue(filter.selectedOrigin())"
+                      (changed)="onOriginChange($event)"></app-pr-filter-select>
+                  </div>
+                  <div class="mwb-filter relative" aria-label="Filter by center">
+                    <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                      Contributing Center
+                    </label>
+                    <app-pr-filter-select
+                      [options]="centerSelectOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Center"
+                      [ngModel]="selectValue(filter.selectedCenter())"
+                      (changed)="onCenterChange($event)"></app-pr-filter-select>
+                  </div>
+                </div>
+
+                <!-- Created by is only offered under *All program results*: under *Mine* every row
+                     is already the current user's, so the dimension would be a no-op control. -->
+                @if (showCreatedByFilter()) {
+                  <div class="grid grid-cols-1 gap-[10px] sm:grid-cols-2">
+                    <div class="mwb-filter relative" aria-label="Filter by created by">
+                      <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                        Created by
+                      </label>
+                      <app-pr-filter-select
+                        [options]="createdBySelectOptions()"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Created by"
+                        [filter]="true"
+                        filterPlaceholder="Search user..."
+                        [ngModel]="selectValue(filter.selectedCreatedBy())"
+                        (changed)="onCreatedByChange($event)"></app-pr-filter-select>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Active chips, inline in the row (`MWB-T-9` (2)) — one per active dimension, `×`
+               removes just that one. The phase chip's `×` restores the DEFAULT phase, never "no
+               phase" (design.md §6.6), which is also why `Clear filters` hides while the phase is
+               the only chip. -->
+          @if (filter.hasActiveFilters()) {
+            @for (chip of filter.activeChips(); track chip.dimension + '|' + chip.value) {
+              <span class="pr-chip mwb-chip" data-testid="my-work-chip">
+                {{ chip.label }}
+                <button type="button" class="mwb-chip-remove" aria-label="Remove filter" (click)="clearChip(chip)">
+                  <ng-icon name="lucideX" size="10px" strokeWidth="2.6" />
+                </button>
+              </span>
+            }
+            @if (hasClearableFilters()) {
+              <button
+                type="button"
+                data-testid="my-work-clear-filters"
+                class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[4px] rounded-[8px] border-0 bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+                (click)="clearAll()">
+                <span class="material-icons-round text-[15px]" aria-hidden="true">filter_alt_off</span>
+                Clear filters
+              </button>
+            }
+          }
         </div>
       </div>
       <!-- Explainer (`MWB-R-10`) removed 2026-09-05 on user request ("quita esto de aquí"). -->
 
       <!-- Board body: skeleton / error+Retry / whole-board empty / groups (`MWB-R-7`, mutually exclusive). -->
-      <div class="flex flex-1 min-h-0 flex-col">
+      <div class="flex flex-1 min-h-0 flex-col" data-guide="tab-my-results-view">
         @if (showSkeleton()) {
           <!-- ═══════════ BOARD-SHAPED SKELETON (`MWB-T-8` (4)) ═══════════
                Same container, same group widths and same column/card metrics as the `showBoard()`
@@ -200,6 +384,19 @@
                 See all program results
               </button>
             </div>
+          </div>
+        } @else if (showFilteredEmpty()) {
+          <!-- `MWB-T-9`: the board emptied by the toolbar, not by the absence of results. Distinct
+               copy and a single Clear-filters action — the "Nothing on your board yet" panel above
+               would tell the user to go report results they demonstrably already have. -->
+          <div
+            class="mx-[16px] my-[14px] flex flex-1 flex-col items-center justify-center gap-[10px] rounded-[12px] border border-dashed border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[24px] text-center sm:mx-[32px]"
+            data-testid="my-work-filtered-empty">
+            <p class="m-0 text-[14px] font-semibold text-[var(--pr-text-heading)]">No results match these filters</p>
+            <p class="m-0 max-w-[360px] text-[12px] leading-[1.5] text-[var(--pr-text-muted)]">
+              Try removing a filter or widening your search to see more of your board.
+            </p>
+            <button type="button" class="text-[12px] font-semibold text-[var(--pr-color-primary-400)]" (click)="clearAll()">Clear filters</button>
           </div>
         } @else if (showBoard()) {
           <!-- `MWB-T-7` (4): keyed on `boardRegroupKey()` (scope/phase) so a scope or phase switch

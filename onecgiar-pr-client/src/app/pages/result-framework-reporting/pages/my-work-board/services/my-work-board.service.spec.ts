@@ -6,6 +6,7 @@ import { ApiService } from '../../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../../shared/services/api/results-api.service';
 import { SaveButtonService } from '../../../../../custom-fields/save-button/save-button.service';
 import { ScienceProgramIdService } from '../../../services/science-program-id.service';
+import { ProgrammeResultsFilterService } from '../../programme-results/services/programme-results-filter.service';
 import { MyWorkCountService } from './my-work-count.service';
 import { MyWorkBoardService } from './my-work-board.service';
 
@@ -20,6 +21,7 @@ import { MyWorkBoardService } from './my-work-board.service';
  */
 describe('MyWorkBoardService', () => {
   let service: MyWorkBoardService;
+  let filter: ProgrammeResultsFilterService;
   let httpMock: HttpTestingController;
   let resolve: jest.Mock;
   let countSet: jest.Mock;
@@ -58,6 +60,9 @@ describe('MyWorkBoardService', () => {
       imports: [HttpClientTestingModule],
       providers: [
         MyWorkBoardService,
+        // @akili-spec changes/my-work-board (MWB-T-9) — page-provided beside the board service on
+        // `MyWorkBoardComponent`; the board reads it to narrow `visibleRows`.
+        ProgrammeResultsFilterService,
         ResultsApiService,
         { provide: SaveButtonService, useValue: { isCreatingPipe: jest.fn(), isGettingSectionPipe: jest.fn(), isSavingPipe: jest.fn(), showSaveSpinner: jest.fn(), isSavingPipeNextStep: jest.fn() } },
         {
@@ -71,6 +76,7 @@ describe('MyWorkBoardService', () => {
     });
 
     service = TestBed.inject(MyWorkBoardService);
+    filter = TestBed.inject(ProgrammeResultsFilterService);
     httpMock = TestBed.inject(HttpTestingController);
   }
 
@@ -277,6 +283,79 @@ describe('MyWorkBoardService', () => {
 
       req.flush(resultsResponse([rawResult({ phase_name: 'Reporting 2025' })]));
       expect(service.scopeTotals()).toEqual({ mine: 2, all: 1 });
+    });
+  });
+
+  // @akili-spec changes/my-work-board (MWB-T-9) — the toolbar's non-phase dimensions.
+  describe('toolbar filters (MWB-T-9)', () => {
+    /**
+     * Six rows in ONE phase, deliberately sharing values ACROSS dimensions (three `W1/W2`, three
+     * `Knowledge product`, but only TWO rows carrying both) — the task's disqualifier: a fixture
+     * with one row per value cannot tell an AND from an OR.
+     */
+    function loadSixRows() {
+      service.currentPhaseName.set('Reporting 2026');
+      service.load('SP01');
+      expectListRequest().flush(
+        resultsResponse([
+          rawResult({ id: '1', result_code: '5101', result_type: 'Knowledge product', source_name: 'W1/W2', lead_center: 'CIAT' }),
+          rawResult({ id: '2', result_code: '5102', result_type: 'Knowledge product', source_name: 'W1/W2', lead_center: 'IWMI' }),
+          rawResult({ id: '3', result_code: '5103', result_type: 'Knowledge product', source_name: 'W3/Bilateral', lead_center: 'CIAT' }),
+          rawResult({ id: '4', result_code: '5104', result_type: 'Innovation development', source_name: 'W1/W2', lead_center: 'CIAT' }),
+          rawResult({ id: '5', result_code: '5105', result_type: 'Innovation development', source_name: 'W3/Bilateral', lead_center: 'IWMI' }),
+          rawResult({
+            id: '6',
+            result_code: '5106',
+            result_type: 'Policy change',
+            source_name: 'W3/Bilateral',
+            lead_center: 'IWMI',
+            status_id: '3',
+            status_name: 'Submitted'
+          })
+        ])
+      );
+    }
+
+    it('narrows visibleRows on ONE dimension without a new request', () => {
+      loadSixRows();
+      expect(service.visibleRows().length).toBe(6);
+
+      filter.selectedCategory.set('Knowledge product');
+      httpMock.expectNone(req => req.url.includes('get/all/roles/filter'));
+
+      expect(service.visibleRows().map(row => row.code)).toEqual(['5101', '5102', '5103']);
+    });
+
+    it('combines two dimensions with AND, not OR', () => {
+      loadSixRows();
+
+      filter.selectedCategory.set('Knowledge product');
+      filter.selectedOrigin.set('W1/W2');
+
+      // OR would yield five rows (three KP + three W1/W2 minus the two shared); AND yields two.
+      expect(service.visibleRows().map(row => row.code)).toEqual(['5101', '5102']);
+    });
+
+    it('never applies a Status dimension — the columns already are the status (ignoreStatus)', () => {
+      loadSixRows();
+
+      filter.selectedStatus.set('Submitted');
+
+      expect(service.visibleRows().length).toBe(6);
+      expect(service.columns().find(column => column.key === 'submitted')?.rows.length).toBe(1);
+    });
+
+    it('leaves the tab badge and the segment total on the PHASE rows while a filter narrows the board', () => {
+      loadSixRows();
+      expect(service.badge()).toBe(5); // five Editing rows in Reporting 2026
+      expect(service.scopeTotals()).toEqual({ mine: 6, all: null });
+
+      filter.selectedCategory.set('Policy change');
+      service.setPhase('Reporting 2026');
+
+      expect(service.visibleRows().length).toBe(1);
+      expect(service.badge()).toBe(5);
+      expect(service.scopeTotals()).toEqual({ mine: 6, all: null });
     });
   });
 });
