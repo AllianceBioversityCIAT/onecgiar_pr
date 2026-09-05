@@ -1,4 +1,16 @@
-import { ChangeDetectionStrategy, Component, HostListener, OnDestroy, computed, effect, inject, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  HostListener,
+  OnDestroy,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+  viewChild
+} from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { FormsModule } from '@angular/forms';
@@ -186,7 +198,11 @@ function formatDate(value: string): string {
 @Component({
   selector: 'app-programme-results',
   standalone: true,
+  // Viewport lock (`SAV-DD-1`, `sp-shell-app-viewport`): unconditional, unlike `dashboard-lab`'s
+  // route-gated class — this surface only ever serves the Results tab.
+  host: { class: 'pr-viewport-page' },
   templateUrl: './programme-results.component.html',
+  styleUrls: ['./programme-results.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     NgTemplateOutlet,
@@ -209,10 +225,6 @@ function formatDate(value: string): string {
   ],
   styles: [
     `
-      :host {
-        display: block;
-      }
-
       /* ── Popover entrance ─────────────────────────────────────────────────────────────────
          The design's '@keyframes prmsPop' (.16s on the Columns popover and the filter panels,
          .12s on the row menu). At-rules are one of the sanctioned SCSS exceptions to
@@ -615,6 +627,13 @@ export class ProgrammeResultsComponent implements OnDestroy {
 
   readonly data = inject(ProgrammeResultsService);
   readonly filter = inject(ProgrammeResultsFilterService);
+
+  /**
+   * Viewport lock (`SAV-T-4`): the work area is the only scroller ≥ 900px — passed to the band as
+   * `scrollHost` so its shadow/compact state reads the right element (`SAV-DD-4`).
+   */
+  readonly workArea = viewChild<ElementRef<HTMLElement>>('workArea');
+  readonly workAreaEl = computed(() => this.workArea()?.nativeElement ?? null);
 
   /** Full catalog, for the header/cell loops. */
   readonly allColumns = PGR_COLUMNS;

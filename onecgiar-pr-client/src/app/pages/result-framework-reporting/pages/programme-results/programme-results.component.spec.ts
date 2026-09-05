@@ -32,6 +32,9 @@ class BandStubComponent {
   @Input() activeTab = '';
   @Input() canReport = false;
   @Input() showToolbar = false;
+  /** `SAV-T-4` viewport-lock bindings — mirrors the real band's signal inputs as plain `@Input()`s. */
+  @Input() frameLocked = false;
+  @Input() scrollHost: HTMLElement | null = null;
 }
 
 /**
@@ -446,6 +449,23 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.originSelectOptions().map(option => option.value)).toEqual(['W1/W2', 'W3/Bilaterals']);
     expect(component.categorySelectOptions().every(option => !!option.value)).toBe(true);
     expect(component.centerSelectOptions().map(option => option.value)).toEqual(['CIAT', 'IITA', 'ILRI']);
+  });
+
+  // ── SAV-T-4 (sp-shell-app-viewport) ──────────────────────────────────────────────────────
+  // Presence assertions only — geometry (document does not scroll, work area does) is owned by
+  // the real-browser probe in `SAV-T-5`.
+  describe('Viewport lock (SAV-T-4)', () => {
+    it('carries the pr-viewport-page host class', () => {
+      expect((fixture.nativeElement as HTMLElement).classList).toContain('pr-viewport-page');
+    });
+
+    it('locks the band and hands it the work area as its scroll host', () => {
+      const workArea = fixture.debugElement.query(By.css('.custom_scroll')).nativeElement as HTMLElement;
+      const band = fixture.debugElement.query(By.directive(BandStubComponent)).componentInstance as BandStubComponent;
+      expect(band.frameLocked).toBe(true);
+      // Identity, not just presence — a stray second scrollable element would still fail this.
+      expect(band.scrollHost).toBe(workArea);
+    });
   });
 
   // ── P2-3312 ───────────────────────────────────────────────────────────────────────────────

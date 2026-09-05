@@ -14,11 +14,13 @@
   </span>
 </ng-template>
 
-<section class="min-h-screen bg-[var(--pr-surface-app)] p-0">
-  <article class="flex w-full min-w-0 flex-col">
+<section
+  class="min-h-screen bg-[var(--pr-surface-app)] p-0 min-[900px]:min-h-0 min-[900px]:flex-1 min-[900px]:flex min-[900px]:flex-col">
+  <article class="flex w-full min-w-0 flex-col min-[900px]:flex-1 min-[900px]:min-h-0">
     <!-- Same band, same tab strip, third tab active. `showToolbar` off: this tab owns its own
          filter row (the band's toolbar belongs to Reporting). `canReport` off: the emerging-result
-         CTA opens a modal this surface does not host. -->
+         CTA opens a modal this surface does not host. `frameLocked`/`scrollHost`: the band drops
+         `sticky` and reads offsets from the work area instead of `window` (`SAV-DD-4`, `SAV-DD-5`). -->
     <app-reporting-program-band
       [programCode]="programmeCode()"
       [programName]="programmeName()"
@@ -27,9 +29,16 @@
       activeTab="results"
       [canReport]="true"
       [showToolbar]="false"
+      [frameLocked]="true"
+      [scrollHost]="workAreaEl()"
       (whereToReport)="openWhereToReport()" />
 
-    <!-- ═══════════════ RESULTS TOP CONTROLS BAR (consistent with Overview & Reporting) ═══════════════ -->
+    <!-- #workArea: the only scroller ≥ 900px (`SAV-DD-1`, `SAV-DD-7`) — filter row, counters and
+         table all scroll together; below `md` the mixin is inert and this stays a plain block. -->
+    <div
+      #workArea
+      class="min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll">
+      <!-- ═══════════════ RESULTS TOP CONTROLS BAR (consistent with Overview & Reporting) ═══════════════ -->
     <div
       class="flex flex-wrap items-center justify-between gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[32px] py-[10px]"
       role="search"
@@ -651,6 +660,7 @@
           </button>
         </div>
       }
+    </div>
     </div>
   </article>
 </section>
