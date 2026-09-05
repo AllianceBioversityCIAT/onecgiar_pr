@@ -235,7 +235,7 @@ Cross-cutting project ACs that apply without restating: `AC-3`, `AC-5`, `AC-9`.
 | Layout clipping, body horizontal overflow, column not scrolling | Cypress CT at 1280 and 1440 measuring `scrollWidth` / `scrollHeight` (`MWB-AC-9`) | jsdom cannot measure layout — Jest is not a gate here |
 | Visual drift from the mockup (tokens, hierarchy, chip sizes) | **No automated gate.** HITL visual check in the real browser at `MWB-T-6`, comparing against `mockup/Main.dc.html` (T6 review) | Accepted: pixel fidelity is judged by a person, not a command |
 | Drag-and-drop accidentally introduced | Cypress CT asserts no `[draggable]`; Reviewer diff check for DnD libraries | — |
-| A11y structure (regions, names, focus) | `axe` in Cypress CT | Contrast over gradient buttons not measurable by axe here — tokens are AA-checked at source; accepted risk |
+| A11y structure (regions, names, focus) | Structural check in Cypress CT (named regions, named buttons, rails `aria-expanded`) — **`axe` did not run: `cypress-axe` is not installed and this spec may not touch `package.json` (TEST_GAP, `MWB-T-5`)** | ARIA validity, duplicate ids, focus order and contrast uncovered by an automated gate; contrast tokens AA-checked at source; accepted risk, follow-up = install `cypress-axe` in an infra change |
 | Added server latency | `MWB-T-6` timing when the local server runs; else accepted risk bounded by the cap | Stated in §7 |
 
 ## 10. Dependencies & Assumptions

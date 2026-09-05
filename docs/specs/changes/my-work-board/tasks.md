@@ -132,7 +132,7 @@
   - [ ] Scoped Jest, `tsc` and lint green
   - [ ] Commit `✨ feat(my-work-board) [SPEC:changes/my-work-board]: My work tab, board page, column and card components`
 
-### `MWB-T-5` — Cypress CT: viewport lock, overflow, no-DnD, axe `[ ]`
+### `MWB-T-5` — Cypress CT: viewport lock, overflow, no-DnD, axe `[x]`
 
 - **Type:** `tests`
 - **Description:** Component test mounting `MyWorkBoardComponent` with mocked services (12 Editing rows + others) at 1280×720 and 1440×900 (`CT_DEV_SERVER_PORT=8090 npx cypress run --component --spec …`; `project-cypress-ct-harness-quirks`).

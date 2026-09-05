@@ -72,3 +72,13 @@
 - **Requirements covered:** `MWB-R-1`, `R-2` render, `R-3` UI + segment counts, `R-4` render, `R-6` nav + negatives, `R-7`, `R-9` structure, `R-10`, `R-11`, `MWB-AC-1`, `AC-2`, `AC-6` args, `AC-7`.
 - **Decisions:** board page badge bound to its own `data.badge()` (no redundant `ensure()`); card date `dd MMM yyyy` (codebase convention); per-column empty copy by the Implementer.
 - **Gate:** auto-approved (pre-approved mode). Budget check: 4/6 tasks, review rounds so far 1+1+1+3.
+
+### `MWB-T-5` — Cypress CT: viewport lock, overflow, no-DnD, axe — **PASS** (attempt 1) · 2026-09-05
+
+- **Tester:** `akili-tester` · skill `angular-developer` · effort medium · 1 attempt. File: `my-work-board/my-work-board.cy.ts` (new, 368 LOC). No application code touched.
+- **Verification:** `CT_DEV_SERVER_PORT=8090 npx cypress run --component --spec …/my-work-board.cy.ts` → `2 passing (293ms) · All specs passed!` at 1280×720 and 1440×900 (two stable runs; the two known harness errors — primeicons fonts, `TS2322` in `ct-utils.ts:54` — printed and non-blocking). Measured: viewport lock engaged (`position: absolute` on the host); Editing list `scrollHeight > clientHeight` and 12th card inside the list rect after `scrollTo('bottom')`; `documentElement.scrollWidth` and `body.scrollWidth` ≤ `innerWidth`; band stub + toolbar rects inside the viewport after scrolling; `[draggable]/[dropzone]/[ondrop]` = 0; five columns in fixed order; two rails `aria-expanded="false"`.
+- **Reviewer (`akili-reviewer`, opus):** `STATUS: PASS` — "All four `MWB-R-9` / `MWB-AC-9` clauses plus the `MWB-R-6` negative and the fixed five-column structure are asserted behaviourally inside retrying `should` callbacks, on the real component with the real view-model doing the grouping, and the fixture's overflow is enforced by the assertion itself rather than assumed."
+- **TEST_GAP (recorded):** `cypress-axe` is not installed and `tasks.md` §2 forbids touching `package.json` → `axe` did not run; the structural substitute proves named regions + named buttons only (ARIA validity, duplicate ids, focus order uncovered; contrast was already an accepted risk). `requirements.md` §9 a11y gate row corrected by the Leader to state this. Follow-up (outside this spec): add `cypress-axe` in an infra change and host it in this file.
+- **Accepted limitation:** the band is stubbed (56px block in the same flex slot); the real band's geometry is measured in `MWB-T-6`.
+- **ADVISORY (recorded):** assert band rect delta ≈ 0 before/after scroll; add `.cdk-drag`/`[cdkDrag]`/`[cdkDropList]` to the no-DnD negative list; assert single-match selectors.
+- **Gate:** auto-approved (pre-approved mode).
