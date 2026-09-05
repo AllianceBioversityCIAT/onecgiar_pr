@@ -87,7 +87,8 @@
       <a
         class="text-[11px] font-semibold text-[var(--pr-color-primary-400)] transition-[color,transform] duration-150 ease-out hover:text-[var(--pr-color-primary-600)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] focus-visible:ring-offset-2 motion-reduce:transition-none"
         [routerLink]="['/result', 'result-detail', row().code, 'general-information']"
-        [queryParams]="continueQueryParams()">
+        [queryParams]="continueQueryParams()"
+        (click)="rememberOrigin()">
         Open
       </a>
     </div>

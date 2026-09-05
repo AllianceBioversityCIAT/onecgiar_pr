@@ -7,7 +7,7 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { PdfExportService } from '../../../../../../shared/services/pdf-export.service';
 import { ResultMetadataPanelService } from '../../../../../../shared/components/result-metadata/result-metadata-panel.service';
-import { isProgrammeResultsTab, SmartNavigationService, splitNavUrl } from '../../../../../../shared/services/smart-navigation.service';
+import { isMyResultsTab, isProgrammeResultsTab, SmartNavigationService, splitNavUrl } from '../../../../../../shared/services/smart-navigation.service';
 
 interface MetaRow {
   label: string;
@@ -185,8 +185,8 @@ export class ResultHeaderComponent implements DoCheck {
   }
 
   /**
-   * Origin-aware way back: Science Program Results tab when that is how the user
-   * arrived, otherwise Results Center. Query string (phase, filters) is preserved.
+   * Origin-aware way back: programme Results, My Results, or Results Center.
+   * Query string (phase, filters) is preserved.
    */
   get backLink(): string {
     return splitNavUrl(this.smartNav.getResultDetailBackTarget().url).path;
@@ -198,7 +198,9 @@ export class ResultHeaderComponent implements DoCheck {
 
   get backTitle(): string {
     const url = this.smartNav.getResultDetailBackTarget().url;
-    return isProgrammeResultsTab(url) ? 'Back to programme results' : 'Back to all results';
+    if (isProgrammeResultsTab(url)) return 'Back to programme results';
+    if (isMyResultsTab(url)) return 'Back to My results';
+    return 'Back to all results';
   }
 
   get title(): string {

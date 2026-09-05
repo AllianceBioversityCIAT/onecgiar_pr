@@ -21,6 +21,11 @@ export function isProgrammeResultsTab(url: string): boolean {
   return /\/entity-details\/[^/?#]+\/results(?:[/?#]|$)/.test(url);
 }
 
+/** My Results tab — `/entity-details/:code/my-work`. */
+export function isMyResultsTab(url: string): boolean {
+  return /\/entity-details\/[^/?#]+\/my-work(?:[/?#]|$)/.test(url);
+}
+
 export function isResultDetailUrl(url: string): boolean {
   return url.includes('/result/result-detail/');
 }
@@ -30,7 +35,7 @@ export function isResultsCenterList(url: string): boolean {
 }
 
 export function isKnownResultDetailOrigin(url: string): boolean {
-  return isProgrammeResultsTab(url) || isResultsCenterList(url);
+  return isProgrammeResultsTab(url) || isMyResultsTab(url) || isResultsCenterList(url);
 }
 
 /** Survives the full page load from the Science Program Results tab into `/result/result-detail`. */
@@ -114,7 +119,7 @@ export class SmartNavigationService {
   }
 
   /**
-   * Persist a known result-detail origin (Science Program Results tab or Results Center)
+   * Persist a known result-detail origin (programme Results, My Results, or Results Center)
    * so Back still works after the full page load into `/result/result-detail`.
    */
   rememberResultDetailOrigin(url?: string): void {
@@ -312,10 +317,10 @@ export class SmartNavigationService {
    * Back target for the result-detail header.
    *
    * Walks history newest-first, skipping the current URL and sibling result-detail
-   * section hops (general-information → contributors, etc.). The only known origin
-   * that is restored as-is is the Science Program Results tab. Coming from Results
-   * Center keeps that list URL (filters included). Everything else — Overview,
-   * Reporting, QA, deep link, empty history — falls back to Results Center.
+   * section hops (general-information → contributors, etc.). Known origins restored
+   * as-is: Science Program Results, My Results, Results Center (query string kept).
+   * Everything else — Overview, Reporting, QA, deep link, empty history — falls
+   * back to Results Center.
    */
   getResultDetailBackTarget(currentUrl?: string): BackTarget {
     const fallback: BackTarget = { url: RESULTS_CENTER_LIST_PATH, label: RESULT_DETAIL_BACK_LABEL };
@@ -325,7 +330,7 @@ export class SmartNavigationService {
       const prev = this.history[i];
       if (!prev || prev === active) continue;
       if (isResultDetailUrl(prev)) continue;
-      if (isProgrammeResultsTab(prev) || isResultsCenterList(prev)) {
+      if (isKnownResultDetailOrigin(prev)) {
         return { url: prev, label: RESULT_DETAIL_BACK_LABEL };
       }
       return fallback;

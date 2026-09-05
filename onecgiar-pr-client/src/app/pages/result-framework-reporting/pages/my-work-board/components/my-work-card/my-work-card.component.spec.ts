@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { MyWorkCardComponent } from './my-work-card.component';
 import { ProgrammeResultRow } from '../../../programme-results/services/programme-results.service';
+import { SmartNavigationService } from '../../../../../../shared/services/smart-navigation.service';
 
 function row(partial: Partial<ProgrammeResultRow> = {}): ProgrammeResultRow {
   return {
@@ -92,6 +93,20 @@ describe('MyWorkCardComponent', () => {
 
       expect(navSpy).toHaveBeenCalledWith(['/result', 'result-detail', '4712', 'geographic-location'], { queryParams: { phase: 36 } });
     });
+
+    it('persists My Results as the result-detail Back origin before Continue navigates', async () => {
+      await build({
+        row: row({ completeness: { complete: 2, total: 5, missing: ['geographic-location'] }, versionId: '36' }),
+        inEditingColumn: true
+      });
+      const remember = jest.spyOn(TestBed.inject(SmartNavigationService), 'rememberResultDetailOrigin');
+      jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+      const btn = Array.from(root().querySelectorAll('button')).find(b => b.textContent?.includes('Continue')) as HTMLButtonElement;
+      btn.click();
+
+      expect(remember).toHaveBeenCalled();
+    });
   });
 
   describe('ready variant (n === m, total > 0)', () => {
@@ -142,6 +157,15 @@ describe('MyWorkCardComponent', () => {
 
       const link = root().querySelector('a');
       expect(link?.textContent?.trim()).toBe('Open');
+    });
+
+    it('persists My Results as the result-detail Back origin when Open is clicked', async () => {
+      await build({ row: row({ statusId: 3, statusName: 'Submitted', completeness: null }), inEditingColumn: false });
+      const remember = jest.spyOn(TestBed.inject(SmartNavigationService), 'rememberResultDetailOrigin');
+
+      root().querySelector('a')?.click();
+
+      expect(remember).toHaveBeenCalled();
     });
 
     it('never renders a primary (gradient) button outside Editing', async () => {

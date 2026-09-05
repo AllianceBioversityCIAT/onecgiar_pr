@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { ProgrammeResultRow } from '../../../programme-results/services/programme-results.service';
 import { firstMissingRoute, MY_WORK_SECTION_MAP, sectionLabel } from '../../my-work-section-map';
 import { STATUS_META } from '../../../result-framework-reporting-home/status-meta';
+import { SmartNavigationService } from '../../../../../../shared/services/smart-navigation.service';
 
 /** The four visual variants `MWB-R-4` names. Derived, never passed in — a caller only says
  *  whether this card sits in the Editing column (`inEditingColumn`); the card works out which of
@@ -35,6 +36,7 @@ function formatDate(value: string): string {
 })
 export class MyWorkCardComponent {
   private readonly router = inject(Router);
+  private readonly smartNav = inject(SmartNavigationService);
 
   readonly row = input.required<ProgrammeResultRow>();
   /** Whether this card is rendered inside the Editing column — the only column that shows
@@ -85,7 +87,13 @@ export class MyWorkCardComponent {
 
   /** `MWB-R-6`: `Continue` is a real `<button>` performing the navigation directly — no `<a>`, no
    *  drag handle, no drop target anywhere on the card. */
+  /** Persist My Results as the result-detail Back origin before the remount. */
+  rememberOrigin(): void {
+    this.smartNav.rememberResultDetailOrigin();
+  }
+
   continue(): void {
+    this.rememberOrigin();
     this.router.navigate(['/result', 'result-detail', this.row().code, this.continueRoute()], { queryParams: this.continueQueryParams() });
   }
 }

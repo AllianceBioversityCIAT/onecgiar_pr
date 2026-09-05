@@ -105,6 +105,20 @@ describe('ResultHeaderComponent', () => {
       expect(q('[data-testid="result-detail-back-link"]').getAttribute('title')).toBe('Back to all results');
     });
 
+    it('links back to My Results when that is where the user came from', async () => {
+      const detail = '/result/result-detail/9057/general-information?phase=36';
+      await build(detail, () => {
+        const nav = TestBed.inject(SmartNavigationService);
+        nav.recordUrl('/result-framework-reporting/entity-details/SP01/my-work?phase=Reporting%202026');
+        nav.recordUrl(detail);
+      });
+
+      const href = q('[data-testid="result-detail-back-link"]').getAttribute('href') ?? '';
+      expect(href).toContain('/result-framework-reporting/entity-details/SP01/my-work');
+      expect(href).toContain('phase=Reporting%202026');
+      expect(q('[data-testid="result-detail-back-link"]').getAttribute('title')).toBe('Back to My results');
+    });
+
     it('links back to the programme Results tab when that is where the user came from', async () => {
       const detail = '/result/result-detail/9042/general-information?phase=36';
       await build(detail, () => {

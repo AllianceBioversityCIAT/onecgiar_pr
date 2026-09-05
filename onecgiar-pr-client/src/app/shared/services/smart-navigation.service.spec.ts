@@ -237,6 +237,7 @@ describe('SmartNavigationService', () => {
     const detail = '/result/result-detail/9042/general-information?phase=36';
     const contributors = '/result/result-detail/9042/rd-contributors-and-partners?phase=36';
     const programmeResults = '/result-framework-reporting/entity-details/SP12/results?phase=Reporting%202026&createdBy=42';
+    const myResults = '/result-framework-reporting/entity-details/SP01/my-work?phase=Reporting%202026';
     const resultsCenter = '/result/results-outlet/results-list?phase=36';
     const overview = '/result-framework-reporting/entity-details/SP12/overview';
     const resultsReview = '/result-framework-reporting/entity-details/SP12/results-review';
@@ -264,6 +265,25 @@ describe('SmartNavigationService', () => {
       service.recordUrl(detail);
 
       expect(service.getResultDetailBackTarget(detail).url).toBe(resultsCenter);
+    });
+
+    it('returns the My Results tab when that is the first non-detail origin', () => {
+      service.recordUrl(myResults);
+      service.recordUrl(detail);
+
+      expect(service.getResultDetailBackTarget(detail).url).toBe(myResults);
+    });
+
+    it('reads a persisted My Results origin after a fresh construct (full page load)', () => {
+      sessionStorage.setItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY, myResults);
+      TestBed.resetTestingModule();
+      mockRouter.url = detail;
+      mockRouter.getCurrentNavigation = jest.fn(() => null);
+      TestBed.configureTestingModule({
+        providers: [SmartNavigationService, { provide: Router, useValue: mockRouter }]
+      });
+
+      expect(TestBed.inject(SmartNavigationService).getResultDetailBackTarget(detail).url).toBe(myResults);
     });
 
     it('falls back to Results Center when the origin is Overview', () => {
