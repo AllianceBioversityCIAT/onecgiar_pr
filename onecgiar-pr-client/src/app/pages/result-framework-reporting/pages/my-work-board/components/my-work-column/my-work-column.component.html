@@ -43,6 +43,19 @@
       @if (isEditing() && readyCount() > 0) {
         <span class="text-[11px] text-[var(--pr-text-subtle)]">{{ readyCount() }} ready to submit</span>
       }
+      <!-- `MWB-T-10` (a): the way back to the rail. Only rendered for a Closed-group column
+           (`collapsible()`); `aria-expanded="true"` is the mirror of the rail's own `false`, so the
+           control reads as one expand/collapse affordance to assistive tech. -->
+      @if (collapsible()) {
+        <button
+          type="button"
+          class="flex h-[22px] w-[22px] flex-none cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] transition-colors hover:bg-[var(--pr-surface-subtle-hover)] hover:text-[var(--pr-text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] motion-reduce:transition-none"
+          aria-expanded="true"
+          [attr.aria-label]="'Collapse ' + column().label"
+          (click)="expandToggle.emit()">
+          <span class="material-icons-round text-[16px]" aria-hidden="true">chevron_left</span>
+        </button>
+      }
     </div>
 
     <div class="flex flex-1 min-h-0 flex-col gap-[10px] overflow-y-auto p-[12px] custom_scroll">

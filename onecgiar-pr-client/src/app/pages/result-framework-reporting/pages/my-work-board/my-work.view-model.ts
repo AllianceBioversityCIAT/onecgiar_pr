@@ -1,13 +1,22 @@
-// @akili-spec changes/my-work-board (MWB-T-2, MWB-R-2, R-3, R-5, R-11, design.md §5, §6.6)
+// @akili-spec changes/my-work-board (MWB-T-2, MWB-T-10, MWB-R-2, R-3, R-5, R-11, design.md §5, §6.6)
 // Pure — no Angular imports. `MyWorkBoardComponent`/`MyWorkBoardService` (T-3, T-4) are the only
 // callers; everything here is a plain function of a `ProgrammeResultRow[]` (or of its output).
 import { ProgrammeResultRow } from '../programme-results/services/programme-results.service';
 
-/** One board column key, in render order (`STATUS_COLUMN_MAP`, design.md §5). */
+/**
+ * One board column key, in render order (`STATUS_COLUMN_MAP`, design.md §5).
+ *
+ * `MWB-T-10`: the `approved` KEY is deliberately kept after the column was relabelled *Quality
+ * assessed* and moved to the *Done* group. It is the id the visual tokens (`MY_WORK_COLUMN_META`,
+ * `--pr-status-approved-*` — `MWB-DD-7`), the `MyWorkTotals` field and the CT/Jest fixtures are all
+ * keyed on; renaming it would be a wide, purely cosmetic sweep with no behavioural gain. The label
+ * is what the user reads, and the label IS "Quality assessed".
+ */
 export type MyWorkColumnKey = 'editing' | 'pending' | 'submitted' | 'approved' | 'discontinued' | 'other';
 
-/** Which of the three visual groups a column belongs to (`MWB-R-2`). */
-export type MyWorkColumnGroup = 'action' | 'waiting' | 'closed';
+/** Which of the four visual groups a column belongs to (`MWB-R-2`). `done` (`MWB-T-10`) renders
+ *  expanded like `waiting`; only `closed` collapses to rails (`MWB-DD-8`). */
+export type MyWorkColumnGroup = 'action' | 'waiting' | 'done' | 'closed';
 
 /** The board's scope segment. Only `'mine'` ever feeds the tab badge (`MWB-R-1`, `MWB-R-3`). */
 export type MyWorkScope = 'mine' | 'all';
@@ -39,12 +48,17 @@ export interface MyWorkColumnDef {
 }
 
 /** Fixed column order (design.md §5). `groupByColumn` always emits the first five; `other` only
- *  when it has rows (`MWB-R-2` *Collapsed closed group*). */
+ *  when it has rows (`MWB-R-2` *Collapsed closed group*).
+ *
+ *  `MWB-T-10` (user request 2026-09-05, "el resultado fue sometido y ya pasó por QA"): ids 2
+ *  (Quality Assessed) and 6 (Approved, bilateral API) are the W1/W2 terminal SUCCESS state, so the
+ *  column reads **Quality assessed** and sits in its own expanded **Done** group — never a rail.
+ *  *Closed* is now only Discontinued (4 + 7 Rejected) and the conditional Other. */
 export const MY_WORK_COLUMN_DEFS: readonly MyWorkColumnDef[] = Object.freeze([
   { key: 'editing', label: 'Editing', group: 'action' },
   { key: 'pending', label: 'Pending review', group: 'waiting' },
   { key: 'submitted', label: 'Submitted', group: 'waiting' },
-  { key: 'approved', label: 'Approved', group: 'closed' },
+  { key: 'approved', label: 'Quality assessed', group: 'done' },
   { key: 'discontinued', label: 'Discontinued', group: 'closed' },
   { key: 'other', label: 'Other', group: 'closed' }
 ]);

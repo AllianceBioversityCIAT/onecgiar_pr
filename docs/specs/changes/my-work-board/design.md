@@ -102,7 +102,7 @@ None.
 
 All routes above exist as children of `result-detail/:id` in `routing-data.ts` (`partners` is P22-gated, `contributor-partners` P25-gated — the map carries both).
 
-- **Status → column table (DD-1b, the single vocabulary):** 1 Editing, 8 Draft → **Editing**; 5 → **Pending review**; 3 → **Submitted**; 2 Quality Assessed, 6 Approved → **Approved**; 4 Discontinued, 7 Rejected → **Discontinued**; anything else → **Other** rail. Card chip shows `status_name`.
+- **Status → column table (DD-1b, the single vocabulary):** 1 Editing, 8 Draft → **Editing**; 5 → **Pending review**; 3 → **Submitted**; 2 Quality Assessed, 6 Approved → **Quality assessed** (group *Done*, expanded — `MWB-T-10`); 4 Discontinued, 7 Rejected → **Discontinued** (rail); anything else → **Other** rail. Card chip shows `status_name`.
 - **Lifecycle:** Editing (1) → Submitted (3) → Quality Assessed (2) (`submissions.service.ts`). `docs/trd/trd.md` `W1` prose is inverted — pending archive sync.
 
 ## 6. Frontend Plan
@@ -134,7 +134,7 @@ All routes above exist as children of `result-detail/:id` in `routing-data.ts` (
 | Tab anatomy | Same classes as the three existing tabs; icon `view_kanban`; badge `h-[18px] min-w-[18px] rounded-full bg-[var(--pr-color-primary-600)] text-[10.5px] font-bold text-white` (Results filter badge) |
 | Surfaces | Page `--pr-surface-app`; action column `bg-white border-[var(--pr-color-primary-200)]`; waiting/closed columns `bg-[var(--pr-surface-app)] border-[var(--pr-border)]`; cards `bg-white border-[var(--pr-border)] rounded-[10px] shadow-[0_1px_2px_rgba(25,21,36,0.05)]` |
 | Group labels | `text-[10px] font-bold uppercase tracking-[0.08em]`; action group `text-[var(--pr-color-primary-400)]`, others `text-[var(--pr-text-subtle)]` |
-| Status dots / count pills | `STATUS_META` (`result-framework-reporting-home/status-meta.ts`) for Editing, Submitted, Pending, Discontinued; **Approved** uses `--pr-status-approved-bg/fg` (#d1fae5 / #047857) — `MWB-DD-7`; Other rail uses the not-started pair |
+| Status dots / count pills | `STATUS_META` (`result-framework-reporting-home/status-meta.ts`) for Editing, Submitted, Pending, Discontinued; **Quality assessed** (ex-*Approved*, `MWB-T-10`) uses `--pr-status-approved-bg/fg` (#d1fae5 / #047857) — `MWB-DD-7`; Other rail uses the not-started pair |
 | Status chip on card | Results tab pill classes with `STATUS_META.chipClass` by `statusId` (fallback not-started tokens) |
 | Category chip | Results tab chip verbatim: `h-[16px] rounded-full bg-[var(--pr-color-primary-50)] px-[6px] text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-primary-400)]` |
 | Code | `font-mono text-[11px] font-semibold tracking-[0.04em] text-[var(--pr-text-subtle)]` |
@@ -142,7 +142,7 @@ All routes above exist as children of `result-detail/:id` in `routing-data.ts` (
 | Completeness | Label `text-[11px] font-semibold text-[var(--pr-text-secondary)]`; bar `h-[4px] rounded-full bg-[var(--pr-surface-ground)]`, violet gradient fill, `--pr-color-green-500` when ready; missing list `text-[11px] text-[var(--pr-text-muted)]` |
 | Primary action | `h-[28px] rounded-[8px] px-[12px] text-[12px] font-semibold text-white` on the brand gradient; secondary: white, `border-[var(--pr-color-primary-200)] text-[var(--pr-color-primary-400)]` |
 | Rails | `w-[44px] rounded-[12px]`, vertical label via `writing-mode: vertical-rl` (SCSS) |
-| Column widths | Editing `w-[360px] flex-none`; waiting group `flex-1 grid grid-cols-2 gap-[12px]`; board `flex gap-[16px] px-[32px] overflow-x-auto`; each list `flex-1 min-h-0 overflow-y-auto` |
+| Column widths | Editing `w-[360px] flex-none`; **every expanded non-Editing column `flex-1 basis-0 min-w-[260px]`** as a direct child of the board's flex row (`MWB-T-10` — the group-level grid made the GROUP the unit of width, so an expanded Closed column took twice a waiting column's share); board `flex gap-[16px] px-[32px] overflow-x-auto`; rails `w-[44px] flex-none`; each list `flex-1 min-h-0 overflow-y-auto`; group label above the group's first column |
 
 ### 6.4 States & a11y
 
@@ -195,6 +195,7 @@ Additive only. Rollback = revert the client PR (route + tab disappear) and, inde
 
 ### `MWB-DD-1b` — One status→column table
 - **Decision:** the `MWB-R-2` table lives in `my-work.view-model.ts`; merged ids keep their `status_name` on the chip; unmapped ids go to *Other*. **Alternatives:** five ids only (rejected: `L-5` — 6/7/8 exist and would vanish).
+- **Amended 2026-09-05 (`MWB-T-10`, user request):** ids 2 + 6 are the column **Quality assessed** in the expanded **Done** group — four groups now (`action` · `waiting` · `done` · `closed`), *Closed* being Discontinued (4, 7) plus the conditional *Other*. The column KEY stays `approved`: it is what the visual tokens (`MWB-DD-7`), the `MyWorkTotals` field and the CT/Jest fixtures are keyed on, and only the label is user-visible.
 
 ### `MWB-DD-2` — Opt-in flag on `roles/filter`, not a sibling endpoint
 - **Decision:** `include_completeness` on the existing endpoint; default path untouched (contract test). **Alternatives:** `results/my-work` endpoint (rejected: duplicates role/initiative filtering).
@@ -211,8 +212,8 @@ Additive only. Rollback = revert the client PR (route + tab disappear) and, inde
 ### `MWB-DD-6` — Read-only board, native controls
 - **Decision:** no DnD library, no `draggable`; CT asserts absence. **Alternatives:** CDK drag with no-op drop (rejected: signals a forbidden capability, `W1`).
 
-### `MWB-DD-7` — Approved column uses the approved status tokens
-- **Decision:** `--pr-status-approved-bg/fg` (green); *ready to submit* shares the green family. **Alternatives:** `STATUS_META` blue QAed pair (rejected: intermediate state would read more "done" than the final one).
+### `MWB-DD-7` — Quality assessed column uses the approved status tokens
+- **Decision:** `--pr-status-approved-bg/fg` (green) dress the **Quality assessed** column (ids 2 + 6, renamed from *Approved* on 2026-09-05, `MWB-T-10`) and its **Done** group label; *ready to submit* shares the green family. **Alternatives:** `STATUS_META` blue QAed pair (rejected: the intermediate state would read more "done" than this terminal one).
 
 ### `MWB-DD-8` — Closed group collapsed, volatile
 - **Decision:** page signal, default collapsed, not persisted.

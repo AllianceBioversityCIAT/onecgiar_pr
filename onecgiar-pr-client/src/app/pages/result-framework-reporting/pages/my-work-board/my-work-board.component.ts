@@ -1,4 +1,4 @@
-// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-T-8, MWB-T-9, MWB-R-1, R-3, R-7, R-9, R-10, design.md §2.2, §6.1-6.6, MWB-DD-11)
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-T-8, MWB-T-9, MWB-T-10, MWB-R-1, R-2, R-3, R-7, R-9, R-10, design.md §2.2, §6.1-6.6, MWB-DD-11)
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -125,15 +125,31 @@ export class MyWorkBoardComponent {
   readonly skeletonEditingCards = [1, 2, 3];
   readonly skeletonWaitingCards = [1, 2];
   readonly skeletonWaitingColumns = [1, 2];
-  readonly skeletonRails = [1, 2];
+  /** `MWB-T-10`: ONE rail now (Discontinued) — Quality assessed left the Closed group, and Other
+   *  is conditional so the skeleton never promises it. */
+  readonly skeletonRails = [1];
 
-  // ── Board layout groups (design.md §6.3) ───────────────────────────────────────────────────
+  // ── Board layout groups (design.md §6.3, `MWB-R-2`) ────────────────────────────────────────
   readonly editingColumn = computed(() => this.data.columns().find(column => column.key === 'editing') ?? null);
   readonly waitingColumns = computed(() => this.data.columns().filter(column => column.group === 'waiting'));
+  /** `MWB-T-10` — *Done*: Quality assessed (ids 2 + 6), always expanded, never a rail. */
+  readonly doneColumns = computed(() => this.data.columns().filter(column => column.group === 'done'));
   readonly closedColumns = computed(() => this.data.columns().filter(column => column.group === 'closed'));
-  /** Rails need no extra width (the 44px is on the rail button itself); an EXPANDED closed column
-   *  needs one, since it now renders a full region inside a plain flex row. */
-  readonly closedItemClass = computed(() => (this.closedCollapsed() ? 'flex' : 'flex flex-1 min-h-0 min-w-[260px]'));
+
+  /**
+   * `MWB-T-10` (b) — the ONE sizing contract every expanded non-Editing column obeys: an equal
+   * share of the board's free space (`flex-1 basis-0`) that never drops below a readable 260px.
+   * `basis-0` is what makes the share equal: without it a column's content width seeds the
+   * distribution and a freshly expanded Closed column would claim roughly twice its neighbours'
+   * width — the defect in the user's screenshot, where Pending review / Submitted were crushed.
+   * Columns overflowing the board scroll it horizontally, never the document (`MWB-R-9`).
+   */
+  readonly expandedColumnItemClass = 'flex flex-1 basis-0 min-h-0 min-w-[260px] flex-col gap-[8px]';
+  /** A rail is the 44px collapsed state and must not grow; expanded, it is just another equal
+   *  column — the SAME class string, so the two can never disagree. */
+  readonly closedItemClass = computed(() =>
+    this.closedCollapsed() ? 'flex w-[44px] flex-none min-h-0 flex-col gap-[8px]' : this.expandedColumnItemClass
+  );
 
   // ── View states (`MWB-R-7`) — mutually exclusive ───────────────────────────────────────────
   readonly showSkeleton = computed(() => this.data.loading() && this.data.rows().length === 0);

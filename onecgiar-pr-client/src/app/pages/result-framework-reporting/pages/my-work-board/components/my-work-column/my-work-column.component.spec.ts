@@ -38,7 +38,7 @@ describe('MyWorkColumnComponent', () => {
   let fixture: ComponentFixture<MyWorkColumnComponent>;
   let component: MyWorkColumnComponent;
 
-  const build = async (inputs: { column: MyWorkColumn; rail?: boolean; collapsed?: boolean }) => {
+  const build = async (inputs: { column: MyWorkColumn; rail?: boolean; collapsed?: boolean; collapsible?: boolean }) => {
     await TestBed.configureTestingModule({
       imports: [MyWorkColumnComponent],
       providers: [provideRouter([])]
@@ -48,6 +48,7 @@ describe('MyWorkColumnComponent', () => {
     fixture.componentRef.setInput('column', inputs.column);
     if (inputs.rail !== undefined) fixture.componentRef.setInput('rail', inputs.rail);
     if (inputs.collapsed !== undefined) fixture.componentRef.setInput('collapsed', inputs.collapsed);
+    if (inputs.collapsible !== undefined) fixture.componentRef.setInput('collapsible', inputs.collapsible);
     fixture.detectChanges();
   };
 
@@ -98,18 +99,54 @@ describe('MyWorkColumnComponent', () => {
 
       expect(text()).not.toContain('ready to submit');
     });
+
+    // `MWB-T-10` (a) — the user's screenshot defect: "cuando uno abre todo no tiene cómo
+    // comprimirlo nuevamente". Only a Closed-group column is collapsible; Done/waiting/action
+    // columns never offer the control.
+    describe('collapse control (MWB-T-10)', () => {
+      it('offers a labelled collapse button with aria-expanded=true when collapsible', async () => {
+        await build({ column: column({ key: 'discontinued', label: 'Discontinued', rows: [row()] }), collapsible: true });
+
+        const collapse = root().querySelector('button[aria-label="Collapse Discontinued"]') as HTMLButtonElement;
+        expect(collapse).toBeTruthy();
+        expect(collapse.getAttribute('aria-expanded')).toBe('true');
+        expect(collapse.textContent).toContain('chevron_left');
+      });
+
+      it('emits toggle when the collapse button is clicked', async () => {
+        await build({ column: column({ key: 'discontinued', label: 'Discontinued', rows: [row()] }), collapsible: true });
+        const spy = jest.fn();
+        component.expandToggle.subscribe(spy);
+
+        (root().querySelector('button[aria-label="Collapse Discontinued"]') as HTMLButtonElement).click();
+
+        expect(spy).toHaveBeenCalledTimes(1);
+      });
+
+      it('renders no collapse control on a non-collapsible column (default)', async () => {
+        await build({ column: column({ key: 'approved', label: 'Quality assessed', rows: [row()] }) });
+
+        expect(root().querySelector('button[aria-expanded]')).toBeNull();
+        expect(root().querySelectorAll('button[aria-label^="Collapse"]').length).toBe(0);
+      });
+    });
   });
 
   describe('rail (collapsed) mode', () => {
     it('renders a 44px aria-expanded button carrying the count and the vertical label', async () => {
-      await build({ column: column({ key: 'approved', label: 'Approved', rows: [row(), row({ code: '2' }), row({ code: '3' }), row({ code: '4' }) ] }), rail: true, collapsed: true });
+      // `MWB-T-10`: Quality assessed is never a rail any more — Discontinued is the canonical one.
+      await build({
+        column: column({ key: 'discontinued', label: 'Discontinued', rows: [row(), row({ code: '2' }), row({ code: '3' }), row({ code: '4' })] }),
+        rail: true,
+        collapsed: true
+      });
 
       const btn = root().querySelector('button') as HTMLButtonElement;
       expect(btn).toBeTruthy();
       expect(btn.className).toContain('w-[44px]');
       expect(btn.getAttribute('aria-expanded')).toBe('false');
       expect(btn.textContent).toContain('4');
-      expect(btn.textContent).toContain('Approved');
+      expect(btn.textContent).toContain('Discontinued');
       expect(root().querySelector('section')).toBeNull();
     });
 

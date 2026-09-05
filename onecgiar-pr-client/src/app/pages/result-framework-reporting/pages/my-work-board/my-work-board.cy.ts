@@ -1,4 +1,4 @@
-// @akili-spec changes/my-work-board (MWB-T-5, MWB-R-9, MWB-R-6 negative, NFR Accessibility, MWB-AC-9, design.md MWB-DD-6, MWB-DD-9, §10 MWB-TEST-6)
+// @akili-spec changes/my-work-board (MWB-T-5, MWB-T-10, MWB-R-9, MWB-R-6 negative, NFR Accessibility, MWB-AC-9, design.md MWB-DD-6, MWB-DD-9, §10 MWB-TEST-6)
 //
 // Cypress Component Test — mounts the REAL `MyWorkBoardComponent` (real `MyWorkColumnComponent` /
 // `MyWorkCardComponent` board area) with a mocked `MyWorkBoardService` built from a genuine
@@ -295,10 +295,11 @@ function assertNoDragAndDrop(label: string) {
   cy.log(`${label}: no [draggable] / [dropzone] / [ondrop] anywhere on the board`);
 }
 
-/** Five columns, fixed order, each with an accessible name; Closed group (Approved,
- *  Discontinued) collapsed to `button[aria-expanded="false"]` rails by default (`MWB-DD-8`). */
+/** Five columns, fixed order, each with an accessible name; the Closed group (Discontinued alone
+ *  since `MWB-T-10` moved Quality assessed into the expanded *Done* group) collapsed to a
+ *  `button[aria-expanded="false"]` rail by default (`MWB-DD-8`). */
 function assertColumnStructure(label: string) {
-  const expectedOrder = ['Editing', 'Pending review', 'Submitted', 'Approved', 'Discontinued'];
+  const expectedOrder = ['Editing', 'Pending review', 'Submitted', 'Quality assessed', 'Discontinued'];
 
   cy.get('app-my-work-column').should($cols => {
     expect($cols.length, `${label}: five columns rendered`).to.eq(5);
@@ -312,10 +313,41 @@ function assertColumnStructure(label: string) {
     });
   });
 
-  // Scoped to `app-my-work-column` — `app-pr-tab-intro`'s own explainer toggle also renders an
-  // `aria-expanded="false"` button while collapsed, and is not part of the Closed group.
+  // Scoped to `app-my-work-column` — the toolbar's Filter button also renders an
+  // `aria-expanded="false"` button while closed, and is not part of the Closed group.
   cy.get('app-my-work-column button[aria-expanded="false"]').should($rails => {
-    expect($rails.length, `${label}: Approved + Discontinued render as collapsed rails`).to.eq(2);
+    expect($rails.length, `${label}: Discontinued is the only collapsed rail (MWB-T-10)`).to.eq(1);
+  });
+
+  // `MWB-T-10`: Quality assessed is an EXPANDED region with its 4 cards, never a rail.
+  cy.get('section[aria-labelledby="my-work-column-approved"]').should($section => {
+    expect($section.length, `${label}: Quality assessed renders expanded`).to.eq(1);
+    expect($section[0].querySelectorAll('article').length, `${label}: Quality assessed shows its 4 cards`).to.eq(4);
+  });
+}
+
+/** `MWB-T-10` (b): every expanded non-Editing column takes the SAME width, never less than 260px;
+ *  Editing keeps its fixed 360px and a rail its 44px. */
+function assertEqualExpandedColumnWidths(label: string, expectedExpandedCount: number) {
+  cy.get('[data-testid="my-work-board-column-item"]').should($items => {
+    const items = Array.from($items) as HTMLElement[];
+    const editing = items.find(item => item.dataset['columnKey'] === 'editing') as HTMLElement;
+    expect(Math.round(editing.getBoundingClientRect().width), `${label}: Editing column is 360px`).to.eq(360);
+
+    // A rail while collapsed is 44px wide; everything else on the board is an equal share.
+    const rails = items.filter(item => !!item.querySelector('button[aria-expanded="false"]'));
+    rails.forEach(rail => {
+      expect(Math.round(rail.getBoundingClientRect().width), `${label}: rail is 44px`).to.eq(44);
+    });
+
+    const expanded = items.filter(item => item.dataset['columnKey'] !== 'editing' && !rails.includes(item));
+    const widths = expanded.map(item => item.getBoundingClientRect().width);
+    expect(expanded.length, `${label}: ${expectedExpandedCount} expanded non-Editing columns`).to.eq(expectedExpandedCount);
+    widths.forEach((width, i) => {
+      expect(width, `${label}: column ${expanded[i].dataset['columnKey']} width(${width.toFixed(1)}) >= 260`).to.be.at.least(259.5);
+    });
+    const spread = Math.max(...widths) - Math.min(...widths);
+    expect(spread, `${label}: equal widths — spread(${spread.toFixed(2)}px) over [${widths.map(w => w.toFixed(1)).join(', ')}]`).to.be.at.most(1);
   });
 }
 
@@ -366,7 +398,47 @@ describe('MyWorkBoardComponent — Cypress CT (MWB-T-5)', () => {
       assertBandAndToolbarStayInViewport(`${width}×${height}`, height);
       assertNoDragAndDrop(`${width}×${height}`);
       assertColumnStructure(`${width}×${height}`);
+      assertEqualExpandedColumnWidths(`${width}×${height}`, 3);
       assertStructuralAccessibility(`${width}×${height}`);
     });
+  });
+
+  // `MWB-T-10` — the two defects from the user's screenshot (2026-09-05): an expanded Closed column
+  // had no way back, and it claimed roughly twice the width of Pending review / Submitted, which
+  // got crushed. Both are pure layout, so the CT at a real 1280 is the only evidence (jsdom cannot
+  // measure any of it — the Jest spec can only assert the class set).
+  it('1280×720 — expanding Discontinued keeps every column equal and ≥ 260px, and the collapse control puts it back (MWB-T-10)', () => {
+    const label = '1280×720 expanded';
+    cy.viewport(1280, 720);
+    mountBoard();
+
+    cy.window().should(win => {
+      expect(win.innerWidth, `${label}: window.innerWidth`).to.eq(1280);
+    });
+
+    // Collapsed default: 3 expanded non-Editing columns + 1 rail.
+    assertEqualExpandedColumnWidths('1280×720 collapsed', 3);
+
+    cy.get('app-my-work-column button[aria-expanded="false"]').click();
+
+    // Expanded: 4 equal non-Editing columns, no rail, and the collapse control is present.
+    cy.get('app-my-work-column button[aria-expanded="false"]').should('not.exist');
+    cy.get('button[aria-label="Collapse Discontinued"]').should($btn => {
+      expect($btn.length, `${label}: collapse control rendered in the expanded header`).to.eq(1);
+      expect($btn[0].getAttribute('aria-expanded'), `${label}: collapse control aria-expanded`).to.eq('true');
+    });
+    assertEqualExpandedColumnWidths(label, 4);
+    // The board container may scroll horizontally (`MWB-R-9`); the DOCUMENT never may.
+    assertNoBodyHorizontalOverflow(label, 1280);
+    assertBandAndToolbarStayInViewport(label, 720);
+
+    // …and back to the rail.
+    cy.get('button[aria-label="Collapse Discontinued"]').click();
+    cy.get('button[aria-label="Collapse Discontinued"]').should('not.exist');
+    cy.get('app-my-work-column button[aria-expanded="false"]').should($rails => {
+      expect($rails.length, `${label}: Discontinued is a collapsed rail again`).to.eq(1);
+    });
+    assertEqualExpandedColumnWidths('1280×720 re-collapsed', 3);
+    assertNoBodyHorizontalOverflow('1280×720 re-collapsed', 1280);
   });
 });

@@ -317,39 +317,54 @@
                column is a placeholder. `animate-pulse` sits on each column/rail shell — it animates
                `opacity` only, so nothing here transitions a transform or a height, and the pulse
                cascades to the card placeholders through the shell's own opacity. -->
+          <!-- `MWB-T-10`: one flat flex row of column items — Editing shell, three EQUAL shells
+               (Pending review, Submitted, Quality assessed) and one 44px rail (Discontinued),
+               each carrying its group label only on the group's first column, exactly as the real
+               board below. Same container classes, so the skeleton→content swap moves nothing. -->
           <div class="flex flex-1 min-h-0 gap-[16px] overflow-x-auto px-[16px] py-[14px] sm:px-[32px]" aria-live="polite" aria-busy="true">
             <span class="sr-only">Loading your board</span>
 
             <!-- Needs my action — `w-[360px]`, same as the real Editing column. -->
             <div class="flex w-[360px] flex-none flex-col gap-[8px]">
-              <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-primary-400)]">Needs my action</span>
+              <span class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-color-primary-400)]"
+                >Needs my action</span
+              >
               <ng-container *ngTemplateOutlet="skeletonColumn; context: { $implicit: skeletonEditingCards }" />
             </div>
 
-            <!-- Waiting on others — the same two-up grid the real group uses. -->
-            <div class="flex min-w-0 flex-1 flex-col gap-[8px]">
-              <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">Waiting on others</span>
-              <div class="grid flex-1 min-h-0 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-[12px]">
-                @for (column of skeletonWaitingColumns; track column) {
-                  <ng-container *ngTemplateOutlet="skeletonColumn; context: { $implicit: skeletonWaitingCards }" />
-                }
+            <!-- Waiting on others — two equal shells, the label above the first. -->
+            @for (column of skeletonWaitingColumns; track column; let first = $first) {
+              <div [class]="expandedColumnItemClass">
+                <span class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-text-subtle)]">{{
+                  first ? 'Waiting on others' : ''
+                }}</span>
+                <ng-container *ngTemplateOutlet="skeletonColumn; context: { $implicit: skeletonWaitingCards }" />
               </div>
+            }
+
+            <!-- Done — the Quality assessed shell, same width as the two above (`MWB-T-10`). -->
+            <div [class]="expandedColumnItemClass">
+              <span
+                class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-status-approved-fg)]"
+                >Done</span
+              >
+              <ng-container *ngTemplateOutlet="skeletonColumn; context: { $implicit: skeletonWaitingCards }" />
             </div>
 
-            <!-- Closed — two 44px rails, matching the collapsed default (`MWB-DD-8`). -->
-            <div class="flex flex-none flex-col gap-[8px]">
-              <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">Closed</span>
-              <div class="flex flex-1 min-h-0 gap-[8px]">
-                @for (rail of skeletonRails; track rail) {
-                  <div
-                    class="flex w-[44px] flex-1 min-h-0 animate-pulse flex-col items-center gap-[10px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] py-[12px] motion-reduce:animate-none"
-                    data-testid="my-work-skeleton-column">
-                    <span class="h-[20px] w-[20px] flex-none rounded-full bg-[var(--pr-surface-ground)]"></span>
-                    <span class="h-[76px] w-[10px] flex-none rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
-                  </div>
-                }
+            <!-- Closed — one 44px rail, matching the collapsed default (`MWB-DD-8`). -->
+            @for (rail of skeletonRails; track rail; let first = $first) {
+              <div class="flex w-[44px] flex-none min-h-0 flex-col gap-[8px]">
+                <span class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-text-subtle)]">{{
+                  first ? 'Closed' : ''
+                }}</span>
+                <div
+                  class="flex w-[44px] flex-1 min-h-0 animate-pulse flex-col items-center gap-[10px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] py-[12px] motion-reduce:animate-none"
+                  data-testid="my-work-skeleton-column">
+                  <span class="h-[20px] w-[20px] flex-none rounded-full bg-[var(--pr-surface-ground)]"></span>
+                  <span class="h-[76px] w-[10px] flex-none rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+                </div>
               </div>
-            </div>
+            }
           </div>
         } @else if (showError()) {
           <div
@@ -403,45 +418,63 @@
                remounts this container and replays its entrance fade once; per-row/card updates
                inside an unchanged scope+phase do not touch the key, so no per-card animation. -->
           @for (regroupKey of [boardRegroupKey()]; track regroupKey) {
+            <!-- `MWB-T-10` (b): ONE flat flex row of column items — no nested group grid any more.
+                 A grid (or a per-group wrapper) made the group, not the column, the unit of width:
+                 the two-up *Waiting* grid and a single expanded *Closed* column each took one flex
+                 share, so an expanded rail rendered twice as wide as Pending review / Submitted.
+                 Flat + `flex-1 basis-0` on every expanded non-Editing item is what makes the four
+                 columns equal; the group label rides above the group's FIRST column (with a fixed
+                 14px box on the others so every column's header line stays aligned). -->
             <div class="pr-board-fade flex flex-1 min-h-0 gap-[16px] overflow-x-auto px-[16px] py-[14px] sm:px-[32px]">
-              <!-- Needs my action -->
+              <!-- Needs my action — the one fixed-width column (`design.md` §6.3). -->
               @if (editingColumn(); as editing) {
-                <div class="flex w-[360px] flex-none flex-col gap-[8px]">
-                  <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-primary-400)]">Needs my action</span>
+                <div class="flex w-[360px] flex-none flex-col gap-[8px]" data-testid="my-work-board-column-item" data-column-key="editing">
+                  <span class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-color-primary-400)]"
+                    >Needs my action</span
+                  >
                   <app-my-work-column [column]="editing" />
                 </div>
               }
 
               <!-- Waiting on others -->
-              @if (waitingColumns().length) {
-                <div class="flex min-w-0 flex-1 flex-col gap-[8px]">
-                  <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">Waiting on others</span>
-                  <div class="grid flex-1 min-h-0 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-[12px]">
-                    @for (col of waitingColumns(); track col.key) {
-                      <app-my-work-column [column]="col" />
-                    }
-                  </div>
+              @for (col of waitingColumns(); track col.key; let first = $first) {
+                <div [class]="expandedColumnItemClass" data-testid="my-work-board-column-item" [attr.data-column-key]="col.key">
+                  <span class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-text-subtle)]">{{
+                    first ? 'Waiting on others' : ''
+                  }}</span>
+                  <app-my-work-column [column]="col" />
                 </div>
               }
 
-              <!-- Closed (collapsed rails by default, MWB-DD-8) -->
-              @if (closedColumns().length) {
-                <div class="flex flex-none flex-col gap-[8px]">
-                  <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">Closed</span>
-                  <div class="flex flex-1 min-h-0 gap-[8px]">
-                    @for (col of closedColumns(); track col.key) {
-                      <!-- `MWB-T-7` (3) gap: no width/opacity transition here — both `closedItemClass()`
-                           states resolve to `width: auto` under flex, so nothing transitions; the
-                           delivered part of (3) is the expanded `section`'s entrance fade below. -->
-                      <div [class]="closedItemClass()">
-                        <app-my-work-column
-                          [column]="col"
-                          [rail]="closedCollapsed()"
-                          [collapsed]="closedCollapsed()"
-                          (expandToggle)="toggleClosed()" />
-                      </div>
-                    }
-                  </div>
+              <!-- Done — Quality assessed (`status_id` 2 + 6), the W1/W2 terminal success state.
+                   Expanded like the waiting columns, never a rail; the label wears the approved
+                   token family (`MWB-DD-7`, design.md §6.3). -->
+              @for (col of doneColumns(); track col.key; let first = $first) {
+                <div [class]="expandedColumnItemClass" data-testid="my-work-board-column-item" [attr.data-column-key]="col.key">
+                  <span
+                    class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-status-approved-fg)]"
+                    >{{ first ? 'Done' : '' }}</span
+                  >
+                  <app-my-work-column [column]="col" />
+                </div>
+              }
+
+              <!-- Closed (Discontinued + the conditional Other) — collapsed rails by default,
+                   `MWB-DD-8`. `collapsible` is what gives an EXPANDED one its way back to the rail
+                   (`MWB-T-10` (a), the user's screenshot defect). -->
+              @for (col of closedColumns(); track col.key; let first = $first) {
+                <!-- `MWB-T-7` (3) gap: no width/opacity transition here — the delivered part of (3)
+                     is the expanded `section`'s own entrance fade inside `app-my-work-column`. -->
+                <div [class]="closedItemClass()" data-testid="my-work-board-column-item" [attr.data-column-key]="col.key">
+                  <span class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-text-subtle)]">{{
+                    first ? 'Closed' : ''
+                  }}</span>
+                  <app-my-work-column
+                    [column]="col"
+                    [rail]="closedCollapsed()"
+                    [collapsed]="closedCollapsed()"
+                    [collapsible]="!closedCollapsed()"
+                    (expandToggle)="toggleClosed()" />
                 </div>
               }
             </div>

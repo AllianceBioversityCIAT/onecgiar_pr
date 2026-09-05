@@ -69,15 +69,33 @@ describe('my-work.view-model', () => {
   });
 
   describe('MY_WORK_COLUMN_DEFS', () => {
+    // `MWB-T-10`: the `approved` column is labelled *Quality assessed* and belongs to the expanded
+    // *Done* group — only Discontinued and Other stay in the collapsed *Closed* group.
     it('is the fixed order with the right group ids', () => {
       expect(MY_WORK_COLUMN_DEFS.map(def => [def.key, def.group])).toEqual([
         ['editing', 'action'],
         ['pending', 'waiting'],
         ['submitted', 'waiting'],
-        ['approved', 'closed'],
+        ['approved', 'done'],
         ['discontinued', 'closed'],
         ['other', 'closed']
       ]);
+    });
+
+    it('labels the ids 2 + 6 column "Quality assessed" (MWB-T-10, user request 2026-09-05)', () => {
+      expect(MY_WORK_COLUMN_DEFS.map(def => [def.key, def.label])).toEqual([
+        ['editing', 'Editing'],
+        ['pending', 'Pending review'],
+        ['submitted', 'Submitted'],
+        ['approved', 'Quality assessed'],
+        ['discontinued', 'Discontinued'],
+        ['other', 'Other']
+      ]);
+    });
+
+    it('keeps exactly one expanded Done column and two collapsible Closed columns', () => {
+      expect(MY_WORK_COLUMN_DEFS.filter(def => def.group === 'done').map(def => def.key)).toEqual(['approved']);
+      expect(MY_WORK_COLUMN_DEFS.filter(def => def.group === 'closed').map(def => def.key)).toEqual(['discontinued', 'other']);
     });
   });
 

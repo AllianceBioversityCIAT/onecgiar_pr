@@ -76,15 +76,15 @@ Two building blocks exist: the results list endpoint accepts `filter_created_by_
 - BUT it must NOT drop or rewrite `phase`
 - AND IT MUST show the badge only when the Editing count is greater than zero
 
-- **`MWB-R-2` Status columns and groups.** Rows MUST be placed by `status_id` through this table, columns rendered in this fixed order:
+- **`MWB-R-2` Status columns and groups.** Rows MUST be placed by `status_id` through this table, columns rendered in this fixed order (groups: *Needs my action* · *Waiting on others* · *Done* · *Closed*):
 
 | Column (label) | `status_id` | Group |
 |---|---|---|
 | **Editing** | 1 Editing · 8 Draft | Needs my action |
 | **Pending review** | 5 Pending Review | Waiting on others |
 | **Submitted** | 3 Submitted | Waiting on others |
-| **Approved** | 2 Quality Assessed · 6 Approved | Closed |
-| **Discontinued** | 4 Discontinued · 7 Rejected | Closed |
+| **Quality assessed** (expanded; renamed from *Approved* and moved out of Closed on 2026-09-05, user request — `MWB-T-10`) | 2 Quality Assessed · 6 Approved | Done |
+| **Discontinued** (rail, collapsible both ways) | 4 Discontinued · 7 Rejected | Closed |
 | **Other** (rail, rendered only when non-empty) | any other id | Closed |
 
 Each card MUST show the payload's `status_name` as its status chip so Draft, Approved and Rejected stay distinguishable inside a merged column. Each column header MUST show its status dot, label and card count. The *Closed* group MUST render collapsed (narrow rails with count) by default and expand on click for the current visit only.
@@ -93,10 +93,11 @@ Each card MUST show the payload's `status_name` as its status chip so Draft, App
 
 - GIVEN a user with 3 Editing, 1 Pending review, 2 Submitted, 4 Quality Assessed and 1 Discontinued results in the phase
 - WHEN the board renders
-- THEN Editing, Pending review and Submitted show their cards, and Approved / Discontinued show as rails with counts 4 and 1; no *Other* rail
-- AND clicking a rail expands that column with its cards
+- THEN Editing, Pending review, Submitted and Quality assessed show their cards, and Discontinued shows as a rail with count 1; no *Other* rail
+- AND clicking a rail expands that column with its cards, and the expanded column offers a collapse control that returns it to a rail (`MWB-T-10`)
 - BUT it must NOT persist the expanded state across a reload or navigation (volatile, same rule as the tab explainer panels)
 - AND IT MUST keep the five columns in place regardless of counts (an empty column still renders, with its empty state)
+- AND IT MUST give every expanded non-Editing column the same width (never twice another's), keeping each at least 260px wide and scrolling the board horizontally when they do not fit (`MWB-T-10`)
 
 #### Scenario: Merged and unmapped statuses
 
@@ -158,7 +159,7 @@ Each card MUST show the payload's `status_name` as its status chip so Draft, App
 - BUT it must NOT expose a draggable handle, `draggable="true"`, or any drop target on cards or columns
 - AND IT MUST keep the whole card keyboard reachable (the action is a real `<button>` / `<a>` with a visible focus ring)
 
-- **`MWB-R-7` UI states.** The board MUST render: a board-shaped skeleton while loading (filter row visible; group labels, five column shells with header and card placeholders, two rails — `MWB-T-8`, user request 2026-09-05); an error panel with a **Retry** action when the list request fails; a per-column empty message when a column has no cards; a whole-board empty state (*Nothing on your board yet* + **Go to Reporting** + *See all program results*) when the active scope + phase has zero rows.
+- **`MWB-R-7` UI states.** The board MUST render: a board-shaped skeleton while loading (filter row visible; group labels, five column shells with header and card placeholders (four expanded + one rail after `MWB-T-10`) — `MWB-T-8`, user request 2026-09-05); an error panel with a **Retry** action when the list request fails; a per-column empty message when a column has no cards; a whole-board empty state (*Nothing on your board yet* + **Go to Reporting** + *See all program results*) when the active scope + phase has zero rows.
 
 #### Scenario: Whole-board empty
 
