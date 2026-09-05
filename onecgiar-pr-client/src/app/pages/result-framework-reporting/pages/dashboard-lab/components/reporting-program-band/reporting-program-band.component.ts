@@ -30,25 +30,7 @@ export interface BandFilterGroup {
   items: BandFilterOption[];
 }
 
-export interface ReportingSummaryStats {
-  programsCount: number;
-  aowsCount: number;
-  totalKpis: number;
-  reportedKpis: number;
-  /**
-   * Program **Planned** — every KPI the ToC plans, zero-target ones included. `totalKpis` is
-   * *Counted* (the zero-target rule already applied, `KCR-R-8`), so the two differ by exactly
-   * `zeroTargetKpis`; the pair is what `totalKpisTitle` discloses. Optional: a caller with no
-   * planned figure to state simply omits both and the figure carries no `title`.
-   * @akili-spec bugfix/kpi-count-reconciliation
-   */
-  plannedKpis?: number;
-  /**
-   * How many planned KPIs the zero-target rule (`MRF-R-7`) removed from `totalKpis`.
-   * @akili-spec bugfix/kpi-count-reconciliation
-   */
-  zeroTargetKpis?: number;
-}
+export type { ReportingSummaryStats } from '../reporting-summary-stats/reporting-summary-stats.component';
 
 /**
  * Program band + tabs + Reporting toolbar.
@@ -128,14 +110,6 @@ export class ReportingProgramBandComponent {
 
   readonly programCode = input<string>('');
   readonly programName = input<string>('');
-  /** Summary statistics banner above reporting heading (PROGRAMS, AOWs, TOTAL KPIs, EVIDENCE). */
-  readonly summaryStats = input<ReportingSummaryStats | null>(null);
-  /**
-   * True while any AoW ToC is still loading. The stats are SUMS over whatever has arrived, so
-   * painting them mid-stream shows numbers that then change — a skeleton is honest, a moving
-   * figure is not (owner field report 2026-08-31).
-   */
-  readonly statsLoading = input<boolean>(false);
   /**
    * Long copy for the ⓘ popover body. Empty → fall back to a short placeholder built from the
    * name (the SP list payload still has no description field — NEEDS-BACKEND).
@@ -650,35 +624,6 @@ export class ReportingProgramBandComponent {
 
   removeOnlyPendingChip(): void {
     this.onlyPendingChange.emit(false);
-  }
-
-  /**
-   * `title` for the **Total KPIs** figure (`KCR-R-2.1`, `KCR-DD-4`). The figure itself is *Counted*;
-   * this states the *Planned* count it was derived from and, when the zero-target rule removed at
-   * least one KPI, how many — `11 planned · excludes 2 zero-target KPIs`, or plain `11 planned`
-   * when nothing was excluded. Built here rather than in the template: `KCR` design §6.3 forbids
-   * template arithmetic, and the pluralisation has to match `reporting-aow-table.countLabel`
-   * exactly so the band and the grouped table never disagree on the same sentence.
-   *
-   * `null` (not `''`) when the host carries no `plannedKpis` — `[attr.title]` then omits the
-   * attribute instead of rendering an empty tooltip.
-   * @akili-spec bugfix/kpi-count-reconciliation
-   */
-  totalKpisTitle(stats: ReportingSummaryStats): string | null {
-    const planned = stats.plannedKpis;
-    if (planned === null || planned === undefined) return null;
-    const zeroTarget = stats.zeroTargetKpis ?? 0;
-    if (zeroTarget <= 0) return `${planned} planned`;
-    return `${planned} planned · excludes ${this.countLabel(zeroTarget, 'zero-target KPI')}`;
-  }
-
-  /** Same body as `reporting-aow-table.countLabel` — the pluralisation `KCR-R-2.1` pins. */
-  private countLabel(n: number, noun: string): string {
-    return `${n} ${noun}${n === 1 ? '' : 's'}`;
-  }
-
-  evidencePercentage(stats: ReportingSummaryStats): number {
-    return stats.totalKpis > 0 ? Math.round((stats.reportedKpis / stats.totalKpis) * 100) : 0;
   }
 
   toggleInfo(event: Event): void {

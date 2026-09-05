@@ -40,6 +40,7 @@ import { IndicatorDrawerComponent } from './components/indicator-drawer/indicato
 import { ReportingAowTableComponent, ReportingAowGroup, ReportingIndicator } from './components/reporting-aow-table/reporting-aow-table.component';
 import { buildReportModalNode } from './components/reporting-aow-table/report-modal-context.util';
 import { ReportingProgramBandComponent, BandFilterOption } from './components/reporting-program-band/reporting-program-band.component';
+import { ReportingSummaryStatsComponent } from './components/reporting-summary-stats/reporting-summary-stats.component';
 import { AowHloCreateModalComponent } from '../entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/aow-hlo-create-modal.component';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
@@ -371,6 +372,7 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
     HighlightSearchPipe,
     ReportingAowTableComponent,
     ReportingProgramBandComponent,
+    ReportingSummaryStatsComponent,
     ProgramOverviewComponent,
     ReportingEntryHubComponent,
     NarrativePanelComponent,

@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { ReportingProgramBandComponent, ReportingSummaryStats } from './reporting-program-band.component';
+import { ReportingProgramBandComponent } from './reporting-program-band.component';
 import { ReportingGuideService } from '../../services/reporting-guide.service';
 
 /**
@@ -946,86 +946,6 @@ describe('ReportingProgramBandComponent', () => {
       expect(root().querySelector('[data-testid="program-band-back-btn"]')).toBeNull();
       expect(root().querySelector('[data-testid="program-band-back-btn-collapsed"]')).toBeNull();
       expect(text()).not.toContain('Back to');
-    });
-  });
-
-  describe('summary stats card', () => {
-    it('renders summary stats card above reporting heading when summaryStats is provided', async () => {
-      await build({
-        showToolbar: true,
-        summaryStats: {
-          programsCount: 1,
-          aowsCount: 5,
-          totalKpis: 41,
-          reportedKpis: 0
-        }
-      });
-
-      const text = root().textContent || '';
-      expect(text).toContain('Programs/Accelerators');
-      expect(text).toContain('Areas of Work');
-      expect(text).toContain('Total KPIs');
-      expect(text).toContain('KPIs with Evidence');
-    });
-  });
-
-  // ── KCR-T-3 · Total KPIs disclosure (KCR-R-2.1 / KCR-DD-4, KCR-AC-2) ──────
-  /**
-   * The big figure is *Counted*; the two numbers it cannot show — how many KPIs were PLANNED and
-   * how many the zero-target rule removed from the denominator — live in its `title`. The full
-   * string is asserted on purpose: requirements.md §9 records that "a `title` present with wrong
-   * text is caught only if the test asserts the text".
-   * @akili-spec bugfix/kpi-count-reconciliation
-   */
-  describe('Total KPIs zero-target disclosure (KCR-R-2.1)', () => {
-    /** The KPI card carrying `label`, resolved upwards from its uppercase label span. */
-    const kpiCard = (label: string): HTMLElement => {
-      const heading = Array.from(root().querySelectorAll('span')).find(s => s.textContent?.trim() === label);
-      return heading!.closest('div.flex.flex-col') as HTMLElement;
-    };
-    const totalKpisFigure = (): HTMLElement => kpiCard('Total KPIs').querySelector('.pr-figure') as HTMLElement;
-    const totalKpisTitle = (): string | null => totalKpisFigure().getAttribute('title');
-
-    /** The requirements.md §7 fixture: planned 11, zero-target 2 (`a4`, `#902`), counted 9. */
-    const stats = (over: Partial<ReportingSummaryStats> = {}): ReportingSummaryStats => ({
-      programsCount: 1,
-      aowsCount: 2,
-      totalKpis: 9,
-      reportedKpis: 1,
-      plannedKpis: 11,
-      zeroTargetKpis: 2,
-      ...over
-    });
-
-    it('states planned and the plural exclusion: "11 planned · excludes 2 zero-target KPIs"', async () => {
-      await build({ showToolbar: true, summaryStats: stats() });
-
-      expect(totalKpisFigure().textContent?.trim()).toBe('9');
-      expect(totalKpisTitle()).toBe('11 planned · excludes 2 zero-target KPIs');
-    });
-
-    it('drops the excludes clause entirely when nothing was excluded: "11 planned"', async () => {
-      // The same fixture with the two zero-target KPIs given `target = 1`: planned stays 11, the
-      // denominator becomes 11 and there is nothing left to disclose.
-      await build({ showToolbar: true, summaryStats: stats({ totalKpis: 11, zeroTargetKpis: 0 }) });
-
-      expect(totalKpisTitle()).toBe('11 planned');
-      expect(totalKpisTitle()).not.toContain('excludes');
-    });
-
-    it('uses the singular noun for exactly one: "11 planned · excludes 1 zero-target KPI"', async () => {
-      await build({ showToolbar: true, summaryStats: stats({ totalKpis: 10, zeroTargetKpis: 1 }) });
-
-      expect(totalKpisTitle()).toBe('11 planned · excludes 1 zero-target KPI');
-    });
-
-    it('omits the attribute for a caller that carries no planned figure (optional-field contract)', async () => {
-      await build({
-        showToolbar: true,
-        summaryStats: { programsCount: 1, aowsCount: 5, totalKpis: 41, reportedKpis: 0 }
-      });
-
-      expect(totalKpisTitle()).toBeNull();
     });
   });
 

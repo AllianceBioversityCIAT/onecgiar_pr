@@ -1447,8 +1447,6 @@
           <app-reporting-program-band
             [programCode]="selected()?.initiativeCode || ''"
             [programName]="selected()?.initiativeShortName || selected()?.initiativeName || ''"
-            [summaryStats]="plannedBrowseView() === 'aows' ? plannedReportingSummaryStats() : null"
-            [statsLoading]="plannedReportingStatsLoading()"
             [aowCount]="aows().length"
             [plannedResultsCount]="bandPlannedResultsCount()"
             [cycleYear]="dataControlSE.reportingCurrentPhase.phaseYear"
@@ -1505,6 +1503,11 @@
           <!-- SAV-T-3 — the ≥900px work-area scroller (design.md §2.2): toolbar-less body, it
                scrolls the AoW cards / reporting table below the band. -->
           <div #workArea class="min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll">
+          @if (plannedBrowseView() === 'aows') {
+            <app-reporting-summary-stats
+              [stats]="plannedReportingSummaryStats()"
+              [loading]="plannedReportingStatsLoading()" />
+          }
           <!-- Content pad: 32px horizontal, 20px top, 32px bottom. 20px between AoW cards. -->
           <div class="flex flex-col gap-[16px] sm:gap-[20px] px-[16px] sm:px-[24px] lg:px-[32px] pt-[16px] sm:pt-[20px] pb-[32px]" data-guide="tab-reporting-view">
             @if (loadingAows()) {
