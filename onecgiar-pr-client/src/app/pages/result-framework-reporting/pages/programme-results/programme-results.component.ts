@@ -45,6 +45,8 @@ import {
 } from '../bilateral-results/bilateral-results.service';
 import { PrToastService } from '../../../../shared/components/pr-toast';
 import { ProgrammeResultRow, ProgrammeResultsService } from './services/programme-results.service';
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1)
+import { MyWorkCountService } from '../my-work-board/services/my-work-count.service';
 import {
   ProgrammeResultsFilterChip,
   ProgrammeResultsFilterService,
@@ -624,6 +626,8 @@ export class ProgrammeResultsComponent implements OnDestroy {
   private readonly clipboard = inject(Clipboard);
   private readonly toastSE = inject(PrToastService);
   private readonly smartNav = inject(SmartNavigationService);
+  /** @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1) — the My work tab's badge. */
+  private readonly myWorkCountSE = inject(MyWorkCountService);
 
   readonly data = inject(ProgrammeResultsService);
   readonly filter = inject(ProgrammeResultsFilterService);
@@ -818,6 +822,18 @@ export class ProgrammeResultsComponent implements OnDestroy {
   /** The Reporting tab's path — the "Go to Reporting" button of the nothing-yet empty state. */
   readonly reportingPath = computed(() => `/result-framework-reporting/entity-details/${this.programmeCode()}`);
 
+  // @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1)
+  /** Same phase label the My work board itself defaults to (design.md §6.6) — the current
+   *  reporting phase's name. `null` when it has not resolved yet: the band hides the badge. */
+  readonly myWorkPhaseLabel = computed<string | null>(() => this.dataControlSE?.reportingCurrentPhase?.phaseName || null);
+  /** Read-only view of the shared badge cache for THIS programme + phase. */
+  readonly myWorkCount = computed<number | null>(() => {
+    const code = this.programmeCode();
+    const phase = this.myWorkPhaseLabel();
+    if (!code || !phase) return null;
+    return this.myWorkCountSE.count(code, phase)();
+  });
+
   /** The design draws a BUTTON here (`onClick={{ tabReporting.go }}`), not a link. */
   goToReporting(): void {
     this.router.navigateByUrl(this.reportingPath());
@@ -921,6 +937,14 @@ export class ProgrammeResultsComponent implements OnDestroy {
       const code = this.programmeCode();
       if (code) this.data.load(code);
       else this.data.reset();
+    });
+
+    // @akili-spec changes/my-work-board (MWB-T-4, MWB-DD-5) — warms the shared badge cache for
+    // this (programme, phase); `ensure()` no-ops once the key is warm or already in flight.
+    effect(() => {
+      const code = this.programmeCode();
+      const phase = this.myWorkPhaseLabel();
+      if (code && phase) this.myWorkCountSE.ensure(code, phase);
     });
 
     // RAC-T-2 — the Area of Work buckets are pinned to one phase (A-1); refetch whenever the

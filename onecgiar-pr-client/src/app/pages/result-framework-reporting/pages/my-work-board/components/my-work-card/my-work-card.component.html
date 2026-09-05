@@ -1,0 +1,112 @@
+<!--
+  One board card (`MWB-R-4`). Tokens from design.md §6.3 — no hard-coded hex, only `var(--pr-*)`.
+  `html`/`body` is 12px — every measurement below is an explicit px value (client CLAUDE.md §5).
+-->
+<article
+  class="flex flex-col gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px_12px_10px] shadow-[0_1px_2px_rgba(25,21,36,0.05)]">
+  <!-- Code · Category chip · Origin -->
+  <div class="flex items-center gap-[8px]">
+    <span class="font-mono text-[11px] font-semibold tracking-[0.04em] text-[var(--pr-text-subtle)]">{{ row().code }}</span>
+    @if (row().category) {
+      <span
+        class="inline-flex h-[16px] items-center rounded-full bg-[var(--pr-color-primary-50)] px-[6px] text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-primary-400)]">
+        {{ row().category }}
+      </span>
+    }
+    <span class="inline-flex items-center rounded-full px-[7px] py-[2px] text-[10px] font-medium" [class]="statusChipClass()">
+      {{ row().statusName }}
+    </span>
+    <span class="flex-1"></span>
+    @if (row().origin) {
+      <span class="text-[11px] text-[var(--pr-text-subtle)]">{{ row().origin }}</span>
+    }
+  </div>
+
+  <!-- Title -->
+  <p
+    class="m-0 text-[13px] leading-[1.35] text-[var(--pr-text-heading)]"
+    [class.font-semibold]="!isWaitingClosed()"
+    [class.font-medium]="isWaitingClosed()">
+    {{ row().title }}
+  </p>
+
+  <!-- Body: completeness (Editing column) or the created line (every other column) -->
+  @if (isEditingVariant()) {
+    <div class="flex flex-col gap-[5px]">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-semibold text-[var(--pr-text-secondary)]">
+          {{ row().completeness!.complete }} of {{ row().completeness!.total }} sections
+        </span>
+        @if (createdLabel()) {
+          <span class="text-[11px] text-[var(--pr-text-subtle)]">Created {{ createdLabel() }}</span>
+        }
+      </div>
+      <div class="h-[4px] overflow-hidden rounded-full bg-[var(--pr-surface-ground)]">
+        <div class="h-full rounded-full bg-gradient-to-r from-[#6b6dc4] to-[#6461bc]" [style.width.%]="progressPercent()"></div>
+      </div>
+      @if (missingLabels().length) {
+        <p class="m-0 text-[11px] leading-[1.4] text-[var(--pr-text-muted)]">Missing: {{ missingLabels().join(' · ') }}</p>
+      }
+    </div>
+  } @else if (isReadyVariant()) {
+    <div class="flex flex-col gap-[5px]">
+      <div class="flex items-center justify-between">
+        <span class="inline-flex items-center gap-[4px] text-[11px] font-semibold text-[var(--pr-status-approved-fg)]">
+          <span class="material-icons-round text-[13px]" aria-hidden="true">check</span>
+          {{ row().completeness!.complete }} of {{ row().completeness!.total }} sections · ready to submit
+        </span>
+        @if (createdLabel()) {
+          <span class="text-[11px] text-[var(--pr-text-subtle)]">Created {{ createdLabel() }}</span>
+        }
+      </div>
+      <div class="h-[4px] overflow-hidden rounded-full bg-[var(--pr-surface-ground)]">
+        <div class="h-full w-full rounded-full bg-[var(--pr-color-green-500)]"></div>
+      </div>
+    </div>
+  } @else if (isUnknownVariant()) {
+    <div class="flex items-center justify-between">
+      <span class="text-[11px] font-semibold text-[var(--pr-text-secondary)]">Open to check completeness</span>
+      @if (createdLabel()) {
+        <span class="text-[11px] text-[var(--pr-text-subtle)]">Created {{ createdLabel() }}</span>
+      }
+    </div>
+  } @else {
+    <div class="flex items-center justify-between">
+      @if (createdLabel()) {
+        <span class="inline-flex items-center gap-[5px] text-[11px] text-[var(--pr-text-muted)]">
+          <span class="material-icons-round text-[13px]" aria-hidden="true">schedule</span>
+          Created {{ createdLabel() }}
+        </span>
+      }
+      <a
+        class="text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:text-[var(--pr-color-primary-600)]"
+        [routerLink]="['/result', 'result-detail', row().code, 'general-information']"
+        [queryParams]="continueQueryParams()">
+        Open
+      </a>
+    </div>
+  }
+
+  <!-- Primary action — Editing column only (`MWB-R-4` "BUT NOT a primary gradient button outside Editing"). -->
+  @if (isEditingVariant() || isUnknownVariant()) {
+    <div class="flex items-center justify-end gap-[8px]">
+      <button
+        type="button"
+        class="inline-flex h-[28px] items-center gap-[6px] rounded-[8px] bg-gradient-to-r from-[#6b6dc4] to-[#6461bc] px-[12px] text-[12px] font-semibold text-white"
+        (click)="continue()">
+        Continue
+        <span class="material-icons-round text-[14px]" aria-hidden="true">arrow_forward</span>
+      </button>
+    </div>
+  } @else if (isReadyVariant()) {
+    <div class="flex items-center justify-end gap-[8px]">
+      <button
+        type="button"
+        class="inline-flex h-[28px] items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12px] font-semibold text-[var(--pr-color-primary-400)]"
+        (click)="continue()">
+        Review and submit
+        <span class="material-icons-round text-[14px]" aria-hidden="true">arrow_forward</span>
+      </button>
+    </div>
+  }
+</article>

@@ -1,0 +1,10 @@
+// Tailwind-first (onecgiar-pr-client/CLAUDE.md §5) — `writing-mode` has no Tailwind utility, so
+// the rail's vertical label is the one rule that lives here (task brief: SCSS only for this).
+:host {
+  display: contents;
+}
+
+.pr-my-work-rail-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}

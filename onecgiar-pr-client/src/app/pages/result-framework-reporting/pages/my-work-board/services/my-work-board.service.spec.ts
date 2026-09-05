@@ -190,4 +190,93 @@ describe('MyWorkBoardService', () => {
     expect(service.badge()).toBeNull();
     expect(countSet).not.toHaveBeenCalled();
   });
+
+  // @akili-spec changes/my-work-board (MWB-T-4 REWORK — Reviewer issue 1, MWB-T-3 forward pointer (b))
+  it('a zero-row Mine load (404) still writes 0 to MyWorkCountService, falling back to the page phase when no row can supply one', () => {
+    service.currentPhaseName.set('Reporting 2026');
+    service.load('SP01');
+    expectListRequest().flush('Results Not Found', { status: 404, statusText: 'Not Found' });
+
+    expect(service.badge()).toBe(0);
+    expect(countSet).toHaveBeenCalledWith('SP01', 'Reporting 2026', 0);
+  });
+
+  // @akili-spec changes/my-work-board (MWB-T-4, MWB-R-3 "Switch scope" — segment counts)
+  describe('scopeTotals', () => {
+    it('starts with both segments unknown', () => {
+      expect(service.scopeTotals()).toEqual({ mine: null, all: null });
+    });
+
+    it('freezes the loaded scope total and leaves the other segment cached until IT loads', () => {
+      service.load('SP01');
+      expectListRequest().flush(resultsResponse([rawResult(), rawResult({ id: '8102', result_code: '5835' })]));
+      expect(service.scopeTotals()).toEqual({ mine: 2, all: null });
+
+      service.setScope('all');
+      expectListRequest().flush(resultsResponse([rawResult()]));
+      expect(service.scopeTotals()).toEqual({ mine: 2, all: 1 });
+
+      // Switching back to Mine does not re-request (same rows already held) and does not touch
+      // the frozen All total.
+      service.setScope('mine');
+      expectListRequest().flush(resultsResponse([rawResult()]));
+      expect(service.scopeTotals()).toEqual({ mine: 1, all: 1 });
+    });
+
+    it('records a 404 as a total of 0 for that scope', () => {
+      service.load('SP01');
+      expectListRequest().flush('Results Not Found', { status: 404, statusText: 'Not Found' });
+
+      expect(service.scopeTotals()).toEqual({ mine: 0, all: null });
+    });
+
+    // @akili-spec changes/my-work-board (MWB-T-4 REWORK — Reviewer issue 2, MWB-R-3 "Switch scope")
+    it('re-freezes the ACTIVE segment total for the newly selected phase on setPhase(), leaving the inactive one cached', () => {
+      service.load('SP01');
+      expectListRequest().flush(
+        resultsResponse([
+          rawResult({ phase_name: 'Reporting 2026' }),
+          rawResult({ id: '8102', result_code: '5835', phase_name: 'Reporting 2026' }),
+          rawResult({ id: '8103', result_code: '5836', phase_name: 'Reporting 2025' })
+        ])
+      );
+      // No phase requested yet -> effectivePhase defaults to the newest option, 'Reporting 2026' (2 rows).
+      expect(service.scopeTotals()).toEqual({ mine: 2, all: null });
+
+      service.setPhase('Reporting 2025');
+
+      // The active (Mine) segment must now read the Reporting 2025 total (1 row), not the frozen 2026 value.
+      expect(service.scopeTotals()).toEqual({ mine: 1, all: null });
+    });
+
+    // @akili-spec changes/my-work-board (MWB-T-4 REWORK attempt 3 — Reviewer issue 1, MWB-T-3 forward pointer (c))
+    it('does not fabricate a total when setPhase() runs before the first load has completed (deep link with ?phase=)', () => {
+      service.load('SP01');
+      const req = expectListRequest();
+
+      // The page's URL effect fires on the very first flush, while the list request is still in
+      // flight: `rows()` is empty, but the segment must still read `–`, not a fabricated 0.
+      service.setPhase('Reporting 2025');
+      expect(service.scopeTotals()).toEqual({ mine: null, all: null });
+
+      req.flush(resultsResponse([rawResult({ phase_name: 'Reporting 2025' })]));
+      expect(service.scopeTotals()).toEqual({ mine: 1, all: null });
+    });
+
+    it('leaves the All segment unknown when a phase change lands before the All response', () => {
+      service.load('SP01');
+      expectListRequest().flush(resultsResponse([rawResult(), rawResult({ id: '8102', result_code: '5835' })]));
+      expect(service.scopeTotals()).toEqual({ mine: 2, all: null });
+
+      service.setScope('all');
+      const req = expectListRequest();
+
+      // The still-held Mine rows must not be counted under the All segment.
+      service.setPhase('Reporting 2025');
+      expect(service.scopeTotals()).toEqual({ mine: 2, all: null });
+
+      req.flush(resultsResponse([rawResult({ phase_name: 'Reporting 2025' })]));
+      expect(service.scopeTotals()).toEqual({ mine: 2, all: 1 });
+    });
+  });
 });

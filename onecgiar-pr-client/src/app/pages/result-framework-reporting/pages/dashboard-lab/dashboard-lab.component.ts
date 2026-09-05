@@ -73,6 +73,7 @@ import { ResultToReview } from '../bilateral-results/components/results-review-t
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';
+import { MyWorkCountService } from '../my-work-board/services/my-work-count.service';
 import { HlmButton } from '@spartan/button';
 // @akili-spec changes/reporting-entry-hub
 import {
@@ -414,6 +415,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   private readonly resultLevelSE = inject(ResultLevelService);
   /** @akili-spec changes/reporting-entry-hub — `createResult` preselects the W3 project + navigates. */
   private readonly bilateralCreationSE = inject(BilateralCreationService);
+  /** @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1) — the My work tab's badge, shared with
+   *  the other three band hosts via `MyWorkCountService`'s (programme, phase) cache. */
+  private readonly myWorkCountSE = inject(MyWorkCountService);
 
   /**
    * Reporting phases with their start / end dates.
@@ -441,6 +445,20 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * contract: full-bleed band, no outer gutters, 32px content pad owned by the tab itself.
    */
   readonly isProgramShell = computed(() => this.showOverview() || this.showPlanned());
+
+  // @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1)
+  /** The phase label the My work badge is scoped to — the current reporting phase's name (same
+   *  phase family the board itself defaults to, design.md §6.6). `null` when it has not resolved
+   *  yet: a host with no phase label handy passes `null` rather than guessing (band hides the
+   *  badge on `null`). */
+  readonly myWorkPhaseLabel = computed<string | null>(() => this.dataControlSE?.reportingCurrentPhase?.phaseName || null);
+  /** Read-only view of the shared badge cache for THIS programme + phase. */
+  readonly myWorkCount = computed<number | null>(() => {
+    const code = this.selected()?.initiativeCode || '';
+    const phase = this.myWorkPhaseLabel();
+    if (!code || !phase) return null;
+    return this.myWorkCountSE.count(code, phase)();
+  });
   /**
    * SAV-T-3 — the ≥900px locked-frame work-area scroller (design.md §2.2/SAV-DD-4). `#workArea` is
    * reused by both the Overview and Reporting branches of the template (mutually exclusive `@if`s),
@@ -953,6 +971,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   constructor() {
+    // @akili-spec changes/my-work-board (MWB-T-4, MWB-DD-5) — warms the shared badge cache for
+    // this (programme, phase) whenever either resolves to a new value; `ensure()` no-ops once the
+    // key is warm or already in flight, so this never issues more than one request per pair.
+    effect(() => {
+      const code = this.selected()?.initiativeCode || '';
+      const phase = this.myWorkPhaseLabel();
+      if (code && phase) this.myWorkCountSE.ensure(code, phase);
+    });
+
     // Load the selected program's Areas of Work on selection change.
     effect(() => {
       const sp = this.selected();

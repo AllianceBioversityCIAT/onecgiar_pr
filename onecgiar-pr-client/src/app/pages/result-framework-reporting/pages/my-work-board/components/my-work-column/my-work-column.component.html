@@ -1,0 +1,48 @@
+<!-- One board column (`MWB-R-2`). `html`/`body` is 12px — every measurement is an explicit px
+     value (client CLAUDE.md §5). -->
+@if (rail()) {
+  <!-- Collapsed Closed-group rail (`MWB-DD-8`): 44px, count + vertical label, expands on click. -->
+  <button
+    type="button"
+    class="flex flex-1 min-h-0 w-[44px] flex-col items-center gap-[10px] rounded-[12px] border py-[12px]"
+    [class]="meta().surfaceClass"
+    [attr.aria-expanded]="!collapsed()"
+    [attr.aria-label]="'Expand ' + column().label + ' (' + column().rows.length + ')'"
+    (click)="expandToggle.emit()">
+    <span class="inline-flex h-[20px] min-w-[20px] flex-none items-center justify-center rounded-full px-[6px] text-[11px] font-bold tabular-nums" [class]="meta().badgeClass">
+      {{ column().rows.length }}
+    </span>
+    <span class="pr-my-work-rail-label flex-1 whitespace-nowrap text-[11px] font-semibold text-[var(--pr-text-secondary)]">
+      {{ column().label }}
+    </span>
+    <span class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)]" aria-hidden="true">chevron_right</span>
+  </button>
+} @else {
+  <section
+    class="flex flex-1 min-h-0 flex-col rounded-[12px] border shadow-[0_1px_2px_rgba(25,21,36,0.04)]"
+    [class]="meta().surfaceClass"
+    role="region"
+    [attr.aria-labelledby]="headingId()">
+    <div class="flex items-center gap-[8px] border-b px-[14px] py-[10px]" [class]="meta().headerBorderClass">
+      <span class="h-[8px] w-[8px] flex-none rounded-full" [class]="meta().dotClass"></span>
+      <span [id]="headingId()" class="text-[12px] font-bold text-[var(--pr-text-heading)]">{{ column().label }}</span>
+      <span
+        class="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-[6px] text-[11px] font-bold tabular-nums"
+        [class]="meta().badgeClass">
+        {{ column().rows.length }}
+      </span>
+      <span class="flex-1"></span>
+      @if (isEditing() && readyCount() > 0) {
+        <span class="text-[11px] text-[var(--pr-text-subtle)]">{{ readyCount() }} ready to submit</span>
+      }
+    </div>
+
+    <div class="flex flex-1 min-h-0 flex-col gap-[10px] overflow-y-auto p-[12px] custom_scroll">
+      @for (row of column().rows; track row.code) {
+        <app-my-work-card [row]="row" [inEditingColumn]="isEditing()" />
+      } @empty {
+        <p class="m-0 text-[12px] text-[var(--pr-text-subtle)]">{{ emptyMessage() }}</p>
+      }
+    </div>
+  </section>
+}

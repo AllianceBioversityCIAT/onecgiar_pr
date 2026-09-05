@@ -101,7 +101,7 @@
   - [ ] Scoped Jest green; lint clean
   - [ ] Commit `✨ feat(my-work-board) [SPEC:changes/my-work-board]: board data service and badge count service`
 
-### `MWB-T-4` — Client UI: route, 4th tab + badge, page, column and card components `[ ]`
+### `MWB-T-4` — Client UI: route, 4th tab + badge, page, column and card components `[x]`
 
 - **Type:** `client`
 - **Description:** Route (`rfrView: 'my-work'`); band: `activeTab` union, `myWorkPath()`, `myWorkCount` input, 4th tab markup with badge, Drafts-slot comment extended (`MWB-DD-12`); `MyWorkBoardComponent` (host `pr-viewport-page` + mixin, band, `<app-pr-tab-intro>` §6.5, toolbar: scope segmented control + **phase `app-pr-filter-select`** with URL bridge `replaceUrl`+merge, skeleton / error / whole-board empty / groups; writes `MyWorkCountService` after Mine loads); `MyWorkColumnComponent` (header, count, ready hint, scrollable list, per-column empty, rail mode `aria-expanded`); `MyWorkCardComponent` (variants editing / ready / unknown / waiting-closed; status chip = `statusName`; native `<button>`/`<a>`; Continue → `['/result','result-detail', code, route]` + `{ phase: versionId }`). Tokens per §6.3. Check every `rfrView` switch treats `'my-work'` like `'results'`. Band on the other tabs calls `MyWorkCountService.ensure(code, phaseLabel)`.

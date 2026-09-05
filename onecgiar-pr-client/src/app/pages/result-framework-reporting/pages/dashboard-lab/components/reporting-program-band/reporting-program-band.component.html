@@ -234,6 +234,33 @@
       </span>
       <span class="pr-tab-label">Results</span>
     </a>
+    <!-- @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1) — fourth programme-view tab, after
+         Results. NOT the design's reserved `Drafts` slot (see `myWorkPath`'s docstring, MWB-DD-12). -->
+    <a
+      class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
+      [class]="
+        activeTab() === 'my-work'
+          ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+          : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+      "
+      [attr.aria-current]="activeTab() === 'my-work' ? 'page' : null"
+      [routerLink]="myWorkPath()"
+      queryParamsHandling="preserve">
+      <span
+        class="material-icons-round text-[18px] transition-colors"
+        [class]="activeTab() === 'my-work' ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
+        aria-hidden="true">
+        view_kanban
+      </span>
+      <span class="pr-tab-label">My work</span>
+      @if ((myWorkCount() ?? 0) > 0) {
+        <span
+          class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums"
+          [attr.aria-label]="myWorkCount() + ' results in editing'">
+          {{ myWorkCount() }}
+        </span>
+      }
+    </a>
     <!-- ⚠️ The design's FOURTH tab, `Drafts` (PRMS-Reporting.dc.html:420 / :443), sits inside an
          `sc-if` on `centerMode` — it is a CENTER-view tab, not a programme-view one, so it is
          deliberately absent here. This is not a missed tab; do not "fix" it.

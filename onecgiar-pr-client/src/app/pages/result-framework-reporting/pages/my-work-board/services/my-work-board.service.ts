@@ -88,6 +88,16 @@ export class MyWorkBoardService {
    */
   readonly badge = signal<number | null>(null);
 
+  // @akili-spec changes/my-work-board (MWB-T-4, MWB-R-3 "Switch scope" — segment counts)
+  /**
+   * Last-loaded total per scope, for the selected phase at the moment that scope's load
+   * completed — the toolbar's segmented control shows each segment's cached number and `–` for
+   * the scope that has never loaded (`MWB-T-3` forward pointer (c)). Not a computed: switching to
+   * All must not retroactively change what Mine showed (and vice versa) — each segment freezes
+   * its own last real count until ITS OWN scope loads again.
+   */
+  readonly scopeTotals = signal<{ mine: number | null; all: number | null }>({ mine: null, all: null });
+
   /** Loads this programme's board rows for the current scope. Safe to call again — a later call
    *  supersedes an earlier one still in flight. */
   load(programmeCode: string): void {
@@ -147,6 +157,7 @@ export class MyWorkBoardService {
           this.rows.set(items.map(toProgrammeResultRow));
           this.loading.set(false);
           this.syncMineBadge();
+          this.recordScopeTotal();
         },
         error: (err: HttpErrorResponse) => {
           if (token !== this.requestToken) return;
@@ -156,6 +167,7 @@ export class MyWorkBoardService {
             this.rows.set([]);
             this.error.set(null);
             this.syncMineBadge();
+            this.recordScopeTotal();
           } else {
             this.error.set('The results of this program could not be loaded.');
           }
@@ -170,10 +182,22 @@ export class MyWorkBoardService {
   }
 
   /** Re-groups the already-loaded rows over a new phase label — NO request (`MWB-R-3` *Switch
-   *  phase*). Also refreshes the badge when the Mine scope is active. */
+   *  phase*). Also refreshes the badge, and — once the active scope has actually loaded —
+   *  re-freezes ITS segment total for the newly selected phase; the inactive segment stays cached
+   *  until IT loads (`MWB-T-4` REWORK, Reviewer issue 2: the active segment must not contradict the
+   *  columns rendered next to it). */
   setPhase(label: string | null): void {
     this.phase.set(label);
     this.syncMineBadge();
+    // Only a COMPLETED load may write a segment total. A phase change can land before the active
+    // scope's request has resolved — a deep link / Back-Forward entry carrying `?phase=` fires the
+    // page's URL effect on the very first flush, and `setScope()` re-issues a load while the
+    // previous scope's rows are still held. In both cases `totals()` describes rows that are not
+    // this scope's, so writing it would freeze a fabricated number where the segment must still
+    // show `–` (`MWB-T-3` forward pointer (c); `MWB-T-4` REWORK attempt 3, Reviewer issue 1).
+    // The two `load()` call sites stay unconditional — they run after the response has landed.
+    if (this.loading() || this.scopeTotals()[this.scope()] === null) return;
+    this.recordScopeTotal();
   }
 
   /** Re-issues the last load (`MWB-R-7` error state's Retry action). */
@@ -189,7 +213,21 @@ export class MyWorkBoardService {
     const value = badgeCount(this.columns(), 'mine') ?? 0;
     this.badge.set(value);
     const code = this.programmeCode();
-    const phase = this.effectivePhase();
+    // A zero-row Mine load leaves `phaseOptions()` empty, so `effectivePhase()` resolves to
+    // `null` (`resolveDefaultPhase`'s `options[0] ?? null` fallback) even though `value` is a
+    // real 0. Fall back to the page's own current phase so the write still lands under the exact
+    // key the other three band hosts read (`MWB-T-3` forward pointer (b); `MWB-T-4` REWORK,
+    // Reviewer issue 1).
+    const phase = this.effectivePhase() ?? this.currentPhaseName();
     if (code && phase) this.countSE.set(code, phase, value);
+  }
+
+  // @akili-spec changes/my-work-board (MWB-T-4, MWB-R-3 "Switch scope" — segment counts)
+  /** Freezes the just-loaded scope's total for the CURRENT phase into `scopeTotals` — read after
+   *  `rows` is set so `totals()` already reflects the new load. */
+  private recordScopeTotal(): void {
+    const scope = this.scope();
+    const total = this.totals().all;
+    this.scopeTotals.update(prev => ({ ...prev, [scope]: total }));
   }
 }

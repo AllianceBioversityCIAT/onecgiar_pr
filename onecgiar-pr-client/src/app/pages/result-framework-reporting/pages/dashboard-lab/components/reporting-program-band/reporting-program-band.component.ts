@@ -157,8 +157,18 @@ export class ReportingProgramBandComponent {
    * every other consumer of this band.
    */
   readonly phaseLabelOverride = input<string>('');
-  /** Which tab is active. Overview, Reporting and Results are separate routes, not local state. */
-  readonly activeTab = input<'overview' | 'reporting' | 'results'>('reporting');
+  /**
+   * Which tab is active. Overview, Reporting, Results and My work are separate routes, not local
+   * state. `'my-work'` added `@akili-spec changes/my-work-board` (MWB-T-4, MWB-R-1).
+   */
+  readonly activeTab = input<'overview' | 'reporting' | 'results' | 'my-work'>('reporting');
+  /**
+   * `@akili-spec changes/my-work-board` (MWB-T-4, MWB-R-1) — the My work tab's badge: the Mine
+   * Editing count for this programme + phase, computed by one scoped list request and cached per
+   * (programme, phase) in `MyWorkCountService`. `null` hides the badge (no count yet, or the host
+   * has no phase label handy) — a host MUST pass `null` rather than guess a number.
+   */
+  readonly myWorkCount = input<number | null>(null);
   readonly programDotColor = input<string>('var(--pr-color-primary-300)');
 
   readonly search = input<string>('');
@@ -244,10 +254,14 @@ export class ReportingProgramBandComponent {
   }
 
   startSpTour(): void {
+    const activeTab = this.activeTab();
     this.guideSE.startSpTour({
       programName: this.programName(),
       cycleYear: this.cycleYear() ?? undefined,
-      activeTab: this.activeTab(),
+      // The guided tour only knows Overview/Reporting/Results (`MWB-DD-12`: My work is a new tab
+      // outside its scope) — `undefined` lets the service fall back to its own default rather than
+      // widening `ReportingGuideService`'s type for a tab it never walks.
+      activeTab: activeTab === 'my-work' ? undefined : activeTab,
       onTabNavigate: (tab: 'overview' | 'reporting' | 'results') => {
         const targetPath =
           tab === 'overview'
@@ -277,8 +291,15 @@ export class ReportingProgramBandComponent {
    * ⚠️ The design draws a FOURTH tab, `Drafts` (`tabResults`'s neighbour at :420 / :443), inside
    * `<sc-if value="{{ centerMode }}">`. It belongs to the CENTER view, not the programme view, so
    * it is deliberately NOT rendered here — this is not a missing tab, do not "fix" it.
+   *
+   * `@akili-spec changes/my-work-board` (`MWB-DD-12`): **My work** (`myWorkPath` below) is a
+   * DIFFERENT, additional programme-view tab — not the design's reserved `Drafts` slot. Reading
+   * this comment as license to wire My work into that slot is the wrong move; My work is its own
+   * fifth-in-design-order / fourth-in-programme-view tab, rendered after Results.
    */
   readonly resultsPath = computed(() => `${this.reportingPath()}/results`);
+  /** Fourth programme-view tab (`MWB-T-4`, `MWB-R-1`) — the submitter's own board. */
+  readonly myWorkPath = computed(() => `${this.reportingPath()}/my-work`);
   /**
    * Kept, unreferenced: the `/emerging` route still exists (nothing is deleted here) but the CTA no
    * longer navigates to it — it opens the legacy modal in place, which is where reporting an
@@ -465,6 +486,13 @@ export class ReportingProgramBandComponent {
           title: 'Results',
           description:
             'View and manage all reported results linked to this Science Program or Accelerator. Use the filters to explore results by status, type, or contributing centers.'
+        };
+      case 'my-work':
+        // @akili-spec changes/my-work-board (MWB-R-10)
+        return {
+          title: 'My work',
+          description:
+            'Your results in this Science Program, grouped by status. The board is read-only: open a result to complete it or submit it; quality assessment happens in QA.'
         };
       case 'reporting':
       default:

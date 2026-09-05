@@ -1,0 +1,169 @@
+<!--
+  "My work" board — 4th SP tab (`MWB-T-4`). Mockup: docs/specs/changes/my-work-board/mockup/Main.dc.html.
+  `html`/`body` is 12px — every measurement below is an explicit px value (client CLAUDE.md §5).
+-->
+<section class="min-h-screen bg-[var(--pr-surface-app)] p-0 min-[900px]:min-h-0 min-[900px]:flex-1 min-[900px]:flex min-[900px]:flex-col">
+  <article class="flex w-full min-w-0 flex-col min-[900px]:flex-1 min-[900px]:min-h-0">
+    <!-- Same band, same tab strip, 4th tab active. `data.badge()` already IS the Mine Editing
+         count this tab's own badge shows (`MWB-R-1`) — it is written by the board's own load, so
+         no extra `MyWorkCountService.ensure()` round trip is needed on this page. -->
+    <app-reporting-program-band
+      [programCode]="programmeCode()"
+      [programName]="programmeName()"
+      [cycleYear]="cycleYear()"
+      [cyclePhase]="cyclePhase()"
+      activeTab="my-work"
+      [myWorkCount]="data.badge()"
+      [canReport]="false"
+      [showToolbar]="false"
+      [frameLocked]="true"
+      [scrollHost]="workAreaEl()" />
+
+    <!-- #workArea: the only scroller ≥ 900px (`SAV-DD-1`, `MWB-R-9`) — explainer, toolbar and the
+         board all scroll together; the band stays visible while a column scrolls internally. -->
+    <div #workArea class="flex flex-1 flex-col min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll">
+      <div class="px-[16px] pt-[14px] sm:px-[32px]">
+        <app-pr-tab-intro title="What does this tab show?" [description]="explainerDescription" icon="view_kanban" />
+      </div>
+
+      <!-- Toolbar: scope segmented control (cached totals) + read-only hint + phase select. -->
+      <div
+        class="flex flex-wrap items-center gap-[16px] px-[16px] pt-[14px] sm:px-[32px]"
+        role="group"
+        aria-label="My work board controls">
+        <div
+          role="tablist"
+          aria-label="Scope"
+          class="inline-flex h-[30px] items-center gap-[2px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[2px]">
+          <button
+            type="button"
+            role="tab"
+            [attr.aria-selected]="data.scope() === 'mine'"
+            class="flex h-full items-center gap-[6px] rounded-[6px] px-[12px] text-[12px] font-medium transition-colors"
+            [class]="
+              data.scope() === 'mine'
+                ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
+                : 'text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+            "
+            (click)="setScope('mine')">
+            <span>Mine</span>
+            <span class="text-[var(--pr-text-subtle)] tabular-nums">{{ data.scopeTotals().mine ?? '–' }}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            [attr.aria-selected]="data.scope() === 'all'"
+            class="flex h-full items-center gap-[6px] rounded-[6px] px-[12px] text-[12px] font-medium transition-colors"
+            [class]="
+              data.scope() === 'all'
+                ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
+                : 'text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+            "
+            (click)="setScope('all')">
+            <span>All program results</span>
+            <span class="text-[var(--pr-text-subtle)] tabular-nums">{{ data.scopeTotals().all ?? '–' }}</span>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-[8px] text-[12px] text-[var(--pr-text-secondary)]">
+          <span class="material-icons-round text-[14px] text-[var(--pr-text-subtle)]" aria-hidden="true">lock</span>
+          <span>Read-only board. Open a result to update it. Status changes still happen inside the result and in QA.</span>
+        </div>
+
+        <span class="flex-1"></span>
+
+        <div class="w-[220px]" aria-label="Filter by phase">
+          <app-pr-filter-select
+            [options]="phaseSelectOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Phase"
+            [ngModel]="data.effectivePhase()"
+            (changed)="onPhaseChange($event)"></app-pr-filter-select>
+        </div>
+      </div>
+
+      <!-- Board body: skeleton / error+Retry / whole-board empty / groups (`MWB-R-7`, mutually exclusive). -->
+      <div class="flex flex-1 min-h-0 flex-col">
+        @if (showSkeleton()) {
+          <div class="flex flex-1 gap-[16px] px-[16px] py-[14px] sm:px-[32px]" aria-live="polite" aria-busy="true">
+            <span class="sr-only">Loading your board</span>
+            @for (skeleton of [1, 2, 3]; track skeleton) {
+              <div class="h-full flex-1 animate-pulse rounded-[12px] bg-[var(--pr-surface-card)]"></div>
+            }
+          </div>
+        } @else if (showError()) {
+          <div
+            role="alert"
+            class="mx-[16px] my-[14px] flex flex-col items-start gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[24px] sm:mx-[32px]">
+            <p class="m-0 text-[14px] font-normal text-[var(--pr-text-secondary)]">{{ data.error() }}</p>
+            <button
+              type="button"
+              class="h-[32px] rounded-[8px] border-0 bg-transparent px-[12px] text-[13px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+              (click)="data.retry()">
+              Retry
+            </button>
+          </div>
+        } @else if (showWholeBoardEmpty()) {
+          <div
+            class="mx-[16px] my-[14px] flex flex-1 flex-col items-center justify-center gap-[12px] rounded-[12px] border border-dashed border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] p-[24px] text-center sm:mx-[32px]">
+            <div class="flex h-[44px] w-[44px] items-center justify-center rounded-[12px] bg-[var(--pr-color-primary-50)]">
+              <span class="material-icons-round text-[22px] text-[var(--pr-color-primary-300)]" aria-hidden="true">view_kanban</span>
+            </div>
+            <p class="m-0 text-[14px] font-semibold text-[var(--pr-text-heading)]">Nothing on your board yet</p>
+            <p class="m-0 max-w-[360px] text-[12px] leading-[1.5] text-[var(--pr-text-muted)]">
+              Results you create in {{ programmeName() || 'this program' }} will show up here, grouped by status.
+            </p>
+            <div class="mt-[4px] flex items-center gap-[10px]">
+              <a
+                class="inline-flex h-[30px] items-center rounded-[8px] bg-gradient-to-r from-[#6b6dc4] to-[#6461bc] px-[14px] text-[12px] font-semibold text-white no-underline"
+                [routerLink]="reportingPath()"
+                queryParamsHandling="preserve">
+                Go to Reporting
+              </a>
+              <button type="button" class="text-[12px] font-semibold text-[var(--pr-color-primary-400)]" (click)="seeAllResults()">
+                See all program results
+              </button>
+            </div>
+          </div>
+        } @else if (showBoard()) {
+          <div class="flex flex-1 min-h-0 gap-[16px] overflow-x-auto px-[16px] py-[14px] sm:px-[32px]">
+            <!-- Needs my action -->
+            @if (editingColumn(); as editing) {
+              <div class="flex w-[360px] flex-none flex-col gap-[8px]">
+                <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-primary-400)]">Needs my action</span>
+                <app-my-work-column [column]="editing" />
+              </div>
+            }
+
+            <!-- Waiting on others -->
+            @if (waitingColumns().length) {
+              <div class="flex min-w-0 flex-1 flex-col gap-[8px]">
+                <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">Waiting on others</span>
+                <div class="grid flex-1 min-h-0 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-[12px]">
+                  @for (col of waitingColumns(); track col.key) {
+                    <app-my-work-column [column]="col" />
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Closed (collapsed rails by default, MWB-DD-8) -->
+            @if (closedColumns().length) {
+              <div class="flex flex-none flex-col gap-[8px]">
+                <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">Closed</span>
+                <div class="flex flex-1 min-h-0 gap-[8px]">
+                  @for (col of closedColumns(); track col.key) {
+                    <div [class]="closedItemClass()">
+                      <app-my-work-column [column]="col" [rail]="closedCollapsed()" [collapsed]="closedCollapsed()" (expandToggle)="toggleClosed()" />
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </article>
+</section>

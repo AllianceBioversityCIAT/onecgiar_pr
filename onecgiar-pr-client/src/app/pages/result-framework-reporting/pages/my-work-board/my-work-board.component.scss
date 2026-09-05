@@ -1,0 +1,11 @@
+// Viewport lock (`sp-shell-app-viewport`, `SAV-T-4`) — unconditional, like `ProgrammeResultsComponent`:
+// this surface only ever serves the My work tab. `:host` lives HERE, not in the inline `styles`
+// array — Angular 21 emits `styleUrls` content BEFORE inline `styles` at equal specificity, so an
+// inline `display: block` there would silently beat the mixin's flex layout instead of losing to it
+// (`programme-results.component.scss` carries the same note, verified against @angular/compiler-cli).
+@use '../../../../../styles/viewport-page' as vp;
+
+:host {
+  display: block;
+  @include vp.pr-viewport-page;
+}

@@ -610,6 +610,19 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
       )
   },
   {
+    // @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1)
+    // Fourth SP tab — the submitter's own results for this programme + phase, grouped by status.
+    // Own component, sibling of `results`: same reasoning, this surface reads a scoped results
+    // list and folds a pure view-model over it, it does not drive the ToC reporting tables.
+    prName: 'Program my work',
+    path: 'entity-details/:entityId/my-work',
+    data: { sidebar: { width: 300 }, rfrView: 'my-work' },
+    loadComponent: () =>
+      import('../../pages/result-framework-reporting/pages/my-work-board/my-work-board.component').then(
+        m => m.MyWorkBoardComponent
+      )
+  },
+  {
     // THE programme page. Serves the redesigned shell (band + Overview/Reporting tabs +
     // the CURRENT reporting table) at the path that was always the programme's address and
     // that people have saved as links. The legacy `EntityDetailsComponent` (Insights bento)
