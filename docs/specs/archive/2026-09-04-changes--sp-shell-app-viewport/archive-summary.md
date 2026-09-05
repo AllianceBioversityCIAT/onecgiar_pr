@@ -91,6 +91,7 @@ No `validation-report.md`. Validation was the `SAV-T-5` real-browser probe (Revi
 ## 8. Historical Notes
 
 - Concurrency: another session (`changes/reporting-aow-hierarchy`) committed in the same checkout during the run (`6fc580586` before start, `4b62f2db2` mid-run) and left uncommitted edits in `dashboard-lab.component.*` and `dashboard-lab/CLAUDE.md`; all diffs and commits of this spec were scoped by explicit paths, and the guide commit staged a blob without the foreign block.
+- Sweep at archive time: the foreign commit `ecf47d549` (`[SPEC:changes/by-aow-hierarchy-alignment]`) landed seconds before the archive commit and swept this spec's in-progress wording amendments to `requirements.md`, `design.md` and `tasks.md` (content identical to the archived state; attribution only). The archive commit `7debfdd37` then moved the folder.
 - Review catches that mattered: the `styleUrls`-before-inline-`styles` cascade on Results (would have left the table unscrollable, invisible to Jest); CT harness missing the short-content and no-work-area-scrollbar assertions; a mirrored-fragment Jest gate with no falsifier.
 - Pending default-branch writes (`docs/ux-ui/design.md` §6 "Viewport-locked page"), kaizen candidates and follow-ups: `execution.md` → "Pending default-branch writes" and the Kaizen entry `docs/specs/kaizen/changes--sp-shell-app-viewport.md`.
 - Next: single PR against `staging` (review order: mixin + CT spec → band → the two pages → docs), then re-run the T-5 probe on TEST once deployed.

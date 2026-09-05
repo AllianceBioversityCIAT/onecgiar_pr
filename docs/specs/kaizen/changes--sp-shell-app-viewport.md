@@ -26,7 +26,7 @@
 | `/akili-quick` escalations | 0 | — |
 | Drift attributable | none (`docs/specs/audits/` holds no report) | — |
 | Budget LOC | ~280 estimated → ≈ 190 production + ≈ 460 test actual (CT harness 247 vs ~90) | execution.md |
-| Concurrency | foreign session active in the same checkout (2 commits, uncommitted edits in the same folder and the same `CLAUDE.md`); no sweep of this spec's files occurred | execution.md T-6 staging note |
+| Concurrency | foreign session active in the same checkout (3 commits, uncommitted edits in the same folder and the same `CLAUDE.md`); **one sweep** — `ecf47d549` committed this spec's archive-time wording amendments under its own `[SPEC:]` tag (content intact, attribution only) | execution.md T-6 staging note; archive-summary §8 |
 | Advisory findings recorded (never reworked) | 16 across 6 tasks; 3 adopted into rework briefs as Leader decisions | execution.md |
 
 ## Lessons
