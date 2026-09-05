@@ -21,7 +21,7 @@
 
 ## 3. Task list
 
-### `MWB-T-1` — Server: `include_completeness` flag on `roles/filter` `[ ]`
+### `MWB-T-1` — Server: `include_completeness` flag on `roles/filter` `[x]`
 
 - **Type:** `server`
 - **Description:** Add a pure `foldCompleteness(rows: NewValidationsDto[])` in `results-validation-module/completeness.ts` (`Number(v) === 1` rule, `missing` in input order). In `results.service.ts` filter path: parse `include_completeness` with `parseQueryBool`; when true, pick eligible items (`status_id` ∈ {1, 8}, `result_type_id` not an IPSR package — check `ResultTypeEnum`), newest `created_date` first, take `MWB_COMPLETENESS_CAP = 60`, call `resultValidationRepository.validateResultById(id)` in chunks of 5, attach `completeness` (fold, or `null` on rejection + one `logger.warn` with the id); every other item `null`. When false: untouched. `@ApiQuery` on the controller (`MWB-DD-1`, `DD-2`).

@@ -14,3 +14,13 @@
 
 ## 2. Task Execution History
 
+### `MWB-T-1` — Server: `include_completeness` flag on `roles/filter` — **PASS** (attempt 1) · 2026-09-04
+
+- **Implementer:** `akili-implementer` (sonnet) · skills `nestjs-expert`, `tdd` · effort medium · 1 attempt.
+- **Files:** `results-validation-module/completeness.ts` (+ `.spec.ts`, new), `results.service.ts` (fold in `findAllByRoleFiltered`, gated by `parseQueryBool(query.include_completeness)`), `results.service.spec.ts` (new, 4 cases), `results.controller.ts` (`@ApiQuery`).
+- **Verification (Implementer):** `npx jest …completeness.spec.ts …results.service.spec.ts --silent --reporters=summary --forceExit && npx eslint … --quiet` → `Test Suites: 2 passed · Tests: 13 passed`, lint clean.
+- **Reviewer (`akili-reviewer`, opus):** `STATUS: PASS` — "The opt-in `include_completeness` fold matches `MWB-R-8`, `MWB-DD-1`/`DD-2` and design §4.1/§5 exactly — guarded so the default path adds no key and issues zero validation calls, eligibility and cap enforced on real payload columns, per-item failure isolation with an id-only warn — and the two new suites prove the default-path contract independently of the new code."
+- **ADVISORY (4R, recorded, not gating):** (a) `foldCompleteness([])` → `{0,0,[]}` would read as `n === m` → *ready*; **forward pointer to `MWB-T-4`**: ready variant requires `total > 0`, `total === 0` renders *Open to check completeness*. (b) chunk size 5 has no max-in-flight test (recorded; not minted as a task). (c) IPSR branch is defence-in-depth: the repository already excludes types 10/11. (d) two new spec files were outside the task's lint glob → Leader ran `prettier --write` + eslint on them inline (mechanical formatting, no logic), re-ran the suite green. (e) key-for-key live comparison happens in `MWB-T-6`.
+- **Implementer assumptions:** IPSR id = `ResultTypeEnum.INNOVATION_USE_IPSR` (10), confirmed by the Reviewer against three call sites.
+- **Requirements covered:** `MWB-R-8` (all clauses), `MWB-R-4` server half, `MWB-AC-8`, NFR compat/security/observability.
+- **Gate:** auto-approved (pre-approved mode).

@@ -74,6 +74,10 @@ import { ElasticService } from '../../elastic/elastic.service';
 import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
 import process from 'node:process';
 import { resultValidationRepository } from './results-validation-module/results-validation-module.repository';
+import {
+  foldCompleteness,
+  MWB_COMPLETENESS_CAP,
+} from './results-validation-module/completeness';
 import { ResultsKnowledgeProductAuthorRepository } from './results-knowledge-products/repositories/results-knowledge-product-authors.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from './results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import { ResultsKnowledgeProductMetadataRepository } from './results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
@@ -1452,6 +1456,70 @@ export class ResultsService {
           initiative_entity_user: initiativesPortfolio3,
         };
       });
+
+      // @akili-spec changes/my-work-board
+      // MWB-R-8 / MWB-DD-1 / MWB-DD-2: opt-in completeness fold on the existing filter path.
+      // Flag absent/false -> untouched (no key added, no validation call) so the default payload
+      // stays byte-identical (MWB-AC-8). Flag true -> compute `completeness` for eligible items
+      // only (status_id 1 Editing or 8 Draft, non-IPSR-package result types), newest
+      // `created_date` first, capped at MWB_COMPLETENESS_CAP per request, `validateResultById`
+      // called in chunks of MWB_COMPLETENESS_CHUNK_SIZE with per-item failure isolation.
+      const includeCompleteness = parseQueryBool(query.include_completeness);
+      if (includeCompleteness) {
+        const isEligible = (item: any): boolean =>
+          (Number(item.status_id) === 1 || Number(item.status_id) === 8) &&
+          Number(item.result_type_id) !== ResultTypeEnum.INNOVATION_USE_IPSR;
+
+        const eligibleItems = result
+          .filter(isEligible)
+          .sort(
+            (a, b) =>
+              new Date(b.created_date).getTime() -
+              new Date(a.created_date).getTime(),
+          )
+          .slice(0, MWB_COMPLETENESS_CAP);
+
+        const completenessById = new Map<
+          number,
+          ReturnType<typeof foldCompleteness> | null
+        >();
+        const MWB_COMPLETENESS_CHUNK_SIZE = 5;
+
+        for (
+          let i = 0;
+          i < eligibleItems.length;
+          i += MWB_COMPLETENESS_CHUNK_SIZE
+        ) {
+          const chunk = eligibleItems.slice(i, i + MWB_COMPLETENESS_CHUNK_SIZE);
+          const settled = await Promise.allSettled(
+            chunk.map((item) =>
+              this._resultValidationRepository.validateResultById(item.id),
+            ),
+          );
+          settled.forEach((outcome, idx) => {
+            const chunkItem = chunk[idx];
+            if (outcome.status === 'fulfilled') {
+              completenessById.set(
+                chunkItem.id,
+                foldCompleteness(outcome.value),
+              );
+            } else {
+              this._logger.warn('my-work completeness failed', {
+                resultId: chunkItem.id,
+              });
+              completenessById.set(chunkItem.id, null);
+            }
+          });
+        }
+
+        const eligibleIds = new Set(eligibleItems.map((item) => item.id));
+        result = result.map((item) => ({
+          ...item,
+          completeness: eligibleIds.has(item.id)
+            ? (completenessById.get(item.id) ?? null)
+            : null,
+        }));
+      }
 
       if (!result.length) {
         throw {
