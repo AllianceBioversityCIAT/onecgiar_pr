@@ -10,7 +10,7 @@
         <input type="text" hlmInput placeholder="Search" [(ngModel)]="searchText" style="width: 100%" />
       </div>
       <div class="pr-ms-list custom_scroll" *ngIf="!group; else groupedList">
-        <div class="option pr-body-2" *ngFor="let option of filteredOptions" (click)="toggle(option); $event.stopPropagation()">
+        <div class="option pr-body-2" *ngFor="let option of filteredOptions; trackBy: trackByOption" (click)="toggle(option); $event.stopPropagation()">
           <input type="checkbox" class="pr-native-check" [checked]="isSelected(option)" (click)="$event.preventDefault()" />
           <div class="label">{{ optionLabel ? option[optionLabel] : option }}</div>
         </div>
@@ -18,9 +18,9 @@
       </div>
       <ng-template #groupedList>
         <div class="pr-ms-list custom_scroll">
-          <div *ngFor="let grp of filteredGroups" class="pr-ms-group">
+          <div *ngFor="let grp of filteredGroups; trackBy: trackByGroup" class="pr-ms-group">
             <div class="pr-ms-group-label pr-body-2">{{ grp.label }}</div>
-            <div class="option pr-body-2" *ngFor="let option of grp.children" (click)="toggle(option); $event.stopPropagation()">
+            <div class="option pr-body-2" *ngFor="let option of grp.children; trackBy: trackByOption" (click)="toggle(option); $event.stopPropagation()">
               <input type="checkbox" class="pr-native-check" [checked]="isSelected(option)" (click)="$event.preventDefault()" />
               <div class="label">{{ optionLabel ? option[optionLabel] : option }}</div>
             </div>

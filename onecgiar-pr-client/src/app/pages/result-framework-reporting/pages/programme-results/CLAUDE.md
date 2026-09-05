@@ -1,6 +1,6 @@
 # programme-results
 
-**Verified:** 2026-09-04 · branch qa-development-2026 · 1c438f120 (adds the viewport-lock layout contract below — unconditional host class, `#workArea` scroller, band `frameLocked`/`scrollHost`; fixes the stale `canReport` value; spec `changes/sp-shell-app-viewport` SAV-T-6); prior: 6a9a45b5e (spec `changes/results-aow-column-filter`, RAC-T-1..T-5 — Area of Work column, live Section filter, `results-scope` join; prior: 2026-08-28 · branch performance-refactor · 11ba9ab1c, P2-3312)
+**Verified:** 2026-09-05 · branch qa-development-2026 · fe1d7402e (spec `changes/my-work-board`, MWB-T-13 — Category / Funding source / Center became MULTI-select on the shared `ProgrammeResultsFilterService`: `selectedCategories/Origins/Centers: string[]`, one chip per value, `parseListParam`/`joinListParam` for the comma-separated params, and the brand checkbox accent widened from `.pgr-filter--section` to `.pgr-filter`); prior: 1c438f120 (adds the viewport-lock layout contract below — unconditional host class, `#workArea` scroller, band `frameLocked`/`scrollHost`; fixes the stale `canReport` value; spec `changes/sp-shell-app-viewport` SAV-T-6); prior: 6a9a45b5e (spec `changes/results-aow-column-filter`, RAC-T-1..T-5 — Area of Work column, live Section filter, `results-scope` join; prior: 2026-08-28 · branch performance-refactor · 11ba9ab1c, P2-3312)
 
 **What this owns:** the **Results** tab of the programme shell (`entity-details/:entityId/results`) — one flat, searchable table of every result that programme reported, plus its filter row, clickable status counters, Columns picker and CSV export.
 
@@ -14,8 +14,19 @@
   never hardcoded, so a dropdown can only offer a value some row actually has. Category is then
   *narrowed* further (P2-3312, below); the other four are shown whole.
 - `ProgrammeResultsFilterService` owns **filter state only** — no HTTP, no idea where rows come from:
-  `searchText`, `selectedSections[]`, `selectedStatus/Category/Origin`, `activeChips()`,
-  `hasActiveFilters()`, plus the pure predicates `matchesProgrammeResultFilters` / `buildStatusCounts`.
+  `searchText`, `selectedSections[]`, `selectedPhase`, `selectedStatus`, `selectedCreatedBy`,
+  `activeChips()`, `hasActiveFilters()`, plus the pure predicates `matchesProgrammeResultFilters` /
+  `buildStatusCounts`. **Since `changes/my-work-board` (MWB-T-13) three dimensions are MULTI-value:**
+  `selectedCategories` / `selectedOrigins` / `selectedCenters`, all `string[]` — **OR inside a
+  dimension, AND across them**, `[]` meaning "no filter" (they replace the old single-value
+  `selectedCategory` / `selectedOrigin` / `selectedCenter`). `activeChips()` emits **one chip per
+  selected value** in selection order, so `clearChip()` removes exactly that value and leaves the
+  dimension's others alone. Their query params are comma-separated lists bridged by the service's own
+  `parseListParam` / `joinListParam` / `sameListParam` exports (`?category=a,b`; an empty selection
+  joins to `null`, which REMOVES the key under `merge`) — a legacy single-value deep link hydrates as
+  a one-element array, which is why the Overview's `RFD-*` links needed no change. **The My results
+  board (`pages/my-work-board/`) consumes these same three signals and the same codecs** — it used to
+  keep a board-local copy, and that copy is gone; do not re-grow one.
 - **Sorting belongs to `app-pr-table`.** The component only renders the glyph and colour
   (`sortArrow()` / `sortColor()`); `prSortableColumn` host-binds `aria-sort` — never set it yourself.
 - The component is the only place that joins them: `filteredRows()` (`:521`), `totalLabel()` (`:530`)
@@ -150,8 +161,10 @@
 - ⚠️ **The Category dropdown is the ONLY narrowed one (P2-3312).** It offers the five Results
   Framework `result_type`s (`STANDARD_RF_CATEGORIES`, RF order, only those some row has) and then one
   `Other` bucket for `Capacity change` / `Other outcome` / `Other output` / `Impact contribution`. The
-  bucket travels as the sentinel `__other__` — in `selectedCategory` AND in the `category` query param
-  — so `matchesProgrammeResultCategory` must stay its only reader (chips relabel it "Other"). The
+  bucket travels as the sentinel `__other__` — as one VALUE inside `selectedCategories` AND inside the
+  comma-separated `category` query param — so `matchesProgrammeResultCategory` must stay its only
+  reader (chips relabel it "Other"). Since MWB-T-13 it is one selection among many, not a mode:
+  `['Knowledge product', '__other__']` is RF-KPs OR every non-RF row, not a contradiction. The
   ticket names the six RF *indicators*; five entries because both policy ones are one `result_type`,
   kept in `result_type` language so the pill agrees with the column beside it. 🛑 Exact non-RF values
   stay filterable — the Overview cards deep-link `category=Other output`, so `buildCategoryFilterOptions`

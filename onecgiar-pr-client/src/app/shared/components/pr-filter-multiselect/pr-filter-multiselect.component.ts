@@ -99,19 +99,90 @@ export class PrFilterMultiselectComponent implements ControlValueAccessor {
     this.changed.emit(arr);
   }
 
+  // @akili-spec changes/my-work-board (MWB-T-13)
+  /**
+   * `trackBy` for both row loops — the option's VALUE, exactly what the model stores
+   * (`optionValue ? option[optionValue] : option`).
+   *
+   * Without it the panel closed on the first click. The panel is shown by `.field:focus-within`,
+   * so it only stays open while focus stays inside it; the click that ticks a row focuses that
+   * row's checkbox, and any `*ngFor` pass that destroys the row takes the focused node with it —
+   * focus falls back to `<body>`, `:focus-within` goes false, panel gone (measured by MWB-T-14 on
+   * the Results tab's Section control). Keying on the value survives both a rebuilt wrapper list
+   * and a fresh `options` array carrying equal-but-new option objects.
+   */
+  trackByOption = (_index: number, option: any): any => this.valueOf(option) ?? option;
+
+  /** `trackBy` for the group loop — the group label, which is what identifies a group here. */
+  trackByGroup = (_index: number, group: { label: string }): any => group?.label;
+
+  // ── Memoised option lists ───────────────────────────────────────────────────────────────
+  // Both getters below are read from the template, so they run on EVERY change-detection pass.
+  // Rebuilding their arrays there was the other half of the closing-panel bug: grouped mode
+  // minted brand-new `{ label, children }` wrappers each pass, which the outer `*ngFor` (identity
+  // diffing) could only read as "every group replaced". They are computed once per real change
+  // and cached, so an unchanged control hands `*ngFor` the SAME array instance and it does not
+  // diff at all.
+  //
+  // Invalidation is lazy rather than `ngOnChanges`-driven on purpose: `options` is assigned
+  // imperatively as often as it is bound (specs and the `@ViewChild` `_value` bridge both do it),
+  // and a cache that only refreshed on a binding pass would go stale for those callers.
+  private cacheKey: string | null = null;
+  private cachedSource: any[] | null = null;
+  private cachedOptions: any[] = [];
+  private cachedGroups: { label: string; children: any[] }[] = [];
+
   get filteredOptions(): any[] {
-    return this.applyFilter(this.options || []);
+    this.refreshCache();
+    return this.cachedOptions;
   }
 
   /** Groups with their (search-filtered) children, for grouped mode. */
   get filteredGroups(): { label: string; children: any[] }[] {
-    const groups = this.options || [];
-    return groups
+    this.refreshCache();
+    return this.cachedGroups;
+  }
+
+  /** Every input the two lists are derived from, except `options` itself (compared separately). */
+  private currentCacheKey(): string {
+    return [this.group, this.optionLabel, this.optionGroupChildren, this.optionGroupLabel, this.filter, this.searchText].join('\u0000');
+  }
+
+  private refreshCache(): void {
+    const source = this.options || [];
+    const key = this.currentCacheKey();
+
+    if (this.cacheKey === key && this.cachedSource !== null && this.sameSource(this.cachedSource, source)) {
+      // Content-equal but a different array instance: adopt the new reference so the next pass
+      // takes the `===` fast path, and keep the cached lists (and with them every DOM row).
+      this.cachedSource = source;
+      return;
+    }
+
+    this.cacheKey = key;
+    this.cachedSource = source;
+    this.cachedOptions = this.applyFilter(source);
+    this.cachedGroups = source
       .map(g => ({
         label: g?.[this.optionGroupLabel],
         children: this.applyFilter(g?.[this.optionGroupChildren] || [])
       }))
       .filter(g => g.children.length);
+  }
+
+  /** Cheap `===`, then a content compare — the group shape when grouped, options otherwise. */
+  private sameSource(a: any[], b: any[]): boolean {
+    if (a === b) return true;
+    if (!a || !b || a.length !== b.length) return false;
+    if (!this.group) return a.every((option, index) => this.sameValue(option, b[index]));
+    return a.every((group, index) => {
+      const other = b[index];
+      if (group === other) return true;
+      if (group?.[this.optionGroupLabel] !== other?.[this.optionGroupLabel]) return false;
+      const children = group?.[this.optionGroupChildren] || [];
+      const otherChildren = other?.[this.optionGroupChildren] || [];
+      return children.length === otherChildren.length && children.every((child, i) => this.sameValue(child, otherChildren[i]));
+    });
   }
 
   private applyFilter(list: any[]): any[] {

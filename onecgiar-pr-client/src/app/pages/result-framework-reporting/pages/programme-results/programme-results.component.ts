@@ -412,7 +412,11 @@ function formatDate(value: string): string {
         color: var(--pr-text-muted);
       }
 
-      .pgr-filter--section ::ng-deep .option .pr-native-check {
+      /* MWB-T-13: the brand accent is NOT Section-only — Category / Funding source / Center are
+         the same app-pr-filter-multiselect since they went multi-value, so the checkbox rule
+         widens to every .pgr-filter. The two rules above stay --section: they polish the GROUPED
+         panel, and Section is the only grouped control here. */
+      .pgr-filter ::ng-deep .option .pr-native-check {
         flex-shrink: 0;
         accent-color: var(--pr-color-primary-300);
       }
