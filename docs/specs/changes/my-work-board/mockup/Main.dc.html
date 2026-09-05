@@ -1,0 +1,301 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: Poppins, "Segoe UI", Helvetica, Arial, sans-serif; color: #191524; background: #f7f7f9; -webkit-font-smoothing: antialiased; }
+    a { color: #6b46e5; text-decoration: none; } a:hover { color: #5733c4; }
+    .mono { font-family: "SF Mono", Menlo, Consolas, monospace; }
+    .rail { writing-mode: vertical-rl; transform: rotate(180deg); }
+  </style>
+</helmet>
+<div style="width: 1440px; height: 900px; display: flex; flex-direction: column; background: #f7f7f9; overflow: hidden;">
+
+  <!-- Topbar (white, 56px, matches --pr-surface-topbar) -->
+  <div style="height: 56px; flex: none; display: flex; align-items: center; gap: 24px; padding: 0 24px; background: #ffffff; border-bottom: 1px solid #e3e3e8;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #6b6dc4, #6461bc);"></div>
+      <span style="font-size: 15px; font-weight: 700; letter-spacing: 0.02em; color: #191524;">PRMS</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; height: 32px; width: 320px; padding: 0 12px; border-radius: 8px; background: #f7f7f9; border: 1px solid #e3e3e8; color: #9691a8; font-size: 12px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9691a8" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+      <span>Search</span>
+    </div>
+    <div style="flex: 1;"></div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <div style="width: 30px; height: 30px; border-radius: 50%; background: #ede9fe; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #5733c4;">JC</div>
+      <span style="font-size: 12px; font-weight: 500; color: #5d5872;">Juan Cadavid</span>
+    </div>
+  </div>
+
+  <!-- Science Program band (--pr-surface-band) -->
+  <div style="flex: none; background: #f7f4fd; border-bottom: 1px solid #e3e3e8;">
+    <div style="display: flex; flex-direction: column; gap: 4px; padding: 14px 32px 0;">
+      <div style="display: flex; align-items: center; gap: 7px;">
+        <span style="width: 7px; height: 7px; border-radius: 50%; background: #6b46e5;"></span>
+        <span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #9691a8; line-height: 1;">SP01</span>
+        <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #9691a8; line-height: 1;">Reporting cycle 2026 · P25</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <h1 style="margin: 0; font-size: 20px; font-weight: 700; line-height: 1.25; color: #191524;">Sustainable Farming</h1>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9691a8" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 8h.01"></path></svg>
+      </div>
+    </div>
+    <!-- Tabs -->
+    <div style="display: flex; align-items: flex-end; gap: 22px; padding: 10px 32px 0; border-bottom: 1px solid #e3e3e8; height: 40px; box-sizing: border-box;">
+      <div style="display: flex; align-items: center; gap: 6px; padding: 0 4px 9px; border-bottom: 2px solid transparent; margin-bottom: -1px; font-size: 14px; font-weight: 500; color: #5d5872;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#6b6580"><path d="M4 4h7v9H4zM13 4h7v5h-7zM13 11h7v9h-7zM4 15h7v5H4z"></path></svg>
+        <span>Overview</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; padding: 0 4px 9px; border-bottom: 2px solid transparent; margin-bottom: -1px; font-size: 14px; font-weight: 500; color: #5d5872;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b6580" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1.5" fill="#6b6580"></circle></svg>
+        <span>Reporting</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; padding: 0 4px 9px; border-bottom: 2px solid transparent; margin-bottom: -1px; font-size: 14px; font-weight: 500; color: #5d5872;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#6b6580"><path d="M3 4h18v4H3zM3 10h18v4H3zM3 16h18v4H3z" opacity="0.9"></path></svg>
+        <span>Results</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; padding: 0 4px 9px; border-bottom: 2px solid #6b46e5; margin-bottom: -1px; font-size: 14px; font-weight: 600; color: #191524;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#5733c4"><path d="M3 4h5v16H3zM9.5 4h5v10h-5zM16 4h5v7h-5z"></path></svg>
+        <span>My work</span>
+        <span style="display: inline-flex; align-items: center; justify-content: center; height: 18px; min-width: 18px; padding: 0 5px; border-radius: 999px; background: #5733c4; color: #ffffff; font-size: 10.5px; font-weight: 700; font-variant-numeric: tabular-nums;">3</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Board toolbar -->
+  <div style="flex: none; display: flex; align-items: center; gap: 16px; padding: 14px 32px 0;">
+    <div style="display: inline-flex; height: 30px; padding: 2px; border-radius: 8px; background: #ffffff; border: 1px solid #e3e3e8; gap: 2px;">
+      <div style="display: flex; align-items: center; gap: 6px; padding: 0 12px; border-radius: 6px; background: #f5f3ff; color: #5733c4; font-size: 12px; font-weight: 600;">
+        <span>Mine</span><span style="font-weight: 500; color: #9691a8;">11</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; padding: 0 12px; border-radius: 6px; color: #5d5872; font-size: 12px; font-weight: 500;">
+        <span>All program results</span><span style="color: #9691a8;">124</span>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b6580;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9691a8" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+      <span>Read-only board. Open a result to update it. Status changes still happen inside the result and in QA.</span>
+    </div>
+    <div style="flex: 1;"></div>
+    <div style="display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 8px; background: #ffffff; border: 1px solid #e3e3e8; font-size: 12px; color: #5d5872;">
+      <span style="color: #9691a8;">Phase</span><span style="font-weight: 600; color: #191524;">Reporting 2026</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9691a8" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"></path></svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 8px; background: #ffffff; border: 1px solid #e3e3e8; font-size: 12px; color: #5d5872;">
+      <span style="color: #9691a8;">Sort</span><span style="font-weight: 600; color: #191524;">Least complete first</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9691a8" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"></path></svg>
+    </div>
+  </div>
+
+  <!-- Board -->
+  <div style="flex: 1; min-height: 0; display: flex; gap: 16px; padding: 14px 32px 20px; overflow: hidden; align-items: stretch;">
+
+    <!-- Group: Needs my action -->
+    <div style="display: flex; flex-direction: column; gap: 8px; width: 360px; flex: none;">
+      <div style="display: flex; align-items: center; gap: 8px; padding: 0 2px; height: 16px;">
+        <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #5733c4;">Needs my action</span>
+      </div>
+      <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; border-radius: 12px; background: #ffffff; border: 1px solid #ddd6fe; box-shadow: 0 1px 2px rgba(25,21,36,0.04);">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 12px 14px 10px; border-bottom: 1px solid #ede9fe;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: #fcc000;"></span>
+          <span style="font-size: 12px; font-weight: 700; color: #191524;">Editing</span>
+          <span style="display: inline-flex; align-items: center; justify-content: center; height: 18px; min-width: 18px; padding: 0 6px; border-radius: 999px; background: #fff3c2; color: #836d05; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;">3</span>
+          <span style="flex: 1;"></span>
+          <span style="font-size: 11px; color: #9691a8;">1 ready to submit</span>
+        </div>
+        <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 12px;">
+
+          <!-- Card 1: 3/7 -->
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 12px 10px; border-radius: 10px; background: #ffffff; border: 1px solid #e3e3e8; box-shadow: 0 1px 2px rgba(25,21,36,0.05);">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: #9691a8;">4712</span>
+              <span style="display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 999px; background: #f5f3ff; color: #5733c4; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1;">Knowledge product</span>
+              <span style="flex: 1;"></span>
+              <span style="font-size: 11px; color: #9691a8;">W1/W2</span>
+            </div>
+            <p style="margin: 0; font-size: 13px; font-weight: 600; line-height: 1.35; color: #191524; text-wrap: pretty;">Farmer-led seed multiplication guide for drought-tolerant sorghum</p>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 11px; font-weight: 600; color: #5d5872;">2 of 5 sections</span>
+                <span style="font-size: 11px; color: #9691a8;">Created 12 Aug</span>
+              </div>
+              <div style="height: 4px; border-radius: 999px; background: #efeef3; overflow: hidden;"><div style="width: 40%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #6b6dc4, #6461bc);"></div></div>
+              <p style="margin: 0; font-size: 11px; line-height: 1.4; color: #6b6580;">Missing: Geographic location · Contributing partners · Knowledge product</p>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+              <div style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 8px; background: linear-gradient(90deg, #6b6dc4, #6461bc); color: #ffffff; font-size: 12px; font-weight: 600;">
+                <span>Continue</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: 5/7 -->
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 12px 10px; border-radius: 10px; background: #ffffff; border: 1px solid #e3e3e8; box-shadow: 0 1px 2px rgba(25,21,36,0.05);">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: #9691a8;">4698</span>
+              <span style="display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 999px; background: #f5f3ff; color: #5733c4; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1;">Innovation development</span>
+              <span style="flex: 1;"></span>
+              <span style="font-size: 11px; color: #9691a8;">W1/W2</span>
+            </div>
+            <p style="margin: 0; font-size: 13px; font-weight: 600; line-height: 1.35; color: #191524; text-wrap: pretty;">Digital advisory bundle piloted with 1,200 households in western Kenya</p>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 11px; font-weight: 600; color: #5d5872;">4 of 5 sections</span>
+                <span style="font-size: 11px; color: #9691a8;">Created 4 Aug</span>
+              </div>
+              <div style="height: 4px; border-radius: 999px; background: #efeef3; overflow: hidden;"><div style="width: 80%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #6b6dc4, #6461bc);"></div></div>
+              <p style="margin: 0; font-size: 11px; line-height: 1.4; color: #6b6580;">Missing: Evidence</p>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+              <div style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 8px; background: linear-gradient(90deg, #6b6dc4, #6461bc); color: #ffffff; font-size: 12px; font-weight: 600;">
+                <span>Continue</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: 7/7 ready -->
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 12px 10px; border-radius: 10px; background: #ffffff; border: 1px solid #e3e3e8; box-shadow: 0 1px 2px rgba(25,21,36,0.05);">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: #9691a8;">4655</span>
+              <span style="display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 999px; background: #f5f3ff; color: #5733c4; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1;">Capacity sharing</span>
+              <span style="flex: 1;"></span>
+              <span style="font-size: 11px; color: #9691a8;">W1/W2</span>
+            </div>
+            <p style="margin: 0; font-size: 13px; font-weight: 600; line-height: 1.35; color: #191524; text-wrap: pretty;">Training of trainers on gender-responsive extension services</p>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #047857;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>
+                  <span>5 of 5 sections · ready to submit</span>
+                </span>
+                <span style="font-size: 11px; color: #9691a8;">Created 22 Jul</span>
+              </div>
+              <div style="height: 4px; border-radius: 999px; background: #efeef3; overflow: hidden;"><div style="width: 100%; height: 100%; border-radius: 999px; background: #19ae58;"></div></div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+              <div style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 8px; background: #ffffff; border: 1px solid #ddd6fe; color: #5733c4; font-size: 12px; font-weight: 600;">
+                <span>Review and submit</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5733c4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Group: Waiting on others -->
+    <div style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0;">
+      <div style="display: flex; align-items: center; gap: 8px; padding: 0 2px; height: 16px;">
+        <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #9691a8;">Waiting on others</span>
+      </div>
+      <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+
+        <!-- Pending review -->
+        <div style="display: flex; flex-direction: column; border-radius: 12px; background: #f7f7f9; border: 1px solid #e3e3e8;">
+          <div style="display: flex; align-items: center; gap: 8px; padding: 12px 14px 10px; border-bottom: 1px solid #e3e3e8;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: #999999;"></span>
+            <span style="font-size: 12px; font-weight: 700; color: #5d5872;">Pending review</span>
+            <span style="display: inline-flex; align-items: center; justify-content: center; height: 18px; min-width: 18px; padding: 0 6px; border-radius: 999px; background: #efeef3; color: #444444; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;">1</span>
+          </div>
+          <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 12px;">
+            <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 10px; background: #ffffff; border: 1px solid #e3e3e8;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: #9691a8;">4701</span>
+                <span style="display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 999px; background: #f5f3ff; color: #5733c4; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1;">Policy change</span>
+                <span style="flex: 1;"></span>
+                <span style="font-size: 11px; color: #9691a8;">W3/Bilateral</span>
+              </div>
+              <p style="margin: 0; font-size: 13px; font-weight: 500; line-height: 1.35; color: #191524; text-wrap: pretty;">National fertilizer policy amendment informed by soil-health evidence</p>
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #6b6580;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9691a8" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+                  <span>Sent for review 2 days ago</span>
+                </span>
+                <a href="#" style="font-size: 11px; font-weight: 600;">Open</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submitted -->
+        <div style="display: flex; flex-direction: column; border-radius: 12px; background: #f7f7f9; border: 1px solid #e3e3e8;">
+          <div style="display: flex; align-items: center; gap: 8px; padding: 12px 14px 10px; border-bottom: 1px solid #e3e3e8;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: #6b46e5;"></span>
+            <span style="font-size: 12px; font-weight: 700; color: #5d5872;">Submitted</span>
+            <span style="display: inline-flex; align-items: center; justify-content: center; height: 18px; min-width: 18px; padding: 0 6px; border-radius: 999px; background: #ede9fe; color: #5733c4; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;">2</span>
+          </div>
+          <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 12px;">
+            <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 10px; background: #ffffff; border: 1px solid #e3e3e8;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: #9691a8;">4630</span>
+                <span style="display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 999px; background: #f5f3ff; color: #5733c4; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1;">Innovation use</span>
+                <span style="flex: 1;"></span>
+                <span style="font-size: 11px; color: #9691a8;">W1/W2</span>
+              </div>
+              <p style="margin: 0; font-size: 13px; font-weight: 500; line-height: 1.35; color: #191524; text-wrap: pretty;">Solar irrigation kit adopted by three farmer cooperatives</p>
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #6b6580;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9691a8" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+                  <span>Submitted 28 Aug · in QA</span>
+                </span>
+                <a href="#" style="font-size: 11px; font-weight: 600;">Open</a>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 10px; background: #ffffff; border: 1px solid #e3e3e8;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: #9691a8;">4588</span>
+                <span style="display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 999px; background: #f5f3ff; color: #5733c4; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1;">Other output</span>
+                <span style="flex: 1;"></span>
+                <span style="font-size: 11px; color: #9691a8;">W1/W2</span>
+              </div>
+              <p style="margin: 0; font-size: 13px; font-weight: 500; line-height: 1.35; color: #191524; text-wrap: pretty;">Climate information service uptake baseline, 2026</p>
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #6b6580;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9691a8" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+                  <span>Submitted 19 Aug · in QA</span>
+                </span>
+                <a href="#" style="font-size: 11px; font-weight: 600;">Open</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Group: Closed (collapsed rails) -->
+    <div style="display: flex; flex-direction: column; gap: 8px; flex: none;">
+      <div style="display: flex; align-items: center; gap: 8px; padding: 0 2px; height: 16px;">
+        <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #9691a8;">Closed</span>
+      </div>
+      <div style="flex: 1; min-height: 0; display: flex; gap: 8px;">
+        <div style="width: 44px; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px 0; border-radius: 12px; background: #f7f7f9; border: 1px solid #e3e3e8;">
+          <span style="display: inline-flex; align-items: center; justify-content: center; height: 20px; min-width: 20px; padding: 0 6px; border-radius: 999px; background: #d1fae5; color: #047857; font-size: 11px; font-weight: 700;">4</span>
+          <span class="rail" style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: #5d5872; white-space: nowrap;">Approved</span>
+          <span style="flex: 1;"></span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9691a8" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg>
+        </div>
+        <div style="width: 44px; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px 0; border-radius: 12px; background: #f7f7f9; border: 1px solid #e3e3e8;">
+          <span style="display: inline-flex; align-items: center; justify-content: center; height: 20px; min-width: 20px; padding: 0 6px; border-radius: 999px; background: #fff1e4; color: #c2410c; font-size: 11px; font-weight: 700;">1</span>
+          <span class="rail" style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: #5d5872; white-space: nowrap;">Discontinued</span>
+          <span style="flex: 1;"></span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9691a8" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
