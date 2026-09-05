@@ -67,7 +67,7 @@
          (>= 900px). Below it the list is `max-h-none overflow-visible` (the base state here) and
          the DOCUMENT scrolls, so a phone reads a column top-to-bottom instead of nesting a second
          scroller inside a page that already scrolls. -->
-    <div class="flex flex-col gap-[10px] p-[12px] min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll" data-testid="my-work-column-list">
+    <div class="flex flex-col gap-[10px] p-[12px] min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-x-hidden min-[900px]:overflow-y-auto custom_scroll" data-testid="my-work-column-list">
       @for (row of column().rows; track row.code) {
         <app-my-work-card [row]="row" [inEditingColumn]="isEditing()" />
       } @empty {

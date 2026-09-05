@@ -7,21 +7,22 @@
      hover STATE still applies, only the animated transition between states is removed. -->
 <article
   class="flex flex-col gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px_12px_10px] shadow-[0_1px_2px_rgba(25,21,36,0.05)] transition-[transform,box-shadow,border-color,background-color] duration-150 ease-out hover:bg-[var(--pr-surface-subtle-hover)] hover:-translate-y-[1px] hover:border-[var(--pr-color-primary-200)] hover:shadow-[0_4px_12px_rgba(25,21,36,0.08)] motion-reduce:transition-none">
-  <!-- Code · Category chip · Origin -->
-  <div class="flex items-center gap-[8px]">
+  <!-- Code · Category chip · Status chip · Origin — wraps instead of overflowing the column (user review 2026-09-05: cards were
+       spilling past the 240/260px column and each list grew a horizontal scrollbar); the category chip truncates with an ellipsis
+       when it alone is wider than the row. -->
+  <div class="flex min-w-0 flex-wrap items-center gap-x-[8px] gap-y-[4px]">
     <span class="font-mono text-[11px] font-semibold tracking-[0.04em] text-[var(--pr-text-subtle)]">{{ row().code }}</span>
     @if (row().category) {
       <span
-        class="inline-flex h-[16px] shrink-0 items-center whitespace-nowrap rounded-full bg-[var(--pr-color-primary-50)] px-[6px] text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-primary-400)]">
+        class="inline-block h-[16px] max-w-full truncate rounded-full bg-[var(--pr-color-primary-50)] px-[6px] text-[10px] font-semibold uppercase leading-[16px] tracking-[0.06em] text-[var(--pr-color-primary-400)]">
         {{ row().category }}
       </span>
     }
-    <span class="inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-[7px] py-[2px] text-[10px] font-medium" [class]="statusChipClass()">
+    <span class="inline-flex items-center whitespace-nowrap rounded-full px-[7px] py-[2px] text-[10px] font-medium" [class]="statusChipClass()">
       {{ row().statusName }}
     </span>
-    <span class="flex-1"></span>
     @if (row().origin) {
-      <span class="text-[11px] text-[var(--pr-text-subtle)]">{{ row().origin }}</span>
+      <span class="ml-auto whitespace-nowrap text-[11px] text-[var(--pr-text-subtle)]">{{ row().origin }}</span>
     }
   </div>
 
