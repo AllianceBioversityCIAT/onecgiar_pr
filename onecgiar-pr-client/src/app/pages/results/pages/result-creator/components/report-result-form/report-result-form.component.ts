@@ -17,6 +17,10 @@ import {
   innovationLinkAnswerIsComplete,
   showsInnovationLinkQuestion
 } from '../../../../../../shared/services/global/qa-innovation-development-results.service';
+import { validateKpHandle } from '../../../../../result-framework-reporting/shared/report-result/kp-handle.validator';
+import { CgspaceItemDto } from '../../../../../result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.component';
+
+export type KpEntryMode = 'browse' | 'manual';
 
 type TitleSearchEvent =
   | {
@@ -44,6 +48,14 @@ export class ReportResultFormComponent implements OnInit, DoCheck, OnDestroy {
   private readonly titleSearchDebounceMs = 500;
   mqapJson: {};
   validating = false;
+  readonly kpEntryMode = signal<KpEntryMode>('browse');
+
+  readonly phaseYear = computed(() => {
+    this.api.dataControlSE.reportingPhaseVersion?.();
+    return Number(this.api.dataControlSE.reportingCurrentPhase?.phaseYear ?? new Date().getFullYear());
+  });
+
+  readonly isAdmin = computed(() => !!this.api.rolesSE?.isAdmin);
 
   // ---- P2-3421: link to a QA'd Innovation Development result -------------------------------
   /** Shared catalogue — one request, one filter, shared with the ToC-linked creation surfaces. */
@@ -215,6 +227,52 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     return this.resultLevelSE.resultBody.result_type_id == 6;
   }
 
+  onCgspaceItemSelected(item: CgspaceItemDto): void {
+    const url = item.itemUrl || item.handleUrl || item.handle;
+    this.validating = true;
+    const error = validateKpHandle(url);
+    this.mqapUrlError = error;
+    if (error.status) {
+      this.validating = false;
+      this.api.alertsFe.show({
+        id: 'reportResultError',
+        title: 'Error!',
+        description: error.message || 'Invalid CGSpace URL',
+        status: 'error'
+      });
+      return;
+    }
+
+    this.resultLevelSE.resultBody.handler = url;
+    this.resultLevelSE.resultBody.result_name = item.title ?? '';
+    this.api.resultsSE.GET_mqapValidation(url).subscribe({
+      next: resp => {
+        this.mqapJson = resp.response;
+        this.resultLevelSE.resultBody.result_name = resp.response?.title ?? '';
+        this.validating = false;
+      },
+      error: err => {
+        this.validating = false;
+        this.resultLevelSE.resultBody.handler = '';
+        this.resultLevelSE.resultBody.result_name = '';
+        this.api.alertsFe.show({
+          id: 'reportResultError',
+          title: 'Error!',
+          description: err?.error?.message || 'Could not retrieve metadata for this item',
+          status: 'error'
+        });
+      }
+    });
+  }
+
+  clearSelectedKpItem(): void {
+    this.resultLevelSE.resultBody.handler = '';
+    this.resultLevelSE.resultBody.result_name = '';
+    this.mqapJson = {};
+    this.mqapUrlError = { status: false, message: '' };
+    this.validating = false;
+  }
+
   /**
    * P2-3421 — visible only on the emergent pathway, only for Innovation use, and only from the
    * 2026 phase onwards. The year gate is a PHASE gate on purpose: `isP25()` would switch the
@@ -262,8 +320,15 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     // instead of leaving a hidden "Yes" (and its link) travelling in the payload.
     this.hasInnovationLink = false;
     this.linkedResultId = null;
-    if (this.resultLevelSE.resultBody.result_type_id == 6) this.resultLevelSE.resultBody.result_name = '';
-    else this.onTitleChange(this.resultLevelSE.resultBody.result_name);
+    this.kpEntryMode.set('browse');
+    if (this.resultLevelSE.resultBody.result_type_id == 6) {
+      this.clearSelectedKpItem();
+    } else {
+      this.resultLevelSE.resultBody.handler = '';
+      this.mqapJson = {};
+      this.mqapUrlError = { status: false, message: '' };
+      this.onTitleChange(this.resultLevelSE.resultBody.result_name);
+    }
   }
 
   private applyPendingResultTypeSelection() {

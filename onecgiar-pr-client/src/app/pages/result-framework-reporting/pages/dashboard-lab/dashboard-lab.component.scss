@@ -311,6 +311,63 @@ $pr-by-aow-pad: 8px 16px;
   }
 }
 
+/* ── Level 3 Indented Indicator Scaffolding (BHA-R-4, BHA-R-5, BHA-R-6) ──
+   7-column grid: [Mark 24px] [Title 1fr] [Target 72px] [Achieved 72px] [Status 110px] [Progress 110px] [Action 120px] */
+$pr-by-aow-indicator-tracks: 24px minmax(260px, 1fr) 72px 72px 110px 110px 120px;
+$pr-by-aow-indicator-gap: 12px;
+$pr-by-aow-indicator-pad: 8px 16px;
+
+.pr-by-aow-subhead {
+  display: grid;
+  grid-template-columns: $pr-by-aow-indicator-tracks;
+  align-items: center;
+  gap: $pr-by-aow-indicator-gap;
+  height: 28px;
+  padding: 0 16px;
+  background: rgba(248, 250, 252, 0.5);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.pr-by-aow-indicator-row {
+  display: grid;
+  grid-template-columns: $pr-by-aow-indicator-tracks;
+  align-items: center;
+  gap: $pr-by-aow-indicator-gap;
+  min-height: 48px;
+  padding: $pr-by-aow-indicator-pad;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--pr-border-divider);
+  background: var(--pr-surface-card);
+  cursor: pointer;
+  transition: background 150ms ease;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: rgba(248, 250, 252, 0.8);
+  }
+}
+
+.pr-status-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--pr-color-primary-300);
+
+  svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+  }
+}
+
 // ─── Legacy "Report emerging result" dialog ───────────────────────────────────
 // Moved AS-IS from entity-details.component.scss (the retired host of this same modal).
 // Deliberately NOT re-authored in Tailwind: `::ng-deep` is component-scoped, so without this
@@ -336,8 +393,8 @@ $pr-by-aow-pad: 8px 16px;
 // `::ng-deep` offers.
 ::ng-deep {
   .report-emerging-dialog {
-    width: 70vw !important;
-    max-width: 1000px !important;
+    width: 80vw !important;
+    max-width: 1120px !important;
     min-height: 50vh !important;
     max-height: 90vh !important;
     border-radius: 26px !important;

@@ -14,6 +14,7 @@ import { AlertGlobalInfoModule } from '../../../../shared/components/alert-globa
 import { ResultAiAssistantComponent } from './components/result-ai-assistant/result-ai-assistant.component';
 import { TermPipe } from '../../../../internationalization/term.pipe';
 import { ReportResultFormComponent } from './components/report-result-form/report-result-form.component';
+import { KpCgspaceBrowseComponent } from '../../../result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.component';
 
 @NgModule({
   declarations: [ResultCreatorComponent, ResultLevelButtonsComponent, ResultLevelCardsComponent, SimilarResultsComponent, SimilarResultsPipe, ReportResultFormComponent],
@@ -25,7 +26,8 @@ import { ReportResultFormComponent } from './components/report-result-form/repor
     RetrieveModalModule,
     AlertGlobalInfoModule,
     ResultAiAssistantComponent,
-    TermPipe
+    TermPipe,
+    KpCgspaceBrowseComponent
   ],
   exports: [ResultCreatorComponent, ReportResultFormComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]

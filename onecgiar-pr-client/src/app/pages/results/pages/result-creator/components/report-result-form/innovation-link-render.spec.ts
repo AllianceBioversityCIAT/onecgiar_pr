@@ -13,6 +13,8 @@ import { EntityAowService } from '../../../../../result-framework-reporting/page
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
 import { ResultLevelCardsComponent } from '../result-level-cards/result-level-cards.component';
+import { KpCgspaceBrowseComponent } from '../../../../../result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.component';
+import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
 import { ResultBody } from '../../../../../../shared/interfaces/result.interface';
 import { INNOVATION_LINK_QUESTION } from '../../../../../../shared/services/global/qa-innovation-development-results.service';
 
@@ -90,13 +92,14 @@ describe('ReportResultFormComponent — the innovation-link question renders (P2
 
     await TestBed.configureTestingModule({
       declarations: [ReportResultFormComponent, ResultLevelCardsComponent],
-      imports: [HttpClientTestingModule, RouterTestingModule, CustomFieldsModule, TermPipe],
+      imports: [HttpClientTestingModule, RouterTestingModule, CustomFieldsModule, TermPipe, KpCgspaceBrowseComponent],
       providers: [
         { provide: ApiService, useValue: apiService },
         { provide: ResultLevelService, useValue: resultLevelSE },
         { provide: PhasesService, useValue: { phases: { reporting: [], ipsr: [] }, currentlyActivePhaseOnReporting: { cgspace_year: 2026 } } },
         { provide: TerminologyService, useValue: { t: jest.fn((k: string, p?: string) => p || k) } },
-        { provide: EntityAowService, useValue: { canReportResults: () => true } }
+        { provide: EntityAowService, useValue: { canReportResults: () => true } },
+        { provide: ResultsApiService, useValue: { GET_cgspaceSearch: jest.fn(() => of({ response: { items: [], total: 0 } })) } }
       ]
     }).compileComponents();
 

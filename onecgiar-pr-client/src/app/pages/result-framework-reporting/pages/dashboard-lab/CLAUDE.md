@@ -104,6 +104,20 @@ de TS): trátalo como host, no como pantalla.
   la desviación WCAG), link 30×30 material `link`, categoría violeta `#6b46e51f`, chip de centro
   neutro, "Show more" (regla UI §4.16 — nunca "Read more").
 
+## Arquitectura de Jerarquía Visual en "By AOW" (UI/UX Pro Max Unified Table Layout)
+El árbol de contenido en la vista "By AOW" (`plannedBrowseView() === 'byAow'`) se estructura con un diseño unificado tipo tabla con alineación estricta CSS grid (`$pr-by-aow-tracks: 28px minmax(240px, 1fr) 76px 76px 64px 130px`):
+- **Banner Metrics Modernizados:** Stat cards con bordes suaves (`rounded-xl border border-slate-200/80 bg-slate-50/60 shadow-2xs`), etiquetas en mayúsculas (`text-slate-500`), cifras de alto contraste (`tabular-nums text-slate-900`) y barra de progreso con gradiente esmeralda.
+- **Level 1: Unified Table Section Card:** Contenedor de sección macro (`section.rounded-2xl.border.border-slate-200/90.bg-white.shadow-xs.overflow-hidden`) con encabezado gradiente, píldora de conteo (`53 KPIs`), toggle *Collapse all / Expand all*, y barra de cabecera de tabla (`.pr-by-aow-head`: `TITLE & TAXONOMY | TARGET | ACHIEVED | KPIS | PROGRESS`).
+- **Level 2: HLO Table Rows:** Filas dentro de `divide-y divide-slate-200/70`. La fila interactiva (`.pr-by-aow-row`) comparte la cuadrícula CSS grid de la cabecera:
+  - Columna 1: Chevron rotatorio en botón blanco.
+  - Columna 2: Chip de taxonomía ToC (`.pr-hlo-code` con `hloTaxonomy`: `OUTPUT 1.1`, `OUTCOME 2.1`, etc.) y título limpio con resaltado de búsqueda.
+  - Columna 3: Cifra pura tabular de meta (sin etiqueta redundante "TARGET").
+  - Columna 4: Cifra pura tabular alcanzada (verde esmeralda si > 0, sin etiqueta redundante "ACHIEVED").
+  - Columna 5: Píldora con recuento de KPIs.
+  - Columna 6: Porcentajes de avance QA y PREL.
+- **Level 3: Indented Indicator Scaffolding:** Sub-tabla interna de indicadores con sangría de 24px (`pl-4 sm:pl-6`), guía visual de árbol (`border-l-4 border-indigo-500/40 bg-indigo-50/10`) y sub-cabecera contextual de columnas (`INDICATOR TITLE & TAXONOMY | Target | Achieved | Status | Progress | Action`). Cada fila de indicador (`.pr-by-aow-indicator-row`) cuenta con accesibilidad completa (`role="button"`, `tabindex="0"`, `aria-expanded`, teclas `Enter`/`Space`), franjas JIRA de estado (`border-l-[3px]`), bullseye concéntrico (18px) y botones de acción interactivos (*Report*, *Copy link*) con aislamiento de eventos (`$event.stopPropagation()` per Kaizen `KZ-changes--reporting-aow-jira-hierarchy-2`). Preserva anclaje de deeplink `[id]="kpiDomId(ind)"` y resaltado `highlightedKpiId`.
+
+
 ## Añadido 2026-09-01 (spec overview-aow-progress-hero)
 - `program-overview`'s "Progress by area of work" is now the Overview HERO (moved right after "About
   this program"). Fed by two NEW host bindings: `[richRows]` (`overviewAowProgressRich` computed) +

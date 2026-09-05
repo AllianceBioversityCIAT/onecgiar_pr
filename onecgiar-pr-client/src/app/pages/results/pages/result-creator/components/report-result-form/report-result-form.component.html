@@ -1,12 +1,14 @@
-<div class="report-result-content">
+<div class="report-result-content" [class.report-result-content--embedded]="disableInitiativeSelect">
   <div class="report-result-content_left">
-    <div class="report-result-content_left_header">
-      <span class="report-result-title">Report result</span>
-      <span class="report-result-description"
-        >Make sure the result you want to report isn't already in the PRMS Reporting Tool. If it exists, you will not be able to create a
-        new one to your science program accelerator.</span
-      >
-    </div>
+    @if (!disableInitiativeSelect) {
+      <div class="report-result-content_left_header">
+        <span class="report-result-title">Report result</span>
+        <span class="report-result-description"
+          >Make sure the result you want to report isn't already in the PRMS Reporting Tool. If it exists, you will not be able to create a
+          new one to your science program accelerator.</span
+        >
+      </div>
+    }
     <div class="report-result-content_left_content">
       <app-pr-select
         [group]="true"
@@ -37,41 +39,106 @@
       </app-pr-radio-button>
 
       <div *ngIf="this.resultLevelSE.resultBody.result_level_id">
-        <app-alert-status *ngIf="isKnowledgeProduct" [description]="this.kpAlertDescription()"> </app-alert-status>
+        @if (isKnowledgeProduct) {
+          <div class="kp-entry" data-testid="emerging-kp-entry">
+            <div class="kp-entry__tabs" role="tablist" aria-label="How to add the knowledge product">
+              <button
+                type="button"
+                role="tab"
+                id="emerging-kp-tab-browse"
+                aria-controls="emerging-kp-panel-browse"
+                [attr.aria-selected]="kpEntryMode() === 'browse'"
+                (click)="kpEntryMode.set('browse')"
+                class="kp-entry__tab"
+                [class.kp-entry__tab--active]="kpEntryMode() === 'browse'">
+                Browse CGSpace
+              </button>
+              <button
+                type="button"
+                role="tab"
+                id="emerging-kp-tab-manual"
+                aria-controls="emerging-kp-panel-manual"
+                [attr.aria-selected]="kpEntryMode() === 'manual'"
+                (click)="kpEntryMode.set('manual')"
+                class="kp-entry__tab"
+                [class.kp-entry__tab--active]="kpEntryMode() === 'manual'">
+                Manual entry
+              </button>
+            </div>
 
-        <div [ngClass]="{ mqap_sync_title: isKnowledgeProduct }">
-          <app-pr-input
-            *ngIf="isKnowledgeProduct"
-            [isStatic]="true"
-            placeholder="Handle..."
-            label="Repository link/handle"
-            type="text"
-            [(ngModel)]="this.resultLevelSE.resultBody.handler">
-          </app-pr-input>
-          <button
-            type="button"
-            (click)="GET_mqapValidation()"
-            class="sync_button"
-            *ngIf="isKnowledgeProduct"
-            [ngClass]="{ globalDisabled: validating }"
-            [disabled]="validating">
-            <app-pr-button
-              padding="medium"
-              [verticalMargin]="1"
-              [text]="validating ? 'Fetching metadata from CGSpace' : 'Sync'"
-              icon="sync"
-              [rotating]="validating"></app-pr-button>
-          </button>
-        </div>
+            <div id="emerging-kp-panel-browse" role="tabpanel" aria-labelledby="emerging-kp-tab-browse" [hidden]="kpEntryMode() !== 'browse'">
+              @if (resultLevelSE.resultBody.handler) {
+                <div class="kp-selected" data-testid="emerging-kp-selected">
+                  <div class="kp-selected__bar">
+                    <span class="kp-selected__badge">
+                      <i class="pi pi-check" aria-hidden="true"></i>
+                      Selected from CGSpace
+                    </span>
+                    <button type="button" class="kp-selected__change" (click)="clearSelectedKpItem()" aria-label="Change selected knowledge product">
+                      <span class="material-icons-round" aria-hidden="true">swap_horiz</span>
+                      Change item
+                    </button>
+                  </div>
+                  @if (validating) {
+                    <p class="kp-selected__status" role="status">
+                      <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                      Retrieving metadata from CGSpace…
+                    </p>
+                  } @else {
+                    <h4 class="kp-selected__title">{{ resultLevelSE.resultBody.result_name }}</h4>
+                  }
+                  <p class="kp-selected__handle">{{ resultLevelSE.resultBody.handler }}</p>
+                </div>
+              } @else {
+                <app-kp-cgspace-browse
+                  [busy]="validating"
+                  [phaseYear]="phaseYear()"
+                  [isAdmin]="isAdmin()"
+                  (itemSelected)="onCgspaceItemSelected($any($event))"
+                  (switchToManual)="kpEntryMode.set('manual')">
+                </app-kp-cgspace-browse>
+              }
+            </div>
 
-        <div *ngIf="isKnowledgeProduct && mqapUrlError.status" class="error__link" [innerHTML]="mqapUrlError.message"></div>
+            <div id="emerging-kp-panel-manual" role="tabpanel" aria-labelledby="emerging-kp-tab-manual" [hidden]="kpEntryMode() !== 'manual'">
+              <p class="kp-manual-hint">
+                Paste a handle from CGSpace, MELSpace, or WorldFish DSpace. Metadata is retrieved automatically; only products from
+                {{ kpGuidanceYears().current }} are accepted.
+              </p>
+              <p class="kp-manual-label">
+                Repository link/handle <span class="kp-manual-label__req" aria-hidden="true">*</span>
+              </p>
+              <div class="kp-manual-row">
+                <div class="kp-manual-row__field">
+                  <app-pr-input
+                    [isStatic]="true"
+                    [showFieldHeader]="false"
+                    placeholder="Paste the repository link…"
+                    type="text"
+                    [(ngModel)]="this.resultLevelSE.resultBody.handler">
+                  </app-pr-input>
+                </div>
+                <button
+                  type="button"
+                  (click)="GET_mqapValidation()"
+                  class="kp-manual-sync"
+                  [disabled]="validating"
+                  [attr.aria-busy]="validating">
+                  {{ validating ? 'Syncing…' : 'Sync' }}
+                  <span class="material-icons-round" [class.kp-manual-sync__spin]="validating" aria-hidden="true">sync</span>
+                </button>
+              </div>
+              <div *ngIf="mqapUrlError.status" class="error__link" role="alert" [innerHTML]="mqapUrlError.message"></div>
+            </div>
+          </div>
+        }
 
         <app-pr-input
           [disabled]="isKnowledgeProduct"
           [readOnly]="isKnowledgeProduct"
           [isStatic]="true"
-          *ngIf="this.resultLevelSE.resultBody.result_type_id"
-          [placeholder]="resultTypeNamePlaceholder + ''"
+          *ngIf="this.resultLevelSE.resultBody.result_type_id && (!isKnowledgeProduct || kpEntryMode() === 'manual' || resultLevelSE.resultBody.handler)"
+          [placeholder]="isKnowledgeProduct ? 'Retrieved from the repository…' : resultTypeNamePlaceholder + ''"
           [label]="isKnowledgeProduct ? 'Title retrieved from the repository' : 'Title of result'"
           type="text"
           [maxWords]="30"
@@ -84,7 +151,7 @@
                   ? 'Title retrieved from WorldFish DSpace'
                   : this.resultLevelSE.resultBody.handler
                     ? 'Title retrieved from CGSpace'
-                    : 'Title retrieved from the repository'
+                    : ''
               : 'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'
           "
           [(ngModel)]="this.resultLevelSE.resultBody.result_name"

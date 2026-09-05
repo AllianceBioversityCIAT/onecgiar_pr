@@ -37,7 +37,8 @@ main.hlmSidebarInset (flex col, min-h-svh)
 └── div.relative.min-h-0.flex-1                             ← outlet slot = containing block
     └── app-dashboard-lab | app-programme-results  :host    ← ABSOLUTE inset-0, flex col, overflow hidden
         └── section (flex-1 min-h-0 flex col)                ← program-shell branch
-            └── article (flex-1 min-h-0 flex col)
+            └── div (min-[900px]:min-h-0 min-[900px]:flex-1)     ← program-shell wrapper — load-bearing, keep it
+              └── article (flex-1 min-h-0 flex col)
                 ├── app-reporting-program-band  [frameLocked]=true [scrollHost]=workArea   flex-none, NOT sticky
                 └── div #workArea (flex-1 min-h-0 overflow-y-auto custom_scroll)           THE scroller
                     ├── tab controls row (phase/filter · toolbar · results filters)        scrolls with content
@@ -77,7 +78,7 @@ None.
 
 ### 6.1 Routes / modules
 
-No route changes. The lock is keyed on existing route data: `rfrView ∈ {overview, planned}` for `dashboard-lab` (`isProgramShell()`), always-on for `programme-results` (it only serves the Results tab). Portfolio routes served by `dashboard-lab` (`/overview`, `/planned-toc`, `/emerging`, `/centers`, `/dashboard-lab`) are **not** locked — out of scope, follow-up chunk.
+No route changes. The lock is keyed on existing route data: `rfrView ∈ {overview, planned}` for `dashboard-lab` (`isProgramShell()`), always-on for `programme-results` (it only serves the Results tab). *Amended at archive (shipped behaviour, T-6 Reviewer):* because the lock keys on `rfrView`, the portfolio routes `/overview` (`rfrView: 'overview'`) and `/planned-toc` (`rfrView: 'planned'`) are locked too — they are the same two tabs without an `:entityId` and render correctly (empty state for non-members). `/emerging`, `/centers`, `/dashboard-lab` are **not** locked — follow-up chunk.
 
 ### 6.2 Components & files
 
@@ -88,7 +89,7 @@ No route changes. The lock is keyed on existing route data: `rfrView ∈ {overvi
 | `dashboard-lab.component.scss` | `:host(.pr-viewport-page) { @include pr-viewport-page; }` — keeps the existing `--rail-w/--panel-w` vars. |
 | `dashboard-lab.component.html` | Program-shell `section` and both `article`s gain `min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:flex min-[900px]:flex-col` and drop `min-h-screen` under the lock (`min-[900px]:min-h-0`); a new `div #workArea` wraps everything below the band in both Overview and Reporting articles with `min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll`. AOW-mode `section` gets the same scroller utilities (no band). Band bindings: `[frameLocked]="true" [scrollHost]="workAreaEl()"`. |
 | `reporting-program-band.component.ts` | New inputs `frameLocked = input(false)`, `scrollHost = input<HTMLElement \| null>(null)`. Listener attaches to `scrollHost` when present (effect re-attaches on change) **and** keeps the window listener; offset = `scrollHost.scrollTop + window.scrollY` (`SAV-DD-4`). |
-| `reporting-program-band.component.html` | Sticky box: `[class]` adds `min-[900px]:static min-[900px]:!top-auto` when `frameLocked()`; unchanged otherwise. |
+| `reporting-program-band.component.html` | Sticky box: `[class]` adds `min-[900px]:static min-[900px]:top-auto!` (shipped with the legacy leading `!`) when `frameLocked()`; unchanged otherwise. |
 | `programme-results.component.ts/.html` | `host: { class: 'pr-viewport-page' }` (+ `styles` include of the mixin); `<section>` loses `min-h-screen` under the lock and becomes the flex column; `div #workArea` wraps the filter row + table; band bindings as above. |
 | Cypress CT (new) `src/styles/viewport-page.recipe.cy.ts` or colocated under `shared/` | Recipe harness spec (see §10). |
 | Jest | `reporting-program-band.component.spec.ts` (+ scroll-source cases), `dashboard-lab.scope.spec.ts` or new `dashboard-lab.viewport.spec.ts` (host class per `rfrView`), `programme-results.component.spec.ts` (host class, band bindings). |
@@ -176,7 +177,7 @@ Disqualifiers (from `requirements.md` §10) apply verbatim: assert `innerWidth/i
 ### `SAV-DD-5` — Band drops `sticky` when `frameLocked` at ≥ `md` (reversion — challenged)
 
 - **Context:** inside an `overflow: hidden` host the host *is* the sticky scrollport; a `sticky; top: 55px` band would be shoved 55px down within the article and open a gap. The band must be `static` in the locked frame.
-- **Decision:** input `frameLocked`; when true, Tailwind `min-[900px]:static min-[900px]:!top-auto` on the sticky box. Below `md` and on pages that do not pass the input (none today besides the three), behavior is unchanged.
+- **Decision:** input `frameLocked`; when true, Tailwind `min-[900px]:static min-[900px]:top-auto!` on the sticky box (Tailwind 4 trailing `!`; the shipped code uses the legacy leading `!`, which the installed build still compiles — T-2 Reviewer advisory). Below `md` and on pages that do not pass the input (none today besides the three), behavior is unchanged.
 - **Reversion challenge — "what does removing sticky break?"** Reviewed inline: (1) below `md` nothing changes — utilities are gated; (2) the `-mt-px` overlap trick and the `isScrolled` shadow do not depend on `sticky`; (3) the ⓘ popover anchors to the identity block, which is still in the band — unaffected; (4) `bandCollapsed` height animation stays; (5) no test asserts `position: sticky` on the band (checked `reporting-program-band.component.spec.ts` — assertions are on classes/inputs, not computed position). **No concrete breakage found; decision stands.**
 - **Consequences:** two layout modes for one component, both expressed in the template and visible in the DOM.
 
@@ -189,7 +190,7 @@ Disqualifiers (from `requirements.md` §10) apply verbatim: assert `innerWidth/i
 ### `SAV-DD-7` — Controls row scrolls with the content (assumption A1 → decision)
 
 - **Context:** `SAV-OQ-1` defaulted; Jira scrolls its "More reports" row; pinning both band and controls would eat ~110px of a laptop viewport (the band's own template comment warns against double sticky chrome).
-- **Decision:** work area starts right under the tab strip; controls rows are its first child.
+- **Decision:** work area starts right under the band; each tab's own controls row is its first child. *Amended at archive:* the Reporting toolbar is band chrome (inside `app-reporting-program-band`, outside `#workArea`) and stays pinned — the "~110px double sticky" concern applies to a *separate* pinned controls row, not to the band's own toolbar (user decision at the T-3 tripwire).
 - **Alternatives:** pinned controls (rejected by default; revisit only on user request).
 - **Consequences:** filters are one short scroll away on long tables; the band remains the only fixed page chrome.
 

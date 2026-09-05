@@ -63,7 +63,7 @@
 ### `SAV-T-2` — Band: `frameLocked` + `scrollHost` inputs, dual scroll source `[x]`
 
 - **Type:** `client` + `tests`
-- **Description:** Add `frameLocked = input(false)` and `scrollHost = input<HTMLElement | null>(null)` to `ReportingProgramBandComponent`. Sticky box `[class]` adds `min-[900px]:static min-[900px]:!top-auto` when `frameLocked()`; nothing else changes visually. Scroll source: keep the passive window listener; add an `effect` that (re)attaches a passive `scroll` listener to `scrollHost()` outside the zone and detaches on change/destroy; `syncBandCollapsed()` reads `offset = (scrollHost()?.scrollTop ?? 0) + (window.scrollY || documentElement.scrollTop || 0)` and runs once on attach. Update the JSDoc that says "the DOCUMENT is the scroller here".
+- **Description:** Add `frameLocked = input(false)` and `scrollHost = input<HTMLElement | null>(null)` to `ReportingProgramBandComponent`. Sticky box `[class]` adds `min-[900px]:static min-[900px]:top-auto!` (shipped as the legacy `!top-auto`) when `frameLocked()`; nothing else changes visually. Scroll source: keep the passive window listener; add an `effect` that (re)attaches a passive `scroll` listener to `scrollHost()` outside the zone and detaches on change/destroy; `syncBandCollapsed()` reads `offset = (scrollHost()?.scrollTop ?? 0) + (window.scrollY || documentElement.scrollTop || 0)` and runs once on attach. Update the JSDoc that says "the DOCUMENT is the scroller here".
 - **Implements:** `SAV-R-6` (all clauses), `SAV-R-8` (band half: sticky retained < `md`) · `SAV-AC-6`, `SAV-AC-11` (band clause)
 - **Design refs:** `SAV-DD-4`, `SAV-DD-5` (+ its reversion challenge), §6.2 band rows
 - **Files (expected):** `.../dashboard-lab/components/reporting-program-band/reporting-program-band.component.ts`, `.component.html`, `.component.spec.ts`
@@ -98,7 +98,7 @@
 - **Estimate:** M
 - **Skills:** `angular-developer`, `tailwind-design-system`, `ui-ux-pro-max` (layout sanity pass on the wrapper changes)
 - **Scenario/clause ownership:**
-  - `SAV-R-2` controls row INSIDE the work area (Overview phase/filter row is the first child of `#workArea`; Reporting toolbar likewise) — `SAV-DD-7`.
+  - `SAV-R-2` controls row INSIDE the work area (Overview phase/filter row is the first child of `#workArea`; *amended:* the Reporting toolbar is band chrome and stays pinned) — `SAV-DD-7`.
   - `SAV-R-4` "From a scrolled Reporting to Results" — wiring half: no residual window scroll; component re-creation gives `scrollTop 0` (asserted in `SAV-T-5`).
   - `SAV-R-5` "AOW row focus" BUT document MUST NOT scroll — the focus targets live inside `#workArea`.
   - `SAV-R-7` rail + popover remain `fixed`; no `transform`/`contain` added on `section`/`article` (reviewer greps the diff).
@@ -208,7 +208,7 @@ No cycles. Two parallel pairs; `SAV-T-5` is the only HITL pause.
 | R-4 tab switch: frame static, `scrollTop 0`, shadow off | T-3, T-4 (re-creation) · T-5 |
 | R-5 tour step ⊂ work area · row focus BUT doc does NOT scroll | T-3 (targets inside `#workArea`) · T-5 (tour HITL + probe) |
 | R-6 element 11/65 · BUT no window event needed · AND null-host window fallback · AND first read on creation | T-2 |
-| R-7 rail anchored, band visible, BUT rail NOT clipped | T-1 (stub) · T-3 (no transform) · T-5 |
+| R-7 rail anchored, BUT rail NOT clipped (*amended: no band in AOW mode*) | T-1 (stub) · T-3 (no transform) · T-5 |
 | R-8 < `md`: doc scrolls, host static, no work-area scrollbar, band sticky | T-1 · T-2 (sticky retained) · T-5 (800×1100) |
 | R-9 no horizontal doc/work-area overflow at 1280/1440/1600 | T-1 · T-4 · T-5 |
 | R-10 modal open/close: frame rects equal, no doc overflow | T-3, T-4 · T-5 |

@@ -1654,8 +1654,57 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(component.cleanHloCode('I-OC 1.1. Breeding network')).toBe('I-OC 1.1');
       expect(component.cleanHloCode('OC 3.1. Some title')).toBe('OC 3.1');
       expect(component.cleanHloCode('Foster motivations')).toBe('');
+      expect(component.cleanHloCode('1.1 Agronomic and farm management scientific data')).toBe('1.1');
+      expect(component.cleanHloCode('1.1: Agronomic data')).toBe('1.1');
+      expect(component.cleanHloCode('1.1')).toBe('1.1');
+      expect(component.cleanHloCode('2.4.1 Specific Sub-Output')).toBe('2.4.1');
+      expect(component.cleanHloCode('HLO 1.1 Agronomic data')).toBe('HLO 1.1');
       expect(component.cleanHloCode('')).toBe('');
       expect(component.cleanHloCode(undefined)).toBe('');
+    });
+  });
+
+  describe('hloTaxonomy (BHA-R-1, BHA-DD-2, KZ-changes--reporting-aow-hierarchy-1)', () => {
+    it('resolves semantic taxonomy badges adhering to institutional ToC categories', async () => {
+      const component = await createComponent();
+
+      // Output section -> HLO
+      expect(component.hloTaxonomy({ code: '1.1' }, { label: 'High Level Outputs' })).toEqual({
+        type: 'HLO',
+        code: '1.1'
+      });
+      expect(component.hloTaxonomy('1.1: Agronomic and farm management data', { label: 'High Level Outputs' })).toEqual({
+        type: 'HLO',
+        code: '1.1'
+      });
+      expect(component.hloTaxonomy('HLO4.AOW1.IO1 Foster motivations', { label: 'High Level Outputs' })).toEqual({
+        type: 'HLO',
+        code: '4'
+      });
+
+      // Outcome section -> OC
+      expect(component.hloTaxonomy({ code: '2.1' }, { label: 'Outcomes' })).toEqual({
+        type: 'OC',
+        code: '2.1'
+      });
+      expect(component.hloTaxonomy('OC 3.1. Some title', { label: 'Outcomes' })).toEqual({
+        type: 'OC',
+        code: '3.1'
+      });
+
+      // Intermediate Outcome section -> I-OC / IO
+      expect(component.hloTaxonomy({ code: '3.5' }, { label: 'Intermediate Outcomes' })).toEqual({
+        type: 'I-OC',
+        code: '3.5'
+      });
+      expect(component.hloTaxonomy('I-OC 3.5. Women, men, youth', { label: 'Intermediate Outcomes' })).toEqual({
+        type: 'I-OC',
+        code: '3.5'
+      });
+      expect(component.hloTaxonomy('IO 2.1 Intermediate', { label: 'Intermediate Outcomes' })).toEqual({
+        type: 'IO',
+        code: '2.1'
+      });
     });
   });
 
@@ -1742,15 +1791,15 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
 
       // Test checking that the template includes the .pr-by-aow-head and .pr-by-aow-row structure
-      expect(template).toContain('class="pr-by-aow-head hidden md:grid"');
+      expect(template).toContain('pr-by-aow-head hidden md:grid');
       expect(template).toContain('class="overflow-x-auto"');
 
       // Check column header titles (BTC-AC-3.1)
-      expect(template).toContain("<span>{{ sec.label === 'High Level Outputs' ? 'High-Level Output' : 'Outcome' }}</span>");
-      expect(template).toContain('<span class="text-center">Target</span>');
-      expect(template).toContain('<span class="text-center">Achieved</span>');
-      expect(template).toContain('<span class="text-center">KPIs</span>');
-      expect(template).toContain('<span class="text-center">Progress</span>');
+      expect(template).toContain('<span>TITLE & TAXONOMY</span>');
+      expect(template).toContain('<span class="text-center">TARGET</span>');
+      expect(template).toContain('<span class="text-center">ACHIEVED</span>');
+      expect(template).toContain('<span class="text-center">KPIS</span>');
+      expect(template).toContain('<span class="text-center">PROGRESS</span>');
     });
 
     it('renders .pr-by-aow-head table column headers into DOM elements with correct text (BTC-AC-3.1)', () => {
@@ -1766,31 +1815,59 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       const headerSpans = Array.from(head?.querySelectorAll('span') ?? []);
       expect(headerSpans.length).toBe(6);
       expect(headerSpans[0].textContent?.trim()).toBe('');
-      expect(headerSpans[1].textContent).toContain('sec.label');
-      expect(headerSpans[2].textContent?.trim()).toBe('Target');
-      expect(headerSpans[3].textContent?.trim()).toBe('Achieved');
-      expect(headerSpans[4].textContent?.trim()).toBe('KPIs');
-      expect(headerSpans[5].textContent?.trim()).toBe('Progress');
+      expect(headerSpans[1].textContent?.trim()).toBe('TITLE & TAXONOMY');
+      expect(headerSpans[2].textContent?.trim()).toBe('TARGET');
+      expect(headerSpans[3].textContent?.trim()).toBe('ACHIEVED');
+      expect(headerSpans[4].textContent?.trim()).toBe('KPIS');
+      expect(headerSpans[5].textContent?.trim()).toBe('PROGRESS');
     });
 
-    it('renders .pr-by-aow-row grid with code badge, sanitized title, and stacked metric cells (BTC-AC-2.1, BTC-AC-2.3)', () => {
+    it('renders Level 2 HLO Sub-Card enclosure with code badge, sanitized title, and stacked metric cells (BHA-R-2, BHA-R-3)', () => {
       const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
       const parser = new DOMParser();
       const doc = parser.parseFromString(template, 'text/html');
 
       const row = doc.querySelector('.pr-by-aow-row');
       expect(row).not.toBeNull();
-      expect(row?.tagName.toLowerCase()).toBe('button');
+      expect(row?.getAttribute('[id]')).toBe("'by-aow-hlo-' + hlo.title");
 
-      // Check badge rendered with cleanHloCode binding (BTC-AC-1.2)
+      const card = row?.closest('section');
+      expect(card).not.toBeNull();
+      expect(card?.classList.contains('rounded-2xl')).toBe(true);
+
+      // Check badge rendered with taxonomy binding (BHA-R-1, BHA-R-2)
       const badge = doc.querySelector('.pr-hlo-code');
       expect(badge).not.toBeNull();
-      expect(badge?.textContent).toContain('cleanHloCode(hlo.split.code || hlo.title)');
+      expect(badge?.textContent).toContain('tax.type');
 
-      // Check stacked target and achieved cells (BTC-AC-2.3)
+      // Check stacked target and achieved cells (BHA-R-3)
       expect(template).toContain('{{ hloTargetSum(hlo) }}');
       expect(template).toContain('{{ hloAchievedSum(hlo) }}');
       expect(template).toContain('{{ hlo.count }}');
+      expect(template).toContain('TARGET');
+      expect(template).toContain('ACHIEVED');
+    });
+
+    it('renders Level 3 indicator rows with accessibility attributes and keyboard navigation (BHA-NFR-2)', async () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(template, 'text/html');
+
+      const indRow = doc.querySelector('.pr-by-aow-indicator-row');
+      expect(indRow).not.toBeNull();
+      expect(indRow?.getAttribute('role')).toBe('button');
+      expect(indRow?.getAttribute('tabindex')).toBe('0');
+      expect(indRow?.getAttribute('(click)')).toBe('openReportAside(ind)');
+      expect(indRow?.getAttribute('(keydown.enter)')).toBe('openReportAside(ind)');
+      expect(indRow?.getAttribute('(keydown.space)')).toBe('$event.preventDefault(); openReportAside(ind)');
+      expect(indRow?.className).toContain('focus-visible:outline-none');
+      expect(indRow?.className).toContain('focus-visible:ring-2');
+      expect(indRow?.className).toContain('focus-visible:ring-indigo-500');
+
+      const component = await createComponent();
+      const reportSpy = jest.spyOn(component, 'openReportAside').mockImplementation();
+      component.openReportAside({ indicator_id: 42 } as any);
+      expect(reportSpy).toHaveBeenCalledWith({ indicator_id: 42 });
     });
 
     it('computes plannedByAowSections with clean codes, titles, and metrics in byAow mode (BTC-R-1, BTC-AC-1.1, BTC-AC-2.1)', async () => {
@@ -1928,4 +2005,136 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(badge?.textContent?.trim()).toBe('I-OC 3.5');
     });
   });
+
+  describe('BHA-T-2 / BHA-T-3 — By-AOW Level 3 Indented Indicator Scaffolding & Event Isolation', () => {
+    it('asserts indented container exists in template with 24px indent and indigo tree guide line (BHA-R-4, Scenario 4.1)', () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(template, 'text/html');
+
+      const container = doc.querySelector('.pl-4.sm\\:pl-6.border-l-4.border-indigo-500\\/40.bg-indigo-50\\/10');
+      expect(container).not.toBeNull();
+      expect(template).toContain('class="pl-4 sm:pl-6 border-l-4 border-indigo-500/40 bg-indigo-50/10"');
+    });
+
+    it('asserts contextual sub-header .pr-by-aow-subhead.pr-hlo-head exists with uppercase column labels (BHA-R-5, Scenario 5.1)', () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(template, 'text/html');
+
+      const subhead = doc.querySelector('.pr-by-aow-subhead.pr-hlo-head');
+      expect(subhead).not.toBeNull();
+      expect(subhead?.classList.contains('h-7')).toBe(true);
+      expect(subhead?.classList.contains('uppercase')).toBe(true);
+      expect(subhead?.getAttribute('aria-hidden')).toBe('true');
+
+      const labels = Array.from(subhead?.querySelectorAll('span') ?? [])
+        .map(s => s.textContent?.trim().toUpperCase())
+        .filter(Boolean);
+
+      expect(labels).toEqual([
+        'INDICATOR TITLE & TAXONOMY',
+        'TARGET',
+        'ACHIEVED',
+        'STATUS',
+        'PROGRESS',
+        'ACTION'
+      ]);
+
+      const headerText = subhead?.textContent?.toUpperCase() ?? '';
+      expect(headerText).toContain('INDICATOR TITLE & TAXONOMY');
+      expect(headerText).toContain('TARGET');
+      expect(headerText).toContain('ACHIEVED');
+      expect(headerText).toContain('STATUS');
+      expect(headerText).toContain('PROGRESS');
+      expect(headerText).toContain('ACTION');
+    });
+
+    it('asserts concentric bullseye mark SVG (.pr-status-mark) renders with viewBox="0 0 18 18" (or 24x24) and target circles (BHA-R-6, Scenario 6.1)', () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(template, 'text/html');
+
+      const mark = doc.querySelector('.pr-status-mark');
+      expect(mark).not.toBeNull();
+      expect(mark?.getAttribute('[class]')).toBe("'pr-status-mark--' + meta.state");
+
+      const svg = mark?.querySelector('svg');
+      expect(svg).not.toBeNull();
+      expect(svg?.getAttribute('width')).toBe('18');
+      expect(svg?.getAttribute('height')).toBe('18');
+      expect(svg?.getAttribute('aria-hidden')).toBe('true');
+
+      const viewBox = svg?.getAttribute('viewBox');
+      expect(viewBox === '0 0 18 18' || viewBox === '0 0 24 24').toBe(true);
+      expect(['0 0 18 18', '0 0 24 24']).toContain(viewBox);
+
+      // 3 target circles: outer ring, mid ring, filled center
+      const circles = Array.from(svg?.querySelectorAll('circle') ?? []);
+      expect(circles.length).toBe(3);
+    });
+
+    it('asserts action buttons (Report and Copy link) invoke $event.stopPropagation() to prevent parent row toggle (BHA-R-7, Scenario 7.1, KZ-changes--reporting-aow-jira-hierarchy-2)', async () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(template, 'text/html');
+
+      // 1. Template structural contract
+      const indRow = doc.querySelector('.pr-by-aow-indicator-row');
+      expect(indRow).not.toBeNull();
+      expect(indRow?.getAttribute('(click)')).toBe('openReportAside(ind)');
+
+      const copyBtn = indRow?.querySelector('button[aria-label="Copy link to this KPI"]');
+      expect(copyBtn).not.toBeNull();
+      expect(copyBtn?.getAttribute('(click)')).toContain('$event.stopPropagation()');
+      expect(copyBtn?.getAttribute('(click)')).toContain('copyKpiLink(ind)');
+
+      const reportBtn = Array.from(indRow?.querySelectorAll('button') ?? []).find(b => b.textContent?.trim() === 'Report');
+      expect(reportBtn).not.toBeUndefined();
+      expect(reportBtn?.getAttribute('(click)')).toContain('$event.stopPropagation()');
+      expect(reportBtn?.getAttribute('(click)')).toContain('openReportAside(ind)');
+
+      // 2. Event propagation isolation behavior in DOM simulation
+      const component = await createComponent();
+      let parentRowTriggered = false;
+      const mockParentRow = document.createElement('div');
+      mockParentRow.addEventListener('click', () => {
+        parentRowTriggered = true;
+        component.openReportAside({ indicator_id: 101 } as any);
+      });
+
+      const mockCopyBtn = document.createElement('button');
+      mockCopyBtn.addEventListener('click', (event: MouseEvent) => {
+        event.stopPropagation();
+        component.copyKpiLink({ indicator_id: 101 } as any);
+      });
+      mockParentRow.appendChild(mockCopyBtn);
+
+      const mockReportBtn = document.createElement('button');
+      mockReportBtn.addEventListener('click', (event: MouseEvent) => {
+        event.stopPropagation();
+        component.openReportAside({ indicator_id: 101 } as any);
+      });
+      mockParentRow.appendChild(mockReportBtn);
+
+      const copySpy = jest.spyOn(component, 'copyKpiLink').mockImplementation();
+      const reportSpy = jest.spyOn(component, 'openReportAside').mockImplementation();
+
+      // Trigger Copy link button click
+      mockCopyBtn.click();
+      expect(parentRowTriggered).toBe(false);
+      expect(copySpy).toHaveBeenCalledWith({ indicator_id: 101 });
+
+      // Trigger Report button click
+      mockReportBtn.click();
+      expect(parentRowTriggered).toBe(false);
+      expect(reportSpy).toHaveBeenCalledWith({ indicator_id: 101 });
+
+      // Trigger parent row click directly
+      mockParentRow.click();
+      expect(parentRowTriggered).toBe(true);
+      expect(reportSpy).toHaveBeenCalledTimes(2);
+    });
+  });
 });
+

@@ -12,6 +12,8 @@ import {
   untracked,
   viewChild
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronDown } from '@ng-icons/lucide';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {DecimalPipe, NgClass } from '@angular/common';
@@ -377,8 +379,10 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
     // no longer the ones users reach (see `openLegacyReportModal` / `openReportModal`).
     AowHloCreateModalComponent,
     PrDialogComponent,
-    ResultCreatorModule
+    ResultCreatorModule,
+    NgIcon
   ],
+  providers: [provideIcons({ lucideChevronDown })],
   templateUrl: './dashboard-lab.component.html',
   styleUrls: ['./dashboard-lab.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -3194,6 +3198,20 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     });
   }
 
+  isKpiOpen(kpiId: unknown): boolean {
+    if (kpiId == null) return false;
+    return this.openKpis().has(kpiId);
+  }
+
+  toggleKpi(kpiId: unknown): void {
+    if (kpiId == null) return;
+    this.openKpis.update(set => {
+      const next = new Set(set);
+      next.has(kpiId) ? next.delete(kpiId) : next.add(kpiId);
+      return next;
+    });
+  }
+
   /**
    * Scroll-into-view + temporary highlight for the `?kpi=` restore (MRF-R-5) — reduced-motion
    * aware, same idiom as `onFocusHub`. The highlight auto-clears; it is a "you are here" cue, not
@@ -3665,6 +3683,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly highlightedKpiId = signal<string | null>(null);
   /** Composite `kpiKey()`s of By-AOW cards with their description expanded in place (MRF-R-5.1). */
   readonly expandedKpiDescriptions = signal<ReadonlySet<string>>(new Set());
+  /** IDs of open Level 3 KPI rows in By-AOW view (BHA-NFR-2). */
+  readonly openKpis = signal<ReadonlySet<unknown>>(new Set());
   /** Layout for By AOW / Indicators lists on the planned surface. */
   readonly plannedLayout = signal<'cards' | 'table'>('cards');
   /** Selected AOW code for the By AOW browse mode. */
@@ -4223,19 +4243,68 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Helper to extract a clean HLO or Outcome code token (e.g. 'HLO4', 'HL013', 'I-OC 3.5', 'OC 3.1') for By-AOW group headers (BTC-R-1, BTC-AC-1.1). */
-  cleanHloCode(raw: string | undefined): string {
+  /** Helper to extract a clean HLO or Outcome code token (e.g. 'HLO4', 'HL013', 'I-OC 3.5', 'OC 3.1', '1.1') for By-AOW group headers (BTC-R-1, BTC-AC-1.1, BHA-R-1, BHA-DD-2). */
+  cleanHloCode(raw: { code?: string; key?: string; name?: string } | string | null | undefined): string {
     if (!raw) return '';
-    const trimmed = raw.trim();
+    if (typeof raw === 'object' && raw.code) return raw.code;
+    const str = typeof raw === 'string' ? raw : (raw.name || raw.key || '');
+    const trimmed = str.trim();
     const iocMatch = /^((?:I-OC|OC)\s*\d+(?:\.\d+)*)\.?/i.exec(trimmed);
     if (iocMatch) {
       return iocMatch[1].toUpperCase().replace(/\s+/, ' ');
     }
+    const prefixSpaceNumMatch = /^((?:HLO|HL|I-OC|OC|IO|EOI)\s+\d+(?:\.\d+)*)/i.exec(trimmed);
+    if (prefixSpaceNumMatch) {
+      return prefixSpaceNumMatch[1].toUpperCase().replace(/\s+/, ' ');
+    }
     const match = /^((?:HLO|HL|IO|EOI)[\w.\-]*)/i.exec(trimmed);
-    if (!match) return '';
-    const rawCode = match[1];
-    const codeMatch = /^(HLO\d+|IO\d+|EOI\d+|HL\d+)/i.exec(rawCode);
-    return codeMatch ? codeMatch[1].toUpperCase() : rawCode.split('.')[0].toUpperCase();
+    if (match) {
+      const rawCode = match[1];
+      const codeMatch = /^(HLO\d+|IO\d+|EOI\d+|HL\d+)/i.exec(rawCode);
+      return codeMatch ? codeMatch[1].toUpperCase() : rawCode.split('.')[0].toUpperCase();
+    }
+    const numMatch = /^(\d+(?:\.\d+)+)/.exec(trimmed);
+    if (numMatch) {
+      return numMatch[1];
+    }
+    return '';
+  }
+
+  /**
+   * Resolve semantic taxonomy badge ({ type: 'HLO' | 'OC' | 'I-OC' | 'IO' | 'EOI', code: string })
+   * based on section context and HLO metadata, preserving specific institutional ToC taxonomy
+   * (KZ-changes--reporting-aow-hierarchy-1, BHA-R-1, BHA-DD-2).
+   */
+  hloTaxonomy(
+    hlo: { code?: string; key?: string; name?: string; title?: string; split?: { code?: string | null; name?: string } } | any,
+    section?: { label?: string; key?: string } | any
+  ): { type: string; code: string } {
+    let rawCode = '';
+    if (typeof hlo === 'string') {
+      rawCode = this.cleanHloCode(hlo) || hlo;
+    } else if (hlo && typeof hlo === 'object') {
+      rawCode = hlo.code || hlo.split?.code || this.cleanHloCode(hlo.title || hlo.name || hlo.key) || '';
+    }
+    rawCode = (rawCode || '').trim();
+
+    const secLabel = (section?.label || section?.key || '').toLowerCase();
+
+    let type = 'HLO';
+    if (secLabel.includes('intermediate') || /^(?:I-OC|IO)/i.test(rawCode)) {
+      type = /^IO(?!\-OC)/i.test(rawCode) ? 'IO' : 'I-OC';
+    } else if (secLabel.includes('outcome') || /^(?:OC|EOI)/i.test(rawCode)) {
+      type = /^EOI/i.test(rawCode) ? 'EOI' : 'OC';
+    } else {
+      type = 'HLO';
+    }
+
+    // Strip redundant prefix from rawCode (e.g. 'HLO 1.1' -> '1.1', 'HLO4' -> '4', 'OC 2.1' -> '2.1', 'OUTPUT 1.1' -> '1.1')
+    let cleanCode = rawCode.replace(/^(?:OUTPUT|OUTCOME|HLO|HL|I-OC|OC|IO|EOI)[\s.\-_:]*/i, '').trim();
+    if (!cleanCode && rawCode) {
+      cleanCode = rawCode;
+    }
+
+    return { type, code: cleanCode };
   }
 
   /** Sum of target values across an HLO's indicators. */
