@@ -793,6 +793,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   // ---- Emerging result (legacy `app-report-result-form` in a pr-dialog) ----
   readonly showReportModal = signal(false);
+  private pendingReturnTab: string | null = null;
 
   /**
    * P2-3139 parity: AVISA (SGP-02) is a deactivated project — view only. The retired
@@ -817,6 +818,36 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   closeReportModal(): void {
     this.showReportModal.set(false);
     this.resultLevelSE.cleanData?.();
+    const returnTab = this.pendingReturnTab || this.route?.snapshot?.queryParamMap?.get('returnTab');
+    this.pendingReturnTab = null;
+    if (returnTab === 'results' || returnTab === 'my-work') {
+      const code = this.selected()?.initiativeCode || this.route?.snapshot?.paramMap?.get('entityId');
+      this.router.navigate(['/result-framework-reporting', 'entity-details', code, returnTab]);
+    } else if (this.route?.snapshot?.queryParamMap?.get('reportEmerging') === 'true') {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { reportEmerging: null, returnTab: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    }
+  }
+
+  onResultCreated(): void {
+    // A created result hands the user to the new result itself (the modal owns that navigation), so
+    // this path must NOT bounce back to the originating tab — only `closeReportModal()` (cancel) does.
+    // Taken over from a concurrent session on 2026-09-05: its spec asserted this, its draft did not.
+    this.pendingReturnTab = null;
+    this.showReportModal.set(false);
+    this.resultLevelSE.cleanData?.();
+    if (this.route?.snapshot?.queryParamMap?.get('reportEmerging') === 'true' || this.route?.snapshot?.queryParamMap?.get('returnTab')) {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { reportEmerging: null, returnTab: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    }
   }
 
   // ---- Guided creation (full-screen flow) ----
@@ -1837,6 +1868,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   /** `(createResult)` — REH-DD-4: preselect the project, then navigate to that center's creator. */
   onHubCreateResult(event: HubCreateResultEvent): void {
+    this.showWhereToReportModal.set(false);
     if (!event.center.acronym) return;
     // The hub's `HubProject` is shaped identically to `BilateralProject` PLUS `allocation`
     // (design.md §4.1 REH-DD-4) — `id` is a bigint-backed string on the wire, hence the cast.
@@ -2253,7 +2285,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       // `whereToReport`/`returnTab` with the old URL). Any other value stays on this page and only
       // cleans the two query params.
       if (returnTab === 'results' || returnTab === 'my-work') {
-        this.router.navigate(['/result-framework-reporting', 'entity-details', this.selected()?.initiativeCode, returnTab]);
+        const code = this.selected()?.initiativeCode || this.route?.snapshot?.paramMap?.get('entityId');
+        this.router.navigate(['/result-framework-reporting', 'entity-details', code, returnTab]);
       } else {
         this.router.navigate([], {
           relativeTo: this.route,
@@ -2263,6 +2296,30 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         });
       }
     }
+  }
+
+  onHubReportEmerging(): void {
+    this.showWhereToReportModal.set(false);
+    this.pendingReturnTab = this.route?.snapshot?.queryParamMap?.get('returnTab') ?? null;
+    if (this.route?.snapshot?.queryParamMap?.get('whereToReport') === 'true') {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { whereToReport: null, returnTab: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    }
+    this.openReportModal();
+  }
+
+  onHubReportAow(code: string): void {
+    this.showWhereToReportModal.set(false);
+    this.onOpenAow(code);
+  }
+
+  onHubReportProgramLevel(kind: HubProgramLevelKind): void {
+    this.showWhereToReportModal.set(false);
+    this.onReportProgramLevel(kind);
   }
 
   /**
@@ -2704,6 +2761,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       if (qp.get('whereToReport') === 'true') {
         this.openWhereToReportModal();
       }
+      if (qp.get('reportEmerging') === 'true') {
+        this.pendingReturnTab = qp.get('returnTab');
+        this.openReportModal();
+      }
       // Browser back/forward on Planned ToC browse mode.
       if (this.rfrView() === 'planned') {
         const view = parsePlannedBrowseView(qp.get('tocView')) ?? 'aows';
@@ -2779,6 +2840,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.overviewSection.set(parseOverviewSection(qp.get(OVERVIEW_SECTION_QUERY_PARAM)));
     if (qp.get('whereToReport') === 'true') {
       this.openWhereToReportModal();
+    }
+    if (qp.get('reportEmerging') === 'true') {
+      this.pendingReturnTab = qp.get('returnTab');
+      this.openReportModal();
     }
     this.restorePlannedBrowseFromQuery(qp);
   }

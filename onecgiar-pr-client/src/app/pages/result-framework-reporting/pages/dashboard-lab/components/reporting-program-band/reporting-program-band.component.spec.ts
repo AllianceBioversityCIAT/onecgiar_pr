@@ -992,6 +992,9 @@ describe('ReportingProgramBandComponent', () => {
 
       opts.onTabNavigate('reporting');
       expect(navSpy).toHaveBeenCalledWith(['/result-framework-reporting/entity-details/SP01'], { queryParamsHandling: 'preserve' });
+
+      opts.onTabNavigate('my-work');
+      expect(navSpy).toHaveBeenCalledWith(['/result-framework-reporting/entity-details/SP01/my-work'], { queryParamsHandling: 'preserve' });
     });
   });
 });

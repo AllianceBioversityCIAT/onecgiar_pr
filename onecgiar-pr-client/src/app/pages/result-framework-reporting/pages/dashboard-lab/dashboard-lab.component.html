@@ -2218,7 +2218,7 @@
       [selectedInitiativeId]="selected()?.initiativeId"
       [disableInitiativeSelect]="true"
       [showInnovationLinkQuestion]="true"
-      (resultCreated)="closeReportModal()">
+      (resultCreated)="onResultCreated()">
     </app-report-result-form>
   </app-pr-dialog>
 }
@@ -2269,10 +2269,10 @@
         [w3State]="w3State()"
         [myCentersCount]="myCenters().length"
         [canReportEmerging]="canReportEmerging()"
-        (reportEmerging)="closeWhereToReportModal(); openReportModal()"
-        (reportAow)="closeWhereToReportModal(); onOpenAow($event)"
-        (reportProgramLevel)="closeWhereToReportModal(); onReportProgramLevel($event)"
-        (createResult)="closeWhereToReportModal(); onHubCreateResult($event)"
+        (reportEmerging)="onHubReportEmerging()"
+        (reportAow)="onHubReportAow($event)"
+        (reportProgramLevel)="onHubReportProgramLevel($event)"
+        (createResult)="onHubCreateResult($event)"
         (retryW3)="retryW3()" />
     </div>
   </app-pr-dialog>

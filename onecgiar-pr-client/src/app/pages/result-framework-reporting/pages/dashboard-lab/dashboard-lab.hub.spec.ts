@@ -858,11 +858,87 @@ describe('By-AoW section collapse/expand', () => {
       .mockReturnValue(of({ response: { programCode: 'SP02', activeYear: 2026, truncated: false, centers: [CENTER] } }));
     const api = apiMock({ GET_reportingEntryHubProjects: getProjects });
     const { component } = await createComponent(api);
-
     component.openWhereToReportModal();
     expect(component.showWhereToReportModal()).toBe(true);
     expect(component.w3State().status).toBe('ready');
     expect(getProjects).toHaveBeenCalledWith('SP02');
+  });
+
+  it('opens emerging result modal on onHubReportEmerging and closes Where to report modal', async () => {
+    const { component } = await createComponent(apiMock());
+    component.openWhereToReportModal();
+    expect(component.showWhereToReportModal()).toBe(true);
+    expect(component.showReportModal()).toBe(false);
+
+    component.onHubReportEmerging();
+    expect(component.showWhereToReportModal()).toBe(false);
+    expect(component.showReportModal()).toBe(true);
+  });
+
+  it('navigates back to my-work on closeReportModal when pendingReturnTab was my-work', async () => {
+    const navigate = jest.fn().mockResolvedValue(true);
+    const { component } = await createComponent(apiMock(), { navigate });
+    (component as any).route = {
+      snapshot: {
+        queryParamMap: {
+          get: (key: string) => (key === 'whereToReport' ? 'true' : key === 'returnTab' ? 'my-work' : null)
+        },
+        paramMap: {
+          get: (key: string) => (key === 'entityId' ? 'SP02' : null)
+        }
+      }
+    };
+
+    component.openWhereToReportModal();
+    component.onHubReportEmerging();
+    expect(component.showReportModal()).toBe(true);
+
+    component.closeReportModal();
+    expect(component.showReportModal()).toBe(false);
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP02', 'my-work']);
+  });
+
+  it('does not navigate back on onResultCreated', async () => {
+    const navigate = jest.fn().mockResolvedValue(true);
+    const { component } = await createComponent(apiMock(), { navigate });
+    (component as any).route = {
+      snapshot: {
+        queryParamMap: {
+          get: (key: string) => (key === 'whereToReport' ? 'true' : key === 'returnTab' ? 'my-work' : null)
+        },
+        paramMap: {
+          get: (key: string) => (key === 'entityId' ? 'SP02' : null)
+        }
+      }
+    };
+
+    component.onHubReportEmerging();
+    expect(component.showReportModal()).toBe(true);
+
+    navigate.mockClear();
+    component.onResultCreated();
+    expect(component.showReportModal()).toBe(false);
+    expect(navigate).not.toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP02', 'my-work']);
+  });
+
+  it('delegates to onOpenAow on onHubReportAow while closing Where to report modal', async () => {
+    const { component } = await createComponent(apiMock());
+    const openAowSpy = jest.spyOn(component, 'onOpenAow').mockImplementation();
+    component.openWhereToReportModal();
+
+    component.onHubReportAow('AOW03');
+    expect(component.showWhereToReportModal()).toBe(false);
+    expect(openAowSpy).toHaveBeenCalledWith('AOW03');
+  });
+
+  it('delegates to onReportProgramLevel on onHubReportProgramLevel while closing Where to report modal', async () => {
+    const { component } = await createComponent(apiMock());
+    const progSpy = jest.spyOn(component, 'onReportProgramLevel').mockImplementation();
+    component.openWhereToReportModal();
+
+    component.onHubReportProgramLevel('2030');
+    expect(component.showWhereToReportModal()).toBe(false);
+    expect(progSpy).toHaveBeenCalledWith('2030');
   });
 });
   // ── KCR-T-3 · hub row disclosure (KCR-R-2.1 / KCR-R-6) ──────────────────────

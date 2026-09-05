@@ -3,11 +3,25 @@ import { driver, DriveStep, Driver } from 'driver.js';
 
 export const SP_TOUR_STORAGE_KEY = 'pr.tour.sp.completed';
 
+export type SpTabId = 'overview' | 'reporting' | 'results' | 'my-work';
+
+export const SP_TAB_LABELS: Record<SpTabId, string> = {
+  overview: 'Overview',
+  reporting: 'Reporting',
+  results: 'Results',
+  'my-work': 'My results'
+};
+
 export interface SpTourOptions {
-  onTabNavigate?: (tab: 'overview' | 'reporting' | 'results') => void | Promise<void>;
+  onTabNavigate?: (tab: SpTabId) => void | Promise<void>;
   programName?: string;
   cycleYear?: number | string;
-  activeTab?: 'overview' | 'reporting' | 'results';
+  activeTab?: SpTabId;
+}
+
+export function tabBadgeHtml(tab: SpTabId): string {
+  const label = SP_TAB_LABELS[tab] ?? tab;
+  return `<span class="pr-guide-tab-badge"><span class="pr-guide-tab-dot"></span>Current tab: <strong>${label}</strong></span>`;
 }
 
 /** What the tutorials need to know about the screen they are about to explain. */
@@ -113,13 +127,14 @@ export class ReportingGuideService {
     const cycle = options.cycleYear ? ` (${options.cycleYear})` : '';
     const identityTitle = `${program}${cycle}`;
 
+    const initialTab: SpTabId = options.activeTab ?? 'overview';
+
     const steps: DriveStep[] = [
       {
         element: '[data-guide="sp-identity"]',
         popover: {
           title: identityTitle,
-          description:
-            'Welcome to your Science Program workspace. Follow this tour to learn how to track portfolio progress, report against planned indicators, and review submitted results.',
+          description: `${tabBadgeHtml(initialTab)}<span class="pr-guide-step-copy">Welcome to your Science Program workspace. Follow this tour to learn how to track portfolio progress, report against planned indicators, and review submitted results.</span>`,
           side: 'bottom',
           align: 'start'
         }
@@ -128,8 +143,7 @@ export class ReportingGuideService {
         element: '[data-guide="sp-tabs"]',
         popover: {
           title: 'Main Navigation Tabs',
-          description:
-            'Switch between the Overview (burndown analytics), Reporting (Theory of Change indicators), and Results (reported deliverables registry) views.',
+          description: `${tabBadgeHtml(initialTab)}<span class="pr-guide-step-copy">Switch between Overview (burndown analytics), Reporting (Theory of Change indicators), Results (reported deliverables registry), and My results (personal workflow Kanban) views.</span>`,
           side: 'bottom',
           align: 'center'
         }
@@ -138,8 +152,7 @@ export class ReportingGuideService {
         element: '[data-guide="tab-overview-view"]',
         popover: {
           title: 'Overview & Burndown',
-          description:
-            'Monitor portfolio health, burndown progress, and High-Level Output (HLO) milestones across the reporting period.',
+          description: `${tabBadgeHtml('overview')}<span class="pr-guide-step-copy">Monitor portfolio health, burndown progress, and High-Level Output (HLO) milestones across the reporting period.</span>`,
           side: 'bottom',
           align: 'start'
         }
@@ -148,8 +161,7 @@ export class ReportingGuideService {
         element: '[data-guide="tab-reporting-view"]',
         popover: {
           title: 'Reporting by Area of Work',
-          description:
-            'Browse Theory of Change indicators structured by Areas of Work and High-Level Outputs, check progress badges, and launch result reporting.',
+          description: `${tabBadgeHtml('reporting')}<span class="pr-guide-step-copy">Browse Theory of Change indicators structured by Areas of Work and High-Level Outputs, check progress badges, and launch result reporting.</span>`,
           side: 'top',
           align: 'start'
         }
@@ -158,8 +170,16 @@ export class ReportingGuideService {
         element: '[data-guide="tab-results-view"]',
         popover: {
           title: 'Results Registry',
-          description:
-            'Inspect all submitted results with resizable table columns, verify review statuses, and export data directly to Excel.',
+          description: `${tabBadgeHtml('results')}<span class="pr-guide-step-copy">Inspect all submitted results with resizable table columns, verify review statuses, and export data directly to Excel.</span>`,
+          side: 'top',
+          align: 'start'
+        }
+      },
+      {
+        element: '[data-guide="tab-my-results-view"]',
+        popover: {
+          title: 'My Results Board',
+          description: `${tabBadgeHtml('my-work')}<span class="pr-guide-step-copy">Track your personal workflow with a Kanban board grouped into Needs my action (drafts in Editing), Waiting on others (Pending review, Submitted), and Closed.</span>`,
           side: 'top',
           align: 'start'
         }
@@ -168,22 +188,20 @@ export class ReportingGuideService {
         element: '[data-guide="sp-actions-toolbar"]',
         popover: {
           title: 'Filters & Quick Actions',
-          description:
-            'Search indicators and results, filter by Center or Typology, and access the "Where to report" guidance at any time.',
+          description: `${tabBadgeHtml('reporting')}<span class="pr-guide-step-copy">Search indicators and results, filter by Center or Typology, and access the "Where to report" guidance at any time.</span>`,
           side: 'bottom',
           align: 'end'
         }
       }
     ];
 
-    const initialTab = options.activeTab ?? 'overview';
-
-    const stepTabs: Array<'overview' | 'reporting' | 'results'> = [
+    const stepTabs: SpTabId[] = [
       initialTab,
       initialTab,
       'overview',
       'reporting',
       'results',
+      'my-work',
       'reporting'
     ];
 

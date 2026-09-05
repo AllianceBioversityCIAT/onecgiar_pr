@@ -258,17 +258,16 @@ export class ReportingProgramBandComponent {
     this.guideSE.startSpTour({
       programName: this.programName(),
       cycleYear: this.cycleYear() ?? undefined,
-      // The guided tour only knows Overview/Reporting/Results (`MWB-DD-12`: My work is a new tab
-      // outside its scope) — `undefined` lets the service fall back to its own default rather than
-      // widening `ReportingGuideService`'s type for a tab it never walks.
-      activeTab: activeTab === 'my-work' ? undefined : activeTab,
-      onTabNavigate: (tab: 'overview' | 'reporting' | 'results') => {
+      activeTab,
+      onTabNavigate: (tab: 'overview' | 'reporting' | 'results' | 'my-work') => {
         const targetPath =
           tab === 'overview'
             ? this.overviewPath()
             : tab === 'results'
               ? this.resultsPath()
-              : this.reportingPath();
+              : tab === 'my-work'
+                ? this.myWorkPath()
+                : this.reportingPath();
         return this.router.navigate([targetPath], { queryParamsHandling: 'preserve' }).then(() => {});
       }
     });
