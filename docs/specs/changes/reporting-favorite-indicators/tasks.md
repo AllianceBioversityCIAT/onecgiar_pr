@@ -31,7 +31,7 @@
 ### `RFI-T-1` — `ReportingFavoritesService` + `favoriteKeyOf`
 - **Type:** `client | tests`
 - **Estimate:** `S`
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Depends on:** `—`
 - **Blocks:** `RFI-T-2`, `RFI-T-3`, `RFI-T-4`
 - **Skills:** `angular-developer`, `tdd`
@@ -44,9 +44,9 @@
 - **Verification:** `cd onecgiar-pr-client && npx jest src/app/pages/result-framework-reporting/pages/dashboard-lab/services/reporting-favorites.service.spec.ts --silent --reporters=summary --no-coverage`
 - **Disqualifiers:** a suite that never reads back through a *second* service instance proves nothing about persistence (AC-3 needs re-instantiation); a storage-throws test that stubs `setItem` but not `getItem` misses the load path. Failing input that must exist: `localStorage['pr.reporting.favorites.v1.7'] = '[]'` → must load as `{}`.
 - **Definition of done:**
-  - [ ] `favoriteKeyOf({indicator_id: 1, center_id: 'c', __aowCode: 'AOW01'}) === '1::c::AOW01'` and missing `center_id` / `__aowCode` produce empty segments.
-  - [ ] `toggle` twice returns to the empty set and removes the programme entry from storage.
-  - [ ] Suite green; `// @akili-spec changes/reporting-favorite-indicators` header present.
+  - [x] `favoriteKeyOf({indicator_id: 1, center_id: 'c', __aowCode: 'AOW01'}) === '1::c::AOW01'` and missing `center_id` / `__aowCode` produce empty segments.
+  - [x] `toggle` twice returns to the empty set and removes the programme entry from storage.
+  - [x] Suite green; `// @akili-spec changes/reporting-favorite-indicators` header present.
 
 ---
 
