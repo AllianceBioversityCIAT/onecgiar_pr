@@ -1,4 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, effect, HostListener, inject, OnDestroy, OnInit, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  HostListener,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+  untracked,
+  viewChild
+} from '@angular/core';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {DecimalPipe, NgClass } from '@angular/common';
@@ -341,6 +354,10 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
 @Component({
   selector: 'app-dashboard-lab',
   standalone: true,
+  // SAV-T-3 (docs/specs/changes/sp-shell-app-viewport) — locks this host to the outlet slot at
+  // ≥900px on Overview/Reporting (`isProgramShell()`); Emerging/Centers/Dashboard render unchanged
+  // (class absent). See `dashboard-lab.component.scss` / `src/styles/_viewport-page.scss`.
+  host: { '[class.pr-viewport-page]': 'isProgramShell()' },
   imports: [
     RouterLink,
     CustomFieldsModule,
@@ -420,6 +437,14 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * contract: full-bleed band, no outer gutters, 32px content pad owned by the tab itself.
    */
   readonly isProgramShell = computed(() => this.showOverview() || this.showPlanned());
+  /**
+   * SAV-T-3 — the ≥900px locked-frame work-area scroller (design.md §2.2/SAV-DD-4). `#workArea` is
+   * reused by both the Overview and Reporting branches of the template (mutually exclusive `@if`s),
+   * so this resolves to whichever one is actually rendered; `null` in AOW mode, on portfolio routes
+   * (Emerging/Centers/Dashboard), or below 900px, where the band falls back to its window listener.
+   */
+  readonly workArea = viewChild<ElementRef<HTMLElement>>('workArea');
+  readonly workAreaEl = computed(() => this.workArea()?.nativeElement ?? null);
   readonly showEmerging = computed(() => this.rfrView() === 'emerging');
   readonly showCenters = computed(() => this.rfrView() === 'centers');
   /** AOW code read from the URL on load, opened once its program's AOWs arrive. */

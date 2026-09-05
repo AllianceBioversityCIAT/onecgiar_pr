@@ -1,4 +1,5 @@
 @use '../../../../../styles/fonts.scss' as fonts;
+@use '../../../../../styles/viewport-page' as vp;
 
 // Styling lives in the template via Tailwind utilities; SCSS only holds what
 // Tailwind can't express — the :host box and the flyout entrance keyframe.
@@ -13,6 +14,14 @@
   --panel-w: 236px; // Areas of Work column (AOW mode)
   --full-w: var(--sidebar-width, 280px);
   --float-gap: 0px; // flush against the app sidebar
+}
+
+// SAV-T-3 (docs/specs/changes/sp-shell-app-viewport) — locks this host to the outlet slot at
+// ≥900px when the active route is Overview/Reporting (`isProgramShell()`, bound via the
+// component's `host` metadata). See `pr-viewport-page`'s own header for the mechanism and the
+// `result-detail` rationale (why `position: absolute`, not a height chain).
+:host(.pr-viewport-page) {
+  @include vp.pr-viewport-page;
 }
 
 // Browsers default <button> to `cursor: default` and Tailwind's preflight does not
