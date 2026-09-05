@@ -6,7 +6,7 @@
 - **Linked spec:** `./requirements.md` (`MWB-R-1`…`R-11`, `MWB-AC-1`…`AC-9`) · `./design.md` (`MWB-DD-1`…`DD-13`, §5 maps, §6.3 tokens, §6.6 phase) · `./judgment.md` (round 1 applied)
 - **Owner / driver:** session Leader (`/akili-execute`)
 - **Status:** `approved` (Phase 3 auto-approved, pre-approved mode, 2026-09-04; rewritten after Judgment Day round 1)
-- **Depth:** Standard · **Budget:** 6 tasks / ~1,350 LOC / ≤ 1 Reviewer round per task (`design.md` §1) · **+ `MWB-T-7` (~120 LOC) added 2026-09-05 on explicit user request — budget 7 / ~1,470**
+- **Depth:** Standard · **Budget:** 6 tasks / ~1,350 LOC / ≤ 1 Reviewer round per task (`design.md` §1) · **+ `MWB-T-7` (~120) and `MWB-T-8` (~180) added 2026-09-05 on explicit user request — budget 8 / ~1,650**
 - **YOLO limits (inherited, `feedback-pragmatic-akili-execution`):** pre-approved gates logged as `auto-approved (pre-approved mode)`; one Reviewer round per task, a second FAIL escalates; verification = targeted `npx jest <path>` only, never a full client run; pointer briefs; workers never `git add -A` (shared worktree); close each worker right after its task commits (Reviewers via `TaskStop`); a plain-language progress line at every task boundary.
 - **Branch:** `qa-development-2026` (shared — explicit-path diffs and commits; `git log --oneline -3` + `git status --short` before every commit).
 
@@ -227,7 +227,7 @@ Coverage stays above server 5/20/35/40 and client 50/60/60/60; targeted suites o
 
 ---
 
-### `MWB-T-7` — Motion polish: card hover / press feedback, rail collapse, state transitions `[ ]`
+### `MWB-T-7` — Motion polish: card hover / press feedback, rail collapse, state transitions `[x]`
 
 - **Type:** `client` · **Added 2026-09-05 by user request** ("revisa también las animaciones que se vea cuando estoy en una card, cuando presiono click … que se vean fluidas las transiciones") — approved scope addition, not an advisory.
 - **Description:** Add fluid, token-aligned motion to the board without changing layout, copy or behaviour: (1) card hover elevation + border tint and a subtle lift (`transition-[transform,box-shadow,border-color] duration-150 ease-out`), press feedback on **Continue** / **Review and submit** / **Open** (`active:` scale/translate, `hover:` brightness or shadow), visible `focus-visible` ring on every action; (2) completeness bar width animates (`transition-[width] duration-300 ease-out`); (3) Closed-group rails expand/collapse with a width + opacity transition and the expanded column's content fades in (reuse the app's `prmsFade` keyframe / `collapse.scss` pattern where it fits); (4) scope / phase re-group and skeleton → content use one short fade (~160 ms) so cards do not pop; (5) every transition honours `prefers-reduced-motion` (global rule in `styles.scss` ~:779; add `motion-reduce:` variants where the global rule does not cover a property). Tailwind-first; SCSS only for keyframes not already global.
@@ -249,3 +249,25 @@ Coverage stays above server 5/20/35/40 and client 50/60/60/60; targeted suites o
   - [ ] Jest + lint + CT green
   - [ ] No hardcoded hex; durations ≤ 300 ms; `prefers-reduced-motion` respected
   - [ ] Commit `🎨 style(my-work-board) [SPEC:changes/my-work-board]: fluid hover, press and collapse transitions`
+
+### `MWB-T-8` — Layout corrections from the user's real-page review `[ ]`
+
+- **Type:** `client` · **Added 2026-09-05 by user request** (screenshots): (a) "esto no debería ir aquí, aquí deberían ir los filtros" — the explainer panel occupies the row under the tabs where the Results tab shows its filter row; (b) "acá falta el botón de Where to report" — the band on My work hides the CTA; (c) the phase dropdown renders with the wrong look and its open panel lands far below the trigger (screenshot: violet chevron block, menu drawn under the Closed rails).
+- **Description:** (1) Make the first row inside `#workArea` a **filter row identical in chrome to the Results tab's** (`flex flex-wrap items-center justify-between gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]`, `role="search"`, `aria-label="My work filters"`) holding the scope segmented control (left) and the **Phase** select with the Results tab's `pgr-filter` label treatment (right); move `<app-pr-tab-intro>` **below** that row (collapsed by default) — the read-only hint line moves into the explainer description. (2) Band: `[canReport]="true"` and `(whereToReport)` → `router.navigate(['/result-framework-reporting','entity-details', code], { queryParams: { whereToReport: 'true', returnTab: 'my-work' } })`; verify `dashboard-lab.component.ts` handles `returnTab` for the new value (if it only knows `results`/`overview`, extend the mapping so the back-link returns to My work). (3) Phase select: reproduce the Results tab's rendering of `app-pr-filter-select` (wrapper classes, label, trigger height 34px) and fix the panel placement — the component's panel is inline-absolute (no CDK overlay), so the trigger's wrapper must be the positioning context (`relative`) and no ancestor between the row and `#workArea` may clip it; verify in the real browser (Orca) that the open panel sits directly under the trigger at 1280 and 1440. (4) **Section skeleton (user request 2026-09-05: "recuerda adicionar el skeleton para el cargue de la sección")**: replace the three flat pulsing blocks with a skeleton that mirrors the board — the filter row renders immediately (segments show `–`), then the three group labels, five column headers (dot + label + count pill placeholders), 2–3 card placeholders in Editing / 1–2 in Pending and Submitted (code line, two title lines, a 4px bar), and the two Closed rails as 44px placeholders; `animate-pulse`, `motion-reduce:animate-none`, `aria-busy="true"` + the existing `sr-only` "Loading your board" text; same widths as the real columns so the swap to content does not shift layout (measured on the live page: skeleton visible ~2–3 s from first paint).
+- **Implements:** user review items (a)–(c) + skeleton request (4); `MWB-R-1` (band parity with Results incl. CTA), `MWB-R-3` (phase select usable), `MWB-R-10` (explainer still present); `MWB-R-9` unchanged.
+- **Design:** `design.md` §6.2 page row, §6.5; Results tab as the exemplar (`programme-results.component.html` lines 20–60, `.scss` `.pgr-filter`).
+- **Files (expected):** `my-work-board/my-work-board.component.{ts,html,scss,spec.ts}`; possibly `dashboard-lab.component.ts` (`returnTab`).
+- **Depends on:** `MWB-T-7` (same templates — serialize) · **Blocks:** —
+- **Estimate:** S/M (~180 LOC)
+- **Skills:** `angular-developer` · `onecgiar-pr-client:spartan` · `frontend-design`
+- **Tests:** page spec: filter row is the first child of `#workArea` and contains the segmented control + phase select; explainer rendered after it; skeleton renders five column-shaped placeholders with card placeholders while `loading()` is true and none once rows land; `whereToReport` output → `router.navigate` with `{ whereToReport: 'true', returnTab: 'my-work' }`; band receives `canReport=true`. Real-browser check (Leader, Orca): open the phase dropdown at 1280/1440 and read the panel's bounding rect relative to the trigger (`top` within trigger.bottom ± 8px).
+- **Verification:**
+  ```bash
+  cd onecgiar-pr-client && npx jest src/app/pages/result-framework-reporting/pages/my-work-board src/app/pages/result-framework-reporting/pages/dashboard-lab/dashboard-lab.component.spec.ts --silent --reporters=summary --no-coverage && npx tsc --noEmit -p tsconfig.app.json && npx ng lint --quiet
+  ```
+  - **FAIL input:** explainer left above the filter row → first-child assertion fails; `canReport` left false → band spec/page spec fails; panel still mispositioned → the Leader's rect read fails (not a Jest gate — jsdom cannot position).
+  - **Disqualifier:** a green Jest run says nothing about the dropdown placement; only the real-browser rect read does.
+- **Definition of done:**
+  - [ ] Jest + tsc + lint green; CT (`MWB-T-5`) re-run green (layout row changed)
+  - [ ] Real-browser rect read recorded in `execution.md`
+  - [ ] Commit `🔧 fix(my-work-board) [SPEC:changes/my-work-board]: filter row, where-to-report CTA and phase select placement`

@@ -127,41 +127,49 @@
             </div>
           </div>
         } @else if (showBoard()) {
-          <div class="flex flex-1 min-h-0 gap-[16px] overflow-x-auto px-[16px] py-[14px] sm:px-[32px]">
-            <!-- Needs my action -->
-            @if (editingColumn(); as editing) {
-              <div class="flex w-[360px] flex-none flex-col gap-[8px]">
-                <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-primary-400)]">Needs my action</span>
-                <app-my-work-column [column]="editing" />
-              </div>
-            }
-
-            <!-- Waiting on others -->
-            @if (waitingColumns().length) {
-              <div class="flex min-w-0 flex-1 flex-col gap-[8px]">
-                <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">Waiting on others</span>
-                <div class="grid flex-1 min-h-0 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-[12px]">
-                  @for (col of waitingColumns(); track col.key) {
-                    <app-my-work-column [column]="col" />
-                  }
+          <!-- `MWB-T-7` (4): keyed on `boardRegroupKey()` (scope/phase) so a scope or phase switch
+               remounts this container and replays its entrance fade once; per-row/card updates
+               inside an unchanged scope+phase do not touch the key, so no per-card animation. -->
+          @for (regroupKey of [boardRegroupKey()]; track regroupKey) {
+            <div class="pr-board-fade flex flex-1 min-h-0 gap-[16px] overflow-x-auto px-[16px] py-[14px] sm:px-[32px]">
+              <!-- Needs my action -->
+              @if (editingColumn(); as editing) {
+                <div class="flex w-[360px] flex-none flex-col gap-[8px]">
+                  <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-primary-400)]">Needs my action</span>
+                  <app-my-work-column [column]="editing" />
                 </div>
-              </div>
-            }
+              }
 
-            <!-- Closed (collapsed rails by default, MWB-DD-8) -->
-            @if (closedColumns().length) {
-              <div class="flex flex-none flex-col gap-[8px]">
-                <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">Closed</span>
-                <div class="flex flex-1 min-h-0 gap-[8px]">
-                  @for (col of closedColumns(); track col.key) {
-                    <div [class]="closedItemClass()">
-                      <app-my-work-column [column]="col" [rail]="closedCollapsed()" [collapsed]="closedCollapsed()" (expandToggle)="toggleClosed()" />
-                    </div>
-                  }
+              <!-- Waiting on others -->
+              @if (waitingColumns().length) {
+                <div class="flex min-w-0 flex-1 flex-col gap-[8px]">
+                  <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">Waiting on others</span>
+                  <div class="grid flex-1 min-h-0 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-[12px]">
+                    @for (col of waitingColumns(); track col.key) {
+                      <app-my-work-column [column]="col" />
+                    }
+                  </div>
                 </div>
-              </div>
-            }
-          </div>
+              }
+
+              <!-- Closed (collapsed rails by default, MWB-DD-8) -->
+              @if (closedColumns().length) {
+                <div class="flex flex-none flex-col gap-[8px]">
+                  <span class="px-[2px] text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">Closed</span>
+                  <div class="flex flex-1 min-h-0 gap-[8px]">
+                    @for (col of closedColumns(); track col.key) {
+                      <!-- `MWB-T-7` (3) gap: no width/opacity transition here — both `closedItemClass()`
+                           states resolve to `width: auto` under flex, so nothing transitions; the
+                           delivered part of (3) is the expanded `section`'s entrance fade below. -->
+                      <div [class]="closedItemClass()">
+                        <app-my-work-column [column]="col" [rail]="closedCollapsed()" [collapsed]="closedCollapsed()" (expandToggle)="toggleClosed()" />
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
         }
       </div>
     </div>

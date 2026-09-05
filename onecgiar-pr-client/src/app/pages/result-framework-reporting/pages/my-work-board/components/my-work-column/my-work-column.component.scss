@@ -8,3 +8,29 @@
   writing-mode: vertical-rl;
   transform: rotate(180deg);
 }
+
+/**
+ * `MWB-T-7` (3) — expanded column entrance fade. `prmsFade` (portfolio-overview.component.ts) /
+ * `pr-band-fade` (reporting-program-band) are component-local, not global (no shared keyframe to
+ * import), so this mirrors the same ~160ms opacity fade locally, per task brief ("SCSS only for
+ * keyframes not already global").
+ */
+@keyframes pr-my-work-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.pr-my-work-fade {
+  animation: pr-my-work-fade 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-my-work-fade {
+    animation: none;
+  }
+}

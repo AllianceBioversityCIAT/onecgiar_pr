@@ -2,8 +2,11 @@
   One board card (`MWB-R-4`). Tokens from design.md §6.3 — no hard-coded hex, only `var(--pr-*)`.
   `html`/`body` is 12px — every measurement below is an explicit px value (client CLAUDE.md §5).
 -->
+<!-- `MWB-T-7`: hover lift/tint — CSS-only, no JS. `motion-reduce:transition-none` follows the
+     app's existing reduced-motion convention (see `styles/collapse.scss`, `pr-band-fade`): the
+     hover STATE still applies, only the animated transition between states is removed. -->
 <article
-  class="flex flex-col gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px_12px_10px] shadow-[0_1px_2px_rgba(25,21,36,0.05)]">
+  class="flex flex-col gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px_12px_10px] shadow-[0_1px_2px_rgba(25,21,36,0.05)] transition-[transform,box-shadow,border-color] duration-150 ease-out hover:-translate-y-[1px] hover:border-[var(--pr-color-primary-200)] hover:shadow-[0_4px_12px_rgba(25,21,36,0.08)] motion-reduce:transition-none">
   <!-- Code · Category chip · Origin -->
   <div class="flex items-center gap-[8px]">
     <span class="font-mono text-[11px] font-semibold tracking-[0.04em] text-[var(--pr-text-subtle)]">{{ row().code }}</span>
@@ -42,7 +45,9 @@
         }
       </div>
       <div class="h-[4px] overflow-hidden rounded-full bg-[var(--pr-surface-ground)]">
-        <div class="h-full rounded-full bg-gradient-to-r from-[#6b6dc4] to-[#6461bc]" [style.width.%]="progressPercent()"></div>
+        <div
+          class="h-full rounded-full bg-gradient-to-r from-[#6b6dc4] to-[#6461bc] transition-[width] duration-300 ease-out motion-reduce:transition-none"
+          [style.width.%]="progressPercent()"></div>
       </div>
       @if (missingLabels().length) {
         <p class="m-0 text-[11px] leading-[1.4] text-[var(--pr-text-muted)]">Missing: {{ missingLabels().join(' · ') }}</p>
@@ -79,7 +84,7 @@
         </span>
       }
       <a
-        class="text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:text-[var(--pr-color-primary-600)]"
+        class="text-[11px] font-semibold text-[var(--pr-color-primary-400)] transition-[color,transform] duration-150 ease-out hover:text-[var(--pr-color-primary-600)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] focus-visible:ring-offset-2 motion-reduce:transition-none"
         [routerLink]="['/result', 'result-detail', row().code, 'general-information']"
         [queryParams]="continueQueryParams()">
         Open
@@ -92,7 +97,7 @@
     <div class="flex items-center justify-end gap-[8px]">
       <button
         type="button"
-        class="inline-flex h-[28px] items-center gap-[6px] rounded-[8px] bg-gradient-to-r from-[#6b6dc4] to-[#6461bc] px-[12px] text-[12px] font-semibold text-white"
+        class="inline-flex h-[28px] items-center gap-[6px] rounded-[8px] bg-gradient-to-r from-[#6b6dc4] to-[#6461bc] px-[12px] text-[12px] font-semibold text-white transition-[transform,box-shadow,filter] duration-150 ease-out hover:brightness-105 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] focus-visible:ring-offset-2 motion-reduce:transition-none"
         (click)="continue()">
         Continue
         <span class="material-icons-round text-[14px]" aria-hidden="true">arrow_forward</span>
@@ -102,7 +107,7 @@
     <div class="flex items-center justify-end gap-[8px]">
       <button
         type="button"
-        class="inline-flex h-[28px] items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12px] font-semibold text-[var(--pr-color-primary-400)]"
+        class="inline-flex h-[28px] items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12px] font-semibold text-[var(--pr-color-primary-400)] transition-[transform,box-shadow,filter] duration-150 ease-out hover:shadow-[0_2px_6px_rgba(25,21,36,0.1)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] focus-visible:ring-offset-2 motion-reduce:transition-none"
         (click)="continue()">
         Review and submit
         <span class="material-icons-round text-[14px]" aria-hidden="true">arrow_forward</span>

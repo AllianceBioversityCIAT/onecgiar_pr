@@ -4,7 +4,7 @@
   <!-- Collapsed Closed-group rail (`MWB-DD-8`): 44px, count + vertical label, expands on click. -->
   <button
     type="button"
-    class="flex flex-1 min-h-0 w-[44px] flex-col items-center gap-[10px] rounded-[12px] border py-[12px]"
+    class="group flex flex-1 min-h-0 w-[44px] flex-col items-center gap-[10px] rounded-[12px] border py-[12px] transition-colors ease-out hover:bg-[var(--pr-surface-subtle-hover)] motion-reduce:transition-none"
     [class]="meta().surfaceClass"
     [attr.aria-expanded]="!collapsed()"
     [attr.aria-label]="'Expand ' + column().label + ' (' + column().rows.length + ')'"
@@ -15,11 +15,19 @@
     <span class="pr-my-work-rail-label flex-1 whitespace-nowrap text-[11px] font-semibold text-[var(--pr-text-secondary)]">
       {{ column().label }}
     </span>
-    <span class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)]" aria-hidden="true">chevron_right</span>
+    <!-- No state-driven rotation: this button and the expanded `section` are `@if`/`@else` siblings, not one persisting element to animate a rotation on. -->
+    <span
+      class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)] transition-transform duration-200 ease-out group-hover:rotate-[15deg] motion-reduce:transition-none"
+      aria-hidden="true"
+      >chevron_right</span
+    >
   </button>
 } @else {
+  <!-- `MWB-T-7` (3): a freshly-mounted `section` (this branch only exists while `!rail()`) always
+       plays its own entrance once — no extra keying needed, and re-rendering `column()`'s inputs
+       later does not remount this element, so the fade never repeats on ordinary data updates. -->
   <section
-    class="flex flex-1 min-h-0 flex-col rounded-[12px] border shadow-[0_1px_2px_rgba(25,21,36,0.04)]"
+    class="pr-my-work-fade flex flex-1 min-h-0 flex-col rounded-[12px] border shadow-[0_1px_2px_rgba(25,21,36,0.04)]"
     [class]="meta().surfaceClass"
     role="region"
     [attr.aria-labelledby]="headingId()">

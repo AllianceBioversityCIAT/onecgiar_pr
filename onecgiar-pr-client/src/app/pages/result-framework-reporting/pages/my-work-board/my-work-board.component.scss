@@ -9,3 +9,29 @@
   display: block;
   @include vp.pr-viewport-page;
 }
+
+/**
+ * `MWB-T-7` (4) — one short fade on the board container itself (never on individual cards) for a
+ * scope/phase re-group or the skeleton→content swap. Angular view encapsulation scopes SCSS per
+ * component, so this cannot reuse `my-work-column`'s `pr-my-work-fade` — same ~160ms shape, a
+ * component-local keyframe per the task brief ("SCSS only for keyframes not already global").
+ */
+@keyframes pr-board-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.pr-board-fade {
+  animation: pr-board-fade 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-board-fade {
+    animation: none;
+  }
+}

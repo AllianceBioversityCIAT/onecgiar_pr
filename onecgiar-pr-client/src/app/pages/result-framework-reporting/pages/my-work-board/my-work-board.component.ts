@@ -1,4 +1,4 @@
-// @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1, R-3, R-7, R-9, R-10, design.md §2.2, §6.1-6.6)
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-R-1, R-3, R-7, R-9, R-10, design.md §2.2, §6.1-6.6)
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -82,6 +82,15 @@ export class MyWorkBoardComponent {
   readonly showError = computed(() => !!this.data.error());
   readonly showWholeBoardEmpty = computed(() => !this.data.loading() && !this.data.error() && this.data.visibleRows().length === 0);
   readonly showBoard = computed(() => !this.showSkeleton() && !this.showError() && !this.showWholeBoardEmpty());
+
+  /** `MWB-T-7` (4): identity for the board's single re-group fade. Changes only when `columns()`
+   *  is regrouped over a new scope/phase — NOT on every change-detection pass — so it is consumed
+   *  through a keyed `@for` (one item) in the template: a new value forces Angular to destroy and
+   *  recreate the board container, replaying its entrance `animation` once; an unrelated re-render
+   *  (e.g. a card's own input updating) leaves the key untouched and nothing replays. The
+   *  skeleton→content case needs no key of its own — that swap is already a distinct `@else if`
+   *  branch, so the container is freshly mounted the first time `showBoard()` becomes true. */
+  readonly boardRegroupKey = computed(() => `${this.data.scope()}::${this.data.effectivePhase() ?? ''}`);
 
   constructor() {
     // `MWB-T-3` forward pointer (d): `currentPhaseName` set BEFORE `load()` — both happen in this

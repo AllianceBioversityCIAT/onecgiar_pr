@@ -1,4 +1,4 @@
-// @akili-spec changes/my-work-board (MWB-T-4)
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7)
 import { Component, Input, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, ParamMap, Router, convertToParamMap } from '@angular/router';
@@ -314,5 +314,16 @@ describe('MyWorkBoardComponent', () => {
 
       expect(service.setPhase).toHaveBeenCalledWith('Reporting 2025');
     });
+  });
+
+  // `MWB-T-7` (4, 5): presence-only — the board container's re-group fade is a local `@keyframes`
+  // neutralised under `prefers-reduced-motion` in the component's own SCSS (not a Tailwind class),
+  // so it's asserted by class name; jsdom does not evaluate the media query itself.
+  it('carries the board re-group entrance-fade class when the board renders (MWB-T-7)', () => {
+    service.visibleRows.set([row()]);
+    service.columns.set([{ key: 'editing', label: 'Editing', group: 'action', rows: [row()] }]);
+    fixture.detectChanges();
+
+    expect(root().querySelector('.pr-board-fade')).toBeTruthy();
   });
 });

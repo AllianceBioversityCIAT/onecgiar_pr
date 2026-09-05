@@ -1,4 +1,4 @@
-// @akili-spec changes/my-work-board (MWB-T-4, MWB-R-2, R-11)
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-R-2, R-11)
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { MyWorkColumnComponent } from './my-work-column.component';
@@ -128,5 +128,15 @@ describe('MyWorkColumnComponent', () => {
 
       expect(spy).toHaveBeenCalledTimes(1);
     });
+  });
+
+  // `MWB-T-7` (3, 5): presence-only — the actual "does it honour prefers-reduced-motion"
+  // behaviour is a CSS media query jsdom does not evaluate; this guards that the expanded
+  // region's local `@keyframes` hook (neutralised under `prefers-reduced-motion` in the
+  // component's own SCSS, not a Tailwind class) stays on the markup.
+  it('carries the expanded region entrance-fade class (MWB-T-7)', async () => {
+    await build({ column: column({ rows: [row()] }) });
+
+    expect((root().querySelector('section') as HTMLElement).className).toContain('pr-my-work-fade');
   });
 });

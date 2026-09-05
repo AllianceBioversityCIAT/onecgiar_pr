@@ -112,3 +112,4 @@ So `MWB-PA-4` is an **add**, not an edit. Suggested bullet under `## 5. Navigati
 
 - Completeness fold cost ≈ 100–200 ms per eligible item (v2 procedure); worst case at cap 60 / concurrency 5 ≈ 2–3 s. Candidate changes for a separate proposal: cap 30, concurrency 10, or a batch procedure `validate_sections_mapped_batch` over many ids.
 - `cypress-axe` is not installed → `MWB-T-5` a11y gate is structural only (see `requirements.md` §9).
+- `MWB-T-7` accepted partial: rail ↔ column width animation not delivered (both states `width: auto` under flex); expanded-column fade delivered. Follow-up only if the user wants an explicit-width slide.

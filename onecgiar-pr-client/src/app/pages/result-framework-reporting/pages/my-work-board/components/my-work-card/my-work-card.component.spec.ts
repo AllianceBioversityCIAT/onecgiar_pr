@@ -1,4 +1,4 @@
-// @akili-spec changes/my-work-board (MWB-T-4, MWB-R-4, R-6)
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-R-4, R-6)
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { MyWorkCardComponent } from './my-work-card.component';
@@ -156,5 +156,16 @@ describe('MyWorkCardComponent', () => {
     await build({ row: row({ statusId: 8, statusName: 'Draft' }), inEditingColumn: true });
 
     expect(text()).toContain('Draft');
+  });
+
+  // `MWB-T-7` (5): presence-only — the real "does it honour prefers-reduced-motion" behaviour is a
+  // CSS media query, not something jsdom evaluates; this only guards the class stays on the markup.
+  it('carries motion-reduce:transition-none on the hover-animated card and its actions (MWB-T-7)', async () => {
+    await build({ row: row({ completeness: { complete: 2, total: 5, missing: ['geographic-location'] } }), inEditingColumn: true });
+
+    const article = root().querySelector('article') as HTMLElement;
+    expect(article.className).toContain('motion-reduce:transition-none');
+    const continueBtn = Array.from(root().querySelectorAll('button')).find(b => b.textContent?.includes('Continue')) as HTMLButtonElement;
+    expect(continueBtn.className).toContain('motion-reduce:transition-none');
   });
 });
