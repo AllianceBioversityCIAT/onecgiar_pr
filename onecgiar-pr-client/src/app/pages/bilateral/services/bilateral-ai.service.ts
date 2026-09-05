@@ -129,7 +129,23 @@ export class BilateralAiService implements OnDestroy {
         } else {
           this.uploadState.update(s => ({ ...s, status: 'completed' }));
           this.loadAllDrafts();
-          await this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'drafts']);
+          // Auto-redirect ONLY while the user still sits on the AI upload flow (the create
+          // wizard), where they are waiting for exactly this. The service is root-provided and
+          // polling survives navigation, so completing used to yank the user out of whatever
+          // result they had moved on to — reported as very abrupt (2026-09-04). Anywhere else, a
+          // toast announces the drafts and the server mails the uploader a link to the list.
+          const url = this.router.url ?? '';
+          const onUploadFlow = url.includes(`/bilateral/${this.ctx.centerAcronym()}/create`);
+          if (onUploadFlow) {
+            await this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'drafts']);
+          } else {
+            this.messageService.add({
+              severity: 'success',
+              summary: 'AI results ready',
+              detail: `${job.result_count} result${job.result_count === 1 ? '' : 's'} identified from your document. Review them in Bilateral → Drafts.`,
+              life: 10000
+            });
+          }
         }
       } else if (job.status === 'FAILED') {
         this.stopPolling();
