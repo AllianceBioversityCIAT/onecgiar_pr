@@ -500,8 +500,8 @@ export class ReportingAowTableComponent {
   }
 
   /**
-   * Helper to extract a clean HLO code token (e.g. 'HLO4', 'IO1', 'EOI2') from an HLO group
-   * or raw string. (RAJ-R-1, RAJ-DD-2)
+   * Helper to extract a clean HLO code token (e.g. 'HLO4', 'IO1', 'EOI2', '1.1') from an HLO group
+   * or raw string. (RAJ-R-1, RAJ-DD-2, RAH-R-2)
    */
   cleanHloCode(hloOrRaw: { code?: string; key?: string; name?: string } | string | null | undefined): string {
     if (!hloOrRaw) return '';
@@ -512,23 +512,82 @@ export class ReportingAowTableComponent {
     if (iocMatch) {
       return iocMatch[1].toUpperCase().replace(/\s+/, ' ');
     }
+    const hloSpaceNumMatch = /^(HLO\s+\d+(?:\.\d+)*)/i.exec(trimmed);
+    if (hloSpaceNumMatch) {
+      return hloSpaceNumMatch[1].toUpperCase().replace(/\s+/, ' ');
+    }
     const match = /^((?:HLO|HL|IO|EOI)[\w.\-]*)/i.exec(trimmed);
-    if (!match) return '';
-    const rawCode = match[1];
-    const codeMatch = /^(HLO\d+|IO\d+|EOI\d+|HL\d+)/i.exec(rawCode);
-    return codeMatch ? codeMatch[1].toUpperCase() : rawCode.split('.')[0].toUpperCase();
+    if (match) {
+      const rawCode = match[1];
+      const codeMatch = /^(HLO\d+|IO\d+|EOI\d+|HL\d+)/i.exec(rawCode);
+      return codeMatch ? codeMatch[1].toUpperCase() : rawCode.split('.')[0].toUpperCase();
+    }
+    const numMatch = /^(\d+(?:\.\d+)+)/.exec(trimmed);
+    if (numMatch) {
+      return numMatch[1];
+    }
+    return '';
+  }
+
+  /**
+   * Resolve semantic taxonomy badge ({ type: 'HLO' | 'OUTCOME' | 'OC' | 'IO' | 'I-OC', code: string })
+   * based on band, hlo key, and row metadata, preserving specific ToC taxonomy (HLO, OC, I-OC). (RAH-R-2, RAH-DD-2)
+   */
+  hloTaxonomy(hlo: any, band?: any): { type: string; code: string } {
+    let type = 'HLO';
+    const bandKey = (band?.key || '').toLowerCase();
+    const hloKey = (hlo?.key || '').toLowerCase();
+    const firstRow = hlo?.rows?.[0];
+    const rawCode = (hlo?.code || this.cleanHloCode(hlo) || '').trim();
+
+    if (
+      bandKey.includes('band-io') ||
+      hloKey.startsWith('io::') ||
+      bandKey.includes('intermediate') ||
+      firstRow?.__isIntermediateCrosscut ||
+      /^(?:I-OC|IO)/i.test(rawCode)
+    ) {
+      type = /^(?:I-OC)/i.test(rawCode) ? 'I-OC' : 'IO';
+    } else if (
+      bandKey.includes('band-out') ||
+      bandKey.includes('band-o30') ||
+      hloKey.includes('::out::') ||
+      hloKey.startsWith('o30::') ||
+      firstRow?.__tier === 'outcome' ||
+      /^(?:OC|EOI)/i.test(rawCode)
+    ) {
+      if (/^OC/i.test(rawCode)) {
+        type = 'OC';
+      } else if (/^EOI/i.test(rawCode)) {
+        type = 'EOI';
+      } else {
+        type = 'OUTCOME';
+      }
+    } else if (bandKey.includes('band-hlo') || hloKey.includes('::hlo::') || firstRow?.__tier === 'output') {
+      type = 'HLO';
+    } else if (/^(?:HLO|HL)/i.test(rawCode)) {
+      type = 'HLO';
+    }
+
+    // Strip redundant prefix from hlo.code (e.g. 'HLO 1.1' -> '1.1', 'HLO4' -> '4', 'I-OC 3.5' -> '3.5', 'OUTPUT 1.1' -> '1.1')
+    let cleanCode = rawCode.replace(/^(?:OUTPUT|OUTCOME|HLO|HL|I-OC|OC|IO|EOI)[\s.\-_:]*/i, '').trim();
+    if (!cleanCode && rawCode) {
+      cleanCode = rawCode;
+    }
+
+    return { type, code: cleanCode };
   }
 
   /**
    * Cluster indicators by ToC title. Display name is the full descriptive title, as the design shows it.
-   * Leading codes like `HL04.AOW1.I01` are stripped when present so the row reads as a sentence,
-   * while the standardized badge code (e.g. `HLO4`) is extracted for the header badge. (RAJ-R-1, RAJ-DD-2)
+   * Leading codes like `HL04.AOW1.I01` or `1.1:` are stripped when present so the row reads as a sentence,
+   * while the standardized badge code (e.g. `HLO4`, `1.1`) is extracted for the header badge. (RAJ-R-1, RAH-R-2)
    */
   private clusterByTitle(rows: ReportingIndicator[], keyPrefix: string): HloGroup[] {
     const byKey = new Map<string, HloGroup>();
     for (const row of rows) {
       const raw = row.__hlo?.trim() || 'Unassigned';
-      const match = /^((?:HLO|HL|I-OC|OC|IO|EOI)(?:[-\s]?\d[\w.\-]*)?)\.?\s*[\-–—:·•]?\s+(.+)$/i.exec(raw);
+      const match = /^((?:(?:HLO|HL|I-OC|OC|IO|EOI)(?:[-\s]?\d[\w.\-]*)?|\d+(?:\.\d+)+))\.?\s*[:\-–—·•]?\s*(.+)$/i.exec(raw);
       const name = (match?.[2] || raw).replace(/^[·•\-–—:\s]+/, '').trim() || raw;
       const rawCode = match?.[1] || '';
       const code = this.cleanHloCode(rawCode || raw) || undefined;

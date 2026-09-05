@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRMS — 3-Level Visual Hierarchy Mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Poppins', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              25: '#fbfaff',
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              200: '#ddd6fe',
+              300: '#6b6dc4',
+              400: '#6461bc',
+              500: '#5733c4',
+              600: '#4c26b5',
+              700: '#43249e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+    }
+    .pr-grid-row {
+      display: grid;
+      grid-template-columns: 24px minmax(280px, 1fr) 72px 72px 104px 124px 108px 28px;
+      align-items: center;
+      gap: 12px;
+    }
+    .bullseye-icon {
+      color: #8b5cf6;
+    }
+  </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+  <!-- Top Demo Control Header -->
+  <header class="max-w-7xl mx-auto mb-6 flex flex-wrap items-center justify-between gap-4 bg-slate-900 text-white px-6 py-4 rounded-xl shadow-lg border border-slate-800">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex items-center justify-center h-9 w-9 rounded-lg bg-indigo-600 font-bold text-white shadow-sm">
+        <span class="material-icons-round text-lg">layers</span>
+      </span>
+      <div>
+        <h1 class="text-base font-bold leading-tight">PRMS UX/UI Redesign — 3-Level Scaffolding Mockup</h1>
+        <p class="text-xs text-slate-400">Area of Work (Macro) &rarr; High-Level Output (Meso) &rarr; Indicators (Micro)</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 bg-slate-800/90 p-1 rounded-lg border border-slate-700">
+      <button id="btnProposed" onclick="setView('proposed')" class="px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all bg-indigo-600 text-white shadow-xs">
+        ✨ Proposed Hierarchy (Card-in-Card)
+      </button>
+      <button id="btnCurrent" onclick="setView('current')" class="px-3.5 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all">
+        Current Flat View
+      </button>
+    </div>
+  </header>
+
+  <!-- Interactive Mockup Container -->
+  <main class="max-w-7xl mx-auto space-y-6">
+
+    <!-- PROPOSED DESIGN VIEW -->
+    <div id="proposedView" class="space-y-6">
+
+      <!-- ================= LEVEL 1: MACRO CONTAINER (AOW CARD) ================= -->
+      <section class="rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden transition-all duration-200">
+        
+        <!-- AoW Macro Header -->
+        <div class="flex h-[56px] min-h-[56px] w-full items-center gap-3 bg-white px-6 border-b border-slate-100">
+          <button type="button" class="flex items-center gap-3 flex-1 text-left cursor-pointer focus:outline-none group">
+            <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-slate-500 group-hover:bg-slate-100 group-hover:text-slate-800 transition-colors">
+              <span class="material-icons-round text-lg">expand_more</span>
+            </span>
+            
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-purple-100 text-purple-800 font-mono text-xs font-bold uppercase tracking-wider">
+                AOW01
+              </span>
+              <span class="text-[15px] font-bold text-slate-900 truncate">
+                Accelerating AI-Enabled Farm Advisory and Predictive Services
+              </span>
+              <span class="material-icons-round text-slate-400 text-base hover:text-indigo-600 cursor-pointer" title="Area of Work information">info</span>
+              <span class="text-xs font-medium text-slate-500 whitespace-nowrap">53 KPIs</span>
+            </div>
+          </button>
+
+          <!-- Center: Progress Bar -->
+          <div class="hidden lg:flex items-center gap-3 px-4 py-1.5 rounded-full bg-slate-50 border border-slate-100">
+            <div class="w-32 h-2 rounded-full bg-slate-200 overflow-hidden">
+              <div class="h-full bg-indigo-600 rounded-full" style="width: 0%"></div>
+            </div>
+            <span class="text-xs font-medium text-slate-600"><strong class="font-bold text-slate-900">0</strong> of 53 <span class="text-slate-400">(0%)</span></span>
+          </div>
+
+          <!-- Right: QA & By AOW Action -->
+          <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3 text-xs pr-2 border-r border-slate-200">
+              <div class="text-right">
+                <span class="font-bold text-slate-900">QA 10%</span>
+                <span class="text-slate-400 text-[10px] block">12 of 16 ind.</span>
+              </div>
+              <div class="text-right">
+                <span class="font-bold text-slate-600">PREL. 0%</span>
+              </div>
+            </div>
+            <button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-200 bg-purple-50/50 text-purple-700 text-xs font-semibold hover:bg-purple-100 transition-colors">
+              <span class="material-icons-round text-sm">folder_open</span>
+              <span>By AOW</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- In-Card Filter Toolbar -->
+        <div class="flex h-10 items-center justify-between px-6 bg-slate-50/75 border-b border-slate-100 text-xs">
+          <div class="flex items-center gap-4 overflow-hidden">
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-600 mr-1">Centers:</span>
+              <button class="px-2 py-0.5 rounded bg-indigo-600 text-white font-semibold shadow-2xs text-[11px]">All (69)</button>
+              <button class="px-2 py-0.5 rounded bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 font-medium text-[11px]">CIAT (Alliance) (16)</button>
+              <button class="px-2 py-0.5 rounded bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 font-medium text-[11px]">IITA (11)</button>
+              <button class="px-2 py-0.5 rounded bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 font-medium text-[11px]">ICRISAT (6)</button>
+            </div>
+            <div class="h-3.5 w-px bg-slate-200"></div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-600 mr-1">Types:</span>
+              <button class="px-2 py-0.5 rounded bg-indigo-600 text-white font-semibold shadow-2xs text-[11px]">All Types</button>
+              <button class="px-2 py-0.5 rounded bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 font-medium text-[11px]">Innovation dev (26)</button>
+              <button class="px-2 py-0.5 rounded bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 font-medium text-[11px]">Knowledge prod (23)</button>
+            </div>
+          </div>
+          <button class="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800 font-medium">
+            <span class="material-icons-round text-sm">filter_list</span>
+            <span>Filter</span>
+          </button>
+        </div>
+
+        <!-- Section Eyebrow -->
+        <div class="flex items-center justify-between px-6 pt-5 pb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-600">High Level Outputs</span>
+            <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10.5px] font-semibold">53 KPIs</span>
+          </div>
+          <button class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800">
+            <span class="material-icons-round text-sm">unfold_less</span>
+            <span>Collapse all</span>
+          </button>
+        </div>
+
+        <!-- AoW Body Content: List of HLO Sub-Cards -->
+        <div class="p-6 pt-2 space-y-4">
+
+          <!-- ================= LEVEL 2: MESO CONTAINER (HLO 1.1 SUB-CARD) ================= -->
+          <div class="rounded-xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden">
+            
+            <!-- HLO Sub-Card Header Bar (Surface Contrast + Semantic Badge) -->
+            <div class="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-slate-50 via-indigo-50/30 to-slate-50 border-b border-slate-200/80 cursor-pointer hover:bg-slate-100/80 transition-colors">
+              <div class="flex items-center gap-3 min-w-0 flex-1">
+                <!-- Smooth Rotating Chevron -->
+                <span class="flex h-6 w-6 items-center justify-center rounded-md bg-white border border-slate-200/80 text-indigo-700 shadow-2xs">
+                  <span class="material-icons-round text-base">expand_more</span>
+                </span>
+
+                <!-- Semantic Taxonomy Chip (OUTPUT) -->
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-indigo-100/80 text-indigo-800 border border-indigo-200/70 font-mono text-[11px] font-bold tracking-tight">
+                  <span class="text-[9px] uppercase tracking-wider text-indigo-700">OUTPUT</span> 1.1
+                </span>
+
+                <!-- HLO Title with Prominence -->
+                <h3 class="text-[13.5px] font-bold text-slate-900 truncate tracking-tight" title="Agronomic and farm management scientific data and analytics">
+                  Agronomic and farm management scientific data and analytics
+                </h3>
+              </div>
+
+              <!-- Consolidated Mini-KPI Metric Group -->
+              <div class="flex items-center gap-6 shrink-0 pl-4">
+                <div class="flex items-baseline gap-1.5">
+                  <span class="text-sm font-extrabold text-slate-900 tabular-nums">59</span>
+                  <span class="text-[9.5px] font-bold uppercase tracking-wider text-slate-600">TARGET</span>
+                </div>
+                <div class="flex items-baseline gap-1.5">
+                  <span class="text-sm font-extrabold text-emerald-600 tabular-nums">0</span>
+                  <span class="text-[9.5px] font-bold uppercase tracking-wider text-slate-600">ACHIEVED</span>
+                </div>
+                <div class="px-2.5 py-0.5 rounded-full bg-white border border-slate-200/80 text-slate-700 font-bold text-xs shadow-2xs">
+                  32 indicators
+                </div>
+                <div class="text-right text-xs">
+                  <span class="font-bold text-slate-900"><span class="text-[9px] font-medium text-slate-600">QA</span> 0%</span>
+                  <span class="text-slate-400 mx-1">·</span>
+                  <span class="font-medium text-slate-600"><span class="text-[9px] font-medium text-slate-600">PREL</span> 0%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ================= LEVEL 3: MICRO ITEMS (NESTED INDICATORS INSET) ================= -->
+            <div class="bg-white">
+              
+              <!-- Left Visual Indentation Wrapper with Tree-Line Scaffolding -->
+              <div class="pl-6 border-l-4 border-indigo-500/40 bg-indigo-50/10">
+
+                <!-- Scoped Contextual Column Header -->
+                <div class="pr-grid-row h-7 px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200/60 bg-slate-50/50">
+                  <span></span>
+                  <span>INDICATOR TITLE & TAXONOMY</span>
+                  <span class="text-center">TARGET</span>
+                  <span class="text-center">ACHIEVED</span>
+                  <span class="text-center">STATUS</span>
+                  <span class="text-center">PROGRESS</span>
+                  <span class="text-center">ACTION</span>
+                  <span></span>
+                </div>
+
+                <!-- Indicator Row 1 -->
+                <div class="pr-grid-row min-h-[56px] px-4 py-2.5 border-b border-slate-100 bg-white hover:bg-slate-50/80 transition-colors group cursor-pointer">
+                  <!-- 1. Bullseye Mark -->
+                  <div class="bullseye-icon flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.75" />
+                      <circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.75" />
+                      <circle cx="12" cy="12" r="1.1" fill="currentColor" />
+                    </svg>
+                  </div>
+
+                  <!-- 2. Title & Metadata Badges -->
+                  <div class="min-w-0 pr-2">
+                    <p class="text-[12.5px] font-medium leading-snug text-slate-900 group-hover:text-indigo-600 transition-colors">
+                      Integration of AgWise agronomic recommendations (nutrient management and seasonal-forecast-based planting-date advisories) into the AKILIMO decision support tool, positioning AgWise as the R&D engine and AKILIMO as the farmer-facing delivery platform.
+                    </p>
+                    <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      <span class="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-100 text-[10.5px] font-semibold">
+                        Number of innovations (innovation development)
+                      </span>
+                      <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[10.5px] font-semibold">
+                        IITA
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- 3. Target -->
+                  <div class="text-center font-bold text-slate-800 tabular-nums text-sm">2</div>
+
+                  <!-- 4. Achieved -->
+                  <div class="text-center font-bold text-slate-400 tabular-nums text-sm">0</div>
+
+                  <!-- 5. Status -->
+                  <div class="flex justify-center">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium border border-slate-200">
+                      <span class="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
+                      Not started
+                    </span>
+                  </div>
+
+                  <!-- 6. Progress -->
+                  <div class="text-xs space-y-1">
+                    <div class="flex items-center gap-1.5 text-[10.5px]">
+                      <span class="text-slate-400 uppercase font-semibold text-[9px] w-6">QA</span>
+                      <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-indigo-500 rounded-full" style="width: 0%"></div>
+                      </div>
+                      <span class="text-slate-500 font-semibold tabular-nums">0%</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 text-[10.5px]">
+                      <span class="text-slate-400 uppercase font-semibold text-[9px] w-6">PREL</span>
+                      <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-slate-400 rounded-full" style="width: 0%"></div>
+                      </div>
+                      <span class="text-slate-500 font-semibold tabular-nums">0%</span>
+                    </div>
+                  </div>
+
+                  <!-- 7. Action -->
+                  <div class="flex items-center justify-end gap-1">
+                    <button class="h-7 w-7 rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 flex items-center justify-center" title="Copy Link">
+                      <span class="material-icons-round text-sm">link</span>
+                    </button>
+                    <button class="h-7 px-2.5 rounded-md border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 transition-colors">
+                      Report
+                    </button>
+                  </div>
+
+                  <!-- 8. Menu -->
+                  <div class="flex justify-center">
+                    <button class="text-slate-400 hover:text-slate-600">
+                      <span class="material-icons-round text-base">more_vert</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Indicator Row 2 -->
+                <div class="pr-grid-row min-h-[56px] px-4 py-2.5 border-b border-slate-100 bg-white hover:bg-slate-50/80 transition-colors group cursor-pointer">
+                  <div class="bullseye-icon flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.75" />
+                      <circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.75" />
+                      <circle cx="12" cy="12" r="1.1" fill="currentColor" />
+                    </svg>
+                  </div>
+
+                  <div class="min-w-0 pr-2">
+                    <p class="text-[12.5px] font-medium leading-snug text-slate-900 group-hover:text-indigo-600 transition-colors">
+                      Standardized, derivative-based phenological signal-detection algorithm for planting-date estimation using satellite time-series data, calibrated and validated to produce a planting-date map for rice-growing regions.
+                    </p>
+                    <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      <span class="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-100 text-[10.5px] font-semibold">
+                        Number of innovations (innovation development)
+                      </span>
+                      <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[10.5px] font-semibold">
+                        IRRI
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="text-center font-bold text-slate-800 tabular-nums text-sm">1</div>
+                  <div class="text-center font-bold text-slate-400 tabular-nums text-sm">0</div>
+
+                  <div class="flex justify-center">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium border border-slate-200">
+                      <span class="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
+                      Not started
+                    </span>
+                  </div>
+
+                  <div class="text-xs space-y-1">
+                    <div class="flex items-center gap-1.5 text-[10.5px]">
+                      <span class="text-slate-400 uppercase font-semibold text-[9px] w-6">QA</span>
+                      <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-indigo-500 rounded-full" style="width: 0%"></div>
+                      </div>
+                      <span class="text-slate-500 font-semibold tabular-nums">0%</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 text-[10.5px]">
+                      <span class="text-slate-400 uppercase font-semibold text-[9px] w-6">PREL</span>
+                      <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-slate-400 rounded-full" style="width: 0%"></div>
+                      </div>
+                      <span class="text-slate-500 font-semibold tabular-nums">0%</span>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-end gap-1">
+                    <button class="h-7 w-7 rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 flex items-center justify-center">
+                      <span class="material-icons-round text-sm">link</span>
+                    </button>
+                    <button class="h-7 px-2.5 rounded-md border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 transition-colors">
+                      Report
+                    </button>
+                  </div>
+
+                  <div class="flex justify-center">
+                    <button class="text-slate-400 hover:text-slate-600">
+                      <span class="material-icons-round text-base">more_vert</span>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- ================= LEVEL 2: COLLAPSED SECOND HLO SUB-CARD ================= -->
+          <div class="rounded-xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden opacity-85 hover:opacity-100 transition-opacity">
+            <div class="flex items-center justify-between px-4 py-3 bg-slate-50/75 cursor-pointer hover:bg-slate-100 transition-colors">
+              <div class="flex items-center gap-3 min-w-0 flex-1">
+                <span class="flex h-6 w-6 items-center justify-center rounded-md bg-white border border-slate-200 text-slate-400 shadow-2xs">
+                  <span class="material-icons-round text-base -rotate-90">expand_more</span>
+                </span>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-200 text-slate-700 border border-slate-300 font-mono text-[11px] font-bold tracking-tight">
+                  <span class="text-[9px] uppercase tracking-wider text-slate-600">OUTPUT</span> 1.2
+                </span>
+                <h3 class="text-[13.5px] font-semibold text-slate-700 truncate tracking-tight">
+                  Digital tools and participatory advisory models for smallholder farmer climate resilience
+                </h3>
+              </div>
+              <div class="flex items-center gap-6 shrink-0 pl-4">
+                <div class="flex items-baseline gap-1.5">
+                  <span class="text-sm font-extrabold text-slate-700 tabular-nums">42</span>
+                  <span class="text-[9.5px] font-bold uppercase tracking-wider text-slate-600">TARGET</span>
+                </div>
+                <div class="flex items-baseline gap-1.5">
+                  <span class="text-sm font-extrabold text-slate-400 tabular-nums">0</span>
+                  <span class="text-[9.5px] font-bold uppercase tracking-wider text-slate-600">ACHIEVED</span>
+                </div>
+                <div class="px-2.5 py-0.5 rounded-full bg-white border border-slate-200 text-slate-600 font-semibold text-xs">
+                  21 indicators
+                </div>
+                <div class="text-right text-xs">
+                  <span class="font-bold text-slate-700"><span class="text-[9px] font-medium text-slate-600">QA</span> 0%</span>
+                  <span class="text-slate-400 mx-1">·</span>
+                  <span class="font-medium text-slate-500"><span class="text-[9px] font-medium text-slate-600">PREL</span> 0%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+
+    <!-- CURRENT FLAT VIEW (FOR TOGGLE COMPARISON) -->
+    <div id="currentView" class="hidden space-y-4">
+      <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center gap-2">
+        <span class="material-icons-round text-amber-600 text-base">warning</span>
+        <span><strong>Current Flat Presentation:</strong> Note how HLO 1.1 shares the identical flat width and alignment as the indicators below it without indentation or sub-card framing.</span>
+      </div>
+
+      <section class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+        <div class="flex h-[52px] items-center justify-between px-6 border-b border-slate-200">
+          <div class="flex items-center gap-3">
+            <span class="material-icons-round text-slate-400">expand_more</span>
+            <span class="px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-mono text-xs font-bold">AOW01</span>
+            <span class="font-bold text-slate-800 text-sm">Accelerating AI-Enabled Farm Advisory...</span>
+          </div>
+        </div>
+
+        <!-- Flat HLO Row -->
+        <div class="pr-grid-row h-12 px-6 bg-purple-50/20 border-t border-b border-slate-200 border-l-4 border-l-purple-600">
+          <span class="material-icons-round text-purple-600">expand_more</span>
+          <span class="font-bold text-slate-800 text-sm truncate">1.1: Agronomic and farm management scientific data and analytics</span>
+          <span class="text-center font-bold text-slate-800 text-xs">59</span>
+          <span class="text-center font-bold text-emerald-600 text-xs">0</span>
+          <span class="text-center"><span class="px-2 py-0.5 rounded-full bg-slate-100 text-xs font-bold">32</span></span>
+          <span class="text-center text-xs font-bold">QA 0%</span>
+          <span></span>
+          <span></span>
+        </div>
+
+        <!-- Flat Table Header -->
+        <div class="pr-grid-row h-8 px-6 bg-slate-50 text-[10px] font-bold uppercase text-slate-400 border-b border-slate-200">
+          <span></span>
+          <span>INDICATOR</span>
+          <span class="text-center">TARGET</span>
+          <span class="text-center">ACHIEVED</span>
+          <span class="text-center">STATUS</span>
+          <span class="text-center">PROGRESS</span>
+          <span class="text-center">ACTION</span>
+          <span></span>
+        </div>
+
+        <!-- Flat Indicator Row -->
+        <div class="pr-grid-row min-h-[50px] px-6 py-2 border-b border-slate-100 border-l-4 border-l-slate-300">
+          <span class="bullseye-icon flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.75" /></svg>
+          </span>
+          <div>
+            <p class="text-xs font-medium text-slate-800">Integration of AgWise agronomic recommendations into AKILIMO...</p>
+            <span class="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded">Number of innovations</span>
+          </div>
+          <span class="text-center text-xs font-bold">2</span>
+          <span class="text-center text-xs font-bold text-slate-400">0</span>
+          <span class="text-center text-[10px] bg-slate-100 px-2 py-0.5 rounded-full">Not started</span>
+          <span class="text-center text-[10px]">0%</span>
+          <span class="text-center"><button class="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-xs">Report</button></span>
+          <span></span>
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("view") === "current") { setTimeout(() => setView("current"), 50); }
+
+    function setView(view) {
+      const proposed = document.getElementById('proposedView');
+      const current = document.getElementById('currentView');
+      const btnP = document.getElementById('btnProposed');
+      const btnC = document.getElementById('btnCurrent');
+
+      if (view === 'proposed') {
+        proposed.classList.remove('hidden');
+        current.classList.add('hidden');
+        btnP.className = 'px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all bg-indigo-600 text-white shadow-xs';
+        btnC.className = 'px-3.5 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all';
+      } else {
+        proposed.classList.add('hidden');
+        current.classList.remove('hidden');
+        btnC.className = 'px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all bg-indigo-600 text-white shadow-xs';
+        btnP.className = 'px-3.5 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all';
+      }
+    }
+  </script>
+</body>
+</html>

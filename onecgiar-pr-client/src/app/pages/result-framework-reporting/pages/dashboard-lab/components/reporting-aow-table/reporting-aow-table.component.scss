@@ -25,7 +25,7 @@
    metric totals, and indicator rows align with pixel precision. */
 $pr-reporting-tracks: 24px minmax(280px, 1fr) 72px 72px 104px 124px 108px 28px;
 $pr-reporting-gap: 12px;
-$pr-reporting-pad: 8px 16px 8px 24px;
+$pr-reporting-pad: 8px 16px;
 
 /* ── Subgroup table column header ── */
 .pr-hlo-head {
@@ -33,17 +33,17 @@ $pr-reporting-pad: 8px 16px 8px 24px;
   grid-template-columns: $pr-reporting-tracks;
   align-items: center;
   gap: $pr-reporting-gap;
-  height: 32px;
-  padding: 0 16px 0 24px;
-  background: var(--pr-surface-subtle);
-  border-top: 1px solid var(--pr-border-divider);
+  height: 28px;
+  padding: 0 16px;
+  background: rgba(248, 250, 252, 0.5);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
   border-left: 3px solid transparent;
   box-sizing: border-box;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--pr-text-secondary);
+  color: #94a3b8;
   user-select: none;
 }
 
@@ -72,15 +72,19 @@ $pr-reporting-pad: 8px 16px 8px 24px;
   gap: $pr-reporting-gap;
   min-height: 48px;
   padding: $pr-reporting-pad;
-  border-top: 1px solid var(--pr-border-divider);
+  border-bottom: 1px solid var(--pr-border-divider);
   background: var(--pr-surface-card);
   box-sizing: border-box;
   width: 100%;
   cursor: pointer;
   transition: background 150ms ease;
 
+  &:last-child {
+    border-bottom: none;
+  }
+
   &:hover {
-    background: var(--pr-surface-ground);
+    background: rgba(248, 250, 252, 0.8);
   }
 
   // The row is a keyboard-reachable control, so it needs a real indicator. The global

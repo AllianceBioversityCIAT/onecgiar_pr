@@ -7,12 +7,22 @@ El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjeta
 of Work (más las dos de programa, `Intermediate` y `2030`) y, en modo `All indicators`, la tabla plana
 ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio.
 
+## Arquitectura de Jerarquía Visual (3-Level Card-in-Card Hierarchy — RAH)
+El árbol de contenido se organiza según el patrón arquitectónico Card-in-Card en 3 niveles estrictos:
+- **Level 1: AoW Outer Card:** Contenedor macro (`section.rounded-2xl.border-slate-200`) que agrupa el área temática (`AOW01`), la barra de progreso global, el botón "By AOW" y la barra de desglose rápido (`Centers`, `Types`) integrada en tarjeta.
+- **Level 2: HLO Sub-Card:** Sub-tarjeta meso autónoma (`rounded-xl border border-slate-200/90 bg-white shadow-2xs`) para cada High-Level Output / Outcome / IO, con contraste superficial mediante gradiente sutil (`from-slate-50 via-indigo-50/30 to-slate-50`), píldora semántica de taxonomía (`HLO 1.1`, `OC 1.2`, `I-OC 3.5`), botón de chevron en caja blanca y micro-KPIs consolidados (Target, Achieved, badge de conteo de indicadores, QA% y Prel%).
+- **Level 3: Indented Indicator Scaffolding:** Scaffolding micro con 24px de sangría (`pl-4 sm:pl-6`), guía visual de árbol (`border-l-4 border-indigo-500/40 bg-indigo-50/10`) y sub-cabecera contextual de columnas (`INDICATOR TITLE & TAXONOMY | Target | Achieved | Status | Progress | Action`) compacta de 28px (`h-7`). Cada fila de indicador (`.pr-reporting-row`) se renderiza sobre fondo blanco (`bg-white hover:bg-slate-50/80`) con franjas JIRA de estado (`border-l-[3px]`), bullseye concéntrico y botones de acción interactivos con aislamiento de eventos (`stopPropagation`).
+
 ## Contrato
 - Inputs: `groups` (requerido), `search`, `statusFilter`, `filtersActive`, `viewMode`
   (`'grouped' | 'flat'`), `canReport`, `expandAll`, `expandAllNonce`, `scopeKey`, `lastReported`
   (el KPI cuyo report se acaba de cerrar — publica el host; enciende "Next pending" en esa fila).
 - Outputs: `openRow`, `reportRow`, `openTarget`, `openAchieved`, `openAow`, `allOpenChange`,
   `clearFilters`, `copyLink`.
+- ⚠️ **Event isolation & contract protection (Kaizen `KZ-changes--reporting-aow-jira-hierarchy-2`):**
+  Todos los botones interactivos dentro de la fila de indicador (`.pr-row-action` [Report],
+  `Copy link`, `Target`, `Achieved`, menú `⋯`) DEBEN invocar `emitAndStop` (`$event.stopPropagation()`)
+  para aislar la acción e impedir que se dispare el evento `openRow` de la fila contenedora.
 - Estado: el host (`dashboard-lab`) es dueño de los datos y de los cinco filtros. Este componente
   solo posee su **disclosure** (`overrides`), los títulos expandidos, y qué overlay está abierto
   (`openMenuKey`, `openInfoKey`).
