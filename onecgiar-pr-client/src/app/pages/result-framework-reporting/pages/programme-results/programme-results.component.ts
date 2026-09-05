@@ -37,6 +37,7 @@ import {
   BandFilterGroup,
   ReportingProgramBandComponent
 } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
+import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import {
   BilateralResultsService,
@@ -218,7 +219,8 @@ function formatDate(value: string): string {
     PrSortableColumnDirective,
     PrFilterSelectComponent,
     PrFilterMultiselectModule,
-    ChangePhaseModalModule
+    ChangePhaseModalModule,
+    WhereToReportModalComponent
   ],
   providers: [
     ProgrammeResultsService,
@@ -479,16 +481,19 @@ function formatDate(value: string): string {
         transition: background 0.2s ease-out;
       }
 
-      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row:hover {
-        /* No token for the design's row-hover tint yet (between --pr-surface-card and
-           --pr-surface-app). Kept literal rather than snapped to a token that would change the
-           colour. */
-        background: #fafafb;
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row:hover,
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row:focus-visible {
+        background: var(--pr-surface-ground, #efeef3);
       }
 
       :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row:focus-visible {
         outline: 2px solid var(--pr-color-primary-300);
         outline-offset: -2px;
+      }
+
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row:hover td.pgr-actions,
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row:focus-visible td.pgr-actions {
+        background: var(--pr-surface-ground, #efeef3);
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -839,10 +844,10 @@ export class ProgrammeResultsComponent implements OnDestroy {
     this.router.navigateByUrl(this.reportingPath());
   }
 
+  readonly showWhereToReportModal = signal(false);
+
   openWhereToReport(): void {
-    this.router.navigate(['/result-framework-reporting', 'entity-details', this.programmeCode()], {
-      queryParams: { whereToReport: 'true', returnTab: 'results' }
-    });
+    this.showWhereToReportModal.set(true);
   }
 
   get cycleYear(): string | number | null {

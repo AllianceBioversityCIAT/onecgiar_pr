@@ -201,6 +201,8 @@
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Created by"
+                    [filter]="true"
+                    filterPlaceholder="Search user..."
                     [ngModel]="selectValue(filter.selectedCreatedBy())"
                     (changed)="onCreatedByChange($event)"></app-pr-filter-select>
                 </div>
@@ -673,3 +675,8 @@
 @if (changePhaseModalMounted()) {
   <app-change-phase-modal></app-change-phase-modal>
 }
+
+<app-where-to-report-modal
+  [programCode]="programmeCode()"
+  returnTab="results"
+  [(visible)]="showWhereToReportModal" />

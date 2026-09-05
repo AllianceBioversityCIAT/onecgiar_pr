@@ -1,4 +1,4 @@
-import { Component, Input, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Clipboard } from '@angular/cdk/clipboard';
@@ -20,6 +20,7 @@ import { BilateralResultsService } from '../bilateral-results/bilateral-results.
 import { PrToastService } from '../../../../shared/components/pr-toast';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
+import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
 import { PrTableComponent } from '../../../../shared/components/pr-table';
 
 /** The band is chrome, not this tab: stubbed so the spec exercises the Results surface only. */
@@ -35,6 +36,15 @@ class BandStubComponent {
   /** `SAV-T-4` viewport-lock bindings — mirrors the real band's signal inputs as plain `@Input()`s. */
   @Input() frameLocked = false;
   @Input() scrollHost: HTMLElement | null = null;
+  @Output() whereToReport = new EventEmitter<void>();
+}
+
+@Component({ selector: 'app-where-to-report-modal', standalone: true, template: '' })
+class WhereToReportModalStubComponent {
+  @Input() programCode = '';
+  @Input() returnTab: 'reporting' | 'my-work' | 'results' = 'results';
+  @Input() visible = false;
+  @Output() visibleChange = new EventEmitter<boolean>();
 }
 
 /**
@@ -357,8 +367,8 @@ describe('ProgrammeResultsComponent', () => {
     });
 
     TestBed.overrideComponent(ProgrammeResultsComponent, {
-      remove: { imports: [ReportingProgramBandComponent] },
-      add: { imports: [BandStubComponent] }
+      remove: { imports: [ReportingProgramBandComponent, WhereToReportModalComponent] },
+      add: { imports: [BandStubComponent, WhereToReportModalStubComponent] }
     });
 
     fixture = TestBed.createComponent(ProgrammeResultsComponent);
@@ -465,6 +475,17 @@ describe('ProgrammeResultsComponent', () => {
       expect(band.frameLocked).toBe(true);
       // Identity, not just presence — a stray second scrollable element would still fail this.
       expect(band.scrollHost).toBe(workArea);
+    });
+
+    it('opens whereToReportModal in-place when whereToReport fires', () => {
+      const band = fixture.debugElement.query(By.directive(BandStubComponent)).componentInstance as BandStubComponent;
+      expect(component.showWhereToReportModal()).toBe(false);
+
+      (router.navigate as jest.Mock).mockClear();
+      band.whereToReport.emit();
+
+      expect(component.showWhereToReportModal()).toBe(true);
+      expect(router.navigate).not.toHaveBeenCalled();
     });
   });
 
