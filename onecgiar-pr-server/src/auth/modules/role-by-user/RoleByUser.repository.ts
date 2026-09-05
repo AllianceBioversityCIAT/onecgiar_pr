@@ -355,6 +355,39 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
    *
    * @param centerCode CLARISA centre code, as stored in `role_by_user.center_id`.
    */
+  /**
+   * Every user with an ACTIVE role — any role — in the initiative. Mirror of `getUserIdsByCenter`
+   * for the initiative axis; used to notify a Science Program's members that a bilateral result
+   * reached Pending Review (2026-09-05). Any role on purpose: today any member can approve or
+   * reject (the review endpoint carries no role guard — P2-3414), so any member gets the heads-up.
+   * If P2-3155 ever narrows the decision to SP Leaders, this is the predicate to narrow with it.
+   */
+  async getUserIdsByInitiative(initiativeId: number): Promise<number[]> {
+    const queryData = `
+    SELECT DISTINCT
+      rbu.\`user\` AS user_id
+    FROM role_by_user rbu
+    WHERE rbu.initiative_id = ?
+      AND rbu.active > 0
+      AND rbu.\`user\` IS NOT NULL;
+    `;
+    try {
+      const result: Array<{ user_id: number | string }> = await this.query(
+        queryData,
+        [initiativeId],
+      );
+      return (result ?? [])
+        .map((row) => Number(row.user_id))
+        .filter((id) => Number.isFinite(id) && id > 0);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: RoleByUserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getUserIdsByCenter(centerCode: string): Promise<number[]> {
     const queryData = `
     SELECT DISTINCT

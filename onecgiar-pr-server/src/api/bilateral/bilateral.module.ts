@@ -74,6 +74,7 @@ import { AdUsersModule } from '../ad_users/ad_users.module';
 import { WebhookOutboxModule } from '../results/webhook/webhook-outbox.module';
 import { EmailNotificationManagementModule } from '../../shared/microservices/email-notification-management/email-notification-management.module';
 import { TemplateRepository } from '../platform-report/repositories/template.repository';
+import { NotificationModule } from '../notification/notification.module';
 import { BilateralWebhookController } from './bilateral-webhook.controller';
 import { BilateralWebhookService } from './services/bilateral-webhook.service';
 
@@ -132,6 +133,11 @@ import { BilateralWebhookService } from './services/bilateral-webhook.service';
     WebhookOutboxModule,
     // 2026-09-04: the AI results-ready mail (BilateralAiService.sendResultsReadyEmail).
     EmailNotificationManagementModule,
+    // 2026-09-05: the submitted-for-review in-app notification to the primary Science Program
+    // (BilateralService.emitBilateralSubmittedNotification). No cycle: NotificationModule imports
+    // SocketManagement, Versioning, forwardRef(ShareResultRequest) and bare entities — nothing
+    // that imports back into this module.
+    NotificationModule,
   ],
   controllers: [
     BilateralWebhookController,
