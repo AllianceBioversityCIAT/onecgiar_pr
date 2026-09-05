@@ -121,12 +121,7 @@
             (changed)="onPhaseChange($event)"></app-pr-filter-select>
         </div>
       </div>
-
-      <!-- Explainer (`MWB-R-10`) — BELOW the filter row now, collapsed by default. The read-only
-           hint that used to sit in the toolbar lives in `explainerDescription`. -->
-      <div class="px-[16px] pt-[14px] sm:px-[32px]">
-        <app-pr-tab-intro title="What does this tab show?" [description]="explainerDescription" icon="view_kanban" />
-      </div>
+      <!-- Explainer (`MWB-R-10`) removed 2026-09-05 on user request ("quita esto de aquí"). -->
 
       <!-- Board body: skeleton / error+Retry / whole-board empty / groups (`MWB-R-7`, mutually exclusive). -->
       <div class="flex flex-1 min-h-0 flex-col">

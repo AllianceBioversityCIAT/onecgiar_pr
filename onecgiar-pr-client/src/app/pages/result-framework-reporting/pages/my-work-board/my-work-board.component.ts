@@ -8,19 +8,11 @@ import { map } from 'rxjs/operators';
 
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
-import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/pr-tab-intro.component';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { MyWorkBoardService } from './services/my-work-board.service';
 import { MyWorkColumnComponent } from './components/my-work-column/my-work-column.component';
 import { MyWorkScope } from './my-work.view-model';
-
-/** Explainer copy (`MWB-R-10`, design.md §6.5). `MWB-T-8` (1): absorbs the read-only hint sentence
- *  that used to sit as a standalone line in the toolbar — the row under the tabs is the filter row
- *  now, so the hint lives in the one place the tab already reserves for "what is this?" copy. */
-const MY_WORK_EXPLAINER_DESCRIPTION =
-  'Your results in this Science Program, grouped by status. The board is read-only: open a result to complete it or submit it. ' +
-  'Status changes still happen inside the result, and quality assessment happens in QA.';
 
 @Component({
   selector: 'app-my-work-board',
@@ -31,7 +23,7 @@ const MY_WORK_EXPLAINER_DESCRIPTION =
   templateUrl: './my-work-board.component.html',
   styleUrls: ['./my-work-board.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgTemplateOutlet, FormsModule, RouterLink, ReportingProgramBandComponent, PrTabIntroComponent, PrFilterSelectComponent, MyWorkColumnComponent],
+  imports: [NgTemplateOutlet, FormsModule, RouterLink, ReportingProgramBandComponent, PrFilterSelectComponent, MyWorkColumnComponent],
   providers: [MyWorkBoardService]
 })
 export class MyWorkBoardComponent {
@@ -43,8 +35,6 @@ export class MyWorkBoardComponent {
   /** Page-scoped board data (`MWB-T-3`) — providing it HERE, not root, drops the rows on leaving
    *  the tab instead of leaking one programme into the next (same reasoning as `ProgrammeResultsService`). */
   readonly data = inject(MyWorkBoardService);
-
-  readonly explainerDescription = MY_WORK_EXPLAINER_DESCRIPTION;
 
   /** Viewport lock (`SAV-T-4`): the work area is the only scroller ≥ 900px. */
   readonly workArea = viewChild<ElementRef<HTMLElement>>('workArea');

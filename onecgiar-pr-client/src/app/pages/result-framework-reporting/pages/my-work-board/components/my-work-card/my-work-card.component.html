@@ -2,11 +2,11 @@
   One board card (`MWB-R-4`). Tokens from design.md §6.3 — no hard-coded hex, only `var(--pr-*)`.
   `html`/`body` is 12px — every measurement below is an explicit px value (client CLAUDE.md §5).
 -->
-<!-- `MWB-T-7`: hover lift/tint — CSS-only, no JS. `motion-reduce:transition-none` follows the
+<!-- `MWB-T-7` + user request 2026-09-05 ("que se sombree"): hover surface tint (`--pr-surface-subtle-hover`) + lift/tint — CSS-only, no JS. `motion-reduce:transition-none` follows the
      app's existing reduced-motion convention (see `styles/collapse.scss`, `pr-band-fade`): the
      hover STATE still applies, only the animated transition between states is removed. -->
 <article
-  class="flex flex-col gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px_12px_10px] shadow-[0_1px_2px_rgba(25,21,36,0.05)] transition-[transform,box-shadow,border-color] duration-150 ease-out hover:-translate-y-[1px] hover:border-[var(--pr-color-primary-200)] hover:shadow-[0_4px_12px_rgba(25,21,36,0.08)] motion-reduce:transition-none">
+  class="flex flex-col gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px_12px_10px] shadow-[0_1px_2px_rgba(25,21,36,0.05)] transition-[transform,box-shadow,border-color,background-color] duration-150 ease-out hover:bg-[var(--pr-surface-subtle-hover)] hover:-translate-y-[1px] hover:border-[var(--pr-color-primary-200)] hover:shadow-[0_4px_12px_rgba(25,21,36,0.08)] motion-reduce:transition-none">
   <!-- Code · Category chip · Origin -->
   <div class="flex items-center gap-[8px]">
     <span class="font-mono text-[11px] font-semibold tracking-[0.04em] text-[var(--pr-text-subtle)]">{{ row().code }}</span>

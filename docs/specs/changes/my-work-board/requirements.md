@@ -191,7 +191,7 @@ Each card MUST show the payload's `status_name` as its status chip so Draft, App
 
 ### Should (SHOULD)
 
-- **`MWB-R-10` Explainer panel.** The tab SHOULD reuse `<app-pr-tab-intro>` (`sp-tab-explainer-panels`) with copy stating the board is read-only and where status changes happen.
+- **`MWB-R-10` Explainer panel.** ~~The tab SHOULD reuse `<app-pr-tab-intro>` …~~ **Withdrawn 2026-09-05 by the user ("quita esto de aquí") after seeing it on the real page; the row under the tabs is the filter row (`MWB-T-8`).**
 - **`MWB-R-11` Editing header hint.** The Editing column header SHOULD show `<k> ready to submit` when `k > 0` cards are at `n === m`.
 
 ## 7. Non-Functional Requirements

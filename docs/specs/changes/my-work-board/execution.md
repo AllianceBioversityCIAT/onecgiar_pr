@@ -336,3 +336,8 @@ Page `…/entity-details/SP02/my-work` (Orca browser, proxy origin of the local 
 - **ADVISORY (recorded):** the visible Phase label makes the filter row ~72 px vs Results' ~54 px — **user's visual call** (options: `sr-only` label + `aria-label` on the control, or inline label); `.options` `width: max-content` could grow an internal horizontal scrollbar for a very long phase label (`right: 0` if it ever bites); `canReport` hardcoded true on two tabs (same as Results); real rail button still lacks the `--pr-color-primary-300` focus ring (deferred from T-7, not in T-8's files — follow-up); `requirements.md` `MWB-R-7` "skeleton of three columns" amended by the Leader to the board-shaped skeleton.
 - **Concurrency note:** another session had uncommitted edits in `pr-filter-select/*` and `programme-results.component.html` during this task; excluded from the diff and the commit (explicit paths).
 - **Gate:** auto-approved (pre-approved mode).
+
+### Quick-track adjustments on user request (Leader inline, cosmetic; `/akili-quick` scale) · 2026-09-05
+
+- **Card hover shading** ("que cuando ponga el mouse sobre la card se sombree"): `hover:bg-[var(--pr-surface-subtle-hover)]` added to the card `<article>` and `background-color` to its transition list (150 ms ease-out). Card spec green (12 tests). Live stylesheet contains the generated `:hover` rule (checked via `document.styleSheets`).
+- **Explainer removed** ("quita esto de aquí"): `<app-pr-tab-intro>` and `MY_WORK_EXPLAINER_DESCRIPTION` dropped from the page; spec rewritten (no explainer, no hint line). `MWB-R-10` (SHOULD) is **withdrawn by the user**; `requirements.md` amended. Jest `7 suites / 87 tests`, tsc, lint green.

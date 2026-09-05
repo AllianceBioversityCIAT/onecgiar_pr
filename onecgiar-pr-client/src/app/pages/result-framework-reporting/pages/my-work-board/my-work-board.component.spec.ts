@@ -326,7 +326,7 @@ describe('MyWorkBoardComponent', () => {
   describe('MWB-T-8 — filter row, Where to report, skeleton', () => {
     const workArea = () => component.workAreaEl() as HTMLElement;
 
-    it('makes the filter row the first element child of #workArea and puts the explainer after it', () => {
+    it('makes the filter row the first element child of #workArea and renders no explainer (removed on user request 2026-09-05)', () => {
       const filterRow = workArea().firstElementChild as HTMLElement;
 
       expect(filterRow.getAttribute('role')).toBe('search');
@@ -335,17 +335,9 @@ describe('MyWorkBoardComponent', () => {
       expect(filterRow.querySelector('app-pr-filter-select')).toBeTruthy();
       expect(filterRow.textContent).toContain('Phase');
 
-      // The explainer is rendered, and it comes AFTER the filter row in document order.
-      const explainer = root().querySelector('app-pr-tab-intro') as HTMLElement;
-      expect(explainer).toBeTruthy();
-      expect(filterRow.compareDocumentPosition(explainer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      expect(filterRow.contains(explainer)).toBe(false);
-    });
-
-    it('drops the standalone read-only hint line and keeps the copy in the explainer description', () => {
+      expect(root().querySelector('app-pr-tab-intro')).toBeNull();
+      expect(text()).not.toContain('What does this tab show?');
       expect(text()).not.toContain('Read-only board.');
-      expect(component.explainerDescription).toContain('read-only');
-      expect(component.explainerDescription).toContain('Status changes still happen inside the result');
     });
 
     it('enables the band CTA and navigates with returnTab=my-work when it fires', () => {
