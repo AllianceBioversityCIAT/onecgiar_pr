@@ -11,7 +11,7 @@
 | Module code | `SAV` |
 | Depth | Standard |
 | Type | Change |
-| Status | approved (2026-09-04, gated: requirements → design → tasks all Continue) |
+| Status | shipped on `qa-development-2026` — executed 2026-09-04, archived 2026-09-04 (see `archive-summary.md`) |
 | Approval Mode | gated |
 | Proposal | `docs/specs/changes/sp-shell-app-viewport/proposal.md` (approved 2026-09-04) |
 | Visual reference | `visual-reference/jira-reference-app-frame.png` (target behavior) · `visual-reference/prms-current-sp-overview-document-scroll.png` (current) |

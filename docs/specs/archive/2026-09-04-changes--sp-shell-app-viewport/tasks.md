@@ -13,7 +13,7 @@
 | Approval Mode | gated |
 | Budget (tripwire) | 6 tasks · ~280 LOC · ≤ 2 review rounds. `/akili-execute` stops and escalates past 8 tasks, 450 LOC, or a third round |
 | Owner / driver | AKILI Leader (T1) · Implementer T2 · Reviewer T3 · visual checks T6/HITL |
-| Status | executed (2026-09-04) — all six tasks PASS; pending `/akili-archive` |
+| Status | shipped — executed and archived 2026-09-04 |
 
 ## 2. Pre-flight checklist
 
