@@ -98,40 +98,12 @@ describe('ResultHeaderComponent', () => {
       expect(title.nextElementSibling?.getAttribute('data-testid')).toBe('result-header-meta-wrap');
     });
 
-    it('links back to the results table', async () => {
+    it('does not render the back link (relocated to result-sections-sidebar)', async () => {
       await build();
 
-      expect(q('[data-testid="result-detail-back-link"]').getAttribute('href')).toBe('/result/results-outlet/results-list');
-      expect(q('[data-testid="result-detail-back-link"]').getAttribute('title')).toBe('Back to all results');
-    });
-
-    it('links back to My Results when that is where the user came from', async () => {
-      const detail = '/result/result-detail/9057/general-information?phase=36';
-      await build(detail, () => {
-        const nav = TestBed.inject(SmartNavigationService);
-        nav.recordUrl('/result-framework-reporting/entity-details/SP01/my-work?phase=Reporting%202026');
-        nav.recordUrl(detail);
-      });
-
-      const href = q('[data-testid="result-detail-back-link"]').getAttribute('href') ?? '';
-      expect(href).toContain('/result-framework-reporting/entity-details/SP01/my-work');
-      expect(href).toContain('phase=Reporting%202026');
-      expect(q('[data-testid="result-detail-back-link"]').getAttribute('title')).toBe('Back to My results');
-    });
-
-    it('links back to the programme Results tab when that is where the user came from', async () => {
-      const detail = '/result/result-detail/9042/general-information?phase=36';
-      await build(detail, () => {
-        const nav = TestBed.inject(SmartNavigationService);
-        nav.recordUrl('/result-framework-reporting/entity-details/SP12/results?phase=36&createdBy=42');
-        nav.recordUrl(detail);
-      });
-
-      const href = q('[data-testid="result-detail-back-link"]').getAttribute('href') ?? '';
-      expect(href).toContain('/result-framework-reporting/entity-details/SP12/results');
-      expect(href).toContain('phase=36');
-      expect(href).toContain('createdBy=42');
-      expect(q('[data-testid="result-detail-back-link"]').getAttribute('title')).toBe('Back to programme results');
+      expect(q('[data-testid="result-detail-back-link"]')).toBeNull();
+      const header = q('[data-testid="result-header"]');
+      expect(header.firstElementChild?.querySelector('[data-testid="result-header-title"]')).toBeTruthy();
     });
 
     it('shows the level and funding inline (code and type live in the sections sidebar)', async () => {
@@ -457,13 +429,6 @@ describe('ResultHeaderComponent', () => {
 
       expect(href).toBe('/result-framework-reporting/entity-details/SP04');
       expect(href).not.toContain('tocAow');
-    });
-
-    it('keeps Back to results targeting the results list when Area of Work is also shown', async () => {
-      mockAowMapping();
-      await build();
-
-      expect(q('[data-testid="result-detail-back-link"]').getAttribute('href')).toBe('/result/results-outlet/results-list');
     });
 
     // RIBL-R-10 / AC-8 — `kpi` only when exactly one contributing indicator id is known.

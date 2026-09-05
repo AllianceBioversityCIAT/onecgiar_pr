@@ -10,8 +10,21 @@
      page (measured at 477px of an 842px column) and the white panel ended in mid-air. The row
      that gives this `100%` a meaning is `.rd_layout` in result-detail.component.scss. -->
 <aside
-  class="pr-light-scroll flex h-full w-[240px] shrink-0 flex-col overflow-y-auto border-r border-[var(--pr-border)] bg-white px-[20px] py-[24px]"
+  class="pr-light-scroll flex h-full w-[240px] shrink-0 flex-col overflow-y-auto border-r border-[var(--pr-border)] bg-white px-[20px] py-[20px]"
   data-testid="result-sections-sidebar">
+  <!-- Way back anchor: relocated from result-header to provide persistent, zero-scroll return -->
+  <div class="mb-[14px] flex shrink-0 items-center border-b border-[var(--pr-border)] pb-[12px]">
+    <a
+      [routerLink]="backLink"
+      [queryParams]="backQueryParams"
+      class="group inline-flex min-h-[32px] w-full items-center gap-[6px] rounded-[8px] px-[8px] py-[6px] -ml-[8px] text-[13px] font-medium text-[var(--pr-text-secondary)] no-underline transition-colors hover:bg-[var(--pr-color-primary-50)] hover:text-[var(--pr-color-primary-400)] focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] focus-visible:outline-none"
+      [title]="backTitle"
+      data-testid="result-detail-back-link">
+      <i class="material-icons-round text-[16px] leading-none text-[var(--pr-text-muted)] transition-colors group-hover:text-[var(--pr-color-primary-400)]" aria-hidden="true">chevron_left</i>
+      <span>Back to results</span>
+    </a>
+  </div>
+
   @if (sectionsSE.resultCode() || sectionsSE.resultTypeName() || sectionsSE.statusLabel()) {
     <div class="mb-[16px] flex shrink-0 flex-col gap-[6px] border-b border-[var(--pr-border)] px-[10px] pb-[16px]" data-testid="result-sections-identity">
       @if (sectionsSE.resultCode()) {

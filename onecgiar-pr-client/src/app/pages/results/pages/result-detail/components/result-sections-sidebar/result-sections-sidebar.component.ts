@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
+import { isMyResultsTab, isProgrammeResultsTab, SmartNavigationService, splitNavUrl } from '../../../../../../shared/services/smart-navigation.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { ResultSectionsService } from './result-sections.service';
 
@@ -27,9 +28,25 @@ const ROW_BASE = 'flex h-[44px] shrink-0 items-center gap-[10px] rounded-[8px] p
 export class ResultSectionsSidebarComponent {
   readonly sectionsSE = inject(ResultSectionsService);
   private readonly fieldsManagerSE = inject(FieldsManagerService);
+  private readonly smartNav = inject(SmartNavigationService);
 
   readonly activeRowClass = `${ROW_BASE} bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]`;
   readonly idleRowClass = `${ROW_BASE} font-medium text-[var(--pr-text)] hover:bg-[var(--pr-surface-subtle-hover)]`;
+
+  get backLink(): string {
+    return splitNavUrl(this.smartNav.getResultDetailBackTarget().url).path;
+  }
+
+  get backQueryParams(): Record<string, string> {
+    return splitNavUrl(this.smartNav.getResultDetailBackTarget().url).queryParams;
+  }
+
+  get backTitle(): string {
+    const url = this.smartNav.getResultDetailBackTarget().url;
+    if (isProgrammeResultsTab(url)) return 'Back to programme results';
+    if (isMyResultsTab(url)) return 'Back to My results';
+    return 'Back to all results';
+  }
 
   /**
    * Skeleton row count while the portfolio resolves. P25 shows fewer sections than P22, so the

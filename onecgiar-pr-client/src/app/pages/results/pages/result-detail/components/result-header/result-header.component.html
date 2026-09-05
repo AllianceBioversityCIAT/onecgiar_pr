@@ -1,19 +1,4 @@
 <header class="mb-[16px] flex w-full flex-col gap-[8px]" data-testid="result-header">
-  <!-- Origin-aware way back: the Science Program Results tab when that is how the user arrived,
-       otherwise Results Center. Query params (phase, filters) are kept. The fully-resolved path
-       is used (rather than `/result`) so the link does not depend on the redirect chain. -->
-  <a
-    [routerLink]="backLink"
-    [queryParams]="backQueryParams"
-    class="inline-flex h-[20px] w-fit items-center gap-[5px] text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:opacity-80"
-    [title]="backTitle"
-    data-testid="result-detail-back-link">
-    <!-- Chevron at 14px, per the mockup. It used to be `arrow_back` at 16px: a tailed arrow reads
-         heavier than the rest of the chrome and made the link compete with the title above it. -->
-    <i class="material-icons-round text-[14px] leading-none" aria-hidden="true">chevron_left</i>
-    Back to results
-  </a>
-
   <div class="flex items-start gap-[16px]">
     <!-- Clamped to two lines: result titles run long and a five-line heading pushes the form below
          the fold. The full text stays reachable in the Title field of General information.

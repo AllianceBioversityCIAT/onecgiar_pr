@@ -168,9 +168,9 @@ PRMS leans on a small set of recurring layouts. Reuse before inventing.
 
 ### Detail with panel menu
 
-- Left **panel menu** lists sections with status indicators (complete / has-warnings / required-empty).
-- Center **section content** (forms, tables, sub-sections).
-- Sticky **action bar** for save / submit / share / back-to-queue.
+- Left **secondary rail** (`app-result-sections-sidebar`, 240px) hosts the persistent **way back anchor** (`[data-testid="result-detail-back-link"]`), result identity (code, type, status), section menu with completion indicators, progress bar, and submit triggers.
+- Center **section content** (`rd_scroll`) begins directly with the elevated result title `<h1>`, metadata popover trigger (`ⓘ`), export actions (`PDF`, `⋮`), and section form cards, eliminating header navigation crowding.
+- Sticky **action bar** for save / submit / next section.
 
 ### Listing screens
 
