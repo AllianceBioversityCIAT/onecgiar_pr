@@ -12,11 +12,11 @@
     <span class="font-mono text-[11px] font-semibold tracking-[0.04em] text-[var(--pr-text-subtle)]">{{ row().code }}</span>
     @if (row().category) {
       <span
-        class="inline-flex h-[16px] items-center rounded-full bg-[var(--pr-color-primary-50)] px-[6px] text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-primary-400)]">
+        class="inline-flex h-[16px] shrink-0 items-center whitespace-nowrap rounded-full bg-[var(--pr-color-primary-50)] px-[6px] text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-primary-400)]">
         {{ row().category }}
       </span>
     }
-    <span class="inline-flex items-center rounded-full px-[7px] py-[2px] text-[10px] font-medium" [class]="statusChipClass()">
+    <span class="inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-[7px] py-[2px] text-[10px] font-medium" [class]="statusChipClass()">
       {{ row().statusName }}
     </span>
     <span class="flex-1"></span>
