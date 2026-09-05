@@ -47,7 +47,7 @@
   - [ ] Swagger shows `include_completeness`
   - [ ] Commit `✨ feat(results) [SPEC:changes/my-work-board]: opt-in completeness on the roles/filter list` with explicit paths
 
-### `MWB-T-2` — Client foundation: SP-id service, row mapper, section map, view-model `[ ]`
+### `MWB-T-2` — Client foundation: SP-id service, row mapper, section map, view-model `[x]`
 
 - **Type:** `client`
 - **Description:** New root `ScienceProgramIdService` (memoised `resolve(code)`, `shareReplay`) used by `ProgrammeResultsService` in place of its private resolver (`MWB-DD-3`); `ProgrammeResultRow` gains `resultTypeId` and optional `completeness`, mapper exported (`MWB-DD-4`); `my-work-section-map.ts` (§5 table, P22 + P25, `firstMissingRoute`, `sectionLabel`); `my-work.view-model.ts` (`STATUS_COLUMN_MAP` per `MWB-DD-1b`, `filterByPhase`, `groupByColumn`, `orderEditing`, `orderByCreatedDesc`, `readyCount`, `badgeCount`, `totals`, default-phase rule §6.6 as a pure function of options + current phase name + URL label). No Angular imports in the two pure files.

@@ -2,9 +2,10 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { switchMap } from 'rxjs/operators';
 import { Observable, of } from 'rxjs';
 import { ApiService } from '../../../../../shared/services/api/api.service';
-import { SPProgress } from '../../../../../shared/interfaces/SP-progress.interface';
 // @akili-spec changes/results-aow-column-filter (RAC-T-3, R-7)
 import { Unit } from '../../entity-details/interfaces/entity-details.interface';
+// @akili-spec changes/my-work-board (MWB-T-2, MWB-DD-3)
+import { ScienceProgramIdService } from '../../../services/science-program-id.service';
 
 /**
  * One row of the programme Results table.
@@ -27,6 +28,11 @@ export interface ProgrammeResultRow {
   statusId: number | null;
   /** `status_name` — the STATUS pill label and the Status filter. */
   statusName: string;
+  // @akili-spec changes/my-work-board (MWB-T-2, MWB-DD-4)
+  /** `result_type_id` — needed by the My work board to tell an IPSR package apart from a
+   *  results-validation-module result (eligibility for `completeness`, `MWB-R-8`). Not shown by
+   *  the Results tab table itself, which renders `category` (`result_type`) instead. */
+  resultTypeId: number | null;
   /** `create_first_name` + `create_last_name` — the CREATED BY optional column. */
   createdBy: string;
   /** `created_date`, raw ISO string. Formatting belongs to the template. */
@@ -106,6 +112,18 @@ export interface ProgrammeResultRow {
    * same object. It costs nothing extra — the response is already in memory.
    */
   raw: Record<string, any>;
+
+  // @akili-spec changes/my-work-board (MWB-T-2, MWB-R-8, MWB-DD-4)
+  /**
+   * `completeness` — present ONLY when the payload carried `include_completeness=true`
+   * (`MWB-R-8`). `{ complete, total, missing }` for an eligible item the server validated;
+   * `null` for every ineligible item, an item past the server cap, or a failed validation call.
+   * Optional (not `| undefined` in the type) so every existing `ProgrammeResultRow` literal
+   * (Results tab, tests) that never asked for the flag does not have to name this field at all —
+   * `toProgrammeResultRow` only sets it when the raw item actually carries the key, preserving an
+   * explicit `null` rather than collapsing it to "absent".
+   */
+  completeness?: { complete: number; total: number; missing: string[] } | null;
 }
 
 /** Envelope of `GET /api/results/get/all/roles/filter/{userId}` (paginated). */
@@ -114,11 +132,6 @@ interface AllResultsEnvelope {
     items?: Record<string, any>[];
     meta?: { total?: string | number; page?: number; limit?: number; totalPages?: number };
   };
-}
-
-/** Envelope of `GET /api/results-framework-reporting/get/science-programs/progress`. */
-interface ScienceProgramsEnvelope {
-  response?: { mySciencePrograms?: SPProgress[]; otherSciencePrograms?: SPProgress[] };
 }
 
 // @akili-spec changes/results-aow-column-filter (RAC-T-2)
@@ -231,10 +244,15 @@ function optionsOf(rows: ProgrammeResultRow[], pick: (row: ProgrammeResultRow) =
   return [...unique].sort((a, b) => a.localeCompare(b));
 }
 
-/** Maps one raw payload item to the row the table renders. Exported for the spec. */
+/** Maps one raw payload item to the row the table renders. Exported for the spec and reused by
+ *  `MyWorkBoardService`/`MyWorkCountService` (T-3) — one mapping of the payload, `MWB-DD-4`. */
 export function toProgrammeResultRow(raw: Record<string, any>): ProgrammeResultRow {
   const firstName = text(raw?.['create_first_name']);
   const lastName = text(raw?.['create_last_name']);
+  // @akili-spec changes/my-work-board (MWB-T-2, MWB-R-8) — `completeness` only exists on the
+  // payload when the caller asked for `include_completeness=true`; preserve an explicit `null`
+  // rather than let `??`/optional-chaining collapse it to "absent" like `undefined` would.
+  const hasCompleteness = !!raw && Object.prototype.hasOwnProperty.call(raw, 'completeness');
 
   return {
     id: num(raw?.['id']),
@@ -243,6 +261,7 @@ export function toProgrammeResultRow(raw: Record<string, any>): ProgrammeResultR
     category: text(raw?.['result_type']),
     statusId: num(raw?.['status_id']),
     statusName: text(raw?.['status_name']),
+    resultTypeId: num(raw?.['result_type_id']),
     createdBy: [firstName, lastName].filter(Boolean).join(' '),
     created: text(raw?.['created_date']),
     origin: text(raw?.['source_name']),
@@ -254,7 +273,8 @@ export function toProgrammeResultRow(raw: Record<string, any>): ProgrammeResultR
     phaseName: text(raw?.['phase_name']),
     phaseYear: num(raw?.['phase_year']),
     submitterCode: text(raw?.['submitter']),
-    raw: raw ?? {}
+    raw: raw ?? {},
+    ...(hasCompleteness ? { completeness: raw['completeness'] } : {})
   };
 }
 
@@ -273,6 +293,8 @@ export function toProgrammeResultRow(raw: Record<string, any>): ProgrammeResultR
 @Injectable()
 export class ProgrammeResultsService {
   private readonly api = inject(ApiService);
+  // @akili-spec changes/my-work-board (MWB-T-2, MWB-DD-3)
+  private readonly scienceProgramIdSE = inject(ScienceProgramIdService);
 
   /** Discards a late response when `load()` was called again with a different programme. */
   private requestToken = 0;
@@ -371,11 +393,16 @@ export class ProgrammeResultsService {
     this.loading.set(true);
     this.error.set(null);
 
-    this.resolveInitiativeId(code)
+    this.scienceProgramIdSE
+      .resolve(code)
       .pipe(
         switchMap(initiativeId => {
           if (token !== this.requestToken) return of(null);
-          if (initiativeId === null) return of(null);
+          if (initiativeId === null) {
+            // Keep the Results tab's exact wording — MWB-T-2 moved the lookup, not the message.
+            this.error.set(`Program "${code}" was not found.`);
+            return of(null);
+          }
 
           this.initiativeId.set(initiativeId);
           return this.api.resultsSE.GET_AllResultsWithUseRole(userId, {
@@ -390,7 +417,7 @@ export class ProgrammeResultsService {
           if (token !== this.requestToken) return;
 
           if (envelope === null) {
-            // resolveInitiativeId already decided what went wrong.
+            // The switchMap branch above already set this.error() for a null initiativeId.
             this.rawRows.set([]);
             this.totalReported.set(0);
             this.isPartial.set(false);
@@ -524,24 +551,5 @@ export class ProgrammeResultsService {
         this.unitNames.set(new Map());
       }
     });
-  }
-
-  /**
-   * Official code (`SP01`) -> numeric initiative id (`50`). Emits `null` when the code is
-   * not in the response, and records why in `error`.
-   */
-  private resolveInitiativeId(code: string): Observable<number | null> {
-    const wanted = code.toUpperCase();
-
-    return (this.api.resultsSE.GET_ScienceProgramsProgress() as Observable<ScienceProgramsEnvelope>).pipe(
-      switchMap(envelope => {
-        const programmes = [...(envelope?.response?.mySciencePrograms ?? []), ...(envelope?.response?.otherSciencePrograms ?? [])];
-        const match = programmes.find(programme => text(programme?.initiativeCode).toUpperCase() === wanted);
-        const id = num(match?.initiativeId);
-
-        if (id === null) this.error.set(`Program "${code}" was not found.`);
-        return of(id);
-      })
-    );
   }
 }

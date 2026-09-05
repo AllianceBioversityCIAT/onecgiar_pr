@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 import { ApiService } from '../../../../../shared/services/api/api.service';
+// @akili-spec changes/my-work-board (MWB-T-2, MWB-DD-3)
+import { ScienceProgramIdService } from '../../../services/science-program-id.service';
 import {
   joinResultScope,
   PROGRAMME_RESULTS_PAGE_LIMIT,
@@ -30,17 +32,12 @@ function rawResult(partial: Record<string, any> = {}): Record<string, any> {
   };
 }
 
-function progressResponse() {
-  return {
-    response: {
-      mySciencePrograms: [
-        { initiativeId: 41, initiativeCode: 'SGP-02', initiativeName: 'AVISA' },
-        { initiativeId: 50, initiativeCode: 'SP01', initiativeName: 'Breeding for Tomorrow' }
-      ],
-      otherSciencePrograms: [{ initiativeId: 55, initiativeCode: 'SP06', initiativeName: 'Climate Action' }]
-    }
-  };
-}
+/**
+ * `ScienceProgramIdService` moved this lookup out of `ProgrammeResultsService` (`MWB-T-2`,
+ * `MWB-DD-3`) — the same code -> id table `progressResponse()` used to return, now served by a
+ * stub `resolve()` instead of a mocked `GET_ScienceProgramsProgress`.
+ */
+const SP_CODE_TO_ID: Record<string, number> = { SP01: 50, SP06: 55 };
 
 function resultsResponse(items: Record<string, any>[], total = items.length) {
   return { response: { items, meta: { total: String(total), page: 1, limit: PROGRAMME_RESULTS_PAGE_LIMIT, totalPages: 1 } } };
@@ -53,7 +50,7 @@ function scopeResponse(buckets: Array<{ result_id: number | string; key: string;
 
 describe('ProgrammeResultsService', () => {
   let service: ProgrammeResultsService;
-  let GET_ScienceProgramsProgress: jest.Mock;
+  let resolve: jest.Mock;
   let GET_AllResultsWithUseRole: jest.Mock;
   let GET_ResultsScope: jest.Mock;
   let localStorageUser: { id: number } | null;
@@ -66,14 +63,15 @@ describe('ProgrammeResultsService', () => {
         {
           provide: ApiService,
           useValue: {
-            resultsSE: { GET_ScienceProgramsProgress, GET_AllResultsWithUseRole, GET_ResultsScope },
+            resultsSE: { GET_AllResultsWithUseRole, GET_ResultsScope },
             authSE: {
               get localStorageUser() {
                 return localStorageUser;
               }
             }
           }
-        }
+        },
+        { provide: ScienceProgramIdService, useValue: { resolve } }
       ]
     });
     service = TestBed.inject(ProgrammeResultsService);
@@ -81,7 +79,7 @@ describe('ProgrammeResultsService', () => {
 
   beforeEach(() => {
     localStorageUser = { id: 2 };
-    GET_ScienceProgramsProgress = jest.fn().mockReturnValue(of(progressResponse()));
+    resolve = jest.fn((code: string) => of(SP_CODE_TO_ID[(code ?? '').trim().toUpperCase()] ?? null));
     GET_AllResultsWithUseRole = jest.fn().mockReturnValue(of(resultsResponse([rawResult()])));
     GET_ResultsScope = jest.fn().mockReturnValue(of(scopeResponse([])));
     build();
@@ -100,7 +98,7 @@ describe('ProgrammeResultsService', () => {
     it('resolves the official code to the numeric initiative id and asks for one big page', () => {
       service.load('SP01');
 
-      expect(GET_ScienceProgramsProgress).toHaveBeenCalledTimes(1);
+      expect(resolve).toHaveBeenCalledWith('SP01');
       expect(GET_AllResultsWithUseRole).toHaveBeenCalledWith(2, {
         submitter_id: '50',
         limit: PROGRAMME_RESULTS_PAGE_LIMIT,
@@ -130,6 +128,8 @@ describe('ProgrammeResultsService', () => {
           category: 'Impact contribution',
           statusId: 1,
           statusName: 'Editing',
+          // @akili-spec changes/my-work-board (MWB-T-2, MWB-DD-4) — fixture never sets result_type_id.
+          resultTypeId: null,
           createdBy: 'Guest Tester',
           created: '2025-08-29T16:37:46.000Z',
           origin: 'W1/W2',
@@ -178,7 +178,7 @@ describe('ProgrammeResultsService', () => {
     it('errors on an empty code without calling the API at all', () => {
       service.load('   ');
 
-      expect(GET_ScienceProgramsProgress).not.toHaveBeenCalled();
+      expect(resolve).not.toHaveBeenCalled();
       expect(service.error()).toBe('No program code was provided.');
     });
 
@@ -188,7 +188,7 @@ describe('ProgrammeResultsService', () => {
 
       service.load('SP01');
 
-      expect(GET_ScienceProgramsProgress).not.toHaveBeenCalled();
+      expect(resolve).not.toHaveBeenCalled();
       expect(service.error()).toBe('Your session could not be read. Please sign in again.');
     });
 
@@ -544,6 +544,33 @@ describe('ProgrammeResultsService', () => {
       expect(row.submitterCode).toBe('SP01');
       expect(row.origin).toBe('W3/Bilaterals');
       expect(row.statusName).toBe('Pending Review');
+    });
+
+    // @akili-spec changes/my-work-board (MWB-T-2, MWB-DD-4)
+    it('coerces result_type_id, nulling it when absent or unusable', () => {
+      expect(toProgrammeResultRow(rawResult({ result_type_id: '6' })).resultTypeId).toBe(6);
+      expect(toProgrammeResultRow(rawResult()).resultTypeId).toBeNull();
+      expect(toProgrammeResultRow(rawResult({ result_type_id: null })).resultTypeId).toBeNull();
+    });
+
+    // @akili-spec changes/my-work-board (MWB-T-2, MWB-R-8) — passthrough incl. an explicit null,
+    // and no key at all when the caller never asked for the flag.
+    it('passes completeness through verbatim, including an explicit null, and omits the key when absent', () => {
+      const withCompleteness = toProgrammeResultRow(
+        rawResult({ completeness: { complete: 2, total: 5, missing: ['geographic-location', 'contributor-partners', 'knowledge-product-info'] } })
+      );
+      expect(withCompleteness.completeness).toEqual({
+        complete: 2,
+        total: 5,
+        missing: ['geographic-location', 'contributor-partners', 'knowledge-product-info']
+      });
+
+      const withNullCompleteness = toProgrammeResultRow(rawResult({ completeness: null }));
+      expect(withNullCompleteness.completeness).toBeNull();
+      expect(Object.prototype.hasOwnProperty.call(withNullCompleteness, 'completeness')).toBe(true);
+
+      const withoutFlag = toProgrammeResultRow(rawResult());
+      expect(Object.prototype.hasOwnProperty.call(withoutFlag, 'completeness')).toBe(false);
     });
   });
 });
