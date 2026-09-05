@@ -1,4 +1,4 @@
-// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-10, MWB-T-11, MWB-T-7, MWB-T-8, MWB-T-9)
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-10, MWB-T-11, MWB-T-7, MWB-T-8, MWB-T-9, MWB-T-12)
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
@@ -19,6 +19,7 @@ import { SaveButtonService } from '../../../../custom-fields/save-button/save-bu
 import { ScienceProgramIdService } from '../../services/science-program-id.service';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
+import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
 
 /** The band is chrome, not this tab: stubbed so the spec exercises the board surface only. */
 @Component({ selector: 'app-reporting-program-band', standalone: true, template: '' })
@@ -92,11 +93,20 @@ class FakeMyWorkBoardService {
   readonly readyCount = signal(0);
   readonly badge = signal<number | null>(null);
   readonly scopeTotals = signal<{ mine: number | null; all: number | null }>({ mine: null, all: null });
+  // @akili-spec changes/my-work-board (MWB-T-12) — the three board-local multi dimensions.
+  readonly selectedCategories = signal<string[]>([]);
+  readonly selectedOrigins = signal<string[]>([]);
+  readonly selectedCenters = signal<string[]>([]);
 
   load = jest.fn();
   setScope = jest.fn();
   setPhase = jest.fn();
   retry = jest.fn();
+  clearMultiFilters = jest.fn(() => {
+    this.selectedCategories.set([]);
+    this.selectedOrigins.set([]);
+    this.selectedCenters.set([]);
+  });
 }
 
 describe('MyWorkBoardComponent', () => {
@@ -481,6 +491,7 @@ describe('MyWorkBoardComponent', () => {
       expect((band.componentInstance as BandStubComponent).canReport).toBe(true);
       expect(component.showWhereToReportModal()).toBe(false);
 
+      router.navigate.mockClear();
       (band.componentInstance as BandStubComponent).whereToReport.emit();
 
       expect(component.showWhereToReportModal()).toBe(true);
@@ -736,36 +747,42 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     expect(cardCount()).toBe(5);
   }));
 
-  it('the Filter badge always equals the number of chips', () => {
+  it('the Filter badge always equals the number of chips — one per SELECTED value (MWB-T-12)', () => {
     build();
     expect(filterBadge()).toBe(String(chipLabels().length));
 
-    component.onCategoryChange('Knowledge product');
+    component.selectedCategories.set(['Knowledge product']);
     fixture.detectChanges();
     expect(chipLabels().length).toBe(2);
     expect(filterBadge()).toBe('2');
 
-    component.onOriginChange('W3/Bilateral');
+    component.selectedOrigins.set(['W3/Bilateral']);
     fixture.detectChanges();
     expect(chipLabels().length).toBe(3);
     expect(filterBadge()).toBe('3');
+
+    // `MWB-T-12`: a second value in an already-active dimension counts as its own chip.
+    component.selectedCategories.set(['Knowledge product', 'Innovation development']);
+    fixture.detectChanges();
+    expect(chipLabels().length).toBe(4);
+    expect(filterBadge()).toBe('4');
   });
 
   it('Category, Funding source and Center each narrow the board and add a chip — combined with AND', () => {
     build();
 
-    component.onCategoryChange('Knowledge product');
+    component.selectedCategories.set(['Knowledge product']);
     fixture.detectChanges();
     expect(cardCount()).toBe(3);
     expect(chipLabels()).toContain('Category: Knowledge product');
 
     // OR over the two dimensions would leave four cards (3 KP ∪ 3 W1/W2 minus the 2 shared).
-    component.onOriginChange('W1/W2');
+    component.selectedOrigins.set(['W1/W2']);
     fixture.detectChanges();
     expect(cardTitles().sort()).toEqual(['Seed multiplication guide', 'Seed systems brief']);
     expect(chipLabels()).toContain('Funding source: W1/W2');
 
-    component.onCenterChange('IWMI');
+    component.selectedCenters.set(['IWMI']);
     fixture.detectChanges();
     expect(cardTitles()).toEqual(['Seed multiplication guide']);
     expect(chipLabels()).toContain('Center: IWMI');
@@ -773,8 +790,8 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
 
   it("a chip's × removes just that filter and Clear all restores the whole board (keeping the default phase)", () => {
     build();
-    component.onCategoryChange('Knowledge product');
-    component.onOriginChange('W3/Bilateral');
+    component.selectedCategories.set(['Knowledge product']);
+    component.selectedOrigins.set(['W3/Bilateral']);
     fixture.detectChanges();
     expect(cardCount()).toBe(1);
 
@@ -815,7 +832,7 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     build();
     router.navigate.mockClear();
 
-    component.onCategoryChange('Knowledge product');
+    component.selectedCategories.set(['Knowledge product']);
     fixture.detectChanges();
 
     expect(router.navigate).toHaveBeenCalledWith([], {
@@ -829,7 +846,10 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
   it('landing on ?origin=W3/Bilateral hydrates the chip and the board', () => {
     build({ origin: 'W3/Bilateral' });
 
-    expect(filter.selectedOrigin()).toBe('W3/Bilateral');
+    expect(component.selectedOrigins()).toEqual(['W3/Bilateral']);
+    // `MWB-T-12`: the shared single-select twin stays untouched — filtering it twice would hide
+    // rows the chips still promise.
+    expect(filter.selectedOrigin()).toBeNull();
     expect(chipLabels()).toContain('Funding source: W3/Bilateral');
     expect(cardTitles().sort()).toEqual(['Policy dialogue note', 'Water accounting tool']);
   });
@@ -926,10 +946,207 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     expect(options.find(option => option.value === PROGRAMME_RESULTS_OTHER_CATEGORY)?.label).toBe('Other');
 
     // …and picking it narrows the board to exactly the non-RF rows.
-    component.onCategoryChange(PROGRAMME_RESULTS_OTHER_CATEGORY);
+    component.selectedCategories.set([PROGRAMME_RESULTS_OTHER_CATEGORY]);
     fixture.detectChanges();
     expect(cardTitles()).toEqual(['Capacity change note']);
     expect(chipLabels()).toContain('Category: Other');
+  });
+
+  // ── `MWB-T-12` — Category / Funding source / Center as multi-selects ────────────────────────
+  //
+  // The fixture is what makes OR distinguishable from AND: *Reporting 2026* holds 3 Knowledge
+  // product rows and 2 Innovation development ones, 3 W1/W2 and 2 W3/Bilateral, 3 CIAT and 2
+  // IWMI. Picking both values of a dimension must therefore show 5 cards; an AND would show 0
+  // (no row carries two categories), which is exactly the FAIL input the task names.
+  describe('MWB-T-12 — multi-select Category, Funding source and Center', () => {
+    /** A non-RF `result_type` — the `Other` bucket's only member. */
+    const CAPACITY_ROW = { id: '7', result_code: '5107', title: 'Capacity change note', result_type: 'Capacity change', result_type_id: '3' };
+
+    it('mounts the three dimensions as multiselects, not single selects', () => {
+      build();
+      const popover = root().querySelector('[data-testid="my-work-filter-popover"]') as HTMLElement;
+
+      for (const label of ['Filter by category', 'Filter by funding source', 'Filter by center']) {
+        const box = popover.querySelector(`[aria-label="${label}"]`) as HTMLElement;
+        expect(box.querySelector('app-pr-filter-multiselect')).toBeTruthy();
+        expect(box.querySelector('app-pr-filter-select')).toBeNull();
+      }
+      // The `.mwb-filter` wrapper is what the T-8 `.custom_select` reshape hangs off — it must
+      // survive the swap or the three controls fall back to the legacy 40px violet form shell.
+      expect(popover.querySelectorAll('.mwb-filter app-pr-filter-multiselect').length).toBe(3);
+    });
+
+    it('ORs the values inside Category and adds one chip per value', () => {
+      build();
+
+      component.selectedCategories.set(['Knowledge product', 'Innovation development']);
+      fixture.detectChanges();
+
+      expect(cardCount()).toBe(5);
+      expect(chipLabels()).toEqual(['Phase: Reporting 2026', 'Category: Knowledge product', 'Category: Innovation development']);
+      expect(filterBadge()).toBe('3');
+    });
+
+    it('ANDs Category against Funding source while ORing inside each', () => {
+      build();
+
+      component.selectedCategories.set(['Knowledge product', 'Innovation development']);
+      component.selectedOrigins.set(['W3/Bilateral']);
+      fixture.detectChanges();
+
+      expect(cardTitles().sort()).toEqual(['Policy dialogue note', 'Water accounting tool']);
+
+      // Widening the funding source back to both values ORs within it and re-opens the board.
+      component.selectedOrigins.set(['W3/Bilateral', 'W1/W2']);
+      fixture.detectChanges();
+      expect(cardCount()).toBe(5);
+    });
+
+    it('ORs the values inside Funding source and inside Center', () => {
+      build();
+
+      component.selectedOrigins.set(['W1/W2', 'W3/Bilateral']);
+      fixture.detectChanges();
+      expect(cardCount()).toBe(5);
+      expect(chipLabels()).toEqual(['Phase: Reporting 2026', 'Funding source: W1/W2', 'Funding source: W3/Bilateral']);
+
+      component.selectedOrigins.set([]);
+      component.selectedCenters.set(['CIAT', 'IWMI']);
+      fixture.detectChanges();
+      expect(cardCount()).toBe(5);
+      expect(chipLabels()).toEqual(['Phase: Reporting 2026', 'Center: CIAT', 'Center: IWMI']);
+
+      component.selectedCenters.set(['IWMI']);
+      fixture.detectChanges();
+      expect(cardTitles().sort()).toEqual(['Seed multiplication guide', 'Water accounting tool']);
+    });
+
+    it("a chip's × removes only that ONE value, leaving the rest of its dimension active", () => {
+      build();
+      component.selectedCategories.set(['Knowledge product', 'Innovation development']);
+      component.selectedCenters.set(['CIAT', 'IWMI']);
+      fixture.detectChanges();
+      expect(cardCount()).toBe(5);
+
+      const chipNamed = (label: string) =>
+        Array.from(root().querySelectorAll('[data-testid="my-work-chip"]')).find(chip =>
+          (chip.textContent ?? '').replace(/\s+/g, ' ').trim().startsWith(label)
+        ) as HTMLElement;
+
+      (chipNamed('Category: Innovation development').querySelector('button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(component.selectedCategories()).toEqual(['Knowledge product']);
+      expect(cardCount()).toBe(3);
+      expect(chipLabels()).toContain('Category: Knowledge product');
+      expect(chipLabels()).not.toContain('Category: Innovation development');
+
+      (chipNamed('Center: CIAT').querySelector('button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(component.selectedCenters()).toEqual(['IWMI']);
+      expect(cardTitles()).toEqual(['Seed multiplication guide']);
+    });
+
+    it('Clear all empties all three multi dimensions and restores the whole board', () => {
+      build();
+      component.selectedCategories.set(['Knowledge product']);
+      component.selectedOrigins.set(['W1/W2']);
+      component.selectedCenters.set(['CIAT']);
+      fixture.detectChanges();
+      expect(cardTitles()).toEqual(['Seed systems brief']);
+
+      (root().querySelector('[data-testid="my-work-clear-filters"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(component.selectedCategories()).toEqual([]);
+      expect(component.selectedOrigins()).toEqual([]);
+      expect(component.selectedCenters()).toEqual([]);
+      expect(cardCount()).toBe(5);
+      expect(chipLabels()).toEqual(['Phase: Reporting 2026']);
+    });
+
+    it('combines the Other bucket with a real category in one selection', () => {
+      build({}, [...FIXTURE, rawResult(CAPACITY_ROW)]);
+
+      component.selectedCategories.set(['Knowledge product', PROGRAMME_RESULTS_OTHER_CATEGORY]);
+      fixture.detectChanges();
+
+      expect(cardTitles().sort()).toEqual([
+        'Capacity change note',
+        'Policy dialogue note',
+        'Seed multiplication guide',
+        'Seed systems brief'
+      ]);
+      // The sentinel never reaches the user: its chip reads `Other`, like the Results tab's.
+      expect(chipLabels()).toEqual(['Phase: Reporting 2026', 'Category: Knowledge product', 'Category: Other']);
+    });
+
+    it('mirrors the selection to the URL as ONE comma-separated value, with merge + replaceUrl', () => {
+      build({}, [...FIXTURE, rawResult(CAPACITY_ROW)]);
+      router.navigate.mockClear();
+
+      component.selectedCategories.set(['Knowledge product', PROGRAMME_RESULTS_OTHER_CATEGORY]);
+      component.selectedOrigins.set(['W1/W2', 'W3/Bilateral']);
+      fixture.detectChanges();
+
+      const lastCall = router.navigate.mock.calls[router.navigate.mock.calls.length - 1];
+      expect(lastCall[1].queryParams.category).toBe('Knowledge product,__other__');
+      expect(lastCall[1].queryParams.origin).toBe('W1/W2,W3/Bilateral');
+      expect(lastCall[1].queryParamsHandling).toBe('merge');
+      expect(lastCall[1].replaceUrl).toBe(true);
+
+      // Emptying it publishes `null`, which is what REMOVES the key under `merge`.
+      router.navigate.mockClear();
+      component.selectedOrigins.set([]);
+      fixture.detectChanges();
+      const afterClear = router.navigate.mock.calls[router.navigate.mock.calls.length - 1];
+      expect(afterClear[1].queryParams.origin).toBeNull();
+    });
+
+    it('hydrates a comma-separated ?category= into one chip per value', () => {
+      build({ category: 'Knowledge product,Innovation development' });
+
+      expect(component.selectedCategories()).toEqual(['Knowledge product', 'Innovation development']);
+      expect(chipLabels()).toEqual(['Phase: Reporting 2026', 'Category: Knowledge product', 'Category: Innovation development']);
+      expect(cardCount()).toBe(5);
+      // The shared single-select twin is never written — one source of truth per dimension.
+      expect(filter.selectedCategory()).toBeNull();
+    });
+
+    it('hydrates ?origin= and ?center= the same way, trimming blanks and duplicates', () => {
+      build({ origin: ' W1/W2 , ,W1/W2', center: 'CIAT,IWMI' });
+
+      expect(component.selectedOrigins()).toEqual(['W1/W2']);
+      expect(component.selectedCenters()).toEqual(['CIAT', 'IWMI']);
+      expect(chipLabels()).toEqual(['Phase: Reporting 2026', 'Funding source: W1/W2', 'Center: CIAT', 'Center: IWMI']);
+      expect(cardTitles().sort()).toEqual(['Drought tolerant maize', 'Seed multiplication guide', 'Seed systems brief']);
+    });
+
+    it('keeps an unknown URL value as a removable chip that matches nothing', () => {
+      build({ center: 'Knowledge product,NOWHERE' });
+
+      expect(chipLabels()).toContain('Center: NOWHERE');
+      expect(cardCount()).toBe(0);
+      expect(root().querySelector('[data-testid="my-work-filtered-empty"]')).toBeTruthy();
+      // …and it stays untickable-from-nowhere: the option list carries every selected value even
+      // when no loaded row has it, so the user can clear it inside the panel too.
+      expect(component.centerSelectOptions().map(option => option.value)).toEqual(['CIAT', 'IWMI', 'Knowledge product', 'NOWHERE']);
+    });
+
+    it('leaves the tab badge and the segment totals untouched — those stay phase-only', () => {
+      build();
+      expect(board.badge()).toBe(5);
+      expect(board.scopeTotals().mine).toBe(5);
+
+      component.selectedCategories.set(['Knowledge product']);
+      component.selectedCenters.set(['IWMI']);
+      fixture.detectChanges();
+
+      expect(cardCount()).toBe(1);
+      expect(board.badge()).toBe(5);
+      expect(board.scopeTotals().mine).toBe(5);
+    });
   });
 
   it('opens and closes the Filter popover, and a document click outside closes it', () => {

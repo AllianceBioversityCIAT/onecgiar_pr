@@ -90,11 +90,21 @@ class FakeMyWorkBoardService {
   readonly readyCount = signal(0);
   readonly badge = signal<number | null>(null);
   readonly scopeTotals = signal<{ mine: number | null; all: number | null }>({ mine: null, all: null });
+  // @akili-spec changes/my-work-board (MWB-T-12) — the three board-local multi-select dimensions
+  // the page reads through this service. Empty here: the CT proves LAYOUT, not filtering.
+  readonly selectedCategories = signal<string[]>([]);
+  readonly selectedOrigins = signal<string[]>([]);
+  readonly selectedCenters = signal<string[]>([]);
 
   load = (): void => {};
   setScope = (): void => {};
   setPhase = (): void => {};
   retry = (): void => {};
+  clearMultiFilters = (): void => {
+    this.selectedCategories.set([]);
+    this.selectedOrigins.set([]);
+    this.selectedCenters.set([]);
+  };
 }
 
 function row(partial: Partial<ProgrammeResultRow> = {}): ProgrammeResultRow {

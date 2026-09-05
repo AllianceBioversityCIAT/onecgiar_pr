@@ -159,7 +159,7 @@
               (click)="toggleFilterPopover($event)"
               class="inline-flex h-[34px] cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] shadow-2xs transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
               [class]="
-                filter.hasActiveFilters()
+                hasActiveFilters()
                   ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] font-semibold'
                   : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] font-medium hover:border-slate-400 hover:bg-slate-50'
               "
@@ -168,8 +168,8 @@
               [attr.aria-expanded]="filterPopoverOpen()">
               <span
                 class="material-icons-round text-[18px]"
-                [class.text-[var(--pr-color-primary-600)]]="filter.hasActiveFilters()"
-                [class.text-slate-500]="!filter.hasActiveFilters()"
+                [class.text-[var(--pr-color-primary-600)]]="hasActiveFilters()"
+                [class.text-slate-500]="!hasActiveFilters()"
                 >filter_list</span
               >
               <span>Filter</span>
@@ -232,15 +232,19 @@
                       [ngModel]="selectValue(filter.selectedPhase())"
                       (changed)="onPhaseChange($event)"></app-pr-filter-select>
                   </div>
+                  <!-- `MWB-T-12`: Category is MULTI-select — the same `app-pr-filter-multiselect` the
+                       Results tab mounts for Areas of Work, inside the same `.mwb-filter` wrapper so
+                       the T-8 reshape of the shared `.custom_select` shell applies unchanged. -->
                   <div class="mwb-filter relative" aria-label="Filter by category">
                     <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]"> Category </label>
-                    <app-pr-filter-select
+                    <app-pr-filter-multiselect
                       [options]="categorySelectOptions()"
                       optionLabel="label"
                       optionValue="value"
                       placeholder="Category"
-                      [ngModel]="selectValue(filter.selectedCategory())"
-                      (changed)="onCategoryChange($event)"></app-pr-filter-select>
+                      countLabel="categories"
+                      [ngModel]="selectedCategories()"
+                      (changed)="selectedCategories.set($event)"></app-pr-filter-multiselect>
                   </div>
                 </div>
 
@@ -249,25 +253,27 @@
                     <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                       Funding source
                     </label>
-                    <app-pr-filter-select
+                    <app-pr-filter-multiselect
                       [options]="originSelectOptions()"
                       optionLabel="label"
                       optionValue="value"
                       placeholder="Funding source"
-                      [ngModel]="selectValue(filter.selectedOrigin())"
-                      (changed)="onOriginChange($event)"></app-pr-filter-select>
+                      countLabel="sources"
+                      [ngModel]="selectedOrigins()"
+                      (changed)="selectedOrigins.set($event)"></app-pr-filter-multiselect>
                   </div>
                   <div class="mwb-filter relative" aria-label="Filter by center">
                     <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                       Contributing Center
                     </label>
-                    <app-pr-filter-select
+                    <app-pr-filter-multiselect
                       [options]="centerSelectOptions()"
                       optionLabel="label"
                       optionValue="value"
                       placeholder="Center"
-                      [ngModel]="selectValue(filter.selectedCenter())"
-                      (changed)="onCenterChange($event)"></app-pr-filter-select>
+                      countLabel="centers"
+                      [ngModel]="selectedCenters()"
+                      (changed)="selectedCenters.set($event)"></app-pr-filter-multiselect>
                   </div>
                 </div>
 
@@ -299,8 +305,8 @@
                removes just that one. The phase chip's `×` restores the DEFAULT phase, never "no
                phase" (design.md §6.6), which is also why `Clear filters` hides while the phase is
                the only chip. -->
-          @if (filter.hasActiveFilters()) {
-            @for (chip of filter.activeChips(); track chip.dimension + '|' + chip.value) {
+          @if (hasActiveFilters()) {
+            @for (chip of boardChips(); track chip.dimension + '|' + chip.value) {
               <span class="pr-chip mwb-chip max-[899px]:order-4" data-testid="my-work-chip">
                 {{ chip.label }}
                 <button type="button" class="mwb-chip-remove" aria-label="Remove filter" (click)="clearChip(chip)">

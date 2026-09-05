@@ -6,7 +6,7 @@
 - **Linked spec:** `./requirements.md` (`MWB-R-1`…`R-11`, `MWB-AC-1`…`AC-9`) · `./design.md` (`MWB-DD-1`…`DD-13`, §5 maps, §6.3 tokens, §6.6 phase) · `./judgment.md` (round 1 applied)
 - **Owner / driver:** session Leader (`/akili-execute`)
 - **Status:** `approved` (Phase 3 auto-approved, pre-approved mode, 2026-09-04; rewritten after Judgment Day round 1)
-- **Depth:** Standard · **Budget:** 6 tasks / ~1,350 LOC / ≤ 1 Reviewer round per task (`design.md` §1) · **+ `MWB-T-7` (~120), `MWB-T-8` (~180), `MWB-T-9` (~320), `MWB-T-10` (~200), `MWB-T-11` (~260) added 2026-09-05 on explicit user request — budget 11 / ~2,430**
+- **Depth:** Standard · **Budget:** 6 tasks / ~1,350 LOC / ≤ 1 Reviewer round per task (`design.md` §1) · **+ `MWB-T-7` (~120), `MWB-T-8` (~180), `MWB-T-9` (~320), `MWB-T-10` (~200), `MWB-T-11` (~260), `MWB-T-12` (~260), `MWB-T-13` (~350) added 2026-09-05 on explicit user request — budget 13 / ~3,040**
 - **YOLO limits (inherited, `feedback-pragmatic-akili-execution`):** pre-approved gates logged as `auto-approved (pre-approved mode)`; one Reviewer round per task, a second FAIL escalates; verification = targeted `npx jest <path>` only, never a full client run; pointer briefs; workers never `git add -A` (shared worktree); close each worker right after its task commits (Reviewers via `TaskStop`); a plain-language progress line at every task boundary.
 - **Branch:** `qa-development-2026` (shared — explicit-path diffs and commits; `git log --oneline -3` + `git status --short` before every commit).
 
@@ -334,3 +334,43 @@ Coverage stays above server 5/20/35/40 and client 50/60/60/60; targeted suites o
   - [ ] Jest + tsc + lint + CT (1280, 1440, 768, 390) green
   - [ ] Real-browser look at effective 390 and 768 recorded in `execution.md`
   - [ ] Commit `✨ feat(my-work-board) [SPEC:changes/my-work-board]: responsive snap strip and column jumper below 900px`
+
+### `MWB-T-12` — Category, Funding source and Contributing Center filters as multi-selects `[x]`
+
+- **Type:** `client` · **Added 2026-09-05 by user request** ("el filtro de category debería ser un multiselect" + "también el de funding source y el de contributing center").
+- **Description:** In the board's Filter popover, **Category**, **Funding source** (origin) and **Contributing Center** become multi-selects using the app's existing `<app-pr-filter-multiselect>` (the control Results uses for Areas of Work), keeping the `Other` bucket (`__other__`) as one selectable value. Values within a dimension combine with **OR**, dimensions combine with **AND**. One chip per selected value (`Category: Knowledge product`, chip × removes only that one), Filter badge counts each chip, Clear all clears them. URL bridge: `category=a,b`, `origin=a,b`, `center=a,b` comma-separated (same shape as `?section=`), hydrate splits on comma, unknown values stay as chips that match nothing. **Do not change the shared `ProgrammeResultsFilterService` or `programme-results/**`** (single-select there, Results tab behaviour unchanged; another session is editing those files): implement the three multi dimensions locally in the board (`selectedCategories` / `selectedOrigins` / `selectedCenters` signals or one reusable multi-dimension helper), reuse the exported `matchesProgrammeResultCategory`/`PROGRAMME_RESULTS_OTHER_CATEGORY` and `buildCategoryFilterOptions` for the option list and the `Other` semantics, and keep the service's `selectedCategory` / `selectedOrigin` / `selectedCenter` at `null`. Badge and segment totals stay phase-only (unaffected).
+- **Implements:** user request; `MWB-R-3` (filters client-side, one request), `MWB-R-9` unchanged (popover width/placement as T-9/T-11).
+- **Files (expected):** `my-work-board/my-work-board.component.{ts,html,spec.ts}` (+ `my-work-board.cy.ts` only if a selector changed).
+- **Depends on:** `MWB-T-9` · **Blocks:** —
+- **Estimate:** M (~260 LOC)
+- **Skills:** `angular-developer` · `onecgiar-pr-client:spartan` · `tdd`
+- **Tests (page spec, fixture ≥ 3 rows sharing values; mirror every case for origin and center):** selecting two categories shows rows of either (OR) and adds two chips; combined with Origin narrows further (AND); chip × removes one category only; Clear all empties both; `__other__` + a real category together work; URL mirrors `category=Knowledge%20product,__other__` with `replaceUrl`; landing on `?category=a,b` hydrates two chips; badge/totals unchanged by category selection (existing case still green).
+- **Verification:**
+  ```bash
+  cd onecgiar-pr-client && npx jest src/app/pages/result-framework-reporting/pages/my-work-board --silent --reporters=summary --no-coverage && npx tsc --noEmit -p tsconfig.app.json && npx ng lint --quiet && CT_DEV_SERVER_PORT=8090 npx cypress run --component --spec src/app/pages/result-framework-reporting/pages/my-work-board/my-work-board.cy.ts
+  ```
+  - **FAIL input:** AND instead of OR across categories → the two-category test shows only rows matching both (fails); `filter.selectedCategory` also set → double filtering hides rows.
+  - **Disqualifier:** a fixture with one row per category cannot tell OR from AND.
+- **Definition of done:**
+  - [ ] Jest + tsc + lint + CT green; real-browser check (Leader) of the multiselect open in the popover at 1280
+  - [ ] Commit `✨ feat(my-work-board) [SPEC:changes/my-work-board]: multi-select Category filter`
+
+### `MWB-T-13` — Multi-select Category / Funding source / Center on the Results tab (shared service) `[ ]`
+
+- **Type:** `client` · **Added 2026-09-05 by user request** ("esto también pasa en los filtros del tab de results, podrías revisarlo de una vez").
+- **Description:** Promote the three dimensions to multi-value in the shared `ProgrammeResultsFilterService` (`selectedCategories`, `selectedOrigins`, `selectedCenters: string[]`, OR within / AND across, chips per value, `clearChip` per value, `clearAll`), wire the Results tab popover to `<app-pr-filter-multiselect>` for the three (same as its Areas of Work control), URL bridge `category=a,b` / `origin=a,b` / `center=a,b` (hydrate splits on `,`; legacy single values keep working), keep `Other` (`__other__`) as a selectable value; then **switch the board (`MWB-T-12`) to consume the service's multi dimensions and delete its board-local layer** so both tabs share one implementation. Overview → Results deep links that pass a single `category`/`origin`/`center` must still land correctly (sibling spec `sp-overview-echarts/results-tab-filter-deeplink`, `RFD-*`).
+- **Implements:** user request (parity Results ↔ My results); `CBF-R-*`/`RFD-*` behaviours preserved (regression: existing `programme-results*.spec.ts` suites stay green with adapted expectations).
+- **Files (expected):** `programme-results/services/programme-results-filter.service.{ts,spec.ts}`, `programme-results/programme-results.component.{ts,html,spec.ts}`, `programme-results/services/programme-results-query-params.ts` (doc comment), `my-work-board/my-work-board.component.{ts,html,spec.ts}` (consume the service, drop the local layer).
+- **Depends on:** `MWB-T-12` **and** the other session committing its `programme-results/**` + `pr-filter-select/*` edits (shared-worktree rule) · **Blocks:** —
+- **Estimate:** M/L (~350 LOC)
+- **Skills:** `angular-developer` · `onecgiar-pr-client:spartan` · `tdd`
+- **Tests:** filter-service spec: OR within / AND across for the three; chips per value; `clearChip(value)`; `clearAll`; single legacy URL value hydrates as a one-element array. Results component spec: multiselect mounted for the three; URL join/split; existing Created by / Center / Phase cases adapted. Board spec: same behaviour as T-12 through the service; local layer gone. Cypress e2e not required (no token); CT for the board stays green.
+- **Verification:**
+  ```bash
+  cd onecgiar-pr-client && npx jest src/app/pages/result-framework-reporting/pages/programme-results src/app/pages/result-framework-reporting/pages/my-work-board --silent --reporters=summary --no-coverage && npx tsc --noEmit -p tsconfig.app.json && npx ng lint --quiet && CT_DEV_SERVER_PORT=8090 npx cypress run --component --spec src/app/pages/result-framework-reporting/pages/my-work-board/my-work-board.cy.ts
+  ```
+  - **FAIL input:** a legacy `?category=Knowledge%20product` deep link from Overview stops filtering → hydrate test fails; AND within a dimension → OR test fails.
+  - **Disqualifier:** green Results suites after deleting their Category/Center cases instead of adapting them.
+- **Definition of done:**
+  - [ ] Jest + tsc + lint + CT green; real-browser check on both tabs (Leader)
+  - [ ] Commit `✨ feat(programme-results) [SPEC:changes/my-work-board]: multi-select Category, Funding source and Center filters shared by Results and My results`

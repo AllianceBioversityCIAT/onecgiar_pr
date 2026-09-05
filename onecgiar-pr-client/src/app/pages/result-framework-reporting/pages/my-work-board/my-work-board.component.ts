@@ -1,5 +1,18 @@
-// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-T-8, MWB-T-9, MWB-T-10, MWB-T-11, MWB-R-1, R-2, R-3, R-7, R-9, R-10, design.md §2.2, §6.1-6.6, MWB-DD-9, MWB-DD-11)
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-T-8, MWB-T-9, MWB-T-10, MWB-T-11, MWB-T-12, MWB-R-1, R-2, R-3, R-7, R-9, R-10, design.md §2.2, §6.1-6.6, MWB-DD-9, MWB-DD-11)
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  HostListener,
+  WritableSignal,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+  viewChild
+} from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -11,11 +24,18 @@ import { lucideSearch, lucideX } from '@ng-icons/lucide';
 
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
+import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
 import { ProgrammeResultRow } from '../programme-results/services/programme-results.service';
-import { ProgrammeResultsFilterChip, ProgrammeResultsFilterService, buildCategoryFilterOptions } from '../programme-results/services/programme-results-filter.service';
+import {
+  PROGRAMME_RESULTS_OTHER_CATEGORY,
+  PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL,
+  ProgrammeResultsFilterChip,
+  ProgrammeResultsFilterService,
+  buildCategoryFilterOptions
+} from '../programme-results/services/programme-results-filter.service';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from '../programme-results/services/programme-results-query-params';
 import { MyWorkBoardService } from './services/my-work-board.service';
 import { MyWorkColumnComponent } from './components/my-work-column/my-work-column.component';
@@ -53,6 +73,56 @@ function optionsOf(rows: ProgrammeResultRow[], pick: (row: ProgrammeResultRow) =
   return [...unique].sort((a, b) => a.localeCompare(b));
 }
 
+// @akili-spec changes/my-work-board (MWB-T-12)
+/** One entry of a filter dropdown. */
+interface MyWorkFilterOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * Keeps every SELECTED value selectable even when no loaded row carries it.
+ *
+ * The option lists are derived from the rows, so a value that arrived on the URL (`?center=NOWHERE`)
+ * — or one whose only row lives in another phase — would otherwise be absent from the panel: the
+ * chip would say the board is filtered while the multiselect showed nothing ticked, and the user
+ * could not untick it there. Appended in the order they were selected, after the row-derived ones.
+ */
+function withSelectedOptions(options: MyWorkFilterOption[], selected: readonly string[], labelOf: (value: string) => string): MyWorkFilterOption[] {
+  const missing = selected.filter(value => !options.some(option => option.value === value));
+  return missing.length ? [...options, ...missing.map(value => ({ value, label: labelOf(value) }))] : options;
+}
+
+/** The `Other` bucket travels as a sentinel (P2-3312) — it must never be shown raw. */
+function categoryOptionLabel(value: string): string {
+  return value === PROGRAMME_RESULTS_OTHER_CATEGORY ? PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL : value;
+}
+
+/**
+ * `?category=a,b` → `['a', 'b']`. Same comma-separated shape the Results tab's `?section=` uses
+ * (`programme-results-query-params.ts`). Blanks are dropped and duplicates collapsed so a hand-typed
+ * `?origin=W1/W2,,W1/W2` cannot produce two identical chips.
+ */
+function parseListParam(raw: string | null): string[] {
+  if (!raw) return [];
+  const seen = new Set<string>();
+  for (const value of raw.split(',')) {
+    const trimmed = value.trim();
+    if (trimmed) seen.add(trimmed);
+  }
+  return [...seen];
+}
+
+/** `['a', 'b']` → `'a,b'`; an empty selection is `null`, which REMOVES the key under `merge`. */
+function joinListParam(values: readonly string[]): string | null {
+  return values.length ? values.join(',') : null;
+}
+
+/** Order-insensitive-free list equality — cheap guard for the URL hydrate. */
+function sameList(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
 @Component({
   selector: 'app-my-work-board',
   standalone: true,
@@ -62,7 +132,19 @@ function optionsOf(rows: ProgrammeResultRow[], pick: (row: ProgrammeResultRow) =
   templateUrl: './my-work-board.component.html',
   styleUrls: ['./my-work-board.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgTemplateOutlet, FormsModule, RouterLink, NgIcon, ReportingProgramBandComponent, PrFilterSelectComponent, MyWorkColumnComponent, WhereToReportModalComponent],
+  imports: [
+    NgTemplateOutlet,
+    FormsModule,
+    RouterLink,
+    NgIcon,
+    ReportingProgramBandComponent,
+    PrFilterSelectComponent,
+    // `MWB-T-12`: Category / Funding source / Center are multi-select — the same control the
+    // Results tab mounts for Areas of Work, not a second implementation of one.
+    PrFilterMultiselectModule,
+    MyWorkColumnComponent,
+    WhereToReportModalComponent
+  ],
   // `MWB-T-9`: `ProgrammeResultsFilterService` is page-scoped exactly like on the Results tab —
   // filters must not survive navigating to another programme. `MyWorkBoardService` injects it.
   providers: [ProgrammeResultsFilterService, MyWorkBoardService],
@@ -152,14 +234,50 @@ export class MyWorkBoardComponent {
   readonly searchDraft = signal('');
   private readonly searchInput = new Subject<string>();
 
+  // @akili-spec changes/my-work-board (MWB-T-12)
+  /** The board's three MULTI-select dimensions, owned by `MyWorkBoardService` so `visibleRows()`
+   *  stays the ONE definition of what the board shows. Re-exposed here under the same names — the
+   *  template and the spec drive them from the page. */
+  readonly selectedCategories = this.data.selectedCategories;
+  readonly selectedOrigins = this.data.selectedOrigins;
+  readonly selectedCenters = this.data.selectedCenters;
+
+  // @akili-spec changes/my-work-board (MWB-T-12)
+  /**
+   * The chip row: the shared filter service's own chips (search · phase · created by) with ONE
+   * chip per selected category / funding source / center spliced in at exactly the position those
+   * three dimensions occupy in `ProgrammeResultsFilterService.activeChips()` — after Phase, before
+   * `Created by` — so the row reads in toolbar order whichever dimensions are active.
+   *
+   * The multi chips reuse `ProgrammeResultsFilterChip` verbatim (same `dimension`/`value` pair),
+   * which is what lets `clearChip()` stay one method for both kinds.
+   */
+  readonly boardChips = computed<ProgrammeResultsFilterChip[]>(() => {
+    const base = this.filter.activeChips();
+    const multi: ProgrammeResultsFilterChip[] = [
+      ...this.selectedCategories().map(value => ({ label: `Category: ${categoryOptionLabel(value)}`, dimension: 'category' as const, value })),
+      ...this.selectedOrigins().map(value => ({ label: `Funding source: ${value}`, dimension: 'origin' as const, value })),
+      ...this.selectedCenters().map(value => ({ label: `Center: ${value}`, dimension: 'center' as const, value }))
+    ];
+    if (!multi.length) return base;
+    const createdByAt = base.findIndex(chip => chip.dimension === 'createdBy');
+    return createdByAt < 0 ? [...base, ...multi] : [...base.slice(0, createdByAt), ...multi, ...base.slice(createdByAt)];
+  });
+
   /** Badge on the Filter button = number of chips, phase included — the same rule the Results tab
-   *  applies, so the two toolbars never disagree about what "1 filter" means. */
-  readonly activeFilterCount = computed(() => this.filter.activeChips().length);
+   *  applies, so the two toolbars never disagree about what "1 filter" means. `MWB-T-12`: a
+   *  multi-select contributes one chip PER selected value, and the badge counts each. */
+  readonly activeFilterCount = computed(() => this.boardChips().length);
+
+  /** Whether anything at all is narrowing the board — the Filter button's active styling and the
+   *  chip row's own `@if`. Not `filter.hasActiveFilters()`: that service no longer knows about the
+   *  three board-local dimensions (`MWB-T-12`). */
+  readonly hasActiveFilters = computed(() => this.boardChips().length > 0);
 
   /** `Clear filters` only shows when something OTHER than the phase would be removed: `clearAll()`
    *  deliberately restores the default phase rather than dropping it (design.md §6.6), so a button
    *  that appeared for the phase chip alone would be permanently visible and do nothing. */
-  readonly hasClearableFilters = computed(() => this.filter.activeChips().some(chip => chip.dimension !== 'phase'));
+  readonly hasClearableFilters = computed(() => this.boardChips().some(chip => chip.dimension !== 'phase'));
 
   /** `Created by` is only meaningful under *All program results* — under *Mine* every row is the
    *  current user's, so the dimension is hidden (and cleared by `setScope`). */
@@ -172,10 +290,29 @@ export class MyWorkBoardComponent {
    *  (P2-3312), and `filterRows` already understands it. `buildCategoryFilterOptions` is that
    *  rule's exported single definition — reused here rather than re-implemented (`MWB-T-9`). */
   readonly categorySelectOptions = computed(() =>
-    buildCategoryFilterOptions(optionsOf(this.data.rows(), row => row.category), this.filter.selectedCategory())
+    withSelectedOptions(
+      // `null`, not a selected value: the multi-select's own selection is topped up by
+      // `withSelectedOptions` below, which handles ALL of them rather than just the first
+      // (`buildCategoryFilterOptions` takes a single-select value — `MWB-T-12`).
+      buildCategoryFilterOptions(optionsOf(this.data.rows(), row => row.category), null),
+      this.selectedCategories(),
+      categoryOptionLabel
+    )
   );
-  readonly originSelectOptions = computed(() => optionsOf(this.data.rows(), row => row.origin).map(value => ({ value, label: value })));
-  readonly centerSelectOptions = computed(() => optionsOf(this.data.rows(), row => row.center).map(value => ({ value, label: value })));
+  readonly originSelectOptions = computed(() =>
+    withSelectedOptions(
+      optionsOf(this.data.rows(), row => row.origin).map(value => ({ value, label: value })),
+      this.selectedOrigins(),
+      value => value
+    )
+  );
+  readonly centerSelectOptions = computed(() =>
+    withSelectedOptions(
+      optionsOf(this.data.rows(), row => row.center).map(value => ({ value, label: value })),
+      this.selectedCenters(),
+      value => value
+    )
+  );
   readonly createdBySelectOptions = computed(() => optionsOf(this.data.rows(), row => row.createdBy).map(value => ({ value, label: value })));
 
   // ── Skeleton shape (`MWB-T-8` (4)) ─────────────────────────────────────────────────────────
@@ -315,16 +452,19 @@ export class MyWorkBoardComponent {
         if (urlPhase !== this.data.phase()) this.data.setPhase(urlPhase);
         this.syncFilterPhase();
 
-        const category = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.category);
-        const origin = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin);
-        const center = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.center);
+        // `MWB-T-12`: the three multi dimensions travel as comma-separated lists, the same shape
+        // the Results tab's `?section=` uses. Splitting on `,` is the whole decode — the router
+        // has already percent-decoded each value.
+        const categories = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.category));
+        const origins = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin));
+        const centers = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.center));
         const createdBy = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy);
 
         // An unknown value is applied as-is: the predicates are pure and case-insensitive, so it
         // simply matches nothing and stays visible as a chip the user can remove (Results parity).
-        if (category !== this.filter.selectedCategory()) this.filter.selectedCategory.set(category);
-        if (origin !== this.filter.selectedOrigin()) this.filter.selectedOrigin.set(origin);
-        if (center !== this.filter.selectedCenter()) this.filter.selectedCenter.set(center);
+        if (!sameList(categories, this.selectedCategories())) this.selectedCategories.set(categories);
+        if (!sameList(origins, this.selectedOrigins())) this.selectedOrigins.set(origins);
+        if (!sameList(centers, this.selectedCenters())) this.selectedCenters.set(centers);
         if (createdBy !== this.filter.selectedCreatedBy()) this.filter.selectedCreatedBy.set(createdBy);
       });
     });
@@ -351,9 +491,11 @@ export class MyWorkBoardComponent {
       // so nothing navigates until the resolution is real. After `clearAll()`/`onPhaseChange(null)`
       // both are `null` only while rows are absent; once they land the resolved default is written.
       const phase = this.data.effectivePhase() ?? this.data.phase();
-      const category = this.filter.selectedCategory();
-      const origin = this.filter.selectedOrigin();
-      const center = this.filter.selectedCenter();
+      // `MWB-T-12`: `null` when nothing is selected — under `queryParamsHandling: 'merge'` that is
+      // what REMOVES the key, so an emptied multi-select leaves no `?category=` behind.
+      const category = joinListParam(this.selectedCategories());
+      const origin = joinListParam(this.selectedOrigins());
+      const center = joinListParam(this.selectedCenters());
       const createdBy = this.filter.selectedCreatedBy();
 
       untracked(() => {
@@ -490,13 +632,31 @@ export class MyWorkBoardComponent {
       this.onPhaseChange(null);
       return;
     }
+    // `MWB-T-12`: a multi chip's × drops ONLY its own value — the other picks of the same
+    // dimension keep filtering.
+    const multi = this.multiDimension(chip?.dimension);
+    if (multi) {
+      multi.update(values => values.filter(value => value !== chip.value));
+      return;
+    }
     this.filter.clearChip(chip);
   }
 
   clearAll(): void {
     this.searchDraft.set('');
     this.filter.clearAll();
+    // `MWB-T-12`: the three board-local dimensions are not the shared service's to clear.
+    this.data.clearMultiFilters();
     this.onPhaseChange(null);
+  }
+
+  // @akili-spec changes/my-work-board (MWB-T-12)
+  /** The signal one of the three multi dimensions is stored in, or `null` for the rest. */
+  private multiDimension(dimension: ProgrammeResultsFilterChip['dimension'] | undefined): WritableSignal<string[]> | null {
+    if (dimension === 'category') return this.selectedCategories;
+    if (dimension === 'origin') return this.selectedOrigins;
+    if (dimension === 'center') return this.selectedCenters;
+    return null;
   }
 
   // ── Single-select filters ──────────────────────────────────────────────────────────────────
@@ -520,17 +680,10 @@ export class MyWorkBoardComponent {
     this.syncFilterPhase();
   }
 
-  onCategoryChange(value: unknown): void {
-    this.filter.selectedCategory.set(this.toFilterValue(value));
-  }
-
-  onOriginChange(value: unknown): void {
-    this.filter.selectedOrigin.set(this.toFilterValue(value));
-  }
-
-  onCenterChange(value: unknown): void {
-    this.filter.selectedCenter.set(this.toFilterValue(value));
-  }
+  // `MWB-T-12` removed `onCategoryChange` / `onOriginChange` / `onCenterChange`: those three
+  // dimensions are multi-select now and write their own signals straight from the template's
+  // `(changed)` output. `ProgrammeResultsFilterService.selectedCategory/Origin/Center` stay `null`
+  // on this page — one source of truth per dimension.
 
   onCreatedByChange(value: unknown): void {
     this.filter.selectedCreatedBy.set(this.toFilterValue(value));

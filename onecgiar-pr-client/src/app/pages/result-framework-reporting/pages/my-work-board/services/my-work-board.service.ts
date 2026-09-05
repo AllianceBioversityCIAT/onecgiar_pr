@@ -1,11 +1,15 @@
-// @akili-spec changes/my-work-board (MWB-T-3, MWB-T-9, MWB-R-1, R-3, R-7, R-8, DD-5, DD-11, DD-13, design.md §2.2 steps 3 & 6, §6.2, §6.6)
+// @akili-spec changes/my-work-board (MWB-T-3, MWB-T-9, MWB-T-12, MWB-R-1, R-3, R-7, R-8, DD-5, DD-11, DD-13, design.md §2.2 steps 3 & 6, §6.2, §6.6)
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { ScienceProgramIdService } from '../../../services/science-program-id.service';
-import { ProgrammeResultsFilterService } from '../../programme-results/services/programme-results-filter.service';
+import {
+  matchesProgrammeResultCategory,
+  normalize,
+  ProgrammeResultsFilterService
+} from '../../programme-results/services/programme-results-filter.service';
 import { PROGRAMME_RESULTS_PAGE_LIMIT, ProgrammeResultRow, toProgrammeResultRow } from '../../programme-results/services/programme-results.service';
 import {
   badgeCount,
@@ -66,6 +70,27 @@ export class MyWorkBoardService {
   /** The URL-driven phase label; `null` before the page sets one. */
   readonly phase = signal<string | null>(null);
 
+  // @akili-spec changes/my-work-board (MWB-T-12)
+  /**
+   * The board's three MULTI-select toolbar dimensions — Category, Funding source (`origin`) and
+   * Contributing Center (`center`). Deliberately board-local rather than pushed into
+   * `ProgrammeResultsFilterService`: the Results tab keeps those three single-select, and its
+   * service is shared verbatim (`MWB-T-9`). Their single-select twins over there
+   * (`selectedCategory` / `selectedOrigin` / `selectedCenter`) stay `null` on this page forever —
+   * setting both would filter the same dimension twice and hide rows the chips still promise.
+   *
+   * They live HERE and not on the page because `visibleRows()` is the ONE definition of "the rows
+   * the board shows" (the columns, the per-column empties, the filtered-empty state and the
+   * totals all read it); a second filtering pass in the template would narrow some of those and
+   * miss the others. The page exposes them under the same names.
+   *
+   * Semantics: OR inside a dimension, AND across dimensions — and AND with everything the shared
+   * filter service still owns (search, phase, created by). An empty array is "no filter".
+   */
+  readonly selectedCategories = signal<string[]>([]);
+  readonly selectedOrigins = signal<string[]>([]);
+  readonly selectedCenters = signal<string[]>([]);
+
   readonly rows = signal<ProgrammeResultRow[]>([]);
   readonly loading = signal<boolean>(false);
   readonly error = signal<string | null>(null);
@@ -98,7 +123,19 @@ export class MyWorkBoardService {
    * that keeps ONE phase source (`MyWorkBoardService.phase` → `effectivePhase`) while still
    * producing the `Phase: …` chip from the same `activeChips()` the other dimensions use.
    */
-  readonly visibleRows = computed<ProgrammeResultRow[]>(() => this.filter.filterRows(this.phaseRows(), { ignoreStatus: true }));
+  readonly visibleRows = computed<ProgrammeResultRow[]>(() => {
+    const base = this.filter.filterRows(this.phaseRows(), { ignoreStatus: true });
+    const categories = this.selectedCategories();
+    const origins = this.selectedOrigins();
+    const centers = this.selectedCenters();
+    if (!categories.length && !origins.length && !centers.length) return base;
+    return base.filter(
+      row =>
+        (!categories.length || categories.some(value => matchesProgrammeResultCategory(row, value))) &&
+        (!origins.length || origins.some(value => normalize(value) === normalize(row?.origin))) &&
+        (!centers.length || centers.some(value => normalize(value) === normalize(row?.center)))
+    );
+  });
 
   readonly columns = computed<MyWorkColumn[]>(() => groupByColumn(this.visibleRows()));
 
@@ -228,6 +265,14 @@ export class MyWorkBoardService {
     // The two `load()` call sites stay unconditional — they run after the response has landed.
     if (this.loading() || this.scopeTotals()[this.scope()] === null) return;
     this.recordScopeTotal();
+  }
+
+  // @akili-spec changes/my-work-board (MWB-T-12)
+  /** Empties the three board-local multi-select dimensions — `Clear all` / `Clear filters`. */
+  clearMultiFilters(): void {
+    this.selectedCategories.set([]);
+    this.selectedOrigins.set([]);
+    this.selectedCenters.set([]);
   }
 
   /** Re-issues the last load (`MWB-R-7` error state's Retry action). */
