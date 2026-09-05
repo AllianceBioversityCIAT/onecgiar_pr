@@ -1,0 +1,54 @@
+// pr-viewport-page — the shared "lock this page to the viewport" recipe.
+//
+// Any routed page that wants to behave like an application frame (chrome that never moves, one
+// work-area scroll) includes this mixin on its `:host`. It is a Sass mixin, not a global `.pr-*`
+// class (`onecgiar-pr-client/CLAUDE.md` §5 forbids new global layout classes but allows `:host`
+// box setup in SCSS) — `SAV-DD-3`.
+//
+// WHY `position: absolute` AND NOT A HEIGHT CHAIN.
+// `result-detail` (`pages/results/pages/result-detail/result-detail.component.scss`) paid for
+// this lesson once — a first attempt that used `height: 100%` up the chain was reverted. The
+// chain under any SP/reporting page is:
+//
+//   main.flex.flex-col.min-h-svh  →  div.relative.min-h-0.min-w-0.flex-1  →  <locked host>
+//
+// `min-height` does NOT become a definite height once content exceeds it: `main` resolves to
+// `max(100svh, content)`, so once a tall page pushes past the viewport the `flex-1` slot has
+// nothing left to share — it takes its content's height instead of the leftover under the
+// header. A `height: 100%` hung off the host then resolves against that content height,
+// `overflow-y: auto` never scrolls, and — because an overflow container IS the sticky containing
+// block — anything `sticky` inside gets pinned in the wrong place.
+//
+// Pinning the host instead breaks the loop: absolutely positioned content is out of flow, so
+// `main` falls back to `min-h-svh`, the slot's leftover becomes a REAL `100svh − header`
+// (whatever the header's actual height is — the TEST banner is optional and can wrap to two
+// lines, so the header is never a constant), and `inset: 0` fills exactly that. No JS measuring
+// the header, no `matchMedia` — the browser's own layout resolves it (`SAV-DD-2`).
+//
+// THE OUTLET-SLOT CONTAINING-BLOCK CONTRACT.
+// This only works because `app.component.html` wraps `<router-outlet>` in
+// `div.relative.min-h-0.min-w-0.flex-1` — the containing block an absolutely positioned host
+// resolves against. Without that `relative` this would resolve against `main` (already
+// `relative` via Spartan's `hlmSidebarInset`) and cover the header instead of sitting under it.
+// Any page that includes this mixin depends on that slot staying `relative min-h-0 min-w-0
+// flex-1` — documented, not enforced by this file (`SAV-R-11`).
+//
+// NO `transform` ON THE HOST OR ITS WRAPPERS.
+// A `transform` on any ancestor between the outlet slot and a page-local `position: fixed`
+// element (e.g. the Reporting AOW rail, a search popover) creates a new containing block and
+// re-anchors that "fixed" element to the ancestor instead of the viewport. This mixin never sets
+// `transform`, and no wrapper a consuming page adds between the mixin's host and its fixed
+// overlays may set one either (`SAV-R-7`).
+//
+// Media-gated at `min-width: 900px` (`md`, `docs/ux-ui/design.md` §9). Below that breakpoint the
+// mixin emits NOTHING: the host stays in normal flow, the document scrolls, and any `sticky`
+// chrome (e.g. the reporting-program-band) keeps behaving exactly as it does today (`SAV-R-8`).
+@mixin pr-viewport-page {
+  @media (min-width: 900px) {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+}
