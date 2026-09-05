@@ -1,5 +1,5 @@
-// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-T-8, MWB-T-9, MWB-T-10, MWB-R-1, R-2, R-3, R-7, R-9, R-10, design.md §2.2, §6.1-6.6, MWB-DD-11)
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-T-8, MWB-T-9, MWB-T-10, MWB-T-11, MWB-R-1, R-2, R-3, R-7, R-9, R-10, design.md §2.2, §6.1-6.6, MWB-DD-9, MWB-DD-11)
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -13,12 +13,32 @@ import { DataControlService } from '../../../../shared/services/data-control.ser
 import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
+import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
 import { ProgrammeResultRow } from '../programme-results/services/programme-results.service';
 import { ProgrammeResultsFilterChip, ProgrammeResultsFilterService, buildCategoryFilterOptions } from '../programme-results/services/programme-results-filter.service';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from '../programme-results/services/programme-results-query-params';
 import { MyWorkBoardService } from './services/my-work-board.service';
 import { MyWorkColumnComponent } from './components/my-work-column/my-work-column.component';
-import { MyWorkScope } from './my-work.view-model';
+import { MyWorkColumn, MyWorkScope } from './my-work.view-model';
+
+// @akili-spec changes/my-work-board (MWB-T-11)
+/**
+ * The one breakpoint this page has: the width at which `pr-viewport-page` stops emitting anything
+ * (`src/styles/_viewport-page.scss`, media-gated at `min-width: 900px`, `SAV-DD-1`). Below it the
+ * host is a plain block, the DOCUMENT scrolls, and the board becomes a horizontal snap strip.
+ * Declared once so the TS query and the `min-[900px]:` / `max-[899px]:` utilities in the template
+ * can never drift apart.
+ */
+export const MY_WORK_NARROW_QUERY = '(max-width: 899px)';
+
+/** One chip of the narrow-viewport column jumper (`MWB-T-11` (2)). */
+export interface MyWorkJumperChip {
+  key: MyWorkColumn['key'];
+  label: string;
+  count: number;
+  /** The column region's own id — this chip's `aria-controls` target. */
+  regionId: string;
+}
 
 // @akili-spec changes/my-work-board (MWB-T-9)
 /**
@@ -42,7 +62,7 @@ function optionsOf(rows: ProgrammeResultRow[], pick: (row: ProgrammeResultRow) =
   templateUrl: './my-work-board.component.html',
   styleUrls: ['./my-work-board.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgTemplateOutlet, FormsModule, RouterLink, NgIcon, ReportingProgramBandComponent, PrFilterSelectComponent, MyWorkColumnComponent],
+  imports: [NgTemplateOutlet, FormsModule, RouterLink, NgIcon, ReportingProgramBandComponent, PrFilterSelectComponent, MyWorkColumnComponent, WhereToReportModalComponent],
   // `MWB-T-9`: `ProgrammeResultsFilterService` is page-scoped exactly like on the Results tab —
   // filters must not survive navigating to another programme. `MyWorkBoardService` injects it.
   providers: [ProgrammeResultsFilterService, MyWorkBoardService],
@@ -53,6 +73,7 @@ export class MyWorkBoardComponent {
   private readonly router = inject(Router);
   private readonly dataControlSE = inject(DataControlService);
   private readonly homeSE = inject(ResultFrameworkReportingHomeService);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** Page-scoped board data (`MWB-T-3`) — providing it HERE, not root, drops the rows on leaving
    *  the tab instead of leaking one programme into the next (same reasoning as `ProgrammeResultsService`). */
@@ -85,6 +106,45 @@ export class MyWorkBoardComponent {
 
   /** Closed group collapsed by default, volatile — a page signal, not a service one (`MWB-DD-8`). */
   readonly closedCollapsed = signal(true);
+
+  // ── `MWB-T-11` — below the viewport-lock breakpoint ────────────────────────────────────────
+  /**
+   * True while the viewport is narrower than the `pr-viewport-page` breakpoint. Everything the
+   * strip does that is purely visual lives in `max-[899px]:` / `min-[900px]:` utilities; this
+   * signal exists for the two things CSS cannot express, both STRUCTURAL:
+   *   1. a Closed column is rendered as a normal column, not a `<button>` rail — different DOM;
+   *   2. the collapse / expand controls and the column jumper are not rendered at all there.
+   * `matchMedia` (not a resize listener) so the source of truth is the same media query the
+   * stylesheet uses; guarded because jsdom/SSR may not provide it.
+   */
+  private readonly narrowQuery =
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia(MY_WORK_NARROW_QUERY) : null;
+  readonly isNarrow = signal(this.narrowQuery?.matches ?? false);
+
+  /** The Closed group is a 44px rail ONLY while the lock is engaged: below 900 a rail would be an
+   *  unreachable sliver on a strip the user swipes, so those columns render expanded (`MWB-T-11` (1)). */
+  readonly closedIsRail = computed(() => this.closedCollapsed() && !this.isNarrow());
+
+  /** The board's horizontal strip — the scroller the jumper drives (`MWB-T-11` (2)). */
+  readonly boardStrip = viewChild<ElementRef<HTMLElement>>('boardStrip');
+
+  /** The jumper's active tab: the column whose left edge is nearest the strip's own left edge. */
+  readonly activeColumnKey = signal<MyWorkColumn['key'] | null>(null);
+
+  /** One chip per RENDERED column, in board order, carrying that column's live count. `Other` is
+   *  conditional in `columns()`, so it appears here exactly when it appears on the board. */
+  readonly jumperChips = computed<MyWorkJumperChip[]>(() =>
+    this.data.columns().map(column => ({
+      key: column.key,
+      label: column.label,
+      count: column.rows.length,
+      regionId: `my-work-region-${column.key}`
+    }))
+  );
+
+  /** Exactly one chip is `aria-selected` at any time: before the first scroll or tap that is the
+   *  first column, which is the one the un-scrolled strip is actually showing. */
+  readonly activeJumperKey = computed(() => this.activeColumnKey() ?? this.jumperChips()[0]?.key ?? null);
 
   // ── Toolbar: search · Filter popover · chips (`MWB-T-9`) ───────────────────────────────────
   readonly filterPopoverOpen = signal(false);
@@ -137,18 +197,44 @@ export class MyWorkBoardComponent {
   readonly closedColumns = computed(() => this.data.columns().filter(column => column.group === 'closed'));
 
   /**
-   * `MWB-T-10` (b) — the ONE sizing contract every expanded non-Editing column obeys: an equal
-   * share of the board's free space (`flex-1 basis-0`) that never drops below a readable 260px.
-   * `basis-0` is what makes the share equal: without it a column's content width seeds the
+   * `MWB-T-11` (5) — the *Editing* column's fixed width, in two steps. `MWB-T-10`'s real-browser
+   * read showed the collapsed default needing 1312px against a ~1020px client at 1280 (sidebar
+   * open), so the floors come down below 1440 and only the widest desktops keep the design's
+   * original 360/260 pair (`design.md` §6.3). Below 900 the lock is inert and this column is a
+   * snap-strip item like every other (`w-[min(85vw,360px)] shrink-0 snap-start`).
+   *
+   * `min-[900px]:flex-none` is what undoes the base `shrink-0`, and it must be the ONLY thing that
+   * does: an added `min-[900px]:shrink` sat in the same media block and, being emitted after
+   * `flex-none`, re-enabled shrinking — a real-browser read at 1440 with the sidebar open (where
+   * the board genuinely overflows) showed Editing at 356.1px instead of 360. The CT never saw it,
+   * because at a sidebar-less 1440 the board has room to spare and nothing shrinks.
+   */
+  readonly editingColumnItemClass =
+    'flex w-[min(85vw,360px)] shrink-0 snap-start flex-col gap-[8px] ' +
+    'min-[900px]:w-[320px] min-[900px]:flex-none min-[900px]:snap-align-none ' +
+    'min-[1440px]:w-[360px]';
+
+  /**
+   * `MWB-T-10` (b) — the ONE sizing contract every expanded non-Editing column obeys at >= 900px:
+   * an equal share of the board's free space (`flex-1 basis-0`) that never drops below a readable
+   * floor. `basis-0` is what makes the share equal: without it a column's content width seeds the
    * distribution and a freshly expanded Closed column would claim roughly twice its neighbours'
    * width — the defect in the user's screenshot, where Pending review / Submitted were crushed.
    * Columns overflowing the board scroll it horizontally, never the document (`MWB-R-9`).
+   *
+   * `MWB-T-11`: the floor is 240px below 1440 and 260px at/above it (same two-step as Editing);
+   * below 900 the column stops flexing entirely and becomes a fixed snap-strip item.
    */
-  readonly expandedColumnItemClass = 'flex flex-1 basis-0 min-h-0 min-w-[260px] flex-col gap-[8px]';
-  /** A rail is the 44px collapsed state and must not grow; expanded, it is just another equal
-   *  column — the SAME class string, so the two can never disagree. */
+  readonly expandedColumnItemClass =
+    'flex w-[min(85vw,360px)] shrink-0 snap-start flex-col gap-[8px] ' +
+    'min-[900px]:w-auto min-[900px]:flex-1 min-[900px]:basis-0 min-[900px]:min-h-0 min-[900px]:min-w-[240px] min-[900px]:snap-align-none ' +
+    'min-[1440px]:min-w-[260px]';
+
+  /** A rail is the 44px collapsed state and must not grow; expanded — and ALWAYS below 900px,
+   *  where `closedIsRail()` is false — it is just another column, the SAME class string, so the
+   *  two can never disagree. */
   readonly closedItemClass = computed(() =>
-    this.closedCollapsed() ? 'flex w-[44px] flex-none min-h-0 flex-col gap-[8px]' : this.expandedColumnItemClass
+    this.closedIsRail() ? 'flex w-[44px] flex-none min-h-0 flex-col gap-[8px]' : this.expandedColumnItemClass
   );
 
   // ── View states (`MWB-R-7`) — mutually exclusive ───────────────────────────────────────────
@@ -175,6 +261,21 @@ export class MyWorkBoardComponent {
   readonly boardRegroupKey = computed(() => `${this.data.scope()}::${this.data.effectivePhase() ?? ''}`);
 
   constructor() {
+    // `MWB-T-11`: keep `isNarrow` in step with the stylesheet's own breakpoint. `addEventListener`
+    // is the modern MediaQueryList API; Safari < 14 (and some jsdom builds) only expose the
+    // deprecated `addListener`, so both are handled and both are torn down.
+    const mql = this.narrowQuery;
+    if (mql) {
+      const onChange = (event: MediaQueryListEvent) => this.isNarrow.set(event.matches);
+      if (typeof mql.addEventListener === 'function') {
+        mql.addEventListener('change', onChange);
+        this.destroyRef.onDestroy(() => mql.removeEventListener('change', onChange));
+      } else if (typeof mql.addListener === 'function') {
+        mql.addListener(onChange);
+        this.destroyRef.onDestroy(() => mql.removeListener(onChange));
+      }
+    }
+
     // `MWB-T-3` forward pointer (d): `currentPhaseName` set BEFORE `load()` — both happen in this
     // one effect body, in this order, every time the programme code (re)resolves or the current
     // reporting phase itself resolves/changes (`reportingPhaseVersion` is the dedicated bump
@@ -285,6 +386,54 @@ export class MyWorkBoardComponent {
     this.closedCollapsed.update(open => !open);
   }
 
+  // ── `MWB-T-11` (2) — column jumper (narrow viewports only) ─────────────────────────────────
+  /**
+   * Scrolls the strip so the chosen column starts at the strip's own left edge. `inline: 'start'`
+   * is the horizontal move; `block: 'nearest'` keeps the DOCUMENT'S vertical scroll where the user
+   * left it (the default `'start'` would yank the page to the top of the board on every chip tap).
+   * Reduced motion drops the smooth animation, per the app-wide convention.
+   */
+  jumpToColumn(key: MyWorkColumn['key']): void {
+    this.activeColumnKey.set(key);
+    const target = this.boardStrip()?.nativeElement?.querySelector<HTMLElement>(`[data-column-key="${key}"]`);
+    if (!target?.scrollIntoView) return;
+    const reduceMotion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    target.scrollIntoView({ inline: 'start', block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+  }
+
+  /**
+   * Active-chip tracking, deliberately the simple version the task allows: on scroll, the column
+   * whose left edge is nearest the strip's left edge wins. Coalesced to one animation frame so a
+   * swipe does not run change detection on every scroll event.
+   */
+  private scrollFrame = 0;
+  onStripScroll(): void {
+    if (this.scrollFrame || typeof requestAnimationFrame !== 'function') {
+      if (typeof requestAnimationFrame !== 'function') this.syncActiveColumn();
+      return;
+    }
+    this.scrollFrame = requestAnimationFrame(() => {
+      this.scrollFrame = 0;
+      this.syncActiveColumn();
+    });
+  }
+
+  private syncActiveColumn(): void {
+    const strip = this.boardStrip()?.nativeElement;
+    if (!strip?.getBoundingClientRect) return;
+    const stripLeft = strip.getBoundingClientRect().left;
+    let nearestKey: string | null = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    strip.querySelectorAll<HTMLElement>('[data-column-key]').forEach(item => {
+      const distance = Math.abs(item.getBoundingClientRect().left - stripLeft);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestKey = item.dataset['columnKey'] ?? null;
+      }
+    });
+    if (nearestKey) this.activeColumnKey.set(nearestKey as MyWorkColumn['key']);
+  }
+
   /** `MWB-R-7` whole-board empty — preserves `phase` like the Results tab's own link. */
   goToReporting(): void {
     this.router.navigate(['/result-framework-reporting', 'entity-details', this.programmeCode()], { queryParamsHandling: 'preserve' });
@@ -295,13 +444,12 @@ export class MyWorkBoardComponent {
     this.setScope('all');
   }
 
-  /** `MWB-T-8` (2) — band CTA. Identical to `ProgrammeResultsComponent.openWhereToReport()` except
-   *  for `returnTab`: the modal lives on `dashboard-lab` (`entity-details/:code`), and that page
-   *  reads `returnTab` on close to send the user back to the tab they came from. */
+  /** In-place modal visibility signal for Where to report */
+  readonly showWhereToReportModal = signal(false);
+
+  /** Band CTA: opens the Where to report modal directly on top of the My work board. */
   openWhereToReport(): void {
-    this.router.navigate(['/result-framework-reporting', 'entity-details', this.programmeCode()], {
-      queryParams: { whereToReport: 'true', returnTab: 'my-work' }
-    });
+    this.showWhereToReportModal.set(true);
   }
 
   // ── Filter popover (`MWB-T-9` (2)) ─────────────────────────────────────────────────────────

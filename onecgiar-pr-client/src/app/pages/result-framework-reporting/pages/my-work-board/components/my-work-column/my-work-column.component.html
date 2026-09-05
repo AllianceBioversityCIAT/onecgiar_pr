@@ -26,10 +26,15 @@
   <!-- `MWB-T-7` (3): a freshly-mounted `section` (this branch only exists while `!rail()`) always
        plays its own entrance once — no extra keying needed, and re-rendering `column()`'s inputs
        later does not remount this element, so the fade never repeats on ordinary data updates. -->
+  <!-- `MWB-T-11`: `flex-1 min-h-0` is gated to >= 900px. Below the viewport-lock breakpoint the
+       page (not this column) is the scroller, and a `min-height: 0` flex item inside a container
+       whose own height is `auto` collapses to zero — the column would render as a 0px sliver.
+       `id` is the jumper's `aria-controls` target (the region itself, not its heading). -->
   <section
-    class="pr-my-work-fade flex flex-1 min-h-0 flex-col rounded-[12px] border shadow-[0_1px_2px_rgba(25,21,36,0.04)]"
+    class="pr-my-work-fade flex flex-col rounded-[12px] border shadow-[0_1px_2px_rgba(25,21,36,0.04)] min-[900px]:flex-1 min-[900px]:min-h-0"
     [class]="meta().surfaceClass"
     role="region"
+    [id]="regionId()"
     [attr.aria-labelledby]="headingId()">
     <div class="flex items-center gap-[8px] border-b px-[14px] py-[10px]" [class]="meta().headerBorderClass">
       <span class="h-[8px] w-[8px] flex-none rounded-full" [class]="meta().dotClass"></span>
@@ -58,7 +63,11 @@
       }
     </div>
 
-    <div class="flex flex-1 min-h-0 flex-col gap-[10px] overflow-y-auto p-[12px] custom_scroll">
+    <!-- `MWB-T-11`: the list scrolls inside itself ONLY while the viewport lock is engaged
+         (>= 900px). Below it the list is `max-h-none overflow-visible` (the base state here) and
+         the DOCUMENT scrolls, so a phone reads a column top-to-bottom instead of nesting a second
+         scroller inside a page that already scrolls. -->
+    <div class="flex flex-col gap-[10px] p-[12px] min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll" data-testid="my-work-column-list">
       @for (row of column().rows; track row.code) {
         <app-my-work-card [row]="row" [inEditingColumn]="isEditing()" />
       } @empty {

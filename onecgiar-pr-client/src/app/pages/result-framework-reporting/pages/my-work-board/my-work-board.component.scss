@@ -157,3 +157,47 @@
     animation: none;
   }
 }
+
+/* ── `MWB-T-11` — below the viewport-lock breakpoint ─────────────────────────────────────────
+   Everything expressible as a utility lives in the template (`max-[899px]:` / `min-[900px]:`).
+   What is left here is the handful of declarations Tailwind has no utility for. */
+
+/* Momentum scrolling for the snap strip. `-webkit-overflow-scrolling` is a vendor property with
+   no Tailwind utility; without it an older iOS WebKit scrolls the strip without inertia, which
+   makes a five-column swipe feel broken. Harmless everywhere else. */
+.mwb-board-strip {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* The jumper is itself horizontally scrollable (six chips do not fit 390px), but a scrollbar under
+   a 44px control strip eats the touch target it is meant to protect. Same rule the program band
+   uses on its own tab strip — copied, not shared, because Angular view encapsulation scopes that
+   one to `reporting-program-band`. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hit targets (`MWB-T-11` (4), NFR Accessibility). Below 900px every primary card action must be
+   at least 44px tall. `my-work-card.component.html` is owned by a concurrent session, so the floor
+   is applied from HERE, over the card's projected DOM, instead of editing that file — the same
+   documented exception to Tailwind-first the `.mwb-filter` reshape above uses. `:host ::ng-deep`
+   keeps it scoped to this page's subtree; it is a stand-in for the permanent fix (the card's own
+   `max-[899px]:h-[44px]`), recorded in `execution.md`. */
+@media (max-width: 899px) {
+  :host ::ng-deep app-my-work-card button {
+    min-height: 44px;
+  }
+
+  /* `Open` is an inline `<a>`, so `min-height` alone would do nothing — it needs a box first. */
+  :host ::ng-deep app-my-work-card a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 8px;
+  }
+}

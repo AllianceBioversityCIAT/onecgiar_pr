@@ -1,4 +1,4 @@
-// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-10, MWB-R-2, R-11, design.md §6.2, §6.3, DD-7, DD-8)
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-10, MWB-T-11, MWB-R-2, R-9, R-11, design.md §6.2, §6.3, DD-7, DD-8, DD-9)
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { MyWorkCardComponent } from '../my-work-card/my-work-card.component';
 import { MyWorkColumn, readyCount as readyCountOf } from '../../my-work.view-model';
@@ -88,6 +88,9 @@ export class MyWorkColumnComponent {
   readonly isEditing = computed(() => this.column().key === 'editing');
   readonly meta = computed(() => MY_WORK_COLUMN_META[this.column().key]);
   readonly headingId = computed(() => `my-work-column-${this.column().key}`);
+  /** `MWB-T-11`: the expanded region's own id — the `aria-controls` target of the narrow-viewport
+   *  column jumper. Distinct from `headingId()`, which names the region via `aria-labelledby`. */
+  readonly regionId = computed(() => `my-work-region-${this.column().key}`);
   readonly readyCount = computed(() => (this.isEditing() ? readyCountOf(this.column().rows) : 0));
   readonly emptyMessage = computed(() => `Nothing in ${this.column().label} yet.`);
 }

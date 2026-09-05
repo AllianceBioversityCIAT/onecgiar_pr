@@ -1,4 +1,4 @@
-// @akili-spec changes/my-work-board (MWB-T-5, MWB-T-10, MWB-R-9, MWB-R-6 negative, NFR Accessibility, MWB-AC-9, design.md MWB-DD-6, MWB-DD-9, §10 MWB-TEST-6)
+// @akili-spec changes/my-work-board (MWB-T-5, MWB-T-10, MWB-T-11, MWB-R-9, MWB-R-6 negative, NFR Accessibility, MWB-AC-9, design.md MWB-DD-6, MWB-DD-9, §10 MWB-TEST-6)
 //
 // Cypress Component Test — mounts the REAL `MyWorkBoardComponent` (real `MyWorkColumnComponent` /
 // `MyWorkCardComponent` board area) with a mocked `MyWorkBoardService` built from a genuine
@@ -240,7 +240,9 @@ function mountBoard() {
   });
 }
 
-const editingList = () => cy.get('section[aria-labelledby="my-work-column-editing"]').find('div.overflow-y-auto');
+// `MWB-T-11`: the list's own scroller classes moved behind `min-[900px]:`, so the class name is no
+// longer a usable selector — the list carries a stable testid instead.
+const editingList = () => cy.get('section[aria-labelledby="my-work-column-editing"]').find('[data-testid="my-work-column-list"]');
 
 /** `MWB-R-9` *1280px laptop* / `MWB-AC-9`: the Editing column's own list overflows vertically, and
  *  scrolling it lands the last of the 12 cards inside the list's own bounding rect. */
@@ -326,13 +328,15 @@ function assertColumnStructure(label: string) {
   });
 }
 
-/** `MWB-T-10` (b): every expanded non-Editing column takes the SAME width, never less than 260px;
- *  Editing keeps its fixed 360px and a rail its 44px. */
-function assertEqualExpandedColumnWidths(label: string, expectedExpandedCount: number) {
+/** `MWB-T-10` (b): every expanded non-Editing column takes the SAME width, never less than the
+ *  floor; Editing keeps its fixed width and a rail its 44px.
+ *  `MWB-T-11` (5): the floors are now a two-step pair — Editing 320 / others 240 below 1440px,
+ *  360 / 260 at or above it — so the expected values are parameters, not constants. */
+function assertEqualExpandedColumnWidths(label: string, expectedExpandedCount: number, editingWidth = 320, floor = 240) {
   cy.get('[data-testid="my-work-board-column-item"]').should($items => {
     const items = Array.from($items) as HTMLElement[];
     const editing = items.find(item => item.dataset['columnKey'] === 'editing') as HTMLElement;
-    expect(Math.round(editing.getBoundingClientRect().width), `${label}: Editing column is 360px`).to.eq(360);
+    expect(Math.round(editing.getBoundingClientRect().width), `${label}: Editing column is ${editingWidth}px`).to.eq(editingWidth);
 
     // A rail while collapsed is 44px wide; everything else on the board is an equal share.
     const rails = items.filter(item => !!item.querySelector('button[aria-expanded="false"]'));
@@ -344,7 +348,7 @@ function assertEqualExpandedColumnWidths(label: string, expectedExpandedCount: n
     const widths = expanded.map(item => item.getBoundingClientRect().width);
     expect(expanded.length, `${label}: ${expectedExpandedCount} expanded non-Editing columns`).to.eq(expectedExpandedCount);
     widths.forEach((width, i) => {
-      expect(width, `${label}: column ${expanded[i].dataset['columnKey']} width(${width.toFixed(1)}) >= 260`).to.be.at.least(259.5);
+      expect(width, `${label}: column ${expanded[i].dataset['columnKey']} width(${width.toFixed(1)}) >= ${floor}`).to.be.at.least(floor - 0.5);
     });
     const spread = Math.max(...widths) - Math.min(...widths);
     expect(spread, `${label}: equal widths — spread(${spread.toFixed(2)}px) over [${widths.map(w => w.toFixed(1)).join(', ')}]`).to.be.at.most(1);
@@ -374,10 +378,13 @@ function assertStructuralAccessibility(label: string) {
 }
 
 describe('MyWorkBoardComponent — Cypress CT (MWB-T-5)', () => {
+  // `MWB-T-11` (5): the expected widths are the two-step floors — 320/240 below 1440px, 360/260 at
+  // or above it. A single pair of constants here would silently pass at one width and lie at the
+  // other, which is the whole point of keeping both viewports in the matrix.
   ([
-    [1280, 720],
-    [1440, 900]
-  ] as const).forEach(([width, height]) => {
+    [1280, 720, 320, 240],
+    [1440, 900, 360, 260]
+  ] as const).forEach(([width, height, editingWidth, floor]) => {
     it(`${width}×${height} — viewport lock, Editing column overflow, no body horizontal scroll, band/toolbar stay visible, no DnD, structural a11y`, () => {
       cy.viewport(width, height);
       mountBoard();
@@ -398,8 +405,10 @@ describe('MyWorkBoardComponent — Cypress CT (MWB-T-5)', () => {
       assertBandAndToolbarStayInViewport(`${width}×${height}`, height);
       assertNoDragAndDrop(`${width}×${height}`);
       assertColumnStructure(`${width}×${height}`);
-      assertEqualExpandedColumnWidths(`${width}×${height}`, 3);
+      assertEqualExpandedColumnWidths(`${width}×${height}`, 3, editingWidth, floor);
       assertStructuralAccessibility(`${width}×${height}`);
+      // `MWB-T-11`: the jumper is a narrow-viewport affordance and must not exist here.
+      cy.get('[data-testid="my-work-jumper"]').should('not.exist');
     });
   });
 
@@ -407,7 +416,7 @@ describe('MyWorkBoardComponent — Cypress CT (MWB-T-5)', () => {
   // had no way back, and it claimed roughly twice the width of Pending review / Submitted, which
   // got crushed. Both are pure layout, so the CT at a real 1280 is the only evidence (jsdom cannot
   // measure any of it — the Jest spec can only assert the class set).
-  it('1280×720 — expanding Discontinued keeps every column equal and ≥ 260px, and the collapse control puts it back (MWB-T-10)', () => {
+  it('1280×720 — expanding Discontinued keeps every column equal and ≥ 240px, and the collapse control puts it back (MWB-T-10)', () => {
     const label = '1280×720 expanded';
     cy.viewport(1280, 720);
     mountBoard();
@@ -417,7 +426,7 @@ describe('MyWorkBoardComponent — Cypress CT (MWB-T-5)', () => {
     });
 
     // Collapsed default: 3 expanded non-Editing columns + 1 rail.
-    assertEqualExpandedColumnWidths('1280×720 collapsed', 3);
+    assertEqualExpandedColumnWidths('1280×720 collapsed', 3, 320, 240);
 
     cy.get('app-my-work-column button[aria-expanded="false"]').click();
 
@@ -427,7 +436,7 @@ describe('MyWorkBoardComponent — Cypress CT (MWB-T-5)', () => {
       expect($btn.length, `${label}: collapse control rendered in the expanded header`).to.eq(1);
       expect($btn[0].getAttribute('aria-expanded'), `${label}: collapse control aria-expanded`).to.eq('true');
     });
-    assertEqualExpandedColumnWidths(label, 4);
+    assertEqualExpandedColumnWidths(label, 4, 320, 240);
     // The board container may scroll horizontally (`MWB-R-9`); the DOCUMENT never may.
     assertNoBodyHorizontalOverflow(label, 1280);
     assertBandAndToolbarStayInViewport(label, 720);
@@ -438,7 +447,167 @@ describe('MyWorkBoardComponent — Cypress CT (MWB-T-5)', () => {
     cy.get('app-my-work-column button[aria-expanded="false"]').should($rails => {
       expect($rails.length, `${label}: Discontinued is a collapsed rail again`).to.eq(1);
     });
-    assertEqualExpandedColumnWidths('1280×720 re-collapsed', 3);
+    assertEqualExpandedColumnWidths('1280×720 re-collapsed', 3, 320, 240);
     assertNoBodyHorizontalOverflow('1280×720 re-collapsed', 1280);
+  });
+  // `MWB-T-11` (5) — the regression the two wide cases above CANNOT see. At 1280/1440 with no
+  // sidebar the board has room to spare, so nothing shrinks and a stray `flex-shrink: 1` on the
+  // Editing column stays invisible. 1000px is narrower than the collapsed default's own width
+  // (320 + 3×240 + 44 + 4×16 gaps + 2×32 padding = 1212), which is exactly the condition the real
+  // app is in at 1280 with the sidebar open — and the condition under which Editing was measured
+  // at 356.1px instead of 360 in the browser. The board must scroll; Editing must not give an inch.
+  it('1000×700 — the board overflows and Editing holds its exact 320px instead of shrinking (MWB-T-11)', () => {
+    const label = '1000×700 overflowing';
+    cy.viewport(1000, 700);
+    mountBoard();
+
+    cy.window().should(win => expect(win.innerWidth, `${label}: window.innerWidth`).to.eq(1000));
+
+    cy.get('[data-testid="my-work-board-strip"]').should($strip => {
+      const strip = $strip[0] as HTMLElement;
+      expect(strip.scrollWidth, `${label}: board overflows its own container (${strip.scrollWidth} > ${strip.clientWidth})`).to.be.greaterThan(
+        strip.clientWidth
+      );
+    });
+
+    // Exact equality, not a floor: shrinking would land just under 320 and a `>=` would miss it.
+    assertEqualExpandedColumnWidths(label, 3, 320, 240);
+    // …and the overflow still belongs to the board, never to the document (`MWB-R-9`).
+    assertNoBodyHorizontalOverflow(label, 1000);
+  });
+
+  // ── `MWB-T-11` — below the viewport-lock breakpoint ────────────────────────────────────────
+  //
+  // jsdom cannot measure ANY of this (task disqualifier): the strip's overflow, the per-column
+  // widths, the jumper's scroll and the 44px hit targets are real-layout facts, so a real browser
+  // at a real phone/tablet viewport is the only evidence. Same harness as above — the lock is inert
+  // here (`pr-viewport-page` emits nothing under 900px), so the DOCUMENT is the scroller and the
+  // negative clause of `MWB-R-9` (`documentElement.scrollWidth <= innerWidth`) is what must hold.
+  ([
+    [390, 844, 'phone'],
+    [768, 1024, 'tablet']
+  ] as const).forEach(([width, height, kind]) => {
+    const label = `${width}×${height} ${kind}`;
+
+    it(`${label} — snap strip, column jumper, no body horizontal scroll, 44px hit targets (MWB-T-11)`, () => {
+      cy.viewport(width, height);
+      mountBoard();
+
+      // Viewport guard first (requirements.md §10 disqualifier: assert the requested size before
+      // any geometry read) — and the lock must be OFF, or every assertion below measures the wrong
+      // layout while still passing for the wrong reason.
+      cy.window().should(win => {
+        expect(win.innerWidth, `${label}: window.innerWidth`).to.eq(width);
+        expect(win.innerHeight, `${label}: window.innerHeight`).to.eq(height);
+      });
+      cy.get('app-my-work-board').should($host => {
+        expect(getComputedStyle($host[0]).position, `${label}: host position (pr-viewport-page INERT below 900px)`).to.eq('static');
+      });
+
+      // `MWB-R-9` still holds below the breakpoint: the strip scrolls sideways, the document never does.
+      assertNoBodyHorizontalOverflow(label, width);
+
+      cy.get('[data-testid="my-work-board-strip"]').should($strip => {
+        const strip = $strip[0] as HTMLElement;
+        expect(strip.scrollWidth, `${label}: strip scrollWidth(${strip.scrollWidth}) > clientWidth(${strip.clientWidth})`).to.be.greaterThan(
+          strip.clientWidth
+        );
+        expect(getComputedStyle(strip).overflowX, `${label}: strip is the horizontal scroller`).to.eq('auto');
+      });
+
+      // Every column — Editing included — is a fixed `min(85vw, 360px)` strip item. `shrink-0` is
+      // what makes that a WIDTH rather than a starting point: without it the five columns would
+      // compress to fit and nothing would scroll (the task's FAIL input).
+      cy.get('[data-testid="my-work-board-column-item"]').should($items => {
+        const items = Array.from($items) as HTMLElement[];
+        expect(items.length, `${label}: five columns, rails rendered as normal columns`).to.eq(5);
+        items.forEach(item => {
+          const itemWidth = item.getBoundingClientRect().width;
+          expect(itemWidth, `${label}: ${item.dataset['columnKey']} width(${itemWidth.toFixed(1)}) <= 85vw(${(width * 0.85).toFixed(1)})`).to.be.at.most(
+            width * 0.85 + 0.5
+          );
+          expect(itemWidth, `${label}: ${item.dataset['columnKey']} width(${itemWidth.toFixed(1)}) <= 360`).to.be.at.most(360.5);
+        });
+      });
+
+      // `MWB-T-11` (1): no rail and no collapse/expand control anywhere below the breakpoint — the
+      // Closed column is a full column the user can swipe to.
+      cy.get('app-my-work-column button[aria-expanded]').should('not.exist');
+      cy.get('section[aria-labelledby="my-work-column-discontinued"]').should('have.length', 1);
+
+      // …and each column's list no longer scrolls inside itself: the page does.
+      editingList().should($list => {
+        const el = $list[0] as HTMLElement;
+        expect(getComputedStyle(el).overflowY, `${label}: column list overflow-y`).to.eq('visible');
+        expect(el.scrollHeight, `${label}: list is fully expanded (scrollHeight === clientHeight)`).to.eq(el.clientHeight);
+      });
+
+      // Jumper: one chip per rendered column, in board order, each carrying that column's count.
+      cy.get('[data-testid="my-work-jumper"]').should('have.attr', 'role', 'tablist');
+      cy.get('[data-testid="my-work-jumper-chip"]').should($chips => {
+        const chips = Array.from($chips) as HTMLElement[];
+        expect(chips.map(chip => chip.dataset['columnKey']), `${label}: one chip per column, board order`).to.deep.eq([
+          'editing',
+          'pending',
+          'submitted',
+          'approved',
+          'discontinued'
+        ]);
+        // Counts read from the SAME fixture the columns were grouped from (12/1/2/4/1).
+        const counts = chips.map(chip => (chip.querySelectorAll('span')[1]?.textContent ?? '').trim());
+        expect(counts, `${label}: chip counts match the columns`).to.deep.eq(['12', '1', '2', '4', '1']);
+        chips.forEach(chip => {
+          expect(chip.getAttribute('role'), `${label}: chip role`).to.eq('tab');
+          const controls = chip.getAttribute('aria-controls') as string;
+          expect(chip.ownerDocument.getElementById(controls), `${label}: aria-controls "${controls}" resolves to a region`).to.not.eq(null);
+          // NFR Accessibility / `MWB-T-11` (4): 44px minimum on the jumper's own controls.
+          expect(chip.offsetHeight, `${label}: chip hit target(${chip.offsetHeight}px) >= 44`).to.be.at.least(44);
+        });
+      });
+
+      // Tapping a chip scrolls the strip so that column starts at the strip's left edge. Smooth
+      // scrolling is asynchronous, so this is a RETRYING assertion, not a one-shot read.
+      cy.get('[data-testid="my-work-jumper-chip"][data-column-key="submitted"]').click();
+      cy.get('[data-testid="my-work-board-strip"]').should($strip => {
+        const strip = $strip[0] as HTMLElement;
+        const target = strip.querySelector('[data-column-key="submitted"]') as HTMLElement;
+        const delta = target.getBoundingClientRect().left - strip.getBoundingClientRect().left;
+        expect(Math.abs(delta), `${label}: Submitted column left is within 8px of the strip left (delta ${delta.toFixed(1)}px)`).to.be.at.most(8);
+      });
+
+      // `MWB-T-11` (4): the card's primary action. `Continue` is 28px tall by design at desktop
+      // widths; below 900px it must reach the 44px touch minimum.
+      cy.get('app-my-work-card button').contains('Continue').should($btn => {
+        const el = $btn[0] as HTMLElement;
+        expect(el.offsetHeight, `${label}: Continue hit target(${el.offsetHeight}px) >= 44`).to.be.at.least(44);
+      });
+
+      // `MWB-T-11` (3): the filter row wraps — search takes the whole first line, everything else
+      // follows on later lines — and the Filter popover stays ON SCREEN. An `absolute left-0` panel
+      // inherits its box's x offset, so on a wrapped row it can start 240px in and hang 200px past
+      // the viewport; that shows up as a DOCUMENT horizontal scrollbar, which `MWB-R-9` forbids.
+      cy.get('[aria-label="My results board controls"]').should($group => {
+        const kids = Array.from(($group[0] as HTMLElement).children).filter(kid => getComputedStyle(kid).display !== 'none') as HTMLElement[];
+        const search = kids.find(kid => kid.querySelector('[data-testid="my-work-search"]')) as HTMLElement;
+        const scope = kids.find(kid => kid.getAttribute('role') === 'tablist') as HTMLElement;
+        expect(search.getBoundingClientRect().top, `${label}: search is on the FIRST line, above the scope control`).to.be.lessThan(
+          scope.getBoundingClientRect().top
+        );
+        expect(search.getBoundingClientRect().width, `${label}: search spans the row`).to.be.greaterThan(scope.getBoundingClientRect().width);
+      });
+
+      cy.get('[data-testid="my-work-filter-button"]').click();
+      cy.get('[data-testid="my-work-filter-popover"]').should($panel => {
+        const rect = ($panel[0] as HTMLElement).getBoundingClientRect();
+        expect(rect.left, `${label}: popover left(${rect.left.toFixed(1)}) >= 0`).to.be.at.least(0);
+        expect(rect.right, `${label}: popover right(${rect.right.toFixed(1)}) <= innerWidth(${width})`).to.be.at.most(width);
+        expect(rect.width, `${label}: popover width(${rect.width.toFixed(1)}) === min(420, 100vw - 32)`).to.be.closeTo(Math.min(420, width - 32), 1);
+      });
+      assertNoBodyHorizontalOverflow(`${label} popover open`, width);
+      cy.get('[data-testid="my-work-filter-button"]').click();
+
+      assertNoDragAndDrop(label);
+      assertStructuralAccessibility(label);
+    });
   });
 });

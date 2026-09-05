@@ -142,7 +142,7 @@ All routes above exist as children of `result-detail/:id` in `routing-data.ts` (
 | Completeness | Label `text-[11px] font-semibold text-[var(--pr-text-secondary)]`; bar `h-[4px] rounded-full bg-[var(--pr-surface-ground)]`, violet gradient fill, `--pr-color-green-500` when ready; missing list `text-[11px] text-[var(--pr-text-muted)]` |
 | Primary action | `h-[28px] rounded-[8px] px-[12px] text-[12px] font-semibold text-white` on the brand gradient; secondary: white, `border-[var(--pr-color-primary-200)] text-[var(--pr-color-primary-400)]` |
 | Rails | `w-[44px] rounded-[12px]`, vertical label via `writing-mode: vertical-rl` (SCSS) |
-| Column widths | Editing `w-[360px] flex-none`; **every expanded non-Editing column `flex-1 basis-0 min-w-[260px]`** as a direct child of the board's flex row (`MWB-T-10` — the group-level grid made the GROUP the unit of width, so an expanded Closed column took twice a waiting column's share); board `flex gap-[16px] px-[32px] overflow-x-auto`; rails `w-[44px] flex-none`; each list `flex-1 min-h-0 overflow-y-auto`; group label above the group's first column |
+| Column widths | ≥ 1440: Editing `w-[360px] flex-none`, expanded columns `flex-1 basis-0 min-w-[260px]`; 900–1439: Editing `w-[320px]`, `min-w-[240px]` (`MWB-T-10` → `T-11`); rails `w-[44px]`; board `flex gap-[16px] px-[32px] overflow-x-auto` (flat row, `MWB-T-10`); lists `min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-y-auto`; **< 900**: snap strip, columns `w-[min(85vw,360px)] shrink-0 snap-start`, page scroll, sticky column jumper (`MWB-T-11`) |
 
 ### 6.4 States & a11y
 

@@ -12,14 +12,14 @@
 -->
 <ng-template #skeletonColumn let-cards>
   <div
-    class="flex flex-1 min-h-0 animate-pulse flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] shadow-[0_1px_2px_rgba(25,21,36,0.04)] motion-reduce:animate-none"
+    class="flex animate-pulse flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] shadow-[0_1px_2px_rgba(25,21,36,0.04)] motion-reduce:animate-none min-[900px]:flex-1 min-[900px]:min-h-0"
     data-testid="my-work-skeleton-column">
     <div class="flex items-center gap-[8px] border-b border-[var(--pr-border-divider)] px-[14px] py-[10px]">
       <span class="h-[8px] w-[8px] flex-none rounded-full bg-[var(--pr-surface-ground)]"></span>
       <span class="h-[10px] w-[88px] rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
       <span class="h-[18px] w-[18px] flex-none rounded-full bg-[var(--pr-surface-ground)]"></span>
     </div>
-    <div class="flex flex-1 min-h-0 flex-col gap-[10px] p-[12px]">
+    <div class="flex flex-col gap-[10px] p-[12px] min-[900px]:flex-1 min-[900px]:min-h-0">
       @for (card of cards; track card) {
         <div
           class="flex flex-none flex-col gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px_12px_10px] shadow-[0_1px_2px_rgba(25,21,36,0.05)]"
@@ -74,11 +74,16 @@
         class="flex flex-wrap items-center justify-between gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] py-[10px] sm:px-[32px]"
         role="search"
         aria-label="My results filters">
-        <div class="flex flex-wrap items-center gap-[10px]" role="group" aria-label="My results board controls">
+        <!-- `MWB-T-11` (3): below 900px this row wraps into lines instead of one 34px strip — the
+             search box takes the whole first line (`order-first w-full`) and the scope control,
+             the Filter button and the chips flow onto the next line(s) in that reading order. The
+             `order-*` utilities are `max-[899px]:` only, so >= 900px the row is byte-identical to
+             `MWB-T-9`'s single line. -->
+        <div class="flex flex-wrap items-center gap-[10px] max-[899px]:w-full" role="group" aria-label="My results board controls">
           <div
             role="tablist"
             aria-label="Scope"
-            class="inline-flex h-[30px] items-center gap-[2px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[2px]">
+            class="inline-flex h-[30px] items-center gap-[2px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[2px] max-[899px]:order-2">
             <button
               type="button"
               role="tab"
@@ -109,12 +114,12 @@
             </button>
           </div>
 
-          <div class="mx-[2px] hidden h-[22px] w-[1px] bg-[var(--pr-border-divider)] sm:block"></div>
+          <div class="mx-[2px] hidden h-[22px] w-[1px] bg-[var(--pr-border-divider)] sm:block max-[899px]:hidden"></div>
 
           <!-- Search (`MWB-T-9` (2)) — 240 × 34, title + code, same predicate as the Results tab
                (`matchesProgrammeResultSearch`). Debounced 300ms in the component; `searchDraft()`
                is the undebounced mirror so typing stays responsive. Memory only, no query param. -->
-          <div class="relative h-[34px] w-[240px] max-sm:w-full">
+          <div class="relative h-[34px] w-[240px] max-sm:w-full max-[899px]:order-first max-[899px]:w-full">
             <span class="pointer-events-none absolute left-[10px] top-1/2 flex -translate-y-1/2 text-[var(--pr-text-subtle)]">
               <ng-icon name="lucideSearch" class="text-[15px]" />
             </span>
@@ -137,12 +142,18 @@
             }
           </div>
 
-          <div class="mx-[2px] hidden h-[22px] w-[1px] bg-[var(--pr-border-divider)] sm:block"></div>
+          <div class="mx-[2px] hidden h-[22px] w-[1px] bg-[var(--pr-border-divider)] sm:block max-[899px]:hidden"></div>
 
           <!-- Filter button + popover (`MWB-T-9` (2)). `.mwb-filter-container` is what the page's
                `document:click` listener checks before closing, so a click inside the panel (or
                inside one of its inline `.custom_select` option lists) keeps it open. -->
-          <div class="mwb-filter-container relative">
+          <!-- `MWB-T-11` (3): `w-full` below 900px is what keeps the popover on screen. The panel is
+               `absolute left-0` inside THIS box, so the panel's left edge is the box's left edge —
+               and on a wrapped row that box starts wherever the scope control ended (x≈240 at
+               390px), pushing a 358px panel out to x=598 and giving the DOCUMENT a horizontal
+               scrollbar. Full width puts the box's left edge back on the row's own 16px gutter;
+               the button inside keeps its intrinsic size. -->
+          <div class="mwb-filter-container relative max-[899px]:order-3 max-[899px]:w-full">
             <button
               type="button"
               (click)="toggleFilterPopover($event)"
@@ -173,8 +184,13 @@
 
             <!-- Popover panel — inline `absolute`, NOT a CDK overlay: same technique as the Results
                  tab, and the reason no clipping/transform ancestor is introduced (`MWB-R-9`). -->
+            <!-- `MWB-T-11` (3): `w-[min(420px,calc(100vw-32px))]` is the panel's whole width rule —
+                 it can never be wider than the viewport less the row's own 16px gutters. Below
+                 900px the `md:right-0` right-anchoring is undone (`max-[899px]:left-0`): on a
+                 wrapped row the Filter button can sit anywhere on its line, and right-anchoring a
+                 420px panel to a button near the left edge pushes it off-screen to the LEFT. -->
             <div
-              class="absolute left-0 top-[40px] z-30 w-[420px] max-w-[calc(100vw-32px)] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] text-left shadow-[0_12px_32px_rgba(25,21,36,0.12)] md:left-auto md:right-0 lg:left-0 lg:right-auto"
+              class="absolute left-0 top-[40px] z-30 w-[min(420px,calc(100vw-32px))] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] text-left shadow-[0_12px_32px_rgba(25,21,36,0.12)] md:left-auto md:right-0 lg:left-0 lg:right-auto max-[899px]:left-0 max-[899px]:right-auto"
               data-testid="my-work-filter-popover"
               [class.hidden]="!filterPopoverOpen()"
               (click)="$event.stopPropagation()">
@@ -285,7 +301,7 @@
                the only chip. -->
           @if (filter.hasActiveFilters()) {
             @for (chip of filter.activeChips(); track chip.dimension + '|' + chip.value) {
-              <span class="pr-chip mwb-chip" data-testid="my-work-chip">
+              <span class="pr-chip mwb-chip max-[899px]:order-4" data-testid="my-work-chip">
                 {{ chip.label }}
                 <button type="button" class="mwb-chip-remove" aria-label="Remove filter" (click)="clearChip(chip)">
                   <ng-icon name="lucideX" size="10px" strokeWidth="2.6" />
@@ -296,7 +312,7 @@
               <button
                 type="button"
                 data-testid="my-work-clear-filters"
-                class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[4px] rounded-[8px] border-0 bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+                class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[4px] rounded-[8px] border-0 bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] max-[899px]:order-4"
                 (click)="clearAll()">
                 <span class="material-icons-round text-[15px]" aria-hidden="true">filter_alt_off</span>
                 Clear filters
@@ -307,8 +323,52 @@
       </div>
       <!-- Explainer (`MWB-R-10`) removed 2026-09-05 on user request ("quita esto de aquí"). -->
 
-      <!-- Board body: skeleton / error+Retry / whole-board empty / groups (`MWB-R-7`, mutually exclusive). -->
-      <div class="flex flex-1 min-h-0 flex-col" data-guide="tab-my-results-view">
+      <!-- ═══════════ COLUMN JUMPER (`MWB-T-11` (2)) — narrow viewports only ═══════════
+           Below 900px the board is a swipe strip, so the columns past the first are off-screen and
+           there is no longer a glance that tells the user what is on the board. These chips are
+           that glance AND the navigation: one per rendered column with its live count, `tablist` /
+           `tab` semantics with `aria-controls` pointing at the column's own region id, and a tap
+           scrolls the strip so that column starts at its left edge.
+           STICKY: the band above is `position: sticky; top: calc(var(--pr-shell-header-height) -
+           1px)` below 900px and — because this page never passes `collapsible` — keeps its full
+           64px identity + 48px tabs = 112px height, so the jumper pins directly under it. `z-10`
+           (the band is `z-20`) so it can never paint over the band if the header ever grows.
+           `@if (isNarrow())`: not `hidden`, because the chips own a scroll listener and a
+           `scrollIntoView` target that must not exist while the locked desktop board is the one on
+           screen (`MWB-T-11` (1) — no collapse/expand or jumper chrome crossing the breakpoint). -->
+      @if (isNarrow() && showBoard()) {
+        <div
+          role="tablist"
+          aria-label="Jump to column"
+          data-testid="my-work-jumper"
+          class="sticky z-10 flex gap-[8px] overflow-x-auto border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] py-[6px] no-scrollbar"
+          style="top: calc(var(--pr-shell-header-height, 56px) - 1px + 112px)">
+          @for (chip of jumperChips(); track chip.key) {
+            <button
+              type="button"
+              role="tab"
+              data-testid="my-work-jumper-chip"
+              [attr.data-column-key]="chip.key"
+              [attr.aria-controls]="chip.regionId"
+              [attr.aria-selected]="activeJumperKey() === chip.key"
+              class="inline-flex min-h-[44px] flex-none cursor-pointer items-center gap-[6px] rounded-[10px] border px-[12px] text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] motion-reduce:transition-none"
+              [class]="
+                activeJumperKey() === chip.key
+                  ? 'border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'
+                  : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)]'
+              "
+              (click)="jumpToColumn(chip.key)">
+              <span>{{ chip.label }}</span>
+              <span class="tabular-nums text-[var(--pr-text-subtle)]">{{ chip.count }}</span>
+            </button>
+          }
+        </div>
+      }
+
+      <!-- Board body: skeleton / error+Retry / whole-board empty / groups (`MWB-R-7`, mutually exclusive).
+           `MWB-T-11`: `flex-1 min-h-0` is gated to >= 900px — below the breakpoint the page is the
+           scroller and a zero `min-height` here would collapse the board to nothing. -->
+      <div class="flex flex-col min-[900px]:flex-1 min-[900px]:min-h-0" data-guide="tab-my-results-view">
         @if (showSkeleton()) {
           <!-- ═══════════ BOARD-SHAPED SKELETON (`MWB-T-8` (4)) ═══════════
                Same container, same group widths and same column/card metrics as the `showBoard()`
@@ -321,11 +381,17 @@
                (Pending review, Submitted, Quality assessed) and one 44px rail (Discontinued),
                each carrying its group label only on the group's first column, exactly as the real
                board below. Same container classes, so the skeleton→content swap moves nothing. -->
-          <div class="flex flex-1 min-h-0 gap-[16px] overflow-x-auto px-[16px] py-[14px] sm:px-[32px]" aria-live="polite" aria-busy="true">
+          <!-- `MWB-T-11` (6): the skeleton follows BOTH breakpoints through the same class strings
+               the real board uses (`mwb-board-strip`, `editingColumnItemClass`,
+               `expandedColumnItemClass`), so the swap moves nothing at 390, 768, 1280 or 1440. -->
+          <div
+            class="mwb-board-strip flex items-start gap-[16px] overflow-x-auto snap-x snap-mandatory px-[16px] py-[14px] sm:px-[32px] min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:items-stretch min-[900px]:snap-none"
+            aria-live="polite"
+            aria-busy="true">
             <span class="sr-only">Loading your board</span>
 
-            <!-- Needs my action — `w-[360px]`, same as the real Editing column. -->
-            <div class="flex w-[360px] flex-none flex-col gap-[8px]">
+            <!-- Needs my action — the real Editing column's own width rule (320/360, or a strip item below 900). -->
+            <div [class]="editingColumnItemClass">
               <span class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-color-primary-400)]"
                 >Needs my action</span
               >
@@ -351,18 +417,23 @@
               <ng-container *ngTemplateOutlet="skeletonColumn; context: { $implicit: skeletonWaitingCards }" />
             </div>
 
-            <!-- Closed — one 44px rail, matching the collapsed default (`MWB-DD-8`). -->
+            <!-- Closed — one 44px rail, matching the collapsed default (`MWB-DD-8`). Below 900px
+                 there are no rails (`closedIsRail()`), so the shell is a full column like the rest. -->
             @for (rail of skeletonRails; track rail; let first = $first) {
-              <div class="flex w-[44px] flex-none min-h-0 flex-col gap-[8px]">
+              <div [class]="closedItemClass()">
                 <span class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-text-subtle)]">{{
                   first ? 'Closed' : ''
                 }}</span>
-                <div
-                  class="flex w-[44px] flex-1 min-h-0 animate-pulse flex-col items-center gap-[10px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] py-[12px] motion-reduce:animate-none"
-                  data-testid="my-work-skeleton-column">
-                  <span class="h-[20px] w-[20px] flex-none rounded-full bg-[var(--pr-surface-ground)]"></span>
-                  <span class="h-[76px] w-[10px] flex-none rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
-                </div>
+                @if (closedIsRail()) {
+                  <div
+                    class="flex w-[44px] flex-1 min-h-0 animate-pulse flex-col items-center gap-[10px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] py-[12px] motion-reduce:animate-none"
+                    data-testid="my-work-skeleton-column">
+                    <span class="h-[20px] w-[20px] flex-none rounded-full bg-[var(--pr-surface-ground)]"></span>
+                    <span class="h-[76px] w-[10px] flex-none rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+                  </div>
+                } @else {
+                  <ng-container *ngTemplateOutlet="skeletonColumn; context: { $implicit: skeletonWaitingCards }" />
+                }
               </div>
             }
           </div>
@@ -425,10 +496,20 @@
                  Flat + `flex-1 basis-0` on every expanded non-Editing item is what makes the four
                  columns equal; the group label rides above the group's FIRST column (with a fixed
                  14px box on the others so every column's header line stays aligned). -->
-            <div class="pr-board-fade flex flex-1 min-h-0 gap-[16px] overflow-x-auto px-[16px] py-[14px] sm:px-[32px]">
-              <!-- Needs my action — the one fixed-width column (`design.md` §6.3). -->
+            <!-- `MWB-T-11` (1): the SAME element is the locked board's row at >= 900px and a
+                 horizontal SNAP STRIP below it. Base classes are the strip (`items-start` so a
+                 short column is not stretched to the tallest one, `snap-x snap-mandatory` so a
+                 swipe lands on a column edge); `min-[900px]:` restores the locked row exactly as
+                 `MWB-T-10` left it. `overflow-x-auto` is unconditional — it is the board's own
+                 scroller in BOTH modes, and the document never scrolls sideways (`MWB-R-9`). -->
+            <div
+              #boardStrip
+              (scroll)="onStripScroll()"
+              data-testid="my-work-board-strip"
+              class="pr-board-fade mwb-board-strip flex items-start gap-[16px] overflow-x-auto snap-x snap-mandatory px-[16px] py-[14px] sm:px-[32px] min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:items-stretch min-[900px]:snap-none">
+              <!-- Needs my action — the one fixed-width column (`design.md` §6.3, floors revisited in `MWB-T-11` (5)). -->
               @if (editingColumn(); as editing) {
-                <div class="flex w-[360px] flex-none flex-col gap-[8px]" data-testid="my-work-board-column-item" data-column-key="editing">
+                <div [class]="editingColumnItemClass" data-testid="my-work-board-column-item" data-column-key="editing">
                   <span class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-color-primary-400)]"
                     >Needs my action</span
                   >
@@ -469,11 +550,16 @@
                   <span class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-text-subtle)]">{{
                     first ? 'Closed' : ''
                   }}</span>
+                  <!-- `MWB-T-11` (1): below 900px `closedIsRail()` is false and `collapsible` is
+                       off — a Closed column renders as a normal strip column with NO expand or
+                       collapse control. The collapsed/expanded state is a desktop affordance; on a
+                       swipe strip a 44px rail would be an unreachable sliver and a chevron would
+                       be a control with nothing to do. -->
                   <app-my-work-column
                     [column]="col"
-                    [rail]="closedCollapsed()"
-                    [collapsed]="closedCollapsed()"
-                    [collapsible]="!closedCollapsed()"
+                    [rail]="closedIsRail()"
+                    [collapsed]="closedIsRail()"
+                    [collapsible]="!closedCollapsed() && !isNarrow()"
                     (expandToggle)="toggleClosed()" />
                 </div>
               }
@@ -483,4 +569,6 @@
       </div>
     </div>
   </article>
+
+  <app-where-to-report-modal [programCode]="programmeCode()" returnTab="my-work" [(visible)]="showWhereToReportModal" />
 </section>

@@ -1,4 +1,4 @@
-// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-R-2, R-11)
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-10, MWB-T-11, MWB-T-7, MWB-R-2, R-11)
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { MyWorkColumnComponent } from './my-work-column.component';
@@ -67,13 +67,30 @@ describe('MyWorkColumnComponent', () => {
       expect(text()).toContain('2');
     });
 
-    it('gives the list flex-1 min-h-0 overflow-y-auto so it scrolls inside itself (SAV contract)', async () => {
+    // `MWB-T-11`: the SAV contract now applies only where the viewport lock does. Below 900px the
+    // page is the scroller, so `flex-1 min-h-0 overflow-y-auto` must be behind `min-[900px]:` and
+    // the BASE state must carry none of them — a `min-height: 0` list inside an auto-height column
+    // collapses to a 0px sliver there.
+    it('gives the list flex-1 min-h-0 overflow-y-auto only at >= 900px (SAV contract, MWB-T-11)', async () => {
       await build({ column: column({ rows: [row()] }) });
 
-      const list = root().querySelector('section > div:nth-child(2)') as HTMLElement;
-      expect(list.className).toContain('flex-1');
-      expect(list.className).toContain('min-h-0');
-      expect(list.className).toContain('overflow-y-auto');
+      const list = root().querySelector('[data-testid="my-work-column-list"]') as HTMLElement;
+      expect(list.className).toContain('min-[900px]:flex-1');
+      expect(list.className).toContain('min-[900px]:min-h-0');
+      expect(list.className).toContain('min-[900px]:overflow-y-auto');
+      // No unprefixed copy of any of the three.
+      expect([...list.classList]).not.toContain('flex-1');
+      expect([...list.classList]).not.toContain('min-h-0');
+      expect([...list.classList]).not.toContain('overflow-y-auto');
+    });
+
+    it('gives the region its own id so the narrow-viewport jumper can target it (MWB-T-11)', async () => {
+      await build({ column: column({ key: 'submitted', label: 'Submitted', rows: [row()] }) });
+
+      const section = root().querySelector('section') as HTMLElement;
+      expect(section.id).toBe('my-work-region-submitted');
+      // …and it stays distinct from the heading id `aria-labelledby` points at.
+      expect(section.getAttribute('aria-labelledby')).toBe('my-work-column-submitted');
     });
 
     it('shows the per-column empty message when there are no rows', async () => {

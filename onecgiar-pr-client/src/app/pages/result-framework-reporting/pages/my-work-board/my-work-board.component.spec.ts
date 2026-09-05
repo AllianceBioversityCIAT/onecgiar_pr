@@ -1,4 +1,4 @@
-// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-T-8, MWB-T-9)
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-10, MWB-T-11, MWB-T-7, MWB-T-8, MWB-T-9)
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
@@ -35,6 +35,17 @@ class BandStubComponent {
   @Input() scrollHost: HTMLElement | null = null;
   /** `MWB-T-8` (2) — the stub carries the output so the page's own binding is exercised. */
   @Output() whereToReport = new EventEmitter<void>();
+}
+
+@Component({
+  selector: 'app-where-to-report-modal',
+  standalone: true,
+  template: ''
+})
+class WhereToReportModalStubComponent {
+  @Input() visible = false;
+  @Input() programCode = '';
+  @Input() returnTab = '';
 }
 
 function row(partial: Partial<ProgrammeResultRow> = {}): ProgrammeResultRow {
@@ -138,8 +149,8 @@ describe('MyWorkBoardComponent', () => {
     });
 
     TestBed.overrideComponent(MyWorkBoardComponent, {
-      remove: { imports: [ReportingProgramBandComponent] },
-      add: { imports: [BandStubComponent] }
+      remove: { imports: [ReportingProgramBandComponent, WhereToReportModalComponent] },
+      add: { imports: [BandStubComponent, WhereToReportModalStubComponent] }
     });
     // `set` REPLACES the component's providers array — `ProgrammeResultsFilterService` is
     // page-provided since `MWB-T-9`, so it has to be re-listed or the toolbar cannot be injected.
@@ -465,15 +476,15 @@ describe('MyWorkBoardComponent', () => {
       expect(text()).not.toContain('Read-only board.');
     });
 
-    it('enables the band CTA and navigates with returnTab=my-work when it fires', () => {
+    it('enables the band CTA and opens whereToReportModal in-place when it fires', () => {
       const band = fixture.debugElement.query(By.directive(BandStubComponent));
       expect((band.componentInstance as BandStubComponent).canReport).toBe(true);
+      expect(component.showWhereToReportModal()).toBe(false);
 
       (band.componentInstance as BandStubComponent).whereToReport.emit();
 
-      expect(router.navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP01'], {
-        queryParams: { whereToReport: 'true', returnTab: 'my-work' }
-      });
+      expect(component.showWhereToReportModal()).toBe(true);
+      expect(router.navigate).not.toHaveBeenCalled();
     });
 
     it('renders a board-shaped skeleton (5 columns + card placeholders) while loading, and none once rows land', () => {
@@ -936,5 +947,210 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     document.body.click();
     fixture.detectChanges();
     expect(popover.classList.contains('hidden')).toBe(true);
+  });
+});
+
+// ── `MWB-T-11` — below the viewport-lock breakpoint ──────────────────────────────────────────
+//
+// jsdom lays nothing out, so the GEOMETRY of the snap strip (widths, overflow, hit-target heights,
+// the jumper's scroll) is proven only by the Cypress CT at 390×844 / 768×1024 in
+// `my-work-board.cy.ts`. What IS testable here is the part that is structural rather than visual:
+// the `matchMedia`-driven `isNarrow` flag and everything it switches — the jumper's existence and
+// contents, and the fact that a Closed column stops being a rail.
+describe('MyWorkBoardComponent — narrow viewport (MWB-T-11)', () => {
+  let fixture: ComponentFixture<MyWorkBoardComponent>;
+  let component: MyWorkBoardComponent;
+  let service: FakeMyWorkBoardService;
+  let originalMatchMedia: typeof window.matchMedia;
+  let listeners: Array<(event: MediaQueryListEvent) => void>;
+
+  const columnsFixture: MyWorkColumn[] = [
+    { key: 'editing', label: 'Editing', group: 'action', rows: [row(), row({ code: '4713' })] },
+    { key: 'pending', label: 'Pending review', group: 'waiting', rows: [row({ code: '4714', statusId: 5, statusName: 'Pending Review' })] },
+    { key: 'submitted', label: 'Submitted', group: 'waiting', rows: [] },
+    { key: 'approved', label: 'Quality assessed', group: 'done', rows: [row({ code: '4715', statusId: 2, statusName: 'Quality Assessed' })] },
+    { key: 'discontinued', label: 'Discontinued', group: 'closed', rows: [row({ code: '4716', statusId: 4, statusName: 'Discontinued' })] }
+  ];
+
+  /** `matches` is fixed at construction time by the component's own `matchMedia` call, so the flag
+   *  has to be installed BEFORE `createComponent` — hence a stub rather than a resize. */
+  function stubMatchMedia(narrow: boolean): void {
+    listeners = [];
+    window.matchMedia = jest.fn().mockImplementation((query: string) => ({
+      // Only the board's own breakpoint query answers `narrow`; `prefers-reduced-motion` must
+      // stay false or `jumpToColumn` would silently take the no-animation branch for the wrong
+      // reason and the test would prove nothing about the query it thinks it is exercising.
+      matches: query === '(max-width: 899px)' ? narrow : false,
+      media: query,
+      addEventListener: (_: string, cb: (event: MediaQueryListEvent) => void) => listeners.push(cb),
+      removeEventListener: (_: string, cb: (event: MediaQueryListEvent) => void) => {
+        listeners = listeners.filter(existing => existing !== cb);
+      },
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+      onchange: null
+    })) as unknown as typeof window.matchMedia;
+  }
+
+  function build(narrow: boolean): void {
+    stubMatchMedia(narrow);
+    service = new FakeMyWorkBoardService();
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [MyWorkBoardComponent],
+      providers: [
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            paramMap: of(convertToParamMap({ entityId: 'SP01' })),
+            snapshot: { paramMap: convertToParamMap({ entityId: 'SP01' }), queryParamMap: convertToParamMap({}) },
+            queryParamMap: of(convertToParamMap({}))
+          }
+        },
+        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } },
+        {
+          provide: DataControlService,
+          useValue: { reportingCurrentPhase: { phaseYear: 2026, phaseName: 'Reporting 2026', portfolioAcronym: 'P26' }, reportingPhaseVersion: signal(0) }
+        },
+        {
+          provide: ResultFrameworkReportingHomeService,
+          useValue: { mySPsList: () => [{ initiativeCode: 'SP01', initiativeShortName: 'SF', initiativeName: 'SP01 long' }], otherSPsList: () => [], otherProjectsList: () => [] }
+        }
+      ]
+    });
+    TestBed.overrideComponent(MyWorkBoardComponent, { remove: { imports: [ReportingProgramBandComponent] }, add: { imports: [BandStubComponent] } });
+    TestBed.overrideComponent(MyWorkBoardComponent, {
+      set: { providers: [ProgrammeResultsFilterService, { provide: MyWorkBoardService, useValue: service }] }
+    });
+
+    fixture = TestBed.createComponent(MyWorkBoardComponent);
+    component = fixture.componentInstance;
+    service.visibleRows.set([row()]);
+    service.columns.set(columnsFixture);
+    fixture.detectChanges();
+  }
+
+  const root = () => fixture.nativeElement as HTMLElement;
+  const chips = () => Array.from(root().querySelectorAll<HTMLElement>('[data-testid="my-work-jumper-chip"]'));
+  /** Label and count are two adjacent `<span>`s with no whitespace between them in the template —
+   *  read them as the two fields they are rather than asserting on a concatenated string. */
+  const chipText = (chip: HTMLElement) =>
+    Array.from(chip.querySelectorAll('span'))
+      .map(span => span.textContent?.trim() ?? '')
+      .join(' ');
+
+  beforeAll(() => {
+    originalMatchMedia = window.matchMedia;
+  });
+
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+  });
+
+  it('reads the breakpoint from the same media query the stylesheet uses', () => {
+    build(true);
+    expect(window.matchMedia).toHaveBeenCalledWith('(max-width: 899px)');
+    expect(component.isNarrow()).toBe(true);
+
+    build(false);
+    expect(component.isNarrow()).toBe(false);
+  });
+
+  it('follows the media query when the viewport crosses the breakpoint after load', () => {
+    build(false);
+    expect(component.isNarrow()).toBe(false);
+
+    listeners.forEach(cb => cb({ matches: true } as MediaQueryListEvent));
+    fixture.detectChanges();
+
+    expect(component.isNarrow()).toBe(true);
+    expect(chips().length).toBe(5);
+  });
+
+  it('renders one jumper chip per rendered column, in board order, with that column count', () => {
+    build(true);
+
+    expect(chips().map(chip => chip.dataset['columnKey'])).toEqual(['editing', 'pending', 'submitted', 'approved', 'discontinued']);
+    // Counts come from `columns()`, so an empty column shows a real 0 rather than disappearing.
+    expect(chips().map(chipText)).toEqual(['Editing 2', 'Pending review 1', 'Submitted 0', 'Quality assessed 1', 'Discontinued 1']);
+  });
+
+  it('adds the conditional Other column to the jumper exactly when the board renders it', () => {
+    build(true);
+    expect(chips().length).toBe(5);
+
+    service.columns.set([...columnsFixture, { key: 'other', label: 'Other', group: 'closed', rows: [row({ code: '9999', statusId: 42, statusName: 'Weird' })] }]);
+    fixture.detectChanges();
+
+    expect(chips().length).toBe(6);
+    expect(chipText(chips()[5])).toBe('Other 1');
+  });
+
+  it('gives the jumper tablist/tab semantics, one selected tab, and aria-controls on the column region', () => {
+    build(true);
+
+    const jumper = root().querySelector('[data-testid="my-work-jumper"]') as HTMLElement;
+    expect(jumper.getAttribute('role')).toBe('tablist');
+    chips().forEach(chip => expect(chip.getAttribute('role')).toBe('tab'));
+
+    // Exactly one selected, and it is the first column — the one an un-scrolled strip is showing.
+    expect(chips().filter(chip => chip.getAttribute('aria-selected') === 'true').map(chip => chip.dataset['columnKey'])).toEqual(['editing']);
+
+    // Every `aria-controls` resolves to a real column region in the same DOM.
+    chips().forEach(chip => {
+      const controls = chip.getAttribute('aria-controls') as string;
+      expect(root().querySelector(`section[role="region"]#${controls}`)).toBeTruthy();
+    });
+  });
+
+  it('moves the selected tab to the column the user jumped to', () => {
+    build(true);
+
+    const submitted = chips().find(chip => chip.dataset['columnKey'] === 'submitted') as HTMLButtonElement;
+    submitted.click();
+    fixture.detectChanges();
+
+    expect(component.activeJumperKey()).toBe('submitted');
+    expect(chips().filter(chip => chip.getAttribute('aria-selected') === 'true').map(chip => chip.dataset['columnKey'])).toEqual(['submitted']);
+  });
+
+  it('renders the Closed column as a normal column with no rail and no collapse control below 900px', () => {
+    build(true);
+
+    // Five expanded regions (vs four + one rail on the locked board) and no expand/collapse chrome.
+    expect(root().querySelectorAll('section[role="region"]').length).toBe(5);
+    expect(root().querySelectorAll('app-my-work-column button[aria-expanded]').length).toBe(0);
+    expect(root().querySelector('button[aria-label="Collapse Discontinued"]')).toBeNull();
+    // The desktop state is untouched — only its RENDERING is suppressed here.
+    expect(component.closedCollapsed()).toBe(true);
+    expect(component.closedIsRail()).toBe(false);
+  });
+
+  it('keeps the rail, the collapse control and the jumper off at >= 900px', () => {
+    build(false);
+
+    expect(root().querySelector('[data-testid="my-work-jumper"]')).toBeNull();
+    expect(component.closedIsRail()).toBe(true);
+    expect(root().querySelectorAll('app-my-work-column button[aria-expanded="false"]').length).toBe(1);
+  });
+
+  it('sizes every strip column to min(85vw, 360px) below 900px and to the two-step floors above it', () => {
+    build(true);
+    const items = () => Array.from(root().querySelectorAll<HTMLElement>('[data-testid="my-work-board-column-item"]'));
+
+    // Below 900 every column — Editing included — is the same fixed strip item.
+    for (const item of items()) {
+      expect(item.className).toContain('w-[min(85vw,360px)]');
+      expect(item.className).toContain('shrink-0');
+      expect(item.className).toContain('snap-start');
+    }
+
+    // `MWB-T-11` (5): 320/240 below 1440, 360/260 at/above it.
+    expect(component.editingColumnItemClass).toContain('min-[900px]:w-[320px]');
+    expect(component.editingColumnItemClass).toContain('min-[1440px]:w-[360px]');
+    expect(component.expandedColumnItemClass).toContain('min-[900px]:min-w-[240px]');
+    expect(component.expandedColumnItemClass).toContain('min-[1440px]:min-w-[260px]');
   });
 });
