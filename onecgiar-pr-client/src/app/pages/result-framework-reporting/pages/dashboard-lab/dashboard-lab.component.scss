@@ -328,6 +328,7 @@ $pr-by-aow-indicator-pad: 8px 16px;
   border-bottom: 1px solid rgba(226, 232, 240, 0.6);
   box-sizing: border-box;
   user-select: none;
+  min-width: 760px;
 }
 
 .pr-by-aow-indicator-row {
@@ -342,6 +343,7 @@ $pr-by-aow-indicator-pad: 8px 16px;
   background: var(--pr-surface-card);
   cursor: pointer;
   transition: background 150ms ease;
+  min-width: 760px;
 
   &:last-child {
     border-bottom: none;

@@ -1502,7 +1502,7 @@
                scrolls the AoW cards / reporting table below the band. -->
           <div #workArea class="min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll">
           <!-- Content pad: 32px horizontal, 20px top, 32px bottom. 20px between AoW cards. -->
-          <div class="flex flex-col gap-[20px] px-[32px] pt-[20px] pb-[32px]" data-guide="tab-reporting-view">
+          <div class="flex flex-col gap-[16px] sm:gap-[20px] px-[16px] sm:px-[24px] lg:px-[32px] pt-[16px] sm:pt-[20px] pb-[32px]" data-guide="tab-reporting-view">
             @if (loadingAows()) {
               @for (s of [1, 2, 3, 4]; track s) {
                 <div class="h-14 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
@@ -1619,8 +1619,8 @@
                   <!-- @akili-spec changes/mass-reporting-flow — MRF-R-4: the session counter joins the
                        tiles row as a 4th tile, and only once something has been reported this session. -->
                   <div
-                    class="mt-[14px] grid gap-3 max-[640px]:grid-cols-1"
-                    [ngClass]="sessionReported() > 0 ? 'grid-cols-4 max-[899px]:grid-cols-2' : 'grid-cols-3'">
+                    class="mt-[14px] grid gap-3 max-[640px]:grid-cols-1 max-[899px]:grid-cols-2"
+                    [ngClass]="sessionReported() > 0 ? 'grid-cols-4' : 'grid-cols-3'">
                     @if (plannedHloLoading()) {
                       @for (i of [0, 1, 2]; track i) {
                         <div class="h-[64px] animate-pulse rounded-xl bg-slate-100" aria-hidden="true"></div>
@@ -1682,7 +1682,7 @@
                 @for (sec of plannedByAowSections(); track sec.label) {
                   <section class="rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden mb-5">
                     <!-- Card Header / Section Banner -->
-                    <div class="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-slate-50 via-indigo-50/20 to-slate-50 border-b border-slate-200/80">
+                    <div class="flex items-center justify-between px-3.5 sm:px-5 py-3 sm:py-3.5 bg-gradient-to-r from-slate-50 via-indigo-50/20 to-slate-50 border-b border-slate-200/80">
                       <div class="flex items-center gap-2.5">
                         <h3 class="m-0 text-xs font-bold uppercase tracking-wider text-slate-700">{{ sec.label }}</h3>
                         <span class="px-2.5 py-0.5 rounded-full bg-white border border-slate-200 text-[11px] font-bold text-slate-700 shadow-2xs tabular-nums">

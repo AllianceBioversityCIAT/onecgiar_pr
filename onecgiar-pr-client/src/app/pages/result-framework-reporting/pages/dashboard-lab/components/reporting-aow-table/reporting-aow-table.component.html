@@ -279,7 +279,7 @@
         <!-- Top-level header: 52px compact, balanced 3-zone layout. Same chrome for AoW and for Intermediate / 2030 buckets. -->
         <button
           type="button"
-          class="flex h-[52px] min-h-[52px] w-full items-center gap-[10px] bg-[var(--pr-surface-card)] px-[20px] text-left cursor-pointer hover:bg-[var(--pr-surface-subtle)] transition-colors rounded-t-[12px]"
+          class="flex h-[52px] min-h-[52px] w-full items-center gap-[10px] bg-[var(--pr-surface-card)] px-[12px] sm:px-[20px] text-left cursor-pointer hover:bg-[var(--pr-surface-subtle)] transition-colors rounded-t-[12px]"
           [class.rounded-b-[12px]]="!aowOpen"
           [class.border-b]="aowOpen"
           [class.border-[var(--pr-border-divider)]]="aowOpen"
@@ -343,7 +343,7 @@
               }
             </span>
 
-            <span class="shrink-0 whitespace-nowrap text-[12px] text-[var(--pr-text-subtle)]">
+            <span class="shrink-0 whitespace-nowrap text-[12px] text-[var(--pr-text-subtle)] hidden sm:inline">
               {{ countLabel(group.count) }}
             </span>
           </div>
@@ -357,18 +357,18 @@
             </span>
           } @else {
             <!-- Center zone: Progress bar and coverage ratio -->
-            <div class="flex items-center gap-[12px] shrink-0 mx-auto" [attr.title]="rowTitle(group) || null">
-              <span class="h-[7px] w-[130px] shrink-0 overflow-hidden rounded-[4px] bg-[var(--pr-border)]">
+            <div class="flex items-center gap-[8px] sm:gap-[12px] shrink-0 mx-auto" [attr.title]="rowTitle(group) || null">
+              <span class="h-[7px] w-[60px] sm:w-[130px] shrink-0 overflow-hidden rounded-[4px] bg-[var(--pr-border)]">
                 <span
                   class="block h-[7px] rounded-[4px] bg-[var(--pr-color-primary-400)]"
                   [style.width.%]="ratio.percent"></span>
               </span>
               <span
-                class="pr-figure-sm min-w-[70px] shrink-0 whitespace-nowrap text-right text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-heading)]">
+                class="pr-figure-sm min-w-[50px] sm:min-w-[70px] shrink-0 whitespace-nowrap text-right text-[12px] sm:text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-heading)]">
                 {{ ratio.done }} of {{ ratio.total }}
               </span>
               <span
-                class="min-w-[40px] shrink-0 whitespace-nowrap text-right text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-secondary)]"
+                class="min-w-[34px] sm:min-w-[40px] shrink-0 whitespace-nowrap text-right text-[12px] sm:text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-secondary)]"
                 prTooltip="KPIs with something reported against them. This is coverage of the plan, not achievement against the targets."
                 prTooltipPosition="top">
                 {{ ratio.percent }}%
@@ -694,7 +694,7 @@
                           </div>
 
                           <div class="px-2.5 py-0.5 rounded-full bg-white border border-slate-200/80 text-slate-700 font-bold text-xs shadow-2xs tabular-nums whitespace-nowrap">
-                            {{ hlo.rows.length }} {{ hlo.rows.length === 1 ? 'indicator' : 'indicators' }}
+                            {{ hlo.rows.length }} <span class="hidden sm:inline">{{ hlo.rows.length === 1 ? 'indicator' : 'indicators' }}</span>
                           </div>
 
                           @if (hlo.achievement) {
@@ -720,7 +720,7 @@
                         class="pr-collapse"
                         [class.is-open]="isOpen(hlo.key, defaultOpen)"
                         [attr.aria-hidden]="!isOpen(hlo.key, defaultOpen)">
-                        <div class="pr-collapse-inner">
+                        <div class="pr-collapse-inner overflow-x-auto custom_scroll">
                           <div class="pl-4 sm:pl-6 border-l-4 border-indigo-500/40 bg-indigo-50/10">
                             @if (hlo.rows.length) {
                               <div class="pr-hlo-head h-7 h-[28px] text-[10px] text-slate-400 font-bold uppercase tracking-wider" aria-hidden="true">

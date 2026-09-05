@@ -45,6 +45,7 @@ $pr-reporting-pad: 8px 16px;
   letter-spacing: 0.06em;
   color: #94a3b8;
   user-select: none;
+  min-width: 820px;
 }
 
 /* ── HLO row (tabular tree-table node) ── */
@@ -57,6 +58,7 @@ $pr-reporting-pad: 8px 16px;
   padding: $pr-reporting-pad;
   box-sizing: border-box;
   width: 100%;
+  min-width: 820px;
 
   &:focus-visible {
     outline: 2px solid var(--pr-color-primary-300);
@@ -76,6 +78,7 @@ $pr-reporting-pad: 8px 16px;
   background: var(--pr-surface-card);
   box-sizing: border-box;
   width: 100%;
+  min-width: 820px;
   cursor: pointer;
   transition: background 150ms ease;
 

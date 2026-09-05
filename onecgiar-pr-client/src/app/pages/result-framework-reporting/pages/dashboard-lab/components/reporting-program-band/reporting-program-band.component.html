@@ -32,7 +32,7 @@
        clipped they must leave the a11y tree AND the tab order, or keyboard focus lands on an
        invisible link. `aria-hidden` alone would hide them while keeping them tabbable. ── -->
   <div
-    class="relative flex flex-col justify-center gap-[4px] px-[32px] transition-[height,opacity] duration-[180ms] ease-out"
+    class="relative flex flex-col justify-center gap-[4px] px-[16px] sm:px-[32px] transition-[height,opacity] duration-[180ms] ease-out"
     [class]="bandCollapsed() ? 'h-0 overflow-hidden opacity-0' : 'h-[64px] opacity-100'"
     [attr.inert]="bandCollapsed() ? '' : null">
     <!-- Eyebrow: dot + SP01 · REPORTING CYCLE 2026 · P25 -->
@@ -56,9 +56,9 @@
     </div>
 
     <!-- Title row + ⓘ popover (reference :343-358). Click, not hover. -->
-    <div class="relative flex min-w-0 items-center gap-[8px] pr-[420px]" data-guide="sp-identity">
+    <div class="relative flex min-w-0 items-center gap-[8px] pr-[140px] sm:pr-[240px] min-[900px]:pr-[380px]" data-guide="sp-identity">
       <h1
-        class="m-0 min-w-0 truncate text-[21px] font-bold leading-[1.25] tracking-[-0.015em] text-[var(--pr-text-heading)]">
+        class="m-0 min-w-0 truncate text-[18px] sm:text-[21px] font-bold leading-[1.25] tracking-[-0.015em] text-[var(--pr-text-heading)]">
         {{ programName() }}
       </h1>
 
@@ -138,25 +138,26 @@
     <!-- Top-right action: Where to report. Smart Back was removed — after sibling-skip
          it always read “Back to Science programs” and did not return Overview ↔ Reporting. -->
     <!-- Top-right actions: Guided Tour + Where to report -->
-    <div class="absolute right-[32px] top-1/2 z-[22] flex -translate-y-1/2 items-center gap-[10px]">
+    <div class="absolute right-[16px] sm:right-[32px] top-1/2 z-[22] flex -translate-y-1/2 items-center gap-[6px] sm:gap-[10px]">
       <button
         type="button"
-        class="flex h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] text-[13px] font-semibold text-[var(--pr-text-secondary)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+        class="flex h-[32px] sm:h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[8px] sm:px-[12px] text-[12px] sm:text-[13px] font-semibold text-[var(--pr-text-secondary)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
         (click)="startSpTour()"
         data-guide="sp-tour-trigger"
         aria-label="Start guided tour">
         <span class="material-icons-round text-[16px] text-[var(--pr-color-primary-500)]">explore</span>
-        <span>Tour</span>
+        <span class="hidden sm:inline">Tour</span>
       </button>
 
       @if (canReport()) {
         <button
           type="button"
-          class="flex h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[14px] text-[13.5px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+          class="flex h-[32px] sm:h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[6px] sm:gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[10px] sm:px-[14px] text-[12px] sm:text-[13.5px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
           (click)="onWhereToReportClick()"
           data-testid="program-band-where-to-report-btn">
-          <span class="material-icons-round text-[18px]">explore</span>
-          <span>Where to report</span>
+          <span class="material-icons-round text-[16px] sm:text-[18px]">explore</span>
+          <span class="hidden min-[480px]:inline">Where to report</span>
+          <span class="min-[480px]:hidden">Report</span>
         </button>
       }
     </div>
@@ -165,22 +166,22 @@
   <!-- ── Tabs: 48px + full-width hairline. Active tab paints a 2px violet line that
        overlaps the hairline (mb-[-1px]) so you never see grey under the violet. ── -->
   <nav
-    class="flex h-[48px] items-stretch gap-[24px] border-b border-[var(--pr-border-band)] px-[32px]"
+    class="flex h-[48px] items-stretch gap-[16px] sm:gap-[24px] border-b border-[var(--pr-border-band)] px-[16px] sm:px-[32px] overflow-x-auto no-scrollbar"
     aria-label="Program sections"
     data-guide="sp-tabs">
     @if (bandCollapsed()) {
       <!-- Collapsed identity — reference :384-386: dot + name at 15px/600, then 24px to the tabs
            (16px gap + the 8px the reference puts on the tab strip). Lives INSIDE the tabs row so the
            band is a single 48px bar, not two stacked ones. -->
-      <div class="pr-band-fade flex items-center gap-[16px]">
+      <div class="pr-band-fade flex shrink-0 items-center gap-[12px] sm:gap-[16px]">
         <span class="h-[8px] w-[8px] shrink-0 rounded-full" [style.background]="programDotColor()"></span>
-        <span class="whitespace-nowrap text-[15px] font-semibold text-[var(--pr-text-heading)]">
+        <span class="whitespace-nowrap text-[14px] sm:text-[15px] font-semibold text-[var(--pr-text-heading)]">
           {{ programName() }}
         </span>
       </div>
     }
     <a
-      class="mb-[-1px] flex items-center gap-[6px] border-b-2 px-[4px] text-[14px] no-underline transition-colors group"
+      class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
       [class]="
         activeTab() === 'overview'
           ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
@@ -198,7 +199,7 @@
       <span class="pr-tab-label">Overview</span>
     </a>
     <a
-      class="mb-[-1px] flex items-center gap-[6px] border-b-2 px-[4px] text-[14px] no-underline transition-colors group"
+      class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
       [class]="
         activeTab() === 'reporting'
           ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
@@ -216,7 +217,7 @@
       <span class="pr-tab-label">Reporting</span>
     </a>
     <a
-      class="mb-[-1px] flex items-center gap-[6px] border-b-2 px-[4px] text-[14px] no-underline transition-colors group"
+      class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
       [class]="
         activeTab() === 'results'
           ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
@@ -246,15 +247,15 @@
            children even while `ml-auto` let it shrink visually. Smart Back was removed from this
            group (it no longer shared the 900px budget with the CTA). -->
       <div
-        class="ml-auto flex min-w-0 items-center gap-[8px] self-center"
+        class="ml-auto flex min-w-0 items-center gap-[6px] sm:gap-[8px] self-center"
         data-testid="program-band-collapsed-actions">
         <button
           type="button"
-          class="group relative flex h-[32px] min-w-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12px] font-semibold text-[var(--pr-text-secondary)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+          class="group relative flex h-[32px] min-w-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[8px] sm:px-[10px] text-[12px] font-semibold text-[var(--pr-text-secondary)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
           (click)="startSpTour()"
           aria-label="Start guided tour">
           <span class="material-icons-round shrink-0 text-[15px] text-[var(--pr-color-primary-500)]">explore</span>
-          <span class="min-w-0 truncate">Tour</span>
+          <span class="hidden sm:inline min-w-0 truncate">Tour</span>
         </button>
 
         @if (canReport()) {
@@ -262,7 +263,7 @@
                carries its own 32px copy (reference :396-399). Same action, same label, same tooltip. -->
           <button
             type="button"
-            class="pr-band-fade group relative flex h-[32px] min-w-0 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[12px] text-[13px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] shadow-2xs"
+            class="pr-band-fade group relative flex h-[32px] min-w-0 cursor-pointer appearance-none items-center gap-[6px] sm:gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[10px] sm:px-[12px] text-[12px] sm:text-[13px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] shadow-2xs"
             (click)="onWhereToReportClick()"
             data-testid="program-band-where-to-report-btn-condensed">
             <span class="material-icons-round shrink-0 text-[16px]">explore</span>
@@ -282,7 +283,7 @@
 @if (showToolbar()) {
   <!-- 1. Top Controls Bar — consistent with Overview top bar -->
   <div
-    class="flex flex-wrap items-center justify-between gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[32px] py-[10px]"
+    class="flex flex-wrap items-center justify-between gap-[10px] sm:gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]"
     role="search"
     aria-label="Reporting controls"
     data-guide="sp-actions-toolbar">
@@ -632,7 +633,7 @@
 
 
     <!-- Right side controls: Expand all + Segmented view switch -->
-    <div class="ml-auto flex items-center gap-[10px]">
+    <div class="flex items-center gap-[8px] sm:gap-[10px] w-full sm:w-auto sm:ml-auto justify-between sm:justify-end flex-wrap mt-1 sm:mt-0">
       @if (compactFilters()) {
         <button
           type="button"

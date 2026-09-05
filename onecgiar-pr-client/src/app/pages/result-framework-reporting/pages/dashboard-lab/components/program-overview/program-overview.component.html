@@ -25,7 +25,7 @@
   ⚠️ html is 12px — only arbitrary px values.
 -->
 
-<div class="grid grid-cols-12 content-start gap-[16px] p-[32px]">
+<div class="grid grid-cols-12 content-start gap-[12px] sm:gap-[16px] p-[16px] sm:p-[24px] lg:p-[32px]">
   <!-- KPI Summary Cards: Totals and key health metrics -->
   <div class="col-span-12 grid grid-cols-12 gap-[16px]">
     <!-- KPI 1: W1/W2 Results (Hero Highlight Card with diffused purple gradient) -->
@@ -180,14 +180,14 @@
   -->
   @if (!hideInlineFilters()) {
   <div class="col-span-12 flex flex-wrap items-center gap-[12px] pt-1">
-    <div class="inline-flex rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] p-[3px]" role="tablist" aria-label="Section filter">
+    <div class="inline-flex max-w-full overflow-x-auto no-scrollbar rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] p-[3px]" role="tablist" aria-label="Section filter">
       <button
         #allSectionsTab
         type="button"
         role="tab"
         [attr.aria-selected]="activeSection() === 'all'"
         (click)="setActiveSection('all')"
-        class="cursor-pointer rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+        class="shrink-0 whitespace-nowrap cursor-pointer rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
         [class]="activeSection() === 'all'
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
@@ -198,7 +198,7 @@
         role="tab"
         [attr.aria-selected]="activeSection() === 'w1w2'"
         (click)="setActiveSection('w1w2')"
-        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+        class="shrink-0 whitespace-nowrap flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
         [class]="activeSection() === 'w1w2'
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-color-primary-600)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
@@ -214,7 +214,7 @@
         role="tab"
         [attr.aria-selected]="activeSection() === 'bilateral'"
         (click)="setActiveSection('bilateral')"
-        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+        class="shrink-0 whitespace-nowrap flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
         [class]="activeSection() === 'bilateral'
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-color-primary-600)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
@@ -230,7 +230,7 @@
         role="tab"
         [attr.aria-selected]="activeSection() === 'aow'"
         (click)="setActiveSection('aow')"
-        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+        class="shrink-0 whitespace-nowrap flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
         [class]="activeSection() === 'aow'
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-color-primary-600)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
@@ -921,7 +921,7 @@
               <span class="pr-figure-sm font-bold">{{ row.done }}/{{ row.total }}</span>
             </button>
           }
-          <span class="ml-auto inline-flex items-center gap-[6px] text-[11.5px] text-[var(--pr-text-secondary)]">
+          <span class="w-full sm:w-auto sm:ml-auto inline-flex flex-wrap items-center gap-[6px] text-[11.5px] text-[var(--pr-text-secondary)] mt-1 sm:mt-0">
             <span class="h-[9px] w-[9px] rounded-[2px] bg-[var(--pr-color-green-500)]" aria-hidden="true"></span> Complete
             <span class="ml-[8px] h-[9px] w-[9px] rounded-[2px] bg-[var(--pr-color-primary-300)]" aria-hidden="true"></span> In progress
             <span class="ml-[8px] h-[9px] w-[9px] rounded-[2px] bg-[var(--pr-border)]" aria-hidden="true"></span> Not started
@@ -1117,7 +1117,7 @@
               <button
                 type="button"
                 (click)="selectScope(row.key)"
-                class="grid flex-1 cursor-pointer grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[14px] border-0 bg-transparent px-[4px] py-[9px] text-left transition-colors duration-150 hover:bg-[var(--pr-surface-ground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                class="grid flex-1 cursor-pointer grid-cols-[54px_minmax(0,1fr)_40px] sm:grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[8px] sm:gap-[14px] border-0 bg-transparent px-[4px] py-[9px] text-left transition-colors duration-150 hover:bg-[var(--pr-surface-ground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
                 <!--
                   `OSF-T-14`: every row now renders a short, user-facing code — `overviewScopeDisplayCode`
                   (single-homed, also used by `scopeTriggerCode()`) maps the non-AoW internal enum keys
@@ -1140,7 +1140,7 @@
                 -->
                 <span
                   role="img"
-                  class="flex h-[8px] overflow-hidden rounded-[999px] bg-[var(--pr-border-divider)]"
+                  class="hidden sm:flex h-[8px] overflow-hidden rounded-[999px] bg-[var(--pr-border-divider)]"
                   [attr.title]="breakdownBarTitle(row)"
                   [attr.aria-label]="breakdownBarTitle(row)">
                   <span class="block h-full bg-[var(--pr-status-in-progress-fg)]" [style.width.%]="breakdownEditingWidth(row)"></span>
@@ -1162,21 +1162,21 @@
           }
 
           @if (group.kind === 'aow') {
-            <div class="grid grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[14px] px-[4px] py-[7px]">
+            <div class="grid grid-cols-[54px_minmax(0,1fr)_40px] sm:grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[8px] sm:gap-[14px] px-[4px] py-[7px]">
               <span></span>
               <span class="text-[11.5px] italic text-[var(--pr-text-muted)]">Areas of work subtotal</span>
               <!-- Bar cell empty but present, exactly as the mockup does, so the grid stays aligned (`OSF-T-13`). -->
-              <span></span>
+              <span class="hidden sm:block"></span>
               <span class="pr-figure-sm text-right font-bold text-[var(--pr-text-muted)]">{{ scopeBreakdown().aowSubtotal }}</span>
             </div>
           }
         }
 
-        <div class="mt-[6px] grid grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[14px] border-t-2 border-[var(--pr-border-strong)] px-[4px] pb-[2px] pt-[10px]">
+        <div class="mt-[6px] grid grid-cols-[54px_minmax(0,1fr)_40px] sm:grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[8px] sm:gap-[14px] border-t-2 border-[var(--pr-border-strong)] px-[4px] pb-[2px] pt-[10px]">
           <span></span>
           <span class="text-[13px] font-bold text-[var(--pr-text-heading)]">All scopes</span>
           <!-- Bar cell empty but present, exactly as the mockup does, so the grid stays aligned (`OSF-T-13`). -->
-          <span></span>
+          <span class="hidden sm:block"></span>
           <span class="pr-figure-sm text-right font-bold text-[var(--pr-text-heading)]">{{ scopeBreakdown().total }}</span>
         </div>
 

@@ -40,7 +40,7 @@
       class="min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll">
       <!-- ═══════════════ RESULTS TOP CONTROLS BAR (consistent with Overview & Reporting) ═══════════════ -->
     <div
-      class="flex flex-wrap items-center justify-between gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[32px] py-[10px]"
+      class="flex flex-wrap items-center justify-between gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]"
       role="search"
       aria-label="Results filters">
       <!-- Left controls: Search + Filter button + Active chips + Clear all -->
@@ -93,7 +93,7 @@
 
           <!-- Popover Modal -->
           <div
-            class="absolute left-0 md:left-auto md:right-0 lg:left-0 lg:right-auto top-[40px] z-30 w-[420px] max-w-[90vw] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+            class="absolute left-0 md:left-auto md:right-0 lg:left-0 lg:right-auto top-[40px] z-30 w-[420px] max-w-[calc(100vw-32px)] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
             [class.hidden]="!filterPopoverOpen()"
             (click)="$event.stopPropagation()">
             <!-- Popover Header -->
@@ -122,7 +122,7 @@
             <!-- Filter Grid inside Popover -->
             <div class="flex flex-col gap-[12px]">
               <!-- Row 1: Phase & Status -->
-              <div class="grid grid-cols-2 gap-[10px]">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
                 <div class="pgr-filter" aria-label="Filter by phase">
                   <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                     Phase
@@ -150,7 +150,7 @@
               </div>
 
               <!-- Row 2: Category & Funding source -->
-              <div class="grid grid-cols-2 gap-[10px]">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
                 <div class="pgr-filter" aria-label="Filter by category">
                   <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                     Category
@@ -178,7 +178,7 @@
               </div>
 
               <!-- Row 3: Center & Created by -->
-              <div class="grid grid-cols-2 gap-[10px]">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
                 <div class="pgr-filter" aria-label="Filter by center">
                   <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                     Contributing Center
@@ -207,7 +207,7 @@
 
               <!-- Row 4: Section — RAC-T-3 (P2-3398 closed): live multi-select over the bucket-key
                    vocabulary, grouped Areas of work / Program-level with counts (RAC-R-3). -->
-              <div class="grid grid-cols-2 gap-[10px]">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
                 <div class="pgr-filter pgr-filter--section" aria-label="Filter by section">
                   <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                     Section
@@ -255,7 +255,7 @@
       </div>
 
       <!-- Right controls: Columns picker + Export CSV -->
-      <div class="ml-auto flex items-center gap-[10px]">
+      <div class="w-full sm:w-auto sm:ml-auto flex items-center justify-between sm:justify-end gap-[10px] mt-1 sm:mt-0">
         <!-- Columns picker -->
         <div class="relative flex-none">
           <button
@@ -329,7 +329,7 @@
     </div>
 
     <!-- TAB BODY — design :762: flex:1, 32px pad, ONE flex column at 16px. -->
-    <div class="flex flex-1 flex-col gap-[16px] p-[32px]" data-guide="tab-results-view">
+    <div class="flex flex-1 flex-col gap-[16px] p-[16px] sm:p-[24px] lg:p-[32px]" data-guide="tab-results-view">
 
       <!-- ════════════════════════════ 4. COUNTS ROW ═════════════════════════════
            Counts are computed over the rows filtered by EVERYTHING EXCEPT status, so each pill
@@ -340,7 +340,7 @@
 
         @for (count of statusCounts(); track count.statusName) {
           <span class="flex items-center gap-[12px]">
-            <span class="h-[14px] w-px bg-[var(--pr-border)]" aria-hidden="true"></span>
+            <span class="h-[14px] w-px bg-[var(--pr-border)] hidden sm:block" aria-hidden="true"></span>
             <button
               type="button"
               class="flex h-[26px] items-center gap-[7px] rounded-full border-0 px-[9px] text-[13px] transition-colors hover:bg-[var(--pr-color-primary-50)]"

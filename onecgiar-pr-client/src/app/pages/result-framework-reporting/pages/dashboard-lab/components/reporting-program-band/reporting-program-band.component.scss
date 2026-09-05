@@ -33,6 +33,16 @@
   }
 }
 
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /**
  * Toolbar filter pills — `app-pr-filter-select` / `app-pr-filter-multiselect` wrapped to the
  * reference metrics: 40px tall, 8px radius, 14px label, placeholder in the muted ink until a value
