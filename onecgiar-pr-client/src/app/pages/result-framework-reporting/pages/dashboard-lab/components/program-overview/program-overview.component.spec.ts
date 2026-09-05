@@ -903,8 +903,8 @@ describe('ProgramOverviewComponent', () => {
    * hub, and the "Progress by area of work" rows get an inline Report button.
    */
   // @akili-spec changes/reporting-entry-hub
-  describe('reporting-entry-hub focus + inline Report (REH-R-7 / REH-R-8 / REH-AC-15)', () => {
-    it('(a) clicking KPI card 2 (W3/Bilateral) emits focusHub("w3") and still sets activeSection to "bilateral"', () => {
+  describe('KPI cards section filtering (REH-R-7 / REH-R-8 / REH-AC-15)', () => {
+    it('(a) clicking KPI card 2 (W3/Bilateral) sets activeSection to "bilateral" without opening hub', () => {
       const emitted: string[] = [];
       component.focusHub.subscribe(code => emitted.push(code));
       const kpiButtons = fixture.debugElement.queryAll(By.css('button.col-span-3'));
@@ -912,11 +912,11 @@ describe('ProgramOverviewComponent', () => {
       kpiButtons[1].nativeElement.click(); // KPI 2: W3 / Bilateral
       fixture.detectChanges();
 
-      expect(emitted).toEqual(['w3']);
+      expect(emitted).toEqual([]);
       expect(component.activeSection()).toBe('bilateral');
     });
 
-    it('(a-cont) clicking KPI card 3 (Contributing Centers) also emits focusHub("w3") and sets activeSection to "bilateral"', () => {
+    it('(a-cont) clicking KPI card 3 (Contributing Centers) sets activeSection to "bilateral" without opening hub', () => {
       const emitted: string[] = [];
       component.focusHub.subscribe(code => emitted.push(code));
       const kpiButtons = fixture.debugElement.queryAll(By.css('button.col-span-3'));
@@ -924,7 +924,7 @@ describe('ProgramOverviewComponent', () => {
       kpiButtons[2].nativeElement.click(); // KPI 3: Contributing Centers
       fixture.detectChanges();
 
-      expect(emitted).toEqual(['w3']);
+      expect(emitted).toEqual([]);
       expect(component.activeSection()).toBe('bilateral');
     });
 
