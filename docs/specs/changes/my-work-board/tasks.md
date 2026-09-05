@@ -157,7 +157,7 @@
   - [ ] CT green at 1280×720 and 1440×900
   - [ ] Commit `✅ test(my-work-board) [SPEC:changes/my-work-board]: viewport, overflow and no-drag component tests`
 
-### `MWB-T-6` — Real-browser evidence, timing, docs sync `[ ]`
+### `MWB-T-6` — Real-browser evidence, timing, docs sync `[~]`
 
 - **Type:** `docs` (+ HITL evidence)
 - **Description:** Local client against the local server with T-1 (if the local stack is not available, use the QA API and state that completeness is `null` everywhere → *Open to check*). Orca embedded browser (`orca-cli`; viewport set **after** `goto`; root zoom ×1.2 → request 1067 for an effective 1280 and 1200 for 1440): open `entity-details/SP01/my-work?phase=…`, screenshots at both widths, compare with `mockup/Main.dc.html` (T6 visual review naming the tab/badge, status pills and card chip/bar), click Continue on one Editing card and confirm the detail opens on the first missing section. If the local server runs: time the flagged vs default request 3× each and report the spread. Write `execution.md` evidence and `pending-archive.md` (TRD `W1` ids, `design.md` §5 rule 2 clarification, §4/§5 inventory, TRD §4 flag row) — never edit those baseline docs on the spec branch.

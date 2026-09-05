@@ -82,3 +82,209 @@
 - **Accepted limitation:** the band is stubbed (56px block in the same flex slot); the real band's geometry is measured in `MWB-T-6`.
 - **ADVISORY (recorded):** assert band rect delta ≈ 0 before/after scroll; add `.cdk-drag`/`[cdkDrag]`/`[cdkDropList]` to the no-DnD negative list; assert single-match selectors.
 - **Gate:** auto-approved (pre-approved mode).
+
+### `MWB-T-6` — Real-browser evidence, timing, docs sync — **BLOCKED (evidence not obtainable)** · 2026-09-05
+
+- **Implementer:** `akili-implementer` (opus) · skill `orca-cli` · effort high.
+- **Verdict:** the docs half is **delivered** (`pending-archive.md`, this entry). The real-browser half is **not evidence** — two independent environment blockers made the board unreachable and un-measurable. Per `tasks.md` `MWB-T-6` *Disqualifier* and `.agents/implementer.md` §4 ("inconclusive is a third outcome"), this is reported as **inconclusive / blocked**, not as a pass.
+
+#### Environment as found (vs. the Leader's 2026-09-05 pre-check)
+
+| Component | Pre-check | Actual |
+|---|---|---|
+| Local API `:3400` | up, T-1 code | **up, T-1 code confirmed** — `curl -s http://localhost:3400/api-json \| grep -o include_completeness` → 1 hit; `/api-json` → 200. Closes `MWB-T-1` DoD *"Swagger shows `include_completeness`"* |
+| Local API → MySQL | (not checked) | **DOWN** — see blocker B |
+| Client dev server `:4200` | up | **up but serving a pre-`MWB-T-4` bundle** — see blocker A |
+| Orca tab | `…/entity-details/SP02?tocView=aows`, page `1ba0a9e0-…` | as stated; **restored at end of task** |
+
+#### Blocker A — the running `ng serve` predates `MWB-T-4`; the `my-work` route does not exist in the served bundle
+
+Reported as a finding, **not fixed** (Leader's instruction: *"if the page errors … report it as a finding with the exact error — do not fix"*). No process was restarted and no file was changed.
+
+| # | Check | Result |
+|---|---|---|
+| A1 | `orca goto …/entity-details/SP02/my-work` ×4 (incl. after `orca reload`) | lands on `/` every time (wildcard fallback). `document.querySelector('app-my-work-board')` → `false` |
+| A2 | Control: `orca goto …/entity-details/SP02/results` | lands on `/result-framework-reporting/entity-details/SP02/results` ✔ — so the redirect is route-specific, not an auth guard |
+| A3 | Control: `orca goto …/entity-details/SP02?tocView=aows` | lands correctly ✔ |
+| A4 | `performance.getEntriesByType('resource')` after A1 | **no `my-work-board.component-*.js` chunk is ever requested** — the router never matched |
+| A5 | Band tab strip on the live page (`app-reporting-program-band a`, double read) | `["space_dashboard Overview", "track_changes Reporting", "table_chart Results"]` — **3 tabs, no *My work*** |
+| A6 | Crawl of all 50 hashed chunks referenced by the served `main.js` | the route-table chunk is `chunk-7O647L4K.js`: `"Program results"` → 1 hit, **`"Program my work"` → 0 hits, `"my-work"` → 0 hits** |
+| A7 | Process age vs. commit | `ng serve (onecgiar-pr-client)` PID 46077 started **Thu 2026-09-03 11:47:42**; the route landed in commit `1ebc2b330` on **2026-09-05 03:56:01** — the server is ~1.7 days older than the code |
+| A8 | Ruled out: service worker cache | `navigator.serviceWorker.getRegistrations()` → `{"sw":0,"scopes":[]}` |
+
+**Exact console error** (`orca console --limit 50`, after A1):
+
+```
+error | ERROR {stack: "TypeError: Failed to fetch dynamically imported mo…lt-framework-reporting-home.component-QUYJXBEG.js",
+         message: "Failed to fetch dynamically imported module: http:…lt-framework-reporting-home.component-QUYJXBEG.js"}
+```
+
+(That chunk later returned 200 on a direct `curl`, so it is a transient of the same stale module graph, not the root cause. The root cause is A6: the route table in the served bundle has no `my-work` entry.)
+
+**Unblocking action for whoever picks this up:** restart `ng serve` in `onecgiar-pr-client`. It was deliberately **not** done here — the process is user-owned in a shared worktree, and blocker B independently voids the data half regardless.
+
+#### Blocker B — the local API cannot reach MySQL; every data endpoint 500s
+
+```
+$ curl -s "http://localhost:3400/auth/role-by-user/get/user/71"
+{"response":{"error":true},"statusCode":500,
+ "message":"[RoleByUserRepository] => error: Error: connect ETIMEDOUT",
+ "timestamp":"2026-09-05T09:00:12.724Z","path":"/auth/role-by-user/get/user/71"}
+```
+
+- Reproduced 4× over ~15 min — not transient.
+- Browser console on any SP page shows the same three 500s: `auth/user/get/initiative/71`, `auth/user/get/initiative/current-portfolio/71`, `auth/role-by-user/get/user/71`.
+- **Root cause is below the app:** a raw TCP connect to the configured `DB_HOST:3306` times out (checked with a socket probe that prints no host, per `.cursorrules`). No local MySQL is listening (`lsof -iTCP:3306` empty) and no container is running (`docker ps` empty). `utun*` interfaces are up, so this reads as a VPN profile / IP allow-list issue on the host — **not something this task may fix.**
+
+**Consequence:** even with blocker A resolved, the board would render its `MWB-R-7` error card. Zero rows ⇒ no cards, no `completeness`, no *Continue* target, no Editing-column overflow, and **no timing measurement** (both timed variants would measure the same 500 path).
+
+#### What *was* measured on the real page
+
+Viewport mapping verified — the `project-orca-browser-real-page-checks` note is exact. Orca's `set viewport W H` is in **device** px and the tab renders at `devicePixelRatio = 0.8333` (= 1/1.2), so `innerWidth = requested × 1.2`. CSS `zoom` on `documentElement` computes to `"1"` — the ×1.2 is the browser's device scale, not a CSS zoom.
+
+| Requested (`orca exec "set viewport …"`) | Effective `innerWidth × innerHeight` | `devicePixelRatio` | Read 1 | Read 2 |
+|---|---|---|---|---|
+| `1067 × 600` | **1280 × 720** | 0.8333333134651184 | ✔ | ✔ (identical) |
+| `1200 × 750` | **1440 × 900** | 0.8333333134651184 | ✔ | ✔ (identical) |
+
+Both `orca eval` double-reads returned byte-identical JSON.
+
+| Measurement | 1280×720 | 1440×900 | Note |
+|---|---|---|---|
+| `documentElement.scrollWidth <= innerWidth` | `true` (1280 ≤ 1280) | `true` (1440 ≤ 1440) | ⚠️ measured on the **sibling Results tab**, the only SP surface the stale bundle serves. **This is NOT evidence for `MWB-AC-9`** — that clause is about the board with 12 Editing cards |
+| Editing column `scrollHeight` / `clientHeight` | — | — | **not measurable** (no board, no rows) |
+| Four tab labels + badge text | 3 tabs, no *My work*, no badge | same | blocker A |
+| `[draggable]` element count | — | — | **not measurable** on the real page. Statically: `grep -rn "draggable\|cdkDrag\|DragDrop\|dragstart"` over `my-work-board/**` matches **only** the three assertions in `my-work-board.component.spec.ts:274`, `my-work-card.component.spec.ts:54` and `my-work-board.cy.ts:288` — no production template or TS file introduces one |
+| Toolbar segment texts (`Mine N` / `All N`) | — | — | not measurable |
+| `get/all/roles/filter` request count | — | — | not measurable; the board never mounted |
+| `green-checks` request count | 0 | 0 | vacuously true — no board request was issued at all. Not evidence |
+
+**Screenshots: NOT captured.** `orca screenshot` and `orca full-screenshot` failed on 5 consecutive attempts (with tab switch and 3 s waits between) with:
+
+```
+browser_error: CDP error (Page.captureScreenshot): Screenshot timed out — the browser tab may not be visible or the window may not have focus.
+```
+
+DOM reads through the same page id succeeded throughout, so the page was live; only the compositor capture was unavailable (Orca's browser pane was not the visible surface). `docs/specs/changes/my-work-board/evidence/` was therefore **not created** — no `my-work-1280.png` / `my-work-1440.png` exist.
+
+#### `Continue` deep link (`MWB-AC-6`, `MWB-R-6`) — not exercised
+
+The click-through is the *only* gate `requirements.md` §9 accepts for *"whether the result detail opens that section"*. It could not be run. The blind spot stays **open**.
+
+Static reading of the shipped navigation seam, for whoever re-runs it — `my-work-card.component.ts:88-90`:
+
+```ts
+continue(): void {
+  this.router.navigate(['/result', 'result-detail', this.row().code, this.continueRoute()], { queryParams: this.continueQueryParams() });
+}
+```
+
+Expected real URL shape: `/result/result-detail/<code>/<first-missing-section>?phase=<versionId>`. Jest covers the *arguments* (`MWB-T-4`); nothing covers the *landing*.
+
+#### Timing (`requirements.md` §7 Performance, `design.md` §8) — **not measured**
+
+Not "slow" and not "fast": **no number was taken.** Blocker B makes both variants 500 on a DB timeout, so any six figures would time the failure path, not the fold. Per §7's own spread rule and the task disqualifier, publishing such numbers would be worse than publishing none.
+
+| Variant | Runs | Result |
+|---|---|---|
+| `…&filter_created_by_me=true` | 0 | not measured — DB unreachable |
+| `…&filter_created_by_me=true&include_completeness=true` | 0 | not measured — DB unreachable |
+
+The `requirements.md` §7 fallback applies verbatim: **recorded as an accepted risk with the cap (`MWB_COMPLETENESS_CAP = 60`, concurrency 5) as the mitigation.** No token or user id was written to any file or shell history beyond the session variables (`.cursorrules`).
+
+#### Visual review vs. `mockup/Main.dc.html`
+
+⚠️ **Static (token-source) comparison, not a rendered pixel review.** Every row below resolves the mockup's literal hex against the shipped Tailwind class through `src/styles/colors.scss` — sound as far as it goes, but it cannot see spacing collapse, wrapping, or clipping. The HITL rendered review named in `requirements.md` §9 (*"Visual drift from the mockup"* — *"pixel fidelity is judged by a person"*) is **still owed**.
+
+**Group 1 — tab + badge** (`design.md` §6.3 row 1; band template lines 239–262)
+
+| Property | Mockup | Shipped | |
+|---|---|---|---|
+| Active underline | `2px solid #6b46e5` | `border-[var(--pr-color-primary-300)]` = `#6b46e5` | ✅ |
+| Active label | `600`, `#191524` | `font-semibold text-[var(--pr-text-heading)]` = `#191524` | ✅ |
+| Icon tint | `#5733c4` | `text-[var(--pr-color-primary-400)]` = `#5733c4` | ✅ |
+| Badge box | `h18 · min-w18 · pad 0 5 · r999 · 10.5px · 700 · tabular` | `h-[18px] min-w-[18px] px-[5px] rounded-full text-[10.5px] font-bold tabular-nums` | ✅ 6/6 |
+| Badge fill | `#5733c4` (= `--pr-color-primary-400`) | `bg-[var(--pr-color-primary-600)]` = **`#3f2499`** | ⚠️ **D-1** |
+| Hidden at 0 | n/a (shows `3`) | `@if ((myWorkCount() ?? 0) > 0)` | ✅ `MWB-R-1` |
+
+**D-1 — spec-internal contradiction, not an implementation defect.** `design.md` §6.3 prescribes `--pr-color-primary-600`; the mockup painted `#5733c4`, which is `--pr-color-primary-400`. The code follows §6.3. The shipped badge is therefore **two steps darker** than the artboard. Someone must decide which document is right; the implementation is defensible either way and was not changed.
+
+**Group 2 — status dots + count pills** (`design.md` §6.3 row 4; `MY_WORK_COLUMN_META` in `my-work-column.component.ts`)
+
+| Column | Mockup dot / pill-bg / pill-fg | Shipped (resolved) | |
+|---|---|---|---|
+| Editing | `#fcc000` / `#fff3c2` / `#836d05` | `STATUS_META[1]` → `yellow-200 #fcc000` / `yellow-75 #fff3c2` / `yellow-600 #836d05` | ✅ 3/3 |
+| Pending review | `#999999` / `#efeef3` / `#444444` | `STATUS_META[5]` → `accents-3 #999` / **`accents-1 #fafafa`** / `accents-6 #444` | ⚠️ **D-2** |
+| Submitted | `#6b46e5` / `#ede9fe` / `#5733c4` | `STATUS_META[3]` → `brand-300 #6b46e5` / **`brand-25 #faf9fe`** / `brand-400 #5733c4` | ⚠️ **D-3** |
+| Approved (rail) | `#d1fae5` / `#047857` | `--pr-status-approved-bg #d1fae5` / `--pr-status-approved-fg #047857` | ✅ exact, `MWB-DD-7` |
+| Discontinued (rail) | `#fff1e4` / `#c2410c` | `STATUS_META[4]` → `orange-75 #fff1e4` / `orange-700 #c2410c` | ✅ 2/2 |
+| Other (rail) | absent | `not-started` `#f3f4f6` / `#4b5563` | n/a — `MWB-R-2` |
+
+**D-2 / D-3 — the count pill loses its shape on the waiting columns.** Both columns sit on `--pr-surface-app` = `#f7f7f9`. `STATUS_META` gives Pending a `#fafafa` pill and Submitted a `#faf9fe` pill — each within ~1.02:1 of that surface, i.e. the pill reads as bare text with no visible capsule. The mockup deliberately used `#efeef3` and `#ede9fe`, which do separate. This is **not** an a11y failure (the `#444` / `#5733c4` text keeps its contrast) and the code obeys §6.3's *"`STATUS_META` for Editing, Submitted, Pending, Discontinued"* literally — the mockup and the token table simply disagree. Flagged, not changed: `design.md` §6.3 is the contract and `MWB-T-6` may not edit it. **This is exactly the drift class §9 says only a human gate catches** — it is offered as a candidate finding for that gate, not as its result.
+
+**Group 3 — card category chip + completeness bar** (`design.md` §6.3 rows 6 and 9; `my-work-card.component.html`)
+
+| Property | Mockup | Shipped | |
+|---|---|---|---|
+| Chip box + type | `h16 · pad 0 6 · r999 · 10px · 600 · uppercase · ls .06em` | `h-[16px] px-[6px] rounded-full text-[10px] font-semibold uppercase tracking-[0.06em]` | ✅ 7/7 |
+| Chip colours | `#f5f3ff` / `#5733c4` | `bg-[var(--pr-color-primary-50)]` = `#f5f3ff` / `text-[var(--pr-color-primary-400)]` = `#5733c4` | ✅ |
+| Bar track | `h4 · r999 · #efeef3` | `h-[4px] rounded-full bg-[var(--pr-surface-ground)]` = `#efeef3` | ✅ |
+| Bar fill, in progress | `linear-gradient(90deg,#6b6dc4,#6461bc)` | `bg-gradient-to-r from-[#6b6dc4] to-[#6461bc]` | ✅ (literal hex — already an `MWB-T-4` advisory) |
+| Bar fill, ready | `#19ae58` | `bg-[var(--pr-color-green-500)]` = `#19ae58` | ✅ |
+| Ready label | `#047857` + check glyph | `text-[var(--pr-status-approved-fg)]` = `#047857` + `material-icons-round check` | ✅ |
+| Completeness label | `11px · 600 · #5d5872` | `text-[11px] font-semibold text-[var(--pr-text-secondary)]` = `#5d5872` | ✅ |
+| Missing list | `11px · lh 1.4 · #6b6580` | `text-[11px] leading-[1.4] text-[var(--pr-text-muted)]` = `#6b6580` | ✅ |
+| Primary action | `h28 · r8 · pad 0 12 · gradient · 12px/600 · white` | identical classes | ✅ |
+| Secondary action | white · border `#ddd6fe` · fg `#5733c4` | `bg-[var(--pr-surface-card)] border-[var(--pr-color-primary-200)] text-[var(--pr-color-primary-400)]` | ✅ |
+
+Group 3 is a clean match — 10/10 rows, zero divergence.
+
+#### Explainer copy (`MWB-R-10`, `design.md` §6.5)
+
+Compared character for character. **Exact match.**
+
+- design §6.5 heading *"What does this tab show?"* → `<app-pr-tab-intro title="What does this tab show?" …>` (`my-work-board.component.html`)
+- design §6.5 body → `MY_WORK_EXPLAINER_DESCRIPTION` (`my-work-board.component.ts:18-19`): *"Your results in this Science Program, grouped by status. The board is read-only: open a result to complete it or submit it; quality assessment happens in QA."*
+
+The toolbar's read-only hint also matches the mockup verbatim: *"Read-only board. Open a result to update it. Status changes still happen inside the result and in QA."*
+
+#### Other divergences from the mockup (all deliberate, recorded so the HITL reviewer does not re-litigate them)
+
+| # | Mockup | Shipped | Sanctioned by |
+|---|---|---|---|
+| D-4 | Toolbar carries a **Sort · "Least complete first"** control | absent | `design.md` §13 — the sort control (`MWB-R-20`) was **removed from this cycle** |
+| D-5 | Card header is `code · category · origin` (no status chip) | adds a `statusName` chip between category and origin | `MWB-R-2` / OQ-2 — *"Card chip shows the real `status_name`"*; spec beats mockup |
+| D-6 | Phase is a static pill *"Phase | Reporting 2026"* | `app-pr-filter-select` dropdown | `tasks.md` `MWB-T-4` — *"phase `app-pr-filter-select`"* |
+| D-7 | `Created 12 Aug`, `Created 4 Aug` (no year, no leading zero) | `Created 12 Aug 2026`, `Created 04 Aug 2026` — `toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'})`, `my-work-card.component.ts:15-20` | `MWB-T-4` decision, *"`dd MMM yyyy` (codebase convention)"*. **Real, un-adjudicated divergence** — the artboard's terser form is what a reviewer will compare against |
+| D-8 | Waiting/closed cards read *"Sent for review 2 days ago"*, *"Submitted 28 Aug · in QA"* — status-specific, relative | one form for all: *"Created &lt;date&gt;"* with a `schedule` glyph | no spec clause requires the status-specific phrasing; `MWB-R-4` only governs the Editing variants. **Real divergence, lower fidelity than the mockup.** Recorded, not minted as a task |
+
+#### What remains unproven after `MWB-T-6`
+
+These `requirements.md` §9 blind spots are **still open** — `MWB-T-6` was supposed to close them and did not:
+
+1. **Visual drift** — no rendered page, no screenshots. The static token pass above is a *candidate list*, not the human gate.
+2. **Deep-link target** — *Continue* never clicked; that the result detail actually opens the named section is unproven.
+3. **Added server latency** — no timing. Falls back to §7's accepted risk (cap 60 / concurrency 5).
+4. **`MWB-AC-1`** (route + band + badge in a real browser) and **`MWB-AC-9`** (real-page layout) — unproven here. `MWB-AC-9` has an independent gate in `MWB-T-5` (`my-work-board.cy.ts`).
+5. **`MWB-T-1` live key-for-key default-payload comparison** (deferred to T-6 by the T-1 review, advisory (e)) — not run; Swagger presence was confirmed, the payload was not.
+
+#### Orca tab restored
+
+Original captured before any navigation and restored at the end: page `1ba0a9e0-d455-401d-b7d6-96db9ce0cf0e` → `http://qa-development-2026.orca.localhost:50196/result-framework-reporting/entity-details/SP02?tocView=aows`, viewport restored to `innerWidth 1273 × innerHeight 1187`.
+
+- **Files written:** `docs/specs/changes/my-work-board/pending-archive.md` (new, `MWB-PA-1`…`PA-5`), `docs/specs/changes/my-work-board/execution.md` (this section). **No application code, no baseline doc, no root guide touched.**
+- **Gate:** **escalate.** Two of the three deliverables in the task's Definition of Done cannot be met in this environment. The Leader decides whether to (a) re-run `MWB-T-6` once `ng serve` is restarted **and** DB connectivity is restored, (b) accept the spec with these blind spots explicitly open, or (c) run the HITL pass on staging per `tasks.md` §6 *Manual QA*.
+
+#### `MWB-T-6` — Leader follow-up after the two blockers (inline, puntual verification) · 2026-09-05
+
+- **Blocker A resolved:** the stale `ng serve` (PID 46077, started 2026-09-03) was stopped and restarted from this worktree (`npm start`, bundle in 14 s). Not a code change; local is disposable.
+- **Real page, Orca browser, double-read at both effective widths** (`set viewport 1067×600` → `innerWidth 1280×720`; `1200×750` → `1440×900`), URL `…/entity-details/SP02/my-work`:
+  - route resolves and `app-my-work-board` mounts (no redirect to `/`);
+  - band tabs = `Overview · Reporting · Results · My work`, **My work** carries `aria-current`; badge hidden (count `null` — data blocked, see B);
+  - `app-pr-tab-intro` present with *What does this tab show?*; toolbar `[aria-label="My work board controls"]` present;
+  - `[draggable],[dropzone],[ondrop]` = **0**; `documentElement.scrollWidth <= innerWidth` and `body.scrollWidth <= innerWidth` = **true** at 1280 and 1440;
+  - board body shows the loading/error state (the list request fails on the API's DB timeout), so `MWB-AC-1` (route, tab, phase param) and the no-DnD / no-horizontal-overflow clauses of `MWB-AC-9` are now evidenced on the real page; the Editing-column scroll clause remains evidenced by `MWB-T-5` only.
+- **Blocker B stands (tested assumption):** local API on 3400 runs T-1 (Swagger lists `include_completeness`) but every data endpoint returns `500 connect ETIMEDOUT` to MySQL (reproduced 4× by T-6, again during this pass) — needs VPN / DB allow-list. Therefore still owed: live cards with completeness, the **Continue** deep-link click (`MWB-AC-6` real navigation), the timing table (§7 Performance → accepted risk with the cap as mitigation until measured), and the T-1 live key-for-key payload comparison.
+- **Screenshots:** `orca screenshot` / `full-screenshot` time out (`Page.captureScreenshot` — tab not visible/focused in the Orca app) on 7 attempts across both passes; no PNGs. Needs the tab focused in the app, or a human look — the human visual gate (`requirements.md` §9) is still owed.
+- **Orca tab restored** to `…/entity-details/SP02?tocView=aows`, viewport back to 1273×1187 effective.
+- **Task status:** `[~]` — docs deliverables done (`pending-archive.md` `MWB-PA-1`…`PA-5`, evidence sections), shell-level real-page evidence done, data-level evidence blocked on the environment. Gate: escalated to the user (environment blocker; pre-approval does not cover it).
