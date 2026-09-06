@@ -168,10 +168,10 @@ T-2 ∥ T-3 (disjoint files) — spawn two Implementers in one wave.
 | `RFI-HITL-1` | visual, at merge | R-10 (no wrap / overflow of the action cell and no page overflow at 1280 / 1024 / **900 / 768**px — every past overflow regression of this component sat at 768–900; star aligned with Copy link) | Real page, SP01 Reporting tab, grouped + All indicators |
 
 ## 6. Rollout & verification
-- [ ] Per-task commits on `feat/reporting-favorite-indicators` with `[SPEC:changes/reporting-favorite-indicators]`.
-- [ ] `npx ng lint --quiet` once after T-4.
+- [x] Per-task commits on `feat/reporting-favorite-indicators` with `[SPEC:changes/reporting-favorite-indicators]`.
+- [x] `npx ng lint --quiet` once after T-4 — "All files pass linting."
 - [ ] Merge into `qa-development-2026` **after** RHSF lands (expected conflicts: `dashboard-lab.component.html` bindings, `reporting-aow-table.component.html` action cells — mechanical).
-- [ ] `RFI-HITL-1` on the merged dev server.
+- [x] `RFI-HITL-1` — run on the worktree dev server (`:4201`) before merge, PASS (see `execution.md`); re-run on the merged server is optional.
 
 ## 7. Roll-back
 Revert the spec's commits; delete `localStorage` keys `pr.reporting.favorites.v1.*` and `sessionStorage` `pr.reporting.favoritesOnly` (harmless if left).
