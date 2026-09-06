@@ -106,7 +106,7 @@ export function escapeHtml(value: string): string {
 
 /**
  * Collect [start, end) ranges for the phrase, each token, and fuzzy similar words;
- * merge overlaps; wrap each range in a yellow mark.
+ * merge overlaps; wrap each range in a violet mark.
  */
 export function highlightPlannedSearch(text: string, query: string | null | undefined): string {
   const raw = text == null ? '' : String(text);
@@ -141,7 +141,7 @@ export function highlightPlannedSearch(text: string, query: string | null | unde
   let cursor = 0;
   for (const [start, end] of merged) {
     if (cursor < start) out += escapeHtml(raw.slice(cursor, start));
-    out += `<mark class="planned-search-hit">${escapeHtml(raw.slice(start, end))}</mark>`;
+    out += `<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">${escapeHtml(raw.slice(start, end))}</mark>`;
     cursor = end;
   }
   if (cursor < raw.length) out += escapeHtml(raw.slice(cursor));

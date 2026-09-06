@@ -2256,3 +2256,348 @@ describe('DashboardLabComponent — Where-to-report return tab (MWB-T-8)', () =>
     expect(navigate).toHaveBeenCalledWith([], expect.objectContaining({ queryParams: { whereToReport: null, returnTab: null } }));
   });
 });
+
+// @akili-spec changes/reporting-hierarchical-search-filters (RHSF-T-5)
+describe('DashboardLabComponent — URL state synchronization, focus recovery & empty state (RHSF-T-5)', () => {
+  const PROGRAM: SPProgress = {
+    initiativeId: 8,
+    initiativeCode: 'SP02',
+    initiativeName: 'Science Program 02',
+    initiativeShortName: 'SP02',
+    portfolioId: 1,
+    portfolioName: 'Portfolio',
+    portfolioAcronym: 'P26',
+    entityTypeCode: 'SP',
+    entityTypeName: 'Science Program',
+    totalResults: 0,
+    progress: 0,
+    versions: []
+  };
+
+  async function createPlannedComponent(queryParams: Record<string, string> = {}, customTemplate?: string) {
+    const navigate = jest.fn().mockResolvedValue(true);
+    const qpMap = convertToParamMap(queryParams);
+    const qpSubject = new Subject<any>();
+    const route = {
+      data: of({ rfrView: 'planned' }),
+      snapshot: { data: { rfrView: 'planned' }, queryParamMap: qpMap },
+      queryParamMap: qpSubject.asObservable(),
+      paramMap: of(convertToParamMap({}))
+    };
+
+    TestBed.resetTestingModule();
+    const moduleDef = TestBed.configureTestingModule({
+      imports: [DashboardLabComponent],
+      providers: [
+        {
+          provide: ResultFrameworkReportingHomeService,
+          useValue: {
+            mySPsList: signal([]),
+            otherSPsList: signal([PROGRAM]),
+            otherProjectsList: signal([]),
+            overviewSelectedPhase: signal<string | null>(null),
+            getScienceProgramsProgress: jest.fn()
+          }
+        },
+        {
+          provide: ApiService,
+          useValue: {
+            resultsSE: {
+              GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of({ response: { units: [] } })),
+              GET_platformGlobalUnitResult: jest.fn().mockReturnValue(of({ response: { results: [] } })),
+              GET_ScienceProgramTocProgress: jest.fn().mockReturnValue(of({ response: { progress: null, areas: [] } })),
+              GET_IndicatorContributionSummary: jest.fn().mockReturnValue(of({ response: { totalsByType: [] } })),
+              GET_reportingEntryHubProjects: jest.fn().mockReturnValue(of({ response: {} })),
+              GET_IntermediateOutcomes: jest.fn().mockReturnValue(of({ response: { tocResults: [] } })),
+              GET_2030Outcomes: jest.fn().mockReturnValue(of({ response: { tocResults: [] } })),
+              GET_tocByInitiativeId: jest.fn().mockReturnValue(of({ response: {} }))
+            }
+          }
+        },
+        {
+          provide: DataControlService,
+          useValue: {
+            focusMode: signal(false),
+            slimNav: signal(false),
+            reportingCurrentPhase: { phaseId: null, phaseYear: null, phaseName: null, portfolioAcronym: null, portfolioId: null },
+            reportingPhaseVersion: signal(0)
+          }
+        },
+        { provide: ReportingGuideService, useValue: {} },
+        { provide: Router, useValue: { navigate } },
+        { provide: ActivatedRoute, useValue: route },
+        { provide: PhasesService, useValue: { phases: { reporting: [] } } },
+        {
+          provide: EntityAowService,
+          useValue: {
+            onCloseReportResultModal: () => undefined,
+            showReportResultModal: signal(false),
+            entityId: signal(''),
+            getAllDetailsData: jest.fn()
+          }
+        },
+        { provide: ResultLevelService, useValue: {} }
+      ]
+    });
+
+    if (customTemplate !== undefined) {
+      moduleDef.overrideComponent(DashboardLabComponent, { set: { template: customTemplate } });
+    } else {
+      moduleDef.overrideComponent(DashboardLabComponent, { set: { template: '' } });
+    }
+    await moduleDef.compileComponents();
+
+    const fixture = TestBed.createComponent(DashboardLabComponent);
+    const component = fixture.componentInstance;
+    component.selectedId.set(PROGRAM.initiativeId);
+    component.ngOnInit();
+    TestBed.flushEffects();
+    await Promise.resolve();
+    navigate.mockClear();
+    return { fixture, component, navigate, qpSubject };
+  }
+
+  it('synchronizes q and typ to queryParams when tocView=aows', async () => {
+    const { component, navigate } = await createPlannedComponent();
+    navigate.mockClear();
+
+    component.plannedBrowseView.set('aows');
+    component.plannedSearch.set('rice');
+    component.reportingTypologyFilter.set('Knowledge Product');
+    TestBed.flushEffects();
+
+    expect(navigate).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({
+        queryParams: expect.objectContaining({
+          tocView: 'aows',
+          q: 'rice',
+          typ: 'Knowledge Product'
+        }),
+        replaceUrl: true
+      })
+    );
+  });
+
+  it('hydrates plannedSearch, reportingTypologyFilter, and pendingKpi with inequality guards without loops', async () => {
+    const { component, qpSubject } = await createPlannedComponent();
+
+    // 1) Test restorePlannedBrowseFromQuery hydration
+    component.plannedSearch.set('');
+    component.reportingTypologyFilter.set('all');
+
+    const searchSetSpy = jest.spyOn(component.plannedSearch, 'set');
+    const typSetSpy = jest.spyOn(component.reportingTypologyFilter, 'set');
+
+    const qp = convertToParamMap({
+      tocView: 'aows',
+      q: 'climate',
+      typ: 'Innovation Development',
+      kpi: '101'
+    });
+
+    (component as any).restorePlannedBrowseFromQuery(qp);
+
+    expect(component.plannedSearch()).toBe('climate');
+    expect(component.reportingTypologyFilter()).toBe('Innovation Development');
+    expect((component as any).pendingKpi).toBe('101');
+    expect(searchSetSpy).toHaveBeenCalledWith('climate');
+    expect(typSetSpy).toHaveBeenCalledWith('Innovation Development');
+
+    // Repeated call with identical parameters must NOT invoke signal setters (inequality guard prevents reactive loop)
+    searchSetSpy.mockClear();
+    typSetSpy.mockClear();
+
+    (component as any).restorePlannedBrowseFromQuery(qp);
+
+    expect(searchSetSpy).not.toHaveBeenCalled();
+    expect(typSetSpy).not.toHaveBeenCalled();
+
+    // 2) Test spParamSub subscription with inequality guards
+    searchSetSpy.mockClear();
+    typSetSpy.mockClear();
+
+    // Emitting identical query params via router stream
+    qpSubject.next(qp);
+
+    expect(searchSetSpy).not.toHaveBeenCalled();
+    expect(typSetSpy).not.toHaveBeenCalled();
+
+    // Emitting changed query params updates signals
+    const changedQp = convertToParamMap({
+      tocView: 'aows',
+      q: 'policy',
+      typ: 'Policy Change',
+      kpi: '202'
+    });
+    qpSubject.next(changedQp);
+
+    expect(searchSetSpy).toHaveBeenCalledWith('policy');
+    expect(typSetSpy).toHaveBeenCalledWith('Policy Change');
+    expect(component.plannedSearch()).toBe('policy');
+    expect(component.reportingTypologyFilter()).toBe('Policy Change');
+    expect((component as any).pendingKpi).toBe('202');
+  });
+
+  it('calls loadAllTocs() when query length >= 2 in onReportingSearchChange', async () => {
+    const { component } = await createPlannedComponent();
+    const loadAllSpy = jest.spyOn(component as any, 'loadAllTocs');
+
+    component.onReportingSearchChange('c');
+    expect(component.plannedSearch()).toBe('c');
+    expect(loadAllSpy).not.toHaveBeenCalled();
+
+    component.onReportingSearchChange('cl');
+    expect(component.plannedSearch()).toBe('cl');
+    expect(loadAllSpy).toHaveBeenCalledTimes(1);
+
+    component.onReportingSearchChange('climate');
+    expect(component.plannedSearch()).toBe('climate');
+    expect(loadAllSpy).toHaveBeenCalledTimes(2);
+
+    component.onReportingSearchChange('');
+    expect(component.plannedSearch()).toBe('');
+    expect(loadAllSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('displays search term and "Clear search" button when search is active with 0 matching AoWs', async () => {
+    const emptyTemplate = `
+      @if (!plannedFilteredAows().length) {
+        @if (plannedSearchActive()) {
+          <div class="m-0 py-8 text-center text-[13px] text-[var(--pr-color-accents-5)]" data-testid="reporting-empty-search">
+            <span>No indicators match your search '<strong class="font-semibold text-gray-800">{{ plannedSearch() }}</strong>'</span>
+            <button
+              type="button"
+              (click)="clearReportingFilters()"
+              class="ml-2 text-[var(--pr-color-primary-400)] underline font-semibold cursor-pointer border-0 bg-transparent p-0 hover:text-[var(--pr-color-primary-500)]">
+              Clear search
+            </button>
+          </div>
+        } @else {
+          <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No Areas of Work match your search.</p>
+        }
+      }
+    `;
+    const { fixture, component } = await createPlannedComponent({}, emptyTemplate);
+
+    // Initial state: no search query, 0 AoWs
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="reporting-empty-search"]')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('No Areas of Work match your search.');
+
+    // Activate search query
+    component.plannedSearch.set('agroforestry');
+    fixture.detectChanges();
+
+    const emptyContainer = fixture.nativeElement.querySelector('[data-testid="reporting-empty-search"]');
+    expect(emptyContainer).not.toBeNull();
+    expect(emptyContainer.textContent).toContain("No indicators match your search 'agroforestry'");
+
+    const clearButton = emptyContainer.querySelector('button');
+    expect(clearButton).not.toBeNull();
+    expect(clearButton.textContent.trim()).toBe('Clear search');
+
+    // Click "Clear search" button
+    const clearSpy = jest.spyOn(component, 'clearReportingFilters');
+    clearButton.click();
+    expect(clearSpy).toHaveBeenCalled();
+    expect(component.plannedSearch()).toBe('');
+
+    // Rerender after clearing
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="reporting-empty-search"]')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('No Areas of Work match your search.');
+  });
+
+  it('triggers element scroll and focus flash class when pendingKpi is set in tocView=aows', async () => {
+    jest.useFakeTimers();
+    const { component } = await createPlannedComponent();
+    component.plannedBrowseView.set('aows');
+
+    const rowEl = document.createElement('div');
+    rowEl.id = 'indicator-row-42';
+    rowEl.scrollIntoView = jest.fn();
+    document.body.appendChild(rowEl);
+
+    try {
+      jest.spyOn(component, 'reportingGroupsForTable').mockReturnValue([
+        {
+          aow: { code: 'AOW01', name: 'AoW 1' },
+          indicators: [
+            { indicator_id: 42, indicator_description: 'Test KPI 42' } as any
+          ],
+          count: 1,
+          loading: false,
+          kind: 'aow'
+        }
+      ]);
+
+      (component as any).pendingKpi = '42';
+      TestBed.flushEffects();
+
+      expect((component as any).pendingKpi).toBeNull();
+
+      // Advance 100ms for setTimeout to find element and scroll/flash
+      jest.advanceTimersByTime(100);
+
+      expect(rowEl.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+      expect(rowEl.classList.contains('animate-focus-flash')).toBe(true);
+
+      // Advance 1500ms for flash animation class removal
+      jest.advanceTimersByTime(1500);
+      expect(rowEl.classList.contains('animate-focus-flash')).toBe(false);
+    } finally {
+      document.body.removeChild(rowEl);
+      jest.useRealTimers();
+    }
+  });
+
+  it('computes reportingMatchingCount and reportingTypologyCounts accurately', async () => {
+    const { component } = await createPlannedComponent();
+
+    const mockGroups = [
+      {
+        aow: { code: 'AOW01', name: 'Breeding Lines' },
+        indicators: [
+          { indicator_id: 1, indicator_description: 'Rice drought tolerance', result_type_name: 'Knowledge Product' },
+          { indicator_id: 2, indicator_description: 'Wheat resistance', result_type_name: 'Innovation Development' }
+        ],
+        count: 2,
+        loading: false,
+        kind: 'aow' as const
+      },
+      {
+        aow: { code: 'AOW02', name: 'Policy and Impact' },
+        indicators: [
+          { indicator_id: 3, indicator_description: 'Seed policy framework', result_type_name: 'Policy Change' }
+        ],
+        count: 1,
+        loading: false,
+        kind: 'aow' as const
+      }
+    ];
+
+    jest.spyOn(component, 'reportingGroups').mockReturnValue(mockGroups as any);
+    jest.spyOn(component, 'reportingGroupsForTable').mockReturnValue(mockGroups as any);
+
+    // Initial search is empty -> matching count is 0
+    component.plannedSearch.set('');
+    expect(component.reportingMatchingCount()).toBe(0);
+
+    // Search matches 'rice' -> 1 match
+    component.plannedSearch.set('rice');
+    expect(component.reportingMatchingCount()).toBe(1);
+
+    // Search matches AoW name 'Breeding' -> matches all 2 indicators in that group
+    component.plannedSearch.set('Breeding');
+    expect(component.reportingMatchingCount()).toBe(2);
+
+    // Typology counts
+    const typologyCounts = component.reportingTypologyCounts();
+    expect(typologyCounts['all']).toBe(3);
+    expect(typologyCounts['Knowledge Product']).toBe(1);
+    expect(typologyCounts['Innovation Development']).toBe(1);
+    expect(typologyCounts['Policy Change']).toBe(1);
+  });
+});
+

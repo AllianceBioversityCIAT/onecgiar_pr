@@ -13,6 +13,7 @@ import {
   PrTableEmptyDirective
 } from '../../../../../../shared/components/pr-table';
 import { buildRatio, pendingOf } from '../../reporting-burndown';
+import { HighlightSearchPipe } from '../../pipes/highlight-search.pipe';
 
 /**
  * `__aowCode` values for the two program-level buckets (Intermediate Outcomes / 2030 Outcomes) —
@@ -182,7 +183,8 @@ interface IndicatorBand {
     PrSortIconComponent,
     PrTableHeaderDirective,
     PrTableBodyDirective,
-    PrTableEmptyDirective
+    PrTableEmptyDirective,
+    HighlightSearchPipe
   ],
   templateUrl: './reporting-aow-table.component.html',
   styleUrls: ['./reporting-aow-table.component.scss'],
@@ -300,7 +302,7 @@ export class ReportingAowTableComponent {
    * map would leak one programme's open cards into the next (P2-3251).
    */
   private readonly overrides = linkedSignal<string, ReadonlyMap<string, boolean>>({
-    source: () => `${this.scopeKey()}::${this.expandAll()}::${this.expandAllNonce()}`,
+    source: () => `${this.scopeKey()}::${this.expandAll()}::${this.expandAllNonce()}::${this.search().trim()}`,
     computation: () => new Map()
   });
   /** Row titles the user expanded past the 2-line clamp. */
@@ -1101,12 +1103,36 @@ export class ReportingAowTableComponent {
    * `expandAll()` is the only thing that lifts that seed: the toolbar's Expand all switch moves the
    * default for every card at once (P2-3252) instead of writing an override per AoW.
    */
-  isDefaultOpenAow(): boolean {
-    return this.expandAll();
+  isDefaultOpenAow(codeOrKey?: string): boolean {
+    if (this.expandAll()) return true;
+    const q = this.search().trim();
+    if (q.length >= 2) {
+      if (!codeOrKey) return true;
+      const code = codeOrKey.startsWith('aow::') ? codeOrKey.slice(5) : codeOrKey;
+      const grp = this.groups().find(g => g.aow?.code === code);
+      return grp ? this.visibleRows(grp).length > 0 : false;
+    }
+    return false;
   }
 
-  isDefaultOpenHlo(): boolean {
-    return this.expandAll();
+  isDefaultOpenHlo(hloOrKey?: HloGroup | string): boolean {
+    if (this.expandAll()) return true;
+    const q = this.search().trim();
+    if (q.length >= 2) {
+      if (!hloOrKey) return true;
+      if (typeof hloOrKey === 'object' && hloOrKey !== null) {
+        return (hloOrKey.rows?.length ?? 0) > 0;
+      }
+      // string key lookup
+      for (const g of this.groups()) {
+        for (const b of this.bandsOf(g)) {
+          const h = b.groups.find(group => group.key === hloOrKey);
+          if (h) return (h.rows?.length ?? 0) > 0;
+        }
+      }
+      return false;
+    }
+    return false;
   }
 
   /**
@@ -1115,7 +1141,7 @@ export class ReportingAowTableComponent {
    * cards drop out so it does not fill with dead headers.
    */
   readonly visibleGroups = computed(() => {
-    if (!this.filtersActive()) return this.groups();
+    if (!this.filtersActive() && !this.search().trim()) return this.groups();
     return this.groups().filter(g => g.loading || this.visibleRows(g).length > 0);
   });
 
@@ -1131,13 +1157,13 @@ export class ReportingAowTableComponent {
   }
 
   /** Check if all HLO sub-groups in a band are expanded. */
-  isBandAllOpen(groups: { key: string }[]): boolean {
+  isBandAllOpen(groups: HloGroup[]): boolean {
     if (!groups?.length) return false;
-    return groups.every(hlo => this.isOpen(hlo.key, this.isDefaultOpenHlo()));
+    return groups.every(hlo => this.isOpen(hlo.key, this.isDefaultOpenHlo(hlo)));
   }
 
   /** Toggle all HLO sub-groups in a band. */
-  toggleBand(groups: { key: string }[]): void {
+  toggleBand(groups: HloGroup[]): void {
     const allOpen = this.isBandAllOpen(groups);
     this.overrides.update(map => {
       const next = new Map(map);
@@ -1160,8 +1186,7 @@ export class ReportingAowTableComponent {
   readonly allOpen = computed(() => {
     const groups = this.visibleGroups();
     if (!groups.length) return false;
-    const defaultOpen = this.expandAll();
-    return groups.every(group => this.isOpen(`aow::${group.aow.code}`, defaultOpen));
+    return groups.every(group => this.isOpen(`aow::${group.aow.code}`, this.isDefaultOpenAow(group.aow.code)));
   });
 
   constructor() {
@@ -1252,6 +1277,16 @@ export class ReportingAowTableComponent {
   readonly highlightedRowKey = signal<string | null>(null);
   private highlightTimer: ReturnType<typeof setTimeout> | null = null;
 
+  /** Highlight a row by key with transient ring/background highlight for ~2.6s. */
+  highlightRow(targetKey: string): void {
+    this.highlightedRowKey.set(targetKey);
+    if (this.highlightTimer) clearTimeout(this.highlightTimer);
+    this.highlightTimer = setTimeout(() => {
+      this.highlightTimer = null;
+      this.highlightedRowKey.set(null);
+    }, 2600);
+  }
+
   /** True for the ONE row whose report surface just closed — that row offers "Next pending". */
   isLastReportedRow(row: ReportingIndicator): boolean {
     const last = this.lastReported();
@@ -1305,17 +1340,12 @@ export class ReportingAowTableComponent {
       const group = this.visibleGroups().find(g => this.visibleRows(g).some(r => this.rowKey(r) === targetKey));
       if (group) {
         const aowKey = `aow::${group.aow.code}`;
-        if (!this.isOpen(aowKey, this.isDefaultOpenAow())) this.toggle(aowKey, this.isDefaultOpenAow());
+        if (!this.isOpen(aowKey, this.isDefaultOpenAow(group.aow.code))) this.toggle(aowKey, this.isDefaultOpenAow(group.aow.code));
         const hlo = this.hloGroupsOf(group).find(h => h.rows.some(r => this.rowKey(r) === targetKey));
-        if (hlo && !this.isOpen(hlo.key, this.isDefaultOpenHlo())) this.toggle(hlo.key, this.isDefaultOpenHlo());
+        if (hlo && !this.isOpen(hlo.key, this.isDefaultOpenHlo(hlo))) this.toggle(hlo.key, this.isDefaultOpenHlo(hlo));
       }
     }
-    this.highlightedRowKey.set(targetKey);
-    if (this.highlightTimer) clearTimeout(this.highlightTimer);
-    this.highlightTimer = setTimeout(() => {
-      this.highlightTimer = null;
-      this.highlightedRowKey.set(null);
-    }, 2600);
+    this.highlightRow(targetKey);
     // Waits for the card's 280ms disclosure animation to FINISH before scrolling — firing earlier
     // scrolls to a position the expanding card is still pushing around (verified live: 60ms landed
     // off-viewport).

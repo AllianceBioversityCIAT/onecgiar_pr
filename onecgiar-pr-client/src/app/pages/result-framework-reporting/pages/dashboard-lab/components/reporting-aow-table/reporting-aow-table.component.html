@@ -64,6 +64,7 @@
           class="pr-flat-row pr-flat-body"
           role="button"
           tabindex="0"
+          [id]="'indicator-row-' + row.indicator_id"
           [attr.data-row-key]="rowKey(row)"
           [class]="highlightedRowKey() === rowKey(row) ? 'ring-2 ring-inset ring-[var(--pr-color-primary-300)]' : ''"
           [attr.aria-label]="row.indicator_description"
@@ -74,8 +75,8 @@
             <div class="flex min-w-0 flex-col">
               <p
                 class="m-0 text-[13.5px] font-semibold leading-[1.45] text-[var(--pr-text-heading)] [text-wrap:pretty]"
-                [class.pr-clamp-2]="!isTitleExpanded(row.indicator_id)">
-                {{ row.indicator_description }}
+                [class.pr-clamp-2]="!isTitleExpanded(row.indicator_id)"
+                [innerHTML]="row.indicator_description | highlightSearch: search()">
               </p>
               @if (needsShowMore(row)) {
                 <button
@@ -90,15 +91,15 @@
                 @if (row.__typeLabel) {
                   <span
                     class="inline-block max-w-[160px] truncate rounded-full bg-[#6b46e51f] px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-400)]"
-                    [title]="row.__typeLabel">
-                    {{ row.__typeLabel }}
+                    [title]="row.__typeLabel"
+                    [innerHTML]="row.__typeLabel | highlightSearch: search()">
                   </span>
                 }
                 @if (row.__centerLabel && row.__centerLabel !== '—') {
                   <span
                     class="inline-flex items-center justify-center rounded-[5px] bg-slate-100 px-[6px] py-[2px] text-[11px] font-medium text-slate-700 border border-slate-200"
-                    [title]="row.__centerLabel">
-                    {{ row.__centerLabel }}
+                    [title]="row.__centerLabel"
+                    [innerHTML]="row.__centerLabel | highlightSearch: search()">
                   </span>
                 }
               </div>
@@ -284,7 +285,7 @@
       @let aowKey = 'aow::' + group.aow.code;
       <!-- Every card starts collapsed (reference seed `expandedAows: {}`), unless the toolbar's
            Expand all switch moved the default — resolved once per card. -->
-      @let aowOpen = isOpen(aowKey, isDefaultOpenAow());
+      @let aowOpen = isOpen(aowKey, isDefaultOpenAow(group.aow.code));
 
       <!-- No `overflow-hidden` here: it clipped the ⓘ popover to a 6px sliver, and the design's own
            card carries no overflow either (PRMS-Reporting.dc.html:1682). The collapse animation is
@@ -299,7 +300,7 @@
           [class.border-b]="aowOpen"
           [class.border-[var(--pr-border-divider)]]="aowOpen"
           [attr.aria-expanded]="aowOpen"
-          (click)="toggle(aowKey, isDefaultOpenAow())">
+          (click)="toggle(aowKey, isDefaultOpenAow(group.aow.code))">
           <ng-icon
             name="lucideChevronDown"
             class="shrink-0 text-[16px] text-[var(--pr-text-secondary)] transition-transform duration-200"
@@ -309,12 +310,14 @@
           <div class="flex items-center gap-[8px] min-w-0 flex-1 max-w-[420px]">
             <span
               class="pr-code shrink-0 rounded-[6px] px-[8px] py-[2px] text-[11.5px] font-semibold uppercase tracking-[0.02em]"
-              [class]="headerChipClass(group)">
-              {{ headerChip(group) }}
+              [class]="headerChipClass(group)"
+              [innerHTML]="headerChip(group) | highlightSearch: search()">
             </span>
 
-            <span class="min-w-0 truncate text-[15px] font-bold text-[var(--pr-text-heading)]" [title]="group.aow.name">
-              {{ group.aow.name }}
+            <span
+              class="min-w-0 truncate text-[15px] font-bold text-[var(--pr-text-heading)]"
+              [title]="group.aow.name"
+              [innerHTML]="group.aow.name | highlightSearch: search()">
             </span>
 
             <!-- ⓘ — a real disclosure, not a hover that repeats the name printed to its left. -->
@@ -657,7 +660,7 @@
                 <div class="p-4 sm:p-6 pt-2 space-y-4">
                   @for (hlo of band.groups; track hlo.key) {
                     <!-- Sub-groups are seeded OPEN in the reference, so an expanded card shows rows. -->
-                    @let defaultOpen = isDefaultOpenHlo();
+                    @let defaultOpen = isDefaultOpenHlo(hlo);
                     @let tax = hloTaxonomy(hlo, band);
                     <div class="rounded-xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden">
                       <button
@@ -691,8 +694,8 @@
                           <!-- HLO title -->
                           <h3
                             class="m-0 min-w-0 truncate text-[13.5px] font-bold text-slate-900 tracking-tight"
-                            [title]="hlo.name">
-                            {{ hlo.name }}
+                            [title]="hlo.name"
+                            [innerHTML]="hlo.name | highlightSearch: search()">
                           </h3>
                         </div>
 
@@ -796,6 +799,7 @@
     [class.border-l-[var(--pr-border-strong)]]="statusOf(row) === 'not-started'"
     role="button"
     tabindex="0"
+    [id]="'indicator-row-' + row.indicator_id"
     [attr.data-row-key]="rowKey(row)"
     [class.ring-2]="highlightedRowKey() === rowKey(row)"
     [class.ring-inset]="highlightedRowKey() === rowKey(row)"
@@ -822,8 +826,8 @@
     <div class="flex min-w-0 flex-col">
       <p
         class="m-0 text-[12.5px] font-medium leading-[1.35] text-[var(--pr-text-heading)] [text-wrap:pretty] group-hover:text-[var(--pr-color-primary-600)] transition-colors"
-        [class.pr-clamp-2]="!isTitleExpanded(row.indicator_id)">
-        {{ row.indicator_description }}
+        [class.pr-clamp-2]="!isTitleExpanded(row.indicator_id)"
+        [innerHTML]="row.indicator_description | highlightSearch: search()">
       </p>
       @if (needsShowMore(row)) {
         <button
@@ -837,22 +841,22 @@
       <div class="mt-[6px] flex flex-wrap items-center gap-[6px]">
         @if (aowCodeOf(row) && showAow) {
           <span
-            class="inline-flex h-[20px] items-center rounded-[5px] bg-[var(--pr-color-primary-50)] px-[6px] font-mono text-[11px] font-bold text-[var(--pr-color-primary-700)] border border-[var(--pr-color-primary-100)]">
-            {{ aowCodeOf(row) }}
+            class="inline-flex h-[20px] items-center rounded-[5px] bg-[var(--pr-color-primary-50)] px-[6px] font-mono text-[11px] font-bold text-[var(--pr-color-primary-700)] border border-[var(--pr-color-primary-100)]"
+            [innerHTML]="aowCodeOf(row) | highlightSearch: search()">
           </span>
         }
         @if (indicatorNameOf(row)) {
           <!-- Violet, like the By-AOW card's category chip — same entity, same colour in both views. -->
           <span
             class="inline-flex max-w-[280px] items-center truncate rounded-full bg-[#6b46e51f] px-[8px] py-px text-[11px] font-semibold text-[var(--pr-color-primary-400)]"
-            [title]="indicatorNameOf(row)">
-            {{ indicatorNameOf(row) }}
+            [title]="indicatorNameOf(row)"
+            [innerHTML]="indicatorNameOf(row) | highlightSearch: search()">
           </span>
         }
         @if (row.center_acronym) {
           <span
-            class="inline-flex items-center rounded-[5px] bg-slate-100 px-[6px] py-[1px] text-[11px] font-medium text-slate-700 border border-slate-200">
-            {{ row.center_acronym }}
+            class="inline-flex items-center rounded-[5px] bg-slate-100 px-[6px] py-[1px] text-[11px] font-medium text-slate-700 border border-slate-200"
+            [innerHTML]="row.center_acronym | highlightSearch: search()">
           </span>
         }
       </div>

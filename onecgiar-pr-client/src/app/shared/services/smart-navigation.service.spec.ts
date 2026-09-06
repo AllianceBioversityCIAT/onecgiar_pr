@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { RESULT_DETAIL_ORIGIN_STORAGE_KEY, SmartNavigationService } from './smart-navigation.service';
+import { isReportingTab, RESULT_DETAIL_ORIGIN_STORAGE_KEY, SmartNavigationService } from './smart-navigation.service';
 
 describe('SmartNavigationService', () => {
   let service: SmartNavigationService;
@@ -55,6 +55,24 @@ describe('SmartNavigationService', () => {
       '/result-framework-reporting/entity-details/SP02',
       '/result-framework-reporting/entity-details/SP02?tocView=byAow&tocAow=AOW01'
     ]);
+  });
+
+  describe('isReportingTab', () => {
+    it('returns true for entity-details root URLs with or without query parameters', () => {
+      expect(isReportingTab('/result-framework-reporting/entity-details/SP01')).toBe(true);
+      expect(
+        isReportingTab('/result-framework-reporting/entity-details/SP02?tocView=aows&q=rice&typ=kp&kpi=101')
+      ).toBe(true);
+      expect(isReportingTab('/entity-details/SP03/')).toBe(true);
+    });
+
+    it('returns false for sibling tabs and unrelated paths', () => {
+      expect(isReportingTab('/result-framework-reporting/entity-details/SP01/overview')).toBe(false);
+      expect(isReportingTab('/results')).toBe(false);
+      expect(isReportingTab('/my-work')).toBe(false);
+      expect(isReportingTab('/results-review')).toBe(false);
+      expect(isReportingTab('/results-outlet/results-list')).toBe(false);
+    });
   });
 
   describe('getBackTarget and getPreviousUrl', () => {
@@ -241,6 +259,7 @@ describe('SmartNavigationService', () => {
     const resultsCenter = '/result/results-outlet/results-list?phase=36';
     const overview = '/result-framework-reporting/entity-details/SP12/overview';
     const resultsReview = '/result-framework-reporting/entity-details/SP12/results-review';
+    const reportingOrigin = '/result-framework-reporting/entity-details/SP02?tocView=aows&q=rice&typ=kp&kpi=101';
 
     it('returns the Science Program Results tab when that is the first non-detail origin', () => {
       service.recordUrl(programmeResults);
@@ -332,6 +351,36 @@ describe('SmartNavigationService', () => {
       });
 
       expect(TestBed.inject(SmartNavigationService).getResultDetailBackTarget(detail).url).toBe(programmeResults);
+    });
+
+    it('returns the Reporting tab URL preserving query parameters when navigating Reporting -> result-detail', () => {
+      service.recordUrl(reportingOrigin);
+      service.recordUrl(detail);
+
+      const target = service.getResultDetailBackTarget(detail);
+
+      expect(target.url).toBe(reportingOrigin);
+      expect(target.label).toBe('Back to results');
+    });
+
+    it('returns the Reporting tab URL after section hops within result-detail', () => {
+      service.recordUrl(reportingOrigin);
+      service.recordUrl(detail);
+      service.recordUrl(contributors);
+
+      expect(service.getResultDetailBackTarget(contributors).url).toBe(reportingOrigin);
+    });
+
+    it('retrieves the persisted Reporting origin from sessionStorage after fresh construct (simulating page reload on result-detail)', () => {
+      sessionStorage.setItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY, reportingOrigin);
+      TestBed.resetTestingModule();
+      mockRouter.url = detail;
+      mockRouter.getCurrentNavigation = jest.fn(() => null);
+      TestBed.configureTestingModule({
+        providers: [SmartNavigationService, { provide: Router, useValue: mockRouter }]
+      });
+
+      expect(TestBed.inject(SmartNavigationService).getResultDetailBackTarget(detail).url).toBe(reportingOrigin);
     });
   });
 });

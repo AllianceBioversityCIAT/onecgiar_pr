@@ -1047,4 +1047,235 @@ describe('ReportingProgramBandComponent', () => {
       expect(navSpy).toHaveBeenCalledWith(['/result-framework-reporting/entity-details/SP01/my-work'], { queryParamsHandling: 'preserve' });
     });
   });
+
+  // ── RHSF-T-3 · Quick typology filter chips & match count badge & debounced search ──
+  describe('quick filter chips', () => {
+    it('renders the 6 typologies with live counts when toolbar is open and not compact', async () => {
+      await build({
+        showToolbar: true,
+        compactFilters: false,
+        plannedResultsCount: 50,
+        typologyCounts: {
+          all: 50,
+          'Knowledge product': 15,
+          'Innovation development': 12,
+          'Policy change': 8,
+          'Innovation use': 6,
+          'Capacity sharing for development': 4
+        }
+      });
+
+      const strip = root().querySelector('[data-testid="quick-typology-filters"]');
+      expect(strip).toBeTruthy();
+
+      const chips = Array.from(strip!.querySelectorAll('button'));
+      expect(chips.length).toBe(6);
+
+      const expected = [
+        { label: 'All', count: '50' },
+        { label: 'Knowledge Product', count: '15' },
+        { label: 'Innovation Development', count: '12' },
+        { label: 'Policy Change', count: '8' },
+        { label: 'Innovation Use', count: '6' },
+        { label: 'Capacity Sharing', count: '4' }
+      ];
+
+      expected.forEach((exp, idx) => {
+        expect(chips[idx].textContent).toContain(exp.label);
+        expect(chips[idx].textContent).toContain(exp.count);
+      });
+    });
+
+    it('falls back to plannedResultsCount for All and 0 for typologies without counts', async () => {
+      await build({
+        showToolbar: true,
+        compactFilters: false,
+        plannedResultsCount: 25,
+        typologyCounts: {}
+      });
+
+      const strip = root().querySelector('[data-testid="quick-typology-filters"]');
+      const chips = Array.from(strip!.querySelectorAll('button'));
+      expect(chips[0].textContent).toContain('All');
+      expect(chips[0].textContent).toContain('25');
+      expect(chips[1].textContent).toContain('Knowledge Product');
+      expect(chips[1].textContent).toContain('0');
+    });
+
+    it('does not render quick filter chips when compactFilters is true', async () => {
+      await build({
+        showToolbar: true,
+        compactFilters: true
+      });
+
+      const strip = root().querySelector('[data-testid="quick-typology-filters"]');
+      expect(strip).toBeNull();
+    });
+
+    it('clicking a chip emits typologyChange with matchKey, and clicking active chip reverts to all', async () => {
+      await build({
+        showToolbar: true,
+        compactFilters: false,
+        typologyValue: 'all'
+      });
+
+      const spy = jest.spyOn(component.typologyChange, 'emit');
+      const strip = root().querySelector('[data-testid="quick-typology-filters"]');
+      const chips = Array.from(strip!.querySelectorAll('button'));
+
+      // Click Knowledge Product (index 1)
+      chips[1].click();
+      expect(spy).toHaveBeenCalledWith('Knowledge product');
+
+      // Now set typologyValue to 'Knowledge product' so it becomes active
+      fixture.componentRef.setInput('typologyValue', 'Knowledge product');
+      fixture.detectChanges();
+
+      expect(chips[1].getAttribute('aria-pressed')).toBe('true');
+      expect(chips[0].getAttribute('aria-pressed')).toBe('false');
+
+      // Click active chip again -> reverts to 'all'
+      chips[1].click();
+      expect(spy).toHaveBeenCalledWith('all');
+
+      // Click 'All' chip -> emits 'all'
+      chips[0].click();
+      expect(spy).toHaveBeenCalledWith('all');
+    });
+  });
+
+  describe('search match counter badge', () => {
+    it('renders match counter badge when search has text and matchCount > 0', async () => {
+      await build({
+        showToolbar: true,
+        search: 'wheat',
+        matchCount: 4
+      });
+
+      const badge = root().querySelector('[data-testid="search-match-count"]');
+      expect(badge).toBeTruthy();
+      expect(badge?.textContent?.trim()).toBe('4 matches');
+      expect(badge?.classList.contains('bg-violet-50')).toBe(true);
+      expect(badge?.classList.contains('text-violet-700')).toBe(true);
+      expect(badge?.classList.contains('border-violet-200')).toBe(true);
+    });
+
+    it('renders singular "1 match" when matchCount is 1', async () => {
+      await build({
+        showToolbar: true,
+        search: 'wheat',
+        matchCount: 1
+      });
+
+      const badge = root().querySelector('[data-testid="search-match-count"]');
+      expect(badge).toBeTruthy();
+      expect(badge?.textContent?.trim()).toBe('1 match');
+      expect(badge?.classList.contains('bg-violet-50')).toBe(true);
+      expect(badge?.classList.contains('text-violet-700')).toBe(true);
+      expect(badge?.classList.contains('border-violet-200')).toBe(true);
+    });
+
+    it('renders 0 matches with amber warning styling when matchCount is 0', async () => {
+      await build({
+        showToolbar: true,
+        search: 'xyznotfound',
+        matchCount: 0
+      });
+
+      const badge = root().querySelector('[data-testid="search-match-count"]');
+      expect(badge).toBeTruthy();
+      expect(badge?.textContent?.trim()).toBe('0 matches');
+      expect(badge?.classList.contains('bg-amber-50')).toBe(true);
+      expect(badge?.classList.contains('text-amber-800')).toBe(true);
+      expect(badge?.classList.contains('border-amber-200')).toBe(true);
+    });
+
+    it('does not render match counter badge when search is empty or matchCount is null', async () => {
+      await build({
+        showToolbar: true,
+        search: '',
+        matchCount: 5
+      });
+      expect(root().querySelector('[data-testid="search-match-count"]')).toBeNull();
+
+      fixture.componentRef.setInput('search', 'wheat');
+      fixture.componentRef.setInput('matchCount', null);
+      fixture.detectChanges();
+      expect(root().querySelector('[data-testid="search-match-count"]')).toBeNull();
+    });
+  });
+
+  describe('search debouncing', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('debounces input by 150ms before emitting searchChange', async () => {
+      jest.useFakeTimers();
+      await build({ showToolbar: true });
+
+      const emitSpy = jest.spyOn(component.searchChange, 'emit');
+      const searchInput = root().querySelector('input[type="text"]') as HTMLInputElement;
+      expect(searchInput).toBeTruthy();
+
+      searchInput.value = 'maize';
+      searchInput.dispatchEvent(new Event('input'));
+
+      // Not emitted immediately
+      expect(emitSpy).not.toHaveBeenCalled();
+
+      // Not emitted at 100ms
+      jest.advanceTimersByTime(100);
+      expect(emitSpy).not.toHaveBeenCalled();
+
+      // Emitted after 150ms total
+      jest.advanceTimersByTime(50);
+      expect(emitSpy).toHaveBeenCalledTimes(1);
+      expect(emitSpy).toHaveBeenCalledWith('maize');
+    });
+
+    it('cancels previous timer on subsequent input keystrokes', async () => {
+      jest.useFakeTimers();
+      await build({ showToolbar: true });
+
+      const emitSpy = jest.spyOn(component.searchChange, 'emit');
+      const searchInput = root().querySelector('input[type="text"]') as HTMLInputElement;
+
+      searchInput.value = 'mai';
+      searchInput.dispatchEvent(new Event('input'));
+      jest.advanceTimersByTime(100);
+
+      searchInput.value = 'maize';
+      searchInput.dispatchEvent(new Event('input'));
+      jest.advanceTimersByTime(100);
+      expect(emitSpy).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(50);
+      expect(emitSpy).toHaveBeenCalledTimes(1);
+      expect(emitSpy).toHaveBeenCalledWith('maize');
+    });
+
+    it('clear button emits immediately and cancels pending debounce timer', async () => {
+      jest.useFakeTimers();
+      await build({ showToolbar: true, search: 'maize' });
+
+      const emitSpy = jest.spyOn(component.searchChange, 'emit');
+      const searchInput = root().querySelector('input[type="text"]') as HTMLInputElement;
+
+      // Start a pending debounce
+      searchInput.value = 'maize seeds';
+      searchInput.dispatchEvent(new Event('input'));
+
+      const clearBtn = root().querySelector('button[aria-label="Clear search"]') as HTMLButtonElement;
+      expect(clearBtn).toBeTruthy();
+
+      clearBtn.click();
+      expect(emitSpy).toHaveBeenCalledTimes(1);
+      expect(emitSpy).toHaveBeenCalledWith('');
+
+      // Advance timers to verify debounce timer was cleared and does not emit again
+      jest.advanceTimersByTime(200);
+      expect(emitSpy).toHaveBeenCalledTimes(1);
+    });
+  });
 });

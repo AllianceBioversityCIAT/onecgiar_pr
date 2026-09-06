@@ -195,14 +195,14 @@ describe('planned-search.util', () => {
   describe('highlightPlannedSearch', () => {
     it('highlights the phrase and leftover tokens without nesting marks', () => {
       const html = highlightPlannedSearch('Market Intelligence', 'intelligence ma');
-      expect(html).toContain('<mark class="planned-search-hit">Ma</mark>');
-      expect(html).toContain('<mark class="planned-search-hit">Intelligence</mark>');
-      expect(html).not.toContain('<mark class="planned-search-hit"><mark');
+      expect(html).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">Ma</mark>');
+      expect(html).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">Intelligence</mark>');
+      expect(html).not.toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5"><mark');
     });
 
     it('highlights fuzzy counterpart words for typos', () => {
       const html = highlightPlannedSearch('Market Intelligence', 'inteligence');
-      expect(html.toLowerCase()).toContain('<mark class="planned-search-hit">intelligence</mark>');
+      expect(html.toLowerCase()).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">intelligence</mark>');
     });
 
     it('returns an empty string for empty, null or undefined text', () => {
@@ -222,12 +222,12 @@ describe('planned-search.util', () => {
 
     it('keeps the text after the last hit', () => {
       const html = highlightPlannedSearch('Market intelligence programme', 'market');
-      expect(html).toBe('<mark class="planned-search-hit">Market</mark> intelligence programme');
+      expect(html).toBe('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">Market</mark> intelligence programme');
     });
 
     it('keeps the text before the first hit', () => {
       const html = highlightPlannedSearch('The market', 'market');
-      expect(html).toBe('The <mark class="planned-search-hit">market</mark>');
+      expect(html).toBe('The <mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">market</mark>');
     });
 
     it('highlights every occurrence of the same needle', () => {
@@ -237,16 +237,45 @@ describe('planned-search.util', () => {
 
     it('merges adjacent and overlapping ranges into one mark', () => {
       const html = highlightPlannedSearch('Intelligence', 'intel intelligence');
-      expect(html).toBe('<mark class="planned-search-hit">Intelligence</mark>');
+      expect(html).toBe('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">Intelligence</mark>');
     });
 
     it('escapes the highlighted fragment itself', () => {
       const html = highlightPlannedSearch('a <b> c', '<b>');
-      expect(html).toBe('a <mark class="planned-search-hit">&lt;b&gt;</mark> c');
+      expect(html).toBe('a <mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">&lt;b&gt;</mark> c');
     });
 
     it('coerces a non-string value before highlighting', () => {
-      expect(highlightPlannedSearch(2026 as any, '20')).toBe('<mark class="planned-search-hit">20</mark>26');
+      expect(highlightPlannedSearch(2026 as any, '20')).toBe('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">20</mark>26');
+    });
+
+    it('safely handles regex characters like parentheses without crashing or syntax error', () => {
+      const html = highlightPlannedSearch('Improved variety (irri) released', 'variety (irri)');
+      expect(html).toBe('Improved <mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">variety (irri)</mark> released');
+    });
+
+    it('safely handles regex plus signs in query without crashing or syntax error', () => {
+      const html = highlightPlannedSearch('Run test+foo before commit', 'test+foo');
+      expect(html).toBe('Run <mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">test+foo</mark> before commit');
+    });
+
+    it('safely handles regex square brackets in query without crashing or syntax error', () => {
+      const html = highlightPlannedSearch('Partners: [nars] in 2026', '[nars]');
+      expect(html).toBe('Partners: <mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">[nars]</mark> in 2026');
+    });
+
+    it('safely handles special regex characters (*, ?, ^, $, |, \\) without crashing or corrupting output', () => {
+      const text = 'Complex pattern a*b?c^d$e|f\\g';
+      expect(() => highlightPlannedSearch(text, '*b?c^d$')).not.toThrow();
+      const html = highlightPlannedSearch(text, '*b?c^d$');
+      expect(html).toBe('Complex pattern a<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">*b?c^d$</mark>e|f\\g');
+    });
+
+    it('properly escapes HTML while highlighting text with regex special characters', () => {
+      const html = highlightPlannedSearch('<div>[nars] (IRRI) & more</div>', '[nars] (irri)');
+      expect(html).toBe(
+        '&lt;div&gt;<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">[nars] (IRRI)</mark> &amp; more&lt;/div&gt;'
+      );
     });
   });
 });

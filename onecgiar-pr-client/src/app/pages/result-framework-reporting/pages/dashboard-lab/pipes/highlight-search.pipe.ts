@@ -3,7 +3,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { highlightPlannedSearch } from './planned-search.util';
 
 /**
- * Highlights the full query phrase and each word (token) in yellow.
+ * Highlights the full query phrase and each word (token) in violet.
  * Escapes HTML so content cannot inject markup.
  */
 @Pipe({ name: 'highlightSearch', standalone: true, pure: true })

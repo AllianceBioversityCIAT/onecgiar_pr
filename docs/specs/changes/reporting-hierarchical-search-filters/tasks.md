@@ -36,7 +36,7 @@ Implementation task breakdown for Phase 1 of the PRMS Result Framework Reporting
 ### `RHSF-T-1` — Token-Safe Highlighting & HTML Sanitization in Search Utility
 - **Type:** `client | tests`
 - **Estimate:** `S` (≤ 0.5d)
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Depends on:** `—`
 - **Blocks:** `RHSF-T-2`
 - **Skills:** `angular-developer`
@@ -55,16 +55,16 @@ Implementation task breakdown for Phase 1 of the PRMS Result Framework Reporting
 - **Verification Command:**
   `npx jest src/app/pages/result-framework-reporting/pages/dashboard-lab/pipes/planned-search.util.spec.ts --silent --reporters=summary --no-coverage`
 - **Definition of Done:**
-  - [ ] `highlightPlannedSearch` produces Tailwind mark classes with WCAG AA contrast.
-  - [ ] Unit tests verify regex escaping, special characters, and HTML entity preservation.
-  - [ ] Jest test suite passes 100%.
+  - [x] `highlightPlannedSearch` produces Tailwind mark classes with WCAG AA contrast.
+  - [x] Unit tests verify regex escaping, special characters, and HTML entity preservation.
+  - [x] Jest test suite passes 100%.
 
 ---
 
 ### `RHSF-T-2` — Dynamic Hierarchical Auto-Expansion & Scoped Overrides in Reporting Table
 - **Type:** `client | tests`
 - **Estimate:** `M` (≤ 1d)
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Depends on:** `RHSF-T-1`
 - **Blocks:** `RHSF-T-3`, `RHSF-T-5`
 - **Skills:** `angular-developer`, `ui-ux-pro-max`
@@ -83,17 +83,17 @@ Implementation task breakdown for Phase 1 of the PRMS Result Framework Reporting
 - **Verification Command:**
   `npx jest src/app/pages/result-framework-reporting/pages/dashboard-lab/components/reporting-aow-table/reporting-aow-table.component.spec.ts --silent --reporters=summary --no-coverage`
 - **Definition of Done:**
-  - [ ] Typing query auto-expands parent AoW cards and HLO sub-groups containing matching indicators.
-  - [ ] Clearing search flushes overrides and restores default collapsed state.
-  - [ ] Highlights render safely with `<mark>` elements in indicator rows.
-  - [ ] Jest test suite passes with new auto-expansion assertions.
+  - [x] Typing query auto-expands parent AoW cards and HLO sub-groups containing matching indicators.
+  - [x] Clearing search flushes overrides and restores default collapsed state.
+  - [x] Highlights render safely with `<mark>` elements in indicator rows.
+  - [x] Jest test suite passes with new auto-expansion assertions.
 
 ---
 
 ### `RHSF-T-3` — Result-Type Quick Filter Chips & Live Match Counter in Program Band
 - **Type:** `client | tests`
 - **Estimate:** `M` (≤ 1d)
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Depends on:** `RHSF-T-2`
 - **Blocks:** `RHSF-T-5`
 - **Skills:** `angular-developer`, `ui-ux-pro-max`
@@ -115,17 +115,17 @@ Implementation task breakdown for Phase 1 of the PRMS Result Framework Reporting
 - **Verification Command:**
   `npx jest src/app/pages/result-framework-reporting/pages/dashboard-lab/components/reporting-program-band/reporting-program-band.component.spec.ts --silent --reporters=summary --no-coverage`
 - **Definition of Done:**
-  - [ ] Filter chips render with correct counts and active toggle states.
-  - [ ] Selecting chip updates `plannedTypeFilter` and table rows reactively.
-  - [ ] Match counter updates in real time with clear button.
-  - [ ] Unit tests cover chip clicks, counts, and search debounce.
+  - [x] Filter chips render with correct counts and active toggle states.
+  - [x] Selecting chip updates `plannedTypeFilter` and table rows reactively.
+  - [x] Match counter updates in real time with clear button.
+  - [x] Unit tests cover chip clicks, counts, and search debounce.
 
 ---
 
 ### `RHSF-T-4` — SmartNavigationService Reporting Tab Origin & Query Parameter Retention
 - **Type:** `client | tests`
 - **Estimate:** `S` (≤ 0.5d)
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Depends on:** `—`
 - **Blocks:** `RHSF-T-5`
 - **Skills:** `angular-developer`
@@ -143,16 +143,16 @@ Implementation task breakdown for Phase 1 of the PRMS Result Framework Reporting
 - **Verification Command:**
   `npx jest src/app/shared/services/smart-navigation.service.spec.ts --silent --reporters=summary --no-coverage`
 - **Definition of Done:**
-  - [ ] Reporting tab is recognized as a known `result-detail` origin.
-  - [ ] Query parameters are preserved without truncation.
-  - [ ] Unit tests pass for direct navigation and round-trip exit from `result-detail`.
+  - [x] Reporting tab is recognized as a known `result-detail` origin.
+  - [x] Query parameters are preserved without truncation.
+  - [x] Unit tests pass for direct navigation and round-trip exit from `result-detail`.
 
 ---
 
 ### `RHSF-T-5` — DashboardLab URL State Synchronization, Focus Recovery & Empty State
 - **Type:** `client | tests`
 - **Estimate:** `M` (≤ 1d)
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Depends on:** `RHSF-T-3`, `RHSF-T-4`
 - **Blocks:** `—`
 - **Skills:** `angular-developer`, `ui-ux-pro-max`
@@ -173,10 +173,10 @@ Implementation task breakdown for Phase 1 of the PRMS Result Framework Reporting
 - **Verification Command:**
   `npx jest src/app/pages/result-framework-reporting/pages/dashboard-lab/dashboard-lab.component.spec.ts --silent --reporters=summary --no-coverage`
 - **Definition of Done:**
-  - [ ] `tocView=aows` synchronizes `q` and `typ` with URL without infinite loops.
-  - [ ] Returning from `result-detail` restores query, filters, and target KPI scroll position with transient highlight.
-  - [ ] Zero-matches empty state renders dynamic query and "Clear search" button.
-  - [ ] Jest integration suite passes 100%.
+  - [x] `tocView=aows` synchronizes `q` and `typ` with URL without infinite loops.
+  - [x] Returning from `result-detail` restores query, filters, and target KPI scroll position with transient highlight.
+  - [x] Zero-matches empty state renders dynamic query and "Clear search" button.
+  - [x] Jest integration suite passes 100%.
 
 ---
 

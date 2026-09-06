@@ -26,12 +26,12 @@ describe('HighlightSearchPipe', () => {
 
   it('highlights each word when the query is split', () => {
     const html = pipe.transform('Market Intelligence', 'intelligence ma') as string;
-    expect(html).toContain('<mark class="planned-search-hit">Ma</mark>');
-    expect(html).toContain('<mark class="planned-search-hit">Intelligence</mark>');
+    expect(html).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">Ma</mark>');
+    expect(html).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">Intelligence</mark>');
   });
 
   it('escapes regex metacharacters in the query', () => {
     const html = pipe.transform('cost is $5.00', '$5.00') as string;
-    expect(html).toContain('<mark class="planned-search-hit">$5.00</mark>');
+    expect(html).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">$5.00</mark>');
   });
 });
