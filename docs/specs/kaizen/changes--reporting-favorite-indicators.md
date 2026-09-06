@@ -7,9 +7,9 @@
 | Spec Path | `changes/reporting-favorite-indicators` · Prefix `RFI` |
 | Date | 2026-09-05 |
 | Branch | `feat/reporting-favorite-indicators` (worktree off `qa-development-2026` @ `336d16632`; default pin `master`) |
-| Archive Run | 1 (pre-merge — the branch is complete, the merge waits for RHSF to commit) |
+| Archive Run | 1 (archived 2026-09-06 after the merge into `qa-development-2026`, ff `9591679b2`) |
 | Approval Mode | `pre-approved` (user "YOLO MODE", 2026-09-05) · Depth Standard |
-| Outcome | 4/4 tasks PASS; HITL-1 PASS on the worktree dev server; 0 HALT; 1 rework round (T-4, test fixture only) |
+| Outcome | 4/4 tasks PASS; HITL-1 PASS; 0 HALT; 1 rework round (T-4, test fixture only); merged with RHSF without conflicts, 459/459 on the merged tree |
 
 ## Metrics
 
@@ -51,8 +51,23 @@
 
 ## Pending Items
 
+Branch Context: `qa-development-2026` ≠ default pin `master` → every item below is `Status: pending`, awaiting the apply phase on the default branch. No shared file was written by this archive.
+
+| # | Kind | Target | Severity | Edit (verbatim) |
+|---|---|---|---|---|
+| K1 | `guide-sync` | `onecgiar-pr-client/src/app/pages/result-framework-reporting/pages/dashboard-lab/CLAUDE.md` → "Hijos sin archivo propio" table | Low | `\| services/reporting-favorites.service.ts \| Store per-usuario/por-programa de indicadores favoritos (localStorage pr.reporting.favorites.v1.<userId>); favoriteKeyOf === rowKey \| El host es el único que lo inyecta — la tabla nunca (RFI-DD-1) \|` |
+| K2 | `factual-sweep` | root `CLAUDE.md` / `onecgiar-pr-client/src/CLAUDE.md` | — | Swept: no falsified claim found (neither guide enumerates the Reporting filters or dashboard-lab services). Nothing to apply. |
+| K3 | `trd-adr` | `docs/trd/trd.md` | — | No TRD decision overturned; no ADR item. |
+| K4 | `standardization` (P1) | `docs/infrastructure.md` §6 Local Environment | Medium | `- Concurrent spec in the same checkout → work in a sibling worktree: git worktree add -b feat/<slug> ~/Development/worktrees/onecgiar_pr/<slug> <HEAD>; symlink onecgiar-pr-client/node_modules; copy the gitignored onecgiar-pr-client/src/environments/*.ts; put new tests in new *.spec.ts files.` |
+| K5 | `standardization` (P2, Methodology) | `/akili-specify` Phase 2 (upstream AKILI) + local note in `docs/specs/general-setup/design.md` | Medium | `- §6 Frontend Plan MUST quote the ⚠️/🛑 lines of every touched component guide (child CLAUDE.md) it is bound by.` |
+| K6 | `standardization` (P3) | `docs/specs/general-setup/task.md` §3 Disqualifiers | Medium | `- The fixture must contain at least one element the named mutation treats differently; a test whose expected and mutated outputs coincide is not a gate.` |
+| K7 | follow-up specs (P4) | `docs/specs/changes/…` | — | `changes/user-preferences-api` (backend pins); stars in By AOW rows; `fav=1` URL param after RHSF-T-5; `inert` on `.pr-collapse`; `__allIndicators` JSDoc amendment in `reporting-aow-table` |
+| K8 | CodeGraph | `.codegraph/` (exists, index not committed) | — | Re-index recommended: `codegraph sync` — one new service + new inputs/outputs on two components |
+
+### Legacy P-list (kept for traceability)
+
 ### P1 — worktree recipe into the local environment contract (`docs/infrastructure.md` §6) — apply on the default branch.
 ### P2 — `/akili-specify` Phase 2 rule "quote the touched component guides' trap lines" — upstream to AKILI; local template note.
 ### P3 — task template Disqualifiers: fixture must be mutation-sensitive — `docs/specs/general-setup/task.md`, apply on the default branch.
 ### P4 — follow-up specs: `changes/user-preferences-api` (backend pins, cross-device), stars in the By AOW view rows, `fav=1` URL param after RHSF-T-5, `inert` on `.pr-collapse`.
-### P5 — merge `feat/reporting-favorite-indicators` into `qa-development-2026` after RHSF commits; re-run `RFI-HITL-1` on the merged server (optional).
+### P5 — DONE 2026-09-06: merged (`ba71b5a8f`, ff `9591679b2`), 459/459 green on the merged tree; HITL re-run on the merged server optional.

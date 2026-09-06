@@ -170,7 +170,7 @@ T-2 ∥ T-3 (disjoint files) — spawn two Implementers in one wave.
 ## 6. Rollout & verification
 - [x] Per-task commits on `feat/reporting-favorite-indicators` with `[SPEC:changes/reporting-favorite-indicators]`.
 - [x] `npx ng lint --quiet` once after T-4 — "All files pass linting."
-- [ ] Merge into `qa-development-2026` **after** RHSF lands (expected conflicts: `dashboard-lab.component.html` bindings, `reporting-aow-table.component.html` action cells — mechanical).
+- [x] Merged into `qa-development-2026` after RHSF landed (`ba71b5a8f` merge, no conflicts; ff to `9591679b2`; 13 suites / 459 tests green on the merged tree).
 - [x] `RFI-HITL-1` — run on the worktree dev server (`:4201`) before merge, PASS (see `execution.md`); re-run on the merged server is optional.
 
 ## 7. Roll-back
