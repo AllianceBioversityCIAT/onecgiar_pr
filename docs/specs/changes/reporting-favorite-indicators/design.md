@@ -100,7 +100,7 @@ Template — star button inserted as the **first** child of both action cells (g
 ```
 Flat cell uses `h-[28px] w-[28px] rounded-[8px]` to match its *Copy link*. Angular merges static `class` with `[class]` string bindings — the shared utilities stay in the static attribute, the state-dependent ones in the binding (same pattern as the band's *Only pending* button).
 
-Grid tracks (`reporting-aow-table.component.scss`): `$pr-reporting-tracks` action track `108px → 140px` (26px star + 6px gap); `$pr-flat-tracks` last track `150px → 184px`, and its two wider breakpoint overrides `176px → 210px`, `190px → 224px` (28px star + 6px gap = 34px, JD-3); `.pr-hlo-head { min-width: 820px }` → `852px` so the sub-header's floor grows with the row (JD-4). Only numeric edits to existing rules — no new SCSS blocks, brand rule §7.1.
+Grid tracks (`reporting-aow-table.component.scss`): `$pr-reporting-tracks` action track `108px → 140px` (26px star + 6px gap); `$pr-flat-tracks` last track `150px → 184px`, and its two wider breakpoint overrides `176px → 210px`, `190px → 224px` (28px star + 6px gap = 34px, JD-3); the three rules sharing `$pr-reporting-tracks` (`.pr-hlo-head`, `.pr-hlo-row`, `.pr-reporting-row`) each carry `min-width: 820px` → all three go to `852px` so header and rows keep one floor and stay aligned under ~900px (JD-4; Leader clarification during RFI-T-2). Only numeric edits to existing rules — no new SCSS blocks, brand rule §7.1.
 
 Empty state — both table-level blocks (`prTableEmpty` and `@if (!visibleGroups().length)`): add a first branch
 ```html

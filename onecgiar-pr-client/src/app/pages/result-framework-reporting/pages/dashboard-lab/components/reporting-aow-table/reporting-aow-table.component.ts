@@ -243,6 +243,19 @@ export class ReportingAowTableComponent {
    * report. `null` before the session's first report.
    */
   readonly lastReported = input<{ id: unknown; aowCode: string } | null>(null);
+  /**
+   * Keys of the rows the user has starred, `rowKey`-shaped, for the CURRENT programme only — the
+   * host owns the store (`ReportingFavoritesService`) and derives this set per programme
+   * (`RFI-DD-1`). This component stays presentation-only: it never injects the service.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly favoriteKeys = input<ReadonlySet<string>>(new Set<string>());
+  /**
+   * Whether the host is currently showing only favorite rows. Drives the RFI-R-2.6 empty-state
+   * copy when the programme has zero favorites.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly favoritesOnly = input<boolean>(false);
 
   readonly openAow = output<string>();
   readonly openRow = output<ReportingIndicator>();
@@ -263,6 +276,18 @@ export class ReportingAowTableComponent {
    * press will actually do (P2-3252).
    */
   readonly allOpenChange = output<boolean>();
+  /**
+   * Toggles a row's favorite state. The host owns the store and does the toggling
+   * (`ReportingFavoritesService.toggle`) — this component only names the row.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly toggleFavorite = output<ReportingIndicator>();
+  /**
+   * Emitted by the RFI-R-2.6 empty state's `Show all indicators` button — asks the host to turn
+   * `favoritesOnly` off, mirroring `clearFilters`.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly exitFavoritesOnly = output<void>();
 
   /**
    * Disclosure = a user override on top of a level default (see `isDefaultOpenAow` /
@@ -1329,6 +1354,20 @@ export class ReportingAowTableComponent {
 
   rowKey(row: ReportingIndicator): string {
     return `${row.indicator_id}::${row.center_id ?? ''}::${row.__aowCode ?? ''}`;
+  }
+
+  /**
+   * Whether `row` is starred. `rowKey` and `favoriteKeyOf` (the service's own key builder) MUST
+   * stay byte-identical (RFI-AC-14) — this component never imports the service, only the input.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  isFavorite(row: ReportingIndicator): boolean {
+    return this.favoriteKeys().has(this.rowKey(row));
+  }
+
+  /** @akili-spec changes/reporting-favorite-indicators */
+  favoriteLabel(row: ReportingIndicator): string {
+    return this.isFavorite(row) ? 'Remove from favorites' : 'Add to favorites';
   }
 
   isRowMenuOpen(row: ReportingIndicator): boolean {

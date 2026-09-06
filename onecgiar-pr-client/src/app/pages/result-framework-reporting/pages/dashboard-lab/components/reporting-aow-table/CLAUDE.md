@@ -16,13 +16,21 @@ El árbol de contenido se organiza según el patrón arquitectónico Card-in-Car
 ## Contrato
 - Inputs: `groups` (requerido), `search`, `statusFilter`, `filtersActive`, `viewMode`
   (`'grouped' | 'flat'`), `canReport`, `expandAll`, `expandAllNonce`, `scopeKey`, `lastReported`
-  (el KPI cuyo report se acaba de cerrar — publica el host; enciende "Next pending" en esa fila).
+  (el KPI cuyo report se acaba de cerrar — publica el host; enciende "Next pending" en esa fila),
+  `favoriteKeys` (`ReadonlySet<string>`, por defecto vacío — claves `rowKey`-shaped de las filas
+  marcadas en la programa actual), `favoritesOnly` (host indica si el switch de foco está activo,
+  solo para la copia del empty state; `changes/reporting-favorite-indicators`).
 - Outputs: `openRow`, `reportRow`, `openTarget`, `openAchieved`, `openAow`, `allOpenChange`,
-  `clearFilters`, `copyLink`.
+  `clearFilters`, `copyLink`, `toggleFavorite` (host hace el toggle en su store), `exitFavoritesOnly`
+  (empty state's `Show all indicators` pide apagar el switch — `changes/reporting-favorite-indicators`).
 - ⚠️ **Event isolation & contract protection (Kaizen `KZ-changes--reporting-aow-jira-hierarchy-2`):**
-  Todos los botones interactivos dentro de la fila de indicador (`.pr-row-action` [Report],
-  `Copy link`, `Target`, `Achieved`, menú `⋯`) DEBEN invocar `emitAndStop` (`$event.stopPropagation()`)
-  para aislar la acción e impedir que se dispare el evento `openRow` de la fila contenedora.
+  Todos los botones interactivos dentro de la fila de indicador (★ favorito, `.pr-row-action`
+  [Report], `Copy link`, `Target`, `Achieved`, menú `⋯`) DEBEN invocar `emitAndStop`
+  (`$event.stopPropagation()`) para aislar la acción e impedir que se dispare el evento `openRow`
+  de la fila contenedora.
+- **Presentación pura, sin excepción para favoritos (RFI-R-1.4, `RFI-DD-1`):** el estado de
+  favoritos llega por `favoriteKeys`/`favoritesOnly` y sale por `toggleFavorite`/`exitFavoritesOnly`
+  — este componente NUNCA inyecta `ReportingFavoritesService` (el host es dueño del store).
 - Estado: el host (`dashboard-lab`) es dueño de los datos y de los cinco filtros. Este componente
   solo posee su **disclosure** (`overrides`), los títulos expandidos, y qué overlay está abierto
   (`openMenuKey`, `openInfoKey`).
@@ -107,8 +115,10 @@ El árbol de contenido se organiza según el patrón arquitectónico Card-in-Car
   (match por `rowKey`, nunca identidad — las bandas bucket CLONAN sus filas), scrollea a los 320ms
   (la animación de apertura dura 280ms; a 60ms aterrizaba fuera del viewport — verificado en vivo)
   y resalta ~2.6s. El icono de link visible re-emite el mismo `copyLink` del menú `⋯`; la columna
-  action del grid pasó de 96px a 136px (y la pista flat de 104 a 140) para alojarlo — ahora convive
-  con la pista `Progress` de 132px añadida por P2-3296 (ver `.scss`, `$pr-flat-tracks` /
+  action del grid era 108px agrupada / 150px flat antes de `changes/reporting-favorite-indicators`
+  — esa spec la ensanchó a 140px / 184px (26px/28px de ★ + 6px de gap) para alojar el nuevo botón
+  de favorito como primer hijo de la celda, delante de `Copy link` — ahora convive con la pista
+  `Progress` de 132px añadida por P2-3296 (ver `.scss`, `$pr-flat-tracks` /
   `.pr-reporting-row`'s `grid-template-columns`).
 - **Alineación de vistas (2026-08-30):** el header de cada tarjeta AoW real lleva un botón "By AOW"
   (nested-control con `emitAndStop`) que emite `openAow` → el host salta a la vista enfocada

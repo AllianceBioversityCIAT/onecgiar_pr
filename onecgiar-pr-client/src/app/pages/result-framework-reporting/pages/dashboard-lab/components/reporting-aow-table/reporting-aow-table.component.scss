@@ -23,7 +23,7 @@
 /* ── Shared Reporting Grid Definition ──
    Used identically by .pr-hlo-head, .pr-hlo-row, and .pr-reporting-row so all headers, HLO
    metric totals, and indicator rows align with pixel precision. */
-$pr-reporting-tracks: 24px minmax(280px, 1fr) 72px 72px 104px 124px 108px 28px;
+$pr-reporting-tracks: 24px minmax(280px, 1fr) 72px 72px 104px 124px 140px 28px;
 $pr-reporting-gap: 12px;
 $pr-reporting-pad: 8px 16px;
 
@@ -45,7 +45,7 @@ $pr-reporting-pad: 8px 16px;
   letter-spacing: 0.06em;
   color: #94a3b8;
   user-select: none;
-  min-width: 820px;
+  min-width: 852px;
 }
 
 /* ── HLO row (tabular tree-table node) ── */
@@ -58,7 +58,7 @@ $pr-reporting-pad: 8px 16px;
   padding: $pr-reporting-pad;
   box-sizing: border-box;
   width: 100%;
-  min-width: 820px;
+  min-width: 852px;
 
   &:focus-visible {
     outline: 2px solid var(--pr-color-primary-300);
@@ -78,7 +78,7 @@ $pr-reporting-pad: 8px 16px;
   background: var(--pr-surface-card);
   box-sizing: border-box;
   width: 100%;
-  min-width: 820px;
+  min-width: 852px;
   cursor: pointer;
   transition: background 150ms ease;
 
@@ -241,7 +241,7 @@ $pr-reporting-pad: 8px 16px;
 /* ── ALL INDICATORS table.
    Header row and body rows are ONE grid built from the same track list.
    Tracks: [indicator minmax] [aow] [target] [achieved] [progress] [actions] ── */
-$pr-flat-tracks: minmax(240px, 1fr) 72px 80px 84px 104px 150px;
+$pr-flat-tracks: minmax(240px, 1fr) 72px 80px 84px 104px 184px;
 
 .pr-flat-scroll {
   width: 100%;
@@ -276,11 +276,11 @@ $pr-flat-tracks: minmax(240px, 1fr) 72px 80px 84px 104px 150px;
   box-sizing: border-box;
 
   @media (min-width: 1200px) {
-    grid-template-columns: minmax(300px, 1fr) 96px 116px 124px 150px 176px;
+    grid-template-columns: minmax(300px, 1fr) 96px 116px 124px 150px 210px;
   }
 
   @media (min-width: 1500px) {
-    grid-template-columns: minmax(360px, 1fr) 110px 130px 140px 170px 190px;
+    grid-template-columns: minmax(360px, 1fr) 110px 130px 140px 170px 224px;
   }
 }
 

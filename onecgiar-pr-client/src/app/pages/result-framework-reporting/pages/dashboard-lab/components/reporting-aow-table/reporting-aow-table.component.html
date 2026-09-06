@@ -172,6 +172,18 @@
 
           <!-- 6 — Actions -->
           <td class="pr-flat-cell flex items-center justify-end gap-[6px]">
+            <button type="button"
+              class="inline-flex h-[28px] w-[28px] shrink-0 cursor-pointer appearance-none items-center justify-center rounded-[8px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+              [class]="isFavorite(row)
+                ? 'border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-100)]'
+                : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-subtle)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-color-primary-500)]'"
+              [attr.aria-pressed]="isFavorite(row)"
+              [attr.aria-label]="favoriteLabel(row)"
+              [title]="favoriteLabel(row)"
+              data-testid="favorite-toggle"
+              (click)="emitAndStop(toggleFavorite, row, $event)">
+              <span class="material-icons-round text-[15px]" aria-hidden="true">{{ isFavorite(row) ? 'star' : 'star_outline' }}</span>
+            </button>
             @if (canCopyLink(row)) {
               <button
                 type="button"
@@ -249,7 +261,10 @@
         <tr>
           <td colspan="10">
             <div class="flex flex-col items-center justify-center gap-[12px] px-[24px] py-[40px] text-center text-[13px] text-[var(--pr-text-secondary)]">
-              @if (filtersActive()) {
+              @if (favoritesOnly() && favoriteKeys().size === 0) {
+                <p class="m-0 text-[14px]">No favorite indicators yet. Use the ★ on any indicator row to build your focus list.</p>
+                <button type="button" class="pr-clear-filters" (click)="exitFavoritesOnly.emit()">Show all indicators</button>
+              } @else if (filtersActive()) {
                 <p class="m-0">No indicators match your filters.</p>
                 <button type="button" class="pr-clear-filters" (click)="clearFilters.emit()">Clear filters</button>
               } @else {
@@ -595,7 +610,7 @@
 
               @let bands = bandsOf(group);
 
-              @if (!bands.length) {
+              @if (!bands.length && !group.loading) {
                 <div class="flex flex-col items-start gap-[10px] px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">
                   @if (filtersActive() || selCenter || selType) {
                     <p class="m-0">No indicators match the current filters.</p>
@@ -754,7 +769,10 @@
     @if (!visibleGroups().length) {
       <div
         class="flex min-h-[160px] flex-col items-center justify-center gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[24px] py-[40px] text-center text-[13px] text-[var(--pr-text-secondary)]">
-        @if (filtersActive()) {
+        @if (favoritesOnly() && favoriteKeys().size === 0) {
+          <p class="m-0 text-[14px]">No favorite indicators yet. Use the ★ on any indicator row to build your focus list.</p>
+          <button type="button" class="pr-clear-filters" (click)="exitFavoritesOnly.emit()">Show all indicators</button>
+        } @else if (filtersActive()) {
           <!-- The design's string is "No results match these filters", but on this tab the list is
                of INDICATORS and "result" is a reported entity in PRMS — the design's wording names
                the wrong noun here. Deliberate copy deviation; see docs/DESIGN-DEVIATIONS.md. -->
@@ -955,6 +973,18 @@
 
     <!-- 7 — Report / Continue (+ Copy link icon) -->
     <div class="flex items-center justify-end gap-[6px]">
+      <button type="button"
+        class="inline-flex h-[26px] w-[26px] shrink-0 cursor-pointer appearance-none items-center justify-center rounded-[6px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+        [class]="isFavorite(row)
+          ? 'border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-100)]'
+          : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-subtle)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-color-primary-500)]'"
+        [attr.aria-pressed]="isFavorite(row)"
+        [attr.aria-label]="favoriteLabel(row)"
+        [title]="favoriteLabel(row)"
+        data-testid="favorite-toggle"
+        (click)="emitAndStop(toggleFavorite, row, $event)">
+        <span class="material-icons-round text-[15px]" aria-hidden="true">{{ isFavorite(row) ? 'star' : 'star_outline' }}</span>
+      </button>
       @if (canCopyLink(row)) {
         <button
           type="button"

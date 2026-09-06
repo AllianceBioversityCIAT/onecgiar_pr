@@ -53,7 +53,7 @@
 ### `RFI-T-2` — Star toggle + favorites empty state in `reporting-aow-table`
 - **Type:** `client | tests`
 - **Estimate:** `M`
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Depends on:** `RFI-T-1` (imports `favoriteKeyOf` in the spec for AC-14 only; the component itself imports nothing new)
 - **Blocks:** `RFI-T-4`
 - **Skills:** `angular-developer`, `ui-ux-pro-max`
@@ -69,11 +69,11 @@
 - **Verification:** `cd onecgiar-pr-client && npx jest src/app/pages/result-framework-reporting/pages/dashboard-lab/components/reporting-aow-table/reporting-aow-table.favorites.spec.ts src/app/pages/result-framework-reporting/pages/dashboard-lab/components/reporting-aow-table/reporting-aow-table.component.spec.ts --silent --reporters=summary --no-coverage`
 - **Disqualifiers:** a click test that does not also assert `openRow` did **not** emit proves nothing about isolation (AC-1); counting stars outside `.pr-collapse.is-open` counts hidden mounted panels. Failing input: remove `$event.stopPropagation()` → AC-1 must go red. What presence cannot prove: track widths avoid wrapping — HITL visual check (§5).
 - **Definition of done:**
-  - [ ] Both cells render `[data-testid="favorite-toggle"]` with correct `aria-pressed` / glyph for favorite and non-favorite rows.
-  - [ ] Existing `reporting-aow-table.component.spec.ts` still green (contract unchanged for old consumers).
-  - [ ] `favoriteKeyOf(row) === component.rowKey(row)` asserted.
-  - [ ] AC-16 green (favorites present but hidden by `statusFilter` → generic empty state, not the favorites copy); a `loading` card with no rows renders no empty-state text.
-  - [ ] Reviewer confirms the component file has no import from `services/reporting-favorites.service` (RFI-R-1.4; honest presence check — JD-8).
+  - [x] Both cells render `[data-testid="favorite-toggle"]` with correct `aria-pressed` / glyph for favorite and non-favorite rows.
+  - [x] Existing `reporting-aow-table.component.spec.ts` still green (contract unchanged for old consumers).
+  - [x] `favoriteKeyOf(row) === component.rowKey(row)` asserted.
+  - [x] AC-16 green (favorites present but hidden by `statusFilter` → generic empty state, not the favorites copy); a `loading` card with no rows renders no empty-state text.
+  - [x] Reviewer confirms the component file has no import from `services/reporting-favorites.service` (RFI-R-1.4; honest presence check — JD-8).
 
 ---
 

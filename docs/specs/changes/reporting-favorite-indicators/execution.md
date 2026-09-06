@@ -60,3 +60,26 @@ Auto-approved (pre-approved mode) → proceed to `RFI-T-2` ∥ `RFI-T-3`.
 **ADVISORY (recorded):** no `focus-visible` ring on the switch — consistent with the sibling *Only pending* switch; toolbar-wide consistency debt, not a T-3 gap.
 
 Auto-approved (pre-approved mode) → `RFI-T-2` in flight; `RFI-T-4` next.
+
+### `RFI-T-2` — Star toggle + favorites empty state in `reporting-aow-table` — **PASS** (2026-09-05, 1 attempt, resumed once)
+
+| Field | Value |
+|---|---|
+| Implementer | `akili-implementer` (sonnet), skills `angular-developer`, `ui-ux-pro-max`, effort medium — run cut mid-task by a session rate limit (HTTP 429, sonnet) and resumed with its context intact; no work redone |
+| Reviewer | `akili-reviewer` (opus) |
+| Files (5) | `reporting-aow-table.component.ts`, `.html`, `.scss`, `reporting-aow-table.favorites.spec.ts` (new), `reporting-aow-table/CLAUDE.md` |
+| Verification | `npx jest …/reporting-aow-table.favorites.spec.ts …/reporting-aow-table.component.spec.ts --silent --reporters=summary --no-coverage` → **2 suites, 151/151 passed**; `tsc --noEmit -p tsconfig.app.json` clean for the component |
+| Requirements covered | `RFI-R-1.1`..`1.4`, `RFI-R-2.6` (both sentences), `RFI-R-4.1` (child side), `RFI-R-10`, `RFI-AC-1`, `AC-2`, `AC-10`, `AC-14`, `AC-16`, `RFI-DD-1`, `RFI-DD-4` |
+
+**Leader clarification during the task (design gap, not a FAIL):** design §6.1 named only `.pr-hlo-head` for the `min-width` bump, but `.pr-hlo-row` and `.pr-reporting-row` share the same grid and the same 820px floor; all three now go to 852px so header and rows stay aligned under ~900px. `design.md` §6.1 updated in place.
+
+**Implementer decisions:** `!group.loading` guard added as mandated though structurally redundant today (block already inside the `@else` of `@if (group.loading)`); AC-16 asserted on the table-level empty block (the card drops out of `visibleGroups()`).
+
+**Reviewer PASS summary:** star first in both cells with `emitAndStop` — the click ancestors (`<tr (click)="openRow.emit">`, `.pr-reporting-row (click)`) make AC-1/2 genuinely red without `stopPropagation`; stars queried inside `.pr-collapse.is-open`; no service import in the component (R-1.4 confirmed by grep); every `--pr-*` token resolves; track math matches design exactly (+32 grouped, +34 flat, all three floors 852).
+
+**ADVISORY (recorded):**
+- RELIABILITY — the loading guard is inert today; a belt-and-braces comment would prevent misreading.
+- RISK — the flat action cell is the tight one (~174px content in a 164px content box, unchanged slack vs before). `RFI-HITL-1` must measure the FLAT view first at 900/768.
+- READABILITY — the star's class block is duplicated across the two cells (file convention is inline Tailwind).
+
+Auto-approved (pre-approved mode) → `RFI-T-4` already in flight (disjoint files).
