@@ -30,6 +30,14 @@ export interface BandFilterGroup {
   items: BandFilterOption[];
 }
 
+export interface ResultTypeQuickChip {
+  id: string;
+  label: string;
+  matchKey: string;
+  count?: number;
+  active: boolean;
+}
+
 export type { ReportingSummaryStats } from '../reporting-summary-stats/reporting-summary-stats.component';
 
 /**
@@ -146,8 +154,10 @@ export class ReportingProgramBandComponent {
   readonly programDotColor = input<string>('var(--pr-color-primary-300)');
 
   readonly search = input<string>('');
+  readonly matchCount = input<number | null>(null);
   readonly statusValue = input<string>('all');
   readonly typologyValue = input<string>('all');
+  readonly typologyCounts = input<Record<string, number>>({});
   readonly typologyOptions = input<BandFilterOption[]>([]);
   /** Type filter: hlo | outcome | intermediate_outcome | outcome_2030 | all. */
   readonly typeValue = input<string>('all');
@@ -330,7 +340,25 @@ export class ReportingProgramBandComponent {
   /** True while the page is scrolled past the identity block. Drives the compact band. */
   readonly bandCollapsed = signal(false);
 
+  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  onSearchInput(value: string): void {
+    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+    this.searchDebounceTimer = setTimeout(() => {
+      this.searchChange.emit(value);
+    }, 150);
+  }
+
+  onClearSearch(): void {
+    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+    this.searchChange.emit('');
+  }
+
   constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+    });
+
     // < `md` fallback (`SAV-DD-4`): with no work area handed to the band, the DOCUMENT is the
     // scroller, so the offset comes from `window`. Kept unconditionally — this is the ONE documented
     // window listener the band owns (`SAV-AC-11`). Registered OUTSIDE Angular and only re-enters the
@@ -520,6 +548,47 @@ export class ReportingProgramBandComponent {
     { value: 'intermediate_outcome', label: 'Intermediate outcome' },
     { value: 'outcome_2030', label: '2030 outcome' }
   ];
+
+  readonly QUICK_TYPOLOGIES = [
+    { id: 'all', label: 'All', matchKey: 'all' },
+    { id: 'kp', label: 'Knowledge Product', matchKey: 'Knowledge product' },
+    { id: 'id', label: 'Innovation Development', matchKey: 'Innovation development' },
+    { id: 'pc', label: 'Policy Change', matchKey: 'Policy change' },
+    { id: 'iu', label: 'Innovation Use', matchKey: 'Innovation use' },
+    { id: 'cs', label: 'Capacity Sharing', matchKey: 'Capacity sharing for development' }
+  ] as const;
+
+  readonly quickChips = computed<ResultTypeQuickChip[]>(() => {
+    const currentTypology = this.typologyValue();
+    const counts = this.typologyCounts() ?? {};
+    return this.QUICK_TYPOLOGIES.map(item => {
+      const active =
+        item.matchKey === 'all'
+          ? currentTypology === 'all' || !currentTypology
+          : currentTypology === item.matchKey || currentTypology?.toLowerCase() === item.label.toLowerCase();
+
+      const count =
+        item.matchKey === 'all'
+          ? (counts['all'] ?? this.plannedResultsCount())
+          : (counts[item.matchKey] ?? counts[item.label] ?? 0);
+
+      return {
+        id: item.id,
+        label: item.label,
+        matchKey: item.matchKey,
+        count,
+        active
+      };
+    });
+  });
+
+  onQuickChipClick(chip: ResultTypeQuickChip): void {
+    if (chip.matchKey === 'all' || chip.active) {
+      this.typologyChange.emit('all');
+    } else {
+      this.typologyChange.emit(chip.matchKey);
+    }
+  }
 
   // ── Reporting JIRA-style Top-Bar Filter State ──
   readonly filterPopoverOpen = signal(false);

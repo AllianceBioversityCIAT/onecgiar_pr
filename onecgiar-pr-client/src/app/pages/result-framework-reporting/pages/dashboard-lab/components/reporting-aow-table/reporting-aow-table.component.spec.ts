@@ -2242,4 +2242,143 @@ describe('ReportingAowTableComponent', () => {
       expect(reportBtn?.className).toContain('text-[11px]');
     });
   });
+
+  describe('RHSF-T-2: Dynamic Hierarchical Auto-Expansion & Scoped Overrides', () => {
+    it('auto-expands AoW cards and HLO groups with >= 2 character search query', async () => {
+      const g1 = group([
+        row({ indicator_id: 1, indicator_description: 'Climate change mitigation in rice systems', __hlo: 'HLO 1' })
+      ], { aow: { id: 1, code: 'AOW01', name: 'Climate Solutions' } });
+      const g2 = group([
+        row({ indicator_id: 2, indicator_description: 'Water irrigation management', __hlo: 'HLO 2', __aowCode: 'AOW02' })
+      ], { aow: { id: 2, code: 'AOW02', name: 'Water Resources' } });
+
+      await build([g1, g2], { search: 'climate' });
+
+      // AoW default open logic
+      expect(component.isDefaultOpenAow('AOW01')).toBe(true);
+      expect(component.isDefaultOpenAow('aow::AOW01')).toBe(true);
+      expect(component.isDefaultOpenAow('AOW02')).toBe(false);
+
+      // HLO default open logic
+      const hloGroup1 = component.bandsOf(g1)[0].groups[0];
+      expect(component.isDefaultOpenHlo(hloGroup1)).toBe(true);
+      expect(component.isDefaultOpenHlo(hloGroup1.key)).toBe(true);
+
+      // Non-matching or empty HLO
+      expect(component.isDefaultOpenHlo({ key: 'none', name: 'none', rows: [] })).toBe(false);
+      expect(component.isDefaultOpenHlo('nonexistent-key')).toBe(false);
+
+      // Sub-2 character query does not auto-expand
+      fixture.componentRef.setInput('search', 'c');
+      fixture.detectChanges();
+      expect(component.isDefaultOpenAow('AOW01')).toBe(false);
+      expect(component.isDefaultOpenHlo(hloGroup1)).toBe(false);
+    });
+
+    it('excludes AoW cards with 0 matching rows from visibleGroups and keeps cards with matches', async () => {
+      const g1 = group([
+        row({ indicator_id: 1, indicator_description: 'Climate change adaptation', __hlo: 'HLO 1' })
+      ], { aow: { id: 1, code: 'AOW01', name: 'Climate Solutions' } });
+      const g2 = group([
+        row({ indicator_id: 2, indicator_description: 'Financial accounting standards', __hlo: 'HLO 2', __aowCode: 'AOW02' })
+      ], { aow: { id: 2, code: 'AOW02', name: 'Finance' } });
+      const gLoading = group([], {
+        aow: { id: 3, code: 'AOW03', name: 'Loading Group' },
+        loading: true
+      });
+
+      await build([g1, g2, gLoading], { search: 'climate' });
+
+      const visible = component.visibleGroups();
+      expect(visible.map(g => g.aow.code)).toContain('AOW01');
+      expect(visible.map(g => g.aow.code)).not.toContain('AOW02');
+      // Loading group is retained so spinner shows
+      expect(visible.map(g => g.aow.code)).toContain('AOW03');
+    });
+
+    it('flushes search-scoped overrides linkedSignal and restores baseline when search is cleared', async () => {
+      const g1 = group([
+        row({ indicator_id: 1, indicator_description: 'Climate change adaptation', __hlo: 'HLO 1' })
+      ], { aow: { id: 1, code: 'AOW01', name: 'Climate Solutions' } });
+      const g2 = group([
+        row({ indicator_id: 2, indicator_description: 'Financial management', __hlo: 'HLO 2', __aowCode: 'AOW02' })
+      ], { aow: { id: 2, code: 'AOW02', name: 'Finance' } });
+
+      await build([g1, g2], { search: 'climate' });
+
+      // User manually collapses AOW01 during search
+      component.toggle('aow::AOW01', component.isDefaultOpenAow('AOW01'));
+      expect(component.isOpen('aow::AOW01', true)).toBe(false);
+
+      // Clearing search restores baseline and flushes overrides
+      fixture.componentRef.setInput('search', '');
+      fixture.detectChanges();
+
+      // With search cleared, default open for AOW01 is false (collapsed baseline)
+      expect(component.isDefaultOpenAow('AOW01')).toBe(false);
+      // The search-time override was flushed; isOpen evaluates defaultOpen (false)
+      expect(component.isOpen('aow::AOW01', component.isDefaultOpenAow('AOW01'))).toBe(false);
+
+      // All groups are visible again
+      expect(component.visibleGroups().length).toBe(2);
+    });
+
+    it('renders keyword highlighting with mark element in grouped view', async () => {
+      const g1 = group([
+        row({
+          indicator_id: 10,
+          indicator_description: 'Promote climate-smart rice cultivation',
+          __hlo: 'Climate Innovations',
+          center_acronym: 'CIAT'
+        })
+      ], { aow: { id: 1, code: 'AOW01', name: 'Climate Solutions' } });
+
+      await build([g1], { search: 'climate' });
+
+      const el = fixture.nativeElement as HTMLElement;
+      const marks = el.querySelectorAll('mark.bg-violet-100.text-violet-900');
+      expect(marks.length).toBeGreaterThan(0);
+
+      // Indicator description contains highlight
+      const descEl = el.querySelector('.pr-reporting-row p');
+      expect(descEl?.innerHTML).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">climate</mark>');
+
+      // AoW name in header contains highlight
+      const aowNameEl = el.querySelector('button span.truncate');
+      expect(aowNameEl?.innerHTML).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">Climate</mark>');
+
+      // HLO title contains highlight
+      const hloTitleEl = el.querySelector('h3');
+      expect(hloTitleEl?.innerHTML).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">Climate</mark>');
+
+      // Chip highlight when search matches chip
+      fixture.componentRef.setInput('search', 'AOW01');
+      fixture.detectChanges();
+      const chipEl = el.querySelector('.pr-code');
+      expect(chipEl?.innerHTML).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">AOW01</mark>');
+    });
+
+    it('renders keyword highlighting with mark element in flat view', async () => {
+      const g1 = group([
+        row({
+          indicator_id: 20,
+          indicator_description: 'Global climate impact study',
+          result_type_name: 'Knowledge product',
+          center_acronym: 'CIAT'
+        })
+      ], { aow: { id: 1, code: 'AOW01', name: 'Climate Solutions' } });
+
+      await build([g1], { search: 'climate', viewMode: 'flat' });
+
+      const el = fixture.nativeElement as HTMLElement;
+      const descEl = el.querySelector('.pr-flat-row p');
+      expect(descEl?.innerHTML).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">climate</mark>');
+
+      // Type label chip highlight in flat view
+      fixture.componentRef.setInput('search', 'knowledge');
+      fixture.detectChanges();
+      const typeChipEl = el.querySelector('.pr-flat-row span.truncate');
+      expect(typeChipEl?.innerHTML).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">Knowledge</mark>');
+    });
+  });
 });

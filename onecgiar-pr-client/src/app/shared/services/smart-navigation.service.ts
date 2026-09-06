@@ -34,8 +34,31 @@ export function isResultsCenterList(url: string): boolean {
   return url.includes('/results-outlet/results-list');
 }
 
+/**
+ * Reporting tab only — `/entity-details/:code` (or `/result-framework-reporting/entity-details/:code`).
+ * Matches the root of entity-details with optional query parameters.
+ * Excludes sibling tabs: `/results`, `/my-work`, `/overview`, `/results-review`.
+ */
+export function isReportingTab(url: string): boolean {
+  if (!url) return false;
+  if (
+    isProgrammeResultsTab(url) ||
+    isMyResultsTab(url) ||
+    url.includes('/overview') ||
+    url.includes('/results-review')
+  ) {
+    return false;
+  }
+  return /\/entity-details\/[^/?#]+(?:\/)?(?:[?#]|$)/.test(url);
+}
+
 export function isKnownResultDetailOrigin(url: string): boolean {
-  return isProgrammeResultsTab(url) || isMyResultsTab(url) || isResultsCenterList(url);
+  return (
+    isProgrammeResultsTab(url) ||
+    isMyResultsTab(url) ||
+    isResultsCenterList(url) ||
+    isReportingTab(url)
+  );
 }
 
 /** Survives the full page load from the Science Program Results tab into `/result/result-detail`. */
@@ -119,7 +142,7 @@ export class SmartNavigationService {
   }
 
   /**
-   * Persist a known result-detail origin (programme Results, My Results, or Results Center)
+   * Persist a known result-detail origin (programme Results, My Results, Results Center, or Reporting)
    * so Back still works after the full page load into `/result/result-detail`.
    */
   rememberResultDetailOrigin(url?: string): void {
@@ -318,8 +341,8 @@ export class SmartNavigationService {
    *
    * Walks history newest-first, skipping the current URL and sibling result-detail
    * section hops (general-information → contributors, etc.). Known origins restored
-   * as-is: Science Program Results, My Results, Results Center (query string kept).
-   * Everything else — Overview, Reporting, QA, deep link, empty history — falls
+   * as-is: Science Program Results, My Results, Results Center, Reporting tab (query string kept).
+   * Everything else — Overview, QA, deep link, empty history — falls
    * back to Results Center.
    */
   getResultDetailBackTarget(currentUrl?: string): BackTarget {

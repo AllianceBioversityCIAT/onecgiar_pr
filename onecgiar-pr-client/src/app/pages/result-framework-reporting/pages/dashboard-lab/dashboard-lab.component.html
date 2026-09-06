@@ -1460,6 +1460,8 @@
             (whereToReport)="openWhereToReportModal()"
             (reportEmerging)="openEmergingReport()"
             [search]="plannedSearch()"
+            [matchCount]="plannedSearch().trim() ? reportingMatchingCount() : null"
+            [typologyCounts]="reportingTypologyCounts()"
             [statusValue]="reportingStatusFilter()"
             [aowOptions]="reportingSectionOptions()"
             [aowValue]="reportingAowFilter()"
@@ -1476,7 +1478,7 @@
             [aowSingleOptions]="plannedAowSelectOptions()"
             (aowSwitch)="setPlannedHloAow($event)"
             (toggleExpandAll)="toggleReportingExpandAll()"
-            (searchChange)="plannedSearch.set($event)"
+            (searchChange)="onReportingSearchChange($event)"
             (statusChange)="reportingStatusFilter.set($event)"
             (aowChange)="onSectionFilterChange($event)"
             (typeChange)="reportingTypeFilter.set($event)"
@@ -1528,7 +1530,19 @@
                 </div>
               }
               @if (!plannedFilteredAows().length) {
-                <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No Areas of Work match your search.</p>
+                @if (plannedSearchActive()) {
+                  <div class="m-0 py-8 text-center text-[13px] text-[var(--pr-color-accents-5)]" data-testid="reporting-empty-search">
+                    <span>No indicators match your search '<strong class="font-semibold text-gray-800">{{ plannedSearch() }}</strong>'</span>
+                    <button
+                      type="button"
+                      (click)="clearReportingFilters()"
+                      class="ml-2 text-[var(--pr-color-primary-400)] underline font-semibold cursor-pointer border-0 bg-transparent p-0 hover:text-[var(--pr-color-primary-500)]">
+                      Clear search
+                    </button>
+                  </div>
+                } @else {
+                  <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No Areas of Work match your search.</p>
+                }
               }
               <!-- ════════════════════════════════════════════════════════════════════════
                    REPORTING TAB — AoW → HLO → indicator, per the approved reference.

@@ -476,14 +476,18 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   /** AOW filters read from the URL, applied right after the AOW reopens (openAow
    *  clears filters, so they must be restored last). */
   private pendingFilters: { typ: string | null; st: string | null; q: string } | null = null;
-  /** Planned By AOW selection from `?tocAow=`, applied once the AoW list is ready. */
   private pendingPlannedAow: string | null = null;
+  readonly reportingTable = viewChild(ReportingAowTableComponent);
   /**
-   * KPI id from `?kpi=` (MRF-R-5), read alongside `pendingPlannedAow` above. Survives until the
-   * OWNING AoW's ToC has resolved (cold-load/new-tab: the param can arrive well before the AoW
-   * list, let alone that AoW's indicators) — the constructor effect below waits for both.
+   * KPI id from `?kpi=` (MRF-R-5 / RHSF-T-5), read alongside `pendingPlannedAow` or on `aows` view.
    */
-  private pendingKpi: string | null = null;
+  private readonly pendingKpiSignal = signal<string | null>(null);
+  get pendingKpi(): string | null {
+    return this.pendingKpiSignal();
+  }
+  set pendingKpi(v: string | null) {
+    this.pendingKpiSignal.set(v);
+  }
   /** Skip echoing Planned URL params while hydrating from the query string. */
   private restoringPlannedUrl = false;
   /**
@@ -1170,6 +1174,49 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     });
 
     /**
+     * Restore `?kpi=` in `view === 'aows'` mode (RHSF-T-5).
+     * Once reportingGroupsForTable resolves with the target indicator row:
+     * clears `pendingKpi`, consumes the `kpi` query parameter, and scrolls to/flashes the row.
+     */
+    effect(() => {
+      const view = this.plannedBrowseView();
+      const groups = this.reportingGroupsForTable();
+      if (view !== 'aows') return;
+      const kpiId = this.pendingKpi;
+      if (!kpiId) return;
+      if (!groups || groups.length === 0) return;
+
+      let targetRow: ReportingIndicator | null = null;
+      for (const group of groups) {
+        const match = group.indicators?.find(i => String(i?.indicator_id ?? '') === kpiId);
+        if (match) {
+          targetRow = match;
+          break;
+        }
+      }
+      if (!targetRow) return;
+
+      this.pendingKpi = null;
+      this.consumeKpiQueryParam();
+      const table = this.reportingTable?.();
+      if (table && targetRow) {
+        table.highlightRow(table.rowKey(targetRow));
+      }
+      setTimeout(() => {
+        const el = document.getElementById('indicator-row-' + kpiId) || document.querySelector('[data-row-key*="' + kpiId + '"]');
+        if (el) {
+          if (typeof el.scrollIntoView === 'function') {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          el.classList.add('animate-focus-flash');
+          setTimeout(() => {
+            el.classList.remove('animate-focus-flash');
+          }, 1500);
+        }
+      }, 100);
+    });
+
+    /**
      * Restore `?scope=` (`changes/overview-aow-cross-filter`, `OSF-DD-12`), read in `restoreFromUrl()`
      * below. `scopeOptions()` is read UNCONDITIONALLY (before the `pendingOverviewScope` early
      * return) so this effect re-subscribes even on a run where nothing is pending yet — it must
@@ -1329,12 +1376,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       const sp = this.selectedId();
       const scope = this.scope();
       const aow = this.activeAowCode();
-      const typ = this.typologyFilter();
       const st = this.statusFilter();
-      const q = this.indicatorSearch().trim();
       const onPlanned = this.rfrView() === 'planned';
       const tocView = onPlanned ? this.plannedBrowseView() : null;
       const tocAow = onPlanned && tocView === 'byAow' ? this.plannedHloAowCode() : null;
+      const q = onPlanned ? (this.plannedSearch().trim() || null) : (aow && this.indicatorSearch().trim() ? this.indicatorSearch().trim() : null);
+      const typ = onPlanned ? (this.reportingTypologyFilter() !== 'all' ? this.reportingTypologyFilter() : null) : (aow ? (this.typologyFilter() || null) : null);
       // ToC-scope filter (`OSF-DD-12`): read here, in the SAME url-mirror effect as every other
       // piece of URL state — a second, independent `router.navigate` effect would race this one
       // (both read the URL's current queryParams before either write lands, so whichever loses the
@@ -1342,28 +1389,30 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       const overviewScopeParam = this.overviewScope();
       const overviewSectionParam = this.overviewSection();
       if (this.pendingAow || this.pendingFilters || this.restoringPlannedUrl || this.pendingOverviewScope) return;
-      this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: {
-          // The programme is addressed by the path (`…/entity-details/SP01`) — never mirror it
-          // back as `?sp=`, or the URL would carry two competing sources of truth.
-          sp: null,
-          aow: aow ?? null,
-          // filters only make sense inside an open AOW
-          typ: aow ? typ ?? null : null,
-          st: aow ? st ?? null : null,
-          q: aow && q ? q : null,
-          // Planned ToC browse mode (+ selected AoW when browsing By AOW)
-          tocView: tocView,
-          tocAow: tocAow,
-          // `scope` is free on this route — `phase`/`reviewResult`/`reviewResultId`/`kpi`/`tocView`
-          // are taken (`OSF-DD-12`). `section` is the Overview Filter Section (in-memory only
-          // used to drop on Overview ↔ Reporting remount — same sibling-route destroy).
-          scope: overviewScopeParam ?? null,
-          [OVERVIEW_SECTION_QUERY_PARAM]: overviewSectionParam === 'all' ? null : overviewSectionParam
-        },
-        queryParamsHandling: 'merge',
-        replaceUrl: true
+      untracked(() => {
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: {
+            // The programme is addressed by the path (`…/entity-details/SP01`) — never mirror it
+            // back as `?sp=`, or the URL would carry two competing sources of truth.
+            sp: null,
+            aow: aow ?? null,
+            // filters only make sense inside an open AOW or in Planned browse mode
+            typ: typ,
+            st: aow ? st ?? null : null,
+            q: q,
+            // Planned ToC browse mode (+ selected AoW when browsing By AOW)
+            tocView: tocView,
+            tocAow: tocAow,
+            // `scope` is free on this route — `phase`/`reviewResult`/`reviewResultId`/`kpi`/`tocView`
+            // are taken (`OSF-DD-12`). `section` is the Overview Filter Section (in-memory only
+            // used to drop on Overview ↔ Reporting remount — same sibling-route destroy).
+            scope: overviewScopeParam ?? null,
+            [OVERVIEW_SECTION_QUERY_PARAM]: overviewSectionParam === 'all' ? null : overviewSectionParam
+          },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        });
       });
     });
   }
@@ -2809,12 +2858,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           this.restoringPlannedUrl = true;
           this.plannedBrowseView.set(view);
           this.plannedTypeFilter.set([]);
-          this.plannedSearch.set('');
           if (view === 'byAow') {
             this.pendingPlannedAow = qp.get('tocAow');
-            // MRF-R-5: read beside `tocAow` — consumed by the constructor effect once the owning
-            // AoW's ToC resolves, not here (the ToC has not even started loading yet at this point).
-            this.pendingKpi = qp.get('kpi');
           } else if (view === 'indicators') {
             this.loadAllTocs();
           }
@@ -2825,13 +2870,24 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           const tocAow = qp.get('tocAow');
           if (tocAow && tocAow !== this.plannedHloAowCode()) {
             this.pendingPlannedAow = tocAow;
-            this.pendingKpi = qp.get('kpi');
             const list = this.aows();
             if (list.some(a => a.code === tocAow)) {
               this.pendingPlannedAow = null;
               this.setPlannedHloAow(tocAow);
             }
           }
+        }
+        const qParam = qp.get('q') ?? '';
+        if (qParam !== this.plannedSearch()) {
+          this.plannedSearch.set(qParam);
+        }
+        const typParam = qp.get('typ');
+        if (typParam && typParam !== this.reportingTypologyFilter()) {
+          this.reportingTypologyFilter.set(typParam);
+        }
+        const kpiParam = qp.get('kpi');
+        if (kpiParam) {
+          this.pendingKpi = kpiParam;
         }
       }
     });
@@ -2889,17 +2945,26 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   /** Apply `?tocView=` / `?tocAow=` on the Planned ToC surface. */
   private restorePlannedBrowseFromQuery(qp: { get(name: string): string | null }): void {
     if ((this.route.snapshot.data['rfrView'] as RfrView) !== 'planned') return;
-    const view = parsePlannedBrowseView(qp.get('tocView'));
-    if (!view) return;
+    const hasPlannedParams = qp.get('tocView') != null || qp.get('q') != null || qp.get('typ') != null || qp.get('kpi') != null || qp.get('tocAow') != null;
+    if (!hasPlannedParams) return;
+    const view = parsePlannedBrowseView(qp.get('tocView')) ?? 'aows';
     this.restoringPlannedUrl = true;
     this.plannedBrowseView.set(view);
     this.plannedTypeFilter.set([]);
-    this.plannedSearch.set('');
+    const qParam = qp.get('q') ?? '';
+    if (qParam !== this.plannedSearch()) {
+      this.plannedSearch.set(qParam);
+    }
+    const typParam = qp.get('typ');
+    if (typParam && typParam !== this.reportingTypologyFilter()) {
+      this.reportingTypologyFilter.set(typParam);
+    }
+    const kpiParam = qp.get('kpi');
+    if (kpiParam) {
+      this.pendingKpi = kpiParam;
+    }
     if (view === 'byAow') {
       this.pendingPlannedAow = qp.get('tocAow');
-      // MRF-R-5: `?kpi=` restore — consumed by the constructor effect once the owning AoW's ToC
-      // resolves (cold-load/new-tab: this runs before `aows()` has even loaded).
-      this.pendingKpi = qp.get('kpi');
     } else if (view === 'indicators') {
       queueMicrotask(() => this.loadAllTocs());
     }
@@ -3495,6 +3560,50 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    */
   readonly reportingGroupsForTable = computed<ReportingAowGroup[]>(() => this.applyBurndownFilterAndSort(this.reportingGroups()));
 
+  readonly reportingMatchingCount = computed<number>(() => {
+    const q = this.plannedSearch().trim().toLowerCase();
+    if (!q) return 0;
+    const groups = this.reportingGroupsForTable();
+    let total = 0;
+    for (const group of groups) {
+      const groupHit = [group.aow?.code, group.aow?.name].some(v => (v ?? '').toLowerCase().includes(q));
+      for (const row of group.indicators ?? []) {
+        if (
+          groupHit ||
+          [
+            row.indicator_description,
+            row.__hlo,
+            row.type_name,
+            row.result_type_name,
+            row.__aowCode,
+            row.__aowName,
+            row.center_acronym
+          ].some(v => (v ?? '').toLowerCase().includes(q))
+        ) {
+          total++;
+        }
+      }
+    }
+    return total;
+  });
+
+  readonly reportingTypologyCounts = computed<Record<string, number>>(() => {
+    const counts: Record<string, number> = {};
+    const groups = this.reportingGroups();
+    let total = 0;
+    for (const group of groups) {
+      for (const row of group.indicators ?? []) {
+        total++;
+        const type = row.result_type_name?.trim();
+        if (type) {
+          counts[type] = (counts[type] ?? 0) + 1;
+        }
+      }
+    }
+    counts['all'] = total;
+    return counts;
+  });
+
   /** Flatten a program-level ToC list (`tocResults`) into reporting indicator rows. */
   private flattenBucketIndicators(
     groups: any[] | undefined,
@@ -3701,6 +3810,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // as a filter, so "Clear filters" must switch it off too — through `setOnlyPending` so the
     // persisted sessionStorage value is cleared as well, not just the signal.
     this.setOnlyPending(false);
+  }
+
+  onReportingSearchChange(query: string): void {
+    this.plannedSearch.set(query);
+    if (query.trim().length >= 2) {
+      this.loadAllTocs();
+    }
   }
 
   /**

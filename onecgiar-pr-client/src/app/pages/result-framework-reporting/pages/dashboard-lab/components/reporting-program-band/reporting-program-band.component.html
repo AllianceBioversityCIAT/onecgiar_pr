@@ -367,17 +367,28 @@
           placeholder="Search AoW, outcomes, outputs or indicators"
           aria-label="Search by Area of Work, outcome, output or indicator"
           [value]="search()"
-          (input)="searchChange.emit($any($event.target).value)" />
+          (input)="onSearchInput($any($event.target).value)" />
         @if (search()) {
           <button
             type="button"
-            (click)="searchChange.emit('')"
+            (click)="onClearSearch()"
             class="absolute right-[8px] top-1/2 -translate-y-1/2 flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:text-slate-700"
             aria-label="Clear search">
             <span class="material-icons-round text-[14px]">close</span>
           </button>
         }
       </div>
+
+      @if (search() && matchCount() !== null && matchCount() !== undefined) {
+        <span
+          data-testid="search-match-count"
+          class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold tabular-nums shrink-0"
+          [class]="matchCount() === 0
+            ? 'bg-amber-50 text-amber-800 border border-amber-200'
+            : 'bg-violet-50 text-violet-700 border border-violet-200'">
+          {{ matchCount() }} {{ matchCount() === 1 ? 'match' : 'matches' }}
+        </span>
+      }
 
       <!-- Divider -->
       <div class="h-[22px] w-[1px] bg-[var(--pr-border-divider)] mx-[2px] hidden sm:block"></div>
@@ -753,5 +764,33 @@
       }
     </div>
   </div>
+
+  @if (!compactFilters()) {
+    <div
+      class="flex items-center gap-1.5 px-[16px] sm:px-[32px] py-[8px] bg-[var(--pr-surface-app)] border-b border-[var(--pr-border-divider)] overflow-x-auto custom_scroll"
+      role="group"
+      aria-label="Quick typology filters"
+      data-testid="quick-typology-filters">
+      @for (chip of quickChips(); track chip.id) {
+        <button
+          type="button"
+          (click)="onQuickChipClick(chip)"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] transition-all border cursor-pointer shrink-0"
+          [class]="chip.active
+            ? 'bg-[var(--pr-color-primary-400)] border-[var(--pr-color-primary-400)] text-white shadow-xs font-semibold'
+            : 'bg-[var(--pr-surface-card)] border-[var(--pr-border)] text-[var(--pr-text-secondary)] hover:border-[var(--pr-color-primary-300)] font-medium'"
+          [attr.aria-pressed]="chip.active">
+          <span>{{ chip.label }}</span>
+          @if (chip.count !== undefined && chip.count !== null) {
+            <span
+              class="text-[10.5px] px-1.5 py-0.2 rounded-full tabular-nums"
+              [class]="chip.active ? 'bg-white/20 text-white font-bold' : 'bg-slate-100 text-slate-600 font-medium'">
+              {{ chip.count }}
+            </span>
+          }
+        </button>
+      }
+    </div>
+  }
 }
 

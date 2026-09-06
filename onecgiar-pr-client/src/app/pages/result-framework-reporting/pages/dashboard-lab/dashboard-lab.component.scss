@@ -449,3 +449,23 @@ $pr-by-aow-indicator-pad: 8px 16px;
     }
   }
 }
+
+@keyframes focusFlash {
+  0% {
+    box-shadow: 0 0 0 4px rgba(107, 70, 229, 0.45);
+    background-color: var(--pr-color-primary-50);
+  }
+  70% {
+    box-shadow: 0 0 0 4px rgba(107, 70, 229, 0.25);
+    background-color: var(--pr-color-primary-50);
+  }
+  100% {
+    box-shadow: none;
+    background-color: transparent;
+  }
+}
+
+:host ::ng-deep .animate-focus-flash {
+  animation: focusFlash 1.5s ease-out forwards;
+}
+
