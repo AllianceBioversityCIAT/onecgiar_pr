@@ -237,6 +237,12 @@ describe('DashboardLabComponent — favorites pipeline (RFI-TEST-4)', () => {
     const { component } = await createLoadedComponent();
 
     const burndownSpy = jest.spyOn(component as any, 'applyBurndownFilterAndSort');
+    // Other consumers (RHSF's `reportingMatchingCount`, the `?kpi=` focus-recovery effect) may have
+    // already read the lazy computed during load, so its cached value would reach us without a new
+    // burndown call. Flip the switch on and back off to dirty the computed's own dependency and
+    // force the recompute the identity assertion below is about.
+    component.setFavoritesOnly(true);
+    component.setFavoritesOnly(false);
     const table = component.reportingGroupsForTable();
 
     expect(component.favoritesOnly()).toBe(false);

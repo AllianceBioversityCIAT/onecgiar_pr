@@ -122,3 +122,9 @@ Setup: `ng serve --port 4201` from this worktree; new Orca tab at `http://localh
 | Unpin | `Favorites (0)`, store `{}` |
 
 Cleanup: pin removed, tab closed, original Orca tab (index 0) re-activated. Dev server on 4201 stopped at the end of the run.
+
+## Merge — `qa-development-2026` (RHSF `99fea9d3b`) into `feat/reporting-favorite-indicators` (2026-09-06)
+
+- `git merge qa-development-2026` → **no conflicts** (18 files from RHSF merged automatically; the two specs' hunks in `dashboard-lab.component.{ts,html}`, `reporting-aow-table.component.{ts,html}`, `reporting-program-band.component.{ts,html}` never overlapped).
+- Merged tree: `tsc --noEmit` clean; both specs' suites (13 suites, 459 tests) → 458 green, **1 failure in `RFI-AC-7`** — harness only: RHSF added consumers of `reportingGroupsForTable()` (`reportingMatchingCount`, the `?kpi=` focus-recovery effect) that read the lazy computed during load, so the spy installed afterwards saw zero burndown calls. Leader-inline test fix (recorded, test-only): flip `favoritesOnly` on/off before the read to dirty the computed. Production code untouched. Re-run → 95/95 in the three host suites.
+- Fast-forwarded `qa-development-2026` to the merge commit from the shared checkout once its tree was clean.
