@@ -1493,6 +1493,9 @@
             (onlyPendingChange)="setOnlyPending($event)"
             (burndownSortChange)="setBurndownSort($event)"
             (allAowsClick)="setPlannedBrowseView('aows')"
+            [favoritesOnly]="favoritesOnly()"
+            [favoritesCount]="programFavoritesCount()"
+            (favoritesOnlyChange)="setFavoritesOnly($event)"
             [frameLocked]="true"
             [scrollHost]="workAreaEl()" />
 
@@ -1558,7 +1561,11 @@
                 (openAchieved)="onReportingOpenAchieved($event)"
                 (allOpenChange)="reportingAllOpen.set($event)"
                 (openAow)="openAowFocused($event)"
-                (copyLink)="copyKpiLink($event)" />
+                (copyLink)="copyKpiLink($event)"
+                [favoriteKeys]="programFavoriteKeys()"
+                [favoritesOnly]="favoritesOnly()"
+                (toggleFavorite)="toggleFavorite($event)"
+                (exitFavoritesOnly)="setFavoritesOnly(false)" />
               <!-- Intermediate Outcomes + 2030 Outcomes are top-level cards inside the table
                    (siblings of AoWs). The old "open 2030 detail" jump button is gone. -->
             } @else if (plannedBrowseView() === 'byAow') {

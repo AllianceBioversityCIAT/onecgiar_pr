@@ -75,6 +75,8 @@ import { PhasesService } from '../../../../shared/services/global/phases.service
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';
 import { MyWorkCountService } from '../my-work-board/services/my-work-count.service';
+// @akili-spec changes/reporting-favorite-indicators
+import { ReportingFavoritesService, favoriteKeyOf } from './services/reporting-favorites.service';
 import { HlmButton } from '@spartan/button';
 // @akili-spec changes/reporting-entry-hub
 import {
@@ -420,6 +422,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   /** @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1) — the My work tab's badge, shared with
    *  the other three band hosts via `MyWorkCountService`'s (programme, phase) cache. */
   private readonly myWorkCountSE = inject(MyWorkCountService);
+  /** @akili-spec changes/reporting-favorite-indicators — root-scoped, per-user/per-programme pins. */
+  private readonly favoritesSE = inject(ReportingFavoritesService);
 
   /**
    * Reporting phases with their start / end dates.
@@ -3493,7 +3497,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * on `reportingGroups()` itself.
    * @akili-spec changes/mass-reporting-flow
    */
-  readonly reportingGroupsForTable = computed<ReportingAowGroup[]>(() => this.applyBurndownFilterAndSort(this.reportingGroups()));
+  readonly reportingGroupsForTable = computed<ReportingAowGroup[]>(() =>
+    this.applyFavoritesFilter(this.applyBurndownFilterAndSort(this.reportingGroups()))
+  );
 
   /** Flatten a program-level ToC list (`tocResults`) into reporting indicator rows. */
   private flattenBucketIndicators(
@@ -3622,6 +3628,80 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Session-persisted state of the Favorites switch (RFI-R-2.7), mirroring `onlyPending` /
+   * `readStoredOnlyPending` / `setOnlyPending` above byte-for-byte (same storage shape, same
+   * try/catch discipline). Favorites themselves are programme-scoped and live in
+   * `ReportingFavoritesService`; this scalar only remembers whether the switch is on.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  private static readonly FAVORITES_ONLY_STORAGE_KEY = 'pr.reporting.favoritesOnly';
+
+  readonly favoritesOnly = signal<boolean>(this.readStoredFavoritesOnly());
+
+  private readStoredFavoritesOnly(): boolean {
+    try {
+      return sessionStorage.getItem(DashboardLabComponent.FAVORITES_ONLY_STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  setFavoritesOnly(value: boolean): void {
+    this.favoritesOnly.set(value);
+    try {
+      sessionStorage.setItem(DashboardLabComponent.FAVORITES_ONLY_STORAGE_KEY, value ? '1' : '0');
+    } catch {
+      // Storage may be unavailable (private mode / blocked) — the toggle still works for the session.
+    }
+  }
+
+  /**
+   * The current programme's favorite key `Set` (RFI-R-3.2 — favorites are per-programme), and its
+   * size for the band's `Favorites (N)` label. Reactive: `favoritesSE.setOf` reads the service's
+   * own signal, so a `toggle()` anywhere recomputes both.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly programFavoriteKeys = computed(() => this.favoritesSE.setOf(this.selected()?.initiativeCode ?? ''));
+  readonly programFavoritesCount = computed(() => this.programFavoriteKeys().size);
+
+  /**
+   * `reporting-aow-table`'s `(toggleFavorite)` handler. No-op with no programme selected — there is
+   * no store to toggle into.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  toggleFavorite(row: ReportingIndicator): void {
+    const code = this.selected()?.initiativeCode;
+    if (!code) return;
+    this.favoritesSE.toggle(code, favoriteKeyOf(row));
+  }
+
+  /**
+   * Favorites-only step (RFI-DD-3): runs AFTER `applyBurndownFilterAndSort` so the Remaining-work
+   * order and the `__allIndicators` side-channel it writes are preserved — the ratio (`ratioOf`)
+   * must keep counting the pre-favorites set (RFI-R-2.4), exactly as it already does for
+   * Only-pending. With the switch off this returns the SAME array reference (RFI-R-4.2 — identity,
+   * no silent default change); with it on, each group keeps only its favorite rows and a settled
+   * (non-`loading`) group left with zero rows is dropped — a still-loading card stays visible
+   * (RFI-R-2.3).
+   *
+   * Return type mirrors `applyBurndownFilterAndSort`'s own `(G & {...})[]` — the object spread does
+   * not narrow back to `G` (JD-10).
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  private applyFavoritesFilter<G extends { indicators: any[]; count: number; loading?: boolean; __allIndicators?: any[] }>(
+    groups: G[]
+  ): (G & { __allIndicators?: any[] })[] {
+    if (!this.favoritesOnly()) return groups;
+    const keys = this.programFavoriteKeys();
+    return groups
+      .map(g => {
+        const kept = g.indicators.filter(r => keys.has(favoriteKeyOf(r)));
+        return { ...g, indicators: kept, count: kept.length, __allIndicators: g.__allIndicators ?? g.indicators };
+      })
+      .filter(g => g.indicators.length > 0 || g.loading);
+  }
+
+  /**
    * Global disclosure switch of the Reporting tab (P2-3252). The toolbar's single control flips it
    * and the grouped table takes it as the level default for BOTH AoW cards and their HLO sub-groups.
    *
@@ -3676,6 +3756,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    *
    * ONE computed over all five signals on purpose: a sixth filter added later has exactly one place
    * to be remembered, and forgetting it here is visible immediately rather than as a wrong sentence.
+   *
+   * Favorites-only (RFI-R-2.5) is added as a SIXTH, VIEW-GATED clause: the favorites step only
+   * wraps `reportingGroupsForTable`, never `plannedByAowSections`, and the switch itself is hidden
+   * in By AOW (RFI-R-2.2) — an ungated clause would light "Clear filters" and the "match your
+   * filters" empty states in a view where nothing is actually filtered (JD-1, the P2-3405 defect
+   * class repeating itself).
+   * @akili-spec changes/reporting-favorite-indicators
    */
   readonly reportingFiltersActive = computed(
     () =>
@@ -3685,7 +3772,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       this.reportingTypologyFilter() !== 'all' ||
       this.reportingStatusFilter() !== 'all' ||
       !!this.byAowSelectedCenter() ||
-      !!this.byAowSelectedType()
+      !!this.byAowSelectedType() ||
+      (this.favoritesOnly() && this.plannedBrowseView() === 'aows')
   );
 
   /** `Clear filters` in the Reporting tab's empty state. Resets the same five signals, together. */
@@ -3701,6 +3789,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // as a filter, so "Clear filters" must switch it off too — through `setOnlyPending` so the
     // persisted sessionStorage value is cleared as well, not just the signal.
     this.setOnlyPending(false);
+    // RFI-R-2.5: the switch is also a filter — turn it off, but NEVER delete a pin. `setFavoritesOnly`
+    // only writes the scalar sessionStorage flag; `ReportingFavoritesService` is untouched.
+    // @akili-spec changes/reporting-favorite-indicators
+    this.setFavoritesOnly(false);
   }
 
   /**

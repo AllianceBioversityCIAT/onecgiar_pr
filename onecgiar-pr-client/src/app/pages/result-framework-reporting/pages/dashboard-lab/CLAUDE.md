@@ -11,11 +11,19 @@ de TS): trátalo como host, no como pantalla.
 - Ramas de vista en la plantilla: `showOverview()` (pestaña Overview), `showPlanned()` (pestaña
   **Reporting**), más las vistas de AoW/guía. La pestaña **Results** ya NO vive aquí: es
   `pages/programme-results/`, cargada por su propia ruta.
-- Es dueño de los cinco filtros de Reporting: `plannedSearch`, `reportingAowFilter` (multi),
-  `reportingTypeFilter`, `reportingTypologyFilter`, `reportingStatusFilter`.
-  `reportingFiltersActive()` los agrega en un solo booleano y `clearReportingFilters()` los resetea.
+- Es dueño de **seis** filtros de Reporting: `plannedSearch`, `reportingAowFilter` (multi),
+  `reportingTypeFilter`, `reportingTypologyFilter`, `reportingStatusFilter`, y `favoritesOnly`
+  (spec `changes/reporting-favorite-indicators`, RFI-R-2.*). `reportingFiltersActive()` los agrega
+  en un solo booleano y `clearReportingFilters()` los resetea; la cláusula de `favoritesOnly` va
+  **gateada por vista** (`&& plannedBrowseView() === 'aows'` — JD-1: el switch no filtra nada en By
+  AOW) y `clearReportingFilters()` apaga el switch (`setFavoritesOnly(false)`) pero **nunca borra**
+  un pin — eso vive solo en `ReportingFavoritesService`.
 - `reportingGroups()` aplica **Section / Type / Category** y entrega `ReportingAowGroup[]` ya
   filtrado; `search` y `statusFilter` se pasan aparte y los aplica el hijo.
+- `reportingGroupsForTable()` = `applyFavoritesFilter(applyBurndownFilterAndSort(reportingGroups()))`
+  — `applyFavoritesFilter` corre **DESPUÉS** de `applyBurndownFilterAndSort` a propósito (RFI-DD-3):
+  así hereda el `__allIndicators` que ya escribió Only-pending y el ratio de cabecera sigue contando
+  el universo pre-favoritos (RFI-R-2.4), no el subconjunto de favoritos.
 - El drawer de indicador se abre solo desde aquí: `manageIndicator(row, hlo, tab, node?)` con
   `tab: 'report' | 'info' | 'results' = 'report'` (la pestaña `results`, tabla de resultados
   reportados, es de la spec `changes/indicator-reported-results`; ver `indicator-drawer/CLAUDE.md`).

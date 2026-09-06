@@ -83,3 +83,42 @@ Auto-approved (pre-approved mode) → `RFI-T-2` in flight; `RFI-T-4` next.
 - READABILITY — the star's class block is duplicated across the two cells (file convention is inline Tailwind).
 
 Auto-approved (pre-approved mode) → `RFI-T-4` already in flight (disjoint files).
+
+### `RFI-T-4` — Host wiring, favorites pipeline step, persistence of the switch, guide update — **PASS** (2026-09-05, 2 attempts)
+
+| Field | Value |
+|---|---|
+| Implementer | `akili-implementer` (sonnet), skills `angular-developer`, `tdd`, effort high (attempt 2: fresh worker, same effort) |
+| Reviewer | `akili-reviewer` (opus), two rounds |
+| Files (4) | `dashboard-lab.component.ts`, `dashboard-lab.component.html`, `dashboard-lab.favorites.spec.ts` (new), `dashboard-lab/CLAUDE.md` |
+| Verification | `npx jest …/dashboard-lab.favorites.spec.ts …/dashboard-lab.mrf-burndown-session.spec.ts …/design-tokens.spec.ts --silent --reporters=summary --no-coverage` → **3 suites, 24/24 passed**; `npx tsc --noEmit -p tsconfig.app.json` clean; `npx ng lint --quiet` → "All files pass linting." (whole client, run after attempt 1) |
+| Requirements covered | `RFI-R-2.3`, `2.4`, `2.5` (both clauses), `2.7`, `RFI-R-3.2` (host scope), `RFI-R-4.1` (host side), `RFI-R-4.2`, `RFI-AC-6`, `7`, `8`, `9`, `13`, `15`, `RFI-DD-1`, `DD-3`, `DD-5` |
+
+**Attempt 1 — Reviewer FAIL (1 issue, test-only):** production judged conformant (view-gated `reportingFiltersActive`, identity return, `__allIndicators` precedence against `ratioBase`, only the Reporting band bound, `plannedByAowSections` untouched). Issue: AC-8's fixture pinned both AOW01 rows, so the favorites set equalled the pre-favorites set and the test could not detect the favorites-before-burndown mutation — violating the T-4 disqualifier "swap the pipeline order → AC-8 must go red" (`RFI-DD-3`, `RFI-R-2.4`). Remediation: a third unpinned pending row.
+
+**Attempt 2:** added `KPI_D` (id 4, pending, unpinned), parameterised the loader so AC-6/AC-15 keep their fixture, AC-8 asserts `__allIndicators` ids `[1,2,4]`. Mutation proof run: with the order swapped in production, AC-8 went red (`Expected [1,2,4], Received [1,2]`), the other 6 tests stayed green; production reverted (MD5 identical).
+
+**Reviewer PASS (round 2):** traced both orders against the real code — correct order preserves `[1,2,4]`, swapped order overwrites to `[1,2]`; the non-pending pinned row disqualifier still holds (`KPI_A`); no presence-only assertions; template bindings present.
+
+**ADVISORY (recorded, round 1):**
+- READABILITY — `reporting-aow-table.component.ts` (~929, ~1065) JSDoc still says `__allIndicators` is written "ONLY while Only-pending is on"; favorites writes it too. One-line amendment, outside T-4's file set → follow-up.
+- RELIABILITY — `plannedBrowseView` has a dead third value `'indicators'` with no template branch; the switch would show there while the gate reports not-active. Pre-existing.
+
+Rework ledger: 1 rework round (the YOLO ceiling), narrower than the first round (test fixture only).
+
+### `RFI-HITL-1` — Real-page visual/layout check — **PASS** (2026-09-05, Leader, Orca embedded browser)
+
+Setup: `ng serve --port 4201` from this worktree; new Orca tab at `http://localhost:4201/…/entity-details/SP01?tocView=aows` with the PRMS session copied from the existing tab (values never printed); root zoom ×1.2 applies (requested 1280 → 1536 CSS px, 750 → 900, 640 → 768). Screenshots were not capturable (`Page.captureScreenshot` timeout — the Orca tab was not focused, known limitation); evidence is DOM-measured.
+
+| Check | Result |
+|---|---|
+| Page overflow, grouped view, requested 1280 / 1024 / 900 / 768 / 750 / 640 | `documentElement.scrollWidth === clientWidth` at every width — **no horizontal overflow** |
+| Grouped action cell | width **140px**; star 26 + link 26 + Report 56 on **one line** (identical `top`) at every width |
+| Flat (*All indicators*) action cell, 1280 / 1024 / 900–640 | width **224 / 210 / 184px**; star 28 + link 28 + Report 56 + `⋯` 28 on one line (Report is 26px tall so its `top` reads 1px lower — centring, not a wrap); the flat table scrolls inside its own `.pr-table-wrap` below ~1000px as before, page never overflows |
+| Star toggle (SP01, AOW01 card opened) | 28 stars in the open card; click → `aria-pressed="true"`, glyph `star`, label "Remove from favorites"; card stayed open (event isolation); band switch reads **Favorites (1)**; `localStorage['pr.reporting.favorites.v1.<userId>']` created |
+| Favorites switch ON | 1 card, 1 row visible; *Clear filters* visible; `sessionStorage['pr.reporting.favoritesOnly'] = '1'` |
+| Reload | switch still on, `Favorites (1)`, 1 card, the same star pressed — persistence across reload |
+| Clear filters | switch off (`'0'`), 7 cards back, **Favorites (1)** — pin kept |
+| Unpin | `Favorites (0)`, store `{}` |
+
+Cleanup: pin removed, tab closed, original Orca tab (index 0) re-activated. Dev server on 4201 stopped at the end of the run.

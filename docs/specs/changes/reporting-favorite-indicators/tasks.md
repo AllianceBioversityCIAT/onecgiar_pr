@@ -13,7 +13,7 @@
 | Design Ref | [`design.md`](./design.md) (`RFI-DD-1` .. `RFI-DD-4`, budget §14) |
 | Execution limits | ≤ 1 Reviewer rework per task; verification = the task's targeted `npx jest` command only; lint = `npx ng lint --quiet` once at the end (no flat ESLint config in the client) |
 | Worktree | `/Users/jcadavid/Development/worktrees/onecgiar_pr/reporting-favorites` · branch `feat/reporting-favorite-indicators` · `node_modules` symlinked from the `qa-development-2026` checkout. **Workers run every command from this path.** Never `git add -A`; stage explicit paths. |
-| Status | in-progress |
+| Status | done — all 4 tasks PASS; HITL-1 PASS; merge into `qa-development-2026` pending RHSF landing |
 
 ---
 
@@ -101,7 +101,7 @@
 ### `RFI-T-4` — Host wiring, favorites pipeline step, persistence of the switch, guide update
 - **Type:** `client | tests | docs`
 - **Estimate:** `M`
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Depends on:** `RFI-T-1`, `RFI-T-2`, `RFI-T-3`
 - **Blocks:** `—`
 - **Skills:** `angular-developer`, `tdd`
@@ -116,9 +116,9 @@
 - **Verification:** `cd onecgiar-pr-client && npx jest src/app/pages/result-framework-reporting/pages/dashboard-lab/dashboard-lab.favorites.spec.ts src/app/pages/result-framework-reporting/pages/dashboard-lab/dashboard-lab.mrf-burndown-session.spec.ts src/app/pages/result-framework-reporting/pages/dashboard-lab/design-tokens.spec.ts --silent --reporters=summary --no-coverage && npx tsc --noEmit -p tsconfig.app.json`
 - **Disqualifiers:** AC-7 asserted with `toEqual` on a *copied* array is fine, but AC-7's stronger claim is identity — assert `toBe` on the array when the switch is off. AC-8 that turns Only-pending on with rows that are all pending proves nothing — at least one favorite row must be *non-pending* so it is dropped by burndown and `__allIndicators` still lists it. Failing input: swap the pipeline order (favorites before burndown) → AC-8 must go red.
 - **Definition of done:**
-  - [ ] AC-6..9, AC-13, AC-15 green; RFI-R-2.5 negative case green (switch on + `plannedBrowseView() === 'byAow'` → `reportingFiltersActive()` false with every other filter idle); `mrf-burndown-session` and `design-tokens` suites still green; `tsc` clean.
-  - [ ] Template bindings present on both `<app-reporting-aow-table>` and the Reporting `<app-reporting-program-band>`.
-  - [ ] `dashboard-lab/CLAUDE.md` updated.
+  - [x] AC-6..9, AC-13, AC-15 green; RFI-R-2.5 negative case green (switch on + `plannedBrowseView() === 'byAow'` → `reportingFiltersActive()` false with every other filter idle); `mrf-burndown-session` and `design-tokens` suites still green; `tsc` clean.
+  - [x] Template bindings present on both `<app-reporting-aow-table>` and the Reporting `<app-reporting-program-band>`.
+  - [x] `dashboard-lab/CLAUDE.md` updated.
 
 ---
 
