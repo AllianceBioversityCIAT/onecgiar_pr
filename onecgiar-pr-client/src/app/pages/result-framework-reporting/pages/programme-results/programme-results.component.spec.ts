@@ -1651,7 +1651,7 @@ describe('ProgrammeResultsComponent', () => {
     component.copyLink(row);
 
     const copied = copySpy.mock.calls[0][0];
-    expect(copied).toContain('/result-framework-reporting/entity-details/SP01/results-review');
+    expect(copied).toContain('/result-framework-reporting/entity-details/SP01/bilateral-review');
     expect(copied).toContain(String(row.code));
   });
 
@@ -1713,14 +1713,14 @@ describe('ProgrammeResultsComponent', () => {
     const row = component.data.rows()[2];
     expect(component.usesBilateralReviewFlow(row)).toBe(true);
     expect(component.resultRoute(row)).toEqual({
-      commands: ['/result-framework-reporting', 'entity-details', 'SP01', 'results-review'],
+      commands: ['/result-framework-reporting', 'entity-details', 'SP01', 'bilateral-review'],
       queryParams: { reviewResult: '5003', reviewResultId: 3 }
     });
 
     const bilateral = TestBed.inject(BilateralResultsService);
     component.openResult(row);
     expect(bilateral.currentResultToReview.set).toHaveBeenCalledWith(row);
-    expect(router.navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP01', 'results-review'], {
+    expect(router.navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP01', 'bilateral-review'], {
       queryParams: { reviewResult: '5003', reviewResultId: 3 }
     });
   });

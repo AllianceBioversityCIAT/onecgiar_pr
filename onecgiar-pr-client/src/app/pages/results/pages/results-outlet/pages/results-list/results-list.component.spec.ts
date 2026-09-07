@@ -945,10 +945,10 @@ describe('ResultsListComponent', () => {
       expect(component.getResultQueryParams(result)).toEqual({ phase: 10 });
     });
 
-    it('should link a W3/Bilaterals result pending review to the results-review screen carrying its code', () => {
+    it('should link a W3/Bilaterals result pending review to the bilateral-review screen carrying its code', () => {
       const result = { source_name: 'W3/Bilaterals', submitter: 'OTHER', result_code: 'R-2', version_id: 10, id: 'id-2' } as any;
 
-      expect(component.getResultLink(result)).toEqual(['/result-framework-reporting', 'entity-details', 'OTHER', 'results-review']);
+      expect(component.getResultLink(result)).toEqual(['/result-framework-reporting', 'entity-details', 'OTHER', 'bilateral-review']);
       expect(component.getResultQueryParams(result)).toEqual({ reviewResult: 'R-2', reviewResultId: 'id-2' });
     });
 
@@ -1020,7 +1020,7 @@ describe('ResultsListComponent', () => {
 
       component.navigateToResult(result);
 
-      expect(navigateSpy).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'OTHER', 'results-review'], {
+      expect(navigateSpy).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'OTHER', 'bilateral-review'], {
         queryParams: { reviewResult: 'R-2', reviewResultId: 'id-2' }
       });
     });

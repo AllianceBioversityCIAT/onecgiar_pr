@@ -104,7 +104,8 @@ export class PopUpNotificationItemComponent {
       event.preventDefault();
       this.markAsRead(notification);
       this.itemSelected.emit();
-      this.router.navigateByUrl(`/result-framework-reporting/entity-details/${programCode}/results-review`);
+      // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-17)
+      this.router.navigateByUrl(`/result-framework-reporting/entity-details/${programCode}/bilateral-review`);
       return;
     }
 

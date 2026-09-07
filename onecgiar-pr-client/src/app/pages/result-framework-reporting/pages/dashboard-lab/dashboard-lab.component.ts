@@ -752,7 +752,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
     const returnTab = this.pendingReturnTab || this.route?.snapshot?.queryParamMap?.get('returnTab');
     this.pendingReturnTab = null;
-    if (returnTab === 'results' || returnTab === 'my-work') {
+    // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-22, BRT-AC-20)
+    if (returnTab === 'results' || returnTab === 'my-work' || returnTab === 'bilateral-review') {
       const code = this.selected()?.initiativeCode || this.route?.snapshot?.paramMap?.get('entityId');
       this.router.navigate(['/result-framework-reporting', 'entity-details', code, returnTab]);
     } else if (this.route?.snapshot?.queryParamMap?.get('reportEmerging') === 'true') {
@@ -863,7 +864,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.resultLevelSE.cleanData?.();
     const returnTab = this.pendingReturnTab || this.route?.snapshot?.queryParamMap?.get('returnTab');
     this.pendingReturnTab = null;
-    if (returnTab === 'results' || returnTab === 'my-work') {
+    // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-22, BRT-AC-20)
+    if (returnTab === 'results' || returnTab === 'my-work' || returnTab === 'bilateral-review') {
       const code = this.selected()?.initiativeCode || this.route?.snapshot?.paramMap?.get('entityId');
       this.router.navigate(['/result-framework-reporting', 'entity-details', code, returnTab]);
     } else if (this.route?.snapshot?.queryParamMap?.get('reportEmerging') === 'true') {

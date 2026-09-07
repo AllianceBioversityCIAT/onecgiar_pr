@@ -678,8 +678,9 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     const route: ResultRoute = this.usesBilateralReviewFlow(result)
       ? {
           // Same fallback chain as programCode(): a raw `submitter` can be undefined and
-          // would build `/entity-details/undefined/results-review`.
-          commands: ['/result-framework-reporting', 'entity-details', this.programCode(result), 'results-review'],
+          // would build `/entity-details/undefined/bilateral-review`.
+          // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-17)
+          commands: ['/result-framework-reporting', 'entity-details', this.programCode(result), 'bilateral-review'],
           queryParams: { [REVIEW_RESULT_QUERY_PARAM]: result?.result_code, [REVIEW_RESULT_ID_QUERY_PARAM]: result?.id }
         }
       : {

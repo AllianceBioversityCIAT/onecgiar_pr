@@ -1425,12 +1425,13 @@ export class ProgrammeResultsComponent implements OnDestroy {
   /**
    * Destination for one result. Same branching as `results-list.component.ts:634 getResultRoute()`
    * — a W3/Bilaterals result that is neither AVISA nor Approved deep-links into the programme's
-   * `results-review` drawer; everything else opens Result Detail with its `?phase=`.
+   * `bilateral-review` drawer; everything else opens Result Detail with its `?phase=`.
    */
+  // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-17)
   resultRoute(row: ProgrammeResultRow): PgrResultRoute {
     if (this.usesBilateralReviewFlow(row)) {
       return {
-        commands: ['/result-framework-reporting', 'entity-details', row?.submitterCode || this.programmeCode(), 'results-review'],
+        commands: ['/result-framework-reporting', 'entity-details', row?.submitterCode || this.programmeCode(), 'bilateral-review'],
         queryParams: { [REVIEW_RESULT_QUERY_PARAM]: row?.code, [REVIEW_RESULT_ID_QUERY_PARAM]: row?.id }
       };
     }

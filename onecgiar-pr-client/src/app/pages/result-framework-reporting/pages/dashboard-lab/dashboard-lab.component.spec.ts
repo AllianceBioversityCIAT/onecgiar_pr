@@ -2255,6 +2255,24 @@ describe('DashboardLabComponent — Where-to-report return tab (MWB-T-8)', () =>
 
     expect(navigate).toHaveBeenCalledWith([], expect.objectContaining({ queryParams: { whereToReport: null, returnTab: null } }));
   });
+
+  // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-22, BRT-AC-20)
+  it('closeReportModal returns to the Bilateral review tab when returnTab is "bilateral-review"', async () => {
+    const { component, navigate } = await createComponent({ reportEmerging: 'true', returnTab: 'bilateral-review' });
+
+    component.closeReportModal();
+
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP02', 'bilateral-review']);
+  });
+
+  // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-22, BRT-AC-20)
+  it('closeManage returns to the Bilateral review tab when returnTab is "bilateral-review"', async () => {
+    const { component, navigate } = await createComponent({ returnTab: 'bilateral-review' });
+
+    component.closeManage();
+
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP02', 'bilateral-review']);
+  });
 });
 
 // @akili-spec changes/reporting-hierarchical-search-filters (RHSF-T-5)

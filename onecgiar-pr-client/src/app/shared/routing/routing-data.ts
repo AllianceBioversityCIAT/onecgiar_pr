@@ -623,6 +623,18 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
       )
   },
   {
+    // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-1)
+    // Fifth SP tab — the programme's bilateral review queue (own results submitted through
+    // W3/Bilaterals pending/approved/rejected decision). Own component, sibling of `my-work`.
+    prName: 'Bilateral review',
+    path: 'entity-details/:entityId/bilateral-review',
+    data: { sidebar: { width: 300 }, rfrView: 'bilateral-review' },
+    loadComponent: () =>
+      import('../../pages/result-framework-reporting/pages/bilateral-review/bilateral-review.component').then(
+        m => m.BilateralReviewComponent
+      )
+  },
+  {
     // THE programme page. Serves the redesigned shell (band + Overview/Reporting tabs +
     // the CURRENT reporting table) at the path that was always the programme's address and
     // that people have saved as links. The legacy `EntityDetailsComponent` (Insights bento)
@@ -633,10 +645,14 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
     loadComponent: loadDashboardLab
   },
   {
-    prName: 'Bilateral results review',
+    // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-16/17)
+    // Legacy address kept alive for saved links and notifications minted before the rename.
+    // Angular preserves path params by name and keeps query params on a redirect by default, so
+    // `?center=&search=&reviewResult=&reviewResultId=` all survive onto the new path (BRT-AC-11).
+    prName: 'Bilateral results review (legacy redirect)',
     path: 'entity-details/:entityId/results-review',
-    loadComponent: () =>
-      import('../../pages/result-framework-reporting/pages/bilateral-results/bilateral-results.component').then(m => m.BilateralResultsComponent)
+    redirectTo: 'entity-details/:entityId/bilateral-review',
+    pathMatch: 'full'
   },
   {
     prName: 'Entity AOW',

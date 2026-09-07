@@ -1,6 +1,6 @@
 # Results Framework & Reporting — Module Guide
 
-> **Deep functional + conceptual documentation** of `src/app/pages/result-framework-reporting/` and all its children (home, entity-details, entity-aow, bilateral-results). This is the reference to read **before touching any reporting flow** in this module. It complements (and supersedes where they conflict) the per-folder `AGENTS.md` files, several of which are partially stale (see §9).
+> **Deep functional + conceptual documentation** of `src/app/pages/result-framework-reporting/` and all its children (home, entity-details, entity-aow, bilateral-review). This is the reference to read **before touching any reporting flow** in this module. It complements (and supersedes where they conflict) the per-folder `AGENTS.md` files, several of which are partially stale (see §9).
 >
 > Last full audit: 2026-07-15 (branch `front-redesign-fields`, P25 · Reporting 2026 phase).
 
@@ -16,7 +16,7 @@ It serves one job: **let a Science Program (SP) / Accelerator member report resu
 |---|---|---|---|
 | A | **Report against ToC indicators** ("planned") | `entity-aow` (indicators tables) | New PRMS result **linked to a ToC indicator** |
 | B | **Report Emerging results** ("unplanned") | `entity-details` (indicator-category cards → modal) | New PRMS result **not planned in the ToC** |
-| C | **Bilateral Results Review** | `bilateral-results` | Approve/Reject of Center-submitted bilateral results |
+| C | **Bilateral Results Review** | `bilateral-review` | Approve/Reject of Center-submitted bilateral results |
 
 Both A and B end in the same place: the standard **Result Detail editor** (`/result/result-detail/{code}/general-information?phase={version_id}`) where the user completes the result. The module only handles *creation + context*; editing lives in the `results` feature.
 
@@ -38,7 +38,8 @@ All child routes are declared **outside the module folder** in `src/app/shared/r
 /result-framework-reporting
 ├── home                                → result-framework-reporting-home (landing)
 ├── entity-details/:entityId            → entity-details (SP dashboard)
-├── entity-details/:entityId/results-review → bilateral-results (review workspace)
+├── entity-details/:entityId/bilateral-review → bilateral-review (review workspace)
+│   └── (legacy entity-details/:entityId/results-review redirects here, query params preserved)
 ├── entity-details/:entityId/aow        → entity-aow (shell + Indicators sidebar)
 │   ├── '' → redirect 'all'
 │   ├── all            → PLACEHOLDER ("entity-aow-all works!")   ← dead page, default target!
@@ -79,7 +80,7 @@ Data: `GET api/results-framework-reporting/get/science-programs/progress` → `{
 > `pages/programme-results/CLAUDE.md`.
 
 - **Insights panel**: Editing/Submitted stat tiles + two Chart.js stacked horizontal bars (Outputs / Outcomes × Editing/Submitted/QAed) from `GET .../dashboard?programId=` (a full 3-status × 8-category matrix — more data than is rendered today).
-- **Bilateral Results Review banner**: pending count from `GET api/results/pending-review?programId=` + CTA → `results-review`. Hidden for `SGP-02` (⚠️ but not for the `'SGP02'` spelling — known bug).
+- **Bilateral Results Review banner**: pending count from `GET api/results/pending-review?programId=` + CTA → `bilateral-review`. Hidden for `SGP-02` (⚠️ but not for the `'SGP02'` spelling — known bug).
 - **"Results planned in your {year} ToC"**: one AOW card per `Unit` from `GET .../clarisa-global-units?programId=` with Editing/Submitted counts; "Report against indicators" → `aow/{code}` (workflow A).
 - **"Report Emerging results"**: indicator-category cards from `GET .../programs/indicator-contribution-summary?program=` (`totalsByType`, "Innovation Use(IPSR)" filtered out client-side), grouped OUTPUTS/OUTCOMES. "Report result" → workflow B modal.
 
@@ -91,7 +92,7 @@ Shell renders breadcrumb + "Indicators" sidebar ("By AOW" tree + "2030 Outcomes"
 - **View results** → drawer listing existing contributors (`GET .../existing-result-contributors?...`), deep-links + PDF links per row.
 - **Target details** (only when `targets_by_center.centers.length > 0`) → client-side Center × Year pivot drawer.
 
-### 4.4 Bilateral results (`/entity-details/:entityId/results-review`) — workflow C
+### 4.4 Bilateral results (`/entity-details/:entityId/bilateral-review`) — workflow C
 
 Centers sidebar (CLARISA centers with pending badges = count of `status_id == 5` per `lead_center`) + grouped-by-project table (`GET api/results/by-program-and-centers?programId=[&centerIds=]` — `centerIds` appended **only when exactly 1 center** is selected) + client-side filters (search persisted as `?search=`, center as `?center=`; the 3 multiselects are NOT URL-persisted). Row → **review drawer** (§5C).
 
@@ -129,7 +130,7 @@ Centers sidebar (CLARISA centers with pending badges = count of `status_id == 5`
 |---|---|---|
 | `ResultFrameworkReportingHomeService` | SP lists, recent activity, loading flags | shell, home, insights widget, entity-details (SGP-02 name fallback), dormant `WebsocketService` |
 | `EntityAowService` (in `entity-aow/services/`) | entityId/aowId, entityDetails, entityAows, indicatorSummaries, dashboardData, ToC results, ALL modal/drawer open-state, `reportingEnabled`, `canReportResults` | **entity-details AND entity-aow** (de-facto owner of both pages' state). New fields must be added to `resetDashboardData()` or they leak between SPs |
-| `BilateralResultsService` | centers, selection, filters, tableData/tableResults, `allResultsForCounts`, pending counts | bilateral-results tree |
+| `BilateralResultsService` | centers, selection, filters, tableData/tableResults, `allResultsForCounts`, pending counts | bilateral-review tree |
 
 **Permissions:** `canReportResults() = rolesSE.isAdmin OR (reportingEnabled AND entity ∈ dataControlSE.myInitiativesList)`. `reportingEnabled` comes from `GET api/results/admin-panel/phases/{phaseId}/reporting-initiatives/{initiativeId}/status` and **fails open** (missing phase/initiative or HTTP error ⇒ `true`). `myInitiativesList` is filled by header-panel's `updateUserData()` — the module never fetches it. **Every gate is client-side; the backend must enforce on POST/PATCH.**
 
@@ -176,7 +177,7 @@ Centers sidebar (CLARISA centers with pending badges = count of `status_id == 5`
 - View-results drawer fakes loading with `setTimeout(1000)` (not tied to the HTTP).
 - Sidebar AOW click fires the ToC GET twice (pre-warm + ngOnInit).
 - Bilateral deep-link with `?center=X` never hydrates `allResultsForCounts` → other centers show no badges until "All Centers" is clicked.
-- `.DS_Store` files committed under `bilateral-results/`.
+- `.DS_Store` files committed under `bilateral-review/`.
 - `bilateral-results.service.ts` seeds `tableData` with a ghost all-empty-strings row.
 
 **Structural friction (what a flow-simplification should attack):**
