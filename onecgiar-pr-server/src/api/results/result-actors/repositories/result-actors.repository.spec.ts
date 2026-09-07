@@ -29,15 +29,10 @@ const NON_DB_MODES = new Set(['virtual', 'virtual-property']);
 const NOT_REPLICATED: Record<string, string> = {
   result_actors_id:
     'AUTO_INCREMENT primary key — the phase copy is a new row, so the id is never carried across.',
-  addressing_demands:
-    'PENDING BUSINESS ANSWER (found 7 Sep 2026 while fixing P2-3568). Free text, live since ' +
-    'migration 1727905760292 (Oct 2024): written by the Innovation Dev / Innovation Use forms, ' +
-    'read by summary/innovation_dev.service.ts and innovation-use.service.ts, and required by ' +
-    'the P22 green check (migrations/1761849861521-createValidtionP22.ts:515). It has NEVER been ' +
-    'replicated. Unlike a section tick, this is a reportable VALUE — whether last phase text ' +
-    'still stands is a business call, so it is escalated, not copied, exactly as P2-3292 ' +
-    '(d246d9afe) decided for the same shape. Delete this entry the day the answer lands.',
 };
+// addressing_demands was allow-listed here pending a business answer. The answer
+// landed on 7 Sep 2026 (Yeck): it carries across phases like every other column,
+// so it is replicated and this guard now requires it in all three column lists.
 
 /**
  * SELECT targets that are legitimately computed instead of copied from the source row,
