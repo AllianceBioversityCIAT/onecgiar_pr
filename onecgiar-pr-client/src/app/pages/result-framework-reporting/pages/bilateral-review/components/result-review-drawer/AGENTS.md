@@ -1,8 +1,8 @@
 # AGENTS.md — `result-review-drawer/`
 
 > **Scope:** the 1,666-LOC component that loads a single bilateral result, normalizes the polymorphic payload, gates editing, runs dirty tracking, dispatches type-specific sub-content, and mutates approve / reject / save endpoints.
-> **Parent guide:** [`../../../../AGENTS.md`](../../../../AGENTS.md) (bilateral-results page).
-> **Root guide:** [`../../../../../../AGENTS.md`](../../../../../../AGENTS.md) (module-level replication guide).
+> **Parent guide:** [`../../../bilateral-results/AGENTS.md`](../../../bilateral-results/AGENTS.md) (bilateral-results page).
+> **Root guide:** [`../../../../AGENTS.md`](../../../../AGENTS.md) (module-level replication guide).
 
 This is the **single largest replication risk in the module**. Read this entire file before touching `result-review-drawer.component.ts`.
 
@@ -725,6 +725,6 @@ describe('ResultReviewDrawerComponent integration', () => {
 
 ## 14. See also
 
-- [`../../../../AGENTS.md`](../../../../AGENTS.md) — bilateral-results page-level guide.
-- [`../../../../../../AGENTS.md`](../../../../../../AGENTS.md) — module-level root replication guide (architecture, API contracts, glossary).
+- [`../../../bilateral-results/AGENTS.md`](../../../bilateral-results/AGENTS.md) — bilateral-results page-level guide.
+- [`../../../../AGENTS.md`](../../../../AGENTS.md) — module-level root replication guide (architecture, API contracts, glossary).
 - [`./result-review-drawer.interfaces.ts`](./result-review-drawer.interfaces.ts) — the canonical TypeScript shapes.

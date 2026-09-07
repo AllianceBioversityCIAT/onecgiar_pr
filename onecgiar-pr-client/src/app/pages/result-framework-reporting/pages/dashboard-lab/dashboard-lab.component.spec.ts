@@ -15,7 +15,7 @@ import { ResultLevelService } from '../../../results/pages/result-creator/servic
 import { SPProgress, Status } from '../../../../shared/interfaces/SP-progress.interface';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { Unit } from '../entity-details/interfaces/entity-details.interface';
-import { ResultToReview } from '../bilateral-results/components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
+import { ResultToReview } from '../bilateral-review/components/result-review-drawer/result-review-drawer.interfaces';
 
 // `DashboardLabComponent` imports `ProgramOverviewComponent`, which (since `OVW-T-3`) imports the
 // real `PrVizChartComponent` → real `echarts/core` — an ESM package Jest cannot parse without a

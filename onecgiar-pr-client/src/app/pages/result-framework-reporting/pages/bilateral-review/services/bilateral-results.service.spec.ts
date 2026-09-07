@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
-import { ApiService } from '../../../../shared/services/api/api.service';
+import { ApiService } from '../../../../../shared/services/api/api.service';
 import { BilateralResultsService } from './bilateral-results.service';
 
 function result(partial: Record<string, any> = {}): any {

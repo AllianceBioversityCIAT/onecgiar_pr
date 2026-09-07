@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, Input, OnInit, signal } from '@angular/core';
 import { BilateralResultDetail } from '../../result-review-drawer.interfaces';
-import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
+import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
+import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-cap-sharing-content',

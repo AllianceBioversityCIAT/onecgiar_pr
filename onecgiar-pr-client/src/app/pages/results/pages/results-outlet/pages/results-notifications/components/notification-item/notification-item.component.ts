@@ -5,7 +5,7 @@ import { RetrieveModalService } from '../../../../../result-detail/components/re
 import { ResultLevelService } from '../../../../../result-creator/services/result-level.service';
 import { finalize } from 'rxjs/operators';
 import { Router } from '@angular/router';
-import { BilateralResultsService } from '../../../../../../../result-framework-reporting/pages/bilateral-results/bilateral-results.service';
+import { BilateralResultsService } from '../../../../../../../result-framework-reporting/pages/bilateral-review/services/bilateral-results.service';
 
 // P2-3085: shape of each ToC contribution review entry (backend contract, P2-3086).
 export interface TocContributionReview {

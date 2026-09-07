@@ -14,7 +14,7 @@ import {
   BilateralResultsService,
   REVIEW_RESULT_ID_QUERY_PARAM,
   REVIEW_RESULT_QUERY_PARAM
-} from '../../../../../result-framework-reporting/pages/bilateral-results/bilateral-results.service';
+} from '../../../../../result-framework-reporting/pages/bilateral-review/services/bilateral-results.service';
 import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
 
 interface ResultRoute {

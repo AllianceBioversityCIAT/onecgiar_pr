@@ -2,9 +2,9 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, Input, O
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BilateralResultDetail, BilateralInnovationUseResponse } from '../../result-review-drawer.interfaces';
-import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
-import { YmzListStructureItemModule } from '../../../../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
-import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
+import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
+import { YmzListStructureItemModule } from '../../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
+import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-innovation-use-content',

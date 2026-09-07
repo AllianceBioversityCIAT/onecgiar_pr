@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { CenterDto } from '../../../../../../shared/interfaces/center.dto';
-import { BilateralResultsService } from '../../bilateral-results.service';
+import { BilateralResultsService } from '../../../bilateral-review/services/bilateral-results.service';
 
 @Component({
   selector: 'app-indicators-sidebar',

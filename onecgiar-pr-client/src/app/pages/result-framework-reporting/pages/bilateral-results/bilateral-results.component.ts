@@ -4,7 +4,7 @@ import { IndicatorsSidebarComponent } from './components/indicators-sidebar/indi
 import { ResultsReviewContainerComponent } from './components/results-review-container/results-review-container.component';
 import { ResultsReviewFiltersComponent } from './components/results-review-filters/results-review-filters.component';
 import { ResultsReviewTableComponent } from './components/results-review-table/results-review-table.component';
-import { BilateralResultsService } from './bilateral-results.service';
+import { BilateralResultsService } from '../bilateral-review/services/bilateral-results.service';
 
 @Component({
   selector: 'app-bilateral-results',

@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 
 import { InnovationUseContentComponent } from './innovation-use-content.component';
-import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
+import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 
 describe('InnovationUseContentComponent', () => {

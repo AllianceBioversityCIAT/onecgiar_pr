@@ -15,7 +15,7 @@ import { SPProgress } from '../../../../shared/interfaces/SP-progress.interface'
 import { ScopeBucket, Unit } from '../entity-details/interfaces/entity-details.interface';
 import { OverviewLink } from './components/program-overview/program-overview.component';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from '../programme-results/services/programme-results-query-params';
-import { ResultToReview } from '../bilateral-results/components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
+import { ResultToReview } from '../bilateral-review/components/result-review-drawer/result-review-drawer.interfaces';
 
 // Same echarts mocks as `dashboard-lab.component.spec.ts` — `ProgramOverviewComponent` (a template
 // import of `DashboardLabComponent`) drags in the real `PrVizChartComponent`, an ESM package Jest

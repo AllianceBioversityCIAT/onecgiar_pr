@@ -16,7 +16,7 @@ import { PROGRAMME_RESULTS_OTHER_CATEGORY, ProgrammeResultsFilterService } from 
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
-import { BilateralResultsService } from '../bilateral-results/bilateral-results.service';
+import { BilateralResultsService } from '../bilateral-review/services/bilateral-results.service';
 import { PrToastService } from '../../../../shared/components/pr-toast';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';

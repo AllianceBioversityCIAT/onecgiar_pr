@@ -4,11 +4,11 @@ import { Router } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 
 import { ResultReviewDrawerComponent } from './result-review-drawer.component';
-import { ApiService } from '../../../../../../../../shared/services/api/api.service';
-import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
-import { CentersService } from '../../../../../../../../shared/services/global/centers.service';
-import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
-import { BilateralResultsService } from '../../../../bilateral-results.service';
+import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { RolesService } from '../../../../../../shared/services/global/roles.service';
+import { CentersService } from '../../../../../../shared/services/global/centers.service';
+import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
+import { BilateralResultsService } from '../../services/bilateral-results.service';
 
 
 // jsdom does not expose structuredClone; the component relies on it for snapshots.
@@ -452,6 +452,29 @@ describe('ResultReviewDrawerComponent', () => {
 
     it('is false when myInitiativesList is missing', () => {
       apiMock.dataControlSE.myInitiativesList = null;
+      component.resultToReview.set({ id: '1', status_id: 5 } as any);
+      expect(component.canEditInDrawer()).toBe(false);
+    });
+
+    // BRT-T-2 (BRT-R-14): the shared BilateralReviewAccessService rule and the drawer's own
+    // status_id == 5 guard must both hold, in either order.
+    it('is false for a program member when the row is not pending (status_id 6)', () => {
+      apiMock.dataControlSE.myInitiativesList = [{ official_code: 'SP01' }];
+      TestBed.inject(BilateralResultsService).entityId.set('SP01');
+      component.resultToReview.set({ id: '1', status_id: 6 } as any);
+      expect(component.canEditInDrawer()).toBe(false);
+    });
+
+    it('is true for a program member when the row is pending (status_id 5)', () => {
+      apiMock.dataControlSE.myInitiativesList = [{ official_code: 'SP01' }];
+      TestBed.inject(BilateralResultsService).entityId.set('SP01');
+      component.resultToReview.set({ id: '1', status_id: 5 } as any);
+      expect(component.canEditInDrawer()).toBe(true);
+    });
+
+    it('is false for a non-member on a pending row (status_id 5)', () => {
+      apiMock.dataControlSE.myInitiativesList = [{ official_code: 'SP99' }];
+      TestBed.inject(BilateralResultsService).entityId.set('SP01');
       component.resultToReview.set({ id: '1', status_id: 5 } as any);
       expect(component.canEditInDrawer()).toBe(false);
     });

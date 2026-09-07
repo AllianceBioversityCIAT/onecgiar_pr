@@ -10,11 +10,11 @@ import {
   PrRowTogglerDirective
 } from '../../../../../../shared/components/pr-table';
 import { HlmButton } from '@spartan/button';
-import { ResultReviewDrawerComponent } from './components/result-review-drawer/result-review-drawer.component';
-import { ResultToReview, GroupedResult } from './components/result-review-drawer/result-review-drawer.interfaces';
+import { ResultReviewDrawerComponent } from '../../../bilateral-review/components/result-review-drawer/result-review-drawer.component';
+import { ResultToReview, GroupedResult } from '../../../bilateral-review/components/result-review-drawer/result-review-drawer.interfaces';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
-import { BilateralResultsService, REVIEW_RESULT_ID_QUERY_PARAM, REVIEW_RESULT_QUERY_PARAM } from '../../bilateral-results.service';
+import { BilateralResultsService, REVIEW_RESULT_ID_QUERY_PARAM, REVIEW_RESULT_QUERY_PARAM } from '../../../bilateral-review/services/bilateral-results.service';
 
 @Component({
   selector: 'app-results-review-table',

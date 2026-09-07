@@ -1,7 +1,7 @@
 import { inject, Injectable, signal, computed } from '@angular/core';
-import { CenterDto } from '../../../../shared/interfaces/center.dto';
-import { ApiService } from '../../../../shared/services/api/api.service';
-import { ResultToReview, GroupedResult } from './components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
+import { CenterDto } from '../../../../../shared/interfaces/center.dto';
+import { ApiService } from '../../../../../shared/services/api/api.service';
+import { ResultToReview, GroupedResult } from '../components/result-review-drawer/result-review-drawer.interfaces';
 
 /** Query param that deep-links a result's review drawer on the results-review screen. */
 export const REVIEW_RESULT_QUERY_PARAM = 'reviewResult';

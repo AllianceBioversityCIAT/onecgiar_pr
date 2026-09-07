@@ -17,8 +17,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HlmButton } from '@spartan/button';
 import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
-import { ApiService } from '../../../../../../../../shared/services/api/api.service';
-import { GeoscopeManagementModule } from '../../../../../../../../shared/components/geoscope-management/geoscope-management.module';
+import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { GeoscopeManagementModule } from '../../../../../../shared/components/geoscope-management/geoscope-management.module';
 import { ResultToReview, BilateralResultDetail } from './result-review-drawer.interfaces';
 import { KpContentComponent } from './components/kp-content/kp-content.component';
 import { InnoDevContentComponent } from './components/inno-dev-content/inno-dev-content.component';
@@ -26,14 +26,15 @@ import { CapSharingContentComponent } from './components/cap-sharing-content/cap
 import { PolicyChangeContentComponent } from './components/policy-change-content/policy-change-content.component';
 import { InnovationUseContentComponent } from './components/innovation-use-content/innovation-use-content.component';
 import { SaveChangesJustificationDialogComponent } from './components/save-changes-justification-dialog/save-changes-justification-dialog.component';
-import { filterOutAvisaInitiatives } from '../../../../../../../../shared/utils/avisa-initiative.util';
-import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
-import { BilateralResultsService } from '../../../../bilateral-results.service';
-import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
-import { CentersService } from '../../../../../../../../shared/services/global/centers.service';
-import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
+import { filterOutAvisaInitiatives } from '../../../../../../shared/utils/avisa-initiative.util';
+import { RolesService } from '../../../../../../shared/services/global/roles.service';
+import { BilateralResultsService } from '../../services/bilateral-results.service';
+import { BilateralReviewAccessService } from '../../services/bilateral-review-access.service';
+import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
+import { CentersService } from '../../../../../../shared/services/global/centers.service';
+import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { Router } from '@angular/router';
-import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
+import { RdContributorsAndPartnersModule } from '../../../../../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
 
 @Component({
   selector: 'app-result-review-drawer',
@@ -61,6 +62,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
   bilateralResultsService = inject(BilateralResultsService);
+  private readonly access = inject(BilateralReviewAccessService);
   rolesSE = inject(RolesService);
   centersSE = inject(CentersService);
   institutionsSE = inject(InstitutionsService);
@@ -175,14 +177,15 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   showConfirmSaveChangesDialog = signal<boolean>(false);
   isToCCompleted = signal<boolean>(false);
 
+  // @akili-spec changes/sp-bilateral-review-tab (BRT-T-2, BRT-R-14) — membership check moved to the
+  // shared BilateralReviewAccessService so the row action label (bilateral-review page) and this
+  // drawer read the same rule; the pending-status guard stays local to the drawer.
   canEditInDrawer = computed(() => {
     if (this.api.rolesSE?.isAdmin) return true;
 
     const statusId = this.resultToReview()?.status_id ?? this.resultDetail()?.commonFields?.status_id;
     if (statusId != 5) return false;
-    const myInitiativesList = this.api.dataControlSE.myInitiativesList || [];
-    const found = myInitiativesList.find(item => item.official_code === this.bilateralResultsService.entityId());
-    return !!found;
+    return this.access.isProgramMember(this.bilateralResultsService.entityId());
   });
 
   /**

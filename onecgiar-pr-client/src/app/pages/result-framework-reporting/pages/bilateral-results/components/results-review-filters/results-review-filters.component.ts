@@ -2,7 +2,7 @@ import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { BilateralResultsService } from '../../bilateral-results.service';
+import { BilateralResultsService } from '../../../bilateral-review/services/bilateral-results.service';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { PrFilterMultiselectModule } from '../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { HlmButton } from '@spartan/button';

@@ -70,7 +70,7 @@ const OVERVIEW_SECTIONS: readonly OverviewSection[] = ['all', 'w1w2', 'bilateral
 function parseOverviewSection(raw: string | null): OverviewSection {
   return raw && (OVERVIEW_SECTIONS as readonly string[]).includes(raw) ? (raw as OverviewSection) : 'all';
 }
-import { ResultToReview } from '../bilateral-results/components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
+import { ResultToReview } from '../bilateral-review/components/result-review-drawer/result-review-drawer.interfaces';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';

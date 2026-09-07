@@ -43,7 +43,7 @@ import {
   BilateralResultsService,
   REVIEW_RESULT_ID_QUERY_PARAM,
   REVIEW_RESULT_QUERY_PARAM
-} from '../bilateral-results/bilateral-results.service';
+} from '../bilateral-review/services/bilateral-results.service';
 import { PrToastService } from '../../../../shared/components/pr-toast';
 import { ProgrammeResultRow, ProgrammeResultsService } from './services/programme-results.service';
 // @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1)

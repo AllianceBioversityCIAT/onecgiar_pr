@@ -12,8 +12,8 @@ import { FormsModule } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { BilateralResultDetail } from '../../result-review-drawer.interfaces';
-import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
-import { InnovationControlListService } from '../../../../../../../../../../shared/services/global/innovation-control-list.service';
+import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
+import { InnovationControlListService } from '../../../../../../../../shared/services/global/innovation-control-list.service';
 
 @Component({
   selector: 'app-inno-dev-content',

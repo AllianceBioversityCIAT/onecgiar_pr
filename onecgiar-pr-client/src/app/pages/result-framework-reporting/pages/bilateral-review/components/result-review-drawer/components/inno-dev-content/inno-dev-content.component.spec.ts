@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 
 import { InnoDevContentComponent } from './inno-dev-content.component';
-import { InnovationControlListService } from '../../../../../../../../../../shared/services/global/innovation-control-list.service';
+import { InnovationControlListService } from '../../../../../../../../shared/services/global/innovation-control-list.service';
 
 
 describe('InnoDevContentComponent', () => {

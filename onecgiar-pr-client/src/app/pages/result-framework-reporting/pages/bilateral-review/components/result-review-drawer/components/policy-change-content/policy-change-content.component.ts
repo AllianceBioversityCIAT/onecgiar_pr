@@ -2,9 +2,9 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, Input, O
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BilateralResultDetail } from '../../result-review-drawer.interfaces';
-import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
-import { PolicyControlListService } from '../../../../../../../../../../shared/services/global/policy-control-list.service';
-import { InstitutionsService } from '../../../../../../../../../../shared/services/global/institutions.service';
+import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
+import { PolicyControlListService } from '../../../../../../../../shared/services/global/policy-control-list.service';
+import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
 import { Subscription } from 'rxjs';
 
 @Component({

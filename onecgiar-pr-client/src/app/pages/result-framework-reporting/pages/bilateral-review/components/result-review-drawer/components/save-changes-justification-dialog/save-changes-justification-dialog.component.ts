@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { PrDialogComponent } from '../../../../../../../../../../shared/components/pr-dialog/pr-dialog.component';
+import { PrDialogComponent } from '../../../../../../../../shared/components/pr-dialog/pr-dialog.component';
 import { HlmButton } from '@spartan/button';
 
 @Component({

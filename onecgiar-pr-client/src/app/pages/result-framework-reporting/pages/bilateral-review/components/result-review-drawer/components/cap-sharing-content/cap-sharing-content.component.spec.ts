@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 
 import { CapSharingContentComponent } from './cap-sharing-content.component';
-import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
+import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 
 describe('CapSharingContentComponent', () => {

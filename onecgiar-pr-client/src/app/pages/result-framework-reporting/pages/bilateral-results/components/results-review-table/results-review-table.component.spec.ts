@@ -5,8 +5,8 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
-import { BilateralResultsService, REVIEW_RESULT_ID_QUERY_PARAM, REVIEW_RESULT_QUERY_PARAM } from '../../bilateral-results.service';
-import { ResultToReview } from './components/result-review-drawer/result-review-drawer.interfaces';
+import { BilateralResultsService, REVIEW_RESULT_ID_QUERY_PARAM, REVIEW_RESULT_QUERY_PARAM } from '../../../bilateral-review/services/bilateral-results.service';
+import { ResultToReview } from '../../../bilateral-review/components/result-review-drawer/result-review-drawer.interfaces';
 
 // Two suites on purpose: the filtering/grouping/counters contract came from this branch and the
 // review deep-link contract came from staging. Their TestBed setups differ, so they stay separate
