@@ -1,7 +1,7 @@
 # AGENTS.md — `result-review-drawer/`
 
 > **Scope:** the 1,666-LOC component that loads a single bilateral result, normalizes the polymorphic payload, gates editing, runs dirty tracking, dispatches type-specific sub-content, and mutates approve / reject / save endpoints.
-> **Parent guide:** [`../../../bilateral-results/AGENTS.md`](../../../bilateral-results/AGENTS.md) (bilateral-results page).
+> **Parent guide:** [`../../CLAUDE.md`](../../CLAUDE.md) (bilateral-review page).
 > **Root guide:** [`../../../../AGENTS.md`](../../../../AGENTS.md) (module-level replication guide).
 
 This is the **single largest replication risk in the module**. Read this entire file before touching `result-review-drawer.component.ts`.
@@ -158,8 +158,8 @@ this story exists to close.
 
 | Gate | Answers | True for | Drives |
 |---|---|---|---|
-| `canEditInDrawer()` (`:178`) | "may this user act on the result at all?" | platform admin, **or** a user owning the entity while `status_id == 5` | TOC ALIGNMENT section + its Save, the Approve/Reject footer |
-| `canEditDataStandards()` (`:189`) | "may this user rewrite what the Center reported?" | **platform admin only** | the title pencil, the whole DATA STANDARDS section (`html:137-421`) + its Save |
+| `canEditInDrawer()` (`:183`) | "may this user act on the result at all?" | platform admin (bypass), **or** `BilateralReviewAccessService.isProgramMember(entityId)` true while `status_id == 5` | TOC ALIGNMENT section + its Save, the Approve/Reject footer |
+| `canEditDataStandards()` (`:207`) | "may this user rewrite what the Center reported?" | **platform admin only** | the title pencil, the whole DATA STANDARDS section (`html:137-421`) + its Save |
 
 P2-3154 AC1/AC2/BR1: the Science Program reviews, it does not rewrite. Everything the Center
 reported is displayed but locked; the TOC alignment is the Program's exclusive responsibility and
@@ -615,11 +615,14 @@ canEditInDrawer = computed(() => {
   if (this.api.rolesSE?.isAdmin) return true;
   const statusId = this.resultToReview()?.status_id ?? this.resultDetail()?.commonFields?.status_id;
   if (statusId != 5) return false;
-  const myInitiativesList = this.api.dataControlSE.myInitiativesList || [];
-  const found = myInitiativesList.find(item => item.official_code === this.bilateralResultsService.entityId());
-  return !!found;
+  return this.access.isProgramMember(this.bilateralResultsService.entityId());
 });
 ```
+Membership itself is delegated to `BilateralReviewAccessService.isProgramMember(code)` (BRT-R-14,
+`services/bilateral-review-access.service.ts`) — true for a platform admin or when `code` is one of
+`api.dataControlSE.myInitiativesList`. The same service backs the row-action label on the page
+(`BilateralReviewComponent.canReview()`), so the two never disagree about "who can review this
+program" — only this drawer additionally requires `status_id == 5`.
 - **Threat**: client-only guard. A user with devtools can call PATCH endpoints directly even if the UI hides the buttons.
 - **Mitigation in code**: the UI consistently uses `canEditInDrawer()` for `[editable]`, `[disabled]`, and the footer conditional, and `canEditDataStandards()` for everything the Center reported (§3b). Helps prevent accidents.
 - **Since P2-3154**: `PATCH .../review-update/data-standard/:id` is no longer called by a non-admin reviewer. The endpoint still accepts it — the server MUST enforce the same rule, or the story is UI-deep only.
@@ -698,7 +701,7 @@ describe('ResultReviewDrawerComponent integration', () => {
 });
 ```
 
-### 12.4 Cypress E2E (parent page level — see `bilateral-results/AGENTS.md`)
+### 12.4 Cypress E2E (parent page level — see `../../CLAUDE.md`)
 1. Admin reviews + approves.
 2. Admin reviews + rejects with justification.
 3. Edits TOC alignment + saves.
@@ -725,6 +728,6 @@ describe('ResultReviewDrawerComponent integration', () => {
 
 ## 14. See also
 
-- [`../../../bilateral-results/AGENTS.md`](../../../bilateral-results/AGENTS.md) — bilateral-results page-level guide.
+- [`../../CLAUDE.md`](../../CLAUDE.md) — bilateral-review page-level guide.
 - [`../../../../AGENTS.md`](../../../../AGENTS.md) — module-level root replication guide (architecture, API contracts, glossary).
 - [`./result-review-drawer.interfaces.ts`](./result-review-drawer.interfaces.ts) — the canonical TypeScript shapes.

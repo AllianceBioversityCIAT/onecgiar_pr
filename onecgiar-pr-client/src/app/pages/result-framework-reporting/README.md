@@ -130,7 +130,7 @@ Centers sidebar (CLARISA centers with pending badges = count of `status_id == 5`
 |---|---|---|
 | `ResultFrameworkReportingHomeService` | SP lists, recent activity, loading flags | shell, home, insights widget, entity-details (SGP-02 name fallback), dormant `WebsocketService` |
 | `EntityAowService` (in `entity-aow/services/`) | entityId/aowId, entityDetails, entityAows, indicatorSummaries, dashboardData, ToC results, ALL modal/drawer open-state, `reportingEnabled`, `canReportResults` | **entity-details AND entity-aow** (de-facto owner of both pages' state). New fields must be added to `resetDashboardData()` or they leak between SPs |
-| `BilateralResultsService` | centers, selection, filters, tableData/tableResults, `allResultsForCounts`, pending counts | bilateral-review tree |
+| `BilateralResultsService` | entity state, search, table filters, tableData/tableResults, drawer state (see `pages/bilateral-review/CLAUDE.md`) | bilateral-review tree |
 
 **Permissions:** `canReportResults() = rolesSE.isAdmin OR (reportingEnabled AND entity ∈ dataControlSE.myInitiativesList)`. `reportingEnabled` comes from `GET api/results/admin-panel/phases/{phaseId}/reporting-initiatives/{initiativeId}/status` and **fails open** (missing phase/initiative or HTTP error ⇒ `true`). `myInitiativesList` is filled by header-panel's `updateUserData()` — the module never fetches it. **Every gate is client-side; the backend must enforce on POST/PATCH.**
 
@@ -165,7 +165,7 @@ Centers sidebar (CLARISA centers with pending badges = count of `status_id == 5`
 - **Home**: `SPProgress[]` gives per-SP, per-version, per-status counts (powers the "Reporting overview" widget); `RecentActivity[]` (⚠️ can be empty for a user — verify before building time-series on it).
 - **Entity details**: `dashboardData` is a full 3-status × 8-category matrix (only partially rendered); `entityAows[].resultsCount {editing, submitted}` per AOW; `indicatorSummaries.totalsByType`.
 - **Entity AOW**: per indicator `target_value_sum`, `actual_achieved_value_sum`, `progress_percentage`, `targets_by_center {centers[], targets[]}`.
-- **Bilateral**: `allResultsForCounts` (flat, all centers) → per-status / per-category / per-center / per-project counts + `submission_date` series.
+- **Bilateral**: `tableResults` (flat, all centers, one fetch per programme) → per-status / per-category / per-center / per-project counts + `submission_date` series; the tab badge/KPI counts derive from this same array via `BilateralReviewCountService` (see `pages/bilateral-review/CLAUDE.md`).
 
 ## 9. Known quirks, bugs & friction (revamp backlog)
 
@@ -176,7 +176,7 @@ Centers sidebar (CLARISA centers with pending badges = count of `status_id == 5`
 - Review drawer: global `RolesService.readOnly` flip (restored only in `ngOnDestroy`); `contributingProjects` payload built then overwritten with raw detail (dead mapping); first selected center becomes lead by array index; `planned_result null` coerced to `false`; duplicate `(selectOptionEvent)` binding.
 - View-results drawer fakes loading with `setTimeout(1000)` (not tied to the HTTP).
 - Sidebar AOW click fires the ToC GET twice (pre-warm + ngOnInit).
-- Bilateral deep-link with `?center=X` never hydrates `allResultsForCounts` → other centers show no badges until "All Centers" is clicked.
+- ~~Bilateral deep-link with `?center=X` never hydrates the all-centers counts~~ — superseded: the tab now fetches all centers for the programme unconditionally on every load, so a `?center=` deep link cannot go stale (see `pages/bilateral-review/CLAUDE.md`).
 - `.DS_Store` files committed under `bilateral-review/`.
 - `bilateral-results.service.ts` seeds `tableData` with a ghost all-empty-strings row.
 

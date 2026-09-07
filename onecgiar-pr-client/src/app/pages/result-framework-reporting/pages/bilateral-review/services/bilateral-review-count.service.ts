@@ -22,7 +22,7 @@ function cacheKey(code: string): string {
  * sync after a review decision (T-5).
  *
  * Pending = rows whose `status_id` loosely equals `5` — the wire sometimes sends it as the string
- * `"5"` (same gotcha `BilateralResultsService.totalPendingCount` already works around).
+ * `"5"` (same gotcha `BilateralReviewComponent.isPending` already works around).
  */
 @Injectable({ providedIn: 'root' })
 export class BilateralReviewCountService {

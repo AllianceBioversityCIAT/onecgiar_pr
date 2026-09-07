@@ -291,3 +291,44 @@ The tripwire fired only in hindsight: the running Leader estimate (≈ 1,470 aft
 | Final verification | jest page spec 29/29; lint clean; live SP13: no drawer on cold load, opens on Review, unmounts on close |
 | Gate | auto-approved (pre-approved mode) |
 
+### `BRT-T-8` — attempt 1 **FAIL** (docs residue) — 2026-09-07
+
+| Field | Value |
+|---|---|
+| Reviewer (opus) | **FAIL** — new page guide accurate on every checked claim (route/redirect, six URL keys, deep-link pair `:372-394`, single request → `setFromRows` `:406`, badge-not-`pending-review`, pipeline `:191-251`, permission split, table facts, gotchas, CT zoom, no `axe`, `@use` seven levels); disqualifier clear; service trim clean (zero references to the ten removed members; nothing live dropped; count-service comment updated). 2 issues (verbatim): **1.** "The module `AGENTS.md` still documents the members this same diff deleted, as the service's current API: §5.3 signal/method block `:458-480`, sub-page row `:42` (still 'guide pending — BRT-T-8', 'sidebar + filters'), `:65`, `:273`, §5.8.1 step 14 `:578-580`, gotcha 5 `:1322`, `:1544`, diagrams naming `ResultsReviewTable` / `BilateralResultsComponent` `:235`, `:261`. Point them at `pages/bilateral-review/CLAUDE.md`." **2.** "Drawer `AGENTS.md:731` links `../../../bilateral-results/AGENTS.md` (deleted); prose pointer `:704` — retarget to `../../CLAUDE.md`." |
+| ADVISORY (recorded) | Drawer guide `:370` cites `canEditDataStandards()` at `:189` (now `:207`); band pointer `:376` line refs stale; `pages/result-framework-reporting/README.md:133/168/179` carries the same legacy-member debt (outside the three guides in scope → fold into attempt 2 since the README is a T-6/T-8 deliverable). |
+| Leader adjudication | Attempt 2, docs-only, exact lines given. Owner ≤ 1 round exceeded (docs residue, narrow) — waived as before. |
+
+**Consolidated verification (Leader, quiet tree = HEAD `3c626df8e` + T-8 attempt-2 working tree):** `npx jest` over `pages/bilateral-review`, `reporting-program-band`, `dashboard-lab/services`, `smart-navigation.service.spec.ts`, `shared/routing` → **Suites 19/19, Tests 557/557**; `npx ng lint --quiet` → clean. (Earlier per-task runs: T-6 producers/dashboard-lab 31 suites / 698 tests; T-2 importers 42 suites / 980 tests; CT 14/14.)
+
+### `BRT-T-8` — attempt 2 **PASS** — 2026-09-07
+
+| Field | Value |
+|---|---|
+| Fix delta | module `AGENTS.md` 10 sites (`:42`, `:65`, diagrams `:235`/`:261`, `:273`, §5.3 member list, §5.8.1 step 14, gotchas 5 and 13, one review-addendum line); drawer `AGENTS.md` `:704`/`:731` → `../../CLAUDE.md`, `canEditDataStandards` ref `:207`; page guide band pointer line refs; README `:133/168/179` — 70 delta lines |
+| Reviewer (opus, scoped) | **PASS** — residue grep re-run: only the two 2026-05-12 changelog rows; §5.3 matches the service exports exactly (13 signals, 2 methods, 2 constants); rewritten gotchas/step true against `bilateral-review.component.ts:400-427` and the computed pipeline `:211-236`; line refs exact; both back-links resolve; delta limited to cited sites. |
+| ADVISORY (recorded) | Readability: "programme" (British) in module AGENTS/README, consistent with the existing page guide — future one-spelling sweep. |
+| Requirements | BRT-R-5 evidence (five tabs unchanged, HITL); defect class "visual parity" (HITL, looks #1–#3b + final); "contrast (solid)" covered by measurement (final look) |
+| Verification (final) | jest `…/bilateral-review` 337/337 (Implementer) · consolidated 19 suites / 557 tests · lint clean · guide 93 lines |
+| Reviewer rounds | 2 (docs residue) |
+| Gate | auto-approved (pre-approved mode) |
+
+## Summary — all tasks complete (2026-09-07)
+
+| Task | Result | Attempts (Reviewer rounds) | Commit |
+|---|---|---|---|
+| T-1 Band tab + badge + count service | PASS | 2 | `11713a356` (+ `ec4f7cfea` HITL #1) |
+| T-2 Relocate drawer/service + access rule | PASS | 1 | `e8d74a433` |
+| T-3 Page shell, toolbar, chips, KPIs, URL sync | PASS | 2 | `5006dd0d5` |
+| T-4 Grouped/flat table | PASS | 3 (incl. H2-1) | `b5a4e0266` |
+| T-5 Drawer wiring, propagation, deep link | PASS | 4 (incl. H3-1 SCSS `@use`, H4-1 `@if` mount; attempt-3 resets reverted) | `1348f7ed3`, `3c626df8e` |
+| T-6 Route, redirect, producers, Smart Back, returnTab, legacy deletion | PASS | 3 (2 docs-only) | `7f8908f71` |
+| T-7 Cypress CT layout/focus gate | PASS | 2 (+1 runtime re-spawn) | `31eced222` |
+| T-8 Module guide, doc cleanup, service trim | PASS | 2 | (this commit) |
+
+**Delivered:** fifth SP tab "Bilateral review" with a pending badge on every tab, page on the 2026 design line (own toolbar mirroring the band, status chips, four KPI cards with the Pending toggle, grouped-by-project table with sticky Actions and a flat view, review drawer with in-place decision propagation and `?reviewResult=` deep links), `results-review` redirect with query params preserved, five link producers + Smart Back + `returnTab` updated, legacy page deleted, module guide written, dead service members trimmed.
+**Verified:** Jest 557/557 across the touched areas, Cypress CT 14/14 with a proven-fallible overflow detector, `ng build --configuration development` 0 errors (T-6 and T-5 attempt 2), live looks #1–#3b + final on SP02/SP13 (five tabs, redirect, chips/KPI = badge, table fits at 1536 and scrolls inside at 840, drawer overlay, contrast ≥ 4.5 on every measured surface).
+**Not exercised:** the APPROVE/REJECT PATCH on live shared data (unit-covered); the notification-item deep link end-to-end (unit + Reviewer-verified contract).
+**Budget:** added source 1,775 LOC vs 1,500 tripwire (exceeded 18%, reported), tests 2,102 vs 1,900; review rounds over the ≤ 1 owner limit on six tasks, each extra round narrower and adjudicated.
+**Follow-ups (not new scope):** move the `@if (visible())` guard into the drawer template itself; promote the tab to a Smart Back origin if "See" ever navigates to result-detail; delete the unrouted `EntityDetailsComponent` + banner (`/akili-quick`); phase scoping of the review queue (server); one-spelling sweep ("programme"); drawer state persists across in-app tab switches (legacy parity); `pending-review` endpoint now unused server-side; parent `## Module Guides` index in `onecgiar-pr-client/src/CLAUDE.md` → pointer to `pages/bilateral-review/CLAUDE.md` (default-branch apply); `codegraph sync`.
+**Next:** owner real-page sign-off (T-8 "Done when") → `/akili-archive changes/sp-bilateral-review-tab` (kaizen candidates listed under Constitution Impact).

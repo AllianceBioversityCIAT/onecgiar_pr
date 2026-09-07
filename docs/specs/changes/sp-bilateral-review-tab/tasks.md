@@ -8,7 +8,7 @@
 - **Execution limits (owner mandate, `feedback-pragmatic-akili-execution`):** ≤ 1 Reviewer round per task (a second FAIL escalates); targeted `npx jest <path>` only; `npx ng lint --quiet`; `ng build --configuration development` only for tasks that touch routing/DI/global templates (T-1, T-6); plain-language progress line at every task boundary with elapsed/remaining minutes; offer the cut once T-5 is green
 - **Budget (design §14):** 8 tasks · ~1,200 added source LOC (≈ 600 net) · ~1,900 test LOC · tripwire at ~1,500 **added** source LOC or any third attempt
 - **Owner / driver:** PRMS product owner / AKILI Leader
-- **Status:** not-started
+- **Status:** done (all 8 tasks PASS, 2026-09-07; owner real-page sign-off pending)
 
 ---
 
@@ -140,6 +140,7 @@ Ticked by the Leader at execution start (items 1–4 were satisfied during `/aki
 
 ### `BRT-T-8` — Module guide, final real-page look, spec bookkeeping
 
+- **Status:** [x] PASS 2026-09-07 (attempt 2; Leader final look done, owner sign-off pending; see `execution.md`)
 - **Type:** `docs`
 - **Description:** Write `pages/bilateral-review/CLAUDE.md` (routes, query-param contract, state, endpoints, gotchas inherited from the legacy guide that still apply: loose `status_id` equality, client-side filtering, deep-link drawer); update the drawer AGENTS.md path references; final HITL look #3 across the five tabs on SP02 and a center-heavy program; record follow-ups from design §13 in `execution.md`; mark `requirements.md` status `shipped` on archive.
 - **Implements:** BRT-R-5 evidence (five tabs unchanged), defect class "visual parity" (HITL)
