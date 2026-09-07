@@ -199,17 +199,18 @@ export class ReportingNavSidebarComponent {
 
   /**
    * Platform list order matches CURRENT reference:
-   * Results Center · Innovation Packages · Quality Assurance · Bilateral Results · My Admin
+   * Results Center · Innovation Packages · Quality Assurance · My Admin
    * (+ Admin module at the end when the user is admin — product need, not in the mock).
    *
    * `result-framework-reporting` is omitted: programme entry is My science programs above.
+   * `bilateral` is omitted too: its route carries `prHide: true` because a bare `/bilateral` has no
+   * page (see `routing-data.ts`); centres are entered from the MY CGIAR CENTERS cards.
    */
   private static readonly PLATFORM_ORDER = [
     'portfolio-overview',
     'result',
     'ipsr',
     'quality-assurance',
-    'bilateral',
     'init-admin-module',
     'admin-module'
   ] as const;
