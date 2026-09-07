@@ -10,35 +10,12 @@
   }
 }
 
-// The panel itself is rendered inside app-pr-dialog, hence ::ng-deep (scoped to this host).
-//
-// Why this block exists (2026-09-07): the shared sheet sizes its paddings through PrimeNG's
-// `.p-dialog-header/-content/-footer`, which app-pr-dialog never renders, so the panel fell back to
-// the wrapper's rem paddings (12px/18px at this app's 12px root) and the projected footer had none
-// at all — buttons flush against the corner. And with a one-paragraph body and no width cap the
-// panel stretched to the wrapper's 90vw ceiling. This pins the geometry the sheet was designed
-// with: 480px card, 28px gutters, 24px top/bottom.
+// The panel itself is rendered inside app-pr-dialog, hence ::ng-deep (scoped to this host). Its
+// geometry (520px card, 28px gutters, footer padding) comes from the confirmation-sheet block in
+// styles.scss, shared with the promote / discard dialogs of the Drafts list; what is local is the
+// top-border identity for the two outcomes the sheet has no modifier for — the green one comes from
+// `.pr-dialog--promote`. Same colours as the header icons.
 :host ::ng-deep app-pr-dialog .bilateral-ai-completion-dialog {
-  &.pr-dialog {
-    width: 480px;
-    max-width: 92vw;
-  }
-
-  .pr-dialog__body {
-    padding: 24px 28px 0;
-  }
-
-  .pr-dialog-body {
-    margin-top: 14px;
-  }
-
-  .pr-dialog-footer {
-    flex-wrap: wrap;
-    padding: 20px 28px 24px;
-  }
-
-  // Top-border identity for the two outcomes the shared sheet has no modifier for; the green one
-  // comes from `.pr-dialog--promote`. Same colours as the header icons above.
   &.bacd-panel--info {
     border-top: 3px solid #2563eb;
   }
