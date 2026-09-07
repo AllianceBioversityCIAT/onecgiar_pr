@@ -438,9 +438,21 @@ export class BilateralAiService {
 
       // The drafts route is /bilateral/:acronym/drafts; the acronym comes from the centre's
       // CLARISA institution. Same frontend-base derivation `attachResultLinks` already uses.
+      //
+      // The acronym is a URL path segment and MUST be encoded: "Bioversity (Alliance)" pasted raw
+      // gave mail clients `.../bilateral/Bioversity (Alliance)/drafts`, which they cut at the
+      // space — the link landed on `/bilateral/Bioversity%20/home`, a centre that does not exist
+      // (reported 2026-09-07). `encodeURIComponent` leaves `(` `)` alone and some clients still
+      // stop at those, so they are encoded by hand; the Angular router decodes both fine.
       const institution = await this.clarisaInstitutionsRepository.findOne({
         where: { id: job.center_id },
       });
+      const acronymSegment = institution?.acronym
+        ? encodeURIComponent(institution.acronym).replace(
+            /[()]/g,
+            (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+          )
+        : null;
       const pdfBase = (
         env.FRONT_END_PDF_ENDPOINT ??
         'https://reporting.cgiar.org/reports/result-details/'
@@ -448,8 +460,8 @@ export class BilateralAiService {
       const frontendBase =
         pdfBase.replace(/\/reports\/result-details$/, '') ||
         'https://reporting.cgiar.org';
-      const draftsUrl = institution?.acronym
-        ? `${frontendBase}/bilateral/${institution.acronym}/drafts`
+      const draftsUrl = acronymSegment
+        ? `${frontendBase}/bilateral/${acronymSegment}/drafts`
         : frontendBase;
 
       const compiled = handlebars.compile(templateRow.template);
