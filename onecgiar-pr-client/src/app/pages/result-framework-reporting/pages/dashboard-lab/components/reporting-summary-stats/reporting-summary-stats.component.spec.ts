@@ -36,6 +36,8 @@ describe('ReportingSummaryStatsComponent', () => {
     const text = root().textContent || '';
     expect(text).toContain('Programs/Accelerators');
     expect(text).toContain('Areas of Work');
+    expect(text).toContain('Program areas of work');
+    expect(text).not.toContain('work package');
     expect(text).toContain('Total KPIs');
     expect(text).toContain('KPIs with Evidence');
   });
