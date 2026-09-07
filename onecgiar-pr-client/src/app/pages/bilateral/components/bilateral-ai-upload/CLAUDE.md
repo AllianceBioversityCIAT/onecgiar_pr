@@ -13,7 +13,15 @@ a `My Drafts`.
   (`../../services/bilateral-ai.service.ts`), inyectado como singleton root.
   - `uploadState()` = fuente de verdad del paso. Estados:
     `idle | uploading | pending | processing | completed | completed_no_candidates | failed | discarded | promoted`.
-  - `startJob(jobId)` arranca el polling (`GET .../ai/jobs/:id` cada 5 s, tope 5 min).
+  - `startJob(jobId)` arranca el polling (`GET .../ai/jobs/:id` cada 5 s, tope **30 min**) y guarda
+    `{jobId, centerAcronym, startedAt}` en `localStorage` (`prms.bilateral-ai.active-job`): una
+    recarga o una pestaña nueva retoman el polling desde el constructor del servicio.
+  - **Al terminar (COMPLETED con o sin candidatos, FAILED, timeout) el servicio NUNCA navega ni
+    lanza toast** (2026-09-07): publica `completionNotice` y el modal global
+    `app-bilateral-ai-completion-dialog` (hospedado en `app.component.html`) lo muestra donde esté
+    el usuario, con "Continue working" (se queda) y "Review drafts" (va a
+    `/bilateral/<acronym-del-job>/drafts`). Historia: redirect forzado (quitado 2026-09-04) →
+    toast 10 s (nadie lo vio) → modal.
   - `clearUploadState()` vuelve a `idle`.
 - Proyecto y Science Program se leen de `BilateralCreationService.selectedProject()`
   y `.selectedPrimarySp()`; sin ambos el submit avisa y no envía.
