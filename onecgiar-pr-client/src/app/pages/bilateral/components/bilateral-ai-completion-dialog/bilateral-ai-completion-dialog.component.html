@@ -1,6 +1,6 @@
 @if (notice(); as notice) {
   <app-pr-dialog
-    styleClass="pr-dialog pr-dialog--promote bilateral-ai-completion-dialog"
+    [styleClass]="'pr-dialog bilateral-ai-completion-dialog ' + panelClass()"
     [visible]="true"
     [modal]="true"
     [showHeader]="false"
@@ -20,7 +20,14 @@
     </div>
 
     <div class="pr-dialog-body">
-      <p class="pr-dialog-text" data-testid="ai-completion-message">{{ message() }}</p>
+      @if (notice.status === 'completed') {
+        <p class="pr-dialog-text" data-testid="ai-completion-message">
+          <strong>{{ drafts().label }}</strong> {{ drafts().was }} identified from your documents and {{ drafts().is }} waiting in the Drafts list of
+          <strong>{{ center() }}</strong>. You can review {{ drafts().them }} now or keep working and come back later.
+        </p>
+      } @else {
+        <p class="pr-dialog-text" data-testid="ai-completion-message">{{ message() }}</p>
+      }
     </div>
 
     <div pr-dialog-footer class="pr-dialog-footer">
