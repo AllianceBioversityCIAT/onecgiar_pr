@@ -80,7 +80,7 @@ Linked spec: `requirements.md` + `design.md` (same folder). Module code: `TIP`.
 
 ### `TIP-T-3` — Retarget and extend `pr-tooltip.directive.spec.ts` (Jest)
 
-- **Status:** not-started
+- **Status:** [x] complete — PASS on attempt 2/3, see `execution.md`
 - **Skills:** `angular-developer`, `tdd` (logic-heavy: open/close/keyboard state machine)
 - **Type:** `tests`
 - **Description:** Replace every assertion against the dead `.pr_label_tooltip` selector with the real rendered DOM (`.pr-tooltip`, `.pr-tooltip--pinned`, the host element via `fixture.debugElement`). Add unit coverage for: click opens+pins (`TIP-AC-1`), outside-click closes (`TIP-AC-2`) while a click **inside** the tooltip content (e.g. on a link) does NOT close it (`TIP-AC-2`/`TIP-AC-3` negative constraint), Escape closes (`TIP-AC-3`), `keydown.enter`/`keydown.space` opens on a non-native host and does NOT double-fire on a native `<button>` host (`TIP-AC-4`), `aria-expanded`/`aria-controls`/`aria-describedby` attribute **presence** on open/close (`TIP-AC-6` — presence half only, per `design.md` §10's explicit note that this does not prove screen-reader correctness), and listener teardown (no lingering `scroll`/`resize`/document listeners after `hide()` or `ngOnDestroy()`).
@@ -104,7 +104,7 @@ Linked spec: `requirements.md` + `design.md` (same folder). Module code: `TIP`.
 
 ### `TIP-T-4` — New Cypress component tests: focus order, vertical clamp, scroll/resize reposition
 
-- **Status:** not-started
+- **Status:** [x] complete — PASS on attempt 2/3, see `execution.md`
 - **Skills:** `angular-developer` (Cypress CT is an Angular/CDK-specific real-browser harness, covered under the same skill per this project's Skill Map — no dedicated Cypress skill is registered)
 - **Type:** `tests`
 - **Description:** Real-browser assertions jsdom cannot make (`design.md` §10, rows 3-4). Use an existing pinned-tooltip host (`pr-field-header` or `field-card`, already Cypress-CT-covered per `onecgiar-pr-client/CLAUDE.md` §9) as the test bed, plus one synthetic fixture with a tooltip taller than the available viewport space (required — a fixture that already fits cannot exercise the clamp, per `design.md` §10's named disqualifier).
@@ -125,7 +125,7 @@ Linked spec: `requirements.md` + `design.md` (same folder). Module code: `TIP`.
 
 ### `TIP-T-5` — Cypress regression coverage for the 5 flagged compound-click sites
 
-- **Status:** not-started
+- **Status:** [x] complete — PASS on attempt 3/3, see `execution.md`
 - **Skills:** `angular-developer`
 - **Type:** `tests`
 - **Description:** Per `design.md` §10.1 and `TIP-DD-1`, verify that on each flagged site the existing action still fires exactly once AND the tooltip pins, with no double-fire or swallowed click:

@@ -8,6 +8,11 @@
 // ***********************************************************
 
 import { mount } from 'cypress/angular';
+// TIP-T-4 (`docs/specs/changes/tooltip-keyboard-accessibility/`): real CDP-level Tab/key
+// dispatch (`Input.dispatchKeyEvent`), NOT a synthetic JS KeyboardEvent — needed to assert the
+// browser's actual tab order into a pinned tooltip's focus-trapped content. Cypress core has no
+// built-in `{tab}` support and a synthetic `.trigger('keydown')` does not move focus at all.
+import 'cypress-real-events/support';
 
 Cypress.Commands.add('mount', mount);
 
