@@ -664,6 +664,83 @@ describe('BilateralService (unit)', () => {
     });
   });
 
+  describe('populateResultFromExtractedMds — who leads', () => {
+    const result = { id: 11, result_type_id: 1 } as any;
+    const jobLead = {
+      institution_id: 7,
+      acronym: 'AfricaRice',
+      name: 'Africa Rice Center',
+    };
+
+    const spies = (service: any) => ({
+      lead: jest
+        .spyOn(service, 'handleLeadCenter')
+        .mockResolvedValue(undefined),
+      contributing: jest
+        .spyOn(service, 'handleContributingCenters')
+        .mockResolvedValue(undefined),
+    });
+
+    // 2026-09-07: the centre the model read in the document ("commissioned by ILRI") became the
+    // lead of an AfricaRice upload. The job's centre leads; the extracted one contributes.
+    it('the job centre leads and the extracted centre is kept as a contributor', async () => {
+      const { service } = makeService();
+      const { lead, contributing } = spies(service);
+
+      await service.populateResultFromExtractedMds(
+        result,
+        { lead_center: { acronym: 'ILRI' } },
+        9,
+        { leadCenter: jobLead },
+      );
+
+      expect(lead).toHaveBeenCalledTimes(1);
+      expect(lead).toHaveBeenCalledWith(11, jobLead, 9);
+      expect(contributing).toHaveBeenCalledWith(
+        11,
+        [{ acronym: 'ILRI' }],
+        9,
+        jobLead,
+      );
+    });
+
+    it('with a job centre but nothing extracted, the job centre still leads', async () => {
+      const { service } = makeService();
+      const { lead, contributing } = spies(service);
+
+      await service.populateResultFromExtractedMds(result, null, 9, {
+        leadCenter: jobLead,
+      });
+
+      expect(lead).toHaveBeenCalledWith(11, jobLead, 9);
+      expect(contributing).not.toHaveBeenCalled();
+    });
+
+    it('without a job centre the extracted centre leads, as before', async () => {
+      const { service } = makeService();
+      const { lead, contributing } = spies(service);
+
+      await service.populateResultFromExtractedMds(
+        result,
+        { lead_center: { acronym: 'ILRI' } },
+        9,
+      );
+
+      expect(lead).toHaveBeenCalledWith(11, { acronym: 'ILRI' }, 9);
+      expect(contributing).not.toHaveBeenCalled();
+    });
+
+    it('does nothing with neither MDS nor job centre', async () => {
+      const { service } = makeService();
+      const { lead, contributing } = spies(service);
+
+      await service.populateResultFromExtractedMds(result, null, 9);
+
+      expect(lead).not.toHaveBeenCalled();
+      expect(contributing).not.toHaveBeenCalled();
+    });
+  });
+
   describe('populateTypeSpecificFromExtractedMds', () => {
     it('forwards knowledge_product to the KP handler when promoting a KP draft', async () => {
       const { service, handlers } = makeService();
