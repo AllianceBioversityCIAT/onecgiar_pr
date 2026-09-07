@@ -93,6 +93,7 @@ Ticked by the Leader at execution start (items 1–4 were satisfied during `/aki
 
 ### `BRT-T-5` — Drawer wiring, decision propagation, deep-linked open
 
+- **Status:** [x] PASS 2026-09-07 (attempt 2; H3-1 SCSS `@use` fix folded, see `execution.md`)
 - **Type:** `client`
 - **Description:** Host the relocated drawer in the page (`visible` / `resultToReview` models); row action opens it; `decisionMade` → re-fetch the list (which calls `setFromRows`, so the badge follows without a second request); rows, chip counts, KPI cards and badge update in place (component instance preserved, filters and URL untouched); deep-link effect from `results-review-table.component.ts:134-160` ported (opens once `tableResults` is non-empty, falls back to `{ id, result_code }`, clears `reviewResult`/`reviewResultId` with `replaceUrl`); in-flight decision guards the Review button with `aria-disabled` + `title`.
 - **Implements:** `BRT-R-13`, `BRT-R-21`, `BRT-AC-9`, `BRT-AC-17`; scenario "Reviewer approves from the new tab" (all clauses incl. "must NOT reload", "payload unchanged")

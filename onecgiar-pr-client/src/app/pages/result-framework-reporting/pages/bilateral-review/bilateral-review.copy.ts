@@ -75,6 +75,9 @@ export const BILATERAL_REVIEW_COPY = {
     reviewAction: 'Review',
     seeAction: 'See',
     /** "N results · M pending" (BRT-R-10). */
-    groupSummary: (results: number, pending: number): string => `${results} results · ${pending} pending`
+    groupSummary: (results: number, pending: number): string => `${results} results · ${pending} pending`,
+    // @akili-spec changes/sp-bilateral-review-tab (BRT-T-5, KZ-REH-2)
+    /** Row action title while a decision re-fetch is in flight (`aria-disabled`, not `disabled`). */
+    decisionInFlightTitle: 'Saving the decision. Please wait.'
   }
 };

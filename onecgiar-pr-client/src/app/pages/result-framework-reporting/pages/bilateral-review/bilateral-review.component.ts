@@ -1,4 +1,4 @@
-// @akili-spec changes/sp-bilateral-review-tab (BRT-T-3, BRT-R-4, R-6, R-7, R-8, R-9, R-15, R-20, R-31, R-32, design.md §6.2)
+// @akili-spec changes/sp-bilateral-review-tab (BRT-T-3, BRT-T-5, BRT-R-4, R-6, R-7, R-8, R-9, R-13, R-15, R-20, R-21, R-31, R-32, design.md §6.2, §6.4)
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -16,9 +16,10 @@ import { ReportingProgramBandComponent } from '../dashboard-lab/components/repor
 import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 
-import { BilateralResultsService } from './services/bilateral-results.service';
+import { BilateralResultsService, REVIEW_RESULT_ID_QUERY_PARAM, REVIEW_RESULT_QUERY_PARAM } from './services/bilateral-results.service';
 import { BilateralReviewCountService } from './services/bilateral-review-count.service';
 import { BilateralReviewAccessService } from './services/bilateral-review-access.service';
+import { ResultReviewDrawerComponent } from './components/result-review-drawer/result-review-drawer.component';
 import { GroupedResult, ResultToReview } from './components/result-review-drawer/result-review-drawer.interfaces';
 import { BilateralReviewKpis, BilateralReviewKpisComponent } from './components/bilateral-review-kpis/bilateral-review-kpis.component';
 import { BilateralReviewTableComponent } from './components/bilateral-review-table/bilateral-review-table.component';
@@ -64,7 +65,8 @@ function optionsOf(rows: ResultToReview[], pick: (row: ResultToReview) => string
     WhereToReportModalComponent,
     PrFilterMultiselectModule,
     BilateralReviewKpisComponent,
-    BilateralReviewTableComponent
+    BilateralReviewTableComponent,
+    ResultReviewDrawerComponent
   ],
   viewProviders: [provideIcons({ lucideSearch, lucideChevronsUpDown, lucideChevronsDownUp })]
 })
@@ -81,6 +83,13 @@ export class BilateralReviewComponent {
   private readonly accessService = inject(BilateralReviewAccessService);
 
   readonly copy = BILATERAL_REVIEW_COPY;
+
+  // ── Deep-linked drawer open (BRT-R-21, ported from results-review-table.component.ts:134-160) ──
+  /** Result code deep-linked through the URL, consumed once the results are loaded; `null` once
+   *  consumed so the effect below fires at most once even if `tableResults` changes again later. */
+  private pendingReviewResultCode: string | null = this.route.snapshot.queryParamMap.get(REVIEW_RESULT_QUERY_PARAM);
+  /** Id of that same result, used when it is not part of the review list (e.g. drafts). */
+  private readonly pendingReviewResultId: string | null = this.route.snapshot.queryParamMap.get(REVIEW_RESULT_ID_QUERY_PARAM);
 
   /** Viewport lock: the work area is the only scroller the band needs to know about. */
   readonly workArea = viewChild<ElementRef<HTMLElement>>('workArea');
@@ -125,6 +134,10 @@ export class BilateralReviewComponent {
    *  response (Reliability fix, BRT-T-3 rework). */
   readonly loading = signal(true);
   readonly error = signal(false);
+  /** BRT-T-5 / KZ-REH-2: true only for the re-fetch a drawer decision triggers — guards the row
+   *  action (`aria-disabled` + title + handler early-return, never native `disabled`) so a second
+   *  click can't race the refresh. Reset by `loadResults` in both its `next` and `error` paths. */
+  readonly decisionInFlight = signal(false);
 
   // ── Toolbar / filter state (design.md §6.2) ────────────────────────────────────────────────
   readonly search = signal('');
@@ -355,6 +368,30 @@ export class BilateralReviewComponent {
         this.router.navigate([], { relativeTo: this.route, queryParams: next, queryParamsHandling: 'merge', replaceUrl: true });
       });
     });
+
+    // ── Deep-linked drawer open (BRT-R-21) — fires once, as soon as the list is non-empty ──────
+    effect(() => {
+      const rows = this.results.tableResults();
+      if (!this.pendingReviewResultCode || rows.length === 0) return;
+      untracked(() => {
+        const code = this.pendingReviewResultCode;
+        this.pendingReviewResultCode = null;
+        // Prefer the object from the list (it is complete). A result that is not part of the
+        // review list (e.g. a draft still being edited) falls back to a minimal object built
+        // from the id, which is all the drawer needs to load its detail.
+        const match = rows.find(row => String(row.result_code) === String(code));
+        const target = match ?? (this.pendingReviewResultId ? ({ id: this.pendingReviewResultId, result_code: code } as ResultToReview) : null);
+        if (target) this.onOpenResult(target);
+        // `merge` preserves the six filter keys (search/status/center/project/category/view)
+        // written by the state → URL effect above — only reviewResult/reviewResultId are cleared.
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { [REVIEW_RESULT_QUERY_PARAM]: null, [REVIEW_RESULT_ID_QUERY_PARAM]: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        });
+      });
+    });
   }
 
   private loadResults(code: string): void {
@@ -368,10 +405,12 @@ export class BilateralReviewComponent {
         this.results.tableResults.set(rows);
         this.countService.setFromRows(code, rows);
         this.loading.set(false);
+        this.decisionInFlight.set(false);
       },
       error: () => {
         this.error.set(true);
         this.loading.set(false);
+        this.decisionInFlight.set(false);
       }
     });
   }
@@ -379,6 +418,17 @@ export class BilateralReviewComponent {
   retry(): void {
     const code = this.programmeCode();
     if (code) this.loadResults(code);
+  }
+
+  /** BRT-R-13: after the drawer emits a decision, re-fetch with the SAME `loadResults` the
+   *  initial load uses — one request refreshes rows, chip counts, KPI cards AND (via
+   *  `countService.setFromRows`) the tab badge, with no second request and no navigation. The
+   *  drawer closes itself (its own `visible` model), search/status/filters/view are untouched. */
+  onDecisionMade(): void {
+    const code = this.programmeCode();
+    if (!code) return;
+    this.decisionInFlight.set(true);
+    this.loadResults(code);
   }
 
   // ── Search / status / view / expand ────────────────────────────────────────────────────────

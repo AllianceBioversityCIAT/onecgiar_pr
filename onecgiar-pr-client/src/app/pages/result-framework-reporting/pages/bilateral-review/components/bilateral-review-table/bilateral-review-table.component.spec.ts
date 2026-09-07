@@ -1,4 +1,4 @@
-// @akili-spec changes/sp-bilateral-review-tab (BRT-T-4, BRT-AC-8, BRT-AC-15)
+// @akili-spec changes/sp-bilateral-review-tab (BRT-T-4, BRT-T-5, BRT-AC-8, BRT-AC-15)
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BilateralReviewTableComponent } from './bilateral-review-table.component';
 import { GroupedResult, ResultToReview } from '../result-review-drawer/result-review-drawer.interfaces';
@@ -164,6 +164,31 @@ describe('BilateralReviewTableComponent', () => {
 
       expect(emitted.length).toBe(1);
       expect(emitted[0].id).toBe('a1');
+    });
+  });
+
+  describe('Decision in flight — aria-disabled guard, not native disabled (BRT-T-5, KZ-REH-2)', () => {
+    it('marks the action aria-disabled with a title and swallows the click when actionsDisabled is true', () => {
+      render([GROUP_A], { canReview: true, actionsDisabled: true });
+      const action = byTestId('bilateral-review-row-action')[0] as HTMLButtonElement;
+
+      expect(action.getAttribute('aria-disabled')).toBe('true');
+      expect(action.getAttribute('title')).toBe(BILATERAL_REVIEW_COPY.table.decisionInFlightTitle);
+      expect(action.hasAttribute('disabled')).toBe(false);
+
+      const emitted: ResultToReview[] = [];
+      component.openResult.subscribe(row => emitted.push(row));
+      action.click();
+
+      expect(emitted.length).toBe(0);
+    });
+
+    it('renders no aria-disabled or title when actionsDisabled is false', () => {
+      render([GROUP_A], { canReview: true, actionsDisabled: false });
+      const action = byTestId('bilateral-review-row-action')[0] as HTMLButtonElement;
+
+      expect(action.getAttribute('aria-disabled')).toBeNull();
+      expect(action.getAttribute('title')).toBeNull();
     });
   });
 

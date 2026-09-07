@@ -1,6 +1,7 @@
-// @akili-spec changes/sp-bilateral-review-tab (BRT-T-3, BRT-AC-4, 5, 6, 7, 10, 15, 19)
+// @akili-spec changes/sp-bilateral-review-tab (BRT-T-3, BRT-T-5, BRT-AC-4, 5, 6, 7, 9, 10, 15, 17, 19)
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ActivatedRoute, ParamMap, Router, convertToParamMap } from '@angular/router';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 
@@ -11,6 +12,7 @@ import { SmartNavigationService } from '../../../../shared/services/smart-naviga
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
 import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
+import { ResultReviewDrawerComponent } from './components/result-review-drawer/result-review-drawer.component';
 import { BilateralReviewCountService } from './services/bilateral-review-count.service';
 import { ResultToReview } from './components/result-review-drawer/result-review-drawer.interfaces';
 
@@ -37,6 +39,18 @@ class WhereToReportModalStubComponent {
   @Input() returnTab = '';
   @Input() visible = false;
   @Output() visibleChange = new EventEmitter<boolean>();
+}
+
+/** The real drawer pulls in its five content components and several services — stubbed with the
+ *  same selector and `visible`/`resultToReview`/`decisionMade` contract (BRT-T-5) so the page
+ *  spec can drive it without mounting the whole drawer tree. */
+@Component({ selector: 'app-result-review-drawer', standalone: true, template: '' })
+class DrawerStubComponent {
+  @Input() visible = false;
+  @Output() visibleChange = new EventEmitter<boolean>();
+  @Input() resultToReview: ResultToReview | null = null;
+  @Output() resultToReviewChange = new EventEmitter<ResultToReview | null>();
+  @Output() decisionMade = new EventEmitter<void>();
 }
 
 function row(partial: Partial<ResultToReview> & { id: string }): ResultToReview {
@@ -168,8 +182,8 @@ describe('BilateralReviewComponent', () => {
     });
 
     TestBed.overrideComponent(BilateralReviewComponent, {
-      remove: { imports: [ReportingProgramBandComponent, WhereToReportModalComponent] },
-      add: { imports: [BandStubComponent, WhereToReportModalStubComponent] }
+      remove: { imports: [ReportingProgramBandComponent, WhereToReportModalComponent, ResultReviewDrawerComponent] },
+      add: { imports: [BandStubComponent, WhereToReportModalStubComponent, DrawerStubComponent] }
     });
 
     fixture = TestBed.createComponent(BilateralReviewComponent);
@@ -184,6 +198,7 @@ describe('BilateralReviewComponent', () => {
   const root = () => fixture.nativeElement as HTMLElement;
   const byTestId = (id: string) => root().querySelector(`[data-testid="${id}"]`);
   const text = (id: string) => byTestId(id)?.textContent?.trim() ?? '';
+  const drawerStub = () => fixture.debugElement.query(By.directive(DrawerStubComponent)).componentInstance as DrawerStubComponent;
 
   beforeEach(() => build());
 
@@ -474,6 +489,102 @@ describe('BilateralReviewComponent', () => {
 
       expect(component.results.tableResults().length).toBe(7);
       expect(byTestId('bilateral-review-skeleton')).toBeNull();
+    });
+  });
+
+  // ── BRT-T-5: drawer wiring, decision propagation, deep-linked open ─────────────────────────
+  describe('Drawer mount (BRT-T-5)', () => {
+    it('two-way binds visible/resultToReview to the relocated service and forwards decisionMade', () => {
+      component.onOpenResult(FIXTURE_ROWS[0]);
+      fixture.detectChanges();
+
+      expect(drawerStub().visible).toBe(true);
+      expect(drawerStub().resultToReview?.result_code).toBe('BR-001');
+    });
+  });
+
+  describe('Decision propagation (BRT-R-13, BRT-AC-9, AC-19)', () => {
+    it('re-fetches exactly once via setFromRows, decrements the badge 3 -> 2, and leaves the component instance, search and status untouched', () => {
+      const countService = TestBed.inject(BilateralReviewCountService);
+      expect(countService.count('SP02')()).toBe(3);
+      expect(GET_ResultToReview).toHaveBeenCalledTimes(1);
+
+      // 'result' matches every fixture row's title, so it exercises persistence without also
+      // narrowing `searchFiltered` (and therefore the KPI numbers checked below).
+      component.search.set('result');
+      component.status.set('pending');
+      // Flush the state → URL write-back effect these two signal writes queue, so the assertion
+      // below isolates calls the DECISION path itself makes, not a still-pending earlier write.
+      fixture.detectChanges();
+      const instanceBefore = component;
+
+      // BR-001 (pending) is now Approved after the drawer's decision.
+      const approvedRows = FIXTURE_ROWS.map(row => (row.result_code === 'BR-001' ? { ...row, status_id: 6, status_name: 'Approved' } : row));
+      GET_ResultToReview.mockReturnValue(of(groupedResponse(approvedRows)));
+      router.navigate.mockClear();
+
+      drawerStub().decisionMade.emit();
+      fixture.detectChanges();
+
+      expect(GET_ResultToReview).toHaveBeenCalledTimes(2);
+      expect(countService.count('SP02')()).toBe(2);
+      expect(text('kpi-pending')).toBe('2');
+      expect(component).toBe(instanceBefore);
+      expect(component.search()).toBe('result');
+      expect(component.status()).toBe('pending');
+      // The decision path itself must not navigate — only the drawer's own deep-link clearing does,
+      // and there is no pending reviewResult param in this test.
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('guards the row action with aria-disabled while the decision re-fetch is in flight', () => {
+      const pending$ = new Subject<{ response: unknown }>();
+      GET_ResultToReview.mockReturnValue(pending$ as never);
+
+      drawerStub().decisionMade.emit();
+      fixture.detectChanges();
+
+      expect(component.decisionInFlight()).toBe(true);
+
+      pending$.next(groupedResponse(FIXTURE_ROWS));
+      fixture.detectChanges();
+
+      expect(component.decisionInFlight()).toBe(false);
+    });
+  });
+
+  describe('Deep-linked drawer open (BRT-R-21, BRT-AC-17)', () => {
+    it('opens the drawer for a code present in the list and clears both params with replaceUrl, keeping other filter keys', () => {
+      fixture.destroy();
+      build({ search: 'alpha', status: 'pending', reviewResult: 'BR-002', reviewResultId: '999' });
+
+      expect(component.results.showReviewDrawer()).toBe(true);
+      expect(component.results.currentResultToReview()?.result_code).toBe('BR-002');
+
+      expect(router.navigate).toHaveBeenCalled();
+      const clearCall = router.navigate.mock.calls.find(([, options]) => options.queryParams.reviewResult === null);
+      expect(clearCall).toBeTruthy();
+      const [, clearOptions] = clearCall!;
+      expect(clearOptions.replaceUrl).toBe(true);
+      expect(clearOptions.queryParamsHandling).toBe('merge');
+      expect(clearOptions.queryParams.reviewResultId).toBeNull();
+      // The six filter keys are untouched by this call: `merge` preserves whatever the state → URL
+      // effect already wrote, so the component's own search/status signals are the source of truth.
+      expect(component.search()).toBe('alpha');
+      expect(component.status()).toBe('pending');
+    });
+
+    it('falls back to a minimal { id, result_code } object when the code is absent from the list', () => {
+      fixture.destroy();
+      build({ reviewResult: 'BR-999', reviewResultId: '42' });
+
+      expect(component.results.showReviewDrawer()).toBe(true);
+      expect(component.results.currentResultToReview()).toEqual({ id: '42', result_code: 'BR-999' });
+    });
+
+    it('does not open the drawer or navigate when there is no reviewResult param', () => {
+      expect(component.results.showReviewDrawer()).toBe(false);
+      expect(router.navigate).not.toHaveBeenCalled();
     });
   });
 });

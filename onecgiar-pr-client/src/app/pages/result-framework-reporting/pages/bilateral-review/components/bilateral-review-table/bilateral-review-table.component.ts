@@ -1,4 +1,4 @@
-// @akili-spec changes/sp-bilateral-review-tab (BRT-T-4, BRT-R-10..12, R-30)
+// @akili-spec changes/sp-bilateral-review-tab (BRT-T-4, BRT-T-5, BRT-R-10..12, R-30)
 import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal } from '@angular/core';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { HlmButton } from '@spartan/button';
@@ -75,6 +75,10 @@ export class BilateralReviewTableComponent {
   readonly allExpanded = input(true);
   readonly canReview = input(false);
   readonly loading = input(false);
+  /** BRT-T-5 / KZ-REH-2: true while a decision re-fetch is in flight — the action stays in the
+   *  DOM (never native `disabled`) but reads `aria-disabled` + `title` and the click handler
+   *  early-returns, so a second click mid-refresh can't race the first decision. */
+  readonly actionsDisabled = input(false);
   readonly openResult = output<ResultToReview>();
 
   readonly copy = BILATERAL_REVIEW_COPY.table;
@@ -167,5 +171,12 @@ export class BilateralReviewTableComponent {
 
   actionIcon(row: ResultToReview): string {
     return this.canReviewRow(row) ? 'edit' : 'visibility';
+  }
+
+  /** Click handler for the row action (BRT-T-5 / KZ-REH-2): guards the emit, not the DOM
+   *  attribute — `actionsDisabled` never becomes a native `disabled` on the button. */
+  onActionClick(row: ResultToReview): void {
+    if (this.actionsDisabled()) return;
+    this.openResult.emit(row);
   }
 }

@@ -1,4 +1,4 @@
-<!-- @akili-spec changes/sp-bilateral-review-tab (BRT-T-3, design.md §6.2, §6.3) -->
+<!-- @akili-spec changes/sp-bilateral-review-tab (BRT-T-3, BRT-T-5, design.md §6.2, §6.3) -->
 <section class="min-h-screen bg-[var(--pr-surface-app)] p-0 min-[900px]:min-h-0 min-[900px]:flex-1 min-[900px]:flex min-[900px]:flex-col">
   <article class="flex w-full min-w-0 flex-col min-[900px]:flex-1 min-[900px]:min-h-0">
     <app-reporting-program-band
@@ -347,11 +347,18 @@
             [allExpanded]="allExpanded()"
             [canReview]="canReview()"
             [loading]="loading()"
+            [actionsDisabled]="decisionInFlight()"
             (openResult)="onOpenResult($event)" />
         }
       </div>
     </div>
 
     <app-where-to-report-modal [programCode]="programmeCode()" returnTab="bilateral-review" [(visible)]="showWhereToReportModal" />
+
+    <!-- ═══ Review drawer (BRT-T-5): re-fetches the list on a decision, closes itself ═══ -->
+    <app-result-review-drawer
+      [(visible)]="results.showReviewDrawer"
+      [(resultToReview)]="results.currentResultToReview"
+      (decisionMade)="onDecisionMade()" />
   </article>
 </section>

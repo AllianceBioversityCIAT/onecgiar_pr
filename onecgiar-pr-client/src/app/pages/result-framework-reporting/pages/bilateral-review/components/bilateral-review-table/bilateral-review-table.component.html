@@ -1,4 +1,4 @@
-<!-- @akili-spec changes/sp-bilateral-review-tab (BRT-T-4, design.md §6.2, §6.3) -->
+<!-- @akili-spec changes/sp-bilateral-review-tab (BRT-T-4, BRT-T-5, design.md §6.2, §6.3) -->
 
 <!--
   Shared header/row chrome — Reviewer fix #3 (rework attempt 2): `PrGroupTableComponent`'s own
@@ -55,7 +55,9 @@
         size="sm"
         type="button"
         data-testid="bilateral-review-row-action"
-        (click)="openResult.emit(row)">
+        [attr.aria-disabled]="actionsDisabled() ? 'true' : null"
+        [attr.title]="actionsDisabled() ? copy.decisionInFlightTitle : null"
+        (click)="onActionClick(row)">
         <span class="material-icons-round text-[16px] mr-[4px]">{{ actionIcon(row) }}</span>
         {{ actionLabel(row) }}
       </button>
