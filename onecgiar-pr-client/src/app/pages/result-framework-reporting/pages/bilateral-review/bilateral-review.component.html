@@ -355,10 +355,15 @@
 
     <app-where-to-report-modal [programCode]="programmeCode()" returnTab="bilateral-review" [(visible)]="showWhereToReportModal" />
 
-    <!-- ═══ Review drawer (BRT-T-5): re-fetches the list on a decision, closes itself ═══ -->
-    <app-result-review-drawer
-      [(visible)]="results.showReviewDrawer"
-      [(resultToReview)]="results.currentResultToReview"
-      (decisionMade)="onDecisionMade()" />
+    <!-- ═══ Review drawer (BRT-T-5): re-fetches the list on a decision, closes itself.
+         The drawer's own root renders a fixed, full-viewport overlay + backdrop
+         unconditionally (no internal `@if`), so this page must gate its mount itself
+         or an empty overlay sits on screen on every cold load (H4-1). -->
+    @if (results.showReviewDrawer()) {
+      <app-result-review-drawer
+        [(visible)]="results.showReviewDrawer"
+        [(resultToReview)]="results.currentResultToReview"
+        (decisionMade)="onDecisionMade()" />
+    }
   </article>
 </section>

@@ -1,4 +1,4 @@
-// @akili-spec changes/sp-bilateral-review-tab (BRT-T-3, BRT-T-5, BRT-AC-4, 5, 6, 7, 9, 10, 15, 17, 19)
+// @akili-spec changes/sp-bilateral-review-tab (BRT-T-3, BRT-T-5, BRT-AC-4, 5, 6, 7, 9, 10, 15, 17, 19, H4-1)
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -133,11 +133,7 @@ describe('BilateralReviewComponent', () => {
    *  `entityId` mid-test and observe the component's reaction (Reliability fix, BRT-T-3 rework). */
   let paramMapSubject: BehaviorSubject<ParamMap>;
 
-  function build(
-    initialQueryParams: Record<string, string> = {},
-    resultToReviewResponse: unknown = of(groupedResponse(FIXTURE_ROWS)),
-    entityId = 'SP02'
-  ): void {
+  function build(initialQueryParams: Record<string, string> = {}, resultToReviewResponse: unknown = of(groupedResponse(FIXTURE_ROWS)), entityId = 'SP02'): void {
     router = { navigate: jest.fn().mockResolvedValue(true) };
     GET_ResultToReview = jest.fn().mockReturnValue(resultToReviewResponse);
 
@@ -501,6 +497,20 @@ describe('BilateralReviewComponent', () => {
       expect(drawerStub().visible).toBe(true);
       expect(drawerStub().resultToReview?.result_code).toBe('BR-001');
     });
+
+    // H4-1 (attempt 3b): the drawer's own root renders a fixed, full-viewport overlay
+    // unconditionally — no internal `@if (visible())`. Without a guard here the element (and
+    // its overlay) is mounted on every cold load, even though `visible` is bound false.
+    it('does not mount the drawer element on a cold load with no reviewResult param', () => {
+      expect(root().querySelector('app-result-review-drawer')).toBeNull();
+    });
+
+    it('mounts the drawer element once a row is opened', () => {
+      component.onOpenResult(FIXTURE_ROWS[0]);
+      fixture.detectChanges();
+
+      expect(root().querySelector('app-result-review-drawer')).not.toBeNull();
+    });
   });
 
   describe('Decision propagation (BRT-R-13, BRT-AC-9, AC-19)', () => {
@@ -517,6 +527,11 @@ describe('BilateralReviewComponent', () => {
       // below isolates calls the DECISION path itself makes, not a still-pending earlier write.
       fixture.detectChanges();
       const instanceBefore = component;
+
+      // Open the drawer first (H4-1: it is no longer mounted unconditionally) so its stub exists
+      // to emit `decisionMade`, the way a real decision only fires from an already-open drawer.
+      component.onOpenResult(FIXTURE_ROWS[0]);
+      fixture.detectChanges();
 
       // BR-001 (pending) is now Approved after the drawer's decision.
       const approvedRows = FIXTURE_ROWS.map(row => (row.result_code === 'BR-001' ? { ...row, status_id: 6, status_name: 'Approved' } : row));
@@ -538,6 +553,11 @@ describe('BilateralReviewComponent', () => {
     });
 
     it('guards the row action with aria-disabled while the decision re-fetch is in flight', () => {
+      // Open the drawer first (H4-1: it is no longer mounted unconditionally) so its stub exists
+      // to emit `decisionMade`.
+      component.onOpenResult(FIXTURE_ROWS[0]);
+      fixture.detectChanges();
+
       const pending$ = new Subject<{ response: unknown }>();
       GET_ResultToReview.mockReturnValue(pending$ as never);
 

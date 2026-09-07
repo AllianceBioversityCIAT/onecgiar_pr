@@ -230,3 +230,64 @@
 | Reviewer rounds | 2 (+1 runtime re-spawn). Owner limit exceeded — narrow evidence-quality round (KZ-MWB-3 family), adjudicated. |
 | Gate | auto-approved (pre-approved mode) |
 
+**HITL final look (Leader, Orca browser, HEAD `31eced222`, SP02 and SP13 `/bilateral-review`, 1536 CSS px):** five tabs in order on both programs. **Contrast (canvas-converted oklch → sRGB, WCAG ratio):** tab badge white on violet 10.92 · status chips Pending Review 6.84 (151,60,0 on 255,251,235) · Editing 9.45 · Approved 5.09 (0,122,85 on 236,253,245) · table header 5.17 · cell text 13.41 · active filter chip 11.60 · KPI card 14.35 — all ≥ 4.5 (AA). The "contrast (solid)" defect class is now covered by measurement, not only HITL eyeballing. (First pass mis-read oklch as rgb → bogus 1.0–1.1 ratios; corrected.)
+**Finding H4-1 (defect):** on plain load of the tab (no click) the review drawer is OPEN and empty ("Center - Not specified | Bilateral Project - Not specified", skeleton blocks) on both SP02 and SP13. Cause: `BilateralResultsService` is root-provided; `showReviewDrawer` / `currentResultToReview` kept the values from the Leader's earlier HITL click on SP02 after navigating away, and `BilateralReviewComponent` neither resets them on init nor on destroy (the legacy table reset only `searchText`; the drawer's own `ngOnDestroy` restores body overflow but not `visible`). Latent in the legacy page too, now one click away. Screenshots `reference/hitl-final-SP02-stale-drawer-h4-1.png`, `…SP13…`. **Owner:** T-5 reopened as `[~]` for a narrow attempt 3: reset both signals on init (unless a deep link sets them) and on destroy, with tests; disjoint from T-8's files (service + docs) → run in parallel.
+
+**H4-1 root cause — CORRECTED (Leader, 2026-09-07):** the live re-check after attempt 3 still showed the overlay on a fresh load of SP13, which a root-service leak cannot explain (a document load resets JS state). Verified in code: the drawer template's root `<div class="drawer-overlay-root">` (`result-review-drawer.component.html:1`) renders **unconditionally** — there is no `@if (visible())`; the scss only slides the panel (`translateX`). The legacy host wrapped the mount in `@if (bilateralResultsService.showReviewDrawer()) { … }` (`results-review-table.component.html:104-110` at `7f8908f71~1`); T-5 attempt 1 mounted `<app-result-review-drawer>` unconditionally (`bilateral-review.component.html:359-362`), so the fixed overlay with an empty skeleton is always on screen. The attempt-3 resets (constructor / program switch / destroy) are correct hygiene for the root-scoped service but are NOT the fix. The Reviewer PASS on attempts 1–2 could not see this: jsdom renders the drawer stub, and the Leader's H3-1 re-look clicked a row first. **Fix:** wrap the mount in `@if (results.showReviewDrawer())` exactly as the legacy host did (+ page test: no `app-result-review-drawer` element on cold load; present after `onOpenResult`). Attempt 3b, same task, page html + spec only.
+
+### `BRT-T-5` — attempt 3 (resets) — Reviewer **FAIL** → reverted by Leader decision — 2026-09-07
+
+| Field | Value |
+|---|---|
+| Reviewer (opus, scoped) | **FAIL** — (1) "The resets break the notification producer, which opens the drawer through the root service and passes no `?reviewResult=`: `notification-item.component.ts:366-374` sets `currentResultToReview`, navigates to the tab, then sets `showReviewDrawer` in `.then()`. The constructor reset and the programme-load reset null that result in between … re-creates the H4-1 symptom deterministically. Violated: R-17 (named producer), R-21 (producers: results list and notification items)." (2) "No test discriminates the constructor reset (the load effect clears both signals during the first `detectChanges()`)." |
+| Leader decision | The resets were built on the wrong root cause (see the corrected H4-1 note). The real defect is the unconditional mount; the notification producer's contract (set result → navigate → open, no query param) is legitimate and predates this spec. **Revert all attempt-3 resets** (constructor, program-switch, `ngOnDestroy`) and their four tests + `seedService` hook; keep attempt 3b's `@if (results.showReviewDrawer())` wrapper and its two tests. Residual behavior: a drawer left open when leaving the tab via the tab bar re-opens on return with the same result (root-scoped state) — **legacy parity**, recorded as a follow-up, not a defect. Not converting `notification-item` to deep-link params (out of scope; would widen the producer contract). |
+| Reviewer rounds | T-5 total: 4 (1 PASS, 2 PASS, 3 FAIL-reverted, 3b pending) — all after the functional PASS; HITL-driven. |
+
+**HITL re-look H4-1 (Leader, live browser, SP13 `/bilateral-review`, working tree with the 3b `@if` wrapper):** cold load → `app-result-review-drawer` element absent, `body.overflow` empty, 63 row actions; after clicking the first Review/See action → element present, `.drawer-overlay-root` `position: fixed`; after the drawer's close icon → element absent again. (The Approve/Reject footer was not rendered for SP13's first row at read time — it is gated on `status_id == 5` + membership + detail loaded; footer presence was already proven on SP02 in look #3b.) **H4-1 closed** pending the final scoped Reviewer over the combined attempt-3 delta (html `@if` + spec; ts reverted to HEAD by 3c).
+
+### `BRT-T-5` — attempt 3b/3c — Implementer reports — 2026-09-07
+
+| Field | Value |
+|---|---|
+| 3b (`@if` fix) | `bilateral-review.component.html`: mount wrapped in `@if (results.showReviewDrawer()) { … }`, bindings unchanged; spec: "Drawer mount (BRT-T-5)" tests (absent on cold load / present after `onOpenResult`); two "Decision propagation" tests now open the drawer first (stub no longer mounts on cold load; assertions unchanged). jest 33/33; lint clean. |
+| 3c (revert resets) | `bilateral-review.component.ts` byte-identical to HEAD (`git diff HEAD --stat` empty); spec: attempt-3 describe (4 tests) + `seedService` hook + unused import removed. jest 29/29; lint clean. |
+| Live (Leader, SP13) | cold load → no drawer element; Review → element present, overlay `fixed`; close → absent. |
+
+### `BRT-T-8` — Module guide, doc cleanup, service trim — Implementer report — 2026-09-07
+
+| Field | Value |
+|---|---|
+| Implementer | `akili-implementer` (sonnet), effort medium, skills `cognitive-doc-design`, `angular-developer` |
+| Files | new `pages/bilateral-review/CLAUDE.md` (93 lines); drawer `AGENTS.md` (back-links, `canEditInDrawer` §3b/§11.2); module `AGENTS.md` (folder map, §5.4–5.8, §7.15–7.19→7.16, day-by-day list); `bilateral-results.service.{ts,spec.ts}` trimmed (10 dead members + `CenterDto` import + matching spec blocks); `bilateral-review-count.service.ts` doc comment — 628 diff lines |
+| Verification (Implementer) | jest `…/bilateral-review` → Suites 13/13, Tests 337/337 · lint clean · guide 93 lines · legacy-name grep over the three guides → only the 2026-05-12 changelog line |
+
+## Constitution Impact: BRT-T-1 … BRT-T-8
+
+- **Module created:** `onecgiar-pr-client/src/app/pages/result-framework-reporting/pages/bilateral-review/` (page, KPI strip, grouped/flat table, relocated review drawer, three services, copy + query-param maps, Jest specs, Cypress CT). Child guide `pages/bilateral-review/CLAUDE.md` written by T-8 (93 lines).
+- **Module removed:** `pages/result-framework-reporting/pages/bilateral-results/` (legacy review page shell, its `AGENTS.md`, sidebar, filters, table).
+- **Public surface changed:** `reporting-program-band` gained the fifth tab (`activeTab` union, `bilateralReviewPath`, badge from `BilateralReviewCountService`); `reporting-guide.service.ts` `SpTabId`/`SP_TAB_LABELS` widened; route `entity-details/:entityId/bilateral-review` added and `results-review` became a redirect; `smart-navigation.service.ts` gained `isBilateralReviewTab`; `dashboard-lab` `returnTab` whitelist gained `bilateral-review`; `BilateralResultsService` trimmed to its live members and relocated (importers: results-list, notification-item, programme-results, dashboard-lab).
+- **Guides updated in-spec (deliverables):** `src/CLAUDE.md:168` route list (T-6), `pages/result-framework-reporting/AGENTS.md` + `README.md` (T-6, T-8), drawer `AGENTS.md` back-links (T-8). Parent `## Module Guides` index in `onecgiar-pr-client/src/CLAUDE.md` should gain a pointer to `pages/bilateral-review/CLAUDE.md` — **pending for `/akili-archive`** (shared root guide; not edited on the spec branch).
+- **CodeGraph re-index pending** (`codegraph sync`): new folder, deleted folder, renamed drawer paths.
+- **Kaizen candidates:** (1) relocation tasks must sweep SCSS relative `@use` paths and build with the moved component referenced (H3-1); (2) a Phase-1 "premises verified" table must compare role/status predicates writer-by-writer and use a Leader-run grep for wiring audits (judgment-day L-1/L-2); (3) a drawer/overlay component that renders its root unconditionally needs the host `@if` — record in the drawer guide (H4-1); (4) KZ-REH-1 recurrence: tests ≈ 2× the estimate again; (5) KZ-MWB-3 recurrence: a green CT whose RED came from an inverted, already-false assertion (T-7).
+
+## Budget tripwire — final tally (Leader, 2026-09-07, `git diff --numstat e8d74a433~1` incl. working tree, client `src/app`, excluding specs/CT/docs)
+
+| Metric | Estimate (design §14) | Tripwire | Actual | Verdict |
+|---|---|---|---|---|
+| Added source LOC | ~1,200 | 1,500 | **1,775** (net +302 after 1,473 removed with the legacy shell) | **Exceeded by ~275 (18%)** — page ts 501 / html 369 (est. 300 / 320), table 375 (est. 240) |
+| Test LOC | ~1,900 | — | 2,102 added | Over by ~10% (KZ-REH-1 recurrence) |
+| Tasks | 8 | — | 8 (+ 3 HITL-driven sub-attempts on T-5) | Match |
+| Review rounds | ≤ 1 per task | — | T-1 2 · T-2 1 · T-3 2 · T-4 3 · T-5 4 · T-6 3 · T-7 2 · T-8 1 | Exceeded on six tasks; each extra round strictly narrower (recorded per task) |
+
+The tripwire fired only in hindsight: the running Leader estimate (≈ 1,470 after T-5) under-counted the T-4 rework growth (sticky/parity classes, collapse persistence) and the T-3 attempt-2 additions. Nothing remained to stop when the tally was taken; escalated to the owner in the closing report instead. Cause: state-rich Tailwind templates again (KZ-REH-1) plus HITL-driven corrections folded into tasks (H2-1, H3-1, H4-1).
+
+### `BRT-T-5` — attempt 3 (final: `@if` wrapper) **PASS** — 2026-09-07
+
+| Field | Value |
+|---|---|
+| Reviewer (opus, scoped) | **PASS** — wrapper mirrors the legacy host with the three bindings intact; every producer (row action, deep-link effect `:384`, notification item, results-list, programme-results) sets `currentResultToReview` before flipping `showReviewDrawer`, so the drawer still mounts and its `resultToReview`+`visible` effect fires; cold-load test (spec `:505`) discriminates; propagation tests only add an open step. |
+| ADVISORY (recorded) | Reliability: with the drawer now unmounting on close, its `ngOnDestroy` restores `body.overflow` — previously the unconditional mount locked body scroll from `ngOnInit` on every cold load (second half of H4-1, net improvement). Readability: the durable fix belongs inside `result-review-drawer.component.html` (`@if (visible())` around `.drawer-overlay-root`) so no future host must remember the guard → **follow-up** (drawer internals are out of this spec's scope, DD-4). |
+| Requirements | BRT-R-13, R-21; AC-9, AC-17, AC-19 — closed with H3-1 and H4-1 corrections |
+| Final verification | jest page spec 29/29; lint clean; live SP13: no drawer on cold load, opens on Review, unmounts on close |
+| Gate | auto-approved (pre-approved mode) |
+
