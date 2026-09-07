@@ -18,8 +18,10 @@ import { ResultFrameworkReportingHomeService } from '../result-framework-reporti
 
 import { BilateralResultsService } from './services/bilateral-results.service';
 import { BilateralReviewCountService } from './services/bilateral-review-count.service';
+import { BilateralReviewAccessService } from './services/bilateral-review-access.service';
 import { GroupedResult, ResultToReview } from './components/result-review-drawer/result-review-drawer.interfaces';
 import { BilateralReviewKpis, BilateralReviewKpisComponent } from './components/bilateral-review-kpis/bilateral-review-kpis.component';
+import { BilateralReviewTableComponent } from './components/bilateral-review-table/bilateral-review-table.component';
 import { BILATERAL_REVIEW_COPY } from './bilateral-review.copy';
 import {
   BILATERAL_REVIEW_QUERY_PARAM_MAP,
@@ -55,7 +57,15 @@ function optionsOf(rows: ResultToReview[], pick: (row: ResultToReview) => string
   standalone: true,
   templateUrl: './bilateral-review.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgIcon, FormsModule, ReportingProgramBandComponent, WhereToReportModalComponent, PrFilterMultiselectModule, BilateralReviewKpisComponent],
+  imports: [
+    NgIcon,
+    FormsModule,
+    ReportingProgramBandComponent,
+    WhereToReportModalComponent,
+    PrFilterMultiselectModule,
+    BilateralReviewKpisComponent,
+    BilateralReviewTableComponent
+  ],
   viewProviders: [provideIcons({ lucideSearch, lucideChevronsUpDown, lucideChevronsDownUp })]
 })
 export class BilateralReviewComponent {
@@ -68,6 +78,7 @@ export class BilateralReviewComponent {
 
   readonly results = inject(BilateralResultsService);
   private readonly countService = inject(BilateralReviewCountService);
+  private readonly accessService = inject(BilateralReviewAccessService);
 
   readonly copy = BILATERAL_REVIEW_COPY;
 
@@ -124,9 +135,28 @@ export class BilateralReviewComponent {
   readonly categories = signal<string[]>([]);
   readonly view = signal<BilateralReviewViewMode>('grouped');
   readonly expandAllNonce = signal(0);
+  /** State the table applies to every group on the NEXT `expandAllNonce` bump (BRT-T-4). Starts
+   *  `true` so the table's initial render honors "groups are expanded by default" (BRT-R-10). */
+  readonly allExpanded = signal(true);
   readonly filterPopoverOpen = signal(false);
 
   readonly onlyPending = computed(() => this.status() === 'pending');
+
+  /** "Can this user review THIS program" (BRT-R-14) — gates the row action label (BRT-AC-8).
+   *  A plain method, NOT a `computed()`: `isProgramMember` reads non-reactive state
+   *  (`rolesSE.isAdmin`, `dataControlSE.myInitiativesList` — a plain array) that can resolve
+   *  AFTER this page's first render (hard load / deep link). A `computed()` here would memoize
+   *  whatever answer it saw on that first read — its only SIGNAL dependency is `programmeCode()`
+   *  — locking a genuine program member out of Review forever. A plain method is re-evaluated on
+   *  every change-detection pass instead (Reviewer fix, BRT-T-4 rework attempt 2). */
+  canReview(): boolean {
+    return this.accessService.isProgramMember(this.programmeCode());
+  }
+
+  /** Toolbar label/icon for the Expand all ⇄ Collapse all control — describes the action the next
+   *  click performs, so a page that opens already fully expanded reads "Collapse all" first. */
+  readonly expandAllLabel = computed(() => (this.allExpanded() ? this.copy.toolbar.collapseAll : this.copy.toolbar.expandAll));
+  readonly expandAllIcon = computed(() => (this.allExpanded() ? 'lucideChevronsDownUp' : 'lucideChevronsUpDown'));
 
   // ── Center code ↔ acronym (design.md §6.2 — rows carry the acronym in `lead_center`) ───────
   private readonly codeToAcronym = computed(() => {
@@ -217,6 +247,16 @@ export class BilateralReviewComponent {
     }
     return [...byProject.values()];
   });
+
+  /** Flat view rows (BRT-R-30), sorted desc by `submission_date`. */
+  readonly flatRows = computed<ResultToReview[]>(() =>
+    [...this.visibleRows()].sort((a, b) => this.toSubmissionTime(b.submission_date) - this.toSubmissionTime(a.submission_date))
+  );
+
+  private toSubmissionTime(value: string | null | undefined): number {
+    const time = value ? new Date(value).getTime() : NaN;
+    return Number.isNaN(time) ? 0 : time;
+  }
 
   // ── Filter popover option lists — derived from the LOADED rows (`tableResults`) ────────────
   readonly centerFilterOptions = computed<BilateralReviewFilterOption[]>(() => {
@@ -359,7 +399,14 @@ export class BilateralReviewComponent {
   }
 
   toggleExpandAll(): void {
+    this.allExpanded.update(expanded => !expanded);
     this.expandAllNonce.update(nonce => nonce + 1);
+  }
+
+  /** Row action (BRT-R-12): opens the existing review drawer via the relocated service's models. */
+  onOpenResult(row: ResultToReview): void {
+    this.results.currentResultToReview.set(row);
+    this.results.showReviewDrawer.set(true);
   }
 
   // ── Filter popover ──────────────────────────────────────────────────────────────────────────

@@ -196,8 +196,8 @@
               class="flex h-[32px] shrink-0 items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12.5px] font-medium text-[var(--pr-text-secondary)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)] shadow-2xs"
               data-testid="bilateral-review-expand-all"
               (click)="toggleExpandAll()">
-              <ng-icon name="lucideChevronsUpDown" class="text-[15px]" />
-              {{ copy.toolbar.expandAll }}
+              <ng-icon [name]="expandAllIcon()" class="text-[15px]" />
+              {{ expandAllLabel() }}
             </button>
           }
 
@@ -339,17 +339,15 @@
             </button>
           </div>
         } @else {
-          <!-- TEMPORARY placeholder — T-4 replaces this with the grouped/flat results table. -->
-          <div class="overflow-x-auto" data-testid="bilateral-review-rows-placeholder">
-            <ul class="flex flex-col gap-[6px]">
-              @for (row of visibleRows(); track row.id) {
-                <li class="flex items-center gap-[10px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] py-[8px] text-[13px]">
-                  <span class="font-mono tabular-nums text-[var(--pr-text-muted)]">{{ row.result_code }}</span>
-                  <span class="truncate text-[var(--pr-text-heading)]">{{ row.result_title }}</span>
-                </li>
-              }
-            </ul>
-          </div>
+          <app-bilateral-review-table
+            [groups]="groups()"
+            [flatRows]="flatRows()"
+            [view]="view()"
+            [expandAllNonce]="expandAllNonce()"
+            [allExpanded]="allExpanded()"
+            [canReview]="canReview()"
+            [loading]="loading()"
+            (openResult)="onOpenResult($event)" />
         }
       </div>
     </div>

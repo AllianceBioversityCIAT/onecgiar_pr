@@ -215,13 +215,13 @@ describe('BilateralReviewComponent', () => {
 
       expect(byTestId('kpi-pending-toggle')?.getAttribute('aria-pressed')).toBe('true');
       expect(byTestId('bilateral-review-chip-pending')?.getAttribute('aria-pressed')).toBe('true');
-      expect(root().querySelectorAll('[data-testid="bilateral-review-rows-placeholder"] li').length).toBe(3);
+      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(3);
 
       (byTestId('kpi-pending-toggle') as HTMLButtonElement).click();
       fixture.detectChanges();
 
       expect(byTestId('kpi-pending-toggle')?.getAttribute('aria-pressed')).toBe('false');
-      expect(root().querySelectorAll('[data-testid="bilateral-review-rows-placeholder"] li').length).toBe(7);
+      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(7);
     });
   });
 
@@ -233,7 +233,7 @@ describe('BilateralReviewComponent', () => {
       fixture.detectChanges();
 
       expect(text('bilateral-review-match-count')).toContain('3');
-      expect(root().querySelectorAll('[data-testid="bilateral-review-rows-placeholder"] li').length).toBe(3);
+      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(3);
       expect(root().textContent).not.toContain('BR-001');
     });
   });
@@ -244,13 +244,13 @@ describe('BilateralReviewComponent', () => {
       fixture.detectChanges();
 
       expect(text('bilateral-review-filter-count')).toBe('1');
-      expect(root().querySelectorAll('[data-testid="bilateral-review-rows-placeholder"] li').length).toBe(3);
+      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(3);
 
       component.clearFilters();
       fixture.detectChanges();
 
       expect(byTestId('bilateral-review-filter-count')).toBeNull();
-      expect(root().querySelectorAll('[data-testid="bilateral-review-rows-placeholder"] li').length).toBe(7);
+      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(7);
     });
   });
 
@@ -261,6 +261,62 @@ describe('BilateralReviewComponent', () => {
 
       expect(component.status()).toBe('pending');
       expect(byTestId('bilateral-review-only-pending')?.getAttribute('aria-checked')).toBe('true');
+    });
+  });
+
+  describe('Expand all / Collapse all (BRT-T-4)', () => {
+    it('flips the toolbar label and bumps the nonce on each click', () => {
+      expect(text('bilateral-review-expand-all')).toBe('Collapse all');
+      expect(component.allExpanded()).toBe(true);
+
+      (byTestId('bilateral-review-expand-all') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(component.allExpanded()).toBe(false);
+      expect(component.expandAllNonce()).toBe(1);
+      expect(text('bilateral-review-expand-all')).toBe('Expand all');
+
+      (byTestId('bilateral-review-expand-all') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(component.allExpanded()).toBe(true);
+      expect(component.expandAllNonce()).toBe(2);
+      expect(text('bilateral-review-expand-all')).toBe('Collapse all');
+    });
+  });
+
+  describe('Row action opens the drawer (BRT-R-12, host of BRT-T-5)', () => {
+    it('sets currentResultToReview and showReviewDrawer on the relocated service', () => {
+      expect(component.results.showReviewDrawer()).toBe(false);
+
+      (root().querySelectorAll('[data-testid="bilateral-review-row-action"]')[0] as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(component.results.showReviewDrawer()).toBe(true);
+      expect(component.results.currentResultToReview()?.result_code).toBe('BR-001');
+    });
+  });
+
+  describe('canReview reactivity — membership resolves after the first render (Reviewer fix #1, rework attempt 2)', () => {
+    it('flips a pending row from See to Review once myInitiativesList lands after the first detectChanges()', () => {
+      const firstAction = () => root().querySelectorAll('[data-testid="bilateral-review-row-action"]')[0] as HTMLElement;
+      // `beforeEach` already rendered with an empty `myInitiativesList` (not a program member yet)
+      // and BR-001 (r1) is pending (status_id 5) — so the row reads See, not Review.
+      expect(firstAction().textContent).toContain('See');
+
+      const api = TestBed.inject(ApiService) as unknown as { dataControlSE: { myInitiativesList: { official_code: string }[] } };
+      api.dataControlSE.myInitiativesList.push({ official_code: 'SP02' });
+      fixture.detectChanges();
+
+      // A `computed()` here would have memoized `false` forever (its only signal dependency is
+      // `programmeCode()`, unchanged) — this only passes because `canReview` is a plain method.
+      expect(firstAction().textContent).toContain('Review');
+    });
+  });
+
+  describe('T-4 placeholder removed', () => {
+    it('no longer renders the T-3 rows placeholder', () => {
+      expect(byTestId('bilateral-review-rows-placeholder')).toBeNull();
     });
   });
 
@@ -409,7 +465,7 @@ describe('BilateralReviewComponent', () => {
       fixture.detectChanges();
 
       expect(component.results.tableResults()).toEqual([]);
-      expect(root().querySelectorAll('[data-testid="bilateral-review-rows-placeholder"] li').length).toBe(0);
+      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(0);
       expect(byTestId('bilateral-review-skeleton')).toBeTruthy();
       expect(GET_ResultToReview).toHaveBeenLastCalledWith('SP03');
 

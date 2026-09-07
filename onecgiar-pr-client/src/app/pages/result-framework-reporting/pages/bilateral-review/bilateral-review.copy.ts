@@ -55,5 +55,26 @@ export const BILATERAL_REVIEW_COPY = {
     filteredEmpty: 'No results match your filters.',
     error: 'We could not load the bilateral review list.',
     retry: 'Retry'
+  },
+  // @akili-spec changes/sp-bilateral-review-tab (BRT-T-4 rework attempt 2 — Reviewer fix #4)
+  /** `BilateralReviewTableComponent` — grouped/flat table copy (column headers, row strings). */
+  table: {
+    headers: {
+      code: 'Code',
+      title: 'Title',
+      category: 'Indicator category',
+      center: 'Lead center',
+      status: 'Status',
+      toc: 'TOC result',
+      indicator: 'Indicator',
+      date: 'Submission date',
+      actions: 'Actions'
+    },
+    contributorBadge: 'Contributor',
+    notSpecified: 'Not specified',
+    reviewAction: 'Review',
+    seeAction: 'See',
+    /** "N results · M pending" (BRT-R-10). */
+    groupSummary: (results: number, pending: number): string => `${results} results · ${pending} pending`
   }
 };

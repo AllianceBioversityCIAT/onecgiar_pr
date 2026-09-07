@@ -143,3 +143,33 @@
 | Forward pointers | → **T-8**: rewrite/delete module AGENTS.md §5.4-5.8, §7.16-7.18, journey traces :621-634, :1401/:1475 (legacy internals); fix folder-map lines (scss, services/, query-params, copy, indentation); drawer AGENTS back-links; trim 9 dead `BilateralResultsService` members (`centers`, `currentCenterSelected`, `selectedCenterCode`, `selectCenter`, `allResultsForCounts`, `pendingCountByAcronym`, `centerAcronymsWithResults`, `centersToShowInSidebar`, `refreshAllResultsForCounts`) + `totalPendingCount` doc-comment. → **T-7**: redirect harness lands on a stub leaf (config-level proof) — cover end-to-end in CT or real page. |
 | Gate | auto-approved (pre-approved mode) |
 
+**HITL re-look H2-1 (Leader, Orca browser, SP02 `/bilateral-review`, 1536 CSS px, working tree with T-4 attempt 2):** table scroll container 1194/1194 (fits, no internal scroll), nested `.overflow-x-auto` inside the table component = 0, Actions header `position: sticky` with right edge at 1486 px (visible), first row action reads "edit Review", group meta "3 results · 3 pending" no longer clipped, header background `rgb(247,247,249)` (light chrome, both branches), body horizontal scroll none, `[disabled]` 0. Screenshot `reference/hitl2b-table-after-h2-1.png`. **H2-1 closed pending the T-4 attempt-2 Reviewer verdict.**
+
+### `BRT-T-4` — attempt 2 **FAIL** — 2026-09-07
+
+| Field | Value |
+|---|---|
+| Fix delta | `canReview()` plain method + reactivity test; grouped branch without own scroller; `!` Tailwind overrides on shared header/row cells; `copy.table` consumed, `variant="ghost"`; H2-1 min-w 70/200/110/90/105/160/120/90/110 + sticky Actions + `line-clamp-2` span + `min-w-0` meta; `userCollapsedKeys` persistence; `[loading]` bound; empty `prTableEmpty`. 290 delta lines. jest 334/334, lint clean. |
+| Reviewer (opus, scoped) | **FAIL** — fixes #1, #2, #4, collapse persistence, scope and H2-1 verified sound. 2 issues (verbatim): **1.** "Fix #3 removes every row divider from the grouped (default) view … `.pr-table` sets `border-collapse: separate`, and in the separated model row borders are not painted. Remediation: move the divider onto the cells (`!border-b !border-[var(--pr-border-divider)]` on every `<td>` incl. the sticky Actions cell), drop it from the `<tr>`." **2.** "Header parity incomplete: `[_nghost] .pr-table thead th` still beats the un-`!` utilities, so grouped headers render at `font-size: 10px`, `line-height: 1`, plus corner radii, while flat uses `text-[11px]`. Remediation: `!` on `text-[11px]`, `tracking-[0.04em]`, `!leading-none`/`!align-middle`, or neutralise the radii." |
+| Leader adjudication | Owner limit (≤ 1 round) exceeded on T-4; escalation waived (narrow CSS-class remediation, strictly narrower than attempt 1; same reasoning as T-6). Attempt 3 is the hard ceiling. Gate note: jsdom cannot evaluate Tailwind computed styles, so the divider/header parity gate is a **real-page measurement by the Leader** (`getComputedStyle` on grouped vs flat `td`/`th`) recorded here, plus T-7 CT. |
+
+**Parity gate baseline (Leader, live browser, T-4 attempt 2, SP02, 1536 CSS px) — the FAIL input:** grouped `thead th` = fontSize 10px · lineHeight 10px · borderTopLeftRadius 10px · table `border-collapse: separate`; flat `thead th` = 11px · 16.5px · 0px · `collapse`. First data `td`: borderBottom `0px solid` in BOTH views (flat rows paint the divider on the `<tr>`, grouped rows paint nothing). Attempt 3 must read: th 11px / leading-none / radius 0 in both views, and a non-zero `td` borderBottom in both views.
+
+### `BRT-T-4` — attempt 3 — Implementer report + Leader gate — 2026-09-07
+
+| Field | Value |
+|---|---|
+| Fix delta | `bilateral-review-table.component.html`: every `<td>` `!border-b !border-[var(--pr-border-divider)]` (incl. sticky Actions), `<tr>` border removed; every `<th>` `!text-[11px] !tracking-[0.04em] !leading-none !align-middle !rounded-none`; parity spec extended (td class list identical across views, divider classes on every cell). jest table spec 23/23; lint clean; cumulative T-4 diff 7 files, +853/−20. |
+| Leader parity gate (live browser, SP02, 1536 CSS px) | **AFTER:** grouped th = 11px / lineHeight 11px / radius 0 / bb 0.6px solid · flat th = identical · first `td` and sticky last `td` bb 0.6px solid in BOTH views · sticky position confirmed. Baseline (attempt 2) differed on every header metric and had bb 0px — the gate discriminates. |
+
+### `BRT-T-4` — attempt 3 **PASS** — 2026-09-07
+
+| Field | Value |
+|---|---|
+| Reviewer (opus, scoped) | **PASS** — delta limited to `th`/`td` class lists + one spec test; no `!` collisions; assertions real (`toEqual` on independently rendered arrays, divider classes on every grouped cell, `not.toContain('pr-table')` kept); `<tr>` elements carry no class → no double paint under `collapse`. Live computed styles (Leader) cover what jsdom cannot. |
+| Requirements | BRT-R-10, R-11, R-12, R-30, R-32 (table scroll clause); AC-8, AC-15 (group headers → row actions); scenario "Non-reviewer" (action reads See). HITL finding H2-1 closed. |
+| Verification (final) | jest `…/bilateral-review` 334/334 (attempt 2) + table spec 23/23 (attempt 3); lint clean; live: Actions sticky + visible, no nested scrollers, table fits at 1536, parity metrics identical grouped/flat. |
+| Reviewer rounds | 3 (hard ceiling reached; attempts 2–3 progressively narrower: functional → CSS parity). Owner limit exceeded — adjudicated above. |
+| Budget check | Added source ≈ 1,000 (T-1..T-3) + ≈ 320 (T-4 table ts/html) + ≈ 50 (T-6) ≈ **1,370** vs tripwire 1,500 — under, but T-5 (~80) will land near 1,450. Tests ≈ 2,300 (over the 1,900 estimate — KZ-REH-1 recurrence, recorded for kaizen). |
+| Gate | auto-approved (pre-approved mode) |
+

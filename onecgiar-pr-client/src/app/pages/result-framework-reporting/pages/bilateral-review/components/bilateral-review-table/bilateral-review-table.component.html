@@ -1,0 +1,191 @@
+<!-- @akili-spec changes/sp-bilateral-review-tab (BRT-T-4, design.md §6.2, §6.3) -->
+
+<!--
+  Shared header/row chrome — Reviewer fix #3 (rework attempt 2): `PrGroupTableComponent`'s own
+  `pr-table.component.scss` (`:host ::ng-deep .pr-table thead th / tbody td`) pierces into these
+  projected templates when they render INSIDE `app-pr-group-table` (grouped view), painting a dark
+  navy-chrome header the flat `<table>` never sees (it isn't a descendant of that host, so the
+  class is inert there — design.md §6.3 "chrome gradient not used on this page" says the ambient
+  chrome is itself the wrong look for this table, not the flat table's plain text). Every `!`
+  utility below exists to out-specify that ambient CSS so both branches render identically
+  regardless of where the template is projected — do not remove them thinking they're redundant.
+-->
+
+<!-- Shared row template — grouped (prTableExpandedRow) and flat (<table>) both render this. -->
+<ng-template #rowTpl let-row>
+  <tr>
+    <td
+      class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[8px] font-mono text-[12px] tabular-nums !text-[var(--pr-text-muted)] min-w-[70px]"
+      data-testid="bilateral-review-row-code">
+      {{ row.result_code }}
+    </td>
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[8px] text-[13px] !text-[var(--pr-text-heading)] min-w-[200px]">
+      <p class="m-0">{{ row.result_title }}</p>
+      @if (isContributor(row)) {
+        <span
+          class="mt-[4px] inline-flex items-center rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-app)] px-[8px] py-[1px] text-[10.5px] font-semibold text-[var(--pr-text-secondary)]"
+          >{{ copy.contributorBadge }}</span
+        >
+      }
+    </td>
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[8px] text-[13px] !text-[var(--pr-text-secondary)] min-w-[110px]">{{ row.indicator_category }}</td>
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[8px] text-[13px] !text-[var(--pr-text-secondary)] min-w-[90px]">{{ row.lead_center ?? copy.notSpecified }}</td>
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[8px] min-w-[105px]">
+      <span
+        class="inline-flex items-center rounded-full border px-[10px] py-[2px] text-[11.5px] font-semibold"
+        [class]="statusToneClass(row)"
+        data-testid="bilateral-review-row-status">
+        {{ row.status_name }}
+      </span>
+    </td>
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[8px] text-[13px] !text-[var(--pr-text-secondary)] min-w-[160px]">
+      <!-- `line-clamp-2` on a nested block, not the `<td>` itself — Tailwind's line-clamp sets
+           `display: -webkit-box`, which would override `display: table-cell` and break the
+           column's table layout (H2-1). -->
+      <span class="line-clamp-2">{{ row.toc_title ?? copy.notSpecified }}</span>
+    </td>
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[8px] text-[13px] !text-[var(--pr-text-secondary)] min-w-[120px]">{{ row.indicator ?? copy.notSpecified }}</td>
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[8px] font-mono text-[12px] tabular-nums !text-[var(--pr-text-secondary)] min-w-[90px]">
+      {{ row.submission_date | date: 'dd/MM/yyyy' }}
+    </td>
+    <td class="!border-b !border-[var(--pr-border-divider)] sticky right-0 z-10 bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-center min-w-[110px]">
+      <button
+        hlmBtn
+        variant="ghost"
+        size="sm"
+        type="button"
+        data-testid="bilateral-review-row-action"
+        (click)="openResult.emit(row)">
+        <span class="material-icons-round text-[16px] mr-[4px]">{{ actionIcon(row) }}</span>
+        {{ actionLabel(row) }}
+      </button>
+    </td>
+  </tr>
+</ng-template>
+
+<ng-template #headerRowTpl>
+  <tr>
+    <th
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[70px]">
+      {{ copy.headers.code }}
+    </th>
+    <th
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[200px]">
+      {{ copy.headers.title }}
+    </th>
+    <th
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[110px]">
+      {{ copy.headers.category }}
+    </th>
+    <th
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[90px]">
+      {{ copy.headers.center }}
+    </th>
+    <th
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[105px]">
+      {{ copy.headers.status }}
+    </th>
+    <th
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[160px]">
+      {{ copy.headers.toc }}
+    </th>
+    <th
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[120px]">
+      {{ copy.headers.indicator }}
+    </th>
+    <th
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[90px]">
+      {{ copy.headers.date }}
+    </th>
+    <th
+      class="!border-b !border-[var(--pr-border-divider)] sticky right-0 z-10 !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-center !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[110px]">
+      {{ copy.headers.actions }}
+    </th>
+  </tr>
+</ng-template>
+
+@if (view() === 'grouped') {
+  <div data-testid="bilateral-review-table">
+    <app-pr-group-table
+      styleClass="bilateral-review-table"
+      [value]="filteredGroups()"
+      dataKey="project_name"
+      groupRowsBy="project_name"
+      [expandedRowKeys]="expandedRowKeys()"
+      [loading]="loading()">
+      <ng-template prTableHeader>
+        <ng-container *ngTemplateOutlet="headerRowTpl"></ng-container>
+      </ng-template>
+
+      <ng-template prTableGroupHeader let-item let-expanded="expanded">
+        <tr>
+          <td colspan="9" class="border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-app)] px-[10px] py-[8px]">
+            <button
+              type="button"
+              [prRowToggler]="item"
+              (click)="onToggleGroup(item, expanded)"
+              class="flex w-full cursor-pointer items-center gap-[10px] border-0 bg-transparent p-0 text-left"
+              [attr.aria-expanded]="expanded"
+              [attr.aria-label]="'Toggle ' + item.project_name"
+              data-testid="bilateral-review-group-toggle">
+              <span
+                class="material-icons-round text-[18px] text-[var(--pr-text-secondary)] transition-transform"
+                [class.-rotate-90]="!expanded"
+                aria-hidden="true"
+                >expand_more</span
+              >
+              <span class="font-bold text-[13px] text-[var(--pr-text-heading)]" data-testid="bilateral-review-group-name">{{ item.project_name }}</span>
+              @if (distinctLeadCenters(item)) {
+                <span class="text-[12px] text-[var(--pr-text-secondary)]">{{ distinctLeadCenters(item) }}</span>
+              }
+              <span class="ml-auto min-w-0 text-right text-[12px] text-[var(--pr-text-muted)]" data-testid="bilateral-review-group-summary">{{
+                groupSummary(item)
+              }}</span>
+            </button>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template prTableExpandedRow let-item>
+        @for (row of item.results; track row.id) {
+          <ng-container *ngTemplateOutlet="rowTpl; context: { $implicit: row }"></ng-container>
+        }
+      </ng-template>
+
+      <ng-template prTableEmpty></ng-template>
+
+      <ng-template prTableLoading>
+        @for (row of [1, 2, 3]; track row) {
+          <tr>
+            <td colspan="9" class="px-[10px] py-[10px]">
+              <span class="block h-[14px] w-full animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
+            </td>
+          </tr>
+        }
+      </ng-template>
+    </app-pr-group-table>
+  </div>
+} @else {
+  <div class="overflow-x-auto" data-testid="bilateral-review-table">
+    <table class="w-full" data-testid="bilateral-review-flat-table">
+      <thead>
+        <ng-container *ngTemplateOutlet="headerRowTpl"></ng-container>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          @for (row of [1, 2, 3]; track row) {
+            <tr>
+              <td colspan="9" class="px-[10px] py-[10px]">
+                <span class="block h-[14px] w-full animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
+              </td>
+            </tr>
+          }
+        } @else {
+          @for (row of sortedFlatRows(); track row.id) {
+            <ng-container *ngTemplateOutlet="rowTpl; context: { $implicit: row }"></ng-container>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+}

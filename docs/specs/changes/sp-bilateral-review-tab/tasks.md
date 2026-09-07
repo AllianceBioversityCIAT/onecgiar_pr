@@ -77,6 +77,7 @@ Ticked by the Leader at execution start (items 1–4 were satisfied during `/aki
 
 ### `BRT-T-4` — Grouped / flat results table
 
+- **Status:** [x] PASS 2026-09-07 (attempt 3; H2-1 folded, see `execution.md`)
 - **Type:** `client`
 - **Description:** `BilateralReviewTableComponent`: grouped view on `PrGroupTableComponent` as the legacy table (`groupRowsBy='project_name'`, **`dataKey='project_name'`**, `expandedRowKeys` seeded with every `project_name` and re-seeded on `expandAllNonce`; templates `prTableHeader`, `prTableGroupHeader` with `prRowToggler` + `aria-expanded`, **`prTableExpandedRow`** iterating `item.results` through a shared row `ng-template`, `prTableEmpty`, `prTableLoading`); group header = `project_name` as delivered, distinct lead centers, `N results · M pending`; row columns per BRT-R-11 with status chip tones by loose-equality `status_id` (5 amber, 6 green, 7 red, else neutral with `status_name`), Contributor tag, action **Review** / **See** (`edit` / `visibility`) gated by `canReview` input; **flat view = a plain `<table>` in the same component** reusing the header and row template over `flatRows` sorted by `submission_date` desc (page-sorted); real `table/thead/tbody` sizing via `<col>` / `min-w-*` cells (no CSS grid); wrapper `overflow-x-auto`. Replace T-3's placeholder.
 - **Implements:** `BRT-R-10`, `BRT-R-11`, `BRT-R-12`, `BRT-R-30`, `BRT-R-32` (table scroll clause), `BRT-AC-8`, `BRT-AC-15` (group headers → row actions order); scenario "Non-reviewer" (action reads See)
