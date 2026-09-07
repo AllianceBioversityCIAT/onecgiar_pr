@@ -239,6 +239,54 @@ describe('EvidencesService', () => {
       expect((res.response as any).evidences[0].is_public_file).toBe(true);
       expect((res.response as any).supplementary[0].gender_related).toBe(false);
     });
+
+    // P2-3568: the section marks now survive a phase rollover, so supplementary
+    // evidence can carry them too. It used to normalise only the five
+    // impact-area marks and returned the other seven as raw tinyint (1/0/null).
+    it('normalizes every section mark on supplementary evidence, not just the impact-area ones', async () => {
+      const MARKS = [
+        'gender_related',
+        'youth_related',
+        'nutrition_related',
+        'environmental_biodiversity_related',
+        'poverty_related',
+        'innovation_readiness_related',
+        'innovation_use_related',
+        'policy_change_related',
+        'capacity_sharing_related',
+        'other_output_related',
+        'other_outcome_related',
+        'knowledge_product_metadata_related',
+      ];
+
+      mockResultRepository.getResultById.mockResolvedValue({ id: 1 });
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValue(
+        null,
+      );
+      // Raw MySQL shape: tinyint 1 / 0 / NULL, exactly what the driver returns.
+      const rawRow: Record<string, any> = { id: 2 };
+      MARKS.forEach((mark, i) => {
+        rawRow[mark] = [1, 0, null][i % 3];
+      });
+      mockEvidencesRepository.getEvidencesByResultId
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ ...rawRow }]);
+
+      const res = await service.findAll(1);
+      const supplementary = (res.response as any).supplementary[0];
+
+      const notBoolean = MARKS.filter(
+        (mark) => typeof supplementary[mark] !== 'boolean',
+      );
+      expect(notBoolean).toEqual([]);
+      // And the value is preserved, not just coerced to something.
+      MARKS.forEach((mark) => {
+        expect(supplementary[mark]).toBe(!!rawRow[mark]);
+      });
+      // Control: at least one of each, so this cannot pass on an all-false row.
+      expect(MARKS.some((mark) => supplementary[mark] === true)).toBe(true);
+      expect(MARKS.some((mark) => supplementary[mark] === false)).toBe(true);
+    });
   });
 
   describe('findAllV2', () => {

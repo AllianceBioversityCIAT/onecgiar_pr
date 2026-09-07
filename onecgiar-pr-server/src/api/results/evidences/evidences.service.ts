@@ -37,6 +37,35 @@ export class EvidencesService {
     private readonly _mqapService: MQAPService,
   ) {}
 
+  /**
+   * The section marks an evidence row can carry, as stored: `tinyint NULL`.
+   * P2-3568 made them survive a phase rollover, so every read path has to
+   * normalise them — including supplementary evidence, which used to get only
+   * the five impact-area ones and would have returned raw 1/0/null for the rest.
+   */
+  private static readonly EVIDENCE_MARKS = [
+    'gender_related',
+    'youth_related',
+    'nutrition_related',
+    'environmental_biodiversity_related',
+    'poverty_related',
+    'innovation_readiness_related',
+    'innovation_use_related',
+    'policy_change_related',
+    'capacity_sharing_related',
+    'other_output_related',
+    'other_outcome_related',
+    'knowledge_product_metadata_related',
+  ] as const;
+
+  private _normalizeEvidenceMarks(rows: any[]): void {
+    for (const row of rows ?? []) {
+      for (const mark of EvidencesService.EVIDENCE_MARKS) {
+        row[mark] = !!row[mark];
+      }
+    }
+  }
+
   kpUrlRegex =
     /https:\/\/(cgspace\.cgiar\.org\/(items\/[a-f0-9-]+|handle(\/\d+){1,2})|hdl\.handle\.net(\/\d+){1,2})/gm;
 
@@ -486,33 +515,13 @@ export class EvidencesService {
           1,
         );
 
+      this._normalizeEvidenceMarks(evidences);
       evidences.forEach((e) => {
-        e.gender_related = !!e.gender_related;
-        e.youth_related = !!e.youth_related;
-        e.nutrition_related = !!e.nutrition_related;
-        e.environmental_biodiversity_related =
-          !!e.environmental_biodiversity_related;
-        e.poverty_related = !!e.poverty_related;
-        e.innovation_readiness_related = !!e.innovation_readiness_related;
-        e.innovation_use_related = !!e.innovation_use_related;
-        e.policy_change_related = !!e.policy_change_related;
-        e.capacity_sharing_related = !!e.capacity_sharing_related;
-        e.other_output_related = !!e.other_output_related;
-        e.other_outcome_related = !!e.other_outcome_related;
-        e.knowledge_product_metadata_related =
-          !!e.knowledge_product_metadata_related;
         e.is_sharepoint = Number(!!e?.is_sharepoint);
         e.is_public_file = Boolean(e.is_public_file);
       });
 
-      supplementary.forEach((e) => {
-        e.gender_related = !!e.gender_related;
-        e.youth_related = !!e.youth_related;
-        e.nutrition_related = !!e.nutrition_related;
-        e.environmental_biodiversity_related =
-          !!e.environmental_biodiversity_related;
-        e.poverty_related = !!e.poverty_related;
-      });
+      this._normalizeEvidenceMarks(supplementary);
 
       return {
         response: {
@@ -559,21 +568,8 @@ export class EvidencesService {
         6,
       );
 
+      this._normalizeEvidenceMarks(evidences);
       evidences.forEach((e) => {
-        e.gender_related = !!e.gender_related;
-        e.youth_related = !!e.youth_related;
-        e.nutrition_related = !!e.nutrition_related;
-        e.environmental_biodiversity_related =
-          !!e.environmental_biodiversity_related;
-        e.poverty_related = !!e.poverty_related;
-        e.innovation_readiness_related = !!e.innovation_readiness_related;
-        e.innovation_use_related = !!e.innovation_use_related;
-        e.policy_change_related = !!e.policy_change_related;
-        e.capacity_sharing_related = !!e.capacity_sharing_related;
-        e.other_output_related = !!e.other_output_related;
-        e.other_outcome_related = !!e.other_outcome_related;
-        e.knowledge_product_metadata_related =
-          !!e.knowledge_product_metadata_related;
         e.is_sharepoint = Number(!!e?.is_sharepoint);
         e.is_public_file = Boolean(e.is_public_file);
       });
