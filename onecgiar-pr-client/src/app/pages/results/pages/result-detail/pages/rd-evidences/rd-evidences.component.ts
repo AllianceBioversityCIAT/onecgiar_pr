@@ -414,12 +414,18 @@ export class RdEvidencesComponent implements OnInit, OnDestroy {
     return '';
   }
 
+  // Shared file-storage host denylist (SharePoint/OneDrive/Google Drive/Dropbox).
+  // EVL-R-1 / EVL-R-11: same pattern used by draftValid and validateButtonDisabled — do not duplicate.
+  private readonly _fileStorageDenylistRegex =
+    /^(https?:\/\/)?(www\.)?(drive\.google\.com|docs\.google\.com|onedrive\.live\.com|1drv\.ms|dropbox\.com|([\w-]+\.)?sharepoint\.com)(\/.*)?$/i;
+
   // True when the modal draft can be added (mirrors the per-item save rules).
   get draftValid(): boolean {
     const e = this.draftEvidence;
     if (!e) return false;
     if (e.is_sharepoint) return Boolean(e.file || e.link);
-    return Boolean(e.link);
+    if (!e.link) return false;
+    return !this._fileStorageDenylistRegex.test(e.link);
   }
 
   validateCheckBoxes() {
@@ -472,8 +478,7 @@ export class RdEvidencesComponent implements OnInit, OnDestroy {
   }
 
   get validateButtonDisabled() {
-    const invalidLinkRegex =
-      /^(https?:\/\/)?(www\.)?(drive\.google\.com|docs\.google\.com|onedrive\.live\.com|1drv\.ms|dropbox\.com|([\w-]+\.)?sharepoint\.com)(\/.*)?$/i;
+    const invalidLinkRegex = this._fileStorageDenylistRegex;
 
     const evidences = this.evidencesBody.evidences;
 
