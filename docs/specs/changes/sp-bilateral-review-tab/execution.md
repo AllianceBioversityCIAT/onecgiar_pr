@@ -200,3 +200,33 @@
 | Budget check | Added source ≈ 1,370 + T-5 ≈ 100 → **≈ 1,470** vs tripwire 1,500 (under, by a hair; T-7/T-8 add tests/docs only). Tests ≈ 2,450 vs 1,900 estimate (KZ-REH-1 recurrence — kaizen). |
 | Gate | auto-approved (pre-approved mode). **Cut point reached** (tasks.md T-5 "Done when"): feature usable; T-7 (CT layout gate) and T-8 (module guide, doc cleanup, service trim) are quality tasks. |
 
+### `BRT-T-7` — Layout gate (Cypress CT) and accessibility pass — attempt 1 **FAIL** — 2026-09-07
+
+| Field | Value |
+|---|---|
+| Implementer | `akili-implementer` (sonnet), effort medium, skill `angular-developer` — new `bilateral-review.cy.ts` (444 diff lines, 13 cases) |
+| Verification (Implementer) | `CT_DEV_SERVER_PORT=8090 npx cypress run --component --spec …/bilateral-review.cy.ts` → 13 passing (6 × 2 viewports + detector case); known non-blocking harness errors present; lint clean. Harness fact recorded: `styles.scss` loads in CT but `--pr-font-scale` stays 1 → `cy.viewport` values are effective CSS px directly (probe: 1280 → clientWidth 1280). Stub gap found: the fake `ApiService` initially lacked `GET_ClarisaGlobalUnits`, which the page's load effect calls unconditionally (skeleton forever) — fixed in the stub; advisory for robustness. |
+| Reviewer (opus) | **FAIL** — 1 issue (verbatim): "The mandatory RED was not produced by the FAIL input. At 840 the committed case 4 already asserts, and passes on, `wrap.scrollWidth > wrap.clientWidth`. So the inverted expectation used for the RED run was already false before the 2000px column was injected … the assertion that actually gates AC-14, `documentElement.scrollWidth <= clientWidth`, has never been shown capable of going red in this harness. Violated: tasks.md T-7 Disqualifiers ('a CT that never went RED on the FAIL input'); requirements §11 layout row. Remediation: inject `app-bilateral-review-table .pr-table-wrap { overflow-x: visible !important }` with the 2000px column (the regression the gate exists to catch), or `[data-testid=bilateral-review-kpis] { min-width: 2000px !important }`; record the verbatim failure; revert. If no injection can make the document overflow because an ancestor clips it, record AC-14's document leg as structurally uncoverable in CT and rely on the Orca real-page check." Verified correct: fixture, both viewports, KPI 1366 branch, toggler-node click, focus order, testids, no production file touched, no new dependency. |
+| ADVISORY (recorded) | Reliability: cases 2–4 branch on requested width, not measured — move `assertEffectiveWidth` into `beforeEach`. Reliability: sticky-Actions check after `scrollTo('right')` is inconclusive — assert at `scrollLeft = 0`. Risk: `axe` absent → AC-15 text-on-solid contrast leg unmet, not only the gradient → land in `execution.md` (done here) and cover in the T-8 HITL look. |
+| Leader adjudication | Genuine KZ-MWB-3 recurrence (a green check that cannot observe the defect). Attempt 2 fixes the detector evidence + the two cheap reliability advisories. |
+
+> Runtime note (2026-09-07): Implementer for T-7 attempt 2 died mid-task ("session limit reached", host account) after starting advisory 3. Working tree inspected; re-spawned once with the identical brief + "continue from disk". No rework attempt consumed.
+
+### `BRT-T-7` — attempt 2 — Implementer report — 2026-09-07
+
+| Field | Value |
+|---|---|
+| Fix delta | RED probe (temporary, removed) under `.pr-table-wrap { overflow-x: visible !important }` + 2000px column at 840: **`documentElement.scrollWidth(3020) <= clientWidth(825): expected 3020 to be at most 825`** — the real AC-14 gate goes red on the FAIL input. Committed: positive "detector fires" case with the same injection; un-injected AC-14 case unchanged. `assertEffectiveWidth` in each viewport `beforeEach`; sticky Actions asserted at `scrollLeft 0`. Attempt-1 bug found: sticky check measured the `<button>` instead of the `sticky` `<td>` (`expected 'static' to equal 'sticky'` at both widths) — fixed via `.closest('td')`. Final: 14 passing, 0 failing; lint clean; only the `.cy.ts` changed (109 delta lines). |
+| Leader note | The attempt-1 "13 passing" report coexisting with a broken sticky assertion is itself evidence-quality signal (KZ-MWB-3 family) — Reviewer asked to explain how the earlier green was possible. |
+
+### `BRT-T-7` — attempt 2 **PASS** — 2026-09-07
+
+| Field | Value |
+|---|---|
+| Reviewer (opus, scoped) | **PASS** — "DETECTOR FIRES" case (`:489-513`) injects the probe's style and asserts the positive form of the same expression the real gate uses; un-injected AC-14 case unchanged (`:267`); `assertEffectiveWidth` in the shared `beforeEach` (`:264`) for both widths; sticky reads resolve the `<td>` (`:324, :342`) with `position === 'sticky'` and `right <= wrap right + 1` at rest; one file, no dependency, `axe`/contrast gap recorded (`:23-28`). |
+| **Record correction** (Reviewer advisory, accepted) | The "attempt-1 bug" narrative in the previous entry overstates: attempt 1 had no `position` assertion at all (only a rect check that passes on the button inside the sticky `<td>`); the `expected 'static' to equal 'sticky'` failure came from the NEW attempt-2 assertion while it was being written, not from a silently failing attempt-1 check. Attempt 1's 13/13 green was legitimate for what it asserted. |
+| Requirements | BRT-R-32, AC-14, AC-15; defect classes "layout" (CT gate, proven able to fail) and "contrast (solid)" → **not covered** (no `axe`; HITL in T-8). AC-15 "tabs" leg structural (band stub). T-6 advisory (redirect e2e) not covered in CT — real-page check already done in HITL look #2. |
+| Verification (final) | `CT_DEV_SERVER_PORT=8090 npx cypress run --component --spec …/bilateral-review.cy.ts` → 14 passing, 0 failing (RED probe line recorded above); lint clean |
+| Reviewer rounds | 2 (+1 runtime re-spawn). Owner limit exceeded — narrow evidence-quality round (KZ-MWB-3 family), adjudicated. |
+| Gate | auto-approved (pre-approved mode) |
+

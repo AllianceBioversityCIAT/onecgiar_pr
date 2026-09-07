@@ -125,6 +125,7 @@ Ticked by the Leader at execution start (items 1–4 were satisfied during `/aki
 
 ### `BRT-T-7` — Layout gate (Cypress CT) and accessibility pass
 
+- **Status:** [x] PASS 2026-09-07 (attempt 2, RED probe recorded, see `execution.md`)
 - **Type:** `tests`
 - **Description:** Cypress CT for `BilateralReviewComponent` with the T-3 fixture at effective 840 and 1536 CSS px: KPI strip 2×2 vs 1×4; `document.documentElement.scrollWidth <= clientWidth`; chips wrap without clipping; table wrapper scrolls horizontally; clicking the group toggler node (not the row center, KZ-MWB-3) collapses its rows; keyboard order tabs → toolbar → chips → KPI → group headers → row actions; `axe` run on the rendered page (text-on-solid). Run the CT once against a FAIL input (a fixed `min-width: 2000px` column) and record RED.
 - **Implements:** `BRT-AC-14`, `BRT-AC-15`, `BRT-R-32`; defect classes "layout" and "contrast (solid)" from `requirements.md` §11
