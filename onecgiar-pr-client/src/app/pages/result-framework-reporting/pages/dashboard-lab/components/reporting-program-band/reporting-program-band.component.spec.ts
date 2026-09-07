@@ -1,7 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
 import { ReportingProgramBandComponent } from './reporting-program-band.component';
 import { ReportingGuideService } from '../../services/reporting-guide.service';
+// @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-R-5) — one useValue stub, per the spec's
+// allowance (band edits limited to the tab bar / path / badge mechanism).
+import { BilateralReviewCountService } from '../../../bilateral-review/services/bilateral-review-count.service';
 
 /**
  * The band renders the whole programme shell chrome, so these tests go through the real template:
@@ -13,10 +17,14 @@ describe('ReportingProgramBandComponent', () => {
   let fixture: ComponentFixture<ReportingProgramBandComponent>;
   let component: ReportingProgramBandComponent;
 
-  const build = async (inputs: Record<string, unknown> = {}) => {
+  /** `BRT-T-1` — reassigned per-test so a case can control what the badge renders. */
+  let bilateralReviewCountStub: { count: jest.Mock; ensure: jest.Mock };
+
+  const build = async (inputs: Record<string, unknown> = {}, bilateralReviewCount: number | null = null) => {
+    bilateralReviewCountStub = { count: jest.fn(() => signal<number | null>(bilateralReviewCount)), ensure: jest.fn() };
     await TestBed.configureTestingModule({
       imports: [ReportingProgramBandComponent],
-      providers: [provideRouter([])]
+      providers: [provideRouter([]), { provide: BilateralReviewCountService, useValue: bilateralReviewCountStub }]
     }).compileComponents();
     fixture = TestBed.createComponent(ReportingProgramBandComponent);
     component = fixture.componentInstance;
@@ -613,10 +621,10 @@ describe('ReportingProgramBandComponent', () => {
     const tabText = (a: HTMLAnchorElement) => a.querySelector('.pr-tab-label')?.textContent?.trim() || a.textContent?.trim();
     const tab = (label: string) => tabs().find(a => tabText(a) === label) as HTMLAnchorElement;
 
-    it('renders the four programme tabs in the order the design shows', async () => {
+    it('renders the five programme tabs in the order the design shows', async () => {
       await build({ showToolbar: true });
 
-      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results', 'My results']);
+      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results', 'Bilateral review', 'My results']);
     });
 
     it('points Results at the `/results` route under the programme', async () => {
@@ -666,12 +674,12 @@ describe('ReportingProgramBandComponent', () => {
       expect(tabs().filter(a => a.getAttribute('aria-current') === 'page')).toHaveLength(1);
     });
 
-    it('keeps the four tabs in the condensed bar — one strip serves both shapes', async () => {
+    it('keeps the five tabs in the condensed bar — one strip serves both shapes', async () => {
       await build({ showToolbar: true, activeTab: 'results' });
 
       scrollTo(200);
 
-      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results', 'My results']);
+      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results', 'Bilateral review', 'My results']);
       expect(tab('Results').getAttribute('aria-current')).toBe('page');
     });
 
@@ -1276,6 +1284,74 @@ describe('ReportingProgramBandComponent', () => {
       // Advance timers to verify debounce timer was cleared and does not emit again
       jest.advanceTimersByTime(200);
       expect(emitSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-R-1/2/3/5, BRT-AC-1/2/3/16)
+  describe('Bilateral review tab (BRT-T-1)', () => {
+    const navLabels = () =>
+      Array.from(root().querySelectorAll('nav[aria-label="Program sections"] a')).map(a => a.querySelector('.pr-tab-label')?.textContent?.trim());
+
+    it('renders in DOM order Overview, Reporting, Results, Bilateral review, My results', async () => {
+      await build();
+
+      expect(navLabels()).toEqual(['Overview', 'Reporting', 'Results', 'Bilateral review', 'My results']);
+    });
+
+    it("the new anchor's href ends with /bilateral-review and preserves query params", async () => {
+      await build();
+
+      const anchors = Array.from(root().querySelectorAll('nav[aria-label="Program sections"] a'));
+      const bilateralAnchor = anchors.find(a => a.querySelector('.pr-tab-label')?.textContent?.trim() === 'Bilateral review') as HTMLAnchorElement;
+
+      expect(bilateralAnchor).toBeTruthy();
+      expect(bilateralAnchor.getAttribute('href')).toMatch(/\/bilateral-review$/);
+      expect(bilateralAnchor.getAttribute('queryParamsHandling')).toBe('preserve');
+    });
+
+    it('renders the badge with a stubbed count of 3', async () => {
+      await build({}, 3);
+      const badge = root().querySelector('nav[aria-label="Program sections"] a:nth-of-type(4) [aria-label$="pending review"]');
+      expect(badge?.textContent?.trim()).toBe('3');
+    });
+
+    it('hides the badge for a stubbed count of 0', async () => {
+      await build({}, 0);
+      const badge = root().querySelector('nav[aria-label="Program sections"] a:nth-of-type(4) [aria-label$="pending review"]');
+      expect(badge).toBeNull();
+    });
+
+    it('hides the badge for a stubbed count of null (cold cache)', async () => {
+      await build({}, null);
+      const badge = root().querySelector('nav[aria-label="Program sections"] a:nth-of-type(4) [aria-label$="pending review"]');
+      expect(badge).toBeNull();
+    });
+
+    it("activeTab='bilateral-review' sets aria-current=\"page\" on it only", async () => {
+      await build({ activeTab: 'bilateral-review' });
+
+      const anchors = Array.from(root().querySelectorAll('nav[aria-label="Program sections"] a'));
+      const current = anchors.filter(a => a.getAttribute('aria-current') === 'page');
+
+      expect(current.length).toBe(1);
+      expect(current[0].querySelector('.pr-tab-label')?.textContent?.trim()).toBe('Bilateral review');
+    });
+
+    it('warms the badge via ensure(programCode()) for a non-empty code', async () => {
+      await build({ programCode: 'SP02' });
+
+      expect(bilateralReviewCountStub.ensure).toHaveBeenCalledWith('SP02');
+    });
+
+    it('the explainer panel shows the approved Bilateral review title and description', async () => {
+      await build({ activeTab: 'bilateral-review' });
+
+      const infoButton = root().querySelector('button[aria-label="About this program and view"]') as HTMLButtonElement;
+      infoButton.click();
+      fixture.detectChanges();
+
+      expect(text()).toContain('Bilateral review');
+      expect(text()).toContain('W3/Bilateral results');
     });
   });
 });

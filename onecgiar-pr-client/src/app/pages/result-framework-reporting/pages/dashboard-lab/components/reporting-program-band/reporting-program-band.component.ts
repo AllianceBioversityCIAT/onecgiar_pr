@@ -18,6 +18,9 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap } from '@ng-icons/lucide';
 import { PrFilterMultiselectModule } from '../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { PrFilterSelectComponent } from '../../../../../../shared/components/pr-filter-select/pr-filter-select.component';
+// @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-DD-2)
+import { BilateralReviewCountService } from '../../../bilateral-review/services/bilateral-review-count.service';
+import { BILATERAL_REVIEW_COPY } from '../../../bilateral-review/bilateral-review.copy';
 
 export interface BandFilterOption {
   value: string;
@@ -115,6 +118,12 @@ export class ReportingProgramBandComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
   private readonly guideSE = inject(ReportingGuideService);
+  /** `BRT-DD-2` — injected directly (not a host input) so the badge reaches every tab without
+   *  touching any host template. */
+  private readonly bilateralReviewCountSE = inject(BilateralReviewCountService);
+  /** `BRT-T-1` rework — the band template reads label/badge copy from here instead of hardcoding
+   *  strings, so `bilateral-review.copy.ts` stays the single source of truth (design.md §6.2/§6.3). */
+  readonly copy = BILATERAL_REVIEW_COPY;
 
   readonly programCode = input<string>('');
   readonly programName = input<string>('');
@@ -140,10 +149,12 @@ export class ReportingProgramBandComponent {
    */
   readonly phaseLabelOverride = input<string>('');
   /**
-   * Which tab is active. Overview, Reporting, Results and My work are separate routes, not local
-   * state. `'my-work'` added `@akili-spec changes/my-work-board` (MWB-T-4, MWB-R-1).
+   * Which tab is active. Overview, Reporting, Results, Bilateral review and My work are separate
+   * routes, not local state. `'my-work'` added `@akili-spec changes/my-work-board` (MWB-T-4,
+   * MWB-R-1). `'bilateral-review'` added `@akili-spec changes/sp-bilateral-review-tab` (BRT-T-1,
+   * BRT-R-1) — fifth tab, rendered between Results and My results.
    */
-  readonly activeTab = input<'overview' | 'reporting' | 'results' | 'my-work'>('reporting');
+  readonly activeTab = input<'overview' | 'reporting' | 'results' | 'bilateral-review' | 'my-work'>('reporting');
   /**
    * `@akili-spec changes/my-work-board` (MWB-T-4, MWB-R-1) — the My work tab's badge: the Mine
    * Editing count for this programme + phase, computed by one scoped list request and cached per
@@ -269,15 +280,17 @@ export class ReportingProgramBandComponent {
       programName: this.programName(),
       cycleYear: this.cycleYear() ?? undefined,
       activeTab,
-      onTabNavigate: (tab: 'overview' | 'reporting' | 'results' | 'my-work') => {
+      onTabNavigate: (tab: 'overview' | 'reporting' | 'results' | 'bilateral-review' | 'my-work') => {
         const targetPath =
           tab === 'overview'
             ? this.overviewPath()
             : tab === 'results'
               ? this.resultsPath()
-              : tab === 'my-work'
-                ? this.myWorkPath()
-                : this.reportingPath();
+              : tab === 'bilateral-review'
+                ? this.bilateralReviewPath()
+                : tab === 'my-work'
+                  ? this.myWorkPath()
+                  : this.reportingPath();
         return this.router.navigate([targetPath], { queryParamsHandling: 'preserve' }).then(() => {});
       }
     });
@@ -307,6 +320,12 @@ export class ReportingProgramBandComponent {
    * fifth-in-design-order / fourth-in-programme-view tab, rendered after Results.
    */
   readonly resultsPath = computed(() => `${this.reportingPath()}/results`);
+  /**
+   * Fifth-in-design-order / fourth-in-programme-view tab (`@akili-spec
+   * changes/sp-bilateral-review-tab`, `BRT-T-1`, `BRT-R-1`) — rendered between Results and My
+   * results (`myWorkPath` below).
+   */
+  readonly bilateralReviewPath = computed(() => `${this.reportingPath()}/bilateral-review`);
   /** Fourth programme-view tab (`MWB-T-4`, `MWB-R-1`) — the submitter's own board. */
   readonly myWorkPath = computed(() => `${this.reportingPath()}/my-work`);
   /**
@@ -349,6 +368,12 @@ export class ReportingProgramBandComponent {
 
   /** True while the page is scrolled past the identity block. Drives the compact band. */
   readonly bandCollapsed = signal(false);
+
+  /**
+   * `BRT-R-3`, `BRT-DD-2` — the Bilateral review tab's pending-review badge, read from the
+   * injected count service and shown on every tab (not just Bilateral review itself).
+   */
+  readonly bilateralReviewCount = computed(() => this.bilateralReviewCountSE.count(this.programCode())());
 
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -401,6 +426,14 @@ export class ReportingProgramBandComponent {
     // without this first read the band would render expanded until the next scroll event. Covers the
     // < `md` / no-`scrollHost` case; the effect above covers the ≥ `md` case.
     this.syncBandCollapsed();
+
+    // `BRT-DD-2` — warms the Bilateral review badge for this programme on every band host
+    // (Overview, Reporting, Results, Bilateral review, My results), not just its own tab. A no-op
+    // once the count service already has (or is fetching) this programme's code.
+    effect(() => {
+      const code = this.programCode();
+      if (code) this.bilateralReviewCountSE.ensure(code);
+    });
   }
 
   /**
@@ -513,6 +546,12 @@ export class ReportingProgramBandComponent {
           title: 'Results',
           description:
             'View and manage all reported results linked to this Science Program or Accelerator. Use the filters to explore results by status, type, or contributing centers.'
+        };
+      case 'bilateral-review':
+        // @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-R-19)
+        return {
+          title: BILATERAL_REVIEW_COPY.explainer.title,
+          description: BILATERAL_REVIEW_COPY.explainer.description
         };
       case 'my-work':
         // @akili-spec changes/my-work-board (MWB-R-10)

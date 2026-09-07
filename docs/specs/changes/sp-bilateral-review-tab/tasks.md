@@ -29,6 +29,7 @@ Ticked by the Leader at execution start (items 1–4 were satisfied during `/aki
 
 ### `BRT-T-1` — Band: fifth tab, path, badge, explainer
 
+- **Status:** [x] PASS 2026-09-07 (attempt 2, see `execution.md`)
 - **Type:** `client`
 - **Description:** Extend `reporting-program-band`: `activeTab` union gains `'bilateral-review'`; `bilateralReviewPath` computed; new anchor between Results and My results cloned from the My results anchor (`material-icons-round` `fact_check`, label "Bilateral review", `queryParamsHandling="preserve"`, `aria-current`); badge from an injected `BilateralReviewCountService` (`ensure(programCode())` in an effect, shown when `> 0`, `aria-label` "N pending review"); `activeTabInfo` case (`.ts:503-532`) with the explainer copy; the tour ternary at `.ts:266-283` gains the branch; widen `SpTabId` + `SP_TAB_LABELS` in `dashboard-lab/services/reporting-guide.service.ts:6-13` (tab **not** added to tour steps). Create `services/bilateral-review-count.service.ts` (root; `count`, `ensure` memoized per code via one `GET_ResultToReview(code)`, `setFromRows`, `refresh`; pending = rows with `status_id == 5`, loose equality) in the new `pages/bilateral-review/services/` folder. Both band specs gain one `useValue` stub for the service and new `it` blocks only. **No change inside the `@if (showToolbar())` block.**
 - **Implements:** `BRT-R-1` (tab + label), `BRT-R-2`, `BRT-R-3`, `BRT-R-5`, `BRT-R-19`, `BRT-AC-1`, `BRT-AC-2`, `BRT-AC-3`, `BRT-AC-16`; scenario "Sibling tabs unchanged" (all clauses)

@@ -36,3 +36,29 @@
 | Not Done / Assumptions (Implementer, verbatim) | "The 'approve/reject buttons absent' assertion for member+status_id 6 can only be verified via canEditInDrawer() itself in this spec — the existing spec harness overrides the drawer's template to ''." Leader: accepted as harness limitation, forwarded to T-7. |
 | Gate | auto-approved (pre-approved mode) |
 
+> Runtime note (2026-09-07): Reviewer for T-1 attempt 1 died mid-audit ("session limit reached", host account) before emitting a verdict — environment failure, not a work FAIL. Re-spawned once with the identical brief after `/login`; no rework attempt consumed.
+
+### `BRT-T-1` — Band: fifth tab, path, badge, explainer — attempt 1 **FAIL** — 2026-09-07
+
+| Field | Value |
+|---|---|
+| Implementer | `akili-implementer` (sonnet), effort medium, skill `angular-developer` |
+| Files | `reporting-program-band.component.{ts,html,spec.ts}`, `reporting-program-band.favorites.spec.ts`, `dashboard-lab/services/reporting-guide.service.{ts,spec.ts}`, new `bilateral-review/bilateral-review.copy.ts`, new `bilateral-review/services/bilateral-review-count.service.{ts,spec.ts}` (+161/−14 in band folder) |
+| Leader adjudication (mid-attempt) | Two pre-existing band `it` blocks hard-coded the 4-tab literal; the brief's "no existing assertion edits" was stricter than BRT-R-5's intent. Approved updating those two literals (+ "four"→"five" titles). Recorded here so the Reviewer treats it as sanctioned. |
+| Verification (Implementer) | `npx jest <band + dashboard-lab/services + bilateral-review/services> --silent` → Suites 7/7, Tests 215/215 · `npx ng lint --quiet` clean · band html hunk at 257–283, `@if (showToolbar())` at 379 |
+| Reviewer (opus, re-spawned after runtime death) | **FAIL** — 1 issue (verbatim): "`bilateral-review.copy.ts` exports `tabLabel` and `badgeAriaLabel(n)`, but the band template consumes neither. Line 276 … hardcodes `Bilateral review` and line 280 hardcodes `[attr.aria-label]=\"bilateralReviewCount() + ' pending review'\"`. Only `explainer` is actually wired. Violated: design.md §6.2 'label from copy'; §6.3 'Copy: bilateral-review.copy.ts'. Remediation: expose the map on the component and bind both strings." Everything else conformed (DOM order, anchor clone, badge gating, `ensure()` guard, count service semantics, `stepTabs` untouched, spec edits limited to stub + adjudicated literals + new `it`s). |
+| ADVISORY (recorded) | Reliability: `refresh()` during an in-flight request lets two responses race (last write wins). Readability: `count(code)` allocates a `computed` per read; "centralised" spelling in the copy docstring. |
+
+### `BRT-T-1` — attempt 2 **PASS** — 2026-09-07
+
+| Field | Value |
+|---|---|
+| Implementer | `akili-implementer` (sonnet), effort high (rework), skill `angular-developer` |
+| Fix delta | `reporting-program-band.component.ts:~126` `readonly copy = BILATERAL_REVIEW_COPY`; html `:276` `{{ copy.tabLabel }}`, `:280` `[attr.aria-label]="copy.badgeAriaLabel(bilateralReviewCount()!)"`; copy docstring "centralized" |
+| Verification | jest (band + dashboard-lab/services + bilateral-review/services) → Suites 7/7, Tests 215/215 · `npx ng lint --quiet` clean · diff stat: 5 files, +179/−14 |
+| Reviewer (opus, scoped re-review) | **PASS** — FAIL resolved; copy file has no dead members; one html hunk (254–288) closes before `@if (showToolbar())` at 379; only the two adjudicated `it` blocks changed; DOM order / `preserve` / `fact_check` / badge gating / 7 tour steps all hold. |
+| Requirements | BRT-R-1 (tab), R-2, R-3, R-5, R-19, R-20; AC-1, AC-2, AC-3, AC-16; scenario "Sibling tabs unchanged" |
+| Decisions | Adjudicated literal update of two pre-existing tests (see attempt 1). Reviewer count for T-1: 2 rounds (owner limit ≤ 1 exceeded by one narrow copy-binding round; recorded, not escalated — second round was the fix verification, not a new defect). |
+| Gate | auto-approved (pre-approved mode) |
+| HITL look #1 | see below |
+

@@ -3,12 +3,16 @@ import { driver, DriveStep, Driver } from 'driver.js';
 
 export const SP_TOUR_STORAGE_KEY = 'pr.tour.sp.completed';
 
-export type SpTabId = 'overview' | 'reporting' | 'results' | 'my-work';
+// @akili-spec changes/sp-bilateral-review-tab (BRT-T-1) — 'bilateral-review' widens the union so
+// `startSpTour`'s `activeTab`/`onTabNavigate` typing stays sound with the band's new tab; the tab
+// is deliberately NOT added to the tour's step list (design.md §6.2).
+export type SpTabId = 'overview' | 'reporting' | 'results' | 'bilateral-review' | 'my-work';
 
 export const SP_TAB_LABELS: Record<SpTabId, string> = {
   overview: 'Overview',
   reporting: 'Reporting',
   results: 'Results',
+  'bilateral-review': 'Bilateral review',
   'my-work': 'My results'
 };
 

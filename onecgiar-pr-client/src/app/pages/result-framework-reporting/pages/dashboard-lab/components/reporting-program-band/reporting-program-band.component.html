@@ -254,6 +254,34 @@
       </span>
       <span class="pr-tab-label">Results</span>
     </a>
+    <!-- @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-R-1, BRT-R-2) — fifth tab,
+         between Results and My results, cloned from the My results anchor below. Badge from the
+         injected BilateralReviewCountService (BRT-DD-2), not a host input. -->
+    <a
+      class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
+      [class]="
+        activeTab() === 'bilateral-review'
+          ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+          : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+      "
+      [attr.aria-current]="activeTab() === 'bilateral-review' ? 'page' : null"
+      [routerLink]="bilateralReviewPath()"
+      queryParamsHandling="preserve">
+      <span
+        class="material-icons-round text-[18px] transition-colors"
+        [class]="activeTab() === 'bilateral-review' ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
+        aria-hidden="true">
+        fact_check
+      </span>
+      <span class="pr-tab-label">{{ copy.tabLabel }}</span>
+      @if ((bilateralReviewCount() ?? 0) > 0) {
+        <span
+          class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums"
+          [attr.aria-label]="copy.badgeAriaLabel(bilateralReviewCount()!)">
+          {{ bilateralReviewCount() }}
+        </span>
+      }
+    </a>
     <!-- @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1) — fourth programme-view tab, after
          Results. NOT the design's reserved `Drafts` slot (see `myWorkPath`'s docstring, MWB-DD-12). -->
     <a

@@ -1,7 +1,11 @@
 // @akili-spec changes/reporting-favorite-indicators
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { ReportingProgramBandComponent } from './reporting-program-band.component';
+// @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-R-5) — one useValue stub, per the
+// spec's allowance, so the band's new injected dependency does not issue a real HTTP request here.
+import { BilateralReviewCountService } from '../../../bilateral-review/services/bilateral-review-count.service';
 
 /**
  * RFI-T-3 — the Favorites switch in the Reporting toolbar.
@@ -17,7 +21,10 @@ describe('ReportingProgramBandComponent — favorites switch', () => {
   const build = async (inputs: Record<string, unknown> = {}) => {
     await TestBed.configureTestingModule({
       imports: [ReportingProgramBandComponent],
-      providers: [provideRouter([])]
+      providers: [
+        provideRouter([]),
+        { provide: BilateralReviewCountService, useValue: { count: () => signal<number | null>(null), ensure: jest.fn() } }
+      ]
     }).compileComponents();
     fixture = TestBed.createComponent(ReportingProgramBandComponent);
     component = fixture.componentInstance;
