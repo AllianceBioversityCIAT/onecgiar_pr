@@ -57,6 +57,9 @@ export class PrSelectComponent implements ControlValueAccessor {
   readonly optionBadgeLabel = input<string>('');
   readonly optionBadgeTone = input<string>('');
 
+  /** Must match `.custom_select .option` height in custom-fields.scss (30px; 50px when extraInformation). */
+  readonly virtualOptionItemSize = computed(() => (this.extraInformation() ? 50 : 30));
+
   readonly selectOptionEvent = output<any>();
 
   private readonly elementRef = inject(ElementRef);

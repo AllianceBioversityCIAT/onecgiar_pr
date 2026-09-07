@@ -146,6 +146,9 @@
 // The options panel is NOT portaled to body (`overlayToBody` left false), so it stays a DOM
 // descendant of `.opf-phase-select` and these rules reach it.
 :host ::ng-deep .opf-phase-select {
+  position: relative;
+  z-index: 1;
+
   .custom_select .field {
     height: 34px;
     padding: 0 10px;
@@ -157,6 +160,20 @@
     &:focus-within {
       border-color: var(--pr-color-primary-300);
     }
+  }
+
+  // Shared `.options` defaults to z-index 3 (custom-fields.scss) — below Overview KPI cards at z-10.
+  // Raise and paint opaque so W1/W2 content cannot bleed through the virtual-scroll viewport.
+  .custom_select:focus-within .options {
+    z-index: 50;
+    background-color: var(--pr-surface-card);
+  }
+
+  .search_input_container,
+  .virtual_scroll,
+  .cdk-virtual-scroll-viewport,
+  .options .option {
+    background-color: var(--pr-surface-card);
   }
 
   // The Open-phase row's chip — violet tint, matches the band's accent (hard rule §7: "Violet is
