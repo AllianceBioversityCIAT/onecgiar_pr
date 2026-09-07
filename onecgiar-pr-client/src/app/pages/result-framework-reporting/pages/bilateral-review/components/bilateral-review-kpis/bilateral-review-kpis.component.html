@@ -1,0 +1,77 @@
+<!-- @akili-spec changes/sp-bilateral-review-tab (BRT-T-3, BRT-R-6) -->
+<div class="grid grid-cols-4 gap-[14px] max-[1366px]:grid-cols-2 max-sm:grid-cols-1" data-testid="bilateral-review-kpis">
+  <!-- Bilateral projects -->
+  <div
+    class="flex min-w-0 flex-col justify-between gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px] px-[16px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs">
+    <div class="flex items-center gap-[6px] min-w-0">
+      <span class="material-icons-round shrink-0 text-[15px] text-purple-600" aria-hidden="true">account_tree</span>
+      <span class="truncate text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">Bilateral projects</span>
+    </div>
+    @if (loading()) {
+      <span class="h-[26px] w-[48px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
+    } @else {
+      <span class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-projects">{{
+        kpis().projects
+      }}</span>
+    }
+  </div>
+
+  <!-- Contributing centers -->
+  <div
+    class="flex min-w-0 flex-col justify-between gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px] px-[16px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs">
+    <div class="flex items-center gap-[6px] min-w-0">
+      <span class="material-icons-round shrink-0 text-[15px] text-emerald-600" aria-hidden="true">groups</span>
+      <span class="truncate text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">Contributing centers</span>
+    </div>
+    @if (loading()) {
+      <span class="h-[26px] w-[48px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
+    } @else {
+      <span class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-centers">{{
+        kpis().centers
+      }}</span>
+    }
+  </div>
+
+  <!-- Pending review — toggle, equivalent to the Pending chip (BRT-R-6) -->
+  <button
+    type="button"
+    (click)="togglePending.emit()"
+    [attr.aria-pressed]="pendingActive()"
+    data-testid="kpi-pending-toggle"
+    class="flex min-w-0 flex-col justify-between gap-[8px] rounded-[10px] border p-[12px] px-[16px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs cursor-pointer"
+    [class]="
+      pendingActive()
+        ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)]'
+        : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)]'
+    ">
+    <div class="flex items-center gap-[6px] min-w-0">
+      <span class="material-icons-round shrink-0 text-[15px] text-amber-600" aria-hidden="true">hourglass_top</span>
+      <span class="truncate text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">Pending review</span>
+    </div>
+    @if (loading()) {
+      <span class="h-[26px] w-[48px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
+    } @else {
+      <span class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-pending">{{
+        kpis().pending
+      }}</span>
+    }
+  </button>
+
+  <!-- Decided this list = Approved + Rejected, split as sublabel -->
+  <div
+    class="flex min-w-0 flex-col justify-between gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px] px-[16px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs">
+    <div class="flex items-center gap-[6px] min-w-0">
+      <span class="material-icons-round shrink-0 text-[15px] text-teal-600" aria-hidden="true">fact_check</span>
+      <span class="truncate text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">Decided this list</span>
+    </div>
+    @if (loading()) {
+      <span class="h-[26px] w-[48px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
+      <span class="h-[12px] w-[120px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
+    } @else {
+      <span class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-decided">{{
+        kpis().approved + kpis().rejected
+      }}</span>
+      <span class="truncate text-[11.5px] text-[var(--pr-text-secondary)]" data-testid="kpi-decided-sublabel">{{ decidedSublabel(kpis()) }}</span>
+    }
+  </div>
+</div>

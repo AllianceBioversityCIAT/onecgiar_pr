@@ -64,3 +64,29 @@
 
 **HITL look #1 (Leader, Orca browser, SP02 Reporting tab, viewport 1280 → 1536 CSS px):** DOM tabs = `Overview, Reporting, Results, Bilateral review, My results`; badge `aria-label` = "143 pending review" (SP02 has 143 W3 rows, all pending — consistent with the legacy page's "All Centers 143"); toolbar controls unchanged (search, Only pending, Favorites, Catalogue/Remaining, Grouped/All indicators all present; 359 typology chips). Screenshot `scratchpad/hitl1-reporting.png` reviewed by the Leader; owner look pending at the next gate (pre-approved mode: not blocking).
 
+### `BRT-T-3` — Page shell: band mount, toolbar, status chips, KPI strip, URL sync — attempt 1 **FAIL** — 2026-09-07
+
+| Field | Value |
+|---|---|
+| Implementer | `akili-implementer` (sonnet), effort high, skills `angular-developer`, `frontend-design` |
+| Files (new) | `bilateral-review.component.{ts,html,spec.ts}` (ts 397 / html 359), `bilateral-review.query-params.ts`, `components/bilateral-review-kpis/*`; `bilateral-review.copy.ts` extended (+45) — 8 files, +1378/−1 |
+| Verification (Implementer) | `npx jest …/bilateral-review --silent` → Suites 12/12, Tests 304/304 · `npx ng lint --quiet` clean |
+| Implementer judgment calls | (a) popover "Clear filters" clears Center/Project/Category; filtered-empty "Clear filters" also resets search + chip. (b) KPI/chip counts over `searchFiltered` only (design §6.2 literal). (c) Expand all / view switch inert against the placeholder (T-4). |
+| Reviewer (opus) | **FAIL** — 2 issues (verbatim): **1.** "The match count never renders when a search returns zero rows. `bilateral-review.component.html:57` guards with `@if (matchCount(); as count)`, and `0` is falsy … Violated: R-9, R-4; design §6.2 Toolbar. Remediation: `@if (search() && matchCount() !== null)`; add a spec case asserting `0 matches` renders with the filtered-empty state." **2.** "No test can distinguish the three KPI slots that all read `3` … Violated: tasks.md T-3 Verification (KZ-KCR fixture rule). Remediation: keep the AC-4 fixture; add one all-distinct case to the KPI component spec (e.g. 9/7/4/3/2 → decided 5), asserting each `data-testid` separately." |
+| ADVISORY (recorded) | Reliability: `loading` starts `false` → one empty-state paint before the skeleton (init `true`); root-scoped service keeps the previous program's rows during a new fetch (legacy cleared first). Readability: two "Clear filters" controls — split judged acceptable (R-8 binds the popover control; CF-R-1/2 hold on its axes). Counts over `searchFiltered` = design §6.2, conformant. Popover has no focus trap = parity with the exemplar. Deferred to T-4: Editing neutral chip, Expand/Collapse label toggle. INFO: LOC over estimate (397 vs 300, 359 vs 320) — budget tracked in §14 tripwire (added source so far ≈ 1,550 incl. tests? no: source ≈ 1,000; tests ≈ 900). |
+| Leader decisions | Both judgment calls (a)(b) accepted as conformant. The two Reliability advisories are two-line fixes on files this attempt already owns → folded into attempt 2 as "advisory fixes" (not new scope; recorded). |
+
+### `BRT-T-3` — attempt 2 **PASS** — 2026-09-07
+
+| Field | Value |
+|---|---|
+| Implementer | `akili-implementer` (sonnet), effort high (rework) |
+| Fix delta | html:51-57 match-count guard `@if (search() && matchCount() !== null)`; ts:115 `loading` starts `true`; ts:257-263 programCode effect clears `tableData`/`tableResults` inside `untracked` before `loadResults`; KPI spec all-distinct 9/7/4/3/2 → decided 5; page spec all-distinct 3/4/2/1/0 → decided 1, `0 matches` assertion, cold-render skeleton test, program-switch clearing test (114 delta lines) |
+| Verification | `npx jest …/bilateral-review --silent` → Suites 12/12, Tests 308/308 · `npx ng lint --quiet` clean |
+| Reviewer (opus, scoped) | **PASS** — both FAIL issues resolved as specified; advisory fixes correct and minimal (no effect loop, one request per code); only the four named files touched; attempt-1 conformance re-checked on the tree. |
+| ADVISORY (recorded) | Reliability: mount without `entityId` would hold the skeleton (latent; route always supplies it). Reliability: badge keeps the previous program's count until the new list lands (rows clear first) — cosmetic, ≤ 1 fetch window. Testability: one placeholder-`li` assertion passes vacuously during the skeleton branch; adjacent assertions carry the proof. |
+| Requirements | BRT-R-4, R-6, R-7, R-8, R-9, R-15, R-20, R-31, R-32 (KPI/toolbar wrap); AC-4, 5, 6, 7, 10, 15 (partial), 19 |
+| Budget check | Added source so far ≈ 1,000 LOC (T-1 ≈ 200, T-2 ≈ 60 net edits, T-3 ≈ 760 excl. spec); tests ≈ 1,300. Under the 1,500 added-source tripwire; T-4 (~240) + T-6 (~50) projected ≈ 1,300. |
+| HITL look #2 | **Deferred to after T-6**: the page has no route until T-6 lands, so it is not reachable in the browser yet. Owner look will happen at the T-6 gate (T-4/T-5 corrections fold into T-7/T-8 if needed). Recorded per KZ-MWB-2 intent. |
+| Gate | auto-approved (pre-approved mode). Reviewer rounds for T-3: 2 (second round = fix verification). |
+
