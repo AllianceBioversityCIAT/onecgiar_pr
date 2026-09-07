@@ -1,0 +1,11 @@
+// Header icon and footer reuse the shared `.pr-dialog-*` classes from styles.scss (the same look
+// as the Create Result / Discard Draft dialogs of the Drafts list). Only the "finished with no
+// candidates" tint is local — the shared sheet has a green (promote) and a red (discard) icon, not
+// a neutral one.
+.bacd-icon--info {
+  background: #eff6ff;
+
+  i {
+    color: #2563eb;
+  }
+}

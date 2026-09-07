@@ -815,6 +815,52 @@ describe('BilateralAiService (unit)', () => {
       );
     });
 
+    // 2026-09-07: "Bioversity (Alliance)" pasted raw into the href was cut at the space by the
+    // mail client and landed on /bilateral/Bioversity%20/home. The segment is percent-encoded,
+    // parentheses included, so the link survives every client and the router decodes it back.
+    it('percent-encodes the centre acronym in the drafts link, parentheses included', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaInstitutionsRepository.findOne.mockResolvedValue({
+        id: 7,
+        acronym: 'Bioversity (Alliance)',
+      });
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+        center_id: 7,
+        program_code: 'SP06',
+      });
+      stubs.userRepository.findOne.mockResolvedValue({
+        email: 'uploader@cgiar.org',
+        first_name: 'Juan',
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [
+          { indicator: 'Number of innovations', title: 'A', description: 'd' },
+        ],
+        interactionId: 'int-9',
+      });
+      jest
+        .spyOn(service as any, 'createDraftFromCandidate')
+        .mockResolvedValue({ id: 1 });
+
+      await service.processJob('j1');
+
+      const payload = stubs.emailService.sendEmail.mock.calls[0][0];
+      expect(payload.emailBody.message.socketFile).toContain(
+        '/bilateral/Bioversity%20%28Alliance%29/drafts',
+      );
+      expect(payload.emailBody.message.socketFile).not.toContain(
+        '/bilateral/Bioversity (Alliance)/drafts',
+      );
+    });
+
     it('a mail failure never fails the job — COMPLETED already stands', async () => {
       const { service, stubs } = makeService();
       stubs.jobRepository.findOne.mockResolvedValue({

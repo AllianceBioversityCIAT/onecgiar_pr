@@ -1,0 +1,35 @@
+@if (notice(); as notice) {
+  <app-pr-dialog
+    styleClass="pr-dialog pr-dialog--promote bilateral-ai-completion-dialog"
+    [visible]="true"
+    [modal]="true"
+    [showHeader]="false"
+    [closable]="false"
+    [dismissableMask]="false"
+    [closeOnEscape]="true"
+    (onHide)="close()">
+    <div class="pr-dialog-header" data-testid="ai-completion-header">
+      <span
+        class="pr-dialog-header-icon"
+        [class.pr-dialog-header-icon--promote]="notice.status === 'completed'"
+        [class.pr-dialog-header-icon--discard]="notice.status === 'failed'"
+        [class.bacd-icon--info]="notice.status === 'completed_no_candidates'">
+        <i class="material-icons-round">{{ icon() }}</i>
+      </span>
+      <span class="pr-dialog-header-title">{{ title() }}</span>
+    </div>
+
+    <div class="pr-dialog-body">
+      <p class="pr-dialog-text" data-testid="ai-completion-message">{{ message() }}</p>
+    </div>
+
+    <div pr-dialog-footer class="pr-dialog-footer">
+      <button hlmBtn variant="outline" type="button" data-testid="ai-completion-close" (click)="close()">
+        {{ canReview() ? 'Continue working' : 'Close' }}
+      </button>
+      @if (canReview()) {
+        <button hlmBtn type="button" data-testid="ai-completion-review" (click)="reviewDrafts()">Review drafts</button>
+      }
+    </div>
+  </app-pr-dialog>
+}

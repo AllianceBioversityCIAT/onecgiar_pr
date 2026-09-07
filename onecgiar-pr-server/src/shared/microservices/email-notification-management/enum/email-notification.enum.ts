@@ -27,8 +27,9 @@ export enum EmailTemplate {
   /**
    * 2026-09-04. Tells the uploader their AI text-mining job finished and how many result drafts it
    * produced, with a link to the centre's Drafts list. Lookup-only, rendered with handlebars by
-   * `BilateralAiService.sendResultsReadyEmail` — the in-app half is the client toast (the forced
-   * post-completion redirect was removed the same day).
+   * `BilateralAiService.sendResultsReadyEmail` — the in-app half is the client's completion
+   * dialog (`app-bilateral-ai-completion-dialog`, 2026-09-07; before that a toast, and before
+   * that a forced redirect removed 2026-09-04).
    */
   BILATERAL_AI_RESULTS_READY = 'email_template_bilateral_ai_results_ready',
 }
