@@ -62,3 +62,5 @@
 | Gate | auto-approved (pre-approved mode) |
 | HITL look #1 | see below |
 
+**HITL look #1 (Leader, Orca browser, SP02 Reporting tab, viewport 1280 → 1536 CSS px):** DOM tabs = `Overview, Reporting, Results, Bilateral review, My results`; badge `aria-label` = "143 pending review" (SP02 has 143 W3 rows, all pending — consistent with the legacy page's "All Centers 143"); toolbar controls unchanged (search, Only pending, Favorites, Catalogue/Remaining, Grouped/All indicators all present; 359 typology chips). Screenshot `scratchpad/hitl1-reporting.png` reviewed by the Leader; owner look pending at the next gate (pre-approved mode: not blocking).
+
