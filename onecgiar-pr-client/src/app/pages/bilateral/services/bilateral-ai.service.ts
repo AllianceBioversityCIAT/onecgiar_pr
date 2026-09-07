@@ -7,6 +7,7 @@ import { ResultsApiService } from '../../../shared/services/api/results-api.serv
 import { BilateralContextService } from './bilateral-context.service';
 import { BilateralCreationService } from './bilateral-creation.service';
 import {
+  BilateralAiCompletionNotice,
   BilateralAiDraft,
   BilateralAiJob,
   BilateralAiUploadState,
@@ -14,7 +15,19 @@ import {
 import { ReportingApiResponse } from '../../../shared/interfaces/reporting-api.response';
 
 const POLL_INTERVAL = 5000;
-const MAX_POLL_DURATION = 300_000;
+/**
+ * 30 minutes. The old 5-minute ceiling was shorter than a real text-mining run: the client gave up,
+ * flagged the job as failed, and the server finished anyway with nobody told (2026-09-07).
+ */
+const MAX_POLL_DURATION = 1_800_000;
+/** The job being polled, so a reload (or a new tab) resumes it instead of losing the outcome. */
+const ACTIVE_JOB_STORAGE_KEY = 'prms.bilateral-ai.active-job';
+
+interface ActiveJobRecord {
+  jobId: string;
+  centerAcronym: string;
+  startedAt: number;
+}
 
 @Injectable({ providedIn: 'root' })
 export class BilateralAiService implements OnDestroy {
@@ -41,8 +54,17 @@ export class BilateralAiService implements OnDestroy {
     uploadProgress: 0,
   });
 
+  /**
+   * The terminal outcome of the last AI job, for the app-wide `app-bilateral-ai-completion-dialog`.
+   * Set once per job, from wherever the user is; cleared when they act on it. Replaces the toast
+   * (2026-09-04 → 2026-09-07) that nobody noticed and the forced redirect before it.
+   */
+  completionNotice = signal<BilateralAiCompletionNotice | null>(null);
+
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
   private pollingStart = 0;
+  /** Centre captured when the job started — the context signals are stale by the time it ends. */
+  private activeJob: ActiveJobRecord | null = null;
 
   draftCount = computed(() => this.draftList().length);
   draftCountDisplay = computed(() => {
@@ -62,6 +84,8 @@ export class BilateralAiService implements OnDestroy {
         this.loadAllDrafts();
       }
     });
+
+    this.resumeActiveJob();
   }
 
   ngOnDestroy(): void {
@@ -79,6 +103,8 @@ export class BilateralAiService implements OnDestroy {
   // ── Job lifecycle ───────────────────────────────────────────────────
 
   startJob(jobId: string): void {
+    this.activeJob = { jobId, centerAcronym: this.ctx.centerAcronym(), startedAt: Date.now() };
+    this.persistActiveJob();
     this.currentJobId.set(jobId);
     this.uploadState.set({
       jobId,
@@ -88,9 +114,76 @@ export class BilateralAiService implements OnDestroy {
     this.startPolling(jobId);
   }
 
-  private startPolling(jobId: string): void {
+  /** The user acknowledged the outcome and stays where they are. */
+  dismissCompletionNotice(): void {
+    this.completionNotice.set(null);
+  }
+
+  /** The user chose to review the drafts: the centre's Drafts list, from anywhere in the app. */
+  openDraftsFromNotice(): void {
+    const notice = this.completionNotice();
+    this.completionNotice.set(null);
+    if (!notice?.centerAcronym) return;
+    void this.router.navigate(['/bilateral', notice.centerAcronym, 'drafts']);
+  }
+
+  /**
+   * Picks the polling back up after a reload. The record is dropped once the job is older than the
+   * polling ceiling — by then the server has long finished or failed and the Drafts list is the
+   * source of truth.
+   */
+  private resumeActiveJob(): void {
+    const record = this.readActiveJob();
+    if (!record) return;
+    if (Date.now() - record.startedAt > MAX_POLL_DURATION) {
+      this.clearActiveJob();
+      return;
+    }
+    this.activeJob = record;
+    this.currentJobId.set(record.jobId);
+    this.uploadState.set({ jobId: record.jobId, status: 'pending', uploadProgress: 100 });
+    this.startPolling(record.jobId, record.startedAt);
+  }
+
+  private persistActiveJob(): void {
+    try {
+      if (this.activeJob) localStorage.setItem(ACTIVE_JOB_STORAGE_KEY, JSON.stringify(this.activeJob));
+    } catch {
+      // storage unavailable — polling still works for this tab's lifetime
+    }
+  }
+
+  private readActiveJob(): ActiveJobRecord | null {
+    try {
+      const raw = localStorage.getItem(ACTIVE_JOB_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed?.jobId && typeof parsed.startedAt === 'number' ? (parsed as ActiveJobRecord) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private clearActiveJob(): void {
+    this.activeJob = null;
+    try {
+      localStorage.removeItem(ACTIVE_JOB_STORAGE_KEY);
+    } catch {
+      // nothing to clear
+    }
+  }
+
+  /** Terminal state reached: record the outcome for the dialog and forget the job. */
+  private announce(status: BilateralAiCompletionNotice['status'], resultCount: number, errorMessage?: string): void {
+    const jobId = this.activeJob?.jobId ?? this.currentJobId() ?? '';
+    const centerAcronym = this.activeJob?.centerAcronym || this.ctx.centerAcronym();
+    this.completionNotice.set({ jobId, centerAcronym, status, resultCount, errorMessage });
+    this.clearActiveJob();
+  }
+
+  private startPolling(jobId: string, startedAt: number = Date.now()): void {
     this.stopPolling();
-    this.pollingStart = Date.now();
+    this.pollingStart = startedAt;
     this.pollingTimer = setInterval(() => this.pollJob(jobId), POLL_INTERVAL);
     void this.pollJob(jobId);
   }
@@ -105,11 +198,9 @@ export class BilateralAiService implements OnDestroy {
   private async pollJob(jobId: string): Promise<void> {
     if (Date.now() - this.pollingStart > MAX_POLL_DURATION) {
       this.stopPolling();
-      this.uploadState.update(s => ({
-        ...s,
-        status: 'failed',
-        errorMessage: 'Processing timed out. Please try again.',
-      }));
+      const errorMessage = 'Processing timed out. Please try again.';
+      this.uploadState.update(s => ({ ...s, status: 'failed', errorMessage }));
+      this.announce('failed', 0, errorMessage);
       return;
     }
 
@@ -124,20 +215,24 @@ export class BilateralAiService implements OnDestroy {
         this.uploadState.update(s => ({ ...s, status: 'processing' }));
       } else if (job.status === 'COMPLETED') {
         this.stopPolling();
+        // No navigation, ever. The service is root-provided and polling survives navigation, so
+        // completing used to yank the user out of whatever they had moved on to (2026-09-04);
+        // the toast that replaced it went unnoticed (2026-09-07). The outcome is announced
+        // through `completionNotice` — a dialog the user closes or follows to the Drafts list —
+        // and the server mails the uploader a link as the durable half.
         if (job.result_count === 0) {
           this.uploadState.update(s => ({ ...s, status: 'completed_no_candidates' }));
+          this.announce('completed_no_candidates', 0);
         } else {
           this.uploadState.update(s => ({ ...s, status: 'completed' }));
           this.loadAllDrafts();
-          await this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'drafts']);
+          this.announce('completed', job.result_count);
         }
       } else if (job.status === 'FAILED') {
         this.stopPolling();
-        this.uploadState.update(s => ({
-          ...s,
-          status: 'failed',
-          errorMessage: job.error_message ?? 'AI processing failed. Please try again.',
-        }));
+        const errorMessage = job.error_message ?? 'AI processing failed. Please try again.';
+        this.uploadState.update(s => ({ ...s, status: 'failed', errorMessage }));
+        this.announce('failed', 0, errorMessage);
       }
     } catch {
       // polling error — keep trying
@@ -213,7 +308,16 @@ export class BilateralAiService implements OnDestroy {
         this.uploadState.update(s => ({ ...s, status: 'promoted' }));
         this.draftList.update(list => list.filter(d => d.id !== draftId));
         const resultId = response?.resultId ?? response?.result_id;
-        if (resultId) {
+        // Canonical editor URL is result_code + ?phase (the shape the results list opens): the
+        // backend resolves `:id` by code+version when `phase` travels, and by internal id only as
+        // the fallback. Navigating with the bare id produced /result/11514 instead of
+        // /result/9046?phase=36. Older servers do not send resultCode/versionId — keep the fallback.
+        const resultCode = response?.resultCode ?? response?.result_code;
+        const versionId = response?.versionId ?? response?.version_id;
+        if (resultCode && versionId) {
+          this.creationService.isAiGenerated.set(true);
+          void this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'result', resultCode], { queryParams: { phase: versionId } });
+        } else if (resultId) {
           this.creationService.isAiGenerated.set(true);
           void this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'result', resultId]);
         } else {

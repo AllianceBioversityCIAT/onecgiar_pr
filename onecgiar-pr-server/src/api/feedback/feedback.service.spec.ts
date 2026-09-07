@@ -82,6 +82,21 @@ describe('FeedbackService', () => {
     expect(digitalTools).toEqual([{ id: '10215' }]);
   });
 
+  /**
+   * Regression lock, 4 Sep 2026. Every other test sets the env var, so none of
+   * them can see the fallback — and the fallback is what prtest uses if the
+   * variable is not configured there. It has to be the submissions epic, never
+   * `P2-3472` (the feedback feature's own curated backlog).
+   */
+  it('defaults to the submissions epic P2-3584 when the env var is absent', async () => {
+    delete process.env.JIRA_FEEDBACK_EPIC_KEY;
+    service = new FeedbackService(mockHttp as any);
+    mockHttp.post.mockReturnValue(of({ data: { key: 'P2-9008' } }));
+
+    await service.createFeedback(validDto, user);
+    expect(mockHttp.post.mock.calls[0][1].fields.parent.key).toBe('P2-3584');
+  });
+
   it('carries the chosen priority and the three labels', async () => {
     mockHttp.post.mockReturnValue(of({ data: { key: 'P2-9006' } }));
     await service.createFeedback({ ...validDto, priority: '1' }, user);

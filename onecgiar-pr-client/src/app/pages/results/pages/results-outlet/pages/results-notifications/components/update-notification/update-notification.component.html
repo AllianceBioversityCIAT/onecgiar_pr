@@ -1,7 +1,11 @@
 @let emitterName = notification?.obj_emitter_user?.first_name + ' ' + notification?.obj_emitter_user?.last_name;
 @let initOfficialCode = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.official_code;
+<!-- 2026-09-05: "submitted for your review" links to the SP's review queue — the detail route does
+     not serve a bilateral result to its reviewer; the queue's drawer does. -->
 @let resultUrl =
-  '/result/result-detail/' + notification?.obj_result?.result_code + '/general-information?phase=' + notification?.obj_result?.obj_version?.id;
+  isBilateralSubmitted
+    ? '/result-framework-reporting/entity-details/' + initOfficialCode + '/results-review'
+    : '/result/result-detail/' + notification?.obj_result?.result_code + '/general-information?phase=' + notification?.obj_result?.obj_version?.id;
 
 <div
   [ngSwitch]="notification?.obj_notification_level?.notifications_level_id"

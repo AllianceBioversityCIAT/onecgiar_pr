@@ -3751,6 +3751,20 @@ describe('ResultsApiService', () => {
     });
   });
 
+  // @akili-spec changes/results-aow-column-filter (RAC-T-2)
+  describe('GET_ResultsScope', () => {
+    it('calls results-scope with programId and versionId and returns the buckets envelope', done => {
+      service.GET_ResultsScope('SP01', 36).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/results-scope?programId=SP01&versionId=36`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
   // ========== NEW BRANCH COVERAGE TESTS ==========
 
   describe('GET_AllResultsWithUseRole - searchParams branches', () => {
@@ -3815,6 +3829,31 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}get/all/roles/filter/${userId}`);
       expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    // @akili-spec changes/my-work-board (MWB-T-3, MWB-R-8)
+    it('should send include_completeness=true only when the flag is truthy', done => {
+      const userId = 'userId';
+
+      mockResponse = { response: { items: [] } };
+
+      service.GET_AllResultsWithUseRole(userId, { submitter_id: 'sub1', include_completeness: true } as any).subscribe(() => done());
+
+      const req = httpMock.expectOne(r => r.url.includes(`get/all/roles/filter/${userId}`) && r.url.includes('submitter_id=sub1') && r.url.includes('include_completeness=true'));
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should not send include_completeness when the flag is falsy', done => {
+      const userId = 'userId';
+
+      mockResponse = { response: { items: [] } };
+
+      service.GET_AllResultsWithUseRole(userId, { submitter_id: 'sub1', include_completeness: false } as any).subscribe(() => done());
+
+      const req = httpMock.expectOne(r => r.url.includes(`get/all/roles/filter/${userId}`) && r.url.includes('submitter_id=sub1'));
+      expect(req.request.url.includes('include_completeness')).toBe(false);
       req.flush(mockResponse);
     });
   });

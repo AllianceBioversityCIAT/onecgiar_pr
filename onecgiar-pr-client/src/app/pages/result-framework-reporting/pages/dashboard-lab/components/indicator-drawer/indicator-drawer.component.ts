@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { LabReportFormComponent } from '../lab-report-form/lab-report-form.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
+// @akili-spec changes/report-result-form-ux (RFUX-T-1, RFUX-R-1, RFUX-R-8)
 // @akili-spec changes/indicator-reported-results
 import {
   PrTableComponent,
@@ -126,8 +127,10 @@ export class IndicatorDrawerComponent {
   private readonly clipboard = inject(Clipboard);
   private readonly toastSE = inject(PrToastService);
 
-  /** The indicator being managed, plus the context it lives in. */
-  readonly indicator = input.required<any>();
+  /** The indicator being managed, plus the context it lives in. Null when `emerging` is true. */
+  readonly indicator = input<any | null>(null);
+  /** Emerging create: no KPI, no contributor fetch, report tab only (`ERC-DD-1`). */
+  readonly emerging = input<boolean>(false);
   readonly groupTitle = input<string>('');
   readonly programCode = input<string>('');
   /** The ToC node the indicator hangs from, and the owning initiative. */
@@ -226,6 +229,22 @@ export class IndicatorDrawerComponent {
     this.contextCollapsed.update(v => !v);
   }
 
+  /** Whether the indicator description in the context header is expanded past the 2-line clamp. */
+  readonly descriptionExpanded = signal(false);
+
+  toggleDescription(): void {
+    this.descriptionExpanded.update(v => !v);
+  }
+
+  /**
+   * "Show more" only when the indicator description actually overflows the 2-line clamp (~120 chars).
+   * Short titles fit in two lines and never need the extra control.
+   */
+  readonly needsDescriptionMore = computed(() => {
+    const desc = this.indicator()?.indicator_description;
+    return typeof desc === 'string' && desc.trim().length > 120;
+  });
+
   /** Unsaved work in the form; closing or switching indicator must warn first. */
   readonly formDirty = signal(false);
   readonly confirmingExit = signal<null | 'close'>(null);
@@ -290,8 +309,15 @@ export class IndicatorDrawerComponent {
     info: { title: 'Indicator information', icon: 'info' },
     results: { title: 'Reported results', icon: 'fact_check' }
   };
-  readonly tabTitle = computed(() => IndicatorDrawerComponent.TAB_CHROME[this.tab()].title);
-  readonly tabIcon = computed(() => IndicatorDrawerComponent.TAB_CHROME[this.tab()].icon);
+  readonly tabTitle = computed(() => {
+    if (this.emerging() && this.tab() === 'report') return 'Report emerging result';
+    return IndicatorDrawerComponent.TAB_CHROME[this.tab()].title;
+  });
+  readonly tabIcon = computed(() => {
+    if (this.emerging() && this.tab() === 'report') return 'add_circle';
+    return IndicatorDrawerComponent.TAB_CHROME[this.tab()].icon;
+  });
+  readonly drawerAriaLabel = computed(() => (this.emerging() ? 'Report emerging result' : 'Manage indicator'));
   /** True once the mode is fixed, so the smart default stops overriding. */
   private tabTouched = false;
 
@@ -312,6 +338,7 @@ export class IndicatorDrawerComponent {
   readonly returnTab = signal<DrawerTab | null>(null);
 
   openResultsFromReport(): void {
+    if (this.emerging()) return;
     this.returnTab.set('report');
     this.setTab('results');
   }
@@ -350,11 +377,13 @@ export class IndicatorDrawerComponent {
     // let the smart default override.
     effect(() => {
       const ind = this.indicator();
-      this.tab.set(this.initialTab());
+      const emerging = this.emerging();
+      this.tab.set(emerging ? 'report' : this.initialTab());
       this.tabTouched = true;
       this.existing.set(null);
       this.loadError.set(null);
       this.formDirty.set(false);
+      this.descriptionExpanded.set(false);
       // @akili-spec changes/indicator-reported-results
       // Folder-guide trap: state added here MUST be reset here, or it leaks between indicators —
       // a search typed against indicator A would silently hide indicator B's rows.
@@ -364,7 +393,12 @@ export class IndicatorDrawerComponent {
       // The remembered width belongs to the indicator that was on screen when the floor fired; a
       // different indicator has no claim on it (IRR-DD-5 / design §6.2 "Reset effect").
       this.widthBeforeResults = null;
-      if (ind) this.loadExisting(ind);
+      if (emerging) {
+        this.existing.set([]);
+        this.loadingExisting.set(false);
+      } else if (ind) {
+        this.loadExisting(ind);
+      }
     });
 
     // @akili-spec changes/indicator-reported-results
@@ -380,6 +414,7 @@ export class IndicatorDrawerComponent {
   }
 
   setTab(tab: DrawerTab): void {
+    if (this.emerging() && tab !== 'report') return;
     this.tabTouched = true;
     this.tab.set(tab);
   }

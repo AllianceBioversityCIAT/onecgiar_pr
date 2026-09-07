@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output, forwardRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { HlmInput } from '@spartan/input';
 
 /**
  * Compact single-choice filter dropdown — the pill used in toolbars ("Section ⌄", "Status ⌄").
@@ -16,7 +17,7 @@ import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/f
 @Component({
   selector: 'app-pr-filter-select',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HlmInput],
   templateUrl: './pr-filter-select.component.html',
   styleUrls: ['./pr-filter-select.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,6 +36,10 @@ export class PrFilterSelectComponent implements ControlValueAccessor {
   @Input() optionValue: string;
   @Input() placeholder = 'Select';
   @Input() disabled = false;
+  /** Enables in-panel search input above the options list. */
+  @Input() filter = false;
+  /** Placeholder for the search input when filter is enabled. */
+  @Input() filterPlaceholder = 'Search';
   /**
    * Value that means "no filter". Selecting the option that carries it clears the pill back to the
    * placeholder. Defaults to `'all'` — the sentinel the reporting band already uses.
@@ -43,6 +48,7 @@ export class PrFilterSelectComponent implements ControlValueAccessor {
   @Output() changed = new EventEmitter<any>();
 
   value: any = null;
+  searchText = '';
 
   // OnPush + CVA: a value written from the parent (filter reset, deep link) is not a template
   // event, so the view would keep the stale label until something else triggered CD.
@@ -63,14 +69,55 @@ export class PrFilterSelectComponent implements ControlValueAccessor {
     return this.valueOf(option) === this.value;
   }
 
+  get filteredOptions(): any[] {
+    if (!this.filter || !this.searchText) {
+      return this.options || [];
+    }
+    const q = this.searchText.toLowerCase().trim();
+    if (!q) return this.options || [];
+    return (this.options || []).filter(option => {
+      const label = this.labelOf(option);
+      return (label ? String(label) : '').toLowerCase().includes(q);
+    });
+  }
+
+  clearSearch(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    this.searchText = '';
+    this.cdr.markForCheck();
+  }
+
+  onSearchChange(): void {
+    this.cdr.markForCheck();
+  }
+
+  onSearchEnter(trigger?: HTMLElement): void {
+    const list = this.filteredOptions;
+    if (list.length === 1) {
+      this.pick(list[0], trigger);
+    }
+  }
+
+  private blurAll(trigger?: HTMLElement): void {
+    trigger?.blur();
+    const active = document.activeElement as HTMLElement | null;
+    if (active && typeof active.blur === 'function') {
+      active.blur();
+    }
+  }
+
   /** Picking the active option again clears the filter — same affordance as the reference. */
-  pick(option: any, trigger: HTMLElement): void {
+  pick(option: any, trigger?: HTMLElement): void {
     if (this.disabled) return;
     const next = this.valueOf(option);
     this.value = next === this.value ? this.emptyValue : next;
     this.onChange(this.value);
     this.changed.emit(this.value);
-    trigger?.blur();
+    this.searchText = '';
+    this.blurAll(trigger);
   }
 
   get hasValue(): boolean {
@@ -83,8 +130,9 @@ export class PrFilterSelectComponent implements ControlValueAccessor {
     return selected ? this.labelOf(selected) : this.placeholder;
   }
 
-  removeFocus(el: HTMLElement): void {
-    el?.blur();
+  removeFocus(el?: HTMLElement): void {
+    this.searchText = '';
+    this.blurAll(el);
     this.onTouched();
   }
 

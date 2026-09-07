@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs/operators';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideX, lucideCirclePlus } from '@ng-icons/lucide';
-import { HlmTabsImports } from '@spartan/tabs';
+import { HlmTabs, HlmTabsList, HlmTabsTrigger } from '@spartan/tabs';
 import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
@@ -43,7 +43,9 @@ type AssignmentTab = 'science-program' | 'center';
     CommonModule,
     FormsModule,
     NgIcon,
-    HlmTabsImports,
+    HlmTabs,
+    HlmTabsList,
+    HlmTabsTrigger,
     PrDialogComponent,
     CustomFieldsModule,
     SearchUserSelectComponent,

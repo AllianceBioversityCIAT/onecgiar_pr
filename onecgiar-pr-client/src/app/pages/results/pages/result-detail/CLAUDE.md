@@ -1,6 +1,6 @@
 # result-detail
 
-**Verified:** 2026-09-03 · branch qa-development-2026 · 6963df5af
+**Verified:** 2026-09-04 · branch qa-development-2026 · 2b7232fff (adds the one-line pointer to the shared `pr-viewport-page` mixin, spec `changes/sp-shell-app-viewport` SAV-T-6; no code change); prior: 2026-09-03 · 6963df5af
 
 ## Qué es
 
@@ -19,7 +19,7 @@ scrollea en esta ruta.
   no sirve, porque `min-height` deja de ser altura definida en cuanto el contenido la supera, y
   entonces `flex-1` reparte 0 de sobrante y el hijo crece con su contenido. Al sacar la página
   del flujo, `main` vuelve a su `min-h-svh` y el slot recibe `100svh - header` de verdad.
-- Su bloque contenedor es el `div.relative.min-h-0.flex-1` de `app.component.html:46`. **Si
+- Su bloque contenedor es el `div.relative.min-h-0.flex-1` de `app.component.html:48`. **Si
   alguien le quita ese `relative`**, la página se posiciona contra `main` (que `hlmSidebarInset`
   ya hace `relative`) y tapa el topbar.
 - `.rd_scroll` es el scroll del contenido (el `#pg-scroll` del mockup). Header del resultado y
@@ -28,11 +28,13 @@ scrollea en esta ruta.
 - **Section heading ⓘ (P2-3262):** `.rd_section_head` draws ONE info trigger when the open section
   publishes HTML into `DataControlService.currentResultSectionGuidance` (the publisher must clear it
   on destroy). `.rd_section_title` is `flex: 0 1 auto` so the ⓘ sits by the name, not at the far right.
+- **Pointer:** the shared `pr-viewport-page` mixin (`src/styles/_viewport-page.scss`, spec
+  `changes/sp-shell-app-viewport`) generalizes this same lock, media-gated ≥ `md`; this page's
+  `:host` predates it and stays inlined/unconditional here — no code change.
 
 ## Dónde se usa
 
-- `app.component.html:46` — el `relative` del slot existe **para esta página**; es no-op para el
-  resto, que sigue scrolleando el documento.
+- `app.component.html:48` — el `relative` del slot existe **para esta página**; es no-op para el resto, que sigue scrolleando el documento.
 
 ## Hijos sin archivo propio
 
@@ -70,8 +72,7 @@ dueño del componente porque elimina nodos a través del padre **actual**.
 - ⚠️ `.rd_scroll` tiene `overflow-y: auto`, así que **es el bloque de contención de cualquier
   `sticky`** que haya dentro del formulario. Un `sticky bottom-0` aquí dentro se pega al piso del
   scroll, no al del viewport.
-- El escaneo de campos obligatorios (`ngDoCheck`) busca por el selector `.section_container`. Si
-  se elimina esa clase del layout, el contador "N fields missing" se queda en cero.
+- El escaneo de campos obligatorios (`ngDoCheck`) busca por el selector `.section_container`. Si se elimina esa clase del layout, el contador "N fields missing" se queda en cero.
 - La card blanca envolvente (`.section_container`) **se queda**. El mockup pone cards por sección
   y el formulario de hoy es plano: quitarla dejaría los campos flotando sobre gris. Su estilo y su
   caja sí se alinearon (regla de 1px + radio 12 sin sombra, ancho completo, 24px de padding), con
@@ -107,8 +108,7 @@ está excluido de Jest, su gate son los Cypress CT.
   id numérico, sin forma de resolver el nombre. `Portfolio` muestra el acrónimo (`P25`): el
   mockup escribe el nombre largo y el payload no lo trae, así que inventarlo sería redactar
   contenido. Verificado leyendo `currentResult` en vivo (49 claves) el 24-ago-2026.
-- **Falta `sectionName`** en la tira de identidad, entre el nivel y el funding (el mockup lo pone
-  bajo `pg.showSectionName`).
+- **Falta `sectionName`** en la tira de identidad, entre el nivel y el funding (el mockup lo pone bajo `pg.showSectionName`).
 - Cards individuales por sección, como el mockup — sin ticket todavía.
 - **Los Impact Area scores siguen siendo 5 bloques sueltos.** El mockup los presenta como UNA tabla
   de cinco filas (nombre + ⓘ a la izquierda, pista a la derecha, regla de 1px entre filas) cerrada

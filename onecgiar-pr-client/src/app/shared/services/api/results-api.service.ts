@@ -62,6 +62,8 @@ export class ResultsApiService {
       if (searchParams.version_id) queryParams.push(`version_id=${searchParams.version_id}`);
       if (searchParams.filter_created_by_me) queryParams.push('filter_created_by_me=true');
       if (searchParams.filter_submitted_by_me) queryParams.push('filter_submitted_by_me=true');
+      // @akili-spec changes/my-work-board (MWB-T-3, MWB-R-8)
+      if (searchParams.include_completeness) queryParams.push('include_completeness=true');
     }
 
     const qs = queryParams.length ? `?${queryParams.join('&')}` : '';
@@ -1423,6 +1425,29 @@ export class ResultsApiService {
   GET_ClarisaGlobalUnits(entityId: string) {
     return this.http.get<{ message: string; response: EntityDetails; status: boolean }>(
       `${environment.apiBaseUrl}api/results-framework-reporting/clarisa-global-units?programId=${entityId}`
+    );
+  }
+
+  /**
+   * @akili-spec changes/results-aow-column-filter (RAC-T-2)
+   * Each result's Area of Work scope bucket for one program at one phase — the same partition
+   * and tie-break rule the Overview's `clarisa-global-units` `scopeBuckets` uses (RAC-R-1), but
+   * without the W1/W2 source filter (the Results tab lists every source, RAC A-3). Joined
+   * client-side by `result_id` in `ProgrammeResultsService` (RAC-DD-1).
+   */
+  GET_ResultsScope(programId: string, versionId: number) {
+    return this.http.get<{
+      response: {
+        programId: string;
+        versionId: number;
+        buckets: Array<{ result_id: number | string; key: string; kind: 'aow' | 'outcome' | 'untagged'; codes: string[] }>;
+      };
+      message: string;
+      status: boolean;
+    }>(
+      `${environment.apiBaseUrl}api/results-framework-reporting/results-scope?programId=${encodeURIComponent(
+        programId
+      )}&versionId=${encodeURIComponent(String(versionId))}`
     );
   }
 

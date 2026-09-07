@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { ResultSectionsSidebarComponent } from './result-sections-sidebar.component';
 import { ResultSectionsService } from './result-sections.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
+import { RESULT_DETAIL_ORIGIN_STORAGE_KEY, SmartNavigationService } from '../../../../../../shared/services/smart-navigation.service';
 
 describe('ResultSectionsSidebarComponent', () => {
   let fixture: ComponentFixture<ResultSectionsSidebarComponent>;
@@ -13,7 +14,8 @@ describe('ResultSectionsSidebarComponent', () => {
 
   const html = () => fixture.nativeElement as HTMLElement;
 
-  const build = async () => {
+  const build = async (setup?: () => void) => {
+    sessionStorage.removeItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY);
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [ResultSectionsSidebarComponent],
@@ -24,6 +26,7 @@ describe('ResultSectionsSidebarComponent', () => {
       ]
     }).compileComponents();
 
+    setup?.();
     fixture = TestBed.createComponent(ResultSectionsSidebarComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -204,5 +207,48 @@ describe('ResultSectionsSidebarComponent', () => {
     await build();
 
     expect(html().querySelector('[data-testid="result-sections-ai-review"]')).toBeFalsy();
+  });
+
+  describe('way back navigation', () => {
+    const q = (sel: string) => html().querySelector(sel) as HTMLElement;
+
+    it('renders the back link at the top of the sidebar rail targeting the results list by default', async () => {
+      await build();
+      const backLink = q('[data-testid="result-detail-back-link"]');
+
+      expect(backLink).toBeTruthy();
+      expect(backLink.getAttribute('href')).toBe('/result/results-outlet/results-list');
+      expect(backLink.getAttribute('title')).toBe('Back to all results');
+      expect(backLink.textContent).toContain('Back to results');
+    });
+
+    it('links back to My Results when that is where the user came from', async () => {
+      const detail = '/result/result-detail/9057/general-information?phase=36';
+      await build(() => {
+        const nav = TestBed.inject(SmartNavigationService);
+        nav.recordUrl('/result-framework-reporting/entity-details/SP01/my-work?phase=Reporting%202026');
+        nav.recordUrl(detail);
+      });
+
+      const href = q('[data-testid="result-detail-back-link"]').getAttribute('href') ?? '';
+      expect(href).toContain('/result-framework-reporting/entity-details/SP01/my-work');
+      expect(href).toContain('phase=Reporting%202026');
+      expect(q('[data-testid="result-detail-back-link"]').getAttribute('title')).toBe('Back to My results');
+    });
+
+    it('links back to the programme Results tab when that is where the user came from', async () => {
+      const detail = '/result/result-detail/9042/general-information?phase=36';
+      await build(() => {
+        const nav = TestBed.inject(SmartNavigationService);
+        nav.recordUrl('/result-framework-reporting/entity-details/SP12/results?phase=36&createdBy=42');
+        nav.recordUrl(detail);
+      });
+
+      const href = q('[data-testid="result-detail-back-link"]').getAttribute('href') ?? '';
+      expect(href).toContain('/result-framework-reporting/entity-details/SP12/results');
+      expect(href).toContain('phase=36');
+      expect(href).toContain('createdBy=42');
+      expect(q('[data-testid="result-detail-back-link"]').getAttribute('title')).toBe('Back to programme results');
+    });
   });
 });

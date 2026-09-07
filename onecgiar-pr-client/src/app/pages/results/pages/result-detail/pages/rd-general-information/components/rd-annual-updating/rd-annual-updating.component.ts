@@ -121,6 +121,24 @@ export class RdAnnualUpdatingComponent implements OnInit {
   ngOnInit(): void {
     this.getAlertNarrative();
     this.generalInfoBody.merge_split_targets ??= [];
+
+    // 🛑 Se dispara con `is_discontinued`, NO con la razón tildada, y esa distinción es el arreglo.
+    //
+    // La versión anterior llamaba a `ensureMergeSplitCatalogue()` a secas, cuya guarda exige que una
+    // razón de transición esté tildada. Pero las razones NO están aquí todavía: el padre las pide en
+    // una SEGUNDA petición, disparada en el callback de la principal
+    // (`rd-general-information.component.ts:214` → `:304` las reemplaza). Así que en `ngOnInit` la
+    // guarda siempre decía "no hay transición" y el catálogo no se cargaba nunca por esta vía.
+    //
+    // Medido en prtest el 4-sep-2026: tras recargar, la razón salía tildada (había llegado) y el
+    // desplegable decía "No information found" con la selección guardada invisible — el reportero
+    // ve su respuesta como perdida aunque esté a salvo en la base.
+    //
+    // `is_discontinued` sí viaja en el cuerpo principal, y el `*ngIf="is_replicated"` del padre
+    // garantiza que ese cuerpo ya llegó cuando este componente se monta. El coste es una petición
+    // en resultados ya marcados como inactivos; el `(click)` sigue cubriendo al reportero que tilda
+    // la razón durante la visita.
+    if (this.generalInfoBody.is_discontinued) this.loadMergeSplitCatalogue();
   }
 
   /**
@@ -149,8 +167,19 @@ export class RdAnnualUpdatingComponent implements OnInit {
    * the dropdown says there is nothing to pick — so the failure is not silent to the user either.
    */
   ensureMergeSplitCatalogue(): void {
-    if (this.mergeSplitCatalogueRequested) return;
     if (!this.showsMergeTargets && !this.showsSplitTargets) return;
+    this.loadMergeSplitCatalogue();
+  }
+
+  /**
+   * Fetches the catalogue once, with no opinion about whether a dropdown is visible.
+   *
+   * 🛑 Split from `ensureMergeSplitCatalogue` on purpose: the visibility guard depends on the
+   * reasons, which arrive in a LATER request than the body (see `ngOnInit`). Anything that needs the
+   * catalogue before the reasons land must call this, not the guarded version.
+   */
+  private loadMergeSplitCatalogue(): void {
+    if (this.mergeSplitCatalogueRequested) return;
 
     const resultId = Number(this.api.dataControlSE.currentResult?.id);
     if (!Number.isInteger(resultId) || resultId <= 0) return;
@@ -175,15 +204,87 @@ export class RdAnnualUpdatingComponent implements OnInit {
   }
 
   /**
-   * The ids currently declared for one transition type, for the multi-select to bind to.
+   * Stable array instances handed to the two multi-selects.
+   *
+   * 🛑 THE REASON THIS CACHE EXISTS — it is not an optimisation. `selectedTargets()` is bound in the
+   * template, so Angular calls it on every change-detection pass. Returning a freshly built array
+   * each time gave the multi-select a NEW REFERENCE every pass, which made it call `writeValue`,
+   * which marked the view dirty, which ran change detection again — forever:
+   *
+   *     NG0103: Angular could not stabilize because there were endless change notifications
+   *       at _PrMultiSelectComponent.writeValue
+   *
+   * The control rendered and listed the innovations correctly, and clicking an option simply did
+   * not register, because the component never stabilised. Found on prtest on 4 Sep 2026 by
+   * verifying on screen — **the 19 unit tests passed then and still pass**: they call these methods
+   * directly and never run change detection against the real component, so no automated gate in
+   * this repo could have caught it.
+   *
+   * ⚠️ AND THIS CACHE ALONE WAS NOT THE FIX. Deployed on its own (build #2150) NG0103 SURVIVED a
+   * cache-busted reload, because the new reference was being created INSIDE the shared component,
+   * after our code — see `selectedTargets` for the half that actually closes the loop. The cache is
+   * still necessary: without it we hand over a new array every pass and we are back to square one.
+   */
+  private readonly selectionCache: Record<'merge' | 'split', any[]> = {
+    merge: [],
+    split: []
+  };
+
+  /**
+   * The catalogue OPTIONS currently declared for one transition type, for the multi-select to bind to.
+   *
+   * 🛑 IT HANDS OVER OBJECTS, NOT RAW IDS, AND THAT IS THE FIX — not a style choice.
+   * `PrMultiSelectComponent.writeValue` (`custom-fields/pr-multi-select/pr-multi-select.component.ts`)
+   * tests `value.some(v => typeof v !== 'object' || v === null)` and, when ANY entry is a raw id,
+   * REMAPS the array to option objects — building a brand-new array, setting its signal and marking
+   * the view dirty on every single call. Its own comment states the contract:
+   *
+   *     "Only remap when some entries are raw IDs (chips need objects). When every entry is already
+   *      an object, keep the EXACT array reference ... without re-triggering writeValue."
+   *
+   * We were binding `result_code` numbers, so `needsMapping` was ALWAYS true and the loop lived
+   * inside the shared component, past the end of our code. Hence NG0103 surviving the first fix.
+   *
+   * 🛑 Do not "simplify" this back to `.map(t => Number(t.target_result_id))`. It reads cleaner, it
+   * type-checks, all the unit tests stay green — and it reinstates the infinite loop, which only
+   * shows up on screen.
    *
    * The two dropdowns share one stored collection, told apart by `transition_type`, because the
-   * server keeps them in one table with that discriminator.
+   * server keeps them in one table with that discriminator. `merge_split_targets` stays the single
+   * source of truth — the cache above only guarantees the REFERENCE is stable while the content is
+   * unchanged. It also means the parent replacing the whole `generalInfoBody` after the API responds
+   * is picked up on the next pass, with no setter needed.
+   *
+   * ⚠️ It resolves by `option.id`, not by `result_code` — what is stored is the id (see
+   * `onTargetsChange`). An id with no option in the catalogue is dropped from what the dropdown SHOWS, never from
+   * what is stored: `onTargetsChange` is the only writer, so a catalogue that failed to load cannot
+   * erase a saved answer — it can only fail to display it, which is why `ngOnInit` loads it eagerly
+   * when a transition reason arrives already ticked.
    */
-  selectedTargets(type: 'merge' | 'split'): number[] {
-    return (this.generalInfoBody.merge_split_targets ?? [])
-      .filter(target => target.transition_type === type)
-      .map(target => Number(target.target_result_id));
+  /**
+   * The ids STORED for one transition type — the truth, independent of the catalogue.
+   *
+   * 🛑 Kept apart from `selectedTargets` on purpose. `selectedTargets` can only return what the
+   * catalogue can resolve, so anything that asks *"did the reporter answer this?"* must read here
+   * instead: a catalogue still in flight (or one that failed to load) would otherwise make a saved
+   * answer look absent, and the completeness indicator would go red on a form that is complete.
+   */
+  private storedTargets(type: 'merge' | 'split'): any[] {
+    return (this.generalInfoBody.merge_split_targets ?? []).filter(target => target.transition_type === type);
+  }
+
+  selectedTargets(type: 'merge' | 'split'): any[] {
+    const wanted = this.storedTargets(type)
+      .map(target => this.mergeSplitCatalogue.find(option => Number(option?.id) === Number(target.target_result_id)))
+      .filter(option => !!option);
+
+    const cached = this.selectionCache[type];
+    if (cached.length === wanted.length && cached.every((option, i) => option === wanted[i])) {
+      return cached;
+    }
+
+    this.selectionCache[type] = wanted;
+    return wanted;
   }
 
   /**
@@ -192,10 +293,25 @@ export class RdAnnualUpdatingComponent implements OnInit {
    * 🛑 Rebuilding the whole array from one dropdown would wipe the other's answers: a reporter who
    * ticked both "merging" and "splitting" would lose whichever they filled first.
    */
-  onTargetsChange(type: 'merge' | 'split', ids: number[]): void {
+  onTargetsChange(type: 'merge' | 'split', selection: any[]): void {
     const others = (this.generalInfoBody.merge_split_targets ?? []).filter(target => target.transition_type !== type);
 
-    this.generalInfoBody.merge_split_targets = [...others, ...(ids ?? []).map(id => ({ target_result_id: Number(id), transition_type: type }))];
+    // The dropdown now hands back catalogue OBJECTS (see `selectedTargets`), while what we store is
+    // the id. A raw id is still accepted on purpose: `optionValue` is a template detail, and a caller
+    // that passes ids must not end up storing `NaN` silently.
+    // 🛑 SE GUARDA EL `id`, NUNCA EL `result_code`, y esto es un bug de DATOS si se confunde.
+    // `target_result_id` es FK a `result.id`. El 4-sep-2026 esto guardaba `result_code` y el reportero
+    // eligió "test bilateral JD" (id 11438, code 8970): se almacenó **8970 como id**, que resultó ser
+    // OTRO resultado existente, así que al releerlo salía "Unraveling the genetic architecture of
+    // stripe rust resistance in ICARDA spring wheat". ⚠️ Y el FK **no protegió**: aceptó 8970 porque
+    // ese id existe. Un FK solo caza los ids inexistentes, no los ids equivocados.
+    // La etiqueta sigue mostrando `result_code - título`, que es lo que pide la historia; lo que viaja
+    // al servidor es el `id`.
+    const ids = (selection ?? [])
+      .map(entry => Number(entry && typeof entry === 'object' ? entry.id : entry))
+      .filter(id => Number.isFinite(id) && id > 0);
+
+    this.generalInfoBody.merge_split_targets = [...others, ...ids.map(id => ({ target_result_id: id, transition_type: type }))];
   }
 
   /**
@@ -205,8 +321,10 @@ export class RdAnnualUpdatingComponent implements OnInit {
    * possible, so it reports through the same completeness channel as the reasons above.
    */
   get mergeSplitIsComplete(): boolean {
-    if (this.showsMergeTargets && this.selectedTargets('merge').length === 0) return false;
-    if (this.showsSplitTargets && this.selectedTargets('split').length === 0) return false;
+    // Reads what is STORED, never `selectedTargets`: see `storedTargets`. A form with two saved
+    // merge targets and a catalogue that has not arrived yet is complete, and must read as complete.
+    if (this.showsMergeTargets && this.storedTargets('merge').length === 0) return false;
+    if (this.showsSplitTargets && this.storedTargets('split').length === 0) return false;
     return true;
   }
 

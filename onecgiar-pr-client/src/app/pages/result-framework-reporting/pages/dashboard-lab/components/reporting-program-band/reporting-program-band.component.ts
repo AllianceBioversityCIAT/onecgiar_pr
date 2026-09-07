@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   HostListener,
   inject,
   input,
@@ -29,25 +30,15 @@ export interface BandFilterGroup {
   items: BandFilterOption[];
 }
 
-export interface ReportingSummaryStats {
-  programsCount: number;
-  aowsCount: number;
-  totalKpis: number;
-  reportedKpis: number;
-  /**
-   * Program **Planned** — every KPI the ToC plans, zero-target ones included. `totalKpis` is
-   * *Counted* (the zero-target rule already applied, `KCR-R-8`), so the two differ by exactly
-   * `zeroTargetKpis`; the pair is what `totalKpisTitle` discloses. Optional: a caller with no
-   * planned figure to state simply omits both and the figure carries no `title`.
-   * @akili-spec bugfix/kpi-count-reconciliation
-   */
-  plannedKpis?: number;
-  /**
-   * How many planned KPIs the zero-target rule (`MRF-R-7`) removed from `totalKpis`.
-   * @akili-spec bugfix/kpi-count-reconciliation
-   */
-  zeroTargetKpis?: number;
+export interface ResultTypeQuickChip {
+  id: string;
+  label: string;
+  matchKey: string;
+  count?: number;
+  active: boolean;
 }
+
+export type { ReportingSummaryStats } from '../reporting-summary-stats/reporting-summary-stats.component';
 
 /**
  * Program band + tabs + Reporting toolbar.
@@ -127,14 +118,6 @@ export class ReportingProgramBandComponent {
 
   readonly programCode = input<string>('');
   readonly programName = input<string>('');
-  /** Summary statistics banner above reporting heading (PROGRAMS, AOWs, TOTAL KPIs, EVIDENCE). */
-  readonly summaryStats = input<ReportingSummaryStats | null>(null);
-  /**
-   * True while any AoW ToC is still loading. The stats are SUMS over whatever has arrived, so
-   * painting them mid-stream shows numbers that then change — a skeleton is honest, a moving
-   * figure is not (owner field report 2026-08-31).
-   */
-  readonly statsLoading = input<boolean>(false);
   /**
    * Long copy for the ⓘ popover body. Empty → fall back to a short placeholder built from the
    * name (the SP list payload still has no description field — NEEDS-BACKEND).
@@ -156,13 +139,25 @@ export class ReportingProgramBandComponent {
    * every other consumer of this band.
    */
   readonly phaseLabelOverride = input<string>('');
-  /** Which tab is active. Overview, Reporting and Results are separate routes, not local state. */
-  readonly activeTab = input<'overview' | 'reporting' | 'results'>('reporting');
+  /**
+   * Which tab is active. Overview, Reporting, Results and My work are separate routes, not local
+   * state. `'my-work'` added `@akili-spec changes/my-work-board` (MWB-T-4, MWB-R-1).
+   */
+  readonly activeTab = input<'overview' | 'reporting' | 'results' | 'my-work'>('reporting');
+  /**
+   * `@akili-spec changes/my-work-board` (MWB-T-4, MWB-R-1) — the My work tab's badge: the Mine
+   * Editing count for this programme + phase, computed by one scoped list request and cached per
+   * (programme, phase) in `MyWorkCountService`. `null` hides the badge (no count yet, or the host
+   * has no phase label handy) — a host MUST pass `null` rather than guess a number.
+   */
+  readonly myWorkCount = input<number | null>(null);
   readonly programDotColor = input<string>('var(--pr-color-primary-300)');
 
   readonly search = input<string>('');
+  readonly matchCount = input<number | null>(null);
   readonly statusValue = input<string>('all');
   readonly typologyValue = input<string>('all');
+  readonly typologyCounts = input<Record<string, number>>({});
   readonly typologyOptions = input<BandFilterOption[]>([]);
   /** Type filter: hlo | outcome | intermediate_outcome | outcome_2030 | all. */
   readonly typeValue = input<string>('all');
@@ -193,6 +188,14 @@ export class ReportingProgramBandComponent {
    * Same visibility as `onlyPending`. @akili-spec changes/mass-reporting-flow
    */
   readonly burndownSort = input<'catalogue' | 'remaining'>('catalogue');
+  /**
+   * Favorites-only switch (RFI-R-2.1): filters the Reporting table down to the programme's pinned
+   * indicators. Hidden in the By-AOW compact view (`compactFilters`), where no stars render
+   * (RFI-R-2.2). @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly favoritesOnly = input<boolean>(false);
+  /** Live count of the programme's favorites, rendered as `Favorites (N)`. @akili-spec changes/reporting-favorite-indicators */
+  readonly favoritesCount = input<number>(0);
   /** By-AOW mode: the active AoW + flat options for the single-select switcher (a multiselect is meaningless when exactly one AoW renders). @akili-spec changes/reporting-entry-hub */
   readonly activeAowCode = input<string | null>(null);
   readonly aowSingleOptions = input<{ label: string; value: string }[]>([]);
@@ -218,6 +221,14 @@ export class ReportingProgramBandComponent {
    * button that refuses to act.
    */
   readonly canReport = input<boolean>(true);
+  /**
+   * `@akili-spec changes/emerging-result-cta-placement` (`ERC-T-1`, `ERC-DD-3`, `ERC-R-5`) — gates
+   * the standalone **Report emerging result** control, distinct from `canReport` / *Where to
+   * report*. Defaults `false` (fail-closed, same class as `canReport`): a host that forgets to
+   * bind this cannot leak create chrome on AVISA / no-programme. Unset or explicitly `false` hides
+   * BOTH the expanded and collapsed copies — it does NOT use native `[disabled]` (KZ-REH-2).
+   */
+  readonly canReportEmerging = input<boolean>(false);
 
   readonly searchChange = output<string>();
   readonly statusChange = output<string>();
@@ -228,6 +239,8 @@ export class ReportingProgramBandComponent {
   readonly onlyPendingChange = output<boolean>();
   /** @akili-spec changes/mass-reporting-flow */
   readonly burndownSortChange = output<'catalogue' | 'remaining'>();
+  /** @akili-spec changes/reporting-favorite-indicators */
+  readonly favoritesOnlyChange = output<boolean>();
   readonly viewModeChange = output<'grouped' | 'flat'>();
   readonly clearAllFilters = output<void>();
   readonly aowSwitch = output<string>();
@@ -239,21 +252,32 @@ export class ReportingProgramBandComponent {
 
   onWhereToReportClick(): void {
     this.whereToReport.emit();
+  }
+
+  /**
+   * `@akili-spec changes/emerging-result-cta-placement` (`ERC-T-1`, `ERC-R-2`, `ERC-DD-3`) — emits
+   * ONLY `reportEmerging`. Distinct from `onWhereToReportClick`: the two controls MUST NOT share a
+   * click, so neither handler triggers the other's output.
+   */
+  onReportEmergingClick(): void {
     this.reportEmerging.emit();
   }
 
   startSpTour(): void {
+    const activeTab = this.activeTab();
     this.guideSE.startSpTour({
       programName: this.programName(),
       cycleYear: this.cycleYear() ?? undefined,
-      activeTab: this.activeTab(),
-      onTabNavigate: (tab: 'overview' | 'reporting' | 'results') => {
+      activeTab,
+      onTabNavigate: (tab: 'overview' | 'reporting' | 'results' | 'my-work') => {
         const targetPath =
           tab === 'overview'
             ? this.overviewPath()
             : tab === 'results'
               ? this.resultsPath()
-              : this.reportingPath();
+              : tab === 'my-work'
+                ? this.myWorkPath()
+                : this.reportingPath();
         return this.router.navigate([targetPath], { queryParamsHandling: 'preserve' }).then(() => {});
       }
     });
@@ -276,8 +300,15 @@ export class ReportingProgramBandComponent {
    * ⚠️ The design draws a FOURTH tab, `Drafts` (`tabResults`'s neighbour at :420 / :443), inside
    * `<sc-if value="{{ centerMode }}">`. It belongs to the CENTER view, not the programme view, so
    * it is deliberately NOT rendered here — this is not a missing tab, do not "fix" it.
+   *
+   * `@akili-spec changes/my-work-board` (`MWB-DD-12`): **My work** (`myWorkPath` below) is a
+   * DIFFERENT, additional programme-view tab — not the design's reserved `Drafts` slot. Reading
+   * this comment as license to wire My work into that slot is the wrong move; My work is its own
+   * fifth-in-design-order / fourth-in-programme-view tab, rendered after Results.
    */
   readonly resultsPath = computed(() => `${this.reportingPath()}/results`);
+  /** Fourth programme-view tab (`MWB-T-4`, `MWB-R-1`) — the submitter's own board. */
+  readonly myWorkPath = computed(() => `${this.reportingPath()}/my-work`);
   /**
    * Kept, unreferenced: the `/emerging` route still exists (nothing is deleted here) but the CTA no
    * longer navigates to it — it opens the legacy modal in place, which is where reporting an
@@ -296,6 +327,22 @@ export class ReportingProgramBandComponent {
   readonly isScrolled = signal(false);
 
   /**
+   * `changes/sp-shell-app-viewport` `SAV-DD-2`: true once the host page is viewport-locked (≥ `md`).
+   * Drops `sticky` on the band's own box (`SAV-DD-5`) — inside an `overflow: hidden` locked host the
+   * host itself is the sticky scrollport, so a `sticky` band would be shoved down by its own `top`
+   * offset and open a gap. Below `md`, and on any page that never passes this input, nothing changes.
+   */
+  readonly frameLocked = input(false);
+  /**
+   * `SAV-R-6` / `SAV-DD-4`: the work area element the locked page hands the band, so the band's
+   * scroll-driven state (`isScrolled`, `bandCollapsed`) tracks the ACTUAL scroller at ≥ `md` instead
+   * of the document (which never moves once locked). `null` (default, and every < `md` / unlocked
+   * consumer) keeps the window listener as the sole source — byte-identical to before this input
+   * existed.
+   */
+  readonly scrollHost = input<HTMLElement | null>(null);
+
+  /**
    * Scroll offset at which the band condenses. 64px is the height of the compact identity block.
    */
   private static readonly COLLAPSE_THRESHOLD_PX = 64;
@@ -303,25 +350,67 @@ export class ReportingProgramBandComponent {
   /** True while the page is scrolled past the identity block. Drives the compact band. */
   readonly bandCollapsed = signal(false);
 
+  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  onSearchInput(value: string): void {
+    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+    this.searchDebounceTimer = setTimeout(() => {
+      this.searchChange.emit(value);
+    }, 150);
+  }
+
+  onClearSearch(): void {
+    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+    this.searchChange.emit('');
+  }
+
   constructor() {
-    // The DOCUMENT is the scroller here (the band is `sticky`, not inside an overflow
-    // box), so the offset comes from `window`. The listener is registered OUTSIDE Angular and only
-    // re-enters the zone on the single frame where the threshold is crossed: a zone-bound
+    this.destroyRef.onDestroy(() => {
+      if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+    });
+
+    // < `md` fallback (`SAV-DD-4`): with no work area handed to the band, the DOCUMENT is the
+    // scroller, so the offset comes from `window`. Kept unconditionally — this is the ONE documented
+    // window listener the band owns (`SAV-AC-11`). Registered OUTSIDE Angular and only re-enters the
+    // zone on the single frame where the threshold is crossed: a zone-bound
     // `@HostListener('window:scroll')` would tick change detection on EVERY scroll frame to
     // maintain a boolean that flips twice per page. Passive: we never preventDefault.
     this.zone.runOutsideAngular(() => {
-      const onScroll = () => this.syncBandCollapsed();
-      window.addEventListener('scroll', onScroll, { passive: true });
-      this.destroyRef.onDestroy(() => window.removeEventListener('scroll', onScroll));
+      const onWindowScroll = () => this.syncBandCollapsed();
+      window.addEventListener('scroll', onWindowScroll, { passive: true });
+      this.destroyRef.onDestroy(() => window.removeEventListener('scroll', onWindowScroll));
     });
+
+    // ≥ `md` (locked frame, `SAV-R-6`): the work area itself is the real scroller. Re-attaches
+    // whenever `scrollHost` changes (a tab switch can hand the band a brand-new element) and detaches
+    // the previous element's listener via the effect's own cleanup — covers both re-attachment and
+    // destroy, no separate `destroyRef.onDestroy` needed here.
+    effect(onCleanup => {
+      const host = this.scrollHost();
+      if (!host) return;
+      const onHostScroll = () => this.syncBandCollapsed();
+      this.zone.runOutsideAngular(() => host.addEventListener('scroll', onHostScroll, { passive: true }));
+      onCleanup(() => host.removeEventListener('scroll', onHostScroll));
+      // First read on (re)attach — a page mounting the band against an already-scrolled work area
+      // (or a tab switch re-creating it) must not wait for the next scroll frame to reflect reality
+      // (`SAV-R-6`, `SAV-AC-6`).
+      this.syncBandCollapsed();
+    });
+
     // A tab switch (Overview ⇄ Reporting) re-creates the band on an already-scrolled document —
-    // without this first read the band would render expanded until the next scroll event.
+    // without this first read the band would render expanded until the next scroll event. Covers the
+    // < `md` / no-`scrollHost` case; the effect above covers the ≥ `md` case.
     this.syncBandCollapsed();
   }
 
-  /** Cheap: one `scrollY` read + a compare. Nothing happens unless the threshold is crossed. */
+  /**
+   * Cheap: one `scrollTop`/`scrollY` read + a compare. Nothing happens unless the threshold is
+   * crossed. `scrollHost` (the work area, ≥ `md`) and `window` (the document, < `md`) are SUMMED
+   * rather than switched on with `matchMedia` in TS (`SAV-DD-4`) — the CSS breakpoint decides which
+   * one is actually scrolling at any given width, and the other always contributes 0.
+   */
   private syncBandCollapsed(): void {
-    const offset = window.scrollY || document.documentElement?.scrollTop || 0;
+    const offset = (this.scrollHost()?.scrollTop ?? 0) + (window.scrollY || document.documentElement?.scrollTop || 0);
     const isScrolled = offset > 10;
     if (isScrolled !== this.isScrolled()) {
       this.zone.run(() => this.isScrolled.set(isScrolled));
@@ -425,6 +514,13 @@ export class ReportingProgramBandComponent {
           description:
             'View and manage all reported results linked to this Science Program or Accelerator. Use the filters to explore results by status, type, or contributing centers.'
         };
+      case 'my-work':
+        // @akili-spec changes/my-work-board (MWB-R-10)
+        return {
+          title: 'My results',
+          description:
+            'Your results in this Science Program, grouped by status. The board is read-only: open a result to complete it or submit it; quality assessment happens in QA.'
+        };
       case 'reporting':
       default:
         return {
@@ -462,6 +558,47 @@ export class ReportingProgramBandComponent {
     { value: 'intermediate_outcome', label: 'Intermediate outcome' },
     { value: 'outcome_2030', label: '2030 outcome' }
   ];
+
+  readonly QUICK_TYPOLOGIES = [
+    { id: 'all', label: 'All', matchKey: 'all' },
+    { id: 'kp', label: 'Knowledge Product', matchKey: 'Knowledge product' },
+    { id: 'id', label: 'Innovation Development', matchKey: 'Innovation development' },
+    { id: 'pc', label: 'Policy Change', matchKey: 'Policy change' },
+    { id: 'iu', label: 'Innovation Use', matchKey: 'Innovation use' },
+    { id: 'cs', label: 'Capacity Sharing', matchKey: 'Capacity sharing for development' }
+  ] as const;
+
+  readonly quickChips = computed<ResultTypeQuickChip[]>(() => {
+    const currentTypology = this.typologyValue();
+    const counts = this.typologyCounts() ?? {};
+    return this.QUICK_TYPOLOGIES.map(item => {
+      const active =
+        item.matchKey === 'all'
+          ? currentTypology === 'all' || !currentTypology
+          : currentTypology === item.matchKey || currentTypology?.toLowerCase() === item.label.toLowerCase();
+
+      const count =
+        item.matchKey === 'all'
+          ? (counts['all'] ?? this.plannedResultsCount())
+          : (counts[item.matchKey] ?? counts[item.label] ?? 0);
+
+      return {
+        id: item.id,
+        label: item.label,
+        matchKey: item.matchKey,
+        count,
+        active
+      };
+    });
+  });
+
+  onQuickChipClick(chip: ResultTypeQuickChip): void {
+    if (chip.matchKey === 'all' || chip.active) {
+      this.typologyChange.emit('all');
+    } else {
+      this.typologyChange.emit(chip.matchKey);
+    }
+  }
 
   // ── Reporting JIRA-style Top-Bar Filter State ──
   readonly filterPopoverOpen = signal(false);
@@ -566,35 +703,6 @@ export class ReportingProgramBandComponent {
 
   removeOnlyPendingChip(): void {
     this.onlyPendingChange.emit(false);
-  }
-
-  /**
-   * `title` for the **Total KPIs** figure (`KCR-R-2.1`, `KCR-DD-4`). The figure itself is *Counted*;
-   * this states the *Planned* count it was derived from and, when the zero-target rule removed at
-   * least one KPI, how many — `11 planned · excludes 2 zero-target KPIs`, or plain `11 planned`
-   * when nothing was excluded. Built here rather than in the template: `KCR` design §6.3 forbids
-   * template arithmetic, and the pluralisation has to match `reporting-aow-table.countLabel`
-   * exactly so the band and the grouped table never disagree on the same sentence.
-   *
-   * `null` (not `''`) when the host carries no `plannedKpis` — `[attr.title]` then omits the
-   * attribute instead of rendering an empty tooltip.
-   * @akili-spec bugfix/kpi-count-reconciliation
-   */
-  totalKpisTitle(stats: ReportingSummaryStats): string | null {
-    const planned = stats.plannedKpis;
-    if (planned === null || planned === undefined) return null;
-    const zeroTarget = stats.zeroTargetKpis ?? 0;
-    if (zeroTarget <= 0) return `${planned} planned`;
-    return `${planned} planned · excludes ${this.countLabel(zeroTarget, 'zero-target KPI')}`;
-  }
-
-  /** Same body as `reporting-aow-table.countLabel` — the pluralisation `KCR-R-2.1` pins. */
-  private countLabel(n: number, noun: string): string {
-    return `${n} ${noun}${n === 1 ? '' : 's'}`;
-  }
-
-  evidencePercentage(stats: ReportingSummaryStats): number {
-    return stats.totalKpis > 0 ? Math.round((stats.reportedKpis / stats.totalKpis) * 100) : 0;
   }
 
   toggleInfo(event: Event): void {

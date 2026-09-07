@@ -636,3 +636,103 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
     });
   });
 });
+
+// ── onOverviewLink stamps overviewScope as `section` (RAC-T-4, RAC-DD-4) ─────────────────────────
+/**
+ * `RAC-R-4`/`RAC-AC-4` — `onOverviewLink` is the ONE seam every `OverviewLink` passes through
+ * before navigating to the Results tab (`RAC-DD-4`: stamped here, not in each of the ~6 chart
+ * builders in `program-overview.component.ts`). Asserts the exact `queryParams` object built for
+ * each combination of an active scope and an explicit/absent `link.section` — `toHaveBeenCalledWith`
+ * is deep-equality, so an extra or missing key fails the same as a wrong value.
+ * @akili-spec changes/results-aow-column-filter
+ */
+describe('DashboardLabComponent — onOverviewLink stamps overviewScope as section (RAC-T-4, RAC-DD-4)', () => {
+  const PROGRAM: SPProgress = {
+    initiativeId: 6,
+    initiativeCode: 'SP06',
+    initiativeName: 'Science Program 06',
+    initiativeShortName: 'SP06',
+    portfolioId: 1,
+    portfolioName: 'Portfolio',
+    portfolioAcronym: 'P25',
+    entityTypeCode: 'SP',
+    entityTypeName: 'Science Program',
+    totalResults: 0,
+    progress: 0,
+    versions: [{ versionId: 1, phaseName: 'Reporting 2026', phaseYear: 2026, totalResults: 0, statuses: [] }]
+  };
+
+  let navigate: jest.Mock;
+
+  async function createComponent() {
+    navigate = jest.fn().mockResolvedValue(true);
+    await TestBed.configureTestingModule({
+      imports: [DashboardLabComponent],
+      providers: [
+        {
+          provide: ResultFrameworkReportingHomeService,
+          useValue: { mySPsList: signal([]), otherSPsList: signal([PROGRAM]), otherProjectsList: signal([]) }
+        },
+        { provide: ApiService, useValue: {} },
+        { provide: DataControlService, useValue: { focusMode: signal(false), slimNav: signal(false) } },
+        { provide: ReportingGuideService, useValue: {} },
+        { provide: Router, useValue: { navigate } },
+        { provide: ActivatedRoute, useValue: { data: of({}), snapshot: { data: {}, paramMap: { get: () => null } } } },
+        { provide: PhasesService, useValue: { phases: { reporting: [] } } },
+        { provide: EntityAowService, useValue: { onCloseReportResultModal: () => undefined, showReportResultModal: signal(false) } },
+        { provide: ResultLevelService, useValue: {} }
+      ]
+    })
+      .overrideComponent(DashboardLabComponent, { set: { template: '' } })
+      .compileComponents();
+
+    const fixture = TestBed.createComponent(DashboardLabComponent);
+    const component = fixture.componentInstance;
+    component.selectedId.set(PROGRAM.initiativeId);
+    return component;
+  }
+
+  it('overviewScope="AOW01" + link {status:"Editing"} → navigates with section:"AOW01" added, exact queryParams', async () => {
+    const component = await createComponent();
+    component.overviewScope.set('AOW01');
+
+    component.onOverviewLink({ status: 'Editing' });
+
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP06', 'results'], {
+      queryParams: { status: 'Editing', section: 'AOW01', phase: 'Reporting 2026' }
+    });
+  });
+
+  it('overviewScope=null → no section key is added (BUT clause)', async () => {
+    const component = await createComponent();
+    expect(component.overviewScope()).toBeNull();
+
+    component.onOverviewLink({ status: 'Editing' });
+
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP06', 'results'], {
+      queryParams: { status: 'Editing', phase: 'Reporting 2026' }
+    });
+  });
+
+  it('a link that already carries an explicit section is never overwritten by the active scope', async () => {
+    const component = await createComponent();
+    component.overviewScope.set('AOW01');
+
+    component.onOverviewLink({ section: 'EOI_2030' });
+
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP06', 'results'], {
+      queryParams: { section: 'EOI_2030', phase: 'Reporting 2026' }
+    });
+  });
+
+  it('overviewScope="UNTAGGED" propagates as section:"UNTAGGED" — fixed keys are scopes too', async () => {
+    const component = await createComponent();
+    component.overviewScope.set('UNTAGGED');
+
+    component.onOverviewLink({ status: 'Editing' });
+
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP06', 'results'], {
+      queryParams: { status: 'Editing', section: 'UNTAGGED', phase: 'Reporting 2026' }
+    });
+  });
+});

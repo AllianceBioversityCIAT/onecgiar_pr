@@ -8,6 +8,7 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { PdfExportService } from '../../../../../../shared/services/pdf-export.service';
 import { ResultMetadataPanelService } from '../../../../../../shared/components/result-metadata/result-metadata-panel.service';
+import { RESULT_DETAIL_ORIGIN_STORAGE_KEY, SmartNavigationService } from '../../../../../../shared/services/smart-navigation.service';
 
 describe('ResultHeaderComponent', () => {
   let fixture: ComponentFixture<ResultHeaderComponent>;
@@ -21,7 +22,8 @@ describe('ResultHeaderComponent', () => {
   const html = () => fixture.nativeElement as HTMLElement;
   const q = (sel: string) => html().querySelector(sel) as HTMLElement;
 
-  const build = async (url = '/result/result-detail/1234/general-information?phase=7') => {
+  const build = async (url = '/result/result-detail/1234/general-information?phase=7', setup?: () => void) => {
+    sessionStorage.removeItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY);
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [ResultHeaderComponent],
@@ -36,6 +38,7 @@ describe('ResultHeaderComponent', () => {
     }).compileComponents();
 
     jest.spyOn(TestBed.inject(Router), 'url', 'get').mockReturnValue(url);
+    setup?.();
 
     fixture = TestBed.createComponent(ResultHeaderComponent);
     component = fixture.componentInstance;
@@ -95,10 +98,12 @@ describe('ResultHeaderComponent', () => {
       expect(title.nextElementSibling?.getAttribute('data-testid')).toBe('result-header-meta-wrap');
     });
 
-    it('links back to the results table', async () => {
+    it('does not render the back link (relocated to result-sections-sidebar)', async () => {
       await build();
 
-      expect(q('[data-testid="result-detail-back-link"]').getAttribute('href')).toBe('/result/results-outlet/results-list');
+      expect(q('[data-testid="result-detail-back-link"]')).toBeNull();
+      const header = q('[data-testid="result-header"]');
+      expect(header.firstElementChild?.querySelector('[data-testid="result-header-title"]')).toBeTruthy();
     });
 
     it('shows the level and funding inline (code and type live in the sections sidebar)', async () => {
@@ -424,13 +429,6 @@ describe('ResultHeaderComponent', () => {
 
       expect(href).toBe('/result-framework-reporting/entity-details/SP04');
       expect(href).not.toContain('tocAow');
-    });
-
-    it('keeps Back to results targeting the results list when Area of Work is also shown', async () => {
-      mockAowMapping();
-      await build();
-
-      expect(q('[data-testid="result-detail-back-link"]').getAttribute('href')).toBe('/result/results-outlet/results-list');
     });
 
     // RIBL-R-10 / AC-8 — `kpi` only when exactly one contributing indicator id is known.

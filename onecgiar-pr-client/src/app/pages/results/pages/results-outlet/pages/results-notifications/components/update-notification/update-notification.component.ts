@@ -6,6 +6,7 @@ import { FormatTimeAgoPipe } from '../../../../../../../../shared/pipes/format-t
 import {
   getNotificationActionVerb,
   getResultNotificationTextParts,
+  isBilateralSubmittedNotification,
   type NotificationTextParts
 } from '../../../../../../../../shared/constants/notification-type.constants';
 
@@ -26,6 +27,15 @@ export class UpdateNotificationComponent {
    */
   get textParts(): NotificationTextParts {
     return getResultNotificationTextParts(this.notification);
+  }
+
+  /**
+   * 2026-09-05 — "submitted for your review" links to the SP's review queue, not to the result
+   * detail: bilateral results are reviewed from the queue's drawer, and the detail route does not
+   * serve them to a reviewer.
+   */
+  get isBilateralSubmitted(): boolean {
+    return isBilateralSubmittedNotification(this.notification);
   }
 
   getNotificationAction(notificationType: number) {

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 import { signal, WritableSignal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { DashboardLabComponent } from './dashboard-lab.component';
@@ -575,7 +575,12 @@ describe('DashboardLabComponent — overview heatmap matrices (OVW-T-3)', () => 
     const component = await createComponent();
     component.summariesByCode.set(
       // Same `code::default` key as above — see note there.
-      new Map([['SP02::default', [{ resultTypeId: 7, resultTypeName: 'Innovation development', editing: 0, qualityAssessed: 0, submitted: 0, others: 0, totalResults: 0 }]]])
+      new Map([
+        [
+          'SP02::default',
+          [{ resultTypeId: 7, resultTypeName: 'Innovation development', editing: 0, qualityAssessed: 0, submitted: 0, others: 0, totalResults: 0 }]
+        ]
+      ])
     );
 
     const heatmap = component.overviewW12Heatmap();
@@ -765,7 +770,8 @@ describe('DashboardLabComponent — loadSummaries() / summariesByCode cache (W12
         {
           provide: EntityAowService,
           useValue: {
-            onCloseReportResultModal: () => undefined, showReportResultModal: signal(false),
+            onCloseReportResultModal: () => undefined,
+            showReportResultModal: signal(false),
             // Needed once effects are flushed: `primeEntityAowContext()` (called from the same
             // effect as `loadAows`) reads/writes `entityId` and calls `getAllDetailsData`.
             entityId: signal(''),
@@ -948,8 +954,24 @@ describe('DashboardLabComponent — loadSummaries() / summariesByCode cache (W12
 
     component.summariesByCode.set(
       new Map([
-        ['SP04::20', [{ resultTypeId: 1, resultTypeName: 'Knowledge product', editing: 1, submitted: 0, qualityAssessed: 0, others: 0, totalResults: 1 } as any]],
-        ['SP04::10', [{ resultTypeId: 2, resultTypeName: 'Innovation development', editing: 1, submitted: 0, qualityAssessed: 0, others: 0, totalResults: 1 } as any]]
+        [
+          'SP04::20',
+          [{ resultTypeId: 1, resultTypeName: 'Knowledge product', editing: 1, submitted: 0, qualityAssessed: 0, others: 0, totalResults: 1 } as any]
+        ],
+        [
+          'SP04::10',
+          [
+            {
+              resultTypeId: 2,
+              resultTypeName: 'Innovation development',
+              editing: 1,
+              submitted: 0,
+              qualityAssessed: 0,
+              others: 0,
+              totalResults: 1
+            } as any
+          ]
+        ]
       ])
     );
 
@@ -1060,7 +1082,12 @@ describe('DashboardLabComponent — phase filter resolver + loaders (OPF-T-3)', 
         { provide: PhasesService, useValue: { phases: { reporting: [] } } },
         {
           provide: EntityAowService,
-          useValue: { onCloseReportResultModal: () => undefined, showReportResultModal: signal(false), entityId: signal(''), getAllDetailsData: jest.fn() }
+          useValue: {
+            onCloseReportResultModal: () => undefined,
+            showReportResultModal: signal(false),
+            entityId: signal(''),
+            getAllDetailsData: jest.fn()
+          }
         },
         { provide: ResultLevelService, useValue: {} }
       ]
@@ -1315,7 +1342,15 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
     entityTypeName: 'Science Program',
     totalResults: 11,
     progress: 0,
-    versions: [{ versionId: 36, phaseName: 'Reporting 2026', phaseYear: 2026, totalResults: 11, statuses: [{ statusId: 5, statusName: 'Submitted', count: 11 }] }]
+    versions: [
+      {
+        versionId: 36,
+        phaseName: 'Reporting 2026',
+        phaseYear: 2026,
+        totalResults: 11,
+        statuses: [{ statusId: 5, statusName: 'Submitted', count: 11 }]
+      }
+    ]
   };
 
   // `PhasesService.phases.reporting` fixture: 2 phases of SP04's own portfolio (34 closed, 36
@@ -1366,7 +1401,13 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
           useValue: {
             focusMode: signal(false),
             slimNav: signal(false),
-            reportingCurrentPhase: { phaseId: openPhaseId, phaseYear: 2026, phaseName: 'Reporting 2026', portfolioAcronym: 'P25', portfolioId: PORTFOLIO_ID },
+            reportingCurrentPhase: {
+              phaseId: openPhaseId,
+              phaseYear: 2026,
+              phaseName: 'Reporting 2026',
+              portfolioAcronym: 'P25',
+              portfolioId: PORTFOLIO_ID
+            },
             reportingPhaseVersion: signal(0)
           }
         },
@@ -1379,7 +1420,12 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
         { provide: PhasesService, useValue: { phases: { reporting: phases } } },
         {
           provide: EntityAowService,
-          useValue: { onCloseReportResultModal: () => undefined, showReportResultModal: signal(false), entityId: signal(''), getAllDetailsData: jest.fn() }
+          useValue: {
+            onCloseReportResultModal: () => undefined,
+            showReportResultModal: signal(false),
+            entityId: signal(''),
+            getAllDetailsData: jest.fn()
+          }
         },
         { provide: ResultLevelService, useValue: {} }
       ]
@@ -1397,7 +1443,7 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
   // which the server pins to one row) — at least the 2 phases of SP04's portfolio, sorted
   // `phase_year` desc, labeled "«phase_name» · «phase_year»" — and the foreign-portfolio phase
   // (12, a different portfolio) is excluded (OPF-R-1 BUT clause).
-  it('(a) options list every phase of the program\'s own portfolio, newest year first, excluding foreign portfolios', async () => {
+  it("(a) options list every phase of the program's own portfolio, newest year first, excluding foreign portfolios", async () => {
     const component = await createComponent(apiMock());
     const options = component.phaseSelectorOptions();
 
@@ -1654,8 +1700,57 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(component.cleanHloCode('I-OC 1.1. Breeding network')).toBe('I-OC 1.1');
       expect(component.cleanHloCode('OC 3.1. Some title')).toBe('OC 3.1');
       expect(component.cleanHloCode('Foster motivations')).toBe('');
+      expect(component.cleanHloCode('1.1 Agronomic and farm management scientific data')).toBe('1.1');
+      expect(component.cleanHloCode('1.1: Agronomic data')).toBe('1.1');
+      expect(component.cleanHloCode('1.1')).toBe('1.1');
+      expect(component.cleanHloCode('2.4.1 Specific Sub-Output')).toBe('2.4.1');
+      expect(component.cleanHloCode('HLO 1.1 Agronomic data')).toBe('HLO 1.1');
       expect(component.cleanHloCode('')).toBe('');
       expect(component.cleanHloCode(undefined)).toBe('');
+    });
+  });
+
+  describe('hloTaxonomy (BHA-R-1, BHA-DD-2, KZ-changes--reporting-aow-hierarchy-1)', () => {
+    it('resolves semantic taxonomy badges adhering to institutional ToC categories', async () => {
+      const component = await createComponent();
+
+      // Output section -> HLO
+      expect(component.hloTaxonomy({ code: '1.1' }, { label: 'High Level Outputs' })).toEqual({
+        type: 'HLO',
+        code: '1.1'
+      });
+      expect(component.hloTaxonomy('1.1: Agronomic and farm management data', { label: 'High Level Outputs' })).toEqual({
+        type: 'HLO',
+        code: '1.1'
+      });
+      expect(component.hloTaxonomy('HLO4.AOW1.IO1 Foster motivations', { label: 'High Level Outputs' })).toEqual({
+        type: 'HLO',
+        code: '4'
+      });
+
+      // Outcome section -> OC
+      expect(component.hloTaxonomy({ code: '2.1' }, { label: 'Outcomes' })).toEqual({
+        type: 'OC',
+        code: '2.1'
+      });
+      expect(component.hloTaxonomy('OC 3.1. Some title', { label: 'Outcomes' })).toEqual({
+        type: 'OC',
+        code: '3.1'
+      });
+
+      // Intermediate Outcome section -> I-OC / IO
+      expect(component.hloTaxonomy({ code: '3.5' }, { label: 'Intermediate Outcomes' })).toEqual({
+        type: 'I-OC',
+        code: '3.5'
+      });
+      expect(component.hloTaxonomy('I-OC 3.5. Women, men, youth', { label: 'Intermediate Outcomes' })).toEqual({
+        type: 'I-OC',
+        code: '3.5'
+      });
+      expect(component.hloTaxonomy('IO 2.1 Intermediate', { label: 'Intermediate Outcomes' })).toEqual({
+        type: 'IO',
+        code: '2.1'
+      });
     });
   });
 
@@ -1720,6 +1815,21 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(component.byAowSelectedType()).toBeNull();
       expect(component.reportingFiltersActive()).toBe(false);
     });
+
+    // quick/reporting-clear-filters-only-pending (2026-09-04): the band badge counts Only-pending as
+    // a filter, so Clear filters must switch it off — and forget the persisted value, or the next
+    // visit would restore the toggle the user just cleared.
+    it('clearReportingFilters also switches Only-pending off and clears its persisted value', async () => {
+      const component = await createComponent();
+      component.setOnlyPending(true);
+      expect(component.onlyPending()).toBe(true);
+      expect(sessionStorage.getItem('pr.burndown.onlyPending')).toBe('1');
+
+      component.clearReportingFilters();
+
+      expect(component.onlyPending()).toBe(false);
+      expect(sessionStorage.getItem('pr.burndown.onlyPending')).toBe('0');
+    });
   });
 
   describe('By-AoW tabular layout (BTC-R-2, BTC-R-3)', () => {
@@ -1727,15 +1837,15 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
 
       // Test checking that the template includes the .pr-by-aow-head and .pr-by-aow-row structure
-      expect(template).toContain('class="pr-by-aow-head hidden md:grid"');
+      expect(template).toContain('pr-by-aow-head hidden md:grid');
       expect(template).toContain('class="overflow-x-auto"');
 
       // Check column header titles (BTC-AC-3.1)
-      expect(template).toContain("<span>{{ sec.label === 'High Level Outputs' ? 'High-Level Output' : 'Outcome' }}</span>");
-      expect(template).toContain('<span class="text-center">Target</span>');
-      expect(template).toContain('<span class="text-center">Achieved</span>');
-      expect(template).toContain('<span class="text-center">KPIs</span>');
-      expect(template).toContain('<span class="text-center">Progress</span>');
+      expect(template).toContain('<span>TITLE & TAXONOMY</span>');
+      expect(template).toContain('<span class="text-center">TARGET</span>');
+      expect(template).toContain('<span class="text-center">ACHIEVED</span>');
+      expect(template).toContain('<span class="text-center">KPIS</span>');
+      expect(template).toContain('<span class="text-center">PROGRESS</span>');
     });
 
     it('renders .pr-by-aow-head table column headers into DOM elements with correct text (BTC-AC-3.1)', () => {
@@ -1751,31 +1861,59 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       const headerSpans = Array.from(head?.querySelectorAll('span') ?? []);
       expect(headerSpans.length).toBe(6);
       expect(headerSpans[0].textContent?.trim()).toBe('');
-      expect(headerSpans[1].textContent).toContain('sec.label');
-      expect(headerSpans[2].textContent?.trim()).toBe('Target');
-      expect(headerSpans[3].textContent?.trim()).toBe('Achieved');
-      expect(headerSpans[4].textContent?.trim()).toBe('KPIs');
-      expect(headerSpans[5].textContent?.trim()).toBe('Progress');
+      expect(headerSpans[1].textContent?.trim()).toBe('TITLE & TAXONOMY');
+      expect(headerSpans[2].textContent?.trim()).toBe('TARGET');
+      expect(headerSpans[3].textContent?.trim()).toBe('ACHIEVED');
+      expect(headerSpans[4].textContent?.trim()).toBe('KPIS');
+      expect(headerSpans[5].textContent?.trim()).toBe('PROGRESS');
     });
 
-    it('renders .pr-by-aow-row grid with code badge, sanitized title, and stacked metric cells (BTC-AC-2.1, BTC-AC-2.3)', () => {
+    it('renders Level 2 HLO Sub-Card enclosure with code badge, sanitized title, and stacked metric cells (BHA-R-2, BHA-R-3)', () => {
       const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
       const parser = new DOMParser();
       const doc = parser.parseFromString(template, 'text/html');
 
       const row = doc.querySelector('.pr-by-aow-row');
       expect(row).not.toBeNull();
-      expect(row?.tagName.toLowerCase()).toBe('button');
+      expect(row?.getAttribute('[id]')).toBe("'by-aow-hlo-' + hlo.title");
 
-      // Check badge rendered with cleanHloCode binding (BTC-AC-1.2)
+      const card = row?.closest('section');
+      expect(card).not.toBeNull();
+      expect(card?.classList.contains('rounded-2xl')).toBe(true);
+
+      // Check badge rendered with taxonomy binding (BHA-R-1, BHA-R-2)
       const badge = doc.querySelector('.pr-hlo-code');
       expect(badge).not.toBeNull();
-      expect(badge?.textContent).toContain('cleanHloCode(hlo.split.code || hlo.title)');
+      expect(badge?.textContent).toContain('tax.type');
 
-      // Check stacked target and achieved cells (BTC-AC-2.3)
+      // Check stacked target and achieved cells (BHA-R-3)
       expect(template).toContain('{{ hloTargetSum(hlo) }}');
       expect(template).toContain('{{ hloAchievedSum(hlo) }}');
       expect(template).toContain('{{ hlo.count }}');
+      expect(template).toContain('TARGET');
+      expect(template).toContain('ACHIEVED');
+    });
+
+    it('renders Level 3 indicator rows with accessibility attributes and keyboard navigation (BHA-NFR-2)', async () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(template, 'text/html');
+
+      const indRow = doc.querySelector('.pr-by-aow-indicator-row');
+      expect(indRow).not.toBeNull();
+      expect(indRow?.getAttribute('role')).toBe('button');
+      expect(indRow?.getAttribute('tabindex')).toBe('0');
+      expect(indRow?.getAttribute('(click)')).toBe('openReportAside(ind)');
+      expect(indRow?.getAttribute('(keydown.enter)')).toBe('openReportAside(ind)');
+      expect(indRow?.getAttribute('(keydown.space)')).toBe('$event.preventDefault(); openReportAside(ind)');
+      expect(indRow?.className).toContain('focus-visible:outline-none');
+      expect(indRow?.className).toContain('focus-visible:ring-2');
+      expect(indRow?.className).toContain('focus-visible:ring-indigo-500');
+
+      const component = await createComponent();
+      const reportSpy = jest.spyOn(component, 'openReportAside').mockImplementation();
+      component.openReportAside({ indicator_id: 42 } as any);
+      expect(reportSpy).toHaveBeenCalledWith({ indicator_id: 42 });
     });
 
     it('computes plannedByAowSections with clean codes, titles, and metrics in byAow mode (BTC-R-1, BTC-AC-1.1, BTC-AC-2.1)', async () => {
@@ -1837,6 +1975,36 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(outcomeGroup.count).toBe(1);
     });
 
+    it('sorts plannedByAowSections HLO groups numerically by code (e.g. HL01, HL02, HL03, HL04, HL05)', async () => {
+      const component = await createComponent();
+      component.plannedBrowseView.set('byAow');
+      component.plannedHloAowCode.set('SP02-AOW01');
+
+      const mockInds = [
+        { indicator_id: 4, __tier: 'output', __hlo: 'HL04 Foster motivations' },
+        { indicator_id: 5, __tier: 'output', __hlo: 'HL05 Investment cases' },
+        { indicator_id: 2, __tier: 'output', __hlo: 'HL02 Target markets' },
+        { indicator_id: 1, __tier: 'output', __hlo: 'HL01 Steer to impact' },
+        { indicator_id: 3, __tier: 'output', __hlo: 'HL03 Design concepts' }
+      ];
+
+      jest.spyOn(component, 'indicatorsForAow').mockReturnValue({
+        aow: { code: 'SP02-AOW01', name: 'Genetic Innovation' },
+        indicators: mockInds
+      } as any);
+
+      const sections = component.plannedByAowSections();
+      const outputsSec = sections.find(s => s.label === 'High Level Outputs');
+      expect(outputsSec?.groups.map(g => g.split.code)).toEqual(['HL01', 'HL02', 'HL03', 'HL04', 'HL05']);
+      expect(outputsSec?.groups.map(g => g.split.name)).toEqual([
+        'Steer to impact',
+        'Target markets',
+        'Design concepts',
+        'Foster motivations',
+        'Investment cases'
+      ]);
+    });
+
     it('defines $pr-by-aow-tracks CSS Grid specification matching BTC-AC-2.1 and BTC-AC-3.2', () => {
       const scss = readFileSync(join(__dirname, 'dashboard-lab.component.scss'), 'utf8');
 
@@ -1883,4 +2051,553 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(badge?.textContent?.trim()).toBe('I-OC 3.5');
     });
   });
+
+  describe('BHA-T-2 / BHA-T-3 — By-AOW Level 3 Indented Indicator Scaffolding & Event Isolation', () => {
+    it('asserts indented container exists in template with 24px indent and indigo tree guide line (BHA-R-4, Scenario 4.1)', () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(template, 'text/html');
+
+      const container = doc.querySelector('.pl-4.sm\\:pl-6.border-l-4.border-indigo-500\\/40.bg-indigo-50\\/10');
+      expect(container).not.toBeNull();
+      expect(template).toContain('class="pl-4 sm:pl-6 border-l-4 border-indigo-500/40 bg-indigo-50/10"');
+    });
+
+    it('asserts contextual sub-header .pr-by-aow-subhead.pr-hlo-head exists with uppercase column labels (BHA-R-5, Scenario 5.1)', () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(template, 'text/html');
+
+      const subhead = doc.querySelector('.pr-by-aow-subhead.pr-hlo-head');
+      expect(subhead).not.toBeNull();
+      expect(subhead?.classList.contains('h-7')).toBe(true);
+      expect(subhead?.classList.contains('uppercase')).toBe(true);
+      expect(subhead?.getAttribute('aria-hidden')).toBe('true');
+
+      const labels = Array.from(subhead?.querySelectorAll('span') ?? [])
+        .map(s => s.textContent?.trim().toUpperCase())
+        .filter(Boolean);
+
+      expect(labels).toEqual(['INDICATOR TITLE & TAXONOMY', 'TARGET', 'ACHIEVED', 'STATUS', 'PROGRESS', 'ACTION']);
+
+      const headerText = subhead?.textContent?.toUpperCase() ?? '';
+      expect(headerText).toContain('INDICATOR TITLE & TAXONOMY');
+      expect(headerText).toContain('TARGET');
+      expect(headerText).toContain('ACHIEVED');
+      expect(headerText).toContain('STATUS');
+      expect(headerText).toContain('PROGRESS');
+      expect(headerText).toContain('ACTION');
+    });
+
+    it('asserts concentric bullseye mark SVG (.pr-status-mark) renders with viewBox="0 0 18 18" (or 24x24) and target circles (BHA-R-6, Scenario 6.1)', () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(template, 'text/html');
+
+      const mark = doc.querySelector('.pr-status-mark');
+      expect(mark).not.toBeNull();
+      expect(mark?.getAttribute('[class]')).toBe("'pr-status-mark--' + meta.state");
+
+      const svg = mark?.querySelector('svg');
+      expect(svg).not.toBeNull();
+      expect(svg?.getAttribute('width')).toBe('18');
+      expect(svg?.getAttribute('height')).toBe('18');
+      expect(svg?.getAttribute('aria-hidden')).toBe('true');
+
+      const viewBox = svg?.getAttribute('viewBox');
+      expect(viewBox === '0 0 18 18' || viewBox === '0 0 24 24').toBe(true);
+      expect(['0 0 18 18', '0 0 24 24']).toContain(viewBox);
+
+      // 3 target circles: outer ring, mid ring, filled center
+      const circles = Array.from(svg?.querySelectorAll('circle') ?? []);
+      expect(circles.length).toBe(3);
+    });
+
+    it('asserts action buttons (Report and Copy link) invoke $event.stopPropagation() to prevent parent row toggle (BHA-R-7, Scenario 7.1, KZ-changes--reporting-aow-jira-hierarchy-2)', async () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(template, 'text/html');
+
+      // 1. Template structural contract
+      const indRow = doc.querySelector('.pr-by-aow-indicator-row');
+      expect(indRow).not.toBeNull();
+      expect(indRow?.getAttribute('(click)')).toBe('openReportAside(ind)');
+
+      const copyBtn = indRow?.querySelector('button[aria-label="Copy link to this KPI"]');
+      expect(copyBtn).not.toBeNull();
+      expect(copyBtn?.getAttribute('(click)')).toContain('$event.stopPropagation()');
+      expect(copyBtn?.getAttribute('(click)')).toContain('copyKpiLink(ind)');
+
+      const reportBtn = Array.from(indRow?.querySelectorAll('button') ?? []).find(b => b.textContent?.trim() === 'Report');
+      expect(reportBtn).not.toBeUndefined();
+      expect(reportBtn?.getAttribute('(click)')).toContain('$event.stopPropagation()');
+      expect(reportBtn?.getAttribute('(click)')).toContain('openReportAside(ind)');
+
+      // 2. Event propagation isolation behavior in DOM simulation
+      const component = await createComponent();
+      let parentRowTriggered = false;
+      const mockParentRow = document.createElement('div');
+      mockParentRow.addEventListener('click', () => {
+        parentRowTriggered = true;
+        component.openReportAside({ indicator_id: 101 } as any);
+      });
+
+      const mockCopyBtn = document.createElement('button');
+      mockCopyBtn.addEventListener('click', (event: MouseEvent) => {
+        event.stopPropagation();
+        component.copyKpiLink({ indicator_id: 101 } as any);
+      });
+      mockParentRow.appendChild(mockCopyBtn);
+
+      const mockReportBtn = document.createElement('button');
+      mockReportBtn.addEventListener('click', (event: MouseEvent) => {
+        event.stopPropagation();
+        component.openReportAside({ indicator_id: 101 } as any);
+      });
+      mockParentRow.appendChild(mockReportBtn);
+
+      const copySpy = jest.spyOn(component, 'copyKpiLink').mockImplementation();
+      const reportSpy = jest.spyOn(component, 'openReportAside').mockImplementation();
+
+      // Trigger Copy link button click
+      mockCopyBtn.click();
+      expect(parentRowTriggered).toBe(false);
+      expect(copySpy).toHaveBeenCalledWith({ indicator_id: 101 });
+
+      // Trigger Report button click
+      mockReportBtn.click();
+      expect(parentRowTriggered).toBe(false);
+      expect(reportSpy).toHaveBeenCalledWith({ indicator_id: 101 });
+
+      // Trigger parent row click directly
+      mockParentRow.click();
+      expect(parentRowTriggered).toBe(true);
+      expect(reportSpy).toHaveBeenCalledTimes(2);
+    });
+  });
 });
+
+// @akili-spec changes/my-work-board (MWB-T-8)
+describe('DashboardLabComponent — Where-to-report return tab (MWB-T-8)', () => {
+  const PROGRAM: SPProgress = {
+    initiativeId: 7,
+    initiativeCode: 'SP02',
+    initiativeName: 'Science Program 02',
+    initiativeShortName: 'SP02',
+    portfolioId: 1,
+    portfolioName: 'Portfolio',
+    portfolioAcronym: 'P26',
+    entityTypeCode: 'SP',
+    entityTypeName: 'Science Program',
+    totalResults: 0,
+    progress: 0,
+    versions: []
+  };
+
+  async function createComponent(queryParams: Record<string, string>) {
+    const navigate = jest.fn().mockResolvedValue(true);
+    const route = {
+      data: of({}),
+      snapshot: { data: {}, queryParamMap: convertToParamMap(queryParams) }
+    };
+
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [DashboardLabComponent],
+      providers: [
+        {
+          provide: ResultFrameworkReportingHomeService,
+          useValue: {
+            mySPsList: signal([]),
+            otherSPsList: signal([PROGRAM]),
+            otherProjectsList: signal([]),
+            overviewSelectedPhase: signal<string | null>(null)
+          }
+        },
+        { provide: ApiService, useValue: {} },
+        { provide: DataControlService, useValue: { focusMode: signal(false), slimNav: signal(false) } },
+        { provide: ReportingGuideService, useValue: {} },
+        { provide: Router, useValue: { navigate } },
+        { provide: ActivatedRoute, useValue: route },
+        { provide: PhasesService, useValue: { phases: { reporting: [] } } },
+        { provide: EntityAowService, useValue: { onCloseReportResultModal: () => undefined, showReportResultModal: signal(false) } },
+        { provide: ResultLevelService, useValue: {} }
+      ]
+    })
+      .overrideComponent(DashboardLabComponent, { set: { template: '' } })
+      .compileComponents();
+
+    const component = TestBed.createComponent(DashboardLabComponent).componentInstance;
+    component.selectedId.set(PROGRAM.initiativeId);
+    return { component, navigate };
+  }
+
+  it('returns to the My work tab when returnTab is "my-work"', async () => {
+    const { component, navigate } = await createComponent({ whereToReport: 'true', returnTab: 'my-work' });
+
+    component.closeWhereToReportModal();
+
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP02', 'my-work']);
+  });
+
+  it('still returns to the Results tab when returnTab is "results"', async () => {
+    const { component, navigate } = await createComponent({ whereToReport: 'true', returnTab: 'results' });
+
+    component.closeWhereToReportModal();
+
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP02', 'results']);
+  });
+
+  it('only cleans the query params for an unknown returnTab', async () => {
+    const { component, navigate } = await createComponent({ whereToReport: 'true' });
+
+    component.closeWhereToReportModal();
+
+    expect(navigate).toHaveBeenCalledWith([], expect.objectContaining({ queryParams: { whereToReport: null, returnTab: null } }));
+  });
+});
+
+// @akili-spec changes/reporting-hierarchical-search-filters (RHSF-T-5)
+describe('DashboardLabComponent — URL state synchronization, focus recovery & empty state (RHSF-T-5)', () => {
+  const PROGRAM: SPProgress = {
+    initiativeId: 8,
+    initiativeCode: 'SP02',
+    initiativeName: 'Science Program 02',
+    initiativeShortName: 'SP02',
+    portfolioId: 1,
+    portfolioName: 'Portfolio',
+    portfolioAcronym: 'P26',
+    entityTypeCode: 'SP',
+    entityTypeName: 'Science Program',
+    totalResults: 0,
+    progress: 0,
+    versions: []
+  };
+
+  async function createPlannedComponent(queryParams: Record<string, string> = {}, customTemplate?: string) {
+    const navigate = jest.fn().mockResolvedValue(true);
+    const qpMap = convertToParamMap(queryParams);
+    const qpSubject = new Subject<any>();
+    const route = {
+      data: of({ rfrView: 'planned' }),
+      snapshot: { data: { rfrView: 'planned' }, queryParamMap: qpMap },
+      queryParamMap: qpSubject.asObservable(),
+      paramMap: of(convertToParamMap({}))
+    };
+
+    TestBed.resetTestingModule();
+    const moduleDef = TestBed.configureTestingModule({
+      imports: [DashboardLabComponent],
+      providers: [
+        {
+          provide: ResultFrameworkReportingHomeService,
+          useValue: {
+            mySPsList: signal([]),
+            otherSPsList: signal([PROGRAM]),
+            otherProjectsList: signal([]),
+            overviewSelectedPhase: signal<string | null>(null),
+            getScienceProgramsProgress: jest.fn()
+          }
+        },
+        {
+          provide: ApiService,
+          useValue: {
+            resultsSE: {
+              GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of({ response: { units: [] } })),
+              GET_platformGlobalUnitResult: jest.fn().mockReturnValue(of({ response: { results: [] } })),
+              GET_ScienceProgramTocProgress: jest.fn().mockReturnValue(of({ response: { progress: null, areas: [] } })),
+              GET_IndicatorContributionSummary: jest.fn().mockReturnValue(of({ response: { totalsByType: [] } })),
+              GET_reportingEntryHubProjects: jest.fn().mockReturnValue(of({ response: {} })),
+              GET_IntermediateOutcomes: jest.fn().mockReturnValue(of({ response: { tocResults: [] } })),
+              GET_2030Outcomes: jest.fn().mockReturnValue(of({ response: { tocResults: [] } })),
+              GET_tocByInitiativeId: jest.fn().mockReturnValue(of({ response: {} }))
+            }
+          }
+        },
+        {
+          provide: DataControlService,
+          useValue: {
+            focusMode: signal(false),
+            slimNav: signal(false),
+            reportingCurrentPhase: { phaseId: null, phaseYear: null, phaseName: null, portfolioAcronym: null, portfolioId: null },
+            reportingPhaseVersion: signal(0)
+          }
+        },
+        { provide: ReportingGuideService, useValue: {} },
+        { provide: Router, useValue: { navigate } },
+        { provide: ActivatedRoute, useValue: route },
+        { provide: PhasesService, useValue: { phases: { reporting: [] } } },
+        {
+          provide: EntityAowService,
+          useValue: {
+            onCloseReportResultModal: () => undefined,
+            showReportResultModal: signal(false),
+            entityId: signal(''),
+            getAllDetailsData: jest.fn()
+          }
+        },
+        { provide: ResultLevelService, useValue: {} }
+      ]
+    });
+
+    if (customTemplate !== undefined) {
+      moduleDef.overrideComponent(DashboardLabComponent, { set: { template: customTemplate } });
+    } else {
+      moduleDef.overrideComponent(DashboardLabComponent, { set: { template: '' } });
+    }
+    await moduleDef.compileComponents();
+
+    const fixture = TestBed.createComponent(DashboardLabComponent);
+    const component = fixture.componentInstance;
+    component.selectedId.set(PROGRAM.initiativeId);
+    component.ngOnInit();
+    TestBed.flushEffects();
+    await Promise.resolve();
+    navigate.mockClear();
+    return { fixture, component, navigate, qpSubject };
+  }
+
+  it('synchronizes q and typ to queryParams when tocView=aows', async () => {
+    const { component, navigate } = await createPlannedComponent();
+    navigate.mockClear();
+
+    component.plannedBrowseView.set('aows');
+    component.plannedSearch.set('rice');
+    component.reportingTypologyFilter.set('Knowledge Product');
+    TestBed.flushEffects();
+
+    expect(navigate).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({
+        queryParams: expect.objectContaining({
+          tocView: 'aows',
+          q: 'rice',
+          typ: 'Knowledge Product'
+        }),
+        replaceUrl: true
+      })
+    );
+  });
+
+  it('hydrates plannedSearch, reportingTypologyFilter, and pendingKpi with inequality guards without loops', async () => {
+    const { component, qpSubject } = await createPlannedComponent();
+
+    // 1) Test restorePlannedBrowseFromQuery hydration
+    component.plannedSearch.set('');
+    component.reportingTypologyFilter.set('all');
+
+    const searchSetSpy = jest.spyOn(component.plannedSearch, 'set');
+    const typSetSpy = jest.spyOn(component.reportingTypologyFilter, 'set');
+
+    const qp = convertToParamMap({
+      tocView: 'aows',
+      q: 'climate',
+      typ: 'Innovation Development',
+      kpi: '101'
+    });
+
+    (component as any).restorePlannedBrowseFromQuery(qp);
+
+    expect(component.plannedSearch()).toBe('climate');
+    expect(component.reportingTypologyFilter()).toBe('Innovation Development');
+    expect((component as any).pendingKpi).toBe('101');
+    expect(searchSetSpy).toHaveBeenCalledWith('climate');
+    expect(typSetSpy).toHaveBeenCalledWith('Innovation Development');
+
+    // Repeated call with identical parameters must NOT invoke signal setters (inequality guard prevents reactive loop)
+    searchSetSpy.mockClear();
+    typSetSpy.mockClear();
+
+    (component as any).restorePlannedBrowseFromQuery(qp);
+
+    expect(searchSetSpy).not.toHaveBeenCalled();
+    expect(typSetSpy).not.toHaveBeenCalled();
+
+    // 2) Test spParamSub subscription with inequality guards
+    searchSetSpy.mockClear();
+    typSetSpy.mockClear();
+
+    // Emitting identical query params via router stream
+    qpSubject.next(qp);
+
+    expect(searchSetSpy).not.toHaveBeenCalled();
+    expect(typSetSpy).not.toHaveBeenCalled();
+
+    // Emitting changed query params updates signals
+    const changedQp = convertToParamMap({
+      tocView: 'aows',
+      q: 'policy',
+      typ: 'Policy Change',
+      kpi: '202'
+    });
+    qpSubject.next(changedQp);
+
+    expect(searchSetSpy).toHaveBeenCalledWith('policy');
+    expect(typSetSpy).toHaveBeenCalledWith('Policy Change');
+    expect(component.plannedSearch()).toBe('policy');
+    expect(component.reportingTypologyFilter()).toBe('Policy Change');
+    expect((component as any).pendingKpi).toBe('202');
+  });
+
+  it('calls loadAllTocs() when query length >= 2 in onReportingSearchChange', async () => {
+    const { component } = await createPlannedComponent();
+    const loadAllSpy = jest.spyOn(component as any, 'loadAllTocs');
+
+    component.onReportingSearchChange('c');
+    expect(component.plannedSearch()).toBe('c');
+    expect(loadAllSpy).not.toHaveBeenCalled();
+
+    component.onReportingSearchChange('cl');
+    expect(component.plannedSearch()).toBe('cl');
+    expect(loadAllSpy).toHaveBeenCalledTimes(1);
+
+    component.onReportingSearchChange('climate');
+    expect(component.plannedSearch()).toBe('climate');
+    expect(loadAllSpy).toHaveBeenCalledTimes(2);
+
+    component.onReportingSearchChange('');
+    expect(component.plannedSearch()).toBe('');
+    expect(loadAllSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('displays search term and "Clear search" button when search is active with 0 matching AoWs', async () => {
+    const emptyTemplate = `
+      @if (!plannedFilteredAows().length) {
+        @if (plannedSearchActive()) {
+          <div class="m-0 py-8 text-center text-[13px] text-[var(--pr-color-accents-5)]" data-testid="reporting-empty-search">
+            <span>No indicators match your search '<strong class="font-semibold text-gray-800">{{ plannedSearch() }}</strong>'</span>
+            <button
+              type="button"
+              (click)="clearReportingFilters()"
+              class="ml-2 text-[var(--pr-color-primary-400)] underline font-semibold cursor-pointer border-0 bg-transparent p-0 hover:text-[var(--pr-color-primary-500)]">
+              Clear search
+            </button>
+          </div>
+        } @else {
+          <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No Areas of Work match your search.</p>
+        }
+      }
+    `;
+    const { fixture, component } = await createPlannedComponent({}, emptyTemplate);
+
+    // Initial state: no search query, 0 AoWs
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="reporting-empty-search"]')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('No Areas of Work match your search.');
+
+    // Activate search query
+    component.plannedSearch.set('agroforestry');
+    fixture.detectChanges();
+
+    const emptyContainer = fixture.nativeElement.querySelector('[data-testid="reporting-empty-search"]');
+    expect(emptyContainer).not.toBeNull();
+    expect(emptyContainer.textContent).toContain("No indicators match your search 'agroforestry'");
+
+    const clearButton = emptyContainer.querySelector('button');
+    expect(clearButton).not.toBeNull();
+    expect(clearButton.textContent.trim()).toBe('Clear search');
+
+    // Click "Clear search" button
+    const clearSpy = jest.spyOn(component, 'clearReportingFilters');
+    clearButton.click();
+    expect(clearSpy).toHaveBeenCalled();
+    expect(component.plannedSearch()).toBe('');
+
+    // Rerender after clearing
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="reporting-empty-search"]')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('No Areas of Work match your search.');
+  });
+
+  it('triggers element scroll and focus flash class when pendingKpi is set in tocView=aows', async () => {
+    jest.useFakeTimers();
+    const { component } = await createPlannedComponent();
+    component.plannedBrowseView.set('aows');
+
+    const rowEl = document.createElement('div');
+    rowEl.id = 'indicator-row-42';
+    rowEl.scrollIntoView = jest.fn();
+    document.body.appendChild(rowEl);
+
+    try {
+      jest.spyOn(component, 'reportingGroupsForTable').mockReturnValue([
+        {
+          aow: { code: 'AOW01', name: 'AoW 1' },
+          indicators: [
+            { indicator_id: 42, indicator_description: 'Test KPI 42' } as any
+          ],
+          count: 1,
+          loading: false,
+          kind: 'aow'
+        }
+      ]);
+
+      (component as any).pendingKpi = '42';
+      TestBed.flushEffects();
+
+      expect((component as any).pendingKpi).toBeNull();
+
+      // Advance 100ms for setTimeout to find element and scroll/flash
+      jest.advanceTimersByTime(100);
+
+      expect(rowEl.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+      expect(rowEl.classList.contains('animate-focus-flash')).toBe(true);
+
+      // Advance 1500ms for flash animation class removal
+      jest.advanceTimersByTime(1500);
+      expect(rowEl.classList.contains('animate-focus-flash')).toBe(false);
+    } finally {
+      document.body.removeChild(rowEl);
+      jest.useRealTimers();
+    }
+  });
+
+  it('computes reportingMatchingCount and reportingTypologyCounts accurately', async () => {
+    const { component } = await createPlannedComponent();
+
+    const mockGroups = [
+      {
+        aow: { code: 'AOW01', name: 'Breeding Lines' },
+        indicators: [
+          { indicator_id: 1, indicator_description: 'Rice drought tolerance', result_type_name: 'Knowledge Product' },
+          { indicator_id: 2, indicator_description: 'Wheat resistance', result_type_name: 'Innovation Development' }
+        ],
+        count: 2,
+        loading: false,
+        kind: 'aow' as const
+      },
+      {
+        aow: { code: 'AOW02', name: 'Policy and Impact' },
+        indicators: [
+          { indicator_id: 3, indicator_description: 'Seed policy framework', result_type_name: 'Policy Change' }
+        ],
+        count: 1,
+        loading: false,
+        kind: 'aow' as const
+      }
+    ];
+
+    jest.spyOn(component, 'reportingGroups').mockReturnValue(mockGroups as any);
+    jest.spyOn(component, 'reportingGroupsForTable').mockReturnValue(mockGroups as any);
+
+    // Initial search is empty -> matching count is 0
+    component.plannedSearch.set('');
+    expect(component.reportingMatchingCount()).toBe(0);
+
+    // Search matches 'rice' -> 1 match
+    component.plannedSearch.set('rice');
+    expect(component.reportingMatchingCount()).toBe(1);
+
+    // Search matches AoW name 'Breeding' -> matches all 2 indicators in that group
+    component.plannedSearch.set('Breeding');
+    expect(component.reportingMatchingCount()).toBe(2);
+
+    // Typology counts
+    const typologyCounts = component.reportingTypologyCounts();
+    expect(typologyCounts['all']).toBe(3);
+    expect(typologyCounts['Knowledge Product']).toBe(1);
+    expect(typologyCounts['Innovation Development']).toBe(1);
+    expect(typologyCounts['Policy Change']).toBe(1);
+  });
+});
+

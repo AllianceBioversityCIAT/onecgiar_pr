@@ -177,6 +177,5 @@
   <!-- Global "Report a bug / adjustment" modal, opened by the bug button above. -->
   <app-report-feedback-dialog
     [visible]="reportFeedbackOpen()"
-    [autoScreenshot]="reportFeedbackShot()"
     (visibleChange)="reportFeedbackOpen.set($event)" />
 }

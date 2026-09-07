@@ -62,22 +62,13 @@
       <dl class="bp-project-fields">
         <div class="bp-meta-field bp-meta-field--project">
           <dt class="bp-meta-field-label">Project</dt>
-          @if (canChangeProject()) {
-            <!--
-              P2-3518 — the field was static text, so a draft reported against the wrong W3/Bilateral
-              project could never be corrected. `canChangeProject()` keeps it text once the result
-              leaves the centre's hands.
-            -->
-            <dd class="bp-meta-field-value bp-meta-field-value--project bp-meta-field-value--editable">
-              <app-bilateral-project-selector
-                variant="inline"
-                (projectSelected)="onProjectChanged()"></app-bilateral-project-selector>
-            </dd>
-          } @else {
-            <dd class="bp-meta-field-value bp-meta-field-value--project" [title]="project.fullName || project.shortName">
-              {{ project.fullName || project.shortName }}
-            </dd>
-          }
+          <!-- Always static text (2026-09-05, Juan David): the primary W3/Bilateral project is the
+               result's identity and must NOT be changeable from the editor. This reverses the
+               P2-3518 inline picker; a draft created against the wrong project is discarded and
+               recreated instead of re-pointed. -->
+          <dd class="bp-meta-field-value bp-meta-field-value--project" [title]="project.fullName || project.shortName">
+            {{ project.fullName || project.shortName }}
+          </dd>
         </div>
         @if (project.leadCenter) {
           <div class="bp-meta-field">
@@ -123,24 +114,7 @@
     }
   </div>
 
-  <div class="bp-dashboard-card bp-dashboard-card--actions">
-    <h3 class="bp-card-title">Actions</h3>
-    <button class="bp-action-btn" disabled type="button" aria-label="Generate Narrative - Coming soon">
-      <i class="material-icons-round">sparkles</i>
-      <span>Generate Narrative</span>
-      <span class="bp-action-status">Coming soon</span>
-    </button>
-    <button class="bp-action-btn" disabled type="button" aria-label="Download PDF - Coming soon">
-      <i class="material-icons-round">picture_as_pdf</i>
-      <span>Download PDF</span>
-      <span class="bp-action-status">Coming soon</span>
-    </button>
-    <button class="bp-action-btn" disabled type="button" aria-label="AI Review - Coming soon">
-      <i class="material-icons-round">search_check</i>
-      <span>AI Review</span>
-      <span class="bp-action-status">Coming soon</span>
-    </button>
-    <!-- Submit for review moved to the editor's sections rail (feedback 2026-09-04): it is the form's
-         one primary action, not an Overview card entry — and its stale "In progress" badge went with it. -->
-  </div>
+  <!-- The Actions card is gone (feedback 2026-09-04): Submit for review lives in the editor's
+       sections rail, and a column of disabled Coming-soon buttons earned no screen space. Bring the
+       card back only when one of those actions actually ships. -->
 </div>

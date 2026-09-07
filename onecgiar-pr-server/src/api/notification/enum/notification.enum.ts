@@ -17,4 +17,9 @@ export enum NotificationTypeEnum {
   // resolved — the numeric ids differ between environments because they were inserted by hand.
   RESULT_CONTRIBUTION_ACCEPTED = 'Result Contribution Accepted',
   RESULT_CONTRIBUTION_DECLINED = 'Result Contribution Declined',
+  // 2026-09-05. Tells the primary Science Program's members a bilateral result reached Pending
+  // Review — before this, the SP only found out through the review-queue counter. Emitted from
+  // BOTH entry paths (the centre form's Submit and the API ingest, which creates results already
+  // in Pending Review).
+  BILATERAL_RESULT_SUBMITTED = 'Bilateral Result Submitted',
 }

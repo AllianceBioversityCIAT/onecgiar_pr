@@ -4,6 +4,7 @@ import {
   getNotificationActionVerb,
   getResultNotificationTextParts,
   isBilateralReviewNotification,
+  isBilateralSubmittedNotification,
   isResultTaggedNotification,
   resolveNotificationType
 } from './notification-type.constants';
@@ -209,6 +210,27 @@ describe('notification-type constants', () => {
       expect(isBilateralReviewNotification(notificationOf(NotificationType.BILATERAL_RESULT_REJECTED))).toBe(true);
       expect(isBilateralReviewNotification(notificationOf(NotificationType.RESULT_SUBMITTED))).toBe(false);
       expect(isBilateralReviewNotification({})).toBe(false);
+    });
+  });
+
+  // 2026-09-05 — the arrival announcement to the primary SP.
+  describe('bilateral submitted for review', () => {
+    it('isBilateralSubmittedNotification is true only for the submitted type', () => {
+      expect(isBilateralSubmittedNotification(notificationOf(NotificationType.BILATERAL_RESULT_SUBMITTED))).toBe(true);
+      expect(isBilateralSubmittedNotification(notificationOf(NotificationType.BILATERAL_RESULT_APPROVED))).toBe(false);
+      expect(isBilateralSubmittedNotification(notificationOf(NotificationType.RESULT_SUBMITTED))).toBe(false);
+      expect(isBilateralSubmittedNotification({})).toBe(false);
+    });
+
+    it('renders the server-composed suffix, like the other server-split types', () => {
+      const parts = getResultNotificationTextParts(
+        notificationOf(NotificationType.BILATERAL_RESULT_SUBMITTED, {
+          text: 'was submitted for your review by AfricaRice.'
+        })
+      );
+
+      expect(parts.prefix).toBe('The result');
+      expect(parts.suffix).toBe('was submitted for your review by AfricaRice.');
     });
   });
 });

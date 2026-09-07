@@ -20,7 +20,9 @@ export enum NotificationType {
   RESULT_CENTER_TAGGED = 'Result Center Tagged',
   RESULT_BILATERAL_PROJECT_TAGGED = 'Result Bilateral Project Tagged',
   RESULT_CONTRIBUTION_ACCEPTED = 'Result Contribution Accepted',
-  RESULT_CONTRIBUTION_DECLINED = 'Result Contribution Declined'
+  RESULT_CONTRIBUTION_DECLINED = 'Result Contribution Declined',
+  /** 2026-09-05 — a bilateral result reached Pending Review; sent to the primary SP's members. */
+  BILATERAL_RESULT_SUBMITTED = 'Bilateral Result Submitted'
 }
 
 /**
@@ -91,9 +93,10 @@ function getEmitterName(notification: any): string {
 
 /**
  * Official code of the owner (submitting) Science Program — `initiative_role_id = 1`, the only
- * initiative relation the notification payload carries.
+ * initiative relation the notification payload carries. Exported since 2026-09-05: the
+ * submitted-for-review click routes to the SP's review queue, which needs this code in the URL.
  */
-function getProgramCode(notification: any): string | null {
+export function getProgramCode(notification: any): string | null {
   const initiatives = notification?.obj_result?.obj_result_by_initiatives;
   if (!Array.isArray(initiatives)) return null;
 
@@ -152,6 +155,9 @@ export function getResultNotificationTextParts(notification: any): NotificationT
     // P2-3188 shares the split: the server stores which Science Program decided, we supply the lead-in.
     case NotificationType.RESULT_CONTRIBUTION_ACCEPTED:
     case NotificationType.RESULT_CONTRIBUTION_DECLINED:
+    // 2026-09-05 — same split: the server names the submitting lead centre, which the payload
+    // cannot resolve client-side ("was submitted for your review by AfricaRice.").
+    case NotificationType.BILATERAL_RESULT_SUBMITTED:
       return {
         prefix: 'The result',
         suffix: notification?.text?.trim() || null,
@@ -177,6 +183,14 @@ export function buildResultNotificationText(notification: any): string {
 export function isBilateralReviewNotification(notification: any): boolean {
   const type = resolveNotificationType(notification);
   return type === NotificationType.BILATERAL_RESULT_APPROVED || type === NotificationType.BILATERAL_RESULT_REJECTED;
+}
+
+/**
+ * True when the notification tells an SP member a bilateral result reached Pending Review
+ * (2026-09-05). Routes to the SP's review queue rather than to the result or the centre dashboard.
+ */
+export function isBilateralSubmittedNotification(notification: any): boolean {
+  return resolveNotificationType(notification) === NotificationType.BILATERAL_RESULT_SUBMITTED;
 }
 
 /** True when the notification reports an SP contributor's decision on a contribution (P2-3188). */

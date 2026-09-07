@@ -53,8 +53,24 @@ entiende (*Received*, *Being worked on*, *Fixed — waiting for the next release
 
 ## Env (server/.env — NO versionado)
 `JIRA_BASE_URL`, `JIRA_EMAIL_JC`, `JIRA_TOKEN_JC`, `JIRA_FEEDBACK_PROJECT_KEY` (P2),
-`JIRA_FEEDBACK_EPIC_KEY` (P2-3472), `JIRA_FEEDBACK_REPORTER_ID`.
+`JIRA_FEEDBACK_EPIC_KEY` (**P2-3584**), `JIRA_FEEDBACK_REPORTER_ID`.
 Sin credenciales → 503 (no revienta el arranque). **En prtest están puestas.**
+
+🛑 **`JIRA_FEEDBACK_EPIC_KEY` = `P2-3584`, NO `P2-3472`** (Yeck, 4-sep-2026). `P2-3472` es el backlog
+de la *feature* de feedback — 17 requisitos curados a mano — y los envíos crudos del botón cayendo al
+lado mezclaban trabajo triado con reportes sin triar. Un envío `TeST` aterrizó entre los requisitos
+reales esa mañana y hubo que borrarlo a mano (`P2-3582` + subtarea `P2-3583`).
+
+⚠️ **El default del código ya es `P2-3584`, pero si la variable está puesta en prtest, la variable
+gana y el código no cambia nada.** Es infra del server (no nuestra): se comprueba **enviando un
+reporte y mirando de qué épico queda hijo**. Si sale `P2-3472`, hay que pedírselo a Cristian.
+
+⚠️ **La clave mueve CUATRO sitios a la vez**, no solo el `parent` del create: es el `parent =` de los
+tres JQL (`my-reports`, `similar`, `me-too`). Lo que quede bajo el épico viejo deja de salir en la
+lista del usuario. Al cambiarla se verificó que no había nada que migrar.
+
+🛑 **Y para borrar cualquier sonda futura: la cuenta de Yeck NO tiene `DELETE_ISSUES` en P2.** El
+borrado hay que hacerlo con la credencial de JC, y queda **firmado como JC** en el registro.
 
 ## Verificado en prtest (3-sep-2026)
 Extremo a extremo desde la interfaz: `P2-3561` (Bug) y `P2-3562` (Adjustment → Enhancement), los

@@ -269,6 +269,14 @@ export class ResultsController {
     description:
       'When true, restrict to results with an active submission row for the authenticated user.',
   })
+  // @akili-spec changes/my-work-board
+  @ApiQuery({
+    name: 'include_completeness',
+    type: Boolean,
+    required: false,
+    description:
+      'When true, every item carries a `completeness: { complete, total, missing } | null` field computed for eligible items only (status_id 1 Editing or 8 Draft, non-IPSR-package result types), capped per request. Absent or false leaves the response byte-identical to the default payload (MWB-R-8).',
+  })
   findAllResultRolesFiltered(
     @Param('userId') userId: number,
     @Query() query: Record<string, any>,

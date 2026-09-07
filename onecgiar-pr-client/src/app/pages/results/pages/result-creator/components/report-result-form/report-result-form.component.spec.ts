@@ -13,6 +13,8 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
 import { ResultLevelCardsComponent } from '../result-level-cards/result-level-cards.component';
 import { signal } from '@angular/core';
+import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
+import { KpCgspaceBrowseComponent } from '../../../../../result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.component';
 
 describe('ReportResultFormComponent', () => {
   let component: ReportResultFormComponent;
@@ -109,12 +111,13 @@ describe('ReportResultFormComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [ReportResultFormComponent, ResultLevelCardsComponent],
-      imports: [HttpClientTestingModule, RouterTestingModule, CustomFieldsModule, TermPipe],
+      imports: [HttpClientTestingModule, RouterTestingModule, CustomFieldsModule, TermPipe, KpCgspaceBrowseComponent],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: ResultLevelService, useValue: mockResultLevelService },
         { provide: PhasesService, useValue: mockPhasesService },
-        { provide: TerminologyService, useValue: mockTerminologyService }
+        { provide: TerminologyService, useValue: mockTerminologyService },
+        { provide: ResultsApiService, useValue: { GET_cgspaceSearch: jest.fn(() => of({ response: { items: [], total: 0 } })) } }
       ]
     }).compileComponents();
 
@@ -229,6 +232,24 @@ describe('ReportResultFormComponent', () => {
     });
   });
 
+  describe('reportForDisplay getter', () => {
+    it('joins official code and short name', () => {
+      mockResultLevelService.resultBody.initiative_id = 1;
+      component.availableInitiativesSig.set([
+        { id: 1, official_code: 'SP02', short_name: 'Sustainable Farming', full_name: 'SP02 - Sustainable Farming - Sustainable Farming' }
+      ]);
+      expect(component.reportForDisplay).toBe('SP02 · Sustainable Farming');
+    });
+
+    it('collapses a duplicated full_name when short name is missing', () => {
+      mockResultLevelService.resultBody.initiative_id = 1;
+      component.availableInitiativesSig.set([
+        { id: 1, full_name: 'SP02 - Sustainable Farming - Sustainable Farming' }
+      ]);
+      expect(component.reportForDisplay).toBe('SP02 · Sustainable Farming');
+    });
+  });
+
   describe('resultTypeNamePlaceholder getter', () => {
     it('should return type name with "title..." suffix when type exists', () => {
       mockResultLevelService.currentResultTypeList = [{ id: 1, name: 'Innovation' }];
@@ -282,6 +303,55 @@ describe('ReportResultFormComponent', () => {
       jest.spyOn(component, 'onTitleChange');
       component.clean();
       expect(component.onTitleChange).toHaveBeenCalledWith('Test Name');
+    });
+  });
+
+  describe('CGSpace browse (emerging KP)', () => {
+    const cgspaceItem = {
+      uuid: '12345678-1234-1234-1234-123456789012',
+      handle: '10568/1',
+      handleUrl: 'https://hdl.handle.net/10568/1',
+      itemUrl: 'https://cgspace.cgiar.org/items/12345678-1234-1234-1234-123456789012',
+      title: 'From browse',
+      type: 'Report',
+      year: 2026,
+      authors: [],
+      affiliations: [],
+      countries: [],
+      doi: null,
+      uri: ''
+    };
+
+    it('template offers Browse CGSpace and Manual entry for Knowledge products', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const template = fs.readFileSync(path.join(__dirname, 'report-result-form.component.html'), 'utf8');
+
+      expect(template).toContain('Browse CGSpace');
+      expect(template).toContain('Manual entry');
+      expect(template).toContain('app-kp-cgspace-browse');
+      expect(template).toContain('emerging-kp-entry');
+      expect(template).toContain('emerging-report-for');
+      expect(template).toContain('kp-manual-row');
+      expect(template).toContain('kp-manual-sync');
+    });
+
+    it('fills handler and title from a CGSpace selection', () => {
+      component.onCgspaceItemSelected(cgspaceItem as any);
+
+      expect(mockResultLevelService.resultBody.handler).toBe(cgspaceItem.itemUrl);
+      expect(mockResultLevelService.resultBody.result_name).toBe('Test Title');
+      expect(component.validating).toBe(false);
+    });
+
+    it('clears the selected item so the user can pick another', () => {
+      mockResultLevelService.resultBody.handler = cgspaceItem.itemUrl;
+      mockResultLevelService.resultBody.result_name = 'From browse';
+
+      component.clearSelectedKpItem();
+
+      expect(mockResultLevelService.resultBody.handler).toBe('');
+      expect(mockResultLevelService.resultBody.result_name).toBe('');
     });
   });
 

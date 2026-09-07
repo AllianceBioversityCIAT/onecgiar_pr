@@ -3,6 +3,7 @@
 **Verified:** 2026-09-03 · branch performance-refactor
 
 ## What it is
+
 The "Annual updating" block at the very top of General Information. It asks whether the innovation
 is still active / still receiving investment, and when the answer is "no" it collects the reasons
 (checkbox list, plus a free-text box for the "Other" reason). From the 2026 phase on, Innovation
@@ -10,6 +11,7 @@ Development uses the P2-3292 wording for both questions; every earlier phase and
 render exactly as they always did.
 
 ## Contract
+
 - `@Input() generalInfoBody: GeneralInfoBody` — two-way bound to `is_discontinued` (the stored
   answer) and `discontinued_options[]` (the reasons). The component never persists; the parent saves.
 - `@Input() isPhaseOpen = false` — mirrors the parent's phase gate.
@@ -25,6 +27,7 @@ render exactly as they always did.
 - State owner: `DataControlService.currentResult` is the source of truth for result type and phase year.
 
 ## Where it is used
+
 - `rd-general-information.component.html:1` — rendered only when `generalInfoBody.is_replicated`
   is known, which is what makes the construction-time resolution safe.
 - Declared in `rd-general-information.module.ts:22` (the component itself is standalone).
@@ -52,8 +55,8 @@ result's phase year — so the checklist never mixes the two.
   different id and nothing demands its text. That branch is in the MySQL validation function, not
   here.
 - 🛑 **Steps 3 and 4 of the story are NOT built.** Merge / split has nowhere to store the link
-  (`linked_result` carries no link-type discriminator), so the two reasons record *that* the
-  innovation merged or split but not *with what*. The auto-lock of Step 4 is waiting on the A/B
+  (`linked_result` carries no link-type discriminator), so the two reasons record _that_ the
+  innovation merged or split but not _with what_. The auto-lock of Step 4 is waiting on the A/B
   question published on the ticket on 31 Aug 2026.
 
 ## Step 4 — the auto-lock, and why it has an escape (P2-3292)
@@ -86,6 +89,7 @@ ticked reason (the parent still owns the save).
   silently overwritten. This is a derived getter for that reason (same shape as `showAiReview`).
 
 ## Traps (⚠️ = already broke something)
+
 - ⚠️ **The 2026 label is a question, so it must pass `[useColon]="false"`.** `app-pr-field-header`
   appends `':'` to every label unless told otherwise (`pr-field-header.component.html:8`, and
   `useColon` defaults to `true` at `pr-field-header.component.ts:18`). The block shipped reading
@@ -129,6 +133,7 @@ ticked reason (the parent still owns the save).
   it with a bold `Description:` chip (`pr-field-header.component.ts:26-28`).
 
 ## Pending / Coming soon
+
 Nothing is disabled here. What is still missing from P2-3292, and who owns it:
 | Piece | Owner | Why not here |
 |---|---|---|

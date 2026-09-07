@@ -4,7 +4,14 @@ import {
   BadRequestException,
   NotFoundException,
   Logger,
+  Optional,
 } from '@nestjs/common';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { NotificationService } from '../notification/notification.service';
+import {
+  NotificationLevelEnum,
+  NotificationTypeEnum,
+} from '../notification/enum/notification.enum';
 import {
   ResultBilateralDto,
   RootResultsDto,
@@ -229,6 +236,9 @@ export class BilateralService {
     private readonly _otherOutputHandler: NoopBilateralHandler,
     private readonly _otherOutcomeHandler: NoopBilateralHandler,
     private readonly _adUserService: AdUserService,
+    private readonly _roleByUserRepository: RoleByUserRepository,
+    @Optional()
+    private readonly _notificationService?: NotificationService,
   ) {
     this.resultTypeHandlerMap = new Map<number, BilateralResultTypeHandler>([
       [_knowledgeProductHandler.resultType, _knowledgeProductHandler],
@@ -278,6 +288,13 @@ export class BilateralService {
           bilateralDto.toc_mapping,
           bilateralDto.contributing_programs,
         );
+
+        // Captured inside the transaction, consumed AFTER it commits: the submitted-for-review
+        // notification must never ride inside the transaction (a notification failure cannot be
+        // allowed to roll an ingested result back, and rows written mid-transaction would
+        // reference a result that may still vanish).
+        let createdResultId: number | null = null;
+        let submitterUserId: number | null = null;
 
         await this.dataSource.transaction(
           async (_transactionalEntityManager) => {
@@ -361,6 +378,8 @@ export class BilateralService {
             });
             const newResultHeader = resultHeader;
             const resultId = resultHeader.id;
+            createdResultId = resultId;
+            submitterUserId = submittedUserId ?? userId;
 
             await this.handleLeadCenter(
               resultId,
@@ -492,6 +511,15 @@ export class BilateralService {
             );
           },
         );
+
+        // Ingested results are born in Pending Review, so the arrival announcement to the primary
+        // Science Program fires here — post-commit, mirroring the centre form's submitForReview.
+        if (createdResultId) {
+          await this.emitBilateralSubmittedNotification(
+            createdResultId,
+            submitterUserId ?? 0,
+          );
+        }
       } catch (error) {
         this.logger.error('Error creating bilateral', error);
         this.logger.error(
@@ -506,6 +534,95 @@ export class BilateralService {
       message: 'Results Bilateral created successfully.',
       status: 201,
     };
+  }
+
+  /**
+   * 2026-09-05 — tells the primary Science Program's members a bilateral result reached Pending
+   * Review. Before this, the SP only found out through the review-queue counter; the decision
+   * notifications (P2-3157) flow centre-ward, so nothing ever announced the arrival.
+   *
+   * Called from BOTH entry paths, always AFTER the state is committed: the centre form's
+   * `submitForReview` (BilateralCenterService) and the API ingest (`create`, where results are
+   * born already in Pending Review). Recipients are every user with an active role in the
+   * primary (role-1) initiative — matching who can actually review today (any member; the role
+   * guard is P2-3414/P2-3155 territory). The emitter is filtered out downstream.
+   *
+   * The suffix is composed here (the P2-3214/P2-3188 split): the lead centre's acronym is not
+   * derivable client-side from the notification payload. Never throws — a notification failure
+   * must not fail a submit or an ingest that already succeeded.
+   */
+  async emitBilateralSubmittedNotification(
+    resultId: number,
+    emitterUserId: number,
+  ): Promise<void> {
+    try {
+      if (!this._notificationService) {
+        this.logger.warn(
+          `NotificationService unavailable; skipping submitted-for-review notification for result ${resultId}`,
+        );
+        return;
+      }
+
+      // Self-guarding on status: the ingest can re-process a duplicate (knowledge products return
+      // their existing header), and a result that is no longer Pending Review must not re-announce.
+      const result = await this._resultRepository.findOne({
+        where: { id: resultId, is_active: true },
+        select: ['id', 'status_id'],
+      });
+      if (Number(result?.status_id) !== ResultStatusData.PendingReview.value) {
+        return;
+      }
+
+      const owner =
+        await this._resultByInitiativesRepository.getOwnerInitiativeByResult(
+          resultId,
+        );
+      const ownerId = owner?.id != null ? Number(owner.id) : null;
+      if (!ownerId) {
+        this.logger.log(
+          `Result ${resultId} has no primary Science Program; no submitted-for-review notification sent`,
+        );
+        return;
+      }
+
+      const recipients =
+        await this._roleByUserRepository.getUserIdsByInitiative(ownerId);
+      if (!recipients.length) {
+        this.logger.log(
+          `No Science Program users to notify for result ${resultId} (initiative ${ownerId})`,
+        );
+        return;
+      }
+
+      let centerText = '';
+      try {
+        const centers =
+          await this._resultsCenterRepository.getAllResultsCenterByResultId(
+            resultId,
+          );
+        const lead = (centers ?? []).find(
+          (center: any) => Number(center?.is_leading_result) === 1,
+        );
+        const label = lead?.acronym || lead?.code;
+        if (label) centerText = ` by ${label}`;
+      } catch {
+        // The centre name is decoration; the notification goes out without it.
+      }
+
+      await this._notificationService.emitResultNotification(
+        NotificationLevelEnum.RESULT,
+        NotificationTypeEnum.BILATERAL_RESULT_SUBMITTED,
+        recipients,
+        emitterUserId,
+        resultId,
+        `was submitted for your review${centerText}.`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to emit the submitted-for-review notification for result ${resultId}`,
+        error as Error,
+      );
+    }
   }
 
   async findOne(id: number) {

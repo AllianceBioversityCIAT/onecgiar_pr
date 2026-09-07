@@ -1,4 +1,19 @@
-import { ChangeDetectionStrategy, Component, computed, effect, HostListener, inject, OnDestroy, OnInit, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  HostListener,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+  untracked,
+  viewChild
+} from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronDown } from '@ng-icons/lucide';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {DecimalPipe, NgClass } from '@angular/common';
@@ -25,6 +40,7 @@ import { IndicatorDrawerComponent } from './components/indicator-drawer/indicato
 import { ReportingAowTableComponent, ReportingAowGroup, ReportingIndicator } from './components/reporting-aow-table/reporting-aow-table.component';
 import { buildReportModalNode } from './components/reporting-aow-table/report-modal-context.util';
 import { ReportingProgramBandComponent, BandFilterOption } from './components/reporting-program-band/reporting-program-band.component';
+import { ReportingSummaryStatsComponent } from './components/reporting-summary-stats/reporting-summary-stats.component';
 import { AowHloCreateModalComponent } from '../entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/aow-hlo-create-modal.component';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
@@ -58,6 +74,9 @@ import { ResultToReview } from '../bilateral-results/components/results-review-t
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';
+import { MyWorkCountService } from '../my-work-board/services/my-work-count.service';
+// @akili-spec changes/reporting-favorite-indicators
+import { ReportingFavoritesService, favoriteKeyOf } from './services/reporting-favorites.service';
 import { HlmButton } from '@spartan/button';
 // @akili-spec changes/reporting-entry-hub
 import {
@@ -341,6 +360,10 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
 @Component({
   selector: 'app-dashboard-lab',
   standalone: true,
+  // SAV-T-3 (docs/specs/changes/sp-shell-app-viewport) — locks this host to the outlet slot at
+  // ≥900px on Overview/Reporting (`isProgramShell()`); Emerging/Centers/Dashboard render unchanged
+  // (class absent). See `dashboard-lab.component.scss` / `src/styles/_viewport-page.scss`.
+  host: { '[class.pr-viewport-page]': 'isProgramShell()' },
   imports: [
     RouterLink,
     CustomFieldsModule,
@@ -351,6 +374,7 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
     HighlightSearchPipe,
     ReportingAowTableComponent,
     ReportingProgramBandComponent,
+    ReportingSummaryStatsComponent,
     ProgramOverviewComponent,
     ReportingEntryHubComponent,
     NarrativePanelComponent,
@@ -360,8 +384,10 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
     // no longer the ones users reach (see `openLegacyReportModal` / `openReportModal`).
     AowHloCreateModalComponent,
     PrDialogComponent,
-    ResultCreatorModule
+    ResultCreatorModule,
+    NgIcon
   ],
+  providers: [provideIcons({ lucideChevronDown })],
   templateUrl: './dashboard-lab.component.html',
   styleUrls: ['./dashboard-lab.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -393,6 +419,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   private readonly resultLevelSE = inject(ResultLevelService);
   /** @akili-spec changes/reporting-entry-hub — `createResult` preselects the W3 project + navigates. */
   private readonly bilateralCreationSE = inject(BilateralCreationService);
+  /** @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1) — the My work tab's badge, shared with
+   *  the other three band hosts via `MyWorkCountService`'s (programme, phase) cache. */
+  private readonly myWorkCountSE = inject(MyWorkCountService);
+  /** @akili-spec changes/reporting-favorite-indicators — root-scoped, per-user/per-programme pins. */
+  private readonly favoritesSE = inject(ReportingFavoritesService);
 
   /**
    * Reporting phases with their start / end dates.
@@ -420,6 +451,28 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * contract: full-bleed band, no outer gutters, 32px content pad owned by the tab itself.
    */
   readonly isProgramShell = computed(() => this.showOverview() || this.showPlanned());
+
+  // @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1)
+  /** The phase label the My work badge is scoped to — the current reporting phase's name (same
+   *  phase family the board itself defaults to, design.md §6.6). `null` when it has not resolved
+   *  yet: a host with no phase label handy passes `null` rather than guessing (band hides the
+   *  badge on `null`). */
+  readonly myWorkPhaseLabel = computed<string | null>(() => this.dataControlSE?.reportingCurrentPhase?.phaseName || null);
+  /** Read-only view of the shared badge cache for THIS programme + phase. */
+  readonly myWorkCount = computed<number | null>(() => {
+    const code = this.selected()?.initiativeCode || '';
+    const phase = this.myWorkPhaseLabel();
+    if (!code || !phase) return null;
+    return this.myWorkCountSE.count(code, phase)();
+  });
+  /**
+   * SAV-T-3 — the ≥900px locked-frame work-area scroller (design.md §2.2/SAV-DD-4). `#workArea` is
+   * reused by both the Overview and Reporting branches of the template (mutually exclusive `@if`s),
+   * so this resolves to whichever one is actually rendered; `null` in AOW mode, on portfolio routes
+   * (Emerging/Centers/Dashboard), or below 900px, where the band falls back to its window listener.
+   */
+  readonly workArea = viewChild<ElementRef<HTMLElement>>('workArea');
+  readonly workAreaEl = computed(() => this.workArea()?.nativeElement ?? null);
   readonly showEmerging = computed(() => this.rfrView() === 'emerging');
   readonly showCenters = computed(() => this.rfrView() === 'centers');
   /** AOW code read from the URL on load, opened once its program's AOWs arrive. */
@@ -427,14 +480,18 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   /** AOW filters read from the URL, applied right after the AOW reopens (openAow
    *  clears filters, so they must be restored last). */
   private pendingFilters: { typ: string | null; st: string | null; q: string } | null = null;
-  /** Planned By AOW selection from `?tocAow=`, applied once the AoW list is ready. */
   private pendingPlannedAow: string | null = null;
+  readonly reportingTable = viewChild(ReportingAowTableComponent);
   /**
-   * KPI id from `?kpi=` (MRF-R-5), read alongside `pendingPlannedAow` above. Survives until the
-   * OWNING AoW's ToC has resolved (cold-load/new-tab: the param can arrive well before the AoW
-   * list, let alone that AoW's indicators) — the constructor effect below waits for both.
+   * KPI id from `?kpi=` (MRF-R-5 / RHSF-T-5), read alongside `pendingPlannedAow` or on `aows` view.
    */
-  private pendingKpi: string | null = null;
+  private readonly pendingKpiSignal = signal<string | null>(null);
+  get pendingKpi(): string | null {
+    return this.pendingKpiSignal();
+  }
+  set pendingKpi(v: string | null) {
+    this.pendingKpiSignal.set(v);
+  }
   /** Skip echoing Planned URL params while hydrating from the query string. */
   private restoringPlannedUrl = false;
   /**
@@ -659,8 +716,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   // ---- Manage drawer (one indicator) ----
-  /** The indicator being managed, with the HLO it belongs to for context. */
-  readonly managed = signal<{ indicator: any; groupTitle: string; node: any } | null>(null);
+  /** The indicator being managed, with the HLO it belongs to for context. Emerging uses null indicator. */
+  readonly managed = signal<{ indicator: any | null; groupTitle: string; node: any; emerging?: boolean } | null>(null);
   /** Which tab the drawer should land on — chosen by the card button that opened it. */
   // @akili-spec changes/indicator-reported-results — `results` = the Reported results table (IRR-R-1)
   readonly manageTab = signal<'report' | 'info' | 'results'>('report');
@@ -692,6 +749,39 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const captured = this.drawerReportKpi;
     this.drawerReportKpi = null;
     if (captured) this.publishReportedKpi(captured);
+
+    const returnTab = this.pendingReturnTab || this.route?.snapshot?.queryParamMap?.get('returnTab');
+    this.pendingReturnTab = null;
+    if (returnTab === 'results' || returnTab === 'my-work') {
+      const code = this.selected()?.initiativeCode || this.route?.snapshot?.paramMap?.get('entityId');
+      this.router.navigate(['/result-framework-reporting', 'entity-details', code, returnTab]);
+    } else if (this.route?.snapshot?.queryParamMap?.get('reportEmerging') === 'true') {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { reportEmerging: null, returnTab: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    }
+  }
+
+  /** Hub card + band CTA: open the Reporting aside in emerging mode (not the legacy dialog). */
+  openEmergingReport(): void {
+    if (!this.canReportEmerging()) return;
+    this.primeEntityAowContext();
+    this.manageTab.set('report');
+    this.managed.set({ indicator: null, groupTitle: '', node: null, emerging: true });
+  }
+
+  /** Drop `reportEmerging` from the URL once consumed; keep `returnTab` for cancel restore. */
+  private consumeEmergingQueryParam(): void {
+    if (this.route?.snapshot?.queryParamMap?.get('reportEmerging') !== 'true') return;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { reportEmerging: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 
   // ---- Legacy report surfaces (the ones the users actually get) ----
@@ -746,6 +836,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   // ---- Emerging result (legacy `app-report-result-form` in a pr-dialog) ----
   readonly showReportModal = signal(false);
+  private pendingReturnTab: string | null = null;
 
   /**
    * P2-3139 parity: AVISA (SGP-02) is a deactivated project — view only. The retired
@@ -770,6 +861,36 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   closeReportModal(): void {
     this.showReportModal.set(false);
     this.resultLevelSE.cleanData?.();
+    const returnTab = this.pendingReturnTab || this.route?.snapshot?.queryParamMap?.get('returnTab');
+    this.pendingReturnTab = null;
+    if (returnTab === 'results' || returnTab === 'my-work') {
+      const code = this.selected()?.initiativeCode || this.route?.snapshot?.paramMap?.get('entityId');
+      this.router.navigate(['/result-framework-reporting', 'entity-details', code, returnTab]);
+    } else if (this.route?.snapshot?.queryParamMap?.get('reportEmerging') === 'true') {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { reportEmerging: null, returnTab: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    }
+  }
+
+  onResultCreated(): void {
+    // A created result hands the user to the new result itself (the modal owns that navigation), so
+    // this path must NOT bounce back to the originating tab — only `closeReportModal()` (cancel) does.
+    // Taken over from a concurrent session on 2026-09-05: its spec asserted this, its draft did not.
+    this.pendingReturnTab = null;
+    this.showReportModal.set(false);
+    this.resultLevelSE.cleanData?.();
+    if (this.route?.snapshot?.queryParamMap?.get('reportEmerging') === 'true' || this.route?.snapshot?.queryParamMap?.get('returnTab')) {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { reportEmerging: null, returnTab: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    }
   }
 
   // ---- Guided creation (full-screen flow) ----
@@ -924,6 +1045,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   constructor() {
+    // @akili-spec changes/my-work-board (MWB-T-4, MWB-DD-5) — warms the shared badge cache for
+    // this (programme, phase) whenever either resolves to a new value; `ensure()` no-ops once the
+    // key is warm or already in flight, so this never issues more than one request per pair.
+    effect(() => {
+      const code = this.selected()?.initiativeCode || '';
+      const phase = this.myWorkPhaseLabel();
+      if (code && phase) this.myWorkCountSE.ensure(code, phase);
+    });
+
     // Load the selected program's Areas of Work on selection change.
     effect(() => {
       const sp = this.selected();
@@ -1045,6 +1175,49 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         setTimeout(() => this.scrollToHighlightedKpi(match), 0);
       }
       this.consumeKpiQueryParam();
+    });
+
+    /**
+     * Restore `?kpi=` in `view === 'aows'` mode (RHSF-T-5).
+     * Once reportingGroupsForTable resolves with the target indicator row:
+     * clears `pendingKpi`, consumes the `kpi` query parameter, and scrolls to/flashes the row.
+     */
+    effect(() => {
+      const view = this.plannedBrowseView();
+      const groups = this.reportingGroupsForTable();
+      if (view !== 'aows') return;
+      const kpiId = this.pendingKpi;
+      if (!kpiId) return;
+      if (!groups || groups.length === 0) return;
+
+      let targetRow: ReportingIndicator | null = null;
+      for (const group of groups) {
+        const match = group.indicators?.find(i => String(i?.indicator_id ?? '') === kpiId);
+        if (match) {
+          targetRow = match;
+          break;
+        }
+      }
+      if (!targetRow) return;
+
+      this.pendingKpi = null;
+      this.consumeKpiQueryParam();
+      const table = this.reportingTable?.();
+      if (table && targetRow) {
+        table.highlightRow(table.rowKey(targetRow));
+      }
+      setTimeout(() => {
+        const el = document.getElementById('indicator-row-' + kpiId) || document.querySelector('[data-row-key*="' + kpiId + '"]');
+        if (el) {
+          if (typeof el.scrollIntoView === 'function') {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          el.classList.add('animate-focus-flash');
+          setTimeout(() => {
+            el.classList.remove('animate-focus-flash');
+          }, 1500);
+        }
+      }, 100);
     });
 
     /**
@@ -1207,12 +1380,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       const sp = this.selectedId();
       const scope = this.scope();
       const aow = this.activeAowCode();
-      const typ = this.typologyFilter();
       const st = this.statusFilter();
-      const q = this.indicatorSearch().trim();
       const onPlanned = this.rfrView() === 'planned';
       const tocView = onPlanned ? this.plannedBrowseView() : null;
       const tocAow = onPlanned && tocView === 'byAow' ? this.plannedHloAowCode() : null;
+      const q = onPlanned ? (this.plannedSearch().trim() || null) : (aow && this.indicatorSearch().trim() ? this.indicatorSearch().trim() : null);
+      const typ = onPlanned ? (this.reportingTypologyFilter() !== 'all' ? this.reportingTypologyFilter() : null) : (aow ? (this.typologyFilter() || null) : null);
       // ToC-scope filter (`OSF-DD-12`): read here, in the SAME url-mirror effect as every other
       // piece of URL state — a second, independent `router.navigate` effect would race this one
       // (both read the URL's current queryParams before either write lands, so whichever loses the
@@ -1220,28 +1393,30 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       const overviewScopeParam = this.overviewScope();
       const overviewSectionParam = this.overviewSection();
       if (this.pendingAow || this.pendingFilters || this.restoringPlannedUrl || this.pendingOverviewScope) return;
-      this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: {
-          // The programme is addressed by the path (`…/entity-details/SP01`) — never mirror it
-          // back as `?sp=`, or the URL would carry two competing sources of truth.
-          sp: null,
-          aow: aow ?? null,
-          // filters only make sense inside an open AOW
-          typ: aow ? typ ?? null : null,
-          st: aow ? st ?? null : null,
-          q: aow && q ? q : null,
-          // Planned ToC browse mode (+ selected AoW when browsing By AOW)
-          tocView: tocView,
-          tocAow: tocAow,
-          // `scope` is free on this route — `phase`/`reviewResult`/`reviewResultId`/`kpi`/`tocView`
-          // are taken (`OSF-DD-12`). `section` is the Overview Filter Section (in-memory only
-          // used to drop on Overview ↔ Reporting remount — same sibling-route destroy).
-          scope: overviewScopeParam ?? null,
-          [OVERVIEW_SECTION_QUERY_PARAM]: overviewSectionParam === 'all' ? null : overviewSectionParam
-        },
-        queryParamsHandling: 'merge',
-        replaceUrl: true
+      untracked(() => {
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: {
+            // The programme is addressed by the path (`…/entity-details/SP01`) — never mirror it
+            // back as `?sp=`, or the URL would carry two competing sources of truth.
+            sp: null,
+            aow: aow ?? null,
+            // filters only make sense inside an open AOW or in Planned browse mode
+            typ: typ,
+            st: aow ? st ?? null : null,
+            q: q,
+            // Planned ToC browse mode (+ selected AoW when browsing By AOW)
+            tocView: tocView,
+            tocAow: tocAow,
+            // `scope` is free on this route — `phase`/`reviewResult`/`reviewResultId`/`kpi`/`tocView`
+            // are taken (`OSF-DD-12`). `section` is the Overview Filter Section (in-memory only
+            // used to drop on Overview ↔ Reporting remount — same sibling-route destroy).
+            scope: overviewScopeParam ?? null,
+            [OVERVIEW_SECTION_QUERY_PARAM]: overviewSectionParam === 'all' ? null : overviewSectionParam
+          },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        });
       });
     });
   }
@@ -1781,6 +1956,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   /** `(createResult)` — REH-DD-4: preselect the project, then navigate to that center's creator. */
   onHubCreateResult(event: HubCreateResultEvent): void {
+    this.showWhereToReportModal.set(false);
     if (!event.center.acronym) return;
     // The hub's `HubProject` is shaped identically to `BilateralProject` PLUS `allocation`
     // (design.md §4.1 REH-DD-4) — `id` is a bigint-backed string on the wire, hence the cast.
@@ -2192,8 +2368,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.showWhereToReportModal.set(false);
     if (this.route?.snapshot?.queryParamMap?.get('whereToReport') === 'true') {
       const returnTab = this.route.snapshot.queryParamMap.get('returnTab');
-      if (returnTab === 'results') {
-        this.router.navigate(['/result-framework-reporting', 'entity-details', this.selected()?.initiativeCode, 'results']);
+      // @akili-spec changes/my-work-board (MWB-T-8) — `my-work` joins `results`: both are tabs that
+      // live on their own route, so closing the modal navigates back to that route (which drops
+      // `whereToReport`/`returnTab` with the old URL). Any other value stays on this page and only
+      // cleans the two query params.
+      if (returnTab === 'results' || returnTab === 'my-work') {
+        const code = this.selected()?.initiativeCode || this.route?.snapshot?.paramMap?.get('entityId');
+        this.router.navigate(['/result-framework-reporting', 'entity-details', code, returnTab]);
       } else {
         this.router.navigate([], {
           relativeTo: this.route,
@@ -2203,6 +2384,31 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         });
       }
     }
+  }
+
+  onHubReportEmerging(): void {
+    this.showWhereToReportModal.set(false);
+    this.pendingReturnTab = this.route?.snapshot?.queryParamMap?.get('returnTab') ?? null;
+    if (this.route?.snapshot?.queryParamMap?.get('whereToReport') === 'true') {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { whereToReport: null, returnTab: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    }
+    this.openEmergingReport();
+    this.consumeEmergingQueryParam();
+  }
+
+  onHubReportAow(code: string): void {
+    this.showWhereToReportModal.set(false);
+    this.onOpenAow(code);
+  }
+
+  onHubReportProgramLevel(kind: HubProgramLevelKind): void {
+    this.showWhereToReportModal.set(false);
+    this.onReportProgramLevel(kind);
   }
 
   /**
@@ -2375,6 +2581,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   onOverviewLink(link: OverviewLink): void {
     const code = this.selected()?.initiativeCode;
     if (!code) return;
+    // @akili-spec changes/results-aow-column-filter (`RAC-DD-4`): stamp the active Overview scope
+    // as `section` here — the ONE seam every `OverviewLink` passes through — rather than in each of
+    // the ~6 chart builders that construct a link (`program-overview.component.ts`). A builder that
+    // already knows its own scope (the breakdown rows' `viewBreakdownResults`) sets `section`
+    // explicitly and is never overwritten; no active scope adds no `section` key at all.
+    const scope = this.overviewScope();
+    if (scope && link.section === undefined) {
+      link = { ...link, section: scope };
+    }
     const queryParams: Record<string, string> = {};
     (Object.keys(link) as (keyof OverviewLink)[]).forEach(dimension => {
       const value = link[dimension];
@@ -2635,6 +2850,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       if (qp.get('whereToReport') === 'true') {
         this.openWhereToReportModal();
       }
+      if (qp.get('reportEmerging') === 'true') {
+        this.pendingReturnTab = qp.get('returnTab');
+        this.openEmergingReport();
+        this.consumeEmergingQueryParam();
+      }
       // Browser back/forward on Planned ToC browse mode.
       if (this.rfrView() === 'planned') {
         const view = parsePlannedBrowseView(qp.get('tocView')) ?? 'aows';
@@ -2642,12 +2862,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           this.restoringPlannedUrl = true;
           this.plannedBrowseView.set(view);
           this.plannedTypeFilter.set([]);
-          this.plannedSearch.set('');
           if (view === 'byAow') {
             this.pendingPlannedAow = qp.get('tocAow');
-            // MRF-R-5: read beside `tocAow` — consumed by the constructor effect once the owning
-            // AoW's ToC resolves, not here (the ToC has not even started loading yet at this point).
-            this.pendingKpi = qp.get('kpi');
           } else if (view === 'indicators') {
             this.loadAllTocs();
           }
@@ -2658,13 +2874,24 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           const tocAow = qp.get('tocAow');
           if (tocAow && tocAow !== this.plannedHloAowCode()) {
             this.pendingPlannedAow = tocAow;
-            this.pendingKpi = qp.get('kpi');
             const list = this.aows();
             if (list.some(a => a.code === tocAow)) {
               this.pendingPlannedAow = null;
               this.setPlannedHloAow(tocAow);
             }
           }
+        }
+        const qParam = qp.get('q') ?? '';
+        if (qParam !== this.plannedSearch()) {
+          this.plannedSearch.set(qParam);
+        }
+        const typParam = qp.get('typ');
+        if (typParam && typParam !== this.reportingTypologyFilter()) {
+          this.reportingTypologyFilter.set(typParam);
+        }
+        const kpiParam = qp.get('kpi');
+        if (kpiParam) {
+          this.pendingKpi = kpiParam;
         }
       }
     });
@@ -2711,23 +2938,37 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (qp.get('whereToReport') === 'true') {
       this.openWhereToReportModal();
     }
+    if (qp.get('reportEmerging') === 'true') {
+      this.pendingReturnTab = qp.get('returnTab');
+      this.openEmergingReport();
+      this.consumeEmergingQueryParam();
+    }
     this.restorePlannedBrowseFromQuery(qp);
   }
 
   /** Apply `?tocView=` / `?tocAow=` on the Planned ToC surface. */
   private restorePlannedBrowseFromQuery(qp: { get(name: string): string | null }): void {
     if ((this.route.snapshot.data['rfrView'] as RfrView) !== 'planned') return;
-    const view = parsePlannedBrowseView(qp.get('tocView'));
-    if (!view) return;
+    const hasPlannedParams = qp.get('tocView') != null || qp.get('q') != null || qp.get('typ') != null || qp.get('kpi') != null || qp.get('tocAow') != null;
+    if (!hasPlannedParams) return;
+    const view = parsePlannedBrowseView(qp.get('tocView')) ?? 'aows';
     this.restoringPlannedUrl = true;
     this.plannedBrowseView.set(view);
     this.plannedTypeFilter.set([]);
-    this.plannedSearch.set('');
+    const qParam = qp.get('q') ?? '';
+    if (qParam !== this.plannedSearch()) {
+      this.plannedSearch.set(qParam);
+    }
+    const typParam = qp.get('typ');
+    if (typParam && typParam !== this.reportingTypologyFilter()) {
+      this.reportingTypologyFilter.set(typParam);
+    }
+    const kpiParam = qp.get('kpi');
+    if (kpiParam) {
+      this.pendingKpi = kpiParam;
+    }
     if (view === 'byAow') {
       this.pendingPlannedAow = qp.get('tocAow');
-      // MRF-R-5: `?kpi=` restore — consumed by the constructor effect once the owning AoW's ToC
-      // resolves (cold-load/new-tab: this runs before `aows()` has even loaded).
-      this.pendingKpi = qp.get('kpi');
     } else if (view === 'indicators') {
       queueMicrotask(() => this.loadAllTocs());
     }
@@ -3160,6 +3401,20 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     });
   }
 
+  isKpiOpen(kpiId: unknown): boolean {
+    if (kpiId == null) return false;
+    return this.openKpis().has(kpiId);
+  }
+
+  toggleKpi(kpiId: unknown): void {
+    if (kpiId == null) return;
+    this.openKpis.update(set => {
+      const next = new Set(set);
+      next.has(kpiId) ? next.delete(kpiId) : next.add(kpiId);
+      return next;
+    });
+  }
+
   /**
    * Scroll-into-view + temporary highlight for the `?kpi=` restore (MRF-R-5) — reduced-motion
    * aware, same idiom as `onFocusHub`. The highlight auto-clears; it is a "you are here" cue, not
@@ -3307,7 +3562,53 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * on `reportingGroups()` itself.
    * @akili-spec changes/mass-reporting-flow
    */
-  readonly reportingGroupsForTable = computed<ReportingAowGroup[]>(() => this.applyBurndownFilterAndSort(this.reportingGroups()));
+  readonly reportingGroupsForTable = computed<ReportingAowGroup[]>(() =>
+    this.applyFavoritesFilter(this.applyBurndownFilterAndSort(this.reportingGroups()))
+  );
+
+  readonly reportingMatchingCount = computed<number>(() => {
+    const q = this.plannedSearch().trim().toLowerCase();
+    if (!q) return 0;
+    const groups = this.reportingGroupsForTable();
+    let total = 0;
+    for (const group of groups) {
+      const groupHit = [group.aow?.code, group.aow?.name].some(v => (v ?? '').toLowerCase().includes(q));
+      for (const row of group.indicators ?? []) {
+        if (
+          groupHit ||
+          [
+            row.indicator_description,
+            row.__hlo,
+            row.type_name,
+            row.result_type_name,
+            row.__aowCode,
+            row.__aowName,
+            row.center_acronym
+          ].some(v => (v ?? '').toLowerCase().includes(q))
+        ) {
+          total++;
+        }
+      }
+    }
+    return total;
+  });
+
+  readonly reportingTypologyCounts = computed<Record<string, number>>(() => {
+    const counts: Record<string, number> = {};
+    const groups = this.reportingGroups();
+    let total = 0;
+    for (const group of groups) {
+      for (const row of group.indicators ?? []) {
+        total++;
+        const type = row.result_type_name?.trim();
+        if (type) {
+          counts[type] = (counts[type] ?? 0) + 1;
+        }
+      }
+    }
+    counts['all'] = total;
+    return counts;
+  });
 
   /** Flatten a program-level ToC list (`tocResults`) into reporting indicator rows. */
   private flattenBucketIndicators(
@@ -3436,6 +3737,80 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Session-persisted state of the Favorites switch (RFI-R-2.7), mirroring `onlyPending` /
+   * `readStoredOnlyPending` / `setOnlyPending` above byte-for-byte (same storage shape, same
+   * try/catch discipline). Favorites themselves are programme-scoped and live in
+   * `ReportingFavoritesService`; this scalar only remembers whether the switch is on.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  private static readonly FAVORITES_ONLY_STORAGE_KEY = 'pr.reporting.favoritesOnly';
+
+  readonly favoritesOnly = signal<boolean>(this.readStoredFavoritesOnly());
+
+  private readStoredFavoritesOnly(): boolean {
+    try {
+      return sessionStorage.getItem(DashboardLabComponent.FAVORITES_ONLY_STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  setFavoritesOnly(value: boolean): void {
+    this.favoritesOnly.set(value);
+    try {
+      sessionStorage.setItem(DashboardLabComponent.FAVORITES_ONLY_STORAGE_KEY, value ? '1' : '0');
+    } catch {
+      // Storage may be unavailable (private mode / blocked) — the toggle still works for the session.
+    }
+  }
+
+  /**
+   * The current programme's favorite key `Set` (RFI-R-3.2 — favorites are per-programme), and its
+   * size for the band's `Favorites (N)` label. Reactive: `favoritesSE.setOf` reads the service's
+   * own signal, so a `toggle()` anywhere recomputes both.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly programFavoriteKeys = computed(() => this.favoritesSE.setOf(this.selected()?.initiativeCode ?? ''));
+  readonly programFavoritesCount = computed(() => this.programFavoriteKeys().size);
+
+  /**
+   * `reporting-aow-table`'s `(toggleFavorite)` handler. No-op with no programme selected — there is
+   * no store to toggle into.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  toggleFavorite(row: ReportingIndicator): void {
+    const code = this.selected()?.initiativeCode;
+    if (!code) return;
+    this.favoritesSE.toggle(code, favoriteKeyOf(row));
+  }
+
+  /**
+   * Favorites-only step (RFI-DD-3): runs AFTER `applyBurndownFilterAndSort` so the Remaining-work
+   * order and the `__allIndicators` side-channel it writes are preserved — the ratio (`ratioOf`)
+   * must keep counting the pre-favorites set (RFI-R-2.4), exactly as it already does for
+   * Only-pending. With the switch off this returns the SAME array reference (RFI-R-4.2 — identity,
+   * no silent default change); with it on, each group keeps only its favorite rows and a settled
+   * (non-`loading`) group left with zero rows is dropped — a still-loading card stays visible
+   * (RFI-R-2.3).
+   *
+   * Return type mirrors `applyBurndownFilterAndSort`'s own `(G & {...})[]` — the object spread does
+   * not narrow back to `G` (JD-10).
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  private applyFavoritesFilter<G extends { indicators: any[]; count: number; loading?: boolean; __allIndicators?: any[] }>(
+    groups: G[]
+  ): (G & { __allIndicators?: any[] })[] {
+    if (!this.favoritesOnly()) return groups;
+    const keys = this.programFavoriteKeys();
+    return groups
+      .map(g => {
+        const kept = g.indicators.filter(r => keys.has(favoriteKeyOf(r)));
+        return { ...g, indicators: kept, count: kept.length, __allIndicators: g.__allIndicators ?? g.indicators };
+      })
+      .filter(g => g.indicators.length > 0 || g.loading);
+  }
+
+  /**
    * Global disclosure switch of the Reporting tab (P2-3252). The toolbar's single control flips it
    * and the grouped table takes it as the level default for BOTH AoW cards and their HLO sub-groups.
    *
@@ -3490,6 +3865,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    *
    * ONE computed over all five signals on purpose: a sixth filter added later has exactly one place
    * to be remembered, and forgetting it here is visible immediately rather than as a wrong sentence.
+   *
+   * Favorites-only (RFI-R-2.5) is added as a SIXTH, VIEW-GATED clause: the favorites step only
+   * wraps `reportingGroupsForTable`, never `plannedByAowSections`, and the switch itself is hidden
+   * in By AOW (RFI-R-2.2) — an ungated clause would light "Clear filters" and the "match your
+   * filters" empty states in a view where nothing is actually filtered (JD-1, the P2-3405 defect
+   * class repeating itself).
+   * @akili-spec changes/reporting-favorite-indicators
    */
   readonly reportingFiltersActive = computed(
     () =>
@@ -3499,7 +3881,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       this.reportingTypologyFilter() !== 'all' ||
       this.reportingStatusFilter() !== 'all' ||
       !!this.byAowSelectedCenter() ||
-      !!this.byAowSelectedType()
+      !!this.byAowSelectedType() ||
+      (this.favoritesOnly() && this.plannedBrowseView() === 'aows')
   );
 
   /** `Clear filters` in the Reporting tab's empty state. Resets the same five signals, together. */
@@ -3511,6 +3894,21 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.reportingStatusFilter.set('all');
     this.byAowSelectedCenter.set(null);
     this.byAowSelectedType.set(null);
+    // quick/reporting-clear-filters-only-pending (2026-09-04): the band's badge counts Only-pending
+    // as a filter, so "Clear filters" must switch it off too — through `setOnlyPending` so the
+    // persisted sessionStorage value is cleared as well, not just the signal.
+    this.setOnlyPending(false);
+    // RFI-R-2.5: the switch is also a filter — turn it off, but NEVER delete a pin. `setFavoritesOnly`
+    // only writes the scalar sessionStorage flag; `ReportingFavoritesService` is untouched.
+    // @akili-spec changes/reporting-favorite-indicators
+    this.setFavoritesOnly(false);
+  }
+
+  onReportingSearchChange(query: string): void {
+    this.plannedSearch.set(query);
+    if (query.trim().length >= 2) {
+      this.loadAllTocs();
+    }
   }
 
   /**
@@ -3627,6 +4025,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly highlightedKpiId = signal<string | null>(null);
   /** Composite `kpiKey()`s of By-AOW cards with their description expanded in place (MRF-R-5.1). */
   readonly expandedKpiDescriptions = signal<ReadonlySet<string>>(new Set());
+  /** IDs of open Level 3 KPI rows in By-AOW view (BHA-NFR-2). */
+  readonly openKpis = signal<ReadonlySet<unknown>>(new Set());
   /** Layout for By AOW / Indicators lists on the planned surface. */
   readonly plannedLayout = signal<'cards' | 'table'>('cards');
   /** Selected AOW code for the By AOW browse mode. */
@@ -4116,12 +4516,37 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(ind);
     }
-    return [...map.entries()].map(([title, inds]) => ({
-      title,
-      indicators: inds,
-      split: this.splitGroupTitle(title),
-      achievement: (inds[0] as any)?.__hloNode?.progress ?? null
-    }));
+    return [...map.entries()]
+      .map(([title, inds]) => ({
+        title,
+        indicators: inds,
+        split: this.splitGroupTitle(title),
+        achievement: (inds[0] as any)?.__hloNode?.progress ?? null
+      }))
+      .sort((a, b) => this.comparePlannedHloGroup(a, b));
+  }
+
+  /**
+   * Sort HLO and Outcome groups by their code token numerically (e.g. HL01, HL02, HL03... I-OC 1.1, I-OC 1.2),
+   * placing coded groups first in numerical order, followed by uncoded groups sorted alphabetically by name.
+   */
+  comparePlannedHloGroup(
+    a: { split: { code: string | null; name: string }; title: string },
+    b: { split: { code: string | null; name: string }; title: string }
+  ): number {
+    const codeA = (this.cleanHloCode(a.split.code || a.title) || '').trim();
+    const codeB = (this.cleanHloCode(b.split.code || b.title) || '').trim();
+    if (codeA && codeB) {
+      const cmp = codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+      if (cmp !== 0) return cmp;
+    } else if (codeA) {
+      return -1;
+    } else if (codeB) {
+      return 1;
+    }
+    const nameA = a.split.name || a.title || '';
+    const nameB = b.split.name || b.title || '';
+    return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
   }
 
   isPlannedHloExpanded(title: string): boolean {
@@ -4160,19 +4585,68 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Helper to extract a clean HLO or Outcome code token (e.g. 'HLO4', 'HL013', 'I-OC 3.5', 'OC 3.1') for By-AOW group headers (BTC-R-1, BTC-AC-1.1). */
-  cleanHloCode(raw: string | undefined): string {
+  /** Helper to extract a clean HLO or Outcome code token (e.g. 'HLO4', 'HL013', 'I-OC 3.5', 'OC 3.1', '1.1') for By-AOW group headers (BTC-R-1, BTC-AC-1.1, BHA-R-1, BHA-DD-2). */
+  cleanHloCode(raw: { code?: string; key?: string; name?: string } | string | null | undefined): string {
     if (!raw) return '';
-    const trimmed = raw.trim();
+    if (typeof raw === 'object' && raw.code) return raw.code;
+    const str = typeof raw === 'string' ? raw : (raw.name || raw.key || '');
+    const trimmed = str.trim();
     const iocMatch = /^((?:I-OC|OC)\s*\d+(?:\.\d+)*)\.?/i.exec(trimmed);
     if (iocMatch) {
       return iocMatch[1].toUpperCase().replace(/\s+/, ' ');
     }
+    const prefixSpaceNumMatch = /^((?:HLO|HL|I-OC|OC|IO|EOI)\s+\d+(?:\.\d+)*)/i.exec(trimmed);
+    if (prefixSpaceNumMatch) {
+      return prefixSpaceNumMatch[1].toUpperCase().replace(/\s+/, ' ');
+    }
     const match = /^((?:HLO|HL|IO|EOI)[\w.\-]*)/i.exec(trimmed);
-    if (!match) return '';
-    const rawCode = match[1];
-    const codeMatch = /^(HLO\d+|IO\d+|EOI\d+|HL\d+)/i.exec(rawCode);
-    return codeMatch ? codeMatch[1].toUpperCase() : rawCode.split('.')[0].toUpperCase();
+    if (match) {
+      const rawCode = match[1];
+      const codeMatch = /^(HLO\d+|IO\d+|EOI\d+|HL\d+)/i.exec(rawCode);
+      return codeMatch ? codeMatch[1].toUpperCase() : rawCode.split('.')[0].toUpperCase();
+    }
+    const numMatch = /^(\d+(?:\.\d+)+)/.exec(trimmed);
+    if (numMatch) {
+      return numMatch[1];
+    }
+    return '';
+  }
+
+  /**
+   * Resolve semantic taxonomy badge ({ type: 'HLO' | 'OC' | 'I-OC' | 'IO' | 'EOI', code: string })
+   * based on section context and HLO metadata, preserving specific institutional ToC taxonomy
+   * (KZ-changes--reporting-aow-hierarchy-1, BHA-R-1, BHA-DD-2).
+   */
+  hloTaxonomy(
+    hlo: { code?: string; key?: string; name?: string; title?: string; split?: { code?: string | null; name?: string } } | any,
+    section?: { label?: string; key?: string } | any
+  ): { type: string; code: string } {
+    let rawCode = '';
+    if (typeof hlo === 'string') {
+      rawCode = this.cleanHloCode(hlo) || hlo;
+    } else if (hlo && typeof hlo === 'object') {
+      rawCode = hlo.code || hlo.split?.code || this.cleanHloCode(hlo.title || hlo.name || hlo.key) || '';
+    }
+    rawCode = (rawCode || '').trim();
+
+    const secLabel = (section?.label || section?.key || '').toLowerCase();
+
+    let type = 'HLO';
+    if (secLabel.includes('intermediate') || /^(?:I-OC|IO)/i.test(rawCode)) {
+      type = /^IO(?!\-OC)/i.test(rawCode) ? 'IO' : 'I-OC';
+    } else if (secLabel.includes('outcome') || /^(?:OC|EOI)/i.test(rawCode)) {
+      type = /^EOI/i.test(rawCode) ? 'EOI' : 'OC';
+    } else {
+      type = 'HLO';
+    }
+
+    // Strip redundant prefix from rawCode (e.g. 'HLO 1.1' -> '1.1', 'HLO4' -> '4', 'OC 2.1' -> '2.1', 'OUTPUT 1.1' -> '1.1')
+    let cleanCode = rawCode.replace(/^(?:OUTPUT|OUTCOME|HLO|HL|I-OC|OC|IO|EOI)[\s.\-_:]*/i, '').trim();
+    if (!cleanCode && rawCode) {
+      cleanCode = rawCode;
+    }
+
+    return { type, code: cleanCode };
   }
 
   /** Sum of target values across an HLO's indicators. */
@@ -4266,13 +4740,23 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    */
   splitGroupTitle(title: string | null | undefined): { code: string | null; name: string } {
     const text = String(title ?? '').trim();
-    const prefixed = /^((?:HLO|HL|I-OC|OC|IO|EOI)(?:[-\s]?\d[\w.\-]*)?)\.?\s*[-–:]?\s+(.+)$/i.exec(text);
+    const prefixed = /^((?:HLO|HL|I-OC|OC|IO|EOI)(?:[-\s]?\d[\w.\-]*)?)\.?\s*[\-–—:·•]?\s+(.+)$/i.exec(text);
     if (prefixed) {
-      return { code: prefixed[1].replace(/\.+$/, '').trim(), name: prefixed[2].trim() };
+      return {
+        code: prefixed[1].replace(/\.+$/, '').trim(),
+        name: prefixed[2].replace(/^[·•\-–—:\s]+/, '').trim()
+      };
     }
-    const numeric = /^([\d.]+)\s*[:–-]\s*(.+)$/.exec(text);
+    const numeric = /^([\d.]+)\s*[\-–—:·•]\s*(.+)$/.exec(text);
     if (numeric) {
-      return { code: numeric[1].trim(), name: numeric[2].trim() };
+      return {
+        code: numeric[1].trim(),
+        name: numeric[2].replace(/^[·•\-–—:\s]+/, '').trim()
+      };
+    }
+    const codeOnly = /^((?:HLO|HL|I-OC|OC|IO|EOI)(?:[-\s]?\d[\w.\-]*)?)\.?$/i.exec(text);
+    if (codeOnly) {
+      return { code: codeOnly[1].replace(/\.+$/, '').trim(), name: text };
     }
     return { code: null, name: text };
   }

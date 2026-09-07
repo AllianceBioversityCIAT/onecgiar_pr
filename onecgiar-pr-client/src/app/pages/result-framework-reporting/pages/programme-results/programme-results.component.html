@@ -14,24 +14,36 @@
   </span>
 </ng-template>
 
-<section class="min-h-screen bg-[var(--pr-surface-app)] p-0">
-  <article class="flex w-full min-w-0 flex-col">
+<section
+  class="min-h-screen bg-[var(--pr-surface-app)] p-0 min-[900px]:min-h-0 min-[900px]:flex-1 min-[900px]:flex min-[900px]:flex-col">
+  <article class="flex w-full min-w-0 flex-col min-[900px]:flex-1 min-[900px]:min-h-0">
     <!-- Same band, same tab strip, third tab active. `showToolbar` off: this tab owns its own
          filter row (the band's toolbar belongs to Reporting). `canReport` off: the emerging-result
-         CTA opens a modal this surface does not host. -->
+         CTA opens a modal this surface does not host. `frameLocked`/`scrollHost`: the band drops
+         `sticky` and reads offsets from the work area instead of `window` (`SAV-DD-4`, `SAV-DD-5`). -->
     <app-reporting-program-band
       [programCode]="programmeCode()"
       [programName]="programmeName()"
       [cycleYear]="cycleYear"
       [cyclePhase]="cyclePhase"
       activeTab="results"
+      [myWorkCount]="myWorkCount()"
       [canReport]="true"
+      [canReportEmerging]="canReportEmerging()"
       [showToolbar]="false"
-      (whereToReport)="openWhereToReport()" />
+      [frameLocked]="true"
+      [scrollHost]="workAreaEl()"
+      (whereToReport)="openWhereToReport()"
+      (reportEmerging)="openEmergingReport()" />
 
-    <!-- ═══════════════ RESULTS TOP CONTROLS BAR (consistent with Overview & Reporting) ═══════════════ -->
+    <!-- #workArea: the only scroller ≥ 900px (`SAV-DD-1`, `SAV-DD-7`) — filter row, counters and
+         table all scroll together; below `md` the mixin is inert and this stays a plain block. -->
     <div
-      class="flex flex-wrap items-center justify-between gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[32px] py-[10px]"
+      #workArea
+      class="min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll">
+      <!-- ═══════════════ RESULTS TOP CONTROLS BAR (consistent with Overview & Reporting) ═══════════════ -->
+    <div
+      class="flex flex-wrap items-center justify-between gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]"
       role="search"
       aria-label="Results filters">
       <!-- Left controls: Search + Filter button + Active chips + Clear all -->
@@ -84,7 +96,7 @@
 
           <!-- Popover Modal -->
           <div
-            class="absolute left-0 top-[40px] z-30 w-[420px] max-w-[90vw] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+            class="absolute left-0 md:left-auto md:right-0 lg:left-0 lg:right-auto top-[40px] z-30 w-[420px] max-w-[calc(100vw-32px)] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
             [class.hidden]="!filterPopoverOpen()"
             (click)="$event.stopPropagation()">
             <!-- Popover Header -->
@@ -95,7 +107,8 @@
                   <button
                     type="button"
                     (click)="clearAll()"
-                    class="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:underline">
+                    class="inline-flex cursor-pointer items-center gap-[3px] border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:underline">
+                    <span class="material-icons-round text-[14px]" aria-hidden="true">filter_alt_off</span>
                     Clear all
                   </button>
                 }
@@ -112,7 +125,7 @@
             <!-- Filter Grid inside Popover -->
             <div class="flex flex-col gap-[12px]">
               <!-- Row 1: Phase & Status -->
-              <div class="grid grid-cols-2 gap-[10px]">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
                 <div class="pgr-filter" aria-label="Filter by phase">
                   <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                     Phase
@@ -139,47 +152,52 @@
                 </div>
               </div>
 
-              <!-- Row 2: Category & Funding source -->
-              <div class="grid grid-cols-2 gap-[10px]">
+              <!-- Row 2: Category & Funding source — MWB-T-13: both MULTI-select, the same
+                   `app-pr-filter-multiselect` this popover already mounts for Section, inside the
+                   unchanged `.pgr-filter` wrapper so the popover's shell styling still applies. -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
                 <div class="pgr-filter" aria-label="Filter by category">
                   <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                     Category
                   </label>
-                  <app-pr-filter-select
+                  <app-pr-filter-multiselect
                     [options]="categorySelectOptions()"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Category"
-                    [ngModel]="selectValue(filter.selectedCategory())"
-                    (changed)="onCategoryChange($event)"></app-pr-filter-select>
+                    countLabel="categories"
+                    [ngModel]="filter.selectedCategories()"
+                    (changed)="filter.selectedCategories.set($event)"></app-pr-filter-multiselect>
                 </div>
                 <div class="pgr-filter" aria-label="Filter by funding source">
                   <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                     Funding source
                   </label>
-                  <app-pr-filter-select
+                  <app-pr-filter-multiselect
                     [options]="originSelectOptions()"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Funding source"
-                    [ngModel]="selectValue(filter.selectedOrigin())"
-                    (changed)="onOriginChange($event)"></app-pr-filter-select>
+                    countLabel="sources"
+                    [ngModel]="filter.selectedOrigins()"
+                    (changed)="filter.selectedOrigins.set($event)"></app-pr-filter-multiselect>
                 </div>
               </div>
 
               <!-- Row 3: Center & Created by -->
-              <div class="grid grid-cols-2 gap-[10px]">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
                 <div class="pgr-filter" aria-label="Filter by center">
                   <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                     Contributing Center
                   </label>
-                  <app-pr-filter-select
+                  <app-pr-filter-multiselect
                     [options]="centerSelectOptions()"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Center"
-                    [ngModel]="selectValue(filter.selectedCenter())"
-                    (changed)="onCenterChange($event)"></app-pr-filter-select>
+                    countLabel="centers"
+                    [ngModel]="filter.selectedCenters()"
+                    (changed)="filter.selectedCenters.set($event)"></app-pr-filter-multiselect>
                 </div>
                 <div class="pgr-filter" aria-label="Filter by created by">
                   <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
@@ -190,35 +208,31 @@
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Created by"
+                    [filter]="true"
+                    filterPlaceholder="Search user..."
                     [ngModel]="selectValue(filter.selectedCreatedBy())"
                     (changed)="onCreatedByChange($event)"></app-pr-filter-select>
                 </div>
               </div>
 
-              <!-- Row 4: Section (Coming soon) -->
-              <div>
-                <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
-                  Section
-                </label>
-                <div class="flex items-center gap-[6px]">
-                  <div
-                    class="pgr-filter pgr-filter--section flex-1 cursor-not-allowed opacity-60"
-                    aria-disabled="true"
-                    title="Filtering by section is not available yet: the results feed does not carry the area of work.">
-                    <app-pr-filter-multiselect
-                      [options]="sectionOptions()"
-                      [group]="true"
-                      optionGroupLabel="label"
-                      optionGroupChildren="items"
-                      optionLabel="label"
-                      optionValue="value"
-                      placeholder="Section"
-                      countLabel="sections"
-                      [disabled]="true"
-                      [ngModel]="filter.selectedSections()"
-                      (changed)="filter.selectedSections.set($event)"></app-pr-filter-multiselect>
-                  </div>
-                  <ng-container [ngTemplateOutlet]="comingSoon"></ng-container>
+              <!-- Row 4: Section — RAC-T-3 (P2-3398 closed): live multi-select over the bucket-key
+                   vocabulary, grouped Areas of work / Program-level with counts (RAC-R-3). -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
+                <div class="pgr-filter pgr-filter--section" aria-label="Filter by section">
+                  <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                    Section
+                  </label>
+                  <app-pr-filter-multiselect
+                    [options]="sectionOptions()"
+                    [group]="true"
+                    optionGroupLabel="label"
+                    optionGroupChildren="items"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Section"
+                    countLabel="sections"
+                    [ngModel]="filter.selectedSections()"
+                    (changed)="filter.selectedSections.set($event)"></app-pr-filter-multiselect>
                 </div>
               </div>
             </div>
@@ -235,17 +249,23 @@
               </button>
             </span>
           }
+          <!-- quick/filters-clear-button-everywhere (2026-09-04): same control as Overview and Reporting;
+               hidden while the only chip is the phase, which Clear deliberately keeps. -->
+          @if (hasClearableFilters()) {
           <button
             type="button"
-            class="h-[26px] rounded-[8px] border-0 bg-transparent px-[10px] text-[13px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
+            data-testid="results-clear-filters"
+            class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[4px] rounded-[8px] border-0 bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
             (click)="clearAll()">
-            Clear all
+            <span class="material-icons-round text-[15px]" aria-hidden="true">filter_alt_off</span>
+            Clear filters
           </button>
+          }
         }
       </div>
 
       <!-- Right controls: Columns picker + Export CSV -->
-      <div class="ml-auto flex items-center gap-[10px]">
+      <div class="w-full sm:w-auto sm:ml-auto flex items-center justify-between sm:justify-end gap-[10px] mt-1 sm:mt-0">
         <!-- Columns picker -->
         <div class="relative flex-none">
           <button
@@ -319,7 +339,7 @@
     </div>
 
     <!-- TAB BODY — design :762: flex:1, 32px pad, ONE flex column at 16px. -->
-    <div class="flex flex-1 flex-col gap-[16px] p-[32px]" data-guide="tab-results-view">
+    <div class="flex flex-1 flex-col gap-[16px] p-[16px] sm:p-[24px] lg:p-[32px]" data-guide="tab-results-view">
 
       <!-- ════════════════════════════ 4. COUNTS ROW ═════════════════════════════
            Counts are computed over the rows filtered by EVERYTHING EXCEPT status, so each pill
@@ -330,7 +350,7 @@
 
         @for (count of statusCounts(); track count.statusName) {
           <span class="flex items-center gap-[12px]">
-            <span class="h-[14px] w-px bg-[var(--pr-border)]" aria-hidden="true"></span>
+            <span class="h-[14px] w-px bg-[var(--pr-border)] hidden sm:block" aria-hidden="true"></span>
             <button
               type="button"
               class="flex h-[26px] items-center gap-[7px] rounded-full border-0 px-[9px] text-[13px] transition-colors hover:bg-[var(--pr-color-primary-50)]"
@@ -441,6 +461,43 @@
                     <!-- 5 · CATEGORY — truncated + native tooltip. -->
                     <td class="pgr-td truncate text-[13px] font-normal text-[var(--pr-text)]" [attr.title]="row.category">
                       {{ row.category }}
+                    </td>
+                  }
+                  @case ('aow') {
+                    <!-- @akili-spec changes/results-aow-column-filter (RAC-T-2)
+                         AREA OF WORK (RAC-R-2 / R-2.1) — code / fixed label / `+N` with every
+                         code in `title`; skeleton while the scope request is in flight; `—` +
+                         explanatory `title` on error or a phase mismatch (A-1). -->
+                    <td class="pgr-td">
+                      @switch (row.sectionState) {
+                        @case ('loading') {
+                          <span class="sr-only">Loading area of work</span>
+                          <span
+                            class="inline-block h-[14px] w-[64px] animate-pulse rounded-[4px] bg-[var(--pr-surface-app)]"
+                            aria-hidden="true"></span>
+                        }
+                        @case ('error') {
+                          <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]" [attr.title]="aowTitle(row)">—</span>
+                        }
+                        @case ('version-mismatch') {
+                          <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]" [attr.title]="aowTitle(row)">—</span>
+                        }
+                        @default {
+                          @if ((row.aowCodes ?? []).length > 1) {
+                            <!-- RAC-DD-3 / design.md §6.3 — the code in the mono heading colour,
+                                 `+N` in `--pr-text-muted`. The suffix span's own text starts with
+                                 the space, so the cell's textContent still reads `AOW01 +1`. -->
+                            <span class="truncate" [attr.title]="aowTitle(row)">
+                              <span class="font-mono text-[12px] font-medium text-[var(--pr-text-heading)]">{{ row.section }}</span
+                              ><span class="text-[12px] font-medium text-[var(--pr-text-muted)]"> +{{ (row.aowCodes ?? []).length - 1 }}</span>
+                            </span>
+                          } @else if (row.section && (row.aowCodes ?? []).length === 1) {
+                            <span class="truncate font-mono text-[12px] font-medium text-[var(--pr-text-heading)]">{{ row.section }}</span>
+                          } @else {
+                            <span class="truncate text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ cellText(row, 'aow') }}</span>
+                          }
+                        }
+                      }
                     </td>
                   }
                   @case ('status') {
@@ -614,6 +671,7 @@
         </div>
       }
     </div>
+    </div>
   </article>
 </section>
 
@@ -624,3 +682,8 @@
 @if (changePhaseModalMounted()) {
   <app-change-phase-modal></app-change-phase-modal>
 }
+
+<app-where-to-report-modal
+  [programCode]="programmeCode()"
+  returnTab="results"
+  [(visible)]="showWhereToReportModal" />

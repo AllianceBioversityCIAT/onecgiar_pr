@@ -1174,6 +1174,13 @@ export class BilateralCenterService {
       await manager.save(ResultReviewHistory, reviewHistory);
     });
 
+    // 2026-09-05: tell the primary Science Program's members the result is waiting for them.
+    // Post-commit and non-blocking (the emitter never throws) — the submit already succeeded.
+    await this.bilateralService.emitBilateralSubmittedNotification(
+      parsedResultId,
+      user.id,
+    );
+
     return {
       response: {
         resultId: parsedResultId,

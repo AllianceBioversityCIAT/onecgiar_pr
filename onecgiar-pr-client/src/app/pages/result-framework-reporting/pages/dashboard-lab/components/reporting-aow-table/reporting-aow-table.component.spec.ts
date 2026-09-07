@@ -349,6 +349,26 @@ describe('ReportingAowTableComponent', () => {
       expect(component.hloTargetSum(hloGroup)).toBe('8.5');
       expect(component.hloAchievedSum(hloGroup)).toBe('20.5');
     });
+
+    it('sorts HLO groups numerically by code (e.g. HL01, HL02, HL03, HL04, HL05)', async () => {
+      const g = group([
+        row({ indicator_id: 4, __tier: 'output', __hlo: 'HL04 Foster motivations' }),
+        row({ indicator_id: 5, __tier: 'output', __hlo: 'HL05 Investment cases' }),
+        row({ indicator_id: 2, __tier: 'output', __hlo: 'HL02 Target markets' }),
+        row({ indicator_id: 1, __tier: 'output', __hlo: 'HL01 Steer to impact' }),
+        row({ indicator_id: 3, __tier: 'output', __hlo: 'HL03 Design concepts' })
+      ]);
+      await build([g]);
+      const bands = component.bandsOf(g);
+      expect(bands[0].groups.map(grp => grp.code)).toEqual(['HL01', 'HL02', 'HL03', 'HL04', 'HL05']);
+      expect(bands[0].groups.map(grp => grp.name)).toEqual([
+        'Steer to impact',
+        'Target markets',
+        'Design concepts',
+        'Foster motivations',
+        'Investment cases'
+      ]);
+    });
   });
 
   // ── RAJ-T-2: HLO headers, tabular metrics & quick filters ─────────────────
@@ -367,35 +387,35 @@ describe('ReportingAowTableComponent', () => {
       expect(component.cleanHloCode({ code: 'HLO4', name: 'Foster motivations' })).toBe('HLO4');
     });
 
-    it('HLO header renders standardized pr-hlo-code badge and clean name (RAJ-R-1, RAJ-AC-1.1)', async () => {
+    it('HLO header renders standardized pr-hlo-code badge and clean name (RAJ-R-1, RAJ-AC-1.1, RAH-R-2)', async () => {
       const g = group([row({ __hlo: 'HLO4.AOW1.IO1 Foster motivations' })]);
       await build([g]);
       openAow();
 
       const badge = (fixture.nativeElement as HTMLElement).querySelector('.pr-hlo-code');
       expect(badge).toBeTruthy();
-      expect(badge!.textContent?.trim()).toBe('HLO4');
+      expect(badge!.textContent?.trim().replace(/\s+/g, ' ')).toBe('HLO 4');
 
-      const titleEl = (fixture.nativeElement as HTMLElement).querySelector('span[title="Foster motivations"]');
+      const titleEl = (fixture.nativeElement as HTMLElement).querySelector('[title="Foster motivations"]');
       expect(titleEl).toBeTruthy();
       expect(titleEl!.textContent).toContain('Foster motivations');
     });
 
-    it('Outcome header renders standardized pr-hlo-code badge and clean name for I-OC (BTC-R-1, BTC-AC-1.3)', async () => {
+    it('Outcome header renders standardized pr-hlo-code badge and clean name for I-OC (BTC-R-1, BTC-AC-1.3, RAH-R-2)', async () => {
       const g = group([row({ __tier: 'outcome', __hlo: 'I-OC 3.5. Women, men, youth and vulnerable groups' })]);
       await build([g]);
       openAow();
 
       const badge = (fixture.nativeElement as HTMLElement).querySelector('.pr-hlo-code');
       expect(badge).toBeTruthy();
-      expect(badge!.textContent?.trim()).toBe('I-OC 3.5');
+      expect(badge!.textContent?.trim().replace(/\s+/g, ' ')).toBe('I-OC 3.5');
 
-      const titleEl = (fixture.nativeElement as HTMLElement).querySelector('span[title="Women, men, youth and vulnerable groups"]');
+      const titleEl = (fixture.nativeElement as HTMLElement).querySelector('[title="Women, men, youth and vulnerable groups"]');
       expect(titleEl).toBeTruthy();
       expect(titleEl!.textContent).toContain('Women, men, youth and vulnerable groups');
     });
 
-    it('HLO header displays tabular metrics cluster with clean count badge and green achieved value (RAJ-R-2, RAJ-AC-2.1)', async () => {
+    it('HLO header displays tabular metrics cluster with clean count badge and green achieved value (RAJ-R-2, RAJ-AC-2.1, RAH-R-3)', async () => {
       const g = group([
         row({ indicator_id: 1, target_value_sum: '2', actual_achieved_value_sum: 0, progress_percentage: 0 }),
         row({ indicator_id: 2, target_value_sum: '3', actual_achieved_value_sum: 1, progress_percentage: 33 })
@@ -411,10 +431,10 @@ describe('ReportingAowTableComponent', () => {
       expect(achievedVal).toBeTruthy();
       expect(achievedVal!.textContent?.trim()).toBe('1');
 
-      // Count badge is a clean numeric pill '2', not '2 KPIs'
+      // Count badge displays indicator count pill
       const countPill = hloBtn!.querySelector('.rounded-full.tabular-nums');
       expect(countPill).toBeTruthy();
-      expect(countPill!.textContent?.trim()).toBe('2');
+      expect(countPill!.textContent?.trim()).toBe('2 indicators');
     });
 
     it('eliminates redundant duplicate "N indicators" text when all indicators are counted (RAJ-R-2, RAJ-DD-3)', async () => {
@@ -467,6 +487,327 @@ describe('ReportingAowTableComponent', () => {
       expect(srOnlyEl).toBeTruthy();
       expect(srOnlyEl!.textContent).toContain('QA');
       expect(srOnlyEl!.textContent).toContain('Prel.');
+    });
+  });
+
+  // ── RAH-T-1: Level 2 HLO Sub-Card Enclosure & Semantic Taxonomy Badges ─────
+  describe('RAH-T-1 — Level 2 HLO Sub-Card Enclosure & Semantic Taxonomy Badges', () => {
+    it('cleanHloCode extracts numerical patterns like 1.1 from titles and raw strings (RAH-R-2)', async () => {
+      await build([group([row()])]);
+      expect(component.cleanHloCode('1.1 Agronomic and farm management scientific data')).toBe('1.1');
+      expect(component.cleanHloCode('1.1: Agronomic data')).toBe('1.1');
+      expect(component.cleanHloCode('1.1')).toBe('1.1');
+      expect(component.cleanHloCode('2.4.1 Specific Sub-Output')).toBe('2.4.1');
+      expect(component.cleanHloCode('HLO 1.1 Agronomic data')).toBe('HLO 1.1');
+    });
+
+    it('clusterByTitle recognizes numerical prefixes like 1.1: as code (RAH-R-2)', async () => {
+      const g = group([row({ __hlo: '1.1: Agronomic and farm management scientific data and analytics' })]);
+      await build([g]);
+      openAow();
+
+      const bands = component.bandsOf(g);
+      const hlo = bands[0].groups[0];
+      expect(hlo.code).toBe('1.1');
+      expect(hlo.name).toBe('Agronomic and farm management scientific data and analytics');
+    });
+
+    it('hloTaxonomy helper resolves correct type and strips redundant code prefixes (RAH-R-2, RAH-DD-2)', async () => {
+      await build([group([row()])]);
+      // HLO from HLO band
+      expect(component.hloTaxonomy({ code: 'HLO 1.1' }, { key: 'AOW01::band-hlo' })).toEqual({
+        type: 'HLO',
+        code: '1.1'
+      });
+      // HLO stripping redundant prefix
+      expect(component.hloTaxonomy({ code: 'HLO4' }, { key: 'AOW01::band-hlo' })).toEqual({
+        type: 'HLO',
+        code: '4'
+      });
+      // HLO with numerical code
+      expect(component.hloTaxonomy({ code: '1.1' }, { key: 'AOW01::band-hlo' })).toEqual({
+        type: 'HLO',
+        code: '1.1'
+      });
+      // OC from Outcome band with OC code
+      expect(component.hloTaxonomy({ code: 'OC 3.1' }, { key: 'AOW01::band-out' })).toEqual({
+        type: 'OC',
+        code: '3.1'
+      });
+      // I-OC from Intermediate band with I-OC code
+      expect(component.hloTaxonomy({ code: 'I-OC 3.5' }, { key: 'band-io' })).toEqual({
+        type: 'I-OC',
+        code: '3.5'
+      });
+      // Uncoded HLO
+      expect(component.hloTaxonomy({ code: undefined, name: 'General Work Package' }, { key: 'AOW01::band-hlo' })).toEqual({
+        type: 'HLO',
+        code: ''
+      });
+    });
+
+    it('renders HLO in an autonomous rounded-xl sub-card container with gradient header (RAH-R-1, RAH-DD-1)', async () => {
+      const g = group([row({ __hlo: '1.1: Agronomic and farm management scientific data and analytics' })]);
+      await build([g]);
+      openAow();
+
+      const subCard = (fixture.nativeElement as HTMLElement).querySelector('.rounded-xl.border.border-slate-200\\/90');
+      expect(subCard).toBeTruthy();
+      expect(subCard!.classList.contains('shadow-2xs')).toBe(true);
+
+      const headerBtn = subCard!.querySelector('button[id^="hlo-group-"]');
+      expect(headerBtn).toBeTruthy();
+      expect(headerBtn!.className).toContain('bg-gradient-to-r');
+
+      // Rotating chevron
+      const chevron = headerBtn!.querySelector('ng-icon[name="lucideChevronDown"]');
+      expect(chevron).toBeTruthy();
+      expect(chevron!.classList.contains('rotate-180')).toBe(true); // open by default
+
+      // Semantic taxonomy badge
+      const badge = headerBtn!.querySelector('.pr-hlo-code');
+      expect(badge).toBeTruthy();
+      expect(badge!.textContent?.trim().replace(/\s+/g, ' ')).toBe('HLO 1.1');
+    });
+
+    it('renders consolidated micro-KPI metric blocks with TARGET, ACHIEVED, and count pill (RAH-R-3)', async () => {
+      const g = group([
+        row({ indicator_id: 1, target_value_sum: '15', actual_achieved_value_sum: 5 }),
+        row({ indicator_id: 2, target_value_sum: '10', actual_achieved_value_sum: 5 })
+      ]);
+      await build([g]);
+      openAow();
+
+      const hloBtn = (fixture.nativeElement as HTMLElement).querySelector('button[id^="hlo-group-"]');
+      expect(hloBtn).toBeTruthy();
+
+      expect(hloBtn!.textContent).toContain('TARGET');
+      expect(hloBtn!.textContent).toContain('ACHIEVED');
+      expect(hloBtn!.textContent).toContain('25'); // Target sum 15 + 10
+      expect(hloBtn!.textContent).toContain('10'); // Achieved sum 5 + 5
+      expect(hloBtn!.textContent).toContain('2 indicators');
+    });
+
+    it('renders singular "1 indicator" on count pill when single row present (RAH-R-3)', async () => {
+      const g = group([row({ indicator_id: 1, target_value_sum: '5', actual_achieved_value_sum: 2 })]);
+      await build([g]);
+      openAow();
+
+      const countPill = (fixture.nativeElement as HTMLElement).querySelector('button[id^="hlo-group-"] .rounded-full.tabular-nums');
+      expect(countPill).toBeTruthy();
+      expect(countPill!.textContent?.trim()).toBe('1 indicator');
+    });
+  });
+
+  // ── RAH-T-2 / RAH-T-3: Level 3 Indented Indicator Scaffolding & Event Isolation ──
+  describe('RAH-T-2 / RAH-T-3 — Level 3 Indented Indicator Scaffolding & Event Isolation', () => {
+    it('renders the indented container inside an expanded HLO with tree-line guide (RAH-R-4, RAH-DD-3)', async () => {
+      const g = group([row({ indicator_id: 1, __hlo: '1.1: Agronomic and farm management' })]);
+      await build([g]);
+      openAow();
+
+      const el = fixture.nativeElement as HTMLElement;
+      const indentedContainer = el.querySelector('.border-l-4.border-indigo-500\\/40') as HTMLElement;
+      expect(indentedContainer).toBeTruthy();
+      expect(indentedContainer.classList.contains('pl-4')).toBe(true);
+      expect(indentedContainer.classList.contains('sm:pl-6')).toBe(true);
+      expect(indentedContainer.classList.contains('bg-indigo-50/10')).toBe(true);
+    });
+
+    it('renders contextual sub-header with INDICATOR TITLE & TAXONOMY and metric labels (RAH-R-5)', async () => {
+      const g = group([row({ indicator_id: 1, __hlo: '1.1: Agronomic and farm management' })]);
+      await build([g]);
+      openAow();
+
+      const el = fixture.nativeElement as HTMLElement;
+      const subHeader = el.querySelector('.border-l-4.border-indigo-500\\/40 .pr-hlo-head') as HTMLElement;
+      expect(subHeader).toBeTruthy();
+      expect(subHeader.classList.contains('h-7')).toBe(true);
+      expect(subHeader.classList.contains('text-[10px]')).toBe(true);
+      expect(subHeader.classList.contains('uppercase')).toBe(true);
+
+      const headerText = subHeader.textContent ?? '';
+      expect(headerText).toContain('INDICATOR TITLE & TAXONOMY');
+      expect(headerText).toContain('Target');
+      expect(headerText).toContain('Achieved');
+      expect(headerText).toContain('Status');
+      expect(headerText).toContain('Progress');
+      expect(headerText).toContain('Action');
+    });
+
+    it('clicking an indicator row inside nested container emits openRow with exact row model (RAH-R-6, Scenario 6.1)', async () => {
+      const testRow = row({
+        indicator_id: 42,
+        indicator_description: 'Test Indicator Title',
+        target_value_sum: '12',
+        actual_achieved_value_sum: 4,
+        __hlo: '1.1: Agronomic analytics',
+        __aowCode: 'AOW01'
+      });
+      const g = group([testRow]);
+      await build([g]);
+      openAow();
+
+      const openRowSpy = jest.fn();
+      component.openRow.subscribe(openRowSpy);
+
+      const el = fixture.nativeElement as HTMLElement;
+      const rowEl = el.querySelector('.border-l-4.border-indigo-500\\/40 .pr-reporting-row') as HTMLElement;
+      expect(rowEl).toBeTruthy();
+      rowEl.click();
+
+      expect(openRowSpy).toHaveBeenCalledTimes(1);
+      expect(openRowSpy).toHaveBeenCalledWith(testRow);
+    });
+
+    it('clicking Report button emits reportRow and stops propagation to prevent parent row click (RAH-R-6, KZ-changes--reporting-aow-jira-hierarchy-2)', async () => {
+      const testRow = row({
+        indicator_id: 42,
+        progress_percentage: 0,
+        target_value_sum: '10',
+        actual_achieved_value_sum: 0,
+        __hlo: '1.1: Agronomic analytics',
+        __aowCode: 'AOW01'
+      });
+      const g = group([testRow]);
+      await build([g], { canReport: true });
+      openAow();
+
+      const openRowSpy = jest.fn();
+      const reportRowSpy = jest.fn();
+      component.openRow.subscribe(openRowSpy);
+      component.reportRow.subscribe(reportRowSpy);
+
+      const el = fixture.nativeElement as HTMLElement;
+      const rowEl = el.querySelector('.border-l-4.border-indigo-500\\/40 .pr-reporting-row') as HTMLElement;
+      expect(rowEl).toBeTruthy();
+
+      const reportBtn = rowEl.querySelector('.pr-row-action') as HTMLButtonElement;
+      expect(reportBtn).toBeTruthy();
+      reportBtn.click();
+
+      expect(reportRowSpy).toHaveBeenCalledTimes(1);
+      expect(reportRowSpy).toHaveBeenCalledWith(testRow);
+      expect(openRowSpy).not.toHaveBeenCalled();
+    });
+
+    it('clicking Copy link button emits copyLink and does NOT trigger row click (RAH-R-6, Scenario 6.1)', async () => {
+      const testRow = row({
+        indicator_id: 42,
+        __hlo: '1.1: Agronomic analytics',
+        __aowCode: 'AOW01'
+      });
+      const g = group([testRow]);
+      await build([g]);
+      openAow();
+
+      const openRowSpy = jest.fn();
+      const copyLinkSpy = jest.fn();
+      component.openRow.subscribe(openRowSpy);
+      component.copyLink.subscribe(copyLinkSpy);
+
+      const el = fixture.nativeElement as HTMLElement;
+      const copyLinkBtn = el.querySelector(
+        '.border-l-4.border-indigo-500\\/40 button[aria-label="Copy link to this KPI"]'
+      ) as HTMLButtonElement;
+      expect(copyLinkBtn).toBeTruthy();
+      copyLinkBtn.click();
+
+      expect(copyLinkSpy).toHaveBeenCalledTimes(1);
+      expect(copyLinkSpy).toHaveBeenCalledWith(testRow);
+      expect(openRowSpy).not.toHaveBeenCalled();
+    });
+
+    it('clicking Target and Achieved buttons emits openTarget and openAchieved without row click (RAH-R-6, KZ-changes--reporting-aow-jira-hierarchy-2)', async () => {
+      const testRow = row({
+        indicator_id: 42,
+        target_value_sum: '15',
+        actual_achieved_value_sum: 5,
+        __hlo: '1.1: Agronomic analytics',
+        __aowCode: 'AOW01'
+      });
+      const g = group([testRow]);
+      await build([g]);
+      openAow();
+
+      const openRowSpy = jest.fn();
+      const openTargetSpy = jest.fn();
+      const openAchievedSpy = jest.fn();
+      component.openRow.subscribe(openRowSpy);
+      component.openTarget.subscribe(openTargetSpy);
+      component.openAchieved.subscribe(openAchievedSpy);
+
+      const el = fixture.nativeElement as HTMLElement;
+      const rowEl = el.querySelector('.border-l-4.border-indigo-500\\/40 .pr-reporting-row') as HTMLElement;
+      expect(rowEl).toBeTruthy();
+
+      const targetBtn = rowEl.querySelector('.group\\/target') as HTMLElement;
+      expect(targetBtn).toBeTruthy();
+      targetBtn.click();
+      expect(openTargetSpy).toHaveBeenCalledWith(testRow);
+      expect(openRowSpy).not.toHaveBeenCalled();
+
+      const achievedBtn = rowEl.querySelector('.group\\/achieved') as HTMLElement;
+      expect(achievedBtn).toBeTruthy();
+      achievedBtn.click();
+      expect(openAchievedSpy).toHaveBeenCalledWith(testRow);
+      expect(openRowSpy).not.toHaveBeenCalled();
+    });
+
+    it('manages keyboard navigation and reflects aria-expanded attributes accurately (RAH-R-6, Scenario 6.2)', async () => {
+      const testRow = row({
+        indicator_id: 42,
+        __hlo: '1.1: Agronomic analytics',
+        __aowCode: 'AOW01'
+      });
+      const g = group([testRow]);
+      await build([g]);
+
+      const el = fixture.nativeElement as HTMLElement;
+
+      // AoW Accordion Header: initial state collapsed
+      const aowBtn = el.querySelector('section > button[aria-expanded]') as HTMLButtonElement;
+      expect(aowBtn.getAttribute('aria-expanded')).toBe('false');
+
+      // Click AoW header to expand
+      aowBtn.click();
+      fixture.detectChanges();
+      expect(aowBtn.getAttribute('aria-expanded')).toBe('true');
+
+      // HLO Sub-Card Header inside opened AoW: starts collapsed when expandAll is false
+      const hloBtn = el.querySelector('button[id^="hlo-group-"]') as HTMLButtonElement;
+      expect(hloBtn).toBeTruthy();
+      expect(hloBtn.getAttribute('aria-expanded')).toBe('false');
+
+      // Toggle HLO accordion open
+      hloBtn.click();
+      fixture.detectChanges();
+      expect(hloBtn.getAttribute('aria-expanded')).toBe('true');
+
+      // Toggle HLO accordion closed
+      hloBtn.click();
+      fixture.detectChanges();
+      expect(hloBtn.getAttribute('aria-expanded')).toBe('false');
+
+      // Re-open HLO accordion for row navigation test
+      hloBtn.click();
+      fixture.detectChanges();
+      expect(hloBtn.getAttribute('aria-expanded')).toBe('true');
+
+      // Keyboard navigation on indicator row: Enter and Space trigger openRow
+      const openRowSpy = jest.fn();
+      component.openRow.subscribe(openRowSpy);
+
+      const rowEl = el.querySelector('.border-l-4.border-indigo-500\\/40 .pr-reporting-row') as HTMLElement;
+      expect(rowEl).toBeTruthy();
+      expect(rowEl.getAttribute('role')).toBe('button');
+      expect(rowEl.getAttribute('tabindex')).toBe('0');
+
+      rowEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      expect(openRowSpy).toHaveBeenCalledWith(testRow);
+
+      rowEl.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));
+      expect(openRowSpy).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -771,6 +1112,49 @@ describe('ReportingAowTableComponent', () => {
       ]);
       await build([g], { search: 'varieties' });
       expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([1]);
+    });
+
+    // quick/reporting-search-all-levels (2026-09-04): "search should find every level" — AoW code
+    // and name, the HLO / outcome node, the Center — not only the indicator's own fields.
+    it('keeps EVERY row of a card whose AoW code or name matches (a card-level hit is not a row filter)', async () => {
+      const g = group([row({ indicator_id: 1, indicator_description: 'cassava' }), row({ indicator_id: 2, indicator_description: 'barley' })], {
+        aow: { id: 1, code: 'AOW01', name: 'Market Intelligence', progress: 0 }
+      });
+      await build([g], { search: 'aow01', filtersActive: true });
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([1, 2]);
+      expect(component.visibleGroups().length).toBe(1);
+
+      fixture.componentRef.setInput('search', 'market intel');
+      fixture.detectChanges();
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([1, 2]);
+
+      fixture.componentRef.setInput('search', 'zzz-no-match');
+      fixture.detectChanges();
+      expect(component.visibleRows(g)).toEqual([]);
+    });
+
+    it('matches the AoW a row sits in and its Center on the row itself (flat and By-AOW rows)', async () => {
+      const g = group([
+        row({ indicator_id: 1, indicator_description: 'cassava', __aowCode: 'AOW02', __aowName: 'Accelerated Breeding', center_acronym: 'CIAT' }),
+        row({ indicator_id: 2, indicator_description: 'barley', __aowCode: 'AOW03', __aowName: 'Seed Systems', center_acronym: 'ICARDA' })
+      ]);
+      await build([g], { search: 'accelerated' });
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([1]);
+      fixture.componentRef.setInput('search', 'icarda');
+      fixture.detectChanges();
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([2]);
+      fixture.componentRef.setInput('search', 'aow03');
+      fixture.detectChanges();
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([2]);
+    });
+
+    it('matches the outcome / HLO node title the row hangs from', async () => {
+      const g = group([
+        row({ indicator_id: 1, indicator_description: 'cassava', __hlo: 'Foster motivations' }),
+        row({ indicator_id: 2, indicator_description: 'barley', __hlo: 'Equitable seed systems adopted' })
+      ]);
+      await build([g], { search: 'seed systems adopted' });
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([2]);
     });
 
     it('filters by status', async () => {
@@ -1850,12 +2234,151 @@ describe('ReportingAowTableComponent', () => {
       expect(title?.className).toContain('text-[12.5px]');
       expect(title?.className).toContain('font-medium');
 
-      const target = el.querySelector('.pr-figure');
+      const target = el.querySelector('.pr-reporting-row .pr-figure-sm');
       expect(target?.className).toContain('text-[13px]');
 
       const reportBtn = el.querySelector('.pr-row-action');
       expect(reportBtn?.className).toContain('h-[26px]');
       expect(reportBtn?.className).toContain('text-[11px]');
+    });
+  });
+
+  describe('RHSF-T-2: Dynamic Hierarchical Auto-Expansion & Scoped Overrides', () => {
+    it('auto-expands AoW cards and HLO groups with >= 2 character search query', async () => {
+      const g1 = group([
+        row({ indicator_id: 1, indicator_description: 'Climate change mitigation in rice systems', __hlo: 'HLO 1' })
+      ], { aow: { id: 1, code: 'AOW01', name: 'Climate Solutions' } });
+      const g2 = group([
+        row({ indicator_id: 2, indicator_description: 'Water irrigation management', __hlo: 'HLO 2', __aowCode: 'AOW02' })
+      ], { aow: { id: 2, code: 'AOW02', name: 'Water Resources' } });
+
+      await build([g1, g2], { search: 'climate' });
+
+      // AoW default open logic
+      expect(component.isDefaultOpenAow('AOW01')).toBe(true);
+      expect(component.isDefaultOpenAow('aow::AOW01')).toBe(true);
+      expect(component.isDefaultOpenAow('AOW02')).toBe(false);
+
+      // HLO default open logic
+      const hloGroup1 = component.bandsOf(g1)[0].groups[0];
+      expect(component.isDefaultOpenHlo(hloGroup1)).toBe(true);
+      expect(component.isDefaultOpenHlo(hloGroup1.key)).toBe(true);
+
+      // Non-matching or empty HLO
+      expect(component.isDefaultOpenHlo({ key: 'none', name: 'none', rows: [] })).toBe(false);
+      expect(component.isDefaultOpenHlo('nonexistent-key')).toBe(false);
+
+      // Sub-2 character query does not auto-expand
+      fixture.componentRef.setInput('search', 'c');
+      fixture.detectChanges();
+      expect(component.isDefaultOpenAow('AOW01')).toBe(false);
+      expect(component.isDefaultOpenHlo(hloGroup1)).toBe(false);
+    });
+
+    it('excludes AoW cards with 0 matching rows from visibleGroups and keeps cards with matches', async () => {
+      const g1 = group([
+        row({ indicator_id: 1, indicator_description: 'Climate change adaptation', __hlo: 'HLO 1' })
+      ], { aow: { id: 1, code: 'AOW01', name: 'Climate Solutions' } });
+      const g2 = group([
+        row({ indicator_id: 2, indicator_description: 'Financial accounting standards', __hlo: 'HLO 2', __aowCode: 'AOW02' })
+      ], { aow: { id: 2, code: 'AOW02', name: 'Finance' } });
+      const gLoading = group([], {
+        aow: { id: 3, code: 'AOW03', name: 'Loading Group' },
+        loading: true
+      });
+
+      await build([g1, g2, gLoading], { search: 'climate' });
+
+      const visible = component.visibleGroups();
+      expect(visible.map(g => g.aow.code)).toContain('AOW01');
+      expect(visible.map(g => g.aow.code)).not.toContain('AOW02');
+      // Loading group is retained so spinner shows
+      expect(visible.map(g => g.aow.code)).toContain('AOW03');
+    });
+
+    it('flushes search-scoped overrides linkedSignal and restores baseline when search is cleared', async () => {
+      const g1 = group([
+        row({ indicator_id: 1, indicator_description: 'Climate change adaptation', __hlo: 'HLO 1' })
+      ], { aow: { id: 1, code: 'AOW01', name: 'Climate Solutions' } });
+      const g2 = group([
+        row({ indicator_id: 2, indicator_description: 'Financial management', __hlo: 'HLO 2', __aowCode: 'AOW02' })
+      ], { aow: { id: 2, code: 'AOW02', name: 'Finance' } });
+
+      await build([g1, g2], { search: 'climate' });
+
+      // User manually collapses AOW01 during search
+      component.toggle('aow::AOW01', component.isDefaultOpenAow('AOW01'));
+      expect(component.isOpen('aow::AOW01', true)).toBe(false);
+
+      // Clearing search restores baseline and flushes overrides
+      fixture.componentRef.setInput('search', '');
+      fixture.detectChanges();
+
+      // With search cleared, default open for AOW01 is false (collapsed baseline)
+      expect(component.isDefaultOpenAow('AOW01')).toBe(false);
+      // The search-time override was flushed; isOpen evaluates defaultOpen (false)
+      expect(component.isOpen('aow::AOW01', component.isDefaultOpenAow('AOW01'))).toBe(false);
+
+      // All groups are visible again
+      expect(component.visibleGroups().length).toBe(2);
+    });
+
+    it('renders keyword highlighting with mark element in grouped view', async () => {
+      const g1 = group([
+        row({
+          indicator_id: 10,
+          indicator_description: 'Promote climate-smart rice cultivation',
+          __hlo: 'Climate Innovations',
+          center_acronym: 'CIAT'
+        })
+      ], { aow: { id: 1, code: 'AOW01', name: 'Climate Solutions' } });
+
+      await build([g1], { search: 'climate' });
+
+      const el = fixture.nativeElement as HTMLElement;
+      const marks = el.querySelectorAll('mark.bg-violet-100.text-violet-900');
+      expect(marks.length).toBeGreaterThan(0);
+
+      // Indicator description contains highlight
+      const descEl = el.querySelector('.pr-reporting-row p');
+      expect(descEl?.innerHTML).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">climate</mark>');
+
+      // AoW name in header contains highlight
+      const aowNameEl = el.querySelector('button span.truncate');
+      expect(aowNameEl?.innerHTML).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">Climate</mark>');
+
+      // HLO title contains highlight
+      const hloTitleEl = el.querySelector('h3');
+      expect(hloTitleEl?.innerHTML).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">Climate</mark>');
+
+      // Chip highlight when search matches chip
+      fixture.componentRef.setInput('search', 'AOW01');
+      fixture.detectChanges();
+      const chipEl = el.querySelector('.pr-code');
+      expect(chipEl?.innerHTML).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">AOW01</mark>');
+    });
+
+    it('renders keyword highlighting with mark element in flat view', async () => {
+      const g1 = group([
+        row({
+          indicator_id: 20,
+          indicator_description: 'Global climate impact study',
+          result_type_name: 'Knowledge product',
+          center_acronym: 'CIAT'
+        })
+      ], { aow: { id: 1, code: 'AOW01', name: 'Climate Solutions' } });
+
+      await build([g1], { search: 'climate', viewMode: 'flat' });
+
+      const el = fixture.nativeElement as HTMLElement;
+      const descEl = el.querySelector('.pr-flat-row p');
+      expect(descEl?.innerHTML).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">climate</mark>');
+
+      // Type label chip highlight in flat view
+      fixture.componentRef.setInput('search', 'knowledge');
+      fixture.detectChanges();
+      const typeChipEl = el.querySelector('.pr-flat-row span.truncate');
+      expect(typeChipEl?.innerHTML).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">Knowledge</mark>');
     });
   });
 });

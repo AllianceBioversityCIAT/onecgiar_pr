@@ -13,10 +13,14 @@ también abre el aside, directo en `results` (`dashboard-lab.component.ts`
 
 ## Contrato
 ```
-inputs   indicator (required) · groupTitle · programCode · tocNode · initiativeId
-         aowCode · accent · initialTab ('report' | 'info' | 'results') · canReport
+inputs   indicator (optional when emerging) · groupTitle · programCode · tocNode · initiativeId
+         aowCode · accent · initialTab ('report' | 'info' | 'results') · canReport · emerging
 outputs  closed · widthChange
 ```
+- `emerging` (default `false`): cuando es `true`, `indicator`/`tocNode` pueden ser null; **no** llama
+  `GET_ExistingResultsContributors`; oculta las pestañas `info`/`results`; el título es **Report
+  emerging result**; reenvía `[emergingMode]="true"` y `[emergingCategory]="null"` a
+  `lab-report-form`. Planned Report (`emerging` false + indicador) sigue igual que antes.
 - `canReport` se reenvía a `lab-report-form`; **por defecto `false`**, para que un host que se
   olvide de pasarlo no exponga la acción por accidente.
 - Ancho arrastrable desde el borde izquierdo; a partir de 720 px el formulario pasa a dos columnas.

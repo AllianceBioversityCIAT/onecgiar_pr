@@ -1,4 +1,16 @@
-import { ChangeDetectionStrategy, Component, HostListener, OnDestroy, computed, effect, inject, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  HostListener,
+  OnDestroy,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+  viewChild
+} from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { FormsModule } from '@angular/forms';
@@ -25,6 +37,7 @@ import {
   BandFilterGroup,
   ReportingProgramBandComponent
 } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
+import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import {
   BilateralResultsService,
@@ -33,14 +46,25 @@ import {
 } from '../bilateral-results/bilateral-results.service';
 import { PrToastService } from '../../../../shared/components/pr-toast';
 import { ProgrammeResultRow, ProgrammeResultsService } from './services/programme-results.service';
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1)
+import { MyWorkCountService } from '../my-work-board/services/my-work-count.service';
 import {
   ProgrammeResultsFilterChip,
   ProgrammeResultsFilterService,
   buildCategoryFilterOptions,
   buildStatusCounts,
-  normalize
+  normalize,
+  // @akili-spec changes/my-work-board (MWB-T-13) — the shared comma-list URL codec.
+  joinListParam,
+  parseListParam,
+  sameListParam,
+  PROGRAMME_RESULTS_OTHER_CATEGORY,
+  PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL
 } from './services/programme-results-filter.service';
+import { PROGRAMME_RESULTS_FIXED_SECTION_LABELS, sectionLabel } from './services/programme-results-section-labels';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from './services/programme-results-query-params';
+import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
+import { isAvisaInitiative } from '../../../../shared/utils/avisa-initiative.util';
 
 /**
  * Router commands + query params for one result. Same shape as
@@ -83,6 +107,11 @@ export const PGR_COLUMNS: readonly PgrColumnDef[] = [
   { key: 'code', label: 'Code', sortField: 'code', track: '92px', minPx: 92, optional: false },
   { key: 'title', label: 'Result', sortField: 'title', track: 'minmax(240px,2fr)', minPx: 240, optional: false },
   { key: 'category', label: 'Category', sortField: 'category', track: 'minmax(140px,1fr)', minPx: 140, optional: false },
+  // @akili-spec changes/results-aow-column-filter (RAC-T-2)
+  // Area of Work, default on, after Category (design.md §6.2). Sorts by the
+  // precomputed rank string (`sectionSort`), never the raw key, so `INTERMEDIATE` /
+  // `EOI_2030` / `UNTAGGED` land after the alphabetically-sorted AoW codes (RAC-R-2.2).
+  { key: 'aow', label: 'Area of Work', sortField: 'sectionSort', track: '132px', minPx: 132, optional: false },
   { key: 'status', label: 'Status', sortField: 'statusName', track: '120px', minPx: 120, optional: false },
   { key: 'createdBy', label: 'Created by', sortField: 'createdBy', track: 'minmax(140px,1fr)', minPx: 140, optional: true },
   { key: 'created', label: 'Created', sortField: 'created', track: '100px', minPx: 100, optional: true },
@@ -130,9 +159,73 @@ const STATUS_TOKENS: Record<string, { fg: string; bg: string }> = {
   3: { fg: 'var(--pr-status-submitted-fg)', bg: 'var(--pr-status-submitted-bg)' }
 };
 
-/** Programme-level Section buckets — same codes as `dashboard-lab.component.ts:164-165`. */
-const INTERMEDIATE_OUTCOMES_CODE = 'intermediate-outcomes';
-const OUTCOMES_2030_CODE = '2030-outcomes';
+// @akili-spec changes/results-aow-column-filter (RAC-T-3)
+/** The three fixed, program-level bucket keys, in the design's display order. */
+const PROGRAMME_LEVEL_SECTION_KEYS: readonly string[] = ['INTERMEDIATE', 'EOI_2030', 'UNTAGGED'];
+
+// @akili-spec changes/results-aow-column-filter (RAC-T-3)
+/**
+ * `?section=A,B` → `['A', 'B']`. `null` / `''` → `[]`. Values are kept EXACTLY as they arrive
+ * (no trim-casing beyond whitespace, no upper-casing) — RAC-R-4.1's "raw value in chip" rule
+ * depends on the stored value being the one the URL actually carried.
+ */
+function toSectionValues(param: string | null): string[] {
+  if (!param) return [];
+  return param
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean);
+}
+
+// @akili-spec changes/my-work-board (MWB-T-13)
+/** One option of a filter dropdown. */
+interface ProgrammeResultsFilterOption {
+  value: string;
+  label: string;
+}
+
+// @akili-spec changes/my-work-board (MWB-T-13)
+/**
+ * Keeps every SELECTED value tickable even when no loaded row carries it.
+ *
+ * The option lists derive from the rows, so a value that arrived on the URL (`?center=NOWHERE`,
+ * or an Overview deep link into a category this phase has none of) would otherwise be absent from
+ * the panel: the chip would say the table is filtered while the multiselect showed nothing ticked
+ * and the user could not untick it there. Appended after the row-derived options, in selection
+ * order. Single-select had the same need and solved it inside `buildCategoryFilterOptions`; with
+ * three multi dimensions it is one helper for all of them.
+ */
+function withSelectedOptions(
+  options: ProgrammeResultsFilterOption[],
+  selected: readonly string[],
+  labelOf: (value: string) => string
+): ProgrammeResultsFilterOption[] {
+  const missing = selected.filter(value => !options.some(option => option.value === value));
+  return missing.length ? [...options, ...missing.map(value => ({ value, label: labelOf(value) }))] : options;
+}
+
+// @akili-spec changes/my-work-board (MWB-T-13, carrying MWB-T-14's finding)
+/**
+ * Value equality for a multiselect's `[options]` array — the `equal` of the three computeds below.
+ *
+ * `app-pr-filter-multiselect` has no overlay: its panel is a child of the trigger and is shown by
+ * `.field:focus-within`, and its rows are `*ngFor`-ed over the `[options]` input verbatim. A new
+ * ARRAY INSTANCE therefore destroys and rebuilds every row, detaching the checkbox that currently
+ * holds focus — focus falls to `<body>`, `:focus-within` goes false and the panel snaps shut after
+ * a single tick. `withSelectedOptions()` above reads the selection, so without this guard ticking
+ * an option would invalidate the computed and rebuild an identical list, reproducing exactly the
+ * defect the board hit and fixed in `MWB-T-14`. Angular keeps the PREVIOUS array whenever this
+ * returns true, so the identity only changes when the option SET genuinely does.
+ */
+function sameFilterOptions(a: ProgrammeResultsFilterOption[], b: ProgrammeResultsFilterOption[]): boolean {
+  return a.length === b.length && a.every((option, index) => option.value === b[index].value && option.label === b[index].label);
+}
+
+// @akili-spec changes/my-work-board (MWB-T-13)
+/** The `Other` bucket travels as a sentinel (P2-3312) — it must never be shown raw. */
+function categoryOptionLabel(value: string): string {
+  return value === PROGRAMME_RESULTS_OTHER_CATEGORY ? PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL : value;
+}
 
 /** `dd MMM yyyy`, the format the other three results tables already use. '' stays ''. */
 function formatDate(value: string): string {
@@ -160,7 +253,11 @@ function formatDate(value: string): string {
 @Component({
   selector: 'app-programme-results',
   standalone: true,
+  // Viewport lock (`SAV-DD-1`, `sp-shell-app-viewport`): unconditional, unlike `dashboard-lab`'s
+  // route-gated class — this surface only ever serves the Results tab.
+  host: { class: 'pr-viewport-page' },
   templateUrl: './programme-results.component.html',
+  styleUrls: ['./programme-results.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     NgTemplateOutlet,
@@ -174,7 +271,8 @@ function formatDate(value: string): string {
     PrSortableColumnDirective,
     PrFilterSelectComponent,
     PrFilterMultiselectModule,
-    ChangePhaseModalModule
+    ChangePhaseModalModule,
+    WhereToReportModalComponent
   ],
   providers: [
     ProgrammeResultsService,
@@ -183,10 +281,6 @@ function formatDate(value: string): string {
   ],
   styles: [
     `
-      :host {
-        display: block;
-      }
-
       /* ── Popover entrance ─────────────────────────────────────────────────────────────────
          The design's '@keyframes prmsPop' (.16s on the Columns popover and the filter panels,
          .12s on the row menu). At-rules are one of the sanctioned SCSS exceptions to
@@ -298,6 +392,33 @@ function formatDate(value: string): string {
       /* The Section panel is taller than the other three (design: 320px vs 280px). */
       .pgr-filter--section ::ng-deep .custom_select .field .options {
         max-height: 320px;
+      }
+
+      /* quick/results-filter-popover-polish (2026-09-04): grouped-panel polish copied from
+         'reporting-program-band.component.scss' '.pr-band-filter' so the two Section panels
+         cannot drift — group headers, group divider, checkbox accent. Tokens only. */
+      .pgr-filter--section ::ng-deep .pr-ms-group + .pr-ms-group {
+        margin-top: 6px;
+        border-top: 1px solid var(--pr-border-divider);
+        padding-top: 6px;
+      }
+
+      .pgr-filter--section ::ng-deep .pr-ms-group-label {
+        padding: 6px 10px 2px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--pr-text-muted);
+      }
+
+      /* MWB-T-13: the brand accent is NOT Section-only — Category / Funding source / Center are
+         the same app-pr-filter-multiselect since they went multi-value, so the checkbox rule
+         widens to every .pgr-filter. The two rules above stay --section: they polish the GROUPED
+         panel, and Section is the only grouped control here. */
+      .pgr-filter ::ng-deep .option .pr-native-check {
+        flex-shrink: 0;
+        accent-color: var(--pr-color-primary-300);
       }
 
       /* ── Filter chips ─────────────────────────────────────────────────────────────────────
@@ -416,16 +537,19 @@ function formatDate(value: string): string {
         transition: background 0.2s ease-out;
       }
 
-      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row:hover {
-        /* No token for the design's row-hover tint yet (between --pr-surface-card and
-           --pr-surface-app). Kept literal rather than snapped to a token that would change the
-           colour. */
-        background: #fafafb;
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row:hover,
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row:focus-visible {
+        background: var(--pr-surface-ground, #efeef3);
       }
 
       :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row:focus-visible {
         outline: 2px solid var(--pr-color-primary-300);
         outline-offset: -2px;
+      }
+
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row:hover td.pgr-actions,
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row:focus-visible td.pgr-actions {
+        background: var(--pr-surface-ground, #efeef3);
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -562,9 +686,19 @@ export class ProgrammeResultsComponent implements OnDestroy {
   private readonly bilateralSE = inject(BilateralResultsService);
   private readonly clipboard = inject(Clipboard);
   private readonly toastSE = inject(PrToastService);
+  private readonly smartNav = inject(SmartNavigationService);
+  /** @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1) — the My work tab's badge. */
+  private readonly myWorkCountSE = inject(MyWorkCountService);
 
   readonly data = inject(ProgrammeResultsService);
   readonly filter = inject(ProgrammeResultsFilterService);
+
+  /**
+   * Viewport lock (`SAV-T-4`): the work area is the only scroller ≥ 900px — passed to the band as
+   * `scrollHost` so its shadow/compact state reads the right element (`SAV-DD-4`).
+   */
+  readonly workArea = viewChild<ElementRef<HTMLElement>>('workArea');
+  readonly workAreaEl = computed(() => this.workArea()?.nativeElement ?? null);
 
   /** Full catalog, for the header/cell loops. */
   readonly allColumns = PGR_COLUMNS;
@@ -599,6 +733,14 @@ export class ProgrammeResultsComponent implements OnDestroy {
   closeFilterPopover(): void {
     this.filterPopoverOpen.set(false);
   }
+
+  /**
+   * quick/filters-clear-button-everywhere (2026-09-04): the toolbar's "Clear filters" shows only when
+   * there is something `clearAll()` would actually remove. The phase chip does not count — `clearAll()`
+   * deliberately retains the phase (see the URL-mirroring spec), so a button that showed for the phase
+   * alone would be permanently visible and would do nothing.
+   */
+  readonly hasClearableFilters = computed(() => this.filter.activeChips().some(chip => chip.dimension !== 'phase'));
 
   readonly activeFilterCount = computed(() => {
     return this.filter.activeChips().length;
@@ -682,29 +824,71 @@ export class ProgrammeResultsComponent implements OnDestroy {
    * `Impact contribution`, which is what end users asked us to stop doing. See
    * `buildCategoryFilterOptions` for why the selected value is threaded in.
    */
-  readonly categorySelectOptions = computed(() => buildCategoryFilterOptions(this.data.categoryOptions(), this.filter.selectedCategory()));
-  readonly originSelectOptions = computed(() => this.data.originOptions().map(value => ({ value, label: value })));
-  readonly centerSelectOptions = computed(() => this.data.centerOptions().map(value => ({ value, label: value })));
+  // @akili-spec changes/my-work-board (MWB-T-13) — `null`, not a selected value:
+  // `buildCategoryFilterOptions` takes a SINGLE value, and the multi-select's whole selection is
+  // topped up by `withSelectedOptions` below, which handles all of them rather than just the first.
+  readonly categorySelectOptions = computed(
+    () => withSelectedOptions(buildCategoryFilterOptions(this.data.categoryOptions(), null), this.filter.selectedCategories(), categoryOptionLabel),
+    { equal: sameFilterOptions }
+  );
+  readonly originSelectOptions = computed(
+    () =>
+      withSelectedOptions(
+        this.data.originOptions().map(value => ({ value, label: value })),
+        this.filter.selectedOrigins(),
+        value => value
+      ),
+    { equal: sameFilterOptions }
+  );
+  readonly centerSelectOptions = computed(
+    () =>
+      withSelectedOptions(
+        this.data.centerOptions().map(value => ({ value, label: value })),
+        this.filter.selectedCenters(),
+        value => value
+      ),
+    { equal: sameFilterOptions }
+  );
   readonly createdBySelectOptions = computed(() => this.data.createdByOptions().map(value => ({ value, label: value })));
 
   /**
-   * Section options, grouped "Areas of work" / "Programme-level" exactly like
-   * `dashboard-lab.component.ts:1600 reportingSectionOptions()`.
+   * Section options, grouped "Areas of work" / "Program-level" exactly like
+   * `dashboard-lab.component.ts:1600 reportingSectionOptions()` — same grouping, same
+   * bucket-key vocabulary (RAC-DD-3), now live (RAC-R-3, closing P2-3398).
    *
-   * P2-3398 — the control ships DISABLED: no endpoint returns a programme's full result set with
-   * an AoW/Section field, so every row's `section` is ''. The options stay wired (and the
-   * Areas-of-work group fills itself the moment rows carry a section) so enabling it is one flag.
+   * "Areas of work" offers only the AoW codes present in the loaded rows (RAC-DD-5: while the
+   * scope buckets are loading/erroring every row's `section` is `''`, so this group is empty and
+   * only the three fixed Program-level keys are offered); "Program-level" always offers all
+   * three fixed keys, counted, even at zero (RAC-R-3 scenario: `2030 outcomes (0)`).
+   *
+   * R-7 (SHOULD) — the AoW's unit name is appended beside the code (`AOW01 · Market
+   * Intelligence`) once `data.unitNames()` resolves; until then (loading, or a failed request —
+   * `loadUnits()` is fail-soft) the option falls back to the bare code. Chips are unaffected:
+   * `sectionLabel()` never gained unit-name lookup, so a selected chip still reads `Section:
+   * AOW01` — R-7 is options-only per requirements.md.
    */
   readonly sectionOptions = computed<BandFilterGroup[]>(() => {
-    const codes = [...new Set(this.data.rows().map(row => row.section).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const counts = new Map<string, number>();
+    for (const row of this.data.rows()) {
+      if (!row.section) continue;
+      counts.set(row.section, (counts.get(row.section) ?? 0) + 1);
+    }
+
+    const aowCodes = [...counts.keys()]
+      .filter(key => !PROGRAMME_RESULTS_FIXED_SECTION_LABELS[key])
+      .sort((a, b) => a.localeCompare(b));
+
+    const unitNames = this.data.unitNames();
+    const aowLabel = (code: string): string => {
+      const name = unitNames.get(code.toUpperCase());
+      return name ? `${code} · ${name}` : code;
+    };
+
     return [
-      { label: 'Areas of work', items: codes.map(code => ({ value: code, label: code })) },
+      { label: 'Areas of work', items: aowCodes.map(code => ({ value: code, label: `${aowLabel(code)} (${counts.get(code) ?? 0})` })) },
       {
         label: 'Program-level',
-        items: [
-          { value: INTERMEDIATE_OUTCOMES_CODE, label: 'Intermediate outcomes' },
-          { value: OUTCOMES_2030_CODE, label: '2030 outcomes' }
-        ]
+        items: PROGRAMME_LEVEL_SECTION_KEYS.map(key => ({ value: key, label: `${sectionLabel(key)} (${counts.get(key) ?? 0})` }))
       }
     ];
   });
@@ -721,14 +905,41 @@ export class ProgrammeResultsComponent implements OnDestroy {
   /** The Reporting tab's path — the "Go to Reporting" button of the nothing-yet empty state. */
   readonly reportingPath = computed(() => `/result-framework-reporting/entity-details/${this.programmeCode()}`);
 
+  // @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1)
+  /** Same phase label the My work board itself defaults to (design.md §6.6) — the current
+   *  reporting phase's name. `null` when it has not resolved yet: the band hides the badge. */
+  readonly myWorkPhaseLabel = computed<string | null>(() => this.dataControlSE?.reportingCurrentPhase?.phaseName || null);
+  /** Read-only view of the shared badge cache for THIS programme + phase. */
+  readonly myWorkCount = computed<number | null>(() => {
+    const code = this.programmeCode();
+    const phase = this.myWorkPhaseLabel();
+    if (!code || !phase) return null;
+    return this.myWorkCountSE.count(code, phase)();
+  });
+
   /** The design draws a BUTTON here (`onClick={{ tabReporting.go }}`), not a link. */
   goToReporting(): void {
     this.router.navigateByUrl(this.reportingPath());
   }
 
+  readonly showWhereToReportModal = signal(false);
+
+  /** Fail-closed gate for the band emerging CTA (`ERC-R-5`). */
+  readonly canReportEmerging = computed(() => {
+    const code = this.programmeCode();
+    return !!code && !isAvisaInitiative({ official_code: code, initiativeCode: code });
+  });
+
   openWhereToReport(): void {
+    this.showWhereToReportModal.set(true);
+  }
+
+  /** Hop to dashboard-lab host; persist Smart Back origin before navigate (`ERC-R-4`). */
+  openEmergingReport(): void {
+    if (!this.canReportEmerging()) return;
+    this.smartNav.rememberResultDetailOrigin();
     this.router.navigate(['/result-framework-reporting', 'entity-details', this.programmeCode()], {
-      queryParams: { whereToReport: 'true', returnTab: 'results' }
+      queryParams: { reportEmerging: 'true', returnTab: 'results' }
     });
   }
 
@@ -787,11 +998,69 @@ export class ProgrammeResultsComponent implements OnDestroy {
     return activePhaseName || (activePhaseYear ? `Phase ${activePhaseYear}` : null);
   });
 
+  // @akili-spec changes/results-aow-column-filter (RAC-T-2)
+  /**
+   * Numeric `versionId` of the phase currently selected in the toolbar — the phase the Area of
+   * Work buckets must be pinned to (RAC-T-2, A-1). This screen holds every phase's rows in one
+   * flat list and filters client-side, so there is no separate phase→versionId catalog to read;
+   * resolved here the same way `defaultPhase()` matches a phase label against the loaded rows.
+   * `null` while rows have not loaded yet or the selection matches nothing — `loadScope()`
+   * treats that as "skip the request".
+   */
+  readonly currentPhaseVersionId = computed<number | null>(() => {
+    const phase = this.filter.selectedPhase();
+    if (!phase) return null;
+    const target = normalize(phase);
+
+    const match = this.data.rows().find(row => {
+      const pName = normalize(row.phaseName);
+      const pYear = normalize(row.phaseYear);
+      const pPhaseYear = normalize(`Phase ${row.phaseYear}`);
+      const vId = normalize(row.versionId);
+      return (
+        target === pName ||
+        target === pYear ||
+        target === vId ||
+        target === pPhaseYear ||
+        (!!pName && (target.includes(pName) || pName.includes(target)))
+      );
+    });
+
+    const id = match ? Number(match.versionId) : null;
+    return id !== null && Number.isFinite(id) ? id : null;
+  });
+
   constructor() {
     effect(() => {
       const code = this.programmeCode();
       if (code) this.data.load(code);
       else this.data.reset();
+    });
+
+    // @akili-spec changes/my-work-board (MWB-T-4, MWB-DD-5) — warms the shared badge cache for
+    // this (programme, phase); `ensure()` no-ops once the key is warm or already in flight.
+    effect(() => {
+      const code = this.programmeCode();
+      const phase = this.myWorkPhaseLabel();
+      if (code && phase) this.myWorkCountSE.ensure(code, phase);
+    });
+
+    // RAC-T-2 — the Area of Work buckets are pinned to one phase (A-1); refetch whenever the
+    // programme or the toolbar's selected phase resolves to a different versionId.
+    // `loadScope()` self-guards an empty code / unresolved versionId, so no `else` branch here.
+    effect(() => {
+      const code = this.programmeCode();
+      const versionId = this.currentPhaseVersionId();
+      this.data.loadScope(code, versionId);
+    });
+
+    // @akili-spec changes/results-aow-column-filter (RAC-T-3, R-7) — AoW display names for the
+    // Section filter's option labels. Only the PROGRAMME dimension, not the phase: unlike the
+    // scope buckets, the unit catalog is not pinned to one version, so this does not belong in
+    // the effect above and must not refetch on every phase change.
+    effect(() => {
+      const code = this.programmeCode();
+      if (code) this.data.loadUnits(code);
     });
 
     // Controlled input + 300ms debounce: the signal stays the single source of truth for both the
@@ -818,17 +1087,29 @@ export class ProgrammeResultsComponent implements OnDestroy {
         const urlPhase = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase);
         const phase = urlPhase !== null ? this.toFilterValue(urlPhase) : defPhase;
         const status = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.status);
-        const category = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.category);
-        const origin = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin);
-        const center = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.center);
+        // @akili-spec changes/my-work-board (MWB-T-13) — the three multi dimensions travel as
+        // comma-separated lists. Splitting on `,` is the whole decode (the router has already
+        // percent-decoded each value), and a legacy SINGLE value from an Overview deep link
+        // (`?category=Knowledge product`, `RFD-*`) simply yields a one-element array.
+        const categories = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.category));
+        const origins = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin));
+        const centers = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.center));
         const createdBy = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy);
+        // @akili-spec changes/results-aow-column-filter (RAC-T-3) — multi-value, comma list.
+        // Raw values, not upper-cased: `?section=aow01` must still show `aow01` in its chip
+        // (RAC-R-4.1's "raw value in chip" rule) while `matchesProgrammeResultFilters` matches
+        // it case-insensitively.
+        const sections = toSectionValues(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.section));
 
         if (phase !== this.filter.selectedPhase()) this.filter.selectedPhase.set(phase);
         if (status !== this.filter.selectedStatus()) this.filter.selectedStatus.set(status);
-        if (category !== this.filter.selectedCategory()) this.filter.selectedCategory.set(category);
-        if (origin !== this.filter.selectedOrigin()) this.filter.selectedOrigin.set(origin);
-        if (center !== this.filter.selectedCenter()) this.filter.selectedCenter.set(center);
+        // An unknown value is applied as-is: the predicates are pure and case-insensitive, so it
+        // simply matches nothing and stays visible as a chip the user can remove.
+        if (!sameListParam(categories, this.filter.selectedCategories())) this.filter.selectedCategories.set(categories);
+        if (!sameListParam(origins, this.filter.selectedOrigins())) this.filter.selectedOrigins.set(origins);
+        if (!sameListParam(centers, this.filter.selectedCenters())) this.filter.selectedCenters.set(centers);
         if (createdBy !== this.filter.selectedCreatedBy()) this.filter.selectedCreatedBy.set(createdBy);
+        if (!sameListParam(sections, this.filter.selectedSections())) this.filter.selectedSections.set(sections);
       });
     });
 
@@ -841,10 +1122,16 @@ export class ProgrammeResultsComponent implements OnDestroy {
     effect(() => {
       const phase = this.filter.selectedPhase();
       const status = this.filter.selectedStatus();
-      const category = this.filter.selectedCategory();
-      const origin = this.filter.selectedOrigin();
-      const center = this.filter.selectedCenter();
+      // @akili-spec changes/my-work-board (MWB-T-13) — `null` when nothing is selected: under
+      // `queryParamsHandling: 'merge'` that is what REMOVES the key, so an emptied multi-select
+      // leaves no `?category=` behind.
+      const category = joinListParam(this.filter.selectedCategories());
+      const origin = joinListParam(this.filter.selectedOrigins());
+      const center = joinListParam(this.filter.selectedCenters());
       const createdBy = this.filter.selectedCreatedBy();
+      // @akili-spec changes/results-aow-column-filter (RAC-T-3) — comma list, `null` (not '')
+      // when empty so the param drops from the URL entirely on Clear filters (RAC-R-3).
+      const sections = this.filter.selectedSections();
 
       untracked(() => {
         const current = this.route.snapshot.queryParamMap;
@@ -854,7 +1141,8 @@ export class ProgrammeResultsComponent implements OnDestroy {
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.category]: category,
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin]: origin,
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.center]: center,
-          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy]: createdBy
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy]: createdBy,
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.section]: sections.length ? sections.join(',') : null
         };
         const changed = Object.entries(next).some(([key, value]) => (current.get(key) ?? null) !== (value ?? null));
         if (!changed) return;
@@ -908,17 +1196,11 @@ export class ProgrammeResultsComponent implements OnDestroy {
     this.filter.selectedStatus.set(this.toFilterValue(value));
   }
 
-  onCategoryChange(value: unknown): void {
-    this.filter.selectedCategory.set(this.toFilterValue(value));
-  }
-
-  onOriginChange(value: unknown): void {
-    this.filter.selectedOrigin.set(this.toFilterValue(value));
-  }
-
-  onCenterChange(value: unknown): void {
-    this.filter.selectedCenter.set(this.toFilterValue(value));
-  }
+  // @akili-spec changes/my-work-board (MWB-T-13) — Category / Funding source / Center are
+  // multi-select now; the template writes `filter.selectedCategories.set($event)` straight from
+  // `app-pr-filter-multiselect`'s `(changed)` (an array), exactly like the Section control above
+  // it and like the My results board. No `toFilterValue` sentinel is involved: the multiselect's
+  // "nothing picked" is an empty array, not `'all'`.
 
   // @akili-spec result-framework-reporting/programme-results-created-by-filter
   onCreatedByChange(value: unknown): void {
@@ -1169,6 +1451,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
       return;
     }
 
+    this.smartNav.rememberResultDetailOrigin();
     this.router.navigate(commands, { queryParams });
   }
 
@@ -1226,9 +1509,21 @@ export class ProgrammeResultsComponent implements OnDestroy {
         return row?.code ?? '';
       case 'title':
         return row?.title ?? '';
-      // Always '' in v1 — no endpoint exposes the AoW for a programme's full result set.
+      // Not a real column (the AoW column is 'aow', below) — the raw bucket key, unused by any
+      // catalog entry today. Kept only so a stray caller gets the real value instead of ''.
       case 'section':
         return row?.section ?? '';
+      // RAC-R-2 / RAC-AC-8 — Area of Work cell text, also used verbatim by CSV export
+      // (`exportCsv()` calls this same switch). Loading has no text (the DOM shows a
+      // skeleton instead); error/version-mismatch render the same dash the cell shows.
+      case 'aow': {
+        const state = row?.sectionState;
+        if (state === 'loading') return '';
+        if (state === 'error' || state === 'version-mismatch') return '—';
+        const label = sectionLabel(row?.section);
+        const extra = (row?.aowCodes?.length ?? 0) > 1 ? ` +${(row?.aowCodes?.length ?? 0) - 1}` : '';
+        return `${label}${extra}`;
+      }
       case 'category':
         return row?.category ?? '';
       case 'status':
@@ -1249,6 +1544,20 @@ export class ProgrammeResultsComponent implements OnDestroy {
       default:
         return '';
     }
+  }
+
+  /**
+   * `title` for the Area of Work cell (RAC-R-2 `+N`, RAC-R-2.1 error/mismatch explanation).
+   * Empty for the loading state (a skeleton has nothing to explain) and for a single-code /
+   * fixed-label cell (nothing more to say than the visible text).
+   */
+  aowTitle(row: ProgrammeResultRow): string {
+    if (row?.sectionState === 'error') return 'The Area of Work buckets could not be loaded.';
+    if (row?.sectionState === 'version-mismatch') {
+      return "This result belongs to a different phase than the Area of Work data currently loaded.";
+    }
+    if ((row?.aowCodes?.length ?? 0) > 1) return row.aowCodes.join(', ');
+    return '';
   }
 
   // ── Export ──────────────────────────────────────────────────────────────────────────────

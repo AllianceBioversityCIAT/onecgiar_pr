@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { ReportingProgramBandComponent, ReportingSummaryStats } from './reporting-program-band.component';
+import { ReportingProgramBandComponent } from './reporting-program-band.component';
 import { ReportingGuideService } from '../../services/reporting-guide.service';
 
 /**
@@ -31,6 +31,8 @@ describe('ReportingProgramBandComponent', () => {
   const text = () => root().textContent ?? '';
   /** The sticky band is the host's only top-level box; the identity block is its first child. */
   const identity = () => root().firstElementChild?.firstElementChild as HTMLElement;
+  /** The sticky box itself — the element `frameLocked` mutates. */
+  const stickyBox = () => root().firstElementChild as HTMLElement;
   /** Everything that only exists while the band is condensed carries the fade class. */
   const collapsedParts = () => root().querySelectorAll('.pr-band-fade');
 
@@ -217,57 +219,254 @@ describe('ReportingProgramBandComponent', () => {
     });
   });
 
-  // ── Emerging-result CTA — a MODAL on the host, not a route ────────────────
-  describe('report emerging result', () => {
-    /** Both copies of the CTA carry the same label; index 0 is the identity block's. */
-    const ctas = () =>
-      Array.from(root().querySelectorAll('button')).filter(b => b.textContent?.includes('Where to report'));
+  // ── SAV-T-2 · frameLocked + scrollHost, dual scroll source ────────────────
+  // `docs/specs/changes/sp-shell-app-viewport/` SAV-R-6, SAV-R-8, SAV-AC-6, SAV-AC-11 (band clause).
+  describe('frame-locked scroll source (SAV-T-2)', () => {
+    let hostEl: HTMLDivElement;
 
-    it('emits instead of navigating when the expanded CTA is clicked', async () => {
-      await build({ showToolbar: true });
-      const emitted = jest.fn();
-      const whereEmitted = jest.fn();
-      component.reportEmerging.subscribe(emitted);
-      component.whereToReport.subscribe(whereEmitted);
-
-      ctas()[0].click();
-
-      expect(emitted).toHaveBeenCalledTimes(1);
-      expect(whereEmitted).toHaveBeenCalledTimes(1);
+    beforeEach(() => {
+      hostEl = document.createElement('div');
+      document.body.appendChild(hostEl);
     });
 
-    it('emits from the condensed bar copy too — one behaviour, two renders', async () => {
+    afterEach(() => {
+      hostEl.remove();
+    });
+
+    it('flips isScrolled from the element scroll listener alone — no window event dispatched', async () => {
+      await build({ showToolbar: true, scrollHost: hostEl });
+      expect(component.isScrolled()).toBe(false);
+
+      hostEl.scrollTop = 11;
+      hostEl.dispatchEvent(new Event('scroll'));
+      fixture.detectChanges();
+
+      expect(component.isScrolled()).toBe(true);
+    });
+
+    it('flips bandCollapsed past the 64px threshold via the element alone', async () => {
+      await build({ showToolbar: true, collapsible: true, scrollHost: hostEl });
+
+      hostEl.scrollTop = 65;
+      hostEl.dispatchEvent(new Event('scroll'));
+      fixture.detectChanges();
+
+      expect(component.bandCollapsed()).toBe(true);
+    });
+
+    it('falls back to the window listener when scrollHost is null', async () => {
+      await build({ showToolbar: true, scrollHost: null });
+
+      Object.defineProperty(window, 'scrollY', { configurable: true, value: 11 });
+      window.dispatchEvent(new Event('scroll'));
+      fixture.detectChanges();
+
+      expect(component.isScrolled()).toBe(true);
+    });
+
+    it('evaluates once on attach against a pre-scrolled host, before any event fires', async () => {
+      hostEl.scrollTop = 20;
+      await build({ showToolbar: true, scrollHost: hostEl });
+
+      expect(component.isScrolled()).toBe(true);
+    });
+  });
+
+  describe('frameLocked sticky override (SAV-T-2, SAV-DD-5)', () => {
+    it('adds the static/top-auto utilities to the sticky box when frameLocked', async () => {
+      await build({ showToolbar: true, frameLocked: true });
+
+      expect(stickyBox().classList.contains('min-[900px]:static')).toBe(true);
+    });
+
+    it('does not add them when frameLocked is false (default)', async () => {
+      await build({ showToolbar: true, frameLocked: false });
+
+      expect(stickyBox().classList.contains('min-[900px]:static')).toBe(false);
+    });
+  });
+
+  // ── Emerging-result CTA — standalone control, split emits ─────────────────
+  // `@akili-spec changes/emerging-result-cta-placement` ERC-T-1 (ERC-R-1, ERC-R-2, ERC-R-5,
+  // ERC-R-11, ERC-R-20, ERC-AC-1/2/3). Where to report and Report emerging result used to be one
+  // click emitting both outputs; they are now two distinct controls with two distinct emits, and
+  // the new one is fail-closed behind `canReportEmerging` (default false).
+  describe('report emerging result (ERC-T-1)', () => {
+    /** Where to report — both copies (expanded + condensed) share this label. */
+    const wtrCtas = () =>
+      Array.from(root().querySelectorAll('button')).filter(b => b.textContent?.includes('Where to report'));
+    /** The standalone emerging control — both copies (expanded + condensed) carry the aria-label. */
+    const emergingCtas = () =>
+      Array.from(root().querySelectorAll('button')).filter(b => b.getAttribute('aria-label') === 'Report emerging result');
+    const tourCtas = () => Array.from(root().querySelectorAll('button')).filter(b => b.getAttribute('data-guide') === 'sp-tour-trigger' || b.textContent?.trim().includes('Tour'));
+
+    // ── ERC-R-5 fail-closed: unset / false → absent ──
+    it('renders no emerging control when canReportEmerging is unset (default false)', async () => {
       await build({ showToolbar: true });
-      const emitted = jest.fn();
+
+      expect(emergingCtas()).toHaveLength(0);
+      expect(text()).not.toContain('Report emerging result');
+      // Tour + Where to report are unaffected.
+      expect(wtrCtas().length).toBeGreaterThan(0);
+    });
+
+    it('renders no emerging control when canReportEmerging is explicitly false, in expanded and collapsed', async () => {
+      await build({ showToolbar: true, canReportEmerging: false });
+      expect(emergingCtas()).toHaveLength(0);
+
+      scrollTo(200);
+
+      expect(emergingCtas()).toHaveLength(0);
+      expect(text()).not.toContain('Report emerging result');
+      // Tour + Where to report still present in the collapsed bar.
+      expect(text()).toContain('Tour');
+      expect(text()).toContain('Where to report');
+    });
+
+    // ── ERC-R-1 / ERC-AC-1: present, outline, in both chrome states when true ──
+    it('renders exactly one labelled emerging control in the expanded cluster when canReportEmerging is true', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+
+      expect(emergingCtas()).toHaveLength(1);
+      const btn = emergingCtas()[0];
+      expect(btn.getAttribute('data-testid')).toBe('program-band-report-emerging-btn');
+      // Outline chrome (Tour's own class of button) — not the filled-brand class Where to report uses.
+      expect(btn.className).toContain('border');
+      expect(btn.className).toContain('bg-[var(--pr-surface-card)]');
+      expect(btn.className).not.toContain('bg-[var(--pr-color-primary-300)]');
+    });
+
+    it('renders exactly one REACHABLE labelled emerging control in the collapsed 48px bar when canReportEmerging is true', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+      scrollTo(200);
+
+      // The identity block's copy is still in the DOM but `inert` (clipped, out of the a11y/tab
+      // tree) once collapsed — the same pattern the band already uses for Tour / Where to report.
+      // "Reachable" excludes anything inside that inert ancestor.
+      const reachable = emergingCtas().filter(b => !b.closest('[inert]'));
+      expect(reachable).toHaveLength(1);
+      const btn = reachable[0];
+      expect(btn.getAttribute('data-testid')).toBe('program-band-report-emerging-btn-condensed');
+      expect(btn.className).not.toContain('bg-[var(--pr-color-primary-300)]');
+    });
+
+    it('does not replace or hide Tour or Where to report when the emerging control is shown', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+
+      expect(tourCtas().length).toBeGreaterThan(0);
+      expect(wtrCtas().length).toBeGreaterThan(0);
+      expect(emergingCtas()).toHaveLength(1);
+    });
+
+    // ── ERC-R-2 / ERC-AC-2 / ERC-AC-3: split, isolated emits ──
+    it('Where to report click emits ONLY whereToReport — not reportEmerging', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+      const emergingEmitted = jest.fn();
       const whereEmitted = jest.fn();
-      component.reportEmerging.subscribe(emitted);
+      component.reportEmerging.subscribe(emergingEmitted);
+      component.whereToReport.subscribe(whereEmitted);
+
+      wtrCtas()[0].click();
+
+      expect(whereEmitted).toHaveBeenCalledTimes(1);
+      expect(emergingEmitted).not.toHaveBeenCalled();
+    });
+
+    it('the emerging control click emits ONLY reportEmerging — not whereToReport', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+      const emergingEmitted = jest.fn();
+      const whereEmitted = jest.fn();
+      component.reportEmerging.subscribe(emergingEmitted);
+      component.whereToReport.subscribe(whereEmitted);
+
+      emergingCtas()[0].click();
+
+      expect(emergingEmitted).toHaveBeenCalledTimes(1);
+      expect(whereEmitted).not.toHaveBeenCalled();
+    });
+
+    it('the condensed emerging control click also emits ONLY reportEmerging', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+      const emergingEmitted = jest.fn();
+      const whereEmitted = jest.fn();
+      component.reportEmerging.subscribe(emergingEmitted);
       component.whereToReport.subscribe(whereEmitted);
       scrollTo(200);
 
-      // Only the condensed copy is left once the identity block collapses away.
-      const condensed = ctas().find(b => b.className.includes('pr-band-fade')) as HTMLButtonElement;
-      condensed.click();
+      emergingCtas()[0].click();
 
-      expect(emitted).toHaveBeenCalledTimes(1);
-      expect(whereEmitted).toHaveBeenCalledTimes(1);
+      expect(emergingEmitted).toHaveBeenCalledTimes(1);
+      expect(whereEmitted).not.toHaveBeenCalled();
+    });
+
+    // ── ERC-R-1 narrow viewport / ERC-R-20: accessible name stays full ──
+    it('keeps the accessible name "Report emerging result" even where the visible label is allowed to shorten', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+
+      const expanded = emergingCtas()[0];
+      expect(expanded.getAttribute('aria-label')).toBe('Report emerging result');
+
+      scrollTo(200);
+      const condensed = emergingCtas()[0];
+      expect(condensed.getAttribute('aria-label')).toBe('Report emerging result');
     });
 
     it('is not a link — the /emerging route is no longer the entry point', async () => {
-      await build({ showToolbar: true });
+      await build({ showToolbar: true, canReportEmerging: true });
 
-      const links = Array.from(root().querySelectorAll('a')).filter(a => a.textContent?.includes('Report emerging result'));
+      const links = Array.from(root().querySelectorAll('a')).filter(a => a.getAttribute('aria-label') === 'Report emerging result');
       expect(links).toHaveLength(0);
-      expect(ctas()).toHaveLength(1);
     });
 
-    it('hides both copies when the programme cannot report (AVISA)', async () => {
-      await build({ showToolbar: true, canReport: false });
-      expect(ctas()).toHaveLength(0);
+    // ── ERC-R-5: does not use native [disabled] ──
+    it('is absent rather than disabled — no [disabled] attribute anywhere when false', async () => {
+      await build({ showToolbar: true, canReportEmerging: false });
+
+      const disabledButtons = Array.from(root().querySelectorAll('button[disabled]'));
+      expect(disabledButtons).toHaveLength(0);
+    });
+
+    // ── ERC-R-11: DOM / tab order Tour → Emerging → Where to report ──
+    it('orders the expanded cluster Tour, then the emerging control, then Where to report', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+
+      const cluster = root().querySelector('[data-guide="sp-tour-trigger"]')?.parentElement as HTMLElement;
+      const buttons = Array.from(cluster.querySelectorAll('button'));
+      const labels = buttons.map(b => (b.getAttribute('data-guide') === 'sp-tour-trigger' ? 'tour' : b.getAttribute('aria-label') === 'Report emerging result' ? 'emerging' : b.getAttribute('data-testid') === 'program-band-where-to-report-btn' ? 'wtr' : 'other'));
+
+      expect(labels).toEqual(['tour', 'emerging', 'wtr']);
+    });
+
+    it('orders the collapsed bar Tour, then the emerging control, then Where to report', async () => {
+      await build({ showToolbar: true, canReportEmerging: true });
+      scrollTo(200);
+
+      const group = root().querySelector('[data-testid="program-band-collapsed-actions"]') as HTMLElement;
+      const buttons = Array.from(group.querySelectorAll('button'));
+      const labels = buttons.map(b => (b.getAttribute('aria-label') === 'Start guided tour' ? 'tour' : b.getAttribute('aria-label') === 'Report emerging result' ? 'emerging' : b.getAttribute('data-testid')?.includes('where-to-report') ? 'wtr' : 'other'));
+
+      expect(labels).toEqual(['tour', 'emerging', 'wtr']);
+    });
+
+    // ── canReport=false / canReportEmerging=true: emerging still shows independently ──
+    it('still shows the collapsed emerging control when canReport is false but canReportEmerging is true', async () => {
+      await build({ showToolbar: true, canReport: false, canReportEmerging: true });
+      scrollTo(200);
+
+      const reachable = emergingCtas().filter(b => !b.closest('[inert]'));
+      expect(reachable).toHaveLength(1);
+      expect(wtrCtas().filter(b => !b.closest('[inert]'))).toHaveLength(0);
+    });
+
+    it('hides both copies of the emerging control when the programme cannot report it (AVISA)', async () => {
+      await build({ showToolbar: true, canReport: false, canReportEmerging: false });
+      expect(emergingCtas()).toHaveLength(0);
+      expect(wtrCtas()).toHaveLength(0);
 
       scrollTo(200);
 
       expect(text()).not.toContain('Report emerging result');
-      // Only the collapsed identity (dot + name) fades in — the action group is gone with canReport false.
+      // Only the collapsed identity (dot + name) fades in — the action group is gone with both flags false.
       expect(collapsedParts().length).toBe(1);
     });
   });
@@ -414,10 +613,10 @@ describe('ReportingProgramBandComponent', () => {
     const tabText = (a: HTMLAnchorElement) => a.querySelector('.pr-tab-label')?.textContent?.trim() || a.textContent?.trim();
     const tab = (label: string) => tabs().find(a => tabText(a) === label) as HTMLAnchorElement;
 
-    it('renders the three programme tabs in the order the design shows', async () => {
+    it('renders the four programme tabs in the order the design shows', async () => {
       await build({ showToolbar: true });
 
-      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results']);
+      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results', 'My results']);
     });
 
     it('points Results at the `/results` route under the programme', async () => {
@@ -467,12 +666,12 @@ describe('ReportingProgramBandComponent', () => {
       expect(tabs().filter(a => a.getAttribute('aria-current') === 'page')).toHaveLength(1);
     });
 
-    it('keeps the three tabs in the condensed bar — one strip serves both shapes', async () => {
+    it('keeps the four tabs in the condensed bar — one strip serves both shapes', async () => {
       await build({ showToolbar: true, activeTab: 'results' });
 
       scrollTo(200);
 
-      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results']);
+      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results', 'My results']);
       expect(tab('Results').getAttribute('aria-current')).toBe('page');
     });
 
@@ -483,6 +682,71 @@ describe('ReportingProgramBandComponent', () => {
 
       expect(tabs().map(a => a.textContent?.trim())).not.toContain('Drafts');
       expect(text()).not.toContain('Drafts');
+    });
+  });
+
+  // ── My work tab — 4th programme-view tab + badge (`changes/my-work-board`, MWB-T-4) ─────────
+  describe('My work tab', () => {
+    const tabs = () => Array.from((root().querySelector('nav') as HTMLElement).querySelectorAll('a'));
+    const tabText = (a: HTMLAnchorElement) => a.querySelector('.pr-tab-label')?.textContent?.trim() || a.textContent?.trim();
+    const tab = (label: string) => tabs().find(a => tabText(a) === label) as HTMLAnchorElement;
+    const badge = () => tab('My results').querySelector('[aria-label$="results in editing"]') as HTMLElement | null;
+
+    it('points My work at the `/my-work` route under the programme (`myWorkPath()`)', async () => {
+      await build({ showToolbar: true });
+
+      expect(component.myWorkPath()).toBe('/result-framework-reporting/entity-details/SP01/my-work');
+      expect(tab('My results').getAttribute('href')).toBe('/result-framework-reporting/entity-details/SP01/my-work');
+    });
+
+    it('follows the programme code instead of freezing the href', async () => {
+      await build({ showToolbar: true });
+      fixture.componentRef.setInput('programCode', 'SP07');
+      fixture.detectChanges();
+
+      expect(tab('My results').getAttribute('href')).toBe('/result-framework-reporting/entity-details/SP07/my-work');
+    });
+
+    it('preserves query params like the other three tabs', async () => {
+      await build({ showToolbar: true });
+
+      expect(tab('My results').getAttribute('queryParamsHandling')).toBe('preserve');
+    });
+
+    it('underlines and announces My work when it is the active tab', async () => {
+      await build({ showToolbar: true, activeTab: 'my-work' });
+
+      const myWork = tab('My results');
+      expect(myWork.className).toContain('border-[var(--pr-color-primary-300)]');
+      expect(myWork.className).toContain('font-semibold');
+      expect(myWork.getAttribute('aria-current')).toBe('page');
+    });
+
+    it('leaves My work neutral while another tab is active', async () => {
+      await build({ showToolbar: true, activeTab: 'results' });
+
+      const myWork = tab('My results');
+      expect(myWork.className).toContain('border-transparent');
+      expect(myWork.getAttribute('aria-current')).toBeNull();
+    });
+
+    it('hides the badge when myWorkCount is null (default)', async () => {
+      await build({ showToolbar: true });
+
+      expect(badge()).toBeNull();
+    });
+
+    it('hides the badge when myWorkCount is 0', async () => {
+      await build({ showToolbar: true, myWorkCount: 0 });
+
+      expect(badge()).toBeNull();
+    });
+
+    it('shows the badge text and an accessible label once myWorkCount is greater than zero', async () => {
+      await build({ showToolbar: true, myWorkCount: 3 });
+
+      expect(badge()?.textContent?.trim()).toBe('3');
+      expect(badge()?.getAttribute('aria-label')).toBe('3 results in editing');
     });
   });
 
@@ -685,86 +949,6 @@ describe('ReportingProgramBandComponent', () => {
     });
   });
 
-  describe('summary stats card', () => {
-    it('renders summary stats card above reporting heading when summaryStats is provided', async () => {
-      await build({
-        showToolbar: true,
-        summaryStats: {
-          programsCount: 1,
-          aowsCount: 5,
-          totalKpis: 41,
-          reportedKpis: 0
-        }
-      });
-
-      const text = root().textContent || '';
-      expect(text).toContain('Programs/Accelerators');
-      expect(text).toContain('Areas of Work');
-      expect(text).toContain('Total KPIs');
-      expect(text).toContain('KPIs with Evidence');
-    });
-  });
-
-  // ── KCR-T-3 · Total KPIs disclosure (KCR-R-2.1 / KCR-DD-4, KCR-AC-2) ──────
-  /**
-   * The big figure is *Counted*; the two numbers it cannot show — how many KPIs were PLANNED and
-   * how many the zero-target rule removed from the denominator — live in its `title`. The full
-   * string is asserted on purpose: requirements.md §9 records that "a `title` present with wrong
-   * text is caught only if the test asserts the text".
-   * @akili-spec bugfix/kpi-count-reconciliation
-   */
-  describe('Total KPIs zero-target disclosure (KCR-R-2.1)', () => {
-    /** The KPI card carrying `label`, resolved upwards from its uppercase label span. */
-    const kpiCard = (label: string): HTMLElement => {
-      const heading = Array.from(root().querySelectorAll('span')).find(s => s.textContent?.trim() === label);
-      return heading!.closest('div.flex.flex-col') as HTMLElement;
-    };
-    const totalKpisFigure = (): HTMLElement => kpiCard('Total KPIs').querySelector('.pr-figure') as HTMLElement;
-    const totalKpisTitle = (): string | null => totalKpisFigure().getAttribute('title');
-
-    /** The requirements.md §7 fixture: planned 11, zero-target 2 (`a4`, `#902`), counted 9. */
-    const stats = (over: Partial<ReportingSummaryStats> = {}): ReportingSummaryStats => ({
-      programsCount: 1,
-      aowsCount: 2,
-      totalKpis: 9,
-      reportedKpis: 1,
-      plannedKpis: 11,
-      zeroTargetKpis: 2,
-      ...over
-    });
-
-    it('states planned and the plural exclusion: "11 planned · excludes 2 zero-target KPIs"', async () => {
-      await build({ showToolbar: true, summaryStats: stats() });
-
-      expect(totalKpisFigure().textContent?.trim()).toBe('9');
-      expect(totalKpisTitle()).toBe('11 planned · excludes 2 zero-target KPIs');
-    });
-
-    it('drops the excludes clause entirely when nothing was excluded: "11 planned"', async () => {
-      // The same fixture with the two zero-target KPIs given `target = 1`: planned stays 11, the
-      // denominator becomes 11 and there is nothing left to disclose.
-      await build({ showToolbar: true, summaryStats: stats({ totalKpis: 11, zeroTargetKpis: 0 }) });
-
-      expect(totalKpisTitle()).toBe('11 planned');
-      expect(totalKpisTitle()).not.toContain('excludes');
-    });
-
-    it('uses the singular noun for exactly one: "11 planned · excludes 1 zero-target KPI"', async () => {
-      await build({ showToolbar: true, summaryStats: stats({ totalKpis: 10, zeroTargetKpis: 1 }) });
-
-      expect(totalKpisTitle()).toBe('11 planned · excludes 1 zero-target KPI');
-    });
-
-    it('omits the attribute for a caller that carries no planned figure (optional-field contract)', async () => {
-      await build({
-        showToolbar: true,
-        summaryStats: { programsCount: 1, aowsCount: 5, totalKpis: 41, reportedKpis: 0 }
-      });
-
-      expect(totalKpisTitle()).toBeNull();
-    });
-  });
-
   describe('program description popover (resolvedDescription)', () => {
     it('resolves SP04 description for Multifunctional Landscapes', async () => {
       await build({ programCode: 'SP04', programName: 'Multifunctional Landscapes' });
@@ -858,6 +1042,240 @@ describe('ReportingProgramBandComponent', () => {
 
       opts.onTabNavigate('reporting');
       expect(navSpy).toHaveBeenCalledWith(['/result-framework-reporting/entity-details/SP01'], { queryParamsHandling: 'preserve' });
+
+      opts.onTabNavigate('my-work');
+      expect(navSpy).toHaveBeenCalledWith(['/result-framework-reporting/entity-details/SP01/my-work'], { queryParamsHandling: 'preserve' });
+    });
+  });
+
+  // ── RHSF-T-3 · Quick typology filter chips & match count badge & debounced search ──
+  describe('quick filter chips', () => {
+    it('renders the 6 typologies with live counts when toolbar is open and not compact', async () => {
+      await build({
+        showToolbar: true,
+        compactFilters: false,
+        plannedResultsCount: 50,
+        typologyCounts: {
+          all: 50,
+          'Knowledge product': 15,
+          'Innovation development': 12,
+          'Policy change': 8,
+          'Innovation use': 6,
+          'Capacity sharing for development': 4
+        }
+      });
+
+      const strip = root().querySelector('[data-testid="quick-typology-filters"]');
+      expect(strip).toBeTruthy();
+
+      const chips = Array.from(strip!.querySelectorAll('button'));
+      expect(chips.length).toBe(6);
+
+      const expected = [
+        { label: 'All', count: '50' },
+        { label: 'Knowledge Product', count: '15' },
+        { label: 'Innovation Development', count: '12' },
+        { label: 'Policy Change', count: '8' },
+        { label: 'Innovation Use', count: '6' },
+        { label: 'Capacity Sharing', count: '4' }
+      ];
+
+      expected.forEach((exp, idx) => {
+        expect(chips[idx].textContent).toContain(exp.label);
+        expect(chips[idx].textContent).toContain(exp.count);
+      });
+    });
+
+    it('falls back to plannedResultsCount for All and 0 for typologies without counts', async () => {
+      await build({
+        showToolbar: true,
+        compactFilters: false,
+        plannedResultsCount: 25,
+        typologyCounts: {}
+      });
+
+      const strip = root().querySelector('[data-testid="quick-typology-filters"]');
+      const chips = Array.from(strip!.querySelectorAll('button'));
+      expect(chips[0].textContent).toContain('All');
+      expect(chips[0].textContent).toContain('25');
+      expect(chips[1].textContent).toContain('Knowledge Product');
+      expect(chips[1].textContent).toContain('0');
+    });
+
+    it('does not render quick filter chips when compactFilters is true', async () => {
+      await build({
+        showToolbar: true,
+        compactFilters: true
+      });
+
+      const strip = root().querySelector('[data-testid="quick-typology-filters"]');
+      expect(strip).toBeNull();
+    });
+
+    it('clicking a chip emits typologyChange with matchKey, and clicking active chip reverts to all', async () => {
+      await build({
+        showToolbar: true,
+        compactFilters: false,
+        typologyValue: 'all'
+      });
+
+      const spy = jest.spyOn(component.typologyChange, 'emit');
+      const strip = root().querySelector('[data-testid="quick-typology-filters"]');
+      const chips = Array.from(strip!.querySelectorAll('button'));
+
+      // Click Knowledge Product (index 1)
+      chips[1].click();
+      expect(spy).toHaveBeenCalledWith('Knowledge product');
+
+      // Now set typologyValue to 'Knowledge product' so it becomes active
+      fixture.componentRef.setInput('typologyValue', 'Knowledge product');
+      fixture.detectChanges();
+
+      expect(chips[1].getAttribute('aria-pressed')).toBe('true');
+      expect(chips[0].getAttribute('aria-pressed')).toBe('false');
+
+      // Click active chip again -> reverts to 'all'
+      chips[1].click();
+      expect(spy).toHaveBeenCalledWith('all');
+
+      // Click 'All' chip -> emits 'all'
+      chips[0].click();
+      expect(spy).toHaveBeenCalledWith('all');
+    });
+  });
+
+  describe('search match counter badge', () => {
+    it('renders match counter badge when search has text and matchCount > 0', async () => {
+      await build({
+        showToolbar: true,
+        search: 'wheat',
+        matchCount: 4
+      });
+
+      const badge = root().querySelector('[data-testid="search-match-count"]');
+      expect(badge).toBeTruthy();
+      expect(badge?.textContent?.trim()).toBe('4 matches');
+      expect(badge?.classList.contains('bg-violet-50')).toBe(true);
+      expect(badge?.classList.contains('text-violet-700')).toBe(true);
+      expect(badge?.classList.contains('border-violet-200')).toBe(true);
+    });
+
+    it('renders singular "1 match" when matchCount is 1', async () => {
+      await build({
+        showToolbar: true,
+        search: 'wheat',
+        matchCount: 1
+      });
+
+      const badge = root().querySelector('[data-testid="search-match-count"]');
+      expect(badge).toBeTruthy();
+      expect(badge?.textContent?.trim()).toBe('1 match');
+      expect(badge?.classList.contains('bg-violet-50')).toBe(true);
+      expect(badge?.classList.contains('text-violet-700')).toBe(true);
+      expect(badge?.classList.contains('border-violet-200')).toBe(true);
+    });
+
+    it('renders 0 matches with amber warning styling when matchCount is 0', async () => {
+      await build({
+        showToolbar: true,
+        search: 'xyznotfound',
+        matchCount: 0
+      });
+
+      const badge = root().querySelector('[data-testid="search-match-count"]');
+      expect(badge).toBeTruthy();
+      expect(badge?.textContent?.trim()).toBe('0 matches');
+      expect(badge?.classList.contains('bg-amber-50')).toBe(true);
+      expect(badge?.classList.contains('text-amber-800')).toBe(true);
+      expect(badge?.classList.contains('border-amber-200')).toBe(true);
+    });
+
+    it('does not render match counter badge when search is empty or matchCount is null', async () => {
+      await build({
+        showToolbar: true,
+        search: '',
+        matchCount: 5
+      });
+      expect(root().querySelector('[data-testid="search-match-count"]')).toBeNull();
+
+      fixture.componentRef.setInput('search', 'wheat');
+      fixture.componentRef.setInput('matchCount', null);
+      fixture.detectChanges();
+      expect(root().querySelector('[data-testid="search-match-count"]')).toBeNull();
+    });
+  });
+
+  describe('search debouncing', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('debounces input by 150ms before emitting searchChange', async () => {
+      jest.useFakeTimers();
+      await build({ showToolbar: true });
+
+      const emitSpy = jest.spyOn(component.searchChange, 'emit');
+      const searchInput = root().querySelector('input[type="text"]') as HTMLInputElement;
+      expect(searchInput).toBeTruthy();
+
+      searchInput.value = 'maize';
+      searchInput.dispatchEvent(new Event('input'));
+
+      // Not emitted immediately
+      expect(emitSpy).not.toHaveBeenCalled();
+
+      // Not emitted at 100ms
+      jest.advanceTimersByTime(100);
+      expect(emitSpy).not.toHaveBeenCalled();
+
+      // Emitted after 150ms total
+      jest.advanceTimersByTime(50);
+      expect(emitSpy).toHaveBeenCalledTimes(1);
+      expect(emitSpy).toHaveBeenCalledWith('maize');
+    });
+
+    it('cancels previous timer on subsequent input keystrokes', async () => {
+      jest.useFakeTimers();
+      await build({ showToolbar: true });
+
+      const emitSpy = jest.spyOn(component.searchChange, 'emit');
+      const searchInput = root().querySelector('input[type="text"]') as HTMLInputElement;
+
+      searchInput.value = 'mai';
+      searchInput.dispatchEvent(new Event('input'));
+      jest.advanceTimersByTime(100);
+
+      searchInput.value = 'maize';
+      searchInput.dispatchEvent(new Event('input'));
+      jest.advanceTimersByTime(100);
+      expect(emitSpy).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(50);
+      expect(emitSpy).toHaveBeenCalledTimes(1);
+      expect(emitSpy).toHaveBeenCalledWith('maize');
+    });
+
+    it('clear button emits immediately and cancels pending debounce timer', async () => {
+      jest.useFakeTimers();
+      await build({ showToolbar: true, search: 'maize' });
+
+      const emitSpy = jest.spyOn(component.searchChange, 'emit');
+      const searchInput = root().querySelector('input[type="text"]') as HTMLInputElement;
+
+      // Start a pending debounce
+      searchInput.value = 'maize seeds';
+      searchInput.dispatchEvent(new Event('input'));
+
+      const clearBtn = root().querySelector('button[aria-label="Clear search"]') as HTMLButtonElement;
+      expect(clearBtn).toBeTruthy();
+
+      clearBtn.click();
+      expect(emitSpy).toHaveBeenCalledTimes(1);
+      expect(emitSpy).toHaveBeenCalledWith('');
+
+      // Advance timers to verify debounce timer was cleared and does not emit again
+      jest.advanceTimersByTime(200);
+      expect(emitSpy).toHaveBeenCalledTimes(1);
     });
   });
 });

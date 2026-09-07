@@ -13,6 +13,7 @@ import {
   PrTableEmptyDirective
 } from '../../../../../../shared/components/pr-table';
 import { buildRatio, pendingOf } from '../../reporting-burndown';
+import { HighlightSearchPipe } from '../../pipes/highlight-search.pipe';
 
 /**
  * `__aowCode` values for the two program-level buckets (Intermediate Outcomes / 2030 Outcomes) —
@@ -182,7 +183,8 @@ interface IndicatorBand {
     PrSortIconComponent,
     PrTableHeaderDirective,
     PrTableBodyDirective,
-    PrTableEmptyDirective
+    PrTableEmptyDirective,
+    HighlightSearchPipe
   ],
   templateUrl: './reporting-aow-table.component.html',
   styleUrls: ['./reporting-aow-table.component.scss'],
@@ -243,6 +245,19 @@ export class ReportingAowTableComponent {
    * report. `null` before the session's first report.
    */
   readonly lastReported = input<{ id: unknown; aowCode: string } | null>(null);
+  /**
+   * Keys of the rows the user has starred, `rowKey`-shaped, for the CURRENT programme only — the
+   * host owns the store (`ReportingFavoritesService`) and derives this set per programme
+   * (`RFI-DD-1`). This component stays presentation-only: it never injects the service.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly favoriteKeys = input<ReadonlySet<string>>(new Set<string>());
+  /**
+   * Whether the host is currently showing only favorite rows. Drives the RFI-R-2.6 empty-state
+   * copy when the programme has zero favorites.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly favoritesOnly = input<boolean>(false);
 
   readonly openAow = output<string>();
   readonly openRow = output<ReportingIndicator>();
@@ -263,6 +278,18 @@ export class ReportingAowTableComponent {
    * press will actually do (P2-3252).
    */
   readonly allOpenChange = output<boolean>();
+  /**
+   * Toggles a row's favorite state. The host owns the store and does the toggling
+   * (`ReportingFavoritesService.toggle`) — this component only names the row.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly toggleFavorite = output<ReportingIndicator>();
+  /**
+   * Emitted by the RFI-R-2.6 empty state's `Show all indicators` button — asks the host to turn
+   * `favoritesOnly` off, mirroring `clearFilters`.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly exitFavoritesOnly = output<void>();
 
   /**
    * Disclosure = a user override on top of a level default (see `isDefaultOpenAow` /
@@ -275,7 +302,7 @@ export class ReportingAowTableComponent {
    * map would leak one programme's open cards into the next (P2-3251).
    */
   private readonly overrides = linkedSignal<string, ReadonlyMap<string, boolean>>({
-    source: () => `${this.scopeKey()}::${this.expandAll()}::${this.expandAllNonce()}`,
+    source: () => `${this.scopeKey()}::${this.expandAll()}::${this.expandAllNonce()}::${this.search().trim()}`,
     computation: () => new Map()
   });
   /** Row titles the user expanded past the 2-line clamp. */
@@ -500,8 +527,8 @@ export class ReportingAowTableComponent {
   }
 
   /**
-   * Helper to extract a clean HLO code token (e.g. 'HLO4', 'IO1', 'EOI2') from an HLO group
-   * or raw string. (RAJ-R-1, RAJ-DD-2)
+   * Helper to extract a clean HLO code token (e.g. 'HLO4', 'IO1', 'EOI2', '1.1') from an HLO group
+   * or raw string. (RAJ-R-1, RAJ-DD-2, RAH-R-2)
    */
   cleanHloCode(hloOrRaw: { code?: string; key?: string; name?: string } | string | null | undefined): string {
     if (!hloOrRaw) return '';
@@ -512,26 +539,85 @@ export class ReportingAowTableComponent {
     if (iocMatch) {
       return iocMatch[1].toUpperCase().replace(/\s+/, ' ');
     }
+    const hloSpaceNumMatch = /^(HLO\s+\d+(?:\.\d+)*)/i.exec(trimmed);
+    if (hloSpaceNumMatch) {
+      return hloSpaceNumMatch[1].toUpperCase().replace(/\s+/, ' ');
+    }
     const match = /^((?:HLO|HL|IO|EOI)[\w.\-]*)/i.exec(trimmed);
-    if (!match) return '';
-    const rawCode = match[1];
-    const codeMatch = /^(HLO\d+|IO\d+|EOI\d+|HL\d+)/i.exec(rawCode);
-    return codeMatch ? codeMatch[1].toUpperCase() : rawCode.split('.')[0].toUpperCase();
+    if (match) {
+      const rawCode = match[1];
+      const codeMatch = /^(HLO\d+|IO\d+|EOI\d+|HL\d+)/i.exec(rawCode);
+      return codeMatch ? codeMatch[1].toUpperCase() : rawCode.split('.')[0].toUpperCase();
+    }
+    const numMatch = /^(\d+(?:\.\d+)+)/.exec(trimmed);
+    if (numMatch) {
+      return numMatch[1];
+    }
+    return '';
+  }
+
+  /**
+   * Resolve semantic taxonomy badge ({ type: 'HLO' | 'OUTCOME' | 'OC' | 'IO' | 'I-OC', code: string })
+   * based on band, hlo key, and row metadata, preserving specific ToC taxonomy (HLO, OC, I-OC). (RAH-R-2, RAH-DD-2)
+   */
+  hloTaxonomy(hlo: any, band?: any): { type: string; code: string } {
+    let type = 'HLO';
+    const bandKey = (band?.key || '').toLowerCase();
+    const hloKey = (hlo?.key || '').toLowerCase();
+    const firstRow = hlo?.rows?.[0];
+    const rawCode = (hlo?.code || this.cleanHloCode(hlo) || '').trim();
+
+    if (
+      bandKey.includes('band-io') ||
+      hloKey.startsWith('io::') ||
+      bandKey.includes('intermediate') ||
+      firstRow?.__isIntermediateCrosscut ||
+      /^(?:I-OC|IO)/i.test(rawCode)
+    ) {
+      type = /^(?:I-OC)/i.test(rawCode) ? 'I-OC' : 'IO';
+    } else if (
+      bandKey.includes('band-out') ||
+      bandKey.includes('band-o30') ||
+      hloKey.includes('::out::') ||
+      hloKey.startsWith('o30::') ||
+      firstRow?.__tier === 'outcome' ||
+      /^(?:OC|EOI)/i.test(rawCode)
+    ) {
+      if (/^OC/i.test(rawCode)) {
+        type = 'OC';
+      } else if (/^EOI/i.test(rawCode)) {
+        type = 'EOI';
+      } else {
+        type = 'OUTCOME';
+      }
+    } else if (bandKey.includes('band-hlo') || hloKey.includes('::hlo::') || firstRow?.__tier === 'output') {
+      type = 'HLO';
+    } else if (/^(?:HLO|HL)/i.test(rawCode)) {
+      type = 'HLO';
+    }
+
+    // Strip redundant prefix from hlo.code (e.g. 'HLO 1.1' -> '1.1', 'HLO4' -> '4', 'I-OC 3.5' -> '3.5', 'OUTPUT 1.1' -> '1.1')
+    let cleanCode = rawCode.replace(/^(?:OUTPUT|OUTCOME|HLO|HL|I-OC|OC|IO|EOI)[\s.\-_:]*/i, '').trim();
+    if (!cleanCode && rawCode) {
+      cleanCode = rawCode;
+    }
+
+    return { type, code: cleanCode };
   }
 
   /**
    * Cluster indicators by ToC title. Display name is the full descriptive title, as the design shows it.
-   * Leading codes like `HL04.AOW1.I01` are stripped when present so the row reads as a sentence,
-   * while the standardized badge code (e.g. `HLO4`) is extracted for the header badge. (RAJ-R-1, RAJ-DD-2)
+   * Leading codes like `HL04.AOW1.I01` or `1.1:` are stripped when present so the row reads as a sentence,
+   * while the standardized badge code (e.g. `HLO4`, `1.1`) is extracted for the header badge. (RAJ-R-1, RAH-R-2)
    */
   private clusterByTitle(rows: ReportingIndicator[], keyPrefix: string): HloGroup[] {
     const byKey = new Map<string, HloGroup>();
     for (const row of rows) {
       const raw = row.__hlo?.trim() || 'Unassigned';
-      const match = /^((?:HLO|HL|I-OC|OC|IO|EOI)(?:[-\s]?\d[\w.\-]*)?)\.?\s*[-–:]?\s+(.+)$/i.exec(raw);
-      const name = (match?.[2] || raw).trim() || raw;
+      const match = /^((?:(?:HLO|HL|I-OC|OC|IO|EOI)(?:[-\s]?\d[\w.\-]*)?|\d+(?:\.\d+)+))\.?\s*[:\-–—·•]?\s*(.+)$/i.exec(raw);
+      const name = (match?.[2] || raw).replace(/^[·•\-–—:\s]+/, '').trim() || raw;
       const rawCode = match?.[1] || '';
-      const code = this.cleanHloCode(rawCode) || undefined;
+      const code = this.cleanHloCode(rawCode || raw) || undefined;
       const key = `${keyPrefix}::${raw}`;
       if (!byKey.has(key)) {
         // Every row of a group comes from the same ToC node, so the first one carries the group's
@@ -541,7 +627,27 @@ export class ReportingAowTableComponent {
       }
       byKey.get(key)!.rows.push(row);
     }
-    return [...byKey.values()];
+    return [...byKey.values()].sort((a, b) => this.compareHloGroups(a, b));
+  }
+
+  /**
+   * Sort HLO and Outcome groups by their code token numerically (e.g. HL01, HL02, HL03... I-OC 1.1, I-OC 1.2),
+   * placing coded groups first in numerical order, followed by uncoded groups sorted alphabetically by name.
+   */
+  compareHloGroups(a: { code?: string; name?: string; key?: string }, b: { code?: string; name?: string; key?: string }): number {
+    const codeA = (a.code || '').trim();
+    const codeB = (b.code || '').trim();
+    if (codeA && codeB) {
+      const cmp = codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+      if (cmp !== 0) return cmp;
+    } else if (codeA) {
+      return -1;
+    } else if (codeB) {
+      return 1;
+    }
+    const nameA = a.name || a.key || '';
+    const nameB = b.name || b.key || '';
+    return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
   }
 
   /** KPI count for a band header (`4 KPIs`). */
@@ -786,16 +892,29 @@ export class ReportingAowTableComponent {
     const selCenter = this.selectedCenterOf(group);
     const selType = this.selectedTypeOf(group);
 
+    // quick/reporting-search-all-levels (2026-09-04): the search box says "indicators" but users
+    // type any level of the tree. A hit on the CARD itself (AoW code or name) keeps every row of
+    // that card — filtering its rows by the AoW's own name would empty the very card that matched.
+    const groupHit =
+      !!q && [group.aow?.code, group.aow?.name].some(v => (v ?? '').toLowerCase().includes(q));
+
     return (group.indicators ?? []).filter(row => {
       if (status !== 'all' && this.statusOf(row) !== status) return false;
       if (selCenter && row.center_acronym?.trim() !== selCenter) return false;
       if (selType && row.result_type_name?.trim() !== selType) return false;
-      if (!q) return true;
-      // Both name fields are searched: the visible meta line is the indicator name now, but users
-      // still type categories ("innovation use"), which only live in `result_type_name`.
-      return [row.indicator_description, row.__hlo, this.indicatorNameOf(row), row.result_type_name].some(v =>
-        (v ?? '').toLowerCase().includes(q)
-      );
+      if (!q || groupHit) return true;
+      // Every level a row belongs to is searchable: its own description and name, the category
+      // ("innovation use" only lives in `result_type_name`), the HLO / outcome node it hangs from
+      // (`__hlo`), the AoW it sits in (`__aowCode` / `__aowName`) and its Center.
+      return [
+        row.indicator_description,
+        row.__hlo,
+        this.indicatorNameOf(row),
+        row.result_type_name,
+        row.__aowCode,
+        row.__aowName,
+        row.center_acronym
+      ].some(v => (v ?? '').toLowerCase().includes(q));
     });
   }
 
@@ -984,12 +1103,36 @@ export class ReportingAowTableComponent {
    * `expandAll()` is the only thing that lifts that seed: the toolbar's Expand all switch moves the
    * default for every card at once (P2-3252) instead of writing an override per AoW.
    */
-  isDefaultOpenAow(): boolean {
-    return this.expandAll();
+  isDefaultOpenAow(codeOrKey?: string): boolean {
+    if (this.expandAll()) return true;
+    const q = this.search().trim();
+    if (q.length >= 2) {
+      if (!codeOrKey) return true;
+      const code = codeOrKey.startsWith('aow::') ? codeOrKey.slice(5) : codeOrKey;
+      const grp = this.groups().find(g => g.aow?.code === code);
+      return grp ? this.visibleRows(grp).length > 0 : false;
+    }
+    return false;
   }
 
-  isDefaultOpenHlo(): boolean {
-    return this.expandAll();
+  isDefaultOpenHlo(hloOrKey?: HloGroup | string): boolean {
+    if (this.expandAll()) return true;
+    const q = this.search().trim();
+    if (q.length >= 2) {
+      if (!hloOrKey) return true;
+      if (typeof hloOrKey === 'object' && hloOrKey !== null) {
+        return (hloOrKey.rows?.length ?? 0) > 0;
+      }
+      // string key lookup
+      for (const g of this.groups()) {
+        for (const b of this.bandsOf(g)) {
+          const h = b.groups.find(group => group.key === hloOrKey);
+          if (h) return (h.rows?.length ?? 0) > 0;
+        }
+      }
+      return false;
+    }
+    return false;
   }
 
   /**
@@ -998,7 +1141,7 @@ export class ReportingAowTableComponent {
    * cards drop out so it does not fill with dead headers.
    */
   readonly visibleGroups = computed(() => {
-    if (!this.filtersActive()) return this.groups();
+    if (!this.filtersActive() && !this.search().trim()) return this.groups();
     return this.groups().filter(g => g.loading || this.visibleRows(g).length > 0);
   });
 
@@ -1014,13 +1157,13 @@ export class ReportingAowTableComponent {
   }
 
   /** Check if all HLO sub-groups in a band are expanded. */
-  isBandAllOpen(groups: { key: string }[]): boolean {
+  isBandAllOpen(groups: HloGroup[]): boolean {
     if (!groups?.length) return false;
-    return groups.every(hlo => this.isOpen(hlo.key, this.isDefaultOpenHlo()));
+    return groups.every(hlo => this.isOpen(hlo.key, this.isDefaultOpenHlo(hlo)));
   }
 
   /** Toggle all HLO sub-groups in a band. */
-  toggleBand(groups: { key: string }[]): void {
+  toggleBand(groups: HloGroup[]): void {
     const allOpen = this.isBandAllOpen(groups);
     this.overrides.update(map => {
       const next = new Map(map);
@@ -1043,8 +1186,7 @@ export class ReportingAowTableComponent {
   readonly allOpen = computed(() => {
     const groups = this.visibleGroups();
     if (!groups.length) return false;
-    const defaultOpen = this.expandAll();
-    return groups.every(group => this.isOpen(`aow::${group.aow.code}`, defaultOpen));
+    return groups.every(group => this.isOpen(`aow::${group.aow.code}`, this.isDefaultOpenAow(group.aow.code)));
   });
 
   constructor() {
@@ -1135,6 +1277,16 @@ export class ReportingAowTableComponent {
   readonly highlightedRowKey = signal<string | null>(null);
   private highlightTimer: ReturnType<typeof setTimeout> | null = null;
 
+  /** Highlight a row by key with transient ring/background highlight for ~2.6s. */
+  highlightRow(targetKey: string): void {
+    this.highlightedRowKey.set(targetKey);
+    if (this.highlightTimer) clearTimeout(this.highlightTimer);
+    this.highlightTimer = setTimeout(() => {
+      this.highlightTimer = null;
+      this.highlightedRowKey.set(null);
+    }, 2600);
+  }
+
   /** True for the ONE row whose report surface just closed — that row offers "Next pending". */
   isLastReportedRow(row: ReportingIndicator): boolean {
     const last = this.lastReported();
@@ -1188,17 +1340,12 @@ export class ReportingAowTableComponent {
       const group = this.visibleGroups().find(g => this.visibleRows(g).some(r => this.rowKey(r) === targetKey));
       if (group) {
         const aowKey = `aow::${group.aow.code}`;
-        if (!this.isOpen(aowKey, this.isDefaultOpenAow())) this.toggle(aowKey, this.isDefaultOpenAow());
+        if (!this.isOpen(aowKey, this.isDefaultOpenAow(group.aow.code))) this.toggle(aowKey, this.isDefaultOpenAow(group.aow.code));
         const hlo = this.hloGroupsOf(group).find(h => h.rows.some(r => this.rowKey(r) === targetKey));
-        if (hlo && !this.isOpen(hlo.key, this.isDefaultOpenHlo())) this.toggle(hlo.key, this.isDefaultOpenHlo());
+        if (hlo && !this.isOpen(hlo.key, this.isDefaultOpenHlo(hlo))) this.toggle(hlo.key, this.isDefaultOpenHlo(hlo));
       }
     }
-    this.highlightedRowKey.set(targetKey);
-    if (this.highlightTimer) clearTimeout(this.highlightTimer);
-    this.highlightTimer = setTimeout(() => {
-      this.highlightTimer = null;
-      this.highlightedRowKey.set(null);
-    }, 2600);
+    this.highlightRow(targetKey);
     // Waits for the card's 280ms disclosure animation to FINISH before scrolling — firing earlier
     // scrolls to a position the expanding card is still pushing around (verified live: 60ms landed
     // off-viewport).
@@ -1237,6 +1384,20 @@ export class ReportingAowTableComponent {
 
   rowKey(row: ReportingIndicator): string {
     return `${row.indicator_id}::${row.center_id ?? ''}::${row.__aowCode ?? ''}`;
+  }
+
+  /**
+   * Whether `row` is starred. `rowKey` and `favoriteKeyOf` (the service's own key builder) MUST
+   * stay byte-identical (RFI-AC-14) — this component never imports the service, only the input.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  isFavorite(row: ReportingIndicator): boolean {
+    return this.favoriteKeys().has(this.rowKey(row));
+  }
+
+  /** @akili-spec changes/reporting-favorite-indicators */
+  favoriteLabel(row: ReportingIndicator): string {
+    return this.isFavorite(row) ? 'Remove from favorites' : 'Add to favorites';
   }
 
   isRowMenuOpen(row: ReportingIndicator): boolean {

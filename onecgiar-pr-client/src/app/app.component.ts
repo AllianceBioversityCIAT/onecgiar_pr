@@ -9,6 +9,7 @@ import { LayoutService, SidebarLayout } from './shared/services/layout.service';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
 import { ResultsNotificationsService } from './pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
+import { SmartNavigationService } from './shared/services/smart-navigation.service';
 // import { WebsocketService } from './sockets/websocket.service';
 
 @Component({
@@ -31,6 +32,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly resultsNotificationsSE = inject(ResultsNotificationsService);
+  /** Constructed at bootstrap so result-detail Back can see the page the user left. */
+  private readonly smartNav = inject(SmartNavigationService);
 
   constructor(
     public AuthService: AuthService,

@@ -77,6 +77,17 @@ describe('BilateralAiService (unit)', () => {
     const clarisaCentersRepository = {
       findOne: jest.fn().mockResolvedValue({ code: 'TEST_CENTER' }),
     };
+    const clarisaInstitutionsRepository = {
+      findOne: jest.fn().mockResolvedValue({ id: 7, acronym: 'AfricaRice' }),
+    };
+    const templateRepository = {
+      findOne: jest.fn().mockResolvedValue({
+        template: '<p>{{result_count}} — {{drafts_url}}</p>',
+      }),
+    };
+    const emailService = {
+      sendEmail: jest.fn(),
+    };
 
     const service = new BilateralAiService(
       jobRepository as any,
@@ -93,6 +104,9 @@ describe('BilateralAiService (unit)', () => {
       userRepository as any,
       roleByUserRepository as any,
       clarisaCentersRepository as any,
+      clarisaInstitutionsRepository as any,
+      templateRepository as any,
+      emailService as any,
     );
 
     Object.assign(service, overrides);
@@ -114,6 +128,9 @@ describe('BilateralAiService (unit)', () => {
         userRepository,
         roleByUserRepository,
         clarisaCentersRepository,
+        clarisaInstitutionsRepository,
+        templateRepository,
+        emailService,
       },
     };
   };
@@ -573,6 +590,33 @@ describe('BilateralAiService (unit)', () => {
       ).toHaveBeenCalledWith(100, 'CLIMATE', 42);
     });
 
+    // 2026-09-04: the client lands on /bilateral/:center/result/:result_code?phase=:versionId —
+    // the same URL shape the results list opens — instead of the bare internal id.
+    it('returns resultCode and versionId alongside resultId for the canonical editor URL', async () => {
+      const { service, stubs } = makeService();
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 5,
+        is_discarded: false,
+        result_id: 100,
+        job: { program_code: null, user_id: 42, center_id: 7 },
+        extracted_mds: null,
+      });
+      stubs.evidenceRepository.find.mockResolvedValue([]);
+      stubs.resultRepository.findOneOrFail.mockResolvedValue({
+        id: 100,
+        result_code: 9046,
+        version_id: 36,
+      });
+
+      const res = await service.promoteDraft(5, 42);
+
+      expect(res.response).toEqual({
+        resultId: 100,
+        resultCode: 9046,
+        versionId: 36,
+      });
+    });
+
     it('should throw BadRequestException when non-DOCUMENT formal evidence exists', async () => {
       const { service, stubs } = makeService();
       stubs.draftRepository.findOne.mockResolvedValue({
@@ -722,6 +766,129 @@ describe('BilateralAiService (unit)', () => {
         response_snapshot: expect.any(Object),
         completed_date: expect.any(Date),
       });
+      // Zero candidates → nothing to review → no mail.
+      expect(stubs.emailService.sendEmail).not.toHaveBeenCalled();
+    });
+
+    // 2026-09-04: the client no longer force-redirects on completion, so this mail is what brings
+    // the uploader back to the Drafts list.
+    it('mails the uploader a link to the drafts list when candidates were produced', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+        center_id: 7,
+        program_code: 'SP06',
+      });
+      stubs.userRepository.findOne.mockResolvedValue({
+        email: 'uploader@cgiar.org',
+        first_name: 'Cristian',
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [
+          { indicator: 'Number of innovations', title: 'A', description: 'd' },
+        ],
+        interactionId: 'int-9',
+      });
+      jest
+        .spyOn(service as any, 'createDraftFromCandidate')
+        .mockResolvedValue({ id: 1 });
+
+      await service.processJob('j1');
+
+      expect(stubs.templateRepository.findOne).toHaveBeenCalledWith({
+        where: { name: 'email_template_bilateral_ai_results_ready' },
+      });
+      expect(stubs.emailService.sendEmail).toHaveBeenCalledTimes(1);
+      const payload = stubs.emailService.sendEmail.mock.calls[0][0];
+      expect(payload.emailBody.to).toEqual(['uploader@cgiar.org']);
+      // The rendered body carries the count and the centre's drafts URL.
+      expect(payload.emailBody.message.socketFile).toContain('1');
+      expect(payload.emailBody.message.socketFile).toContain(
+        '/bilateral/AfricaRice/drafts',
+      );
+    });
+
+    // 2026-09-07: "Bioversity (Alliance)" pasted raw into the href was cut at the space by the
+    // mail client and landed on /bilateral/Bioversity%20/home. The segment is percent-encoded,
+    // parentheses included, so the link survives every client and the router decodes it back.
+    it('percent-encodes the centre acronym in the drafts link, parentheses included', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaInstitutionsRepository.findOne.mockResolvedValue({
+        id: 7,
+        acronym: 'Bioversity (Alliance)',
+      });
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+        center_id: 7,
+        program_code: 'SP06',
+      });
+      stubs.userRepository.findOne.mockResolvedValue({
+        email: 'uploader@cgiar.org',
+        first_name: 'Juan',
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [
+          { indicator: 'Number of innovations', title: 'A', description: 'd' },
+        ],
+        interactionId: 'int-9',
+      });
+      jest
+        .spyOn(service as any, 'createDraftFromCandidate')
+        .mockResolvedValue({ id: 1 });
+
+      await service.processJob('j1');
+
+      const payload = stubs.emailService.sendEmail.mock.calls[0][0];
+      expect(payload.emailBody.message.socketFile).toContain(
+        '/bilateral/Bioversity%20%28Alliance%29/drafts',
+      );
+      expect(payload.emailBody.message.socketFile).not.toContain(
+        '/bilateral/Bioversity (Alliance)/drafts',
+      );
+    });
+
+    it('a mail failure never fails the job — COMPLETED already stands', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+        center_id: 7,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [{ indicator: 'Number of innovations' }],
+        interactionId: null,
+      });
+      jest
+        .spyOn(service as any, 'createDraftFromCandidate')
+        .mockResolvedValue({ id: 1 });
+      stubs.templateRepository.findOne.mockRejectedValue(new Error('db down'));
+
+      await expect(service.processJob('j1')).resolves.toBeUndefined();
+
+      expect(stubs.jobRepository.update).toHaveBeenCalledWith(
+        'j1',
+        expect.objectContaining({ status: BilateralAiJobStatus.COMPLETED }),
+      );
     });
 
     it('should preserve the AI-detected lead center when creating a draft', async () => {

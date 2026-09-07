@@ -185,10 +185,13 @@ describe('InnovationPathwayStepTwoService', () => {
   // someone forgetting it; here the exclusion is the subject of the test. P2-3572 excludes
   // Knowledge Products from Step 2 explicitly, "regardless of their association with the package".
   it('never asks for Knowledge Products (type 6) — excluded by P2-3572', async () => {
-    (mockResultRepository.getResultByTypes as jest.Mock).mockResolvedValueOnce([]);
+    (mockResultRepository.getResultByTypes as jest.Mock).mockResolvedValueOnce(
+      [],
+    );
     await service.findInnovationsAndComplementary();
-    const [requestedTypes] = (mockResultRepository.getResultByTypes as jest.Mock)
-      .mock.calls[0];
+    const [requestedTypes] = (
+      mockResultRepository.getResultByTypes as jest.Mock
+    ).mock.calls[0];
     expect(requestedTypes).not.toContain(6);
   });
 

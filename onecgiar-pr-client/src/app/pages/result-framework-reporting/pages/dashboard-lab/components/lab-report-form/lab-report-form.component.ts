@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
+import { WordCounterService } from '../../../../../../shared/services/word-counter.service';
 import { ResultLevelService } from '../../../../../results/pages/result-creator/services/result-level.service';
 import { filterOutAvisaInitiatives } from '../../../../../../shared/utils/avisa-initiative.util';
 import { buildCreateResultPayload, OTHER_CENTERS_CODE, OTHER_SP_ID, ReportResultFormBody } from '../../../../shared/report-result/create-result-payload.util';
@@ -54,6 +55,64 @@ export class LabReportFormComponent {
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
   private readonly centersSE = inject(CentersService);
+  private readonly wordCounterSE = inject(WordCounterService);
+
+  // @akili-spec changes/report-result-form-ux (RFUX-T-3, RFUX-R-3)
+  readonly titleInput = viewChild<ElementRef<HTMLTextAreaElement>>('titleInput');
+
+  // @akili-spec changes/report-result-form-ux (RFUX-T-4, RFUX-R-4)
+  readonly contributionInput = viewChild<ElementRef<HTMLInputElement>>('contributionInput');
+  readonly unitMeasurement = computed(() => this.indicator()?.unit_messurament || '');
+  readonly targetValueSum = computed(() => this.indicator()?.target_value_sum ?? 0);
+  readonly achievedValueSum = computed(() => this.indicator()?.actual_achieved_value_sum ?? 0);
+
+  // @akili-spec changes/report-result-form-ux (RFUX-T-6, RFUX-R-6)
+  readonly categoryContainer = viewChild<ElementRef<HTMLElement>>('categoryContainer');
+
+  focusFirstMissingField(): void {
+    if (this.needsCategoryChoice() && !this.createResultBody().result_type_id) {
+      const container = this.categoryContainer()?.nativeElement;
+      const target = container?.querySelector<HTMLElement>('a.field, select, input, [tabindex]') || container;
+      target?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+      target?.focus();
+      return;
+    }
+    if (!this.createResultBody().result_name?.trim() || this.titleWordCount() > 30) {
+      this.titleInput()?.nativeElement?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+      this.titleInput()?.nativeElement?.focus();
+      return;
+    }
+    if (this.createResultBody().contribution_to_indicator_target == null || `${this.createResultBody().contribution_to_indicator_target}`.trim() === '') {
+      this.contributionInput()?.nativeElement?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+      this.contributionInput()?.nativeElement?.focus();
+      return;
+    }
+  }
+
+  readonly titleWordCount = computed(() => this.wordCounterSE.counter(this.createResultBody().result_name || ''));
+
+  readonly titleWordCountClass = computed<string>(() => {
+    const count = this.titleWordCount();
+    if (count <= 24) return 'bg-gray-100 text-gray-600 border border-gray-200';
+    if (count <= 29) return 'bg-amber-50 text-amber-700 border border-amber-200';
+    if (count === 30) return 'bg-violet-50 text-[var(--pr-color-primary-400)] border border-violet-300 font-bold';
+    return 'bg-red-50 text-red-700 border border-red-300 font-bold';
+  });
+
+  readonly titleWordCountLabel = computed<string>(() => {
+    const count = this.titleWordCount();
+    if (count <= 29) return `${count} / 30 words`;
+    if (count === 30) return '30 / 30 max words';
+    return `${count} / 30 (Limit exceeded)`;
+  });
+
+  adjustTextareaHeight(event: Event): void {
+    const textarea = event.target as HTMLTextAreaElement;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    const nextHeight = Math.min(Math.max(textarea.scrollHeight, 68), 140);
+    textarea.style.height = `${nextHeight}px`;
+  }
   /**
    * Injected for TWO reasons, both load-bearing:
    *  1. `resultLevelListSig` is a SIGNAL, so the category options recompute the moment the catalog
@@ -75,11 +134,16 @@ export class LabReportFormComponent {
   /** Program code, for the bilateral-projects lookup. */
   readonly programCode = input<string>('');
   /**
-   * When set, the form runs in EMERGING mode: no indicator, no ToC node — the category is fixed to
-   * this result type and the result is created without a ToC contribution.
+   * Explicit emerging entry. Unlike `emergingCategory`, this arms the form without preselecting a
+   * result type so the user can choose Output/Outcome and then a category.
+   */
+  readonly emergingMode = input<boolean>(false);
+  /**
+   * Optional legacy emerging entry where a category is already fixed. New emerging-aside callers
+   * leave this null and set `emergingMode`.
    */
   readonly emergingCategory = input<{ id: number; name: string; levelId: number } | null>(null);
-  readonly isEmerging = computed(() => !!this.emergingCategory());
+  readonly isEmerging = computed(() => this.emergingMode() || !!this.emergingCategory());
   /**
    * Whether the user may create a result here (phase open + member of the program). Sourced from
    * `EntityAowService.canReportResults()`. Defaults to false so a host that forgets to pass it
@@ -168,8 +232,19 @@ export class LabReportFormComponent {
     });
   }
 
-  /** The level the category options belong to. Never chosen by the user. */
-  readonly resultLevelId = computed(() => this.indicator()?.result_level_id ?? this.tocNode()?.result_level_id ?? this.emergingCategory()?.levelId ?? null);
+  /** Local level selection exists only for explicit emerging mode without a seeded category. */
+  readonly chosenResultLevelId = signal<number | null>(null);
+  readonly outputOutcomeLevels = computed<any[]>(() => this.resultLevelSE.outputOutcomeLevelsSig() ?? []);
+  readonly needsResultLevelChoice = computed(() => this.emergingMode() && !this.emergingCategory());
+
+  /** The level the category options belong to; only unseeded emerging mode lets the user choose it. */
+  readonly resultLevelId = computed(
+    () =>
+      this.indicator()?.result_level_id ??
+      this.tocNode()?.result_level_id ??
+      this.emergingCategory()?.levelId ??
+      this.chosenResultLevelId()
+  );
 
   /**
    * The category picker is asked for whenever the indicator does not declare a category, and only
@@ -279,23 +354,33 @@ export class LabReportFormComponent {
   readonly noScienceProgramsNote = 'No Science Programs related to the established HLO/Outcomes were found';
 
   constructor() {
-    // Re-arm for whichever indicator the drawer is showing — or for an emerging category when the
-    // form runs in emerging mode.
+    // Re-arm for whichever indicator/category the drawer is showing, or for explicit emerging mode
+    // where both are intentionally null until the user chooses a level and category.
     effect(() => {
       const ind = this.indicator();
       const emerging = this.emergingCategory();
-      if (!ind && !emerging) return;
-      this.resetForm();
-      if (this.currentResultIsKnowledgeProduct()) {
-        this.createResultBody.update(body => ({ ...body, contribution_to_indicator_target: 1 }));
-      }
-      this.loadInitiatives();
-      this.loadBilateral();
-      this.preselectCentersP = this.preselectTocCenters();
-      if (emerging) {
-        // Emerging: the category is fixed, so lock the result type and skip the picker.
-        this.createResultBody.update(b => ({ ...b, result_type_id: emerging.id }));
-      }
+      const emergingMode = this.emergingMode();
+      if (!ind && !emerging && !emergingMode) return;
+      // Field bug 2026-09-04 (quick/category-picker-kp-reset): everything below runs UNTRACKED.
+      // This effect used to read `currentResultIsKnowledgeProduct()`, which depends on the form body
+      // — so the moment a user picked "Knowledge product" in the category picker, the boolean
+      // flipped, the effect re-ran and `resetForm()` wiped the choice back to "Select a category"
+      // (any other category stuck, because it did not flip the boolean). The re-arm must react to
+      // the indicator / emerging category only, never to what the user types or picks.
+      untracked(() => {
+        this.resetForm();
+        this.chosenResultLevelId.set(null);
+        if (this.currentResultIsKnowledgeProduct()) {
+          this.createResultBody.update(body => ({ ...body, contribution_to_indicator_target: 1 }));
+        }
+        this.loadInitiatives();
+        this.loadBilateral();
+        this.preselectCentersP = this.preselectTocCenters();
+        if (emerging) {
+          // Emerging: the category is fixed, so lock the result type and skip the picker.
+          this.createResultBody.update(b => ({ ...b, result_type_id: emerging.id }));
+        }
+      });
     });
 
     // P2-3420 — fetch the linkable-innovation catalogue only once the question is actually on
@@ -360,9 +445,25 @@ export class LabReportFormComponent {
     if (!this.currentResultIsKnowledgeProduct()) return;
     await Promise.resolve(this.preselectCentersP);
     if (this.canSave()) {
+      this.autoCreateHint.set(null);
       this.createResult();
+      return;
+    }
+    // Hardening 2026-09-04 (quick/kp-create-navigation-hardening): the auto-create used to skip
+    // SILENTLY when the form was not save-ready at the moment MQAP resolved — the publication looked
+    // linked and nothing happened. Say so, and point at what is missing.
+    if (this.mqapJson()) {
+      const n = this.missingFields().length;
+      this.autoCreateHint.set(
+        n > 0
+          ? `Publication linked. ${n} field${n === 1 ? '' : 's'} still need${n === 1 ? 's' : ''} your input before the result is created.`
+          : 'Publication linked. Use Create result to finish.'
+      );
     }
   }
+
+  /** Why the knowledge-product auto-create did not fire (null when it did, or does not apply). */
+  readonly autoCreateHint = signal<string | null>(null);
 
   /**
    * Centers mapped in the node's ToC: the union of its partner institutions and the centers
@@ -390,6 +491,11 @@ export class LabReportFormComponent {
     this.markDirty();
   }
 
+  onResultLevelChange(resultLevelId: number | null): void {
+    this.chosenResultLevelId.set(resultLevelId);
+    this.onCategoryChange(null);
+  }
+
   /**
    * Changing the category away from Knowledge product must discard everything the repository sync
    * produced. Otherwise a user who synced a handle and then re-picked the category submits a
@@ -399,6 +505,14 @@ export class LabReportFormComponent {
   onCategoryChange(resultTypeId: number | null): void {
     const wasKnowledgeProduct = this.currentResultIsKnowledgeProduct();
     this.patch('result_type_id', resultTypeId);
+    // A knowledge product contributes 1 by definition (KPAC-R-1) — the same default the re-arm
+    // applies to KP indicators, now also when the category is picked by hand.
+    if (resultTypeId === KNOWLEDGE_PRODUCT_TYPE_ID && !wasKnowledgeProduct) {
+      const current = this.createResultBody().contribution_to_indicator_target;
+      if (current == null || `${current}`.trim() === '' || Number(current) === 0) {
+        this.createResultBody.update(body => ({ ...body, contribution_to_indicator_target: 1 }));
+      }
+    }
     // P2-3420: the question only exists for Innovation use — dropping the answer keeps a hidden
     // "Yes" (and its link) from travelling in the payload of a result of another category.
     this.hasInnovationLink.set(false);
@@ -441,7 +555,7 @@ export class LabReportFormComponent {
   titleHint(): string {
     return this.currentResultIsKnowledgeProduct()
       ? 'Filled automatically from the repository once you sync the handle.'
-      : 'A short, specific title for the result. Maximum 30 words.';
+      : 'Provide a clear, concise title describing the output or outcome. Maximum 30 words.';
   }
 
   titleLabel(): string {
@@ -497,7 +611,16 @@ export class LabReportFormComponent {
 
   // ---- chip removal: every multi-value field shows its selection as removable chips ----
 
+  // @akili-spec changes/report-result-form-ux (RFUX-T-5, RFUX-R-7)
+  isLeadCenter(center: any): boolean {
+    const leadAcronym = this.indicator()?.center_acronym?.toUpperCase();
+    if (!leadAcronym) return false;
+    const centerAcronym = (center?.acronym ?? center?.code ?? '').toUpperCase();
+    return centerAcronym === leadAcronym;
+  }
+
   removeCenter(item: any): void {
+    if (this.isLeadCenter(item)) return;
     this.contributingCenters.update(list => list.filter(c => c?.code !== item?.code));
     if (!this.showOtherCenters()) this.otherCentersSelected.set([]);
     this.markDirty();
@@ -542,6 +665,7 @@ export class LabReportFormComponent {
     const missing: string[] = [];
     if (this.needsCategoryChoice() && !body.result_type_id) missing.push('Indicator category');
     if (!body.result_name?.trim()) missing.push('Result title');
+    else if (this.titleWordCount() > 30) missing.push('Result title exceeds 30 words');
     if (this.currentResultIsKnowledgeProduct() && !this.mqapJson()) missing.push('Repository link/handle');
     if (body.contribution_to_indicator_target == null || `${body.contribution_to_indicator_target}`.trim() === '')
       missing.push('Contribution to indicator target');
@@ -562,12 +686,19 @@ export class LabReportFormComponent {
     if (!this.canSave()) return;
     this.creatingResult.set(true);
 
+    const selectedType = this.resultTypes().find((type: any) => type.id === this.createResultBody().result_type_id);
+    const selectedEmergingCategory =
+      this.emergingCategory() ??
+      (this.emergingMode() && selectedType && this.resultLevelId() != null
+        ? { id: selectedType.id, name: selectedType.name ?? '', levelId: this.resultLevelId() as number }
+        : null);
+
     const body = buildCreateResultPayload({
       indicator: this.indicator(),
       tocNode: this.tocNode(),
       initiativeId: this.initiativeId(),
       body: this.createResultBody(),
-      emergingCategory: this.emergingCategory(),
+      emergingCategory: selectedEmergingCategory,
       mqapJson: this.mqapJson(),
       tocCentersSelected: this.contributingCenters(),
       otherCentersSelected: this.otherCentersSelected(),
@@ -578,16 +709,32 @@ export class LabReportFormComponent {
       linkedResultId: this.linkedResultId()
     });
 
+    this.autoCreateHint.set(null);
     this.api.resultsSE.POST_createResult(body).subscribe({
       next: (resp: any) => {
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
-        this.created.emit();
-        // Keep the button in its "Creating…" state until the router actually lands on the new
-        // result — clearing it before navigating leaves a blank gap with no loading feedback.
+        const code = resp?.response?.result?.result_code;
+        const phase = resp?.response?.result?.version_id;
+        if (code == null) {
+          // Nothing to navigate to — close the drawer; the result exists and is listed on the Results tab.
+          this.created.emit();
+          this.creatingResult.set(false);
+          return;
+        }
+        // Hardening 2026-09-04 (quick/kp-create-navigation-hardening): navigate FIRST and let the
+        // drawer leave with the page. `created` used to fire before this navigation; the host's
+        // reaction to the drawer closing could write the URL itself, which cancels an in-flight
+        // navigation — the user was left on the Reporting tab with a result they never saw.
+        // `created` now fires only when the navigation did NOT happen (refused or failed), so the
+        // drawer still closes in that case. The button stays in "Creating…" until the router lands.
         void this.router
-          .navigate([`/result/result-detail/${resp?.response?.result?.result_code}/general-information`], {
-            queryParams: { phase: resp?.response?.result?.version_id }
-          })
+          .navigate([`/result/result-detail/${code}/general-information`], { queryParams: { phase } })
+          .then(
+            navigated => {
+              if (!navigated) this.created.emit();
+            },
+            () => this.created.emit()
+          )
           .finally(() => this.creatingResult.set(false));
       },
       error: (err: any) => {

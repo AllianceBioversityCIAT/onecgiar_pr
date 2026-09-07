@@ -65,6 +65,19 @@ Data: `GET api/results-framework-reporting/get/science-programs/progress` → `{
 
 ### 4.2 Entity details (`/entity-details/:entityId`) — the SP dashboard
 
+> **Viewport-locked at ≥ `md` (900px)** (spec `changes/sp-shell-app-viewport`). On `DashboardLabComponent`
+> the lock is keyed on `rfrView ∈ {overview, planned}` (`isProgramShell()`), not on the route path — so
+> both the SP-shell routes (`entity-details/:entityId` → `planned`, `entity-details/:entityId/overview`
+> → `overview`) AND the portfolio `/overview` and `/planned-toc` routes are locked too;
+> `emerging`/`centers`/`dashboard-lab` stay unaffected. `entity-details/:entityId/results` (Results, its
+> own `programme-results` component) locks unconditionally — that surface only ever serves Results.
+> Every locked surface is pulled out of document flow and pinned to the `app.component.html` outlet
+> slot; each tab gets ONE internal `#workArea` scroller and the program band drops `sticky`, reading
+> scroll offsets from that element instead of `window`. Below `md` nothing changes: the document
+> scrolls and the band stays `sticky` as before. Shared recipe: `src/styles/_viewport-page.scss`
+> (`pr-viewport-page` mixin); per-page contract: `pages/dashboard-lab/CLAUDE.md` and
+> `pages/programme-results/CLAUDE.md`.
+
 - **Insights panel**: Editing/Submitted stat tiles + two Chart.js stacked horizontal bars (Outputs / Outcomes × Editing/Submitted/QAed) from `GET .../dashboard?programId=` (a full 3-status × 8-category matrix — more data than is rendered today).
 - **Bilateral Results Review banner**: pending count from `GET api/results/pending-review?programId=` + CTA → `results-review`. Hidden for `SGP-02` (⚠️ but not for the `'SGP02'` spelling — known bug).
 - **"Results planned in your {year} ToC"**: one AOW card per `Unit` from `GET .../clarisa-global-units?programId=` with Editing/Submitted counts; "Report against indicators" → `aow/{code}` (workflow A).

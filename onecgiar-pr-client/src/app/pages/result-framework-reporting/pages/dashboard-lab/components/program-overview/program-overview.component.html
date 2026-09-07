@@ -25,7 +25,7 @@
   ⚠️ html is 12px — only arbitrary px values.
 -->
 
-<div class="grid grid-cols-12 content-start gap-[16px] p-[32px]">
+<div class="grid grid-cols-12 content-start gap-[12px] sm:gap-[16px] p-[16px] sm:p-[24px] lg:p-[32px]">
   <!-- KPI Summary Cards: Totals and key health metrics -->
   <div class="col-span-12 grid grid-cols-12 gap-[16px]">
     <!-- KPI 1: W1/W2 Results (Hero Highlight Card with diffused purple gradient) -->
@@ -72,7 +72,7 @@
     <!-- KPI 2: W3 / Bilateral Results -->
     <button
       type="button"
-      (click)="setActiveSection('bilateral'); focusHub.emit('w3')"
+      (click)="setActiveSection('bilateral')"
       class="col-span-3 flex cursor-pointer flex-col justify-between gap-[12px] rounded-[12px] border bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:shadow-sm focus-visible:outline-none max-[1024px]:col-span-6 max-[640px]:col-span-12"
       [class]="activeSection() === 'bilateral'
         ? 'border-[var(--pr-color-primary-500)] ring-2 ring-[var(--pr-color-primary-500)]'
@@ -109,7 +109,7 @@
     <!-- KPI 3: Contributing Centers -->
     <button
       type="button"
-      (click)="setActiveSection('bilateral'); focusHub.emit('w3')"
+      (click)="setActiveSection('bilateral')"
       class="col-span-3 flex cursor-pointer flex-col justify-between gap-[12px] rounded-[12px] border bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:shadow-sm focus-visible:outline-none max-[1024px]:col-span-6 max-[640px]:col-span-12"
       [class]="activeSection() === 'bilateral'
         ? 'border-[var(--pr-color-primary-500)] ring-2 ring-[var(--pr-color-primary-500)]'
@@ -180,14 +180,14 @@
   -->
   @if (!hideInlineFilters()) {
   <div class="col-span-12 flex flex-wrap items-center gap-[12px] pt-1">
-    <div class="inline-flex rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] p-[3px]" role="tablist" aria-label="Section filter">
+    <div class="inline-flex max-w-full overflow-x-auto no-scrollbar rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] p-[3px]" role="tablist" aria-label="Section filter">
       <button
         #allSectionsTab
         type="button"
         role="tab"
         [attr.aria-selected]="activeSection() === 'all'"
         (click)="setActiveSection('all')"
-        class="cursor-pointer rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+        class="shrink-0 whitespace-nowrap cursor-pointer rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
         [class]="activeSection() === 'all'
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
@@ -198,7 +198,7 @@
         role="tab"
         [attr.aria-selected]="activeSection() === 'w1w2'"
         (click)="setActiveSection('w1w2')"
-        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+        class="shrink-0 whitespace-nowrap flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
         [class]="activeSection() === 'w1w2'
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-color-primary-600)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
@@ -214,7 +214,7 @@
         role="tab"
         [attr.aria-selected]="activeSection() === 'bilateral'"
         (click)="setActiveSection('bilateral')"
-        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+        class="shrink-0 whitespace-nowrap flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
         [class]="activeSection() === 'bilateral'
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-color-primary-600)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
@@ -230,7 +230,7 @@
         role="tab"
         [attr.aria-selected]="activeSection() === 'aow'"
         (click)="setActiveSection('aow')"
-        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+        class="shrink-0 whitespace-nowrap flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
         [class]="activeSection() === 'aow'
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-color-primary-600)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
@@ -920,7 +920,7 @@
               <span class="pr-figure-sm font-bold">{{ row.done }}/{{ row.total }}</span>
             </button>
           }
-          <span class="ml-auto inline-flex items-center gap-[6px] text-[11.5px] text-[var(--pr-text-secondary)]">
+          <span class="w-full sm:w-auto sm:ml-auto inline-flex flex-wrap items-center gap-[6px] text-[11.5px] text-[var(--pr-text-secondary)] mt-1 sm:mt-0">
             <span class="h-[9px] w-[9px] rounded-[2px] bg-[var(--pr-color-green-500)]" aria-hidden="true"></span> Complete
             <span class="ml-[8px] h-[9px] w-[9px] rounded-[2px] bg-[var(--pr-color-primary-300)]" aria-hidden="true"></span> In progress
             <span class="ml-[8px] h-[9px] w-[9px] rounded-[2px] bg-[var(--pr-border)]" aria-hidden="true"></span> Not started
@@ -1105,59 +1105,77 @@
           </div>
 
           @for (row of group.options; track row.key) {
-            <button
-              type="button"
-              (click)="selectScope(row.key)"
-              class="grid w-full cursor-pointer grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[14px] border-0 border-b border-[var(--pr-border-divider)] bg-transparent px-[4px] py-[9px] text-left transition-colors duration-150 hover:bg-[var(--pr-surface-ground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
-              <!--
-                `OSF-T-14`: every row now renders a short, user-facing code — `overviewScopeDisplayCode`
-                (single-homed, also used by `scopeTriggerCode()`) maps the non-AoW internal enum keys
-                (`INTERMEDIATE`/`EOI_2030`/`UNTAGGED`) to the mockup's own short codes (`INT`/`2030`/`—`);
-                AoW keys (`AOW01`...) pass through unchanged. `aria-hidden`: the row's name span (below,
-                NOT hidden) already carries the full accessible meaning, so the untagged bucket's bare
-                `—` glyph is never announced on its own.
-              -->
-              <span
-                class="pr-code text-[11px] font-bold"
-                aria-hidden="true"
-                [class]="row.kind === 'aow' ? 'text-[var(--pr-color-primary-600)]' : 'text-[var(--pr-text-muted)]'">{{ overviewScopeDisplayCode(row) }}</span>
-              <span class="min-w-0 truncate text-[13px] text-[var(--pr-text)]" [title]="row.name">{{ row.name }}</span>
-              <!--
-                `OSF-T-13`: the mockup's segmented status bar (editing/submitted/QA), restored — `OSF-T-7`
-                shipped a 3-track row and dropped this 150px column entirely. Widths COMPUTED IN TS from
-                the bucket's own `byStatus` (never template arithmetic — `OAH-R-3`, same discipline as the
-                AoW row bar above). `role="img"` + `aria-label` (`OAH-N-1` precedent): a roleless `<span>`
-                is not exposed as a text-alternative-bearing element.
-              -->
-              <span
-                role="img"
-                class="flex h-[8px] overflow-hidden rounded-[999px] bg-[var(--pr-border-divider)]"
-                [attr.title]="breakdownBarTitle(row)"
-                [attr.aria-label]="breakdownBarTitle(row)">
-                <span class="block h-full bg-[var(--pr-status-in-progress-fg)]" [style.width.%]="breakdownEditingWidth(row)"></span>
-                <span class="block h-full bg-[var(--pr-status-submitted-fg)]" [style.width.%]="breakdownSubmittedWidth(row)"></span>
-                <span class="block h-full bg-[var(--pr-status-in-qa-fg)]" [style.width.%]="breakdownQaWidth(row)"></span>
-              </span>
-              <span class="pr-figure-sm text-right font-bold text-[var(--pr-text-heading)]">{{ row.count }}</span>
-            </button>
+            <!--
+              @akili-spec changes/results-aow-column-filter (`RAC-R-4`): the row is now a non-interactive
+              wrapper holding TWO sibling buttons — the pre-existing select button (unchanged click,
+              unchanged content) plus a new "View results" icon button. Never nested: a `<button>`
+              cannot legally contain interactive content, so the new action sits beside it instead of
+              inside it.
+            -->
+            <div class="flex w-full items-stretch gap-[4px] border-0 border-b border-[var(--pr-border-divider)]">
+              <button
+                type="button"
+                (click)="selectScope(row.key)"
+                class="grid flex-1 cursor-pointer grid-cols-[54px_minmax(0,1fr)_40px] sm:grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[8px] sm:gap-[14px] border-0 bg-transparent px-[4px] py-[9px] text-left transition-colors duration-150 hover:bg-[var(--pr-surface-ground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                <!--
+                  `OSF-T-14`: every row now renders a short, user-facing code — `overviewScopeDisplayCode`
+                  (single-homed, also used by `scopeTriggerCode()`) maps the non-AoW internal enum keys
+                  (`INTERMEDIATE`/`EOI_2030`/`UNTAGGED`) to the mockup's own short codes (`INT`/`2030`/`—`);
+                  AoW keys (`AOW01`...) pass through unchanged. `aria-hidden`: the row's name span (below,
+                  NOT hidden) already carries the full accessible meaning, so the untagged bucket's bare
+                  `—` glyph is never announced on its own.
+                -->
+                <span
+                  class="pr-code text-[11px] font-bold"
+                  aria-hidden="true"
+                  [class]="row.kind === 'aow' ? 'text-[var(--pr-color-primary-600)]' : 'text-[var(--pr-text-muted)]'">{{ overviewScopeDisplayCode(row) }}</span>
+                <span class="min-w-0 truncate text-[13px] text-[var(--pr-text)]" [title]="row.name">{{ row.name }}</span>
+                <!--
+                  `OSF-T-13`: the mockup's segmented status bar (editing/submitted/QA), restored — `OSF-T-7`
+                  shipped a 3-track row and dropped this 150px column entirely. Widths COMPUTED IN TS from
+                  the bucket's own `byStatus` (never template arithmetic — `OAH-R-3`, same discipline as the
+                  AoW row bar above). `role="img"` + `aria-label` (`OAH-N-1` precedent): a roleless `<span>`
+                  is not exposed as a text-alternative-bearing element.
+                -->
+                <span
+                  role="img"
+                  class="hidden sm:flex h-[8px] overflow-hidden rounded-[999px] bg-[var(--pr-border-divider)]"
+                  [attr.title]="breakdownBarTitle(row)"
+                  [attr.aria-label]="breakdownBarTitle(row)">
+                  <span class="block h-full bg-[var(--pr-status-in-progress-fg)]" [style.width.%]="breakdownEditingWidth(row)"></span>
+                  <span class="block h-full bg-[var(--pr-status-submitted-fg)]" [style.width.%]="breakdownSubmittedWidth(row)"></span>
+                  <span class="block h-full bg-[var(--pr-status-in-qa-fg)]" [style.width.%]="breakdownQaWidth(row)"></span>
+                </span>
+                <span class="pr-figure-sm text-right font-bold text-[var(--pr-text-heading)]">{{ row.count }}</span>
+              </button>
+              <!-- @akili-spec changes/results-aow-column-filter (`RAC-R-4`) -->
+              <button
+                type="button"
+                (click)="viewBreakdownResults(row, $event)"
+                [attr.aria-label]="'View results for ' + row.name"
+                title="View results"
+                class="inline-flex h-[28px] w-[28px] shrink-0 cursor-pointer items-center justify-center self-center rounded-[6px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                <span class="material-icons-round text-[14px]" aria-hidden="true">arrow_forward</span>
+              </button>
+            </div>
           }
 
           @if (group.kind === 'aow') {
-            <div class="grid grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[14px] px-[4px] py-[7px]">
+            <div class="grid grid-cols-[54px_minmax(0,1fr)_40px] sm:grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[8px] sm:gap-[14px] px-[4px] py-[7px]">
               <span></span>
               <span class="text-[11.5px] italic text-[var(--pr-text-muted)]">Areas of work subtotal</span>
               <!-- Bar cell empty but present, exactly as the mockup does, so the grid stays aligned (`OSF-T-13`). -->
-              <span></span>
+              <span class="hidden sm:block"></span>
               <span class="pr-figure-sm text-right font-bold text-[var(--pr-text-muted)]">{{ scopeBreakdown().aowSubtotal }}</span>
             </div>
           }
         }
 
-        <div class="mt-[6px] grid grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[14px] border-t-2 border-[var(--pr-border-strong)] px-[4px] pb-[2px] pt-[10px]">
+        <div class="mt-[6px] grid grid-cols-[54px_minmax(0,1fr)_40px] sm:grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[8px] sm:gap-[14px] border-t-2 border-[var(--pr-border-strong)] px-[4px] pb-[2px] pt-[10px]">
           <span></span>
           <span class="text-[13px] font-bold text-[var(--pr-text-heading)]">All scopes</span>
           <!-- Bar cell empty but present, exactly as the mockup does, so the grid stays aligned (`OSF-T-13`). -->
-          <span></span>
+          <span class="hidden sm:block"></span>
           <span class="pr-figure-sm text-right font-bold text-[var(--pr-text-heading)]">{{ scopeBreakdown().total }}</span>
         </div>
 

@@ -1,0 +1,53 @@
+@if (visible()) {
+  <app-pr-dialog
+    [visible]="visible()"
+    [modal]="true"
+    [closeOnEscape]="true"
+    [showHeader]="false"
+    [dismissableMask]="true"
+    styleClass="where-to-report-dialog"
+    (onHide)="closeModal()">
+    <div class="flex items-center justify-between border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[24px] py-[16px]">
+      <div class="flex items-center gap-[10px]">
+        <span class="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[8px] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]">
+          <span class="material-icons-round text-[20px]">explore</span>
+        </span>
+        <div>
+          <h2 class="m-0 text-[16px] font-bold text-[var(--pr-text-heading)]">Where to report</h2>
+          <p class="m-0 mt-[1px] text-[12px] text-[var(--pr-text-muted)]">
+            Two funding paths, two entry points. Pick the one that matches the result you are reporting.
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        (click)="closeModal()"
+        aria-label="Close modal"
+        class="flex h-[32px] w-[32px] cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)] transition-colors">
+        <i class="material-icons-round text-[20px]">close</i>
+      </button>
+    </div>
+
+    <div class="p-[20px] max-h-[82vh] overflow-y-auto bg-[var(--pr-surface-ground)]">
+      <app-reporting-entry-hub
+        id="reporting-entry-hub"
+        [isModal]="true"
+        [programCode]="programCode()"
+        [phaseLabel]="phaseLabel()"
+        [isActivePhase]="isActivePhase()"
+        [activeYear]="activeYear()"
+        [aowRows]="aowRows()"
+        [w1w2Loading]="w1w2Loading()"
+        [programLevelRows]="programLevelRows()"
+        [canReportW1W2]="canReportW1W2()"
+        [w3State]="w3State()"
+        [myCentersCount]="myCentersCount()"
+        [canReportEmerging]="canReportEmerging()"
+        (reportEmerging)="onReportEmerging()"
+        (reportAow)="onReportAow($event)"
+        (reportProgramLevel)="onReportProgramLevel($event)"
+        (createResult)="onCreateResult($event)"
+        (retryW3)="retryW3()" />
+    </div>
+  </app-pr-dialog>
+}

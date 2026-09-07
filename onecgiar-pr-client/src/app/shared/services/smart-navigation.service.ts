@@ -7,6 +7,74 @@ export interface BackTarget {
   label: string;
 }
 
+/** Default way out of result-detail when the origin is unknown. */
+export const RESULTS_CENTER_LIST_PATH = '/result/results-outlet/results-list';
+
+/** Visible label for the result-detail header back link (kept stable across origins). */
+export const RESULT_DETAIL_BACK_LABEL = 'Back to results';
+
+/**
+ * Programme Results tab only — `/entity-details/:code/results`.
+ * Must not match the sibling `results-review` route.
+ */
+export function isProgrammeResultsTab(url: string): boolean {
+  return /\/entity-details\/[^/?#]+\/results(?:[/?#]|$)/.test(url);
+}
+
+/** My Results tab — `/entity-details/:code/my-work`. */
+export function isMyResultsTab(url: string): boolean {
+  return /\/entity-details\/[^/?#]+\/my-work(?:[/?#]|$)/.test(url);
+}
+
+export function isResultDetailUrl(url: string): boolean {
+  return url.includes('/result/result-detail/');
+}
+
+export function isResultsCenterList(url: string): boolean {
+  return url.includes('/results-outlet/results-list');
+}
+
+/**
+ * Reporting tab only — `/entity-details/:code` (or `/result-framework-reporting/entity-details/:code`).
+ * Matches the root of entity-details with optional query parameters.
+ * Excludes sibling tabs: `/results`, `/my-work`, `/overview`, `/results-review`.
+ */
+export function isReportingTab(url: string): boolean {
+  if (!url) return false;
+  if (
+    isProgrammeResultsTab(url) ||
+    isMyResultsTab(url) ||
+    url.includes('/overview') ||
+    url.includes('/results-review')
+  ) {
+    return false;
+  }
+  return /\/entity-details\/[^/?#]+(?:\/)?(?:[?#]|$)/.test(url);
+}
+
+export function isKnownResultDetailOrigin(url: string): boolean {
+  return (
+    isProgrammeResultsTab(url) ||
+    isMyResultsTab(url) ||
+    isResultsCenterList(url) ||
+    isReportingTab(url)
+  );
+}
+
+/** Survives the full page load from the Science Program Results tab into `/result/result-detail`. */
+export const RESULT_DETAIL_ORIGIN_STORAGE_KEY = 'prms.resultDetailBackOrigin';
+
+/** Split a stored history URL so `[routerLink]` + `[queryParams]` can consume it. */
+export function splitNavUrl(url: string): { path: string; queryParams: Record<string, string> } {
+  const qIndex = url.indexOf('?');
+  if (qIndex === -1) return { path: url, queryParams: {} };
+  const queryParams: Record<string, string> = {};
+  new URLSearchParams(url.slice(qIndex + 1)).forEach((value, key) => {
+    queryParams[key] = value;
+  });
+  return { path: url.slice(0, qIndex), queryParams };
+}
+
 /**
  * Smart navigation tracker that listens to router transitions and determines
  * the context-aware "Back" destination and human-readable label based on where the
@@ -19,10 +87,15 @@ export class SmartNavigationService {
   private history: string[] = [];
 
   constructor() {
+    // The service is providedIn root but only constructed on first inject. Result-detail
+    // used to be that first inject, so the NavigationEnd for the origin page had already
+    // passed. Seed the in-flight / last previous URL so Back still sees the Results tab.
+    const previous = this.urlFromNavigation(this.router?.getCurrentNavigation?.()?.previousNavigation)
+      || this.urlFromNavigation(this.router?.lastSuccessfulNavigation?.()?.previousNavigation);
+    this.trackUrl(previous);
+
     const current = this.sanitizeUrl(this.router?.url);
-    if (current && this.isValidHistoryUrl(current)) {
-      this.history.push(current);
-    }
+    this.trackUrl(current);
 
     const events$ = this.router?.events;
     if (events$ && typeof events$.pipe === 'function') {
@@ -30,15 +103,24 @@ export class SmartNavigationService {
         .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
         .subscribe((event: NavigationEnd) => {
           const rawUrl = event.urlAfterRedirects || event.url;
-          const url = this.sanitizeUrl(rawUrl);
-          if (url && this.isValidHistoryUrl(url) && this.history[this.history.length - 1] !== url) {
-            this.history.push(url);
-          }
-          if (this.history.length > 50) {
-            this.history.shift();
-          }
+          this.trackUrl(this.sanitizeUrl(rawUrl));
         });
     }
+  }
+
+  private urlFromNavigation(nav: { finalUrl?: unknown; extractedUrl?: unknown } | null | undefined): string {
+    if (!nav || !this.router) return '';
+    const tree = nav.finalUrl ?? nav.extractedUrl;
+    if (!tree) return '';
+    if (typeof tree === 'string') return this.sanitizeUrl(tree);
+    if (typeof this.router.serializeUrl === 'function') {
+      try {
+        return this.sanitizeUrl(this.router.serializeUrl(tree as Parameters<Router['serializeUrl']>[0]));
+      } catch {
+        return '';
+      }
+    }
+    return '';
   }
 
   private sanitizeUrl(url: string | null | undefined): string {
@@ -56,10 +138,15 @@ export class SmartNavigationService {
 
   /** Record a URL directly (useful for tests or custom synthetic steps). */
   recordUrl(url: string): void {
-    const sanitized = this.sanitizeUrl(url);
-    if (sanitized && this.isValidHistoryUrl(sanitized) && this.history[this.history.length - 1] !== sanitized) {
-      this.history.push(sanitized);
-    }
+    this.trackUrl(this.sanitizeUrl(url));
+  }
+
+  /**
+   * Persist a known result-detail origin (programme Results, My Results, Results Center, or Reporting)
+   * so Back still works after the full page load into `/result/result-detail`.
+   */
+  rememberResultDetailOrigin(url?: string): void {
+    this.persistKnownOrigin(this.sanitizeUrl(url ?? this.router?.url));
   }
 
   /**
@@ -247,6 +334,65 @@ export class SmartNavigationService {
       this.history.splice(lastIdx, 1);
     }
     this.router?.navigateByUrl(target.url);
+  }
+
+  /**
+   * Back target for the result-detail header.
+   *
+   * Walks history newest-first, skipping the current URL and sibling result-detail
+   * section hops (general-information → contributors, etc.). Known origins restored
+   * as-is: Science Program Results, My Results, Results Center, Reporting tab (query string kept).
+   * Everything else — Overview, QA, deep link, empty history — falls
+   * back to Results Center.
+   */
+  getResultDetailBackTarget(currentUrl?: string): BackTarget {
+    const fallback: BackTarget = { url: RESULTS_CENTER_LIST_PATH, label: RESULT_DETAIL_BACK_LABEL };
+    const active = this.sanitizeUrl(currentUrl ?? this.router?.url);
+
+    for (let i = this.history.length - 1; i >= 0; i--) {
+      const prev = this.history[i];
+      if (!prev || prev === active) continue;
+      if (isResultDetailUrl(prev)) continue;
+      if (isKnownResultDetailOrigin(prev)) {
+        return { url: prev, label: RESULT_DETAIL_BACK_LABEL };
+      }
+      return fallback;
+    }
+
+    const persisted = this.readPersistedOrigin();
+    if (persisted && persisted !== active && isKnownResultDetailOrigin(persisted)) {
+      return { url: persisted, label: RESULT_DETAIL_BACK_LABEL };
+    }
+
+    return fallback;
+  }
+
+  private trackUrl(url: string): void {
+    if (!url || !this.isValidHistoryUrl(url)) return;
+    if (this.history[this.history.length - 1] !== url) {
+      this.history.push(url);
+    }
+    if (this.history.length > 50) {
+      this.history.shift();
+    }
+    this.persistKnownOrigin(url);
+  }
+
+  private persistKnownOrigin(url: string): void {
+    if (!isKnownResultDetailOrigin(url)) return;
+    try {
+      sessionStorage.setItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY, url);
+    } catch {
+      // Private mode / quota — memory history still works inside the same heap.
+    }
+  }
+
+  private readPersistedOrigin(): string {
+    try {
+      return this.sanitizeUrl(sessionStorage.getItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY));
+    } catch {
+      return '';
+    }
   }
 
   private extractProgramCode(url: string): string | null {

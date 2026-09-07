@@ -112,6 +112,13 @@ describe('BilateralService (unit)', () => {
     const adUserService = {
       resolveOrCreateContact: jest.fn().mockResolvedValue(null),
     };
+    // 2026-09-05: the submitted-for-review notification to the primary Science Program.
+    const roleByUserRepository = {
+      getUserIdsByInitiative: jest.fn().mockResolvedValue([21, 22]),
+    };
+    const notificationService = {
+      emitResultNotification: jest.fn().mockResolvedValue(undefined),
+    };
 
     const service = new BilateralService(
       dataSource,
@@ -159,6 +166,8 @@ describe('BilateralService (unit)', () => {
       otherOutputHandler as any,
       otherOutcomeHandler as any,
       adUserService as any,
+      roleByUserRepository as any,
+      notificationService as any,
     ) as any;
 
     Object.assign(service, overrides);
@@ -190,6 +199,8 @@ describe('BilateralService (unit)', () => {
         resultByInitiativesRepository,
         resultsKnowledgeProductsService,
         adUserService,
+        roleByUserRepository,
+        notificationService,
       },
       handlers: {
         knowledgeProductHandler,
@@ -970,6 +981,105 @@ describe('BilateralService (unit)', () => {
       expect(saved.lead_contact_person).toBeUndefined();
       expect(saved.lead_contact_person_id).toBeUndefined();
       expect(stubs.adUserService.resolveOrCreateContact).not.toHaveBeenCalled();
+    });
+  });
+
+  // 2026-09-05 — the arrival announcement to the primary Science Program. Both entry paths call
+  // this (the centre form's submitForReview and the ingest, post-commit); these tests pin the
+  // emitter's own contract: status-guarded, SP-member fan-out, centre acronym in the copy, and
+  // never throwing.
+  describe('emitBilateralSubmittedNotification', () => {
+    const arrange = () => {
+      const { service, stubs } = makeService();
+      const svc: any = service;
+      svc._resultRepository.findOne = jest
+        .fn()
+        .mockResolvedValue({ id: 77, status_id: 5 });
+      svc._resultByInitiativesRepository = {
+        getOwnerInitiativeByResult: jest.fn().mockResolvedValue({ id: 6 }),
+      };
+      svc._resultsCenterRepository = {
+        getAllResultsCenterByResultId: jest
+          .fn()
+          .mockResolvedValue([
+            { code: 'CENTER-01', acronym: 'AfricaRice', is_leading_result: 1 },
+          ]),
+      };
+      return { service: svc, stubs };
+    };
+
+    it('notifies every member of the primary SP, naming the lead centre in the copy', async () => {
+      const { service, stubs } = arrange();
+
+      await service.emitBilateralSubmittedNotification(77, 42);
+
+      expect(
+        stubs.notificationService.emitResultNotification,
+      ).toHaveBeenCalledWith(
+        'Result',
+        'Bilateral Result Submitted',
+        [21, 22],
+        42,
+        77,
+        'was submitted for your review by AfricaRice.',
+      );
+    });
+
+    it('stays silent when the result is not Pending Review (duplicate re-ingest guard)', async () => {
+      const { service, stubs } = arrange();
+      service._resultRepository.findOne = jest
+        .fn()
+        .mockResolvedValue({ id: 77, status_id: 6 });
+
+      await service.emitBilateralSubmittedNotification(77, 42);
+
+      expect(
+        stubs.notificationService.emitResultNotification,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('stays silent when the result has no primary Science Program', async () => {
+      const { service, stubs } = arrange();
+      service._resultByInitiativesRepository.getOwnerInitiativeByResult = jest
+        .fn()
+        .mockResolvedValue(null);
+
+      await service.emitBilateralSubmittedNotification(77, 42);
+
+      expect(
+        stubs.notificationService.emitResultNotification,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('never throws — a notification failure cannot fail a submit or an ingest', async () => {
+      const { service, stubs } = arrange();
+      stubs.roleByUserRepository.getUserIdsByInitiative.mockRejectedValue(
+        new Error('db down'),
+      );
+
+      await expect(
+        service.emitBilateralSubmittedNotification(77, 42),
+      ).resolves.toBeUndefined();
+    });
+
+    it('still notifies without the centre name when the centres lookup fails', async () => {
+      const { service, stubs } = arrange();
+      service._resultsCenterRepository.getAllResultsCenterByResultId = jest
+        .fn()
+        .mockRejectedValue(new Error('no centres'));
+
+      await service.emitBilateralSubmittedNotification(77, 42);
+
+      expect(
+        stubs.notificationService.emitResultNotification,
+      ).toHaveBeenCalledWith(
+        'Result',
+        'Bilateral Result Submitted',
+        [21, 22],
+        42,
+        77,
+        'was submitted for your review.',
+      );
     });
   });
 });

@@ -191,6 +191,36 @@ describe('PopUpNotificationItemComponent', () => {
       expect(emitted).toHaveBeenCalled();
     });
 
+    // 2026-09-05 — "submitted for your review" goes to the SP's review queue.
+    it('routes a submitted-for-review notification to the Science Program review queue', () => {
+      const emitted = jest.fn();
+      component.itemSelected.subscribe(emitted);
+      component.notification = bilateralNotification({
+        obj_notification_type: { type: NotificationType.BILATERAL_RESULT_SUBMITTED }
+      });
+
+      const event = clickEvent();
+      component.onNotificationClick(event);
+
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(resultsApi.PATCH_readNotification).toHaveBeenCalledWith(55);
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/result-framework-reporting/entity-details/SP5/results-review');
+      expect(emitted).toHaveBeenCalled();
+    });
+
+    it('falls back to the plain anchor when the submitted notification carries no SP code', () => {
+      component.notification = bilateralNotification({
+        obj_notification_type: { type: NotificationType.BILATERAL_RESULT_SUBMITTED },
+        obj_result: { result_code: 'R100', obj_version: { id: 'v1' }, obj_result_by_initiatives: [] }
+      });
+
+      const event = clickEvent();
+      component.onNotificationClick(event);
+
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+    });
+
     it('routes a bilateral review notification to the lead centre dashboard with the result in focus', () => {
       bilateralApi.GET_centersByResultId.mockReturnValue(
         of({ response: [{ code: '3', acronym: 'CIAT', is_leading_result: 1 }] })
