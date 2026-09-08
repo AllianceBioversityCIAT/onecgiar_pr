@@ -167,3 +167,80 @@ Viewport restored to 1500 × 960 after the look.
 | Issues | Count numerals inside chips measure 2.77 / 3.04 contrast — identical token and ratio on the pre-existing status chips (inherited gap, parent spec §11); follow-up `/akili-quick` on both rows. Budget: cumulative source ≈ +694 vs 320 (tripwire already escalated at T-1). |
 | Gate | auto-approved (pre-approved mode) |
 
+### `BRC-T-3` — CT extension, guide, bookkeeping
+
+| Field | Value |
+|---|---|
+| Status | in progress (attempt 1 — Implementer spawned 20:08, fresh worker; CT run is the worker's own measurement, no other worker active) |
+| Date | 2026-09-07 |
+| Gate before start | auto-approved (pre-approved mode) after T-2 PASS |
+| Skills assigned | `angular-developer`, `cognitive-doc-design` (task list) |
+| Effort | medium |
+
+**Leader bookkeeping (part of T-3's work order, written by the Leader — 20:10):**
+- **`BRT-DD-7` superseded.** Parent spec `changes/sp-bilateral-review-tab` `design.md` DD-7 ("not phase-scoped, parity with legacy") is superseded by `BRC-DD-1` as of `fe892c94c`: every list request carries `versionId`, `?phase=` selects the cycle, the badge is keyed `CODE::<number>` on the current phase. `/akili-archive` flips the DD-7 row in the parent design (archive sync); nothing is edited in place now.
+- **Parent-spec follow-up note updated:** `sp-bilateral-review-tab/execution.md` Summary follow-ups — "phase scoping of the review queue (server)" annotated as done client-side by this spec.
+
+**Attempt 1 — Implementer report (20:21):** `bilateral-review.cy.ts` +175/−8 (9-center fixture, 840 wrap/clip/overflow case, chip-click collapse, FAIL-input probe case), `CLAUDE.md` rewritten to **132 lines** (+108/−97). RED probe recorded verbatim (uninverted gate, before revert):
+
+```
+AssertionError: Timed out retrying after 10000ms: RED PROBE 840 (strip nowrap + 3000px, #workArea overflow-x:visible): documentElement.scrollWidth(3000) <= clientWidth(825): expected 3000 to be at most 825
+```
+
+GREEN after revert: `17 passing (2s)` · `✔ All specs passed! bilateral-review.cy.ts 17 17 - - -`. Lint clean. Assumptions: 9-center fixture has one pending row per center (layout-only gate; arithmetic is Jest's); the 9-center describe uses `cy.viewport(840, 1600)` because at 900 tall a native vertical scrollbar shaves ~15 px off `clientWidth` (documented in spec + guide).
+
+**Finding worth a kaizen row:** the CT spec had been **latently broken since T-1** — the mount fixture never stubbed `PhasesService`/`GET_versioning`, so every pre-existing CT test crashed with `GET_versioning is not a function`. T-1 and T-2 verified with Jest only (owner's targeted-jest limit), so the break surfaced only when T-3 ran the CT. Fixed in T-3 scope (AC-12 requires CT green) and recorded as a guide Gotcha. Lesson: a task that changes a component's constructor-time injections must list every harness that mounts it (Jest **and** CT) in its verification, even under the targeted-run limit.
+
+Reviewer (opus, lens checklist, high) spawned 20:23 on the 2-file diff (462 lines, `t3.diff`).
+
+**Attempt 1 — Reviewer runtime failure (20:27):** the first Reviewer spawn terminated before reading the diff — `API error: You've hit your session limit · resets 10:50pm (America/Bogota) (rate_limit, HTTP 429, model claude-opus-5)`. Environment blocker, not a work FAIL. Per the runtime-failure fallback table: **never inline** — retried once on the same wrapper (opus) at 20:31; the retry ran to completion. No model change, no waiver.
+
+**Attempt 1 — Reviewer verdict (20:36): `STATUS: PASS`.** "BRC-T-3 delivers a genuinely measured AC-11 wrap/clip/body-overflow gate with a real, uninverted RED probe recorded and reverted, a behavioral chip-click case, and a 132-line guide whose every factual claim matches the working tree; no disqualifier triggered and no scope drift." The Reviewer checked each guide claim against the tree by line and confirmed the harness fix is stub-and-provider only (AC-12 holds).
+
+**ADVISORY (recorded):**
+- *Reliability:* the injected `#workArea { overflow-x: visible !important }` clause matches nothing (`#workArea` is a template reference, not an id) and at 840 the work area has no overflow constraint anyway; the RED is genuine without it — drop or retarget the clause in a later pass.
+- *Coverage:* the structural a11y loop's `aria-pressed` selector (`[data-testid^="bilateral-review-chip-"]`) does not match the strip's `bilateral-review-center-chip-*` ids, so only the two chips in the new case get an `aria-pressed` assertion — widen with a second `^=` check.
+- *Risk (pre-existing):* `onecgiar-pr-client/docs/COMPONENT-DOCS.md:31-32` sets a hard **120-line** cap on folder guides while this task's approved Verification says ≤ 150; the guide went 121 → 132. **Leader decision:** the approved task cap governs this spec (the guide had to absorb the phase contract, the strip and four gotchas); reconciliation (trim to 120 or amend COMPONENT-DOCS) is handed to `/akili-archive` as a pending item.
+
+**Final — `BRC-T-3` PASS on attempt 1 (2026-09-07 20:38)**
+
+| Field | Value |
+|---|---|
+| Attempts | 1 (one Reviewer runtime failure, retried) |
+| Files | `bilateral-review.cy.ts` (+175/−8), `pages/bilateral-review/CLAUDE.md` (132 lines) |
+| Verification | `CT_DEV_SERVER_PORT=8090 npx cypress run --component --spec …/bilateral-review.cy.ts` → `17 passing` · `✔ All specs passed!`; RED probe recorded above; `npx ng lint --quiet` clean |
+| Requirements covered | BRC-R-20 (gate), AC-11, AC-12; defect classes "strip wrap / body overflow", "indicator copy / chip a11y" |
+| Decisions | 9-center fixture with one pending row per center (layout gate; arithmetic is Jest's); `cy.viewport(840, 1600)` to keep a native scrollbar from shaving `clientWidth`; CT harness stubs for `PhasesService`/`GET_versioning` fixed in scope; guide cap 150 (approved) over COMPONENT-DOCS 120 (pending reconciliation at archive) |
+| Issues | CT spec latently broken since T-1 (see the kaizen note above) |
+| Gate | auto-approved (pre-approved mode) |
+
+## Summary
+
+All three tasks `[x]` with Reviewer PASS evidence (2026-09-07 18:10 → 20:40, ~2 h 30 min wall-clock).
+
+| Task | Attempts | Reviewer rounds | Live look | Commit |
+|---|---|---|---|---|
+| BRC-T-1 phase scoping | 2 | 2 (FAIL → scoped PASS) | #1, #2 | `fe892c94c` |
+| BRC-T-2 center strip | 2 | 2 (FAIL → scoped PASS) | #3 | `736f5339c` |
+| BRC-T-3 CT + guide | 1 | 1 (PASS; one runtime retry) | — | (this commit) |
+
+**Budget tally (design §12 vs actual, `git diff --numstat 15b3282ad -- onecgiar-pr-client/src`):**
+
+| Number | Estimate | Actual | Delta |
+|---|---|---|---|
+| Source LOC | ~320 | **+694 / −74 (net 620)** | +117 % — tripwire (450) crossed inside T-1, escalated at 19:10, owner did not object; cause: page phase machinery (catalog signal + fallback, error state, `phaseParamRaw`, normalizer) and the strip's sentinel/expand logic were under-counted (KZ-REH-1, fourth recurrence) |
+| Test LOC | ~460 | **+955 / −55** | +108 % — Jest page spec grew with every FAIL-input test; CT +175 |
+| Review rounds | ≤ 1 per task | 2, 2, 1 | owner limit exceeded on T-1 and T-2 by one scoped re-review each, escalated at 19:10 |
+| Attempts | — | 2, 2, 1 | no third attempt anywhere |
+
+**Defects found only live (KZ-MWB-2):** `versionId=0` cold-load request (`Number(null) === 0`); stale `?phase=` label not rewritten. Both fixed in T-1 attempt 2. **Inherited gaps (not fixed):** chip count numerals at ≈ 3:1 contrast on both chip rows; two identical list requests per cold load (band `ensure` + page); page catalog fallback fires alongside the shell's; cross-tab `?phase=` value-space collision with the Results tab under `queryParamsHandling="preserve"`.
+
+**Follow-ups (not new scope, owner to triage):** `/akili-quick` count-numeral token on both chip rows · tab-scoped phase key or outbound `phase` strip on the Results link · popover "Not specified" option so the trigger stops reading "1 centers" · `aria-expanded` inert on "+N more" · strip spec fixture to use the sentinel · CT `#workArea` clause + a11y selector widening · guide cap reconciliation (120 vs 150) · **owner-requested UX polish pass** (filter band collapse, count badges, Clear filters in the toolbar, compact KPIs, table density/sticky head/group-by-center/cards below 900 px) — to be opened as its own spec `changes/bilateral-review-ux-polish`.
+
+## Constitution Impact: BRC-T-2
+
+- **Module reshaped:** `pages/bilateral-review/` gains `components/bilateral-review-center-strip/` (standalone, OnPush; inputs `items`, `allPending`, `selectedCodes`, `maxVisible`; output `selectCenter`). Covered by the module guide `pages/bilateral-review/CLAUDE.md` (T-3) — no separate child guide needed.
+- **Public surface changed:** `BilateralReviewCountService` API now `(code, versionId)`; `reporting-program-band` injects `DataControlService`; `bilateral-review.query-params.ts` exports `normalizeBilateralReviewPhaseId` and the seventh key `phase`.
+- **Parent guide index:** `onecgiar-pr-client/src/CLAUDE.md` `## Module Guides` still lacks the pointer to `pages/bilateral-review/CLAUDE.md` (carried over from the parent spec — default-branch apply).
+- **Parent spec:** `sp-bilateral-review-tab` `BRT-DD-7` superseded by `BRC-DD-1` (archive sync flips it).
+- **CodeGraph re-index pending** (`codegraph sync`).

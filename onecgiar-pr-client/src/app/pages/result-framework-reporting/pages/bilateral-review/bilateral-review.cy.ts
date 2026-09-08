@@ -29,11 +29,12 @@
 import { Component, Input, Output, EventEmitter, model, output } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 
 import { BilateralReviewComponent } from './bilateral-review.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { CentersService } from '../../../../shared/services/global/centers.service';
+import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
@@ -162,9 +163,58 @@ const FIXTURE_CENTERS = [
   { code: 'C3', acronym: 'CIAT', name: 'International Center for Tropical Agriculture' }
 ] as any[];
 
+// @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-3, BRC-R-20, AC-11)
+/** 9-center fixture for the strip-wrap gate (BRC-AC-11) — one project, one pending row per center,
+ *  so the 9 center chips (+ "All centers") are the ONLY thing varying between this suite and the
+ *  AC-4 one above. Counts/order arithmetic is already Jest's job (BRC-T-2's page spec) — this CT
+ *  only measures LAYOUT: does the strip wrap without clipping at 840, and does clicking a chip
+ *  still narrow the table. 9 <= the component's default `maxVisible` (12), so no "+N more" tail. */
+const NINE_CENTERS_FIXTURE_CENTERS = [
+  { code: 'C1', acronym: 'CIP', name: 'International Potato Center' },
+  { code: 'C2', acronym: 'IITA', name: 'International Institute of Tropical Agriculture' },
+  { code: 'C3', acronym: 'CIAT', name: 'International Center for Tropical Agriculture' },
+  { code: 'C4', acronym: 'IRRI', name: 'International Rice Research Institute' },
+  { code: 'C5', acronym: 'ILRI', name: 'International Livestock Research Institute' },
+  { code: 'C6', acronym: 'IWMI', name: 'International Water Management Institute' },
+  { code: 'C7', acronym: 'ICARDA', name: 'International Center for Agricultural Research in the Dry Areas' },
+  { code: 'C8', acronym: 'WORLDFISH', name: 'WorldFish' },
+  { code: 'C9', acronym: 'AFRICARICE', name: 'AfricaRice' }
+] as any[];
+
+const NINE_CENTERS_FIXTURE_ROWS: ResultToReview[] = NINE_CENTERS_FIXTURE_CENTERS.map((center, i) =>
+  row({
+    id: `n${i + 1}`,
+    project_id: 'p1',
+    project_name: 'P1 - Nine Centers',
+    result_code: `BR-9${i + 1}`,
+    result_title: `Result for ${center.acronym}`,
+    lead_center: center.acronym,
+    status_id: 5
+  })
+);
+
+// @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-3, mount fixture gap left by
+// BRC-T-1/T-2 — neither task's verification command ran this CT spec, only their own Jest suites)
+/** BRC-T-1 made the page phase-aware: the constructor calls `fetchPhaseCatalogFallback()` — which
+ *  hits `api.resultsSE.GET_versioning` — whenever its own `reportingPhases` seed
+ *  (`PhasesService.phases.reporting`) is empty. This mount never provided `PhasesService` at all,
+ *  so the REAL (`providedIn: 'root'`) one is injected, its own constructor-time HTTP fetch never
+ *  resolves in this harness, `phases.reporting` stays `[]`, and the fallback throws
+ *  (`GET_versioning is not a function`) — every test in this file, not just the ones this task
+ *  adds. Mirrors `bilateral-review.component.spec.ts`'s `PHASE_CURRENT` fixture: one open reporting
+ *  phase in the programme's own portfolio (`obj_portfolio.id` === `PROGRAMME.portfolioId`, BRC-T-1
+ *  design.md §6.1), `app_module_id: 1` so the fallback's own filter (mirroring
+ *  `PhasesService.getNewPhases()`) keeps it. */
+const PHASE_CURRENT = { id: 36, phase_name: 'Reporting 2026', phase_year: 2026, obj_portfolio: { id: 1 }, status: true, app_module_id: 1 } as any;
+
 /** Mounts the real page. Must run `TestBed.overrideComponent` BEFORE `cy.mount` compiles the
- *  component — same ordering `my-work-board.cy.ts` relies on (both statements are synchronous). */
-function mountPage() {
+ *  component — same ordering `my-work-board.cy.ts` relies on (both statements are synchronous).
+ *  `rows`/`centers` default to the AC-4 fixture; BRC-T-3 passes the 9-center fixture instead —
+ *  same mount, different data, so the wiring under test (stubs, providers) stays identical. */
+function mountPage(fixture?: { rows: ResultToReview[]; centers: typeof FIXTURE_CENTERS }) {
+  const rows = fixture?.rows ?? FIXTURE_ROWS;
+  const centers = fixture?.centers ?? FIXTURE_CENTERS;
+
   TestBed.overrideComponent(BilateralReviewComponent, {
     remove: { imports: [ReportingProgramBandComponent, WhereToReportModalComponent, ResultReviewDrawerComponent] },
     add: { imports: [BandStubComponent, WhereToReportModalStubComponent, DrawerStubComponent] }
@@ -185,24 +235,39 @@ function mountPage() {
         provide: ApiService,
         useValue: {
           resultsSE: {
-            GET_ResultToReview: () => of(groupedResponse(FIXTURE_ROWS)),
+            GET_ResultToReview: () => of(groupedResponse(rows)),
             // `BilateralResultsService.getEntityDetails()` — called by the page's load effect
             // alongside `loadResults` — subscribes to this unconditionally (`bilateral-results.service.ts:118`).
-            GET_ClarisaGlobalUnits: () => of({ response: { initiative: {} } })
+            GET_ClarisaGlobalUnits: () => of({ response: { initiative: {} } }),
+            // Defensive: `PhasesService` below seeds `reportingPhases` non-empty, so the
+            // constructor's own fallback fetch never fires in the happy path this suite mounts —
+            // but `retry()` (AC-14) would call it too, so it stays a real, callable stub rather
+            // than an absent method that throws.
+            GET_versioning: () => of({ response: [PHASE_CURRENT] })
           },
           dataControlSE: {
-            reportingCurrentPhase: { phaseYear: 2026, portfolioAcronym: 'P25' },
+            reportingCurrentPhase: { phaseId: PHASE_CURRENT.id, phaseYear: 2026, portfolioAcronym: 'P25' },
             myInitiativesList: [{ official_code: 'SP02' }]
           },
           rolesSE: { isAdmin: false }
         }
       },
-      { provide: CentersService, useValue: { centers: () => FIXTURE_CENTERS, getData: () => Promise.resolve() } },
+      { provide: CentersService, useValue: { centers: () => centers, getData: () => Promise.resolve() } },
+      {
+        provide: PhasesService,
+        useValue: {
+          phases: { reporting: [PHASE_CURRENT] },
+          // A fresh, never-emitting Subject — mirrors a component mounting AFTER the shell's own
+          // one-shot phases fetch already resolved (same fixture `bilateral-review.component.spec.ts`
+          // uses, judgment-day L-1: the real `Subject` never replays).
+          getPhasesObservable: () => new Subject<unknown[]>().asObservable()
+        }
+      },
       { provide: SmartNavigationService, useValue: { rememberResultDetailOrigin: () => {} } },
       {
         provide: ResultFrameworkReportingHomeService,
         useValue: {
-          mySPsList: () => [{ initiativeCode: 'SP02', initiativeShortName: 'Bilateral SP02', initiativeName: 'Bilateral SP02 long' }],
+          mySPsList: () => [{ initiativeCode: 'SP02', initiativeShortName: 'Bilateral SP02', initiativeName: 'Bilateral SP02 long', portfolioId: 1 }],
           otherSPsList: () => [],
           otherProjectsList: () => []
         }
@@ -414,6 +479,108 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
 
           expect(doc.querySelectorAll('[disabled]').length, `${width}: no native [disabled] anywhere (KZ-REH-2)`).to.eq(0);
         });
+      });
+    });
+  });
+
+  // ── Center strip extension (BRC-T-3, BRC-R-20, AC-11, AC-12) — 9-center fixture, effective 840 ──
+  describe('Center strip — 9-center fixture (BRC-T-3)', () => {
+    beforeEach(() => {
+      // Taller than the other describes' 900px (`assertEffectiveWidth` measures, not assumes,
+      // per the disqualifier): this fixture's 9-row single group + a 2-line-wrapped strip push
+      // the page past 900px tall, which triggers a NATIVE vertical scrollbar at 900 and quietly
+      // shaves ~15px off `documentElement.clientWidth` — an artifact of content height, unrelated
+      // to the wrap-clip regression this suite gates. 1600 keeps the vertical scrollbar out of it.
+      cy.viewport(840, 1600);
+      mountPage({ rows: NINE_CENTERS_FIXTURE_ROWS, centers: NINE_CENTERS_FIXTURE_CENTERS });
+      waitForLoad();
+      assertEffectiveWidth('840 (nine-center fixture)', 840);
+    });
+
+    it('BRC-AC-11: the strip wraps to >= 2 lines with no clipped chip, and the document does not scroll horizontally', () => {
+      cy.get('[data-testid="bilateral-review-center-strip"]').should($group => {
+        const group = $group[0] as HTMLElement;
+        const groupRect = group.getBoundingClientRect();
+        const chips = Array.from(group.querySelectorAll('button'));
+
+        // "All centers" + 9 center chips, no "+N more" tail (9 <= maxVisible's default of 12).
+        expect(chips.length, '840: 10 chips render (All centers + 9 centers, no "+N more" tail)').to.eq(10);
+
+        const tops = [...new Set(chips.map(chip => Math.round(chip.getBoundingClientRect().top)))];
+        expect(tops.length, `840: strip wraps to >= 2 lines — distinct chip tops [${tops.join(', ')}]`).to.be.at.least(2);
+
+        chips.forEach(chip => {
+          const rect = chip.getBoundingClientRect();
+          expect(
+            rect.right,
+            `840: chip "${chip.textContent?.trim()}" right(${rect.right.toFixed(1)}) <= strip right(${groupRect.right.toFixed(1)}) — not clipped`
+          ).to.be.at.most(groupRect.right + 1);
+        });
+      });
+
+      assertNoBodyHorizontalOverflow('840 (nine-center fixture)');
+    });
+
+    it('clicking a center chip collapses the table to that center only, then clicking it again clears the filter', () => {
+      cy.get('[data-testid="bilateral-review-row-action"]').should('have.length', 9);
+
+      cy.get('[data-testid="bilateral-review-center-chip-C5"]').should('have.attr', 'aria-pressed', 'false').click();
+      cy.get('[data-testid="bilateral-review-row-action"]').should('have.length', 1);
+      cy.get('[data-testid="bilateral-review-center-chip-C5"]').should('have.attr', 'aria-pressed', 'true');
+      cy.get('[data-testid="bilateral-review-center-chip-all"]').should('have.attr', 'aria-pressed', 'false');
+
+      cy.get('[data-testid="bilateral-review-center-chip-C5"]').click();
+      cy.get('[data-testid="bilateral-review-row-action"]').should('have.length', 9);
+      cy.get('[data-testid="bilateral-review-center-chip-all"]').should('have.attr', 'aria-pressed', 'true');
+    });
+  });
+
+  // ── Center strip FAIL-input evidence (BRC-T-3, KZ-MWB-3, parent T-7 lesson: a CT that never went
+  // RED is not a gate) ──
+  //
+  // RED PROBE (run once against the REAL, uninverted `assertNoBodyHorizontalOverflow` gate — no
+  // inverted expectation, captured verbatim here, then reverted, not committed in probe form):
+  //   cy.viewport(840, 900); mountPage({ rows: NINE_CENTERS_FIXTURE_ROWS, centers: NINE_CENTERS_FIXTURE_CENTERS });
+  //   waitForLoad();
+  //   inject `[data-testid="bilateral-review-center-strip"] { white-space: nowrap !important;
+  //           min-width: 3000px !important; } #workArea { overflow-x: visible !important; }`
+  //   assertNoBodyHorizontalOverflow(...)  // the committed AC-11/AC-14 assertion, unmodified
+  // Result: FAILED as expected —
+  //   AssertionError: Timed out retrying after 10000ms: RED PROBE 840 (strip nowrap + 3000px,
+  //   #workArea overflow-x:visible): documentElement.scrollWidth(3000) <= clientWidth(825): expected
+  //   3000 to be at most 825
+  // This proves the document-level gate is a live measurement for the STRIP too: defeating its
+  // `flex-wrap` (the regression this gate exists to catch) genuinely pushes the overflow onto
+  // `documentElement`, and the gate catches it. Committed below in its positive/GREEN form, same
+  // pattern the table's FAIL-input case above uses — not a faked RED at commit time.
+  describe('Center strip FAIL-input evidence — detector sensitivity (mandatory RED, then inverted GREEN)', () => {
+    afterEach(() => {
+      cy.document().then(doc => {
+        doc.querySelectorAll('[data-testid="ct-fail-input-style"]').forEach(el => el.remove());
+      });
+    });
+
+    it('840px: DETECTOR FIRES — with the strip forced to nowrap, the document-level AC-11 gate reports the overflow it exists to catch', () => {
+      cy.viewport(840, 900);
+      mountPage({ rows: NINE_CENTERS_FIXTURE_ROWS, centers: NINE_CENTERS_FIXTURE_CENTERS });
+      waitForLoad();
+
+      // Reproduces the RED PROBE injection verbatim: the same style that made the real, uninverted
+      // `assertNoBodyHorizontalOverflow` gate fail (`expected 3000 to be at most 825`, recorded above).
+      cy.document().then(doc => {
+        const style = doc.createElement('style');
+        style.setAttribute('data-testid', 'ct-fail-input-style');
+        style.textContent =
+          '[data-testid="bilateral-review-center-strip"] { white-space: nowrap !important; min-width: 3000px !important; } #workArea { overflow-x: visible !important; }';
+        doc.head.appendChild(style);
+      });
+
+      cy.document().should(doc => {
+        const de = doc.documentElement;
+        expect(
+          de.scrollWidth,
+          `DETECTOR FIRES: documentElement.scrollWidth(${de.scrollWidth}) > clientWidth(${de.clientWidth}) once the center strip's flex-wrap is defeated — the AC-11 gate is capable of going red on this exact regression`
+        ).to.be.greaterThan(de.clientWidth);
       });
     });
   });

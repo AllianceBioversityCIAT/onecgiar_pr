@@ -7,7 +7,7 @@
 - **Approval Mode:** pre-approved (owner, 2026-09-07) — routine gates auto-pass and are logged; HALT / Pivot / budget tripwire / FATAL_FAIL stop
 - **Execution limits (owner):** ≤ 1 Reviewer round per task (second FAIL escalates); targeted `npx jest <path>`; `npx ng lint --quiet`; no `ng build` needed (no routing/DI change) unless a template error is suspected; Leader real-page look after T-2 (before T-3) per `project-hitl-looks-catch-what-diff-reviews-miss`
 - **Budget (design §12):** 3 tasks · ~320 added source LOC · ~460 test LOC · tripwire > 450 added source or any third attempt
-- **Status:** in-progress (2026-09-07)
+- **Status:** done (2026-09-07) — all tasks `[x]`, see `execution.md` Summary
 
 ## 2. Pre-flight (ticked by the Leader at execution start)
 
@@ -50,6 +50,7 @@
 
 ### `BRC-T-3` — CT extension, guide, bookkeeping
 
+- [x] **Status:** PASS on attempt 1 (2026-09-07, `execution.md`)
 - **Type:** `tests` + `docs`
 - **Description:** Extend `bilateral-review.cy.ts`: 9-center fixture; at 840 the strip wraps to ≥ 2 lines with no clipped chip and body `scrollWidth <= clientWidth`; chip click collapses rows to that center; FAIL-input detector case (`.bilateral-review-center-strip { white-space: nowrap; min-width: 3000px !important }` + `overflow-x: visible` on its wrapper → body overflow detected) with a RED probe recorded (KZ-MWB-3, parent T-7 lesson). Update `pages/bilateral-review/CLAUDE.md` (phase contract, `?phase=`, badge keyed by phase, strip semantics) and the parent-spec follow-up note. Record in `execution.md` that `BRT-DD-7` is superseded (archive sync flips it).
 - **Implements:** BRC-R-20 (gate), AC-11, AC-12; defect classes "strip wrap / body overflow", "indicator copy / chip a11y"
