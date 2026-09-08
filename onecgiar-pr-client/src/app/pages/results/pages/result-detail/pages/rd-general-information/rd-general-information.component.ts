@@ -15,6 +15,7 @@ import { AiReviewService } from '../../../../../../shared/services/api/ai-review
 import { SaveConfirmationModalComponent } from './components/save-confirmation-modal/save-confirmation-modal.component';
 import { LeadContactPersonFieldComponent } from '../../../../../../custom-fields/lead-contact-person-field/lead-contact-person-field.component';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
+import { toNullableBoolean } from '../../../../../../shared/utils/nullable-boolean.util';
 
 @Component({
   selector: 'app-rd-general-information',
@@ -206,6 +207,13 @@ export class RdGeneralInformationComponent implements OnInit {
         this.sectionLoading.set(false);
         this.generalInfoBody = response;
         this.generalInfoBody.reporting_year = response['phase_year'];
+        // P2-3292 (QA 7-Sep-2026) — `is_discontinued` is a MySQL `tinyint(1)`, so it arrives as the
+        // NUMBER 1, and the Annual updating radio offers `value: false` / `value: true`. `1` matches
+        // neither, so the control rendered BLANK on every reload of a discontinued result while the
+        // reason, the merge targets and the status badge all hydrated correctly — because they are
+        // read with truthiness, which `1` satisfies. Measured on prtest: result 6432 answers
+        // `is_discontinued: 1` on this very endpoint.
+        this.generalInfoBody.is_discontinued = toNullableBoolean(response['is_discontinued']) as any;
         this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
 
         // Normalize impact area fields to arrays (backend returns arrays, but handle single numbers for backward compatibility)

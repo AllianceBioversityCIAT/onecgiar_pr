@@ -5,6 +5,7 @@ import { GeneralInfoBody } from '../../models/generalInfoBody';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../../shared/directives/feedback-validation-directive.module';
+import { toNullableBoolean } from '../../../../../../../../shared/utils/nullable-boolean.util';
 
 /** `result_type.id` of Innovation Development — the only result type P2-3292 Step 1 scopes. */
 const INNOVATION_DEVELOPMENT_RESULT_TYPE_ID = 7;
@@ -368,7 +369,23 @@ export class RdAnnualUpdatingComponent implements OnInit {
       return false;
     }
 
-    return this.api.dataControlSE.currentResult?.is_discontinued === true;
+    return this.storedIsDiscontinued === true;
+  }
+
+  /**
+   * The STORED answer, read as a real boolean.
+   *
+   * P2-3292 (QA 7-Sep-2026): `is_discontinued` is a MySQL `tinyint(1)`, so `GET .../results/get/:id`
+   * answers the NUMBER 1 (measured on prtest, result 6432). The two gates below compared it with
+   * `=== true`, which a `1` never satisfies — so on a result already stored as inactive the lock
+   * never closed and the "Reopen this innovation" button never appeared, for either role. QA
+   * reported both as one finding and was right about the shape: it is the same coercion defect as
+   * the blank Yes/No radio, one layer up.
+   *
+   * 🥇 Still `=== true` at the call sites, deliberately: `null` (never answered) must NOT lock.
+   */
+  private get storedIsDiscontinued(): boolean | null {
+    return toNullableBoolean(this.api.dataControlSE.currentResult?.is_discontinued);
   }
 
   /**
@@ -385,7 +402,7 @@ export class RdAnnualUpdatingComponent implements OnInit {
    * stored as inactive, in the 2026 phase or later.
    */
   get canReopenDiscontinuation(): boolean {
-    return this.usesStatusTriggerWording && this.api.rolesSE.isAdmin && this.api.dataControlSE.currentResult?.is_discontinued === true;
+    return this.usesStatusTriggerWording && this.api.rolesSE.isAdmin && this.storedIsDiscontinued === true;
   }
 
   /**

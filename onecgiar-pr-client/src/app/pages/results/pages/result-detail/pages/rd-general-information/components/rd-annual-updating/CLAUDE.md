@@ -1,6 +1,7 @@
 # rd-annual-updating
 
-**Verified:** 2026-09-03 · branch performance-refactor
+**Verified:** 2026-09-08 · branch performance-refactor (P2-3292 QA findings A/B: the stored flag is a
+`tinyint`, not a boolean); prior: 2026-09-03
 
 ## What it is
 
@@ -54,10 +55,10 @@ result's phase year — so the checklist never mixes the two.
   requires `description` when `investment_discontinued_option_id = 6`; the 2026 "Other" row is a
   different id and nothing demands its text. That branch is in the MySQL validation function, not
   here.
-- 🛑 **Steps 3 and 4 of the story are NOT built.** Merge / split has nowhere to store the link
-  (`linked_result` carries no link-type discriminator), so the two reasons record _that_ the
-  innovation merged or split but not _with what_. The auto-lock of Step 4 is waiting on the A/B
-  question published on the ticket on 31 Aug 2026.
+- ✅ **Steps 3 and 4 ARE built** (this line said otherwise until 8-Sep-2026). Merge / split stores the
+  link in its own table, `result_innovation_merge_split` — NOT in `linked_result`, which has no
+  link-type discriminator and whose links the Innovation Use form deactivates on save. Step 4's
+  auto-lock is the section above.
 
 ## Step 4 — the auto-lock, and why it has an escape (P2-3292)
 
@@ -90,6 +91,24 @@ ticked reason (the parent still owns the save).
 
 ## Traps (⚠️ = already broke something)
 
+- 🛑 **`is_discontinued` arrives as the NUMBER 1, not `true`** — it is a MySQL `tinyint(1)`, and both
+  `GET .../get/general-information/result/:id` and `GET .../results/get/:id` answer `1` / `0`
+  (measured on prtest 8-Sep-2026, result 6432). This broke TWO things at once and QA reported them
+  as separate findings on 7-Sep:
+  - the Yes/No radio rendered **blank** on every reload of a discontinued result, because
+    `app-pr-radio-button` matches its `optionValue` (`false` / `true`) by identity and `1 === true`
+    is false. Everything around it kept working — the ticked reason, the merge/split targets, the
+    DISCONTINUED badge — because they are all read with **truthiness**, which `1` satisfies. That
+    asymmetry is the fingerprint of this defect.
+  - `lockedByDiscontinuation` and `canReopenDiscontinuation` compared `=== true`, so on a real
+    discontinued result the lock never closed and the reopen button never rendered, for either role.
+  Both now go through `toNullableBoolean` (`shared/utils/nullable-boolean.util.ts`); the parent
+  normalises the payload once, this component normalises the stored flag it reads from
+  `currentResult`. 🥇 The call sites keep `=== true` on purpose: `null` (never answered) must not lock.
+- ⚠️ **A fixture that seeds a boolean cannot see it.** Every Step 4 spec seeded
+  `is_discontinued: true` and all of them were green while the defect was live in production — the
+  same shape as the length pin replaced in P2-3603. The `the stored flag arrives as a MySQL tinyint`
+  describe feeds `1` / `0` / `null` and is the guard that can actually fail.
 - ⚠️ **The 2026 label is a question, so it must pass `[useColon]="false"`.** `app-pr-field-header`
   appends `':'` to every label unless told otherwise (`pr-field-header.component.html:8`, and
   `useColon` defaults to `true` at `pr-field-header.component.ts:18`). The block shipped reading
@@ -138,6 +157,4 @@ Nothing is disabled here. What is still missing from P2-3292, and who owns it:
 | Piece | Owner | Why not here |
 |---|---|---|
 | The seven 2026 reason **texts** | Juan David Delgado | Rows of `investment_discontinued_option`; the table has no phase axis, so they must be new rows, never an `UPDATE` (see the pre-plan on P2-3292, 1-Sep). |
-| Step 3 merge / split links | Juan David Delgado | `linked_result` has no link-type discriminator, and no portfolio-wide QA'd innovation endpoint exists. |
-| Step 4 auto-lock / view-only | blocked on business | A/B question published on P2-3292 on 31-Aug (can a mistaken discontinuation be reopened?). Locking undoes the P2-2923 fix, so it waits for the answer. |
 | Green check rule | Juan David Delgado | MySQL `validation_<section>_<portfolio>` + `validate_sections_mapped_batch`. |
