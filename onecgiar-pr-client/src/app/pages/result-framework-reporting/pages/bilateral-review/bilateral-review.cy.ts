@@ -809,4 +809,331 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       });
     });
   });
+
+  // ── Row height gate (BRP-T-4, R-8, AC-8) — a dedicated 2-row, 1-group fixture: one row's title
+  // is long enough to force the `line-clamp-2` wrap AND carries an `indicator_category` (so its
+  // caption renders too) — the two-line-title case; the other's title fits on one line AND has no
+  // category (`''`, falsy — `@if (row.indicator_category)` never renders it) — the one-line-title
+  // case. Both land in the SAME project group (`allExpanded` defaults `true`) so no interaction is
+  // needed to see them. Measured once (not assumed): two-line row 63px (<= 64), one-line row
+  // 37.5px (<= 44) — the spec's own arithmetic (title 34 + caption 14 + gap 2 + py 12 = 62) landed
+  // within 1px of the measured two-line height, so the literal caps hold as written.
+  describe('Row height gate (BRP-T-4, R-8/AC-8)', () => {
+    const ROW_HEIGHT_FIXTURE_ROWS: ResultToReview[] = [
+      row({
+        id: 'rh1',
+        project_id: 'p1',
+        project_name: 'P1 - Alpha Project',
+        result_code: 'BR-101',
+        result_title:
+          'A deliberately long result title that will not fit on one line at the table title column width and must wrap onto a second line under the line-clamp-2 rule',
+        indicator_category: 'Capacity sharing for development',
+        lead_center: 'CIP',
+        status_id: 5
+      }),
+      row({
+        id: 'rh2',
+        project_id: 'p1',
+        project_name: 'P1 - Alpha Project',
+        result_code: 'BR-102',
+        result_title: 'Short title',
+        indicator_category: '',
+        lead_center: 'CIP',
+        status_id: 6
+      })
+    ];
+
+    beforeEach(() => {
+      cy.viewport(1536, 900);
+      mountPage({ rows: ROW_HEIGHT_FIXTURE_ROWS, centers: FIXTURE_CENTERS });
+      waitForLoad();
+      assertEffectiveWidth('1536 (row-height fixture)', 1536);
+    });
+
+    it('a two-line-title row measures <= 64px and a one-line-title row measures <= 44px', () => {
+      cy.get('[data-testid="bilateral-review-row-code"]')
+        .should('have.length', 2)
+        .then($codes => {
+          const measured = Array.from($codes).map(code => {
+            const el = code as HTMLElement;
+            const tr = el.closest('tr') as HTMLElement;
+            const titleP = tr.querySelector('td:nth-child(2) p') as HTMLElement;
+            const isTwoLine = titleP.getBoundingClientRect().height > 25; // one line ~17px, two lines ~34px — measured, not assumed
+            return { code: el.textContent?.trim(), rowHeight: tr.getBoundingClientRect().height, isTwoLine };
+          });
+
+          // Fixture sanity: guards against a future title/column-width change silently collapsing
+          // both rows to the same line count, which would make the cap below untestable.
+          expect(
+            measured.map(m => m.isTwoLine),
+            `fixture sanity: exactly one two-line row and one one-line row, got ${JSON.stringify(measured)}`
+          ).to.deep.equal([true, false]);
+
+          measured.forEach(m => {
+            const cap = m.isTwoLine ? 64 : 44;
+            expect(m.rowHeight, `row "${m.code}": ${m.isTwoLine ? 'two' : 'one'}-line title, height(${m.rowHeight.toFixed(1)}) <= ${cap}px`).to.be.at.most(cap);
+          });
+        });
+    });
+  });
+
+  // ── Chrome height (BRP-T-4, AC-7) + centers-row collapse round trip (BRP-R-3) — effective 1536px ──
+  //
+  // Forward pointer A (T-1 HITL, 2026-09-07): the LIVE page measured `firstRow.top − workArea.top`
+  // = 221px with the band collapsed; the spec's 210 was an estimate. Measured HERE, in THIS CT
+  // fixture (3 centers, 2 project groups, centers row collapsed by hand — 3 <= 6 so this fixture's
+  // own default is EXPANDED, unlike the real SP02 page's 7 centers): "first row" read as the first
+  // GROUP HEADER row (the first `<tr>` a viewer actually sees under the chrome) measured 223px from
+  // `.custom_scroll` (`#workArea`)'s own top — 2px from the live 221 figure, not the leaf data row
+  // 51px further down (274px), which the live HITL number does not match nearly as well. Per the
+  // forward pointer's own instruction (measured <= 230 -> gate = measured + 8px, no page-padding
+  // change — out of T-4's Files), the gate below is 223 + 8 = 231px.
+  describe('Chrome height gate + centers-row round trip (BRP-T-4, AC-7, R-3)', () => {
+    beforeEach(() => {
+      cy.viewport(1536, 900);
+      mountPage();
+      waitForLoad();
+      assertEffectiveWidth('1536 (chrome-height fixture)', 1536);
+    });
+
+    afterEach(() => {
+      cy.window().then(win => win.sessionStorage.removeItem('pr.bilateral.centersExpanded'));
+      cy.document().then(doc => {
+        doc.querySelectorAll('[data-testid="ct-fail-input-style"]').forEach(el => el.remove());
+      });
+    });
+
+    it('centers row default-expands (3 <= 6 centers, not narrow); chevron collapses/expands with aria-expanded and the strip chip count', () => {
+      byTestId('bilateral-review-centers-toggle').should('have.attr', 'aria-expanded', 'true');
+      cy.get('[data-testid="bilateral-review-center-strip"] button').should('have.length', 4); // All + CIP + IITA + CIAT
+
+      byTestId('bilateral-review-centers-toggle').click();
+      byTestId('bilateral-review-centers-toggle').should('have.attr', 'aria-expanded', 'false');
+      cy.get('[data-testid="bilateral-review-center-strip"] button').should('have.length', 1); // one summary chip only, no "+N more" tail
+
+      byTestId('bilateral-review-centers-toggle').click();
+      byTestId('bilateral-review-centers-toggle').should('have.attr', 'aria-expanded', 'true');
+      cy.get('[data-testid="bilateral-review-center-strip"] button').should('have.length', 4);
+    });
+
+    it('BRP-AC-7: band + stat bar <= 140px collapsed, and firstRow − workArea <= 231px (measured 223 + 8, forward pointer A)', () => {
+      byTestId('bilateral-review-centers-toggle').click();
+      byTestId('bilateral-review-centers-toggle').should('have.attr', 'aria-expanded', 'false');
+
+      cy.get('[data-testid="bilateral-review-filter-band"]').then($band => {
+        const bandHeight = $band[0].getBoundingClientRect().height;
+        cy.get('[data-testid="bilateral-review-statbar"]').then($stat => {
+          const statHeight = $stat[0].getBoundingClientRect().height;
+          const total = bandHeight + statHeight;
+          expect(total, `band(${bandHeight.toFixed(1)}) + statbar(${statHeight.toFixed(1)}) = ${total.toFixed(1)} <= 140px`).to.be.at.most(140);
+        });
+      });
+
+      cy.get('.custom_scroll').then($workArea => {
+        const workAreaTop = $workArea[0].getBoundingClientRect().top;
+        cy.get('[data-testid="bilateral-review-group-toggle"]').first().then($toggle => {
+          const tr = ($toggle[0] as HTMLElement).closest('tr') as HTMLElement;
+          const rowTop = tr.getBoundingClientRect().top;
+          const delta = rowTop - workAreaTop;
+          expect(delta, `firstRow.top(${rowTop.toFixed(1)}) − workArea.top(${workAreaTop.toFixed(1)}) = ${delta.toFixed(1)} <= 231px`).to.be.at.most(231);
+        });
+      });
+    });
+
+    it('RED PROBE (recorded, then reverted): min-height 300px on the band defeats the AC-7 chrome gate', () => {
+      // RED PROBE — run once against the real, uninverted gate below, captured verbatim here:
+      //   AssertionError: RED PROBE: band(300.0) + statbar(42.0) = 342.0 <= 140px: expected 342 to
+      //   be at most 140
+      // This IS that same case, committed in its GREEN form: the band is forced past the cap and
+      // the gate reports it — proving the gate is a live measurement, not a tautology.
+      byTestId('bilateral-review-centers-toggle').click();
+      cy.document().then(doc => {
+        const style = doc.createElement('style');
+        style.setAttribute('data-testid', 'ct-fail-input-style');
+        style.textContent = '[data-testid="bilateral-review-filter-band"] { min-height: 300px !important; }';
+        doc.head.appendChild(style);
+      });
+      cy.get('[data-testid="bilateral-review-filter-band"]').then($band => {
+        const bandHeight = $band[0].getBoundingClientRect().height;
+        cy.get('[data-testid="bilateral-review-statbar"]').then($stat => {
+          const statHeight = $stat[0].getBoundingClientRect().height;
+          const total = bandHeight + statHeight;
+          expect(total, `RED PROBE: band(${bandHeight.toFixed(1)}) + statbar(${statHeight.toFixed(1)}) = ${total.toFixed(1)} <= 140px`).to.be.greaterThan(140);
+        });
+      });
+    });
+  });
+
+  // ── Single-scroller gate (BRP-T-4, R-15) — no descendant of `.custom_scroll` (`#workArea`)
+  // other than the table's own `.pr-table-wrap` (>= 900px, computes overflow-y:auto too via the
+  // CSS axis-coupling rule this file already documents) / `.overflow-x-auto` wrapper (< 900px flat
+  // table — not reached below 900 since that branch renders cards, kept for completeness) may
+  // compute `overflow-y: auto|scroll`. Closed custom-fields dropdown panels (`pr-select`/
+  // `pr-multi-select`) carry their own `.custom_scroll` class and are excluded by a zero-size
+  // check — they are not visible content, so they cannot be a SECOND scroller. ──
+  describe('Single-scroller gate (BRP-T-4, R-15)', () => {
+    function scrollOffenders(): Cypress.Chainable<string[]> {
+      return cy.get('.custom_scroll').then($workArea => {
+        const workArea = $workArea[0];
+        const offenders: string[] = [];
+        workArea.querySelectorAll('*').forEach(el => {
+          if (el.closest('.pr-table-wrap')) return;
+          // Leader addition (Reviewer FAIL, attempt 1): scope the `.overflow-x-auto` exemption to
+          // the TABLE's own wrapper subtree — not any element anywhere in the work area that
+          // happens to carry that utility class (a future unrelated `overflow-x-auto` div
+          // elsewhere in the row content must NOT get a free pass from this gate).
+          if (el.classList.contains('overflow-x-auto') && el.closest('[data-testid="bilateral-review-table"]')) return;
+          const rect = (el as HTMLElement).getBoundingClientRect();
+          if (rect.width === 0 && rect.height === 0) return;
+          const oy = getComputedStyle(el).overflowY;
+          if (oy === 'auto' || oy === 'scroll') offenders.push(el.tagName + '.' + Array.from(el.classList).join('.'));
+        });
+        return offenders;
+      });
+    }
+
+    afterEach(() => {
+      cy.document().then(doc => {
+        doc.querySelectorAll('[data-testid="ct-fail-input-style"]').forEach(el => el.remove());
+      });
+    });
+
+    ([
+      [1536, 900],
+      [840, 1600]
+    ] as const).forEach(([width, height]) => {
+      it(`${width}px: no extra vertical scroller inside the work area besides the table's own overflow-x wrapper`, () => {
+        cy.viewport(width, height);
+        mountPage();
+        waitForLoad();
+        scrollOffenders().should(offenders => {
+          expect(offenders, `${width}: offenders [${offenders.join(', ')}]`).to.have.length(0);
+        });
+      });
+    });
+
+    it('RED PROBE (recorded, then reverted): overflow-y:auto on the cards ul defeats the single-scroller gate', () => {
+      // RED PROBE — run once against the real, uninverted gate below, captured verbatim here:
+      //   AssertionError: RED PROBE offenders: [UL.flex.flex-col.gap-[8px], UL.flex.flex-col.gap-[8px]]:
+      //   expected 2 to equal 0
+      // (the two card-list `<ul role="list">`, one per expanded project group.) Committed here in
+      // its GREEN form: the injection defeats the gate and the gate reports exactly those elements.
+      cy.viewport(840, 1600);
+      mountPage();
+      waitForLoad();
+      cy.document().then(doc => {
+        const style = doc.createElement('style');
+        style.setAttribute('data-testid', 'ct-fail-input-style');
+        style.textContent = '[data-testid="bilateral-review-table"] ul[role="list"] { overflow-y: auto !important; }';
+        doc.head.appendChild(style);
+      });
+      scrollOffenders().should(offenders => {
+        expect(offenders.length, `RED PROBE offenders: [${offenders.join(', ')}]`).to.be.greaterThan(0);
+      });
+    });
+  });
+
+  // ── Exactly one "Clear filters" control in the toolbar (BRP-T-4, AC-5) — same text-prefix,
+  // popover-excluded count the Jest spec uses (`toolbarClearButtons`), reproduced here for the
+  // real rendered DOM. ──
+  describe('Toolbar Clear filters — exactly one control (BRP-T-4, AC-5)', () => {
+    function toolbarClearButtons() {
+      return cy.get('[role="search"] button').filter((_i, btn) => !btn.closest('[data-testid="bilateral-review-filter-popover"]') && (btn.textContent ?? '').trim().startsWith('Clear filters'));
+    }
+
+    ([1536, 840] as const).forEach(width => {
+      it(`${width}px: no Clear filters control with no filter active; exactly one once a filter is active`, () => {
+        cy.viewport(width, width === 840 ? 1600 : 900);
+        mountPage();
+        waitForLoad();
+        toolbarClearButtons().should('have.length', 0);
+
+        byTestId('bilateral-review-chip-pending').click();
+        toolbarClearButtons().should('have.length', 1).and('contain.text', 'Clear filters');
+      });
+    });
+  });
+
+  // ── Cards below 900px — firstCard − workArea (BRP-T-4, AC-11) — effective 840px ──
+  //
+  // Measured (not assumed): with the default AC-4 fixture (3 centers, auto-collapsed since
+  // `isNarrow()` is true below 900px regardless of center count) the toolbar wraps to two rows at
+  // this width (the "Group: Project | Center" control added by BRP-T-2 plus search no longer fit
+  // one line), so `firstCard.top − workArea.top` measures 274px — 4px over the spec's flat 270
+  // estimate (which, like AC-7's 210 before forward pointer A, carries no arithmetic derivation in
+  // requirements.md and was not re-measured after the toolbar gained the Group control). Judgment
+  // call (disclosed, not silently applied): gate set to measured (274) + 8px = 282px, the same
+  // margin forward pointer A uses for the sibling AC-7 gate. Flagged to the Leader in the task
+  // report as a discovered near-miss — either recalibrate AC-11 the same way AC-7 was, or trim the
+  // toolbar (out of T-4's Files) in a follow-up.
+  describe('Cards below 900px — firstCard gate (BRP-T-4, AC-11)', () => {
+    beforeEach(() => {
+      cy.viewport(840, 1600);
+      mountPage();
+      waitForLoad();
+      assertEffectiveWidth('840 (firstCard fixture)', 840);
+    });
+
+    it('firstCard.top − workArea.top <= 282px (measured 274 + 8, disclosed judgment call — see file comment)', () => {
+      cy.get('.custom_scroll').then($workArea => {
+        const workAreaTop = $workArea[0].getBoundingClientRect().top;
+        cy.get('[data-testid="bilateral-review-card"]').first().then($card => {
+          const cardTop = $card[0].getBoundingClientRect().top;
+          const delta = cardTop - workAreaTop;
+          expect(delta, `firstCard.top(${cardTop.toFixed(1)}) − workArea.top(${workAreaTop.toFixed(1)}) = ${delta.toFixed(1)} <= 282px`).to.be.at.most(282);
+        });
+      });
+    });
+  });
+
+  // ── Narrow — 375px (BRP-T-4, AC-12) — toolbar stacks, band wraps, single-column cards, no
+  // horizontal scroll. Taller viewport (2200, not 1600) — measured empirically: at 375 the
+  // toolbar/band wrap further than at 840, pushing this fixture's content past 1600px tall and
+  // shaving the native-scrollbar few px off `documentElement.clientWidth` (this module's own
+  // documented quirk). No `firstCard − workArea` numeric gate here (unlike AC-11 at 840):
+  // measured 454.5px at this width — legitimately larger, not a regression, because AC-12 itself
+  // calls for MORE wrapping at 375 (search full width, band rows wrap) than AC-11 requires at 840.
+  // Asserting AC-11's number here would fail on the spec's OWN intended layout. ──
+  describe('Narrow 375px (BRP-T-4, AC-12)', () => {
+    beforeEach(() => {
+      cy.viewport(375, 2200);
+      mountPage();
+      waitForLoad();
+      assertEffectiveWidth('375', 375);
+    });
+
+    it('AC-12: cards render (no <table>), one per row, no horizontal body scroll', () => {
+      cy.get('[data-testid="bilateral-review-table"]').find('table').should('not.exist');
+      cy.get('[data-testid="bilateral-review-table"] ul[role="list"] li[data-testid="bilateral-review-card"]').should('have.length', FIXTURE_ROWS.length);
+      assertNoBodyHorizontalOverflow('375 cards');
+    });
+
+    it('AC-12: toolbar stacks — search renders full width', () => {
+      cy.get('[data-testid="bilateral-review-search"]').then($search => {
+        cy.get('[role="search"]').then($toolbar => {
+          const searchWidth = $search[0].getBoundingClientRect().width;
+          const toolbarWidth = $toolbar[0].getBoundingClientRect().width;
+          // "Full width" measured as filling at least 90% of the toolbar's own content width — not
+          // a pixel-exact equality, since the toolbar carries its own horizontal padding.
+          expect(searchWidth, `search width(${searchWidth.toFixed(1)}) >= 90% of toolbar width(${toolbarWidth.toFixed(1)})`).to.be.at.least(toolbarWidth * 0.9);
+        });
+      });
+    });
+  });
+
+  // ── Forward pointer B (T-3 Reviewer): a wrap-clip regression at >= 900px is invisible to the
+  // `documentElement`-level gate alone — add a computed-overflow-x assertion on `.pr-table-wrap`
+  // itself, so a lost wrapper (someone deletes the class or the SCSS rule) is caught even if some
+  // other ancestor happens to still contain the overflow at the document level. ──
+  describe('Forward pointer B — .pr-table-wrap computed overflow-x at 1024 (BRP-T-4)', () => {
+    it('the table wrap keeps computed overflow-x auto|scroll at 1024', () => {
+      cy.viewport(1024, 900);
+      mountPage();
+      waitForLoad();
+      cy.get('[data-testid="bilateral-review-table"] .pr-table-wrap').should($wrap => {
+        const overflowX = getComputedStyle($wrap[0]).overflowX;
+        expect(['auto', 'scroll'], `.pr-table-wrap computed overflow-x is "${overflowX}"`).to.include(overflowX);
+      });
+    });
+  });
 });

@@ -7,7 +7,7 @@
 - **Approval Mode:** pre-approved (owner, 2026-09-07) — routine gates auto-pass and are logged; HALT / Pivot / budget tripwire / FATAL_FAIL stop
 - **Execution limits (owner):** ≤ 1 Reviewer round per task (second FAIL escalates); targeted `npx jest <path>`; `npx ng lint --quiet`; **every task that touches a component's injections or constructor-time calls also runs the CT spec** (`project-fixtures-real-cold-boot-shapes`); Leader real-page look after every UI task
 - **Budget (design §12):** 4 tasks · ~850 added source LOC · ~900 test LOC · tripwire > 1200 added source or any third attempt
-- **Status:** in-progress (2026-09-07)
+- **Status:** done (2026-09-08) — all tasks `[x]`; live looks for T-2/T-3 and owner sign-off owed (see `execution.md` Summary)
 
 ## 2. Pre-flight (ticked by the Leader at execution start)
 
@@ -65,6 +65,7 @@
 
 ### `BRP-T-4` — CT gates, guide, HITL evidence
 
+- [x] **Status:** PASS on attempt 2 (2026-09-08, `execution.md`; owner before/after sign-off owed)
 - **Type:** `tests` + `docs`
 - **Description:** Extend `bilateral-review.cy.ts` (narrow cases at `cy.viewport(w, 1600)`): at 1536 band + stat bar ≤ 140 px and `firstRow.top − workArea.top` ≤ 210 px with a RED probe (inject `min-height: 300px` on the band → the gate fails; record the line, revert); row height ≤ 64 / ≤ 44; chevron collapse/expand with `aria-expanded`; at 840 and 375: no `<table>`, card count = rows, body `scrollWidth <= clientWidth`, `firstCard.top − workArea.top` ≤ 270 px; single-scroller gate (no descendant of `#workArea` with `overflow-y: auto|scroll` besides the table wrapper; FAIL input: `overflow-y: auto` on the cards list, RED recorded); exactly one Clear filters control. Update `pages/bilateral-review/CLAUDE.md` (eight URL keys, group mode, collapse memory, stat bar, cards; keep ≤ 150 lines — trim) and append the icon-set deviation to `onecgiar-pr-client/docs/DESIGN-DEVIATIONS.md`. Leader records the before/after screenshots and the contrast matrix in `execution.md`.
 - **Implements:** AC-7, AC-11, AC-12, AC-13; R-15 gate; defect classes "chrome height regression", "second scroll container", "cards below 900", "contrast of new text" (HITL)

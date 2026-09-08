@@ -212,3 +212,31 @@ the code disagree on tab count, that is an open item to raise with the owner —
   each. Removing them to hit 160px would restore the dead end while keeping the message. Added
   2026-09-04 (P2-3574).
 - The 160px cap still holds for every real empty state on the screen; nothing else here grew.
+
+## 15. Bilateral review: the page already mixes both icon sets — new markup follows its nearest sibling, not a clean region split
+
+- **Design says:** `docs/ux-ui/design.md` §7 line 230 — `material-icons-round` always, and never
+  mix icon sets.
+- **We do:** `pages/bilateral-review/` already carries **both** sets before and after this spec —
+  there is no clean lucide-region/material-region split. Lucide (`ng-icon`) covers the strip and
+  the toolbar's search/expand/clear affordances (`bilateral-review.component.html:30, 225, 238,
+  405`). `material-icons-round` covers four **pre-existing** toolbar glyphs — the search-clear ✕
+  (`:46`), the Filter button glyph (`:86`), the popover's clear + close (`:114`, `:123`), and the
+  filtered-empty state's clear (`:452`) — plus the table's row-action icon and group chevron. The
+  stat bar (`bilateral-review-kpis.component.html`) carries **no icons at all** (T-1 dropped them
+  to hold the ≤ 44px height gate).
+- **Why:** the toolbar's four `material-icons-round` glyphs shipped before `sp-bilateral-review-tab`
+  and were never lucide; T-1's new toolbar controls (Clear filters, chevron) are lucide because
+  that is what the toolbar's *other* new affordances already are. Rule adopted by
+  `changes/bilateral-review-ux-polish` design §6.3 (execution-corrected once the false "toolbar is
+  all lucide" / "region-scoped" premise was measured against the working tree): **no *new* markup
+  mixes sets within one control; each new control follows the set of its nearest existing
+  siblings** — band/strip = lucide, table/cards = `material-icons-round`, stat bar = no icons. The
+  four pre-existing toolbar `material-icons-round` glyphs are **grandfathered**, not exempted by a
+  region boundary that does not exist. Rewriting them to lucide for cosmetic consistency was out of
+  this spec's scope and risked an unrelated regression.
+- 🛑 Do not "fix" this by asserting the page is region-split by icon set — it is not. Any new
+  control still follows the nearest-sibling rule above; only a scoped pass that re-verifies every
+  pre-existing glyph may reduce the mix. Added 2026-09-08; corrected 2026-09-08 after Reviewer
+  BRP-T-4 attempt-1 FAIL (the first version of this entry stated a region split the working tree
+  does not have).

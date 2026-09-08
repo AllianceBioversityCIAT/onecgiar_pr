@@ -157,3 +157,86 @@
 | Issues | Implementer's report claimed the cards omit the Contributor badge — false (they render it); ledger corrected. |
 | Gate | auto-approved (pre-approved mode) |
 
+### `BRP-T-4` — CT gates, guide, HITL evidence
+
+| Field | Value |
+|---|---|
+| Status | in progress (attempt 1 — Implementer spawned 00:53, fresh worker) |
+| Date | 2026-09-08 |
+| Gate before start | auto-approved (pre-approved mode) after T-3 PASS; T-2/T-3 live looks owed (Orca eval down since 23:26) |
+| Skills assigned | `angular-developer`, `cognitive-doc-design` (task list) |
+| Effort | medium |
+| Forward pointers carried | A (T-1 HITL): `firstRow − workArea` measured 221 vs the spec's 210 — measure in CT, set the gate from measurement, no page padding change · B (T-3 Reviewer): computed-`overflow-x` assertion on `.pr-table-wrap` at 1024 · guide cap 150 (COMPONENT-DOCS says 120 — reconcile at archive) |
+
+**Attempt 1 — Implementer report (01:16):** `bilateral-review.cy.ts` +323 (18 → **31** cases), `CLAUDE.md` rewritten (132 → **129** lines), `DESIGN-DEVIATIONS.md` entry #15. RED probes (uninverted gates, recorded then reverted):
+
+```
+AssertionError: RED PROBE: band(300.0) + statbar(42.0) = 342.0 <= 140px: expected 342 to be at most 140
+AssertionError: RED PROBE offenders: [UL.flex.flex-col.gap-[8px], UL.flex.flex-col.gap-[8px]]: expected 2 to equal 0
+```
+
+GREEN twice: `31 passing` · `✔ All specs passed! 31 31 - - -`. Lint clean. Measured `firstRow − workArea` at 1536 = **223 px** to the first group-header row (matches the 221 px live figure; 274 to the first leaf row) → gate **231** (forward pointer A's formula). Judgment calls **accepted by the Leader:** AC-11's 270 measured 274 at 840 (the toolbar wraps to two rows since T-2's Group control) → gate **282** (same +8 rule); no numeric card cap at 375 (AC-12 names none and wraps more by design); the single-scroller gate excludes zero-size elements (closed `pr-select`/`pr-multiselect` panels carry `.custom_scroll` for an unopened list). **Requirements AC-7 / AC-11 recalibrated** as execution corrections. Reviewer (opus, lens checklist, high) spawned 01:20 on the 3-file diff (598 lines, `p4.diff`).
+
+**Attempt 1 — Reviewer verdict (01:27): `STATUS: FAIL`**, 1 issue. Verified green otherwise: both RED probes genuine and cleaned in `afterEach`; every pixel gate measured; row-height gate on real rows with a fallible fixture sanity check; single-scroller gate fallible (exclusions: `.pr-table-wrap` subtree, `.overflow-x-auto`, zero-size); forward pointers A (231) and B (`.pr-table-wrap` computed `overflow-x` at 1024) executed; Clear-filters count text-scoped; guide 130 lines with every claim true and no stale sentence; scope clean.
+
+| # | Discovered Issue | Violated Rule | Remediation |
+|---|---|---|---|
+| 1 | `DESIGN-DEVIATIONS.md` entry states "toolbar and filter band use lucide … table, stat bar and cards use `material-icons-round`" and "no component mixes the two sets" — false: the page template mixes both (lucide at `.html:30, 225, 238, 405`; `material-icons-round` at `:46, :86, :114, :123, :452`, all pre-existing) and the stat bar has no icons. **Root cause: the Leader's premise in requirements §8 / design §6.3** | requirements §8; design §6.3; tasks T-4 Description | Rewrite the entry to the measured truth; state the real invariant (no *new* markup mixes sets; pre-existing toolbar glyphs grandfathered); **requirements §8 and design §6.3 corrected by the Leader** |
+
+**ADVISORY (recorded):** `scrollOffenders` exempts any element with the `overflow-x-auto` class (**Leader added** scoping to the table's own wrapper to the fix round); `cy.get('.custom_scroll')[0]` relies on document order (the Reviewer's `#workArea` alternative does not exist — it is a template reference, not an id — so kept); only the 840 branch has a single-scroller RED probe (follow-up); guide 130 vs COMPONENT-DOCS 120 (archive reconciliation, already recorded).
+
+**Leader relay (01:30):** FAIL report verbatim + the exemption-scoping addition to the same Implementer. **Attempt 2** — the one allowed Reviewer round; a second FAIL escalates.
+
+**Attempt 2 — Implementer landed (01:36):** deviation entry #15 rewritten to the measured truth and the corrected rule; `scrollOffenders()` exemption scoped to `el.closest('[data-testid="bilateral-review-table"]')`. CT `31 passing` · lint clean. Scoped re-review sent to the same Reviewer (01:38) with the full diff + a 43-line interdiff.
+
+**Attempt 2 — Reviewer verdict (01:41): `STATUS: PASS`.** "The single FAIL issue is closed at the exact seam — entry #15 now states the Leader-corrected nearest-sibling/grandfathered rule and every line reference, icon-set attribution and the 'stat bar has no icons' claim check out against the working tree — and the Leader's exemption scoping tightens the R-15 gate without weakening either RED probe."
+
+**Final — `BRP-T-4` PASS on attempt 2 (2026-09-08 01:43)**
+
+| Field | Value |
+|---|---|
+| Attempts | 2 |
+| Files | `bilateral-review.cy.ts` (+7 gate groups, 18 → 31 cases, two RED probes recorded), `pages/bilateral-review/CLAUDE.md` (130 lines), `onecgiar-pr-client/docs/DESIGN-DEVIATIONS.md` (entry #15) |
+| Verification | CT `31 passing` · `✔ All specs passed! 31 31 - - -`; `npx ng lint --quiet` clean; guide 130 ≤ 150 |
+| Live evidence | **OWED** — owner sign-off on the before/after look and the T-2/T-3 live measurements (Orca `eval` down since 23:26; last probe 01:38) |
+| Requirements covered | AC-7 (CT half, gate 231), AC-11 (gate 282), AC-12, AC-13; R-15 gate; forward pointers A and B closed |
+| Decisions | (1) AC-7 / AC-11 recalibrated from measurement (231 / 282). (2) Requirements §8 and design §6.3 icon premise corrected — the page already mixed both sets; rule = no new markup mixes sets, nearest-sibling, pre-existing glyphs grandfathered. (3) Guide cap 150 (approved) over COMPONENT-DOCS 120 → archive reconciliation. |
+| Issues | Leader's premise about the toolbar icon set was false (third false premise in this spec: Clear filters location, Actions divider, icon regions) — kaizen row below. |
+| Gate | auto-approved (pre-approved mode) |
+
+## Summary
+
+All four tasks `[x]` with Reviewer PASS evidence (2026-09-07 21:40 → 2026-09-08 01:45, ~4 h wall-clock incl. one rate-limit stall).
+
+| Task | Attempts | Reviewer rounds | Live look | Commit |
+|---|---|---|---|---|
+| BRP-T-1 filter band + clear + stat bar | 2 (+1 runtime respawn) | FAIL → scoped PASS | #1 done | `b3e7783a9` |
+| BRP-T-2 table density + group mode | 2 | FAIL → scoped PASS | **owed** | `5e7107edb` |
+| BRP-T-3 cards below 900 | 2 | FAIL → scoped PASS | **owed** | `ac96f916d` |
+| BRP-T-4 CT gates + guide + deviation | 2 | FAIL → scoped PASS | owner sign-off **owed** | (this commit) |
+
+**Budget tally (design §12 vs actual, `git diff --numstat af3e4b566..HEAD -- pages/bilateral-review docs/DESIGN-DEVIATIONS.md`):**
+
+| Number | Estimate | Actual | Delta |
+|---|---|---|---|
+| Source LOC | ~850 | **+1036 / −316 (net 720)** | +22 % gross — within the 1200 tripwire; the re-baseline from the parent's ×2.17 held |
+| Test LOC | ~900 | **+1361 / −120** | +51 % — CT grew to 31 cases with two RED probes |
+| Review rounds | ≤ 1 per task | 2, 2, 2, 2 | every task needed one scoped re-review; none needed a third attempt |
+
+**What the page gained (owner's intent → delivered):** collapsed dense per-center info (collapsible centers row, remembered) · colors (tonal count badges ≥ 12:1, token yellow pending badge, secondary captions) · Clear filters · N in the toolbar · compact stat bar · table density (44/64 px rows, caption, quiet placeholders, short dates, hover, Actions divider) · distribution per center (Group: Project | Center with `?group=`) · responsive (cards below 900, no nested scroller, toolbar wrap at 375) · vertical-scroll consistency preserved (`#workArea` still the only scroller, CT-gated).
+
+**Defects the Reviewers caught that Jest/CT would have shipped:** a spec-prescribed focus-ring class that paints nothing (T-1), the Group control in raw slate (T-2), the missing Actions divider that the design called "unchanged" (T-2), group toggles without focus rings (T-3), a false deviation record (T-4). **Live-only defects (T-1 look):** none new; the band/statbar/first-row numbers confirmed the design.
+
+**Owed before archive:** the combined T-2/T-3 live look (row heights, placeholders, Actions divider, Group: Center headers, cards at 840/375, caption/badge contrast) and the owner's before/after sign-off — blocked on Orca's `eval` (`runtime_unavailable` since 23:26) or an owner screenshot.
+
+**Follow-ups (not new scope):** skeleton `animate-pulse` without `motion-reduce:animate-none` (pre-existing pattern) · single-scroller RED probe for the table branch at 1536 · `expandedKeys` prune of filtered-away keys · popover "Not specified" option · `?phase=` cross-tab collision (from BRC) · row status pill raw amber → yellow tokens (`/akili-quick`) · guide cap 120 vs 150 reconciliation · COMPONENT-DOCS.
+
+**Kaizen signal:** three false premises written by the Leader survived judgment day (Clear filters "only in the popover", Actions "unchanged (`border-l`)", toolbar "all lucide") and were each caught by a Reviewer at execution. All three are "existence claims about current markup" — candidate rule for the premises table: every claim of the form "X exists / does not exist / is unchanged" cites a `grep` result, not a reading.
+
+## Constitution Impact: BRP-T-1..T-4
+
+- **Module reshaped:** `pages/bilateral-review/` — `BilateralReviewKpisComponent` is now a stat bar; `BilateralReviewCenterStripComponent` gains `collapsed`; `BilateralReviewTableComponent` gains `groupMode`, `narrow`, the `BilateralReviewGroup` shape and a cards branch; page gains `group`, `isNarrow`, `centersExpanded`, `clearEverything`. All covered by `pages/bilateral-review/CLAUDE.md` (130 lines) — no new child guide.
+- **Public surface:** eighth URL key `group`; `sessionStorage` key `pr.bilateral.centersExpanded`; testids `bilateral-review-filter-band`, `bilateral-review-statbar`, `bilateral-review-group-pending`, `bilateral-review-card`, `bilateral-review-cards-skeleton`.
+- **Baseline docs:** `docs/ux-ui/design.md` §7 line 230 (icon rule) now has a recorded deviation (`DESIGN-DEVIATIONS.md` #15); `--pr-focus-ring` is a box-shadow token — the design system doc should say so (archive sync candidate).
+- **Parent guide index:** `onecgiar-pr-client/src/CLAUDE.md` `## Module Guides` pointer to `pages/bilateral-review/CLAUDE.md` still pending (default-branch apply, carried from `sp-bilateral-review-tab`).
+- **CodeGraph re-index pending** (`codegraph sync`).
