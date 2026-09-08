@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { HlmSidebarService } from '@spartan/sidebar';
 
 import { ReportingNavSidebarComponent } from './reporting-nav-sidebar.component';
@@ -766,6 +768,48 @@ describe('ReportingNavSidebarComponent', () => {
       component.onEscape();
       expect(component.fontMenuOpen()).toBe(false);
       expect(component.iconFlyout()).toBeNull();
+    });
+  });
+
+  // ------------------------------------------------------- SBAR-T-3 / SBAR-R-10
+  // `[data-guide="sidebar-toggle"]` is the anchor `ReportingGuideService` (SBAR-T-4) targets for
+  // the one-time discoverability hint (SBAR-DD-4).
+  //
+  // Why this is a markup (parsed-template) check and not a `TestBed`-rendered one: EVERY test
+  // above renders this component with its template overridden to `''` — that pre-dates this task.
+  // The real reason is `hlmSidebarMenuButton`'s `tooltip` host-directive binding to `BrnTooltip`
+  // (`hlm-sidebar-menu-button.ts`) throws `NG0311: Directive BrnTooltip does not have an input
+  // with a public name of brnTooltip` the instant the real template is instantiated under Jest —
+  // a pre-existing `@spartan-ng/brain` version-resolution mismatch in the test runner, unrelated
+  // to this attribute change and out of this task's scope to fix. Parsing the actual `.html` file
+  // as markup proves the hook exists in the authored DOM without tripping that unrelated bug.
+  //
+  // What this proves: the markup hook is present exactly once, on a `<button>`, with its existing
+  // attributes/handler untouched. What it does NOT prove: whether a driver.js popover anchored to
+  // this selector renders sensibly (placement/legibility) — that is out of reach for a DOM-presence
+  // assertion and is covered instead by the manual QA step in SBAR-T-6. Don't mistake this test
+  // passing for "the tour looks right".
+  describe('sidebar toggle data-guide hook (SBAR-T-3)', () => {
+    const readTemplateDoc = (): Document => {
+      const html = readFileSync(join(__dirname, 'reporting-nav-sidebar.component.html'), 'utf8');
+      return new DOMParser().parseFromString(html, 'text/html');
+    };
+
+    it('resolves [data-guide="sidebar-toggle"] to exactly one element, on the toggle button, unchanged otherwise', () => {
+      const doc = readTemplateDoc();
+      const hooks = doc.querySelectorAll('[data-guide="sidebar-toggle"]');
+      expect(hooks.length).toBe(1);
+
+      const toggleButton = hooks[0] as HTMLButtonElement;
+      expect(toggleButton.tagName.toLowerCase()).toBe('button');
+      expect(toggleButton.getAttribute('type')).toBe('button');
+      expect(toggleButton.getAttribute('aria-label')).toBe('Expand sidebar');
+      expect(toggleButton.getAttribute('title')).toBe('Expand sidebar');
+      // Click handler and class untouched — the attribute-only nature of this change.
+      expect(toggleButton.outerHTML).toContain('(click)="sidebarSE.toggleSidebar()"');
+      expect(toggleButton.getAttribute('class')).toBe(
+        'hover:bg-sidebar-accent text-sidebar-foreground mx-auto flex size-8 items-center justify-center rounded-md'
+      );
     });
   });
 });

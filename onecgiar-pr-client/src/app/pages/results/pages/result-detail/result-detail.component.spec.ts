@@ -1,4 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ActivatedRoute } from '@angular/router';
+import { Subject } from 'rxjs';
+import { HlmSidebarService } from '@spartan/sidebar';
 
 import { ResultDetailComponent } from './result-detail.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
@@ -32,6 +35,7 @@ import { ResultMetadataListComponent } from '../../../../shared/components/resul
 import { ResultMetadataWindowComponent } from '../../../../shared/components/result-metadata/result-metadata-window.component';
 import { ResultMetadataPanelService } from '../../../../shared/components/result-metadata/result-metadata-panel.service';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
+import { ReportingGuideService } from '../../../result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
 jest.useFakeTimers();
 
@@ -44,6 +48,10 @@ describe('ResultDetailComponent', () => {
   let mockShareRequestModalService:any;
   let mockDataControlService: any;
   let mockResultLevelService:any;
+  let mockActivatedRoute: any;
+  let paramsSubject: Subject<any>;
+  let mockSidebarService: any;
+  let mockReportingGuideService: any;
   const mockGET_resultIdToCodeResponse = 1;
   const mockGET_versioningResultResponse = [];
   const mockGET_versioningByCodeResponse = [
@@ -120,6 +128,31 @@ describe('ResultDetailComponent', () => {
       removeResultTypes: jest.fn()
     }
 
+    // SBAR-T-2: a real Subject stands in for the route's `id`-param stream so tests can push
+    // distinct/repeated emissions on demand (RouterTestingModule's default ActivatedRoute never
+    // emits, which would make the compact-entry subscription untestable).
+    paramsSubject = new Subject<any>();
+    mockActivatedRoute = {
+      params: paramsSubject.asObservable(),
+      snapshot: {
+        paramMap: { get: () => null },
+        queryParamMap: { get: () => null }
+      }
+    };
+
+    mockSidebarService = {
+      isCompact: signal(false),
+      state: signal<'expanded' | 'collapsed'>('expanded'),
+      collapseForCompactEntry: jest.fn()
+    };
+
+    // SBAR-T-5: the discoverability hint trigger, wired off the same id-change stream as
+    // SBAR-T-2's auto-collapse.
+    mockReportingGuideService = {
+      isResultSidebarHintCompleted: jest.fn().mockReturnValue(false),
+      startResultSidebarHint: jest.fn()
+    };
+
     await TestBed.configureTestingModule({
       declarations: [
         ResultDetailComponent,
@@ -173,6 +206,18 @@ describe('ResultDetailComponent', () => {
         {
           provide: PhasesService,
           useValue: mockPhasesService
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: mockActivatedRoute
+        },
+        {
+          provide: HlmSidebarService,
+          useValue: mockSidebarService
+        },
+        {
+          provide: ReportingGuideService,
+          useValue: mockReportingGuideService
         },
       ]
     }).compileComponents();
@@ -455,6 +500,109 @@ describe('ResultDetailComponent', () => {
       spyGetData.mockRestore();
       // getGreenChecks should not be called by the effect since portfolio is undefined
       expect(mockGreenChecksService.getGreenChecks).not.toHaveBeenCalled();
+    });
+  });
+
+  // SBAR-T-2 — auto-collapse the compact-viewport sidebar on distinct result entry.
+  // The subscription is created in the constructor (see `watchCompactEntry()`), so `component` is
+  // already wired the moment `TestBed.createComponent` runs in the outer `beforeEach` — no
+  // `fixture.detectChanges()` / `ngOnInit()` is required to exercise it.
+  describe('compact-viewport auto-collapse on result entry (SBAR-R-1..R-4)', () => {
+    it('Scenario: Compact laptop entering a result — auto-collapse (collapses exactly once)', () => {
+      mockSidebarService.isCompact.set(true);
+      mockSidebarService.state.set('expanded');
+
+      paramsSubject.next({ id: '9043' });
+
+      expect(mockSidebarService.collapseForCompactEntry).toHaveBeenCalledTimes(1);
+    });
+
+    it('Scenario: Desktop viewport unaffected — never collapses, even across multiple distinct entries', () => {
+      mockSidebarService.isCompact.set(false);
+      mockSidebarService.state.set('expanded');
+
+      paramsSubject.next({ id: '9043' });
+      paramsSubject.next({ id: '5001' });
+
+      // Asserted after the full lifecycle above, not just "not yet called".
+      expect(mockSidebarService.collapseForCompactEntry).not.toHaveBeenCalled();
+    });
+
+    it('Scenario: Manual re-expand is respected — re-emitting the same id (section switch) does not re-collapse', () => {
+      mockSidebarService.isCompact.set(true);
+      mockSidebarService.state.set('expanded');
+
+      paramsSubject.next({ id: '9043' });
+      expect(mockSidebarService.collapseForCompactEntry).toHaveBeenCalledTimes(1);
+
+      // User manually re-expands, then switches sections within the same result — same id again.
+      mockSidebarService.state.set('expanded');
+      paramsSubject.next({ id: '9043' });
+
+      expect(mockSidebarService.collapseForCompactEntry).toHaveBeenCalledTimes(1);
+    });
+
+    it('Scenario: Resize after entry does not retrigger — flipping isCompact() with no new route emission calls nothing', () => {
+      mockSidebarService.isCompact.set(false);
+      mockSidebarService.state.set('expanded');
+
+      paramsSubject.next({ id: '9043' });
+      expect(mockSidebarService.collapseForCompactEntry).not.toHaveBeenCalled();
+
+      // Simulates a live resize to a compact width with no navigation — no new params emission.
+      mockSidebarService.isCompact.set(true);
+
+      expect(mockSidebarService.collapseForCompactEntry).not.toHaveBeenCalled();
+
+      // A subsequent fresh entry to a DIFFERENT result at that same narrow width still applies.
+      paramsSubject.next({ id: '5001' });
+      expect(mockSidebarService.collapseForCompactEntry).toHaveBeenCalledTimes(1);
+    });
+
+    it('Disqualifying input: the id-param stream emitting 9043 twice in a row is filtered by distinctUntilChanged', () => {
+      mockSidebarService.isCompact.set(true);
+      mockSidebarService.state.set('expanded');
+
+      paramsSubject.next({ id: '9043' });
+      // Same id again, back-to-back, with no other emission in between — this is exactly the input
+      // that would make the core claim fail if `distinctUntilChanged` were missing or misapplied.
+      paramsSubject.next({ id: '9043' });
+
+      expect(mockSidebarService.collapseForCompactEntry).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // SBAR-T-5 — the discoverability hint fires on the same id-change trigger as SBAR-T-2's
+  // auto-collapse, but its own gate is `isResultSidebarHintCompleted()`, never `isCompact()`.
+  describe('result-sidebar discoverability hint on result entry (SBAR-R-10/R-11)', () => {
+    it('Scenario "First-time discoverability hint": starts the hint once when it has not been seen', () => {
+      mockReportingGuideService.isResultSidebarHintCompleted.mockReturnValue(false);
+
+      paramsSubject.next({ id: '9043' });
+
+      expect(mockReportingGuideService.startResultSidebarHint).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT start the hint when it has already been completed', () => {
+      mockReportingGuideService.isResultSidebarHintCompleted.mockReturnValue(true);
+
+      paramsSubject.next({ id: '9043' });
+
+      expect(mockReportingGuideService.startResultSidebarHint).not.toHaveBeenCalled();
+    });
+
+    // Disqualifying guard: this trigger must NOT be coupled to `isCompact()`. A desktop/expanded
+    // viewport (isCompact() false) that would never auto-collapse the sidebar must still show the
+    // hint — otherwise SBAR-R-10's scope would be silently narrowed to compact viewports only.
+    it('is NOT gated on isCompact(): a desktop viewport still starts the hint', () => {
+      mockSidebarService.isCompact.set(false);
+      mockSidebarService.state.set('expanded');
+      mockReportingGuideService.isResultSidebarHintCompleted.mockReturnValue(false);
+
+      paramsSubject.next({ id: '9043' });
+
+      expect(mockSidebarService.collapseForCompactEntry).not.toHaveBeenCalled();
+      expect(mockReportingGuideService.startResultSidebarHint).toHaveBeenCalledTimes(1);
     });
   });
 });

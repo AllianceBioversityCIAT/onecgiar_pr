@@ -1,11 +1,16 @@
 @if (!dataControlSE.show_qa_full_screen && !dataControlSE.focusMode()) {
   <header class="pr-shell-topbar" role="banner">
-    <!-- Sidebar collapse (CURRENT left control) -->
+    <!-- Sidebar collapse (CURRENT left control). `data-guide="sidebar-toggle"` (SBAR-T-5) is the
+         anchor `ReportingGuideService.startResultSidebarHint()` targets when the nav sidebar is
+         EXPANDED — `reporting-nav-sidebar`'s own hook (SBAR-T-3) only exists in the DOM while the
+         sidebar is collapsed, so this topbar button is what makes the selector resolve on
+         desktop/expanded too. No behavior change, no new class, no style change. -->
     <button
       type="button"
       class="pr-topbar-icon-btn"
       aria-label="Toggle sidebar"
-      (click)="toggleSidebar()">
+      (click)="toggleSidebar()"
+      data-guide="sidebar-toggle">
       <ng-icon name="lucidePanelLeft" class="text-[20px]" />
     </button>
 

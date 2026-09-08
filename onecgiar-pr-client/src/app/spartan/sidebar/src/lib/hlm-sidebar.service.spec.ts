@@ -237,6 +237,97 @@ describe('HlmSidebarService', () => {
     });
   });
 
+  describe('compact behaviour', () => {
+    /** Returns a matchMedia mock that hands out a distinct fake MQL per query string. */
+    function fakeMatchMediaByQuery(mobileMatches: boolean, compactMatches: boolean) {
+      const mobileMql = fakeMql(mobileMatches);
+      const compactMql = fakeMql(compactMatches);
+      const matchMedia = jest.fn((query: string) => (query.includes('1366px') ? compactMql : mobileMql));
+      return { matchMedia, mobileMql, compactMql };
+    }
+
+    it('picks up the compact media query on render', () => {
+      const { matchMedia, compactMql } = fakeMatchMediaByQuery(false, true);
+      Object.defineProperty(window, 'matchMedia', { value: matchMedia, configurable: true, writable: true });
+
+      const service = setup();
+      render();
+
+      expect(matchMedia).toHaveBeenCalledWith('(max-width: 1366px)');
+      expect(service.isCompact()).toBe(true);
+
+      compactMql.handlers.forEach(h => h({ matches: false }));
+      expect(service.isCompact()).toBe(false);
+    });
+
+    it('defaults isCompact to false when the compact media query does not match', () => {
+      const { matchMedia } = fakeMatchMediaByQuery(false, false);
+      Object.defineProperty(window, 'matchMedia', { value: matchMedia, configurable: true, writable: true });
+
+      const service = setup();
+      render();
+
+      expect(service.isCompact()).toBe(false);
+    });
+
+    it('updates isCompact on the existing debounced resize handler', () => {
+      jest.useFakeTimers();
+      const { matchMedia, compactMql } = fakeMatchMediaByQuery(false, false);
+      Object.defineProperty(window, 'matchMedia', { value: matchMedia, configurable: true, writable: true });
+
+      const service = setup();
+      render();
+      expect(service.isCompact()).toBe(false);
+
+      compactMql.matches = true;
+      window.dispatchEvent(new Event('resize'));
+      // Not yet flipped — the debounce hasn't elapsed.
+      expect(service.isCompact()).toBe(false);
+
+      jest.advanceTimersByTime(100);
+      expect(service.isCompact()).toBe(true);
+    });
+
+    it('removes the compact media query listener on destroy', () => {
+      const { matchMedia, compactMql } = fakeMatchMediaByQuery(false, false);
+      Object.defineProperty(window, 'matchMedia', { value: matchMedia, configurable: true, writable: true });
+
+      setup();
+      render();
+      TestBed.resetTestingModule();
+
+      expect(compactMql.removeEventListener).toHaveBeenCalledWith('change', expect.any(Function));
+    });
+  });
+
+  describe('collapseForCompactEntry', () => {
+    it('sets state() to collapsed', () => {
+      const service = setup();
+      expect(service.state()).toBe('expanded');
+      service.collapseForCompactEntry();
+      expect(service.state()).toBe('collapsed');
+      expect(service.open()).toBe(false);
+    });
+
+    /**
+     * Disqualifying regression pair (SBAR-T-1 DoD): a test that only asserts the cookie is
+     * unchanged after `collapseForCompactEntry()` would pass even if the cookie-write logic
+     * were deleted entirely from the codebase. The second assertion — that `setOpen(false)`
+     * DOES change the cookie on the same fixture — is what makes the first assertion meaningful.
+     */
+    it('does NOT write the sidebar cookie, unlike setOpen() on the same fixture', () => {
+      const service = setup();
+      expect(document.cookie).not.toContain('sidebar_state');
+
+      service.collapseForCompactEntry();
+      expect(service.state()).toBe('collapsed');
+      expect(document.cookie).not.toContain('sidebar_state');
+
+      service.setOpen(false);
+      expect(document.cookie).toContain('sidebar_state=false');
+    });
+  });
+
   describe('resize handling', () => {
     it('re-reads the media query after the debounce, on every resize', () => {
       jest.useFakeTimers();

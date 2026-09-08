@@ -4,7 +4,14 @@ jest.mock('driver.js/dist/driver.css', () => ({}), { virtual: true });
 jest.mock('driver.js', () => ({ driver: jest.fn() }));
 
 import { driver } from 'driver.js';
-import { GuideContext, ReportingGuideService, SP_TOUR_STORAGE_KEY, SpTourOptions, TutorialId } from './reporting-guide.service';
+import {
+  GuideContext,
+  RESULT_SIDEBAR_HINT_STORAGE_KEY,
+  ReportingGuideService,
+  SP_TOUR_STORAGE_KEY,
+  SpTourOptions,
+  TutorialId
+} from './reporting-guide.service';
 
 const driverMock = driver as unknown as jest.Mock;
 
@@ -668,6 +675,96 @@ describe('ReportingGuideService', () => {
         inst.config.onDoneClick(undefined, inst.config.steps[6], { driver: inst as any, index: 6 });
         expect(inst.destroy).toHaveBeenCalled();
       });
+    });
+  });
+
+  describe('Result sidebar discoverability hint (SBAR-T-4)', () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    it('storage key is distinct from SP_TOUR_STORAGE_KEY (disqualifying check: a copy-paste collision would silently merge the two flags)', () => {
+      expect(RESULT_SIDEBAR_HINT_STORAGE_KEY).not.toBe(SP_TOUR_STORAGE_KEY);
+      expect(RESULT_SIDEBAR_HINT_STORAGE_KEY).toBe('pr.tour.result-sidebar.completed');
+    });
+
+    describe('isResultSidebarHintCompleted and resetResultSidebarHintState', () => {
+      it('returns false when the storage key is absent', () => {
+        expect(service.isResultSidebarHintCompleted()).toBe(false);
+      });
+
+      it('returns true when the storage key is set to "true"', () => {
+        localStorage.setItem(RESULT_SIDEBAR_HINT_STORAGE_KEY, 'true');
+        expect(service.isResultSidebarHintCompleted()).toBe(true);
+      });
+
+      it('returns false when the storage key has any other value', () => {
+        localStorage.setItem(RESULT_SIDEBAR_HINT_STORAGE_KEY, 'false');
+        expect(service.isResultSidebarHintCompleted()).toBe(false);
+      });
+
+      it('resets the hint state by removing the key from storage', () => {
+        localStorage.setItem(RESULT_SIDEBAR_HINT_STORAGE_KEY, 'true');
+        service.resetResultSidebarHintState();
+        expect(localStorage.getItem(RESULT_SIDEBAR_HINT_STORAGE_KEY)).toBeNull();
+        expect(service.isResultSidebarHintCompleted()).toBe(false);
+      });
+
+      it('completing the SP tour does not mark the sidebar hint as seen, and vice versa', () => {
+        service.startSpTour();
+        lastInstance().config.onDestroyed();
+        expect(service.isSpTourCompleted()).toBe(true);
+        expect(service.isResultSidebarHintCompleted()).toBe(false);
+      });
+    });
+
+    describe('startResultSidebarHint', () => {
+      it('builds exactly one DriveStep targeting the sidebar toggle', () => {
+        service.startResultSidebarHint();
+
+        expect(driverMock).toHaveBeenCalledTimes(1);
+        const steps = lastSteps();
+        expect(steps).toHaveLength(1);
+        expect(steps[0].element).toBe('[data-guide="sidebar-toggle"]');
+        expect(lastInstance().drive).toHaveBeenCalled();
+      });
+
+      it('destroys a pre-existing instance before starting a fresh one', () => {
+        service.startResultSidebarHint();
+        const first = lastInstance();
+        service.startResultSidebarHint();
+
+        expect(first.destroy).toHaveBeenCalled();
+        expect(instances).toHaveLength(2);
+      });
+
+      it('marks the completion flag when the tour is destroyed (complete or skip)', () => {
+        service.startResultSidebarHint();
+        expect(service.isResultSidebarHintCompleted()).toBe(false);
+
+        lastInstance().config.onDestroyed();
+        expect(service.isResultSidebarHintCompleted()).toBe(true);
+        expect(localStorage.getItem(RESULT_SIDEBAR_HINT_STORAGE_KEY)).toBe('true');
+      });
+
+      it('destroys the instance on onDoneClick', () => {
+        service.startResultSidebarHint();
+        const inst = lastInstance();
+        inst.config.onDoneClick(undefined, inst.config.steps[0], { driver: inst as any, index: 0 });
+        expect(inst.destroy).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('catalogue / TutorialId regression guard (SBAR-DD-4)', () => {
+    it('is unchanged by the result-sidebar hint addition — the hint is NOT part of the SP tutorial catalogue', () => {
+      expect(service.catalogue).toHaveLength(4);
+      expect(service.catalogue.map(t => t.id)).toEqual(['basics', 'planned', 'emerging', 'guided']);
+      expect(service.catalogue.map(t => t.id)).not.toContain('sidebar-hint' as unknown as TutorialId);
     });
   });
 });

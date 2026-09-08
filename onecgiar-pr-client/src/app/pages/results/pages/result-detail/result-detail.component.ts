@@ -1,5 +1,8 @@
 import { Component, DoCheck, ElementRef, OnInit, OnDestroy, ViewChild, effect, inject, signal, NgZone } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { distinctUntilChanged, map } from 'rxjs/operators';
+import { HlmSidebarService } from '@spartan/sidebar';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
@@ -12,6 +15,7 @@ import { SectionBottomBarSlotService } from './components/section-bottom-bar/sec
 import { ResultSectionsService } from './components/result-sections-sidebar/result-sections.service';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
+import { ReportingGuideService } from '../../../result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
 @Component({
   selector: 'app-result-detail',
@@ -25,6 +29,8 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
   private readonly bottomBarSlotSE = inject(SectionBottomBarSlotService);
   private readonly router = inject(Router);
   private readonly phasesSE = inject(PhasesService);
+  private readonly sidebarSE = inject(HlmSidebarService);
+  private readonly reportingGuideSE = inject(ReportingGuideService);
 
   /**
    * Phases this result code DOES have a version in, newest first. Only filled when the requested
@@ -53,8 +59,46 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
         this.greenChecksSE.getGreenChecks();
       }
     });
+
+    this.watchCompactEntry();
   }
   closeInfo = false;
+
+  /**
+   * SBAR-R-1..R-4 / SBAR-DD-3: on each DISTINCT result id, collapse the sidebar when the viewport
+   * is compact (≤1366px) and it is currently expanded. Wired off the route's own `id`-param
+   * stream (already present on the injected `ActivatedRoute`) with `distinctUntilChanged` so this
+   * runs exactly once per result entry — never on a `?phase=` query-only change (not part of
+   * `params`) and never on child-route/section navigation within the same result (no new `id`
+   * emission). Deliberately NOT an `effect()` on `isCompact()`: the trigger must be entry-driven,
+   * not resize-driven, so a manual re-expand survives a later resize (`SBAR-R-3`, `SBAR-R-4`).
+   *
+   * SBAR-T-5 / SBAR-R-10 / SBAR-R-11: the same id-change trigger also fires the one-time
+   * discoverability hint (`ReportingGuideService.startResultSidebarHint()`) so a user who deep
+   * links straight into a result — never visiting the SP dashboard tour — still learns the
+   * sidebar is collapsible. This half is deliberately NOT gated on `isCompact()`: the hint is
+   * shown regardless of viewport width, unlike the auto-collapse above.
+   */
+  private watchCompactEntry(): void {
+    this.activatedRoute.params
+      .pipe(
+        map(params => params['id']),
+        distinctUntilChanged(),
+        takeUntilDestroyed()
+      )
+      .subscribe(() => {
+        if (this.sidebarSE.isCompact() && this.sidebarSE.state() === 'expanded') {
+          this.sidebarSE.collapseForCompactEntry();
+        }
+
+        // SBAR-R-10/R-11: the discoverability hint fires on every genuine result entry,
+        // independent of `isCompact()` — it is shown on ANY viewport, not only the compact one
+        // that triggers the auto-collapse above. Do not gate this on `isCompact()`.
+        if (!this.reportingGuideSE.isResultSidebarHintCompleted()) {
+          this.reportingGuideSE.startResultSidebarHint();
+        }
+      });
+  }
 
   ngOnInit(): void {
     // Published here, NOT in ngAfterViewInit: Angular runs a child's `ngAfterViewInit` before its

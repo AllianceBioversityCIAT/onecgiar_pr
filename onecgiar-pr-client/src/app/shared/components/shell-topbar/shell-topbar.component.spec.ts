@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { HlmSidebarService } from '@spartan/sidebar';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 import { ShellTopbarComponent } from './shell-topbar.component';
 import { ApiService } from '../../services/api/api.service';
@@ -270,5 +272,37 @@ describe('ShellTopbarComponent', () => {
     component.onEscape();
     expect(component.userMenuOpen()).toBe(false);
     expect(component.notificationsOpen()).toBe(false);
+  });
+
+  // ------------------------------------------------------- SBAR-T-5 (approved scope addition)
+  // `[data-guide="sidebar-toggle"]` (SBAR-T-3) only exists in `reporting-nav-sidebar`'s DOM while
+  // the nav sidebar is COLLAPSED. `ReportingGuideService.startResultSidebarHint()` (SBAR-T-4) must
+  // fire regardless of sidebar/viewport state (SBAR-R-10), so this topbar's own always-rendered
+  // toggle button carries the same hook — it is what makes the selector resolve while the sidebar
+  // is EXPANDED (the common desktop state), which `reporting-nav-sidebar` alone cannot cover.
+  //
+  // Same reason as `reporting-nav-sidebar.component.spec.ts`: every test above builds this fixture
+  // with its template overridden to `''`, so a `TestBed`-rendered DOM assertion isn't available
+  // here either. Parsing the actual `.html` file as markup proves the hook is present in the
+  // authored template without touching that unrelated override.
+  describe('sidebar toggle data-guide hook (SBAR-T-5)', () => {
+    const readTemplateDoc = (): Document => {
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+      return new DOMParser().parseFromString(html, 'text/html');
+    };
+
+    it('resolves [data-guide="sidebar-toggle"] to exactly one element, on the toggle button, unchanged otherwise', () => {
+      const doc = readTemplateDoc();
+      const hooks = doc.querySelectorAll('[data-guide="sidebar-toggle"]');
+      expect(hooks.length).toBe(1);
+
+      const toggleButton = hooks[0] as HTMLButtonElement;
+      expect(toggleButton.tagName.toLowerCase()).toBe('button');
+      expect(toggleButton.getAttribute('type')).toBe('button');
+      expect(toggleButton.getAttribute('aria-label')).toBe('Toggle sidebar');
+      // Click handler and class untouched — the attribute-only nature of this change.
+      expect(toggleButton.outerHTML).toContain('(click)="toggleSidebar()"');
+      expect(toggleButton.getAttribute('class')).toBe('pr-topbar-icon-btn');
+    });
   });
 });

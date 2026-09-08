@@ -8,6 +8,7 @@ export interface HlmSidebarConfig {
   sidebarCookieMaxAge: number;
   sidebarKeyboardShortcut: string;
   mobileBreakpoint: string;
+  compactBreakpoint: string;
   closeMobileSidebarOnMenuButtonClick: boolean;
 }
 
@@ -19,6 +20,7 @@ const defaultConfig: HlmSidebarConfig = {
   sidebarCookieMaxAge: 60 * 60 * 24 * 7, // 7 days in seconds
   sidebarKeyboardShortcut: 'b',
   mobileBreakpoint: '768px',
+  compactBreakpoint: '1366px',
   closeMobileSidebarOnMenuButtonClick: false
 };
 

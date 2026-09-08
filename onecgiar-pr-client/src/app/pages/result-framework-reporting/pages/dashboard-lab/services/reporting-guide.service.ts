@@ -3,6 +3,14 @@ import { driver, DriveStep, Driver } from 'driver.js';
 
 export const SP_TOUR_STORAGE_KEY = 'pr.tour.sp.completed';
 
+/**
+ * The result-sidebar discoverability hint (SBAR-R-10/R-11) is a small, independent
+ * addition alongside the SP tour above — NOT merged into it (SBAR-DD-4). It needs its
+ * own storage key: reusing SP_TOUR_STORAGE_KEY here would collapse both flags into one,
+ * silently marking the hint "seen" the moment anyone completes the unrelated SP tour.
+ */
+export const RESULT_SIDEBAR_HINT_STORAGE_KEY = 'pr.tour.result-sidebar.completed';
+
 export type SpTabId = 'overview' | 'reporting' | 'results' | 'my-work';
 
 export const SP_TAB_LABELS: Record<SpTabId, string> = {
@@ -118,6 +126,80 @@ export class ReportingGuideService {
     } catch {
       // ignore storage access errors
     }
+  }
+
+  /**
+   * Independent discoverability hint for the nav sidebar toggle (SBAR-R-10/R-11).
+   * Reachable from a direct `result-detail` landing, not only from the SP dashboard tour.
+   * Deliberately NOT part of `catalogue`/`TutorialId` (SBAR-DD-4) — that catalogue drives
+   * the Science-Program tutorial picker, a different, unrelated screen.
+   */
+  isResultSidebarHintCompleted(): boolean {
+    try {
+      return localStorage.getItem(RESULT_SIDEBAR_HINT_STORAGE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  resetResultSidebarHintState(): void {
+    try {
+      localStorage.removeItem(RESULT_SIDEBAR_HINT_STORAGE_KEY);
+    } catch {
+      // ignore storage access errors
+    }
+  }
+
+  /**
+   * A single-step popover anchored on the sidebar toggle, teaching a user landing directly
+   * on `result-detail` that the nav sidebar is collapsible. Copy is structural, one-time
+   * coach-mark text that does not differ between P22/P25 (no domain vocabulary swapped by
+   * `TerminologyService`), authored directly in-service — the same pattern already used for
+   * every step of the SP tour above, none of which is routed through the `term` pipe either.
+   */
+  startResultSidebarHint(): void {
+    this.instance?.destroy();
+
+    const steps: DriveStep[] = [
+      {
+        element: '[data-guide="sidebar-toggle"]',
+        popover: {
+          title: 'Collapse the sidebar for more space',
+          description:
+            '<span class="pr-guide-step-copy">Click this toggle any time to collapse or expand the navigation sidebar and free up room for the result editor.</span>',
+          side: 'right',
+          align: 'start'
+        }
+      }
+    ];
+
+    this.instance = driver({
+      showProgress: false,
+      nextBtnText: 'Next',
+      prevBtnText: 'Back',
+      doneBtnText: 'Got it',
+      overlayColor: '#1e202f',
+      overlayOpacity: 0.65,
+      stagePadding: 6,
+      stageRadius: 10,
+      popoverClass: 'pr-guide',
+      allowClose: true,
+      onDestroyed: () => {
+        try {
+          localStorage.setItem(RESULT_SIDEBAR_HINT_STORAGE_KEY, 'true');
+        } catch {
+          // ignore storage errors
+        }
+        this.instance = null;
+      },
+      onDoneClick: (_element, _step, opts) => {
+        const d = opts?.driver ?? this.instance;
+        d?.destroy();
+      },
+      steps
+    });
+
+    this.instance.drive();
   }
 
   startSpTour(options: SpTourOptions = {}): void {
