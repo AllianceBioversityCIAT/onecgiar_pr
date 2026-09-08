@@ -41,19 +41,30 @@ export class BilateralAiCompletionDialogComponent {
     }
   });
 
+  readonly center = computed(() => this.notice()?.centerAcronym || 'your center');
+
+  /**
+   * Number agreement for the "drafts are ready" copy, which the template assembles itself so the
+   * count and the centre can be emphasised (the sheet's `.pr-dialog-text strong`).
+   */
+  readonly drafts = computed(() => {
+    const n = this.notice()?.resultCount ?? 0;
+    return n === 1
+      ? { label: '1 result draft', was: 'was', is: 'is', them: 'it' }
+      : { label: `${n} result drafts`, was: 'were', is: 'are', them: 'them' };
+  });
+
+  /** Plain copy for the states that have nothing to emphasise. */
   readonly message = computed(() => {
     const notice = this.notice();
     if (!notice) return '';
-    const center = notice.centerAcronym || 'your center';
     switch (notice.status) {
-      case 'completed': {
-        const n = notice.resultCount;
-        return `${n} result draft${n === 1 ? '' : 's'} ${n === 1 ? 'was' : 'were'} identified from your documents and ${n === 1 ? 'is' : 'are'} waiting in the Drafts list of ${center}. You can review ${n === 1 ? 'it' : 'them'} now or keep working and come back later.`;
-      }
       case 'completed_no_candidates':
-        return `The AI could not extract enough information from the documents you uploaded for ${center}. No drafts were created — try again with more documents or context.`;
+        return `The AI could not extract enough information from the documents you uploaded for ${this.center()}. No drafts were created — try again with more documents or context.`;
       case 'failed':
         return notice.errorMessage || 'An unexpected error occurred during AI processing. Please try again.';
+      default:
+        return '';
     }
   });
 
@@ -65,6 +76,23 @@ export class BilateralAiCompletionDialogComponent {
         return 'info';
       case 'failed':
         return 'error_outline';
+      default:
+        return '';
+    }
+  });
+
+  /**
+   * The sheet's identity follows the outcome: green (promote) for drafts, red for a failure and a
+   * neutral blue when the job simply found nothing — the top border must match the header icon.
+   */
+  readonly panelClass = computed(() => {
+    switch (this.notice()?.status) {
+      case 'completed':
+        return 'pr-dialog--promote';
+      case 'failed':
+        return 'bacd-panel--failed';
+      case 'completed_no_candidates':
+        return 'bacd-panel--info';
       default:
         return '';
     }

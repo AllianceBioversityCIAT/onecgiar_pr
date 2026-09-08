@@ -9,3 +9,18 @@
     color: #2563eb;
   }
 }
+
+// The panel itself is rendered inside app-pr-dialog, hence ::ng-deep (scoped to this host). Its
+// geometry (520px card, 28px gutters, footer padding) comes from the confirmation-sheet block in
+// styles.scss, shared with the promote / discard dialogs of the Drafts list; what is local is the
+// top-border identity for the two outcomes the sheet has no modifier for — the green one comes from
+// `.pr-dialog--promote`. Same colours as the header icons.
+:host ::ng-deep app-pr-dialog .bilateral-ai-completion-dialog {
+  &.bacd-panel--info {
+    border-top: 3px solid #2563eb;
+  }
+
+  &.bacd-panel--failed {
+    border-top: 3px solid #dc2626;
+  }
+}

@@ -277,13 +277,17 @@ export class BilateralAiService {
       where: { id: draft.result_id },
     });
 
-    if (draft.extracted_mds) {
-      await this.bilateralService.populateResultFromExtractedMds(
-        result,
-        draft.extracted_mds as Record<string, any>,
-        userId,
-      );
-    }
+    // The lead centre is the centre the document was uploaded under — `job.center_id`, the same
+    // value that scopes the drafts list and the entitlement check — never the centre the model
+    // read in the text (see `populateResultFromExtractedMds`). Resolved to name + acronym as
+    // well as id so the contributor de-duplication can recognise it under any spelling.
+    const jobLeadCenter = await this.resolveJobLeadCenter(draft.job?.center_id);
+    await this.bilateralService.populateResultFromExtractedMds(
+      result,
+      (draft.extracted_mds as Record<string, any>) ?? null,
+      userId,
+      { leadCenter: jobLeadCenter },
+    );
 
     await this.bilateralService.populateInitiativeAndTocFromProgramCode(
       result.id,
@@ -318,6 +322,29 @@ export class BilateralAiService {
       },
       message: 'Draft promoted to bilateral result',
       status: 200,
+    };
+  }
+
+  /** The job's centre as a `handleLeadCenter` input, or undefined when the job carries none. */
+  private async resolveJobLeadCenter(
+    centerInstitutionId: number | null | undefined,
+  ): Promise<
+    { name?: string; acronym?: string; institution_id?: number } | undefined
+  > {
+    if (centerInstitutionId == null) return undefined;
+    const institution = await this.clarisaInstitutionsRepository.findOne({
+      where: { id: centerInstitutionId },
+    });
+    if (!institution) {
+      this.logger.warn(
+        `Job centre institution ${centerInstitutionId} not found; the promoted result gets no lead centre from the job`,
+      );
+      return { institution_id: centerInstitutionId };
+    }
+    return {
+      institution_id: institution.id,
+      acronym: institution.acronym ?? undefined,
+      name: institution.name ?? undefined,
     };
   }
 

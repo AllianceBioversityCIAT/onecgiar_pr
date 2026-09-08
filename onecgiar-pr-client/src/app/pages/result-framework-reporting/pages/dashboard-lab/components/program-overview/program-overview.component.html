@@ -785,7 +785,6 @@
                     class="hidden @max-[630px]:inline-flex shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] transition-colors group-hover:text-[var(--pr-color-primary-600)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
                     [prTooltip]="achievementTooltip(row.achievement)"
                     prTooltipPosition="top"
-                    [prTooltipPinnable]="true"
                     (click)="$event.stopPropagation()"
                     [attr.aria-label]="achievementTooltip(row.achievement)">
                     <ng-icon name="lucideInfo" class="text-[13px]" aria-hidden="true" />
