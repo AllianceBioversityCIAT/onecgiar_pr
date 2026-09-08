@@ -1,4 +1,4 @@
-// @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-R-3, BRT-DD-2)
+// @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-6, BRC-DD-1/DD-2)
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { ApiService } from '../../../../../shared/services/api/api.service';
@@ -7,8 +7,8 @@ import { SaveButtonService } from '../../../../../custom-fields/save-button/save
 import { BilateralReviewCountService } from './bilateral-review-count.service';
 
 /** Same seam as `my-work-count.service.spec.ts`: the real HTTP boundary for `GET_ResultToReview`
- *  (proves the exact one-request-per-code shape `BRT-DD-2` requires). */
-describe('BilateralReviewCountService', () => {
+ *  (proves the exact one-request-per-(code, phase) shape `BRC-DD-1`/`DD-2` require). */
+describe('BilateralReviewCountService (phase-scoped, BRC-T-1)', () => {
   let service: BilateralReviewCountService;
   let httpMock: HttpTestingController;
 
@@ -61,14 +61,14 @@ describe('BilateralReviewCountService', () => {
     httpMock.verify();
   });
 
-  function expectReviewRequest() {
-    return httpMock.expectOne(req => req.url.includes('by-program-and-centers') && req.url.includes('programId=SP02'));
+  function expectReviewRequest(versionId: number | string) {
+    return httpMock.expectOne(req => req.url.includes('by-program-and-centers') && req.url.includes('programId=SP02') && req.url.includes(`versionId=${versionId}`));
   }
 
-  it('a cold code issues one GET_ResultToReview request and counts loose-equal status_id 5 rows across groups', () => {
-    service.ensure('SP02');
+  it('a cold (code, phase) pair issues one GET_ResultToReview request carrying versionId and counts loose-equal status_id 5 rows across groups', () => {
+    service.ensure('SP02', 36);
 
-    const req = expectReviewRequest();
+    const req = expectReviewRequest(36);
     req.flush(
       groupedResponse([
         { project_id: 'PRJ-1', project_name: 'DESIRA', results: [row(), row({ id: '9002', status_id: 6, status_name: 'Approved' })] },
@@ -76,50 +76,89 @@ describe('BilateralReviewCountService', () => {
       ])
     );
 
-    expect(service.count('SP02')()).toBe(2);
+    expect(service.count('SP02', 36)()).toBe(2);
   });
 
-  it('a warm code (ensure called twice) issues only one request', () => {
-    service.ensure('SP02');
-    service.ensure('SP02');
+  it('a warm (code, phase) pair (ensure called twice) issues only one request', () => {
+    service.ensure('SP02', 36);
+    service.ensure('SP02', 36);
 
-    const req = expectReviewRequest();
+    const req = expectReviewRequest(36);
     req.flush(groupedResponse([{ project_id: 'PRJ-1', project_name: 'DESIRA', results: [row()] }]));
 
     httpMock.expectNone(req2 => req2.url.includes('by-program-and-centers'));
-    expect(service.count('SP02')()).toBe(1);
+    expect(service.count('SP02', 36)()).toBe(1);
+  });
+
+  it('isolates the cache per phase — the same program at a different phase is cold and issues its own request', () => {
+    service.setFromRows('SP02', 36, [row(), row({ id: '9002', status_id: 5 })] as any);
+    expect(service.count('SP02', 36)()).toBe(2);
+
+    service.ensure('SP02', 34);
+    const req = expectReviewRequest(34);
+    req.flush(groupedResponse([{ project_id: 'PRJ-1', project_name: 'DESIRA', results: [row()] }]));
+
+    expect(service.count('SP02', 34)()).toBe(1);
+    // The phase-36 entry is untouched by the phase-34 fetch.
+    expect(service.count('SP02', 36)()).toBe(2);
+  });
+
+  it('a wire string "36" and the number 36 share the same cache entry (bigint-string normalization, judgment-day L-3)', () => {
+    service.setFromRows('SP02', '36', [row(), row({ id: '9002', status_id: 5 })] as any);
+
+    expect(service.count('SP02', 36)()).toBe(2);
+    service.ensure('SP02', 36); // must be a no-op: the string-keyed write already warmed this key
+    httpMock.expectNone(req => req.url.includes('by-program-and-centers'));
   });
 
   it('setFromRows overrides the cache without issuing a request', () => {
-    service.setFromRows('SP02', [row(), row({ id: '9002', status_id: 5 }), row({ id: '9003', status_id: 6 })] as any);
+    service.setFromRows('SP02', 36, [row(), row({ id: '9002', status_id: 5 }), row({ id: '9003', status_id: 6 })] as any);
 
     httpMock.expectNone(req => req.url.includes('by-program-and-centers'));
-    expect(service.count('SP02')()).toBe(2);
+    expect(service.count('SP02', 36)()).toBe(2);
   });
 
-  it('refresh re-requests even when the code is already warm', () => {
-    service.setFromRows('SP02', [row()] as any);
-    expect(service.count('SP02')()).toBe(1);
+  it('refresh re-requests even when the (code, phase) pair is already warm', () => {
+    service.setFromRows('SP02', 36, [row()] as any);
+    expect(service.count('SP02', 36)()).toBe(1);
 
-    service.refresh('SP02');
+    service.refresh('SP02', 36);
 
-    const req = expectReviewRequest();
+    const req = expectReviewRequest(36);
     req.flush(groupedResponse([{ project_id: 'PRJ-1', project_name: 'DESIRA', results: [row(), row({ id: '9002', status_id: 5 })] }]));
 
-    expect(service.count('SP02')()).toBe(2);
+    expect(service.count('SP02', 36)()).toBe(2);
   });
 
-  it('a malformed response (response not an array) leaves the code cold', () => {
-    service.ensure('SP02');
-    expectReviewRequest().flush({ response: null });
-
-    expect(service.count('SP02')()).toBeNull();
+  it('ensure(code, null) is a no-op — issues no request and count() keeps reading null', () => {
+    service.ensure('SP02', null);
+    httpMock.expectNone(req => req.url.includes('by-program-and-centers'));
+    expect(service.count('SP02', null)()).toBeNull();
   });
 
-  it('an HTTP error leaves the code cold — count() keeps reading null', () => {
-    service.ensure('SP02');
-    expectReviewRequest().flush('boom', { status: 500, statusText: 'Server Error' });
+  it('ensure(code, NaN) is a no-op', () => {
+    service.ensure('SP02', NaN);
+    httpMock.expectNone(req => req.url.includes('by-program-and-centers'));
+    expect(service.count('SP02', NaN)()).toBeNull();
+  });
 
-    expect(service.count('SP02')()).toBeNull();
+  it('ensure(code, 0) is a no-op — 0 is never a valid phase id (Leader-found live-page defect: Number(null) === 0)', () => {
+    service.ensure('SP02', 0);
+    httpMock.expectNone(req => req.url.includes('by-program-and-centers'));
+    expect(service.count('SP02', 0)()).toBeNull();
+  });
+
+  it('a malformed response (response not an array) leaves the (code, phase) pair cold', () => {
+    service.ensure('SP02', 36);
+    expectReviewRequest(36).flush({ response: null });
+
+    expect(service.count('SP02', 36)()).toBeNull();
+  });
+
+  it('an HTTP error leaves the (code, phase) pair cold — count() keeps reading null', () => {
+    service.ensure('SP02', 36);
+    expectReviewRequest(36).flush('boom', { status: 500, statusText: 'Server Error' });
+
+    expect(service.count('SP02', 36)()).toBeNull();
   });
 });

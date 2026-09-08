@@ -6,6 +6,10 @@ import { ReportingGuideService } from '../../services/reporting-guide.service';
 // @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-R-5) — one useValue stub, per the spec's
 // allowance (band edits limited to the tab bar / path / badge mechanism).
 import { BilateralReviewCountService } from '../../../bilateral-review/services/bilateral-review-count.service';
+// @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-6) — one useValue
+// stub, per the spec's allowance (judgment-day L-2: the band's new injected dependency must not
+// issue a real HTTP request here).
+import { DataControlService } from '../../../../../../shared/services/data-control.service';
 
 /**
  * The band renders the whole programme shell chrome, so these tests go through the real template:
@@ -20,11 +24,33 @@ describe('ReportingProgramBandComponent', () => {
   /** `BRT-T-1` — reassigned per-test so a case can control what the badge renders. */
   let bilateralReviewCountStub: { count: jest.Mock; ensure: jest.Mock };
 
-  const build = async (inputs: Record<string, unknown> = {}, bilateralReviewCount: number | null = null) => {
-    bilateralReviewCountStub = { count: jest.fn(() => signal<number | null>(bilateralReviewCount)), ensure: jest.fn() };
+  const build = async (
+    inputs: Record<string, unknown> = {},
+    bilateralReviewCount: number | null = null,
+    // BRC-T-1: the current phase id the band resolves via `DataControlService`. Default `36` is
+    // resolved; `null` is the REAL shell cold-boot shape (`reportingCurrentPhase` initializes
+    // `phaseId: null`, `data-control.service.ts:104`) and must ALSO read as unresolved — a fixture
+    // using `undefined`/`NaN` here would pass even if the `Number(null) === 0` defect regressed
+    // (Reviewer/Leader-found: `Number(null)` is `0`, not `NaN`).
+    currentPhaseId: number | null | undefined = 36
+  ) => {
+    // BRC-T-1: mirrors the real service's "no versionId, no count" gate (count(code, null/NaN) is
+    // always null) closely enough for `bilateralReviewCount`'s own null-phase test to mean anything
+    // — a stub that ignored `versionId` entirely would return the stubbed count even while the
+    // phase is unresolved, which the real service never does.
+    bilateralReviewCountStub = {
+      count: jest.fn((_code: string, versionId: number | null | undefined) =>
+        signal<number | null>(versionId === null || versionId === undefined || Number.isNaN(versionId) ? null : bilateralReviewCount)
+      ),
+      ensure: jest.fn()
+    };
     await TestBed.configureTestingModule({
       imports: [ReportingProgramBandComponent],
-      providers: [provideRouter([]), { provide: BilateralReviewCountService, useValue: bilateralReviewCountStub }]
+      providers: [
+        provideRouter([]),
+        { provide: BilateralReviewCountService, useValue: bilateralReviewCountStub },
+        { provide: DataControlService, useValue: { reportingCurrentPhase: { phaseId: currentPhaseId }, reportingPhaseVersion: signal(0) } }
+      ]
     }).compileComponents();
     fixture = TestBed.createComponent(ReportingProgramBandComponent);
     component = fixture.componentInstance;
@@ -1337,10 +1363,22 @@ describe('ReportingProgramBandComponent', () => {
       expect(current[0].querySelector('.pr-tab-label')?.textContent?.trim()).toBe('Bilateral review');
     });
 
-    it('warms the badge via ensure(programCode()) for a non-empty code', async () => {
+    it('warms the badge via ensure(programCode(), currentPhaseId()) for a non-empty code (BRC-T-1)', async () => {
       await build({ programCode: 'SP02' });
 
-      expect(bilateralReviewCountStub.ensure).toHaveBeenCalledWith('SP02');
+      expect(bilateralReviewCountStub.ensure).toHaveBeenCalledWith('SP02', 36);
+    });
+
+    it('does not call ensure and hides the badge while the current phase has not resolved — the REAL shell cold-boot shape (BRC-T-1, BRC-R-6, Leader/Reviewer-found)', async () => {
+      // `null`, not `undefined`/`NaN` — `DataControlService.reportingCurrentPhase` genuinely
+      // initializes `phaseId: null` before the shell's phases request lands
+      // (`data-control.service.ts:104`); `Number(null) === 0`, NOT `NaN`, so a fixture using
+      // `undefined` here passes even if that defect regresses — only `null` can catch it.
+      await build({ programCode: 'SP02' }, 3, null);
+
+      expect(bilateralReviewCountStub.ensure).not.toHaveBeenCalled();
+      const badge = root().querySelector('nav[aria-label="Program sections"] a:nth-of-type(4) [aria-label$="pending review"]');
+      expect(badge).toBeNull();
     });
 
     it('the explainer panel shows the approved Bilateral review title and description', async () => {

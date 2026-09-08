@@ -12,8 +12,13 @@ export const BILATERAL_REVIEW_CENTER_QUERY_PARAM = 'center';
 export const BILATERAL_REVIEW_PROJECT_QUERY_PARAM = 'project';
 export const BILATERAL_REVIEW_CATEGORY_QUERY_PARAM = 'category';
 export const BILATERAL_REVIEW_VIEW_QUERY_PARAM = 'view';
+// @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-7)
+/** The selected reporting cycle — a numeric `versionId`, NOT a phase label (unlike the Results
+ *  tab's `?phase=`, which carries `phaseName` — parity of behavior, not of value space, per
+ *  `requirements.md` §2 "Results tab phase UX"). */
+export const BILATERAL_REVIEW_PHASE_QUERY_PARAM = 'phase';
 
-export type BilateralReviewQueryParamDimension = 'search' | 'status' | 'center' | 'project' | 'category' | 'view';
+export type BilateralReviewQueryParamDimension = 'search' | 'status' | 'center' | 'project' | 'category' | 'view' | 'phase';
 
 /** `dimension → param name`, in toolbar order. */
 export const BILATERAL_REVIEW_QUERY_PARAM_MAP: Record<BilateralReviewQueryParamDimension, string> = {
@@ -22,7 +27,8 @@ export const BILATERAL_REVIEW_QUERY_PARAM_MAP: Record<BilateralReviewQueryParamD
   center: BILATERAL_REVIEW_CENTER_QUERY_PARAM,
   project: BILATERAL_REVIEW_PROJECT_QUERY_PARAM,
   category: BILATERAL_REVIEW_CATEGORY_QUERY_PARAM,
-  view: BILATERAL_REVIEW_VIEW_QUERY_PARAM
+  view: BILATERAL_REVIEW_VIEW_QUERY_PARAM,
+  phase: BILATERAL_REVIEW_PHASE_QUERY_PARAM
 };
 
 export type BilateralReviewStatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
@@ -57,4 +63,30 @@ export function joinBilateralReviewListParam(values: readonly string[]): string 
 /** Order-insensitive-free list equality — cheap guard for the URL hydrate effect. */
 export function sameBilateralReviewList(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+// @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-5, BRC-R-7)
+/**
+ * Normalizes any wire-shaped phase id (`number | string | null | undefined`) to a real, POSITIVE
+ * phase id, or `null`. Shared by the page's and the band's `currentPhaseId` computeds and
+ * `BilateralReviewCountService` — the ONE place the "not a real phase" rule lives.
+ *
+ * Live-page defect (Leader, Orca browser, SP02): `DataControlService.reportingCurrentPhase`
+ * initializes `phaseId: null` (`data-control.service.ts:104`), and `Number(null) === 0` — NOT
+ * `NaN` — so a naive `Number(raw)` reads the shell's cold-boot state as a "resolved" phase 0 and
+ * fires an unscoped `versionId=0` request before the shell's own phases request lands. Rejecting
+ * `null`/`undefined`/`''` BEFORE calling `Number()`, and rejecting `<= 0` after, closes both the
+ * `Number(null) === 0` and the `Number('') === 0` variants — a phase id is never zero or negative.
+ */
+export function normalizeBilateralReviewPhaseId(raw: number | string | null | undefined): number | null {
+  if (raw === null || raw === undefined || raw === '') return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** `?phase=36` → `36`; missing, blank, non-numeric or `<= 0` → `null` — the "no explicit override"
+ *  value `selectedVersionId` falls back to the current phase for (BRC-R-7's default). All phase
+ *  comparisons downstream are numeric, never a raw wire string. */
+export function parseBilateralReviewPhase(raw: string | null): number | null {
+  return normalizeBilateralReviewPhaseId(raw);
 }

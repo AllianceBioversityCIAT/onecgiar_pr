@@ -32,7 +32,10 @@ export const BILATERAL_REVIEW_COPY = {
     projectFilterLabel: 'Bilateral project',
     projectFilterPlaceholder: 'Bilateral project',
     categoryFilterLabel: 'Indicator category',
-    categoryFilterPlaceholder: 'Indicator category'
+    categoryFilterPlaceholder: 'Indicator category',
+    // @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-7)
+    cycleFilterLabel: 'Cycle',
+    cycleFilterPlaceholder: 'Cycle'
   },
   /** Status chips row. */
   chips: {
@@ -49,6 +52,10 @@ export const BILATERAL_REVIEW_COPY = {
     decided: 'Decided this list',
     decidedSublabel: (approved: number, rejected: number): string => `${approved} approved · ${rejected} rejected`
   },
+  // @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-8)
+  /** Pill next to the match count, shown only when the selected cycle differs from the current
+   *  one ("Showing Reporting 2025") — so the hero's own cycle line is never misread. */
+  phaseIndicator: (phaseName: string): string => `Showing ${phaseName}`,
   /** Loading / empty / filtered-empty / error states (BRT-R-31). */
   states: {
     empty: 'No bilateral results reported to this program yet.',

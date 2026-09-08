@@ -1,5 +1,6 @@
 // @akili-spec changes/sp-bilateral-review-tab (BRT-T-3, BRT-T-5, BRT-R-4, R-6, R-7, R-8, R-9, R-13, R-15, R-20, R-21, R-31, R-32, design.md §6.2, §6.4)
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+// @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, R-5, R-6, R-7, R-8, R-10, design.md §6.1, §6.2)
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -9,8 +10,12 @@ import { lucideChevronsDownUp, lucideChevronsUpDown, lucideSearch } from '@ng-ic
 
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { CentersService } from '../../../../shared/services/global/centers.service';
+import { PhasesService } from '../../../../shared/services/global/phases.service';
+import { Phases } from '../../../../shared/interfaces/phasesList.interface';
+import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../shared/enum/api.enum';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
+import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
 import { isAvisaInitiative } from '../../../../shared/utils/avisa-initiative.util';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
 import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
@@ -29,11 +34,20 @@ import {
   BilateralReviewStatusFilter,
   BilateralReviewViewMode,
   joinBilateralReviewListParam,
+  normalizeBilateralReviewPhaseId,
   parseBilateralReviewListParam,
+  parseBilateralReviewPhase,
   parseBilateralReviewStatus,
   parseBilateralReviewView,
   sameBilateralReviewList
 } from './bilateral-review.query-params';
+
+/** One entry of the popover Cycle select — normalized ids (BRC-R-7). */
+interface BilateralReviewPhaseOption {
+  id: number;
+  phase_name: string;
+  phase_year: number;
+}
 
 /** One entry of the Center / Bilateral project / Indicator category popover filters. */
 interface BilateralReviewFilterOption {
@@ -64,6 +78,7 @@ function optionsOf(rows: ResultToReview[], pick: (row: ResultToReview) => string
     ReportingProgramBandComponent,
     WhereToReportModalComponent,
     PrFilterMultiselectModule,
+    PrFilterSelectComponent,
     BilateralReviewKpisComponent,
     BilateralReviewTableComponent,
     ResultReviewDrawerComponent
@@ -75,8 +90,10 @@ export class BilateralReviewComponent {
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
   private readonly centersSE = inject(CentersService);
+  private readonly phasesSE = inject(PhasesService);
   private readonly smartNav = inject(SmartNavigationService);
   private readonly homeSE = inject(ResultFrameworkReportingHomeService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly results = inject(BilateralResultsService);
   private readonly countService = inject(BilateralReviewCountService);
@@ -94,6 +111,14 @@ export class BilateralReviewComponent {
   /** Viewport lock: the work area is the only scroller the band needs to know about. */
   readonly workArea = viewChild<ElementRef<HTMLElement>>('workArea');
   readonly workAreaEl = computed(() => this.workArea()?.nativeElement ?? null);
+
+  /** Leader-found defect fix (BRC-AC-6 + AC-8b): `app-pr-filter-select.pick()` toggles its OWN
+   *  `value` to `emptyValue` on a re-pick of the shown option, then emits it — our one-way
+   *  `[ngModel]="selectedVersionId()"` never re-pushes because, from this page's perspective,
+   *  nothing changed (the value was already Q). Left alone the trigger would show the muted
+   *  placeholder while the page silently stays on Q. `setPhase()` re-syncs the child directly via
+   *  its own CVA `writeValue` (a public method) whenever the emit is a no-op. */
+  private readonly cycleSelect = viewChild<PrFilterSelectComponent>('cycleSelect');
 
   readonly programmeCode = toSignal(this.route.paramMap.pipe(map(params => params.get('entityId') ?? '')), { initialValue: '' });
   readonly queryParams = toSignal(this.route.queryParamMap, { initialValue: this.route.snapshot.queryParamMap });
@@ -138,6 +163,114 @@ export class BilateralReviewComponent {
    *  action (`aria-disabled` + title + handler early-return, never native `disabled`) so a second
    *  click can't race the refresh. Reset by `loadResults` in both its `next` and `error` paths. */
   readonly decisionInFlight = signal(false);
+  /** BRC-R-10: set `true` in `loadResults`' own `next` handler (rows may be empty), reset before
+   *  every new fetch. Drives the deep-link effect so it fires once the phase-scoped load SETTLES,
+   *  never on "rows non-empty" (judgment-day L-4 — that guard silently drops a deep link to a
+   *  result of another phase, whose phase-scoped list is legitimately empty). */
+  private readonly listSettled = signal(false);
+
+  // ── Phase state (BRC-T-1, design.md §6.1) ──────────────────────────────────────────────────
+  /** Seeded from the app-wide catalogue already fetched by `PhasesService`; kept live via its
+   *  `getPhasesObservable()` (a non-replaying `Subject` — judgment-day L-1, mirrors
+   *  `dashboard-lab.component.ts:2839-2841`). A component still empty after that seed falls back
+   *  to its own `GET_versioning(ALL, ALL)` request (`fetchPhaseCatalogFallback`, same filter the
+   *  service itself applies). */
+  private readonly reportingPhases = signal<Phases[]>(this.phasesSE.phases.reporting ?? []);
+  /** `'ready'` when the catalogue already has data (the common case — the shell fetched it before
+   *  this tab mounted); `'pending'` while this component's own fallback request is in flight;
+   *  `'failed'` when that fallback errors — BRC-R-5/AC-14 read this as a hard error state instead
+   *  of an indefinite skeleton. */
+  readonly phaseCatalogState = signal<'ready' | 'pending' | 'failed'>(this.reportingPhases().length ? 'ready' : 'pending');
+
+  /** BRC-AC-14 fallback source: the portfolio-filtered catalogue's own "open" row (`status ===
+   *  true`) — the SAME fact the shell fetches via `GET_versioning(OPEN, REPORTING)`, so reading it
+   *  here is not a second authority, just an earlier read of the same number once THIS
+   *  component's own catalogue fetch has settled. `null` while there is no such row (or the
+   *  program/portfolio itself hasn't resolved). */
+  private readonly catalogCurrentPhaseId = computed<number | null>(() => {
+    const portfolioId = this.programme()?.portfolioId;
+    if (portfolioId == null) return null;
+    const open = this.reportingPhases().find(
+      p => p?.obj_portfolio?.id != null && Number(p.obj_portfolio.id) === Number(portfolioId) && p.status === true
+    );
+    return open ? Number(open.id) : null;
+  });
+
+  /** THE single current-phase resolver (mirrors `dashboard-lab.effectiveVersionId`'s bigint-string
+   *  normalization, `:1477-1516`): tracked read of `reportingPhaseVersion()`, otherwise unused —
+   *  `reportingCurrentPhase` is a plain mutable object, not a signal, so without this a
+   *  late-arriving phase would never re-trigger this computed. Prefers the SHELL's own value;
+   *  falls back to `catalogCurrentPhaseId` (BRC-AC-14) only once this component's own catalogue
+   *  fetch has SETTLED (`phaseCatalogState() === 'ready'`) — racing an in-flight catalogue fetch
+   *  would risk resolving to a DIFFERENT number than the one the shell is about to deliver, which
+   *  would cost a second list request the moment the shell catches up (asserted in the spec: the
+   *  race test bumps the shell to the SAME number the catalogue already resolved and checks the
+   *  list request count stays at one). `null` while genuinely unresolved either way. */
+  readonly currentPhaseId = computed<number | null>(() => {
+    this.api.dataControlSE.reportingPhaseVersion?.();
+    const shellId = normalizeBilateralReviewPhaseId(this.api.dataControlSE.reportingCurrentPhase?.phaseId);
+    if (shellId !== null) return shellId;
+    if (this.phaseCatalogState() !== 'ready') return null;
+    return this.catalogCurrentPhaseId();
+  });
+
+  /** BRC-AC-14 (second half): the catalogue settled successfully but there is genuinely no
+   *  resolvable current phase — no "open" row for this program's portfolio, and the shell's own
+   *  value never arrived either. Same hard error state as an outright catalogue request failure
+   *  (`phaseCatalogState() === 'failed'`); `retry()` re-attempts both branches identically. */
+  readonly currentPhaseUnresolvable = computed(() => this.phaseCatalogState() === 'ready' && this.currentPhaseId() === null);
+
+  /** The program's own portfolio's phases, current first then `phase_year` desc (mirrors
+   *  `dashboard-lab.phaseSelectorOptions`, `:1503-1524`) — the Cycle select's options. Empty while
+   *  the program or the catalogue has not resolved yet. */
+  readonly knownPhases = computed<BilateralReviewPhaseOption[]>(() => {
+    const portfolioId = this.programme()?.portfolioId;
+    if (portfolioId == null) return [];
+    const currentId = this.currentPhaseId();
+    return this.reportingPhases()
+      .filter(p => p?.obj_portfolio?.id != null && Number(p.obj_portfolio.id) === Number(portfolioId))
+      .map(p => ({ id: Number(p.id), phase_name: p.phase_name, phase_year: p.phase_year }))
+      .sort((a, b) => {
+        if (a.id === currentId && b.id !== currentId) return -1;
+        if (b.id === currentId && a.id !== currentId) return 1;
+        return (b.phase_year ?? 0) - (a.phase_year ?? 0);
+      });
+  });
+
+  /** `?phase=` hydrated by the URL → state effect below; `null` = no explicit override (BRC-R-7's
+   *  default: fall back to the current phase). Also `null` for a PRESENT-but-unparseable value
+   *  (e.g. the Results tab's own `?phase=` carries a phase NAME, not a `versionId` — every band
+   *  tab link uses `queryParamsHandling="preserve"`, so a Results → Bilateral review hop lands
+   *  exactly that value) — `phaseParamRaw` below is what distinguishes the two cases for the
+   *  URL-rewrite effect (Reviewer-found defect: "absent" and "present-but-invalid" must not
+   *  collapse into the same `null`, or the stale label never gets rewritten). */
+  readonly phaseParam = signal<number | null>(null);
+  /** Raw `?phase=` string, or `null` when the key itself is absent from the URL — the ONLY signal
+   *  that can tell "no override" apart from "an override that failed to parse". */
+  private readonly phaseParamRaw = signal<string | null>(null);
+
+  /** THE selected phase every list request/count-service call is scoped to (BRC-R-5). A param
+   *  that cannot yet be validated against `knownPhases` (catalogue still empty) is treated the
+   *  same as "unknown" — it defaults to the current phase rather than firing an unscoped request,
+   *  and is re-validated once the catalogue actually loads (the URL-rewrite effect below). */
+  readonly selectedVersionId = computed<number | null>(() => {
+    const current = this.currentPhaseId();
+    const param = this.phaseParam();
+    if (param === null) return current;
+    const known = this.knownPhases();
+    if (known.length === 0) return null;
+    return known.some(p => p.id === param) ? param : current;
+  });
+
+  /** "Showing <phase name>" pill copy — `null` (hidden) unless the selected phase differs from the
+   *  current one (BRC-R-8). */
+  readonly phaseIndicator = computed<string | null>(() => {
+    const selected = this.selectedVersionId();
+    const current = this.currentPhaseId();
+    if (selected === null || current === null || selected === current) return null;
+    const name = this.knownPhases().find(p => p.id === selected)?.phase_name;
+    return name ?? null;
+  });
 
   // ── Toolbar / filter state (design.md §6.2) ────────────────────────────────────────────────
   readonly search = signal('');
@@ -290,36 +423,51 @@ export class BilateralReviewComponent {
   readonly filtersActive = computed(() => this.activeFilterCount() > 0);
 
   // ── View states (BRT-R-31) — mutually exclusive ────────────────────────────────────────────
-  readonly showSkeleton = computed(() => this.loading() && this.results.tableResults().length === 0);
-  readonly showError = computed(() => this.error() && !this.loading());
-  readonly showWholeEmpty = computed(
-    () => !this.loading() && !this.error() && this.results.tableResults().length === 0
-  );
+  /** BRC-R-5/AC-14: a phase-catalogue request failure, OR the catalogue settling with genuinely no
+   *  resolvable current phase, is a hard error at the tab level — deliberately NOT gated on
+   *  `!loading()` (unlike a plain list-load `error()`): when the phase itself can never resolve,
+   *  the list effect never fires, so `loading()` would otherwise stay `true` forever and this
+   *  state could never show (the exact "indefinite skeleton" AC-14 forbids). `showSkeleton` below
+   *  excludes `showError()` explicitly instead, keeping the four states mutually exclusive. */
+  readonly showError = computed(() => this.error() || this.phaseCatalogState() === 'failed' || this.currentPhaseUnresolvable());
+  readonly showSkeleton = computed(() => !this.showError() && this.loading() && this.results.tableResults().length === 0);
+  readonly showWholeEmpty = computed(() => !this.showError() && !this.loading() && this.results.tableResults().length === 0);
   readonly showFilteredEmpty = computed(
-    () => !this.loading() && !this.error() && this.results.tableResults().length > 0 && this.visibleRows().length === 0
+    () => !this.showError() && !this.loading() && this.results.tableResults().length > 0 && this.visibleRows().length === 0
   );
   readonly showContent = computed(() => !this.showSkeleton() && !this.showError() && !this.showWholeEmpty() && !this.showFilteredEmpty());
 
   constructor() {
-    // ── Load: entity details + review list, one GET_ResultToReview(code) per programme code ──
+    // ── Phase catalogue (BRC-T-1, judgment-day L-1): seed already covers the common case (the
+    // shell fetched it before this tab mounted); the Subject subscription catches a still-in-flight
+    // fetch; the fallback below covers "the catalogue is empty and nothing is coming". ──────────
+    if (typeof this.phasesSE.getPhasesObservable === 'function') {
+      const phasesSub = this.phasesSE.getPhasesObservable().subscribe(list => {
+        this.reportingPhases.set(list ?? []);
+        this.phaseCatalogState.set('ready');
+      });
+      this.destroyRef.onDestroy(() => phasesSub.unsubscribe());
+    }
+    if (this.reportingPhases().length === 0) this.fetchPhaseCatalogFallback();
+
+    // ── Load: entity details — one request per programme CODE, never re-fired by a phase switch
+    // (BRC-R-5 "entity details are not re-fetched") ───────────────────────────────────────────
     effect(() => {
       const code = this.programmeCode();
       untracked(() => {
         if (!code) return;
         this.results.entityId.set(code);
-        // Clear the previous programme's rows before issuing the new fetch (Reliability fix,
-        // BRT-T-3 rework) — mirrors the legacy results-review-table.component.ts effect, so a
-        // program switch never renders the old programme's rows under the new hero.
-        this.results.tableData.set([]);
-        this.results.tableResults.set([]);
         this.results.getEntityDetails();
-        this.loadResults(code);
       });
     });
 
-    if (!this.centersSE.centers().length) void this.centersSE.getData();
-
-    // ── URL → state (guarded, `untracked`, same bridge as `my-work-board`) ────────────────────
+    // ── URL → state (guarded, `untracked`, same bridge as `my-work-board`). MUST run — i.e. be
+    // REGISTERED — before the list-loading effect below: effects flush in registration order, and
+    // the list effect's `selectedVersionId()` reads `phaseParam()`, which this effect writes. With
+    // the order reversed, the very first flush would resolve `selectedVersionId` to the CURRENT
+    // phase (phaseParam still at its initial `null`) before this effect ever set it from `?phase=`
+    // — firing one throwaway request and (worse) writing a stale badge count under the current
+    // phase's cache key. ───────────────────────────────────────────────────────────────────────
     effect(() => {
       const params = this.queryParams();
       untracked(() => {
@@ -340,8 +488,40 @@ export class BilateralReviewComponent {
 
         const categories = parseBilateralReviewListParam(params.get(BILATERAL_REVIEW_QUERY_PARAM_MAP.category));
         if (!sameBilateralReviewList(categories, this.categories())) this.categories.set(categories);
+
+        const phaseRaw = params.get(BILATERAL_REVIEW_QUERY_PARAM_MAP.phase);
+        if (phaseRaw !== this.phaseParamRaw()) this.phaseParamRaw.set(phaseRaw);
+        const phase = parseBilateralReviewPhase(phaseRaw);
+        if (phase !== this.phaseParam()) this.phaseParam.set(phase);
       });
     });
+
+    // ── Load: review list — programme code + the SELECTED phase (BRC-R-5). Skips while either
+    // has not resolved: no unscoped fetch, no fetch before the phase is known. ─────────────────
+    let previousListCode: string | null = null;
+    let previousListVersionId: number | null = null;
+    effect(() => {
+      const code = this.programmeCode();
+      const versionId = this.selectedVersionId();
+      untracked(() => {
+        if (!code || versionId === null) return;
+        // Clear the previous list before issuing the new fetch (Reliability fix, BRT-T-3 rework) —
+        // a deliberate flash of empty table rather than a stale prior list under the new hero.
+        this.results.tableData.set([]);
+        this.results.tableResults.set([]);
+        // BRC-R-7: a phase switch on the SAME program (not a program switch, not the first load)
+        // re-expands every group and bumps the nonce.
+        if (previousListCode === code && previousListVersionId !== null && previousListVersionId !== versionId) {
+          this.allExpanded.set(true);
+          this.expandAllNonce.update(n => n + 1);
+        }
+        previousListCode = code;
+        previousListVersionId = versionId;
+        this.loadResults(code, versionId);
+      });
+    });
+
+    if (!this.centersSE.centers().length) void this.centersSE.getData();
 
     // ── State → URL (`replaceUrl`, `merge`) ────────────────────────────────────────────────────
     effect(() => {
@@ -369,21 +549,49 @@ export class BilateralReviewComponent {
       });
     });
 
-    // ── Deep-linked drawer open (BRT-R-21) — fires once, as soon as the list is non-empty ──────
+    // ── Unknown/invalid `?phase=` → rewrite to the current phase (BRC-R-7, AC-7). `phaseParamRaw`
+    // (not `phaseParam`) gates whether there is anything to judge at all — a present-but-unparseable
+    // value (Reviewer-found defect: e.g. the Results tab's own `?phase=Reporting%202026` label,
+    // reachable via any `queryParamsHandling="preserve"` band tab link) also parses to `phaseParam
+    // === null`, which must NOT be read as "no override" here or the stale label never gets
+    // rewritten. Waits for the catalogue to actually have entries before judging a param "unknown"
+    // — otherwise a valid `?phase=Q` would get rewritten away during the brief window before the
+    // catalogue loads. ─────────────────────────────────────────────────────────────────────────
     effect(() => {
-      const rows = this.results.tableResults();
-      if (!this.pendingReviewResultCode || rows.length === 0) return;
+      const raw = this.phaseParamRaw();
+      const param = this.phaseParam();
+      const current = this.currentPhaseId();
+      const known = this.knownPhases();
+      if (raw === null || current === null || known.length === 0) return;
+      if (param !== null && known.some(p => p.id === param)) return; // valid AND known → nothing to rewrite
+      untracked(() => {
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { [BILATERAL_REVIEW_QUERY_PARAM_MAP.phase]: current },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        });
+      });
+    });
+
+    // ── Deep-linked drawer open (BRT-R-21, BRC-R-10) — fires once the phase-scoped list SETTLES,
+    // not on "rows non-empty" (judgment-day L-4: a phase-scoped list may legitimately be empty). ─
+    effect(() => {
+      const settled = this.listSettled();
+      if (!settled || !this.pendingReviewResultCode) return;
       untracked(() => {
         const code = this.pendingReviewResultCode;
         this.pendingReviewResultCode = null;
+        const rows = this.results.tableResults();
         // Prefer the object from the list (it is complete). A result that is not part of the
-        // review list (e.g. a draft still being edited) falls back to a minimal object built
-        // from the id, which is all the drawer needs to load its detail.
+        // review list (e.g. a draft still being edited, or another phase's result) falls back to a
+        // minimal object built from the id, which is all the drawer needs to load its detail.
         const match = rows.find(row => String(row.result_code) === String(code));
         const target = match ?? (this.pendingReviewResultId ? ({ id: this.pendingReviewResultId, result_code: code } as ResultToReview) : null);
         if (target) this.onOpenResult(target);
-        // `merge` preserves the six filter keys (search/status/center/project/category/view)
-        // written by the state → URL effect above — only reviewResult/reviewResultId are cleared.
+        // `merge` preserves the six filter keys (search/status/center/project/category/view) +
+        // `phase` written by the state → URL effects above — only reviewResult/reviewResultId are
+        // cleared.
         this.router.navigate([], {
           relativeTo: this.route,
           queryParams: { [REVIEW_RESULT_QUERY_PARAM]: null, [REVIEW_RESULT_ID_QUERY_PARAM]: null },
@@ -394,18 +602,47 @@ export class BilateralReviewComponent {
     });
   }
 
-  private loadResults(code: string): void {
+  /** Fallback catalogue fetch (BRC-R-5/AC-14): same request + filter `PhasesService.getNewPhases()`
+   *  itself uses. Normally only writes `reportingPhases` if nothing else (the seed, or the
+   *  Subject) already populated it in the meantime; `force` (used by `retry()`) always adopts the
+   *  fresh response — a Retry after "catalogue settled with no open phase" must actually re-check
+   *  reality, not discard a response that now DOES contain one just because the list was already
+   *  non-empty. */
+  private fetchPhaseCatalogFallback(force = false): void {
+    this.phaseCatalogState.set('pending');
+    this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.ALL).subscribe({
+      next: ({ response }: { response?: Phases[] }) => {
+        if (force || this.reportingPhases().length === 0) {
+          const reporting = (response ?? []).filter((item: Phases) => item.app_module_id == 1); // eslint-disable-line eqeqeq -- wire may send a numeric string
+          this.reportingPhases.set(reporting);
+        }
+        this.phaseCatalogState.set('ready');
+      },
+      error: () => {
+        this.phaseCatalogState.set('failed');
+      }
+    });
+  }
+
+  /** THE single list entry point (initial load, `retry()`, `onDecisionMade()` — BRC-R-5): every
+   *  call carries the given `versionId`. `setFromRows` only fires when that versionId is the
+   *  CURRENT phase (BRC-R-6, BRC-DD-2) — the count service itself knows no "current". */
+  private loadResults(code: string, versionId: number): void {
     this.loading.set(true);
     this.error.set(false);
-    this.api.resultsSE.GET_ResultToReview(code).subscribe({
+    this.listSettled.set(false);
+    this.api.resultsSE.GET_ResultToReview(code, undefined, versionId).subscribe({
       next: (res: { response?: GroupedResult[] }) => {
         const groups = Array.isArray(res?.response) ? res.response : [];
         this.results.tableData.set(groups);
         const rows = groups.flatMap(group => group.results ?? []);
         this.results.tableResults.set(rows);
-        this.countService.setFromRows(code, rows);
+        if (this.currentPhaseId() !== null && Number(versionId) === this.currentPhaseId()) {
+          this.countService.setFromRows(code, versionId, rows);
+        }
         this.loading.set(false);
         this.decisionInFlight.set(false);
+        this.listSettled.set(true);
       },
       error: () => {
         this.error.set(true);
@@ -415,20 +652,37 @@ export class BilateralReviewComponent {
     });
   }
 
+  /** BRC-R-5/AC-14: re-attempts the phase catalogue too — both when the fetch itself failed AND
+   *  when it settled with no resolvable current phase (`currentPhaseUnresolvable`) — alongside the
+   *  list. `force: true` so a genuinely fresh response is adopted even though `reportingPhases`
+   *  is already non-empty (see `fetchPhaseCatalogFallback`'s doc).
+   *
+   *  The list re-fetch itself is manual ONLY when the phase was ALREADY resolvable before this
+   *  call — the ordinary "the list request failed, the phase was fine all along" retry, where the
+   *  list-loading effect's dependencies do not change and so it will not refire on its own. When
+   *  the phase was UNRESOLVED before this call (`currentPhaseUnresolvable()`), the catalogue
+   *  re-fetch above may resolve it synchronously (`fetchPhaseCatalogFallback`'s `next` handler runs
+   *  inline for a synchronous `Observable`) — that resolution is exactly what the list-loading
+   *  effect above already reacts to, so firing `loadResults` here TOO would duplicate the request
+   *  the moment the phase resolves. */
   retry(): void {
+    const versionIdBeforeRetry = this.selectedVersionId();
+    if (this.phaseCatalogState() === 'failed' || this.currentPhaseUnresolvable()) this.fetchPhaseCatalogFallback(true);
     const code = this.programmeCode();
-    if (code) this.loadResults(code);
+    if (code && versionIdBeforeRetry !== null) this.loadResults(code, versionIdBeforeRetry);
   }
 
   /** BRT-R-13: after the drawer emits a decision, re-fetch with the SAME `loadResults` the
    *  initial load uses — one request refreshes rows, chip counts, KPI cards AND (via
-   *  `countService.setFromRows`) the tab badge, with no second request and no navigation. The
-   *  drawer closes itself (its own `visible` model), search/status/filters/view are untouched. */
+   *  `countService.setFromRows`, when the selected phase is the current one — BRC-R-6) the tab
+   *  badge, with no second request and no navigation. The drawer closes itself (its own `visible`
+   *  model), search/status/filters/view/phase are untouched. */
   onDecisionMade(): void {
     const code = this.programmeCode();
-    if (!code) return;
+    const versionId = this.selectedVersionId();
+    if (!code || versionId === null) return;
     this.decisionInFlight.set(true);
-    this.loadResults(code);
+    this.loadResults(code, versionId);
   }
 
   // ── Search / status / view / expand ────────────────────────────────────────────────────────
@@ -457,6 +711,34 @@ export class BilateralReviewComponent {
   onOpenResult(row: ResultToReview): void {
     this.results.currentResultToReview.set(row);
     this.results.showReviewDrawer.set(true);
+  }
+
+  // ── Cycle select (BRC-T-1, BRC-R-7) ────────────────────────────────────────────────────────
+  /** `(changed)` handler for the popover Cycle select. A no-op when the value is unchanged or not
+   *  a real number (BRC-AC-8b): `app-pr-filter-select.pick()` toggles to its `emptyValue` (default
+   *  `'all'`) when the SAME option is re-picked — this guard rejects that `NaN`-after-`Number()`
+   *  emit as well as a genuine repeat of the current numeric id. Deliberately NOT bound via
+   *  `[emptyValue]="selectedVersionId()"`: that binding would make the shared component's own
+   *  `hasValue` getter (`value !== emptyValue`) permanently false, so the trigger would never show
+   *  the phase name — a straight contradiction of BRC-AC-6. Writes `?phase=` only on an actual
+   *  change; picking the current phase clears the param instead of writing it explicitly (same
+   *  "empty removes the key" convention the other five filter dimensions use). */
+  setPhase(id: number): void {
+    const next = Number(id);
+    if (Number.isNaN(next) || next === this.selectedVersionId()) {
+      // Leader-found defect: re-sync the child's OWN displayed value — see the `cycleSelect`
+      // field doc above. `writeValue` is a public CVA method; it re-renders the child (its own
+      // `cdr.markForCheck()`) without touching this page's state or issuing any request/navigation.
+      this.cycleSelect()?.writeValue(this.selectedVersionId());
+      return;
+    }
+    this.phaseParam.set(next === this.currentPhaseId() ? null : next);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { [BILATERAL_REVIEW_QUERY_PARAM_MAP.phase]: next === this.currentPhaseId() ? null : next },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 
   // ── Filter popover ──────────────────────────────────────────────────────────────────────────

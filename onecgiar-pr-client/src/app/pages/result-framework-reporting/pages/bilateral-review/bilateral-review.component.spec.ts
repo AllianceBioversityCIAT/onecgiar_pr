@@ -1,4 +1,5 @@
 // @akili-spec changes/sp-bilateral-review-tab (BRT-T-3, BRT-T-5, BRT-AC-4, 5, 6, 7, 9, 10, 15, 17, 19, H4-1)
+// @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, R-5, R-6, R-7, R-8, R-10, AC-5..14)
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -8,6 +9,7 @@ import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { BilateralReviewComponent } from './bilateral-review.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { CentersService } from '../../../../shared/services/global/centers.service';
+import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
@@ -122,25 +124,65 @@ const FIXTURE_CENTERS = [
   { code: 'C3', acronym: 'CIAT', name: 'International Center for Tropical Agriculture' }
 ] as any[];
 
+/** BRC-T-1 fixture — two reporting phases in the program's own portfolio (`obj_portfolio.id: 1`,
+ *  matching `PROGRAMME.portfolioId` below). `PHASE_CURRENT` (36) is what
+ *  `dataControlSE.reportingCurrentPhase.phaseId` resolves to by default; `PHASE_OTHER` (34) is the
+ *  alternative cycle ("Q") the phase-switch scenarios pick. Ids are numbers here — the mixed-type
+ *  ("36" wire string vs `36`) cases are exercised explicitly where they matter. */
+// `app_module_id: 1` is required so `fetchPhaseCatalogFallback`'s own filter (mirroring
+// `PhasesService.getNewPhases()`) keeps these rows — a fixture missing it would silently be
+// dropped by that filter without any test ever noticing (the shell-resolved-phase tests never
+// exercise the fallback fetch, only the AC-14 catalogue-fallback tests do).
+const PHASE_CURRENT = { id: 36, phase_name: 'Reporting 2026', phase_year: 2026, obj_portfolio: { id: 1 }, status: true, app_module_id: 1 } as any;
+const PHASE_OTHER = { id: 34, phase_name: 'Reporting 2025', phase_year: 2025, obj_portfolio: { id: 1 }, status: false, app_module_id: 1 } as any;
+const PROGRAMME = { initiativeCode: 'SP02', initiativeId: 2, initiativeShortName: 'SP02 Program', portfolioId: 1 };
+
 describe('BilateralReviewComponent', () => {
   let fixture: ComponentFixture<BilateralReviewComponent>;
   let component: BilateralReviewComponent;
   let router: { navigate: jest.Mock };
   let GET_ResultToReview: jest.Mock;
+  let GET_versioning: jest.Mock;
   let queryParamMapSubject: BehaviorSubject<ParamMap>;
   let routeSnapshotQueryParamMap: ParamMap;
   /** BehaviorSubject (not a static `of(...)`) so a program-switch test can `.next()` a new
    *  `entityId` mid-test and observe the component's reaction (Reliability fix, BRT-T-3 rework). */
   let paramMapSubject: BehaviorSubject<ParamMap>;
+  /** Mutable — a test can flip `.phaseId`/bump `.reportingPhaseVersion` mid-test to simulate the
+   *  current phase resolving late (BRC-AC-5's "no request before the phase resolves"). */
+  let dataControlSEStub: {
+    reportingCurrentPhase: { phaseId: unknown; phaseYear: unknown; phaseName: unknown; portfolioAcronym: unknown; portfolioId: unknown };
+    reportingPhaseVersion: ReturnType<typeof signal<number>>;
+    myInitiativesList: { official_code: string }[];
+  };
 
-  function build(initialQueryParams: Record<string, string> = {}, resultToReviewResponse: unknown = of(groupedResponse(FIXTURE_ROWS)), entityId = 'SP02'): void {
+  function build(
+    initialQueryParams: Record<string, string> = {},
+    resultToReviewResponse: unknown = of(groupedResponse(FIXTURE_ROWS)),
+    entityId = 'SP02',
+    phaseOverrides: {
+      /** `undefined` (the default) resolves to `PHASE_CURRENT.id` (36); pass `null` to simulate an
+       *  unresolved current phase. */
+      phaseId?: number | string | null;
+      reportingPhases?: unknown[];
+      getVersioningResponse?: unknown;
+    } = {}
+  ): void {
     router = { navigate: jest.fn().mockResolvedValue(true) };
     GET_ResultToReview = jest.fn().mockReturnValue(resultToReviewResponse);
+    GET_versioning = jest.fn().mockReturnValue(phaseOverrides.getVersioningResponse ?? of({ response: [PHASE_CURRENT, PHASE_OTHER] }));
 
     const initialMap = convertToParamMap(initialQueryParams);
     routeSnapshotQueryParamMap = initialMap;
     queryParamMapSubject = new BehaviorSubject<ParamMap>(initialMap);
     paramMapSubject = new BehaviorSubject<ParamMap>(convertToParamMap({ entityId }));
+
+    const resolvedPhaseId = 'phaseId' in phaseOverrides ? phaseOverrides.phaseId : PHASE_CURRENT.id;
+    dataControlSEStub = {
+      reportingCurrentPhase: { phaseId: resolvedPhaseId, phaseYear: 2026, phaseName: 'Reporting 2026', portfolioAcronym: 'P26', portfolioId: 1 },
+      reportingPhaseVersion: signal(1),
+      myInitiativesList: []
+    };
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -165,15 +207,26 @@ describe('BilateralReviewComponent', () => {
           useValue: {
             resultsSE: {
               GET_ResultToReview,
+              GET_versioning,
               GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of({ response: { initiative: {} } }))
             },
-            dataControlSE: { reportingCurrentPhase: { phaseYear: 2026, phaseName: 'Reporting 2026', portfolioAcronym: 'P26' }, myInitiativesList: [] },
+            dataControlSE: dataControlSEStub,
             rolesSE: { isAdmin: false }
           }
         },
         { provide: CentersService, useValue: { centers: signal(FIXTURE_CENTERS), getData: jest.fn().mockResolvedValue(FIXTURE_CENTERS) } },
+        {
+          provide: PhasesService,
+          useValue: {
+            phases: { reporting: phaseOverrides.reportingPhases ?? [PHASE_CURRENT, PHASE_OTHER] },
+            // A fresh, never-emitting Subject — mirrors a component mounting AFTER the shell's own
+            // one-shot phases fetch already resolved (the non-replaying Subject has nothing left to
+            // say), same as production (judgment-day L-1).
+            getPhasesObservable: () => new Subject<unknown[]>().asObservable()
+          }
+        },
         { provide: SmartNavigationService, useValue: { rememberResultDetailOrigin: jest.fn() } },
-        { provide: ResultFrameworkReportingHomeService, useValue: { mySPsList: () => [], otherSPsList: () => [], otherProjectsList: () => [] } }
+        { provide: ResultFrameworkReportingHomeService, useValue: { mySPsList: () => [PROGRAMME], otherSPsList: () => [], otherProjectsList: () => [] } }
       ]
     });
 
@@ -198,8 +251,8 @@ describe('BilateralReviewComponent', () => {
 
   beforeEach(() => build());
 
-  it('loads the review list for the resolved programme code', () => {
-    expect(GET_ResultToReview).toHaveBeenCalledWith('SP02');
+  it('loads the review list for the resolved programme code, scoped to the current phase (BRC-AC-5)', () => {
+    expect(GET_ResultToReview).toHaveBeenCalledWith('SP02', undefined, 36);
   });
 
   describe('KPI strip and status chips (BRT-AC-4)', () => {
@@ -279,6 +332,7 @@ describe('BilateralReviewComponent', () => {
     it('flips the toolbar label and bumps the nonce on each click', () => {
       expect(text('bilateral-review-expand-all')).toBe('Collapse all');
       expect(component.allExpanded()).toBe(true);
+      expect(component.expandAllNonce()).toBe(0);
 
       (byTestId('bilateral-review-expand-all') as HTMLButtonElement).click();
       fixture.detectChanges();
@@ -332,9 +386,9 @@ describe('BilateralReviewComponent', () => {
   });
 
   describe('AC-19 — badge follows the loaded rows', () => {
-    it('calls setFromRows with the loaded rows, and the count service reads 3 pending', () => {
+    it('calls setFromRows with the loaded rows, and the count service reads 3 pending for (SP02, 36)', () => {
       const countService = TestBed.inject(BilateralReviewCountService);
-      expect(countService.count('SP02')()).toBe(3);
+      expect(countService.count('SP02', 36)()).toBe(3);
     });
   });
 
@@ -478,7 +532,7 @@ describe('BilateralReviewComponent', () => {
       expect(component.results.tableResults()).toEqual([]);
       expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(0);
       expect(byTestId('bilateral-review-skeleton')).toBeTruthy();
-      expect(GET_ResultToReview).toHaveBeenLastCalledWith('SP03');
+      expect(GET_ResultToReview).toHaveBeenLastCalledWith('SP03', undefined, 36);
 
       secondResponse$.next(groupedResponse(FIXTURE_ROWS));
       fixture.detectChanges();
@@ -516,7 +570,7 @@ describe('BilateralReviewComponent', () => {
   describe('Decision propagation (BRT-R-13, BRT-AC-9, AC-19)', () => {
     it('re-fetches exactly once via setFromRows, decrements the badge 3 -> 2, and leaves the component instance, search and status untouched', () => {
       const countService = TestBed.inject(BilateralReviewCountService);
-      expect(countService.count('SP02')()).toBe(3);
+      expect(countService.count('SP02', 36)()).toBe(3);
       expect(GET_ResultToReview).toHaveBeenCalledTimes(1);
 
       // 'result' matches every fixture row's title, so it exercises persistence without also
@@ -542,7 +596,8 @@ describe('BilateralReviewComponent', () => {
       fixture.detectChanges();
 
       expect(GET_ResultToReview).toHaveBeenCalledTimes(2);
-      expect(countService.count('SP02')()).toBe(2);
+      expect(GET_ResultToReview).toHaveBeenLastCalledWith('SP02', undefined, 36);
+      expect(countService.count('SP02', 36)()).toBe(2);
       expect(text('kpi-pending')).toBe('2');
       expect(component).toBe(instanceBefore);
       expect(component.search()).toBe('result');
@@ -605,6 +660,310 @@ describe('BilateralReviewComponent', () => {
     it('does not open the drawer or navigate when there is no reviewResult param', () => {
       expect(component.results.showReviewDrawer()).toBe(false);
       expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    // BRC-AC-13 / BRC-R-10 (judgment-day L-4): a phase-scoped list can legitimately be EMPTY for
+    // the target phase — the old "rows.length === 0" guard would never fire the fallback here.
+    it('BRC-AC-13: opens the { id, result_code } fallback when the phase-scoped list settles with ZERO rows', () => {
+      fixture.destroy();
+      build({ reviewResult: 'BR-273', reviewResultId: '91' }, of({ response: [] }));
+
+      expect(component.results.showReviewDrawer()).toBe(true);
+      expect(component.results.currentResultToReview()).toEqual({ id: '91', result_code: 'BR-273' });
+      const clearCall = router.navigate.mock.calls.find(([, options]) => options.queryParams.reviewResult === null);
+      expect(clearCall).toBeTruthy();
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════════════════════
+  // BRC-T-1 — phase-scoped list, badge, Cycle selector
+  // ═══════════════════════════════════════════════════════════════════════════════════════════
+  describe('Phase gating — no unscoped fetch (BRC-R-5, BRC-AC-5)', () => {
+    it('issues no list request while the current phase has not resolved, then exactly one request carrying versionId once it resolves', () => {
+      fixture.destroy();
+      // FAIL input (per the task's disqualifier): the response is ready to flush immediately —
+      // if the component ever fired before the phase resolved, this test would catch it reading
+      // stale rows. `null`, not `undefined` — the REAL shell cold-boot shape
+      // (`DataControlService.reportingCurrentPhase` initializes `phaseId: null`,
+      // `data-control.service.ts:104`); `Number(null) === 0` (a "resolved" phase 0), NOT `NaN`, so
+      // an `undefined` fixture here would pass even if that normalization regressed
+      // (Leader/Reviewer-found live-page defect — `versionId=0` requests were observed on SP02).
+      // The catalogue is ALSO still empty/in-flight (a never-resolving fallback request) —
+      // otherwise BRC-AC-14's own catalogue-open-row fallback would resolve the phase immediately
+      // from the catalogue alone (a DIFFERENT, separately tested scenario), and an empty catalogue
+      // that has already SETTLED with no open row is a THIRD scenario (`currentPhaseUnresolvable`,
+      // also separately tested) — this test is specifically "still waiting on the shell".
+      build({}, of(groupedResponse(FIXTURE_ROWS)), 'SP02', {
+        phaseId: null,
+        reportingPhases: [],
+        getVersioningResponse: new Subject<{ response: unknown[] }>() // never emits
+      });
+
+      expect(GET_ResultToReview).not.toHaveBeenCalled();
+      expect(byTestId('bilateral-review-skeleton')).toBeTruthy();
+
+      dataControlSEStub.reportingCurrentPhase.phaseId = 36;
+      dataControlSEStub.reportingPhaseVersion.update(v => v + 1);
+      fixture.detectChanges();
+
+      expect(GET_ResultToReview).toHaveBeenCalledTimes(1);
+      expect(GET_ResultToReview).toHaveBeenCalledWith('SP02', undefined, 36);
+    });
+
+    it('fetches entity details exactly once even across a later phase switch', () => {
+      const api = TestBed.inject(ApiService) as unknown as { resultsSE: { GET_ClarisaGlobalUnits: jest.Mock } };
+      const detailsCallsBefore = api.resultsSE.GET_ClarisaGlobalUnits.mock.calls.length;
+
+      component.setPhase(34);
+      fixture.detectChanges();
+
+      expect(api.resultsSE.GET_ClarisaGlobalUnits.mock.calls.length).toBe(detailsCallsBefore);
+    });
+  });
+
+  describe('?phase= hydration (BRC-AC-6)', () => {
+    it('a known phase Q in the URL loads with versionId=Q, the Cycle select shows Q, and the indicator is visible', async () => {
+      fixture.destroy();
+      build({ phase: '34' });
+      // Same NgModel-deferred-write reason the center filter hydration test awaits (see above).
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(GET_ResultToReview).toHaveBeenCalledWith('SP02', undefined, 34);
+      expect(component.selectedVersionId()).toBe(34);
+      expect(text('bilateral-review-phase-indicator')).toBe('Showing Reporting 2025');
+
+      const cycleSelectText = root().querySelector('[data-testid="bilateral-review-cycle-select"] .text')?.textContent?.trim();
+      expect(cycleSelectText).toBe('Reporting 2025');
+    });
+
+    it('does not show the indicator when no phase param is set (selected === current)', () => {
+      expect(byTestId('bilateral-review-phase-indicator')).toBeNull();
+    });
+  });
+
+  describe('Unknown ?phase= falls back to the current phase (BRC-AC-7)', () => {
+    it('?phase=999 loads with the current phase id and rewrites the URL with replaceUrl', () => {
+      fixture.destroy();
+      build({ phase: '999' });
+
+      expect(GET_ResultToReview).toHaveBeenCalledWith('SP02', undefined, 36);
+      expect(component.selectedVersionId()).toBe(36);
+
+      const rewriteCall = router.navigate.mock.calls.find(([, options]) => options.queryParams?.phase === 36);
+      expect(rewriteCall).toBeTruthy();
+      const [, rewriteOptions] = rewriteCall!;
+      expect(rewriteOptions.replaceUrl).toBe(true);
+    });
+
+    // Reviewer-found defect: a PRESENT-but-non-numeric `?phase=` (e.g. the Results tab's own
+    // `?phase=` carries a phase NAME, not a versionId — reachable via any band tab link, which all
+    // use `queryParamsHandling="preserve"`) parses to `null` the same as an ABSENT param, so the
+    // rewrite effect used to bail without ever repairing the stale label in the URL.
+    it('?phase=Reporting%202026 (a non-numeric, PRESENT value) loads with the current phase id and rewrites the URL', () => {
+      fixture.destroy();
+      build({ phase: 'Reporting 2026' });
+
+      expect(GET_ResultToReview).toHaveBeenCalledWith('SP02', undefined, 36);
+      expect(component.selectedVersionId()).toBe(36);
+
+      const rewriteCall = router.navigate.mock.calls.find(([, options]) => options.queryParams?.phase === 36);
+      expect(rewriteCall).toBeTruthy();
+      const [, rewriteOptions] = rewriteCall!;
+      expect(rewriteOptions.replaceUrl).toBe(true);
+    });
+  });
+
+  describe('Cycle change P → Q (BRC-AC-8)', () => {
+    it('preserves search/status/centers, expands all groups, bumps the nonce, and issues exactly one new list request (no entity-details re-fetch)', () => {
+      component.search.set('alpha');
+      component.status.set('pending');
+      component.centers.set(['C1']);
+      fixture.detectChanges();
+      component.toggleExpandAll(); // now collapsed, so the phase switch's "re-expand" is observable
+      fixture.detectChanges();
+      expect(component.allExpanded()).toBe(false);
+      const nonceBefore = component.expandAllNonce();
+      GET_ResultToReview.mockClear();
+
+      component.setPhase(34);
+      fixture.detectChanges();
+
+      expect(component.search()).toBe('alpha');
+      expect(component.status()).toBe('pending');
+      expect(component.centers()).toEqual(['C1']);
+      expect(component.allExpanded()).toBe(true);
+      expect(component.expandAllNonce()).toBe(nonceBefore + 1);
+      expect(GET_ResultToReview).toHaveBeenCalledTimes(1);
+      expect(GET_ResultToReview).toHaveBeenCalledWith('SP02', undefined, 34);
+    });
+  });
+
+  describe('Re-picking the shown phase is a no-op (BRC-AC-8b)', () => {
+    it('setPhase(currentId) issues no request and no navigation', () => {
+      GET_ResultToReview.mockClear();
+      router.navigate.mockClear();
+
+      component.setPhase(36); // 36 is already the selected/current phase
+
+      expect(GET_ResultToReview).not.toHaveBeenCalled();
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('re-picking an already-selected NON-current phase (Q) is also a no-op', () => {
+      fixture.destroy();
+      build({ phase: '34' });
+      GET_ResultToReview.mockClear();
+      router.navigate.mockClear();
+
+      component.setPhase(34);
+
+      expect(GET_ResultToReview).not.toHaveBeenCalled();
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+  });
+
+  // Leader-found defect (not caught by the report above): `app-pr-filter-select.pick()` toggles
+  // its OWN `value` to `emptyValue` on a re-pick and emits that — `setPhase` correctly no-ops
+  // (BRC-AC-8b), but the one-way `[ngModel]` binding never re-pushes `selectedVersionId()` since
+  // nothing changed from the page's perspective, so the trigger was left showing the muted
+  // placeholder instead of Q's name (contradicting BRC-AC-6). Real integration test: drives the
+  // ACTUAL `PrFilterSelectComponent` (not stubbed in this spec), not `component.setPhase()` directly.
+  describe('Re-pick visual resync (Leader-found defect, BRC-AC-6 + AC-8b)', () => {
+    it('keeps the Cycle trigger showing Q after the user re-picks the already-selected Q option', async () => {
+      fixture.destroy();
+      build({ phase: '34' });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const cycleRoot = () => root().querySelector('[data-testid="bilateral-review-cycle-select"]') as HTMLElement;
+      const triggerText = () => cycleRoot().querySelector('.text')?.textContent?.trim();
+      expect(triggerText()).toBe('Reporting 2025');
+
+      const qOption = Array.from(cycleRoot().querySelectorAll('.option')).find(o => o.textContent?.trim() === 'Reporting 2025') as HTMLElement;
+      expect(qOption).toBeTruthy();
+
+      GET_ResultToReview.mockClear();
+      router.navigate.mockClear();
+      qOption.click(); // re-pick the ALREADY-selected Q — pr-filter-select toggles to its emptyValue internally
+      fixture.detectChanges();
+
+      expect(GET_ResultToReview).not.toHaveBeenCalled();
+      expect(router.navigate).not.toHaveBeenCalled();
+      // FAIL input: without the `writeValue` resync in `setPhase()`, this reads the muted
+      // placeholder ('Reporting 2025' would fail, becoming e.g. 'Cycle').
+      expect(triggerText()).toBe('Reporting 2025');
+    });
+  });
+
+  describe('Badge propagation follows the CURRENT phase only (BRC-R-6, BRC-AC-9, AC-10)', () => {
+    it('setFromRows is called with (code, versionId, rows) when selected === current, including a wire string "36" vs the param 36 (mixed-type)', () => {
+      const countService = TestBed.inject(BilateralReviewCountService);
+      // The default build() resolves versionId as the NUMBER 36, but the count service must treat
+      // it identically to the WIRE STRING "36" — proven independently here, not by comparing two
+      // numbers.
+      expect(countService.count('SP02', '36')()).toBe(3);
+    });
+
+    // Reviewer-found gap: the previous mixed-type test only re-proved the count service's OWN key
+    // normalization (already covered at that seam by `bilateral-review-count.service.spec.ts`). It
+    // never delivered the wire string from the SHELL itself, so `currentPhaseId`'s own `Number()`
+    // normalization (`bilateral-review.component.ts`) was unprotected: removing it would silently
+    // stop `setFromRows` from firing (the badge goes stale) while every other test stayed green,
+    // because `Number(versionId) === this.currentPhaseId()` would compare a number to a string.
+    it('the SHELL delivering the phase id as a wire string ("36") still normalizes end-to-end: request, badge and no stray indicator', () => {
+      fixture.destroy();
+      build({}, of(groupedResponse(FIXTURE_ROWS)), 'SP02', { phaseId: '36' });
+
+      expect(GET_ResultToReview).toHaveBeenCalledWith('SP02', undefined, 36);
+      expect(component.currentPhaseId()).toBe(36);
+      expect(component.selectedVersionId()).toBe(36);
+
+      const countService = TestBed.inject(BilateralReviewCountService);
+      expect(countService.count('SP02', 36)()).toBe(3);
+      expect(byTestId('bilateral-review-phase-indicator')).toBeNull();
+    });
+
+    it('setFromRows is NOT called for the selected phase when selected !== current', () => {
+      fixture.destroy();
+      build({ phase: '34' }, of(groupedResponse(FIXTURE_ROWS)));
+
+      const countService = TestBed.inject(BilateralReviewCountService);
+      // Rows loaded are scoped to phase 34 (the selection), so the CURRENT phase's own cache entry
+      // (36) must stay cold — the page never wrote to it from this phase-34 load.
+      expect(countService.count('SP02', 34)()).toBeNull();
+      expect(countService.count('SP02', 36)()).toBeNull();
+    });
+  });
+
+  describe('Phase catalog failure (BRC-R-5, BRC-AC-14)', () => {
+    it('shows the error state with Retry when the fallback catalog request fails, and Retry re-attempts the catalog + list', () => {
+      fixture.destroy();
+      build({}, of(groupedResponse(FIXTURE_ROWS)), 'SP02', { reportingPhases: [], getVersioningResponse: throwError(() => new Error('boom')) });
+
+      expect(byTestId('bilateral-review-error')).toBeTruthy();
+
+      GET_versioning.mockReturnValue(of({ response: [PHASE_CURRENT, PHASE_OTHER] }));
+      GET_ResultToReview.mockClear();
+      (root().querySelector('[data-testid="bilateral-review-error"] button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(GET_versioning).toHaveBeenCalledTimes(2);
+      expect(GET_ResultToReview).toHaveBeenCalledTimes(1);
+      expect(byTestId('bilateral-review-error')).toBeNull();
+    });
+  });
+
+  // Leader-found gap: AC-14's "current phase never resolves" half. Design intent (design.md §6.1
+  // last sentence, R-5): once THIS component's own catalogue fetch has settled, fall back to the
+  // portfolio-filtered catalogue's own "open" row (`status === true`) — the SAME fact the shell
+  // fetches via `GET_versioning(OPEN, REPORTING)`, so no authority conflict, just an earlier read
+  // of the same number. Only when the catalogue settles with NO open row AND the shell also never
+  // resolves does the tab show the existing error state.
+  describe('AC-14 — current phase fallback to the catalogue\'s own open-phase row', () => {
+    it('resolves the current phase from the catalogue when the shell has not resolved yet, and issues exactly one list request', () => {
+      fixture.destroy();
+      // Catalogue seeded NON-EMPTY (PHASE_CURRENT carries status: true) — `phaseCatalogState`
+      // starts 'ready' synchronously, so the fallback applies on the very first read.
+      build({}, of(groupedResponse(FIXTURE_ROWS)), 'SP02', { phaseId: null }); // real shell cold-boot shape
+
+      expect(component.currentPhaseId()).toBe(36);
+      expect(GET_ResultToReview).toHaveBeenCalledTimes(1);
+      expect(GET_ResultToReview).toHaveBeenCalledWith('SP02', undefined, 36);
+    });
+
+    it('the race: when the shell later confirms the SAME number the catalogue already resolved, selectedVersionId does not change and no second list request fires', () => {
+      fixture.destroy();
+      build({}, of(groupedResponse(FIXTURE_ROWS)), 'SP02', { phaseId: null }); // real shell cold-boot shape
+      expect(GET_ResultToReview).toHaveBeenCalledTimes(1);
+
+      dataControlSEStub.reportingCurrentPhase.phaseId = 36; // same number the catalogue fallback already resolved
+      dataControlSEStub.reportingPhaseVersion.update(v => v + 1);
+      fixture.detectChanges();
+
+      expect(component.currentPhaseId()).toBe(36);
+      expect(GET_ResultToReview).toHaveBeenCalledTimes(1); // still one — no second request
+    });
+
+    it('shows the error state with Retry when the catalogue settles with no open phase for this portfolio and the shell never resolves; Retry re-attempts the catalogue + list', () => {
+      fixture.destroy();
+      const noOpenPhase = [
+        { ...PHASE_CURRENT, status: false },
+        { ...PHASE_OTHER, status: false }
+      ];
+      build({}, of(groupedResponse(FIXTURE_ROWS)), 'SP02', { phaseId: null, reportingPhases: noOpenPhase }); // real shell cold-boot shape
+
+      expect(GET_ResultToReview).not.toHaveBeenCalled();
+      expect(byTestId('bilateral-review-error')).toBeTruthy();
+
+      GET_versioning.mockReturnValue(of({ response: [PHASE_CURRENT, PHASE_OTHER] })); // this time WITH an open phase (36)
+      (root().querySelector('[data-testid="bilateral-review-error"] button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(GET_versioning).toHaveBeenCalledTimes(1); // constructor skipped it (catalogue seeded non-empty); Retry issued it
+      expect(GET_ResultToReview).toHaveBeenCalledTimes(1);
+      expect(GET_ResultToReview).toHaveBeenCalledWith('SP02', undefined, 36);
+      expect(byTestId('bilateral-review-error')).toBeNull();
     });
   });
 });

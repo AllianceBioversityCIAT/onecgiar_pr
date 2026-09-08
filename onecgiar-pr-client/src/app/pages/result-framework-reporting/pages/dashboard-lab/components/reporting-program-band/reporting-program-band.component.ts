@@ -21,6 +21,10 @@ import { PrFilterSelectComponent } from '../../../../../../shared/components/pr-
 // @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-DD-2)
 import { BilateralReviewCountService } from '../../../bilateral-review/services/bilateral-review-count.service';
 import { BILATERAL_REVIEW_COPY } from '../../../bilateral-review/bilateral-review.copy';
+import { normalizeBilateralReviewPhaseId } from '../../../bilateral-review/bilateral-review.query-params';
+// @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-6, BRC-DD-1) — the
+// badge now follows the CURRENT reporting phase, not just the program code (judgment-day L-2).
+import { DataControlService } from '../../../../../../shared/services/data-control.service';
 
 export interface BandFilterOption {
   value: string;
@@ -121,6 +125,10 @@ export class ReportingProgramBandComponent {
   /** `BRT-DD-2` — injected directly (not a host input) so the badge reaches every tab without
    *  touching any host template. */
   private readonly bilateralReviewCountSE = inject(BilateralReviewCountService);
+  /** `BRC-T-1`, `BRC-DD-1`/`DD-2` — new: resolves the current reporting phase the same way the
+   *  page does, so the badge (unlike the tab's own Cycle selector) always follows the CURRENT
+   *  phase, never the reviewer's selection. */
+  private readonly dataControlSE = inject(DataControlService);
   /** `BRT-T-1` rework — the band template reads label/badge copy from here instead of hardcoding
    *  strings, so `bilateral-review.copy.ts` stays the single source of truth (design.md §6.2/§6.3). */
   readonly copy = BILATERAL_REVIEW_COPY;
@@ -370,10 +378,27 @@ export class ReportingProgramBandComponent {
   readonly bandCollapsed = signal(false);
 
   /**
-   * `BRT-R-3`, `BRT-DD-2` — the Bilateral review tab's pending-review badge, read from the
-   * injected count service and shown on every tab (not just Bilateral review itself).
+   * `BRC-T-1`, `BRC-DD-1` — the same phase resolution the page uses (`bilateral-review.component.ts`
+   * `currentPhaseId`): a tracked read of `reportingPhaseVersion()` (otherwise unused) because
+   * `reportingCurrentPhase` is a plain, non-signal object — without it a late-arriving phase would
+   * never re-trigger this computed. `version.id` is a bigint column serialized as a STRING on the
+   * wire ("36"); `normalizeBilateralReviewPhaseId` normalizes it at this one origin — Leader-found
+   * live-page defect: `reportingCurrentPhase.phaseId` initializes `null`, and `Number(null) === 0`
+   * (not `NaN`), so a naive `Number()` guard read the cold-boot state as a "resolved" phase 0 and
+   * warmed the badge/`ensure()` before the shell's own phases request landed.
    */
-  readonly bilateralReviewCount = computed(() => this.bilateralReviewCountSE.count(this.programCode())());
+  readonly currentPhaseId = computed<number | null>(() => {
+    this.dataControlSE.reportingPhaseVersion();
+    return normalizeBilateralReviewPhaseId(this.dataControlSE.reportingCurrentPhase?.phaseId);
+  });
+
+  /**
+   * `BRT-R-3`, `BRT-DD-2`, `BRC-DD-2` — the Bilateral review tab's pending-review badge, read from
+   * the injected count service and shown on every tab (not just Bilateral review itself). Now
+   * phase-scoped to the CURRENT phase (never the tab's own selected phase) — `null` while the
+   * current phase has not resolved, which the count service already reads as "no badge".
+   */
+  readonly bilateralReviewCount = computed(() => this.bilateralReviewCountSE.count(this.programCode(), this.currentPhaseId())());
 
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -427,12 +452,15 @@ export class ReportingProgramBandComponent {
     // < `md` / no-`scrollHost` case; the effect above covers the ≥ `md` case.
     this.syncBandCollapsed();
 
-    // `BRT-DD-2` — warms the Bilateral review badge for this programme on every band host
-    // (Overview, Reporting, Results, Bilateral review, My results), not just its own tab. A no-op
-    // once the count service already has (or is fetching) this programme's code.
+    // `BRT-DD-2`, `BRC-DD-1`/`DD-2` — warms the Bilateral review badge for this programme + the
+    // CURRENT phase on every band host (Overview, Reporting, Results, Bilateral review, My results),
+    // not just its own tab. A no-op once the count service already has (or is fetching) this
+    // (code, phase) pair, or while the current phase has not resolved yet (`ensure` itself no-ops
+    // on a null/NaN versionId).
     effect(() => {
       const code = this.programCode();
-      if (code) this.bilateralReviewCountSE.ensure(code);
+      const versionId = this.currentPhaseId();
+      if (code && versionId !== null) this.bilateralReviewCountSE.ensure(code, versionId);
     });
   }
 
