@@ -9,7 +9,7 @@
 | Sub-feature | `result-detail-back-rail` |
 | Type | Change |
 | Depth | Standard |
-| Status | `draft` |
+| Status | `shipped` |
 | Owner | Results & UX/UI Core Team |
 | Requirements | `docs/specs/changes/result-detail-back-rail/requirements.md` (`RDBR-R-1`…`R-4`, `RDBR-AC-1`…`AC-6`) |
 

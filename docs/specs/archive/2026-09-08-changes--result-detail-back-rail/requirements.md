@@ -9,7 +9,7 @@
 | Sub-feature | `result-detail-back-rail` |
 | Type | Change |
 | Depth | Standard |
-| Status | `draft` |
+| Status | `shipped` |
 | Owner | Results & UX/UI Core Team |
 | Baseline | `US-S1` (`docs/prd.md`); Result Detail Layout (`docs/ux-ui/design.md` §4); `W1` (`docs/trd/trd.md`) |
 | Related specs | `changes/result-submitter-back-link`, `bugfix/smart-back-button` |
@@ -150,9 +150,9 @@ The back navigation control MUST remain visible and interactive regardless of ho
 
 ## 9. Acceptance Criteria Index
 
-- [ ] `RDBR-AC-1`: `[data-testid="result-detail-back-link"]` is present in `app-result-sections-sidebar` as the first interactive element.
-- [ ] `RDBR-AC-2`: `[data-testid="result-detail-back-link"]` is NOT present in `app-result-header`.
-- [ ] `RDBR-AC-3`: `[data-testid="result-detail-back-link"]` correctly binds `routerLink` and `queryParams` from `SmartNavigationService`.
-- [ ] `RDBR-AC-4`: `[data-testid="result-detail-back-link"]` tooltip title dynamically resolves to "Back to My results", "Back to programme results", or "Back to all results".
-- [ ] `RDBR-AC-5`: In `app-result-header`, `<h1>{{ title }}</h1>` is the topmost element in the header flow.
-- [ ] `RDBR-AC-6`: All unit tests in `result-sections-sidebar.component.spec.ts` and `result-header.component.spec.ts` pass 100%.
+- [x] `RDBR-AC-1`: `[data-testid="result-detail-back-link"]` is present in `app-result-sections-sidebar` as the first interactive element.
+- [x] `RDBR-AC-2`: `[data-testid="result-detail-back-link"]` is NOT present in `app-result-header`.
+- [x] `RDBR-AC-3`: `[data-testid="result-detail-back-link"]` correctly binds `routerLink` and `queryParams` from `SmartNavigationService`.
+- [x] `RDBR-AC-4`: `[data-testid="result-detail-back-link"]` tooltip title dynamically resolves to "Back to My results", "Back to programme results", or "Back to all results".
+- [x] `RDBR-AC-5`: In `app-result-header`, `<h1>{{ title }}</h1>` is the topmost element in the header flow.
+- [x] `RDBR-AC-6`: All unit tests in `result-sections-sidebar.component.spec.ts` and `result-header.component.spec.ts` pass 100%.

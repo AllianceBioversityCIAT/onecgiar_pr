@@ -8,7 +8,7 @@
   - Design: `docs/specs/changes/result-detail-back-rail/design.md` (§2, §3, §4, §5)
   - Proposal: `docs/specs/changes/result-detail-back-rail/proposal.md`
 - **Owner / Driver:** Results & UX/UI Core Team
-- **Status:** `approved`
+- **Status:** `shipped`
 - **Budget:** 3 atomic tasks / ~150 LOC
 - **Branch:** `qa-development-2026`
 
