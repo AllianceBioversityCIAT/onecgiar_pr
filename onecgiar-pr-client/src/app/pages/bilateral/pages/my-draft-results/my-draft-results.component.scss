@@ -1,5 +1,18 @@
+@use '../../../../../styles/viewport-page' as vp;
+
 :host {
   display: block;
+
+  @media (min-width: 900px) {
+    display: flex;
+    flex-direction: column;
+    @include vp.pr-viewport-page;
+  }
+}
+
+.mdr-toolbar-docked {
+  border-bottom: 1px solid var(--pr-border-divider);
+  background: var(--pr-surface-card);
 }
 
 .mdr {

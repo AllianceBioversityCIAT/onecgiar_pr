@@ -330,4 +330,49 @@ describe('MyDraftResultsComponent', () => {
       expect(component.drafts().map(draft => draft.id)).toEqual([1]);
     });
   });
+
+  describe('BSA-T-3: Viewport-Locked Scroller & Docked Toolbar', () => {
+    it('should have pr-viewport-page host class', () => {
+      expect((fixture.nativeElement as HTMLElement).classList.contains('pr-viewport-page')).toBe(true);
+    });
+
+    it('should render #workArea scroller with responsive viewport lock classes (BSA-R-4, BSA-AC-5)', () => {
+      const workArea = fixture.nativeElement.querySelector('#workArea') as HTMLElement;
+      expect(workArea).toBeTruthy();
+      expect(workArea.className).toContain('min-[900px]:overflow-y-auto');
+      expect(workArea.className).toContain('min-[900px]:flex-1');
+      expect(workArea.className).toContain('min-[900px]:min-h-0');
+      expect(workArea.className).toContain('custom_scroll');
+    });
+
+    it('should dock project filter toolbar above #workArea scroller when drafts exist (BSA-R-5, BSA-AC-6)', () => {
+      bilateralAiService.draftList.set([draftStub]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      const hostEl = fixture.nativeElement as HTMLElement;
+      const toolbar = hostEl.querySelector('.mdr-toolbar-docked') as HTMLElement;
+      const workArea = hostEl.querySelector('#workArea') as HTMLElement;
+
+      expect(toolbar).toBeTruthy();
+      expect(toolbar.classList.contains('flex-none')).toBe(true);
+      expect(workArea).toBeTruthy();
+
+      // Verify toolbar is docked above #workArea in DOM order
+      expect(toolbar.compareDocumentPosition(workArea) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(workArea.contains(toolbar)).toBe(false);
+      expect(toolbar.nextElementSibling).toBe(workArea);
+    });
+
+    it('should render modern skeleton loading state using .pr-skeleton when loading (BSA-R-8, BSA-AC-9)', () => {
+      bilateralAiService.isDraftListLoaded.set(false);
+      fixture.detectChanges();
+
+      const skeletonHost = fixture.nativeElement.querySelector('[data-testid="mdr-loading-skeleton"]');
+      expect(skeletonHost).toBeTruthy();
+
+      const skeletons = fixture.nativeElement.querySelectorAll('.pr-skeleton');
+      expect(skeletons.length).toBeGreaterThanOrEqual(3);
+    });
+  });
 });

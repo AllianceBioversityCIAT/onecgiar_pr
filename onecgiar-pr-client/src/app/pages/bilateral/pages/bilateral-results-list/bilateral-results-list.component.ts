@@ -118,6 +118,9 @@ function defaultColumnVisibility(): Record<string, boolean> {
   templateUrl: './bilateral-results-list.component.html',
   styleUrl: './bilateral-results-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    class: 'pr-viewport-page',
+  },
 })
 export class BilateralResultsListComponent implements OnInit {
   private readonly bilateralApiService = inject(BilateralApiService);

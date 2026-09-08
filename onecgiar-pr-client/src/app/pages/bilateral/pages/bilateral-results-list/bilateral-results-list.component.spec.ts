@@ -248,4 +248,45 @@ describe('BilateralResultsListComponent', () => {
       );
     });
   });
+
+  describe('BSA-T-3: Viewport-Locked Scroller & Docked Filters', () => {
+    it('should have pr-viewport-page host class', () => {
+      expect((fixture.nativeElement as HTMLElement).classList.contains('pr-viewport-page')).toBe(true);
+    });
+
+    it('should render docked phase tabs and filter bar above #workArea scroller (BSA-R-4, BSA-R-5, BSA-AC-5, BSA-AC-6)', () => {
+      const hostEl = fixture.nativeElement as HTMLElement;
+      const dockedBar = hostEl.querySelector('.brl_docked') as HTMLElement;
+      const filterBar = hostEl.querySelector('.brl_filter_bar') as HTMLElement;
+      const workArea = hostEl.querySelector('#workArea') as HTMLElement;
+
+      expect(dockedBar).toBeTruthy();
+      expect(dockedBar.classList.contains('flex-none')).toBe(true);
+
+      expect(filterBar).toBeTruthy();
+      expect(workArea).toBeTruthy();
+
+      // Verify workArea has overflow-y-auto at >=900px responsive class and custom scrollbar
+      expect(workArea.className).toContain('min-[900px]:overflow-y-auto');
+      expect(workArea.className).toContain('min-[900px]:flex-1');
+      expect(workArea.className).toContain('min-[900px]:min-h-0');
+      expect(workArea.className).toContain('custom_scroll');
+
+      // Verify filter bar is docked above #workArea in DOM order
+      expect(filterBar.compareDocumentPosition(workArea) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(workArea.contains(filterBar)).toBe(false);
+      expect(dockedBar.nextElementSibling).toBe(workArea);
+    });
+
+    it('should enclose table and catalog content (.brl_body) inside #workArea scroller (BSA-DD-4, BSA-DD-5)', () => {
+      const workArea = fixture.nativeElement.querySelector('#workArea') as HTMLElement;
+      expect(workArea).toBeTruthy();
+
+      const brlBody = workArea.querySelector('.brl_body');
+      expect(brlBody).toBeTruthy();
+
+      const table = workArea.querySelector('app-pr-table');
+      expect(table).toBeTruthy();
+    });
+  });
 });

@@ -1,3 +1,17 @@
 :host {
   display: block;
 }
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.border-b-band {
+  border-bottom: 1px solid var(--pr-border-band);
+}

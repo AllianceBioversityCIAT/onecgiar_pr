@@ -1,5 +1,12 @@
 :host {
   display: block;
+
+  @media (min-width: 900px) {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
 }
 
 .bpp {
@@ -183,12 +190,21 @@
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  background: #ffffff;
+  background: var(--pr-surface-card);
   border: 1px solid var(--pr-color-accents-2);
   border-radius: 12px;
   padding: 12px 18px;
   margin-bottom: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+
+  &.bpp_toolbar_docked {
+    border: none;
+    border-bottom: 1px solid var(--pr-border-divider);
+    background: var(--pr-surface-card);
+    border-radius: 0;
+    margin-bottom: 0;
+    box-shadow: none;
+  }
 }
 
 .bpp_toolbar_left {
@@ -210,7 +226,7 @@
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 13px;
+  font-size: 18px;
   color: var(--pr-color-accents-4);
   pointer-events: none;
 }
