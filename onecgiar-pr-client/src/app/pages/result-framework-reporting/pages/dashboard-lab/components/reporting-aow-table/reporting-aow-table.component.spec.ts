@@ -1,5 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Clipboard } from '@angular/cdk/clipboard';
 import { By } from '@angular/platform-browser';
 import {
   ReportingAowTableComponent,
@@ -7,6 +8,7 @@ import {
   ReportingIndicator,
   TocAchievement
 } from './reporting-aow-table.component';
+import { PrToastService } from '../../../../../../shared/components/pr-toast/pr-toast.service';
 import { PrTooltipDirective } from '../../../../../../shared/directives/pr-tooltip.directive';
 import { buildAowBannerStats } from '../../dashboard-lab.component';
 
@@ -2379,6 +2381,130 @@ describe('ReportingAowTableComponent', () => {
       fixture.detectChanges();
       const typeChipEl = el.querySelector('.pr-flat-row span.truncate');
       expect(typeChipEl?.innerHTML).toContain('<mark class="bg-violet-100 text-violet-900 font-semibold rounded px-0.5">Knowledge</mark>');
+    });
+  });
+
+  describe('Copy to clipboard and text selection guard', () => {
+    let clipboard: Clipboard;
+    let toastSE: PrToastService;
+
+    beforeEach(async () => {
+      await build([group([row()])]);
+      clipboard = fixture.debugElement.injector.get(Clipboard);
+      toastSE = fixture.debugElement.injector.get(PrToastService);
+    });
+
+    it('copies formatted AoW code and name to clipboard and toasts', () => {
+      const copySpy = jest.spyOn(clipboard, 'copy').mockReturnValue(true);
+      const toastSpy = jest.spyOn(toastSE, 'add');
+      const stopSpy = jest.fn();
+      const mockEvent = { stopPropagation: stopSpy, preventDefault: jest.fn() } as unknown as Event;
+
+      const g = group([row()], { aow: { code: 'AOW01', name: 'Accelerating AI-Enabled Advisory' } });
+      component.copyAow(g, mockEvent);
+
+      expect(stopSpy).toHaveBeenCalled();
+      expect(copySpy).toHaveBeenCalledWith('[AOW01] Accelerating AI-Enabled Advisory');
+      expect(component.isJustCopied('aow::AOW01')).toBe(true);
+      expect(toastSpy).toHaveBeenCalledWith(expect.objectContaining({
+        key: 'globalUserNotification',
+        severity: 'success',
+        summary: 'Area of Work name copied'
+      }));
+    });
+
+    it('copies formatted HLO code and title to clipboard and toasts', () => {
+      const copySpy = jest.spyOn(clipboard, 'copy').mockReturnValue(true);
+      const toastSpy = jest.spyOn(toastSE, 'add');
+      const stopSpy = jest.fn();
+      const mockEvent = { stopPropagation: stopSpy, preventDefault: jest.fn() } as unknown as Event;
+
+      const hlo = { key: 'hlo-1.1', code: '1.1', name: 'Agronomic analytics', rows: [] };
+      const tax = { type: 'HLO', code: '1.1' };
+      component.copyHlo(hlo as any, tax, mockEvent);
+
+      expect(stopSpy).toHaveBeenCalled();
+      expect(copySpy).toHaveBeenCalledWith('[HLO 1.1] Agronomic analytics');
+      expect(component.isJustCopied('hlo-1.1')).toBe(true);
+      expect(toastSpy).toHaveBeenCalledWith(expect.objectContaining({
+        key: 'globalUserNotification',
+        severity: 'success',
+        summary: 'HLO title copied'
+      }));
+    });
+
+    it('copies formatted Indicator code and description to clipboard and toasts', () => {
+      const copySpy = jest.spyOn(clipboard, 'copy').mockReturnValue(true);
+      const toastSpy = jest.spyOn(toastSE, 'add');
+      const stopSpy = jest.fn();
+      const mockEvent = { stopPropagation: stopSpy, preventDefault: jest.fn() } as unknown as Event;
+
+      const r = row({
+        indicator_id: 101,
+        indicator_description: 'Integration of AgWise agronomic recommendations',
+        __aowCode: 'AOW01'
+      });
+      component.copyIndicatorText(r, mockEvent);
+
+      expect(stopSpy).toHaveBeenCalled();
+      expect(copySpy).toHaveBeenCalledWith('[AOW01] Integration of AgWise agronomic recommendations');
+      expect(component.isJustCopied(component.rowKey(r))).toBe(true);
+      expect(toastSpy).toHaveBeenCalledWith(expect.objectContaining({
+        key: 'globalUserNotification',
+        severity: 'success',
+        summary: 'Indicator title copied'
+      }));
+    });
+
+    it('onRowClick ignores click event if text is selected', () => {
+      const emitSpy = jest.spyOn(component.openRow, 'emit');
+      const r = row({ indicator_id: 101 });
+
+      const selSpy = jest.spyOn(window, 'getSelection').mockReturnValue({
+        toString: () => 'some highlighted text'
+      } as unknown as Selection);
+
+      component.onRowClick(r);
+      expect(emitSpy).not.toHaveBeenCalled();
+
+      selSpy.mockReturnValue({
+        toString: () => ''
+      } as unknown as Selection);
+
+      component.onRowClick(r);
+      expect(emitSpy).toHaveBeenCalledWith(r);
+
+      selSpy.mockRestore();
+    });
+
+    it('toggle ignores accordion toggle if text is selected', () => {
+      const selSpy = jest.spyOn(window, 'getSelection').mockReturnValue({
+        toString: () => 'highlighted text'
+      } as unknown as Selection);
+
+      component.toggle('aow::AOW01', false);
+      expect(component.isOpen('aow::AOW01', false)).toBe(false);
+
+      selSpy.mockReturnValue({
+        toString: () => ''
+      } as unknown as Selection);
+
+      component.toggle('aow::AOW01', false);
+      expect(component.isOpen('aow::AOW01', false)).toBe(true);
+
+      selSpy.mockRestore();
+    });
+
+    it('runFromMenu executes function actions and closes menu', () => {
+      const stopSpy = jest.fn();
+      const ev = { stopPropagation: stopSpy } as unknown as Event;
+      const fnSpy = jest.fn();
+      const r = row({ indicator_id: 101 });
+
+      component.runFromMenu(fnSpy, r, ev);
+
+      expect(stopSpy).toHaveBeenCalled();
+      expect(fnSpy).toHaveBeenCalledWith(r);
     });
   });
 });

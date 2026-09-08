@@ -1,8 +1,10 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, HostListener, computed, effect, input, linkedSignal, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, computed, effect, inject, input, linkedSignal, output, signal } from '@angular/core';
+import { Clipboard } from '@angular/cdk/clipboard';
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideArrowDown, lucideChevronDown, lucideCheck, lucideEllipsis, lucideInfo, lucideLink, lucideX } from '@ng-icons/lucide';
+import { PrToastService } from '../../../../../../shared/components/pr-toast/pr-toast.service';
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import {
   PrTableComponent,
@@ -195,8 +197,14 @@ export class ReportingAowTableComponent {
   readonly groups = input.required<ReportingAowGroup[]>();
   /** Free-text filter, owned by the parent toolbar. Matched against the title and the indicator. */
   readonly search = input<string>('');
-  /** `'all'` or one of the RowStatus values. */
-  readonly statusFilter = input<string>('all');
+  /** `'all'` or array of RowStatus values. */
+  readonly statusFilter = input<string[], string[] | string | null | undefined>([], {
+    transform: (v: string[] | string | null | undefined): string[] => {
+      if (Array.isArray(v)) return v.filter(x => x && x !== 'all');
+      if (!v || v === 'all') return [];
+      return [v];
+    }
+  });
   /**
    * Whether ANY toolbar control is narrowing the list right now — search, Section, Type, Category
    * or Status.
@@ -899,7 +907,7 @@ export class ReportingAowTableComponent {
       !!q && [group.aow?.code, group.aow?.name].some(v => (v ?? '').toLowerCase().includes(q));
 
     return (group.indicators ?? []).filter(row => {
-      if (status !== 'all' && this.statusOf(row) !== status) return false;
+      if (status && status.length > 0 && !status.includes(this.statusOf(row))) return false;
       if (selCenter && row.center_acronym?.trim() !== selCenter) return false;
       if (selType && row.result_type_name?.trim() !== selType) return false;
       if (!q || groupHit) return true;
@@ -1151,7 +1159,11 @@ export class ReportingAowTableComponent {
     return this.overrides().get(key) ?? defaultOpen;
   }
 
-  toggle(key: string, defaultOpen = false): void {
+  toggle(key: string, defaultOpen = false, event?: MouseEvent): void {
+    const selection = window.getSelection()?.toString();
+    if (selection && selection.trim().length > 0) {
+      return;
+    }
     const now = this.isOpen(key, defaultOpen);
     this.overrides.update(map => new Map(map).set(key, !now));
   }
@@ -1189,10 +1201,85 @@ export class ReportingAowTableComponent {
     return groups.every(group => this.isOpen(`aow::${group.aow.code}`, this.isDefaultOpenAow(group.aow.code)));
   });
 
+  // ── Copy to Clipboard & Selection Guard ────────────────────────────────────
+  private readonly clipboard = inject(Clipboard);
+  private readonly toastSE = inject(PrToastService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly justCopiedKey = signal<string | null>(null);
+  private copyResetTimer: ReturnType<typeof setTimeout> | null = null;
+
+  isJustCopied(key: string): boolean {
+    return this.justCopiedKey() === key;
+  }
+
+  private markCopied(key: string, summary: string): void {
+    this.justCopiedKey.set(key);
+    if (this.copyResetTimer !== null) {
+      clearTimeout(this.copyResetTimer);
+    }
+    this.copyResetTimer = setTimeout(() => {
+      this.copyResetTimer = null;
+      this.justCopiedKey.set(null);
+    }, 1500);
+    this.toastSE.add({ key: 'globalUserNotification', severity: 'success', summary });
+  }
+
+  copyAow(group: ReportingAowGroup, event?: Event): void {
+    event?.stopPropagation();
+    event?.preventDefault();
+    const chip = this.headerChip(group);
+    const name = (group?.aow?.name ?? '').trim();
+    const text = chip ? `[${chip}] ${name}` : name;
+    if (!text) return;
+    this.clipboard.copy(text);
+    this.markCopied(`aow::${group.aow.code}`, 'Area of Work name copied');
+  }
+
+  copyHlo(hlo: HloGroup, tax?: { type: string; code: string }, event?: Event): void {
+    event?.stopPropagation();
+    event?.preventDefault();
+    const code = tax?.code ? `${tax.type ? tax.type + ' ' : ''}${tax.code}`.trim() : (hlo?.code?.trim() ?? '');
+    const name = (hlo?.name ?? '').trim();
+    const text = code ? `[${code}] ${name}` : name;
+    if (!text) return;
+    this.clipboard.copy(text);
+    this.markCopied(hlo.key, 'HLO title copied');
+  }
+
+  copyIndicatorText(row: ReportingIndicator, event?: Event): void {
+    event?.stopPropagation();
+    event?.preventDefault();
+    const aow = this.aowCodeOf(row);
+    const desc = (row?.indicator_description ?? '').trim();
+    const text = aow ? `[${aow}] ${desc}` : desc;
+    if (!text) return;
+    this.clipboard.copy(text);
+    this.markCopied(this.rowKey(row), 'Indicator title copied');
+  }
+
+  readonly copyIndicatorAction = (row: ReportingIndicator): void => {
+    this.copyIndicatorText(row);
+  };
+
+  onRowClick(row: ReportingIndicator, event?: MouseEvent): void {
+    const selection = window.getSelection()?.toString();
+    if (selection && selection.trim().length > 0) {
+      return;
+    }
+    this.openRow.emit(row);
+  }
+
   constructor() {
     // The host owns the toolbar, which sits ABOVE this table and cannot read into it — so the state
     // is pushed out. `allOpen` is a computed, so this only fires when the answer actually changes.
     effect(() => this.allOpenChange.emit(this.allOpen()));
+    this.destroyRef.onDestroy(() => {
+      if (this.copyResetTimer !== null) {
+        clearTimeout(this.copyResetTimer);
+        this.copyResetTimer = null;
+      }
+    });
   }
 
   isTitleExpanded(id: number): boolean {
@@ -1412,10 +1499,14 @@ export class ReportingAowTableComponent {
   }
 
   /** Run a menu item's action and close the menu, without letting the click open the row. */
-  runFromMenu<T>(emitter: { emit: (v: T) => void }, value: T, ev: Event): void {
+  runFromMenu<T>(emitter: { emit: (v: T) => void } | ((v: T) => void), value: T, ev: Event): void {
     ev.stopPropagation();
     this.openMenuKey.set(null);
-    emitter.emit(value);
+    if (typeof emitter === 'function') {
+      emitter(value);
+    } else {
+      emitter.emit(value);
+    }
   }
 
   /**

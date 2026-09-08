@@ -854,7 +854,7 @@ describe('ReportingProgramBandComponent', () => {
       expect(el.querySelector('[aria-label="Filter by status"]')).not.toBeNull();
       expect(el.querySelector('[aria-label="Filter by category"]')).toBeNull();
       expect(el.querySelector('[aria-label="Grouping"]')).toBeNull();
-      expect(el.querySelector('app-pr-filter-multiselect')).toBeNull();
+      expect(el.querySelector('[aria-label="Filter by section"]')).toBeNull();
       expect(el.querySelector('[aria-label="Switch Area of Work"] app-pr-filter-select')).not.toBeNull();
     });
 
@@ -1150,7 +1150,7 @@ describe('ReportingProgramBandComponent', () => {
       await build({
         showToolbar: true,
         compactFilters: false,
-        typologyValue: 'all'
+        typologyValue: []
       });
 
       const spy = jest.spyOn(component.typologyChange, 'emit');
@@ -1159,22 +1159,22 @@ describe('ReportingProgramBandComponent', () => {
 
       // Click Knowledge Product (index 1)
       chips[1].click();
-      expect(spy).toHaveBeenCalledWith('Knowledge product');
+      expect(spy).toHaveBeenCalledWith(['Knowledge product']);
 
-      // Now set typologyValue to 'Knowledge product' so it becomes active
-      fixture.componentRef.setInput('typologyValue', 'Knowledge product');
+      // Now set typologyValue to ['Knowledge product'] so it becomes active
+      fixture.componentRef.setInput('typologyValue', ['Knowledge product']);
       fixture.detectChanges();
 
       expect(chips[1].getAttribute('aria-pressed')).toBe('true');
       expect(chips[0].getAttribute('aria-pressed')).toBe('false');
 
-      // Click active chip again -> reverts to 'all'
+      // Click active chip again -> reverts to []
       chips[1].click();
-      expect(spy).toHaveBeenCalledWith('all');
+      expect(spy).toHaveBeenCalledWith([]);
 
-      // Click 'All' chip -> emits 'all'
+      // Click 'All' chip -> emits []
       chips[0].click();
-      expect(spy).toHaveBeenCalledWith('all');
+      expect(spy).toHaveBeenCalledWith([]);
     });
   });
 
@@ -1390,6 +1390,90 @@ describe('ReportingProgramBandComponent', () => {
 
       expect(text()).toContain('Bilateral review');
       expect(text()).toContain('W3/Bilateral results');
+    });
+  });
+
+  describe('multi-select Type, Category, and Status filters in popover', () => {
+    it('renders Type, Category, and Status as app-pr-filter-multiselect in grouped mode', async () => {
+      await build({
+        showToolbar: true,
+        compactFilters: false,
+        typologyOptions: [
+          { value: 'Knowledge product', label: 'Knowledge product' },
+          { value: 'Policy change', label: 'Policy change' }
+        ]
+      });
+
+      const el = fixture.nativeElement as HTMLElement;
+      const typeFilter = el.querySelector('[aria-label="Filter by type"] app-pr-filter-multiselect');
+      const categoryFilter = el.querySelector('[aria-label="Filter by category"] app-pr-filter-multiselect');
+      const statusFilter = el.querySelector('[aria-label="Filter by status"] app-pr-filter-multiselect');
+
+      expect(typeFilter).not.toBeNull();
+      expect(categoryFilter).not.toBeNull();
+      expect(statusFilter).not.toBeNull();
+    });
+
+    it('emits string[] on typeChange, typologyChange, and statusChange', async () => {
+      await build({
+        showToolbar: true,
+        compactFilters: false,
+        typologyOptions: [
+          { value: 'Knowledge product', label: 'Knowledge product' }
+        ]
+      });
+
+      const typeSpy = jest.spyOn(component.typeChange, 'emit');
+      const typSpy = jest.spyOn(component.typologyChange, 'emit');
+      const statusSpy = jest.spyOn(component.statusChange, 'emit');
+
+      component.typeChange.emit(['hlo', 'outcome']);
+      expect(typeSpy).toHaveBeenCalledWith(['hlo', 'outcome']);
+
+      component.typologyChange.emit(['Knowledge product']);
+      expect(typSpy).toHaveBeenCalledWith(['Knowledge product']);
+
+      component.statusChange.emit(['achieved', 'in-progress']);
+      expect(statusSpy).toHaveBeenCalledWith(['achieved', 'in-progress']);
+    });
+
+    it('renders individual chips for each selected Type, Category, and Status and removes them', async () => {
+      await build({
+        showToolbar: true,
+        compactFilters: false,
+        typeValue: ['hlo', 'outcome'],
+        typologyValue: ['Knowledge product'],
+        typologyOptions: [
+          { value: 'Knowledge product', label: 'Knowledge product' }
+        ],
+        statusValue: ['achieved', 'not-started']
+      });
+
+      expect(component.activeTypeChips()).toEqual([
+        { value: 'hlo', label: 'High level output' },
+        { value: 'outcome', label: 'Outcome' }
+      ]);
+      expect(component.activeTypologyChips()).toEqual([
+        { value: 'Knowledge product', label: 'Knowledge product' }
+      ]);
+      expect(component.activeStatusChips()).toEqual([
+        { value: 'achieved', label: 'Achieved' },
+        { value: 'not-started', label: 'Not started' }
+      ]);
+
+      expect(component.activeFilterCount()).toBe(5); // 2 types + 1 category + 2 statuses
+
+      const typeSpy = jest.spyOn(component.typeChange, 'emit');
+      component.removeTypeChip('hlo');
+      expect(typeSpy).toHaveBeenCalledWith(['outcome']);
+
+      const typSpy = jest.spyOn(component.typologyChange, 'emit');
+      component.removeTypologyChip('Knowledge product');
+      expect(typSpy).toHaveBeenCalledWith([]);
+
+      const statusSpy = jest.spyOn(component.statusChange, 'emit');
+      component.removeStatusChip('achieved');
+      expect(statusSpy).toHaveBeenCalledWith(['not-started']);
     });
   });
 });

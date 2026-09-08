@@ -174,12 +174,30 @@ export class ReportingProgramBandComponent {
 
   readonly search = input<string>('');
   readonly matchCount = input<number | null>(null);
-  readonly statusValue = input<string>('all');
-  readonly typologyValue = input<string>('all');
+  readonly statusValue = input<string[], string[] | string | null | undefined>([], {
+    transform: (v: string[] | string | null | undefined): string[] => {
+      if (Array.isArray(v)) return v.filter(x => x && x !== 'all');
+      if (!v || v === 'all') return [];
+      return [v];
+    }
+  });
+  readonly typologyValue = input<string[], string[] | string | null | undefined>([], {
+    transform: (v: string[] | string | null | undefined): string[] => {
+      if (Array.isArray(v)) return v.filter(x => x && x !== 'all');
+      if (!v || v === 'all') return [];
+      return [v];
+    }
+  });
   readonly typologyCounts = input<Record<string, number>>({});
   readonly typologyOptions = input<BandFilterOption[]>([]);
   /** Type filter: hlo | outcome | intermediate_outcome | outcome_2030 | all. */
-  readonly typeValue = input<string>('all');
+  readonly typeValue = input<string[], string[] | string | null | undefined>([], {
+    transform: (v: string[] | string | null | undefined): string[] => {
+      if (Array.isArray(v)) return v.filter(x => x && x !== 'all');
+      if (!v || v === 'all') return [];
+      return [v];
+    }
+  });
   /** Section is multi-select (reference `selSection`): the picked section codes, empty = no filter. */
   readonly aowValue = input<string[]>([]);
   readonly aowOptions = input<BandFilterGroup[]>([]);
@@ -250,9 +268,9 @@ export class ReportingProgramBandComponent {
   readonly canReportEmerging = input<boolean>(false);
 
   readonly searchChange = output<string>();
-  readonly statusChange = output<string>();
-  readonly typologyChange = output<string>();
-  readonly typeChange = output<string>();
+  readonly statusChange = output<string[]>();
+  readonly typologyChange = output<string[]>();
+  readonly typeChange = output<string[]>();
   readonly aowChange = output<string[]>();
   /** @akili-spec changes/mass-reporting-flow */
   readonly onlyPendingChange = output<boolean>();
@@ -626,6 +644,10 @@ export class ReportingProgramBandComponent {
     { value: 'outcome_2030', label: '2030 outcome' }
   ];
 
+  readonly cleanTypeOptions = computed(() => this.typeOptions.filter(o => o.value !== 'all'));
+  readonly cleanTypologyOptions = computed(() => this.typologyOptions().filter(o => o.value !== 'all'));
+  readonly cleanStatusOptions = computed(() => this.statusOptions.filter(o => o.value !== 'all'));
+
   readonly QUICK_TYPOLOGIES = [
     { id: 'all', label: 'All', matchKey: 'all' },
     { id: 'kp', label: 'Knowledge Product', matchKey: 'Knowledge product' },
@@ -636,13 +658,17 @@ export class ReportingProgramBandComponent {
   ] as const;
 
   readonly quickChips = computed<ResultTypeQuickChip[]>(() => {
-    const currentTypology = this.typologyValue();
+    const currentTypologies = this.typologyValue() || [];
     const counts = this.typologyCounts() ?? {};
+    const isAll = currentTypologies.length === 0;
+
     return this.QUICK_TYPOLOGIES.map(item => {
       const active =
         item.matchKey === 'all'
-          ? currentTypology === 'all' || !currentTypology
-          : currentTypology === item.matchKey || currentTypology?.toLowerCase() === item.label.toLowerCase();
+          ? isAll
+          : currentTypologies.some(
+              t => t === item.matchKey || t.toLowerCase() === item.label.toLowerCase()
+            );
 
       const count =
         item.matchKey === 'all'
@@ -661,9 +687,9 @@ export class ReportingProgramBandComponent {
 
   onQuickChipClick(chip: ResultTypeQuickChip): void {
     if (chip.matchKey === 'all' || chip.active) {
-      this.typologyChange.emit('all');
+      this.typologyChange.emit([]);
     } else {
-      this.typologyChange.emit(chip.matchKey);
+      this.typologyChange.emit([chip.matchKey]);
     }
   }
 
@@ -684,13 +710,13 @@ export class ReportingProgramBandComponent {
     if (this.compactFilters()) {
       if (this.centerValue() && this.centerValue() !== 'all') count++;
       if (this.byAowTypeValue() && this.byAowTypeValue() !== 'all') count++;
-      if (this.statusValue() && this.statusValue() !== 'all') count++;
+      if (this.statusValue()?.length) count += this.statusValue().length;
       if (this.onlyPending()) count++;
     } else {
-      if (this.aowValue() && this.aowValue().length > 0) count += this.aowValue().length;
-      if (this.typeValue() && this.typeValue() !== 'all') count++;
-      if (this.typologyValue() && this.typologyValue() !== 'all') count++;
-      if (this.statusValue() && this.statusValue() !== 'all') count++;
+      if (this.aowValue()?.length) count += this.aowValue().length;
+      if (this.typeValue()?.length) count += this.typeValue().length;
+      if (this.typologyValue()?.length) count += this.typologyValue().length;
+      if (this.statusValue()?.length) count += this.statusValue().length;
       if (this.onlyPending()) count++;
     }
     return count;
@@ -725,22 +751,44 @@ export class ReportingProgramBandComponent {
     return vals.map(v => ({ value: v, label: map.get(v) || v }));
   });
 
+  readonly activeTypeChips = computed(() => {
+    const vals = this.typeValue() || [];
+    if (!vals.length) return [];
+    return vals.map(v => ({
+      value: v,
+      label: this.typeOptions.find(o => o.value === v)?.label || v
+    }));
+  });
+
+  readonly activeTypologyChips = computed(() => {
+    const vals = this.typologyValue() || [];
+    if (!vals.length) return [];
+    const opts = this.typologyOptions();
+    return vals.map(v => ({
+      value: v,
+      label: opts.find(o => o.value === v)?.label || v
+    }));
+  });
+
+  readonly activeStatusChips = computed(() => {
+    const vals = this.statusValue() || [];
+    if (!vals.length) return [];
+    return vals.map(v => ({
+      value: v,
+      label: this.statusOptions.find(o => o.value === v)?.label || v
+    }));
+  });
+
   readonly activeTypeLabel = computed(() => {
-    const val = this.typeValue();
-    if (!val || val === 'all') return '';
-    return this.typeOptions.find(o => o.value === val)?.label || val;
+    return this.activeTypeChips().map(c => c.label).join(', ');
   });
 
   readonly activeTypologyLabel = computed(() => {
-    const val = this.typologyValue();
-    if (!val || val === 'all') return '';
-    return this.typologyOptions().find(o => o.value === val)?.label || val;
+    return this.activeTypologyChips().map(c => c.label).join(', ');
   });
 
   readonly activeStatusLabel = computed(() => {
-    const val = this.statusValue();
-    if (!val || val === 'all') return '';
-    return this.statusOptions.find(o => o.value === val)?.label || val;
+    return this.activeStatusChips().map(c => c.label).join(', ');
   });
 
   removeCenterChip(): void {
@@ -756,16 +804,31 @@ export class ReportingProgramBandComponent {
     this.aowChange.emit(next);
   }
 
-  removeTypeChip(): void {
-    this.typeChange.emit('all');
+  removeTypeChip(val?: string): void {
+    if (!val) {
+      this.typeChange.emit([]);
+      return;
+    }
+    const next = (this.typeValue() || []).filter(v => v !== val);
+    this.typeChange.emit(next);
   }
 
-  removeTypologyChip(): void {
-    this.typologyChange.emit('all');
+  removeTypologyChip(val?: string): void {
+    if (!val) {
+      this.typologyChange.emit([]);
+      return;
+    }
+    const next = (this.typologyValue() || []).filter(v => v !== val);
+    this.typologyChange.emit(next);
   }
 
-  removeStatusChip(): void {
-    this.statusChange.emit('all');
+  removeStatusChip(val?: string): void {
+    if (!val) {
+      this.statusChange.emit([]);
+      return;
+    }
+    const next = (this.statusValue() || []).filter(v => v !== val);
+    this.statusChange.emit(next);
   }
 
   removeOnlyPendingChip(): void {
