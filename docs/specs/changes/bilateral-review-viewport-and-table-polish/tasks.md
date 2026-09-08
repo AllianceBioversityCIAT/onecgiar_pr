@@ -7,7 +7,7 @@
 - **Approval Mode:** pre-approved (owner, 2026-09-08)
 - **Execution limits (owner):** ≤ 1 Reviewer round per task; targeted `npx jest <path>`; `npx ng lint --quiet`; CT on every task (the page host changes); verification in the **foreground**; Leader real-page look after T-1 and T-2 (Orca `eval` must be up, or owner screenshots)
 - **Budget (design §12):** 3 tasks · ~650 source LOC · ~800 test LOC · tripwire > 1000 source or any third attempt; ≤ 1 Reviewer round per task under the scoped re-review protocol
-- **Status:** in-progress (2026-09-08)
+- **Status:** done (2026-09-08) — all tasks `[x]`; owner visual sign-off pending (see `execution.md` Summary)
 
 ## 2. Pre-flight
 
@@ -48,6 +48,7 @@
 
 ### `BRV-T-3` — CT closure, guide, HITL evidence
 
+- [x] **Status:** PASS on attempt 2 (2026-09-08, `execution.md`; owner sign-off pending)
 - **Type:** `tests` + `docs`
 - **Description:** Any CT gate not yet written by T-1/T-2; guide update (`pages/bilateral-review/CLAUDE.md` ≤ 150: viewport lock + pinned chrome contract, `scroll-margin-top`, Alignment column, status pairs, accent, center column rule, the host-static RED probe, `documentElement` scroll holds only in CT); `DESIGN-DEVIATIONS.md` entry for the pinned-chrome divergence from sibling tabs; Leader records before/after and the contrast matrix.
 - **Implements:** AC-11, AC-12; guide

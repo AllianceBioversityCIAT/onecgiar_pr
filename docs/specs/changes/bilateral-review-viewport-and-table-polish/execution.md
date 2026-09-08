@@ -120,3 +120,74 @@ Sweep check (04:04): `779d55fbe` touched 0 files under `pages/bilateral-review/`
 | Issues | Owner saw the transient `TS2339 copy.headers.indicator` compile error mid-task (copy updated before the template) — expected in-flight state, resolved within the task. |
 | Gate | auto-approved (pre-approved mode) |
 
+### `BRV-T-3` — CT closure, guide, HITL evidence
+
+| Field | Value |
+|---|---|
+| Status | in progress (attempt 1 — Implementer spawned 05:02, fresh worker) |
+| Date | 2026-09-08 |
+| Gate before start | auto-approved (pre-approved mode) after T-2 PASS; another session's commit `406284a06` (`lab-report-form`) landed between — outside this module |
+| Skills assigned | `angular-developer`, `cognitive-doc-design` (task list) |
+| Effort | medium |
+
+**Attempt 1 — Implementer report (05:13):** `bilateral-review.cy.ts` +39 (one describe, two cases: flat view keeps the center column with `?group=center` / grouped hides it — RED-verified by forcing `showCenterColumn()` true → `expected 7 to equal 6`, reverted), `CLAUDE.md` rewritten 130 → **149** lines, `DESIGN-DEVIATIONS.md` entry #16. CT `51 passing` · lint clean. No `Not Done`. Reviewer (opus, lens checklist, high) spawned 05:15 on the 3-file diff (298 lines, `v3.diff`).
+
+**Attempt 1 — Reviewer verdict (05:22): `STATUS: FAIL`**, 1 issue (docs only). Verified green: the new CT cases measure header counts from the DOM, drive the real Group control, cover AC-7 and AC-7b, and are fallible; guide 149 lines with every code claim true (host class, SCSS depth, `.custom_scroll tr`, 7/6 columns, three `colspan` sites, `!p-0 !border-b-0`, cards bar without `border-0`, hover tone, fixed pairs); no stale sentence survived.
+
+| # | Discovered Issue | Violated Rule | Remediation |
+|---|---|---|---|
+| 1 | Guide and deviation #16 say "the stat bar and center strip are NOT pinned" — the strip lives inside the filter band, inside the pinned wrapper; only the stat bar and rows are outside | R-2, §4, design §6.1, DD-2, T-3 Description, client `CLAUDE.md` §19 | Two sentences corrected: stat bar not pinned; strip pinned (cap holds with the row collapsed) |
+
+**ADVISORY (recorded → follow-ups):** `bilateral-review.component.ts:892` comment says the SCSS fallback is 130 (SCSS is 142); `.html:21` names the wrapper `#bilateral-review-pinned` (id-style wording for a `data-testid` — the very trap the guide documents); the `**Verified:**` stamp is one unwrapped line; 149 lines vs the repo's 120 folder-doc cap (archive reconciliation, already recorded); badge helper is `groupPendingBadgeClass()` (**Leader added** the naming fix).
+
+**Leader relay (05:24):** FAIL report verbatim + the naming fix to the same Implementer. **Attempt 2.**
+
+**Attempt 2 — Implementer landed (05:30):** guide and deviation #16 corrected (stat bar not pinned; strip pinned as part of the band; cap holds with the row collapsed; line cites), badge helper named `groupPendingBadgeClass()`; lint clean; guide **148** lines. Scoped re-review sent to the same Reviewer (05:32) with the full diff + a 33-line interdiff.
+
+**Attempt 2 — Reviewer verdict (05:36): `STATUS: PASS`.** "Both false sentences are fixed at the root, not softened … Every cited line number checks out against the working tree … Nothing else moved."
+
+**Final — `BRV-T-3` PASS on attempt 2 (2026-09-08 05:38)**
+
+| Field | Value |
+|---|---|
+| Attempts | 2 (attempt 1 FAIL on two false doc sentences) |
+| Files | `bilateral-review.cy.ts` (+39, 49 → 51 cases), `pages/bilateral-review/CLAUDE.md` (148 lines), `onecgiar-pr-client/docs/DESIGN-DEVIATIONS.md` (entry #16) |
+| Verification | CT `51 passing`; lint clean; guide 148 ≤ 150 |
+| Requirements covered | AC-7, AC-7b, AC-12; guide; deviation record for R-2's divergence |
+| Decisions | Guide cap 150 (approved) over the repo's 120 — archive reconciliation (carried from `BRP`) |
+| Issues | Two out-of-scope leftovers recorded as follow-ups: `.ts:892` comment says 130 (SCSS is 142); `.html:21` calls the wrapper `#bilateral-review-pinned` (id-style wording for a `data-testid`) |
+| Gate | auto-approved (pre-approved mode) |
+
+## Summary
+
+All three tasks `[x]` with Reviewer PASS evidence (2026-09-08 02:52 → 05:40, ~2 h 50 min).
+
+| Task | Attempts | Reviewer rounds | Live look | Commit |
+|---|---|---|---|---|
+| BRV-T-1 lock + pinned chrome | 2 | FAIL → scoped PASS | #1 + re-check ✅ | `609fc73f8` |
+| BRV-T-2 table pairs / columns / accent / label | 2 | FAIL → scoped PASS | #2 ✅ | `f441e748a` |
+| BRV-T-3 CT + guide + deviation | 2 | FAIL → scoped PASS | — | (this commit) |
+
+**Budget tally (design §12 vs actual, `git diff --numstat 43ed79530..HEAD -- pages/bilateral-review docs/DESIGN-DEVIATIONS.md`):**
+
+| Number | Estimate | Actual | Delta |
+|---|---|---|---|
+| Source LOC | ~650 | **+272 / −68 (net 204)** | −58 % — the lock is 40 lines; the re-baseline over-corrected for this shape of task (small code, large proof) |
+| Test LOC | ~800 | **+893 / −58** | +12 % — 20 new CT cases incl. a tall fixture and four RED probes |
+| Review rounds | ≤ 1 per task (scoped protocol) | 2, 2, 2 | as declared |
+
+**What the page gained (owner's intent → delivered):** hero, toolbar and filters stay put while the queue scrolls (the shell's viewport lock, missing since `BRT`, now engaged like the other tabs; plus pinned chrome ≤ 150 px with focus-safe scroll margins) · color with meaning (status pairs from the design system on pills and badges, amber 3 px accent on groups with pending rows, primary "Review" where the user can act) · honest columns (Alignment two-line cell instead of 800 px of dashes, one-line lead center hidden when grouping by center, single-line group headers at 40 px instead of 61) · labels that never wrap.
+
+**Defects caught by Reviewers that suites would have shipped:** an inert `#workArea` id selector (third strike in this module), a single-scroller gate without the host assertion, an unproven cards accent under `border-0`, and two false sentences in the guide/deviation. **Live-only findings:** the `scroll-margin-top` no-op (same as the Reviewer's #1), confirmed fixed at `172px`.
+
+**Follow-ups (not new scope):** `.ts:892` stale `130px` comment and `.html:21` `#bilateral-review-pinned` wording (`/akili-quick`) · `columnCount()` hard-codes 7/6 (derive from `copy.headers`) · toolbar match-count badge + drawer raw palette · align sibling tabs to pinned chrome or accept the split (deviation #16) · stat bar pinning (OQ-1) · 120 vs 150 folder-doc cap · `?phase=` cross-tab collision (from `BRC`).
+
+**Kaizen signal:** three specs in one day on the same module each shipped the `#workArea`-is-not-an-id trap in a different artifact (CT comment, CT probe, SCSS) before the guide named it — a gotcha discovered by a Reviewer must land in the module guide in the *same* spec, not the next one.
+
+## Constitution Impact: BRV-T-1..T-3
+
+- **Module reshaped:** `pages/bilateral-review/` is now a viewport-lock adopter (`host: { class: 'pr-viewport-page' }` + SCSS mixin) — the fourth after `dashboard-lab`, `programme-results`, `my-work-board`; `docs/trd/trd.md` / `docs/ux-ui/design.md` §10 should list it (archive sync). Pinned chrome inside the work area is a new pattern, recorded in `DESIGN-DEVIATIONS.md` #16.
+- **Public surface:** `data-testid`s `bilateral-review-pinned`, `bilateral-review-row-alignment`, `bilateral-review-row-center`; CSS var `--brv-pinned-h`; `copy.table.headers.alignment` (replaces `toc`/`indicator`); table inputs unchanged.
+- **Baseline docs:** `docs/ux-ui/design.md` §7 should state that `--pr-focus-ring` is a box-shadow token and that `--pr-color-*-100` are saturated mid-tones (two traps hit this week); `docs/ux-ui/design.md` §10 gains the pinned-chrome pattern or the deviation pointer.
+- **Parent guide index:** `onecgiar-pr-client/src/CLAUDE.md` `## Module Guides` pointer to `pages/bilateral-review/CLAUDE.md` still pending (default-branch apply).
+- **CodeGraph re-index pending** (`codegraph sync`).

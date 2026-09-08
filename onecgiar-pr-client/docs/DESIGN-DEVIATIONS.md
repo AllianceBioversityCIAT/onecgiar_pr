@@ -240,3 +240,26 @@ the code disagree on tab count, that is an open item to raise with the owner —
   pre-existing glyph may reduce the mix. Added 2026-09-08; corrected 2026-09-08 after Reviewer
   BRP-T-4 attempt-1 FAIL (the first version of this entry stated a region split the working tree
   does not have).
+
+## 16. Bilateral review: pins toolbar + filter band, not just the band — sibling tabs pin less
+
+- **Design says:** the shared viewport-lock pattern (`SAV-DD-1`) pins only the programme band
+  inside `#workArea` — `programme-results.component.html:39-43` ("filter row, counters and table
+  all scroll together") and `my-work-board.component.html:61-63` ("explainer, toolbar and the board
+  all scroll together") both keep their OWN toolbar/filter chrome scrolling with the rows; only the
+  band (rendered above `#workArea`) stays visible.
+- **We do:** Bilateral review pins its **toolbar AND filter band** together, inside `#workArea`, in
+  a dedicated `data-testid="bilateral-review-pinned"` wrapper (`min-[900px]:sticky
+  min-[900px]:top-0 min-[900px]:z-[15]`, ≤ 150px at 1536). The stat bar is left scrolling with the
+  rows (`BRV-OQ-1`); the center strip travels with the pin because it is part of the filter band
+  (`bilateral-review.component.html:423-430`, inside the wrapper that opens at `:29-32` and closes
+  at `:433`) — only the stat bar and rows area diverge from the pin.
+- **Why:** owner request, 2026-09-08 ("el hero y los filtros no deberían moverse") — named the
+  filters explicitly, not just the band. `BRV-R-2`/`BRV-DD-2` scope the pin to toolbar + filter
+  band only (capped, so it costs at most 150px of rows on every scroll position) rather than
+  matching the siblings' narrower pin.
+- 🛑 Do not "fix" this by trimming Bilateral review's pin back to band-only to match the siblings —
+  the owner asked for more here, not less. The follow-up is the other direction: align
+  `programme-results`/`my-work-board` to this wider pin, or accept the split as permanent
+  (`docs/specs/changes/bilateral-review-viewport-and-table-polish/design.md` §13). Added
+  2026-09-08.

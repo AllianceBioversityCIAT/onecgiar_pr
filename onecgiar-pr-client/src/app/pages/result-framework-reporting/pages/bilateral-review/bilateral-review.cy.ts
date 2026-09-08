@@ -1271,6 +1271,45 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
     });
   });
 
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-3, R-4, R-9 (a), AC-7,
+  // AC-7b) — T-2's CT coverage proved the merged Alignment header and the raw-palette ban, but
+  // never exercised the OTHER column-count branch this task's brief names: `showCenterColumn()` =
+  // `!(groupMode() === 'center' && view() === 'grouped')` — the lead-center column's presence
+  // differs by MODE, not just by fixture shape. Jest already proves the arithmetic
+  // (`columnCount()`, every real `colspan` site) in both modes with a mocked signal — this CT
+  // proves the SAME branch renders correctly once Angular actually swaps the `@if` block, driven
+  // through the real toolbar controls (`bilateral-review-group-mode-center`, the "All results"
+  // tab), not a query-param mock.
+  describe('Column presence — grouped-by-center vs flat view (BRV-T-3, R-4, R-9 (a), AC-7, AC-7b)', () => {
+    beforeEach(() => {
+      cy.viewport(1536, 900);
+      mountPage();
+      waitForLoad();
+      assertEffectiveWidth('1536 (column presence, group=center)', 1536);
+    });
+
+    it('BRV-AC-7: grouping by center in the GROUPED view hides the lead-center column — 6 headers, group header colspan=6', () => {
+      byTestId('bilateral-review-group-mode-center').click();
+      cy.get('thead th').should($ths => {
+        const texts = Array.from($ths).map(th => th.textContent?.trim());
+        expect(texts.length, `6 headers once grouped by center: ${JSON.stringify(texts)}`).to.eq(6);
+        expect(texts, `no "Lead center" header rendered: ${JSON.stringify(texts)}`).to.not.include('Lead center');
+      });
+      cy.get('[data-testid="bilateral-review-group-toggle"]').first().closest('td').should('have.attr', 'colspan', '6');
+    });
+
+    it('BRV-AC-7b: the SAME grouping, but the FLAT view, keeps the lead-center column — 7 headers, 7 cells on a real row', () => {
+      byTestId('bilateral-review-group-mode-center').click();
+      cy.contains('[role="tab"]', 'All results').click();
+      cy.get('[data-testid="bilateral-review-flat-table"] thead th').should($ths => {
+        const texts = Array.from($ths).map(th => th.textContent?.trim());
+        expect(texts.length, `7 headers in the flat view even with group=center: ${JSON.stringify(texts)}`).to.eq(7);
+        expect(texts, `"Lead center" header still renders: ${JSON.stringify(texts)}`).to.include('Lead center');
+      });
+      cy.get('[data-testid="bilateral-review-flat-table"] tbody tr').first().find('td').should('have.length', 7);
+    });
+  });
+
   // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-6, AC-9) — group
   // header 3px accent + single-line label, measured in BOTH modes the header renders in: the
   // grouped table (>= 900px) and the grouped cards bar (< 900px, "cards' group bars carry the
