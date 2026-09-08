@@ -15,7 +15,7 @@ export const RESULT_DETAIL_BACK_LABEL = 'Back to results';
 
 /**
  * Programme Results tab only — `/entity-details/:code/results`.
- * Must not match the sibling `results-review` route.
+ * Must not match the sibling `bilateral-review` route.
  */
 export function isProgrammeResultsTab(url: string): boolean {
   return /\/entity-details\/[^/?#]+\/results(?:[/?#]|$)/.test(url);
@@ -24,6 +24,12 @@ export function isProgrammeResultsTab(url: string): boolean {
 /** My Results tab — `/entity-details/:code/my-work`. */
 export function isMyResultsTab(url: string): boolean {
   return /\/entity-details\/[^/?#]+\/my-work(?:[/?#]|$)/.test(url);
+}
+
+// @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-DD-5)
+/** Bilateral review tab — `/entity-details/:code/bilateral-review` (renamed from `results-review`). */
+export function isBilateralReviewTab(url: string): boolean {
+  return /\/entity-details\/[^/?#]+\/bilateral-review(?:[/?#]|$)/.test(url);
 }
 
 export function isResultDetailUrl(url: string): boolean {
@@ -37,7 +43,11 @@ export function isResultsCenterList(url: string): boolean {
 /**
  * Reporting tab only — `/entity-details/:code` (or `/result-framework-reporting/entity-details/:code`).
  * Matches the root of entity-details with optional query parameters.
- * Excludes sibling tabs: `/results`, `/my-work`, `/overview`, `/results-review`.
+ * Excludes sibling tabs: `/results`, `/my-work`, `/overview`, `/bilateral-review`.
+ * // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-17, BRT-DD-5)
+ * The `isBilateralReviewTab` exclusion below is defensive, not load-bearing (judgment-day JB-12):
+ * the closing regex already requires the URL to end at `:code`, so it already rejects any
+ * `/entity-details/:code/<segment>` URL, `bilateral-review` included. Kept for readability/intent.
  */
 export function isReportingTab(url: string): boolean {
   if (!url) return false;
@@ -45,7 +55,7 @@ export function isReportingTab(url: string): boolean {
     isProgrammeResultsTab(url) ||
     isMyResultsTab(url) ||
     url.includes('/overview') ||
-    url.includes('/results-review')
+    isBilateralReviewTab(url)
   ) {
     return false;
   }

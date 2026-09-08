@@ -15,7 +15,6 @@ import { GlobalParameterRepository } from '../../global-parameter/repositories/g
 import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
 import { VersioningService } from '../../versioning/versioning.service';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
-import { SocketManagementService } from '../../../shared/microservices/socket-management/socket-management.service';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { NotificationService } from '../../notification/notification.service';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
@@ -25,6 +24,11 @@ describe('ShareResultRequestService', () => {
 
   const mockShareResultRequestRepository = {
     find: jest.fn(),
+    save: jest.fn(),
+    update: jest.fn(),
+  };
+  const mockNotificationService = {
+    emitResultNotification: jest.fn(),
   };
   const mockResultsTocResultRepository = {
     getContributionReviewTocByResultAndInitiative: jest.fn(),
@@ -56,7 +60,7 @@ describe('ShareResultRequestService', () => {
         },
         {
           provide: NotificationService,
-          useValue: { emitResultNotification: jest.fn() },
+          useValue: mockNotificationService,
         },
         { provide: ResultByInitiativesRepository, useValue: {} },
         {
@@ -76,7 +80,6 @@ describe('ShareResultRequestService', () => {
         { provide: UserNotificationSettingRepository, useValue: {} },
         { provide: VersioningService, useValue: {} },
         { provide: UserRepository, useValue: {} },
-        { provide: SocketManagementService, useValue: {} },
       ],
     }).compile();
 
@@ -190,6 +193,57 @@ describe('ShareResultRequestService', () => {
       expect(
         mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative,
       ).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // P2-3430 (2026-09-08). A contribution request is its own durable in-app notification: the bell
+  // merges pending received requests into the pop-up (`getReceivedResultRequestPopUp`) and the
+  // Requests tab lists them. Writing a `notification` row here as well would show the same request
+  // twice, so creating requests must persist the request and mail — and emit nothing else.
+  describe('saveShareResultRequests (P2-3430)', () => {
+    it('persists the requests, mails the programme, and emits no notification row', async () => {
+      const sendEmails = jest
+        .spyOn(service as any, 'sendEmailsForShareRequests')
+        .mockResolvedValue(undefined);
+      mockShareResultRequestRepository.save.mockResolvedValue([]);
+      mockShareResultRequestRepository.update.mockResolvedValue(undefined);
+
+      const fresh = { shared_inititiative_id: 42, request_status_id: 1 } as any;
+      const existing = {
+        share_result_request_id: 9,
+        shared_inititiative_id: 43,
+        request_status_id: 1,
+        is_active: true,
+      } as any;
+
+      await (service as any).saveShareResultRequests(
+        [fresh, existing],
+        'email_template_contribution',
+        500,
+        user,
+      );
+
+      expect(mockShareResultRequestRepository.save).toHaveBeenCalledWith([
+        fresh,
+      ]);
+      expect(mockShareResultRequestRepository.update).toHaveBeenCalledWith(
+        9,
+        expect.objectContaining({ request_status_id: 1, is_active: true }),
+      );
+      expect(sendEmails).toHaveBeenCalledWith(
+        [fresh, existing],
+        user,
+        500,
+        'email_template_contribution',
+      );
+      expect(
+        mockNotificationService.emitResultNotification,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('no longer knows about the socket push that had no caller', () => {
+      expect((service as any).sendSocketNotification).toBeUndefined();
+      expect((service as any)._socketManagementService).toBeUndefined();
     });
   });
 });

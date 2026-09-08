@@ -68,15 +68,28 @@
           [attr.data-row-key]="rowKey(row)"
           [class]="highlightedRowKey() === rowKey(row) ? 'ring-2 ring-inset ring-[var(--pr-color-primary-300)]' : ''"
           [attr.aria-label]="row.indicator_description"
-          (click)="openRow.emit(row)"
+          (click)="onRowClick(row, $event)"
           (keydown.enter)="openRow.emit(row)">
           <!-- 1 — indicator + its name -->
           <td class="pr-flat-cell">
-            <div class="flex min-w-0 flex-col">
+            <div class="flex min-w-0 flex-col group/title">
               <p
-                class="m-0 text-[13.5px] font-semibold leading-[1.45] text-[var(--pr-text-heading)] [text-wrap:pretty]"
+                class="m-0 text-[13.5px] font-semibold leading-[1.45] text-[var(--pr-text-heading)] [text-wrap:pretty] cursor-text select-text"
                 [class.pr-clamp-2]="!isTitleExpanded(row.indicator_id)"
-                [innerHTML]="row.indicator_description | highlightSearch: search()">
+                (click)="$event.stopPropagation()">
+                <span [innerHTML]="row.indicator_description | highlightSearch: search()"></span>
+                <button
+                  type="button"
+                  class="inline-flex h-[18px] w-[18px] ml-[6px] -mt-[2px] align-middle shrink-0 appearance-none items-center justify-center rounded-[3px] border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] opacity-0 group-hover/title:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text-heading)] cursor-pointer"
+                  [class.opacity-100]="isJustCopied(rowKey(row))"
+                  aria-label="Copy indicator title"
+                  [prTooltip]="isJustCopied(rowKey(row)) ? 'Copied!' : 'Copy title'"
+                  prTooltipPosition="top"
+                  (click)="copyIndicatorText(row, $event)">
+                  <span class="material-icons-round text-[13px]" [class.text-emerald-600]="isJustCopied(rowKey(row))">
+                    {{ isJustCopied(rowKey(row)) ? 'check' : 'content_copy' }}
+                  </span>
+                </button>
               </p>
               @if (needsShowMore(row)) {
                 <button
@@ -234,6 +247,14 @@
                     type="button"
                     role="menuitem"
                     class="pr-row-menu_item"
+                    (click)="runFromMenu(copyIndicatorAction, row, $event)">
+                    <span class="material-icons-round text-[15px] text-[var(--pr-text-subtle)] mr-[6px]">content_copy</span>
+                    <span>Copy indicator title</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    class="pr-row-menu_item"
                     [class.pr-row-menu_item--disabled]="!canCopyLink(row)"
                     [disabled]="!canCopyLink(row)"
                     [attr.aria-disabled]="!canCopyLink(row) ? 'true' : null"
@@ -300,7 +321,7 @@
           [class.border-b]="aowOpen"
           [class.border-[var(--pr-border-divider)]]="aowOpen"
           [attr.aria-expanded]="aowOpen"
-          (click)="toggle(aowKey, isDefaultOpenAow(group.aow.code))">
+          (click)="toggle(aowKey, isDefaultOpenAow(group.aow.code), $event)">
           <ng-icon
             name="lucideChevronDown"
             class="shrink-0 text-[16px] text-[var(--pr-text-secondary)] transition-transform duration-200"
@@ -315,10 +336,23 @@
             </span>
 
             <span
-              class="min-w-0 truncate text-[15px] font-bold text-[var(--pr-text-heading)]"
+              class="min-w-0 truncate text-[15px] font-bold text-[var(--pr-text-heading)] cursor-text select-text"
               [title]="group.aow.name"
+              (click)="$event.stopPropagation()"
               [innerHTML]="group.aow.name | highlightSearch: search()">
             </span>
+
+            <button
+              type="button"
+              class="flex h-[20px] w-[20px] shrink-0 appearance-none items-center justify-center rounded-[4px] border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] transition-colors hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text-heading)] cursor-pointer"
+              aria-label="Copy Area of Work name"
+              [prTooltip]="isJustCopied(aowKey) ? 'Copied!' : 'Copy name'"
+              prTooltipPosition="top"
+              (click)="copyAow(group, $event)">
+              <span class="material-icons-round text-[14px]" [class.text-emerald-600]="isJustCopied(aowKey)">
+                {{ isJustCopied(aowKey) ? 'check' : 'content_copy' }}
+              </span>
+            </button>
 
             <!-- ⓘ — a real disclosure, not a hover that repeats the name printed to its left. -->
             <span class="relative flex shrink-0 items-center">
@@ -337,9 +371,20 @@
                   aria-label="About this group"
                   (click)="$event.stopPropagation()">
                   <div class="mb-[8px] flex items-center gap-[8px]">
-                    <span class="flex-1 text-[14px] font-semibold text-[var(--pr-text-heading)]">
+                    <span class="flex-1 text-[14px] font-semibold text-[var(--pr-text-heading)] cursor-text select-text">
                       {{ headerChip(group) }} · {{ group.aow.name }}
                     </span>
+                    <button
+                      type="button"
+                      class="flex h-[22px] w-[22px] appearance-none items-center justify-center rounded-[4px] border-0 bg-transparent p-0 text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle)] cursor-pointer"
+                      aria-label="Copy Area of Work name"
+                      [prTooltip]="isJustCopied(aowKey) ? 'Copied!' : 'Copy name'"
+                      prTooltipPosition="top"
+                      (click)="copyAow(group, $event)">
+                      <span class="material-icons-round text-[14px]" [class.text-emerald-600]="isJustCopied(aowKey)">
+                        {{ isJustCopied(aowKey) ? 'check' : 'content_copy' }}
+                      </span>
+                    </button>
                     <button
                       type="button"
                       class="flex h-[24px] w-[24px] appearance-none items-center justify-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle)]"
@@ -671,7 +716,7 @@
                         [class.border-slate-200/80]="isOpen(hlo.key, defaultOpen)"
                         [class.border-b-0]="!isOpen(hlo.key, defaultOpen)"
                         [attr.aria-expanded]="isOpen(hlo.key, defaultOpen)"
-                        (click)="toggle(hlo.key, defaultOpen)">
+                        (click)="toggle(hlo.key, defaultOpen, $event)">
                         <!-- Left identity zone -->
                         <div class="flex items-center gap-3 min-w-0 flex-1">
                           <!-- Rotating chevron in white button box -->
@@ -693,10 +738,23 @@
 
                           <!-- HLO title -->
                           <h3
-                            class="m-0 min-w-0 truncate text-[13.5px] font-bold text-slate-900 tracking-tight"
+                            class="m-0 min-w-0 truncate text-[13.5px] font-bold text-slate-900 tracking-tight cursor-text select-text"
                             [title]="hlo.name"
+                            (click)="$event.stopPropagation()"
                             [innerHTML]="hlo.name | highlightSearch: search()">
                           </h3>
+
+                          <button
+                            type="button"
+                            class="flex h-[20px] w-[20px] shrink-0 appearance-none items-center justify-center rounded-[4px] border-0 bg-transparent p-0 text-slate-400 transition-colors hover:bg-slate-200/60 hover:text-slate-700 cursor-pointer"
+                            aria-label="Copy HLO title"
+                            [prTooltip]="isJustCopied(hlo.key) ? 'Copied!' : 'Copy title'"
+                            prTooltipPosition="top"
+                            (click)="copyHlo(hlo, tax, $event)">
+                            <span class="material-icons-round text-[14px]" [class.text-emerald-600]="isJustCopied(hlo.key)">
+                              {{ isJustCopied(hlo.key) ? 'check' : 'content_copy' }}
+                            </span>
+                          </button>
                         </div>
 
                         <!-- Right zone mini-KPI metrics -->
@@ -806,7 +864,7 @@
     [class.ring-[var(--pr-color-primary-300)]]="highlightedRowKey() === rowKey(row)"
     [class.bg-[var(--pr-color-primary-50)]]="highlightedRowKey() === rowKey(row)"
     [attr.aria-label]="row.indicator_description"
-    (click)="openRow.emit(row)"
+    (click)="onRowClick(row, $event)"
     (keydown.enter)="openRow.emit(row)"
     (keydown.space)="openRow.emit(row)">
     <!-- 1 — concentric bullseye -->
@@ -823,11 +881,24 @@
     </span>
 
     <!-- 2 — title + optional Show more + indicator-name meta -->
-    <div class="flex min-w-0 flex-col">
+    <div class="flex min-w-0 flex-col group/title">
       <p
-        class="m-0 text-[12.5px] font-medium leading-[1.35] text-[var(--pr-text-heading)] [text-wrap:pretty] group-hover:text-[var(--pr-color-primary-600)] transition-colors"
+        class="m-0 text-[12.5px] font-medium leading-[1.35] text-[var(--pr-text-heading)] [text-wrap:pretty] group-hover:text-[var(--pr-color-primary-600)] transition-colors cursor-text select-text"
         [class.pr-clamp-2]="!isTitleExpanded(row.indicator_id)"
-        [innerHTML]="row.indicator_description | highlightSearch: search()">
+        (click)="$event.stopPropagation()">
+        <span [innerHTML]="row.indicator_description | highlightSearch: search()"></span>
+        <button
+          type="button"
+          class="inline-flex h-[18px] w-[18px] ml-[6px] -mt-[2px] align-middle shrink-0 appearance-none items-center justify-center rounded-[3px] border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] opacity-0 group-hover/title:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text-heading)] cursor-pointer"
+          [class.opacity-100]="isJustCopied(rowKey(row))"
+          aria-label="Copy indicator title"
+          [prTooltip]="isJustCopied(rowKey(row)) ? 'Copied!' : 'Copy title'"
+          prTooltipPosition="top"
+          (click)="copyIndicatorText(row, $event)">
+          <span class="material-icons-round text-[13px]" [class.text-emerald-600]="isJustCopied(rowKey(row))">
+            {{ isJustCopied(rowKey(row)) ? 'check' : 'content_copy' }}
+          </span>
+        </button>
       </p>
       @if (needsShowMore(row)) {
         <button
@@ -1036,6 +1107,14 @@
           </button>
           <button type="button" role="menuitem" class="pr-row-menu_item" (click)="runFromMenu(openTarget, row, $event)">
             Target details
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            class="pr-row-menu_item"
+            (click)="runFromMenu(copyIndicatorAction, row, $event)">
+            <span class="material-icons-round text-[15px] text-[var(--pr-text-subtle)] mr-[6px]">content_copy</span>
+            <span>Copy indicator title</span>
           </button>
           <button
             type="button"

@@ -15,7 +15,7 @@ import { ResultLevelService } from '../../../results/pages/result-creator/servic
 import { SPProgress, Status } from '../../../../shared/interfaces/SP-progress.interface';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { Unit } from '../entity-details/interfaces/entity-details.interface';
-import { ResultToReview } from '../bilateral-results/components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
+import { ResultToReview } from '../bilateral-review/components/result-review-drawer/result-review-drawer.interfaces';
 
 // `DashboardLabComponent` imports `ProgramOverviewComponent`, which (since `OVW-T-3`) imports the
 // real `PrVizChartComponent` → real `echarts/core` — an ESM package Jest cannot parse without a
@@ -2255,6 +2255,24 @@ describe('DashboardLabComponent — Where-to-report return tab (MWB-T-8)', () =>
 
     expect(navigate).toHaveBeenCalledWith([], expect.objectContaining({ queryParams: { whereToReport: null, returnTab: null } }));
   });
+
+  // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-22, BRT-AC-20)
+  it('closeReportModal returns to the Bilateral review tab when returnTab is "bilateral-review"', async () => {
+    const { component, navigate } = await createComponent({ reportEmerging: 'true', returnTab: 'bilateral-review' });
+
+    component.closeReportModal();
+
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP02', 'bilateral-review']);
+  });
+
+  // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-22, BRT-AC-20)
+  it('closeManage returns to the Bilateral review tab when returnTab is "bilateral-review"', async () => {
+    const { component, navigate } = await createComponent({ returnTab: 'bilateral-review' });
+
+    component.closeManage();
+
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP02', 'bilateral-review']);
+  });
 });
 
 // @akili-spec changes/reporting-hierarchical-search-filters (RHSF-T-5)
@@ -2363,7 +2381,7 @@ describe('DashboardLabComponent — URL state synchronization, focus recovery & 
 
     component.plannedBrowseView.set('aows');
     component.plannedSearch.set('rice');
-    component.reportingTypologyFilter.set('Knowledge Product');
+    component.reportingTypologyFilter.set(['Knowledge Product']);
     TestBed.flushEffects();
 
     expect(navigate).toHaveBeenCalledWith(
@@ -2384,7 +2402,7 @@ describe('DashboardLabComponent — URL state synchronization, focus recovery & 
 
     // 1) Test restorePlannedBrowseFromQuery hydration
     component.plannedSearch.set('');
-    component.reportingTypologyFilter.set('all');
+    component.reportingTypologyFilter.set([]);
 
     const searchSetSpy = jest.spyOn(component.plannedSearch, 'set');
     const typSetSpy = jest.spyOn(component.reportingTypologyFilter, 'set');
@@ -2399,10 +2417,10 @@ describe('DashboardLabComponent — URL state synchronization, focus recovery & 
     (component as any).restorePlannedBrowseFromQuery(qp);
 
     expect(component.plannedSearch()).toBe('climate');
-    expect(component.reportingTypologyFilter()).toBe('Innovation Development');
+    expect(component.reportingTypologyFilter()).toEqual(['Innovation Development']);
     expect((component as any).pendingKpi).toBe('101');
     expect(searchSetSpy).toHaveBeenCalledWith('climate');
-    expect(typSetSpy).toHaveBeenCalledWith('Innovation Development');
+    expect(typSetSpy).toHaveBeenCalledWith(['Innovation Development']);
 
     // Repeated call with identical parameters must NOT invoke signal setters (inequality guard prevents reactive loop)
     searchSetSpy.mockClear();
@@ -2433,9 +2451,9 @@ describe('DashboardLabComponent — URL state synchronization, focus recovery & 
     qpSubject.next(changedQp);
 
     expect(searchSetSpy).toHaveBeenCalledWith('policy');
-    expect(typSetSpy).toHaveBeenCalledWith('Policy Change');
+    expect(typSetSpy).toHaveBeenCalledWith(['Policy Change']);
     expect(component.plannedSearch()).toBe('policy');
-    expect(component.reportingTypologyFilter()).toBe('Policy Change');
+    expect(component.reportingTypologyFilter()).toEqual(['Policy Change']);
     expect((component as any).pendingKpi).toBe('202');
   });
 

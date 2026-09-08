@@ -5,7 +5,7 @@ import { RetrieveModalService } from '../../../../../result-detail/components/re
 import { ResultLevelService } from '../../../../../result-creator/services/result-level.service';
 import { finalize } from 'rxjs/operators';
 import { Router } from '@angular/router';
-import { BilateralResultsService } from '../../../../../../../result-framework-reporting/pages/bilateral-results/bilateral-results.service';
+import { BilateralResultsService } from '../../../../../../../result-framework-reporting/pages/bilateral-review/services/bilateral-results.service';
 
 // P2-3085: shape of each ToC contribution review entry (backend contract, P2-3086).
 export interface TocContributionReview {
@@ -362,8 +362,9 @@ export class NotificationItemComponent {
     return this.notification?.obj_result?.status_id == 2 && this.notification?.request_status_id == 1;
   }
 
+  // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-17)
   navigateToResult(notification) {
-    const url = `/result-framework-reporting/entity-details/${this.requesterCode}/results-review`;
+    const url = `/result-framework-reporting/entity-details/${this.requesterCode}/bilateral-review`;
 
     this.bilateralResultsService.currentResultToReview.set(notification?.obj_result);
 

@@ -1,7 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { isReportingTab, RESULT_DETAIL_ORIGIN_STORAGE_KEY, SmartNavigationService } from './smart-navigation.service';
+import {
+  isBilateralReviewTab,
+  isReportingTab,
+  RESULT_DETAIL_ORIGIN_STORAGE_KEY,
+  SmartNavigationService
+} from './smart-navigation.service';
 
 describe('SmartNavigationService', () => {
   let service: SmartNavigationService;
@@ -70,8 +75,29 @@ describe('SmartNavigationService', () => {
       expect(isReportingTab('/result-framework-reporting/entity-details/SP01/overview')).toBe(false);
       expect(isReportingTab('/results')).toBe(false);
       expect(isReportingTab('/my-work')).toBe(false);
-      expect(isReportingTab('/results-review')).toBe(false);
+      expect(isReportingTab('/bilateral-review')).toBe(false);
       expect(isReportingTab('/results-outlet/results-list')).toBe(false);
+    });
+
+    // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-AC-18)
+    it('returns false for the bilateral review tab and true for the bare program path', () => {
+      expect(isReportingTab('/result-framework-reporting/entity-details/SP02/bilateral-review')).toBe(false);
+      expect(isReportingTab('/result-framework-reporting/entity-details/SP02')).toBe(true);
+    });
+  });
+
+  // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-17, BRT-DD-5)
+  describe('isBilateralReviewTab', () => {
+    it('matches the bilateral review tab with or without query parameters', () => {
+      expect(isBilateralReviewTab('/result-framework-reporting/entity-details/SP02/bilateral-review')).toBe(true);
+      expect(isBilateralReviewTab('/result-framework-reporting/entity-details/SP02/bilateral-review?center=12')).toBe(
+        true
+      );
+    });
+
+    it('does not match sibling tabs or the bare program path', () => {
+      expect(isBilateralReviewTab('/result-framework-reporting/entity-details/SP02')).toBe(false);
+      expect(isBilateralReviewTab('/result-framework-reporting/entity-details/SP02/my-work')).toBe(false);
     });
   });
 
@@ -258,7 +284,7 @@ describe('SmartNavigationService', () => {
     const myResults = '/result-framework-reporting/entity-details/SP01/my-work?phase=Reporting%202026';
     const resultsCenter = '/result/results-outlet/results-list?phase=36';
     const overview = '/result-framework-reporting/entity-details/SP12/overview';
-    const resultsReview = '/result-framework-reporting/entity-details/SP12/results-review';
+    const bilateralReview = '/result-framework-reporting/entity-details/SP12/bilateral-review';
     const reportingOrigin = '/result-framework-reporting/entity-details/SP02?tocView=aows&q=rice&typ=kp&kpi=101';
 
     it('returns the Science Program Results tab when that is the first non-detail origin', () => {
@@ -312,8 +338,8 @@ describe('SmartNavigationService', () => {
       expect(service.getResultDetailBackTarget(detail).url).toBe('/result/results-outlet/results-list');
     });
 
-    it('does not treat results-review as the programme Results tab', () => {
-      service.recordUrl(resultsReview);
+    it('does not treat bilateral-review as the programme Results tab', () => {
+      service.recordUrl(bilateralReview);
       service.recordUrl(detail);
 
       expect(service.getResultDetailBackTarget(detail).url).toBe('/result/results-outlet/results-list');

@@ -244,4 +244,58 @@ describe('BilateralProjectsPanelComponent', () => {
     expect(component.searchQuery()).toBe('');
     expect(fixture.nativeElement.querySelectorAll('.bpp_card').length).toBe(3);
   });
+
+  describe('BSA-T-2: Viewport-Locked Scroller, Docked Toolbar & Skeleton', () => {
+    it('should render docked toolbar above #workArea scroller (BSA-R-4, BSA-R-5, BSA-AC-5, BSA-AC-6)', () => {
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      fixture.detectChanges();
+
+      const hostEl = fixture.nativeElement as HTMLElement;
+      const toolbar = hostEl.querySelector('.bpp_toolbar') as HTMLElement;
+      const workArea = hostEl.querySelector('#workArea') as HTMLElement;
+
+      expect(toolbar).toBeTruthy();
+      expect(toolbar.classList.contains('bpp_toolbar_docked')).toBe(true);
+      expect(toolbar.classList.contains('flex-none')).toBe(true);
+
+      expect(workArea).toBeTruthy();
+      // Verify workArea has overflow-y-auto at >=900px responsive class
+      expect(workArea.className).toContain('min-[900px]:overflow-y-auto');
+      expect(workArea.className).toContain('min-[900px]:flex-1');
+      expect(workArea.className).toContain('min-[900px]:min-h-0');
+      expect(workArea.className).toContain('custom_scroll');
+
+      // Verify toolbar is docked above #workArea in DOM order
+      expect(toolbar.compareDocumentPosition(workArea) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(toolbar.nextElementSibling).toBe(workArea);
+    });
+
+    it('should enclose header, KPI cards, and catalog inside #workArea scroller (BSA-DD-4, BSA-DD-5)', () => {
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      fixture.detectChanges();
+
+      const workArea = fixture.nativeElement.querySelector('#workArea') as HTMLElement;
+      expect(workArea).toBeTruthy();
+
+      const header = workArea.querySelector('.bpp_header');
+      const kpiSection = workArea.querySelector('.bpp_kpi_section');
+      const catalogHeader = workArea.querySelector('.bpp_catalog_header');
+
+      expect(header).toBeTruthy();
+      expect(kpiSection).toBeTruthy();
+      expect(catalogHeader).toBeTruthy();
+    });
+
+    it('should render modern skeleton loading state using .pr-skeleton when loading is true (BSA-R-8, BSA-AC-9)', () => {
+      component.loading.set(true);
+      fixture.detectChanges();
+
+      const skeletonHost = fixture.nativeElement.querySelector('[data-testid="bpp-loading-skeleton"]');
+      expect(skeletonHost).toBeTruthy();
+
+      const skeletons = fixture.nativeElement.querySelectorAll('.pr-skeleton');
+      expect(skeletons.length).toBe(9); // 5 KPI skeleton cards + 4 catalog grid cards
+      expect(fixture.nativeElement.querySelector('.pi-spinner')).toBeNull();
+    });
+  });
 });

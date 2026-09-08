@@ -8,6 +8,9 @@ import { BilateralProjectsPanelComponent } from './components/bilateral-projects
   imports: [BilateralPageHeaderComponent, BilateralProjectsPanelComponent],
   templateUrl: './bilateral-home.component.html',
   styleUrl: './bilateral-home.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    class: 'pr-viewport-page'
+  }
 })
 export class BilateralHomeComponent {}

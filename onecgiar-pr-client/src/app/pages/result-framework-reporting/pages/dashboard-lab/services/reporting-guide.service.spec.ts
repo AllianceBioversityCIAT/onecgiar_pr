@@ -4,7 +4,7 @@ jest.mock('driver.js/dist/driver.css', () => ({}), { virtual: true });
 jest.mock('driver.js', () => ({ driver: jest.fn() }));
 
 import { driver } from 'driver.js';
-import { GuideContext, ReportingGuideService, SP_TOUR_STORAGE_KEY, SpTourOptions, TutorialId } from './reporting-guide.service';
+import { GuideContext, ReportingGuideService, SP_TAB_LABELS, SP_TOUR_STORAGE_KEY, SpTourOptions, TutorialId } from './reporting-guide.service';
 
 const driverMock = driver as unknown as jest.Mock;
 
@@ -337,6 +337,20 @@ describe('ReportingGuideService', () => {
       localStorage.clear();
     });
 
+    // @akili-spec changes/sp-bilateral-review-tab (BRT-T-1) — SpTabId/SP_TAB_LABELS widening.
+    describe('SP_TAB_LABELS (BRT-T-1)', () => {
+      it("includes 'bilateral-review' -> 'Bilateral review' alongside the existing labels", () => {
+        expect(SP_TAB_LABELS['bilateral-review']).toBe('Bilateral review');
+        expect(SP_TAB_LABELS).toEqual({
+          overview: 'Overview',
+          reporting: 'Reporting',
+          results: 'Results',
+          'bilateral-review': 'Bilateral review',
+          'my-work': 'My results'
+        });
+      });
+    });
+
     describe('isSpTourCompleted and resetSpTourState', () => {
       it('returns false initially when no tour flag is stored', () => {
         expect(service.isSpTourCompleted()).toBe(false);
@@ -419,6 +433,19 @@ describe('ReportingGuideService', () => {
         expect(steps[6].popover.description).toContain('Current tab: <strong>Reporting</strong>');
         expect(steps[6].popover.side).toBe('bottom');
         expect(steps[6].popover.align).toBe('end');
+      });
+
+      // @akili-spec changes/sp-bilateral-review-tab (BRT-T-1) — the new tab widens `SpTabId` /
+      // `SP_TAB_LABELS` but must NOT join the tour's step list.
+      it('BRT-T-1: does not add a step for the Bilateral review tab, even when it is the active tab', () => {
+        service.startSpTour({ programName: 'Breeding Resources', cycleYear: 2026, activeTab: 'bilateral-review' as any });
+
+        const steps = lastSteps();
+        expect(steps).toHaveLength(7);
+        expect(steps.some((s: any) => s.element === '[data-guide="tab-bilateral-review-view"]')).toBe(false);
+        // The tour still renders — it just describes the initial tab generically, as it does today
+        // for any activeTab value.
+        expect(steps[0].popover.description).toContain('Current tab: <strong>Bilateral review</strong>');
       });
 
       it('falls back gracefully for missing programName and cycleYear', () => {

@@ -70,7 +70,7 @@ const OVERVIEW_SECTIONS: readonly OverviewSection[] = ['all', 'w1w2', 'bilateral
 function parseOverviewSection(raw: string | null): OverviewSection {
   return raw && (OVERVIEW_SECTIONS as readonly string[]).includes(raw) ? (raw as OverviewSection) : 'all';
 }
-import { ResultToReview } from '../bilateral-results/components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
+import { ResultToReview } from '../bilateral-review/components/result-review-drawer/result-review-drawer.interfaces';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';
@@ -752,7 +752,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
     const returnTab = this.pendingReturnTab || this.route?.snapshot?.queryParamMap?.get('returnTab');
     this.pendingReturnTab = null;
-    if (returnTab === 'results' || returnTab === 'my-work') {
+    // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-22, BRT-AC-20)
+    if (returnTab === 'results' || returnTab === 'my-work' || returnTab === 'bilateral-review') {
       const code = this.selected()?.initiativeCode || this.route?.snapshot?.paramMap?.get('entityId');
       this.router.navigate(['/result-framework-reporting', 'entity-details', code, returnTab]);
     } else if (this.route?.snapshot?.queryParamMap?.get('reportEmerging') === 'true') {
@@ -863,7 +864,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.resultLevelSE.cleanData?.();
     const returnTab = this.pendingReturnTab || this.route?.snapshot?.queryParamMap?.get('returnTab');
     this.pendingReturnTab = null;
-    if (returnTab === 'results' || returnTab === 'my-work') {
+    // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-22, BRT-AC-20)
+    if (returnTab === 'results' || returnTab === 'my-work' || returnTab === 'bilateral-review') {
       const code = this.selected()?.initiativeCode || this.route?.snapshot?.paramMap?.get('entityId');
       this.router.navigate(['/result-framework-reporting', 'entity-details', code, returnTab]);
     } else if (this.route?.snapshot?.queryParamMap?.get('reportEmerging') === 'true') {
@@ -1385,7 +1387,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       const tocView = onPlanned ? this.plannedBrowseView() : null;
       const tocAow = onPlanned && tocView === 'byAow' ? this.plannedHloAowCode() : null;
       const q = onPlanned ? (this.plannedSearch().trim() || null) : (aow && this.indicatorSearch().trim() ? this.indicatorSearch().trim() : null);
-      const typ = onPlanned ? (this.reportingTypologyFilter() !== 'all' ? this.reportingTypologyFilter() : null) : (aow ? (this.typologyFilter() || null) : null);
+      const typVal = this.reportingTypologyFilter();
+      const typ = onPlanned
+        ? (Array.isArray(typVal) ? (typVal.length ? typVal.join(',') : null) : (typVal && typVal !== 'all' ? typVal : null))
+        : (aow ? (this.typologyFilter() || null) : null);
       // ToC-scope filter (`OSF-DD-12`): read here, in the SAME url-mirror effect as every other
       // piece of URL state — a second, independent `router.navigate` effect would race this one
       // (both read the URL's current queryParams before either write lands, so whichever loses the
@@ -2886,8 +2891,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           this.plannedSearch.set(qParam);
         }
         const typParam = qp.get('typ');
-        if (typParam && typParam !== this.reportingTypologyFilter()) {
-          this.reportingTypologyFilter.set(typParam);
+        const typList = typParam ? typParam.split(',').map(s => s.trim()).filter(Boolean) : [];
+        if (!this.arraysEqual(typList, this.reportingTypologyFilter())) {
+          this.reportingTypologyFilter.set(typList);
         }
         const kpiParam = qp.get('kpi');
         if (kpiParam) {
@@ -2960,8 +2966,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       this.plannedSearch.set(qParam);
     }
     const typParam = qp.get('typ');
-    if (typParam && typParam !== this.reportingTypologyFilter()) {
-      this.reportingTypologyFilter.set(typParam);
+    const typList = typParam ? typParam.split(',').map(s => s.trim()).filter(Boolean) : [];
+    if (!this.arraysEqual(typList, this.reportingTypologyFilter())) {
+      this.reportingTypologyFilter.set(typList);
     }
     const kpiParam = qp.get('kpi');
     if (kpiParam) {
@@ -2975,6 +2982,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     queueMicrotask(() => {
       this.restoringPlannedUrl = false;
     });
+  }
+
+  private arraysEqual(a: string[], b: string[]): boolean {
+    if (a === b) return true;
+    if (!a || !b || a.length !== b.length) return false;
+    return a.every((val, idx) => val === b[idx]);
   }
 
   /** Leaving the lab must never strand the shell in focus mode — or leak a timer. */
@@ -3459,19 +3472,22 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    */
   readonly reportingGroups = computed<ReportingAowGroup[]>(() => {
     const aowFilter = this.reportingAowFilter();
-    const typology = this.reportingTypologyFilter();
-    const typeFilter = this.reportingTypeFilter();
+    const typologies = this.reportingTypologyFilter();
+    const typeFilters = this.reportingTypeFilter();
     // Category == `result_type_name` ONLY (Knowledge product, Innovation development, …). The old
     // fallback to `type_name` was wrong: that field carries the indicator's own name ("Proportion of
     // CGIAR-NARS-SME breeding pipelines within…"), so indicators without a result type polluted the
     // filter with 160+ one-off entries.
-    const matchTypology = (i: ReportingIndicator) => typology === 'all' || (i?.result_type_name ?? '').trim() === typology;
+    const noTypology = !typologies || typologies.length === 0;
+    const matchTypology = (i: ReportingIndicator) =>
+      noTypology || typologies.includes((i?.result_type_name ?? '').trim());
     const sp = this.selected()?.initiativeCode;
 
     // Type filter (CURRENT selType) — which top-level card families stay visible.
-    const wantAow = typeFilter === 'all' || typeFilter === 'hlo' || typeFilter === 'outcome';
-    const wantIo = typeFilter === 'all' || typeFilter === 'intermediate_outcome';
-    const wantO30 = typeFilter === 'all' || typeFilter === 'outcome_2030';
+    const noType = !typeFilters || typeFilters.length === 0;
+    const wantAow = noType || typeFilters.includes('hlo') || typeFilters.includes('outcome');
+    const wantIo = noType || typeFilters.includes('intermediate_outcome');
+    const wantO30 = noType || typeFilters.includes('outcome_2030');
 
     // Section filter — a set of AoW codes and/or the two program-level bucket codes. Empty = all.
     const noSection = aowFilter.length === 0;
@@ -3491,15 +3507,19 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
               count: 0,
               loading: false
             };
-            // Type=all → both HLO + outcome tiers (table splits them into CURRENT bands).
+            // Type=all / empty → both HLO + outcome tiers (table splits them into CURRENT bands).
             // Type=hlo / outcome → one tier only.
             const all = bundle.indicators ?? [];
+            const hasHlo = noType || typeFilters.includes('hlo');
+            const hasOutcome = noType || typeFilters.includes('outcome');
             const tierRows =
-              typeFilter === 'outcome'
-                ? all.filter(i => i?.__tier === 'outcome')
-                : typeFilter === 'hlo'
-                  ? all.filter(i => i?.__tier !== 'outcome')
-                  : all;
+              hasHlo && hasOutcome
+                ? all
+                : hasOutcome
+                  ? all.filter(i => i?.__tier === 'outcome')
+                  : hasHlo
+                    ? all.filter(i => i?.__tier !== 'outcome')
+                    : all;
             const rows = tierRows.filter(matchTypology);
             return {
               aow,
@@ -3634,7 +3654,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * `typologyFilter` signals: those are asserted by existing tests and drive a different surface,
    * and sharing them would couple two toolbars that happen to look alike.
    */
-  readonly reportingStatusFilter = signal<string>('all');
+  readonly reportingStatusFilter = signal<string[]>([]);
   readonly reportingViewMode = signal<'grouped' | 'flat'>('grouped');
   /**
    * Band controls (MRF-R-1/R-2): Only-pending toggle + Remaining-work/Catalogue sort, shared by
@@ -3836,9 +3856,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly reportingExpandNonce = signal(0);
   /** Section filter — multi-select like the reference; empty array means "every section". */
   readonly reportingAowFilter = signal<string[]>([]);
-  readonly reportingTypologyFilter = signal<string>('all');
+  readonly reportingTypologyFilter = signal<string[]>([]);
   /** CURRENT selType: all | hlo | outcome | intermediate_outcome | outcome_2030 */
-  readonly reportingTypeFilter = signal<string>('all');
+  readonly reportingTypeFilter = signal<string[]>([]);
 
   /**
    * Toolbar's single Expand all / Collapse all control (P2-3252). One level default, not a per-card
@@ -3877,9 +3897,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     () =>
       !!this.plannedSearch().trim() ||
       this.reportingAowFilter().length > 0 ||
-      this.reportingTypeFilter() !== 'all' ||
-      this.reportingTypologyFilter() !== 'all' ||
-      this.reportingStatusFilter() !== 'all' ||
+      this.reportingTypeFilter().length > 0 ||
+      this.reportingTypologyFilter().length > 0 ||
+      this.reportingStatusFilter().length > 0 ||
       !!this.byAowSelectedCenter() ||
       !!this.byAowSelectedType() ||
       (this.favoritesOnly() && this.plannedBrowseView() === 'aows')
@@ -3889,9 +3909,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   clearReportingFilters(): void {
     this.plannedSearch.set('');
     this.reportingAowFilter.set([]);
-    this.reportingTypeFilter.set('all');
-    this.reportingTypologyFilter.set('all');
-    this.reportingStatusFilter.set('all');
+    this.reportingTypeFilter.set([]);
+    this.reportingTypologyFilter.set([]);
+    this.reportingStatusFilter.set([]);
     this.byAowSelectedCenter.set(null);
     this.byAowSelectedType.set(null);
     // quick/reporting-clear-filters-only-pending (2026-09-04): the band's badge counts Only-pending
@@ -4344,16 +4364,17 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (selType) {
       allInds = allInds.filter(i => (i?.result_type_name?.trim() || i?.type_name?.trim()) === selType);
     }
-    const statusKey = this.reportingStatusFilter();
-    if (statusKey && statusKey !== 'all') {
-      const targetLabel = {
+    const statusKeys = this.reportingStatusFilter();
+    if (statusKeys && statusKeys.length > 0) {
+      const labelMap: Record<string, string> = {
         'not-started': 'Not started',
         'in-progress': 'In progress',
         'achieved': 'Achieved',
         'overachieved': 'Overachieved'
-      }[statusKey];
-      if (targetLabel) {
-        allInds = allInds.filter(i => this.statusLabel(i?.progress_percentage) === targetLabel);
+      };
+      const targetLabels = new Set(statusKeys.map(k => labelMap[k]).filter(Boolean));
+      if (targetLabels.size > 0) {
+        allInds = allInds.filter(i => targetLabels.has(this.statusLabel(i?.progress_percentage)));
       }
     }
 

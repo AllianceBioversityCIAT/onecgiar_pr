@@ -114,6 +114,7 @@
 
 :host ::ng-deep .virtual_scroll {
   overscroll-behavior: contain;
+  background-color: var(--pr-color-white);
 }
 
 .option {

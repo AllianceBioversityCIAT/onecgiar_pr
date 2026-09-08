@@ -1,0 +1,47 @@
+<!-- @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-6, AC-6) — one-line stat bar,
+     replacing the four KPI cards. All six data-testids kept (`kpi-projects`, `kpi-centers`,
+     `kpi-pending`, `kpi-pending-toggle`, `kpi-decided`, `kpi-decided-sublabel`) so the parent
+     Jest invariants (BRT-AC-4/5) keep passing unchanged. -->
+<div
+  class="flex flex-wrap items-center gap-x-[18px] gap-y-[4px] px-[32px] max-sm:px-[16px] py-[8px] text-[12.5px] leading-[18px] text-[var(--pr-text-secondary)]"
+  role="group"
+  aria-label="Summary">
+  @if (loading()) {
+    <span class="h-[16px] w-[70%] max-w-[560px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
+  } @else {
+    <span class="inline-flex items-center gap-[4px]">
+      <span class="pr-figure-sm font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-projects">{{ kpis().projects }}</span>
+      {{ copy.projects }}
+    </span>
+    <span aria-hidden="true">·</span>
+    <span class="inline-flex items-center gap-[4px]">
+      <span class="pr-figure-sm font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-centers">{{ kpis().centers }}</span>
+      {{ copy.centers }}
+    </span>
+    <span aria-hidden="true">·</span>
+    <!-- Pending review — toggle, equivalent to the Pending chip (BRT-R-6). Same pressed visual
+         language as a segmented option (design.md §6.2). -->
+    <button
+      type="button"
+      (click)="togglePending.emit()"
+      [attr.aria-pressed]="pendingActive()"
+      data-testid="kpi-pending-toggle"
+      class="-mx-[8px] inline-flex h-[26px] cursor-pointer items-center gap-[4px] rounded-[6px] px-[8px] transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+      [class]="pendingActive() ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-700)]' : 'text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle-hover)]'">
+      <span
+        class="pr-figure-sm font-semibold tabular-nums"
+        [class]="pendingActive() ? 'text-[var(--pr-color-primary-700)]' : 'text-[var(--pr-text-heading)]'"
+        data-testid="kpi-pending"
+        >{{ kpis().pending }}</span
+      >
+      {{ copy.pending }}
+    </button>
+    <span aria-hidden="true">·</span>
+    <span class="inline-flex items-center gap-[4px]">
+      <span class="pr-figure-sm font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-decided">{{ kpis().approved + kpis().rejected }}</span>
+      {{ copy.decided }}
+      (<span class="text-[var(--pr-text-secondary)]" data-testid="kpi-decided-sublabel">{{ decidedSublabel(kpis()) }}</span
+      >)
+    </span>
+  }
+</div>

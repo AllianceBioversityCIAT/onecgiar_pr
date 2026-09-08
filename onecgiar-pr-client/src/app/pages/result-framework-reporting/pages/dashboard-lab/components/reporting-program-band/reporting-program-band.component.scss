@@ -131,12 +131,18 @@
   }
 }
 
+.pr-band-filter--align-right ::ng-deep .custom_select .field .options {
+  left: auto !important;
+  right: 0 !important;
+}
+
 /* Section multiselect panel polish — scoped to the band's own filter wrappers only.
    ::ng-deep is the accepted exception for projected third-party/shared-component DOM
    (docs/ux-ui/design.md §12 / KPB-DD-8). @akili-spec changes/reporting-entry-hub */
 .pr-band-filter ::ng-deep .pr-filter-ms {
   .options {
-    min-width: 300px;
+    min-width: 100%;
+    max-width: 320px;
     border-radius: 10px;
     border: 1px solid var(--pr-border);
     box-shadow: 0 8px 24px rgba(25, 21, 36, 0.1);

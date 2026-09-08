@@ -1,7 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideArrowLeft } from '@ng-icons/lucide';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
@@ -9,11 +7,10 @@ import { BilateralContextService } from '../../services/bilateral-context.servic
 @Component({
   selector: 'app-bilateral-page-header',
   standalone: true,
-  imports: [RouterLink, NgIcon],
+  imports: [RouterLink],
   templateUrl: './bilateral-page-header.component.html',
   styleUrl: './bilateral-page-header.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [provideIcons({ lucideArrowLeft })]
 })
 export class BilateralPageHeaderComponent {
   private readonly router = inject(Router);
@@ -22,7 +19,10 @@ export class BilateralPageHeaderComponent {
   readonly navSE = inject(SmartNavigationService);
 
   /** Which center section is active. Omit (e.g. on the create-result wizard) to hide the tab bar and CTA. */
-  readonly activeTab = input<'overview' | 'results' | 'drafts' | null>(null);
+  readonly activeTab = input<'overview' | 'reporting' | 'results' | 'drafts' | null>(null);
+
+  /** Whether the Reporting (primary) tab is active — accepts both 'reporting' and legacy 'overview'. */
+  readonly isReportingActive = computed(() => this.activeTab() === 'reporting' || this.activeTab() === 'overview');
 
   /**
    * Page title for the single-page variant of this header (P2-3100 AC1). When set, the
@@ -39,13 +39,7 @@ export class BilateralPageHeaderComponent {
   readonly variant = input<'band' | 'detail'>('band');
 
   /**
-   * P2-3352: identity of the result being edited — code, type, funding tag and status. Passed in
-   * rather than read from BilateralCreationService so this header stays usable by the three tabbed
-   * pages, which have no result loaded. All are optional; the strip renders only what is present.
-   *
-   * ⚠️ This used to say the status badge was blocked on the backend (P2-3437). That was wrong: the
-   * detail payload has always carried `status_id` (result.repository.ts:2904 selects it and
-   * results.service.ts returns `commonFields` unfiltered) — the client was the one dropping it.
+   * P2-3352: identity of the result being edited — code, type, funding tag and status.
    */
   readonly resultCode = input<string | number | null>(null);
   readonly resultTypeName = input<string | null>(null);
@@ -53,11 +47,6 @@ export class BilateralPageHeaderComponent {
   /** `result.status_id`. Only the four the story lists render a badge; anything else is ignored. */
   readonly statusId = input<number | null>(null);
 
-  /**
-   * The four statuses a bilateral result can be in per P2-3352, keyed by `ResultStatusData`
-   * (onecgiar-pr-server/src/shared/constants/result-status.enum.ts). Colours match the chips the
-   * bilateral results list already uses for the same ids, so a result reads the same in both places.
-   */
   private static readonly STATUS_BADGES: Record<number, { label: string; classes: string }> = {
     1: { label: 'Editing', classes: 'bg-[#F3F4F6] text-[#6B7280]' },
     5: { label: 'Pending review', classes: 'bg-[#FEF3C7] text-[#B45309]' },
@@ -81,10 +70,7 @@ export class BilateralPageHeaderComponent {
     return name ? `${name} (${acronym})` : acronym;
   });
 
-  /** Overview gets its own copy slot; the other tabs keep the shared CTA text. */
-  readonly reportCtaLabel = computed(() =>
-    this.activeTab() === 'overview' ? 'Report emerging result' : 'Report emerging result',
-  );
+  readonly reportCtaLabel = computed(() => 'Report emerging result');
 
   /** Optional explicit override for the back button label. */
   readonly backLabelOverride = input<string>('');

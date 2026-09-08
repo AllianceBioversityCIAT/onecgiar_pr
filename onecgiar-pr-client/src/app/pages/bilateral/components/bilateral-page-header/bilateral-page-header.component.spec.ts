@@ -5,11 +5,13 @@ import { RouterModule } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { BilateralPageHeaderComponent } from './bilateral-page-header.component';
 import { BilateralContextService } from '../../services/bilateral-context.service';
+import { BilateralAiService } from '../../services/bilateral-ai.service';
 
 describe('BilateralPageHeaderComponent', () => {
   let component: BilateralPageHeaderComponent;
   let fixture: ComponentFixture<BilateralPageHeaderComponent>;
   let ctx: BilateralContextService;
+  let aiService: BilateralAiService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -20,6 +22,7 @@ describe('BilateralPageHeaderComponent', () => {
     fixture = TestBed.createComponent(BilateralPageHeaderComponent);
     component = fixture.componentInstance;
     ctx = TestBed.inject(BilateralContextService);
+    aiService = TestBed.inject(BilateralAiService);
   });
 
   it('should create', () => {
@@ -32,10 +35,13 @@ describe('BilateralPageHeaderComponent', () => {
     expect(fixture.nativeElement.querySelector('h1')).toBeNull();
   });
 
-  it('shows the center acronym and name once resolved', () => {
+  it('shows the center acronym and name once resolved with compact typography', () => {
     ctx.setCenter('SMO', 'CGIAR System Organization');
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('h1')?.textContent.trim()).toBe('SMO');
+    const h1 = fixture.nativeElement.querySelector('h1');
+    expect(h1?.textContent.trim()).toBe('SMO');
+    expect(h1?.classList.contains('text-[18px]')).toBe(true);
+    expect(h1?.classList.contains('font-bold')).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('CGIAR System Organization');
   });
 
@@ -46,32 +52,145 @@ describe('BilateralPageHeaderComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Report emerging result');
   });
 
-  it('shows the tab bar and marks the active tab when activeTab is set', () => {
+  it('shows the tab bar, icons, and marks the active tab when activeTab is set', () => {
     ctx.setCenter('SMO', 'CGIAR System Organization');
     fixture.componentRef.setInput('activeTab', 'results');
     fixture.detectChanges();
 
     const links = fixture.debugElement.queryAll(By.css('nav a'));
     expect(links.map(l => l.nativeElement.textContent.trim().split('\n')[0].trim())).toEqual([
-      'Overview',
-      'Results',
-      'Drafts',
+      'track_changes\n          Reporting',
+      'table_chart\n          Results',
+      'fact_check\n          Drafts',
+    ].map(s => s.replace(/\s+/g, ' ')));
+
+    // Verify icons on all three tabs
+    const icons = fixture.debugElement.queryAll(By.css('nav a .material-icons-round'));
+    expect(icons.map(i => i.nativeElement.textContent.trim())).toEqual([
+      'track_changes',
+      'table_chart',
+      'fact_check',
     ]);
+
+    // Active tab assertions
     const active = links.find(l => l.nativeElement.getAttribute('aria-current') === 'page');
     expect(active?.nativeElement.textContent.trim()).toContain('Results');
     expect(fixture.nativeElement.textContent).toContain('Report emerging result');
+
+    // Horizontal scroll and styling
+    const nav = fixture.debugElement.query(By.css('nav[aria-label="Center sections"]'));
+    expect(nav.nativeElement.classList.contains('overflow-x-auto')).toBe(true);
+    expect(nav.nativeElement.classList.contains('no-scrollbar')).toBe(true);
   });
 
-  // P2-3100 AC1: the creation screen needs a one-line breadcrumb
-  // `CGIAR Center > [Full Center Name] (INITIALS)` with the page title directly below.
-  // The three tabbed pages share this component and must be untouched by it.
-  // P2-3352: the header must identify the result — code, type, funding tag and status. The status
-  // badge was long believed blocked on the backend (P2-3437); it never was — the detail response has
-  // always carried `status_id` and the client was dropping it.
+  it('does not display a dividing line between hero and tabs when activeTab is set', () => {
+    ctx.setCenter('SMO', 'CGIAR System Organization');
+    fixture.componentRef.setInput('activeTab', 'reporting');
+    fixture.detectChanges();
+
+    const heroDiv = fixture.nativeElement.querySelector('.h-\\[64px\\]');
+    expect(heroDiv).toBeTruthy();
+    expect(heroDiv.classList.contains('border-b-band')).toBe(false);
+  });
+
+  it('displays a bottom dividing border on the hero when activeTab is NOT set', () => {
+    ctx.setCenter('SMO', 'CGIAR System Organization');
+    fixture.componentRef.setInput('pageTitle', 'Create Result');
+    fixture.detectChanges();
+
+    const heroDiv = fixture.nativeElement.querySelector('.h-\\[64px\\]');
+    expect(heroDiv).toBeTruthy();
+    expect(heroDiv.classList.contains('border-b-band')).toBe(true);
+  });
+
+  it('activates Reporting tab when activeTab is "reporting" or "overview"', () => {
+    ctx.setCenter('SMO', 'CGIAR System Organization');
+    fixture.componentRef.setInput('activeTab', 'reporting');
+    fixture.detectChanges();
+
+    let active = fixture.debugElement.query(By.css('nav a[aria-current="page"]'));
+    expect(active?.nativeElement.textContent.trim()).toContain('Reporting');
+
+    fixture.componentRef.setInput('activeTab', 'overview');
+    fixture.detectChanges();
+
+    active = fixture.debugElement.query(By.css('nav a[aria-current="page"]'));
+    expect(active?.nativeElement.textContent.trim()).toContain('Reporting');
+  });
+
+  describe('draft count badge', () => {
+    it('renders badge when draft count > 0', () => {
+      aiService.draftList.set([
+        { id: 1, result_title: 'Draft 1' } as any,
+        { id: 2, result_title: 'Draft 2' } as any,
+      ]);
+      ctx.setCenter('SMO', 'CGIAR System Organization');
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      fixture.detectChanges();
+
+      const badge = fixture.debugElement.query(By.css('[data-testid="bilateral-drafts-badge"]'));
+      expect(badge).not.toBeNull();
+      expect(badge.nativeElement.textContent.trim()).toBe('2');
+    });
+
+    it('does not render badge when draft count is 0', () => {
+      aiService.draftList.set([]);
+      ctx.setCenter('SMO', 'CGIAR System Organization');
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      fixture.detectChanges();
+
+      const badge = fixture.debugElement.query(By.css('[data-testid="bilateral-drafts-badge"]'));
+      expect(badge).toBeNull();
+    });
+  });
+
+  describe('back button visibility (BSA-R-2, BSA-AC-2)', () => {
+    it('does NOT render back button in default tabbed variant', () => {
+      ctx.setCenter('SMO', 'CGIAR System Organization');
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      fixture.detectChanges();
+
+      const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
+      expect(backBtn).toBeNull();
+    });
+
+    it('does NOT render back button in band mode with pageTitle', () => {
+      ctx.setCenter('SMO', 'CGIAR System Organization');
+      fixture.componentRef.setInput('pageTitle', 'Report New Bilateral Result');
+      fixture.detectChanges();
+
+      const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
+      expect(backBtn).toBeNull();
+    });
+
+    it('renders back button in detail variant and handles goBack()', () => {
+      ctx.setCenter('ABC', 'Alliance of Bioversity International and CIAT');
+      fixture.componentRef.setInput('variant', 'detail');
+      fixture.componentRef.setInput('pageTitle', 'A bilateral result');
+      fixture.detectChanges();
+
+      const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
+      expect(backBtn).not.toBeNull();
+
+      const spy = jest.spyOn(component, 'goBack');
+      backBtn.nativeElement.click();
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('respects backLabelOverride in detail variant', () => {
+      ctx.setCenter('ABC', 'Alliance of Bioversity International and CIAT');
+      fixture.componentRef.setInput('variant', 'detail');
+      fixture.componentRef.setInput('pageTitle', 'A bilateral result');
+      fixture.componentRef.setInput('backLabelOverride', 'Back to Custom Destination');
+      fixture.detectChanges();
+
+      const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
+      expect(backBtn.nativeElement.textContent).toContain('Back to Custom Destination');
+    });
+  });
+
   describe('result identity strip (P2-3352)', () => {
     const withTitle = () => {
-      // The whole header is gated on `@if (ctx.centerAcronym())`, so without a centre nothing renders
-      // and every textContent assertion passes against an empty string.
       ctx.setCenter('ABC', 'Alliance of Bioversity International and CIAT');
       fixture.componentRef.setInput('pageTitle', 'A bilateral result');
       fixture.detectChanges();
@@ -137,7 +256,6 @@ describe('BilateralPageHeaderComponent', () => {
       fixture.componentRef.setInput('activeTab', 'results');
       fixture.componentRef.setInput('resultCode', 8682);
       fixture.detectChanges();
-      // hasIdentityStrip is true, but the strip lives in the pageTitle branch only.
       expect(fixture.nativeElement.textContent).not.toContain('8682');
     });
   });
@@ -214,40 +332,6 @@ describe('BilateralPageHeaderComponent', () => {
     expect(draftsTab?.nativeElement.getAttribute('href')).toBe('/bilateral/SMO/drafts');
   });
 
-  describe('smart back button', () => {
-    it('renders the smart back button in the header', () => {
-      ctx.setCenter('SMO', 'CGIAR System Organization');
-      fixture.componentRef.setInput('pageTitle', 'Report New Bilateral Result');
-      fixture.detectChanges();
-
-      const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
-      expect(backBtn).toBeTruthy();
-      expect(backBtn.nativeElement.textContent).toContain('Back to Center overview');
-    });
-
-    it('calls goBack() on click', () => {
-      ctx.setCenter('SMO', 'CGIAR System Organization');
-      fixture.componentRef.setInput('pageTitle', 'Report New Bilateral Result');
-      fixture.detectChanges();
-
-      const spy = jest.spyOn(component, 'goBack');
-      const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
-      backBtn.nativeElement.click();
-
-      expect(spy).toHaveBeenCalledTimes(1);
-    });
-
-    it('respects backLabelOverride when supplied', () => {
-      ctx.setCenter('SMO', 'CGIAR System Organization');
-      fixture.componentRef.setInput('backLabelOverride', 'Back to Custom Destination');
-      fixture.detectChanges();
-
-      const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
-      expect(backBtn.nativeElement.textContent).toContain('Back to Custom Destination');
-    });
-  });
-
-  // The result editor's header: in flow, way back on top, title, identity strip — the W1/W2 shape.
   describe('detail variant (result editor)', () => {
     const q = (selector: string) => fixture.nativeElement.querySelector(selector);
 

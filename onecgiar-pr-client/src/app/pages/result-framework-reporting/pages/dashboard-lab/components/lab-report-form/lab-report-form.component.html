@@ -305,7 +305,7 @@
         <p id="contribution-helper" class="m-0 mb-2.5 text-[12px] leading-normal text-gray-500">
           Enter the numerical amount this specific result contributes toward the target.
         </p>
-        <div class="relative flex items-center max-w-[260px]">
+        <div class="flex max-w-full flex-wrap items-center gap-x-3 gap-y-1.5">
           <input
             #contributionInput
             id="contribution-input"
@@ -317,13 +317,13 @@
             [ngModelOptions]="{ standalone: true }"
             (ngModelChange)="patch('contribution_to_indicator_target', $event)"
             [disabled]="creatingResult() || currentResultIsKnowledgeProduct()"
-            aria-describedby="contribution-helper contribution-target-reference"
-            class="w-full rounded-[10px] border border-[var(--pr-border)] pl-3 pr-16 py-2.5 text-[14px] font-semibold text-gray-900 transition-all focus:border-[var(--pr-color-primary-300)] focus:ring-2 focus:ring-[var(--pr-color-primary-100)] focus:outline-none disabled:bg-gray-50 disabled:text-gray-400" />
+            [attr.aria-describedby]="unitMeasurement() ? 'contribution-helper contribution-target-reference contribution-unit-suffix' : 'contribution-helper contribution-target-reference'"
+            class="contribution-input w-[132px] shrink-0 rounded-[10px] border border-[var(--pr-border)] px-3 py-2.5 text-[14px] font-semibold text-gray-900 transition-all focus:border-[var(--pr-color-primary-300)] focus:ring-2 focus:ring-[var(--pr-color-primary-100)] focus:outline-none disabled:bg-gray-50 disabled:text-gray-400" />
           @if (unitMeasurement()) {
             <span
+              id="contribution-unit-suffix"
               data-testid="contribution-unit-suffix"
-              class="pointer-events-none absolute right-3 text-xs font-semibold text-gray-500 truncate max-w-[90px]"
-              [title]="unitMeasurement()">
+              class="min-w-0 flex-1 text-[12px] font-medium leading-snug text-gray-600">
               {{ unitMeasurement() }}
             </span>
           }
