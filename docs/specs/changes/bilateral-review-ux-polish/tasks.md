@@ -50,11 +50,12 @@
 
 ### `BRP-T-3` — Cards below 900 px
 
+- [x] **Status:** PASS on attempt 2 (2026-09-08, `execution.md`; live look owed — Orca eval down)
 - **Type:** `client`
-- **Description:** `narrow` input on the table component fed by the page's `isNarrow`; `@if (narrow())` branch rendering `ul[role=list]` cards per design §6.2 (grouped: `<button aria-expanded>` header bars + cards gated by the component-owned `expandedKeys` from T-2; flat: `sortedFlatRows` order); no `<table>`, no `overflow-x`, no `overflow-y` in this branch; toolbar wraps at 375 (search full width, controls on one row). Rewrite the parent CT case R-14 (d) in `bilateral-review.cy.ts` (table horizontal scroll + sticky Actions asserted at 1024; the 840 case becomes the cards gate).
+- **Description:** `narrow` input on the table component fed by the page's `isNarrow`; `@if (narrow())` branch rendering `ul[role=list]` cards per design §6.2 (grouped: `<button aria-expanded>` header bars + cards gated by the component-owned `expandedKeys` from T-2; flat: `sortedFlatRows` order); no `<table>`, no `overflow-x`, no `overflow-y` in this branch; toolbar wraps at 375 (search full width, controls on one row). Rewrite the parent CT cases R-14 (d), (g) and (h) in `bilateral-review.cy.ts` (table horizontal scroll + sticky Actions asserted at 1024; the 840 case becomes the cards gate; narrow `beforeEach`/9-center describe at `cy.viewport(840, 1600)`; BRT-T-7's two FAIL-input probes at 1024) — **execution amendment after attempt 1: cards broke those cases, so T-3 owns them (R-14 rule).**
 - **Implements:** BRP-R-13, R-14; AC-11, 12
 - **Design refs:** §6.2 cards, BRP-DD-5
-- **Files:** `components/bilateral-review-table/*.{ts,html,spec.ts}`, `bilateral-review.component.{html,spec.ts}`, `bilateral-review.cy.ts` (only the R-14 (d) case)
+- **Files:** `components/bilateral-review-table/*.{ts,html,spec.ts}`, `bilateral-review.component.{html,spec.ts}`, `bilateral-review.cy.ts` (only the R-14 (d), (g), (h) cases)
 - **Depends on:** T-2 · **Blocks:** T-4
 - **Estimate:** M
 - **Skills:** `angular-developer`, `ui-ux-pro-max`, `frontend-design`

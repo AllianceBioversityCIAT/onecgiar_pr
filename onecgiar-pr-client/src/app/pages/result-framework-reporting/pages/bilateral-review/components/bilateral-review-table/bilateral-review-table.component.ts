@@ -67,6 +67,10 @@ export interface BilateralReviewGroup {
  * which would have cleared `userCollapsedKeys` and broken the "IITA still collapsed after a Project
  * → Center → Project round trip" requirement, BRP-AC-10).
  *
+ * `narrow` (BRP-T-3) selects a THIRD rendering, checked before either of the two above: below
+ * 900px the table is not rendered at all (BRP-R-13, R-15) — one-per-result cards in a
+ * `ul[role=list]`, grouped by the same `filteredGroups()`/`expandedKeys` this class already owns.
+ *
  * That "keep whatever value it last had" rule is not enough on its own: `[prRowToggler]` mutates
  * only the CHILD `PrGroupTableComponent`'s own internal expansion Set, never this component's
  * `lastKeys` bookkeeping. Left alone, the next unrelated re-render (e.g. a search keystroke, which
@@ -100,6 +104,14 @@ export class BilateralReviewTableComponent {
   readonly groups = input<BilateralReviewGroup[]>([]);
   readonly flatRows = input<ResultToReview[]>([]);
   readonly view = input<'grouped' | 'flat'>('grouped');
+  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-13, R-14 (d), design.md §6.2 "Cards")
+  /** Fed by the page's `isNarrow` (`matchMedia('(max-width: 899px)')`, BRP-T-1). `true` renders the
+   *  `ul[role=list]` card branch instead of either table branch — no `<table>`, no `overflow-x`,
+   *  no `overflow-y` in that branch (R-15's single-scroller contract). Grouped cards read/toggle
+   *  the SAME `expandedKeys` single source as the table branch (design.md §6.1) — there is no
+   *  `app-pr-group-table` in this branch, so the group header button below writes `expandedKeys`
+   *  directly via the existing `onToggleGroup`. */
+  readonly narrow = input(false);
   /** BRP-R-11: which dimension `groups` is keyed by — namespaces the collapse memory below so a
    *  mode switch never confuses a project's key with a same-named center's, and so collapsing a
    *  group in one mode survives a round trip through the other (design.md §6.1). */
@@ -265,6 +277,20 @@ export class BilateralReviewTableComponent {
    *  for a genuinely blank value. */
   placeholderText(value: string | null | undefined): string {
     return value && value.trim() ? value : this.copy.notSpecified;
+  }
+
+  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-13, design.md §6.2 "Cards")
+  /** One segment of the card's "category · center · TOC" caption — "—" for a blank/placeholder
+   *  value (same `isPlaceholder` rule the table columns use), the raw value otherwise. Unlike the
+   *  table's TOC/Indicator columns (R-9), the caption is one truncated text run with no separate
+   *  `title`/`sr-only` pair per segment — the card's own `title` (below) carries the full string. */
+  private cardSegment(value: string | null | undefined): string {
+    return this.isPlaceholder(value) ? '—' : (value as string);
+  }
+
+  /** "category · center · TOC" (design.md §6.2) — the card's third line. */
+  cardCaption(row: ResultToReview): string {
+    return [this.cardSegment(row.indicator_category), this.cardSegment(row.lead_center), this.cardSegment(row.toc_title)].join(' · ');
   }
 
   /** Tailwind tone classes by loose `status_id` (5 amber, 6 green, 7 red, else neutral). */

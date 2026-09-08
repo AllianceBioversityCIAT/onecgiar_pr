@@ -134,6 +134,14 @@ describe('BilateralReviewTableComponent', () => {
       // collapse both groups together and this would read 0.
       expect(byTestId('bilateral-review-row-action').length).toBe(1);
     });
+
+    // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, Reviewer FAIL #1, design.md §6.3)
+    it('the group toggle carries the box-shadow focus ring, never the broken `ring-` utility', () => {
+      render([GROUP_A]);
+      const toggle = byTestId('bilateral-review-group-toggle')[0] as HTMLButtonElement;
+      expect(toggle.className).toContain('focus-visible:shadow-[var(--pr-focus-ring)]');
+      expect(toggle.className).not.toContain('ring-[var(--pr-focus-ring)]');
+    });
   });
 
   describe('Expand all / Collapse all via nonce (assert rendered rows, not state)', () => {
@@ -449,6 +457,98 @@ describe('BilateralReviewTableComponent', () => {
       render([GROUP_A]);
       const wrapper = root().querySelector('[data-testid="bilateral-review-table"]') as HTMLElement;
       expect(wrapper.className).not.toContain('overflow-x-auto');
+    });
+  });
+
+  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-13, R-14 (d), AC-11, AC-12)
+  describe('Narrow cards below 900px (BRP-R-13)', () => {
+    it('narrow=true renders ul[role=list] with li count = row count and no <table> element (FAIL input: leave the table branch mounted)', () => {
+      render([GROUP_A, GROUP_B], { narrow: true });
+
+      // FAIL input this test guards against: asserting only card count without also asserting
+      // the table branch never mounted would still pass with BOTH branches rendered together.
+      expect(root().querySelector('table')).toBeNull();
+
+      const cards = root().querySelectorAll('ul[role="list"] li[data-testid="bilateral-review-card"]');
+      expect(cards.length).toBe(GROUP_A.results.length + GROUP_B.results.length);
+    });
+
+    // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, Reviewer FAIL #1, design.md §6.3)
+    it('the cards group-toggle bar carries the box-shadow focus ring, never the broken `ring-` utility', () => {
+      render([GROUP_A], { narrow: true });
+      const toggle = byTestId('bilateral-review-group-toggle')[0] as HTMLButtonElement;
+      expect(toggle.className).toContain('focus-visible:shadow-[var(--pr-focus-ring)]');
+      expect(toggle.className).not.toContain('ring-[var(--pr-focus-ring)]');
+    });
+
+    it('flat + narrow: renders one card per flatRow, in sortedFlatRows order, no <table>', () => {
+      fixture.componentRef.setInput('view', 'flat');
+      fixture.componentRef.setInput('narrow', true);
+      fixture.componentRef.setInput('flatRows', [
+        row({ id: 'f1', result_code: 'OLD', submission_date: '2026-01-01' }),
+        row({ id: 'f2', result_code: 'NEW', submission_date: '2026-03-01' })
+      ]);
+      fixture.detectChanges();
+      fixture.detectChanges();
+
+      expect(root().querySelector('table')).toBeNull();
+      const codes = byTestId('bilateral-review-row-code').map(el => el.textContent?.trim());
+      expect(codes).toEqual(['NEW', 'OLD']); // sortedFlatRows desc by submission_date
+    });
+
+    it('a card shows the code, status pill, title, caption with "—" placeholders, date and the action button', () => {
+      const group = projectGroup('P12 - Card Project', [
+        row({
+          id: 'card1',
+          project_id: 'p12',
+          project_name: 'P12 - Card Project',
+          result_code: 'BR-900',
+          result_title: 'Card title',
+          indicator_category: '',
+          lead_center: undefined,
+          toc_title: 'Not specified',
+          submission_date: '2026-02-23'
+        })
+      ]);
+      render([group], { narrow: true, canReview: true });
+
+      const card = byTestId('bilateral-review-card')[0];
+      expect(card.querySelector('[data-testid="bilateral-review-row-code"]')?.textContent).toContain('BR-900');
+      expect(card.querySelector('[data-testid="bilateral-review-row-status"]')).toBeTruthy();
+      expect(card.querySelector('p')?.textContent).toBe('Card title');
+      // Every one of category / center / TOC is blank on this row — all three placeholder to "—".
+      expect(card.querySelector('[data-testid="bilateral-review-card-caption"]')?.textContent).toBe('— · — · —');
+      expect(card.textContent).toContain('23 Feb 2026');
+      const action = card.querySelector('[data-testid="bilateral-review-row-action"]') as HTMLElement;
+      expect(action).toBeTruthy();
+      expect(action.textContent).toContain('Review');
+    });
+
+    it('narrow=false renders the usual grouped table branch — no ul[role=list], group togglers still work', () => {
+      render([GROUP_A], { narrow: false });
+      expect(root().querySelector('ul[role="list"]')).toBeNull();
+      expect(root().querySelector('table')).toBeTruthy();
+      expect(byTestId('bilateral-review-group-toggle').length).toBe(1);
+    });
+
+    it('grouped narrow: the group header bar toggles the group\'s cards through the owned expandedKeys — collapsing in cards then switching narrow=false shows the group collapsed in the table too', () => {
+      render([GROUP_A, GROUP_B], { narrow: true });
+      expect(byTestId('bilateral-review-card').length).toBe(3);
+
+      (byTestId('bilateral-review-group-toggle')[0] as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(byTestId('bilateral-review-card').length).toBe(1); // only Group B's card remains
+      expect(byTestId('bilateral-review-group-toggle')[0].getAttribute('aria-expanded')).toBe('false');
+
+      fixture.componentRef.setInput('narrow', false);
+      fixture.detectChanges();
+      fixture.detectChanges();
+
+      // Same `expandedKeys` single source (design.md §6.1) — Group A is still collapsed, now in
+      // the grouped TABLE branch.
+      expect(root().querySelector('ul[role="list"]')).toBeNull();
+      expect(byTestId('bilateral-review-row-action').length).toBe(1);
+      expect(byTestId('bilateral-review-group-toggle')[0].getAttribute('aria-expanded')).toBe('false');
     });
   });
 

@@ -318,7 +318,13 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   ] as const).forEach(([width, kind]) => {
     describe(`effective ${width}px — ${kind}`, () => {
       beforeEach(() => {
-        cy.viewport(width, 900);
+        // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-14 (g), JB-10) — the AC-4
+        // fixture's 7 cards (BRP-R-13) are taller than the 7 compact table rows this height was
+        // originally sized for, tripping the SAME native-vertical-scrollbar-shaves-clientWidth
+        // quirk this module's CLAUDE.md already documents for the 9-row center-strip fixture
+        // (`cy.viewport(840, 900)` → shaves ~15px off `documentElement.clientWidth`, unrelated to
+        // any real regression). Pulled forward from T-4 per JB-10.
+        cy.viewport(width, 1600);
         mountPage();
         // Let the URL-hydrate effect's second CD pass settle (same reason the Jest spec runs a
         // second `detectChanges()`) before any geometry read.
@@ -366,7 +372,21 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         });
       });
 
-      it('table: horizontal scroll behavior and the sticky Actions column', () => {
+      // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-13, R-14 (d)) — below 900px the
+      // table branch never mounts (BRP-R-13: "the table `<table>` is not rendered in this
+      // branch"), so the 840 case can no longer assert `.pr-table-wrap`/sticky-Actions geometry.
+      // The horizontal-scroll + sticky-Actions assertions move to a dedicated 1024px viewport
+      // below (900–1366 is exactly the band where the table branch renders AND is too narrow to
+      // fit without scrolling); the 840 case becomes the cards gate instead (no `<table>`, card
+      // count = rows, single scroller).
+      it(width === 840 ? 'BRP-R-13/AC-11: narrow renders cards — no <table>, card count = rows, single scroller' : 'table: horizontal scroll behavior and the sticky Actions column', () => {
+        if (width === 840) {
+          cy.get('[data-testid="bilateral-review-table"]').find('table').should('not.exist');
+          cy.get('[data-testid="bilateral-review-table"] ul[role="list"] li[data-testid="bilateral-review-card"]').should('have.length', FIXTURE_ROWS.length);
+          assertNoBodyHorizontalOverflow(`${width} cards`);
+          return;
+        }
+
         cy.get('[data-testid="bilateral-review-table"] .pr-table-wrap').should($wrap => {
           const wrap = $wrap[0] as HTMLElement;
           if (width < 1366) {
@@ -503,6 +523,56 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
     });
   });
 
+  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-13, R-14 (d)) — dedicated 1024px
+  // viewport for the table's horizontal-scroll + sticky-Actions behavior, moved off the 840 case
+  // above (which now renders cards, not a `<table>`, per BRP-R-13). 1024 sits inside the ONLY band
+  // where this assertion is meaningful: >= 900 (the table branch mounts at all — below 900 it is
+  // cards) and < 1366 (the table's natural width does not already fit, so `.pr-table-wrap` truly
+  // scrolls — at the 1536 width above the wrap never needs to).
+  describe('effective 1024px — table branch, below the natural-fit width (BRP-T-3, R-14 (d))', () => {
+    const width = 1024;
+
+    beforeEach(() => {
+      cy.viewport(width, 900);
+      mountPage();
+      waitForLoad();
+      assertEffectiveWidth(`${width}`, width);
+    });
+
+    it('table: horizontal scroll behavior and the sticky Actions column', () => {
+      cy.get('[data-testid="bilateral-review-table"] .pr-table-wrap').should($wrap => {
+        const wrap = $wrap[0] as HTMLElement;
+        expect(wrap.scrollWidth, `${width}: table wrapper scrollWidth(${wrap.scrollWidth}) > clientWidth(${wrap.clientWidth}) — scrolls inside its own container`).to.be.greaterThan(
+          wrap.clientWidth
+        );
+      });
+      assertNoBodyHorizontalOverflow(`${width} table`);
+
+      cy.get('[data-testid="bilateral-review-table"] .pr-table-wrap').should($wrap => {
+        const wrap = $wrap[0] as HTMLElement;
+        const wrapRect = wrap.getBoundingClientRect();
+        const actionButton = wrap.querySelector('[data-testid="bilateral-review-row-action"]') as HTMLElement;
+        const actionCell = actionButton.closest('td') as HTMLElement;
+        const actionRect = actionCell.getBoundingClientRect();
+        const position = getComputedStyle(actionCell).position;
+        expect(position, `${width}: Actions cell position is "sticky" at scrollLeft 0`).to.eq('sticky');
+        expect(actionRect.right, `${width}: at scrollLeft 0, sticky Actions cell right(${actionRect.right.toFixed(1)}) <= wrap right(${wrapRect.right.toFixed(1)})`).to.be.at.most(
+          wrapRect.right + 1
+        );
+      });
+
+      cy.get('[data-testid="bilateral-review-table"] .pr-table-wrap').scrollTo('right', { ensureScrollable: false });
+      cy.get('[data-testid="bilateral-review-table"] .pr-table-wrap').should($wrap => {
+        const wrap = $wrap[0] as HTMLElement;
+        const wrapRect = wrap.getBoundingClientRect();
+        const actionButton = wrap.querySelector('[data-testid="bilateral-review-row-action"]') as HTMLElement;
+        const actionCell = actionButton.closest('td') as HTMLElement;
+        const actionRect = actionCell.getBoundingClientRect();
+        expect(actionRect.right, `${width}: sticky Actions cell right(${actionRect.right.toFixed(1)}) <= wrap right(${wrapRect.right.toFixed(1)})`).to.be.at.most(wrapRect.right + 1);
+      });
+    });
+  });
+
   // ── Center strip extension (BRC-T-3, BRC-R-20, AC-11, AC-12) — 9-center fixture, effective 840 ──
   describe('Center strip — 9-center fixture (BRC-T-3)', () => {
     beforeEach(() => {
@@ -511,7 +581,12 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       // the page past 900px tall, which triggers a NATIVE vertical scrollbar at 900 and quietly
       // shaves ~15px off `documentElement.clientWidth` — an artifact of content height, unrelated
       // to the wrap-clip regression this suite gates. 1600 keeps the vertical scrollbar out of it.
-      cy.viewport(840, 1600);
+      // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-14 (g), JB-10) — 1600 (this
+      // module's existing figure for the 9-row single-group fixture) is no longer tall enough now
+      // that the 9 rows render as cards (BRP-R-13, taller than table rows): measured empirically,
+      // 1600 still shaved a native vertical scrollbar into `documentElement.clientWidth`; 2400
+      // clears it.
+      cy.viewport(840, 2400);
       mountPage({ rows: NINE_CENTERS_FIXTURE_ROWS, centers: NINE_CENTERS_FIXTURE_CENTERS });
       waitForLoad();
       assertEffectiveWidth('840 (nine-center fixture)', 840);
@@ -640,6 +715,18 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   // own clip (the regression this gate exists to catch — the wrap losing its `overflow-x: auto`)
   // genuinely pushes the overflow onto `documentElement`, and the gate catches it.
   //
+  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-14 (h)) — RETARGETED to 1024, not
+  // re-recorded: the RED PROBE above was captured at 840 before BRP-R-13 existed. Below 900px the
+  // table branch (`.pr-table-wrap`, `td:first-child`) no longer mounts at all (cards instead), so
+  // this probe can no longer even find its target at 840 — that would make the injection inert,
+  // not a genuinely fallible gate. The RED PROBE proves `assertNoBodyHorizontalOverflow` itself is
+  // a live, fallible measurement — it does NOT prove defeating `.pr-table-wrap`'s clip alone is
+  // sufficient to reach `documentElement` at every width: at >= 900px `#workArea` ALSO gains its
+  // own computed `overflow-x: auto` (CSS couples it to the `overflow-y: auto` Tailwind sets on
+  // that element — see the DETECTOR test below, `:780-791`), a second clip that never existed at
+  // 840. Both clips must be defeated for the DETECTOR case to reach the document at 1024; the
+  // "wrap absorbs it" case needs neither defeated, since it only measures `.pr-table-wrap` itself.
+  //
   // Two cases committed below, both GREEN:
   //  1. The original FAIL input alone (2000px column, wrap's `overflow-x: auto` intact) — the wrap
   //     absorbs it (scrollWidth > clientWidth) and the document does not. This is the everyday
@@ -663,8 +750,8 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       });
     });
 
-    it('840px: a forced 2000px first column blows out the table wrapper while the document still does not scroll (wrap absorbs it)', () => {
-      cy.viewport(840, 900);
+    it('1024px: a forced 2000px first column blows out the table wrapper while the document still does not scroll (wrap absorbs it)', () => {
+      cy.viewport(1024, 900);
       mountPage();
       waitForLoad();
 
@@ -682,11 +769,11 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         );
         expect(wrap.scrollWidth, 'FAIL-input: the forced column genuinely dominates the wrap width').to.be.greaterThan(1900);
       });
-      assertNoBodyHorizontalOverflow('FAIL-input 840 (wrap absorbs the overflow, body does not)');
+      assertNoBodyHorizontalOverflow('FAIL-input 1024 (wrap absorbs the overflow, body does not)');
     });
 
-    it('840px: DETECTOR FIRES — with the wrap\'s own clip defeated, the document-level AC-14 gate reports the overflow it exists to catch', () => {
-      cy.viewport(840, 900);
+    it('1024px: DETECTOR FIRES — with the wrap\'s own clip defeated, the document-level AC-14 gate reports the overflow it exists to catch', () => {
+      cy.viewport(1024, 900);
       mountPage();
       waitForLoad();
 
@@ -694,11 +781,22 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       // `assertNoBodyHorizontalOverflow` gate fail (`expected 3020 to be at most 825`, recorded above).
       // Asserted here in its positive/GREEN form — the detector reporting the regression, not a faked
       // RED at commit time.
+      //
+      // 1024-specific addition (R-14 (h)): at >= 900px `#workArea`'s own class sets ONLY
+      // `overflow-y: auto` (`bilateral-review.component.html:20`, `.custom_scroll`) — per the CSS
+      // overflow spec, a `visible` value on one axis computes up to `auto` whenever the OTHER axis
+      // is non-`visible`, so `#workArea` silently gains its own COMPUTED `overflow-x: auto` at this
+      // width too (never at 840, where that class never applied — confirmed empirically: an
+      // `overflow-x: visible !important` override alone left `getComputedStyle` reporting `auto`
+      // regardless; only overriding BOTH axes on `.custom_scroll` breaks the coupling). Left alone,
+      // that second clip absorbs the injection before it can reach `documentElement`, and the
+      // DETECTOR test could never fire here no matter what the table does — defeating it too is
+      // required for this test to stay genuinely fallible at 1024.
       cy.document().then(doc => {
         const style = doc.createElement('style');
         style.setAttribute('data-testid', 'ct-fail-input-style');
         style.textContent =
-          'app-bilateral-review-table .pr-table-wrap { overflow-x: visible !important; } app-bilateral-review-table td:first-child { min-width: 2000px !important; }';
+          'app-bilateral-review-table .pr-table-wrap { overflow-x: visible !important; } app-bilateral-review-table td:first-child { min-width: 2000px !important; } .custom_scroll { overflow-x: visible !important; overflow-y: visible !important; }';
         doc.head.appendChild(style);
       });
 

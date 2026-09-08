@@ -1526,4 +1526,68 @@ describe('BilateralReviewComponent', () => {
       });
     });
   });
+
+  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-13, R-14 (d)) — proves the WIRING,
+  // not just the table component in isolation: a real `matchMedia` stub (same technique as
+  // `my-work-board.component.spec.ts:1500-1518`) drives the page's `isNarrow`, which this spec's
+  // `build()` feeds straight into the REAL `BilateralReviewTableComponent`'s `narrow` input (only
+  // band/modal/drawer are stubbed in this file).
+  describe('Cards below 900px — isNarrow wired to the table (BRP-T-3)', () => {
+    let originalMatchMedia: typeof window.matchMedia;
+    let listeners: Array<(event: MediaQueryListEvent) => void>;
+
+    /** `isNarrow`'s `matchMedia` call happens at the component's field-initializer time, so the
+     *  stub must be installed BEFORE `TestBed.createComponent` (i.e. before `build()`). */
+    function stubMatchMedia(narrow: boolean): void {
+      listeners = [];
+      window.matchMedia = jest.fn().mockImplementation((query: string) => ({
+        matches: query === '(max-width: 899px)' ? narrow : false,
+        media: query,
+        addEventListener: (_: string, cb: (event: MediaQueryListEvent) => void) => listeners.push(cb),
+        removeEventListener: (_: string, cb: (event: MediaQueryListEvent) => void) => {
+          listeners = listeners.filter(existing => existing !== cb);
+        },
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+        dispatchEvent: jest.fn(),
+        onchange: null
+      })) as unknown as typeof window.matchMedia;
+    }
+
+    beforeAll(() => {
+      originalMatchMedia = window.matchMedia;
+    });
+
+    afterEach(() => {
+      window.matchMedia = originalMatchMedia;
+    });
+
+    it('a narrow matchMedia stub flips the table input: cards render (ul[role=list], no <table>) instead of the grouped table', () => {
+      stubMatchMedia(true);
+      fixture.destroy();
+      build({}, of(groupedResponse(FIXTURE_ROWS)));
+
+      expect(window.matchMedia).toHaveBeenCalledWith('(max-width: 899px)');
+      expect(component.isNarrow()).toBe(true);
+      expect(root().querySelector('table')).toBeNull();
+      expect(root().querySelector('ul[role="list"]')).toBeTruthy();
+    });
+
+    it('follows the media query when the viewport crosses the breakpoint after load', () => {
+      stubMatchMedia(false);
+      fixture.destroy();
+      build({}, of(groupedResponse(FIXTURE_ROWS)));
+
+      expect(root().querySelector('table')).toBeTruthy();
+      expect(root().querySelector('ul[role="list"]')).toBeNull();
+
+      listeners.forEach(cb => cb({ matches: true } as MediaQueryListEvent));
+      fixture.detectChanges();
+      fixture.detectChanges();
+
+      expect(component.isNarrow()).toBe(true);
+      expect(root().querySelector('table')).toBeNull();
+      expect(root().querySelector('ul[role="list"]')).toBeTruthy();
+    });
+  });
 });

@@ -113,3 +113,47 @@
 | Issues | Worker yielded twice on background Jest runs — brief template now says "foreground, no run_in_background" (kaizen). |
 | Gate | auto-approved (pre-approved mode) |
 
+### `BRP-T-3` — Cards below 900 px
+
+| Field | Value |
+|---|---|
+| Status | in progress (attempt 1 — Implementer spawned 23:50, fresh worker) |
+| Date | 2026-09-07 |
+| Gate before start | auto-approved (pre-approved mode) after T-2 PASS; T-2 live look owed (Orca eval down) — combined look scheduled after T-3 |
+| Skills assigned | `angular-developer`, `ui-ux-pro-max`, `frontend-design` (task list) |
+| Effort | high |
+| Forward pointers carried | T-2 advisory: optional `expandedKeys` prune against `filteredGroups` |
+
+**Attempt 1 — Implementer report (00:07):** cards branch implemented (`narrow` input, `ul[role=list]`, group bars on the owned `expandedKeys`, flat order, no table/overflow in the branch); R-14 (d) rewritten (table scroll + sticky Actions at a new 1024 viewport, 840 = cards gate). `Tests: 433 passed` · lint clean · **CT `18 · Passing 8 · Failing 4`** — the four failures are outside the authorized (d) rewrite: (1)(2) the shared `assertEffectiveWidth` `beforeEach` and the 9-center describe fail at 840 because cards are taller than rows and trip the documented native-scrollbar quirk (JB-10's `cy.viewport(w, 1600)` fix was assigned to T-4); (3)(4) `BRT-T-7`'s two 840 FAIL-input probes inject CSS at `.pr-table-wrap` / `td:first-child`, which no longer exist under cards. The Implementer probed (viewport 1600 temporarily) → 14/3, proving (d) itself is correct, then reverted to the authorized diff. LOC: source +144 / −1 · tests +213 / −1. Not done: Contributor role badge omitted on cards (design §6.2 card spec does not list it — accepted, literal).
+
+**Leader decision (00:10):** not a Pivot — R-14's own rule says the breaking task owns the rewrite. Spec amended: R-14 gains (g) narrow viewport 1600 for the shared `beforeEach` + 9-center describe (pulled forward from T-4) and (h) BRT-T-7's two FAIL-input probes retargeted to 1024; T-3's Files/Description updated. Remainder sent to the same Implementer before the single Reviewer round (rule 2.3.0 — a task with a red verification never reaches the Reviewer as complete).
+
+**Attempt 1 — Implementer remainder landed (00:22):** `bilateral-review.cy.ts` only. (g) shared `beforeEach` → `cy.viewport(840, 1600)`; the 9-center describe needed **2400** (cards taller than rows; measured, documented inline). (h) BRT-T-7's two FAIL-input probes → `cy.viewport(1024, 900)`; the detector additionally needed `overflow-y: visible !important` on `.custom_scroll` in the injected style because `#workArea`'s `min-[900px]:overflow-y-auto` computes `overflow-x: auto` too at 1024 (CSS overflow spec) — verified with a reverted ancestor-trail probe. `Tests: 433 passed` · lint clean · **CT `18 · Passing 18 · Failing 0`**. LOC: source +144 / −1 · tests +252 / −9. Reviewer (opus, lens checklist, high) spawned 00:25 on the 6-file diff (539 lines, `p3.diff`). Orca `eval` still down (probe 00:15).
+
+**Attempt 1 — Reviewer verdict (00:33): `STATUS: FAIL`**, 1 issue. Verified green otherwise: `@if (narrow())` first branch, `ul[role=list]`, one `li` per row, no `<table>`/overflow utilities in the branch; grouped cards read `expandedRowKeys()` and write through the owned `expandedKeys` (cross-branch persistence proven in Jest); flat order; card content per §6.2 incl. 44 px action target; 36 px bars with the token badge; table branch untouched with every `!` intact; page `[narrow]` wiring driven by the real `matchMedia` listener; Jest asserts the absence of `<table>` and card content; CT 840 = cards gate, 1024 = wrap-scroll + sticky Actions; scope = 6 files.
+
+| # | Discovered Issue | Violated Rule | Remediation |
+|---|---|---|---|
+| 1 | Cards group-header `<button>` has no `focus-visible:*` (no global rule covers a bare button) — the only keyboard affordance for expand/collapse in the narrow branch; the T-2 table group toggle has the identical gap | design §6.3 "focus ring … on every new button"; requirements §8 | `focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]` on both toggles + one Jest assertion each (Leader: fix both, same rule, same file) |
+
+**ADVISORY (recorded):** (1) CT retarget comment at `cy.ts:203-210` contradicts `:780-791` — at ≥ 900 px both clips must be defeated, so the probe proves the body-overflow gate is fallible but not that a wrap-clip loss is reachable; **Leader added the comment fix**; **forward pointer → T-4:** a wrap-clip regression at ≥ 900 px is invisible to a `documentElement`-level gate (a `.pr-table-wrap` computed-`overflow-x` assertion is the honest gate). (2) **Ledger correction:** the Implementer's attempt-1 report said cards omit the Contributor badge — false, it renders at `table.html:139-144`; the accepted "deviation 3" is void. (3) R-14 (g)/AC-11 text reconciled to the 2400 viewport for the 9-card fixture (done above). (4) Narrow loading skeleton emits its own `ul[role=list]` — **Leader added a distinct `data-testid`**; its `animate-pulse` lacks `motion-reduce:animate-none`, matching the pre-existing table skeleton (no regression; follow-up).
+
+**Leader relay (00:36):** FAIL report verbatim + attempt history + additions (a)(b) to the same Implementer. **Attempt 2** — the one allowed Reviewer round; a second FAIL escalates.
+
+**Attempt 2 — Implementer landed (00:42):** shadow focus ring on both group toggles + two `className` assertions; skeleton `ul` → `data-testid="bilateral-review-cards-skeleton"`; CT comment corrected (both clips named). `Tests: 435 passed` · lint clean · CT `18 passing`. LOC: source +148 / −2 · tests +271 / −9. Scoped re-review sent to the same Reviewer (00:44) with the full diff + a 44-line interdiff.
+
+**Attempt 2 — Reviewer verdict (00:48): `STATUS: PASS`.** "The single FAIL issue is closed on both toggles with the exact §6.3 shadow-ring string plus two behavior-relevant className assertions, and the two Leader additions (distinct skeleton testid, truthful CT probe comment) are correctly executed." Advisories carried: ledger deviation 3 already voided above; R-14 (g)/AC-11 already reconciled to 2400; **forward pointer → T-4:** a wrap-clip regression at ≥ 900 px is invisible to the `documentElement`-level gate — add a computed-`overflow-x` assertion on `.pr-table-wrap`.
+
+**Final — `BRP-T-3` PASS on attempt 2 (2026-09-08 00:50)**
+
+| Field | Value |
+|---|---|
+| Attempts | 2 (attempt 1 = cards + Leader remainder for the CT cases cards broke; attempt 2 = focus ring on both toggles) |
+| Files | `components/bilateral-review-table/*.{ts,html,spec.ts}`, `bilateral-review.component.{html,spec.ts}`, `bilateral-review.cy.ts` (R-14 (d)(g)(h)) |
+| Verification | `npx jest …/bilateral-review --silent --reporters=summary --no-coverage` → `Test Suites: 14 passed · Tests: 435 passed`; `npx ng lint --quiet` → clean; CT → `18 · Passing 18 · Failing 0` |
+| Live evidence | **OWED** (Orca `eval` `runtime_unavailable` since 23:26; probes at 00:15, 00:25, 00:37, 00:44) — combined T-2/T-3 look scheduled when Orca is restarted or on the owner's screenshots (840 and 375 for the cards) |
+| Requirements covered | BRP-R-13, R-14 (d)(g)(h), R-15 (branch has no scroller); AC-11, AC-12 (CT halves) |
+| Decisions | (1) R-14 amended with (g)(h): the CT cases cards broke belong to T-3 (own rule), the JB-10 viewport fix pulled forward from T-4. (2) 9-card fixture at `cy.viewport(840, 2400)` (measured; spec text reconciled). (3) The 1024 detector injects `overflow-y: visible` on `.custom_scroll` too — the probe proves the body-overflow gate is fallible, not that a wrap-clip loss is reachable at ≥ 900 (T-4 gets the honest `.pr-table-wrap` gate). (4) Both group toggles got the focus ring (T-2's had the same gap). |
+| Issues | Implementer's report claimed the cards omit the Contributor badge — false (they render it); ledger corrected. |
+| Gate | auto-approved (pre-approved mode) |
+

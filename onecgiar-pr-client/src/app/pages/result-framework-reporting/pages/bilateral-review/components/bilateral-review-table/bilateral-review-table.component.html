@@ -122,7 +122,126 @@
   </tr>
 </ng-template>
 
-@if (view() === 'grouped') {
+<!-- @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-13, R-14 (d), R-15, design.md §6.2
+     "Cards") — below 900px (page's `isNarrow`) neither table branch below renders; one card per
+     result instead. No `<table>`, no `overflow-x`, no `overflow-y` in this branch (R-15 single-
+     scroller gate). Grouped cards read/toggle the SAME `expandedKeys` single source the grouped
+     table uses (design.md §6.1) — there is no `app-pr-group-table` here, so the group header
+     button below calls `onToggleGroup` directly. -->
+<ng-template #cardTpl let-row>
+  <li
+    class="flex flex-col gap-[6px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px]"
+    data-testid="bilateral-review-card">
+    <!-- Line 1: code + status pill. -->
+    <div class="flex items-center justify-between gap-[8px]">
+      <span class="font-mono text-[12px] tabular-nums !text-[var(--pr-text-muted)]" data-testid="bilateral-review-row-code">
+        {{ row.result_code }}
+        @if (isContributor(row)) {
+          <span
+            class="ml-[6px] inline-flex items-center rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-app)] px-[6px] py-[1px] text-[10px] leading-[16px] font-semibold text-[var(--pr-text-secondary)]"
+            >{{ copy.contributorBadge }}</span
+          >
+        }
+      </span>
+      <span
+        class="inline-flex shrink-0 items-center whitespace-nowrap rounded-full border px-[10px] py-[2px] text-[11.5px] font-semibold"
+        [class]="statusToneClass(row)"
+        data-testid="bilateral-review-row-status">
+        {{ row.status_name }}
+      </span>
+    </div>
+    <!-- Line 2: title, 2-line clamp. -->
+    <p class="m-0 line-clamp-2 text-[13px] leading-[17px] !text-[var(--pr-text-heading)]" [title]="row.result_title">{{ row.result_title }}</p>
+    <!-- Line 3: caption "category · center · TOC", placeholders as "—" (BRP-R-13). -->
+    <span class="truncate text-[11.5px] leading-[14px] text-[var(--pr-text-secondary)]" [title]="cardCaption(row)" data-testid="bilateral-review-card-caption">{{
+      cardCaption(row)
+    }}</span>
+    <!-- Line 4: date left, action right — action button carries a 44px touch target. -->
+    <div class="flex items-center justify-between gap-[8px]">
+      <span class="font-mono text-[12px] tabular-nums !text-[var(--pr-text-secondary)]">{{ row.submission_date | date: 'd MMM y' }}</span>
+      <button
+        hlmBtn
+        variant="ghost"
+        size="sm"
+        type="button"
+        class="!h-[44px] !min-w-[44px]"
+        data-testid="bilateral-review-row-action"
+        [attr.aria-disabled]="actionsDisabled() ? 'true' : null"
+        [attr.title]="actionsDisabled() ? copy.decisionInFlightTitle : null"
+        (click)="onActionClick(row)">
+        <span class="material-icons-round text-[16px] mr-[4px]">{{ actionIcon(row) }}</span>
+        {{ actionLabel(row) }}
+      </button>
+    </div>
+  </li>
+</ng-template>
+
+@if (narrow()) {
+  <div data-testid="bilateral-review-table">
+    @if (loading()) {
+      <!-- Leader addition (Reviewer ADVISORY, examined): distinct testid so a bare
+           `ul[role=list]` presence assertion cannot pass on the loading skeleton — it must find
+           the CARDS list specifically. -->
+      <ul role="list" class="flex flex-col gap-[8px]" aria-hidden="true" data-testid="bilateral-review-cards-skeleton">
+        @for (row of [1, 2, 3]; track row) {
+          <li class="rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px]">
+            <span class="block h-[14px] w-full animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+          </li>
+        }
+      </ul>
+    } @else if (view() === 'grouped') {
+      <div class="flex flex-col gap-[8px]">
+        @for (group of filteredGroups(); track group.key) {
+          <div class="flex flex-col gap-[8px]">
+            <button
+              type="button"
+              [attr.aria-expanded]="!!expandedRowKeys()[group.key]"
+              [attr.aria-label]="'Toggle ' + group.label"
+              (click)="onToggleGroup(group, !!expandedRowKeys()[group.key])"
+              class="flex h-[36px] w-full cursor-pointer items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-surface-app)] px-[10px] text-left focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+              data-testid="bilateral-review-group-toggle">
+              <span
+                class="material-icons-round text-[18px] text-[var(--pr-text-secondary)] transition-transform duration-150 motion-reduce:transition-none"
+                [class.-rotate-90]="!expandedRowKeys()[group.key]"
+                aria-hidden="true"
+                >expand_more</span
+              >
+              <span class="truncate font-bold text-[13px] text-[var(--pr-text-heading)]" data-testid="bilateral-review-group-name">{{ group.label }}</span>
+              @if (group.caption || group.center) {
+                <span class="truncate text-[12px] text-[var(--pr-text-secondary)]">{{ group.caption ?? group.center }}</span>
+              }
+              <span class="ml-auto flex shrink-0 items-center gap-[8px]">
+                <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="bilateral-review-group-summary">{{ resultsLabel(group) }}</span>
+                @if (pendingCount(group) > 0) {
+                  <span
+                    class="rounded-full border border-[var(--pr-color-yellow-300)] bg-[var(--pr-color-yellow-100)] px-[8px] py-[1px] text-[11px] font-semibold text-[var(--pr-color-yellow-900)]"
+                    data-testid="bilateral-review-group-pending">
+                    {{ pendingLabel(group) }}
+                  </span>
+                } @else {
+                  <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="bilateral-review-group-pending">{{ pendingLabel(group) }}</span>
+                }
+              </span>
+            </button>
+            @if (expandedRowKeys()[group.key]) {
+              <ul role="list" class="flex flex-col gap-[8px]">
+                @for (row of group.results; track row.id) {
+                  <ng-container *ngTemplateOutlet="cardTpl; context: { $implicit: row }"></ng-container>
+                }
+              </ul>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <ul role="list" class="flex flex-col gap-[8px]">
+        @for (row of sortedFlatRows(); track row.id) {
+          <ng-container *ngTemplateOutlet="cardTpl; context: { $implicit: row }"></ng-container>
+        }
+      </ul>
+    }
+  </div>
+} @else if (view() === 'grouped') {
   <div data-testid="bilateral-review-table">
     <app-pr-group-table
       styleClass="bilateral-review-table"
@@ -145,7 +264,7 @@
               type="button"
               [prRowToggler]="item"
               (click)="onToggleGroup(item, expanded)"
-              class="flex h-[40px] w-full cursor-pointer items-center gap-[10px] border-0 bg-transparent px-[10px] text-left"
+              class="flex h-[40px] w-full cursor-pointer items-center gap-[10px] border-0 bg-transparent px-[10px] text-left focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
               [attr.aria-expanded]="expanded"
               [attr.aria-label]="'Toggle ' + item.label"
               data-testid="bilateral-review-group-toggle">
