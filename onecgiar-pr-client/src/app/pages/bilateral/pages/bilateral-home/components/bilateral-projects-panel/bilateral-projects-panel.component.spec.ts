@@ -294,7 +294,7 @@ describe('BilateralProjectsPanelComponent', () => {
       expect(skeletonHost).toBeTruthy();
 
       const skeletons = fixture.nativeElement.querySelectorAll('.pr-skeleton');
-      expect(skeletons.length).toBe(8); // 4 KPI skeleton cards + 4 catalog grid cards
+      expect(skeletons.length).toBe(9); // 5 KPI skeleton cards + 4 catalog grid cards
       expect(fixture.nativeElement.querySelector('.pi-spinner')).toBeNull();
     });
   });

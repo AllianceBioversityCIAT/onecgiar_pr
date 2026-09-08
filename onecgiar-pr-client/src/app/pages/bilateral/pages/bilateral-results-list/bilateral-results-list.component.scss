@@ -18,8 +18,12 @@
 
 .brl {
   width: 100%;
-  padding: 16px 32px 56px;
   box-sizing: border-box;
+  padding: 20px 32px 48px;
+
+  @media (max-width: 640px) {
+    padding: 16px 16px 32px;
+  }
 }
 
 // ─── Phase tabs ───────────────────────────────────────────────────────────────
