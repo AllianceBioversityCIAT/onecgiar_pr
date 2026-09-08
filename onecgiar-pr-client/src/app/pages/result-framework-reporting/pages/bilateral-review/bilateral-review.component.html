@@ -330,6 +330,13 @@
         </button>
       </div>
 
+      <!-- ═══ Center chip strip (BRC-T-2, BRC-R-1..4, R-20, R-21) ═══ -->
+      <app-bilateral-review-center-strip
+        [items]="centerStrip()"
+        [allPending]="chipCounts().pending"
+        [selectedCodes]="centers()"
+        (selectCenter)="onCenterChipSelect($event)" />
+
       <!-- ═══ KPI strip ═══ -->
       <div class="px-[32px] max-sm:px-[16px] pt-[14px] pb-[16px]">
         <app-bilateral-review-kpis

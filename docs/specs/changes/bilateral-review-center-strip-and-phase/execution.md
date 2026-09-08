@@ -105,3 +105,65 @@ Observations (not T-1 defects, recorded): (a) the badge's `ensure` and the page'
 | Issues | Jest fixtures used `undefined` where the shell uses `null` — a whole class of tests could not fail on the real cold-boot shape; caught only live (KZ-MWB-2 pattern, second recurrence on this page). Budget: source +478 vs 320 for the spec → tripwire escalated to the owner at this gate (recommendation: continue, scope unchanged). Owner limit "≤ 1 Reviewer round" exceeded by one scoped re-review — escalated in the same message. |
 | Gate | auto-approved (pre-approved mode) for the PASS; the tripwire and the second review round were raised to the owner, who was told the Leader continues unless they object |
 
+### `BRC-T-2` — Center chip strip
+
+| Field | Value |
+|---|---|
+| Status | in progress (attempt 1 — Implementer spawned 19:32, fresh worker) |
+| Date | 2026-09-07 |
+| Gate before start | auto-approved (pre-approved mode) after T-1 PASS; budget tripwire and second review round raised to the owner at 19:10 with "continue unless you object" — no objection at 19:32 |
+| Skills assigned | `angular-developer`, `frontend-design` (task list) + `tdd` (Leader addition: count/order/pressed logic with mandated FAIL-input fixture) |
+| Effort | medium (well-specified, additive) |
+
+**Attempt 1 — Implementer report (19:42):** new `components/bilateral-review-center-strip/` (ts/html/spec), page `centerStrip` computed + `onCenterChipSelect`, mount under the status chips, copy block. `Test Suites: 14 passed · Tests: 374 passed`; lint clean. LOC: source +199 · tests +259. No `Not Done`. **Deviation:** output renamed `select` → `selectCenter` because `@angular-eslint/no-output-native` (enforced) forbids outputs named after native DOM events — Leader accepts; design §6.2 and tasks T-2 amended after PASS. Reviewer (opus, lens checklist, high) spawned 19:44 on the 7-file explicit-path diff (540 lines, `t2.diff`).
+
+**Leader HITL look #3 (19:45, Orca tab, SP02, P = 34, while the Reviewer audited):**
+
+| Check | Result |
+|---|---|
+| Strip at 1787 CSS px | `role="group"` "Contributing centers"; one line; chips `All centers 131 · IITA 99 · IWMI 20 · CIP 9 · IRRI 2 · Bioversity (Alliance) 1 · AfricaRice 0 · ILRI 0` — pending desc then acronym asc ✅; **All centers 131 = KPI Pending 131** ✅ (R-1, R-4, AC-1) |
+| Accessible names | `aria-label="IITA, 99 pending"`, `aria-pressed` on every chip, All pressed by default ✅ |
+| Class parity with status chips | pressed and unpressed class strings **identical** to the status chips (`bg-[var(--pr-color-primary-50)] border-[var(--pr-color-primary-300)] … text-[var(--pr-color-primary-700)]` / `bg-[var(--pr-surface-card)] border-[var(--pr-border)] … text-[var(--pr-text-secondary)]`); height 28 px, 12.5 px font on both ✅ |
+| Click IITA | URL `?tocView=aows&center=CENTER-11`, IITA pressed, All unpressed, rows collapse to IITA only, Pending KPI stays 131, chip counts unchanged ✅ (R-2, R-3, scenario clauses THEN / AND / BUT) |
+| Click IITA again | URL `?tocView=aows` (key removed), All pressed, full rows back ✅ (AND IT MUST clear with one click) |
+| 840 CSS px (viewport 700 × 900, root zoom ×1.2 → `innerWidth` 840, `clientWidth` 822) | strip wraps to **2 lines**, no clipped chip, `body.scrollWidth (822) <= clientWidth (822)` ✅ (R-20, AC-11 preview) |
+| Contrast (oklch → canvas → WCAG) | chip label: pressed `rgb(51,34,122)` on `rgb(245,243,255)` = **11.6**, unpressed `rgb(93,88,114)` on white = **6.76** ✅. Count numeral (`text-[var(--pr-text-subtle)]`, `rgb(150,145,168)`): **2.77** pressed / **3.04** unpressed ❌ — but **identical on the existing status chips** (same class, same ratios measured): an inherited gap, the parent spec's recorded HITL-only contrast item, not a T-2 defect. Follow-up candidate: one token swap on both chip rows' numerals (`--pr-text-subtle` → `--pr-text-secondary`) via `/akili-quick` |
+
+Viewport restored to 1500 × 960 after the look.
+
+**Attempt 1 — Reviewer verdict (19:50): `STATUS: FAIL`**, 1 issue. Conformance sweep otherwise clean: counts over `searchFiltered` with loose `== 5`, 0-pending centers kept, sort order, acronym fallback, `allPending` bound to `chipCounts().pending` (= KPI by construction), R-2 pressed rules exact, chip classes byte-identical to the status chips, all `var(--pr-*)`, `flex-wrap`, copy in `copy.ts`, `role="group"` + `aria-label`, no `[disabled]`, tests assert rendered text with all-distinct counts incl. 0 and blank, clicks on the chip button, 14 → 12 + "+2 more"; files exactly the task list; T-1 untouched.
+
+| # | Discovered Issue | Violated Rule | Remediation |
+|---|---|---|---|
+| 1 | The "Not specified" bucket has `code: ''`; `onCenterChipSelect` sets `centers = ['']`, the state→URL effect joins it to `''`, and the URL→state parser drops an empty value and resets the signal — the chip never stays pressed and any later merge-navigate reverts the filter. The suite cannot see it because `router.navigate` is a `jest.fn()` that never feeds `queryParamMapSubject` | `requirements.md` BRC-R-3 (same state persisted in `?center=` csv) with BRC-R-2 (exactly one chip pressed) for a chip BRC-R-1 mandates | Param-safe sentinel code for the bucket resolved to blank `lead_center` in the row filter; page test that clicks Not specified, re-emits the produced params through `queryParamMapSubject`, asserts `centers()` and `aria-pressed` survive |
+
+**ADVISORY (recorded):**
+- *Reliability:* strip mounts unconditionally (skeleton paints "All centers 0"). **Leader examined:** the status-chip row mounts unconditionally too (`bilateral-review.component.html:272`), so this is parity — no action.
+- *Readability:* design §6.3 names a `material-icons-round` caret on "+N more"; none shipped. Correct under the client's lucide-only rule → **design.md §6.3 corrected** after PASS.
+- *A11y:* "+N more" has no `aria-expanded`. **Leader added** to the fix round (one attribute; module guide lists `aria-expanded` among structural a11y checks).
+- *Readability:* strip repeats the status row's `border-b`. **Leader examined:** each band ends in one divider, consistent stacking — no action; the live look showed no double line.
+
+**Leader relay (19:52):** FAIL report passed verbatim to the same Implementer with attempt history; effort bumped to high. **Attempt 2** — this is the one Reviewer round the owner limit allows; a second FAIL escalates.
+
+**Attempt 2 — Implementer landed (19:58):** bucket code = sentinel `UNASSIGNED_CENTER_CODE = '__unassigned__'`, mapped back to `''` in `selectedCenterAcronyms`; `aria-expanded` on "+N more"; named page test "BRC-R-3: the Not specified chip selection survives the ?center= round trip through the router" (RED verified by reverting the fix). `Tests: 375 passed`, lint clean. LOC: source +216 · tests +293. Live regression check: 8 chips, All centers 131 pressed, KPI 131, zero console errors.
+
+**Attempt 2 — Reviewer verdict (20:02): `STATUS: PASS`.** "The sentinel closes the attempt-1 `?center=` round-trip defect (BRC-R-2/R-3) without collision, popover-option leakage or accessible-name leakage, `visibleRows` matches exactly the blank-`lead_center` rows the bucket counts, and the named test drives a real URL → state hydrate that fails under the old `''`." The Reviewer also traced: sentinel cannot collide with CLARISA codes; `centerFilterOptions` drops blanks so the bucket never becomes a popover option; accessible name uses the acronym.
+
+**ADVISORY (attempt 2, recorded):**
+- *Readability:* the strip's own spec fixture still uses `code: ''` for the bucket instead of the sentinel the page emits — align in a later pass.
+- *A11y:* `aria-expanded` never reaches `"true"` because the "+N more" button unmounts on expand (`@if (showMore())`); the attribute is an accurate description of an inert disclosure. Not gated by §8; follow-up if disclosure state should be announced.
+- *Readability:* with the bucket selected the popover trigger reads "1 centers" (pre-existing `triggerLabel` fallback); a "Not specified" popover option would make the two controls read identically — follow-up, out of scope.
+
+**Final — `BRC-T-2` PASS on attempt 2 (2026-09-07 20:05)**
+
+| Field | Value |
+|---|---|
+| Attempts | 2 |
+| Files | new `components/bilateral-review-center-strip/bilateral-review-center-strip.component.{ts,html,spec.ts}`; `bilateral-review.component.{ts,html,spec.ts}`; `bilateral-review.copy.ts` |
+| Verification | `npx jest src/app/pages/result-framework-reporting/pages/bilateral-review --silent --reporters=summary --no-coverage` → `Test Suites: 14 passed · Tests: 375 passed`; `npx ng lint --quiet` → `All files pass linting.` |
+| Live evidence | HITL #3 above: counts = KPI, order, click round trip via `?center=CENTER-11`, clear, 2-line wrap at 840 CSS px with no body overflow, class parity, label contrast 11.6 / 6.76 |
+| Requirements covered | BRC-R-1, R-2, R-3, R-4, R-9 (strip part), R-20, R-21; AC-1, 2, 3, 4, 12, 15; scenario "Review center by center" (all four clauses) |
+| Decisions | (1) output `select` → `selectCenter` (`@angular-eslint/no-output-native`) — design §6.2 + tasks T-2 amended. (2) "Not specified" bucket carries the param-safe sentinel `__unassigned__` — design §6.1 amended. (3) No caret icon on "+N more" (client lucide-only rule beats design §6.3's `material-icons-round`) — design §6.3 amended. (4) `tdd` added to skills. |
+| Issues | Count numerals inside chips measure 2.77 / 3.04 contrast — identical token and ratio on the pre-existing status chips (inherited gap, parent spec §11); follow-up `/akili-quick` on both rows. Budget: cumulative source ≈ +694 vs 320 (tripwire already escalated at T-1). |
+| Gate | auto-approved (pre-approved mode) |
+

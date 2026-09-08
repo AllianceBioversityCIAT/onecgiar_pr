@@ -1,5 +1,6 @@
 // @akili-spec changes/sp-bilateral-review-tab (BRT-T-3, BRT-T-5, BRT-R-4, R-6, R-7, R-8, R-9, R-13, R-15, R-20, R-21, R-31, R-32, design.md §6.2, §6.4)
 // @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, R-5, R-6, R-7, R-8, R-10, design.md §6.1, §6.2)
+// @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-2, R-1, R-2, R-3, R-4, R-9, R-20, R-21, design.md §6.1, §6.2)
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -28,6 +29,10 @@ import { ResultReviewDrawerComponent } from './components/result-review-drawer/r
 import { GroupedResult, ResultToReview } from './components/result-review-drawer/result-review-drawer.interfaces';
 import { BilateralReviewKpis, BilateralReviewKpisComponent } from './components/bilateral-review-kpis/bilateral-review-kpis.component';
 import { BilateralReviewTableComponent } from './components/bilateral-review-table/bilateral-review-table.component';
+import {
+  BilateralReviewCenterStripComponent,
+  BilateralReviewCenterStripItem
+} from './components/bilateral-review-center-strip/bilateral-review-center-strip.component';
 import { BILATERAL_REVIEW_COPY } from './bilateral-review.copy';
 import {
   BILATERAL_REVIEW_QUERY_PARAM_MAP,
@@ -67,6 +72,15 @@ function optionsOf(rows: ResultToReview[], pick: (row: ResultToReview) => string
   return [...unique].sort((a, b) => a.localeCompare(b));
 }
 
+/** Param-safe sentinel for the center strip's "Not specified" bucket (BRC-R-1). Reviewer-found
+ *  defect (attempt 1): the bucket's `code` was `''`, which `joinBilateralReviewListParam([''])`
+ *  turns into `''`, and the URL → state hydrate effect's `parseBilateralReviewListParam` treats an
+ *  empty/falsy raw value as "no param" (`if (!raw) return []`) — so the selection could never
+ *  survive a `?center=` round trip (any merge-navigate reset it back to `[]`). This value has no
+ *  CLARISA code collision risk and round-trips through the csv param like any real code; blank
+ *  `lead_center` rows are recovered from it explicitly in `selectedCenterAcronyms` below. */
+const UNASSIGNED_CENTER_CODE = '__unassigned__';
+
 @Component({
   selector: 'app-bilateral-review',
   standalone: true,
@@ -81,6 +95,7 @@ function optionsOf(rows: ResultToReview[], pick: (row: ResultToReview) => string
     PrFilterSelectComponent,
     BilateralReviewKpisComponent,
     BilateralReviewTableComponent,
+    BilateralReviewCenterStripComponent,
     ResultReviewDrawerComponent
   ],
   viewProviders: [provideIcons({ lucideSearch, lucideChevronsUpDown, lucideChevronsDownUp })]
@@ -317,7 +332,7 @@ export class BilateralReviewComponent {
   });
   private readonly selectedCenterAcronyms = computed(() => {
     const map = this.codeToAcronym();
-    return this.centers().map(code => map.get(code) ?? code);
+    return this.centers().map(code => (code === UNASSIGNED_CENTER_CODE ? '' : (map.get(code) ?? code)));
   });
 
   // ── Computed pipeline (design.md §6.2): searchFiltered → chipCounts/kpis → visibleRows → groups ──
@@ -364,6 +379,48 @@ export class BilateralReviewComponent {
       rejected: counts.rejected
     };
   });
+
+  /** Center chip strip (BRC-R-1..4, design.md §6.1): one entry per distinct `lead_center` present
+   *  in `searchFiltered` — the SAME base the status chips/KPIs use, so counts are independent of
+   *  the status chip and the popover filters (BRC-R-4). A center with zero pending rows still gets
+   *  a chip (e.g. "IWMI 0", BRC-AC-1) as long as at least one of its rows is in the base. Blank
+   *  `lead_center` rows are folded into a trailing "Not specified" bucket instead of being dropped
+   *  (BRC-R-1) — its `code` is `UNASSIGNED_CENTER_CODE`, a param-safe sentinel (see its own doc —
+   *  attempt 1 used `''`, which cannot survive the `?center=` csv round trip); `selectedCenterAcronyms`
+   *  maps that sentinel back to `''`, which is exactly what `row.lead_center ?? ''` compares
+   *  against, so selecting the bucket narrows to the blank rows and stays pressed across a
+   *  merge-navigate. Sorted pending desc, acronym asc; the "Not specified" bucket is always last
+   *  regardless of its count (BRC-R-1's "trailing", not "sorted-in"). */
+  readonly centerStrip = computed<BilateralReviewCenterStripItem[]>(() => {
+    const acronymToCode = this.acronymToCode();
+    const pendingByAcronym = new Map<string, number>();
+    let hasBlank = false;
+    let blankPending = 0;
+
+    for (const row of this.searchFiltered()) {
+      const acronym = row.lead_center;
+      if (!acronym) {
+        hasBlank = true;
+        if (this.isPending(row)) blankPending++;
+        continue;
+      }
+      if (!pendingByAcronym.has(acronym)) pendingByAcronym.set(acronym, 0);
+      if (this.isPending(row)) pendingByAcronym.set(acronym, pendingByAcronym.get(acronym)! + 1);
+    }
+
+    const items = [...pendingByAcronym.entries()]
+      .map(([acronym, pending]) => ({ code: acronymToCode.get(acronym) ?? acronym, acronym, pending }))
+      .sort((a, b) => b.pending - a.pending || a.acronym.localeCompare(b.acronym));
+    if (hasBlank) items.push({ code: UNASSIGNED_CENTER_CODE, acronym: this.copy.centerStrip.notSpecified, pending: blankPending });
+    return items;
+  });
+
+  /** Clicking a chip replaces the Center filter with exactly that center; clicking the pressed
+   *  chip or All centers clears it (BRC-R-2) — the existing `centers` signal drives both the
+   *  popover multiselect and the `?center=` URL sync (BRC-R-3), so no new state is introduced. */
+  onCenterChipSelect(code: string | null): void {
+    this.centers.set(code === null ? [] : [code]);
+  }
 
   /** Status + popover filters applied on top of `searchFiltered`. */
   readonly visibleRows = computed<ResultToReview[]>(() => {

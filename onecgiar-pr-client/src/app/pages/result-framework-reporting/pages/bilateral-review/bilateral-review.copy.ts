@@ -56,6 +56,15 @@ export const BILATERAL_REVIEW_COPY = {
   /** Pill next to the match count, shown only when the selected cycle differs from the current
    *  one ("Showing Reporting 2025") — so the hero's own cycle line is never misread. */
   phaseIndicator: (phaseName: string): string => `Showing ${phaseName}`,
+  // @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-2, R-1, R-2, R-20, R-21)
+  /** `BilateralReviewCenterStripComponent` — center chip strip under the status chips. */
+  centerStrip: {
+    groupAriaLabel: 'Contributing centers',
+    all: 'All centers',
+    notSpecified: 'Not specified',
+    moreLabel: (hidden: number): string => `+${hidden} more`,
+    chipAriaLabel: (label: string, pending: number): string => `${label}, ${pending} pending`
+  },
   /** Loading / empty / filtered-empty / error states (BRT-R-31). */
   states: {
     empty: 'No bilateral results reported to this program yet.',
