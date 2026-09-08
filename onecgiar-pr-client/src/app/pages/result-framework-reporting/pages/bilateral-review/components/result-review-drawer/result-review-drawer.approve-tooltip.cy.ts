@@ -50,7 +50,7 @@ import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr
  */
 describe('Approve button — tooltip trigger doubles as a functional control (TIP-T-5, site 1)', () => {
   const REAL_TEMPLATE_PATH =
-    'src/app/pages/result-framework-reporting/pages/bilateral-results/components/results-review-table/components/result-review-drawer/result-review-drawer.component.html';
+    'src/app/pages/result-framework-reporting/pages/bilateral-review/components/result-review-drawer/result-review-drawer.component.html';
 
   before(() => {
     cy.readFile(REAL_TEMPLATE_PATH).then((html: string) => {
