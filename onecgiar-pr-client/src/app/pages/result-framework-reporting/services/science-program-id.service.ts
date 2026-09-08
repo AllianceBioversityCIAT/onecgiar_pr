@@ -40,7 +40,15 @@ export class ScienceProgramIdService {
    */
   private cached$: Observable<ScienceProgramsEnvelope> | null = null;
 
-  private get progress$(): Observable<ScienceProgramsEnvelope> {
+  /**
+   * The shared `GET_ScienceProgramsProgress()` response, session-cached (see class docs).
+   * Any caller that only needs the raw envelope (not a code→id lookup) should subscribe here
+   * instead of calling `api.resultsSE.GET_ScienceProgramsProgress()` directly — that bypasses
+   * the cache and re-issues the request. P2-3180: the landing redirect and the sidebar's
+   * "My Science Programs" list (`ResultFrameworkReportingHomeService`) used to call it
+   * directly, each firing its own request on the same page load.
+   */
+  get progress$(): Observable<ScienceProgramsEnvelope> {
     if (!this.cached$) {
       this.cached$ = (this.api.resultsSE.GET_ScienceProgramsProgress() as Observable<ScienceProgramsEnvelope>).pipe(
         catchError(error => {

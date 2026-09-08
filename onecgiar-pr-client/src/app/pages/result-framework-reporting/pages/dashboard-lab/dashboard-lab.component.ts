@@ -1757,9 +1757,37 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * indicator may enter an average (a usable target, i.e. present and greater than zero) lives in
    * exactly one place, `toc-progress-rollup.ts` on the server. A second copy here would drift the
    * day one of the two is corrected.
+   *
+   * P2-3180: cached by `code::versionId` (`summaryCacheKey`, same key `summariesByCode` uses) —
+   * `loadTocAchievement` used to have no de-dup guard at all, so the constructor's unconditional
+   * effect (fires on every `selected()`/`effectiveVersionId()` settle during initial load) issued
+   * the SAME request 3-4 times back to back. `programAchievement` / `achievementByAowCode` stay
+   * plain readable signals backed by this cache — `computed()`, not `WritableSignal`, so a
+   * program switch re-reads the right entry instead of showing the previous program's stale value.
    */
-  readonly programAchievement = signal<TocAchievement | null>(null);
-  readonly achievementByAowCode = signal<Record<string, TocAchievement>>({});
+  private readonly tocAchievementByKey = signal<Map<string, { progress: TocAchievement | null; byAow: Record<string, TocAchievement> }>>(
+    new Map()
+  );
+  private readonly loadingAchievementKeys = signal<Set<string>>(new Set());
+
+  private currentAchievementKey(): string | null {
+    const sp = this.selected();
+    const code = sp?.initiativeCode;
+    if (!code) return null;
+    return this.summaryCacheKey(code, this.effectiveVersionId());
+  }
+
+  readonly programAchievement = computed<TocAchievement | null>(() => {
+    const key = this.currentAchievementKey();
+    if (!key) return null;
+    return this.tocAchievementByKey().get(key)?.progress ?? null;
+  });
+
+  readonly achievementByAowCode = computed<Record<string, TocAchievement>>(() => {
+    const key = this.currentAchievementKey();
+    if (!key) return {};
+    return this.tocAchievementByKey().get(key)?.byAow ?? {};
+  });
 
   /**
    * @akili-spec bugfix/kpi-count-reconciliation — basis is the AoW-**own** set from
@@ -3058,19 +3086,29 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * An error clears the figures and the page renders exactly as it did before the ticket.
    */
   private loadTocAchievement(code: string, versionId?: number): void {
+    const key = this.summaryCacheKey(code, versionId);
+    if (this.tocAchievementByKey().has(key) || this.loadingAchievementKeys().has(key)) return;
+    this.loadingAchievementKeys.update(set => new Set(set).add(key));
+
+    const settle = (progress: TocAchievement | null, byAow: Record<string, TocAchievement>) => {
+      this.tocAchievementByKey.update(map => new Map(map).set(key, { progress, byAow }));
+      this.loadingAchievementKeys.update(set => {
+        const next = new Set(set);
+        next.delete(key);
+        return next;
+      });
+    };
+
     this.api.resultsSE.GET_ScienceProgramTocProgress(code, versionId).subscribe({
       next: (res: {
         response?: { progress?: TocAchievement; areas?: Array<{ code: string; progress: TocAchievement }> };
       }) => {
-        this.programAchievement.set(res?.response?.progress ?? null);
-        this.achievementByAowCode.set(
+        settle(
+          res?.response?.progress ?? null,
           Object.fromEntries((res?.response?.areas ?? []).filter(a => a?.code).map(a => [a.code, a.progress]))
         );
       },
-      error: () => {
-        this.programAchievement.set(null);
-        this.achievementByAowCode.set({});
-      }
+      error: () => settle(null, {})
     });
   }
 

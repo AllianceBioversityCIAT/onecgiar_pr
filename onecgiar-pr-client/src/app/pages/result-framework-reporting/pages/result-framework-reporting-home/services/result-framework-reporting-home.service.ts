@@ -2,6 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { RecentActivity } from '../../../../../shared/interfaces/recentActivity.interface';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { SPProgress } from '../../../../../shared/interfaces/SP-progress.interface';
+import { ScienceProgramIdService } from '../../../services/science-program-id.service';
 
 const COMPACT_STORAGE_KEY = 'pr-rfr-home-compact';
 
@@ -43,6 +44,7 @@ export function partitionScienceProgramsForHome(response?: {
 })
 export class ResultFrameworkReportingHomeService {
   api = inject(ApiService);
+  private readonly scienceProgramIdSE = inject(ScienceProgramIdService);
   recentActivityList = signal<RecentActivity[]>([]);
 
   mySPsList = signal<SPProgress[]>([]);
@@ -79,12 +81,18 @@ export class ResultFrameworkReportingHomeService {
   getScienceProgramsProgress() {
     this.isLoadingSPLists.set(true);
 
-    this.api.resultsSE.GET_ScienceProgramsProgress().subscribe(({ response }) => {
-      const partitioned = partitionScienceProgramsForHome(response);
-      this.mySPsList.set(partitioned.mySciencePrograms);
-      this.otherSPsList.set(partitioned.otherSciencePrograms);
-      this.otherProjectsList.set(partitioned.otherProjects);
-      this.isLoadingSPLists.set(false);
+    // P2-3180: shared/session-cached request (`ScienceProgramIdService`) instead of calling
+    // `GET_ScienceProgramsProgress()` directly — this list is fetched from both the sidebar
+    // shell and this page, and each direct call re-issued the same request.
+    this.scienceProgramIdSE.progress$.subscribe({
+      next: ({ response }) => {
+        const partitioned = partitionScienceProgramsForHome(response);
+        this.mySPsList.set(partitioned.mySciencePrograms);
+        this.otherSPsList.set(partitioned.otherSciencePrograms);
+        this.otherProjectsList.set(partitioned.otherProjects);
+        this.isLoadingSPLists.set(false);
+      },
+      error: () => this.isLoadingSPLists.set(false)
     });
   }
 }
