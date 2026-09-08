@@ -27,7 +27,6 @@ import { EmailNotificationManagementModule } from '../../../shared/microservices
 import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
 import { VersioningModule } from '../../versioning/versioning.module';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
-import { SocketManagementModule } from '../../../shared/microservices/socket-management/socket-management.module';
 import { NotificationModule } from '../../notification/notification.module';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 
@@ -64,7 +63,6 @@ import { ResultsCenterRepository } from '../results-centers/results-centers.repo
     EmailNotificationManagementModule,
     ResultsTocResultsModule,
     forwardRef(() => VersioningModule),
-    SocketManagementModule,
     // P2-3188. Genuinely circular: NotificationModule imports this module for one method
     // (`getReceivedResultRequestPopUp`), and this service now needs to emit. Note that the emit
     // path itself is independent — `emitResultNotification` only touches the notification
