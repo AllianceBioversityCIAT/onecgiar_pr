@@ -245,9 +245,23 @@ export class BilateralProjectsService {
       );
     }
 
+    // P2-3313 (Nicoleta, 2026-09-08): a centre may only report against projects mapped to a
+    // Program/Accelerator in the W3 Registry. A project with no mapping is not reportable — the
+    // wizard's step 2 has no Science Program to offer and dead-ends — so it is not listed at all.
+    const reportableProjects = currentPhaseProjects.filter((p) =>
+      this.hasProgramMapping(p),
+    );
+    const unmappedCount =
+      currentPhaseProjects.length - reportableProjects.length;
+    if (unmappedCount > 0) {
+      this.logger.debug(
+        `${unmappedCount} project(s) of center code=${center.code} hidden: no mapping to a Program/Accelerator (P2-3313)`,
+      );
+    }
+
     const programCodes = [
       ...new Set(
-        currentPhaseProjects
+        reportableProjects
           .flatMap((p) => p.obj_project_mappings ?? [])
           .map((m) => m.programCode)
           .filter((code): code is string => !!code),
@@ -255,7 +269,7 @@ export class BilateralProjectsService {
     ];
     const spByCode = await this.resolveScienceProgramNames(programCodes);
 
-    const mapped = currentPhaseProjects.map((project) => ({
+    const mapped = reportableProjects.map((project) => ({
       id: project.id,
       shortName: project.shortName,
       fullName: project.fullName,
@@ -293,5 +307,22 @@ export class BilateralProjectsService {
     }));
 
     return { projects: mapped };
+  }
+
+  /**
+   * P2-3313 AC1 — "mapped to a Program/Accelerator" means at least one mapping row carrying a
+   * `programCode`: that code is what the wizard's Science Program step selects from, so a mapping
+   * without one is not reportable either.
+   *
+   * AC2 ("mapping approved by the committee") is deliberately NOT applied here. The column exists
+   * (`clarisa_project_mappings.status`) but the W3 Registry's `published/latest` payload does not
+   * carry the mapping state and CLARISA fills it with `Pending` on ingest, so filtering on it today
+   * would hide every project. When the registry exposes the state and CLARISA propagates it, the
+   * rule belongs in this same predicate (`status` in the approved set).
+   */
+  private hasProgramMapping(project: ClarisaProject): boolean {
+    return (project.obj_project_mappings ?? []).some(
+      (mapping) => !!mapping.programCode?.trim(),
+    );
   }
 }
