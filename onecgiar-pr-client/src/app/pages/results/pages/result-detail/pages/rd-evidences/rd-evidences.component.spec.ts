@@ -732,6 +732,49 @@ describe('RdEvidencesComponent', () => {
     });
   });
 
+  describe('draftValid', () => {
+    // EVL-AC-5: a denylisted file-storage link must never validate the modal draft.
+    it.each([
+      ['SharePoint', 'https://cgiar.sharepoint.com/sites/foo'],
+      ['OneDrive (onedrive.live.com)', 'https://onedrive.live.com/foo'],
+      ['OneDrive (1drv.ms)', 'https://1drv.ms/foo'],
+      ['Google Drive (drive.google.com)', 'https://drive.google.com/foo'],
+      ['Google Drive (docs.google.com)', 'https://docs.google.com/foo'],
+      ['Dropbox', 'https://www.dropbox.com/foo']
+    ])('should return false for a %s link', (_label, link) => {
+      component.draftEvidence = { is_sharepoint: false, link };
+
+      expect(component.draftValid).toBe(false);
+    });
+
+    // EVL-AC-6: a plain public link must remain valid (regression guard).
+    it('should return true for a plain public link', () => {
+      component.draftEvidence = { is_sharepoint: false, link: 'https://www.cgiar.org/evidence-1' };
+
+      expect(component.draftValid).toBe(true);
+    });
+
+    // Unaffected: the file-upload path never runs the link check.
+    it('should return true for a file-source draft with a file attached, regardless of link', () => {
+      component.draftEvidence = { is_sharepoint: true, file: new File([''], 'doc.pdf') } as any;
+
+      expect(component.draftValid).toBe(true);
+    });
+
+    // Regression guard: unchanged pre-existing behavior for a missing link.
+    it('should return false when the link field is empty and is_sharepoint is false', () => {
+      component.draftEvidence = { is_sharepoint: false, link: '' };
+
+      expect(component.draftValid).toBe(false);
+    });
+
+    it('should return false when there is no draft', () => {
+      component.draftEvidence = null as any;
+
+      expect(component.draftValid).toBe(false);
+    });
+  });
+
   describe('validateHasInnoReadinessLevelEvidence', () => {
     it('should return true if isOptionalReadinessLevel is true', () => {
       component.isOptionalReadinessLevel = true;

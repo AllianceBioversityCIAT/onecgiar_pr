@@ -58,6 +58,10 @@ describe('FieldCardComponent', () => {
       fixture.detectChanges();
     });
 
+    afterEach(() => {
+      document.body.querySelectorAll('.pr-tooltip').forEach(el => el.remove());
+    });
+
     it('replaces the colour legend with the ⓘ trigger', () => {
       expect(q('.sgi-dac-info')).toBeTruthy();
       expect(q('.fch_info_wrap')).toBeNull();
@@ -74,9 +78,20 @@ describe('FieldCardComponent', () => {
       expect(trigger.nativeElement.textContent.trim()).toBe('');
     });
 
-    it('is pinnable, so the guidance survives the pointer leaving and its links stay clickable', () => {
+    // P2-3323 Part 2 (TIP-DD-5): `prTooltipPinnable` was removed — pinning is unconditional
+    // directive-wide now. This component's scope is just "clicking the trigger here actually
+    // pins it"; the directive's full open/close/keyboard behavior is covered in
+    // pr-tooltip.directive.spec.ts.
+    it('pins on click so the guidance survives the pointer leaving and its links stay clickable', () => {
       const directive = fixture.debugElement.query(By.directive(PrTooltipDirective)).injector.get(PrTooltipDirective);
-      expect(directive.prTooltipPinnable).toBe(true);
+      expect(directive).toBeInstanceOf(PrTooltipDirective);
+
+      const trigger = q('.sgi-dac-info');
+      trigger.nativeElement.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(document.body.querySelector('.pr-tooltip.pr-tooltip--pinned')).toBeTruthy();
+
+      trigger.nativeElement.dispatchEvent(new MouseEvent('mouseleave'));
+      expect(document.body.querySelector('.pr-tooltip')).toBeTruthy(); // still open — pinning survives pointer leaving
     });
 
     // The colour legend that used to take this slot explained the four card colours. With no

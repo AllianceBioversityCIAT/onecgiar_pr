@@ -111,15 +111,15 @@ export const routingApp: PrRoute[] = [
     loadComponent: () => import('../../pages/rfr-explanation/rfr-explanation.component').then(m => m.RfrExplanationComponent)
   },
   {
-    // `prHide` was `true` while the bilateral module was being built. The approved reference lists
-    // "Bilateral Results" as the 4th PLATFORM entry (GAP-ANALYSIS-2026-08-11 §1 S1) and
-    // `PLATFORM_ORDER` in the nav sidebar already reserves its slot, so the route is now visible.
-    // The only other reader of `prHide` over `routingApp` is `NavigationBarComponent`, which renders
-    // exclusively inside `HeaderPanelComponent` — no longer mounted by any template since the Spartan
-    // sidebar replaced the old header. So nothing else changes by unhiding it.
+    // Hidden from the PLATFORM list on purpose (2026-09-07). The sidebar builds a Platform row's
+    // target as `/<path>`, i.e. a bare `/bilateral` — and this module has had no empty-path route
+    // since `9de783e26` moved it to `/bilateral/:acronym/...`: its `**` child redirects to `/`,
+    // so the row landed the user on their first Science Program. The module stays routable; the
+    // way in is the centre cards under MY CGIAR CENTERS (`/bilateral/<acronym>/home`). Unhide
+    // only once a bare `/bilateral` has a page of its own.
     prName: 'Bilateral Results',
     underConstruction: false,
-    prHide: false,
+    prHide: true,
     canActivate: [CheckLoginGuard],
     path: 'bilateral',
     loadChildren: () => import('../../pages/bilateral/bilateral.module').then(m => m.BilateralModule)

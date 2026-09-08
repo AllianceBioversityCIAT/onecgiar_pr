@@ -277,13 +277,17 @@ export class BilateralAiService {
       where: { id: draft.result_id },
     });
 
-    if (draft.extracted_mds) {
-      await this.bilateralService.populateResultFromExtractedMds(
-        result,
-        draft.extracted_mds as Record<string, any>,
-        userId,
-      );
-    }
+    // The lead centre is the centre the document was uploaded under — `job.center_id`, the same
+    // value that scopes the drafts list and the entitlement check — never the centre the model
+    // read in the text (see `populateResultFromExtractedMds`). Resolved to name + acronym as
+    // well as id so the contributor de-duplication can recognise it under any spelling.
+    const jobLeadCenter = await this.resolveJobLeadCenter(draft.job?.center_id);
+    await this.bilateralService.populateResultFromExtractedMds(
+      result,
+      (draft.extracted_mds as Record<string, any>) ?? null,
+      userId,
+      { leadCenter: jobLeadCenter },
+    );
 
     await this.bilateralService.populateInitiativeAndTocFromProgramCode(
       result.id,
@@ -318,6 +322,29 @@ export class BilateralAiService {
       },
       message: 'Draft promoted to bilateral result',
       status: 200,
+    };
+  }
+
+  /** The job's centre as a `handleLeadCenter` input, or undefined when the job carries none. */
+  private async resolveJobLeadCenter(
+    centerInstitutionId: number | null | undefined,
+  ): Promise<
+    { name?: string; acronym?: string; institution_id?: number } | undefined
+  > {
+    if (centerInstitutionId == null) return undefined;
+    const institution = await this.clarisaInstitutionsRepository.findOne({
+      where: { id: centerInstitutionId },
+    });
+    if (!institution) {
+      this.logger.warn(
+        `Job centre institution ${centerInstitutionId} not found; the promoted result gets no lead centre from the job`,
+      );
+      return { institution_id: centerInstitutionId };
+    }
+    return {
+      institution_id: institution.id,
+      acronym: institution.acronym ?? undefined,
+      name: institution.name ?? undefined,
     };
   }
 
@@ -438,9 +465,21 @@ export class BilateralAiService {
 
       // The drafts route is /bilateral/:acronym/drafts; the acronym comes from the centre's
       // CLARISA institution. Same frontend-base derivation `attachResultLinks` already uses.
+      //
+      // The acronym is a URL path segment and MUST be encoded: "Bioversity (Alliance)" pasted raw
+      // gave mail clients `.../bilateral/Bioversity (Alliance)/drafts`, which they cut at the
+      // space — the link landed on `/bilateral/Bioversity%20/home`, a centre that does not exist
+      // (reported 2026-09-07). `encodeURIComponent` leaves `(` `)` alone and some clients still
+      // stop at those, so they are encoded by hand; the Angular router decodes both fine.
       const institution = await this.clarisaInstitutionsRepository.findOne({
         where: { id: job.center_id },
       });
+      const acronymSegment = institution?.acronym
+        ? encodeURIComponent(institution.acronym).replace(
+            /[()]/g,
+            (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+          )
+        : null;
       const pdfBase = (
         env.FRONT_END_PDF_ENDPOINT ??
         'https://reporting.cgiar.org/reports/result-details/'
@@ -448,8 +487,8 @@ export class BilateralAiService {
       const frontendBase =
         pdfBase.replace(/\/reports\/result-details$/, '') ||
         'https://reporting.cgiar.org';
-      const draftsUrl = institution?.acronym
-        ? `${frontendBase}/bilateral/${institution.acronym}/drafts`
+      const draftsUrl = acronymSegment
+        ? `${frontendBase}/bilateral/${acronymSegment}/drafts`
         : frontendBase;
 
       const compiled = handlebars.compile(templateRow.template);

@@ -64,6 +64,9 @@ describe('BilateralAiService (unit)', () => {
 
     const bilateralService = {
       populateResultFromExtractedMds: jest.fn().mockResolvedValue(undefined),
+      populateTypeSpecificFromExtractedMds: jest
+        .fn()
+        .mockResolvedValue(undefined),
       populateInitiativeAndTocFromProgramCode: jest
         .fn()
         .mockResolvedValue(undefined),
@@ -617,6 +620,107 @@ describe('BilateralAiService (unit)', () => {
       });
     });
 
+    // 2026-09-07: an AfricaRice upload whose document said "commissioned by ILRI" was promoted
+    // with ILRI as lead centre — the promote handed the model's `lead_center` straight to
+    // handleLeadCenter. The lead is the job's centre; the model's centre rides along as an option
+    // for the bilateral service to keep as a contributor.
+    it('makes the job centre the lead centre and passes the extracted MDS alongside it', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaInstitutionsRepository.findOne.mockResolvedValue({
+        id: 7,
+        acronym: 'AfricaRice',
+        name: 'Africa Rice Center',
+      });
+      const extracted = {
+        lead_center: { acronym: 'ILRI' },
+        contributing_partners: [],
+      };
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 5,
+        is_discarded: false,
+        result_id: 100,
+        job: { program_code: null, user_id: 42, center_id: 7 },
+        extracted_mds: extracted,
+      });
+      stubs.evidenceRepository.find.mockResolvedValue([]);
+
+      await service.promoteDraft(5, 42);
+
+      expect(stubs.clarisaInstitutionsRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 7 },
+      });
+      expect(
+        stubs.bilateralService.populateResultFromExtractedMds,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 100 }),
+        extracted,
+        42,
+        {
+          leadCenter: {
+            institution_id: 7,
+            acronym: 'AfricaRice',
+            name: 'Africa Rice Center',
+          },
+        },
+      );
+    });
+
+    // A draft with no extracted MDS used to get NO lead centre at all (the populate call was
+    // skipped) — the same silent gap the wizard has for projects without organization_code.
+    it('still assigns the job centre as lead when the draft carries no extracted MDS', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaInstitutionsRepository.findOne.mockResolvedValue({
+        id: 7,
+        acronym: 'AfricaRice',
+        name: 'Africa Rice Center',
+      });
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 5,
+        is_discarded: false,
+        result_id: 100,
+        job: { program_code: null, user_id: 42, center_id: 7 },
+        extracted_mds: null,
+      });
+      stubs.evidenceRepository.find.mockResolvedValue([]);
+
+      await service.promoteDraft(5, 42);
+
+      expect(
+        stubs.bilateralService.populateResultFromExtractedMds,
+      ).toHaveBeenCalledWith(expect.objectContaining({ id: 100 }), null, 42, {
+        leadCenter: expect.objectContaining({
+          institution_id: 7,
+          acronym: 'AfricaRice',
+        }),
+      });
+    });
+
+    it('passes no lead centre when the job has none, so the extracted one still leads', async () => {
+      const { service, stubs } = makeService();
+      const extracted = { lead_center: { acronym: 'ILRI' } };
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 5,
+        is_discarded: false,
+        result_id: 100,
+        job: { program_code: null, user_id: 42, center_id: null },
+        extracted_mds: extracted,
+      });
+      stubs.evidenceRepository.find.mockResolvedValue([]);
+
+      await service.promoteDraft(5, 42);
+
+      expect(
+        stubs.bilateralService.populateResultFromExtractedMds,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 100 }),
+        extracted,
+        42,
+        {
+          leadCenter: undefined,
+        },
+      );
+    });
+
     it('should throw BadRequestException when non-DOCUMENT formal evidence exists', async () => {
       const { service, stubs } = makeService();
       stubs.draftRepository.findOne.mockResolvedValue({
@@ -812,6 +916,52 @@ describe('BilateralAiService (unit)', () => {
       expect(payload.emailBody.message.socketFile).toContain('1');
       expect(payload.emailBody.message.socketFile).toContain(
         '/bilateral/AfricaRice/drafts',
+      );
+    });
+
+    // 2026-09-07: "Bioversity (Alliance)" pasted raw into the href was cut at the space by the
+    // mail client and landed on /bilateral/Bioversity%20/home. The segment is percent-encoded,
+    // parentheses included, so the link survives every client and the router decodes it back.
+    it('percent-encodes the centre acronym in the drafts link, parentheses included', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaInstitutionsRepository.findOne.mockResolvedValue({
+        id: 7,
+        acronym: 'Bioversity (Alliance)',
+      });
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+        center_id: 7,
+        program_code: 'SP06',
+      });
+      stubs.userRepository.findOne.mockResolvedValue({
+        email: 'uploader@cgiar.org',
+        first_name: 'Juan',
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [
+          { indicator: 'Number of innovations', title: 'A', description: 'd' },
+        ],
+        interactionId: 'int-9',
+      });
+      jest
+        .spyOn(service as any, 'createDraftFromCandidate')
+        .mockResolvedValue({ id: 1 });
+
+      await service.processJob('j1');
+
+      const payload = stubs.emailService.sendEmail.mock.calls[0][0];
+      expect(payload.emailBody.message.socketFile).toContain(
+        '/bilateral/Bioversity%20%28Alliance%29/drafts',
+      );
+      expect(payload.emailBody.message.socketFile).not.toContain(
+        '/bilateral/Bioversity (Alliance)/drafts',
       );
     });
 

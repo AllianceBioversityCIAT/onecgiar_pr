@@ -48,7 +48,15 @@ export class EvidencesRepository
           `e.knowledge_product_related`,
           config.phase,
         )} as knowledge_product_related,
-        e.evidence_type_id
+        e.evidence_type_id,
+        e.innovation_readiness_related,
+        e.innovation_use_related,
+        e.policy_change_related,
+        e.capacity_sharing_related,
+        e.other_output_related,
+        e.other_outcome_related,
+        e.knowledge_product_metadata_related,
+        e.innov_dev_user_demand
         from evidence e where e.result_id = ${
           config.old_result_id
         } and is_active > 0
@@ -71,7 +79,15 @@ export class EvidencesRepository
         is_sharepoint,
         result_id,
         knowledge_product_related,
-        evidence_type_id
+        evidence_type_id,
+        innovation_readiness_related,
+        innovation_use_related,
+        policy_change_related,
+        capacity_sharing_related,
+        other_output_related,
+        other_outcome_related,
+        knowledge_product_metadata_related,
+        innov_dev_user_demand
         ) select
         e.description,
         e.is_active,
@@ -94,7 +110,15 @@ export class EvidencesRepository
           `e.knowledge_product_related`,
           config.phase,
         )} as knowledge_product_related,
-        e.evidence_type_id
+        e.evidence_type_id,
+        e.innovation_readiness_related,
+        e.innovation_use_related,
+        e.policy_change_related,
+        e.capacity_sharing_related,
+        e.other_output_related,
+        e.other_outcome_related,
+        e.knowledge_product_metadata_related,
+        e.innov_dev_user_demand
         from evidence e where e.result_id = ${
           config.old_result_id
         } and is_active > 0`,

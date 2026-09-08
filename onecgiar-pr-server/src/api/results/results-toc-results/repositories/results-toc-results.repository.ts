@@ -1845,7 +1845,7 @@ export class ResultsTocResultRepository
 
               const payload = {
                 is_active: true,
-                contributing_indicator: this.toNumberOrNull(
+                contributing_indicator: this.toContributingIndicator(
                   target.contributing_indicator ?? target.contributing,
                 ),
                 indicator_question:
@@ -1909,7 +1909,7 @@ export class ResultsTocResultRepository
               await this._resultTocIndicatorTargetRepository.save({
                 result_toc_result_indicator_id:
                   resultTocResultIndicator.result_toc_result_indicator_id,
-                contributing_indicator: this.toNumberOrNull(
+                contributing_indicator: this.toContributingIndicator(
                   target.contributing_indicator ?? target.contributing,
                 ),
                 indicator_question:
@@ -2475,6 +2475,20 @@ select *
     if (value === null || value === undefined) return null;
     const num = Number(value);
     return Number.isFinite(num) ? num : null;
+  }
+
+  /**
+   * P2-3608: `contributing_indicator` is a contribution towards a target, so a
+   * negative value is never valid. It is clamped to 0 - the same value the form
+   * already writes when a negative one is typed - instead of being dropped, so a
+   * row that already counted as answered keeps counting as answered.
+   * null/undefined stay null ("not answered yet"), and 0 is preserved on
+   * purpose: it is a real answer for qualitative indicators (P2-3089).
+   */
+  private toContributingIndicator(value: any): number | null {
+    const num = this.toNumberOrNull(value);
+    if (num === null) return null;
+    return num < 0 ? 0 : num;
   }
 
   private toStringOrNull(value: unknown): string | null {

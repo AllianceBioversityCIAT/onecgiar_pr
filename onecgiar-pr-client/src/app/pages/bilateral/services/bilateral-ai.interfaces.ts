@@ -43,3 +43,16 @@ export interface BilateralAiUploadState {
   errorMessage?: string;
   uploadProgress: number;
 }
+
+/**
+ * What the app-wide completion dialog shows once an AI job reaches a terminal state. Carries the
+ * centre captured when the job STARTED — by the time it finishes the user may be anywhere in the
+ * app (or have reloaded), so the bilateral context signals cannot be trusted for the link.
+ */
+export interface BilateralAiCompletionNotice {
+  jobId: string;
+  centerAcronym: string;
+  status: 'completed' | 'completed_no_candidates' | 'failed';
+  resultCount: number;
+  errorMessage?: string;
+}

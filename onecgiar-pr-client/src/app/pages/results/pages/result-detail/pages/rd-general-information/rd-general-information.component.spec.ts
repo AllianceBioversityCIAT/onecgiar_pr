@@ -1486,4 +1486,43 @@ describe('RdGeneralInformationComponent', () => {
       expect(component.generalInfoBody.result_code).toBe('123');
     });
   });
+  /**
+   * P2-3292 (QA 7-Sep-2026) — "Is this innovation active and receiving investment?" rendered BLANK
+   * after every reload of a discontinued result, while the ticked reason, the merge/split targets
+   * and the DISCONTINUED badge all came back correctly.
+   *
+   * The asymmetry IS the diagnosis: `is_discontinued` is a MySQL `tinyint(1)`, so it arrives as the
+   * NUMBER 1 (measured on prtest the same day: result 6432 answers `is_discontinued: 1` on this
+   * very endpoint). Everything downstream reads it with truthiness, which `1` satisfies. Only
+   * `app-pr-radio-button`, which matches its `optionValue` (`false` / `true`) by identity, cannot.
+   */
+  describe('P2-3292 — is_discontinued must reach the radio as a real boolean', () => {
+    const loadWith = (isDiscontinued: any) => {
+      mockApiService.resultsSE.GET_generalInformationByResultId.mockReturnValue(
+        of({ response: { ...mockGET_generalInformationByResultIdResponse, is_discontinued: isDiscontinued } })
+      );
+      component.getSectionInformation();
+      return component.generalInfoBody.is_discontinued as any;
+    };
+
+    it('turns the tinyint 1 the server sends into true, so "No" comes back selected', () => {
+      expect(loadWith(1)).toBe(true);
+    });
+
+    it('turns 0 into false, so "Yes" comes back selected', () => {
+      expect(loadWith(0)).toBe(false);
+    });
+
+    it('leaves an actual boolean untouched', () => {
+      expect(loadWith(true)).toBe(true);
+      expect(loadWith(false)).toBe(false);
+    });
+
+    // 🥇 The block is mandatory and `[isComplete]="is_discontinued != null"` is what reports it as
+    // answered. Collapsing "never answered" to false would tick a question nobody has answered.
+    it('keeps an unanswered question null, never false', () => {
+      expect(loadWith(null)).toBeNull();
+      expect(loadWith(undefined)).toBeNull();
+    });
+  });
 });

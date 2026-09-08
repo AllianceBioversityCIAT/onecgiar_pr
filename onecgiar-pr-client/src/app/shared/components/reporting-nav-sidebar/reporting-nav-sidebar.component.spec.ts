@@ -124,17 +124,16 @@ describe('ReportingNavSidebarComponent', () => {
     const paths = component.sections().map(s => s.path);
     expect(paths).not.toContain('result-framework-reporting');
     expect(paths).not.toContain('emerging');
-    // Reference order: Results Center · Innovation Packages · Quality Assurance · Bilateral · My Admin.
-    // Bilateral used to be absent because its route carried `prHide: true`, which dropped it from
-    // `sections()`; the approved order lists it as the fourth PLATFORM entry, so it must be here.
+    // Reference order: Results Center · Innovation Packages · Quality Assurance · My Admin.
+    // Bilateral is NOT a Platform row: the row would target a bare `/bilateral`, which has no page
+    // (the module only routes `/bilateral/:acronym/...`) and bounced the user to their first
+    // Science Program. Centres are entered from the MY CGIAR CENTERS cards instead.
     const result = paths.indexOf('result');
     const qa = paths.indexOf('quality-assurance');
-    const bilateral = paths.indexOf('bilateral');
     const myAdmin = paths.indexOf('init-admin-module');
-    expect(bilateral).toBeGreaterThanOrEqual(0);
-    expect(result).toBeLessThan(bilateral);
-    expect(qa).toBeLessThan(bilateral);
-    if (myAdmin >= 0) expect(bilateral).toBeLessThan(myAdmin);
+    expect(paths).not.toContain('bilateral');
+    expect(result).toBeLessThan(qa);
+    if (myAdmin >= 0) expect(qa).toBeLessThan(myAdmin);
     expect(component.rfrPlannedPath).toBe(PLANNED);
     expect(component.programGroups().find(g => g.key === 'other')?.label).toBe('Other science programs');
     expect(component.fontScaleOptions.length).toBeGreaterThan(0);

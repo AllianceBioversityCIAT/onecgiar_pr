@@ -14,7 +14,7 @@
   "compilerOptions": {
     "moduleResolution": "bundler",
     "outDir": "./out-tsc/ct",
-    "types": ["node", "jest", "cypress"]
+    "types": ["node", "jest", "cypress", "cypress-real-events"]
   },
   "include": ["src/**/*.cy.ts", "src/**/*.d.ts", "cypress/support/component.ts", "cypress/support/ct-utils.ts"]
 }
