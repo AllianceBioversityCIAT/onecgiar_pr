@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-09-02 · branch performance-refactor · P2-3420/P2-3421 (QA'd innovation link, single select)
+**Verified:** 2026-09-04 · branch qa-development-2026-ss · f2e9b5d65 · P2-3301 follow-up (Theory of Change note removed for P25)
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
@@ -327,6 +327,21 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
   🛑 **Not yet verified in a real browser** — this spec's E2E/manual walkthrough is an outstanding
   human gate (local stack + auth token + a real ToC-mapped P25 result are all required and were not
   available at doc-update time).
+
+- ⚠️ **P2-3301 follow-up (2026-09-04): the "CGIAR Centers ... Section 2, Theory of Change" sentence
+  was REMOVED from `components/multiple-wps/components/knowledge-product-selector` (`CPKnowledgeProductSelectorComponent`),
+  not re-fixed.** P2-3301 had already turned the frozen `undefined` link into a working getter-based
+  deep link (`resultCode`/`versionId` re-evaluated on each CD pass). But the destination never made
+  sense for P25: `routing-data.ts` registers `theory-of-change` with `portfolioAcronym: 'P22'`, which
+  only hides it from the **sidebar** — there is no route guard — so P25 has no navigable Theory of
+  Change section at all, and even the copy was wrong (P25's own section order makes THIS section —
+  Contributors & partners — section 2, not Theory of Change; "Section 2" was P22-derived boilerplate).
+  `alertStatusMessage` is a plain string again (no getter, no `resultCode`/`versionId` — nothing else
+  in the component read them). If P25 ever gets a real ToC view, re-add the sentence pointing at
+  THAT route, don't resurrect the P22 copy or the `/theory-of-change` deep link.
+  🛑 The **legacy** `rd-partners/components/knowledge-product-selector` (P22, `KnowledgeProductSelectorComponent`)
+  keeps its getter-based ToC link untouched — P22 genuinely has Theory of Change as section 2, so
+  that copy is correct there. Don't apply this removal to the P22 twin.
 
 ## El enlace a la innovación QA'd (P2-3420 / P2-3421) — TRES caminos, no dos
 
