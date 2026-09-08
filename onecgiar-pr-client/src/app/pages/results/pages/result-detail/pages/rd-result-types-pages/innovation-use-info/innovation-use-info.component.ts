@@ -78,6 +78,30 @@ export class InnovationUseInfoComponent {
             measures: [],
             organization: []
           };
+
+          // P2-3613 — 🛑 this hydration is written key by key, so a key the server sends and this
+          // block does not name never reaches `app-innovation-use-form`, whose `@Input() body` IS
+          // this object. The five below were all missing, and each one reaches the screen as a
+          // silent absence rather than an error:
+          //
+          // - `current_use_previous` gates `showCurrentUseUpdate()`. Undefined here means the whole
+          //   Current Use Update block never renders, which is exactly what QA reported on 7 Sep
+          //   2026 (result 8398, a real 2025 -> 2026 rollover). Measured the same day: the server
+          //   answers `{result_id: 10866, phase_year: 2025, total_actors: 8825}` for that result,
+          //   so the defect was never in the read path the block was verified against.
+          // - `innovation_use_2030_previous` gates the same way for the 2030 projection (P2-3295).
+          // - `innov_use_2030_justification`, `new_users_added` and `use_expansion_narrative` are
+          //   bound with `[(ngModel)]`: the reporter types them, `saveSectionWith` sends them, and
+          //   the reload paints them empty. Worse for the last two, which the server writes as
+          //   `?? null`: a later save from this section would erase what was stored.
+          //
+          // `?? null` and not `|| null` on the three answers: 0 and '' are answers. §5 of the story
+          // allows "the use was verified and did not grow" explicitly, which is a reported 0.
+          this.innovationUseInfoBody.current_use_previous = response.current_use_previous ?? null;
+          this.innovationUseInfoBody.innovation_use_2030_previous = response.innovation_use_2030_previous ?? null;
+          this.innovationUseInfoBody.innov_use_2030_justification = response.innov_use_2030_justification ?? null;
+          this.innovationUseInfoBody.new_users_added = response.new_users_added ?? null;
+          this.innovationUseInfoBody.use_expansion_narrative = response.use_expansion_narrative ?? null;
         }
         this.convertOrganizations(this.innovationUseInfoBody?.innovatonUse?.organization);
         this.convertOrganizations(this.innovationUseInfoBody?.innovation_use_2030?.organization);
@@ -165,6 +189,11 @@ export class InnovationUseInfoComponent {
       // P2-3295 §3. This payload is built key by key, so a field the form collects and this object
       // does not name is typed by the reporter and thrown away on save, with no error to show it.
       innov_use_2030_justification: (this.innovationUseInfoBody as any).innov_use_2030_justification ?? null,
+      // P2-3613 §4 — same trap as the line above, one story later. The server assigns both as
+      // `?? null` (innovation-use.service.ts:192-193), so omitting them here does not "leave them
+      // alone": every save from this section would blank whatever the reporter had stored.
+      new_users_added: this.innovationUseInfoBody.new_users_added ?? null,
+      use_expansion_narrative: this.innovationUseInfoBody.use_expansion_narrative ?? null,
       investment_programs,
       investment_bilateral,
       investment_partners,
