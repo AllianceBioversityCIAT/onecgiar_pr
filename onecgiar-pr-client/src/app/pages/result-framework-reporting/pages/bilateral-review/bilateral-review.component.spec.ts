@@ -1434,6 +1434,23 @@ describe('BilateralReviewComponent', () => {
     });
   });
 
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-8, AC-11)
+  describe('Filter band labels never wrap (BRV-R-8)', () => {
+    it('both the Status and Centers row labels carry min-w-[84px] shrink-0 whitespace-nowrap, not a fixed width', () => {
+      const statusLabel = root().querySelector('[role="group"][aria-label="Status"]')!.parentElement!.querySelector('span:first-child') as HTMLElement;
+      const centersLabel = root().querySelector('[data-testid="bilateral-review-centers-toggle"]')!.parentElement!.querySelector('span:first-child') as HTMLElement;
+
+      for (const label of [statusLabel, centersLabel]) {
+        expect(label.className).toContain('min-w-[84px]');
+        expect(label.className).toContain('shrink-0');
+        expect(label.className).toContain('whitespace-nowrap');
+        // FAIL input this guards against: a fixed `w-[64px]` (the old class) truncates a two-digit
+        // count instead of just holding its ground — `min-w` never constrains growth.
+        expect(label.className).not.toMatch(/(?<!min-)w-\[64px\]/);
+      }
+    });
+  });
+
   // @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-11, design.md §6.1, §6.4, judgment-day L-4)
   describe('Group mode — ?group=, setGroup, and center-mode arithmetic/ordering (BRP-R-11)', () => {
     it('defaults to "project" with no ?group= param', () => {

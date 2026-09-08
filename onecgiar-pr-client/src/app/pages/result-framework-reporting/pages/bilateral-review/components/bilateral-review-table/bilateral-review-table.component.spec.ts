@@ -95,14 +95,15 @@ describe('BilateralReviewTableComponent', () => {
     });
   });
 
-  describe('Group header pending badge — token-based, only when M > 0 (BRP-R-11, R-12)', () => {
-    it('the pending badge carries the yellow tokens only for a group with M > 0; a zero-pending group renders muted text instead', () => {
+  describe('Group header pending badge — token-based, only when M > 0 (BRP-R-11, R-12; BRV-R-5, judgment-day L-1)', () => {
+    it('the pending badge carries the fixed pending token pair only for a group with M > 0; a zero-pending group renders muted text instead', () => {
       render([GROUP_A, GROUP_B]);
       const badges = byTestId('bilateral-review-group-pending');
 
-      expect(badges[0].className).toContain('bg-[var(--pr-color-yellow-100)]');
-      expect(badges[0].className).toContain('text-[var(--pr-color-yellow-900)]');
-      expect(badges[1].className).not.toContain('bg-[var(--pr-color-yellow-100)]');
+      expect(badges[0].className).toContain('bg-[var(--pr-status-in-progress-bg)]');
+      expect(badges[0].className).toContain('text-[var(--pr-status-in-progress-fg)]');
+      expect(badges[0].className).not.toContain('yellow');
+      expect(badges[1].className).not.toContain('bg-[var(--pr-status-in-progress-bg)]');
     });
 
     it('project-mode caption shows the distinct lead centers; center-mode caption shows "N projects"', () => {
@@ -287,8 +288,9 @@ describe('BilateralReviewTableComponent', () => {
     });
   });
 
-  describe('Status chip tone by loose status_id (neutral for non-5/6/7, e.g. Editing)', () => {
-    it('tones amber / green / red / neutral and shows the raw status_name for a neutral row', () => {
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-5, AC-8, judgment-day L-1)
+  describe('Status chip tone by loose status_id — fixed token pairs, never raw Tailwind palette (BRV-R-5, AC-8)', () => {
+    it('tones pending / approved / rejected / neutral from the SAME fg/bg pair, and shows the raw status_name for a neutral row', () => {
       const statuses = projectGroup('P5 - Statuses Project', [
         row({ id: 'st1', project_id: 'p5', project_name: 'P5 - Statuses Project', status_id: 5, status_name: 'Pending Review' }),
         row({ id: 'st2', project_id: 'p5', project_name: 'P5 - Statuses Project', status_id: 6, status_name: 'Approved' }),
@@ -298,11 +300,28 @@ describe('BilateralReviewTableComponent', () => {
       render([statuses]);
 
       const chips = byTestId('bilateral-review-row-status');
-      expect(chips[0].className).toContain('bg-amber-50');
-      expect(chips[1].className).toContain('bg-emerald-50');
-      expect(chips[2].className).toContain('bg-red-50');
-      expect(chips[3].className).toContain('bg-slate-100');
+      expect(chips[0].className).toContain('bg-[var(--pr-status-in-progress-bg)]');
+      expect(chips[0].className).toContain('text-[var(--pr-status-in-progress-fg)]');
+      expect(chips[1].className).toContain('bg-[var(--pr-status-approved-bg)]');
+      expect(chips[1].className).toContain('text-[var(--pr-status-approved-fg)]');
+      expect(chips[2].className).toContain('bg-[var(--pr-danger-bg)]');
+      expect(chips[2].className).toContain('text-[var(--pr-danger)]');
+      expect(chips[3].className).toContain('bg-[var(--pr-status-not-started-bg)]');
+      expect(chips[3].className).toContain('text-[var(--pr-status-not-started-fg)]');
       expect(chips[3].textContent?.trim()).toBe('Editing');
+    });
+
+    it('carries border-transparent (sizing only) and no raw amber/emerald/red-/slate class anywhere in the rendered table (FAIL input: leave one raw class)', () => {
+      const statuses = projectGroup('P5b - Statuses Project', [
+        row({ id: 'st1b', project_id: 'p5b', project_name: 'P5b - Statuses Project', status_id: 5, status_name: 'Pending Review' }),
+        row({ id: 'st2b', project_id: 'p5b', project_name: 'P5b - Statuses Project', status_id: 6, status_name: 'Approved' }),
+        row({ id: 'st3b', project_id: 'p5b', project_name: 'P5b - Statuses Project', status_id: 7, status_name: 'Rejected' })
+      ]);
+      render([statuses]);
+
+      const chips = byTestId('bilateral-review-row-status');
+      chips.forEach(chip => expect(chip.className).toContain('border-transparent'));
+      expect(root().innerHTML).not.toMatch(/\bamber-\d|\bemerald-\d|\bred-\d/);
     });
   });
 
@@ -331,7 +350,9 @@ describe('BilateralReviewTableComponent', () => {
       render([GROUP_A]);
       const headerTexts = Array.from(root().querySelectorAll('thead th')).map(th => th.textContent?.trim());
       expect(headerTexts).not.toContain('Indicator category');
-      expect(headerTexts.length).toBe(8);
+      // 7 in project mode (default groupMode): code, title, center, status, alignment, date, actions
+      // — down from 8 now that TOC result + Indicator merge into one Alignment column (BRV-R-3).
+      expect(headerTexts.length).toBe(7);
 
       const titleCell = byTestId('bilateral-review-row-action')[0].closest('tr')!.querySelectorAll('td')[1];
       expect(titleCell.textContent).toContain(GROUP_A.results[0].indicator_category);
@@ -355,43 +376,86 @@ describe('BilateralReviewTableComponent', () => {
     });
   });
 
-  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-9, AC-9, judgment-day JB-14)
-  describe('Muted placeholders — TOC result / Indicator (BRP-R-9, AC-9)', () => {
-    it('"Not specified" and "Not Applicable" render as an aria-hidden dash with an sr-only sibling carrying the original text', () => {
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-3, AC-4, AC-4b,
+  // AC-5, design.md §2 L-6 truncation-on-a-td disqualifier)
+  describe('Alignment column — merged TOC result + Indicator, per-line placeholder logic (BRV-R-3, AC-4, AC-4b, AC-5)', () => {
+    it('both present: renders two lines by data-testid, inner spans truncate with title — never the td', () => {
+      render([GROUP_A]); // a1: toc_title "ToC", indicator "Indicator" — both real values.
+      const cell = byTestId('bilateral-review-row-alignment')[0];
+      const spans = cell.querySelectorAll('span');
+
+      expect(spans.length).toBe(2);
+      expect(spans[0].textContent).toBe('ToC');
+      expect(spans[0].className).toContain('truncate');
+      expect(spans[0].getAttribute('title')).toBe('ToC');
+      expect(spans[1].textContent).toBe('Indicator');
+      expect(spans[1].className).toContain('truncate');
+      expect(spans[1].getAttribute('title')).toBe('Indicator');
+      // Disqualifier: truncation must live on the inner span, never the td (H2-1/L-6 — `max-width`
+      // on a `td` is inert under `table-layout: auto`).
+      expect(cell.className).not.toContain('truncate');
+    });
+
+    it('TOC only (Indicator placeholder): renders exactly one line, no dash (AC-4b)', () => {
+      const group = projectGroup('P13 - TOC Only Project', [
+        row({ id: 'al1', project_id: 'p13', project_name: 'P13 - TOC Only Project', toc_title: 'HLO1.AOW1.IO1 Steer to impact', indicator: 'Not Applicable' })
+      ]);
+      render([group]);
+      const cell = byTestId('bilateral-review-row-alignment')[0];
+
+      expect(cell.querySelectorAll('span[aria-hidden]').length).toBe(0);
+      const spans = Array.from(cell.querySelectorAll('span')).filter(s => !s.classList.contains('sr-only'));
+      expect(spans.length).toBe(1);
+      expect(spans[0].textContent).toBe('HLO1.AOW1.IO1 Steer to impact');
+    });
+
+    it('Indicator only (TOC placeholder): renders exactly one line, no dash (AC-4b, and the reverse of the above)', () => {
+      const group = projectGroup('P14 - Indicator Only Project', [
+        row({ id: 'al2', project_id: 'p14', project_name: 'P14 - Indicator Only Project', toc_title: 'Not specified', indicator: 'Number of people trained' })
+      ]);
+      render([group]);
+      const cell = byTestId('bilateral-review-row-alignment')[0];
+
+      expect(cell.querySelectorAll('span[aria-hidden]').length).toBe(0);
+      const spans = Array.from(cell.querySelectorAll('span')).filter(s => !s.classList.contains('sr-only'));
+      expect(spans.length).toBe(1);
+      expect(spans[0].textContent).toBe('Number of people trained');
+    });
+
+    it('both placeholders: exactly one aria-hidden dash + one sr-only text naming BOTH originals (AC-5)', () => {
       const group = projectGroup('P9 - Placeholder Project', [
         row({ id: 'ph1', project_id: 'p9', project_name: 'P9 - Placeholder Project', toc_title: 'Not specified', indicator: 'Not Applicable' })
       ]);
       render([group]);
+      const cell = byTestId('bilateral-review-row-alignment')[0];
 
-      const rowEl = root().querySelectorAll('tbody tr')[1];
-      const tocCell = rowEl.querySelectorAll('td')[4];
-      const indicatorCell = rowEl.querySelectorAll('td')[5];
+      const dashes = cell.querySelectorAll('span[aria-hidden="true"]');
+      expect(dashes.length).toBe(1);
+      expect(dashes[0].textContent).toBe('—');
 
-      const tocDash = tocCell.querySelector('span[aria-hidden="true"]') as HTMLElement;
-      expect(tocDash.textContent).toBe('—');
-      expect(tocDash.getAttribute('title')).toBe('Not specified');
-      expect(tocCell.querySelector('.sr-only')?.textContent).toBe('Not specified');
-
-      const indicatorDash = indicatorCell.querySelector('span[aria-hidden="true"]') as HTMLElement;
-      expect(indicatorDash.getAttribute('title')).toBe('Not Applicable');
-      expect(indicatorCell.querySelector('.sr-only')?.textContent).toBe('Not Applicable');
+      const srOnly = cell.querySelector('.sr-only');
+      expect(srOnly?.textContent).toContain('Not specified');
+      expect(srOnly?.textContent).toContain('Not Applicable');
     });
 
-    it('a genuinely blank value falls back to the "Not specified" copy in both title and sr-only text', () => {
-      const group = projectGroup('P10 - Blank Project', [row({ id: 'bl1', project_id: 'p10', project_name: 'P10 - Blank Project', toc_title: '' as unknown as string, indicator: '' as unknown as string })]);
+    it('a genuinely blank pair falls back to the "Not specified" copy in the sr-only text', () => {
+      const group = projectGroup('P10 - Blank Project', [
+        row({ id: 'bl1', project_id: 'p10', project_name: 'P10 - Blank Project', toc_title: '' as unknown as string, indicator: '' as unknown as string })
+      ]);
       render([group]);
-
-      const rowEl = root().querySelectorAll('tbody tr')[1];
-      const tocCell = rowEl.querySelectorAll('td')[4];
-      expect(tocCell.querySelector('span[aria-hidden="true"]')?.getAttribute('title')).toBe(BILATERAL_REVIEW_COPY.table.notSpecified);
+      const cell = byTestId('bilateral-review-row-alignment')[0];
+      expect(cell.querySelector('.sr-only')?.textContent).toContain(BILATERAL_REVIEW_COPY.table.notSpecified);
     });
 
-    it('a normal value renders as text, not the placeholder dash', () => {
+    it('th and td carry min-w-[220px]; the title column grows to min-w-[280px]', () => {
       render([GROUP_A]);
-      const rowEl = root().querySelectorAll('tbody tr')[1];
-      const tocCell = rowEl.querySelectorAll('td')[4];
-      expect(tocCell.querySelector('span[aria-hidden="true"]')).toBeNull();
-      expect(tocCell.textContent).toContain('ToC');
+      const headerCells = Array.from(root().querySelectorAll('thead th'));
+      const alignmentHeader = headerCells.find(th => th.textContent?.trim() === BILATERAL_REVIEW_COPY.table.headers.alignment) as HTMLElement;
+      const titleHeader = headerCells[1] as HTMLElement;
+
+      expect(alignmentHeader.className).toContain('min-w-[220px]');
+      expect(titleHeader.className).toContain('min-w-[280px]');
+      expect(byTestId('bilateral-review-row-alignment')[0].className).toContain('min-w-[220px]');
     });
   });
 
@@ -402,15 +466,38 @@ describe('BilateralReviewTableComponent', () => {
       render([group]);
 
       const rowEl = root().querySelectorAll('tbody tr')[1];
-      const dateCell = rowEl.querySelectorAll('td')[6];
+      // Column order (project mode, 7 columns): code(0) title(1) center(2) status(3)
+      // alignment(4) date(5) actions(6) — was index 6 before the Alignment merge dropped one column.
+      const dateCell = rowEl.querySelectorAll('td')[5];
       expect(dateCell.textContent?.trim()).toBe('23 Feb 2026');
       expect(dateCell.className).toContain('text-right');
     });
   });
 
   describe('Copy strings render from BILATERAL_REVIEW_COPY.table (Reviewer fix #4)', () => {
-    it('renders the eight column headers from copy.table.headers', () => {
+    // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-9 (a), AC-4, AC-7)
+    // — header-ORDER is load-bearing: `alignment` sits in column position (between status and
+    // date), replacing `toc`/`indicator`. Split project (7) / center-grouped (6) per R-9 (a).
+    it('project mode: renders the seven column headers from copy.table.headers, in key order', () => {
       render([GROUP_A]);
+      const headerTexts = Array.from(root().querySelectorAll('thead th')).map(th => th.textContent?.trim());
+      expect(headerTexts).toEqual(Object.values(BILATERAL_REVIEW_COPY.table.headers));
+    });
+
+    it('center-grouped mode: renders six headers — the Lead center header/column is hidden (AC-7)', () => {
+      const centerGroup: BilateralReviewGroup = { key: 'CIP', label: 'CIP', caption: BILATERAL_REVIEW_COPY.table.projectsCaption(1), center: null, results: GROUP_A.results };
+      render([centerGroup], { groupMode: 'center' });
+      const headerTexts = Array.from(root().querySelectorAll('thead th')).map(th => th.textContent?.trim());
+      const expected = Object.values(BILATERAL_REVIEW_COPY.table.headers).filter(h => h !== BILATERAL_REVIEW_COPY.table.headers.center);
+      expect(headerTexts).toEqual(expected);
+    });
+
+    it('center mode + FLAT view: the Lead center column stays (AC-7b — hiding is grouped-view only)', () => {
+      fixture.componentRef.setInput('view', 'flat');
+      fixture.componentRef.setInput('groupMode', 'center');
+      fixture.componentRef.setInput('flatRows', GROUP_A.results);
+      fixture.detectChanges();
+      fixture.detectChanges();
       const headerTexts = Array.from(root().querySelectorAll('thead th')).map(th => th.textContent?.trim());
       expect(headerTexts).toEqual(Object.values(BILATERAL_REVIEW_COPY.table.headers));
     });
@@ -574,6 +661,150 @@ describe('BilateralReviewTableComponent', () => {
       fixture.detectChanges();
 
       expect(byTestId('bilateral-review-row-action').length).toBe(1);
+    });
+  });
+
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-4, AC-6, AC-7, AC-7b)
+  describe('Lead center column — inner-span truncation, hidden ONLY for groupMode=center + grouped view (BRV-R-4)', () => {
+    it('renders a truncating inner span with title, never on the td (Disqualifier)', () => {
+      const group = projectGroup('P15 - Center Project', [row({ id: 'ce1', project_id: 'p15', project_name: 'P15 - Center Project', lead_center: 'Bioversity (Alliance)' })]);
+      render([group]);
+      const cell = byTestId('bilateral-review-row-center')[0];
+      const span = cell.querySelector('span') as HTMLElement;
+
+      expect(span.className).toContain('truncate');
+      expect(span.className).toContain('max-w-[150px]');
+      expect(span.getAttribute('title')).toBe('Bioversity (Alliance)');
+      expect(span.textContent).toBe('Bioversity (Alliance)');
+      expect(cell.className).not.toContain('truncate');
+    });
+
+    it('project mode (grouped or flat): the column is present', () => {
+      render([GROUP_A], { groupMode: 'project' });
+      expect(byTestId('bilateral-review-row-center').length).toBeGreaterThan(0);
+      expect(root().querySelectorAll('thead th')[2].textContent?.trim()).toBe(BILATERAL_REVIEW_COPY.table.headers.center);
+    });
+
+    it('center mode + GROUPED view: the column (header + cell) is hidden (AC-7)', () => {
+      const centerGroup: BilateralReviewGroup = { key: 'CIP', label: 'CIP', caption: BILATERAL_REVIEW_COPY.table.projectsCaption(1), center: null, results: GROUP_A.results };
+      render([centerGroup], { groupMode: 'center' });
+      expect(byTestId('bilateral-review-row-center').length).toBe(0);
+      const headerTexts = Array.from(root().querySelectorAll('thead th')).map(th => th.textContent?.trim());
+      expect(headerTexts).not.toContain(BILATERAL_REVIEW_COPY.table.headers.center);
+    });
+
+    it('center mode + FLAT view: the column stays (AC-7b)', () => {
+      fixture.componentRef.setInput('view', 'flat');
+      fixture.componentRef.setInput('groupMode', 'center');
+      fixture.componentRef.setInput('flatRows', GROUP_A.results);
+      fixture.detectChanges();
+      fixture.detectChanges();
+      expect(byTestId('bilateral-review-row-center').length).toBe(GROUP_A.results.length);
+    });
+  });
+
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-4, AC-7, AC-7b,
+  // judgment-day L-8) — `columnCount()` must drive EVERY `colspan` site, not just one.
+  describe('columnCount() drives every colspan site (BRV-R-4, judgment-day L-8)', () => {
+    it('grouped view, project mode (7 columns): the group header td AND the loading row td both carry colspan=7', () => {
+      render([GROUP_A]);
+      const groupHeaderCell = byTestId('bilateral-review-group-toggle')[0].closest('td') as HTMLTableCellElement;
+      expect(groupHeaderCell.colSpan).toBe(7);
+
+      render([GROUP_A], { loading: true });
+      const loadingCells = root().querySelectorAll('tbody tr td[colspan]');
+      expect(loadingCells.length).toBeGreaterThan(0);
+      loadingCells.forEach(td => expect((td as HTMLTableCellElement).colSpan).toBe(7));
+    });
+
+    it('grouped view, center mode (6 columns): the group header td AND the loading row td both carry colspan=6', () => {
+      const centerGroup: BilateralReviewGroup = { key: 'CIP', label: 'CIP', caption: BILATERAL_REVIEW_COPY.table.projectsCaption(1), center: null, results: GROUP_A.results };
+      render([centerGroup], { groupMode: 'center' });
+      const groupHeaderCell = byTestId('bilateral-review-group-toggle')[0].closest('td') as HTMLTableCellElement;
+      expect(groupHeaderCell.colSpan).toBe(6);
+
+      render([centerGroup], { groupMode: 'center', loading: true });
+      const loadingCells = root().querySelectorAll('tbody tr td[colspan]');
+      loadingCells.forEach(td => expect((td as HTMLTableCellElement).colSpan).toBe(6));
+    });
+
+    it('flat view loading row: colspan equals the flat header count (7 in project mode, FAIL input guard: was hard-coded 8)', () => {
+      fixture.componentRef.setInput('view', 'flat');
+      fixture.componentRef.setInput('flatRows', []);
+      fixture.componentRef.setInput('loading', true);
+      fixture.detectChanges();
+      fixture.detectChanges();
+
+      const loadingCells = root().querySelectorAll('tbody tr td[colspan]');
+      expect(loadingCells.length).toBeGreaterThan(0);
+      loadingCells.forEach(td => expect((td as HTMLTableCellElement).colSpan).toBe(7));
+    });
+  });
+
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-7, AC-10,
+  // judgment-day L-9)
+  describe('Action tone — primary text on canReviewRow, neutral otherwise, no background tint (BRV-R-7, AC-10)', () => {
+    it('a pending row, member reviewer: "Review" carries the primary text tone (incl. on hover) and no bg class', () => {
+      render([GROUP_A], { canReview: true });
+      const action = byTestId('bilateral-review-row-action')[0]; // a1: pending
+      expect(action.className).toContain('text-[var(--pr-color-primary-700)]');
+      // Leader addition (ADVISORY (a), examined): repeats the token under `hover:` so the hlm
+      // ghost button's own `hover:text-foreground` cannot erase the emphasis on pointer-over.
+      expect(action.className).toContain('hover:text-[var(--pr-color-primary-700)]');
+      expect(action.className).toContain('font-semibold');
+      expect(action.className).not.toMatch(/\bbg-\[/);
+    });
+
+    it('an approved row (already decided): "See" is neutral even though the user can review', () => {
+      render([GROUP_A], { canReview: true });
+      const action = byTestId('bilateral-review-row-action')[1]; // a2: approved
+      expect(action.className).not.toContain('text-[var(--pr-color-primary-700)]');
+    });
+
+    it('a pending row, non-member: "See" is neutral (judgment-day L-9 — tone keys on canReviewRow, not isPending alone)', () => {
+      render([GROUP_A], { canReview: false });
+      const action = byTestId('bilateral-review-row-action')[0]; // a1: pending, but canReview=false
+      expect(action.textContent).toContain('See');
+      expect(action.className).not.toContain('text-[var(--pr-color-primary-700)]');
+    });
+  });
+
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-6, AC-9)
+  describe('Group header accent + single-line label (BRV-R-6, AC-9)', () => {
+    it('a group with pending > 0 carries the pending-tone left accent; a zero-pending group carries the neutral border tone', () => {
+      render([GROUP_A, GROUP_B]); // GROUP_A has 1 pending, GROUP_B has 0.
+      const headerCells = Array.from(root().querySelectorAll('tbody > tr')).map(tr => tr.querySelector('td[colspan]')).filter(Boolean) as HTMLElement[];
+
+      expect(headerCells[0].className).toContain('!border-l-[var(--pr-status-in-progress-fg)]');
+      expect(headerCells[1].className).toContain('!border-l-[var(--pr-border)]');
+      expect(headerCells[1].className).not.toContain('!border-l-[var(--pr-status-in-progress-fg)]');
+    });
+
+    // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-6, AC-9;
+    // Reviewer FAIL #1, remediated) — the table-header proof above does NOT transfer to the cards
+    // group-bar: it is a different element with a different class cascade. Requirements.md BRV-R-6
+    // last sentence: "Cards' group bars carry the same accent."
+    it('narrow cards: the group bar carries the SAME accent classes as the table header (pending vs zero-pending)', () => {
+      render([GROUP_A, GROUP_B], { narrow: true }); // GROUP_A has 1 pending, GROUP_B has 0.
+      const toggles = byTestId('bilateral-review-group-toggle');
+
+      expect(toggles[0].className).toContain('!border-l-[3px]');
+      expect(toggles[0].className).toContain('!border-l-[var(--pr-status-in-progress-fg)]');
+      expect(toggles[1].className).toContain('!border-l-[var(--pr-border)]');
+      expect(toggles[1].className).not.toContain('!border-l-[var(--pr-status-in-progress-fg)]');
+    });
+
+    it('the label is a single-line truncated span with title, inside a min-w-0 flex-1 container — the row never wraps', () => {
+      const longName = 'P16 - A deliberately long bilateral project name that would wrap onto a second line without truncation';
+      const group = projectGroup(longName, GROUP_A.results);
+      render([group]);
+
+      const nameEl = byTestId('bilateral-review-group-name')[0];
+      expect(nameEl.className).toContain('block');
+      expect(nameEl.className).toContain('truncate');
+      expect(nameEl.getAttribute('title')).toBe(longName);
+      expect(nameEl.parentElement?.className).toContain('min-w-0');
+      expect(nameEl.parentElement?.className).toContain('flex-1');
     });
   });
 });

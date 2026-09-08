@@ -34,10 +34,11 @@
 
 ### `BRV-T-2` — Table color, columns, emphasis, label
 
+- [x] **Status:** PASS on attempt 2 (2026-09-08, `execution.md`)
 - **Type:** `client`
 - **Description:** Per design §6.2/§6.3: Alignment column (merge TOC + Indicator, per-line rendering, inner-span truncation, `data-testid`, header "Alignment" **in column position** of `copy.table.headers`); lead center inner-span truncation + hidden only for `groupMode='center' && view='grouped'`; `columnCount()` driving all four `colspan` sites; `statusToneClass` → fixed `--pr-status-*`/`--pr-danger*` pairs (row pill, card pill, group badge); group header + cards bar `!border-l-[3px]` accent by pending and a single-line truncated label with `title`; primary-text action on `canReviewRow` (table + cards, no bg); both band labels `min-w-[84px] shrink-0 whitespace-nowrap`; copy updates; re-base the one-line row cap (R-11).
 - **Implements:** BRV-R-3, R-4, R-5, R-6, R-7, R-8, R-9 (a)(d), R-11; AC-4, 4b, 5, 6, 7, 7b, 8, 9, 10, 11; scenario "Scan by color"
-- **Files:** `components/bilateral-review-table/*.{ts,html,spec.ts}`, `bilateral-review.component.{html,spec.ts}`, `bilateral-review.copy.ts`
+- **Files:** `components/bilateral-review-table/*.{ts,html,spec.ts}`, `bilateral-review.component.{html,spec.ts}`, `bilateral-review.copy.ts`, `bilateral-review.cy.ts` (the gates this task's Verification names — bookkeeping correction after attempt 1)
 - **Depends on:** T-1 · **Blocks:** T-3
 - **Estimate:** M
 - **Skills:** `angular-developer`, `ui-ux-pro-max`, `frontend-design`

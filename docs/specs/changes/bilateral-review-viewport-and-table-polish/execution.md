@@ -66,3 +66,57 @@
 | Issues | The `#workArea`-is-not-an-id trap bit a third time in this module (BRP CT comment, BRP T-3 probe, now the SCSS) — guide gotcha in T-3. |
 | Gate | auto-approved (pre-approved mode) |
 
+### `BRV-T-2` — Table color, columns, emphasis, label
+
+| Field | Value |
+|---|---|
+| Status | in progress (attempt 1 — Implementer spawned 04:03, fresh worker) |
+| Date | 2026-09-08 |
+| Gate before start | auto-approved (pre-approved mode) after T-1 PASS. Note: another session committed `779d55fbe` (`bilateral/shell-sp-alignment`) to this branch between T-1's landing and its commit — checked for sweeps of `pages/bilateral-review/**` (see below) |
+| Skills assigned | `angular-developer`, `ui-ux-pro-max`, `frontend-design` (task list) |
+| Effort | high |
+
+Sweep check (04:04): `779d55fbe` touched 0 files under `pages/bilateral-review/`; T-1's commit `609fc73f8` carries exactly its 9 files; the module tree is clean.
+
+**Attempt 1 — Implementer report (04:30):** 7 files; `Tests: 458 passed` · lint clean · CT `49 passing` · `ng build` ok. LOC: source +178 / −64 · tests +502 / −57. Measured: one-line+caption 49 (≤ 50), one-line 37.5 (≤ 44), two-line 63 (≤ 64); group header **61 → ≤ 40** (root cause: ambient `pr-table.component.scss tbody td` padding out-specifying non-`!` utilities on the header `td` — fixed with `!p-0 !border-b-0`); accent 3 px `rgb(180,83,9)` vs `rgb(227,227,232)`. Judgment calls accepted: the cards bar has no `colspan` (three real sites — **R-4 corrected**); AC-6's "Bioversity (Alliance)" does not overflow 150 px in the harness → a longer name proves truncation in CT, the Jest case keeps the original. Reviewer (opus, lens checklist, high) spawned 04:33 on the 7-file diff (1151 lines, `v2.diff`).
+
+**Leader HITL look #2 (04:35, dedicated Orca page, SP02, 1273 CSS px — the requested 1489 viewport did not apply; still ≥ 900):**
+
+| Check | Result |
+|---|---|
+| Headers | `Code · Title · Lead center · Status · Alignment · Submission date · Actions` (7) ✅ |
+| Group headers | max **40 px** ✅ (was 61); pending header `border-left 3px rgb(180,83,9)` ✅; badge "3 pending" in-progress pair, contrast **4.51** ✅ (pre-audited pair, AA) |
+| Pills | Pending Review `rgb(180,83,9)` on `rgb(254,243,199)` 4.51 (tint, luminance 0.89 — not a fill) ✅; Editing not-started pair 6.87 ✅ |
+| Alignment cell | both placeholders → one "—" + `sr-only` "TOC result: Not specified · Indicator: Not Applicable" ✅ |
+| Action tone | "Review" carries `primary-700`, transparent bg, contrast 11.89 ✅; "See" neutral ✅ |
+| Labels | "Status" / "Centers · 7" height 16, no overflow ✅ |
+| Row caps | one-line max 46 (≤ 50), two-line max 63 (≤ 64) ✅ |
+| Pinned / rows | pinned 172 at 1273 (toolbar wraps below ~1400); **11 data rows visible in the first screen** (the owner's "before" screenshot at ~846 px tall showed 8) — AC-13 ✅ |
+
+**Attempt 1 — Reviewer verdict (04:41): `STATUS: FAIL`**, 1 issue. Conforms otherwise: R-3 (per-line Alignment, inner-span truncation, widths, key position), R-4 (`showCenterColumn()` predicate, three `colspan` sites bound, no orphan `colspan="8"`, no dangling `headers.toc/indicator` in `src/`), R-5 (fixed pairs only, never recombined, zero raw palette left in the table component), R-6 table accent + `!p-0 !border-b-0` root cause, R-7 on `canReviewRow`, R-8, R-11; §6.3 intact; scope clean.
+
+| # | Discovered Issue | Violated Rule | Remediation |
+|---|---|---|---|
+| 1 | The **cards** group-bar accent has no evidence (Jest reads only the table `td`; CT 840 asserts height/ellipsis only); the bar is `border-0 !border-l-[3px]` — a different cascade — so an inert accent below 900 would pass every gate | tasks T-2 Tests ("table header **and cards bar**"); R-6 last sentence | Jest narrow case on both toggles' classes; CT 840 computed `borderLeftWidth 3px` + colour on the cards toggle |
+
+**ADVISORY (recorded):** `columnCount()` hard-codes 7/6 (derive from `copy.headers` — follow-up); `!border-b-0` removes the header's 1 px divider (accepted for the ≤ 40 cap; checked live — the tinted header row reads fine); hlm ghost `hover:text-foreground` erases the "Review" emphasis on hover — **Leader added** `hover:text-[var(--pr-color-primary-700)]`; AC-11 "same left edge" ungated — **Leader added** an equal-width label assertion in the 12-center CT case; T-2 Files omitted `bilateral-review.cy.ts` — **corrected in tasks.md**.
+
+**Leader relay (04:43):** FAIL report verbatim + the two additions to the same Implementer. **Attempt 2** — the one allowed Reviewer round.
+
+**Attempt 2 — Implementer landed (04:50):** cards toggle drops `border-0` (kept `!border-l-[3px]`); Jest narrow accent case on both toggles; CT 840 computed `borderLeftWidth 3px` + `rgb(180, 83, 9)` on the cards toggle; `actionToneClass()` adds `hover:text-[var(--pr-color-primary-700)]`; 12-center CT case asserts equal label widths. Jest 459 · lint clean · CT 49. Scoped re-review sent to the same Reviewer (04:52) with the full diff + a 78-line interdiff.
+
+**Attempt 2 — Reviewer verdict (04:56): `STATUS: PASS`.** "All three items remediated as claimed, each with an effect-level (not presence-level) gate; `border-0` removal is safe because the global base-layer `button { border-width: 0 }` already zeroes the other axes and cannot out-specify the `!` left accent."
+
+**Final — `BRV-T-2` PASS on attempt 2 (2026-09-08 04:58)**
+
+| Field | Value |
+|---|---|
+| Attempts | 2 |
+| Files | `components/bilateral-review-table/*.{ts,html,spec.ts}`, `bilateral-review.copy.ts`, `bilateral-review.component.{html,spec.ts}`, `bilateral-review.cy.ts` |
+| Verification | `Tests: 459 passed`; lint clean; CT `49 passing`; `ng build` ok |
+| Live evidence | HITL #2: 7 headers with Alignment, group headers 40 px, accent 3 px in-progress colour, pills as tints (4.51 / 6.87), primary "Review" 11.89, labels no overflow, rows 46 / 63, 11 rows visible in the first screen |
+| Requirements covered | BRV-R-3..R-8, R-9 (a)(d), R-11; AC-4, 4b, 5, 6, 7, 7b, 8, 9, 10, 11, 13; scenario "Scan by color" |
+| Decisions | (1) R-4: three `colspan` sites (the cards bar has none). (2) AC-6 truncation proven with a longer name in CT. (3) `hover:text-primary-700` added so hlm's ghost hover does not erase the emphasis. (4) `!p-0 !border-b-0` on the group header `td` (ambient `pr-table` padding was the 61 px root cause; the header's divider is now the tinted row itself — checked live). |
+| Issues | Owner saw the transient `TS2339 copy.headers.indicator` compile error mid-task (copy updated before the template) — expected in-flight state, resolved within the task. |
+| Gate | auto-approved (pre-approved mode) |
+

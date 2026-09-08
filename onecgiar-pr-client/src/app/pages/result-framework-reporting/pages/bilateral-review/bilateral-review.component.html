@@ -334,7 +334,9 @@
         <!-- Row 1: Status — same data-testids and setStatus() semantics as the old chip row, now a
              segmented control (visual language borrowed from the Grouped/All results tablist). -->
         <div class="flex flex-wrap items-center gap-[10px]">
-          <span class="w-[64px] shrink-0 text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{
+          <!-- BRV-R-8: `min-w` (not a fixed `w-`) + `shrink-0` + `whitespace-nowrap` so a
+               two-digit count on the sibling row never forces this label to wrap or overflow. -->
+          <span class="min-w-[84px] shrink-0 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{
             copy.filterBand.statusLabel
           }}</span>
           <div
@@ -403,7 +405,9 @@
         <!-- Row 2: Centers — chevron (BRP-R-3) + the strip, now band-owned (strip lost its own
              band chrome). Collapsed by default when > 6 centers or narrow (BRP-R-3, R-21). -->
         <div class="flex flex-wrap items-center gap-[10px]">
-          <span class="w-[64px] shrink-0 text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{
+          <!-- BRV-R-8: same nowrap contract as the Status label above — a two-digit center count
+               ("Centers · 12") must not wrap or overflow either. -->
+          <span class="min-w-[84px] shrink-0 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{
             copy.filterBand.centersLabel(centerStrip().length)
           }}</span>
           <button

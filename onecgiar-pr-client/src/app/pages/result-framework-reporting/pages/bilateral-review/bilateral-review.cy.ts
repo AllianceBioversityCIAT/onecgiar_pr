@@ -1070,15 +1070,21 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
     });
   });
 
-  // ── Row height gate (BRP-T-4, R-8, AC-8) — a dedicated 2-row, 1-group fixture: one row's title
-  // is long enough to force the `line-clamp-2` wrap AND carries an `indicator_category` (so its
-  // caption renders too) — the two-line-title case; the other's title fits on one line AND has no
-  // category (`''`, falsy — `@if (row.indicator_category)` never renders it) — the one-line-title
-  // case. Both land in the SAME project group (`allExpanded` defaults `true`) so no interaction is
-  // needed to see them. Measured once (not assumed): two-line row 63px (<= 64), one-line row
-  // 37.5px (<= 44) — the spec's own arithmetic (title 34 + caption 14 + gap 2 + py 12 = 62) landed
-  // within 1px of the measured two-line height, so the literal caps hold as written.
-  describe('Row height gate (BRP-T-4, R-8/AC-8)', () => {
+  // ── Row height gate (BRP-T-4, R-8, AC-8; re-based BRV-T-2, R-11) — a dedicated 3-row, 1-group
+  // fixture: rh1's title is long enough to force the `line-clamp-2` wrap AND carries an
+  // `indicator_category` (so its caption renders too) — the two-line-title case; rh2's title fits
+  // on one line AND has no category (`''`, falsy — `@if (row.indicator_category)` never renders
+  // it) — the one-line-NO-caption case; rh3 (BRV-T-2 addition) is a one-line title WITH a caption
+  // — R-11's third case, previously untested. All three land in the SAME project group
+  // (`allExpanded` defaults `true`) so no interaction is needed to see them.
+  //
+  // Measured (not assumed) after the Alignment-column merge (BRV-R-3, which widened the title
+  // column and so could change wrap points — re-measured, not carried over): two-line-with-caption
+  // row 63px (cap 64), one-line-no-caption row 37.5px (cap 44), one-line-WITH-caption row 49px (cap
+  // 50, BRV-R-11's own arithmetic: title 17 + caption 14 + gap 2 + py 12 = 45, +4px measured
+  // rounding/line-height slack, landing at 49 — the same distance the original two-line estimate
+  // (62) sat from its own measurement (63)).
+  describe('Row height gate (BRP-T-4, R-8/AC-8; re-based BRV-T-2, R-11)', () => {
     const ROW_HEIGHT_FIXTURE_ROWS: ResultToReview[] = [
       row({
         id: 'rh1',
@@ -1100,6 +1106,17 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         indicator_category: '',
         lead_center: 'CIP',
         status_id: 6
+      }),
+      // BRV-T-2 addition (R-11's third case): one-line title, WITH a caption.
+      row({
+        id: 'rh3',
+        project_id: 'p1',
+        project_name: 'P1 - Alpha Project',
+        result_code: 'BR-103',
+        result_title: 'Another short title',
+        indicator_category: 'Policy',
+        lead_center: 'CIP',
+        status_id: 5
       })
     ];
 
@@ -1110,28 +1127,30 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       assertEffectiveWidth('1536 (row-height fixture)', 1536);
     });
 
-    it('a two-line-title row measures <= 64px and a one-line-title row measures <= 44px', () => {
+    it('one-line-with-caption <= 50px, one-line-no-caption <= 44px, two-line <= 64px (R-11 re-based)', () => {
       cy.get('[data-testid="bilateral-review-row-code"]')
-        .should('have.length', 2)
+        .should('have.length', 3)
         .then($codes => {
           const measured = Array.from($codes).map(code => {
             const el = code as HTMLElement;
             const tr = el.closest('tr') as HTMLElement;
             const titleP = tr.querySelector('td:nth-child(2) p') as HTMLElement;
+            const hasCaption = !!tr.querySelector('td:nth-child(2) span');
             const isTwoLine = titleP.getBoundingClientRect().height > 25; // one line ~17px, two lines ~34px — measured, not assumed
-            return { code: el.textContent?.trim(), rowHeight: tr.getBoundingClientRect().height, isTwoLine };
+            return { code: el.textContent?.trim(), rowHeight: tr.getBoundingClientRect().height, isTwoLine, hasCaption };
           });
 
           // Fixture sanity: guards against a future title/column-width change silently collapsing
-          // both rows to the same line count, which would make the cap below untestable.
+          // the three rows to fewer distinct shapes, which would make the caps below untestable.
           expect(
-            measured.map(m => m.isTwoLine),
-            `fixture sanity: exactly one two-line row and one one-line row, got ${JSON.stringify(measured)}`
-          ).to.deep.equal([true, false]);
+            measured.map(m => `${m.isTwoLine ? 'two' : 'one'}-line${m.hasCaption ? '+caption' : ''}`),
+            `fixture sanity: [two-line+caption, one-line (no caption), one-line+caption], got ${JSON.stringify(measured)}`
+          ).to.deep.equal(['two-line+caption', 'one-line', 'one-line+caption']);
 
           measured.forEach(m => {
-            const cap = m.isTwoLine ? 64 : 44;
-            expect(m.rowHeight, `row "${m.code}": ${m.isTwoLine ? 'two' : 'one'}-line title, height(${m.rowHeight.toFixed(1)}) <= ${cap}px`).to.be.at.most(cap);
+            const cap = m.isTwoLine ? 64 : m.hasCaption ? 50 : 44;
+            const shape = `${m.isTwoLine ? 'two' : 'one'}-line${m.hasCaption ? ', with caption' : ', no caption'}`;
+            expect(m.rowHeight, `row "${m.code}" (${shape}): height(${m.rowHeight.toFixed(1)}) <= ${cap}px`).to.be.at.most(cap);
           });
         });
     });
@@ -1220,6 +1239,230 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
           const total = bandHeight + statHeight;
           expect(total, `RED PROBE: band(${bandHeight.toFixed(1)}) + statbar(${statHeight.toFixed(1)}) = ${total.toFixed(1)} <= 140px`).to.be.greaterThan(140);
         });
+      });
+    });
+  });
+
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-3, R-6, AC-4, AC-9)
+  // — table-color/columns gates this task adds. Reuses the default AC-4 mount (7 rows, real
+  // toc_title/indicator values) at 1536.
+  describe('Table color and columns (BRV-T-2)', () => {
+    beforeEach(() => {
+      cy.viewport(1536, 900);
+      mountPage();
+      waitForLoad();
+      assertEffectiveWidth('1536 (table color/columns)', 1536);
+    });
+
+    it('the merged Alignment header renders in column position; no separate TOC result / Indicator headers remain', () => {
+      cy.get('thead th').then($ths => {
+        const texts = Array.from($ths).map(th => th.textContent?.trim());
+        expect(texts, `headers: ${JSON.stringify(texts)}`).to.include('Alignment');
+        expect(texts).to.not.include('TOC result');
+        expect(texts).to.not.include('Indicator');
+      });
+    });
+
+    it('status pills carry no raw amber/emerald/red-/slate class anywhere in the table (AC-8)', () => {
+      cy.get('[data-testid="bilateral-review-table"]').then($table => {
+        const html = $table[0].innerHTML;
+        expect(html).to.not.match(/\bamber-\d|\bemerald-\d|\bred-\d|\bslate-100\b/);
+      });
+    });
+  });
+
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-6, AC-9) — group
+  // header 3px accent + single-line label, measured in BOTH modes the header renders in: the
+  // grouped table (>= 900px) and the grouped cards bar (< 900px, "cards' group bars carry the
+  // same accent"). A long project name is required — the live page measured 61px on one before
+  // this fix; a short name would pass even without `truncate`.
+  describe('Group header accent + no-wrap label, measured live (BRV-T-2, R-6, AC-9)', () => {
+    const LONG_NAME = 'P1 - A deliberately long bilateral project name meant to force a wrap without the truncate fix landed here';
+    const LONG_NAME_ROWS: ResultToReview[] = [
+      row({ id: 'gh1', project_id: 'p1', project_name: LONG_NAME, result_code: 'BR-201', lead_center: 'CIP', status_id: 5 }),
+      row({ id: 'gh2', project_id: 'p1', project_name: LONG_NAME, result_code: 'BR-202', lead_center: 'CIP', status_id: 6 })
+    ];
+
+    it('1536 (grouped table): header height <= 40px, computed border-left-width 3px, pending-tone colour on a group with a pending row', () => {
+      cy.viewport(1536, 900);
+      mountPage({ rows: LONG_NAME_ROWS, centers: FIXTURE_CENTERS });
+      waitForLoad();
+      assertEffectiveWidth('1536 (group header, long name)', 1536);
+
+      cy.get('[data-testid="bilateral-review-group-toggle"]')
+        .first()
+        .closest('td')
+        .should($td => {
+          const el = $td[0] as HTMLElement;
+          const style = getComputedStyle(el);
+          const height = el.getBoundingClientRect().height;
+          expect(height, `group header td height(${height.toFixed(1)}) <= 40px`).to.be.at.most(40);
+          expect(style.borderLeftWidth, 'computed border-left-width is "3px"').to.eq('3px');
+          // GROUP has one pending row (gh1, status_id 5) — pending tone colour resolves to the
+          // fixed --pr-status-in-progress-fg token (#b45309 = rgb(180, 83, 9)), never the neutral
+          // --pr-border (#e3e3e8 = rgb(227, 227, 232)).
+          expect(style.borderLeftColor, `computed border-left-color is the pending tone (#b45309)`).to.eq('rgb(180, 83, 9)');
+        });
+
+      cy.get('[data-testid="bilateral-review-group-name"]').first().should($name => {
+        const el = $name[0] as HTMLElement;
+        expect(getComputedStyle(el).textOverflow, 'label computed text-overflow is "ellipsis" (truncate)').to.eq('ellipsis');
+        expect(el.getAttribute('title'), 'label carries the full name in title').to.eq(LONG_NAME);
+      });
+    });
+
+    it('a group with zero pending rows renders the neutral border-left colour', () => {
+      cy.viewport(1536, 900);
+      mountPage({
+        rows: [row({ id: 'gh3', project_id: 'p1', project_name: LONG_NAME, result_code: 'BR-203', lead_center: 'CIP', status_id: 6 })],
+        centers: FIXTURE_CENTERS
+      });
+      waitForLoad();
+
+      cy.get('[data-testid="bilateral-review-group-toggle"]')
+        .first()
+        .closest('td')
+        .should($td => {
+          const style = getComputedStyle($td[0] as HTMLElement);
+          expect(style.borderLeftWidth, 'computed border-left-width is "3px"').to.eq('3px');
+          expect(style.borderLeftColor, `computed border-left-color(${style.borderLeftColor}) is the neutral --pr-border token`).to.eq('rgb(227, 227, 232)');
+        });
+    });
+
+    it('840 (cards): the group bar header height <= 40px, the accent survives on THIS element (proves `border-0` did not eat it), and the label never wraps', () => {
+      cy.viewport(840, 1600);
+      mountPage({ rows: LONG_NAME_ROWS, centers: FIXTURE_CENTERS });
+      waitForLoad();
+      assertEffectiveWidth('840 (group header, long name, cards)', 840);
+
+      cy.get('[data-testid="bilateral-review-group-toggle"]')
+        .first()
+        .should($toggle => {
+          const el = $toggle[0] as HTMLElement;
+          const style = getComputedStyle(el);
+          const height = el.getBoundingClientRect().height;
+          expect(height, `cards group bar height(${height.toFixed(1)}) <= 40px`).to.be.at.most(40);
+          // Reviewer FAIL #1 (remediated): the cards bar is a plain button (`!border-l-[3px]`,
+          // no `border-0` competing for the same axis after the fix) — a DIFFERENT cascade from
+          // the table's `td`. Asserting computed style HERE (not just the class, and not just on
+          // the table header) is what proves the accent is actually painted on this element too,
+          // with the same pending-tone colour (LONG_NAME_ROWS' gh1 is pending).
+          expect(style.borderLeftWidth, 'cards bar computed border-left-width is "3px"').to.eq('3px');
+          expect(style.borderLeftColor, 'cards bar computed border-left-color is the pending tone (#b45309)').to.eq('rgb(180, 83, 9)');
+        });
+
+      cy.get('[data-testid="bilateral-review-group-name"]').first().should($name => {
+        expect(getComputedStyle($name[0] as HTMLElement).textOverflow, 'label computed text-overflow is "ellipsis" (truncate)').to.eq('ellipsis');
+      });
+    });
+  });
+
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-8, AC-11) — both
+  // filter band labels stay a fixed height and never scroll, at a single-digit (6) AND a
+  // double-digit (12) center count — the two-digit case is the one a fixed `w-[64px]` used to
+  // clip.
+  describe('Filter band labels never wrap or clip — single- and double-digit counts (BRV-R-8, AC-11)', () => {
+    const SIX_CENTERS_FIXTURE = FIXTURE_CENTERS.concat([
+      { code: 'C4', acronym: 'IRRI', name: 'International Rice Research Institute' },
+      { code: 'C5', acronym: 'ILRI', name: 'International Livestock Research Institute' },
+      { code: 'C6', acronym: 'IWMI', name: 'International Water Management Institute' }
+    ]) as typeof FIXTURE_CENTERS;
+    const SIX_CENTERS_FIXTURE_ROWS: ResultToReview[] = SIX_CENTERS_FIXTURE.map((center, i) =>
+      row({ id: `sc${i + 1}`, project_id: 'p1', project_name: 'P1 - Six Centers', result_code: `BR-6${i + 1}`, lead_center: center.acronym, status_id: 5 })
+    );
+    const TWELVE_CENTERS_FIXTURE = NINE_CENTERS_FIXTURE_CENTERS.concat([
+      { code: 'C10', acronym: 'CIFOR', name: 'Center for International Forestry Research' },
+      { code: 'C11', acronym: 'ICRAF', name: 'World Agroforestry' },
+      { code: 'C12', acronym: 'BIOVERSITY', name: 'Bioversity International' }
+    ]) as typeof FIXTURE_CENTERS;
+    const TWELVE_CENTERS_FIXTURE_ROWS: ResultToReview[] = TWELVE_CENTERS_FIXTURE.map((center, i) =>
+      row({ id: `tc${i + 1}`, project_id: 'p1', project_name: 'P1 - Twelve Centers', result_code: `BR-12-${i + 1}`, lead_center: center.acronym, status_id: 5 })
+    );
+
+    function assertBothLabelsFit(): void {
+      cy.get('[role="group"][aria-label="Status"]')
+        .parent()
+        .find('span')
+        .first()
+        .should($label => {
+          const el = $label[0] as HTMLElement;
+          expect(el.getBoundingClientRect().height, `Status label height <= 18px`).to.be.at.most(18);
+          expect(el.scrollWidth, `Status label scrollWidth(${el.scrollWidth}) <= clientWidth(${el.clientWidth})`).to.be.at.most(el.clientWidth);
+        });
+      cy.get('[data-testid="bilateral-review-centers-toggle"]')
+        .parent()
+        .find('span')
+        .first()
+        .should($label => {
+          const el = $label[0] as HTMLElement;
+          expect(el.getBoundingClientRect().height, `Centers label height <= 18px`).to.be.at.most(18);
+          expect(el.scrollWidth, `Centers label scrollWidth(${el.scrollWidth}) <= clientWidth(${el.clientWidth}) — count "${el.textContent}"`).to.be.at.most(el.clientWidth);
+        });
+    }
+
+    it('6 centers: both labels fit on one line', () => {
+      cy.viewport(1536, 900);
+      mountPage({ rows: SIX_CENTERS_FIXTURE_ROWS, centers: SIX_CENTERS_FIXTURE });
+      waitForLoad();
+      cy.contains('[data-testid="bilateral-review-filter-band"] span', 'Centers · 6').should('exist');
+      assertBothLabelsFit();
+    });
+
+    it('12 centers (two-digit count): both labels still fit on one line (FAIL input this guards against: the old fixed w-[64px])', () => {
+      cy.viewport(1536, 900);
+      mountPage({ rows: TWELVE_CENTERS_FIXTURE_ROWS, centers: TWELVE_CENTERS_FIXTURE });
+      waitForLoad();
+      cy.contains('[data-testid="bilateral-review-filter-band"] span', 'Centers · 12').should('exist');
+      assertBothLabelsFit();
+
+      // Leader addition (ADVISORY, examined, in scope): AC-11's "the two labels share the same
+      // left edge for the controls" is a WIDTH-equality claim, not just a no-clip claim — the
+      // `min-w-[84px]` gives both labels the same floor, so as long as neither's content pushes it
+      // past 84px (proven above by the scrollWidth<=clientWidth check) their rendered widths must
+      // match, which is what actually puts the Status group and the Centers toggle at the same x.
+      cy.get('[role="group"][aria-label="Status"]')
+        .parent()
+        .find('span')
+        .first()
+        .then($statusLabel => {
+          const statusWidth = ($statusLabel[0] as HTMLElement).getBoundingClientRect().width;
+          cy.get('[data-testid="bilateral-review-centers-toggle"]')
+            .parent()
+            .find('span')
+            .first()
+            .should($centersLabel => {
+              const centersWidth = ($centersLabel[0] as HTMLElement).getBoundingClientRect().width;
+              expect(centersWidth, `Status label width(${statusWidth.toFixed(1)}) === Centers label width(${centersWidth.toFixed(1)}) — same left edge for the controls`).to.eq(statusWidth);
+            });
+        });
+    });
+  });
+
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-4, AC-6) — the
+  // lead-center column's inner-span truncation, measured live in a real 150px-wide cell.
+  //
+  // Measured (not assumed): AC-6 names "Bioversity (Alliance)" (21 chars) as the truncation
+  // example, but at this harness's 12.5px Manrope rendering that string measured
+  // clientWidth === scrollWidth === 150 — it lands almost exactly AT the 150px cap without going
+  // over it, so it is not a reliable overflow proof (a font-metric coincidence, not a code
+  // regression). Substituted a definitively longer center name below so the SAME 150px/12.5px
+  // contract has a string that overflows with margin; "Bioversity (Alliance)" itself is proven at
+  // the unit level (Jest: `truncate` class + `title` present) where jsdom does not lay out text.
+  describe('Lead center column — truncation measured live (BRV-R-4, AC-6)', () => {
+    it('a long center name truncates inside its 150px inner span (scrollWidth > clientWidth), title carries the full name', () => {
+      const longCenter = 'International Center for Tropical Agriculture — Bioversity Alliance';
+      cy.viewport(1536, 900);
+      mountPage({
+        rows: [row({ id: 'ctr1', project_id: 'p1', project_name: 'P1 - Alpha Project', result_code: 'BR-301', lead_center: longCenter, status_id: 5 })],
+        centers: FIXTURE_CENTERS
+      });
+      waitForLoad();
+      assertEffectiveWidth('1536 (center truncation)', 1536);
+
+      cy.get('[data-testid="bilateral-review-row-center"] span').should($span => {
+        const el = $span[0] as HTMLElement;
+        expect(el.getAttribute('title'), 'title carries the full center name').to.eq(longCenter);
+        expect(el.scrollWidth, `scrollWidth(${el.scrollWidth}) > clientWidth(${el.clientWidth}) — truly truncated`).to.be.greaterThan(el.clientWidth);
       });
     });
   });

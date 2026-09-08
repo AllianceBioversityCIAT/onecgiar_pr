@@ -110,13 +110,16 @@ export const BILATERAL_REVIEW_COPY = {
   // @akili-spec changes/sp-bilateral-review-tab (BRT-T-4 rework attempt 2 — Reviewer fix #4)
   /** `BilateralReviewTableComponent` — grouped/flat table copy (column headers, row strings). */
   table: {
+    // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-3) — `toc` +
+    // `indicator` merged into one `alignment` header IN COLUMN POSITION (between `status` and
+    // `date`) — key order is load-bearing for the header-order spec (project 7 keys / center 6
+    // rendered, `showCenterColumn()` hides `center`'s rendered `<th>` but the key stays here).
     headers: {
       code: 'Code',
       title: 'Title',
       center: 'Lead center',
       status: 'Status',
-      toc: 'TOC result',
-      indicator: 'Indicator',
+      alignment: 'Alignment',
       date: 'Submission date',
       actions: 'Actions'
     },
@@ -124,6 +127,12 @@ export const BILATERAL_REVIEW_COPY = {
     notSpecified: 'Not specified',
     reviewAction: 'Review',
     seeAction: 'See',
+    // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-3, AC-5)
+    /** The two original column names, kept for the merged Alignment cell's `sr-only` text when
+     *  both values are placeholders — the visible header is `headers.alignment` now, but a screen
+     *  reader user still needs to know WHICH value ("TOC result" vs "Indicator") is which. */
+    tocLabel: 'TOC result',
+    indicatorLabel: 'Indicator',
     // @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-11, R-12)
     /** Group header right side, split so the pending figure can carry its own tone (BRP-R-11) —
      *  replaces the combined "N results · M pending" string. */

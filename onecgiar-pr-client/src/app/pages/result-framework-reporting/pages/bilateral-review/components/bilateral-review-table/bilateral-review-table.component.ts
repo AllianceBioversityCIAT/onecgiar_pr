@@ -129,6 +129,17 @@ export class BilateralReviewTableComponent {
 
   readonly copy = BILATERAL_REVIEW_COPY.table;
 
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-4, AC-7, AC-7b)
+  /** The lead-center column is hidden (header + cell) ONLY when the table is both grouped by
+   *  center AND rendering the grouped view — the center is then the group label itself, so the
+   *  column would be a no-op. Flat view keeps it even in `groupMode='center'` (AC-7b). */
+  readonly showCenterColumn = computed<boolean>(() => !(this.groupMode() === 'center' && this.view() === 'grouped'));
+
+  /** Rendered column count (7 with the center column, 6 without) — drives every `colspan` site
+   *  (group header `td`, grouped loading row, flat loading row) so none of them can drift from
+   *  R-3's merged Alignment column arithmetic (judgment-day L-8: was hard-coded `8` at 3 sites). */
+  readonly columnCount = computed<number>(() => (this.showCenterColumn() ? 7 : 6));
+
   /** Groups with at least one result — defensive drop of an empty group (BRT-R-10), even though
    *  the page never builds one today. */
   readonly filteredGroups = computed<BilateralReviewGroup[]>(() => this.groups().filter(group => (group.results?.length ?? 0) > 0));
@@ -279,6 +290,20 @@ export class BilateralReviewTableComponent {
     return value && value.trim() ? value : this.copy.notSpecified;
   }
 
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-3, AC-4, AC-4b, AC-5)
+  /** True only when BOTH the TOC result and the Indicator are placeholders — the merged Alignment
+   *  column then renders exactly one dash instead of two (AC-5); one present value alone still
+   *  renders on its own line with no dash (AC-4b). */
+  alignmentBothPlaceholder(row: ResultToReview): boolean {
+    return this.isPlaceholder(row.toc_title) && this.isPlaceholder(row.indicator);
+  }
+
+  /** `sr-only` text for the collapsed-to-one-dash case — names BOTH original values so a screen
+   *  reader user loses nothing the two separate columns used to carry (AC-5). */
+  alignmentSrOnlyText(row: ResultToReview): string {
+    return `${this.copy.tocLabel}: ${this.placeholderText(row.toc_title)} · ${this.copy.indicatorLabel}: ${this.placeholderText(row.indicator)}`;
+  }
+
   // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-13, design.md §6.2 "Cards")
   /** One segment of the card's "category · center · TOC" caption — "—" for a blank/placeholder
    *  value (same `isPlaceholder` rule the table columns use), the raw value otherwise. Unlike the
@@ -293,16 +318,67 @@ export class BilateralReviewTableComponent {
     return [this.cardSegment(row.indicator_category), this.cardSegment(row.lead_center), this.cardSegment(row.toc_title)].join(' · ');
   }
 
-  /** Tailwind tone classes by loose `status_id` (5 amber, 6 green, 7 red, else neutral). */
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-5, R-6, AC-8, AC-9,
+  // judgment-day L-1)
+  /** The design system's FIXED fg/bg pairs (client hard rule 9) — never recombine a fg with
+   *  another bg, never invent a status colour. One helper backs the row pill, the card pill (same
+   *  markup, `statusToneClass`) AND the group-header pending badge (`groupPendingBadgeClass`
+   *  below, which literally reuses the `'pending'` branch) so a token change here can never drift
+   *  between the three surfaces. Replaces the raw `amber/emerald/red/slate` classes AND the `BRP`
+   *  group badge's `--pr-color-yellow-100/900/300` (PRMS's `-100` shades are saturated mid-tones,
+   *  never pill fills — `colors.scss:236-245`). */
+  private toneClasses(tone: 'pending' | 'approved' | 'rejected' | 'neutral'): string {
+    switch (tone) {
+      case 'pending':
+        return 'bg-[var(--pr-status-in-progress-bg)] text-[var(--pr-status-in-progress-fg)] border border-transparent';
+      case 'approved':
+        return 'bg-[var(--pr-status-approved-bg)] text-[var(--pr-status-approved-fg)] border border-transparent';
+      case 'rejected':
+        return 'bg-[var(--pr-danger-bg)] text-[var(--pr-danger)] border border-transparent';
+      default:
+        return 'bg-[var(--pr-status-not-started-bg)] text-[var(--pr-status-not-started-fg)] border border-transparent';
+    }
+  }
+
+  /** Token-pair tone classes by loose `status_id` (5 pending, 6 approved, 7 rejected, else
+   *  neutral) — drives the row pill AND the card pill (same method, both templates call it). */
   statusToneClass(row: ResultToReview): string {
-    if (isPending(row)) return 'bg-amber-50 text-amber-800 border-amber-200';
-    if (isApproved(row)) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-    if (isRejected(row)) return 'bg-red-50 text-red-700 border-red-200';
-    return 'bg-slate-100 text-slate-700 border-slate-200';
+    if (isPending(row)) return this.toneClasses('pending');
+    if (isApproved(row)) return this.toneClasses('approved');
+    if (isRejected(row)) return this.toneClasses('rejected');
+    return this.toneClasses('neutral');
+  }
+
+  /** The group-header (and cards group-bar) pending badge — reuses the SAME `'pending'` branch
+   *  `statusToneClass` uses, so it can never fall out of sync with the row pill's tone. */
+  groupPendingBadgeClass(): string {
+    return this.toneClasses('pending');
+  }
+
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-6, AC-9)
+  /** 3px left accent on a group header (grouped table `td` and the cards group-bar `button`):
+   *  the pending tone colour when the group has at least one pending result, the neutral border
+   *  token otherwise. Both surfaces compensate their left padding by 3px so the accent doesn't
+   *  shift the label relative to the rows below it. */
+  groupAccentClass(group: BilateralReviewGroup): string {
+    return this.pendingCount(group) > 0 ? '!border-l-[var(--pr-status-in-progress-fg)]' : '!border-l-[var(--pr-border)]';
   }
 
   private canReviewRow(row: ResultToReview): boolean {
     return isPending(row) && this.canReview();
+  }
+
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-7, AC-10,
+  // judgment-day L-9; Reviewer ADVISORY (a), examined)
+  /** Primary-text emphasis for the "Review" action — same predicate `actionLabel`/`actionIcon`
+   *  already key on, so a non-member never sees an emphasised "See" (L-9's trap: an earlier draft
+   *  keyed the tone on `isPending` alone). No background tint (UI rule 7 keeps violet fills out of
+   *  the content area) — text colour + weight only. `hover:text-[...]` repeats the same token: the
+   *  `hlmBtn variant="ghost"` base class carries `hover:text-foreground`, which would otherwise
+   *  win on hover (later in the cascade, same specificity) and erase the emphasis exactly when the
+   *  pointer lands on it. */
+  actionToneClass(row: ResultToReview): string {
+    return this.canReviewRow(row) ? 'text-[var(--pr-color-primary-700)] hover:text-[var(--pr-color-primary-700)] font-semibold' : '';
   }
 
   actionLabel(row: ResultToReview): string {
