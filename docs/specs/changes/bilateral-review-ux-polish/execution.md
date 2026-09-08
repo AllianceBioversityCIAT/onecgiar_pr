@@ -69,3 +69,47 @@
 | Issues | First-row HITL target < 420 px missed by 2 px (422) with the centers row collapsed — the remaining chrome is the toolbar (50) and the rows-area top padding (20); T-2's row density does not move this number. Recorded, not blocking: the CT gate (`firstRow − workArea ≤ 210`) is T-4's and today measures 221 → **T-4 must either trim the rows-area `pt` or restate the gate from measurement** (forward pointer → T-4). |
 | Gate | auto-approved (pre-approved mode) |
 
+### `BRP-T-2` — Table density, placeholders, group mode
+
+| Field | Value |
+|---|---|
+| Status | in progress (attempt 1 — Implementer spawned 22:46, fresh worker) |
+| Date | 2026-09-07 |
+| Gate before start | auto-approved (pre-approved mode) after T-1 PASS |
+| Skills assigned | `angular-developer`, `ui-ux-pro-max`, `tdd` (task list) |
+| Effort | high |
+| Forward pointers carried | T-1 → `group ≠ project` negative case for `activeFilterCount` |
+
+**Attempt 1 — Implementer report (23:22):** 8 files; `Tests: 425 passed` · lint clean · CT `17 passing`. LOC: source +424 / −98 · tests +295 / −87. Judgment calls accepted: `untracked()` on the `expandedKeys` seed read (the effect read and wrote the same signal — infinite loop found and fixed mid-task); group-summary testid split into `-group-summary` + `-group-pending`; `setGroup` as a direct navigate (mirrors `setPhase`); `placeholderText()` keeps the server's literal string; no CT edits needed. The worker yielded twice on background Jest runs before finishing — nudged to foreground verification (kaizen: brief must say "foreground, no run_in_background" for verification). Reviewer (opus, lens checklist, high) spawned 23:25 on the 8-file diff (1341 lines, `p2.diff`).
+
+**Leader HITL look #2 — BLOCKED (23:26):** probe per *Deferring a check*: `orca status` reports the runtime `ready`/`reachable` and `orca tab list` works, but every `orca eval` (even `"ping"`) returns `runtime_unavailable: The Orca runtime closed the connection before responding. Restart Orca and try again.` The owner is browsing the same tab (now on SP04). Deferred until the owner restarts Orca or pastes a screenshot; the table gates that matter here are also CT-measurable in T-4 (row height ≤ 64 / ≤ 44). Not a waiver: the look is owed before T-3's cards are judged.
+
+**Attempt 1 — Reviewer verdict (23:33): `STATUS: FAIL`**, 3 issues. Verified green otherwise: L-4 honored (no nonce bump, `?group=` outside the state→URL effect, namespaced memory, `untracked` breaks only the self-read while a new `groups` reference still re-seeds); R-11 ordering; R-8 density with every `!` utility intact; R-9 dash triple; R-12 token badge; grouped-only gating; `shadow-[var(--pr-focus-ring)]`; `motion-reduce`; `colspan` 8; scope limited to the 8 files; CT unaffected.
+
+| # | Discovered Issue | Violated Rule | Remediation |
+|---|---|---|---|
+| 1 | Center-mode arithmetic asserted only on `component.groups()`; zero rendered group-header assertions in the page spec although the real table is mounted | tasks T-2 Disqualifier "asserted on the computed instead of rendered headers"; §10 | Assert `[data-testid="bilateral-review-group-name"]` order, the "2 projects" caption and per-header `-group-pending` figures in the DOM |
+| 2 | Group-mode control built from raw slate/white/`shadow-xs` cloning the legacy tablist instead of T-1's tokenized status control | design §6.3 tokens-only in new markup, no bespoke shadows; requirements §8 | Swap to the T-1 token set, drop `shadow-xs` |
+| 3 | Sticky Actions cell has no left divider — design §6.2 said "unchanged (sticky right, `border-l`)" but the BRT cell never had one (**Leader's false premise**) | `BRP-R-10` (MUST, T-2) | `!border-l !border-[var(--pr-border-divider)]` on `td` + `th`, pinned in the chrome-parity Jest case; **design §6.2 corrected by the Leader** |
+
+**ADVISORY (recorded):** `expandedKeys` never prunes keys of filtered-away groups (harmless; prune candidate for T-3); `setGroup` writes the signal before `router.navigate` (mirrors `setPhase` — precedent, noted); invalid-`?group=` effect re-hardcodes the value space; the table round-trip case is fallible for force-expand but not for namespacing (fixture keys never collide); the parent case "renders the Contributor badge and Not specified fallback from copy" was deleted though still green — **Leader added its restore to the fix round** (R-14 requires it).
+
+**Leader relay (23:35):** FAIL report verbatim + attempt history + the restore item to the same Implementer; design §6.2 premise corrected. **Attempt 2** — the one allowed Reviewer round; a second FAIL escalates.
+
+**Attempt 2 — Implementer landed (23:41):** rendered-DOM group-header assertions (order, "2 projects" caption, per-header pending), Group control retokenized to the T-1 status-control classes (no slate, no `shadow-xs`), Actions `td`/`th` gain `border-l border-[var(--pr-border-divider)]` pinned in the sticky-Actions Jest case, parent test restored. `Tests: 426 passed` · lint clean · CT `17 passing`. LOC: source +431 / −99 · tests +326 / −88. Scoped re-review sent to the same Reviewer (23:43) with the full diff + a 133-line interdiff. Orca `eval` still `runtime_unavailable` (probe repeated).
+
+**Attempt 2 — Reviewer verdict (23:46): `STATUS: PASS`.** "All three FAIL issues and the Leader's restore are fixed at the exact seams named — arithmetic gate moved to fallible rendered headers, group control on T-1's token set with no raw palette left, and a real `border-l` on the sticky Actions `td`/`th` that needs no `!` because nothing in `pr-table.component.scss` or `table-custom-styles.scss` declares a left border." ADVISORY: the divider's painted effect is only observable live → owed in the HITL look.
+
+**Final — `BRP-T-2` PASS on attempt 2 (2026-09-07 23:48)**
+
+| Field | Value |
+|---|---|
+| Attempts | 2 |
+| Files | `bilateral-review.query-params.ts`, `bilateral-review.copy.ts`, `bilateral-review.component.{ts,html,spec.ts}`, `components/bilateral-review-table/*.{ts,html,spec.ts}` |
+| Verification | `npx jest …/bilateral-review --silent --reporters=summary --no-coverage` → `Test Suites: 14 passed · Tests: 426 passed`; `npx ng lint --quiet` → clean; CT → `17 passing` |
+| Live evidence | **OWED** — Orca `eval` returned `runtime_unavailable` on every probe since 23:26 (status/tab-list fine); the "Done when" live look (row heights 44/64, placeholders, Actions divider, Group: Center headers, caption/badge contrast) is scheduled as the combined look after T-3, or on the owner's screenshot. Recorded, not waived. |
+| Requirements covered | BRP-R-8, R-9, R-10, R-11, R-12, R-14 (f); AC-8, 9, 10 (Jest halves), 13; scenario "Distribute review work by center" (Jest) |
+| Decisions | (1) design §6.2 "Actions cell unchanged (`border-l`)" was a false premise → corrected to "gains `!border-l`". (2) Group control uses T-1's token set (design §6.2 "same visual language as the existing tablist" satisfied without raw slate). (3) `untracked()` on the `expandedKeys` seed read (self-read loop found by the Implementer). (4) `setGroup` writes the signal before navigating (mirrors `setPhase`; precedent noted). (5) T-1 forward pointer (`group` negative count case) delivered. |
+| Issues | Worker yielded twice on background Jest runs — brief template now says "foreground, no run_in_background" (kaizen). |
+| Gate | auto-approved (pre-approved mode) |
+

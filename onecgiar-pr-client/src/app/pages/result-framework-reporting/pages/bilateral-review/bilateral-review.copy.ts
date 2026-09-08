@@ -53,7 +53,12 @@ export const BILATERAL_REVIEW_COPY = {
     cycleFilterPlaceholder: 'Cycle',
     // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-5)
     /** Toolbar "Clear filters · N" ghost button — replaces the old unconditional clear button. */
-    clearAllLabel: (count: number): string => `Clear filters · ${count}`
+    clearAllLabel: (count: number): string => `Clear filters · ${count}`,
+    // @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-11)
+    /** Group-mode segmented control (`Group: Project | Center`), grouped view only. */
+    groupByLabel: 'Group',
+    groupByProject: 'Project',
+    groupByCenter: 'Center'
   },
   // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-1, R-2, R-3)
   /** Filter band — labeled rows above the status segmented control and the centers row. */
@@ -108,7 +113,6 @@ export const BILATERAL_REVIEW_COPY = {
     headers: {
       code: 'Code',
       title: 'Title',
-      category: 'Indicator category',
       center: 'Lead center',
       status: 'Status',
       toc: 'TOC result',
@@ -120,8 +124,14 @@ export const BILATERAL_REVIEW_COPY = {
     notSpecified: 'Not specified',
     reviewAction: 'Review',
     seeAction: 'See',
-    /** "N results · M pending" (BRT-R-10). */
-    groupSummary: (results: number, pending: number): string => `${results} results · ${pending} pending`,
+    // @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-11, R-12)
+    /** Group header right side, split so the pending figure can carry its own tone (BRP-R-11) —
+     *  replaces the combined "N results · M pending" string. */
+    resultsLabel: (results: number): string => `${results} results`,
+    pendingLabel: (pending: number): string => `${pending} pending`,
+    /** Center-mode group caption — "N projects" (BRP-R-11's "the number of projects in the
+     *  group"). Singular for exactly one. */
+    projectsCaption: (count: number): string => `${count} project${count === 1 ? '' : 's'}`,
     // @akili-spec changes/sp-bilateral-review-tab (BRT-T-5, KZ-REH-2)
     /** Row action title while a decision re-fetch is in flight (`aria-disabled`, not `disabled`). */
     decisionInFlightTitle: 'Saving the decision. Please wait.'

@@ -17,8 +17,11 @@ export const BILATERAL_REVIEW_VIEW_QUERY_PARAM = 'view';
  *  tab's `?phase=`, which carries `phaseName` — parity of behavior, not of value space, per
  *  `requirements.md` §2 "Results tab phase UX"). */
 export const BILATERAL_REVIEW_PHASE_QUERY_PARAM = 'phase';
+// @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-11)
+/** Eighth key — the grouped view's grouping dimension. Absent/invalid = `'project'` (BRP-R-11). */
+export const BILATERAL_REVIEW_GROUP_QUERY_PARAM = 'group';
 
-export type BilateralReviewQueryParamDimension = 'search' | 'status' | 'center' | 'project' | 'category' | 'view' | 'phase';
+export type BilateralReviewQueryParamDimension = 'search' | 'status' | 'center' | 'project' | 'category' | 'view' | 'phase' | 'group';
 
 /** `dimension → param name`, in toolbar order. */
 export const BILATERAL_REVIEW_QUERY_PARAM_MAP: Record<BilateralReviewQueryParamDimension, string> = {
@@ -28,11 +31,15 @@ export const BILATERAL_REVIEW_QUERY_PARAM_MAP: Record<BilateralReviewQueryParamD
   project: BILATERAL_REVIEW_PROJECT_QUERY_PARAM,
   category: BILATERAL_REVIEW_CATEGORY_QUERY_PARAM,
   view: BILATERAL_REVIEW_VIEW_QUERY_PARAM,
-  phase: BILATERAL_REVIEW_PHASE_QUERY_PARAM
+  phase: BILATERAL_REVIEW_PHASE_QUERY_PARAM,
+  group: BILATERAL_REVIEW_GROUP_QUERY_PARAM
 };
 
 export type BilateralReviewStatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
 export type BilateralReviewViewMode = 'grouped' | 'flat';
+/** BRP-R-11: how the grouped view's rows are grouped — by bilateral project (today) or by lead
+ *  center. Never a third value; unknown/missing parses to `'project'` (BRP-DD-4). */
+export type BilateralReviewGroupMode = 'project' | 'center';
 
 /** Unknown/missing → `'all'` (BRT-R-7's default), never a value the chips do not render. */
 export function parseBilateralReviewStatus(raw: string | null): BilateralReviewStatusFilter {
@@ -42,6 +49,13 @@ export function parseBilateralReviewStatus(raw: string | null): BilateralReviewS
 /** Unknown/missing → `'grouped'` (BRT-R-30's default). */
 export function parseBilateralReviewView(raw: string | null): BilateralReviewViewMode {
   return raw === 'flat' ? 'flat' : 'grouped';
+}
+
+/** Unknown/missing → `'project'` (BRP-R-11's default). The page's own effect (not this pure
+ *  function) is what strips a present-but-invalid raw value from the URL — this only decides the
+ *  RUNTIME value, same split `parseBilateralReviewStatus`/`parseBilateralReviewView` use. */
+export function parseBilateralReviewGroupMode(raw: string | null): BilateralReviewGroupMode {
+  return raw === 'center' ? 'center' : 'project';
 }
 
 /** `?center=a,b` → `['a', 'b']`. Blanks dropped, duplicates collapsed. */

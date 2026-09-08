@@ -1,4 +1,5 @@
 <!-- @akili-spec changes/sp-bilateral-review-tab (BRT-T-4, BRT-T-5, design.md §6.2, §6.3) -->
+<!-- @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-8, R-9, R-10, R-11, R-12, design.md §6.2) -->
 
 <!--
   Shared header/row chrome — Reviewer fix #3 (rework attempt 2): `PrGroupTableComponent`'s own
@@ -11,44 +12,63 @@
   regardless of where the template is projected — do not remove them thinking they're redundant.
 -->
 
-<!-- Shared row template — grouped (prTableExpandedRow) and flat (<table>) both render this. -->
+<!-- Shared row template — grouped (prTableExpandedRow) and flat (<table>) both render this.
+     BRP-R-8: 8 columns (Indicator category dropped — its value moves under the title as a
+     caption); every `<td>` `!py-[6px]` (was 8). -->
 <ng-template #rowTpl let-row>
-  <tr>
+  <tr class="transition-colors duration-150 motion-reduce:transition-none hover:bg-[var(--pr-surface-app)]">
     <td
-      class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[8px] font-mono text-[12px] tabular-nums !text-[var(--pr-text-muted)] min-w-[70px]"
+      class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] whitespace-nowrap font-mono text-[12px] tabular-nums !text-[var(--pr-text-muted)] min-w-[70px]"
       data-testid="bilateral-review-row-code">
       {{ row.result_code }}
-    </td>
-    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[8px] text-[13px] !text-[var(--pr-text-heading)] min-w-[200px]">
-      <p class="m-0">{{ row.result_title }}</p>
       @if (isContributor(row)) {
         <span
-          class="mt-[4px] inline-flex items-center rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-app)] px-[8px] py-[1px] text-[10.5px] font-semibold text-[var(--pr-text-secondary)]"
+          class="ml-[6px] inline-flex items-center rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-app)] px-[6px] py-[1px] text-[10px] leading-[16px] font-semibold text-[var(--pr-text-secondary)]"
           >{{ copy.contributorBadge }}</span
         >
       }
     </td>
-    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[8px] text-[13px] !text-[var(--pr-text-secondary)] min-w-[110px]">{{ row.indicator_category }}</td>
-    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[8px] text-[13px] !text-[var(--pr-text-secondary)] min-w-[90px]">{{ row.lead_center ?? copy.notSpecified }}</td>
-    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[8px] min-w-[105px]">
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] text-[13px] !text-[var(--pr-text-heading)] min-w-[220px]">
+      <p class="m-0 line-clamp-2 leading-[17px]" [title]="row.result_title">{{ row.result_title }}</p>
+      @if (row.indicator_category) {
+        <span class="mt-[2px] block truncate text-[11px] leading-[14px] text-[var(--pr-text-secondary)]">{{ row.indicator_category }}</span>
+      }
+    </td>
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] text-[13px] !text-[var(--pr-text-secondary)] min-w-[90px]">{{ row.lead_center ?? copy.notSpecified }}</td>
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] whitespace-nowrap min-w-[128px]">
       <span
-        class="inline-flex items-center rounded-full border px-[10px] py-[2px] text-[11.5px] font-semibold"
+        class="inline-flex items-center whitespace-nowrap rounded-full border px-[10px] py-[2px] text-[11.5px] font-semibold"
         [class]="statusToneClass(row)"
         data-testid="bilateral-review-row-status">
         {{ row.status_name }}
       </span>
     </td>
-    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[8px] text-[13px] !text-[var(--pr-text-secondary)] min-w-[160px]">
-      <!-- `line-clamp-2` on a nested block, not the `<td>` itself — Tailwind's line-clamp sets
-           `display: -webkit-box`, which would override `display: table-cell` and break the
-           column's table layout (H2-1). -->
-      <span class="line-clamp-2">{{ row.toc_title ?? copy.notSpecified }}</span>
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] text-[13px] !text-[var(--pr-text-secondary)] min-w-[160px]">
+      <!-- BRP-R-9 / AC-9: a placeholder value renders as a muted dash for sighted users, with the
+           ORIGINAL text carried in `title` (pointer users) and an `sr-only` sibling (screen readers
+           — JB-14: an `aria-label` on a bare, non-interactive `<span>` is never exposed). -->
+      @if (isPlaceholder(row.toc_title)) {
+        <span aria-hidden="true" class="text-[var(--pr-text-subtle)]" [title]="placeholderText(row.toc_title)">—</span>
+        <span class="sr-only">{{ placeholderText(row.toc_title) }}</span>
+      } @else {
+        <!-- `line-clamp-2` on a nested block, not the `<td>` itself — Tailwind's line-clamp sets
+             `display: -webkit-box`, which would override `display: table-cell` and break the
+             column's table layout (H2-1). -->
+        <span class="line-clamp-2 leading-[17px]" [title]="row.toc_title">{{ row.toc_title }}</span>
+      }
     </td>
-    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[8px] text-[13px] !text-[var(--pr-text-secondary)] min-w-[120px]">{{ row.indicator ?? copy.notSpecified }}</td>
-    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[8px] font-mono text-[12px] tabular-nums !text-[var(--pr-text-secondary)] min-w-[90px]">
-      {{ row.submission_date | date: 'dd/MM/yyyy' }}
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] text-[13px] !text-[var(--pr-text-secondary)] min-w-[120px]">
+      @if (isPlaceholder(row.indicator)) {
+        <span aria-hidden="true" class="text-[var(--pr-text-subtle)]" [title]="placeholderText(row.indicator)">—</span>
+        <span class="sr-only">{{ placeholderText(row.indicator) }}</span>
+      } @else {
+        <span class="line-clamp-2 leading-[17px]" [title]="row.indicator">{{ row.indicator }}</span>
+      }
     </td>
-    <td class="!border-b !border-[var(--pr-border-divider)] sticky right-0 z-10 bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-center min-w-[110px]">
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] text-right font-mono text-[12px] tabular-nums !text-[var(--pr-text-secondary)] min-w-[95px]">
+      {{ row.submission_date | date: 'd MMM y' }}
+    </td>
+    <td class="!border-b !border-l !border-[var(--pr-border-divider)] sticky right-0 z-10 bg-[var(--pr-surface-app)] !px-[10px] !py-[6px] text-center min-w-[110px]">
       <button
         hlmBtn
         variant="ghost"
@@ -72,19 +92,15 @@
       {{ copy.headers.code }}
     </th>
     <th
-      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[200px]">
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[220px]">
       {{ copy.headers.title }}
-    </th>
-    <th
-      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[110px]">
-      {{ copy.headers.category }}
     </th>
     <th
       class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[90px]">
       {{ copy.headers.center }}
     </th>
     <th
-      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[105px]">
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[128px]">
       {{ copy.headers.status }}
     </th>
     <th
@@ -96,11 +112,11 @@
       {{ copy.headers.indicator }}
     </th>
     <th
-      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[90px]">
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-right !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[95px]">
       {{ copy.headers.date }}
     </th>
     <th
-      class="!border-b !border-[var(--pr-border-divider)] sticky right-0 z-10 !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-center !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[110px]">
+      class="!border-b !border-l !border-[var(--pr-border-divider)] sticky right-0 z-10 !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-center !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] min-w-[110px]">
       {{ copy.headers.actions }}
     </th>
   </tr>
@@ -111,38 +127,50 @@
     <app-pr-group-table
       styleClass="bilateral-review-table"
       [value]="filteredGroups()"
-      dataKey="project_name"
-      groupRowsBy="project_name"
+      dataKey="key"
+      groupRowsBy="key"
       [expandedRowKeys]="expandedRowKeys()"
       [loading]="loading()">
       <ng-template prTableHeader>
         <ng-container *ngTemplateOutlet="headerRowTpl"></ng-container>
       </ng-template>
 
+      <!-- Group header restyle (BRP-R-11, R-12): chevron, bold `label` (project code or center
+           acronym), muted `caption`/`center` (mutually exclusive per mode — exactly one is set),
+           right-aligned "N results" + the pending figure, token-based warning badge when M > 0. -->
       <ng-template prTableGroupHeader let-item let-expanded="expanded">
         <tr>
-          <td colspan="9" class="border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-app)] px-[10px] py-[8px]">
+          <td colspan="8" class="border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-app)] p-0">
             <button
               type="button"
               [prRowToggler]="item"
               (click)="onToggleGroup(item, expanded)"
-              class="flex w-full cursor-pointer items-center gap-[10px] border-0 bg-transparent p-0 text-left"
+              class="flex h-[40px] w-full cursor-pointer items-center gap-[10px] border-0 bg-transparent px-[10px] text-left"
               [attr.aria-expanded]="expanded"
-              [attr.aria-label]="'Toggle ' + item.project_name"
+              [attr.aria-label]="'Toggle ' + item.label"
               data-testid="bilateral-review-group-toggle">
               <span
-                class="material-icons-round text-[18px] text-[var(--pr-text-secondary)] transition-transform"
+                class="material-icons-round text-[18px] text-[var(--pr-text-secondary)] transition-transform duration-150 motion-reduce:transition-none"
                 [class.-rotate-90]="!expanded"
                 aria-hidden="true"
                 >expand_more</span
               >
-              <span class="font-bold text-[13px] text-[var(--pr-text-heading)]" data-testid="bilateral-review-group-name">{{ item.project_name }}</span>
-              @if (distinctLeadCenters(item)) {
-                <span class="text-[12px] text-[var(--pr-text-secondary)]">{{ distinctLeadCenters(item) }}</span>
+              <span class="font-bold text-[13px] text-[var(--pr-text-heading)]" data-testid="bilateral-review-group-name">{{ item.label }}</span>
+              @if (item.caption || item.center) {
+                <span class="text-[12px] text-[var(--pr-text-secondary)]">{{ item.caption ?? item.center }}</span>
               }
-              <span class="ml-auto min-w-0 text-right text-[12px] text-[var(--pr-text-muted)]" data-testid="bilateral-review-group-summary">{{
-                groupSummary(item)
-              }}</span>
+              <span class="ml-auto flex shrink-0 items-center gap-[8px]">
+                <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="bilateral-review-group-summary">{{ resultsLabel(item) }}</span>
+                @if (pendingCount(item) > 0) {
+                  <span
+                    class="rounded-full border border-[var(--pr-color-yellow-300)] bg-[var(--pr-color-yellow-100)] px-[8px] py-[1px] text-[11px] font-semibold text-[var(--pr-color-yellow-900)]"
+                    data-testid="bilateral-review-group-pending">
+                    {{ pendingLabel(item) }}
+                  </span>
+                } @else {
+                  <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="bilateral-review-group-pending">{{ pendingLabel(item) }}</span>
+                }
+              </span>
             </button>
           </td>
         </tr>
@@ -159,7 +187,7 @@
       <ng-template prTableLoading>
         @for (row of [1, 2, 3]; track row) {
           <tr>
-            <td colspan="9" class="px-[10px] py-[10px]">
+            <td colspan="8" class="px-[10px] py-[10px]">
               <span class="block h-[14px] w-full animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
             </td>
           </tr>
@@ -177,7 +205,7 @@
         @if (loading()) {
           @for (row of [1, 2, 3]; track row) {
             <tr>
-              <td colspan="9" class="px-[10px] py-[10px]">
+              <td colspan="8" class="px-[10px] py-[10px]">
                 <span class="block h-[14px] w-full animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
               </td>
             </tr>

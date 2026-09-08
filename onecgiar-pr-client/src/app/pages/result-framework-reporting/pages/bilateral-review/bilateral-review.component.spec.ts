@@ -1207,8 +1207,13 @@ describe('BilateralReviewComponent', () => {
       expect(component.activeFilterCount()).toBe(0);
     });
 
-    // `group` is introduced by BRP-T-2 (not yet a page signal here) — its own negative case belongs
-    // to that task's spec once `?group=` exists.
+    // @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-11) — forward pointer from T-1
+    // (`execution.md`): `group` is a view mode, not a filter, same as `view` above.
+    it('group ≠ project does NOT count (a view mode, not a filter)', () => {
+      component.setGroup('center');
+      fixture.detectChanges();
+      expect(component.activeFilterCount()).toBe(0);
+    });
   });
 
   // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-5, AC-5, judgment-day L-1, L-2)
@@ -1390,6 +1395,134 @@ describe('BilateralReviewComponent', () => {
         expect(component.centersRowExpanded()).toBe(false);
         const chip = root().querySelector('[data-testid="bilateral-review-center-chip-summary"]');
         expect(chip?.textContent?.replace(/\s+/g, ' ').trim()).toContain('CIP');
+      });
+    });
+  });
+
+  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-11, design.md §6.1, §6.4, judgment-day L-4)
+  describe('Group mode — ?group=, setGroup, and center-mode arithmetic/ordering (BRP-R-11)', () => {
+    it('defaults to "project" with no ?group= param', () => {
+      expect(component.group()).toBe('project');
+    });
+
+    it('hydrates "center" from ?group=center', () => {
+      fixture.destroy();
+      build({ group: 'center' });
+
+      expect(component.group()).toBe('center');
+    });
+
+    it('an invalid ?group= value hydrates to "project" and strips the key from the URL (replaceUrl)', () => {
+      fixture.destroy();
+      build({ group: 'bogus' });
+
+      expect(component.group()).toBe('project');
+      const rewriteCall = router.navigate.mock.calls.find(([, options]) => 'group' in (options.queryParams ?? {}));
+      expect(rewriteCall).toBeTruthy();
+      const [, options] = rewriteCall!;
+      expect(options.queryParams.group).toBeNull();
+      expect(options.replaceUrl).toBe(true);
+    });
+
+    it('setGroup("center") issues exactly one navigate (group: "center", merge, replaceUrl), bumps no nonce, and issues no list request', () => {
+      const nonceBefore = component.expandAllNonce();
+      router.navigate.mockClear();
+      GET_ResultToReview.mockClear();
+
+      component.setGroup('center');
+
+      expect(component.group()).toBe('center');
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+      const [, options] = router.navigate.mock.calls[0];
+      expect(options.queryParams).toEqual({ group: 'center' });
+      expect(options.queryParamsHandling).toBe('merge');
+      expect(options.replaceUrl).toBe(true);
+      expect(component.expandAllNonce()).toBe(nonceBefore);
+      expect(GET_ResultToReview).not.toHaveBeenCalled();
+    });
+
+    it('setGroup("project") — the default — writes group: null rather than the literal string', () => {
+      component.setGroup('center');
+      router.navigate.mockClear();
+
+      component.setGroup('project');
+
+      expect(component.group()).toBe('project');
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+      const [, options] = router.navigate.mock.calls[0];
+      expect(options.queryParams).toEqual({ group: null });
+    });
+
+    it('hidden toggle has no effect on centers/status/search — group is independent of every filter dimension', () => {
+      component.search.set('maize');
+      component.centers.set(['C1']);
+      component.setGroup('center');
+      fixture.detectChanges();
+
+      expect(component.search()).toBe('maize');
+      expect(component.centers()).toEqual(['C1']);
+    });
+
+    // BRP-T-2 TDD fixture (design.md §6.4): 3 centers with DISTINCT pending counts, a blank
+    // ("Not specified") bucket with 2 pending that must still trail, and one center spanning two
+    // projects for the "N projects" caption.
+    describe('Center-mode ordering / arithmetic — pending desc, acronym asc, blank bucket ALWAYS last', () => {
+      const GROUP_FIXTURE_ROWS: ResultToReview[] = [
+        // IITA: 3 pending, one project.
+        row({ id: 'g1', project_id: 'p1', project_name: 'P1 - Alpha', result_code: 'BR-G1', lead_center: 'IITA', status_id: 5 }),
+        row({ id: 'g2', project_id: 'p1', project_name: 'P1 - Alpha', result_code: 'BR-G2', lead_center: 'IITA', status_id: 5 }),
+        row({ id: 'g3', project_id: 'p1', project_name: 'P1 - Alpha', result_code: 'BR-G3', lead_center: 'IITA', status_id: 5 }),
+        // CIP: 1 pending, spans TWO projects — caption "2 projects".
+        row({ id: 'g4', project_id: 'p1', project_name: 'P1 - Alpha', result_code: 'BR-G4', lead_center: 'CIP', status_id: 5 }),
+        row({ id: 'g5', project_id: 'p2', project_name: 'P2 - Beta', result_code: 'BR-G5', lead_center: 'CIP', status_id: 6 }),
+        // CIAT: 0 pending.
+        row({ id: 'g6', project_id: 'p2', project_name: 'P2 - Beta', result_code: 'BR-G6', lead_center: 'CIAT', status_id: 6 }),
+        // Blank lead_center — 2 pending rows. FAIL input this guards: sorting the blank bucket BY
+        // count instead of trailing it unconditionally would place it ahead of CIP(1) and CIAT(0).
+        row({ id: 'g7', project_id: 'p1', project_name: 'P1 - Alpha', result_code: 'BR-G7', lead_center: undefined, status_id: 5 }),
+        row({ id: 'g8', project_id: 'p2', project_name: 'P2 - Beta', result_code: 'BR-G8', lead_center: undefined, status_id: 5 })
+      ];
+
+      const groupNames = () => Array.from(root().querySelectorAll('[data-testid="bilateral-review-group-name"]')).map(el => el.textContent?.trim());
+      const groupPending = () => Array.from(root().querySelectorAll('[data-testid="bilateral-review-group-pending"]')).map(el => el.textContent?.trim());
+      const groupToggles = () => Array.from(root().querySelectorAll('[data-testid="bilateral-review-group-toggle"]'));
+
+      beforeEach(() => {
+        fixture.destroy();
+        build({}, of(groupedResponse(GROUP_FIXTURE_ROWS)));
+        component.setGroup('center');
+        fixture.detectChanges();
+        fixture.detectChanges();
+      });
+
+      // Reviewer FAIL #1 (attempt 1): arithmetic asserted only on `component.groups()` cannot
+      // catch a wrong order/caption actually reaching the DOM, nor a key↔label mixup on the blank
+      // bucket. The real `BilateralReviewTableComponent` is mounted here (only band/modal/drawer
+      // are stubbed) — the gate is the RENDERED group headers.
+      it('renders group headers in order [IITA (3 pending), CIP (1 pending), CIAT (0 pending), Not specified (2 pending, trailing)]', () => {
+        expect(groupNames()).toEqual(['IITA', 'CIP', 'CIAT', 'Not specified']);
+        expect(groupPending()).toEqual(['3 pending', '1 pending', '0 pending', '2 pending']);
+      });
+
+      it('renders the "2 projects" caption on the center spanning two projects', () => {
+        const cipToggle = groupToggles().find(el => el.textContent?.includes('CIP'));
+        expect(cipToggle?.textContent).toContain('2 projects');
+      });
+
+      it('keeps the computed groups() consistent with the rendered headers (order, caption, center=null)', () => {
+        const groups = component.groups();
+        expect(groups.map(g => g.label)).toEqual(['IITA', 'CIP', 'CIAT', 'Not specified']);
+        expect(groups.find(g => g.label === 'CIP')?.caption).toBe('2 projects');
+        expect(groups.every(g => g.center === null)).toBe(true);
+      });
+
+      it('back to project mode restores insertion-order project groups, unaffected by the center-mode arithmetic', () => {
+        component.setGroup('project');
+        fixture.detectChanges();
+        fixture.detectChanges();
+
+        expect(groupNames()).toEqual(['P1 - Alpha', 'P2 - Beta']);
+        expect(component.groups().map(g => g.label)).toEqual(['P1 - Alpha', 'P2 - Beta']);
       });
     });
   });

@@ -1,7 +1,8 @@
 // @akili-spec changes/sp-bilateral-review-tab (BRT-T-4, BRT-T-5, BRT-AC-8, BRT-AC-15)
+// @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-8, R-9, R-11, R-12, R-14 (f))
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { BilateralReviewTableComponent } from './bilateral-review-table.component';
-import { GroupedResult, ResultToReview } from '../result-review-drawer/result-review-drawer.interfaces';
+import { BilateralReviewTableComponent, BilateralReviewGroup } from './bilateral-review-table.component';
+import { ResultToReview } from '../result-review-drawer/result-review-drawer.interfaces';
 import { BILATERAL_REVIEW_COPY } from '../../bilateral-review.copy';
 
 function row(partial: Partial<ResultToReview> & { id: string }): ResultToReview {
@@ -22,20 +23,21 @@ function row(partial: Partial<ResultToReview> & { id: string }): ResultToReview 
   } as ResultToReview;
 }
 
-const GROUP_A: GroupedResult = {
-  project_id: 'p1',
-  project_name: 'P1 - Alpha Project',
-  results: [
-    row({ id: 'a1', project_id: 'p1', project_name: 'P1 - Alpha Project', result_code: 'BR-001', status_id: 5, status_name: 'Pending Review', lead_center: 'CIP' }),
-    row({ id: 'a2', project_id: 'p1', project_name: 'P1 - Alpha Project', result_code: 'BR-002', status_id: 6, status_name: 'Approved', lead_center: 'IITA' })
-  ]
-};
+/** BRP-T-2: project-mode groups now carry `key`/`label`/`caption`/`center` instead of
+ *  `project_id`/`project_name` — `key = label = project_name`, `center` = the group's distinct
+ *  lead centers (comma-joined), `caption = null` (project mode never shows one). */
+function projectGroup(key: string, results: ResultToReview[], center: string | null = null): BilateralReviewGroup {
+  return { key, label: key, caption: null, center: center ?? [...new Set(results.map(r => r.lead_center).filter(Boolean))].join(', '), results };
+}
 
-const GROUP_B: GroupedResult = {
-  project_id: 'p2',
-  project_name: 'P2 - Beta Project',
-  results: [row({ id: 'b1', project_id: 'p2', project_name: 'P2 - Beta Project', result_code: 'BR-003', status_id: 7, status_name: 'Rejected', lead_center: 'CIAT' })]
-};
+const GROUP_A = projectGroup('P1 - Alpha Project', [
+  row({ id: 'a1', project_id: 'p1', project_name: 'P1 - Alpha Project', result_code: 'BR-001', status_id: 5, status_name: 'Pending Review', lead_center: 'CIP' }),
+  row({ id: 'a2', project_id: 'p1', project_name: 'P1 - Alpha Project', result_code: 'BR-002', status_id: 6, status_name: 'Approved', lead_center: 'IITA' })
+]);
+
+const GROUP_B = projectGroup('P2 - Beta Project', [
+  row({ id: 'b1', project_id: 'p2', project_name: 'P2 - Beta Project', result_code: 'BR-003', status_id: 7, status_name: 'Rejected', lead_center: 'CIAT' })
+]);
 
 describe('BilateralReviewTableComponent', () => {
   let fixture: ComponentFixture<BilateralReviewTableComponent>;
@@ -52,7 +54,7 @@ describe('BilateralReviewTableComponent', () => {
 
   /** Sets inputs then flushes the constructor effect — this codebase's convention for
    *  effect-driven components is two `detectChanges()` passes (see `bilateral-review.component.spec.ts`). */
-  function render(groups: GroupedResult[], extra: Record<string, unknown> = {}): void {
+  function render(groups: BilateralReviewGroup[], extra: Record<string, unknown> = {}): void {
     fixture.componentRef.setInput('groups', groups);
     for (const [key, value] of Object.entries(extra)) {
       fixture.componentRef.setInput(key, value);
@@ -66,19 +68,21 @@ describe('BilateralReviewTableComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('Grouped view — headers and counts (BRT-R-10)', () => {
-    it('renders group headers with "N results · M pending" and the project name as delivered', () => {
+  describe('Grouped view — headers and counts (BRT-R-10, BRP-R-11)', () => {
+    it('renders group headers with the label, "N results" and the pending figure', () => {
       render([GROUP_A, GROUP_B]);
 
       const names = byTestId('bilateral-review-group-name').map(el => el.textContent?.trim());
       const summaries = byTestId('bilateral-review-group-summary').map(el => el.textContent?.trim());
+      const pending = byTestId('bilateral-review-group-pending').map(el => el.textContent?.trim());
 
       expect(names).toEqual(['P1 - Alpha Project', 'P2 - Beta Project']);
-      expect(summaries).toEqual(['2 results · 1 pending', '1 results · 0 pending']);
+      expect(summaries).toEqual(['2 results', '1 results']);
+      expect(pending).toEqual(['1 pending', '0 pending']);
     });
 
     it('drops a group left with zero results', () => {
-      const empty: GroupedResult = { project_id: 'p3', project_name: 'P3 - Empty Project', results: [] };
+      const empty: BilateralReviewGroup = { key: 'P3 - Empty Project', label: 'P3 - Empty Project', caption: null, center: null, results: [] };
       render([GROUP_A, empty]);
 
       const names = byTestId('bilateral-review-group-name').map(el => el.textContent?.trim());
@@ -88,6 +92,33 @@ describe('BilateralReviewTableComponent', () => {
     it('groups render expanded by default (BRT-R-10)', () => {
       render([GROUP_A, GROUP_B]);
       expect(byTestId('bilateral-review-row-action').length).toBe(3);
+    });
+  });
+
+  describe('Group header pending badge — token-based, only when M > 0 (BRP-R-11, R-12)', () => {
+    it('the pending badge carries the yellow tokens only for a group with M > 0; a zero-pending group renders muted text instead', () => {
+      render([GROUP_A, GROUP_B]);
+      const badges = byTestId('bilateral-review-group-pending');
+
+      expect(badges[0].className).toContain('bg-[var(--pr-color-yellow-100)]');
+      expect(badges[0].className).toContain('text-[var(--pr-color-yellow-900)]');
+      expect(badges[1].className).not.toContain('bg-[var(--pr-color-yellow-100)]');
+    });
+
+    it('project-mode caption shows the distinct lead centers; center-mode caption shows "N projects"', () => {
+      render([GROUP_A]);
+      // GROUP_A spans CIP + IITA.
+      expect(root().textContent).toContain('CIP, IITA');
+
+      const centerGroup: BilateralReviewGroup = {
+        key: 'CIP',
+        label: 'CIP',
+        caption: BILATERAL_REVIEW_COPY.table.projectsCaption(2),
+        center: null,
+        results: GROUP_A.results
+      };
+      render([centerGroup], { groupMode: 'center' });
+      expect(root().textContent).toContain('2 projects');
     });
   });
 
@@ -124,6 +155,37 @@ describe('BilateralReviewTableComponent', () => {
     });
   });
 
+  describe('Namespaced collapse memory survives a groupMode round trip (BRP-R-11, judgment-day L-4)', () => {
+    it('collapsing a group in center mode, switching to project mode, then back to center — the group stays collapsed and no group is force-expanded', () => {
+      const centerA: BilateralReviewGroup = { key: 'IITA', label: 'IITA', caption: BILATERAL_REVIEW_COPY.table.projectsCaption(1), center: null, results: [GROUP_A.results[1]] };
+      const centerB: BilateralReviewGroup = { key: 'CIP', label: 'CIP', caption: BILATERAL_REVIEW_COPY.table.projectsCaption(1), center: null, results: [GROUP_A.results[0]] };
+
+      render([centerA, centerB], { groupMode: 'center' });
+      expect(byTestId('bilateral-review-row-action').length).toBe(2);
+
+      (byTestId('bilateral-review-group-toggle')[0] as HTMLButtonElement).click(); // collapse IITA
+      fixture.detectChanges();
+      expect(byTestId('bilateral-review-row-action').length).toBe(1);
+
+      // Switch to project mode — a DIFFERENT key space (no nonce bump, so this must not force
+      // expand-all; both project groups render expanded because it's their first appearance).
+      fixture.componentRef.setInput('groups', [GROUP_A, GROUP_B]);
+      fixture.componentRef.setInput('groupMode', 'project');
+      fixture.detectChanges();
+      fixture.detectChanges();
+      expect(byTestId('bilateral-review-row-action').length).toBe(3); // both project groups expanded
+
+      // Back to center mode — IITA is still collapsed (FAIL input: bumping the nonce on switch
+      // would instead force every group open here).
+      fixture.componentRef.setInput('groups', [centerA, centerB]);
+      fixture.componentRef.setInput('groupMode', 'center');
+      fixture.detectChanges();
+      fixture.detectChanges();
+      expect(byTestId('bilateral-review-row-action').length).toBe(1);
+      expect(byTestId('bilateral-review-group-toggle')[0].getAttribute('aria-expanded')).toBe('false');
+    });
+  });
+
   describe('Row action gating by status_id x canReview (BRT-AC-8)', () => {
     it('reads Review with the edit icon for a pending row when the user can review', () => {
       render([GROUP_A], { canReview: true });
@@ -146,11 +208,9 @@ describe('BilateralReviewTableComponent', () => {
     });
 
     it('reads Review for a pending row whose status_id arrives as the wire string "5"', () => {
-      const stringStatusGroup: GroupedResult = {
-        project_id: 'p4',
-        project_name: 'P4 - String Status Project',
-        results: [row({ id: 's1', project_id: 'p4', project_name: 'P4 - String Status Project', status_id: '5', status_name: 'Pending Review' })]
-      };
+      const stringStatusGroup = projectGroup('P4 - String Status Project', [
+        row({ id: 's1', project_id: 'p4', project_name: 'P4 - String Status Project', status_id: '5', status_name: 'Pending Review' })
+      ]);
       render([stringStatusGroup], { canReview: true });
       expect(byTestId('bilateral-review-row-action')[0].textContent).toContain('Review');
     });
@@ -221,16 +281,12 @@ describe('BilateralReviewTableComponent', () => {
 
   describe('Status chip tone by loose status_id (neutral for non-5/6/7, e.g. Editing)', () => {
     it('tones amber / green / red / neutral and shows the raw status_name for a neutral row', () => {
-      const statuses: GroupedResult = {
-        project_id: 'p5',
-        project_name: 'P5 - Statuses Project',
-        results: [
-          row({ id: 'st1', project_id: 'p5', project_name: 'P5 - Statuses Project', status_id: 5, status_name: 'Pending Review' }),
-          row({ id: 'st2', project_id: 'p5', project_name: 'P5 - Statuses Project', status_id: 6, status_name: 'Approved' }),
-          row({ id: 'st3', project_id: 'p5', project_name: 'P5 - Statuses Project', status_id: 7, status_name: 'Rejected' }),
-          row({ id: 'st4', project_id: 'p5', project_name: 'P5 - Statuses Project', status_id: 1, status_name: 'Editing' })
-        ]
-      };
+      const statuses = projectGroup('P5 - Statuses Project', [
+        row({ id: 'st1', project_id: 'p5', project_name: 'P5 - Statuses Project', status_id: 5, status_name: 'Pending Review' }),
+        row({ id: 'st2', project_id: 'p5', project_name: 'P5 - Statuses Project', status_id: 6, status_name: 'Approved' }),
+        row({ id: 'st3', project_id: 'p5', project_name: 'P5 - Statuses Project', status_id: 7, status_name: 'Rejected' }),
+        row({ id: 'st4', project_id: 'p5', project_name: 'P5 - Statuses Project', status_id: 1, status_name: 'Editing' })
+      ]);
       render([statuses]);
 
       const chips = byTestId('bilateral-review-row-status');
@@ -242,17 +298,17 @@ describe('BilateralReviewTableComponent', () => {
     });
   });
 
-  describe('Contributor tag (BRT-R-11)', () => {
-    it('shows a Contributor tag only for initiative_role_name = Contributor', () => {
-      const group: GroupedResult = {
-        project_id: 'p6',
-        project_name: 'P6 - Gamma Project',
-        results: [
-          row({ id: 'c1', project_id: 'p6', project_name: 'P6 - Gamma Project', initiative_role_name: 'Contributor' }),
-          row({ id: 'c2', project_id: 'p6', project_name: 'P6 - Gamma Project', initiative_role_name: 'Primary submitter' })
-        ]
-      };
+  describe('Contributor tag — inline after the code (BRT-R-11, BRP-R-8)', () => {
+    it('shows a Contributor tag in the CODE cell only for initiative_role_name = Contributor', () => {
+      const group = projectGroup('P6 - Gamma Project', [
+        row({ id: 'c1', project_id: 'p6', project_name: 'P6 - Gamma Project', initiative_role_name: 'Contributor' }),
+        row({ id: 'c2', project_id: 'p6', project_name: 'P6 - Gamma Project', initiative_role_name: 'Primary submitter' })
+      ]);
       render([group]);
+
+      const codeCells = byTestId('bilateral-review-row-code');
+      expect(codeCells[0].textContent).toContain(BILATERAL_REVIEW_COPY.table.contributorBadge);
+      expect(codeCells[1].textContent).not.toContain(BILATERAL_REVIEW_COPY.table.contributorBadge);
 
       // tbody rows: [0] group header, [1] c1 (Contributor), [2] c2 (Primary submitter).
       const rows = root().querySelectorAll('tbody tr');
@@ -261,61 +317,94 @@ describe('BilateralReviewTableComponent', () => {
     });
   });
 
-  // ── Rework attempt 2 — Reviewer fix #2/#3/#4 + Leader H2-1/advisory (same lines, no new scope) ──
-
-  describe('Header/cell chrome parity across grouped and flat (Reviewer fix #3)', () => {
-    it('renders the identical header cell class list in grouped and flat views', () => {
+  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-8, AC-8)
+  describe('Row density — no category column, caption under the title, line-clamp + title (BRP-R-8, AC-8)', () => {
+    it('renders no "Indicator category" header/column and shows the category as a caption under the title', () => {
       render([GROUP_A]);
-      const groupedHeaderClass = (root().querySelector('thead th') as HTMLElement).className;
+      const headerTexts = Array.from(root().querySelectorAll('thead th')).map(th => th.textContent?.trim());
+      expect(headerTexts).not.toContain('Indicator category');
+      expect(headerTexts.length).toBe(8);
 
-      fixture.componentRef.setInput('view', 'flat');
-      fixture.componentRef.setInput('flatRows', GROUP_A.results);
-      fixture.detectChanges();
-      fixture.detectChanges();
-
-      const flatHeaderClass = (root().querySelector('thead th') as HTMLElement).className;
-      expect(flatHeaderClass).toBe(groupedHeaderClass);
-      // Guards against reintroducing the inert grouped-only chrome class this fix removed.
-      expect(flatHeaderClass).not.toContain('pr-table');
+      const titleCell = byTestId('bilateral-review-row-action')[0].closest('tr')!.querySelectorAll('td')[1];
+      expect(titleCell.textContent).toContain(GROUP_A.results[0].indicator_category);
     });
 
-    it('renders the identical first-row td class list in grouped and flat views, with a divider on every cell', () => {
+    it('clamps a long title to 2 lines and carries the full text in `title`', () => {
+      const longTitle = 'A'.repeat(200);
+      const group = projectGroup('P8 - Long Title Project', [row({ id: 'lt1', project_id: 'p8', project_name: 'P8 - Long Title Project', result_title: longTitle })]);
+      render([group]);
+
+      const titleParagraph = root().querySelector('tbody tr:nth-child(2) p') as HTMLElement;
+      expect(titleParagraph.className).toContain('line-clamp-2');
+      expect(titleParagraph.getAttribute('title')).toBe(longTitle);
+    });
+
+    it('carries `min-w-[128px]` and `whitespace-nowrap` on the status column so a long status name never wraps', () => {
       render([GROUP_A]);
-      const groupedRowCells = Array.from(root().querySelectorAll('tbody tr')[1].querySelectorAll('td')).map(td => td.className);
+      const statusCell = byTestId('bilateral-review-row-status')[0].closest('td') as HTMLElement;
+      expect(statusCell.className).toContain('whitespace-nowrap');
+      expect(statusCell.className).toContain('min-w-[128px]');
+    });
+  });
 
-      fixture.componentRef.setInput('view', 'flat');
-      fixture.componentRef.setInput('flatRows', GROUP_A.results);
-      fixture.detectChanges();
-      fixture.detectChanges();
+  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-9, AC-9, judgment-day JB-14)
+  describe('Muted placeholders — TOC result / Indicator (BRP-R-9, AC-9)', () => {
+    it('"Not specified" and "Not Applicable" render as an aria-hidden dash with an sr-only sibling carrying the original text', () => {
+      const group = projectGroup('P9 - Placeholder Project', [
+        row({ id: 'ph1', project_id: 'p9', project_name: 'P9 - Placeholder Project', toc_title: 'Not specified', indicator: 'Not Applicable' })
+      ]);
+      render([group]);
 
-      const flatRowCells = Array.from(root().querySelectorAll('tbody tr')[0].querySelectorAll('td')).map(td => td.className);
-      expect(flatRowCells).toEqual(groupedRowCells);
-      // Row separation now lives on every cell (not the <tr>) since `border-collapse: separate`
-      // on `.pr-table` never paints a row-level border — see Reviewer fix #3 remediation.
-      for (const cellClass of groupedRowCells) {
-        expect(cellClass).toContain('!border-b');
-        expect(cellClass).toContain('!border-[var(--pr-border-divider)]');
-      }
+      const rowEl = root().querySelectorAll('tbody tr')[1];
+      const tocCell = rowEl.querySelectorAll('td')[4];
+      const indicatorCell = rowEl.querySelectorAll('td')[5];
+
+      const tocDash = tocCell.querySelector('span[aria-hidden="true"]') as HTMLElement;
+      expect(tocDash.textContent).toBe('—');
+      expect(tocDash.getAttribute('title')).toBe('Not specified');
+      expect(tocCell.querySelector('.sr-only')?.textContent).toBe('Not specified');
+
+      const indicatorDash = indicatorCell.querySelector('span[aria-hidden="true"]') as HTMLElement;
+      expect(indicatorDash.getAttribute('title')).toBe('Not Applicable');
+      expect(indicatorCell.querySelector('.sr-only')?.textContent).toBe('Not Applicable');
+    });
+
+    it('a genuinely blank value falls back to the "Not specified" copy in both title and sr-only text', () => {
+      const group = projectGroup('P10 - Blank Project', [row({ id: 'bl1', project_id: 'p10', project_name: 'P10 - Blank Project', toc_title: '' as unknown as string, indicator: '' as unknown as string })]);
+      render([group]);
+
+      const rowEl = root().querySelectorAll('tbody tr')[1];
+      const tocCell = rowEl.querySelectorAll('td')[4];
+      expect(tocCell.querySelector('span[aria-hidden="true"]')?.getAttribute('title')).toBe(BILATERAL_REVIEW_COPY.table.notSpecified);
+    });
+
+    it('a normal value renders as text, not the placeholder dash', () => {
+      render([GROUP_A]);
+      const rowEl = root().querySelectorAll('tbody tr')[1];
+      const tocCell = rowEl.querySelectorAll('td')[4];
+      expect(tocCell.querySelector('span[aria-hidden="true"]')).toBeNull();
+      expect(tocCell.textContent).toContain('ToC');
+    });
+  });
+
+  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-8, R-14 (f))
+  describe('Date format — d MMM y, right-aligned (BRP-R-8, R-14 (f))', () => {
+    it('renders "23 Feb 2026" from "2026-02-23"', () => {
+      const group = projectGroup('P11 - Date Project', [row({ id: 'd1', project_id: 'p11', project_name: 'P11 - Date Project', submission_date: '2026-02-23' })]);
+      render([group]);
+
+      const rowEl = root().querySelectorAll('tbody tr')[1];
+      const dateCell = rowEl.querySelectorAll('td')[6];
+      expect(dateCell.textContent?.trim()).toBe('23 Feb 2026');
+      expect(dateCell.className).toContain('text-right');
     });
   });
 
   describe('Copy strings render from BILATERAL_REVIEW_COPY.table (Reviewer fix #4)', () => {
-    it('renders the nine column headers from copy.table.headers', () => {
+    it('renders the eight column headers from copy.table.headers', () => {
       render([GROUP_A]);
       const headerTexts = Array.from(root().querySelectorAll('thead th')).map(th => th.textContent?.trim());
       expect(headerTexts).toEqual(Object.values(BILATERAL_REVIEW_COPY.table.headers));
-    });
-
-    it('renders the Contributor badge and Not specified fallback from copy', () => {
-      const group: GroupedResult = {
-        project_id: 'p7',
-        project_name: 'P7 - Copy Project',
-        results: [row({ id: 'cp1', project_id: 'p7', project_name: 'P7 - Copy Project', initiative_role_name: 'Contributor', lead_center: undefined })]
-      };
-      render([group]);
-
-      expect(root().textContent).toContain(BILATERAL_REVIEW_COPY.table.contributorBadge);
-      expect(root().textContent).toContain(BILATERAL_REVIEW_COPY.table.notSpecified);
     });
 
     it('renders the row action as a ghost button', () => {
@@ -323,19 +412,35 @@ describe('BilateralReviewTableComponent', () => {
       const action = byTestId('bilateral-review-row-action')[0];
       expect(action.getAttribute('variant')).toBe('ghost');
     });
+
+    // Restored (Leader, examined ADVISORY, R-14): still passes against the new markup —
+    // the Contributor badge moved into the code cell (BRP-R-8) and "Not specified" now reaches
+    // the DOM via the Lead center column's own fallback AND the sr-only placeholder text on a
+    // blank TOC/Indicator value; either way `root().textContent` still contains both strings.
+    it('renders the Contributor badge and Not specified fallback from copy', () => {
+      const group = projectGroup('P7 - Copy Project', [
+        row({ id: 'cp1', project_id: 'p7', project_name: 'P7 - Copy Project', initiative_role_name: 'Contributor', lead_center: undefined })
+      ]);
+      render([group]);
+
+      expect(root().textContent).toContain(BILATERAL_REVIEW_COPY.table.contributorBadge);
+      expect(root().textContent).toContain(BILATERAL_REVIEW_COPY.table.notSpecified);
+    });
   });
 
-  describe('Actions column sticks to the right edge (Leader H2-1)', () => {
-    it('gives the Actions header and row cell sticky classes', () => {
+  describe('Actions column sticks to the right edge (Leader H2-1, BRP-R-10)', () => {
+    it('gives the Actions header and row cell sticky classes plus a left divider (BRP-R-10)', () => {
       render([GROUP_A]);
       const headerCells = root().querySelectorAll('thead th');
       const actionsHeader = headerCells[headerCells.length - 1] as HTMLElement;
       expect(actionsHeader.className).toContain('sticky');
       expect(actionsHeader.className).toContain('right-0');
+      expect(actionsHeader.className).toContain('border-l');
 
       const actionCell = byTestId('bilateral-review-row-action')[0].closest('td') as HTMLElement;
       expect(actionCell.className).toContain('sticky');
       expect(actionCell.className).toContain('right-0');
+      expect(actionCell.className).toContain('border-l');
     });
   });
 

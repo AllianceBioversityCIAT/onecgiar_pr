@@ -28,7 +28,7 @@ import { BilateralReviewAccessService } from './services/bilateral-review-access
 import { ResultReviewDrawerComponent } from './components/result-review-drawer/result-review-drawer.component';
 import { GroupedResult, ResultToReview } from './components/result-review-drawer/result-review-drawer.interfaces';
 import { BilateralReviewKpis, BilateralReviewKpisComponent } from './components/bilateral-review-kpis/bilateral-review-kpis.component';
-import { BilateralReviewTableComponent } from './components/bilateral-review-table/bilateral-review-table.component';
+import { BilateralReviewGroup, BilateralReviewTableComponent } from './components/bilateral-review-table/bilateral-review-table.component';
 import {
   BilateralReviewCenterStripComponent,
   BilateralReviewCenterStripItem
@@ -36,10 +36,12 @@ import {
 import { BILATERAL_REVIEW_COPY, chipCountClass } from './bilateral-review.copy';
 import {
   BILATERAL_REVIEW_QUERY_PARAM_MAP,
+  BilateralReviewGroupMode,
   BilateralReviewStatusFilter,
   BilateralReviewViewMode,
   joinBilateralReviewListParam,
   normalizeBilateralReviewPhaseId,
+  parseBilateralReviewGroupMode,
   parseBilateralReviewListParam,
   parseBilateralReviewPhase,
   parseBilateralReviewStatus,
@@ -295,6 +297,17 @@ export class BilateralReviewComponent {
   readonly projects = signal<string[]>([]);
   readonly categories = signal<string[]>([]);
   readonly view = signal<BilateralReviewViewMode>('grouped');
+  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-11, design.md §6.1)
+  /** Eighth key, `?group=` — how the grouped view is grouped (BRP-R-11). Hydrated by the URL →
+   *  state effect below; a present-but-invalid raw value is stripped from the URL by its own
+   *  effect (mirrors the `?phase=` rewrite's split between the parsed value and the raw string).
+   *  `setGroup()` is the ONLY writer — a direct `router.navigate`, deliberately outside the
+   *  reactive "state → URL" effect below and bumping NO nonce (judgment-day L-4: an earlier draft
+   *  bumped `expandAllNonce`, which would have cleared the table's per-mode collapse memory). */
+  readonly group = signal<BilateralReviewGroupMode>('project');
+  /** Raw `?group=` string, or `null` when the key is absent — the only signal that can tell
+   *  "absent" apart from "present but invalid" (same split `phaseParamRaw` uses for `?phase=`). */
+  private readonly groupParamRaw = signal<string | null>(null);
   readonly expandAllNonce = signal(0);
   /** State the table applies to every group on the NEXT `expandAllNonce` bump (BRT-T-4). Starts
    *  `true` so the table's initial render honors "groups are expanded by default" (BRT-R-10). */
@@ -492,16 +505,85 @@ export class BilateralReviewComponent {
     });
   });
 
-  /** Rebuilds `GroupedResult[]` from `visibleRows`, dropping groups left empty by filtering. */
-  readonly groups = computed<GroupedResult[]>(() => {
-    const byProject = new Map<string, GroupedResult>();
-    for (const row of this.visibleRows()) {
+  /** BRP-R-11, design.md §6.1: rebuilds `BilateralReviewGroup[]` from `visibleRows` in whichever
+   *  dimension `group()` selects, dropping groups left empty by filtering (defensive — filtering
+   *  happens before this computed sees the rows). Project mode: insertion order, unchanged from
+   *  before this generalization. Center mode: pending desc, acronym asc, the blank ("Not
+   *  specified") bucket ALWAYS trailing regardless of its own pending count (BRC-R-1's rule,
+   *  reused here — a center strip caption or a group header disagreeing on this ordering would be
+   *  a genuine UX bug, not just an internal inconsistency). */
+  readonly groups = computed<BilateralReviewGroup[]>(() => {
+    const rows = this.visibleRows();
+    return this.group() === 'center' ? this.buildCenterGroups(rows) : this.buildProjectGroups(rows);
+  });
+
+  /** Project mode: one group per distinct `project_name`, `caption = null`, `center` = the
+   *  group's own distinct lead centers (comma-joined) — the project-mode "center chip" R-12 asks
+   *  for. */
+  private buildProjectGroups(rows: ResultToReview[]): BilateralReviewGroup[] {
+    const byProject = new Map<string, BilateralReviewGroup>();
+    for (const row of rows) {
       const key = row.project_name ?? '';
-      if (!byProject.has(key)) byProject.set(key, { project_id: row.project_id, project_name: row.project_name, results: [] });
+      if (!byProject.has(key)) byProject.set(key, { key, label: row.project_name ?? '', caption: null, center: null, results: [] });
       byProject.get(key)!.results.push(row);
     }
+    for (const group of byProject.values()) group.center = this.distinctLeadCentersOf(group.results);
     return [...byProject.values()];
-  });
+  }
+
+  /** Center mode: one group per distinct `lead_center` acronym, `center = null`, `caption` = "N
+   *  projects" (distinct `project_name` in the group). Blank `lead_center` rows fold into a
+   *  trailing "Not specified" bucket keyed by the same param-safe `UNASSIGNED_CENTER_CODE`
+   *  sentinel the center strip uses (BRC-R-1) — always LAST, even when its own pending count would
+   *  otherwise out-rank another center (judgment-day JA-16). */
+  private buildCenterGroups(rows: ResultToReview[]): BilateralReviewGroup[] {
+    const byAcronym = new Map<string, ResultToReview[]>();
+    const blank: ResultToReview[] = [];
+
+    for (const row of rows) {
+      const acronym = row.lead_center;
+      if (!acronym) {
+        blank.push(row);
+        continue;
+      }
+      if (!byAcronym.has(acronym)) byAcronym.set(acronym, []);
+      byAcronym.get(acronym)!.push(row);
+    }
+
+    const groups: BilateralReviewGroup[] = [...byAcronym.entries()]
+      .map(([acronym, results]) => ({
+        key: acronym,
+        label: acronym,
+        caption: this.copy.table.projectsCaption(this.distinctProjectCountOf(results)),
+        center: null,
+        results
+      }))
+      .sort((a, b) => this.pendingCountOf(b.results) - this.pendingCountOf(a.results) || a.label.localeCompare(b.label));
+
+    if (blank.length) {
+      groups.push({
+        key: UNASSIGNED_CENTER_CODE,
+        label: this.copy.centerStrip.notSpecified,
+        caption: this.copy.table.projectsCaption(this.distinctProjectCountOf(blank)),
+        center: null,
+        results: blank
+      });
+    }
+    return groups;
+  }
+
+  private distinctLeadCentersOf(rows: ResultToReview[]): string {
+    const centers = new Set(rows.map(row => row.lead_center).filter((value): value is string => !!value));
+    return [...centers].join(', ');
+  }
+
+  private distinctProjectCountOf(rows: ResultToReview[]): number {
+    return new Set(rows.map(row => row.project_name).filter(Boolean)).size;
+  }
+
+  private pendingCountOf(rows: ResultToReview[]): number {
+    return rows.filter(row => this.isPending(row)).length;
+  }
 
   /** Flat view rows (BRT-R-30), sorted desc by `submission_date`. */
   readonly flatRows = computed<ResultToReview[]>(() =>
@@ -615,6 +697,11 @@ export class BilateralReviewComponent {
         if (phaseRaw !== this.phaseParamRaw()) this.phaseParamRaw.set(phaseRaw);
         const phase = parseBilateralReviewPhase(phaseRaw);
         if (phase !== this.phaseParam()) this.phaseParam.set(phase);
+
+        const groupRaw = params.get(BILATERAL_REVIEW_QUERY_PARAM_MAP.group);
+        if (groupRaw !== this.groupParamRaw()) this.groupParamRaw.set(groupRaw);
+        const group = parseBilateralReviewGroupMode(groupRaw);
+        if (group !== this.group()) this.group.set(group);
       });
     });
 
@@ -690,6 +777,24 @@ export class BilateralReviewComponent {
         this.router.navigate([], {
           relativeTo: this.route,
           queryParams: { [BILATERAL_REVIEW_QUERY_PARAM_MAP.phase]: current },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        });
+      });
+    });
+
+    // ── Present-but-invalid `?group=` → strip the key (BRP-R-11's "invalid → project, param
+    // removed"). Absent (`raw === null`) is left alone — that IS the "project" default, no key to
+    // strip. A valid `'project'`/`'center'` value is also left alone here; the "state → URL" effect
+    // below never touches `group` at all (only `setGroup()` writes it), so an explicit `?group=
+    // project` round-trips until the user picks something else. ─────────────────────────────────
+    effect(() => {
+      const raw = this.groupParamRaw();
+      if (raw === null || raw === 'project' || raw === 'center') return;
+      untracked(() => {
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { [BILATERAL_REVIEW_QUERY_PARAM_MAP.group]: null },
           queryParamsHandling: 'merge',
           replaceUrl: true
         });
@@ -859,6 +964,25 @@ export class BilateralReviewComponent {
 
   setView(view: BilateralReviewViewMode): void {
     this.view.set(view);
+  }
+
+  /** BRP-R-11: switches the grouped view's grouping dimension. A direct, single
+   *  `router.navigate` (mirrors `setPhase()`) — deliberately NOT a plain signal write left for the
+   *  reactive "state → URL" effect above to pick up, so this method's own contract ("one navigate,
+   *  no nonce bump, no request") is provable in isolation rather than entangled with that effect's
+   *  five-key write. Writes `group` directly too so the table's `groups`/`groupMode` inputs update
+   *  in the SAME change-detection pass the navigate's (synchronous) URL write does — the URL is the
+   *  source of truth on the next hydrate, this just avoids a redundant extra tick. Bumps NEITHER
+   *  `expandAllNonce` nor `allExpanded` (judgment-day L-4) — the table's own per-mode collapse
+   *  memory (namespaced by `groupMode`) is what survives the round trip, not a forced expand-all. */
+  setGroup(mode: BilateralReviewGroupMode): void {
+    this.group.set(mode);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { [BILATERAL_REVIEW_QUERY_PARAM_MAP.group]: mode === 'project' ? null : mode },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 
   toggleExpandAll(): void {

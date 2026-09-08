@@ -238,6 +238,47 @@
               <ng-icon [name]="expandAllIcon()" class="text-[15px]" />
               {{ expandAllLabel() }}
             </button>
+
+            <!-- @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-11, AC-10) — Group:
+                 Project | Center, grouped view only; costs no request (setGroup navigates, no
+                 nonce bump). Tokenized with the SAME classes as the status segmented control
+                 (`.html:287-347`, BRP-T-1) — Reviewer fix: an earlier draft cloned the legacy
+                 raw-slate Grouped/All results tablist instead (design.md §6.3 "tokens only in new
+                 markup"). -->
+            <div class="flex h-[32px] shrink-0 items-center gap-[6px]">
+              <span class="text-[12.5px] font-medium text-[var(--pr-text-secondary)]">{{ copy.toolbar.groupByLabel }}</span>
+              <div
+                role="group"
+                aria-label="Group by"
+                class="inline-flex h-[32px] shrink-0 items-center gap-[2px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[2px]">
+                <button
+                  type="button"
+                  [attr.aria-pressed]="group() === 'project'"
+                  data-testid="bilateral-review-group-mode-project"
+                  class="inline-flex h-[26px] cursor-pointer items-center rounded-[6px] px-[10px] text-[12.5px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+                  [class]="
+                    group() === 'project'
+                      ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-700)] shadow-none'
+                      : 'text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle-hover)]'
+                  "
+                  (click)="setGroup('project')">
+                  {{ copy.toolbar.groupByProject }}
+                </button>
+                <button
+                  type="button"
+                  [attr.aria-pressed]="group() === 'center'"
+                  data-testid="bilateral-review-group-mode-center"
+                  class="inline-flex h-[26px] cursor-pointer items-center rounded-[6px] px-[10px] text-[12.5px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+                  [class]="
+                    group() === 'center'
+                      ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-700)] shadow-none'
+                      : 'text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle-hover)]'
+                  "
+                  (click)="setGroup('center')">
+                  {{ copy.toolbar.groupByCenter }}
+                </button>
+              </div>
+            </div>
           }
 
           <div role="tablist" aria-label="Grouping" class="flex h-[32px] shrink-0 items-center gap-[2px] rounded-[8px] bg-slate-100 p-[2px] border border-slate-200">
@@ -417,6 +458,7 @@
             [groups]="groups()"
             [flatRows]="flatRows()"
             [view]="view()"
+            [groupMode]="group()"
             [expandAllNonce]="expandAllNonce()"
             [allExpanded]="allExpanded()"
             [canReview]="canReview()"
