@@ -240,3 +240,19 @@ All four tasks `[x]` with Reviewer PASS evidence (2026-09-07 21:40 → 2026-09-0
 - **Baseline docs:** `docs/ux-ui/design.md` §7 line 230 (icon rule) now has a recorded deviation (`DESIGN-DEVIATIONS.md` #15); `--pr-focus-ring` is a box-shadow token — the design system doc should say so (archive sync candidate).
 - **Parent guide index:** `onecgiar-pr-client/src/CLAUDE.md` `## Module Guides` pointer to `pages/bilateral-review/CLAUDE.md` still pending (default-branch apply, carried from `sp-bilateral-review-tab`).
 - **CodeGraph re-index pending** (`codegraph sync`).
+
+## HITL — owed T-2/T-3 live look delivered (2026-09-08 02:20, Orca `eval` back; dedicated tab, SP02, P = 34)
+
+| Check | Result |
+|---|---|
+| Table columns / rows (1549 CSS px) | 8 headers (Code, Title, Lead center, Status, TOC result, Indicator, Submission date, Actions); 141 rows; **two-line rows max 63 px** (≤ 64 ✅); **one-line rows max 49 px** — the ≤ 44 gate holds only for caption-less rows (the CT fixture's one-line row has no category); a one-line title **with** caption is 17 + 2 + 14 + 12 + borders ≈ 49. Spec ambiguity, recorded — not a regression (was 71) |
+| Actions divider | computed `border-left: 0.6px rgb(238,238,241)` ✅ (R-10) |
+| Contrast | caption 6.32 · pill "Approved" 5.09 · group "0 pending" 6.32 ✅ |
+| Group control | Project / Center on token classes (no slate) ✅ |
+| Group by center | `?group=center`; headers IITA 99 · IWMI 20 · CIP 9 · IRRI 2 · Bioversity (Alliance) 1 · AfricaRice 0 · ILRI 0 ✅ (R-11) |
+| **Group header height** | **61 px** on a long project name at 1549 px — the label wraps under the center chip + summary; R-12 said ≤ 40. Defect at narrower desktop widths → **carried into `bilateral-review-viewport-and-table-polish` T-2** (single-line label with `title`, fixed right summary) |
+| 840 (viewport 700) | no `<table>`, 141 cards, 17 group bars, no body overflow ✅; first card top **321 px** from the work area on the real page (CT gate 282 measures the harness with its stub band/toolbar — the real toolbar wraps to two rows and the stat bar to two lines); card height 158 |
+| 375 (viewport 313) | cards, no overflow, search 326 / 357 px wide ✅ (AC-12) |
+| **Scroll model** | page host computed `position: static`, `documentElement.scrollHeight > clientHeight` → **the viewport lock never engaged** (no `pr-viewport-page` host class / SCSS): the document scrolls and the band + filters leave the screen. Not a `BRP` regression (pre-existing since `BRT`), owner-reported on 2026-09-08 → fixed by `changes/bilateral-review-viewport-and-table-polish` R-1 |
+
+Owner sign-off: the owner reviewed the "after" screenshot (`after-polish-1.png`) and asked for the follow-up spec (colors, pinned hero + filters, table). Recorded as the sign-off outcome.
