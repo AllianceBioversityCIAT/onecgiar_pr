@@ -1,6 +1,6 @@
 # lead-contact-person-field
 
-**Verified:** 2026-09-02 · branch performance-refactor · P2-2911 AC2 (4th consumer added)
+**Verified:** 2026-09-08 · branch qa-development-2026-ss · quick/lead-contact-clear-button (clear button relocated into the selected-contact card)
 
 ---
 
@@ -68,6 +68,20 @@ reporting surfaces, none of which own it.
 - ⚠️ **`readOnly` disables the input but NOT the clear (✕) button**, so a read-only consumer can
   still have its `body` blanked by a click. Left as is on purpose: guarding it would change P2-3520
   behaviour for the three editable consumers.
+- ⚠️ **The search input is hidden with `[hidden]`, never a structural `@if`, once a contact is
+  locked in — and the clear (✕) button lives inside `.selected-contact-info`, not floating over the
+  input.** (`quick/lead-contact-clear-button`, 2026-09-08: the old layout put the ✕ inside the input
+  box while the name/email sat in a separate card below it, which read as two controls for one
+  action.) **Do not swap `[hidden]` back for a structural directive on `contact-select-wrapper`** —
+  destroying/recreating the inner `<app-pr-input>` breaks the `[body]` `@Input` update for the
+  *unlock* direction (locked → cleared): reproduced with `ng.getComponent()` — after
+  `patchHost`/a parent reassigning `body` to a fresh empty object, `comp.body` never updated at all
+  when the wrapper was `@if`-gated, while the reverse direction (empty → locked) worked fine. Root
+  cause not fully isolated (looks like an Angular CD ordering issue tied to creating a fresh
+  `ControlValueAccessor`-bound child mid-tree, not anything specific to this component's own logic);
+  `[hidden]` keeps `<app-pr-input>` alive in the DOM (just `display: none`) and sidesteps it
+  entirely. If you need this control to be structurally absent (e.g. for a11y tab-order reasons),
+  reproduce the bug first before reaching for `@if`/`@else` again.
 - ⚠️ **`leadContactField` reads the `[general-info]-lead_contact_person` key** from
   `FieldsManagerService` regardless of which section renders the field, so the label, description and
   `required` flag come from that one entry for every consumer.

@@ -85,7 +85,7 @@ describe('LeadContactPersonFieldComponent — contract', () => {
 
     it('[contract] does not let the locked contact be typed over', () => {
       mount({ body: prefilledBody() });
-      cy.get('input').should('be.disabled');
+      cy.get('input').should('not.be.visible');
     });
 
     it('[contract] offers no clear affordance while nothing is selected', () => {
