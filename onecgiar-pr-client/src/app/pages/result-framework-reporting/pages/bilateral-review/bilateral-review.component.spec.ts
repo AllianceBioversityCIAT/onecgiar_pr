@@ -124,6 +124,36 @@ const FIXTURE_CENTERS = [
   { code: 'C3', acronym: 'CIAT', name: 'International Center for Tropical Agriculture' }
 ] as any[];
 
+// @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-3, R-21, AC-1, AC-14)
+/** Centers-row default-collapse fixtures: exactly 6 (not collapsed by the `> 6` rule) and exactly
+ *  7 (collapsed) centers, one pending row each — isolates the THRESHOLD itself (FAIL input the
+ *  task names: swapping `> 6` for `>= 6` would flip the 6-center case). */
+const SIX_CENTERS = [
+  { code: 'C1', acronym: 'CIP' },
+  { code: 'C2', acronym: 'IITA' },
+  { code: 'C3', acronym: 'CIAT' },
+  { code: 'C4', acronym: 'IRRI' },
+  { code: 'C5', acronym: 'ILRI' },
+  { code: 'C6', acronym: 'IWMI' }
+] as any[];
+const SEVEN_CENTERS = [...SIX_CENTERS, { code: 'C7', acronym: 'ICARDA' }] as any[];
+
+function centersFixtureRows(centers: { code: string; acronym: string }[]): ResultToReview[] {
+  return centers.map((center, i) =>
+    row({
+      id: `cf${i}`,
+      project_id: 'p1',
+      project_name: 'P1 - Alpha Project',
+      result_code: `BR-CF${i}`,
+      result_title: `Result for ${center.acronym}`,
+      lead_center: center.acronym,
+      status_id: 5
+    })
+  );
+}
+const SIX_CENTER_ROWS = centersFixtureRows(SIX_CENTERS);
+const SEVEN_CENTER_ROWS = centersFixtureRows(SEVEN_CENTERS);
+
 /** BRC-T-1 fixture — two reporting phases in the program's own portfolio (`obj_portfolio.id: 1`,
  *  matching `PROGRAMME.portfolioId` below). `PHASE_CURRENT` (36) is what
  *  `dataControlSE.reportingCurrentPhase.phaseId` resolves to by default; `PHASE_OTHER` (34) is the
@@ -166,7 +196,10 @@ describe('BilateralReviewComponent', () => {
       phaseId?: number | string | null;
       reportingPhases?: unknown[];
       getVersioningResponse?: unknown;
-    } = {}
+    } = {},
+    // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1) — lets the centers-default-rule
+    // tests feed a 6/7-center catalog without touching every other call site's default.
+    centersOverride: unknown[] = FIXTURE_CENTERS
   ): void {
     router = { navigate: jest.fn().mockResolvedValue(true) };
     GET_ResultToReview = jest.fn().mockReturnValue(resultToReviewResponse);
@@ -214,7 +247,7 @@ describe('BilateralReviewComponent', () => {
             rolesSE: { isAdmin: false }
           }
         },
-        { provide: CentersService, useValue: { centers: signal(FIXTURE_CENTERS), getData: jest.fn().mockResolvedValue(FIXTURE_CENTERS) } },
+        { provide: CentersService, useValue: { centers: signal(centersOverride), getData: jest.fn().mockResolvedValue(centersOverride) } },
         {
           provide: PhasesService,
           useValue: {
@@ -247,9 +280,31 @@ describe('BilateralReviewComponent', () => {
   const root = () => fixture.nativeElement as HTMLElement;
   const byTestId = (id: string) => root().querySelector(`[data-testid="${id}"]`);
   const text = (id: string) => byTestId(id)?.textContent?.trim() ?? '';
+  // Judgment-day L-1/L-2 remediation: count by rendered label, not by the new button's OWN
+  // data-testid — a leftover old unconditional button (a different testid, or none) would
+  // otherwise pass unnoticed. Scoped to the toolbar `[role="search"]`, excluding the filter
+  // popover panel, which legitimately keeps its own "Clear filters" link (design.md §6.1,
+  // `clearFilters()`) — a distinct, popover-scoped control, not the toolbar clear-all this
+  // case guards.
+  const toolbarClearButtons = () =>
+    Array.from(root().querySelectorAll<HTMLButtonElement>('[role="search"] button')).filter(
+      (btn) =>
+        !btn.closest('[data-testid="bilateral-review-filter-popover"]') &&
+        (btn.textContent ?? '').trim().startsWith('Clear filters')
+    );
   const drawerStub = () => fixture.debugElement.query(By.directive(DrawerStubComponent)).componentInstance as DrawerStubComponent;
 
   beforeEach(() => build());
+  // BRP-T-1: the centers-row default-collapse tests below write `sessionStorage`; jsdom keeps one
+  // `sessionStorage` for the whole test FILE (not reset per `it()`), so a value set by one test
+  // would otherwise leak into whichever test runs next. Cleared unconditionally after every test.
+  afterEach(() => {
+    try {
+      sessionStorage.clear();
+    } catch {
+      // Storage may be unavailable — nothing to clear.
+    }
+  });
 
   it('loads the review list for the resolved programme code, scoped to the current phase (BRC-AC-5)', () => {
     expect(GET_ResultToReview).toHaveBeenCalledWith('SP02', undefined, 36);
@@ -1105,6 +1160,237 @@ describe('BilateralReviewComponent', () => {
       expect(GET_ResultToReview).toHaveBeenCalledTimes(1);
       expect(GET_ResultToReview).toHaveBeenCalledWith('SP02', undefined, 36);
       expect(byTestId('bilateral-review-error')).toBeNull();
+    });
+  });
+
+  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-5, AC-5, judgment-day L-2)
+  describe('activeFilterCount — five dimensions (BRP-R-5)', () => {
+    it('search alone counts 1', () => {
+      component.search.set('maize');
+      fixture.detectChanges();
+      expect(component.activeFilterCount()).toBe(1);
+    });
+
+    it('status ≠ all alone counts 1 (onlyPending IS the status dimension, not a second one)', () => {
+      component.setStatus('pending');
+      fixture.detectChanges();
+      expect(component.activeFilterCount()).toBe(1);
+    });
+
+    it('centers alone counts 1', () => {
+      component.centers.set(['C1']);
+      fixture.detectChanges();
+      expect(component.activeFilterCount()).toBe(1);
+    });
+
+    it('projects alone counts 1', () => {
+      component.projects.set(['P1 - Alpha Project']);
+      fixture.detectChanges();
+      expect(component.activeFilterCount()).toBe(1);
+    });
+
+    it('categories alone counts 1', () => {
+      component.categories.set(['Policy']);
+      fixture.detectChanges();
+      expect(component.activeFilterCount()).toBe(1);
+    });
+
+    it('phase does NOT count (a scope, not a filter)', () => {
+      component.phaseParam.set(34);
+      fixture.detectChanges();
+      expect(component.activeFilterCount()).toBe(0);
+    });
+
+    it('view does NOT count (a view mode, not a filter)', () => {
+      component.setView('flat');
+      fixture.detectChanges();
+      expect(component.activeFilterCount()).toBe(0);
+    });
+
+    // `group` is introduced by BRP-T-2 (not yet a page signal here) — its own negative case belongs
+    // to that task's spec once `?group=` exists.
+  });
+
+  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-5, AC-5, judgment-day L-1, L-2)
+  describe('Toolbar "Clear filters · N" (BRP-R-5, AC-5)', () => {
+    it('renders no control at all when no filter is active', () => {
+      expect(byTestId('bilateral-review-clear-all')).toBeNull();
+    });
+
+    it('reads "Clear filters · 3" with search + status + one center active, unaffected by phase', () => {
+      component.search.set('maize');
+      component.setStatus('pending');
+      component.centers.set(['C1']);
+      fixture.detectChanges();
+
+      expect(text('bilateral-review-clear-all')).toContain('3');
+
+      component.phaseParam.set(34);
+      fixture.detectChanges();
+
+      expect(text('bilateral-review-clear-all')).toContain('3'); // phase does not add to the count
+    });
+
+    it('exactly one toolbar "Clear filters" control renders (disqualifier: the old unconditional button left in place)', () => {
+      component.search.set('maize');
+      fixture.detectChanges();
+
+      expect(toolbarClearButtons().length).toBe(1);
+    });
+
+    it('clicking it issues exactly ONE router.navigate with the five keys null, no view/group/phase key, and no list request', () => {
+      component.search.set('maize');
+      component.setStatus('pending');
+      component.centers.set(['C1']);
+      component.projects.set(['P1 - Alpha Project']);
+      component.categories.set(['Policy']);
+      fixture.detectChanges();
+
+      router.navigate.mockClear();
+      GET_ResultToReview.mockClear();
+
+      (byTestId('bilateral-review-clear-all') as HTMLButtonElement).click();
+
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+      const [, options] = router.navigate.mock.calls[0];
+      expect(Object.keys(options.queryParams).sort()).toEqual(['category', 'center', 'project', 'search', 'status']);
+      expect(options.queryParams).toEqual({ search: null, status: null, center: null, project: null, category: null });
+      expect(options.replaceUrl).toBe(true);
+      expect(options.queryParamsHandling).toBe('merge');
+      expect(GET_ResultToReview).not.toHaveBeenCalled();
+    });
+  });
+
+  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, design.md §6.3, judgment-day L-1, L-2)
+  describe('Focus ring and reduced motion on the toolbar clear + centers chevron (L-1, L-2)', () => {
+    it('use the box-shadow focus ring, never the broken `ring-` utility (--pr-focus-ring is a box-shadow triple)', () => {
+      component.search.set('maize');
+      fixture.detectChanges();
+
+      const clearBtn = byTestId('bilateral-review-clear-all') as HTMLButtonElement;
+      const chevronBtn = byTestId('bilateral-review-centers-toggle') as HTMLButtonElement;
+
+      expect(clearBtn.className).toContain('focus-visible:shadow-[var(--pr-focus-ring)]');
+      expect(chevronBtn.className).toContain('focus-visible:shadow-[var(--pr-focus-ring)]');
+      expect(clearBtn.className).not.toContain('ring-[var(--pr-focus-ring)]');
+      expect(chevronBtn.className).not.toContain('ring-[var(--pr-focus-ring)]');
+    });
+
+    it('carry motion-reduce:transition-none on their transition-colors class', () => {
+      component.search.set('maize');
+      fixture.detectChanges();
+
+      const clearBtn = byTestId('bilateral-review-clear-all') as HTMLButtonElement;
+      const chevronBtn = byTestId('bilateral-review-centers-toggle') as HTMLButtonElement;
+
+      expect(clearBtn.className).toContain('motion-reduce:transition-none');
+      expect(chevronBtn.className).toContain('motion-reduce:transition-none');
+    });
+  });
+
+  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-1, R-2, R-3, R-4, R-21, AC-1..3b, AC-14)
+  describe('Filter band — collapsible centers row (BRP-R-3)', () => {
+    it('AC-1: defaults COLLAPSED with 7 centers', () => {
+      fixture.destroy();
+      build({}, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS);
+
+      expect(component.centersRowExpanded()).toBe(false);
+      expect(byTestId('bilateral-review-centers-toggle')?.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('defaults EXPANDED with 6 centers (FAIL input: swap the threshold to ">= 6")', () => {
+      fixture.destroy();
+      build({}, of(groupedResponse(SIX_CENTER_ROWS)), 'SP02', {}, SIX_CENTERS);
+
+      expect(component.centersRowExpanded()).toBe(true);
+      expect(byTestId('bilateral-review-centers-toggle')?.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('a stored "0" beats the "> 6" default', () => {
+      sessionStorage.setItem('pr.bilateral.centersExpanded', '0');
+      fixture.destroy();
+      build({}, of(groupedResponse(SIX_CENTER_ROWS)), 'SP02', {}, SIX_CENTERS); // 6 -> default would be expanded
+      sessionStorage.removeItem('pr.bilateral.centersExpanded');
+
+      expect(component.centersRowExpanded()).toBe(false);
+    });
+
+    it('a stored "1" beats a narrow default', () => {
+      fixture.destroy();
+      build({}, of(groupedResponse(SIX_CENTER_ROWS)), 'SP02', {}, SIX_CENTERS);
+      component.isNarrow.set(true);
+      fixture.detectChanges();
+      expect(component.centersRowExpanded()).toBe(false); // narrow forces collapsed with no stored choice
+
+      sessionStorage.setItem('pr.bilateral.centersExpanded', '1');
+      fixture.destroy();
+      build({}, of(groupedResponse(SIX_CENTER_ROWS)), 'SP02', {}, SIX_CENTERS);
+      sessionStorage.removeItem('pr.bilateral.centersExpanded');
+      component.isNarrow.set(true);
+      fixture.detectChanges();
+
+      expect(component.centersRowExpanded()).toBe(true);
+    });
+
+    it('the chevron toggles aria-expanded and writes sessionStorage', () => {
+      fixture.destroy();
+      build({}, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS); // collapsed by default
+      sessionStorage.removeItem('pr.bilateral.centersExpanded');
+
+      expect(byTestId('bilateral-review-centers-toggle')?.getAttribute('aria-expanded')).toBe('false');
+
+      (byTestId('bilateral-review-centers-toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(byTestId('bilateral-review-centers-toggle')?.getAttribute('aria-expanded')).toBe('true');
+      expect(sessionStorage.getItem('pr.bilateral.centersExpanded')).toBe('1');
+    });
+
+    it('AC-3: collapsed shows exactly one "IITA N ✕" summary chip when one center is selected, and no "+N more" tail', () => {
+      fixture.destroy();
+      build({}, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS); // collapsed by default
+      sessionStorage.removeItem('pr.bilateral.centersExpanded');
+      component.centers.set(['C2']); // IITA
+      fixture.detectChanges();
+
+      const chips = root().querySelectorAll('[data-testid="bilateral-review-center-chip-summary"]');
+      expect(chips.length).toBe(1);
+      expect(root().querySelector('[data-testid="bilateral-review-center-chip-more"]')).toBeNull();
+      expect(chips[0].textContent?.replace(/\s+/g, ' ').trim()).toContain('IITA');
+    });
+
+    it('AC-3b: collapsed shows exactly one "K centers ✕" summary chip when several centers are selected via the popover', () => {
+      fixture.destroy();
+      build({}, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS); // collapsed by default
+      sessionStorage.removeItem('pr.bilateral.centersExpanded');
+      component.centers.set(['C1', 'C2']);
+      fixture.detectChanges();
+
+      const chip = root().querySelector('[data-testid="bilateral-review-center-chip-summary"]');
+      expect(chip?.textContent?.replace(/\s+/g, ' ').trim()).toContain('2 centers');
+    });
+
+    // AC-14 — R-21 one-shot: deep-linked with ?center= AND collapsed-by-default (7 centers).
+    describe('R-21 one-shot auto-expand', () => {
+      it('AC-14: auto-expands ONCE with a ?center= deep link and no stored choice', () => {
+        fixture.destroy();
+        build({ center: 'C1' }, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS);
+        sessionStorage.removeItem('pr.bilateral.centersExpanded');
+
+        expect(component.centersRowExpanded()).toBe(true);
+        expect(byTestId('bilateral-review-centers-toggle')?.getAttribute('aria-expanded')).toBe('true');
+      });
+
+      it('AC-14: with a stored "0" it stays collapsed and shows the single-center summary chip', () => {
+        sessionStorage.setItem('pr.bilateral.centersExpanded', '0');
+        fixture.destroy();
+        build({ center: 'C1' }, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS);
+        sessionStorage.removeItem('pr.bilateral.centersExpanded');
+
+        expect(component.centersRowExpanded()).toBe(false);
+        const chip = root().querySelector('[data-testid="bilateral-review-center-chip-summary"]');
+        expect(chip?.textContent?.replace(/\s+/g, ' ').trim()).toContain('CIP');
+      });
     });
   });
 });

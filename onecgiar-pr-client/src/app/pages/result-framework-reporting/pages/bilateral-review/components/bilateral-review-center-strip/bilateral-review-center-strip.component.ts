@@ -1,6 +1,9 @@
 // @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-2, R-1, R-2, R-3, R-4, R-20, R-21, design.md §6.2)
+// @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-3, R-4, AC-2, AC-3, AC-3b, design.md §6.2)
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
-import { BILATERAL_REVIEW_COPY } from '../../bilateral-review.copy';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideX } from '@ng-icons/lucide';
+import { BILATERAL_REVIEW_COPY, chipCountClass } from '../../bilateral-review.copy';
 
 /** One chip's worth of data — the page computes counts/order (`centerStrip`, design.md §6.1); this
  *  component only renders whatever order it is given. `code` is the CLARISA center code (or the
@@ -24,13 +27,20 @@ export interface BilateralReviewCenterStripItem {
   selector: 'app-bilateral-review-center-strip',
   standalone: true,
   templateUrl: './bilateral-review-center-strip.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [NgIcon],
+  viewProviders: [provideIcons({ lucideX })]
 })
 export class BilateralReviewCenterStripComponent {
   readonly items = input.required<BilateralReviewCenterStripItem[]>();
   readonly allPending = input.required<number>();
   readonly selectedCodes = input<string[]>([]);
   readonly maxVisible = input(12);
+  /** BRP-R-3: when collapsed, the row renders exactly ONE summary chip and suppresses the "+N more"
+   *  tail entirely — the page (band chevron) owns the expand/collapse choice; this component only
+   *  renders whichever mode it is given. */
+  readonly collapsed = input(false);
+  readonly chipCountClass = chipCountClass;
   /** Named `selectCenter`, not the design/task's literal `select` — `@angular-eslint/no-output-native`
    *  (project lint, enforced) forbids an output named (or aliased) after a native DOM event, and
    *  `select` is one; an alias would still trip the same rule ("including aliases"). Implementer
@@ -74,7 +84,30 @@ export class BilateralReviewCenterStripComponent {
     return code || 'not-specified';
   }
 
+  /** Collapsed-row summary (BRP-R-3, AC-2/3/3b): exactly one chip, no "+N more" tail regardless of
+   *  `items().length` — "All centers N" when nothing is selected, the single selected item when one
+   *  code is selected (`selectedCenterItem()` may be `undefined` for one tick if `items()` has not
+   *  caught up with a just-changed `selectedCodes()` — falls back to the "several" shape rather than
+   *  rendering nothing), or "K centers" when several are. */
+  readonly selectedCenterItem = computed(() => {
+    const selected = this.selectedCodes();
+    return selected.length === 1 ? this.items().find(item => item.code === selected[0]) : undefined;
+  });
+
+  readonly collapsedSummaryKind = computed<'all' | 'one' | 'many'>(() => {
+    const selected = this.selectedCodes();
+    if (selected.length === 0) return 'all';
+    if (selected.length === 1 && this.selectedCenterItem()) return 'one';
+    return 'many';
+  });
+
   onAllClick(): void {
+    this.selectCenter.emit(null);
+  }
+
+  /** The collapsed single/"K centers" chip's ✕ — always clears the Center filter entirely (BRP-R-3,
+   *  AC-3, AC-3b), unlike an expanded chip's own click (which toggles just that one chip). */
+  onClearSelection(): void {
     this.selectCenter.emit(null);
   }
 

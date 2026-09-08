@@ -333,18 +333,19 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         assertNoBodyHorizontalOverflow(`${width}`);
       });
 
-      it('R-32: KPI strip is one row of 4 at desktop, 2×2 below md', () => {
-        byTestId('bilateral-review-kpis')
-          .children()
-          .should($cards => {
-            expect($cards.length, `${width}: four KPI cards`).to.eq(4);
-            const tops = [...new Set(Array.from($cards).map(el => Math.round(el.getBoundingClientRect().top)))];
-            if (width >= 1366) {
-              expect(tops.length, `${width}: one row — all four cards share one top offset [${tops.join(', ')}]`).to.eq(1);
-            } else {
-              expect(tops.length, `${width}: 2×2 — cards occupy two distinct top offsets [${tops.join(', ')}]`).to.eq(2);
-            }
-          });
+      // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-6, AC-6, R-14(a)) — supersedes the
+      // old "KPI grid one row of 4 / 2×2" case: the four KPI cards are now a one-line stat bar.
+      it('BRP-R-6/AC-6: stat bar renders on the HOST, all six figures present, height <= 44px at >= 900px', () => {
+        byTestId('bilateral-review-statbar').should($el => {
+          const el = $el[0] as HTMLElement;
+          if (width >= 900) {
+            const height = el.getBoundingClientRect().height;
+            expect(height, `${width}: stat bar host height(${height.toFixed(1)}) <= 44px`).to.be.at.most(44);
+          }
+        });
+        ['kpi-projects', 'kpi-centers', 'kpi-pending', 'kpi-pending-toggle', 'kpi-decided', 'kpi-decided-sublabel'].forEach(id => {
+          byTestId(id).should('exist');
+        });
       });
 
       it('chips row wraps without clipping', () => {
@@ -431,35 +432,53 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         cy.get('[data-testid="bilateral-review-row-action"]').should('have.length', 4);
       });
 
-      it('AC-15: keyboard focus order is tabs → toolbar → chips → KPI Pending → group toggler → first row action', () => {
+      // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-1, R-3, R-5, R-14(b)) — new order:
+      // the toolbar's "Clear filters" now precedes the filter band (status segmented control +
+      // centers chevron), which sits below the toolbar and above the stat bar.
+      it('AC-15: keyboard focus order is tabs → toolbar → Clear filters → status control → centers chevron → KPI Pending → group toggler → first row action', () => {
+        // Activate a filter first so "Clear filters" renders (BRP-R-5) and its position is provable.
+        cy.get('[data-testid="bilateral-review-chip-pending"]').click();
+
         cy.document().should(doc => {
           const focusables = Array.from(doc.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(el => el.getClientRects().length > 0);
           const indexOf = (el: Element | null) => (el ? focusables.indexOf(el as HTMLElement) : -1);
 
           const firstTab = doc.querySelector('[data-testid="band-stub-tab"]');
           const firstToolbarControl = doc.querySelector('[data-testid="bilateral-review-search"]');
-          const firstChip = doc.querySelector('[data-testid="bilateral-review-chip-all"]');
+          const clearAll = doc.querySelector('[data-testid="bilateral-review-clear-all"]');
+          const firstStatusOption = doc.querySelector('[data-testid="bilateral-review-chip-all"]');
+          const centersChevron = doc.querySelector('[data-testid="bilateral-review-centers-toggle"]');
           const kpiPending = doc.querySelector('[data-testid="kpi-pending-toggle"]');
           const groupToggler = doc.querySelector('[data-testid="bilateral-review-group-toggle"]');
           const firstRowAction = doc.querySelector('[data-testid="bilateral-review-row-action"]');
 
           const iTab = indexOf(firstTab);
           const iToolbar = indexOf(firstToolbarControl);
-          const iChip = indexOf(firstChip);
+          const iClear = indexOf(clearAll);
+          const iStatus = indexOf(firstStatusOption);
+          const iChevron = indexOf(centersChevron);
           const iKpi = indexOf(kpiPending);
           const iGroup = indexOf(groupToggler);
           const iRow = indexOf(firstRowAction);
 
-          expect(iTab, `${width}: band tab is focusable and present`).to.be.at.least(0);
-          expect(iToolbar, `${width}: search is focusable and present`).to.be.at.least(0);
-          expect(iChip, `${width}: All chip is focusable and present`).to.be.at.least(0);
-          expect(iKpi, `${width}: KPI Pending toggle is focusable and present`).to.be.at.least(0);
-          expect(iGroup, `${width}: group toggler is focusable and present`).to.be.at.least(0);
-          expect(iRow, `${width}: first row action is focusable and present`).to.be.at.least(0);
+          ([
+            ['band tab', iTab],
+            ['search', iToolbar],
+            ['Clear filters', iClear],
+            ['status control', iStatus],
+            ['centers chevron', iChevron],
+            ['KPI Pending toggle', iKpi],
+            ['group toggler', iGroup],
+            ['first row action', iRow]
+          ] as const).forEach(([label, index]) => {
+            expect(index, `${width}: ${label} is focusable and present`).to.be.at.least(0);
+          });
 
           expect(iTab, `${width}: tabs(${iTab}) before toolbar(${iToolbar})`).to.be.lessThan(iToolbar);
-          expect(iToolbar, `${width}: toolbar(${iToolbar}) before chips(${iChip})`).to.be.lessThan(iChip);
-          expect(iChip, `${width}: chips(${iChip}) before KPI Pending(${iKpi})`).to.be.lessThan(iKpi);
+          expect(iToolbar, `${width}: toolbar(${iToolbar}) before Clear filters(${iClear})`).to.be.lessThan(iClear);
+          expect(iClear, `${width}: Clear filters(${iClear}) before status control(${iStatus})`).to.be.lessThan(iStatus);
+          expect(iStatus, `${width}: status control(${iStatus}) before centers chevron(${iChevron})`).to.be.lessThan(iChevron);
+          expect(iChevron, `${width}: centers chevron(${iChevron}) before KPI Pending(${iKpi})`).to.be.lessThan(iKpi);
           expect(iKpi, `${width}: KPI Pending(${iKpi}) before group toggler(${iGroup})`).to.be.lessThan(iGroup);
           expect(iGroup, `${width}: group toggler(${iGroup}) before first row action(${iRow})`).to.be.lessThan(iRow);
 
@@ -476,6 +495,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
           );
           expect(kpiPending?.hasAttribute('aria-pressed'), `${width}: KPI Pending card carries aria-pressed`).to.eq(true);
           expect(groupToggler?.hasAttribute('aria-expanded'), `${width}: group toggler carries aria-expanded`).to.eq(true);
+          expect(centersChevron?.hasAttribute('aria-expanded'), `${width}: centers chevron carries aria-expanded`).to.eq(true);
 
           expect(doc.querySelectorAll('[disabled]').length, `${width}: no native [disabled] anywhere (KZ-REH-2)`).to.eq(0);
         });
@@ -495,6 +515,18 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       mountPage({ rows: NINE_CENTERS_FIXTURE_ROWS, centers: NINE_CENTERS_FIXTURE_CENTERS });
       waitForLoad();
       assertEffectiveWidth('840 (nine-center fixture)', 840);
+      // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-3, R-14(c)) — the centers row now
+      // defaults COLLAPSED with 9 > 6 centers; expand it first so every test below this point (the
+      // wrap gate AND the per-chip filter test) exercises the expanded, per-chip strip as before.
+      cy.get('[data-testid="bilateral-review-centers-toggle"]').click();
+    });
+
+    afterEach(() => {
+      // Leader addition (BRP-T-1, judgment-day L-1/L-2): the chevron click above writes
+      // `sessionStorage['pr.bilateral.centersExpanded'] = '1'`, which — being sessionStorage, not
+      // per-mount state — otherwise survives into later `describe` blocks in this same spec file
+      // and makes their centers row inherit "expanded" instead of exercising its own default.
+      cy.window().then(win => win.sessionStorage.removeItem('pr.bilateral.centersExpanded'));
     });
 
     it('BRC-AC-11: the strip wraps to >= 2 lines with no clipped chip, and the document does not scroll horizontally', () => {

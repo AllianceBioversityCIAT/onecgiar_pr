@@ -7,7 +7,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs/operators';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronsDownUp, lucideChevronsUpDown, lucideSearch } from '@ng-icons/lucide';
+import { lucideChevronDown, lucideChevronsDownUp, lucideChevronsUpDown, lucideChevronUp, lucideSearch, lucideX } from '@ng-icons/lucide';
 
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { CentersService } from '../../../../shared/services/global/centers.service';
@@ -33,7 +33,7 @@ import {
   BilateralReviewCenterStripComponent,
   BilateralReviewCenterStripItem
 } from './components/bilateral-review-center-strip/bilateral-review-center-strip.component';
-import { BILATERAL_REVIEW_COPY } from './bilateral-review.copy';
+import { BILATERAL_REVIEW_COPY, chipCountClass } from './bilateral-review.copy';
 import {
   BILATERAL_REVIEW_QUERY_PARAM_MAP,
   BilateralReviewStatusFilter,
@@ -98,7 +98,7 @@ const UNASSIGNED_CENTER_CODE = '__unassigned__';
     BilateralReviewCenterStripComponent,
     ResultReviewDrawerComponent
   ],
-  viewProviders: [provideIcons({ lucideSearch, lucideChevronsUpDown, lucideChevronsDownUp })]
+  viewProviders: [provideIcons({ lucideSearch, lucideChevronsUpDown, lucideChevronsDownUp, lucideChevronDown, lucideChevronUp, lucideX })]
 })
 export class BilateralReviewComponent {
   private readonly route = inject(ActivatedRoute);
@@ -303,6 +303,58 @@ export class BilateralReviewComponent {
 
   readonly onlyPending = computed(() => this.status() === 'pending');
 
+  // ── Filter band (BRP-T-1, design.md §6.1) ──────────────────────────────────────────────────
+  /** Shared tonal count-badge class helper (BRP-R-4), re-exported for the template. */
+  readonly chipCountClass = chipCountClass;
+
+  /** Effective CSS width < 900px (BRP glossary "Narrow") — `matchMedia`, guarded for jsdom, same
+   *  pattern as `my-work-board.component.ts:56, 311-327`. Structural only (the centers-row default
+   *  and, later tasks, the cards branch); CSS handles everything purely visual. */
+  private readonly narrowQuery =
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 899px)') : null;
+  readonly isNarrow = signal(this.narrowQuery?.matches ?? false);
+
+  private static readonly CENTERS_EXPANDED_STORAGE_KEY = 'pr.bilateral.centersExpanded';
+
+  /** `null` = no stored choice yet; `'1'`/`'0'` otherwise (app convention, `dashboard-lab.component.ts:3649-3683`). */
+  private readStoredCentersExpanded(): boolean | null {
+    try {
+      const raw = sessionStorage.getItem(BilateralReviewComponent.CENTERS_EXPANDED_STORAGE_KEY);
+      return raw === '1' ? true : raw === '0' ? false : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** The user's explicit choice (chevron click), or `null` while none has been made this session. */
+  private readonly storedCentersExpanded = signal<boolean | null>(this.readStoredCentersExpanded());
+  /** R-21 one-shot override — set at most once, by the constructor effect below, and never itself
+   *  persisted (a stored choice always wins over it, per AC-14's "with a stored false it stays
+   *  collapsed"). */
+  private readonly oneShotExpanded = signal(false);
+
+  /** Stored choice beats the one-shot, which beats the `> 6 centers or narrow` default (BRP-R-3). */
+  readonly centersRowExpanded = computed(() => {
+    const stored = this.storedCentersExpanded();
+    if (stored !== null) return stored;
+    if (this.oneShotExpanded()) return true;
+    return !(this.centerStrip().length > 6 || this.isNarrow());
+  });
+
+  readonly centersChevronIcon = computed(() => (this.centersRowExpanded() ? 'lucideChevronUp' : 'lucideChevronDown'));
+  readonly centersChevronLabel = computed(() => (this.centersRowExpanded() ? this.copy.filterBand.hideCenters : this.copy.filterBand.showCenters));
+
+  toggleCentersRow(): void {
+    const next = !this.centersRowExpanded();
+    this.storedCentersExpanded.set(next);
+    this.oneShotExpanded.set(false); // an explicit choice always supersedes the one-shot.
+    try {
+      sessionStorage.setItem(BilateralReviewComponent.CENTERS_EXPANDED_STORAGE_KEY, next ? '1' : '0');
+    } catch {
+      // Storage may be unavailable (private mode / blocked) — the toggle still works for the session.
+    }
+  }
+
   /** "Can this user review THIS program" (BRT-R-14) — gates the row action label (BRT-AC-8).
    *  A plain method, NOT a `computed()`: `isProgramMember` reads non-reactive state
    *  (`rolesSE.isAdmin`, `dataControlSE.myInitiativesList` — a plain array) that can resolve
@@ -476,7 +528,20 @@ export class BilateralReviewComponent {
     optionsOf(this.results.tableResults(), row => row.indicator_category).map(value => ({ value, label: value }))
   );
 
-  readonly activeFilterCount = computed(() => this.centers().length + this.projects().length + this.categories().length);
+  /** BRP-R-5, design.md §6.1 (judgment-day L-2): the FIVE filter dimensions — search non-empty,
+   *  status ≠ all (`onlyPending` is this dimension, not a second one), centers, projects,
+   *  categories. `phase` (a scope) and `group`/`view` (view modes) never count. Recomputed here in
+   *  place of the prior three-dimension reading (centers/projects/categories only) — the single
+   *  source both the Filter popover badge and the new toolbar "Clear filters · N" button read. */
+  readonly activeFilterCount = computed(() => {
+    let count = 0;
+    if (this.search().trim()) count++;
+    if (this.status() !== 'all') count++;
+    if (this.centers().length) count++;
+    if (this.projects().length) count++;
+    if (this.categories().length) count++;
+    return count;
+  });
   readonly filtersActive = computed(() => this.activeFilterCount() > 0);
 
   // ── View states (BRT-R-31) — mutually exclusive ────────────────────────────────────────────
@@ -657,6 +722,43 @@ export class BilateralReviewComponent {
         });
       });
     });
+
+    // ── Filter band: keep `isNarrow` in step with the stylesheet's own breakpoint (BRP-T-1, copy of
+    // `my-work-board.component.ts:695-706`). `addEventListener` is the modern MediaQueryList API;
+    // Safari < 14 (and some jsdom builds) only expose the deprecated `addListener` — both handled
+    // and both torn down. ──────────────────────────────────────────────────────────────────────
+    const centersNarrowMql = this.narrowQuery;
+    if (centersNarrowMql) {
+      const onNarrowChange = (event: MediaQueryListEvent) => this.isNarrow.set(event.matches);
+      if (typeof centersNarrowMql.addEventListener === 'function') {
+        centersNarrowMql.addEventListener('change', onNarrowChange);
+        this.destroyRef.onDestroy(() => centersNarrowMql.removeEventListener('change', onNarrowChange));
+      } else if (typeof centersNarrowMql.addListener === 'function') {
+        centersNarrowMql.addListener(onNarrowChange);
+        this.destroyRef.onDestroy(() => centersNarrowMql.removeListener(onNarrowChange));
+      }
+    }
+
+    // ── BRP-R-21 one-shot: auto-expand the centers row exactly once when the user lands with
+    // `?center=` already set (one center) AND the row would otherwise be collapsed by the `> 6 or
+    // narrow` DEFAULT — never by their own stored choice (AC-14). Waits for the list to SETTLE (same
+    // readiness signal the deep-linked-drawer effect above uses) so `centerStrip()` reflects the
+    // loaded rows, not an empty cold-boot value, before judging "collapsed by default". Consumes
+    // itself after the first settle no matter what it decides — a later `?center=` change (e.g. the
+    // user picking a different center from the popover) must NOT re-trigger it. ──────────────────
+    let centersOneShotDone = false;
+    effect(() => {
+      if (centersOneShotDone) return;
+      const settled = this.listSettled();
+      const centers = this.centers();
+      if (!settled) return;
+      centersOneShotDone = true;
+      untracked(() => {
+        if (this.storedCentersExpanded() !== null) return;
+        if (centers.length !== 1) return;
+        if (this.centerStrip().length > 6 || this.isNarrow()) this.oneShotExpanded.set(true);
+      });
+    });
   }
 
   /** Fallback catalogue fetch (BRC-R-5/AC-14): same request + filter `PhasesService.getNewPhases()`
@@ -809,8 +911,10 @@ export class BilateralReviewComponent {
   }
 
   /** Clears the Center / Bilateral project / Indicator category popover filters only — the
-   *  toolbar and popover's "Clear filters" both call this (BRT-R-8); search and the status chip
-   *  are independent dimensions with their own controls. */
+   *  popover header's own "Clear filters" link calls this (BRT-R-8, kept per BRP-R-5: "the popover
+   *  header clear and the empty-state clear stay"); search and the status chip are independent
+   *  dimensions with their own controls. The TOOLBAR's own clear control is `clearEverything()`
+   *  below, since BRP-T-1 replaced the old unconditional toolbar button. */
   clearFilters(): void {
     this.centers.set([]);
     this.projects.set([]);
@@ -823,6 +927,30 @@ export class BilateralReviewComponent {
     this.search.set('');
     this.status.set('all');
     this.clearFilters();
+  }
+
+  /** Toolbar "Clear filters · N" (BRP-R-5, AC-5, judgment-day L-2): resets the FIVE filter
+   *  dimensions in exactly ONE explicit `router.navigate` — deliberately NOT the reactive
+   *  "state → URL" effect above (registered in the constructor), which always writes `view` too and
+   *  would make this a wider navigate than the spec allows. The five keys removed here round-trip
+   *  back through the existing "URL → state" effect (same as any other navigation) to actually reset
+   *  `search`/`status`/`centers`/`projects`/`categories` — setting those signals here directly would
+   *  just re-trigger that reactive effect and fire a SECOND, `view`-inclusive navigate. `phase`,
+   *  `group` and `view` are never touched (no key at all, not even `null`), and none of the five
+   *  keys removed here is read by the list-loading effect, so no request results. */
+  clearEverything(): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        [BILATERAL_REVIEW_QUERY_PARAM_MAP.search]: null,
+        [BILATERAL_REVIEW_QUERY_PARAM_MAP.status]: null,
+        [BILATERAL_REVIEW_QUERY_PARAM_MAP.center]: null,
+        [BILATERAL_REVIEW_QUERY_PARAM_MAP.project]: null,
+        [BILATERAL_REVIEW_QUERY_PARAM_MAP.category]: null
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 
   @HostListener('document:click', ['$event'])

@@ -3,6 +3,21 @@
  * `Bilateral review` tab — string map (NFR i18n: American English, centralized copy).
  * `docs/specs/changes/sp-bilateral-review-tab/requirements.md` BRT-R-19; `design.md` §6.2/§6.3.
  */
+
+// @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-4, design.md §6.2)
+/**
+ * Tonal count badge shared by the status segmented control and the center strip. Contrast measured
+ * HITL (BRP-R-4): primary-100/primary-800 and primary-700/white both clear 4.5:1; the neutral
+ * fallback (zero count) uses the same subtle-surface/secondary-text pairing the rest of the page
+ * uses for muted numerals.
+ */
+export function chipCountClass(count: number, pressed: boolean): string {
+  const base = 'inline-flex min-w-[20px] justify-center rounded-full px-[6px] text-[11px] font-semibold tabular-nums leading-[18px]';
+  if (count > 0 && pressed) return `${base} bg-[var(--pr-color-primary-700)] text-white`;
+  if (count > 0) return `${base} bg-[var(--pr-color-primary-100)] text-[var(--pr-color-primary-800)]`;
+  return `${base} bg-[var(--pr-surface-subtle)] text-[var(--pr-text-secondary)]`;
+}
+
 export const BILATERAL_REVIEW_COPY = {
   tabLabel: 'Bilateral review',
   badgeAriaLabel: (pendingCount: number): string => `${pendingCount} pending review`,
@@ -35,7 +50,18 @@ export const BILATERAL_REVIEW_COPY = {
     categoryFilterPlaceholder: 'Indicator category',
     // @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-7)
     cycleFilterLabel: 'Cycle',
-    cycleFilterPlaceholder: 'Cycle'
+    cycleFilterPlaceholder: 'Cycle',
+    // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-5)
+    /** Toolbar "Clear filters · N" ghost button — replaces the old unconditional clear button. */
+    clearAllLabel: (count: number): string => `Clear filters · ${count}`
+  },
+  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-1, R-2, R-3)
+  /** Filter band — labeled rows above the status segmented control and the centers row. */
+  filterBand: {
+    statusLabel: 'Status',
+    centersLabel: (count: number): string => `Centers · ${count}`,
+    showCenters: 'Show centers',
+    hideCenters: 'Hide centers'
   },
   /** Status chips row. */
   chips: {
@@ -44,12 +70,12 @@ export const BILATERAL_REVIEW_COPY = {
     approved: 'Approved',
     rejected: 'Rejected'
   },
-  /** KPI strip (`BilateralReviewKpisComponent`). */
+  /** KPI strip (`BilateralReviewKpisComponent`) — rewritten as a one-line stat bar (BRP-R-6). */
   kpis: {
-    projects: 'Bilateral projects',
-    centers: 'Contributing centers',
-    pending: 'Pending review',
-    decided: 'Decided this list',
+    projects: 'bilateral projects',
+    centers: 'contributing centers',
+    pending: 'pending review',
+    decided: 'decided',
     decidedSublabel: (approved: number, rejected: number): string => `${approved} approved · ${rejected} rejected`
   },
   // @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-8)
@@ -63,7 +89,11 @@ export const BILATERAL_REVIEW_COPY = {
     all: 'All centers',
     notSpecified: 'Not specified',
     moreLabel: (hidden: number): string => `+${hidden} more`,
-    chipAriaLabel: (label: string, pending: number): string => `${label}, ${pending} pending`
+    chipAriaLabel: (label: string, pending: number): string => `${label}, ${pending} pending`,
+    // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-3, AC-3b)
+    /** Collapsed-row summary chip when the popover holds several centers ("2 centers ✕"). */
+    multipleLabel: (count: number): string => `${count} centers`,
+    clearCenterAriaLabel: 'Clear center'
   },
   /** Loading / empty / filtered-empty / error states (BRT-R-31). */
   states: {

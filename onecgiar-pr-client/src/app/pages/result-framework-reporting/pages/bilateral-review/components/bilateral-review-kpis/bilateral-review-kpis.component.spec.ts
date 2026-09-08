@@ -1,4 +1,5 @@
 // @akili-spec changes/sp-bilateral-review-tab (BRT-T-3, BRT-R-6, BRT-AC-4, BRT-AC-5)
+// @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-6, AC-6)
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { BilateralReviewKpisComponent } from './bilateral-review-kpis.component';
@@ -67,5 +68,14 @@ describe('BilateralReviewKpisComponent', () => {
 
     expect(fixture.debugElement.query(By.css('[data-testid="kpi-projects"]'))).toBeNull();
     expect(fixture.debugElement.query(By.css('[disabled]'))).toBeNull();
+  });
+
+  it('BRP-AC-6: the HOST carries data-testid="bilateral-review-statbar" and all six figures render', () => {
+    setKpis({ projects: 2, centers: 3, pending: 3, approved: 2, rejected: 1 });
+
+    expect(fixture.nativeElement.getAttribute('data-testid')).toBe('bilateral-review-statbar');
+    ['kpi-projects', 'kpi-centers', 'kpi-pending', 'kpi-pending-toggle', 'kpi-decided', 'kpi-decided-sublabel'].forEach(testId => {
+      expect(fixture.debugElement.query(By.css(`[data-testid="${testId}"]`))).not.toBeNull();
+    });
   });
 });
