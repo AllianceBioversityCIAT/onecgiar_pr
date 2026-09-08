@@ -86,7 +86,13 @@ const UNASSIGNED_CENTER_CODE = '__unassigned__';
 @Component({
   selector: 'app-bilateral-review',
   standalone: true,
+  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-1, R-1): unconditional,
+  // like `ProgrammeResultsComponent`/`MyWorkBoardComponent` — this surface only ever serves the
+  // Bilateral review tab. Discoverability only (JA-21/judgment.md L-2): the mixin sits on bare
+  // `:host` in the SCSS below, not gated on this class.
+  host: { class: 'pr-viewport-page' },
   templateUrl: './bilateral-review.component.html',
+  styleUrl: './bilateral-review.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     NgIcon,
@@ -128,6 +134,11 @@ export class BilateralReviewComponent {
   /** Viewport lock: the work area is the only scroller the band needs to know about. */
   readonly workArea = viewChild<ElementRef<HTMLElement>>('workArea');
   readonly workAreaEl = computed(() => this.workArea()?.nativeElement ?? null);
+
+  /** BRV-R-2: the pinned toolbar + filter band wrapper — its measured height drives
+   *  `--brv-pinned-h` (rows'/cards' `scroll-margin-top`, WCAG 2.4.11), set on `#workArea` below. */
+  private readonly pinnedWrapper = viewChild<ElementRef<HTMLElement>>('pinnedWrapper');
+  private pinnedResizeObserver?: ResizeObserver;
 
   /** Leader-found defect fix (BRC-AC-6 + AC-8b): `app-pr-filter-select.pick()` toggles its OWN
    *  `value` to `emptyValue` on a re-pick of the shown option, then emits it — our one-way
@@ -642,6 +653,16 @@ export class BilateralReviewComponent {
   readonly showContent = computed(() => !this.showSkeleton() && !this.showError() && !this.showWholeEmpty() && !this.showFilteredEmpty());
 
   constructor() {
+    // ── Pinned chrome height (BRV-T-1, BRV-R-2): wires the ResizeObserver exactly once, the first
+    // change-detection pass both view-child refs resolve on. `untracked` — this effect's own
+    // dependencies are the two viewChild signals, never anything the observer itself writes. ──────
+    effect(() => {
+      const wrapperEl = this.pinnedWrapper()?.nativeElement;
+      const workAreaEl = this.workAreaEl();
+      if (!wrapperEl || !workAreaEl || this.pinnedResizeObserver) return;
+      untracked(() => this.observePinnedHeight(wrapperEl, workAreaEl));
+    });
+
     // ── Phase catalogue (BRC-T-1, judgment-day L-1): seed already covers the common case (the
     // shell fetched it before this tab mounted); the Subject subscription catches a still-in-flight
     // fetch; the fallback below covers "the catalogue is empty and nothing is coming". ──────────
@@ -864,6 +885,23 @@ export class BilateralReviewComponent {
         if (this.centerStrip().length > 6 || this.isNarrow()) this.oneShotExpanded.set(true);
       });
     });
+  }
+
+  /** BRV-R-2: keeps `--brv-pinned-h` in step with the pinned wrapper's real rendered height (same
+   *  pattern as `app.component.ts`'s shell-header observer) — guarded for jsdom (no `ResizeObserver`
+   *  in the Jest environment; the SCSS's own `130px` fallback covers that case there, and CT, which
+   *  DOES have `ResizeObserver`, exercises the live value). Runs once per mount (guarded by the
+   *  caller effect above); torn down on destroy. */
+  private observePinnedHeight(wrapperEl: HTMLElement, workAreaEl: HTMLElement): void {
+    const update = () => {
+      const height = Math.round(wrapperEl.getBoundingClientRect().height);
+      workAreaEl.style.setProperty('--brv-pinned-h', `${height}px`);
+    };
+    update();
+    if (typeof ResizeObserver === 'undefined') return;
+    this.pinnedResizeObserver = new ResizeObserver(update);
+    this.pinnedResizeObserver.observe(wrapperEl);
+    this.destroyRef.onDestroy(() => this.pinnedResizeObserver?.disconnect());
   }
 
   /** Fallback catalogue fetch (BRC-R-5/AC-14): same request + filter `PhasesService.getNewPhases()`

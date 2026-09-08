@@ -15,12 +15,24 @@
       (whereToReport)="openWhereToReport()"
       (reportEmerging)="openEmergingReport()" />
 
-    <!-- #workArea: the only scroller >= 900px — toolbar, chips, KPI strip and the rows all scroll
-         together while the band stays put (same viewport-lock contract as the siblings). -->
+    <!-- #workArea: the only scroller >= 900px (BRV-R-1 — the host's own `pr-viewport-page` lock is
+         what makes this the sole scroller; the band above is a SIBLING it never contains, so it
+         cannot move by scrolling this area). Toolbar + filter band are pinned INSIDE it (BRV-R-2,
+         `#bilateral-review-pinned` below); the stat bar and rows scroll beneath them. -->
     <div #workArea class="flex flex-1 flex-col min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll">
+      <!-- ═══ Pinned chrome (BRV-R-2, design.md §6.1): toolbar + filter band share ONE
+           `position: sticky` wrapper inside #workArea — no nested scroller, no `overflow` here (it
+           would clip its own sticky children). `z-[15]` sits above the rows' own sticky Actions
+           cell (`z-10`) and below the band's overlays (`z-20` / `z-[22]` / `z-[30]`). One bottom
+           divider for the whole wrapper (BRV-R-20) — the toolbar's own divider and the filter
+           band's own `border-b` both move here. ═══ -->
+      <div
+        #pinnedWrapper
+        data-testid="bilateral-review-pinned"
+        class="min-[900px]:sticky min-[900px]:top-0 min-[900px]:z-[15] bg-[var(--pr-surface-app)] border-b border-[var(--pr-border-divider)]">
       <!-- ═══ Toolbar (own, not the band's — BRT-DD-1) ═══ -->
       <div
-        class="flex flex-wrap items-center justify-between gap-[10px] sm:gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]"
+        class="flex flex-wrap items-center justify-between gap-[10px] sm:gap-[12px] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]"
         role="search"
         aria-label="Bilateral review controls">
         <div class="flex flex-wrap items-center gap-[10px]">
@@ -317,7 +329,7 @@
            semantics as before) and a labeled, collapsible Centers row. One bottom divider for the
            whole band, none between its two rows. ═══ -->
       <div
-        class="flex flex-col gap-[6px] bg-[var(--pr-surface-app)] border-b border-[var(--pr-border-divider)] px-[16px] sm:px-[32px] py-[8px]"
+        class="flex flex-col gap-[6px] bg-[var(--pr-surface-app)] px-[16px] sm:px-[32px] py-[8px]"
         data-testid="bilateral-review-filter-band">
         <!-- Row 1: Status — same data-testids and setStatus() semantics as the old chip row, now a
              segmented control (visual language borrowed from the Grouped/All results tablist). -->
@@ -414,6 +426,8 @@
           </div>
         </div>
       </div>
+      </div>
+      <!-- ═══ End pinned chrome (BRV-R-2) ═══ -->
 
       <!-- ═══ Stat bar (BRP-R-6) — one-line replacement of the four KPI cards; no page-level wrapper
            padding, the component's own host is what the ≤ 44px gate measures. ═══ -->
