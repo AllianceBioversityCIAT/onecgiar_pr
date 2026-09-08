@@ -243,7 +243,7 @@ No socket events. Notification items keep deep-linking with `reviewResult` / `re
 - **Reversion challenge:** removing `indicators-sidebar` removes per-center counts → preserved as popover option counts (derived from `tableResults`) and the Contributing centers KPI; removing the sidebar also removes the only CLARISA code → acronym lookup that `?center=` needs → the page rebuilds that map from `CentersService` (judgment-day JB-7); removing the filter drawer removes temp/apply semantics → replaced by immediate-apply multiselects, consistent with siblings.
 - **Consequences:** a small dead-code cleanup remains for a later `/akili-quick`.
 
-### `BRT-DD-7` — Not phase-scoped (parity)
+### `BRT-DD-7` — Not phase-scoped (parity) — **SUPERSEDED 2026-09-08 by `BRC-DD-1`** (`changes/bilateral-review-center-strip-and-phase`: every list request carries `versionId`, `?phase=` selects the cycle, the badge is keyed `CODE::<number>` on the current phase; commit `fe892c94c`)
 - **Context:** neither endpoint is phase-scoped; the scout flagged `versionId` as an available but unused filter.
 - **Decision:** keep parity with the legacy page and the badge endpoint; do not send `versionId`.
 - **Alternatives:** send the shell's phase (would desynchronize list and badge unless the count endpoint also grows a phase filter — a server change, out of scope).
