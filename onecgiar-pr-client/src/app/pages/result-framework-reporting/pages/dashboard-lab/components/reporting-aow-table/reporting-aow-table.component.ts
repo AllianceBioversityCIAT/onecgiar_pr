@@ -45,6 +45,12 @@ export interface ReportingIndicator {
   type_name?: string;
   center_id?: string;
   center_acronym?: string;
+  /**
+   * P2-3255 exposed every centre that holds this row's target. The scalars above are filled ONLY
+   * when exactly one centre holds it — naming one of ten as "the" centre is the misreport that
+   * ticket was about — so a shared target reads its centres from HERE, never from the scalar.
+   */
+  centers?: Array<{ center_id?: number | null; center_acronym?: string | null }>;
   toc_result_id?: number;
   __hlo?: string;
   /** The ToC node this row was flattened from. Carries the node's P2-3296 AC2 roll-up. */
@@ -771,11 +777,83 @@ export class ReportingAowTableComponent {
     }
   }
 
+  /**
+   * Every centre behind one row, in display order.
+   *
+   * A target held by N centres is ONE row (P2-3255) whose scalar `center_acronym` is deliberately
+   * null, so reading the scalar alone dropped those rows out of the chips and out of the Center
+   * filter entirely — SP-13 KPI 1.3.3 (one target, ten centres) showed no centre at all. `centers`
+   * is the list; the scalar is only a fallback for payloads that predate it.
+   */
+  centerAcronymsOf(row: ReportingIndicator): string[] {
+    const fromList = (row?.centers ?? [])
+      .map(c => c?.center_acronym?.trim())
+      .filter((c): c is string => !!c && c !== '—');
+
+    if (fromList.length > 0) return fromList;
+
+    const scalar = row?.center_acronym?.trim();
+    return scalar && scalar !== '—' ? [scalar] : [];
+  }
+
+  /**
+   * How many centre chips a row shows before collapsing the rest behind the counter. Three keeps a
+   * ten-centre row the same height as every other row; the owner asked for the overflow to be
+   * openable rather than wrapped (2026-09-09).
+   */
+  private static readonly ROW_CENTER_CHIP_LIMIT = 3;
+
+  /** Rows whose centre overflow the user opened, by `rowKey`. */
+  private readonly expandedCenterRows = signal<ReadonlySet<string>>(new Set<string>());
+
+  areRowCentersExpanded(row: ReportingIndicator): boolean {
+    return this.expandedCenterRows().has(this.rowKey(row));
+  }
+
+  toggleRowCenters(row: ReportingIndicator, event: Event): void {
+    // Nested control inside a row that is itself a button (KZ-changes--reporting-aow-jira-hierarchy-2).
+    event.stopPropagation();
+    const key = this.rowKey(row);
+    const next = new Set(this.expandedCenterRows());
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    this.expandedCenterRows.set(next);
+  }
+
+  /**
+   * The chips actually rendered on a row. `activeCenter` is the card's current Center filter: when
+   * it is one of this row's centres it is ALWAYS shown, and first — filtering by a centre that then
+   * sits hidden behind "+7 more" would leave the user staring at a row with no visible reason to
+   * be there.
+   */
+  rowCentersShown(row: ReportingIndicator, activeCenter?: string | null): string[] {
+    const all = this.centerAcronymsOf(row);
+    const limit = ReportingAowTableComponent.ROW_CENTER_CHIP_LIMIT;
+
+    // One over the limit is not worth a counter — the counter itself would take that slot.
+    if (this.areRowCentersExpanded(row) || all.length <= limit + 1) return all;
+
+    const active = activeCenter?.trim();
+    const pinned = active && all.includes(active) ? [active] : [];
+    const rest = all.filter(c => !pinned.includes(c));
+
+    return [...pinned, ...rest].slice(0, limit);
+  }
+
+  /** How many centres "+N more" stands for. 0 when every centre is on screen. */
+  rowCentersHidden(row: ReportingIndicator, activeCenter?: string | null): number {
+    return this.centerAcronymsOf(row).length - this.rowCentersShown(row, activeCenter).length;
+  }
+
   centerCountsOf(group: ReportingAowGroup): { center: string; count: number }[] {
     const map = new Map<string, number>();
     for (const ind of group.indicators ?? []) {
-      const c = ind.center_acronym?.trim();
-      if (c && c !== '—') {
+      // A shared target counts towards EVERY centre that holds it: each of those centres does own
+      // the KPI, which is the whole reason the chip has to come from the list and not the scalar.
+      for (const c of this.centerAcronymsOf(ind)) {
         map.set(c, (map.get(c) ?? 0) + 1);
       }
     }
@@ -908,7 +986,7 @@ export class ReportingAowTableComponent {
 
     return (group.indicators ?? []).filter(row => {
       if (status && status.length > 0 && !status.includes(this.statusOf(row))) return false;
-      if (selCenter && row.center_acronym?.trim() !== selCenter) return false;
+      if (selCenter && !this.centerAcronymsOf(row).includes(selCenter)) return false;
       if (selType && row.result_type_name?.trim() !== selType) return false;
       if (!q || groupHit) return true;
       // Every level a row belongs to is searchable: its own description and name, the category
@@ -921,7 +999,8 @@ export class ReportingAowTableComponent {
         row.result_type_name,
         row.__aowCode,
         row.__aowName,
-        row.center_acronym
+        // Every centre of the row, so typing "IRRI" finds a shared target IRRI holds too.
+        this.centerAcronymsOf(row).join(' ')
       ].some(v => (v ?? '').toLowerCase().includes(q));
     });
   }
@@ -1340,7 +1419,7 @@ export class ReportingAowTableComponent {
         // offers. The indicator NAME (`type_name`) stays on the title block's meta line, exactly as
         // in the grouped view — the two are different fields and the design shows both.
         __typeLabel: row.result_type_name?.trim() || '—',
-        __centerLabel: row.center_acronym?.trim() || '—'
+        __centerLabel: this.centerAcronymsOf(row).join(', ') || '—'
       };
     })
   );

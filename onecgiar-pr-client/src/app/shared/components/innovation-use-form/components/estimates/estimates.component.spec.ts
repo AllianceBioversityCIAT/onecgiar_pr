@@ -3,25 +3,15 @@ import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { EstimatesCgiarComponent } from './estimates.component';
 
-// Minimal stubs for injected services via ApiService usage
-class ApiServiceStub {
-  dataControlSE = { currentResult: { result_code: '123', version_id: 1 } };
-}
-
-class TerminologyServiceStub {}
-
 describe('EstimatesCgiarComponent', () => {
   let component: EstimatesCgiarComponent;
   let fixture: ComponentFixture<EstimatesCgiarComponent>;
 
   beforeEach(async () => {
+    // P2-3390 — standalone now, and it no longer injects anything: the component reads only its
+    // `body` input, so the ApiService / TerminologyService stubs it used to need are gone.
     await TestBed.configureTestingModule({
-      declarations: [EstimatesCgiarComponent],
-      imports: [HttpClientTestingModule],
-      providers: [
-        { provide: (await import('../../../../services/api/api.service')).ApiService, useClass: ApiServiceStub },
-        { provide: (await import('../../../../../internationalization/terminology.service')).TerminologyService, useClass: TerminologyServiceStub }
-      ],
+      imports: [HttpClientTestingModule, EstimatesCgiarComponent],
       schemas: [CUSTOM_ELEMENTS_SCHEMA]
     }).compileComponents();
 

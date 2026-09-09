@@ -138,7 +138,13 @@ describe('TypeInnovationUseComponent', () => {
       bilateralApi.GET_institutionsTypeTree.mockReturnValue(of({ response: null }));
       build();
       fixture.detectChanges();
-      expect(component.body).toEqual({});
+      // P2-3390 — `hydrateInvestmentTables` guarantees the three arrays exist before the shared table
+      // component renders, so an empty response is `{}` plus those three empty arrays.
+      expect(component.body).toEqual({
+        investment_programs: [],
+        investment_bilateral: [],
+        investment_partners: [],
+      });
       expect(component.actorsTypeList).toEqual([]);
       expect(component.institutionsTypeTreeList).toEqual([]);
     });
@@ -567,26 +573,53 @@ describe('TypeInnovationUseComponent', () => {
       expect(lastFields()).toContainEqual({ ...LEVEL, filled: true });
     });
 
-    // 🛑 26-ago-2026 — AC8 asks for an editable, required investment amount, and the server cannot store
-    // one. A red asterisk on a field the endpoint discards makes the user type a number that vanishes on
-    // the next reload with no warning, so the field follows the house rule instead: VISIBLE BUT DISABLED
-    // with a `Coming soon` tag (same markup as `result-ai-item.component.html`). Do NOT re-add
-    // `[required]="true"` until the amount can actually be persisted — see the TODO in updateMds().
-    it('AC8 — the investment amount is rendered disabled and tagged Coming soon, never as required', () => {
+    // P2-3390 (9-sep-2026) — REPLACES the 26-ago-2026 lock that pinned a disabled `Coming soon` amount
+    // here. The single amount had nowhere to be stored; investment is per ENTITY, so the section now
+    // renders the same three tables W1/W2 does, inside the full metadata, and the placeholder input is
+    // gone. It stays OPTIONAL and out of the MDS by PO decision — see the tracker test below.
+    it('AC8 / P2-3390 — renders the three investment tables in the full metadata, not a disabled amount', () => {
       const html = readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
-      const field = html.slice(
-        html.indexOf('Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period'),
-      );
-      const input = field.slice(0, field.indexOf('</app-pr-input>'));
-      expect(input).toContain('[required]="false"');
-      expect(input).not.toContain('[required]="true"');
-      expect(input).toContain('[disabled]="true"');
-      expect(input).toContain('type="currency"');
-      expect(input).toContain('[(ngModel)]="body.investment_bilateral_usd"');
-      // The tag sits beside the input, before the MDS note row that closes the always-visible block.
-      const block = field.slice(0, field.indexOf('mdsInfoNote'));
-      expect(block).toContain('data-testid="use-investment-coming-soon"');
-      expect(block).toContain('Coming soon');
+
+      expect(html).toContain('<app-estimates-cgiar [body]="body" [disabled]="loaded() !== true">');
+      // The old placeholder and its tag are gone for good.
+      expect(html).not.toContain('body.investment_bilateral_usd');
+      expect(html).not.toContain('use-investment-coming-soon');
+      expect(html).not.toContain('Not available yet');
+      // And the tables live BELOW the full-metadata toggle, never in the always-visible MDS block.
+      expect(html.indexOf('mdsInfoNote')).toBeLessThan(html.indexOf('<app-estimates-cgiar'));
+    });
+
+    it('P2-3390 — sends the three investment arrays in the payload', () => {
+      build();
+      component.body = {
+        investment_programs: [{ id: 90, kind_cash: 100, is_determined: null }],
+        investment_bilateral: [{ id: 4321, project_id: 4321, kind_cash: null, is_determined: true }],
+        investment_partners: [{ id: 77, kind_cash: 250, is_determined: null }],
+      };
+      component.onSave();
+
+      const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+      expect(payload.investment_programs).toEqual([{ id: 90, kind_cash: 100, is_determined: null }]);
+      expect(payload.investment_bilateral).toEqual([
+        { id: 4321, project_id: 4321, kind_cash: null, is_determined: true },
+      ]);
+      expect(payload.investment_partners).toEqual([{ id: 77, kind_cash: 250, is_determined: null }]);
+      // 🛑 The legacy nested keys must never be sent from here: their writer resolves the
+      // `non_pooled_project` catalogue and drops every bilateral row in silence.
+      expect(payload).not.toHaveProperty('bilateral_expected_investment');
+      expect(payload).not.toHaveProperty('initiative_expected_investment');
+      expect(payload).not.toHaveProperty('institutions_expected_investment');
+    });
+
+    it('P2-3390 — sends empty arrays when the tables hold nothing, which the server treats as a no-op', () => {
+      build();
+      component.body = {};
+      component.onSave();
+
+      const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+      expect(payload.investment_programs).toEqual([]);
+      expect(payload.investment_bilateral).toEqual([]);
+      expect(payload.investment_partners).toEqual([]);
     });
 
     it('never sends investment_bilateral_usd in the payload — the server has no column for it', () => {
@@ -598,15 +631,12 @@ describe('TypeInnovationUseComponent', () => {
     });
 
     // 🛑 DO NOT "fix" this by adding the item back.
-    // 25-ago-2026: `investment_bilateral_usd` does not exist on the server (zero hits in
-    // `onecgiar-pr-server/src/`) and the legacy endpoint this section saves through has no
-    // `ValidationPipe`, so the key is discarded with no error. Publish it to the tracker and the item
-    // reads as unfilled again after every reload, leaving Submit blocked with no way for the user to
-    // unblock it — the form becomes uncompletable. Storing it needs `PATCH /v2/api/innovation-use/...`,
-    // which models the amount PER PROJECT and expects the 0-9 level in `innovation_use_level_id`, and
-    // the story does not define how to split one total across several contributing projects.
-    // The field stays mandatory ON SCREEN; it just does not gate Submit.
-    it('does NOT publish use-investment to the MDS tracker, because it cannot be persisted yet', () => {
+    // P2-3390 (9-sep-2026) — the amount IS persisted now, in three tables, so the old reason
+    // ("no column on the server") is obsolete. The item still must not be published: the PO decided
+    // investment is OPTIONAL and lives in the full metadata, and AC16 forbids anything revealed by the
+    // toggle from counting. Publishing it would raise the bar Submit is gated on
+    // (`overallStatus() === 'complete'`) for every bilateral Innovation Use result.
+    it('does NOT publish use-investment to the MDS tracker — optional by PO decision (P2-3390)', () => {
       build();
       component.body = { investment_bilateral_usd: 15000 };
       component.updateMds();

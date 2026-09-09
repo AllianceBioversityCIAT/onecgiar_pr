@@ -442,7 +442,19 @@ export class AoWBilateralRepository {
         tri.type_value,
         NULLIF(TRIM(tri.type_name), '') AS type_name,
         tri.location,
-        COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
+        -- P2-3255, second half. Rows are grouped by trit.toc_indicator_target_id, so every
+        -- group IS one target — but the centre joins remain below, so the group still holds one
+        -- row per associated centre and SUM went on counting the same target once per centre.
+        -- SP-13 KPI 1.3.3, a target of 1 document shared by 10 centres, read 10. MAX over a value
+        -- that is itself part of the grouping key returns the target's own value, immune to how
+        -- many centres hold it.
+        --
+        -- Do NOT overwrite this with getIndicatorContributions' figure instead: that one sums an
+        -- indicator's whole set of targets (KPI 1.3.1 = 2480 over 9 targets) while this row is ONE
+        -- target — it would stamp 2480 onto each of the nine rows.
+        --
+        -- Keep the words that the spec slices this query on out of this comment.
+        COALESCE(MAX(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
         trit.number_target,
         trit.target_date,
         trit.target_value,
