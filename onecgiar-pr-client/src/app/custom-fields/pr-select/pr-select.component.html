@@ -51,14 +51,16 @@
 
         <div class="remove_focus" (click)="removeFocus()"></div>
         <div class="options" style="min-width: 200px" [style]="overlayToBody() ? overlayStyles() : optionsInlineStyles()">
-          <div class="search_input_container">
-            <span class="material-icons-round search_icon">search</span>
-            <input type="text" hlmInput placeholder="Search" [(ngModel)]="this.searchText" style="width: 100%" />
-          </div>
+          @if (showSearchInput()) {
+            <div class="search_input_container">
+              <span class="material-icons-round search_icon">search</span>
+              <input type="text" hlmInput placeholder="Search" [(ngModel)]="this.searchText" style="width: 100%" />
+            </div>
+          }
 
           <cdk-virtual-scroll-viewport [itemSize]="virtualOptionItemSize()" class="custom_scroll virtual_scroll" (wheel)="onOptionsWheel($event)">
             <div
-              *cdkVirtualFor="let option of optionsIntance() | listFilterByTextAndAttr: optionLabel() : this.searchText"
+              *cdkVirtualFor="let option of optionsIntance() | listFilterByTextAndAttr: optionLabel() : (showSearchInput() ? this.searchText : '')"
               class="option pr-body-2"
               [style]="extraInformation() ? 'height: 50px;' : ''"
               [ngClass]="{
