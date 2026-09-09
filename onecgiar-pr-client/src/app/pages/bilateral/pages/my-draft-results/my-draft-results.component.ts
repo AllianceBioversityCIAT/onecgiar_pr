@@ -6,6 +6,7 @@ import { HlmButton } from '@spartan/button';
 import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
 import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
+import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
 import { BilateralContextService } from '../../services/bilateral-context.service';
@@ -82,6 +83,7 @@ const DRAFT_STATUS_MODIFIERS: Record<number, string> = {
     HlmButton,
     PrDialogComponent,
     PrFilterSelectComponent,
+    CustomFieldsModule,
     BilateralPageHeaderComponent,
     DraftResultCardComponent,
     DraftEvidenceListComponent,
@@ -113,11 +115,13 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   readonly reviewTooltip =
     'Preview everything the AI extracted from your files, next to the source evidence it used. Nothing is saved or created — the draft stays in this list.';
   readonly promoteTooltip =
-    'Turn this draft into a real bilateral result. You will be asked to confirm first; after that the draft leaves this list and the new result opens for you to complete.';
+    'After your Center has reviewed and validated this AI-generated draft, turn it into a real bilateral result. You will be asked to confirm that validation first; after that the draft leaves this list and the new result opens for you to complete.';
   readonly deleteTooltip =
     'Delete this draft and everything the AI extracted from it. You will be asked to confirm first, and it cannot be undone.';
 
   promoteTarget = signal<BilateralAiDraft | null>(null);
+  /** P2-3315: a Center user must explicitly validate an AI draft before it can become an editable result. */
+  centerValidationConfirmed = signal(false);
   discardTarget = signal<BilateralAiDraft | null>(null);
   selectedDraft = signal<BilateralAiDraft | null>(null);
 
@@ -284,20 +288,23 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   }
 
   onPromoteClick(draft: BilateralAiDraft): void {
+    this.centerValidationConfirmed.set(false);
     this.promoteTarget.set(draft);
   }
 
   onPromoteConfirm(): void {
     const draft = this.promoteTarget();
-    if (draft) {
+    if (draft && this.centerValidationConfirmed()) {
       this.bilateralAiService.promoteDraft(draft.id);
     }
     this.promoteTarget.set(null);
     this.selectedDraft.set(null);
+    this.centerValidationConfirmed.set(false);
   }
 
   onPromoteCancel(): void {
     this.promoteTarget.set(null);
+    this.centerValidationConfirmed.set(false);
   }
 
   onDiscardClick(draft: BilateralAiDraft): void {
