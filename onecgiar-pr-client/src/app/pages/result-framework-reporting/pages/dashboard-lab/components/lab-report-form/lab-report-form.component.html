@@ -33,6 +33,7 @@
         placeholder="Select Output or Outcome"
         [editable]="true"
         [required]="true"
+        [overlayToBody]="true"
         [ngModel]="chosenResultLevelId()"
         [ngModelOptions]="{ standalone: true }"
         (selectOptionEvent)="onResultLevelChange($event?.id ?? null)"
