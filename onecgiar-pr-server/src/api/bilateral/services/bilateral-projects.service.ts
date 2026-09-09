@@ -262,7 +262,7 @@ export class BilateralProjectsService {
     const programCodes = [
       ...new Set(
         reportableProjects
-          .flatMap((p) => p.obj_project_mappings ?? [])
+          .flatMap((p) => this.reportableMappings(p))
           .map((m) => m.programCode)
           .filter((code): code is string => !!code),
       ),
@@ -282,7 +282,9 @@ export class BilateralProjectsService {
             acronym: project.obj_organization.acronym,
           }
         : null,
-      sciencePrograms: (project.obj_project_mappings ?? []).map((mapping) => {
+      // Only approved, addressable mappings are offered as Science Programs: the wizard's step 2
+      // picks the primary SP from this list, so an unapproved mapping must not be selectable.
+      sciencePrograms: this.reportableMappings(project).map((mapping) => {
         const initiative = mapping.programCode
           ? spByCode.get(mapping.programCode)
           : undefined;
@@ -310,19 +312,38 @@ export class BilateralProjectsService {
   }
 
   /**
-   * P2-3313 AC1 — "mapped to a Program/Accelerator" means at least one mapping row carrying a
-   * `programCode`: that code is what the wizard's Science Program step selects from, so a mapping
-   * without one is not reportable either.
+   * P2-3313 — a project is reportable when at least one of its W3 Registry mappings is both
+   * addressable and approved:
    *
-   * AC2 ("mapping approved by the committee") is deliberately NOT applied here. The column exists
-   * (`clarisa_project_mappings.status`) but the W3 Registry's `published/latest` payload does not
-   * carry the mapping state and CLARISA fills it with `Pending` on ingest, so filtering on it today
-   * would hide every project. When the registry exposes the state and CLARISA propagates it, the
-   * rule belongs in this same predicate (`status` in the approved set).
+   * - AC1: the mapping carries a `programCode` — that code is what the wizard's Science Program
+   *   step selects from, so a mapping without one is not reportable either.
+   * - AC2: the mapping is approved. The registry publishes only committee-agreed mappings and
+   *   marks them `agreed`; CLARISA translates that to its own enum as `Confirmed`
+   *   (`toMappingStatus`, clarisa-back `integration/w3`, 2026-09-08) and PRMS copies the value
+   *   verbatim into `clarisa_project_mappings.status`. `Confirmed` is also what CLARISA's
+   *   pre-registry mappings carry. Anything else — `Pending`, `Proposed`, `Rejected`, NULL — is
+   *   not approved and hides the project.
+   *
+   * ⚠️ Deploy order: this guard must reach an environment only AFTER CLARISA's fix is deployed
+   * there and both syncs (registry → CLARISA, CLARISA → PRMS) have re-run; otherwise every
+   * registry-fed project still sits at `Pending` and the picker empties.
    */
   private hasProgramMapping(project: ClarisaProject): boolean {
-    return (project.obj_project_mappings ?? []).some(
-      (mapping) => !!mapping.programCode?.trim(),
+    return this.reportableMappings(project).length > 0;
+  }
+
+  /** The project's mappings that carry a programCode AND an approved status. */
+  private reportableMappings(project: ClarisaProject) {
+    return (project.obj_project_mappings ?? []).filter(
+      (mapping) =>
+        !!mapping.programCode?.trim() &&
+        BilateralProjectsService.APPROVED_MAPPING_STATUSES.has(
+          mapping.status?.trim() ?? '',
+        ),
     );
   }
+
+  /** `clarisa_project_mappings.status` values that mean "approved" (see `hasProgramMapping`). */
+  private static readonly APPROVED_MAPPING_STATUSES: ReadonlySet<string> =
+    new Set(['Confirmed']);
 }

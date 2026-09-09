@@ -80,6 +80,7 @@ describe('BilateralProjectsService', () => {
             allocation: '50.00',
             programName: 'Breeding for Tomorrow',
             programShortName: 'BfT',
+            status: 'Confirmed',
           },
         ],
       },
@@ -112,7 +113,12 @@ describe('BilateralProjectsService', () => {
           phase: CURRENT_YEAR,
           obj_organization: null,
           obj_project_mappings: [
-            { programId: 1, programCode: 'SP01', allocation: '100.00' },
+            {
+              programId: 1,
+              programCode: 'SP01',
+              allocation: '100.00',
+              status: 'Confirmed',
+            },
           ],
         },
       ]); // fallback source_center_acronym query
@@ -134,7 +140,12 @@ describe('BilateralProjectsService', () => {
       phase: CURRENT_YEAR,
       obj_organization: null,
       obj_project_mappings: [
-        { programId: 1, programCode: 'SP01', allocation: '100.00' },
+        {
+          programId: 1,
+          programCode: 'SP01',
+          allocation: '100.00',
+          status: 'Confirmed',
+        },
       ],
     };
     projectRepo.find
@@ -164,6 +175,7 @@ describe('BilateralProjectsService', () => {
             allocation: '30.00',
             programName: null,
             programShortName: null,
+            status: 'Confirmed',
           },
         ],
       },
@@ -187,7 +199,12 @@ describe('BilateralProjectsService', () => {
         phase: 2025, // legacy phase, active year is 2026 in this test suite
         obj_organization: null,
         obj_project_mappings: [
-          { programId: 1, programCode: 'SP01', allocation: '100.00' },
+          {
+            programId: 1,
+            programCode: 'SP01',
+            allocation: '100.00',
+            status: 'Confirmed',
+          },
         ],
       },
     ]);
@@ -209,7 +226,12 @@ describe('BilateralProjectsService', () => {
         phase: 2025,
         obj_organization: null,
         obj_project_mappings: [
-          { programId: 1, programCode: 'SP01', allocation: '100.00' },
+          {
+            programId: 1,
+            programCode: 'SP01',
+            allocation: '100.00',
+            status: 'Confirmed',
+          },
         ],
       },
       {
@@ -218,7 +240,12 @@ describe('BilateralProjectsService', () => {
         phase: CURRENT_YEAR,
         obj_organization: null,
         obj_project_mappings: [
-          { programId: 1, programCode: 'SP01', allocation: '100.00' },
+          {
+            programId: 1,
+            programCode: 'SP01',
+            allocation: '100.00',
+            status: 'Confirmed',
+          },
         ],
       },
     ]);
@@ -242,6 +269,7 @@ describe('BilateralProjectsService', () => {
         programId: i + 1,
         programCode: code,
         allocation: '100.00',
+        status: 'Confirmed',
         programName: null,
         programShortName: null,
       })),
@@ -414,7 +442,12 @@ describe('BilateralProjectsService', () => {
       projectRepo.find.mockResolvedValueOnce([
         project(10, []),
         project(11, [
-          { programId: 1, programCode: 'SP01', allocation: '100.00' },
+          {
+            programId: 1,
+            programCode: 'SP01',
+            allocation: '100.00',
+            status: 'Confirmed',
+          },
         ]),
       ]);
 
@@ -427,10 +460,20 @@ describe('BilateralProjectsService', () => {
       centerRepo.findOne.mockResolvedValueOnce(center);
       projectRepo.find.mockResolvedValueOnce([
         project(12, [
-          { programId: 1, programCode: null, allocation: '100.00' },
+          {
+            programId: 1,
+            programCode: null,
+            allocation: '100.00',
+            status: 'Confirmed',
+          },
         ]),
         project(13, [
-          { programId: 1, programCode: '   ', allocation: '100.00' },
+          {
+            programId: 1,
+            programCode: '   ',
+            allocation: '100.00',
+            status: 'Confirmed',
+          },
         ]),
       ]);
 
@@ -439,7 +482,9 @@ describe('BilateralProjectsService', () => {
       expect(result.projects).toEqual([]);
     });
 
-    it('keeps a mapped project with its sciencePrograms intact, and does not filter on mapping status', async () => {
+    // P2-3313 AC2: the W3 Registry publishes only committee-agreed mappings (`agreed`), CLARISA
+    // translates that to `Confirmed`, and PRMS copies the value. Anything else is not approved.
+    it('hides a project whose mappings are all unapproved (Pending / null status)', async () => {
       centerRepo.findOne.mockResolvedValueOnce(center);
       projectRepo.find.mockResolvedValueOnce([
         project(14, [
@@ -460,10 +505,40 @@ describe('BilateralProjectsService', () => {
 
       const result = await service.getProjectsByCenter(5);
 
+      expect(result.projects).toEqual([]);
+    });
+
+    it('keeps a project with one Confirmed mapping and offers only the approved Science Programs', async () => {
+      centerRepo.findOne.mockResolvedValueOnce(center);
+      projectRepo.find.mockResolvedValueOnce([
+        project(15, [
+          {
+            programId: 1,
+            programCode: 'SP01',
+            allocation: '60.00',
+            status: 'Confirmed',
+          },
+          {
+            programId: 2,
+            programCode: 'SP06',
+            allocation: '40.00',
+            status: 'Pending',
+          },
+          {
+            programId: 3,
+            programCode: 'SP02',
+            allocation: '0.00',
+            status: 'Rejected',
+          },
+        ]),
+      ]);
+
+      const result = await service.getProjectsByCenter(5);
+
       expect(result.projects).toHaveLength(1);
       expect(
         result.projects[0].sciencePrograms.map((sp) => sp.programCode),
-      ).toEqual(['SP01', 'SP06']);
+      ).toEqual(['SP01']);
     });
   });
 });
