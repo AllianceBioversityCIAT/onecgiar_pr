@@ -72,11 +72,13 @@ describe('BilateralReviewTableComponent', () => {
     it('renders group headers with the label, "N results" and the pending figure', () => {
       render([GROUP_A, GROUP_B]);
 
+      const codes = byTestId('bilateral-review-project-code').map(el => el.textContent?.trim());
       const names = byTestId('bilateral-review-group-name').map(el => el.textContent?.trim());
       const summaries = byTestId('bilateral-review-group-summary').map(el => el.textContent?.trim());
       const pending = byTestId('bilateral-review-group-pending').map(el => el.textContent?.trim());
 
-      expect(names).toEqual(['P1 - Alpha Project', 'P2 - Beta Project']);
+      expect(codes).toEqual(['P1', 'P2']);
+      expect(names).toEqual(['Alpha Project', 'Beta Project']);
       expect(summaries).toEqual(['2 results', '1 results']);
       expect(pending).toEqual(['1 pending', '0 pending']);
     });
@@ -86,12 +88,15 @@ describe('BilateralReviewTableComponent', () => {
       render([GROUP_A, empty]);
 
       const names = byTestId('bilateral-review-group-name').map(el => el.textContent?.trim());
-      expect(names).toEqual(['P1 - Alpha Project']);
+      expect(names).toEqual(['Alpha Project']);
     });
 
-    it('groups render expanded by default (BRT-R-10)', () => {
+    it('smart progressive disclosure on initial load (BRH-R-4): expands groups with pending reviews and collapses zero-pending groups', () => {
       render([GROUP_A, GROUP_B]);
-      expect(byTestId('bilateral-review-row-action').length).toBe(3);
+      // GROUP_A has pending > 0 (expanded: 2 action buttons), GROUP_B has pending = 0 (collapsed: 0 buttons)
+      expect(byTestId('bilateral-review-row-action').length).toBe(2);
+      expect(byTestId('bilateral-review-group-toggle')[0].getAttribute('aria-expanded')).toBe('true');
+      expect(byTestId('bilateral-review-group-toggle')[1].getAttribute('aria-expanded')).toBe('false');
     });
   });
 
@@ -109,7 +114,8 @@ describe('BilateralReviewTableComponent', () => {
     it('project-mode caption shows the distinct lead centers; center-mode caption shows "N projects"', () => {
       render([GROUP_A]);
       // GROUP_A spans CIP + IITA.
-      expect(root().textContent).toContain('CIP, IITA');
+      expect(root().textContent).toContain('CIP');
+      expect(root().textContent).toContain('IITA');
 
       const centerGroup: BilateralReviewGroup = {
         key: 'CIP',
@@ -125,7 +131,7 @@ describe('BilateralReviewTableComponent', () => {
 
   describe('Toggling one group (dataKey correctness — FAIL input for a wrong dataKey)', () => {
     it('collapsing one group leaves the other group expanded', () => {
-      render([GROUP_A, GROUP_B]);
+      render([GROUP_A, GROUP_B], { expandAllNonce: 1, allExpanded: true });
       expect(byTestId('bilateral-review-row-action').length).toBe(3);
 
       (byTestId('bilateral-review-group-toggle')[0] as HTMLButtonElement).click();
@@ -147,17 +153,17 @@ describe('BilateralReviewTableComponent', () => {
 
   describe('Expand all / Collapse all via nonce (assert rendered rows, not state)', () => {
     it('collapses every group when allExpanded=false and the nonce bumps, then re-expands', () => {
-      render([GROUP_A, GROUP_B]);
+      render([GROUP_A, GROUP_B], { expandAllNonce: 1, allExpanded: true });
       expect(byTestId('bilateral-review-row-action').length).toBe(3);
 
       fixture.componentRef.setInput('allExpanded', false);
-      fixture.componentRef.setInput('expandAllNonce', 1);
+      fixture.componentRef.setInput('expandAllNonce', 2);
       fixture.detectChanges();
       fixture.detectChanges();
       expect(byTestId('bilateral-review-row-action').length).toBe(0);
 
       fixture.componentRef.setInput('allExpanded', true);
-      fixture.componentRef.setInput('expandAllNonce', 2);
+      fixture.componentRef.setInput('expandAllNonce', 3);
       fixture.detectChanges();
       fixture.detectChanges();
       expect(byTestId('bilateral-review-row-action').length).toBe(3);
@@ -169,7 +175,7 @@ describe('BilateralReviewTableComponent', () => {
       const centerA: BilateralReviewGroup = { key: 'IITA', label: 'IITA', caption: BILATERAL_REVIEW_COPY.table.projectsCaption(1), center: null, results: [GROUP_A.results[1]] };
       const centerB: BilateralReviewGroup = { key: 'CIP', label: 'CIP', caption: BILATERAL_REVIEW_COPY.table.projectsCaption(1), center: null, results: [GROUP_A.results[0]] };
 
-      render([centerA, centerB], { groupMode: 'center' });
+      render([centerA, centerB], { groupMode: 'center', expandAllNonce: 1, allExpanded: true });
       expect(byTestId('bilateral-review-row-action').length).toBe(2);
 
       (byTestId('bilateral-review-group-toggle')[0] as HTMLButtonElement).click(); // collapse IITA
@@ -180,6 +186,8 @@ describe('BilateralReviewTableComponent', () => {
       // expand-all; both project groups render expanded because it's their first appearance).
       fixture.componentRef.setInput('groups', [GROUP_A, GROUP_B]);
       fixture.componentRef.setInput('groupMode', 'project');
+      fixture.componentRef.setInput('expandAllNonce', 2);
+      fixture.componentRef.setInput('allExpanded', true);
       fixture.detectChanges();
       fixture.detectChanges();
       expect(byTestId('bilateral-review-row-action').length).toBe(3); // both project groups expanded
@@ -337,10 +345,11 @@ describe('BilateralReviewTableComponent', () => {
       expect(codeCells[0].textContent).toContain(BILATERAL_REVIEW_COPY.table.contributorBadge);
       expect(codeCells[1].textContent).not.toContain(BILATERAL_REVIEW_COPY.table.contributorBadge);
 
-      // tbody rows: [0] group header, [1] c1 (Contributor), [2] c2 (Primary submitter).
+      // In container card architecture, the group header is the card button (not a tbody tr).
+      // Data rows in tbody start at index 0: [0] c1 (Contributor), [1] c2 (Primary submitter).
       const rows = root().querySelectorAll('tbody tr');
-      expect(rows[1].textContent).toContain('Contributor');
-      expect(rows[2].textContent).not.toContain('Contributor');
+      expect(rows[0].textContent).toContain('Contributor');
+      expect(rows[1].textContent).not.toContain('Contributor');
     });
   });
 
@@ -363,7 +372,7 @@ describe('BilateralReviewTableComponent', () => {
       const group = projectGroup('P8 - Long Title Project', [row({ id: 'lt1', project_id: 'p8', project_name: 'P8 - Long Title Project', result_title: longTitle })]);
       render([group]);
 
-      const titleParagraph = root().querySelector('tbody tr:nth-child(2) p') as HTMLElement;
+      const titleParagraph = root().querySelector('tbody tr:first-child p') as HTMLElement;
       expect(titleParagraph.className).toContain('line-clamp-2');
       expect(titleParagraph.getAttribute('title')).toBe(longTitle);
     });
@@ -465,7 +474,7 @@ describe('BilateralReviewTableComponent', () => {
       const group = projectGroup('P11 - Date Project', [row({ id: 'd1', project_id: 'p11', project_name: 'P11 - Date Project', submission_date: '2026-02-23' })]);
       render([group]);
 
-      const rowEl = root().querySelectorAll('tbody tr')[1];
+      const rowEl = root().querySelectorAll('tbody tr')[0];
       // Column order (project mode, 7 columns): code(0) title(1) center(2) status(3)
       // alignment(4) date(5) actions(6) — was index 6 before the Alignment merge dropped one column.
       const dateCell = rowEl.querySelectorAll('td')[5];
@@ -539,7 +548,7 @@ describe('BilateralReviewTableComponent', () => {
     });
   });
 
-  describe('Grouped view leaves horizontal scroll to PrGroupTableComponent (Reviewer fix #2)', () => {
+  describe('Grouped view leaves horizontal scroll to the nested per-card table (Reviewer fix #2; BRH-T-2: was PrGroupTableComponent, now each `<section>` card owns its own scroller)', () => {
     it('does not wrap app-bilateral-review-table in its own overflow-x-auto when grouped', () => {
       render([GROUP_A]);
       const wrapper = root().querySelector('[data-testid="bilateral-review-table"]') as HTMLElement;
@@ -550,7 +559,7 @@ describe('BilateralReviewTableComponent', () => {
   // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-13, R-14 (d), AC-11, AC-12)
   describe('Narrow cards below 900px (BRP-R-13)', () => {
     it('narrow=true renders ul[role=list] with li count = row count and no <table> element (FAIL input: leave the table branch mounted)', () => {
-      render([GROUP_A, GROUP_B], { narrow: true });
+      render([GROUP_A, GROUP_B], { narrow: true, expandAllNonce: 1, allExpanded: true });
 
       // FAIL input this test guards against: asserting only card count without also asserting
       // the table branch never mounted would still pass with BOTH branches rendered together.
@@ -611,6 +620,32 @@ describe('BilateralReviewTableComponent', () => {
       expect(action.textContent).toContain('Review');
     });
 
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-2 attempt 2, Reviewer FAIL #2)
+    it('narrow group header (project mode): renders capped contributing-center chips, never a bare comma-separated run (BRH-R-3)', () => {
+      render([GROUP_A], { narrow: true }); // GROUP_A spans CIP + IITA.
+      const chips = byTestId('bilateral-review-center-chip').map(el => el.textContent?.trim());
+      expect(chips).toContain('CIP');
+      expect(chips).toContain('IITA');
+    });
+
+    it('narrow group header (project mode, > 3 centers): caps chips at 3 and adds a "+N" overflow chip instead of overflowing the card', () => {
+      const manyCenterResults = ['CIP', 'IITA', 'CIAT', 'ICRAF', 'ILRI'].map((center, i) =>
+        row({ id: `mc${i}`, project_id: 'p20', project_name: 'P20 - Many Centers Project', result_code: `BR-2${i}`, lead_center: center })
+      );
+      const group = projectGroup('P20 - Many Centers Project', manyCenterResults);
+      render([group], { narrow: true });
+
+      const chips = byTestId('bilateral-review-center-chip');
+      expect(chips.length).toBe(3);
+      expect(root().textContent).toContain('+2');
+    });
+
+    it('narrow group header (center mode): renders the "N projects" caption instead of nothing', () => {
+      const centerGroup: BilateralReviewGroup = { key: 'CIP', label: 'CIP', caption: BILATERAL_REVIEW_COPY.table.projectsCaption(2), center: null, results: GROUP_A.results };
+      render([centerGroup], { narrow: true, groupMode: 'center' });
+      expect(root().textContent).toContain('2 projects');
+    });
+
     it('narrow=false renders the usual grouped table branch — no ul[role=list], group togglers still work', () => {
       render([GROUP_A], { narrow: false });
       expect(root().querySelector('ul[role="list"]')).toBeNull();
@@ -619,7 +654,7 @@ describe('BilateralReviewTableComponent', () => {
     });
 
     it('grouped narrow: the group header bar toggles the group\'s cards through the owned expandedKeys — collapsing in cards then switching narrow=false shows the group collapsed in the table too', () => {
-      render([GROUP_A, GROUP_B], { narrow: true });
+      render([GROUP_A, GROUP_B], { narrow: true, expandAllNonce: 1, allExpanded: true });
       expect(byTestId('bilateral-review-card').length).toBe(3);
 
       (byTestId('bilateral-review-group-toggle')[0] as HTMLButtonElement).click();
@@ -641,12 +676,13 @@ describe('BilateralReviewTableComponent', () => {
 
   describe('Manual group collapse survives an unrelated re-render (Leader advisory fix)', () => {
     it('keeps a manually collapsed group collapsed after a groups-array reference change (e.g. a search keystroke)', () => {
-      render([GROUP_A, GROUP_B]);
+      render([GROUP_A, GROUP_B], { expandAllNonce: 1, allExpanded: true });
       expect(byTestId('bilateral-review-row-action').length).toBe(3);
 
-      // Manually collapse Group A via the toggler — mutates only the CHILD `PrGroupTableComponent`'s
-      // own internal state; without the `userCollapsedKeys` exclusion this test fails because the
-      // next re-seed falls back to the stale `lastKeys` value and re-expands Group A.
+      // Manually collapse Group A via the toggler — mutates only this component's OWN
+      // `expandedKeys`/`userCollapsedKeys` signals (BRH-T-2: no child `PrGroupTableComponent`
+      // anymore); without the `userCollapsedKeys` exclusion this test fails because the next
+      // re-seed falls back to the stale `lastKeys` value and re-expands Group A.
       (byTestId('bilateral-review-group-toggle')[0] as HTMLButtonElement).click();
       fixture.detectChanges();
       expect(byTestId('bilateral-review-row-action').length).toBe(1);
@@ -662,6 +698,31 @@ describe('BilateralReviewTableComponent', () => {
 
       expect(byTestId('bilateral-review-row-action').length).toBe(1);
     });
+
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-2 attempt 2, Reviewer FAIL #1)
+    it('keeps a manually EXPANDED zero-pending group expanded after a groups-array reference change (the inverse defect: onToggleGroup used to write only userCollapsedKeys, never lastKeys, so expanding a 0-pending group was silently reverted by the next re-seed)', () => {
+      // Default nonce/allExpanded — smart default applies: GROUP_A (pending>0) opens, GROUP_B
+      // (0 pending) starts collapsed.
+      render([GROUP_A, GROUP_B]);
+      expect(byTestId('bilateral-review-group-toggle')[1].getAttribute('aria-expanded')).toBe('false');
+
+      // Manually EXPAND Group B (the zero-pending group).
+      (byTestId('bilateral-review-group-toggle')[1] as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(byTestId('bilateral-review-group-toggle')[1].getAttribute('aria-expanded')).toBe('true');
+
+      // Simulate an unrelated re-render producing a NEW `groups` array reference (e.g. a search
+      // keystroke) — the constructor effect re-runs and must not fall back to the stale smart
+      // default (`pendingCount(group) > 0` is still false for Group B).
+      fixture.componentRef.setInput('groups', [
+        { ...GROUP_A, results: [...GROUP_A.results] },
+        { ...GROUP_B, results: [...GROUP_B.results] }
+      ]);
+      fixture.detectChanges();
+      fixture.detectChanges();
+
+      expect(byTestId('bilateral-review-group-toggle')[1].getAttribute('aria-expanded')).toBe('true');
+    });
   });
 
   // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-4, AC-6, AC-7, AC-7b)
@@ -669,14 +730,14 @@ describe('BilateralReviewTableComponent', () => {
     it('renders a truncating inner span with title, never on the td (Disqualifier)', () => {
       const group = projectGroup('P15 - Center Project', [row({ id: 'ce1', project_id: 'p15', project_name: 'P15 - Center Project', lead_center: 'Bioversity (Alliance)' })]);
       render([group]);
-      const cell = byTestId('bilateral-review-row-center')[0];
-      const span = cell.querySelector('span') as HTMLElement;
-
+      const centerCell = byTestId('bilateral-review-row-center')[0];
+      const span = centerCell.querySelector('span') as HTMLElement;
+      expect(span).toBeTruthy();
       expect(span.className).toContain('truncate');
       expect(span.className).toContain('max-w-[150px]');
       expect(span.getAttribute('title')).toBe('Bioversity (Alliance)');
-      expect(span.textContent).toBe('Bioversity (Alliance)');
-      expect(cell.className).not.toContain('truncate');
+      expect(centerCell.className).not.toContain('max-w-');
+      expect(centerCell.className).not.toContain('truncate');
     });
 
     it('project mode (grouped or flat): the column is present', () => {
@@ -706,26 +767,13 @@ describe('BilateralReviewTableComponent', () => {
   // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-4, AC-7, AC-7b,
   // judgment-day L-8) — `columnCount()` must drive EVERY `colspan` site, not just one.
   describe('columnCount() drives every colspan site (BRV-R-4, judgment-day L-8)', () => {
-    it('grouped view, project mode (7 columns): the group header td AND the loading row td both carry colspan=7', () => {
-      render([GROUP_A]);
-      const groupHeaderCell = byTestId('bilateral-review-group-toggle')[0].closest('td') as HTMLTableCellElement;
-      expect(groupHeaderCell.colSpan).toBe(7);
+    it('columnCount is 7 in project mode and 6 in center mode', () => {
+      render([GROUP_A], { groupMode: 'project' });
+      expect(component.columnCount()).toBe(7);
 
-      render([GROUP_A], { loading: true });
-      const loadingCells = root().querySelectorAll('tbody tr td[colspan]');
-      expect(loadingCells.length).toBeGreaterThan(0);
-      loadingCells.forEach(td => expect((td as HTMLTableCellElement).colSpan).toBe(7));
-    });
-
-    it('grouped view, center mode (6 columns): the group header td AND the loading row td both carry colspan=6', () => {
       const centerGroup: BilateralReviewGroup = { key: 'CIP', label: 'CIP', caption: BILATERAL_REVIEW_COPY.table.projectsCaption(1), center: null, results: GROUP_A.results };
       render([centerGroup], { groupMode: 'center' });
-      const groupHeaderCell = byTestId('bilateral-review-group-toggle')[0].closest('td') as HTMLTableCellElement;
-      expect(groupHeaderCell.colSpan).toBe(6);
-
-      render([centerGroup], { groupMode: 'center', loading: true });
-      const loadingCells = root().querySelectorAll('tbody tr td[colspan]');
-      loadingCells.forEach(td => expect((td as HTMLTableCellElement).colSpan).toBe(6));
+      expect(component.columnCount()).toBe(6);
     });
 
     it('flat view loading row: colspan equals the flat header count (7 in project mode, FAIL input guard: was hard-coded 8)', () => {
@@ -773,11 +821,11 @@ describe('BilateralReviewTableComponent', () => {
   describe('Group header accent + single-line label (BRV-R-6, AC-9)', () => {
     it('a group with pending > 0 carries the pending-tone left accent; a zero-pending group carries the neutral border tone', () => {
       render([GROUP_A, GROUP_B]); // GROUP_A has 1 pending, GROUP_B has 0.
-      const headerCells = Array.from(root().querySelectorAll('tbody > tr')).map(tr => tr.querySelector('td[colspan]')).filter(Boolean) as HTMLElement[];
+      const toggles = byTestId('bilateral-review-group-toggle');
 
-      expect(headerCells[0].className).toContain('!border-l-[var(--pr-status-in-progress-fg)]');
-      expect(headerCells[1].className).toContain('!border-l-[var(--pr-border)]');
-      expect(headerCells[1].className).not.toContain('!border-l-[var(--pr-status-in-progress-fg)]');
+      expect(toggles[0].className).toContain('!border-l-[var(--pr-status-in-progress-fg)]');
+      expect(toggles[1].className).toContain('!border-l-[var(--pr-border)]');
+      expect(toggles[1].className).not.toContain('!border-l-[var(--pr-status-in-progress-fg)]');
     });
 
     // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-6, AC-9;
@@ -800,11 +848,93 @@ describe('BilateralReviewTableComponent', () => {
       render([group]);
 
       const nameEl = byTestId('bilateral-review-group-name')[0];
+      const codeEl = byTestId('bilateral-review-project-code')[0];
+      expect(codeEl.textContent?.trim()).toBe('P16');
       expect(nameEl.className).toContain('block');
       expect(nameEl.className).toContain('truncate');
-      expect(nameEl.getAttribute('title')).toBe(longName);
-      expect(nameEl.parentElement?.className).toContain('min-w-0');
-      expect(nameEl.parentElement?.className).toContain('flex-1');
+      expect(nameEl.getAttribute('title')).toBe('A deliberately long bilateral project name that would wrap onto a second line without truncation');
+      expect(nameEl.closest('.flex-1')?.className).toContain('min-w-0');
+    });
+  });
+
+  // ── BRH-T-2 Container Card Architecture, Monospace Code & Progressive Disclosure ──────────────
+  describe('BRH-T-2: Container Card Architecture, Monospace Code & Progressive Disclosure', () => {
+    it('renders project groups as elevated container cards (BRH-R-1)', () => {
+      render([GROUP_A, GROUP_B]);
+      const cards = byTestId('bilateral-review-group-card');
+      expect(cards.length).toBe(2);
+      expect(cards[0].className).toContain('rounded-[12px]');
+      expect(cards[0].className).toContain('bg-[var(--pr-surface-card)]');
+    });
+
+    it('separates project code into an authoritative monospace badge (BRH-R-2, parseProjectIdentifier)', () => {
+      const groupWithCode = projectGroup('T-PJ-003262-An innovative approach to agribusiness', [
+        row({ id: 'c1', project_name: 'T-PJ-003262-An innovative approach to agribusiness', result_code: 'BR-101', status_id: 5 })
+      ]);
+      render([groupWithCode]);
+
+      const codeBadge = byTestId('bilateral-review-project-code')[0];
+      expect(codeBadge).toBeTruthy();
+      expect(codeBadge.textContent?.trim()).toBe('T-PJ-003262');
+      expect(codeBadge.className).toContain('font-mono');
+
+      const titleEl = byTestId('bilateral-review-group-name')[0];
+      expect(titleEl.textContent?.trim()).toBe('An innovative approach to agribusiness');
+    });
+
+    it('parseProjectIdentifier handles spaced codes and labels without code prefix', () => {
+      const p1 = component.parseProjectIdentifier('P1 - Alpha Project');
+      expect(p1.code).toBe('P1');
+      expect(p1.title).toBe('Alpha Project');
+
+      const plain = component.parseProjectIdentifier('Standalone Title Without Code');
+      expect(plain.code).toBeNull();
+      expect(plain.title).toBe('Standalone Title Without Code');
+    });
+
+    it('renders discrete contributing center chips in card header (BRH-R-3)', () => {
+      render([GROUP_A]);
+      const chips = byTestId('bilateral-review-center-chip').map(el => el.textContent?.trim());
+      expect(chips).toContain('CIP');
+      expect(chips).toContain('IITA');
+    });
+
+    it('in-card quick filter toolbar filters rows locally without affecting other groups (BRH-R-6)', () => {
+      render([GROUP_A], { expandAllNonce: 1, allExpanded: true });
+      // GROUP_A has CIP (row a1) and IITA (row a2).
+      const toolbar = byTestId('bilateral-review-incard-toolbar')[0];
+      expect(toolbar).toBeTruthy();
+
+      // Initially both rows are displayed
+      expect(byTestId('bilateral-review-row-code').length).toBe(2);
+
+      // Filter by CIP inside the card
+      component.setInCardCenterFilter(GROUP_A.key, 'CIP');
+      fixture.detectChanges();
+      const rowsAfterCIP = byTestId('bilateral-review-row-code');
+      expect(rowsAfterCIP.length).toBe(1);
+      expect(rowsAfterCIP[0].textContent?.trim()).toBe('BR-001');
+
+      // Reset in-card center filter
+      component.setInCardCenterFilter(GROUP_A.key, null);
+      fixture.detectChanges();
+      expect(byTestId('bilateral-review-row-code').length).toBe(2);
+    });
+
+    it('copy button copies project name to clipboard and shows transient check state (BRH-R-5)', () => {
+      const writeTextSpy = jest.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, {
+        clipboard: { writeText: writeTextSpy }
+      });
+
+      render([GROUP_A]);
+      const event = new MouseEvent('click');
+      jest.spyOn(event, 'stopPropagation');
+
+      component.copyText('Test Copy String', 'test-key', event);
+      expect(event.stopPropagation).toHaveBeenCalled();
+      expect(writeTextSpy).toHaveBeenCalledWith('Test Copy String');
+      expect(component.isCopied('test-key')).toBe(true);
     });
   });
 });

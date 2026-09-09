@@ -1,16 +1,7 @@
-// @akili-spec changes/sp-bilateral-review-tab (BRT-T-4, BRT-T-5, BRT-R-10..12, R-30)
+// @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-2, BRH-R-1..4, R-6); parents changes/sp-bilateral-review-tab (BRT-T-4/T-5), changes/bilateral-review-ux-polish (BRP-T-2/T-3), changes/bilateral-review-viewport-and-table-polish (BRV-T-2)
 import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal, untracked } from '@angular/core';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { HlmButton } from '@spartan/button';
-import {
-  PrGroupTableComponent,
-  PrRowTogglerDirective,
-  PrTableEmptyDirective,
-  PrTableExpandedRowDirective,
-  PrTableGroupHeaderDirective,
-  PrTableHeaderDirective,
-  PrTableLoadingDirective
-} from '../../../../../../shared/components/pr-table';
 import { ResultToReview } from '../result-review-drawer/result-review-drawer.interfaces';
 import { BILATERAL_REVIEW_COPY } from '../../bilateral-review.copy';
 import { BilateralReviewGroupMode } from '../../bilateral-review.query-params';
@@ -48,57 +39,22 @@ export interface BilateralReviewGroup {
   results: ResultToReview[];
 }
 
+/** Parsed project identifier (BRH-T-2, BRH-R-2). */
+export interface ParsedProjectHeader {
+  code: string | null;
+  title: string;
+}
+
 /**
- * `BilateralReviewTableComponent` — grouped (default) and flat renderings of the review list
- * (BRT-R-10, R-11, R-12, R-30; group-by-center BRP-R-11). Grouped view hosts `app-pr-group-table`
- * with `dataKey`/`groupRowsBy = "key"` (BRP-T-2 — generalized off `project_name` so the SAME child
- * table renders either grouping dimension); flat view is a plain `<table>` in this same component
- * sharing the row `ng-template` (`prTableBody` is not used — `design.md` BRT-DD-3).
- *
- * `expandedRowKeys` (fed to the child, computed from the single-source `expandedKeys` Set below)
- * merges two rules: a nonce change (Expand all / Collapse all, `expandAllNonce`) forces every group
- * IN THE CURRENT MODE to `allExpanded`; between nonces, a group's key keeps whatever value it last
- * had (new groups default to `allExpanded`) so a manual `prRowToggler` click — which mutates the
- * child table's own internal state, not this input — is never clobbered by an unrelated re-render
- * (e.g. a filter change producing a new `groups` array reference). A MODE switch (BRP-T-2) is
- * neither of those two things — `setGroup` bumps no nonce — so it re-seeds from that mode's OWN
- * memory (`lastKeysByMode`/`userCollapsedKeysByMode`, namespaced by `groupMode`), leaving the other
- * mode's memory untouched (judgment-day L-4: an earlier draft bumped the nonce on a mode switch,
- * which would have cleared `userCollapsedKeys` and broken the "IITA still collapsed after a Project
- * → Center → Project round trip" requirement, BRP-AC-10).
- *
- * `narrow` (BRP-T-3) selects a THIRD rendering, checked before either of the two above: below
- * 900px the table is not rendered at all (BRP-R-13, R-15) — one-per-result cards in a
- * `ul[role=list]`, grouped by the same `filteredGroups()`/`expandedKeys` this class already owns.
- *
- * That "keep whatever value it last had" rule is not enough on its own: `[prRowToggler]` mutates
- * only the CHILD `PrGroupTableComponent`'s own internal expansion Set, never this component's
- * `lastKeys` bookkeeping. Left alone, the next unrelated re-render (e.g. a search keystroke, which
- * produces a new `groups` reference and re-runs this effect) would re-seed the child from the
- * stale `lastKeys` value and silently re-expand a group the user just collapsed by hand. `(click)`
- * on the group-header toggler also calls `onToggleGroup`, which records the key in
- * `userCollapsedKeys` AND writes the single-source `expandedKeys` directly; a re-seed forces that
- * key to `false` regardless of `lastKeys` — UNLESS the re-seed is itself a nonce-driven Expand all /
- * Collapse all, which always wins and clears the manual-collapse memory for the current mode (the
- * toolbar action re-establishes ground truth for every group on screen).
+ * `BilateralReviewTableComponent` — grouped (container cards) and flat renderings of the review list
+ * (BRH-T-2, BRH-R-1..4).
  */
 @Component({
   selector: 'app-bilateral-review-table',
   standalone: true,
   templateUrl: './bilateral-review-table.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    DatePipe,
-    NgTemplateOutlet,
-    HlmButton,
-    PrGroupTableComponent,
-    PrTableHeaderDirective,
-    PrTableGroupHeaderDirective,
-    PrTableExpandedRowDirective,
-    PrTableEmptyDirective,
-    PrTableLoadingDirective,
-    PrRowTogglerDirective
-  ]
+  imports: [DatePipe, NgTemplateOutlet, HlmButton]
 })
 export class BilateralReviewTableComponent {
   readonly groups = input<BilateralReviewGroup[]>([]);
@@ -147,12 +103,130 @@ export class BilateralReviewTableComponent {
   /** Rows sorted desc by `submission_date` — defensive; the page already sorts (design.md §6.2). */
   readonly sortedFlatRows = computed<ResultToReview[]>(() => [...this.flatRows()].sort((a, b) => this.toTime(b.submission_date) - this.toTime(a.submission_date)));
 
-  private lastNonce: number | null = null;
+  private lastNonce = 0;
   /** `lastKeys`/`userCollapsedKeys`, one Map/Set PER `groupMode` — a mode switch alone (no nonce
    *  bump, BRP-T-2/judgment-day L-4) must re-seed from THAT mode's own memory, never the other
    *  mode's, and never force an expand-all. */
   private readonly lastKeysByMode = new Map<BilateralReviewGroupMode, Map<string, boolean>>();
   private readonly userCollapsedKeysByMode = new Map<BilateralReviewGroupMode, Set<string>>();
+
+  // ── In-Card Quick Filter State (BRH-T-2, BRH-R-6, design.md §3.2) ───────────────────────────
+  readonly inCardCenterFilter = signal<Map<string, string | null>>(new Map());
+  readonly inCardTypeFilter = signal<Map<string, string | null>>(new Map());
+  readonly copiedKey = signal<string | null>(null);
+
+  setInCardCenterFilter(groupKey: string, center: string | null): void {
+    const next = new Map(this.inCardCenterFilter());
+    if (center === null) {
+      next.delete(groupKey);
+    } else {
+      next.set(groupKey, center);
+    }
+    this.inCardCenterFilter.set(next);
+  }
+
+  setInCardTypeFilter(groupKey: string, type: string | null): void {
+    const next = new Map(this.inCardTypeFilter());
+    if (type === null) {
+      next.delete(groupKey);
+    } else {
+      next.set(groupKey, type);
+    }
+    this.inCardTypeFilter.set(next);
+  }
+
+  getInCardCenterFilter(groupKey: string): string | null {
+    return this.inCardCenterFilter().get(groupKey) ?? null;
+  }
+
+  getInCardTypeFilter(groupKey: string): string | null {
+    return this.inCardTypeFilter().get(groupKey) ?? null;
+  }
+
+  distinctCardCenters(group: BilateralReviewGroup): { center: string; count: number }[] {
+    const map = new Map<string, number>();
+    for (const r of group.results ?? []) {
+      const c = r.lead_center?.trim();
+      if (c) map.set(c, (map.get(c) ?? 0) + 1);
+    }
+    return Array.from(map.entries()).map(([center, count]) => ({ center, count }));
+  }
+
+  distinctCardTypes(group: BilateralReviewGroup): { type: string; count: number }[] {
+    const map = new Map<string, number>();
+    for (const r of group.results ?? []) {
+      const t = (r.indicator_category || '').trim();
+      if (t) map.set(t, (map.get(t) ?? 0) + 1);
+    }
+    return Array.from(map.entries()).map(([type, count]) => ({ type, count }));
+  }
+
+  hasMultipleCardFilters(group: BilateralReviewGroup): boolean {
+    return this.distinctCardCenters(group).length > 1 || this.distinctCardTypes(group).length > 1;
+  }
+
+  filteredCardResults(group: BilateralReviewGroup): ResultToReview[] {
+    const centerFilter = this.getInCardCenterFilter(group.key);
+    const typeFilter = this.getInCardTypeFilter(group.key);
+    return (group.results ?? []).filter(r => {
+      if (centerFilter && r.lead_center?.trim() !== centerFilter) return false;
+      if (typeFilter && r.indicator_category?.trim() !== typeFilter) return false;
+      return true;
+    });
+  }
+
+  parseProjectIdentifier(label: string | null | undefined): ParsedProjectHeader {
+    if (!label) return { code: null, title: '' };
+    const trimmed = label.trim();
+
+    // Case 1: "P1 - Alpha Project" or "T-PJ-003262 - Title" (hyphen surrounded by spaces)
+    const spacedMatch = trimmed.match(/^([A-Z0-9_-]+)\s+[-–—:]\s+(.+)$/i);
+    if (spacedMatch) {
+      return { code: spacedMatch[1].trim(), title: spacedMatch[2].trim() };
+    }
+
+    // Case 2: "T-PJ-003262-An innovative approach" (hyphen between alphanumeric code and word title)
+    const unspacedMatch = trimmed.match(/^([A-Z0-9]+(?:-[A-Z0-9]+)*)-(?=[A-Z][a-z])(.+)$/);
+    if (unspacedMatch) {
+      return { code: unspacedMatch[1].trim(), title: unspacedMatch[2].trim() };
+    }
+
+    // Case 3: Code ending in digits followed by hyphen and title: e.g. "PJ001-Title"
+    const digitHyphenMatch = trimmed.match(/^([A-Z0-9-]+?\d+)-(.*)$/i);
+    if (digitHyphenMatch) {
+      return { code: digitHyphenMatch[1].trim(), title: digitHyphenMatch[2].trim() };
+    }
+
+    return { code: null, title: trimmed };
+  }
+
+  groupCenters(group: BilateralReviewGroup): string[] {
+    if (group.center) {
+      return group.center.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    const centers = new Set<string>();
+    for (const r of group.results ?? []) {
+      if (r.lead_center) centers.add(r.lead_center.trim());
+    }
+    return [...centers];
+  }
+
+  copyText(text: string, key: string, event: Event): void {
+    event.stopPropagation();
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text);
+      this.copiedKey.set(key);
+      setTimeout(() => {
+        if (this.copiedKey() === key) {
+          this.copiedKey.set(null);
+        }
+      }, 2000);
+    }
+  }
+
+  isCopied(key: string): boolean {
+    return this.copiedKey() === key;
+  }
 
   private lastKeysFor(mode: BilateralReviewGroupMode): Map<string, boolean> {
     let map = this.lastKeysByMode.get(mode);
@@ -176,14 +250,10 @@ export class BilateralReviewTableComponent {
     return `${mode}::${key}`;
   }
 
-  /** SINGLE source of expansion truth (design.md §6.1) — namespaced `${mode}::${group.key}` so the
-   *  grouped `app-pr-group-table` branch (which seeds `[expandedRowKeys]` from it, and whose
-   *  `onToggleGroup` writes it) and the narrow cards branch (BRP-T-3, which will read/toggle it
-   *  directly) share one Set without a project ever colliding with a same-named center's key. */
+  /** SINGLE source of expansion truth (design.md §6.1) — namespaced `${mode}::${group.key}` */
   readonly expandedKeys = signal<Set<string>>(new Set());
 
-  /** `[expandedRowKeys]` for the grouped table, scoped to the CURRENT mode's plain (non-namespaced)
-   *  keys — `dataKey`/`groupRowsBy="key"` compare against `group.key` directly. */
+  /** `[expandedRowKeys]` for the grouped view, scoped to the CURRENT mode's plain keys. */
   readonly expandedRowKeys = computed<Record<string, boolean>>(() => {
     const mode = this.groupMode();
     const expanded = this.expandedKeys();
@@ -210,16 +280,16 @@ export class BilateralReviewTableComponent {
       const nextForMode = new Map<string, boolean>();
       // `untracked`: reading `expandedKeys()` here only to seed the next value, NOT to depend on
       // it — this effect also WRITES `expandedKeys` below, and a tracked self-read would make every
-      // write re-trigger the effect (a new `Set` is never reference-equal to the last one), looping
-      // forever. `onToggleGroup` below is a plain method (no reactive context), so it can read
-      // `expandedKeys()` directly without this concern.
+      // write re-trigger the effect, looping forever.
       const nextExpanded = new Set(untracked(this.expandedKeys));
 
       for (const group of groups) {
         const key = group.key;
         const previous = lastKeys.get(key);
         const collapsedByUser = userCollapsed.has(key);
-        const willExpand = forceAll ? want : collapsedByUser ? false : (previous ?? want);
+        // BRH-R-4: On cold load (previous === undefined), expand if pendingCount > 0, collapse if 0!
+        const smartDefault = this.pendingCount(group) > 0;
+        const willExpand = forceAll ? want : collapsedByUser ? false : (previous ?? smartDefault);
         nextForMode.set(key, willExpand);
         const ns = this.nsKey(mode, key);
         if (willExpand) nextExpanded.add(ns);
@@ -231,21 +301,30 @@ export class BilateralReviewTableComponent {
   }
 
   /** Wraps the group-header toggler click (BRT-T-4 rework — Leader advisory fix): `wasExpanded`
-   *  is the pre-click state from the `prTableGroupHeader` template context, so this always
-   *  records the state the user is CHOOSING, regardless of DOM click-handler ordering against
-   *  `[prRowToggler]` on the same element. Writes BOTH the current mode's collapse memory AND the
-   *  single-source `expandedKeys` directly (design.md §6.1 — the future cards branch has no
-   *  `[prRowToggler]` layer to fall back on). */
+   *  is the pre-click state read directly off the card/row the user just clicked, so this always
+   *  records the state the user is CHOOSING regardless of click-handler ordering. Writes the
+   *  current mode's collapse memory (`userCollapsedKeys`), the single-source `expandedKeys`
+   *  directly (design.md §6.1 — neither branch has any other layer to fall back on), AND —
+   *  Reviewer FAIL #1 (BRH-T-2 attempt 2) — `lastKeysFor(mode)`, so the CONSTRUCTOR EFFECT's own
+   *  `previous ?? smartDefault` re-seed (which fires on every new `groups` reference: a search
+   *  keystroke, a filter change, a mode switch) sees the user's chosen state as `previous` and
+   *  never falls back to `smartDefault`. Before this write, `userCollapsedKeys` protected the
+   *  COLLAPSE direction only — expanding a zero-pending group left `lastKeys` holding the stale
+   *  `false` smart default, so the very next re-render's `previous ?? smartDefault` recomputed
+   *  `false` and silently re-collapsed a card the user had just opened (BRH-R-4 "manual
+   *  expand/collapse actions SHALL be preserved across filter adjustments and mode switches"). */
   onToggleGroup(group: BilateralReviewGroup, wasExpanded: boolean): void {
     const mode = this.groupMode();
     const key = group.key;
+    const willExpand = !wasExpanded;
     if (wasExpanded) this.userCollapsedKeysFor(mode).add(key);
     else this.userCollapsedKeysFor(mode).delete(key);
+    this.lastKeysFor(mode).set(key, willExpand);
 
     const next = new Set(this.expandedKeys());
     const ns = this.nsKey(mode, key);
-    if (wasExpanded) next.delete(ns);
-    else next.add(ns);
+    if (willExpand) next.add(ns);
+    else next.delete(ns);
     this.expandedKeys.set(next);
   }
 

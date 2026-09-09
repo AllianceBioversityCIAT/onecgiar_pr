@@ -26,6 +26,7 @@ import { BilateralResultsService, REVIEW_RESULT_ID_QUERY_PARAM, REVIEW_RESULT_QU
 import { BilateralReviewCountService } from './services/bilateral-review-count.service';
 import { BilateralReviewAccessService } from './services/bilateral-review-access.service';
 import { ResultReviewDrawerComponent } from './components/result-review-drawer/result-review-drawer.component';
+import { GroupedResult, ResultToReview } from './components/result-review-drawer/result-review-drawer.interfaces';
 import { BilateralReviewKpis } from './components/bilateral-review-kpis/bilateral-review-kpis.component';
 import { BilateralReviewGroup, BilateralReviewTableComponent } from './components/bilateral-review-table/bilateral-review-table.component';
 import {

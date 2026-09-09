@@ -3,14 +3,17 @@
 <!-- @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-3..R-8, design.md §6.2) -->
 
 <!--
-  Shared header/row chrome — Reviewer fix #3 (rework attempt 2): `PrGroupTableComponent`'s own
-  `pr-table.component.scss` (`:host ::ng-deep .pr-table thead th / tbody td`) pierces into these
-  projected templates when they render INSIDE `app-pr-group-table` (grouped view), painting a dark
-  navy-chrome header the flat `<table>` never sees (it isn't a descendant of that host, so the
-  class is inert there — design.md §6.3 "chrome gradient not used on this page" says the ambient
-  chrome is itself the wrong look for this table, not the flat table's plain text). Every `!`
-  utility below exists to out-specify that ambient CSS so both branches render identically
-  regardless of where the template is projected — do not remove them thinking they're redundant.
+  Shared header/row chrome — historical note (Reviewer fix #3, rework attempt 2): this `!`-heavy
+  utility set was originally load-bearing to out-specify `PrGroupTableComponent`'s own
+  `pr-table.component.scss` (`:host ::ng-deep .pr-table thead th / tbody td`), which pierced these
+  projected templates when they rendered INSIDE `app-pr-group-table` (grouped view), painting a
+  dark navy-chrome header the flat `<table>` never saw. BRH-T-2 replaced `app-pr-group-table`
+  entirely with the `<section>` container-card architecture below (design.md `BRH-DD-1`) — both the
+  grouped card's nested table and the flat table now render this SAME shared template with no
+  `PrGroupTableComponent` ancestor anywhere, so the ambient bleed this comment describes can no
+  longer occur. The `!` utilities are kept anyway (defensive, harmless, and still the reason both
+  branches render byte-identical chrome) — don't reintroduce a `PrGroupTableComponent` wrapper on
+  the strength of this comment; it's gone for good.
 -->
 
 <!-- Shared row template — grouped (prTableExpandedRow) and flat (<table>) both render this.
@@ -134,8 +137,8 @@
      "Cards") — below 900px (page's `isNarrow`) neither table branch below renders; one card per
      result instead. No `<table>`, no `overflow-x`, no `overflow-y` in this branch (R-15 single-
      scroller gate). Grouped cards read/toggle the SAME `expandedKeys` single source the grouped
-     table uses (design.md §6.1) — there is no `app-pr-group-table` here, so the group header
-     button below calls `onToggleGroup` directly. -->
+     table uses (design.md §6.1) — since BRH-T-2 there is no `app-pr-group-table` ANYWHERE in this
+     component (narrow or wide), so the group header button below calls `onToggleGroup` directly. -->
 <ng-template #cardTpl let-row>
   <li
     class="flex flex-col gap-[6px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px]"
@@ -200,53 +203,97 @@
         }
       </ul>
     } @else if (view() === 'grouped') {
-      <div class="flex flex-col gap-[8px]">
+      <div class="flex flex-col gap-[10px]">
         @for (group of filteredGroups(); track group.key) {
-          <div class="flex flex-col gap-[8px]">
-            <!-- BRV-R-6/AC-9: same 3px left accent + single-line label as the grouped-table
-                 header below (cards' group bars carry the same accent, design.md §6.2). Left
-                 padding compensates the 3px border so the label stays flush with the rows. -->
+          @let isOpen = !!expandedRowKeys()[group.key];
+          <section
+            class="rounded-[12px] border border-[var(--pr-border)] !border-l-[3px] bg-[var(--pr-surface-card)] shadow-xs overflow-hidden"
+            [class]="groupAccentClass(group)"
+            data-testid="bilateral-review-group-card">
             <button
               type="button"
-              [attr.aria-expanded]="!!expandedRowKeys()[group.key]"
+              [attr.aria-expanded]="isOpen"
               [attr.aria-label]="'Toggle ' + group.label"
-              (click)="onToggleGroup(group, !!expandedRowKeys()[group.key])"
-              class="flex h-[36px] w-full cursor-pointer items-center gap-[8px] rounded-[8px] !border-l-[3px] bg-[var(--pr-surface-app)] pl-[7px] pr-[10px] text-left focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+              (click)="onToggleGroup(group, isOpen)"
+              class="flex min-h-[44px] w-full cursor-pointer flex-col justify-center gap-[4px] !border-l-[3px] bg-[var(--pr-surface-card)] px-[12px] py-[8px] text-left focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
               [class]="groupAccentClass(group)"
+              [class.border-b]="isOpen"
+              [class.border-[var(--pr-border-divider)]]="isOpen"
               data-testid="bilateral-review-group-toggle">
-              <span
-                class="material-icons-round text-[18px] text-[var(--pr-text-secondary)] transition-transform duration-150 motion-reduce:transition-none"
-                [class.-rotate-90]="!expandedRowKeys()[group.key]"
-                aria-hidden="true"
-                >expand_more</span
-              >
-              <div class="min-w-0 flex-1">
-                <span class="block truncate font-bold text-[13px] text-[var(--pr-text-heading)]" data-testid="bilateral-review-group-name" [title]="group.label">{{
-                  group.label
-                }}</span>
-              </div>
-              @if (group.caption || group.center) {
-                <span class="shrink-0 truncate text-[12px] text-[var(--pr-text-secondary)]">{{ group.caption ?? group.center }}</span>
-              }
-              <span class="ml-auto flex shrink-0 items-center gap-[8px]">
-                <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="bilateral-review-group-summary">{{ resultsLabel(group) }}</span>
-                @if (pendingCount(group) > 0) {
-                  <span class="rounded-full border border-transparent px-[8px] py-[1px] text-[11px] font-semibold" [class]="groupPendingBadgeClass()" data-testid="bilateral-review-group-pending">
-                    {{ pendingLabel(group) }}
+              <span class="flex w-full items-center gap-[8px]">
+                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white border border-slate-200/80 text-indigo-700 shadow-2xs">
+                  <span
+                    class="material-icons-round text-[16px] transition-transform duration-200"
+                    [class.rotate-180]="isOpen"
+                    aria-hidden="true">
+                    expand_more
                   </span>
-                } @else {
-                  <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="bilateral-review-group-pending">{{ pendingLabel(group) }}</span>
-                }
+                </span>
+                <span class="min-w-0 flex-1">
+                  @if (groupMode() === 'project') {
+                    @let parsed = parseProjectIdentifier(group.label);
+                    <span class="flex items-center gap-[6px] min-w-0">
+                      @if (parsed.code) {
+                        <span class="font-mono text-[10.5px] font-bold px-1.5 py-0.5 rounded bg-indigo-100/80 text-indigo-800 border border-indigo-200/70 shrink-0" data-testid="bilateral-review-project-code">
+                          {{ parsed.code }}
+                        </span>
+                      }
+                      <span class="block truncate font-bold text-[12.5px] text-[var(--pr-text-heading)]" data-testid="bilateral-review-group-name" [title]="parsed.title">
+                        {{ parsed.title }}
+                      </span>
+                    </span>
+                  } @else {
+                    <span class="block truncate font-bold text-[12.5px] text-[var(--pr-text-heading)]" data-testid="bilateral-review-group-name" [title]="group.label">
+                      {{ group.label }}
+                    </span>
+                  }
+                </span>
+                <span class="ml-auto flex shrink-0 items-center gap-[6px]">
+                  <span class="text-[11.5px] text-[var(--pr-text-secondary)]" data-testid="bilateral-review-group-summary">{{ resultsLabel(group) }}</span>
+                  @if (pendingCount(group) > 0) {
+                    <span class="rounded-full border border-transparent px-[6px] py-[1px] text-[10.5px] font-semibold" [class]="groupPendingBadgeClass()" data-testid="bilateral-review-group-pending">
+                      {{ pendingLabel(group) }}
+                    </span>
+                  } @else {
+                    <span class="text-[11.5px] text-[var(--pr-text-secondary)]" data-testid="bilateral-review-group-pending">{{ pendingLabel(group) }}</span>
+                  }
+                </span>
               </span>
+              <!-- Reviewer FAIL #2 (BRH-T-2 attempt 2): the narrow card header used to show NO
+                   contributing-center information at all (chips lived only in the ≥900px branch).
+                   BRH-R-3 requires the chips to TRUNCATE on narrow viewports, not disappear — so a
+                   second indented row carries a capped set of center chips (project mode) or the
+                   "N projects" caption (center mode), aligned under the title past the chevron. -->
+              @if (groupMode() === 'project' && groupCenters(group).length > 0) {
+                <span class="flex flex-wrap items-center gap-[4px] pl-[32px]">
+                  @for (c of groupCenters(group).slice(0, 3); track c) {
+                    <span
+                      class="inline-flex shrink-0 items-center rounded-[4px] bg-slate-100 border border-slate-200 px-[5px] py-[0.5px] text-[10px] font-medium text-slate-700 max-w-[70px] truncate"
+                      [title]="c"
+                      data-testid="bilateral-review-center-chip">
+                      {{ c }}
+                    </span>
+                  }
+                  @if (groupCenters(group).length > 3) {
+                    <span
+                      class="inline-flex shrink-0 items-center rounded-[4px] bg-slate-100 border border-slate-200 px-[5px] py-[0.5px] text-[10px] font-medium text-slate-500"
+                      [title]="groupCenters(group).slice(3).join(', ')">
+                      +{{ groupCenters(group).length - 3 }}
+                    </span>
+                  }
+                </span>
+              } @else if (groupMode() === 'center' && group.caption) {
+                <span class="block pl-[32px] text-[11px] text-[var(--pr-text-secondary)] font-medium">{{ group.caption }}</span>
+              }
             </button>
-            @if (expandedRowKeys()[group.key]) {
-              <ul role="list" class="flex flex-col gap-[8px]">
-                @for (row of group.results; track row.id) {
+            @if (isOpen) {
+              <ul role="list" class="flex flex-col gap-[8px] p-[10px] bg-[var(--pr-surface-app)]">
+                @for (row of filteredCardResults(group); track row.id) {
                   <ng-container *ngTemplateOutlet="cardTpl; context: { $implicit: row }"></ng-container>
                 }
               </ul>
             }
-          </div>
+          </section>
         }
       </div>
     } @else {
@@ -258,89 +305,196 @@
     }
   </div>
 } @else if (view() === 'grouped') {
-  <div data-testid="bilateral-review-table">
-    <app-pr-group-table
-      styleClass="bilateral-review-table"
-      [value]="filteredGroups()"
-      dataKey="key"
-      groupRowsBy="key"
-      [expandedRowKeys]="expandedRowKeys()"
-      [loading]="loading()">
-      <ng-template prTableHeader>
-        <ng-container *ngTemplateOutlet="headerRowTpl"></ng-container>
-      </ng-template>
-
-      <!-- Group header restyle (BRP-R-11, R-12; BRV-R-6/AC-9): chevron, 3px left accent (pending
-           tone when the group has pending rows, neutral border otherwise — left padding
-           compensates), single-line truncated `label` (never wraps — the live page measured 61px
-           headers on long project names before this fix), muted `caption`/`center` (mutually
-           exclusive per mode) and center chip both `shrink-0`, right-aligned "N results" + the
-           pending figure (token-based badge when M > 0). -->
-      <ng-template prTableGroupHeader let-item let-expanded="expanded">
-        <tr>
-          <!-- BRV-R-6/AC-9: `!p-0` (not plain `p-0`) — the ambient `:host ::ng-deep .pr-table
-               tbody td { padding: 10px 12px }` (`pr-table.component.scss`) out-specifies a
-               non-`!` Tailwind utility, which is exactly how the live page measured 61px headers
-               (10px top+bottom padding stacked on top of the button's own 40px) before this fix.
-               `!border-b-0`: that same ambient rule also adds its OWN `border-bottom: 1px` — left
-               un-defeated, 40px (button) + 1px (border) measures 41, one over the ≤40 cap. -->
-          <td
-            [attr.colspan]="columnCount()"
-            class="!border-l-[3px] !border-b-0 bg-[var(--pr-surface-app)] !p-0"
-            [class]="groupAccentClass(item)">
-            <button
-              type="button"
-              [prRowToggler]="item"
-              (click)="onToggleGroup(item, expanded)"
-              class="flex h-[40px] w-full cursor-pointer items-center gap-[10px] border-0 bg-transparent pl-[7px] pr-[10px] text-left focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
-              [attr.aria-expanded]="expanded"
-              [attr.aria-label]="'Toggle ' + item.label"
-              data-testid="bilateral-review-group-toggle">
-              <span
-                class="material-icons-round text-[18px] text-[var(--pr-text-secondary)] transition-transform duration-150 motion-reduce:transition-none"
-                [class.-rotate-90]="!expanded"
-                aria-hidden="true"
-                >expand_more</span
-              >
-              <div class="min-w-0 flex-1">
-                <span class="block truncate font-bold text-[13px] text-[var(--pr-text-heading)]" data-testid="bilateral-review-group-name" [title]="item.label">{{ item.label }}</span>
-              </div>
-              @if (item.caption || item.center) {
-                <span class="shrink-0 truncate text-[12px] text-[var(--pr-text-secondary)]">{{ item.caption ?? item.center }}</span>
-              }
-              <span class="ml-auto flex shrink-0 items-center gap-[8px]">
-                <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="bilateral-review-group-summary">{{ resultsLabel(item) }}</span>
-                @if (pendingCount(item) > 0) {
-                  <span class="rounded-full border border-transparent px-[8px] py-[1px] text-[11px] font-semibold" [class]="groupPendingBadgeClass()" data-testid="bilateral-review-group-pending">
-                    {{ pendingLabel(item) }}
-                  </span>
-                } @else {
-                  <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="bilateral-review-group-pending">{{ pendingLabel(item) }}</span>
-                }
-              </span>
-            </button>
-          </td>
-        </tr>
-      </ng-template>
-
-      <ng-template prTableExpandedRow let-item>
-        @for (row of item.results; track row.id) {
-          <ng-container *ngTemplateOutlet="rowTpl; context: { $implicit: row }"></ng-container>
-        }
-      </ng-template>
-
-      <ng-template prTableEmpty></ng-template>
-
-      <ng-template prTableLoading>
+  <div data-testid="bilateral-review-table" class="flex flex-col gap-[12px]">
+    @if (loading()) {
+      <div class="flex flex-col gap-[12px]">
         @for (row of [1, 2, 3]; track row) {
-          <tr>
-            <td [attr.colspan]="columnCount()" class="px-[10px] py-[10px]">
-              <span class="block h-[14px] w-full animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
-            </td>
-          </tr>
+          <div class="h-[52px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] animate-pulse">
+            <span class="block h-[16px] w-[50%] rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+          </div>
         }
-      </ng-template>
-    </app-pr-group-table>
+      </div>
+    } @else {
+      @for (group of filteredGroups(); track group.key) {
+        @let isOpen = !!expandedRowKeys()[group.key];
+        <section
+          class="rounded-[12px] border border-[var(--pr-border)] !border-l-[3px] bg-[var(--pr-surface-card)] shadow-xs transition-shadow hover:shadow-sm overflow-hidden"
+          [class]="groupAccentClass(group)"
+          data-testid="bilateral-review-group-card">
+          
+          <!-- Structured 52px Header (BRH-T-2, BRH-R-2) -->
+          <button
+            type="button"
+            [attr.aria-expanded]="isOpen"
+            [attr.aria-label]="'Toggle ' + group.label"
+            (click)="onToggleGroup(group, isOpen)"
+            data-testid="bilateral-review-group-toggle"
+            class="flex h-[52px] min-h-[52px] w-full items-center gap-[10px] !border-l-[3px] bg-[var(--pr-surface-card)] px-[16px] sm:px-[20px] text-left cursor-pointer hover:bg-[var(--pr-surface-subtle)] transition-colors rounded-t-[12px] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+            [class]="groupAccentClass(group)"
+            [class.rounded-b-[12px]]="!isOpen"
+            [class.border-b]="isOpen"
+            [class.border-[var(--pr-border-divider)]]="isOpen">
+            
+            <!-- Chevron Box -->
+            <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white border border-slate-200/80 text-indigo-700 shadow-2xs">
+              <span
+                class="material-icons-round text-[16px] transition-transform duration-200"
+                [class.rotate-180]="isOpen"
+                aria-hidden="true">
+                expand_more
+              </span>
+            </div>
+
+            <!-- Group Identity: Code Chip (if project mode and code parsed), Title, Copy Button, Center Chips -->
+            <div class="flex items-center gap-[8px] min-w-0 flex-1 flex-wrap sm:flex-nowrap">
+              @if (groupMode() === 'project') {
+                @let parsed = parseProjectIdentifier(group.label);
+                @if (parsed.code) {
+                  <span
+                    class="font-mono text-[11.5px] font-bold px-2.5 py-0.5 rounded-md bg-indigo-100/80 text-indigo-800 border border-indigo-200/70 shrink-0"
+                    data-testid="bilateral-review-project-code">
+                    {{ parsed.code }}
+                  </span>
+                }
+                <span
+                  class="block min-w-0 truncate text-[13.5px] font-bold text-[var(--pr-text-heading)] cursor-text select-text"
+                  data-testid="bilateral-review-group-name"
+                  [title]="parsed.title"
+                  (click)="$event.stopPropagation()">
+                  {{ parsed.title }}
+                </span>
+
+                <!-- Quick Copy project title/code -->
+                <button
+                  type="button"
+                  (click)="copyText(parsed.code ? parsed.code + ' ' + parsed.title : parsed.title, 'proj-' + group.key, $event)"
+                  class="flex h-5 w-5 shrink-0 items-center justify-center rounded border-0 bg-transparent text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                  [attr.aria-label]="'Copy ' + parsed.title"
+                  [title]="isCopied('proj-' + group.key) ? 'Copied!' : 'Copy project name'">
+                  <span class="material-icons-round text-[14px]" [class.text-emerald-600]="isCopied('proj-' + group.key)">
+                    {{ isCopied('proj-' + group.key) ? 'check' : 'content_copy' }}
+                  </span>
+                </button>
+
+                <!-- Contributing Center Chips — `narrow()` fully replaces this branch below 900px
+                     (Reviewer FAIL #2 remediation), so `sm:` (640px) can never actually hide this
+                     when the wide branch renders (it only renders at ≥900px, already above the
+                     640px breakpoint) — always `flex`, no dead `hidden` gate. -->
+                <div class="flex items-center gap-[4px] shrink-0">
+                  @for (c of groupCenters(group); track c) {
+                    <span
+                      class="inline-flex shrink-0 items-center rounded-[5px] bg-slate-100 border border-slate-200 px-[6px] py-[1.5px] text-[11px] font-medium text-slate-700"
+                      data-testid="bilateral-review-center-chip">
+                      {{ c }}
+                    </span>
+                  }
+                </div>
+              } @else {
+                <!-- Center mode -->
+                <span
+                  class="block min-w-0 truncate text-[13.5px] font-bold text-[var(--pr-text-heading)] cursor-text select-text"
+                  data-testid="bilateral-review-group-name"
+                  [title]="group.label">
+                  {{ group.label }}
+                </span>
+                @if (group.caption) {
+                  <span class="shrink-0 text-[12px] text-[var(--pr-text-secondary)] font-medium">({{ group.caption }})</span>
+                }
+              }
+            </div>
+
+            <!-- Right zone: Results count & Pending review badge -->
+            <div class="ml-auto flex shrink-0 items-center gap-[8px] sm:gap-[10px]">
+              <span class="text-[12px] font-medium text-[var(--pr-text-secondary)] tabular-nums" data-testid="bilateral-review-group-summary">
+                {{ resultsLabel(group) }}
+              </span>
+              @if (pendingCount(group) > 0) {
+                <span
+                  class="rounded-full px-[10px] py-[2px] text-[11px] font-semibold tabular-nums border border-transparent"
+                  [class]="groupPendingBadgeClass()"
+                  data-testid="bilateral-review-group-pending">
+                  {{ pendingLabel(group) }}
+                </span>
+              } @else {
+                <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="bilateral-review-group-pending">
+                  {{ pendingLabel(group) }}
+                </span>
+              }
+            </div>
+          </button>
+
+          @if (isOpen) {
+            <!-- In-Card Quick Filter Toolbar (BRH-R-6) -->
+            @if (hasMultipleCardFilters(group)) {
+              <div
+                class="flex flex-wrap items-center gap-[6px] sm:gap-[10px] min-h-[32px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] px-[16px] sm:px-[20px] py-[4px] text-[11.5px]"
+                data-testid="bilateral-review-incard-toolbar">
+                @if (distinctCardCenters(group).length > 1) {
+                  <div class="flex items-center gap-[4px] flex-wrap">
+                    <span class="font-medium text-[var(--pr-text-muted)] text-[11px] uppercase tracking-wider">Center:</span>
+                    <button
+                      type="button"
+                      (click)="setInCardCenterFilter(group.key, null)"
+                      class="inline-flex h-[22px] cursor-pointer items-center rounded-[4px] px-[6px] text-[11px] font-medium transition-colors"
+                      [class]="getInCardCenterFilter(group.key) === null ? 'bg-white shadow-2xs font-semibold text-[var(--pr-color-primary-700)]' : 'text-[var(--pr-text-secondary)] hover:bg-white/50'"
+                      data-testid="incard-filter-center-all">
+                      All ({{ group.results.length }})
+                    </button>
+                    @for (item of distinctCardCenters(group); track item.center) {
+                      <button
+                        type="button"
+                        (click)="setInCardCenterFilter(group.key, item.center)"
+                        class="inline-flex h-[22px] cursor-pointer items-center rounded-[4px] px-[6px] text-[11px] font-medium transition-colors"
+                        [class]="getInCardCenterFilter(group.key) === item.center ? 'bg-white shadow-2xs font-semibold text-[var(--pr-color-primary-700)]' : 'text-[var(--pr-text-secondary)] hover:bg-white/50'"
+                        data-testid="incard-filter-center-item">
+                        {{ item.center }} ({{ item.count }})
+                      </button>
+                    }
+                  </div>
+                }
+                @if (distinctCardTypes(group).length > 1) {
+                  <div class="flex items-center gap-[4px] flex-wrap">
+                    <span class="font-medium text-[var(--pr-text-muted)] text-[11px] uppercase tracking-wider">Type:</span>
+                    <button
+                      type="button"
+                      (click)="setInCardTypeFilter(group.key, null)"
+                      class="inline-flex h-[22px] cursor-pointer items-center rounded-[4px] px-[6px] text-[11px] font-medium transition-colors"
+                      [class]="getInCardTypeFilter(group.key) === null ? 'bg-white shadow-2xs font-semibold text-[var(--pr-color-primary-700)]' : 'text-[var(--pr-text-secondary)] hover:bg-white/50'"
+                      data-testid="incard-filter-type-all">
+                      All Types
+                    </button>
+                    @for (item of distinctCardTypes(group); track item.type) {
+                      <button
+                        type="button"
+                        (click)="setInCardTypeFilter(group.key, item.type)"
+                        class="inline-flex h-[22px] cursor-pointer items-center rounded-[4px] px-[6px] text-[11px] font-medium transition-colors"
+                        [class]="getInCardTypeFilter(group.key) === item.type ? 'bg-white shadow-2xs font-semibold text-[var(--pr-color-primary-700)]' : 'text-[var(--pr-text-secondary)] hover:bg-white/50'"
+                        data-testid="incard-filter-type-item">
+                        {{ item.type }} ({{ item.count }})
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Nested Results Table -->
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead>
+                  <ng-container *ngTemplateOutlet="headerRowTpl"></ng-container>
+                </thead>
+                <tbody>
+                  @for (row of filteredCardResults(group); track row.id) {
+                    <ng-container *ngTemplateOutlet="rowTpl; context: { $implicit: row }"></ng-container>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      }
+    }
   </div>
 } @else {
   <div class="overflow-x-auto" data-testid="bilateral-review-table">

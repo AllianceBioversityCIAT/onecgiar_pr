@@ -70,7 +70,7 @@
 
 ### `BRH-T-2` — Container Card Architecture, Monospace Code Badge & Smart Progressive Disclosure
 
-- [~] `BRH-T-2` — Container Card Architecture, Monospace Code Badge & Smart Progressive Disclosure
+- [x] `BRH-T-2` — Container Card Architecture, Monospace Code Badge & Smart Progressive Disclosure
 
 - **Type:** client
 - **Estimate:** M

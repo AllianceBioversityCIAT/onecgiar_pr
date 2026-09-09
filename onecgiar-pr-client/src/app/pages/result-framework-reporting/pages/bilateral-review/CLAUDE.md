@@ -1,6 +1,6 @@
 # bilateral-review
 
-**Verified:** 2026-09-08 · branch qa-development-2026 · spec `changes/bilateral-review-viewport-and-table-polish` (BRV-T-1..T-3 — viewport lock, pinned toolbar + filter band, Alignment column, status token pairs, group accent, action emphasis); parents `changes/bilateral-review-ux-polish` (BRP-T-1..T-4 — filter band + Clear filters + stat bar, table density/placeholders/group-by-center, narrow cards, CT gates), `changes/bilateral-review-center-strip-and-phase` (BRC-T-1..T-3 — phase-scoped list + badge, Cycle selector, center chip strip) and `changes/sp-bilateral-review-tab` (BRT-T-1..T-8 — relocated from the legacy `bilateral-results` page into one toolbar/table shell).
+**Verified:** 2026-09-09 · branch qa-development-2026 · spec `changes/bilateral-review-hierarchy-ux` (BRH-T-2 — container card architecture replacing `app-pr-group-table`, monospace project-code badge, contributing-center chips, smart progressive disclosure, in-card quick filter); parents `changes/bilateral-review-viewport-and-table-polish` (BRV-T-1..T-3 — viewport lock, pinned toolbar + filter band, Alignment column, status token pairs, group accent, action emphasis), `changes/bilateral-review-ux-polish` (BRP-T-1..T-4 — filter band + Clear filters + stat bar, table density/placeholders/group-by-center, narrow cards, CT gates), `changes/bilateral-review-center-strip-and-phase` (BRC-T-1..T-3 — phase-scoped list + badge, Cycle selector, center chip strip) and `changes/sp-bilateral-review-tab` (BRT-T-1..T-8 — relocated from the legacy `bilateral-results` page into one toolbar/table shell).
 
 **What this owns:** the **Bilateral review** tab of the programme shell (`entity-details/:entityId/bilateral-review`) — one searchable, filterable, groupable list of W3/Bilateral results reported to this program, with a review drawer for approve/reject decisions.
 
@@ -59,33 +59,46 @@
   filtered-empty state's clear are separate controls; exactly one "Clear filters" node in the
   toolbar.
 - **Stat bar** (`BilateralReviewKpisComponent`, BRP-T-1): one line ≥ 900px, host `data-testid="bilateral-review-statbar"` ≤ 44px there, NOT pinned (see above). Six testids: `kpi-projects`, `kpi-centers`, `kpi-pending`, `kpi-pending-toggle`, `kpi-decided`, `kpi-decided-sublabel`.
-- **Table** (`BilateralReviewTableComponent`, BRP-T-2/T-3, **BRV-T-2**): 7 columns in flat view and
-  in project-grouped view; **6** only when `groupMode() === 'center' && view() === 'grouped'`
-  (`showCenterColumn()`; flat view keeps the center column even with `?group=center`, AC-7b).
-  `columnCount()` (7/6) drives the **three** real `colspan` sites — group header `td`, grouped
-  loading row, flat loading row (the cards group bar is a flex bar, no `colspan`). TOC + Indicator
-  merged into one **Alignment** column (`data-testid="bilateral-review-row-alignment"`): each line
-  renders only when its own value is not a placeholder; both placeholders collapse to one
-  `aria-hidden` "—" + one `sr-only` text naming both originals. Lead center is one line
+- **Table** (`BilateralReviewTableComponent`, BRP-T-2/T-3, BRV-T-2, **BRH-T-2**): grouped rendering
+  is a sequence of elevated `<section class="rounded-[12px] border ... bg-[var(--pr-surface-card)]
+  shadow-xs overflow-hidden">` container cards — `app-pr-group-table`/`PrGroupTableComponent` is
+  **fully gone** (BRH-DD-1), in BOTH the ≥900px branch (a nested `<table>` per card) and the
+  `narrow()` cards branch (own header bar, no nested table). The 52px header (wide) / 44px+ header
+  (narrow) separates the parsed project code (`parseProjectIdentifier`, `BRH-DD-3` —
+  `^[A-Z0-9-]+(?=-)` prefix regex) into a monospace badge from the title, renders contributing
+  centers as discrete chip badges (`data-testid="bilateral-review-center-chip"`, BRH-R-3 — capped
+  at 3 + a `+N` overflow chip on the narrow header, full list on wide), and a rotating chevron in a
+  white button box. 7 columns in flat view and in project-grouped view; **6** only when
+  `groupMode() === 'center' && view() === 'grouped'` (`showCenterColumn()`; flat view keeps the
+  center column even with `?group=center`, AC-7b). `columnCount()` (7/6) drives the ONE remaining
+  `colspan` site, the flat-view loading row; the grouped branch has none since BRH-T-2 (card `<div>`
+  skeleton, `headerRowTpl` `<thead>`, no group-header `td`). TOC + Indicator merged
+  into one **Alignment** column (`data-testid="bilateral-review-row-alignment"`): each line renders
+  only when its own value is not a placeholder; both placeholders collapse to one `aria-hidden` "—"
+  + one `sr-only` text naming both originals. Lead center is one line
   (`data-testid="bilateral-review-row-center"`, inner `truncate` span, `title`). Truncation always
   lives on an inner `<span>`, never the `td` (`table-layout: auto` makes `max-width` on a `td`
   inert). Status pills and card pills key off `statusToneClass`; the group-pending badge keys off
   `groupPendingBadgeClass()` (same pending pair, never recomputed independently) — all three the
   design system's **fixed fg/bg pairs** (`--pr-status-*`/`--pr-danger*`,
   client hard rule 9: **never recombine** a foreground with another background). Group headers
-  carry a 3px left accent (pending tone if the group has pending rows, `--pr-border` otherwise) and
-  a single-line truncated label (`!p-0 !border-b-0` on the header `td` — the ambient
-  `pr-table.component.scss tbody td` padding + border is what measured 61px before this fix; the
-  cards group bar carries the same accent on a different cascade, `!border-l-[3px]` with no
-  competing `border-0`). `groups` generalized to `BilateralReviewGroup { key, label, caption,
+  carry a 3px left accent (pending tone if the group has pending rows, `--pr-border` otherwise).
+  `groups` generalized to `BilateralReviewGroup { key, label, caption,
   center, results }` — project mode `key = project_name`; center mode `key = lead_center ||
-  UNASSIGNED_CENTER_CODE`, pending desc then acronym asc, blank bucket always last.
-  `dataKey`/`groupRowsBy` bind to `"key"`. The component **owns** `expandedKeys: Set<string>`
-  namespaced `${groupMode}::${key}` — single expansion source for both the `app-pr-group-table`
-  branch and the cards branch; `userCollapsedKeys` namespaced too. Row action reads
-  `text-[var(--pr-color-primary-700)] font-semibold` (+ `hover:` variant) only when
-  `canReviewRow(row)` — pending **and** the caller may review; everyone else gets the neutral
-  ghost, same predicate on cards.
+  UNASSIGNED_CENTER_CODE`, pending desc then acronym asc, blank bucket always last. The component
+  **owns** `expandedKeys: Set<string>` namespaced `${groupMode}::${key}` — SINGLE expansion source
+  for both the wide card branch and the narrow cards branch (there is nothing else to defer to —
+  `PrGroupTableComponent`'s own `dataKey`/accordion state is gone). `lastKeysByMode`/
+  `userCollapsedKeysByMode` (one Map/Set PER `groupMode`) back the constructor effect's
+  `previous ?? smartDefault` re-seed that fires on every new `groups()` reference (search keystroke,
+  filter change, mode switch): `userCollapsedKeys` protects a manual COLLAPSE, and — since a
+  BRH-T-2 attempt-2 fix — `onToggleGroup` also writes `lastKeysFor(mode)` on EVERY click so a
+  manual EXPAND of a zero-pending group survives too (previously only the collapse direction was
+  protected, so expanding a 0-pending card was silently re-collapsed by the next re-render). A mode
+  switch alone (no `expandAllNonce` bump) re-seeds from THAT mode's own memory only, never forces
+  expand-all (BRP-T-2/judgment-day L-4). Row action reads `text-[var(--pr-color-primary-700)]
+  font-semibold` (+ `hover:` variant) only when `canReviewRow(row)` — pending **and** the caller may
+  review; everyone else gets the neutral ghost, same predicate on cards.
 - **Cards** (BRP-T-3, `narrow` fed by the page's `isNarrow`): below 900px, `ul[role=list]` of
   `li[data-testid="bilateral-review-card"]`, no `<table>`, no `overflow-x`/`overflow-y` (R-15).
   Grouped bar carries the group accent (above); flat: `sortedFlatRows` order.
@@ -146,3 +159,13 @@
 - ⚠️ **Effect REGISTRATION order matters (BRC-T-1).** The "URL → state" hydrate effect (writes
   `phaseParam`) MUST be registered BEFORE the list-loading effect — reversed, the first flush
   resolves to the current phase before `?phase=` ever hydrates.
+- ⚠️ **Narrow card group header is TWO stacked rows, not one 44px row (BRH-T-2 attempt 2).** The
+  toggle `<button>` is `min-h-[44px] flex-col` (no fixed `h-[44px]`) — row 1 is chevron + identity +
+  count/pending, row 2 (indented `pl-[32px]` to align under the title) carries the capped center
+  chips (project mode) or the "N projects" caption (center mode). Don't collapse this back to one
+  row "to match the wide header" — that was Reviewer FAIL #2 (center info silently disappeared
+  below 900px, contradicting BRH-R-3's "truncate, don't disappear").
+- `ResultToReview` has **no `result_type_name`/`result_type_id` field** — the by-program-and-centers
+  payload (`results.service.ts:getResultsByProgramAndCenters`) only maps `indicator_category` (from
+  `result_category`) for a result's "type". The in-card Type quick filter (`distinctCardTypes`)
+  reads `indicator_category` alone; don't reintroduce an invented `result_type_name` fallback.
