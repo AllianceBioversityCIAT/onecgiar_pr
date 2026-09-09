@@ -56,3 +56,11 @@
   font-weight: 400;
   color: var(--pr-text-secondary);
 }
+
+// `.field_card.fc-row` (styles/field-card.scss, global) draws a border-top on every Impact Area
+// score row, including the first one — that reads as a stray divider between the section title
+// and the row list. Killing it only on the first row (gender_tag_id) keeps the rule between the
+// other rows, matching the approved mockup.
+::ng-deep [data-testid='gi-field-gender_tag_id'] .field_card.fc-row {
+  border-top: none;
+}
