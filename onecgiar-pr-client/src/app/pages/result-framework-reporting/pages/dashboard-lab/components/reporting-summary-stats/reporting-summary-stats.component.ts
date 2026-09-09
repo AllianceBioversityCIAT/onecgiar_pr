@@ -22,9 +22,7 @@ export class ReportingSummaryStatsComponent {
   totalKpisTitle(stats: ReportingSummaryStats): string | null {
     const planned = stats.plannedKpis;
     if (planned === null || planned === undefined) return null;
-    const zeroTarget = stats.zeroTargetKpis ?? 0;
-    if (zeroTarget <= 0) return `${planned} planned`;
-    return `${planned} planned · excludes ${this.countLabel(zeroTarget, 'zero-target KPI')}`;
+    return `${planned} planned`;
   }
 
   evidencePercentage(stats: ReportingSummaryStats): number {

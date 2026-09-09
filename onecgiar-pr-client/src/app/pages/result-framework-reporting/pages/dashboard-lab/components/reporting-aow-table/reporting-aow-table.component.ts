@@ -967,31 +967,29 @@ export class ReportingAowTableComponent {
    * shows the team where targets are still missing.
    */
   achievementCoverage(achievement: TocAchievement | null | undefined): string {
-    const counted = achievement?.indicators_counted;
-    const total = achievement?.indicators_total;
+    const counted = achievement?.counted;
+    const total = achievement?.total;
 
     if (!Number.isFinite(counted) || !Number.isFinite(total) || !total) return '';
 
-    return counted === total ? `${total} indicators` : `${counted} of ${total} indicators`;
+    return counted === total ? `${total} Int. outcomes` : `${counted} of ${total} Int. outcomes`;
   }
 
   achievementTooltip(achievement: TocAchievement | null | undefined, childNoun = 'Intermediate Outcomes'): string {
     if (!achievement || !achievement.total) return 'Nothing has been planned here yet.';
 
-    const { counted, total, indicators_counted: withTarget, indicators_total: allIndicators } = achievement;
+    const { counted, total, indicators_total: kpiTotal } = achievement;
+    const scope = counted === total ? `${total} ${childNoun}` : `${counted} of ${total} ${childNoun}`;
+    const kpiNote = Number.isFinite(kpiTotal) && kpiTotal > 0 ? ` ${kpiTotal} KPIs sit under those nodes.` : '';
 
     if (!counted) {
-      return `None of the ${allIndicators} indicators has a target set, so no achievement percentage can be calculated.`;
+      return `No ${childNoun.toLowerCase()} with a measurable target yet, so no ToC achievement % is shown.${kpiNote} KPI reporting progress uses every planned KPI in the ratio above.`;
     }
 
-    const excluded = allIndicators - withTarget;
-    const base =
-      `QA ${this.achievementLabel(achievement)} and Preliminary ${this.preliminaryAchievementLabel(achievement)}, ` +
-      `averaged over ${counted} of ${total} ${childNoun}, covering ${withTarget} of ${allIndicators} indicators.`;
-
-    return excluded > 0
-      ? `${base} ${excluded} indicator${excluded === 1 ? ' is' : 's are'} excluded for having no target set.`
-      : base;
+    return (
+      `ToC achievement — QA ${this.achievementLabel(achievement)} and Preliminary ${this.preliminaryAchievementLabel(achievement)}, ` +
+      `averaged across ${scope}.${kpiNote} KPI reporting progress counts every planned KPI separately.`
+    );
   }
 
   /**

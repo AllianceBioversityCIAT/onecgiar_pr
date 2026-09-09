@@ -976,8 +976,8 @@ describe('ReportingAowTableComponent', () => {
       const banner = buildAowBannerStats(inds);
       const ratio = component.ratioOf(g);
       expect(ratio).toEqual({ done: banner.done, total: banner.total, percent: banner.pct });
-      // Denominator excludes the one zero-target KPI: 2 counted, 1 reported.
-      expect(ratio).toEqual({ done: 1, total: 2, percent: 50 });
+      // Every planned KPI counts, including zero-target: 3 total, 1 reported.
+      expect(ratio).toEqual({ done: 1, total: 3, percent: 33 });
     });
 
     // MRF-AC-5: Only-pending narrows `indicators`, so the host stashes the pre-toggle set on
@@ -1006,21 +1006,16 @@ describe('ReportingAowTableComponent', () => {
       expect(component.ratioOf(g)).toEqual({ done: 1, total: 2, percent: 50 });
     });
 
-    // MRF-AC-6: every % surface must SAY it dropped KPIs from its denominator.
-    it('titles the header ratio with the zero-target exclusion count, and only when there is one', async () => {
+    it('omits a zero-target exclusion title — every planned KPI is in the denominator', async () => {
       const withZeros = group([
         row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }),
         row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '0' }),
         row({ indicator_id: 3, actual_achieved_value_sum: 0, target_value_sum: '0' })
       ]);
       await build([withZeros]);
-      expect(component.ratioTitle(withZeros)).toBe('excludes 2 zero-target KPIs');
-      const titled = (fixture.nativeElement as HTMLElement).querySelector('[title="excludes 2 zero-target KPIs"]');
-      expect(titled).not.toBeNull();
-
-      // Singular reads as one KPI, and a card with none carries no title attribute at all.
-      const one = group([row({ indicator_id: 1, actual_achieved_value_sum: 0, target_value_sum: '0' })]);
-      expect(component.ratioTitle(one)).toBe('excludes 1 zero-target KPI');
+      expect(component.ratioTitle(withZeros)).toBe('');
+      expect((fixture.nativeElement as HTMLElement).querySelector('[title*="zero-target"]')).toBeNull();
+      expect(component.ratioTitle(group([row({ indicator_id: 1, actual_achieved_value_sum: 0, target_value_sum: '0' })]))).toBe('');
       expect(component.ratioTitle(group([row()]))).toBe('');
     });
   });
@@ -1069,18 +1064,15 @@ describe('ReportingAowTableComponent', () => {
       expect(titled).toBeTruthy();
     });
 
-    // The zero-target `ratioTitle` fallback must survive — OSF-T-16 composes onto it, not over it.
-    it('keeps the zero-target ratioTitle when there is no achievement', async () => {
+    it('rowTitle is empty when there is no achievement and no exclusion copy', async () => {
       const withZeros = group([
         row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }),
         row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '0' })
       ]);
-      expect(component.rowTitle(withZeros)).toBe(component.ratioTitle(withZeros));
-      expect(component.rowTitle(withZeros)).toBe('excludes 1 zero-target KPI');
+      expect(component.rowTitle(withZeros)).toBe('');
     });
 
-    // Both fallbacks compose when both conditions are true — neither must silently drop the other.
-    it('composes the zero-target exclusion and the achievement figures when both apply', async () => {
+    it('rowTitle carries achievement figures when present, without a zero-target exclusion clause', async () => {
       const g = group(
         [
           row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }),
@@ -1089,7 +1081,7 @@ describe('ReportingAowTableComponent', () => {
         { achievement: achievement() }
       );
       const title = component.rowTitle(g);
-      expect(title).toContain('excludes 1 zero-target KPI');
+      expect(title).not.toContain('zero-target');
       expect(title).toContain('QA 40%');
     });
   });
@@ -1242,7 +1234,7 @@ describe('ReportingAowTableComponent', () => {
       expect(component.nextPendingRow()?.indicator_id).toBe(2);
     });
 
-    it('skips reported and zero-target rows', async () => {
+    it('skips reported rows but includes zero-target not-started rows', async () => {
       const rows = [
         row({ indicator_id: 1, actual_achieved_value_sum: 1, target_value_sum: '1' }),
         row({ indicator_id: 2, actual_achieved_value_sum: 2, target_value_sum: '2' }), // reported
@@ -1250,7 +1242,7 @@ describe('ReportingAowTableComponent', () => {
         row({ indicator_id: 4, actual_achieved_value_sum: 0, target_value_sum: '5' }) // the answer
       ];
       await build([group(rows)], { lastReported: { id: 1, aowCode: 'AOW01' } });
-      expect(component.nextPendingRow()?.indicator_id).toBe(4);
+      expect(component.nextPendingRow()?.indicator_id).toBe(3);
     });
 
     it('is null when nothing pending remains (the row shows the all-reported note)', async () => {
@@ -1395,13 +1387,13 @@ describe('ReportingAowTableComponent', () => {
       return fixture.debugElement.query(de => de.nativeElement === button).injector.get(PrTooltipDirective).text;
     };
 
-    it('A header reads "4 KPIs" and "0 of 3" — own Planned beside its own Counted ratio', async () => {
+    it('A header reads "4 KPIs" and "0 of 4" — own Planned beside its own Counted ratio', async () => {
       await build([groupA()]);
 
       const header = (fixture.nativeElement as HTMLElement).querySelector('section > button') as HTMLElement;
       const headerText = (header.textContent ?? '').replace(/\s+/g, ' ');
       expect(headerText).toContain('4 KPIs');
-      expect(headerText).toContain('0 of 3');
+      expect(headerText).toContain('0 of 4');
     });
 
     it('still renders #901 and #902 in the Outcomes band, each with the RES-R-3 cross-cut tooltip', async () => {

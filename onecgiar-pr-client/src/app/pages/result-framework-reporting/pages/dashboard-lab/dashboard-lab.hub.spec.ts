@@ -291,14 +291,14 @@ describe('buildAowBannerStats (By-AOW context banner)', () => {
   // MRF-DD-5: with no `target_value_sum` on any indicator, the two KPIs that reported 0/null
   // achieved are now zero-target (target=0 AND achieved=0) and excluded from the denominator —
   // intentionally different from the pre-MRF-T-1 `{4, 2, 50%}` reading of this same fixture.
-  it('counts total, reported and pct from output indicators, excluding zero-target KPIs (MRF-R-7)', () => {
+  it('counts every planned KPI in total, reported and pct', () => {
     const stats = buildAowBannerStats([
       { actual_achieved_value_sum: 3 },
       { actual_achieved_value_sum: 0 },
       { actual_achieved_value_sum: '2' },
       { actual_achieved_value_sum: null }
     ]);
-    expect(stats).toEqual({ total: 2, done: 2, pct: 100, zeroTarget: 2 });
+    expect(stats).toEqual({ total: 4, done: 2, pct: 50, zeroTarget: 0 });
   });
 
   it('returns 0% for an empty list instead of NaN', () => {
@@ -349,7 +349,7 @@ describe('band controls — Only pending / sort pipeline (MRF-T-2)', () => {
   });
 
   // Card-level fixture for reportingGroupsForTable: 2 AoW cards.
-  //  AOW1: 1 complete, 1 zero-target, 1 in-progress  -> pending = 1 (in-progress only)
+  //  AOW1: 1 complete, 1 zero-target, 1 in-progress  -> pending = 2 (in-progress + zero-target)
   //  AOW2: 2 not-started                              -> pending = 2
   const complete = (id: number) => ({ indicator_id: id, target_value_sum: 5, actual_achieved_value_sum: 5 });
   const zeroTarget = (id: number) => ({ indicator_id: id, target_value_sum: 0, actual_achieved_value_sum: 0 });
@@ -392,21 +392,21 @@ describe('band controls — Only pending / sort pipeline (MRF-T-2)', () => {
       expect((component as any).reportingGroups()).toEqual(fixture);
     });
 
-    it('Only-pending hides complete AND zero-target KPIs, recomputing count (MRF-AC-1)', async () => {
+    it('Only-pending hides complete KPIs but keeps zero-target not-started KPIs, recomputing count (MRF-AC-1)', async () => {
       const { component } = await createComponent(apiMock());
       (component as any).reportingGroups = cardsFixture;
       component.setOnlyPending(true);
 
       const groups = component.reportingGroupsForTable();
       const aow1 = groups.find((g: any) => g.aow.code === 'AOW1');
-      expect(aow1.indicators.map((i: any) => i.indicator_id)).toEqual([3]);
-      expect(aow1.count).toBe(1);
+      expect(aow1.indicators.map((i: any) => i.indicator_id)).toEqual([2, 3]);
+      expect(aow1.count).toBe(2);
       const aow2 = groups.find((g: any) => g.aow.code === 'AOW2');
       expect(aow2.indicators.map((i: any) => i.indicator_id)).toEqual([4, 5]);
       expect(aow2.count).toBe(2);
     });
 
-    it('hides a card whose KPIs are ALL hidden by Only-pending (MRF-R-1)', async () => {
+    it('hides a card whose KPIs are ALL complete under Only-pending, but keeps zero-target not-started KPIs visible (MRF-R-1)', async () => {
       const { component } = await createComponent(apiMock());
       const fixture = [
         {
@@ -421,9 +421,11 @@ describe('band controls — Only pending / sort pipeline (MRF-T-2)', () => {
       (component as any).reportingGroups = () => fixture;
       component.setOnlyPending(true);
 
-      const codes = component.reportingGroupsForTable().map((g: any) => g.aow.code);
-      expect(codes).not.toContain('AOW3');
-      expect(codes).toEqual(['AOW1', 'AOW2']);
+      const groups = component.reportingGroupsForTable();
+      const aow3 = groups.find((g: any) => g.aow.code === 'AOW3');
+      expect(aow3.indicators.map((i: any) => i.indicator_id)).toEqual([11]);
+      expect(aow3.count).toBe(1);
+      expect(groups.map((g: any) => g.aow.code)).toEqual(['AOW3', 'AOW1', 'AOW2']);
     });
 
     it('keeps a still-loading card visible under Only-pending even with 0 indicators so far', async () => {
@@ -441,8 +443,8 @@ describe('band controls — Only pending / sort pipeline (MRF-T-2)', () => {
       component.setBurndownSort('remaining');
 
       const groups = component.reportingGroupsForTable();
-      // AOW2 (pending 2) ranks before AOW1 (pending 1).
-      expect(groups.map((g: any) => g.aow.code)).toEqual(['AOW2', 'AOW1']);
+      // AOW1 and AOW2 both have pending 2 — stable tie-break keeps catalogue order (AOW1, AOW2).
+      expect(groups.map((g: any) => g.aow.code)).toEqual(['AOW1', 'AOW2']);
       const aow1 = groups.find((g: any) => g.aow.code === 'AOW1');
       // in-progress(3) -> complete(1) -> zero-target(2) last.
       expect(aow1.indicators.map((i: any) => i.indicator_id)).toEqual([3, 1, 2]);
@@ -526,7 +528,7 @@ describe('band controls — Only pending / sort pipeline (MRF-T-2)', () => {
   });
 
   describe('plannedByAowSections (By-AOW HLO groups)', () => {
-    // H1: complete(1) + zero-target(2) + in-progress(3) -> pending 1
+    // H1: complete(1) + zero-target(2) + in-progress(3) -> pending 2
     // H2: not-started(4) + not-started(5)                -> pending 2
     // H3: complete(6) only                                -> pending 0 (hidden entirely under Only-pending)
     const hloFixture = () => [
@@ -555,17 +557,17 @@ describe('band controls — Only pending / sort pipeline (MRF-T-2)', () => {
       expect(titles).toEqual(['H1', 'H2']);
       expect(titles).not.toContain('H3');
       const h1 = section.groups.find((g: any) => g.title === 'H1');
-      expect(h1.indicators.map((i: any) => i.indicator_id)).toEqual([3]);
-      expect(h1.count).toBe(1);
-      expect(section.kpis).toBe(3); // 1 (H1) + 2 (H2), H3 dropped entirely
+      expect(h1.indicators.map((i: any) => i.indicator_id)).toEqual([2, 3]);
+      expect(h1.count).toBe(2);
+      expect(section.kpis).toBe(4); // 2 (H1) + 2 (H2), H3 dropped entirely
     });
 
-    it('Remaining-work sort reorders HLO groups by pending count desc (H2 before H1)', async () => {
+    it('Remaining-work sort keeps HLO groups in catalogue order when pending counts tie (H1 before H2)', async () => {
       const component = await buildWithHlo();
       component.setBurndownSort('remaining');
 
       const section = component.plannedByAowSections().find((s: any) => s.label === 'High Level Outputs');
-      expect(section.groups.map((g: any) => g.title)).toEqual(['H2', 'H1', 'H3']);
+      expect(section.groups.map((g: any) => g.title)).toEqual(['H1', 'H2', 'H3']);
     });
 
     it('Catalogue (default) keeps the original HLO group order and full KPI count', async () => {
@@ -765,8 +767,8 @@ describe('narrative gate on the By-AOW banner (MRF-T-7 / MRF-AC-7)', () => {
     ];
 
     expect(component.narrativeStats()).toEqual({ total: 8, done: 3, pct: 38, zeroTarget: 2 });
-    // 3 indicators, but the zero-target one is excluded from pending (MRF-R-7).
-    expect(component.narrativeHlos()).toEqual([{ section: 'High Level Outputs', title: 'HLO 1', total: 3, pending: 1 }]);
+    // 3 indicators; zero-target not-started KPIs count as pending.
+    expect(component.narrativeHlos()).toEqual([{ section: 'High Level Outputs', title: 'HLO 1', total: 3, pending: 2 }]);
   });
 
   it('feeds zeroed stats rather than nulls when no AoW banner is resolved yet', async () => {
@@ -975,30 +977,28 @@ describe('By-AoW section collapse/expand', () => {
       ) as HTMLElement;
     };
 
-    it('discloses the plural exclusion on the AoW row that has one, and nothing on the row that does not', async () => {
+    it('renders hub figures without zero-target exclusion titles', async () => {
       await buildHub([
-        { code: 'AOW01', name: 'Market Intelligence', done: 1, total: 110, zeroTarget: 4 },
+        { code: 'AOW01', name: 'Market Intelligence', done: 1, total: 110, zeroTarget: 0 },
         { code: 'AOW02', name: 'Accelerated Breeding', done: 0, total: 12, zeroTarget: 0 }
       ]);
 
       expect(figure('AOW01').textContent?.replace(/\s+/g, '')).toBe('1/110');
-      expect(figure('AOW01').getAttribute('title')).toBe('excludes 4 zero-target KPIs');
+      expect(figure('AOW01').getAttribute('title')).toBeNull();
       expect(figure('AOW02').getAttribute('title')).toBeNull();
     });
 
-    it('uses the singular noun for one, on AoW rows and program-level rows alike (KCR-R-6)', async () => {
-      // The requirements.md §7 fixture's program-level side: Intermediate plans #901 + #902, #902 is
-      // zero-target → `0/1` with one exclusion; 2030 plans #950 alone → `0/1` with none.
+    it('omits zero-target exclusion titles on AoW and program-level rows (all planned KPIs count)', async () => {
       await buildHub(
-        [{ code: 'AOW01', name: 'Market Intelligence', done: 0, total: 3, zeroTarget: 1 }],
+        [{ code: 'AOW01', name: 'Market Intelligence', done: 0, total: 2, zeroTarget: 0 }],
         [
-          { kind: 'intermediate', name: 'Intermediate outcomes', done: 0, total: 1, zeroTarget: 1 },
+          { kind: 'intermediate', name: 'Intermediate outcomes', done: 0, total: 2, zeroTarget: 0 },
           { kind: '2030', name: '2030 outcomes', done: 0, total: 1, zeroTarget: 0 }
         ]
       );
 
-      expect(figure('AOW01').getAttribute('title')).toBe('excludes 1 zero-target KPI');
-      expect(figure('Intermediate outcomes').getAttribute('title')).toBe('excludes 1 zero-target KPI');
+      expect(figure('AOW01').getAttribute('title')).toBeNull();
+      expect(figure('Intermediate outcomes').getAttribute('title')).toBeNull();
       expect(figure('2030 outcomes').getAttribute('title')).toBeNull();
     });
 
@@ -1039,7 +1039,7 @@ describe('By-AoW section collapse/expand', () => {
       );
 
       expect(component.hubProgramLevelRows()).toEqual([
-        { kind: 'intermediate', name: 'Intermediate outcomes', done: 0, total: 1, zeroTarget: 1 },
+        { kind: 'intermediate', name: 'Intermediate outcomes', done: 0, total: 2, zeroTarget: 0 },
         { kind: '2030', name: '2030 outcomes', done: 0, total: 1, zeroTarget: 0 }
       ]);
     });
@@ -1083,10 +1083,9 @@ describe('By-AoW section collapse/expand', () => {
         ])
       );
 
-      // Own set = #1, #2, #3, #4; #3 is zero-target → counted 3, reported 1 → `1 of 3` excluding 1.
-      // The superseded output-tier-only basis reads `1 of 2`; a cross-cut-inclusive one, `2 of 4`.
+      // Own set = #1, #2, #3, #4 — every KPI counts, including zero-target #3.
       expect(component.overviewAowProgress()).toEqual([
-        { code: 'AOW01', name: 'Market Intelligence', done: 1, total: 3, zeroTarget: 1, achievement: null }
+        { code: 'AOW01', name: 'Market Intelligence', done: 1, total: 4, zeroTarget: 0, achievement: null }
       ]);
     });
 

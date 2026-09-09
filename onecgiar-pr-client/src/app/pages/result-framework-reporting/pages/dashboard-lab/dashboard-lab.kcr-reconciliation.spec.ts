@@ -88,14 +88,14 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
   //           (#902 zero-target)
   //   IO endpoint   — #901, #902        2030 endpoint — #950
   //
-  // Planned 11 · zero-target 2 (`a4`, #902) · counted 9 · reported 1 (`b2`).
+  // Planned 11 · counted 11 (every KPI, including zero-target) · reported 1 (`b2`).
   // `progress_percentage` is deliberately a nonsense string on every REPORTED row (`'1500%'`);
   // every unreported row instead carries `'0%'` (KCR-R-9 requires this). The nonsense value on
   // reported rows proves the band's old `progress_percentage > 0` clause read exactly such a
   // string and must be gone — the predicate must key off `actual_achieved_value_sum` alone.
 
-  /** The 9 KPIs that survive the zero-target rule — the whole shell's denominator budget. */
-  const COUNTED_IDS: Array<string | number> = ['a1', 'a2', 'a3', 'b1', 'b2', 'b3', 'b-own', 901, 950];
+  /** Every planned KPI — the whole shell's denominator budget. */
+  const COUNTED_IDS: Array<string | number> = ['a1', 'a2', 'a3', 'a4', 'b1', 'b2', 'b3', 'b-own', 901, 902, 950];
 
   const ind = (id: string | number, target: number, achieved: number, extra: Record<string, unknown> = {}) => ({
     indicator_id: id,
@@ -232,47 +232,41 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
     Object.fromEntries(component.reportingGroups().map(group => [group.aow.code, group]));
 
   // ── Band (KCR-R-8, KCR-AC-1) ─────────────────────────────────────────────────────────────────
-  it('band Total KPIs = 9 — the program Counted set, cross-cut IOs counted once (today: 15)', async () => {
+  it('band Total KPIs = 11 — every planned KPI, cross-cut IOs counted once', async () => {
     const component = await createComponent();
 
     const stats = component.plannedReportingSummaryStats();
 
-    // 9 = A 3 + B 4 + Intermediate 1 + 2030 1. Today the band flattens `reportingGroups()`, which
-    // repeats #901/#902 inside BOTH AoW cards and again in the Intermediate card → 15.
-    expect(stats.totalKpis).toBe(9);
+    expect(stats.totalKpis).toBe(11);
     expect(stats.reportedKpis).toBe(1);
   });
 
   it('band popover "planned results" = 11 — Planned, not Counted, and not the duplicated 15', async () => {
     const component = await createComponent();
 
-    // KCR-R-8 / KCR-DD-4: the big figure is Counted (9), the popover discloses Planned (11).
     expect(component.bandPlannedResultsCount()).toBe(11);
   });
 
   // ── Hero rows (KCR-R-5, KCR-DD-2) ────────────────────────────────────────────────────────────
-  it('hero rich rows read A 0/3 and B 1/4 — AoW-own basis, zero-target excluded (today B: 1/3)', async () => {
+  it('hero rich rows read A 0/4 and B 1/4 — every AoW-own KPI counts', async () => {
     const component = await createComponent();
 
     const rows = byCode(component.overviewAowProgressRich());
 
-    // A: 4 outputs − 1 zero-target = 3, none reported. B: 3 outputs + 1 owned outcome = 4, one
-    // reported (`b2`, achieved 75). Today the rows are output-tier only, so B reads 1/4 → 1/3.
-    expect({ reported: rows['A'].reported, total: rows['A'].total }).toEqual({ reported: 0, total: 3 });
+    expect({ reported: rows['A'].reported, total: rows['A'].total }).toEqual({ reported: 0, total: 4 });
     expect({ reported: rows['B'].reported, total: rows['B'].total }).toEqual({ reported: 1, total: 4 });
   });
 
-  it('thin AoW rows (KPI card 4 / section badge / hub basis) read A 0/3 and B 1/4 (today: A 0/4, B 1/3)', async () => {
+  it('thin AoW rows (KPI card 4 / section badge / hub basis) read A 0/4 and B 1/4', async () => {
     const component = await createComponent();
 
     const rows = byCode(component.overviewAowProgress());
 
-    // Today this computed applies NO zero-target rule and counts output tier only → A 0/4, B 1/3.
-    expect({ done: rows['A'].done, total: rows['A'].total }).toEqual({ done: 0, total: 3 });
+    expect({ done: rows['A'].done, total: rows['A'].total }).toEqual({ done: 0, total: 4 });
     expect({ done: rows['B'].done, total: rows['B'].total }).toEqual({ done: 1, total: 4 });
   });
 
-  it('hero rail (Σ rich rows, program-overview.richStats) reads 1 of 7 (today: 1 of 6)', async () => {
+  it('hero rail (Σ rich rows, program-overview.richStats) reads 1 of 8', async () => {
     const component = await createComponent();
 
     const rows = component.overviewAowProgressRich();
@@ -281,20 +275,16 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
       total: rows.reduce((sum, row) => sum + row.total, 0)
     };
 
-    // 7 = A 3 + B 4. The rail deliberately sums AoW rows only; program-level KPIs are the chips
-    // beneath it (KCR-R-3). Today B contributes 3 instead of 4 → 1 of 6.
-    expect(rail).toEqual({ reported: 1, total: 7 });
+    expect(rail).toEqual({ reported: 1, total: 8 });
   });
 
   // ── Strategic-outcomes chips (KCR-R-2, KCR-R-6) ──────────────────────────────────────────────
-  it('chips read Intermediate 0/1 and 2030 0/1 — the zero-target rule applies to buckets too (today IO: 0/2)', async () => {
+  it('chips read Intermediate 0/2 and 2030 0/1 — every bucket KPI counts', async () => {
     const component = await createComponent();
 
     const chips = byCode(component.overviewXcutProgress());
 
-    // The Intermediate bucket plans 2 KPIs (#901, #902); #902 is zero-target → counted 1. Today
-    // the chip reads the card's raw `count` with no zero-target rule → 0/2.
-    expect({ done: chips[INTERMEDIATE_OUTCOMES_CODE].done, total: chips[INTERMEDIATE_OUTCOMES_CODE].total }).toEqual({ done: 0, total: 1 });
+    expect({ done: chips[INTERMEDIATE_OUTCOMES_CODE].done, total: chips[INTERMEDIATE_OUTCOMES_CODE].total }).toEqual({ done: 0, total: 2 });
     expect({ done: chips[OUTCOMES_2030_CODE].done, total: chips[OUTCOMES_2030_CODE].total }).toEqual({ done: 0, total: 1 });
   });
 
@@ -309,23 +299,21 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
     expect(tableRatio(groups['B'])).toEqual({ done: 1, total: 4 });
   });
 
-  it('grouped table card A reads "4 KPIs · 0 of 3" — count = AoW-own Planned (today: "6 KPIs · 0 of 4")', async () => {
+  it('grouped table card A reads "4 KPIs · 0 of 4"', async () => {
     const component = await createComponent();
 
     const groups = groupByAowCode(component);
 
-    // KCR-AC-5: the count label is AoW-own Planned (4) and the ratio its Counted set (4 − 1
-    // zero-target = 3). Today the card counts the two cross-cut rows too.
     expect(tableCountLabel(groups['A'])).toBe('4 KPIs');
-    expect(tableRatio(groups['A'])).toEqual({ done: 0, total: 3 });
+    expect(tableRatio(groups['A'])).toEqual({ done: 0, total: 4 });
   });
 
-  it('grouped table bucket cards read Intermediate "0 of 1" and 2030 "0 of 1"', async () => {
+  it('grouped table bucket cards read Intermediate "0 of 2" and 2030 "0 of 1"', async () => {
     const component = await createComponent();
 
     const groups = groupByAowCode(component);
 
-    expect(tableRatio(groups[INTERMEDIATE_OUTCOMES_CODE])).toEqual({ done: 0, total: 1 });
+    expect(tableRatio(groups[INTERMEDIATE_OUTCOMES_CODE])).toEqual({ done: 0, total: 2 });
     expect(tableRatio(groups[OUTCOMES_2030_CODE])).toEqual({ done: 0, total: 1 });
   });
 
@@ -341,14 +329,13 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
   });
 
   // ── Reporting Entry Hub (KCR-R-3, REH-R-2 basis) ─────────────────────────────────────────────
-  it('hub rows sum to the band: Σ AoW rows + Σ program-level rows = 9 (today: 10)', async () => {
+  it('hub rows sum to the band: Σ AoW rows + Σ program-level rows = 11', async () => {
     const component = await createComponent();
 
     const aowTotal = component.overviewAowProgress().reduce((sum, row) => sum + row.total, 0);
     const programTotal = component.hubProgramLevelRows().reduce((sum, row) => sum + row.total, 0);
 
-    // 9 = (A 3 + B 4) + (Intermediate 1 + 2030 1). Today: (4 + 3) + (2 + 1) = 10.
-    expect(aowTotal + programTotal).toBe(9);
+    expect(aowTotal + programTotal).toBe(11);
     expect(aowTotal + programTotal).toBe(component.plannedReportingSummaryStats().totalKpis);
   });
 
@@ -365,16 +352,16 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
   });
 
   // ── Count-once identity (KCR-AC-1 last clause) ───────────────────────────────────────────────
-  it('every counted indicator_id contributes to exactly one denominator: Σ denominators = 9 = band', async () => {
+  it('every counted indicator_id contributes to exactly one denominator: Σ denominators = 11 = band', async () => {
     const component = await createComponent();
 
     const heroRows = byCode(component.overviewAowProgressRich());
     const chips = byCode(component.overviewXcutProgress());
     const groups = groupByAowCode(component);
 
-    // COUNTED_IDS is written out independently from the fixture (11 planned minus `a4` and #902).
-    // Any id counted twice pushes a sum above 9; any id dropped pushes it below.
-    expect(COUNTED_IDS).toHaveLength(9);
+    // COUNTED_IDS is written out independently from the fixture — every planned KPI, once.
+    // Any id counted twice pushes a sum above 11; any id dropped pushes it below.
+    expect(COUNTED_IDS).toHaveLength(11);
 
     // Σ of the four grouped-table header ratios (today 4 + 5 + 1 + 1 = 11 — #901 counted three times).
     const sumOfTableHeaders = [groups['A'], groups['B'], groups[INTERMEDIATE_OUTCOMES_CODE], groups[OUTCOMES_2030_CODE]].reduce(
@@ -443,6 +430,6 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
     sessionStorage.removeItem(ONLY_PENDING_STORAGE_KEY);
 
     // …and the invariant figure is the reconciled one (today the unfiltered reading is 15/1/15).
-    expect(unfiltered).toEqual({ totalKpis: 9, reportedKpis: 1, planned: 11 });
+    expect(unfiltered).toEqual({ totalKpis: 11, reportedKpis: 1, planned: 11 });
   });
 });

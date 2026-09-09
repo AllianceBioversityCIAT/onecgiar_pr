@@ -513,8 +513,8 @@
             <span class="text-[11px] font-medium text-emerald-700/80">Prel.</span>
             <span class="pr-figure-sm font-semibold text-emerald-600/80">{{ preliminaryLabel(programAchievement()) }}</span>
           </div>
-          @if (achievementCoverage(programAchievement())) {
-            <span class="text-[10.5px] font-medium text-emerald-700/70">{{ achievementCoverage(programAchievement()) }}</span>
+          @if (achievementCoverage(programAchievement(), 'Areas of Work')) {
+            <span class="text-[10.5px] font-medium text-emerald-700/70">{{ achievementCoverage(programAchievement(), 'Areas of Work') }}</span>
           }
         </div>
       }

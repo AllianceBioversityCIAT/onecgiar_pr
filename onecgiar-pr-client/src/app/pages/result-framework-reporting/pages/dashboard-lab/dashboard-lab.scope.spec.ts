@@ -289,12 +289,10 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
 
       // KCR — the scope filter narrows rows, it does not compute them, so pin the BASIS of the row
       // it narrows to (design §6.2 `overviewAowProgressRich` row; KCR-R-1/R-5, KCR-DD-2).
-      // AOW01 own = output #1 + the `is_aow: true` node's #3 and #4; #4 is zero-target and the
-      // `is_aow: false` #901 belongs to the Intermediate bucket → total 2, zeroTarget 1, reported 1.
-      // Superseded output-tier-only basis: total 1. Cross-cut-inclusive basis: total 3.
+      // AOW01 own = output #1 + owned outcomes #3 and #4; cross-cut #901 belongs to Intermediate.
       const aow01 = component.overviewAowProgressRich().find(r => r.code === 'AOW01')!;
-      expect(aow01.total).toBe(2);
-      expect(aow01.zeroTarget).toBe(1);
+      expect(aow01.total).toBe(3);
+      expect(aow01.zeroTarget).toBe(0);
       expect(aow01.reported).toBe(1);
 
       component.overviewScope.set('AOW01');

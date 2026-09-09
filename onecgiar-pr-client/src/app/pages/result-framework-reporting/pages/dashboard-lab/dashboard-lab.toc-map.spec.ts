@@ -29,7 +29,7 @@ function node(overrides: Partial<TocMapNodeInput> & { toc_result_id: string }): 
 /**
  * Independent re-derivation of `overviewAowProgress`'s rule (dashboard-lab.component.ts) over the
  * AoW-**own** set — output-tier nodes PLUS the outcome nodes the payload marks `is_aow: true` —
- * with the zero-target rule applied (`target = 0 AND achieved = 0` never enters a denominator).
+ * counting every planned KPI — including zero-target rows.
  * That is the same fixture's OTHER source of truth for "Progress by area of work" since
  * `bugfix/kpi-count-reconciliation` moved the row basis (KCR-R-5 / KCR-DD-2 supersede the
  * output-tier-only rule; KCR-DD-5 puts the zero-target rule on the leaf). Hand-written on purpose:
@@ -39,11 +39,8 @@ function node(overrides: Partial<TocMapNodeInput> & { toc_result_id: string }): 
 function aowCardRow(bucket: TocMapBucketInput | undefined) {
   const ownNodes = [...(bucket?.outputs ?? []), ...(bucket?.outcomes ?? []).filter(n => n?.is_aow === true)];
   const indicators = ownNodes.flatMap(n => n.indicators ?? []);
-  const counted = indicators.filter(
-    i => !(Number(i.target_value_sum ?? 0) === 0 && Number(i.actual_achieved_value_sum ?? 0) === 0)
-  );
-  const done = counted.filter(i => Number(i.actual_achieved_value_sum ?? 0) > 0).length;
-  return { done, total: counted.length };
+  const done = indicators.filter(i => Number(i.actual_achieved_value_sum ?? 0) > 0).length;
+  return { done, total: indicators.length };
 }
 
 describe('buildTocMapModel (TCM-T-1)', () => {
@@ -182,7 +179,7 @@ describe('buildTocMapModel (TCM-T-1)', () => {
 
     // Exact values (not "is a number") — AOW01 output leaves A1(1/2)+A2(0/1)+A3(0/0)+A4(1/2)+
     // A5(0/1) = 2/6, PLUS the AoW-owned outcome IO-A1 — indicators (10,0) and (0,0), the latter
-    // zero-target → counted 1, done 0 — for 2/7.
+    // zero-target → counted with the other indicator, done 0 — for 2/8.
     // A4/A5 are the attempt-1 fixture hole: is_aow:false / absent output-tier nodes. Under the
     // REJECTED attempt-1 partition (both tiers filtered by is_aow:true) these two would have been
     // stripped from the AoW branch entirely, making this assertion read 1/3 instead of 2/6 — this
@@ -191,13 +188,12 @@ describe('buildTocMapModel (TCM-T-1)', () => {
     // KCR: 6 → 7, design §6.2 `overviewAowProgress` row (KCR-DD-2) + §6.3 toc-map (KCR-DD-5).
     // 6 = output-tier leaves only, unfiltered (the superseded TCM-R-3 basis); 8 = outputs + the
     // owned outcome's 2 PLANNED indicators (folded in, but no zero-target rule); 7 = outputs
-    // (6 counted) + the owned outcome's 1 COUNTED indicator = the AoW-own set.
-    expect(aow01.total).toBe(7);
+    // (6 counted) + the owned outcome's 2 COUNTED indicators = the AoW-own set.
+    expect(aow01.total).toBe(8);
     // AOW02: B1(2/4) + B2(1/3) = 3/7 output-tier, PLUS the owned outcome IO-B1 — indicators (4,0)
-    // and (0,0) → counted 1, done 0 — for 3/8. (Old basis: 3/7; owned-but-unfiltered: 3/9.)
+    // and (0,0) — both counted, done 0 on the outcome pair — for 3/9.
     expect(aow02.done).toBe(3);
-    // KCR: 7 → 8, design §6.2 `overviewAowProgress` row (KCR-DD-2) + §6.3 toc-map (KCR-DD-5).
-    expect(aow02.total).toBe(8);
+    expect(aow02.total).toBe(9);
     // Distinct per AoW (asymmetric fixture).
     expect(aow01.done).not.toBe(aow02.done);
     expect(aow01.total).not.toBe(aow02.total);
@@ -218,7 +214,7 @@ describe('buildTocMapModel (TCM-T-1)', () => {
     // leaf's `total` WAS the planned count, so this pair was indistinguishable.
     const ownedLeaf = aow01.leaves.find(l => l.title.includes('Owned outcome for AOW01'))!;
     expect(ownedLeaf.indicators).toBe(2);
-    expect(ownedLeaf.total).toBe(1);
+    expect(ownedLeaf.total).toBe(2);
     expect(ownedLeaf.done).toBe(0);
 
     // Σtarget/Σachieved roll up EVERY leaf under the branch, the AoW-owned outcome-tier IO

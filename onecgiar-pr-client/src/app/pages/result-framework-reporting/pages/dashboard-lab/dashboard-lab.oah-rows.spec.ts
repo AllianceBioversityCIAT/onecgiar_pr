@@ -125,7 +125,7 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
   }
 
   // ── Split / invariant / zero-target (hand-computed expectations) ────────────────────────────
-  it('partitions target=0∧achieved>0 into inProgress (the C-2 orphan), excludes zero-target from total, and holds the invariant', async () => {
+  it('partitions target=0∧achieved>0 into inProgress (the C-2 orphan), counts zero-target in total, and holds the invariant', async () => {
     const component = await createComponent();
     seedAows(component, {
       AOW01: {
@@ -134,7 +134,7 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
           { indicator_id: 1, target_value_sum: 10, actual_achieved_value_sum: 10 }, // complete
           { indicator_id: 2, target_value_sum: 10, actual_achieved_value_sum: 5 }, // in-progress
           { indicator_id: 3, target_value_sum: 10, actual_achieved_value_sum: 0 }, // not-started
-          { indicator_id: 4, target_value_sum: 0, actual_achieved_value_sum: 0 }, // zero-target — excluded
+          { indicator_id: 4, target_value_sum: 0, actual_achieved_value_sum: 0 }, // zero-target — counted as not-started
           { indicator_id: 5, target_value_sum: 0, actual_achieved_value_sum: 3 } // the C-2 orphan → in-progress
         ],
         // AoW-OWNED outcome (`is_aow: true`): counted here since KCR-DD-2 moved the row basis from
@@ -153,23 +153,18 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
 
     // Hand-computed independently of the production code's own arithmetic (anti-tautology).
     // AoW-own set = the 5 output KPIs + the `is_aow: true` outcome #99; the `is_aow: false` #901 is
-    // NOT in it. Counted = {1,2,3,5,99} (4 is excluded as zero-target) → complete=2 (1 and 99),
-    // inProgress=2 (2 and 5), notStarted=1 (3), zeroTarget=1, total=5, reported=4, remaining=1.
+    // NOT in it. All six own KPIs count → complete=2 (1 and 99), inProgress=2 (2 and 5),
+    // notStarted=2 (3 and 4), zeroTarget=0, total=6, reported=4, remaining=2.
     expect(row).toEqual<OverviewAowProgressRowRich>({
       code: 'AOW01',
       name: 'AoW 01',
-      // KCR: 1 → 2, design §6.2 `overviewAowProgressRich` row (KCR-DD-2) — the owned outcome #99
-      // (achieved 5 >= target 5) is `complete` and now belongs to this row.
       complete: 2,
       inProgress: 2,
-      notStarted: 1,
-      zeroTarget: 1,
-      // KCR: 3 → 4, same row — #99 has `achieved > 0`, so it is Reported (KCR-R-9).
+      notStarted: 2,
+      zeroTarget: 0,
       reported: 4,
-      // KCR: 4 → 5, same row — outputs contribute 4 counted, the owned outcome 1. A basis that
-      // also swallowed the cross-cut #901 would read 6; the superseded output-tier basis, 4.
-      total: 5,
-      remaining: 1,
+      total: 6,
+      remaining: 2,
       // P2-3296 — beside the reported-KPI count; no achievement data seeded by this fixture.
       achievement: null
     });
