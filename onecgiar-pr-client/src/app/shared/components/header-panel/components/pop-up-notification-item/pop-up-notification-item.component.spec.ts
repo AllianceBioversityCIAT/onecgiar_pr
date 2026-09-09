@@ -204,7 +204,7 @@ describe('PopUpNotificationItemComponent', () => {
 
       expect(event.preventDefault).toHaveBeenCalled();
       expect(resultsApi.PATCH_readNotification).toHaveBeenCalledWith(55);
-      expect(router.navigateByUrl).toHaveBeenCalledWith('/result-framework-reporting/entity-details/SP5/results-review');
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/result-framework-reporting/entity-details/SP5/bilateral-review');
       expect(emitted).toHaveBeenCalled();
     });
 

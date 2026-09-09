@@ -91,6 +91,30 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     this.contributionDiffers() || this.contributionIsRejected();
 
   /**
+   * P2-3608 — a contribution to a target can never be negative.
+   *
+   * The box is a bare `<input type="number">`, so `min="0"` alone stops the spinner and the browser
+   * arrows but NOT a typed or pasted `-1`: `type="number"` reports `min` through validity, and
+   * nothing here reads it. Without this the value reached the payload and was stored, with no
+   * message anywhere — reported by QA on 7 Sep 2026.
+   *
+   * Clamped to 0 rather than blocked, which is the shape this repository already uses for the same
+   * rule one form over (`innovation-use-form.onNewUsersAddedChange`). The ticket accepts either.
+   *
+   * 🥇 `null` / `''` are NOT touched: an empty box is "not answered", which is a different state
+   * from a reported 0 and is what the mandatory-field scan reads.
+   */
+  onContributionToTargetChange(): void {
+    const target = this.activeTab?.indicators?.[0]?.targets?.[0];
+    if (!target) return;
+
+    const value = target.contributing_indicator;
+    if (value === null || value === undefined || value === '') return;
+
+    if (Number(value) < 0) target.contributing_indicator = 0;
+  }
+
+  /**
    * Says what the two numbers are and where the other one comes from, rather than "these do not
    * match" — the user has to know which figure to go and change.
    */

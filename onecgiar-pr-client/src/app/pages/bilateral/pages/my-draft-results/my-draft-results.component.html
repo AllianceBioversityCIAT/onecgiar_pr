@@ -1,21 +1,12 @@
 <app-bilateral-page-header activeTab="drafts" />
 
-<div class="mdr">
-  <div class="mdr-header">
-    <h2 class="mdr-title">My AI Draft Results</h2>
-    <p class="mdr-subtitle">
-      @if (bilateralAiService.isDraftListLoaded()) {
-        {{ subtitle() }}
-      } @else {
-        Loading drafts...
-      }
-    </p>
-  </div>
-
-  <!-- P2-3319 — filter by project. Only the projects that actually appear in this centre's drafts
-       are offered, so picking one can never empty the page by accident. -->
-  @if (bilateralAiService.isDraftListLoaded() && hasAnyDrafts()) {
-    <div class="mb-[20px] flex flex-wrap items-center gap-[12px]" role="search" aria-label="Draft filters">
+<!-- Docked bar: Project filter dropdown and active filter chips directly below tabs band -->
+@if (bilateralAiService.isDraftListLoaded() && hasAnyDrafts()) {
+  <div
+    class="mdr-toolbar-docked flex-none border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]"
+    role="search"
+    aria-label="Draft filters">
+    <div class="flex flex-wrap items-center gap-[12px]">
       <div class="mdr-filter w-[260px] flex-none" aria-label="Filter by project">
         <app-pr-filter-select
           [options]="projectFilterOptions()"
@@ -40,9 +31,27 @@
         </span>
       }
     </div>
-  }
+  </div>
+}
 
-  @if (hasDrafts()) {
+<!-- Inner Scroller: Header, AI draft cards list, and empty/loading states -->
+<div
+  #workArea
+  id="workArea"
+  class="min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll">
+  <div class="mdr">
+    <div class="mdr-header">
+      <h2 class="mdr-title">My AI Draft Results</h2>
+      <p class="mdr-subtitle">
+        @if (bilateralAiService.isDraftListLoaded()) {
+          {{ subtitle() }}
+        } @else {
+          Loading drafts...
+        }
+      </p>
+    </div>
+
+    @if (hasDrafts()) {
     <div class="mdr-list">
       @for (draft of drafts(); track draft.id) {
         <div class="mdr-card">
@@ -161,10 +170,13 @@
       </a>
     </div>
   } @else {
-    <div class="mdr-loading">
-      <div class="mdr-loading-spinner"></div>
+    <div class="mdr-loading flex flex-col gap-[12px]" data-testid="mdr-loading-skeleton" aria-busy="true" aria-label="Loading drafts">
+      <div class="pr-skeleton rounded-[12px] h-[100px]" style="height: 100px;"></div>
+      <div class="pr-skeleton rounded-[12px] h-[100px]" style="height: 100px;"></div>
+      <div class="pr-skeleton rounded-[12px] h-[100px]" style="height: 100px;"></div>
     </div>
   }
+</div>
 </div>
 
 @if (selectedDraft(); as draft) {

@@ -347,4 +347,67 @@ describe('CPMultipleWPsContentComponent', () => {
       expect(c.contributionCheckMessage()).toContain('single unit');
     });
   });
+  /**
+   * P2-3608 — the contribution box accepted a negative number and stored it, with no message.
+   *
+   * Reported by QA on 7 September 2026 with a recording. `min="0"` on its own does not cover it:
+   * `<input type="number">` reports `min` through validity, and nothing here reads validity — a
+   * typed or pasted `-1` reaches the payload. So the guard is what does the work, and the template
+   * assertion below pins that BOTH halves stay wired.
+   */
+  describe('P2-3608 — a contribution to a target can never be negative', () => {
+    const withContribution = (value: any) => {
+      const c = buildComponent(true);
+      c.activeTab = { indicators: [{ targets: [{ contributing_indicator: value }] }] };
+      return c;
+    };
+
+    it('clamps a typed negative to 0', () => {
+      const c = withContribution(-1);
+
+      c.onContributionToTargetChange();
+
+      expect(c.activeTab.indicators[0].targets[0].contributing_indicator).toBe(0);
+    });
+
+    it('leaves a valid figure exactly as typed', () => {
+      const c = withContribution(200);
+
+      c.onContributionToTargetChange();
+
+      expect(c.activeTab.indicators[0].targets[0].contributing_indicator).toBe(200);
+    });
+
+    // 🥇 An empty box is "not answered", which the mandatory-field scan reads as incomplete.
+    // Turning it into 0 would report the field as answered by somebody who never touched it.
+    it('does NOT turn an empty box into 0', () => {
+      // One component, three values: `buildComponent` configures the TestBed, which can only happen
+      // once per test.
+      const c = withContribution(null);
+      const target = c.activeTab.indicators[0].targets[0];
+
+      for (const empty of [null, undefined, '']) {
+        target.contributing_indicator = empty;
+
+        c.onContributionToTargetChange();
+
+        expect(target.contributing_indicator).toBe(empty);
+      }
+    });
+
+    it('survives a tab that carries no indicator yet', () => {
+      const c = buildComponent(true);
+      c.activeTab = {};
+
+      expect(() => c.onContributionToTargetChange()).not.toThrow();
+    });
+
+    it('keeps both halves wired on the contribution input', () => {
+      const template = readFileSync(join(__dirname, 'multiple-wps-content.component.html'), 'utf8');
+      const input = (template.match(/<input[\s\S]*?contributing_indicator[\s\S]*?\/>/) ?? [''])[0];
+
+      expect(input).toContain('min="0"');
+      expect(input).toContain('(ngModelChange)="onContributionToTargetChange()"');
+    });
+  });
 });

@@ -4366,15 +4366,37 @@ export class BilateralService {
    * Populates result-association tables from `extracted_mds` produced by the AI draft pipeline.
    * Called during draft promotion so that lead center, contributing partners, and geo focus
    * are written to the DB without going through the full bilateral ingestion pipeline.
+   *
+   * `options.leadCenter` is the centre the document was uploaded under (the job's centre). When
+   * it is given it is ALWAYS the lead: a centre the model read in the document text is content,
+   * not ownership — an AfricaRice upload whose study said "commissioned by ILRI" came out with
+   * ILRI as lead centre (2026-09-07). That extracted centre is kept as a contributor instead,
+   * unless it resolves to the same centre as the lead. Without `options.leadCenter` the
+   * extracted `lead_center` still leads, as before.
    */
   public async populateResultFromExtractedMds(
     result: Result,
-    extractedMds: Record<string, any>,
+    extractedMds: Record<string, any> | null,
     userId: number,
+    options?: {
+      leadCenter?: { name?: string; acronym?: string; institution_id?: number };
+    },
   ): Promise<void> {
-    if (!extractedMds) return;
+    const jobLeadCenter = options?.leadCenter;
+    if (!extractedMds && !jobLeadCenter) return;
+    extractedMds = extractedMds ?? {};
 
-    if (extractedMds.lead_center) {
+    if (jobLeadCenter) {
+      await this.handleLeadCenter(result.id, jobLeadCenter, userId);
+      if (extractedMds.lead_center) {
+        await this.handleContributingCenters(
+          result.id,
+          [extractedMds.lead_center],
+          userId,
+          jobLeadCenter,
+        );
+      }
+    } else if (extractedMds.lead_center) {
       await this.handleLeadCenter(result.id, extractedMds.lead_center, userId);
     }
 

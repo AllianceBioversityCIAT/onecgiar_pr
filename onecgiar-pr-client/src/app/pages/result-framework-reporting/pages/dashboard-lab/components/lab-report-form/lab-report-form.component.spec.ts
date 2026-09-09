@@ -1027,6 +1027,16 @@ describe('LabReportFormComponent — Contextual Contribution Input (RFUX-T-4)', 
 
     expect(suffix).toBeTruthy();
     expect(suffix.textContent?.trim()).toBe('varieties');
+    expect(suffix.classList.contains('truncate')).toBe(false);
+  });
+
+  it('shows the full unit label beside the input when unit_messurament is long', async () => {
+    const longUnit = 'Number of people trained on use of AI and digital tools';
+    await mountForm({ unit_messurament: longUnit });
+    const suffix: HTMLElement = fixture.nativeElement.querySelector('[data-testid="contribution-unit-suffix"]');
+
+    expect(suffix.textContent?.trim()).toBe(longUnit);
+    expect(suffix.classList.contains('truncate')).toBe(false);
   });
 
   it('hides unit suffix when unit_messurament is not provided', async () => {

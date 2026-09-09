@@ -1,11 +1,28 @@
+@use '../../../../../styles/viewport-page' as vp;
+
 :host {
   display: block;
+
+  @media (min-width: 900px) {
+    display: flex;
+    flex-direction: column;
+    @include vp.pr-viewport-page;
+  }
+}
+
+.mdr-toolbar-docked {
+  border-bottom: 1px solid var(--pr-border-divider);
+  background: var(--pr-surface-card);
 }
 
 .mdr {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 28px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 20px 32px 48px;
+
+  @media (max-width: 640px) {
+    padding: 16px 16px 32px;
+  }
 }
 
 .mdr-header {

@@ -50,7 +50,9 @@
     </header>
   } @else {
   <div class="sticky top-0 z-20 flex-none bg-[var(--pr-surface-band)]">
-    <div class="relative flex h-[88px] flex-col justify-center gap-[6px] px-[32px]">
+    <div
+      class="relative flex h-[64px] flex-col justify-center gap-[4px] sm:gap-[6px] px-[16px] sm:px-[32px]"
+      [class.border-b-band]="!activeTab()">
       @if (pageTitle(); as title) {
         <nav class="min-w-0" aria-label="Breadcrumb">
           <ol class="m-0 flex min-w-0 list-none items-center gap-[6px] p-0 text-[12px] leading-none">
@@ -64,15 +66,15 @@
           </ol>
         </nav>
 
-        <div class="min-w-0 pr-[420px]">
+        <div class="min-w-0 pr-[140px] sm:pr-[240px] min-[900px]:pr-[320px]">
           <h1
-            class="m-0 min-w-0 truncate text-[30px] font-extrabold leading-none tracking-[-0.02em] text-[var(--pr-text-heading)]">
+            class="m-0 min-w-0 truncate text-[18px] sm:text-[21px] font-bold leading-[1.25] tracking-[-0.015em] text-[var(--pr-text-heading)]">
             {{ title }}
           </h1>
         </div>
 
         @if (hasIdentityStrip()) {
-          <div class="flex min-w-0 flex-wrap items-center gap-[8px] pr-[420px]">
+          <div class="flex min-w-0 flex-wrap items-center gap-[8px] pr-[140px] sm:pr-[240px] min-[900px]:pr-[320px]">
             @if (resultCode() != null) {
               <span class="font-mono text-[12px] font-medium text-[var(--pr-text-secondary)]">{{ resultCode() }}</span>
             }
@@ -96,67 +98,72 @@
           </div>
         }
       } @else {
+        <!-- Eyebrow: dot + CGIAR CENTER -->
         <div class="flex items-center gap-[7px]">
-          <span class="h-[8px] w-[8px] shrink-0 rounded-full bg-[var(--pr-color-primary-300)]"></span>
+          <span class="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--pr-color-primary-300)]"></span>
           <span
             class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
             CGIAR Center
           </span>
         </div>
 
-        <div class="min-w-0 pr-[420px]">
-          <h1
-            class="m-0 min-w-0 truncate text-[30px] font-extrabold leading-none tracking-[-0.02em] text-[var(--pr-text-heading)]">
-            {{ ctx.centerAcronym() }}
-          </h1>
-
-          @if (ctx.centerName()) {
-            <p class="m-0 min-w-0 truncate text-[13px] font-normal text-[var(--pr-text-secondary)]">
-              {{ ctx.centerName() }}
-            </p>
-          }
+        <!-- Center acronym title and center name subtitle -->
+        <div class="min-w-0 pr-[140px] sm:pr-[240px] min-[900px]:pr-[320px]">
+          <div class="flex min-w-0 items-baseline gap-[8px]">
+            <h1
+              class="m-0 min-w-0 truncate text-[18px] sm:text-[21px] font-bold leading-[1.25] tracking-[-0.015em] text-[var(--pr-text-heading)]">
+              {{ ctx.centerAcronym() }}
+            </h1>
+            @if (ctx.centerName()) {
+              <p class="m-0 min-w-0 truncate text-[12px] sm:text-[13px] font-normal text-[var(--pr-text-secondary)]">
+                {{ ctx.centerName() }}
+              </p>
+            }
+          </div>
         </div>
       }
 
-      <div class="absolute right-[32px] top-[68px] z-[22] flex -translate-y-1/2 items-center gap-[10px]">
-        <button
-          type="button"
-          class="flex h-[36px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[13px] text-[13px] font-semibold text-[var(--pr-text-heading)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-app)] hover:text-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
-          [attr.aria-label]="backLabel()"
-          data-testid="bilateral-header-back-btn"
-          (click)="goBack()">
-          <ng-icon name="lucideArrowLeft" class="text-[15px]" />
-          <span>{{ backLabel() }}</span>
-        </button>
-
-        @if (activeTab()) {
+      <!-- Action area right-aligned: [Back to Centers] completely removed from tabbed variant; [+ Report emerging result] preserved -->
+      @if (activeTab()) {
+        <div class="absolute right-[16px] sm:right-[32px] top-1/2 z-[22] flex -translate-y-1/2 items-center gap-[8px] sm:gap-[10px]">
           <a
-            class="flex h-[36px] shrink-0 items-center gap-[8px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[14px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
-            [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']">
-            <i class="pi pi-bolt text-[14px]"></i>
-            {{ reportCtaLabel() }}
+            class="flex h-[32px] sm:h-[36px] shrink-0 items-center gap-[6px] sm:gap-[8px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[10px] sm:px-[14px] text-[12px] sm:text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+            [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']"
+            [attr.aria-label]="reportCtaLabel()">
+            <span class="material-icons-round text-[16px] sm:text-[18px]">add_circle</span>
+            <span class="hidden sm:inline">{{ reportCtaLabel() }}</span>
+            <span class="sm:hidden">Report</span>
           </a>
-        }
-      </div>
+        </div>
+      }
     </div>
 
     @if (activeTab()) {
       <nav
-        class="flex h-[48px] items-stretch gap-[24px] border-b border-[var(--pr-border-band)] px-[32px]"
+        class="flex h-[48px] items-stretch gap-[16px] sm:gap-[24px] border-b border-[var(--pr-border-band)] px-[16px] sm:px-[32px] overflow-x-auto no-scrollbar"
         aria-label="Center sections">
+        <!-- Tab 1: Reporting -->
         <a
-          class="mb-[-1px] flex items-center border-b-2 text-[14px] no-underline transition-colors"
+          class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
           [class]="
-            activeTab() === 'overview'
+            isReportingActive()
               ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
               : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
           "
-          [attr.aria-current]="activeTab() === 'overview' ? 'page' : null"
+          [attr.aria-current]="isReportingActive() ? 'page' : null"
           [routerLink]="['/bilateral', ctx.centerAcronym(), 'home']">
-          Overview
+          <span
+            class="material-icons-round text-[18px] transition-colors"
+            [class]="isReportingActive() ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
+            aria-hidden="true">
+            track_changes
+          </span>
+          <span>Reporting</span>
         </a>
+
+        <!-- Tab 2: Results -->
         <a
-          class="mb-[-1px] flex items-center border-b-2 text-[14px] no-underline transition-colors"
+          class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
           [class]="
             activeTab() === 'results'
               ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
@@ -164,10 +171,18 @@
           "
           [attr.aria-current]="activeTab() === 'results' ? 'page' : null"
           [routerLink]="['/bilateral', ctx.centerAcronym(), 'results']">
-          Results
+          <span
+            class="material-icons-round text-[18px] transition-colors"
+            [class]="activeTab() === 'results' ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
+            aria-hidden="true">
+            table_chart
+          </span>
+          <span>Results</span>
         </a>
+
+        <!-- Tab 3: Drafts -->
         <a
-          class="mb-[-1px] flex items-center gap-[6px] border-b-2 text-[14px] no-underline transition-colors"
+          class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
           [class]="
             activeTab() === 'drafts'
               ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
@@ -175,10 +190,17 @@
           "
           [attr.aria-current]="activeTab() === 'drafts' ? 'page' : null"
           [routerLink]="['/bilateral', ctx.centerAcronym(), 'drafts']">
-          Drafts
+          <span
+            class="material-icons-round text-[18px] transition-colors"
+            [class]="activeTab() === 'drafts' ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
+            aria-hidden="true">
+            fact_check
+          </span>
+          <span>Drafts</span>
           @if (bilateralAiService.draftCountDisplay(); as count) {
             <span
-              class="flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[var(--pr-color-primary-300)] px-[4px] text-[10px] font-semibold leading-none text-white">
+              class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums"
+              data-testid="bilateral-drafts-badge">
               {{ count }}
             </span>
           }

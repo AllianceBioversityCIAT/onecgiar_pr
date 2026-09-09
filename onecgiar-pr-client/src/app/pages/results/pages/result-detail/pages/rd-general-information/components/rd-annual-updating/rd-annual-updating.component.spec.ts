@@ -407,6 +407,43 @@ describe('RdAnnualUpdatingComponent', () => {
       expect(asAdmin(seed({ is_discontinued: false }), true).canReopenDiscontinuation).toBe(false);
     });
 
+    /**
+     * P2-3292 (QA 7-Sep-2026) — the payload sends a `tinyint`, not a boolean.
+     *
+     * 🛑 Every case above seeds `is_discontinued: true`, and that is why they were all green while
+     * the defect was live: `GET .../results/get/:id` answers the NUMBER 1 (measured on prtest,
+     * result 6432), and `1 === true` is false. So on a real discontinued result the lock never
+     * closed and the reopen button never rendered — for either role. A fixture that only ever feeds
+     * a boolean cannot see that, which is the whole reason these cases exist.
+     */
+    describe('the stored flag arrives as a MySQL tinyint', () => {
+      it('locks on `is_discontinued: 1`, exactly as it does on `true`', () => {
+        const c = asAdmin(seed({ is_discontinued: 1 }), false);
+
+        expect(c.lockedByDiscontinuation).toBe(true);
+        expect(c.showDiscontinuationLockNotice).toBe(true);
+      });
+
+      it('offers the reopen button to an administrator on `is_discontinued: 1`', () => {
+        const c = asAdmin(seed({ is_discontinued: 1 }), true);
+
+        expect(c.canReopenDiscontinuation).toBe(true);
+        expect(c.lockedByDiscontinuation).toBe(false);
+      });
+
+      it('treats `is_discontinued: 0` as active — no lock, no reopen button', () => {
+        expect(asAdmin(seed({ is_discontinued: 0 }), false).lockedByDiscontinuation).toBe(false);
+        expect(asAdmin(seed({ is_discontinued: 0 }), true).canReopenDiscontinuation).toBe(false);
+      });
+
+      // 🥇 Never answered is not "inactive". Coercing null to false would be harmless here, but
+      // coercing it to TRUE would lock a reporter out of a question they have not answered yet.
+      it('never locks a result whose answer is null', () => {
+        expect(asAdmin(seed({ is_discontinued: null }), false).lockedByDiscontinuation).toBe(false);
+        expect(asAdmin(seed({ is_discontinued: undefined }), true).canReopenDiscontinuation).toBe(false);
+      });
+    });
+
     it('tells the locked-out reporter who to ask, instead of showing a dead form', () => {
       expect(asAdmin(seed(), false).showDiscontinuationLockNotice).toBe(true);
       expect(asAdmin(seed(), true).showDiscontinuationLockNotice).toBe(false);

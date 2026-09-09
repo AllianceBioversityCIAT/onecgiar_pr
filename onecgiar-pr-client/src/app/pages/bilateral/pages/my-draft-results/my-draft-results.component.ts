@@ -92,6 +92,9 @@ const DRAFT_STATUS_MODIFIERS: Record<number, string> = {
   providers: [MyDraftResultsFilterService],
   templateUrl: './my-draft-results.component.html',
   styleUrl: './my-draft-results.component.scss',
+  host: {
+    class: 'pr-viewport-page',
+  },
 })
 export class MyDraftResultsComponent implements OnInit, OnDestroy {
   readonly bilateralAiService = inject(BilateralAiService);

@@ -5,6 +5,17 @@
   min-height: 0;
 }
 
+.contribution-input {
+  appearance: textfield;
+  -moz-appearance: textfield;
+
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
 :host ::ng-deep {
   .custom_select {
     width: 100%;

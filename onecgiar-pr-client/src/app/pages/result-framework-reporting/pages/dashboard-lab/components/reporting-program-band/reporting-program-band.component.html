@@ -254,6 +254,34 @@
       </span>
       <span class="pr-tab-label">Results</span>
     </a>
+    <!-- @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-R-1, BRT-R-2) — fifth tab,
+         between Results and My results, cloned from the My results anchor below. Badge from the
+         injected BilateralReviewCountService (BRT-DD-2), not a host input. -->
+    <a
+      class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
+      [class]="
+        activeTab() === 'bilateral-review'
+          ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+          : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+      "
+      [attr.aria-current]="activeTab() === 'bilateral-review' ? 'page' : null"
+      [routerLink]="bilateralReviewPath()"
+      queryParamsHandling="preserve">
+      <span
+        class="material-icons-round text-[18px] transition-colors"
+        [class]="activeTab() === 'bilateral-review' ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
+        aria-hidden="true">
+        fact_check
+      </span>
+      <span class="pr-tab-label">{{ copy.tabLabel }}</span>
+      @if ((bilateralReviewCount() ?? 0) > 0) {
+        <span
+          class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums"
+          [attr.aria-label]="copy.badgeAriaLabel(bilateralReviewCount()!)">
+          {{ bilateralReviewCount() }}
+        </span>
+      }
+    </a>
     <!-- @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1) — fourth programme-view tab, after
          Results. NOT the design's reserved `Drafts` slot (see `myWorkPath`'s docstring, MWB-DD-12). -->
     <a
@@ -486,18 +514,18 @@
                   [ngModel]="byAowTypeValue() || 'all'"
                   (changed)="byAowTypeChange.emit($event === 'all' ? null : $event)"></app-pr-filter-select>
               </div>
-              <div class="pr-band-filter" aria-label="Filter by status">
+              <div class="pr-band-filter pr-band-filter--align-right" aria-label="Filter by status">
                 <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                   Status
                 </label>
-                <app-pr-filter-select
-                  [options]="statusOptions"
+                <app-pr-filter-multiselect
+                  [options]="cleanStatusOptions()"
                   optionLabel="label"
                   optionValue="value"
                   placeholder="All statuses"
-                  emptyValue="all"
+                  countLabel="statuses"
                   [ngModel]="statusValue()"
-                  (changed)="statusChange.emit($event)"></app-pr-filter-select>
+                  (changed)="statusChange.emit($event)"></app-pr-filter-multiselect>
               </div>
             </div>
           } @else {
@@ -525,25 +553,27 @@
                 <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                   Type
                 </label>
-                <app-pr-filter-select
-                  [options]="typeOptions"
+                <app-pr-filter-multiselect
+                  [options]="cleanTypeOptions()"
                   optionLabel="label"
                   optionValue="value"
                   placeholder="All types"
+                  countLabel="types"
                   [ngModel]="typeValue()"
-                  (changed)="typeChange.emit($event)"></app-pr-filter-select>
+                  (changed)="typeChange.emit($event)"></app-pr-filter-multiselect>
               </div>
-              <div class="pr-band-filter" aria-label="Filter by category">
+              <div class="pr-band-filter pr-band-filter--align-right" aria-label="Filter by category">
                 <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                   Category
                 </label>
-                <app-pr-filter-select
-                  [options]="typologyOptions()"
+                <app-pr-filter-multiselect
+                  [options]="cleanTypologyOptions()"
                   optionLabel="label"
                   optionValue="value"
                   placeholder="All categories"
+                  countLabel="categories"
                   [ngModel]="typologyValue()"
-                  (changed)="typologyChange.emit($event)"></app-pr-filter-select>
+                  (changed)="typologyChange.emit($event)"></app-pr-filter-multiselect>
               </div>
             </div>
 
@@ -552,13 +582,14 @@
               <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                 Status
               </label>
-              <app-pr-filter-select
-                [options]="statusOptions"
+              <app-pr-filter-multiselect
+                [options]="cleanStatusOptions()"
                 optionLabel="label"
                 optionValue="value"
                 placeholder="All statuses"
+                countLabel="statuses"
                 [ngModel]="statusValue()"
-                (changed)="statusChange.emit($event)"></app-pr-filter-select>
+                (changed)="statusChange.emit($event)"></app-pr-filter-multiselect>
             </div>
           }
         </div>
@@ -607,13 +638,13 @@
           </span>
         }
 
-        @if (activeTypeLabel(); as typeLbl) {
+        @for (chip of activeTypeChips(); track chip.value) {
           <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
             <span class="text-slate-500 font-normal">Type:</span>
-            <span class="font-semibold max-w-[120px] truncate">{{ typeLbl }}</span>
+            <span class="font-semibold max-w-[120px] truncate" [title]="chip.label">{{ chip.label }}</span>
             <button
               type="button"
-              (click)="removeTypeChip()"
+              (click)="removeTypeChip(chip.value)"
               class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
               aria-label="Remove type filter">
               <span class="material-icons-round text-[13px]">close</span>
@@ -621,13 +652,13 @@
           </span>
         }
 
-        @if (activeTypologyLabel(); as typLbl) {
+        @for (chip of activeTypologyChips(); track chip.value) {
           <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
             <span class="text-slate-500 font-normal">Category:</span>
-            <span class="font-semibold max-w-[140px] truncate">{{ typLbl }}</span>
+            <span class="font-semibold max-w-[140px] truncate" [title]="chip.label">{{ chip.label }}</span>
             <button
               type="button"
-              (click)="removeTypologyChip()"
+              (click)="removeTypologyChip(chip.value)"
               class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
               aria-label="Remove category filter">
               <span class="material-icons-round text-[13px]">close</span>
@@ -636,13 +667,13 @@
         }
       }
 
-      @if (activeStatusLabel(); as statLbl) {
+      @for (chip of activeStatusChips(); track chip.value) {
         <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
           <span class="text-slate-500 font-normal">Status:</span>
-          <span class="font-semibold">{{ statLbl }}</span>
+          <span class="font-semibold" [title]="chip.label">{{ chip.label }}</span>
           <button
             type="button"
-            (click)="removeStatusChip()"
+            (click)="removeStatusChip(chip.value)"
             class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
             aria-label="Remove status filter">
             <span class="material-icons-round text-[13px]">close</span>

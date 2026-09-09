@@ -18,6 +18,13 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap } from '@ng-icons/lucide';
 import { PrFilterMultiselectModule } from '../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { PrFilterSelectComponent } from '../../../../../../shared/components/pr-filter-select/pr-filter-select.component';
+// @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-DD-2)
+import { BilateralReviewCountService } from '../../../bilateral-review/services/bilateral-review-count.service';
+import { BILATERAL_REVIEW_COPY } from '../../../bilateral-review/bilateral-review.copy';
+import { normalizeBilateralReviewPhaseId } from '../../../bilateral-review/bilateral-review.query-params';
+// @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-6, BRC-DD-1) — the
+// badge now follows the CURRENT reporting phase, not just the program code (judgment-day L-2).
+import { DataControlService } from '../../../../../../shared/services/data-control.service';
 
 export interface BandFilterOption {
   value: string;
@@ -115,6 +122,16 @@ export class ReportingProgramBandComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
   private readonly guideSE = inject(ReportingGuideService);
+  /** `BRT-DD-2` — injected directly (not a host input) so the badge reaches every tab without
+   *  touching any host template. */
+  private readonly bilateralReviewCountSE = inject(BilateralReviewCountService);
+  /** `BRC-T-1`, `BRC-DD-1`/`DD-2` — new: resolves the current reporting phase the same way the
+   *  page does, so the badge (unlike the tab's own Cycle selector) always follows the CURRENT
+   *  phase, never the reviewer's selection. */
+  private readonly dataControlSE = inject(DataControlService);
+  /** `BRT-T-1` rework — the band template reads label/badge copy from here instead of hardcoding
+   *  strings, so `bilateral-review.copy.ts` stays the single source of truth (design.md §6.2/§6.3). */
+  readonly copy = BILATERAL_REVIEW_COPY;
 
   readonly programCode = input<string>('');
   readonly programName = input<string>('');
@@ -140,10 +157,12 @@ export class ReportingProgramBandComponent {
    */
   readonly phaseLabelOverride = input<string>('');
   /**
-   * Which tab is active. Overview, Reporting, Results and My work are separate routes, not local
-   * state. `'my-work'` added `@akili-spec changes/my-work-board` (MWB-T-4, MWB-R-1).
+   * Which tab is active. Overview, Reporting, Results, Bilateral review and My work are separate
+   * routes, not local state. `'my-work'` added `@akili-spec changes/my-work-board` (MWB-T-4,
+   * MWB-R-1). `'bilateral-review'` added `@akili-spec changes/sp-bilateral-review-tab` (BRT-T-1,
+   * BRT-R-1) — fifth tab, rendered between Results and My results.
    */
-  readonly activeTab = input<'overview' | 'reporting' | 'results' | 'my-work'>('reporting');
+  readonly activeTab = input<'overview' | 'reporting' | 'results' | 'bilateral-review' | 'my-work'>('reporting');
   /**
    * `@akili-spec changes/my-work-board` (MWB-T-4, MWB-R-1) — the My work tab's badge: the Mine
    * Editing count for this programme + phase, computed by one scoped list request and cached per
@@ -155,12 +174,30 @@ export class ReportingProgramBandComponent {
 
   readonly search = input<string>('');
   readonly matchCount = input<number | null>(null);
-  readonly statusValue = input<string>('all');
-  readonly typologyValue = input<string>('all');
+  readonly statusValue = input<string[], string[] | string | null | undefined>([], {
+    transform: (v: string[] | string | null | undefined): string[] => {
+      if (Array.isArray(v)) return v.filter(x => x && x !== 'all');
+      if (!v || v === 'all') return [];
+      return [v];
+    }
+  });
+  readonly typologyValue = input<string[], string[] | string | null | undefined>([], {
+    transform: (v: string[] | string | null | undefined): string[] => {
+      if (Array.isArray(v)) return v.filter(x => x && x !== 'all');
+      if (!v || v === 'all') return [];
+      return [v];
+    }
+  });
   readonly typologyCounts = input<Record<string, number>>({});
   readonly typologyOptions = input<BandFilterOption[]>([]);
   /** Type filter: hlo | outcome | intermediate_outcome | outcome_2030 | all. */
-  readonly typeValue = input<string>('all');
+  readonly typeValue = input<string[], string[] | string | null | undefined>([], {
+    transform: (v: string[] | string | null | undefined): string[] => {
+      if (Array.isArray(v)) return v.filter(x => x && x !== 'all');
+      if (!v || v === 'all') return [];
+      return [v];
+    }
+  });
   /** Section is multi-select (reference `selSection`): the picked section codes, empty = no filter. */
   readonly aowValue = input<string[]>([]);
   readonly aowOptions = input<BandFilterGroup[]>([]);
@@ -231,9 +268,9 @@ export class ReportingProgramBandComponent {
   readonly canReportEmerging = input<boolean>(false);
 
   readonly searchChange = output<string>();
-  readonly statusChange = output<string>();
-  readonly typologyChange = output<string>();
-  readonly typeChange = output<string>();
+  readonly statusChange = output<string[]>();
+  readonly typologyChange = output<string[]>();
+  readonly typeChange = output<string[]>();
   readonly aowChange = output<string[]>();
   /** @akili-spec changes/mass-reporting-flow */
   readonly onlyPendingChange = output<boolean>();
@@ -269,15 +306,17 @@ export class ReportingProgramBandComponent {
       programName: this.programName(),
       cycleYear: this.cycleYear() ?? undefined,
       activeTab,
-      onTabNavigate: (tab: 'overview' | 'reporting' | 'results' | 'my-work') => {
+      onTabNavigate: (tab: 'overview' | 'reporting' | 'results' | 'bilateral-review' | 'my-work') => {
         const targetPath =
           tab === 'overview'
             ? this.overviewPath()
             : tab === 'results'
               ? this.resultsPath()
-              : tab === 'my-work'
-                ? this.myWorkPath()
-                : this.reportingPath();
+              : tab === 'bilateral-review'
+                ? this.bilateralReviewPath()
+                : tab === 'my-work'
+                  ? this.myWorkPath()
+                  : this.reportingPath();
         return this.router.navigate([targetPath], { queryParamsHandling: 'preserve' }).then(() => {});
       }
     });
@@ -307,6 +346,12 @@ export class ReportingProgramBandComponent {
    * fifth-in-design-order / fourth-in-programme-view tab, rendered after Results.
    */
   readonly resultsPath = computed(() => `${this.reportingPath()}/results`);
+  /**
+   * Fifth-in-design-order / fourth-in-programme-view tab (`@akili-spec
+   * changes/sp-bilateral-review-tab`, `BRT-T-1`, `BRT-R-1`) — rendered between Results and My
+   * results (`myWorkPath` below).
+   */
+  readonly bilateralReviewPath = computed(() => `${this.reportingPath()}/bilateral-review`);
   /** Fourth programme-view tab (`MWB-T-4`, `MWB-R-1`) — the submitter's own board. */
   readonly myWorkPath = computed(() => `${this.reportingPath()}/my-work`);
   /**
@@ -349,6 +394,29 @@ export class ReportingProgramBandComponent {
 
   /** True while the page is scrolled past the identity block. Drives the compact band. */
   readonly bandCollapsed = signal(false);
+
+  /**
+   * `BRC-T-1`, `BRC-DD-1` — the same phase resolution the page uses (`bilateral-review.component.ts`
+   * `currentPhaseId`): a tracked read of `reportingPhaseVersion()` (otherwise unused) because
+   * `reportingCurrentPhase` is a plain, non-signal object — without it a late-arriving phase would
+   * never re-trigger this computed. `version.id` is a bigint column serialized as a STRING on the
+   * wire ("36"); `normalizeBilateralReviewPhaseId` normalizes it at this one origin — Leader-found
+   * live-page defect: `reportingCurrentPhase.phaseId` initializes `null`, and `Number(null) === 0`
+   * (not `NaN`), so a naive `Number()` guard read the cold-boot state as a "resolved" phase 0 and
+   * warmed the badge/`ensure()` before the shell's own phases request landed.
+   */
+  readonly currentPhaseId = computed<number | null>(() => {
+    this.dataControlSE.reportingPhaseVersion();
+    return normalizeBilateralReviewPhaseId(this.dataControlSE.reportingCurrentPhase?.phaseId);
+  });
+
+  /**
+   * `BRT-R-3`, `BRT-DD-2`, `BRC-DD-2` — the Bilateral review tab's pending-review badge, read from
+   * the injected count service and shown on every tab (not just Bilateral review itself). Now
+   * phase-scoped to the CURRENT phase (never the tab's own selected phase) — `null` while the
+   * current phase has not resolved, which the count service already reads as "no badge".
+   */
+  readonly bilateralReviewCount = computed(() => this.bilateralReviewCountSE.count(this.programCode(), this.currentPhaseId())());
 
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -401,6 +469,17 @@ export class ReportingProgramBandComponent {
     // without this first read the band would render expanded until the next scroll event. Covers the
     // < `md` / no-`scrollHost` case; the effect above covers the ≥ `md` case.
     this.syncBandCollapsed();
+
+    // `BRT-DD-2`, `BRC-DD-1`/`DD-2` — warms the Bilateral review badge for this programme + the
+    // CURRENT phase on every band host (Overview, Reporting, Results, Bilateral review, My results),
+    // not just its own tab. A no-op once the count service already has (or is fetching) this
+    // (code, phase) pair, or while the current phase has not resolved yet (`ensure` itself no-ops
+    // on a null/NaN versionId).
+    effect(() => {
+      const code = this.programCode();
+      const versionId = this.currentPhaseId();
+      if (code && versionId !== null) this.bilateralReviewCountSE.ensure(code, versionId);
+    });
   }
 
   /**
@@ -514,6 +593,12 @@ export class ReportingProgramBandComponent {
           description:
             'View and manage all reported results linked to this Science Program or Accelerator. Use the filters to explore results by status, type, or contributing centers.'
         };
+      case 'bilateral-review':
+        // @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-R-19)
+        return {
+          title: BILATERAL_REVIEW_COPY.explainer.title,
+          description: BILATERAL_REVIEW_COPY.explainer.description
+        };
       case 'my-work':
         // @akili-spec changes/my-work-board (MWB-R-10)
         return {
@@ -559,6 +644,10 @@ export class ReportingProgramBandComponent {
     { value: 'outcome_2030', label: '2030 outcome' }
   ];
 
+  readonly cleanTypeOptions = computed(() => this.typeOptions.filter(o => o.value !== 'all'));
+  readonly cleanTypologyOptions = computed(() => this.typologyOptions().filter(o => o.value !== 'all'));
+  readonly cleanStatusOptions = computed(() => this.statusOptions.filter(o => o.value !== 'all'));
+
   readonly QUICK_TYPOLOGIES = [
     { id: 'all', label: 'All', matchKey: 'all' },
     { id: 'kp', label: 'Knowledge Product', matchKey: 'Knowledge product' },
@@ -569,13 +658,17 @@ export class ReportingProgramBandComponent {
   ] as const;
 
   readonly quickChips = computed<ResultTypeQuickChip[]>(() => {
-    const currentTypology = this.typologyValue();
+    const currentTypologies = this.typologyValue() || [];
     const counts = this.typologyCounts() ?? {};
+    const isAll = currentTypologies.length === 0;
+
     return this.QUICK_TYPOLOGIES.map(item => {
       const active =
         item.matchKey === 'all'
-          ? currentTypology === 'all' || !currentTypology
-          : currentTypology === item.matchKey || currentTypology?.toLowerCase() === item.label.toLowerCase();
+          ? isAll
+          : currentTypologies.some(
+              t => t === item.matchKey || t.toLowerCase() === item.label.toLowerCase()
+            );
 
       const count =
         item.matchKey === 'all'
@@ -594,9 +687,9 @@ export class ReportingProgramBandComponent {
 
   onQuickChipClick(chip: ResultTypeQuickChip): void {
     if (chip.matchKey === 'all' || chip.active) {
-      this.typologyChange.emit('all');
+      this.typologyChange.emit([]);
     } else {
-      this.typologyChange.emit(chip.matchKey);
+      this.typologyChange.emit([chip.matchKey]);
     }
   }
 
@@ -617,13 +710,13 @@ export class ReportingProgramBandComponent {
     if (this.compactFilters()) {
       if (this.centerValue() && this.centerValue() !== 'all') count++;
       if (this.byAowTypeValue() && this.byAowTypeValue() !== 'all') count++;
-      if (this.statusValue() && this.statusValue() !== 'all') count++;
+      if (this.statusValue()?.length) count += this.statusValue().length;
       if (this.onlyPending()) count++;
     } else {
-      if (this.aowValue() && this.aowValue().length > 0) count += this.aowValue().length;
-      if (this.typeValue() && this.typeValue() !== 'all') count++;
-      if (this.typologyValue() && this.typologyValue() !== 'all') count++;
-      if (this.statusValue() && this.statusValue() !== 'all') count++;
+      if (this.aowValue()?.length) count += this.aowValue().length;
+      if (this.typeValue()?.length) count += this.typeValue().length;
+      if (this.typologyValue()?.length) count += this.typologyValue().length;
+      if (this.statusValue()?.length) count += this.statusValue().length;
       if (this.onlyPending()) count++;
     }
     return count;
@@ -658,22 +751,44 @@ export class ReportingProgramBandComponent {
     return vals.map(v => ({ value: v, label: map.get(v) || v }));
   });
 
+  readonly activeTypeChips = computed(() => {
+    const vals = this.typeValue() || [];
+    if (!vals.length) return [];
+    return vals.map(v => ({
+      value: v,
+      label: this.typeOptions.find(o => o.value === v)?.label || v
+    }));
+  });
+
+  readonly activeTypologyChips = computed(() => {
+    const vals = this.typologyValue() || [];
+    if (!vals.length) return [];
+    const opts = this.typologyOptions();
+    return vals.map(v => ({
+      value: v,
+      label: opts.find(o => o.value === v)?.label || v
+    }));
+  });
+
+  readonly activeStatusChips = computed(() => {
+    const vals = this.statusValue() || [];
+    if (!vals.length) return [];
+    return vals.map(v => ({
+      value: v,
+      label: this.statusOptions.find(o => o.value === v)?.label || v
+    }));
+  });
+
   readonly activeTypeLabel = computed(() => {
-    const val = this.typeValue();
-    if (!val || val === 'all') return '';
-    return this.typeOptions.find(o => o.value === val)?.label || val;
+    return this.activeTypeChips().map(c => c.label).join(', ');
   });
 
   readonly activeTypologyLabel = computed(() => {
-    const val = this.typologyValue();
-    if (!val || val === 'all') return '';
-    return this.typologyOptions().find(o => o.value === val)?.label || val;
+    return this.activeTypologyChips().map(c => c.label).join(', ');
   });
 
   readonly activeStatusLabel = computed(() => {
-    const val = this.statusValue();
-    if (!val || val === 'all') return '';
-    return this.statusOptions.find(o => o.value === val)?.label || val;
+    return this.activeStatusChips().map(c => c.label).join(', ');
   });
 
   removeCenterChip(): void {
@@ -689,16 +804,31 @@ export class ReportingProgramBandComponent {
     this.aowChange.emit(next);
   }
 
-  removeTypeChip(): void {
-    this.typeChange.emit('all');
+  removeTypeChip(val?: string): void {
+    if (!val) {
+      this.typeChange.emit([]);
+      return;
+    }
+    const next = (this.typeValue() || []).filter(v => v !== val);
+    this.typeChange.emit(next);
   }
 
-  removeTypologyChip(): void {
-    this.typologyChange.emit('all');
+  removeTypologyChip(val?: string): void {
+    if (!val) {
+      this.typologyChange.emit([]);
+      return;
+    }
+    const next = (this.typologyValue() || []).filter(v => v !== val);
+    this.typologyChange.emit(next);
   }
 
-  removeStatusChip(): void {
-    this.statusChange.emit('all');
+  removeStatusChip(val?: string): void {
+    if (!val) {
+      this.statusChange.emit([]);
+      return;
+    }
+    const next = (this.statusValue() || []).filter(v => v !== val);
+    this.statusChange.emit(next);
   }
 
   removeOnlyPendingChip(): void {

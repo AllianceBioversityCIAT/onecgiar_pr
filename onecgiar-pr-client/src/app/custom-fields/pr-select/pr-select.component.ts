@@ -1,4 +1,4 @@
-import { Component, computed, ElementRef, forwardRef, HostListener, inject, input, output, signal } from '@angular/core';
+import { Component, computed, ElementRef, forwardRef, HostListener, inject, input, OnDestroy, output, signal } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
@@ -16,7 +16,7 @@ import { DataControlService } from '../../shared/services/data-control.service';
   ],
   standalone: false
 })
-export class PrSelectComponent implements ControlValueAccessor {
+export class PrSelectComponent implements ControlValueAccessor, OnDestroy {
   private static nextInstanceId = 0;
   readonly optionLabel = input<string>();
   readonly optionValue = input<string>();
@@ -57,6 +57,9 @@ export class PrSelectComponent implements ControlValueAccessor {
   readonly optionBadgeLabel = input<string>('');
   readonly optionBadgeTone = input<string>('');
 
+  /** Must match `.custom_select .option` height in custom-fields.scss (30px; 50px when extraInformation). */
+  readonly virtualOptionItemSize = computed(() => (this.extraInformation() ? 50 : 30));
+
   readonly selectOptionEvent = output<any>();
 
   private readonly elementRef = inject(ElementRef);
@@ -85,12 +88,61 @@ export class PrSelectComponent implements ControlValueAccessor {
     }
   }
 
-  /** A fixed overlay becomes detached from its trigger when the page moves, so close it on page scroll. */
-  @HostListener('window:scroll')
-  onWindowScroll(): void {
-    if (this.overlayToBody()) {
+  /**
+   * A fixed overlay is positioned against the viewport, so whatever scrolls the trigger away —
+   * the window or, in the bilateral editor, the section column that scrolls on its own — leaves
+   * the panel where it was, visibly detached from its input (reported 2026-09-07 on
+   * /bilateral/:center/result/:code). The old `window:scroll` host listener never fired there:
+   * scroll events do not bubble, and that column is not the window.
+   *
+   * So while the overlay is open a CAPTURE-phase `scroll` listener on the document sees every
+   * scroll container, and the panel is re-anchored to the trigger on each one. Scrolling the
+   * option list itself is ignored — it is a scroll too, and must not move or close the panel.
+   * Once the trigger has left the viewport there is nothing to anchor to, so the panel closes.
+   */
+  private readonly onAnyScroll = (event: Event): void => {
+    if (!this.overlayToBody() || !this.overlayStyles()) return;
+    const panel: Element | null = this.elementRef.nativeElement.querySelector('.options');
+    const target = event.target as Node | null;
+    if (panel && target instanceof Node && panel.contains(target)) return;
+    this.positionOverlay();
+  };
+
+  private scrollListenerAttached = false;
+
+  private attachScrollListener(): void {
+    if (this.scrollListenerAttached) return;
+    document.addEventListener('scroll', this.onAnyScroll, true);
+    this.scrollListenerAttached = true;
+  }
+
+  private detachScrollListener(): void {
+    if (!this.scrollListenerAttached) return;
+    document.removeEventListener('scroll', this.onAnyScroll, true);
+    this.scrollListenerAttached = false;
+  }
+
+  ngOnDestroy(): void {
+    this.detachScrollListener();
+  }
+
+  /**
+   * Anchors the fixed panel under the trigger. Called on open and on every scroll while open.
+   * Closes the panel instead when the trigger is no longer inside the viewport.
+   */
+  positionOverlay(): void {
+    const triggerElement: HTMLElement | null = document.getElementById(this.triggerId);
+    if (!triggerElement) return;
+    const rect = triggerElement.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    if (rect.bottom < 0 || rect.top > viewportHeight) {
       this.removeFocus();
+      return;
     }
+    const top = rect.bottom + 4;
+    const left = rect.left;
+    const width = rect.width;
+    this.overlayStyles.set(`position: fixed; left: ${left}px; top: ${top}px; width: ${width}px; max-height: 300px; z-index: 10000; transform: none; bottom: auto;`);
   }
 
   /**
@@ -113,6 +165,7 @@ export class PrSelectComponent implements ControlValueAccessor {
     const next = event.relatedTarget as Node | null;
     if (next && this.elementRef.nativeElement.contains(next)) return;
     this.overlayStyles.set('');
+    this.detachScrollListener();
   }
 
   get value(): any {
@@ -160,6 +213,7 @@ export class PrSelectComponent implements ControlValueAccessor {
     if (this.overlayToBody()) {
       // Reset inline styles so next open recalculates position
       this.overlayStyles.set('');
+      this.detachScrollListener();
     }
   }
 
@@ -168,14 +222,8 @@ export class PrSelectComponent implements ControlValueAccessor {
       this.isDropdownOpen.set(true); // Only track state if expansion is enabled
     }
     if (this.overlayToBody()) {
-      const triggerElement: any = document.getElementById(this.triggerId);
-      if (triggerElement) {
-        const rect = triggerElement.getBoundingClientRect();
-        const top = rect.bottom + 4;
-        const left = rect.left;
-        const width = rect.width;
-        this.overlayStyles.set(`position: fixed; left: ${left}px; top: ${top}px; width: ${width}px; max-height: 300px; z-index: 10000; transform: none; bottom: auto;`);
-      }
+      this.positionOverlay();
+      if (this.overlayStyles()) this.attachScrollListener();
     }
   }
 

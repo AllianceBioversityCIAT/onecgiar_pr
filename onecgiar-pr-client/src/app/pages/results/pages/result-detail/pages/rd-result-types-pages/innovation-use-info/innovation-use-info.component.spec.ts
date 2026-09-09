@@ -641,4 +641,129 @@ describe('InnovationUseInfoComponent', () => {
       expect(spyNonP25).not.toHaveBeenCalled();
     });
   });
+  // ───────────────────────────────────────────────────────────────────────────────────────────────
+  // P2-3613 — the Current Use Update block never rendered on a real 2025 -> 2026 rollover
+  //
+  // Reported by QA on 7 Sep 2026 against result 8398. The server was never at fault: measured the
+  // same day on prtest, `GET v2/api/innovation-use/get/result/11551` answered
+  // `current_use_previous: {result_id: 10866, phase_year: 2025, total_actors: 8825}`. The loss was
+  // here — `getSectionInformationp25()` hydrates key by key and named none of these five, so they
+  // never reached `app-innovation-use-form`, whose `@Input() body` is this very object.
+  //
+  // The payloads below are the shape the server actually returns, not an invented one.
+  // ───────────────────────────────────────────────────────────────────────────────────────────────
+  describe('P2-3613 — fields the shared form reads off `body` must survive the P25 hydration', () => {
+    const rolledOverResponse = {
+      ...mockGET_innovationUseP25Response,
+      current_use_previous: { result_id: 10866, phase_year: 2025, total_actors: 8825, actors: [{ result_actors_id: '1009' }] },
+      innovation_use_2030_previous: { result_id: 10866, innov_use_2030_to_be_determined: 1, actors: [], organization: [], measures: [] },
+      innov_use_2030_justification: 'Revised against this year evidence',
+      new_users_added: 175,
+      use_expansion_narrative: 'Spread through the community sharing mechanism'
+    };
+
+    beforeEach(() => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(of({ response: rolledOverResponse }));
+    });
+
+    // This is the reported defect itself: `showCurrentUseUpdate()` is `!!body.current_use_previous`,
+    // so an undefined here is the difference between the block rendering and not existing at all.
+    it('carries current_use_previous, which is what gates the Current Use Update block', () => {
+      component.getSectionInformationp25();
+
+      expect(component.innovationUseInfoBody.current_use_previous).toEqual(rolledOverResponse.current_use_previous);
+      expect(component.innovationUseInfoBody.current_use_previous.total_actors).toBe(8825);
+      expect(component.innovationUseInfoBody.current_use_previous.phase_year).toBe(2025);
+    });
+
+    // Same shape of defect, one story earlier (P2-3295): the 2030 block gates on this key.
+    it('carries innovation_use_2030_previous, which gates the 2030 projection block the same way', () => {
+      component.getSectionInformationp25();
+
+      expect(component.innovationUseInfoBody.innovation_use_2030_previous).toEqual(rolledOverResponse.innovation_use_2030_previous);
+    });
+
+    // These three are `[(ngModel)]`-bound: without hydration the reporter types them, the save
+    // sends them, and the reload paints them empty with no error anywhere.
+    it('carries the three answers the reporter types, so a reload shows what was stored', () => {
+      component.getSectionInformationp25();
+
+      expect(component.innovationUseInfoBody.innov_use_2030_justification).toBe('Revised against this year evidence');
+      expect(component.innovationUseInfoBody.new_users_added).toBe(175);
+      expect(component.innovationUseInfoBody.use_expansion_narrative).toBe('Spread through the community sharing mechanism');
+    });
+
+    // §5 allows "the use was verified and did not grow" — a reported 0. `|| null` would erase it
+    // and the reporter would be told the mandatory field is unanswered.
+    it('keeps a reported 0 as 0, never as null', () => {
+      jest
+        .spyOn(mockApiService.resultsSE, 'GET_innovationUseP25')
+        .mockReturnValue(of({ response: { ...rolledOverResponse, new_users_added: 0, use_expansion_narrative: '' } }));
+
+      component.getSectionInformationp25();
+
+      expect(component.innovationUseInfoBody.new_users_added).toBe(0);
+      expect(component.innovationUseInfoBody.new_users_added).not.toBeNull();
+      expect(component.innovationUseInfoBody.use_expansion_narrative).toBe('');
+    });
+
+    // Scenario A: first-time reporting. `null` is the answer that keeps the block ABSENT.
+    it('leaves the two gates null when the server reports no previous phase', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(of({ response: mockGET_innovationUseP25Response }));
+
+      component.getSectionInformationp25();
+
+      expect(component.innovationUseInfoBody.current_use_previous).toBeNull();
+      expect(component.innovationUseInfoBody.innovation_use_2030_previous).toBeNull();
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────────────────────────
+  // P2-3613 — the save side of the same defect
+  //
+  // `saveInnovationUse` assigns both as `?? null` (innovation-use.service.ts:192-193), so a payload
+  // that omits them does not leave them alone: it blanks them. Without this, the first save after
+  // the block finally renders would erase what the reporter had just been shown.
+  // ───────────────────────────────────────────────────────────────────────────────────────────────
+  describe('P2-3613 — the Current Use Update answers must travel in the save payload', () => {
+    beforeEach(() => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+    });
+
+    it('sends new_users_added and use_expansion_narrative', () => {
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+      component.innovationUseInfoBody.new_users_added = 175;
+      component.innovationUseInfoBody.use_expansion_narrative = 'Spread through the community sharing mechanism';
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
+      expect(bodyArg.new_users_added).toBe(175);
+      expect(bodyArg.use_expansion_narrative).toBe('Spread through the community sharing mechanism');
+    });
+
+    it('sends a reported 0 as 0, so a verified no-growth report survives the round trip', () => {
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+      component.innovationUseInfoBody.new_users_added = 0;
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
+      expect(bodyArg.new_users_added).toBe(0);
+      expect(bodyArg.new_users_added).not.toBeNull();
+    });
+
+    it('sends null, not undefined, when the block was never answered', () => {
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
+      expect(bodyArg).toHaveProperty('new_users_added');
+      expect(bodyArg).toHaveProperty('use_expansion_narrative');
+      expect(bodyArg.new_users_added).toBeNull();
+      expect(bodyArg.use_expansion_narrative).toBeNull();
+    });
+  });
 });

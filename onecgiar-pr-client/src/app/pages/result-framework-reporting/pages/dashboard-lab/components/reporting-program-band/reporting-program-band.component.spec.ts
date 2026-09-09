@@ -1,7 +1,15 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
 import { ReportingProgramBandComponent } from './reporting-program-band.component';
 import { ReportingGuideService } from '../../services/reporting-guide.service';
+// @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-R-5) — one useValue stub, per the spec's
+// allowance (band edits limited to the tab bar / path / badge mechanism).
+import { BilateralReviewCountService } from '../../../bilateral-review/services/bilateral-review-count.service';
+// @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-6) — one useValue
+// stub, per the spec's allowance (judgment-day L-2: the band's new injected dependency must not
+// issue a real HTTP request here).
+import { DataControlService } from '../../../../../../shared/services/data-control.service';
 
 /**
  * The band renders the whole programme shell chrome, so these tests go through the real template:
@@ -13,10 +21,36 @@ describe('ReportingProgramBandComponent', () => {
   let fixture: ComponentFixture<ReportingProgramBandComponent>;
   let component: ReportingProgramBandComponent;
 
-  const build = async (inputs: Record<string, unknown> = {}) => {
+  /** `BRT-T-1` — reassigned per-test so a case can control what the badge renders. */
+  let bilateralReviewCountStub: { count: jest.Mock; ensure: jest.Mock };
+
+  const build = async (
+    inputs: Record<string, unknown> = {},
+    bilateralReviewCount: number | null = null,
+    // BRC-T-1: the current phase id the band resolves via `DataControlService`. Default `36` is
+    // resolved; `null` is the REAL shell cold-boot shape (`reportingCurrentPhase` initializes
+    // `phaseId: null`, `data-control.service.ts:104`) and must ALSO read as unresolved — a fixture
+    // using `undefined`/`NaN` here would pass even if the `Number(null) === 0` defect regressed
+    // (Reviewer/Leader-found: `Number(null)` is `0`, not `NaN`).
+    currentPhaseId: number | null | undefined = 36
+  ) => {
+    // BRC-T-1: mirrors the real service's "no versionId, no count" gate (count(code, null/NaN) is
+    // always null) closely enough for `bilateralReviewCount`'s own null-phase test to mean anything
+    // — a stub that ignored `versionId` entirely would return the stubbed count even while the
+    // phase is unresolved, which the real service never does.
+    bilateralReviewCountStub = {
+      count: jest.fn((_code: string, versionId: number | null | undefined) =>
+        signal<number | null>(versionId === null || versionId === undefined || Number.isNaN(versionId) ? null : bilateralReviewCount)
+      ),
+      ensure: jest.fn()
+    };
     await TestBed.configureTestingModule({
       imports: [ReportingProgramBandComponent],
-      providers: [provideRouter([])]
+      providers: [
+        provideRouter([]),
+        { provide: BilateralReviewCountService, useValue: bilateralReviewCountStub },
+        { provide: DataControlService, useValue: { reportingCurrentPhase: { phaseId: currentPhaseId }, reportingPhaseVersion: signal(0) } }
+      ]
     }).compileComponents();
     fixture = TestBed.createComponent(ReportingProgramBandComponent);
     component = fixture.componentInstance;
@@ -613,10 +647,10 @@ describe('ReportingProgramBandComponent', () => {
     const tabText = (a: HTMLAnchorElement) => a.querySelector('.pr-tab-label')?.textContent?.trim() || a.textContent?.trim();
     const tab = (label: string) => tabs().find(a => tabText(a) === label) as HTMLAnchorElement;
 
-    it('renders the four programme tabs in the order the design shows', async () => {
+    it('renders the five programme tabs in the order the design shows', async () => {
       await build({ showToolbar: true });
 
-      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results', 'My results']);
+      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results', 'Bilateral review', 'My results']);
     });
 
     it('points Results at the `/results` route under the programme', async () => {
@@ -666,12 +700,12 @@ describe('ReportingProgramBandComponent', () => {
       expect(tabs().filter(a => a.getAttribute('aria-current') === 'page')).toHaveLength(1);
     });
 
-    it('keeps the four tabs in the condensed bar — one strip serves both shapes', async () => {
+    it('keeps the five tabs in the condensed bar — one strip serves both shapes', async () => {
       await build({ showToolbar: true, activeTab: 'results' });
 
       scrollTo(200);
 
-      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results', 'My results']);
+      expect(tabs().map(tabText)).toEqual(['Overview', 'Reporting', 'Results', 'Bilateral review', 'My results']);
       expect(tab('Results').getAttribute('aria-current')).toBe('page');
     });
 
@@ -820,7 +854,7 @@ describe('ReportingProgramBandComponent', () => {
       expect(el.querySelector('[aria-label="Filter by status"]')).not.toBeNull();
       expect(el.querySelector('[aria-label="Filter by category"]')).toBeNull();
       expect(el.querySelector('[aria-label="Grouping"]')).toBeNull();
-      expect(el.querySelector('app-pr-filter-multiselect')).toBeNull();
+      expect(el.querySelector('[aria-label="Filter by section"]')).toBeNull();
       expect(el.querySelector('[aria-label="Switch Area of Work"] app-pr-filter-select')).not.toBeNull();
     });
 
@@ -1116,7 +1150,7 @@ describe('ReportingProgramBandComponent', () => {
       await build({
         showToolbar: true,
         compactFilters: false,
-        typologyValue: 'all'
+        typologyValue: []
       });
 
       const spy = jest.spyOn(component.typologyChange, 'emit');
@@ -1125,22 +1159,22 @@ describe('ReportingProgramBandComponent', () => {
 
       // Click Knowledge Product (index 1)
       chips[1].click();
-      expect(spy).toHaveBeenCalledWith('Knowledge product');
+      expect(spy).toHaveBeenCalledWith(['Knowledge product']);
 
-      // Now set typologyValue to 'Knowledge product' so it becomes active
-      fixture.componentRef.setInput('typologyValue', 'Knowledge product');
+      // Now set typologyValue to ['Knowledge product'] so it becomes active
+      fixture.componentRef.setInput('typologyValue', ['Knowledge product']);
       fixture.detectChanges();
 
       expect(chips[1].getAttribute('aria-pressed')).toBe('true');
       expect(chips[0].getAttribute('aria-pressed')).toBe('false');
 
-      // Click active chip again -> reverts to 'all'
+      // Click active chip again -> reverts to []
       chips[1].click();
-      expect(spy).toHaveBeenCalledWith('all');
+      expect(spy).toHaveBeenCalledWith([]);
 
-      // Click 'All' chip -> emits 'all'
+      // Click 'All' chip -> emits []
       chips[0].click();
-      expect(spy).toHaveBeenCalledWith('all');
+      expect(spy).toHaveBeenCalledWith([]);
     });
   });
 
@@ -1276,6 +1310,170 @@ describe('ReportingProgramBandComponent', () => {
       // Advance timers to verify debounce timer was cleared and does not emit again
       jest.advanceTimersByTime(200);
       expect(emitSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-R-1/2/3/5, BRT-AC-1/2/3/16)
+  describe('Bilateral review tab (BRT-T-1)', () => {
+    const navLabels = () =>
+      Array.from(root().querySelectorAll('nav[aria-label="Program sections"] a')).map(a => a.querySelector('.pr-tab-label')?.textContent?.trim());
+
+    it('renders in DOM order Overview, Reporting, Results, Bilateral review, My results', async () => {
+      await build();
+
+      expect(navLabels()).toEqual(['Overview', 'Reporting', 'Results', 'Bilateral review', 'My results']);
+    });
+
+    it("the new anchor's href ends with /bilateral-review and preserves query params", async () => {
+      await build();
+
+      const anchors = Array.from(root().querySelectorAll('nav[aria-label="Program sections"] a'));
+      const bilateralAnchor = anchors.find(a => a.querySelector('.pr-tab-label')?.textContent?.trim() === 'Bilateral review') as HTMLAnchorElement;
+
+      expect(bilateralAnchor).toBeTruthy();
+      expect(bilateralAnchor.getAttribute('href')).toMatch(/\/bilateral-review$/);
+      expect(bilateralAnchor.getAttribute('queryParamsHandling')).toBe('preserve');
+    });
+
+    it('renders the badge with a stubbed count of 3', async () => {
+      await build({}, 3);
+      const badge = root().querySelector('nav[aria-label="Program sections"] a:nth-of-type(4) [aria-label$="pending review"]');
+      expect(badge?.textContent?.trim()).toBe('3');
+    });
+
+    it('hides the badge for a stubbed count of 0', async () => {
+      await build({}, 0);
+      const badge = root().querySelector('nav[aria-label="Program sections"] a:nth-of-type(4) [aria-label$="pending review"]');
+      expect(badge).toBeNull();
+    });
+
+    it('hides the badge for a stubbed count of null (cold cache)', async () => {
+      await build({}, null);
+      const badge = root().querySelector('nav[aria-label="Program sections"] a:nth-of-type(4) [aria-label$="pending review"]');
+      expect(badge).toBeNull();
+    });
+
+    it("activeTab='bilateral-review' sets aria-current=\"page\" on it only", async () => {
+      await build({ activeTab: 'bilateral-review' });
+
+      const anchors = Array.from(root().querySelectorAll('nav[aria-label="Program sections"] a'));
+      const current = anchors.filter(a => a.getAttribute('aria-current') === 'page');
+
+      expect(current.length).toBe(1);
+      expect(current[0].querySelector('.pr-tab-label')?.textContent?.trim()).toBe('Bilateral review');
+    });
+
+    it('warms the badge via ensure(programCode(), currentPhaseId()) for a non-empty code (BRC-T-1)', async () => {
+      await build({ programCode: 'SP02' });
+
+      expect(bilateralReviewCountStub.ensure).toHaveBeenCalledWith('SP02', 36);
+    });
+
+    it('does not call ensure and hides the badge while the current phase has not resolved — the REAL shell cold-boot shape (BRC-T-1, BRC-R-6, Leader/Reviewer-found)', async () => {
+      // `null`, not `undefined`/`NaN` — `DataControlService.reportingCurrentPhase` genuinely
+      // initializes `phaseId: null` before the shell's phases request lands
+      // (`data-control.service.ts:104`); `Number(null) === 0`, NOT `NaN`, so a fixture using
+      // `undefined` here passes even if that defect regresses — only `null` can catch it.
+      await build({ programCode: 'SP02' }, 3, null);
+
+      expect(bilateralReviewCountStub.ensure).not.toHaveBeenCalled();
+      const badge = root().querySelector('nav[aria-label="Program sections"] a:nth-of-type(4) [aria-label$="pending review"]');
+      expect(badge).toBeNull();
+    });
+
+    it('the explainer panel shows the approved Bilateral review title and description', async () => {
+      await build({ activeTab: 'bilateral-review' });
+
+      const infoButton = root().querySelector('button[aria-label="About this program and view"]') as HTMLButtonElement;
+      infoButton.click();
+      fixture.detectChanges();
+
+      expect(text()).toContain('Bilateral review');
+      expect(text()).toContain('W3/Bilateral results');
+    });
+  });
+
+  describe('multi-select Type, Category, and Status filters in popover', () => {
+    it('renders Type, Category, and Status as app-pr-filter-multiselect in grouped mode', async () => {
+      await build({
+        showToolbar: true,
+        compactFilters: false,
+        typologyOptions: [
+          { value: 'Knowledge product', label: 'Knowledge product' },
+          { value: 'Policy change', label: 'Policy change' }
+        ]
+      });
+
+      const el = fixture.nativeElement as HTMLElement;
+      const typeFilter = el.querySelector('[aria-label="Filter by type"] app-pr-filter-multiselect');
+      const categoryFilter = el.querySelector('[aria-label="Filter by category"] app-pr-filter-multiselect');
+      const statusFilter = el.querySelector('[aria-label="Filter by status"] app-pr-filter-multiselect');
+
+      expect(typeFilter).not.toBeNull();
+      expect(categoryFilter).not.toBeNull();
+      expect(statusFilter).not.toBeNull();
+    });
+
+    it('emits string[] on typeChange, typologyChange, and statusChange', async () => {
+      await build({
+        showToolbar: true,
+        compactFilters: false,
+        typologyOptions: [
+          { value: 'Knowledge product', label: 'Knowledge product' }
+        ]
+      });
+
+      const typeSpy = jest.spyOn(component.typeChange, 'emit');
+      const typSpy = jest.spyOn(component.typologyChange, 'emit');
+      const statusSpy = jest.spyOn(component.statusChange, 'emit');
+
+      component.typeChange.emit(['hlo', 'outcome']);
+      expect(typeSpy).toHaveBeenCalledWith(['hlo', 'outcome']);
+
+      component.typologyChange.emit(['Knowledge product']);
+      expect(typSpy).toHaveBeenCalledWith(['Knowledge product']);
+
+      component.statusChange.emit(['achieved', 'in-progress']);
+      expect(statusSpy).toHaveBeenCalledWith(['achieved', 'in-progress']);
+    });
+
+    it('renders individual chips for each selected Type, Category, and Status and removes them', async () => {
+      await build({
+        showToolbar: true,
+        compactFilters: false,
+        typeValue: ['hlo', 'outcome'],
+        typologyValue: ['Knowledge product'],
+        typologyOptions: [
+          { value: 'Knowledge product', label: 'Knowledge product' }
+        ],
+        statusValue: ['achieved', 'not-started']
+      });
+
+      expect(component.activeTypeChips()).toEqual([
+        { value: 'hlo', label: 'High level output' },
+        { value: 'outcome', label: 'Outcome' }
+      ]);
+      expect(component.activeTypologyChips()).toEqual([
+        { value: 'Knowledge product', label: 'Knowledge product' }
+      ]);
+      expect(component.activeStatusChips()).toEqual([
+        { value: 'achieved', label: 'Achieved' },
+        { value: 'not-started', label: 'Not started' }
+      ]);
+
+      expect(component.activeFilterCount()).toBe(5); // 2 types + 1 category + 2 statuses
+
+      const typeSpy = jest.spyOn(component.typeChange, 'emit');
+      component.removeTypeChip('hlo');
+      expect(typeSpy).toHaveBeenCalledWith(['outcome']);
+
+      const typSpy = jest.spyOn(component.typologyChange, 'emit');
+      component.removeTypologyChip('Knowledge product');
+      expect(typSpy).toHaveBeenCalledWith([]);
+
+      const statusSpy = jest.spyOn(component.statusChange, 'emit');
+      component.removeStatusChip('achieved');
+      expect(statusSpy).toHaveBeenCalledWith(['not-started']);
     });
   });
 });

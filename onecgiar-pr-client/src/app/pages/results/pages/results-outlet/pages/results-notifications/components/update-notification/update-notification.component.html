@@ -4,7 +4,7 @@
      not serve a bilateral result to its reviewer; the queue's drawer does. -->
 @let resultUrl =
   isBilateralSubmitted
-    ? '/result-framework-reporting/entity-details/' + initOfficialCode + '/results-review'
+    ? '/result-framework-reporting/entity-details/' + initOfficialCode + '/bilateral-review'
     : '/result/result-detail/' + notification?.obj_result?.result_code + '/general-information?phase=' + notification?.obj_result?.obj_version?.id;
 
 <div
