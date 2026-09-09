@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-09-04 · branch qa-development-2026-ss · merge of origin/performance-refactor 85fdfc8c3 into 9b9c032ba (RTA-T-1's sticky-pin grid was superseded by this branch's tabular redesign — see the RTA-T-1 note below)
+**Verified:** 2026-09-09 · working tree on feat/P2-3390-bilateral-investment-tables (adds "Centros de un target compartido" below — chips desde `centers[]`, tope de 3 + `+N more`, centro filtrado pineado; el fix del target inflado va en `aow-bilateral.repository.ts`) · prior: 2026-09-04 · branch qa-development-2026-ss · merge of origin/performance-refactor 85fdfc8c3 into 9b9c032ba (RTA-T-1's sticky-pin grid was superseded by this branch's tabular redesign — see the RTA-T-1 note below)
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjetas colapsables por Area
@@ -135,6 +135,24 @@ El árbol de contenido se organiza según el patrón arquitectónico Card-in-Car
   (`canCopyLink(row)`, que **duplica** — no importa — los códigos sentinel de
   `dashboard-lab.component.ts`'s `INTERMEDIATE_OUTCOMES_CODE`/`OUTCOMES_2030_CODE` para evitar un
   import circular).
+
+## Centros de un target compartido (2026-09-09)
+Un target sostenido por N centros es **UNA** fila (P2-3255) cuyo escalar `center_acronym` viene
+`null` a propósito. Leer solo el escalar dejaba esas filas **sin chip y fuera del filtro por
+centro** — SP-13 KPI 1.3.3 (un target, diez centros) no mostraba ninguno. Ahora:
+- `centerAcronymsOf(row)` es la única fuente: lee `row.centers[]` y cae al escalar solo si no hay
+  lista. Lo consumen los chips de la fila, `centerCountsOf` (los chips del filtro), el filtro
+  `selCenter` de `visibleRows`, el buscador y `__centerLabel` de la tabla plana.
+- ⚠️ **Una fila compartida cuenta en el chip de CADA uno de sus centros** (decisión del dueño,
+  2026-09-09), así que la suma de los chips puede superar el total de KPIs de la tarjeta. Es
+  intencional: cada uno de esos centros sí es dueño del KPI. No lo "corrijas" a conteo único.
+- `rowCentersShown(row, activeCenter)` muestra **3 chips + `+N more`** (`ROW_CENTER_CHIP_LIMIT`), y
+  con 4 o menos los muestra todos — el contador ocuparía el hueco que ahorra. `toggleRowCenters`
+  despliega/colapsa por `rowKey` y llama `stopPropagation` (regla de aislamiento de eventos).
+- ⚠️ **El centro por el que filtra la tarjeta va PINEADO en los 3 visibles** y con el estilo activo.
+  Sin eso, filtrar por IRRI (último de los diez) dejaba la fila en pantalla sin ninguna razón
+  visible. El `activeCenter` llega por el contexto del `ng-template #indicatorRow` (`:815`, desde el
+  `@let selCenter` de la tarjeta); la vista plana no lo pasa porque no tiene filtro por tarjeta.
 
 ## Pendiente / Coming soon
 - Cuerpo del popover ⓘ (falta descripción de AoW en el backend) → P2-3405, aviso a Ángel.
