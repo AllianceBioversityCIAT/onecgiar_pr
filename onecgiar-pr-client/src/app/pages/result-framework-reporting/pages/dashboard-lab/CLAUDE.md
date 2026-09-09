@@ -159,7 +159,6 @@ El árbol de contenido en la vista "By AOW" (`plannedBrowseView() === 'byAow'`) 
   `RAC-DD-6`) — see `pages/programme-results/CLAUDE.md` for the reconciliation table and the
   contributor-only delta this component's `overviewScope`/breakdown totals still include.
 
-## Trampa nueva (2026-08-26)
 ## IO sin AoW: fuera de los AoW (P2-3336 regla 1, 2026-09-09)
 - Un nodo ToC sin work package (`wp_id NULL`, `is_aow: false`) pertenece al Science Program. El
   server lo devuelve **bajo todas las AoW** a propósito y eso **no cambió**; lo que cambió es que
@@ -179,7 +178,7 @@ El árbol de contenido en la vista "By AOW" (`plannedBrowseView() === 'byAow'`) 
 - `ProgramKpiAowSlice.crosscut` queda en `0` en la ruta de AoW. Se conservó el campo a propósito: el
   payload puede volver a traerlos.
 
-## Trampas
+## Trampa nueva (2026-08-26)
 - ⚠️ **Dos convenciones opuestas para `is_aow` ausente.** `indicatorsByAow()`'s `fromTier` (~línea
   1418) trata un `is_aow` faltante como cross-cutting (`!== true`), mientras que
   `entity-aow/services/entity-aow.service.ts` (líneas ~44, 49) trata un `is_aow` faltante/false como
