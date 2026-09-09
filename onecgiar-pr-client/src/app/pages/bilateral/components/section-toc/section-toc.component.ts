@@ -389,6 +389,17 @@ export class SectionTocComponent implements OnInit {
     return item.title || 'Unnamed';
   }
 
+  /**
+   * The ToC mapping checklist. Every item is `optional: true` (PO decision, Juan David Delgado,
+   * 9-sep-2026): choosing the Primary Science Program is enough to send a bilateral result to
+   * Pending Review, so nothing in this block may hold Submit back.
+   *
+   * ⚠️ The items are still PUBLISHED, on purpose — the reporter keeps seeing them on the checklist,
+   * and the fields, their asterisks and their autosave are untouched. What changed is only the
+   * completeness arithmetic (`BilateralMdsTrackerService.buildStatus` skips optional items), which is
+   * what `canSubmitFromRail` reads. The server never required any of this: `submitForReview` asks
+   * only for a lead centre the caller belongs to and an assigned Science Program.
+   */
   private publishTocMds(): void {
     const planned = this.isPlanned();
     const items: MdsFieldItem[] = [
@@ -396,6 +407,7 @@ export class SectionTocComponent implements OnInit {
         key: 'toc-planned',
         label: 'Mapped to planned ToC indicator',
         filled: planned !== null,
+        optional: true,
       },
     ];
 
@@ -404,6 +416,7 @@ export class SectionTocComponent implements OnInit {
         key: 'toc-why-reported',
         label: 'Why is this result being reported',
         filled: !!this.whyReported()?.trim(),
+        optional: true,
       });
     }
 
@@ -413,24 +426,28 @@ export class SectionTocComponent implements OnInit {
           key: 'toc-level',
           label: 'Level',
           filled: this.selectedLevelId() != null,
+          optional: true,
         });
       }
       items.push({
         key: 'toc-node',
         label: this.selectedLevelName() || 'ToC result',
         filled: this.selectedTocResultId() != null,
+        optional: true,
       });
       if (this.selectedTocResultId()) {
         items.push({
           key: 'toc-indicator',
           label: 'Indicator',
           filled: this.selectedIndicatorId() != null,
+          optional: true,
         });
         if (this.selectedIndicatorId()) {
           items.push({
             key: 'toc-contribution',
             label: 'Contribution to indicator target',
             filled: this.contributionValue() != null,
+            optional: true,
           });
         }
       }

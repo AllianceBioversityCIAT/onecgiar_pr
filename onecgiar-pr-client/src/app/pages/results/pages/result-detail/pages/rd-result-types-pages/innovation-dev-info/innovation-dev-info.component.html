@@ -49,7 +49,14 @@
     <app-anticipated-innovation-user [body]="innovationDevInfoBody" [saving]="this.savingSection"></app-anticipated-innovation-user>
   }
 
-  @if (this.fieldsManagerSE.isP25()) {
+  <!-- P2-3641: the "Evidence of user need/user demand" block is dropped from the 2026 form. The ticket
+       declares itself a complement to P2-3263, so it rides the same threshold as the two blocks above.
+       🛑 `isP25()` alone was the gate here and it is the WRONG question: it answers "which portfolio",
+       and the P25 portfolio holds the 2025 phase too — so it kept showing the block in 2026 while a
+       phase-year gate is what the epic asks for. Both conditions stay: the block never existed before
+       P25, and from 2026 on it is gone. Nothing is deleted — a 2025-phase result still renders every
+       evidence it has, and the save call is skipped rather than sent empty (see onSaveSection). -->
+  @if (this.fieldsManagerSE.isP25() && !this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
     <div class="evidences">
       <app-pr-field-header label="Evidence of user need/user demand" [required]="false"></app-pr-field-header>
 

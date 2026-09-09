@@ -99,6 +99,59 @@ describe('MyDraftResultsComponent', () => {
     });
   });
 
+  describe('P2-3315 — Center validation before creating an AI draft result', () => {
+    beforeEach(() => {
+      bilateralAiService.draftList.set([draftStub]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+    });
+
+    it('renames the page and explains that AI drafts require Center validation', () => {
+      const pageText = fixture.nativeElement.textContent;
+      expect(pageText).toContain('Draft Results');
+      expect(pageText).toContain('AI-generated drafts are pending validation by your Center.');
+    });
+
+    it('keeps creation disabled until the Center validation is confirmed', () => {
+      component.onPromoteClick(draftStub);
+      fixture.detectChanges();
+
+      const confirmButton = fixture.debugElement.query(By.css('[data-testid="draft-promotion-confirm"]')).nativeElement as HTMLButtonElement;
+      expect(component.centerValidationConfirmed()).toBe(false);
+      expect(confirmButton.disabled).toBe(true);
+
+      component.centerValidationConfirmed.set(true);
+      fixture.detectChanges();
+      expect(confirmButton.disabled).toBe(false);
+    });
+
+    it('does not promote without validation and resets it after confirmation', () => {
+      const promoteSpy = jest.spyOn(bilateralAiService, 'promoteDraft').mockImplementation();
+      component.onPromoteClick(draftStub);
+      component.onPromoteConfirm();
+      expect(promoteSpy).not.toHaveBeenCalled();
+
+      component.onPromoteClick(draftStub);
+      component.centerValidationConfirmed.set(true);
+      component.onPromoteConfirm();
+
+      expect(promoteSpy).toHaveBeenCalledWith(draftStub.id);
+      expect(component.centerValidationConfirmed()).toBe(false);
+      expect(component.promoteTarget()).toBeNull();
+    });
+
+    it('resets Center validation when promotion is cancelled or a different draft is selected', () => {
+      component.onPromoteClick(draftStub);
+      component.centerValidationConfirmed.set(true);
+      component.onPromoteCancel();
+      expect(component.centerValidationConfirmed()).toBe(false);
+
+      component.centerValidationConfirmed.set(true);
+      component.onPromoteClick({ ...draftStub, id: 2 } as BilateralAiDraft);
+      expect(component.centerValidationConfirmed()).toBe(false);
+    });
+  });
+
   describe('P2-3169 AC2 — the fields every draft card has to show', () => {
     beforeEach(() => {
       bilateralAiService.draftList.set([draftStub]);

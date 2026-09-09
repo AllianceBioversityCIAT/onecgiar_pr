@@ -1,20 +1,20 @@
 # type-innovation-use (bilateral)
 
-**Verified:** 2026-09-02 · branch performance-refactor · d3dbdd6b0
+**Verified:** 2026-09-09 · branch feat/P2-3390-bilateral-investment-tables · 7d0215b13
 
 ## What it is
 Section 5 of the W3/bilateral result creator when the type is **Innovation Use**. Shows the MDS fields
 always, and hides the rest of the pooled-funding form behind **"Complete full metadata"**.
 Stories: P2-3428 (build), P2-3424 (link to a QA'd Innovation Development), P2-3331 (QA twin),
-P2-3556 (load gate).
+P2-3556 (load gate), P2-3390 (the three Investment tables).
 
 ## Contract
 - No `@Input`/`@Output`: all state travels through services.
 - `BilateralCreationService.currentResultId()` — which result; `reportingYear()` — the phase gate.
 - `BilateralMdsTrackerService.setSectionFields('type-specific', …)` — **three entries and only three**:
   `use-actors`, `use-measures`, `use-level`. ⚠️ The story's fourth MDS field, `use-investment`, is
-  rendered disabled with a `Coming soon` tag and is **NOT published here** — see the trap below. Submit
-  is gated on `overallStatus() === 'complete'`, so every extra entry silently raises the bar.
+  reported in the full metadata and is **NOT published here** — see the trap below. Submit is gated on
+  `overallStatus() === 'complete'`, so every extra entry silently raises the bar.
 - `BilateralAutoSaveService.schedulePayload('typeSpecific', …)` — autosave, 800 ms debounce.
 - Load flag: `loaded = signal<boolean | null>(null)` — `null` in flight, `true` loaded, `false` failed.
   **Every write is gated on `=== true`** at the single choke point `queueTypeSave()`.
@@ -61,22 +61,20 @@ P2-3556 (load gate).
 - ⚠️ **The spec's `build()` runs the first change detection**, so `ngOnInit` fires and the default GET mock
   leaves the component `loaded`. Without it every save assertion in the file passes on a component that
   never initialized — which is exactly what it did before P2-3556.
-- ⚠️ **The investment amount is VISIBLE BUT DISABLED with a `Coming soon` tag — 26-Aug-2026, not an
-  oversight.** `investment_bilateral_usd` **does not exist on the server** (zero hits in
-  `onecgiar-pr-server/src/`) and the legacy endpoint dropped it silently. Until 26-Aug it rendered editable
-  with a red asterisk: the user typed a number that vanished on reload with no warning. It now goes
-  `[required]="false"`, `[disabled]="true"`, class `globalDisabled` and the `Coming soon` tag (same markup as
-  `result-ai-item.component.html`), **and the key no longer travels in the payload**. It is not published to
-  the MDS tracker either: if it were, it would count as unfilled after every reload and **Submit would be
-  blocked with no way to unblock it**. Same pattern as `external-partners` in
-  `section-contributors.component.ts:344`. **Real fix path:** repoint to
-  `PATCH /v2/api/innovation-use/create/result/:resultId`, which models the amount **per project**
-  (`investment_bilateral: [{ id, kind_cash, is_determined }]`, `non_pooled_projetct_budget.kind_cash`) and
-  expects the **0-9 level** in `innovation_use_level_id`, not the catalog id — today it would 400 and abort
-  the whole PATCH. And **the story does not define how to split one total across several contributing
-  projects**, which is not ours to invent (rule 6). Locks: the three tests named `AC8 — …`,
-  `never sends investment_bilateral_usd in the payload…` and `does NOT publish use-investment…`.
-  ⚠️ Diverges from **AC8**, which asks for it editable and mandatory: impossible without a column.
+- ⚠️ **Investment is THREE TABLES in the full metadata, optional, and outside the MDS (P2-3390,
+  9-Sep-2026).** It replaced the single disabled `Coming soon` amount that sat in the MDS block until
+  8-Sep: `investment_bilateral_usd` had no column anywhere and the legacy endpoint dropped it in silence,
+  and the amount is per ENTITY, not one total. The section now renders `app-estimates-cgiar` — the same
+  component W1/W2 uses — over `investment_programs` / `investment_bilateral` / `investment_partners`, one
+  row per entity already linked to the result. **Still not published to the tracker**, now by PO decision
+  (Juan David Delgado): optional, and AC16 forbids anything behind the toggle from counting — publishing it
+  would raise the bar Submit is gated on. Server side the writer is `ResultInvestmentService`
+  (`api/results/result_budget`), reached by this same legacy endpoint; it keys project rows by
+  `results_by_projects` and forces `non_pooled_projetct_id = null`. 🛑 **Never send the legacy
+  `*_expected_investment` keys from here** — their writer resolves the `non_pooled_project` catalogue and
+  drops every bilateral row without an error. Diverges from **P2-3126 AC1** and from QA's "mandatory"
+  recommendation on purpose. Locks: `AC8 / P2-3390 — renders the three investment tables…`,
+  `P2-3390 — sends the three investment arrays…` and `does NOT publish use-investment…`.
 - ⚠️ **The backend already persists everything but the investment (P2-3424).** The DTO
   (`api/results/summary/dto/create-innovation-use.dto.ts`) declares `has_scaling_studies`,
   `scaling_studies_urls`, `innov_use_2030_to_be_determined`, `readiness_level_explanation`,
@@ -115,5 +113,5 @@ P2-3556 (load gate).
 ## Pending / Coming soon
 - **2030 Use Projection**: only "This is yet to be determined" was built; fields redefined by **P2-3295**.
 - **Read-only mode (AC17)**: not implemented and not verified in this section.
-- **W3/bilateral investment amount**: `Coming soon` until the server has somewhere to store it. Investment
-  rows "CGIAR Programs / Initiatives" and "Partner Institutions": read-only, awaiting the P2-3428 decision.
+- **Making investment mandatory / part of the green check**: would require touching the
+  `validation_innovation_use_P25` MySQL function, applied by hand per environment. Out of P2-3390.

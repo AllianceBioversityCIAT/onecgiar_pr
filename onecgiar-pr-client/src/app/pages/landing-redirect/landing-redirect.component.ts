@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { ApiService } from '../../shared/services/api/api.service';
 import { SPProgress } from '../../shared/interfaces/SP-progress.interface';
 import {
   ResultFrameworkReportingHomeService,
   partitionScienceProgramsForHome
 } from '../result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
+import { ScienceProgramIdService } from '../result-framework-reporting/services/science-program-id.service';
 
 /**
  * Where a user with at least one assigned science program lands: the program's own page,
@@ -42,7 +42,7 @@ export const LANDING_FALLBACK_PATH = '/result/results-outlet/results-list';
 })
 export class LandingRedirectComponent implements OnInit {
   private readonly router = inject(Router);
-  private readonly api = inject(ApiService);
+  private readonly scienceProgramIdSE = inject(ScienceProgramIdService);
   private readonly homeSE = inject(ResultFrameworkReportingHomeService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -56,7 +56,10 @@ export class LandingRedirectComponent implements OnInit {
       return;
     }
 
-    const subscription = this.api.resultsSE.GET_ScienceProgramsProgress().subscribe({
+    // P2-3180: shared/session-cached request (see ScienceProgramIdService) instead of calling
+    // GET_ScienceProgramsProgress() directly — avoids a second identical request when the
+    // sidebar's "My Science Programs" list resolves around the same time.
+    const subscription = this.scienceProgramIdSE.progress$.subscribe({
       next: ({ response }) => {
         const partitioned = partitionScienceProgramsForHome(response);
         this.homeSE.mySPsList.set(partitioned.mySciencePrograms);

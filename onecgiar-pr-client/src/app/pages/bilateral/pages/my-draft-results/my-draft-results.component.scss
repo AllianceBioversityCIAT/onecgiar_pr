@@ -36,6 +36,19 @@
   margin: 0 0 4px;
 }
 
+.mdr-validation-note {
+  margin: 6px 0 0;
+  color: var(--pr-text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.mdr-promote-validation {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--pr-border-divider);
+}
+
 .mdr-subtitle {
   font-size: 13px;
   color: #718096;

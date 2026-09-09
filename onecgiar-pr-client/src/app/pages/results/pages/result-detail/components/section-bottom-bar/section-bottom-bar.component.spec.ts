@@ -19,9 +19,11 @@ describe('SectionBottomBarComponent', () => {
   let dataControlMock: any;
   let rolesMock: any;
   /**
-   * Green check de la seccion abierta. P2-3542: es la señal AUTORITATIVA de completitud — la
-   * misma que pinta el rail y habilita Submit —, asi que los casos la fijan explicitamente en vez
-   * de deducirla del scan del DOM.
+   * Green check de la seccion abierta. RSC-1 (2026-09-08) le quito a este componente la lectura
+   * de esta señal para su propio pill (ver `isComplete` en el `.ts`) — se mantiene aqui solo
+   * porque `ResultSectionsService`'s el shape la expone y otros consumidores (el rail, Submit)
+   * siguen dependiendo de ella. Los casos que antes la fijaban para probar que GANABA sobre el
+   * scan del DOM ahora prueban lo contrario — ver el describe `completion status`.
    */
   let sectionIsDone = true;
 
@@ -182,39 +184,27 @@ describe('SectionBottomBarComponent', () => {
     });
 
     /**
-     * P2-3542. El caso que reporto QA: la barra decia "Section complete" mientras el rail estaba
-     * rojo, porque decidia sola escaneando el DOM. El scan solo ve lo renderizado — el tab ToC
-     * activo, y nada de lo que la funcion de validacion exige sin campo en pantalla (partner
-     * contribuyente, centro contribuyente) —, asi que el green check tiene que ganar.
+     * RSC-1 (2026-09-08, supersedes P2-3542 for this pill). The ask: the pill must update live, as
+     * the user types, instead of waiting for a save round-trip to refresh the green check. So the
+     * pill now follows the DOM scan unconditionally — the green check still owns the sidebar rail
+     * and gating Submit (untouched), but this pill no longer waits for it.
      */
-    it('trusts the green check over the DOM scan when the scan found nothing (P2-3542)', async () => {
+    it('follows the DOM scan even when the green check disagrees (RSC-1)', async () => {
       sectionIsDone = false;
       dataControlMock.fieldFeedbackList = signal<string[]>([]);
-      await build();
-
-      expect(q('[data-testid="section-bottom-bar-complete"]')).toBeNull();
-      expect(q('[data-testid="section-bottom-bar-pending"]').textContent).toContain('Section incomplete');
-    });
-
-    it('explains the gap instead of naming zero fields (P2-3542)', async () => {
-      sectionIsDone = false;
-      dataControlMock.fieldFeedbackList = signal<string[]>([]);
-      await build();
-
-      q('[data-testid="section-bottom-bar-pending"]').click();
-      fixture.detectChanges();
-
-      expect(html().querySelectorAll('#sbb-pending-list li')).toHaveLength(0);
-      expect(q('#sbb-pending-list').textContent).toContain('pending requirements');
-    });
-
-    it('stays complete when the green check passes, whatever the DOM scan says (P2-3542)', async () => {
-      sectionIsDone = true;
-      dataControlMock.fieldFeedbackList = signal(['Result title']);
       await build();
 
       expect(q('[data-testid="section-bottom-bar-complete"]').textContent).toContain('Section complete');
       expect(q('[data-testid="section-bottom-bar-pending"]')).toBeNull();
+    });
+
+    it('counts fields as missing even when the green check says the section is done (RSC-1)', async () => {
+      sectionIsDone = true;
+      dataControlMock.fieldFeedbackList = signal(['Result title']);
+      await build();
+
+      expect(q('[data-testid="section-bottom-bar-complete"]')).toBeNull();
+      expect(q('[data-testid="section-bottom-bar-pending"]').textContent).toContain('1 field missing');
     });
 
     /**

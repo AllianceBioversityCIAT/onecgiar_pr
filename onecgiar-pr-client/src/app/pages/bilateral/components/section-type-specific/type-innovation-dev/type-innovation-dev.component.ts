@@ -7,6 +7,7 @@ import { BilateralAutoSaveService } from '../../../services/bilateral-auto-save.
 import { BilateralExpandableStateService } from '../../../services/bilateral-expandable-state.service';
 import { InnovationControlListService } from '../../../../../shared/services/global/innovation-control-list.service';
 import { CustomFieldsModule } from '../../../../../custom-fields/custom-fields.module';
+import { EstimatesCgiarComponent } from '../../../../../shared/components/innovation-use-form/components/estimates/estimates.component';
 import { WordCounterService } from '../../../../../shared/services/word-counter.service';
 import { ReportingDesignYear } from '../../../../../shared/enum/reporting-design-year.enum';
 
@@ -64,7 +65,7 @@ const HAS_SCALING_STUDIES_OPTIONS = [
 
 @Component({
   selector: 'app-type-innovation-dev',
-  imports: [FormsModule, CustomFieldsModule],
+  imports: [FormsModule, CustomFieldsModule, EstimatesCgiarComponent],
   templateUrl: './type-innovation-dev.component.html',
   styleUrl: './type-innovation-dev.component.scss'
 })
@@ -163,6 +164,7 @@ export class TypeInnovationDevComponent implements OnInit {
     this.bilateralApi.GET_innovationDev(resultId).subscribe({
       next: ({ response }) => {
         this.body = response || {};
+        this.hydrateInvestmentTables();
         this.loaded.set(true);
         this.updateMds();
       },
@@ -253,6 +255,17 @@ export class TypeInnovationDevComponent implements OnInit {
    * ⚠️ `scaling_studies_urls` needs no such treatment: its writer only runs when
    * `scaling_studies_urls?.length` is truthy (`summary.service.ts:710-731`), so `[]` is a no-op there.
    */
+  /**
+   * P2-3390 — the server sends one row per active link, but a result with no links at all leaves the keys
+   * absent. The shared table component writes straight into these arrays, so they must exist before it
+   * renders.
+   */
+  private hydrateInvestmentTables(): void {
+    this.body.investment_programs = this.body.investment_programs ?? [];
+    this.body.investment_bilateral = this.body.investment_bilateral ?? [];
+    this.body.investment_partners = this.body.investment_partners ?? [];
+  }
+
   private buildPayload(): Record<string, unknown> {
     const { reference_materials } = this.body as { reference_materials?: unknown };
     const payload: Record<string, unknown> = {
@@ -269,6 +282,15 @@ export class TypeInnovationDevComponent implements OnInit {
       evidences_justification: this.body.evidences_justification ?? null,
       has_scaling_studies: this.body.has_scaling_studies ?? null,
       scaling_studies_urls: this.body.scaling_studies_urls ?? [],
+      // P2-3390: the three investment tables, sent as read — one row per entity. Only these flat keys are
+      // sent, NEVER the legacy `initiative_expected_investment` / `bilateral_expected_investment` /
+      // `institutions_expected_investment` family: the legacy writer resolves the `non_pooled_project`
+      // catalogue by `non_pooled_projetct_id`, finds nothing for a CLARISA project and drops the row in
+      // silence (server `api/results/summary/innovation_dev.service.ts`). The two families are handled by
+      // different writers on the same endpoint, so sending only ours keeps W1/W2 untouched.
+      investment_programs: this.body.investment_programs ?? [],
+      investment_bilateral: this.body.investment_bilateral ?? [],
+      investment_partners: this.body.investment_partners ?? [],
       ...(Array.isArray(reference_materials) ? { reference_materials } : {})
     };
     // Omit null PK so the server can AUTO_INCREMENT on first create.

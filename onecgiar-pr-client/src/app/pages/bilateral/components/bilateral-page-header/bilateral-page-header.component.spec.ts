@@ -61,7 +61,7 @@ describe('BilateralPageHeaderComponent', () => {
     expect(links.map(l => l.nativeElement.textContent.trim().split('\n')[0].trim())).toEqual([
       'track_changes\n          Reporting',
       'table_chart\n          Results',
-      'fact_check\n          Drafts',
+      'fact_check\n          Draft Results',
     ].map(s => s.replace(/\s+/g, ' ')));
 
     // Verify icons on all three tabs
@@ -326,8 +326,8 @@ describe('BilateralPageHeaderComponent', () => {
     const cta = fixture.debugElement.query(By.css('a[href*="create"]'));
     expect(cta.nativeElement.getAttribute('href')).toBe('/bilateral/SMO/create');
 
-    const draftsTab = fixture.debugElement.queryAll(By.css('nav a')).find(l =>
-      l.nativeElement.textContent.includes('Drafts'),
+      const draftsTab = fixture.debugElement.queryAll(By.css('nav a')).find(l =>
+        l.nativeElement.textContent.includes('Draft Results'),
     );
     expect(draftsTab?.nativeElement.getAttribute('href')).toBe('/bilateral/SMO/drafts');
   });

@@ -5,6 +5,7 @@ import { NonPooledProjectBudget } from '../../result_budget/entities/non_pooled_
 import { ResultInitiativeBudget } from '../../result_budget/entities/result_initiative_budget.entity';
 import { ResultInstitutionsBudget } from '../../result_budget/entities/result_institutions_budget.entity';
 import { ResultsByInstitutionType } from '../../results_by_institution_types/entities/results_by_institution_type.entity';
+import { InvestmentRowDto } from '../../result_budget/dto/investment-row.dto';
 
 export class CreateInnovationDevDto {
   public result_innovation_dev_id: number;
@@ -33,6 +34,19 @@ export class CreateInnovationDevDto {
   public initiative_expected_investment: ResultInitiativeBudget[];
   public bilateral_expected_investment: NonPooledProjectBudget[];
   public institutions_expected_investment: ResultInstitutionsBudget[];
+
+  /**
+   * P2-3390 — the same three investment tables in the flat contract, alongside (not instead of) the
+   * legacy nested keys above. Optional; an absent key is a no-op.
+   *
+   * A caller sends one family or the other, never both: W1/W2 keeps sending
+   * `*_expected_investment` (handled by `InnoDevService`, which resolves the legacy
+   * `non_pooled_project` catalogue) and the bilateral form sends these, handled by
+   * `ResultInvestmentService`, which keys the project row by `result_project_id`.
+   */
+  public investment_programs?: InvestmentRowDto[];
+  public investment_bilateral?: InvestmentRowDto[];
+  public investment_partners?: InvestmentRowDto[];
 }
 export interface SubOption {
   result_question_id: number;

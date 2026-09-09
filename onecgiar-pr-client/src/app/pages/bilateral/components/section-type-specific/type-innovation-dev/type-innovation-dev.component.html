@@ -177,20 +177,14 @@
         }
       }
 
+      <!-- P2-3390 — the three "Investment (USD)" tables, the same component the W1/W2 Innovation Use and
+           Innovation Development forms render. One row per entity already linked to this result; the person
+           only types an amount or ticks "yet to be determined". Optional, outside the MDS and outside the
+           green check (`updateMds()` is unchanged). Disabled while the section could not be loaded, since
+           `queueTypeSave` writes nothing in that state. -->
       <div class="flex flex-col gap-2">
         <span class="tsf-label">Investment (USD)</span>
-        <div class="tsf-readonly-row">
-          <span class="tsf-readonly-label">CGIAR Programs / Initiatives</span>
-          <span class="tsf-readonly-value tsf-empty-value">Not available yet</span>
-        </div>
-        <div class="tsf-readonly-row">
-          <span class="tsf-readonly-label">Bilateral Projects</span>
-          <span class="tsf-readonly-value tsf-empty-value">Not available yet</span>
-        </div>
-        <div class="tsf-readonly-row">
-          <span class="tsf-readonly-label">Partner Institutions</span>
-          <span class="tsf-readonly-value tsf-empty-value">Not available yet</span>
-        </div>
+        <app-estimates-cgiar [body]="body" [disabled]="loaded() !== true"></app-estimates-cgiar>
       </div>
 
       <div>

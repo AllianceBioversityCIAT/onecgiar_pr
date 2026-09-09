@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { HlmSidebarService } from '@spartan/sidebar';
 
 import { ReportingNavSidebarComponent } from './reporting-nav-sidebar.component';
@@ -766,6 +768,85 @@ describe('ReportingNavSidebarComponent', () => {
       component.onEscape();
       expect(component.fontMenuOpen()).toBe(false);
       expect(component.iconFlyout()).toBeNull();
+    });
+  });
+
+  // ------------------------------------------------------- SBAR-T-3 / SBAR-R-10 / STC-R-2..R-4
+  // `[data-guide="sidebar-toggle"]` is the anchor `ReportingGuideService` (SBAR-T-4) targets for
+  // the one-time discoverability hint (SBAR-DD-4). Since
+  // `SPEC:changes/sidebar-toggle-consolidation` (STC-T-1), the sidebar owns TWO such buttons — one
+  // per state (STC-DD-1) — each guarded by a mutually exclusive `@if` reading the same
+  // `computed<boolean> isCollapsed()`, so exactly one is ever rendered.
+  //
+  // Why this is a markup (parsed-template) check and not a `TestBed`-rendered one: EVERY test
+  // above renders this component with its template overridden to `''` — that pre-dates this task.
+  // The real reason is `hlmSidebarMenuButton`'s `tooltip` host-directive binding to `BrnTooltip`
+  // (`hlm-sidebar-menu-button.ts`) throws `NG0311: Directive BrnTooltip does not have an input
+  // with a public name of brnTooltip` the instant the real template is instantiated under Jest —
+  // a pre-existing `@spartan-ng/brain` version-resolution mismatch in the test runner, unrelated
+  // to this attribute change and out of this task's scope to fix. Parsing the actual `.html` file
+  // as markup proves the hook exists in the authored DOM without tripping that unrelated bug.
+  //
+  // `DOMParser` has no notion of `@if` — it sees BOTH authored branches, so a parsed-template count
+  // is 2 (one per branch), never the runtime count of 1. That is a property of the workaround, not
+  // an STC-R-4 regression; see `execution.md` → STC-T-1 for the Reviewer's adjudication. What this
+  // proves: both buttons are authored correctly and sit in disjoint `@if` branches (the STC-R-4
+  // invariant a text-parse CAN assert). What it does NOT prove: whether a driver.js popover
+  // anchored to this selector renders sensibly (placement/legibility) — that is out of reach for a
+  // DOM-presence assertion and is covered instead by the manual QA step in STC-T-2's done criteria.
+  // Don't mistake this test passing for "the tour looks right".
+  describe('sidebar toggle data-guide hook (SBAR-T-3, STC-R-2..R-4)', () => {
+    const readTemplateDoc = (): Document => {
+      const html = readFileSync(join(__dirname, 'reporting-nav-sidebar.component.html'), 'utf8');
+      return new DOMParser().parseFromString(html, 'text/html');
+    };
+
+    it('authors both state buttons with the hook — 2 authored branches, not a runtime duplicate', () => {
+      const doc = readTemplateDoc();
+      const hooks = doc.querySelectorAll('[data-guide="sidebar-toggle"]');
+      // Two authored `@if` branches, one per sidebar state — see the block comment above for why
+      // this is 2 here and provably 1 at runtime (STC-R-4).
+      expect(hooks.length).toBe(2);
+    });
+
+    it('expanded-state button (STC-R-2/STC-R-10): "Collapse sidebar", no rail-centring class, toggles the sidebar', () => {
+      const html = readFileSync(join(__dirname, 'reporting-nav-sidebar.component.html'), 'utf8');
+      const doc = readTemplateDoc();
+      const hooks = Array.from(doc.querySelectorAll('[data-guide="sidebar-toggle"]')) as HTMLButtonElement[];
+      const expandedButton = hooks.find(el => el.getAttribute('aria-label') === 'Collapse sidebar');
+
+      expect(expandedButton).toBeTruthy();
+      expect(expandedButton!.tagName.toLowerCase()).toBe('button');
+      expect(expandedButton!.getAttribute('type')).toBe('button');
+      expect(expandedButton!.getAttribute('title')).toBe('Collapse sidebar');
+      expect(expandedButton!.outerHTML).toContain('(click)="sidebarSE.toggleSidebar()"');
+      // `mx-auto` centres the button on the icon RAIL (collapsed state only) — it must NOT be on
+      // the expanded button, which sits in a flex row beside the build badge (STC-R-10 review note).
+      expect(expandedButton!.getAttribute('class')).not.toContain('mx-auto');
+
+      // STC-R-4 invariant: the expanded button's `@if` and the collapsed button's `@if` read the
+      // negated form of the same condition, so they are mutually exclusive branches, not two
+      // independently-true conditions.
+      expect(html).toContain('@if (!isCollapsed())');
+    });
+
+    it('collapsed-state button (STC-R-3, unchanged): "Expand sidebar", rail-centred, toggles the sidebar', () => {
+      const html = readFileSync(join(__dirname, 'reporting-nav-sidebar.component.html'), 'utf8');
+      const doc = readTemplateDoc();
+      const hooks = Array.from(doc.querySelectorAll('[data-guide="sidebar-toggle"]')) as HTMLButtonElement[];
+      const collapsedButton = hooks.find(el => el.getAttribute('aria-label') === 'Expand sidebar');
+
+      expect(collapsedButton).toBeTruthy();
+      expect(collapsedButton!.tagName.toLowerCase()).toBe('button');
+      expect(collapsedButton!.getAttribute('type')).toBe('button');
+      expect(collapsedButton!.getAttribute('title')).toBe('Expand sidebar');
+      expect(collapsedButton!.outerHTML).toContain('(click)="sidebarSE.toggleSidebar()"');
+      expect(collapsedButton!.getAttribute('class')).toBe(
+        'hover:bg-sidebar-accent text-sidebar-foreground mx-auto flex size-8 items-center justify-center rounded-md'
+      );
+
+      // STC-R-4 invariant, other half: the collapsed branch reads the un-negated condition.
+      expect(html).toContain('@if (isCollapsed())');
     });
   });
 });

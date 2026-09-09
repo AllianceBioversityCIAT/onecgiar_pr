@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { HlmSidebarService } from '@spartan/sidebar';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 import { ShellTopbarComponent } from './shell-topbar.component';
 import { ApiService } from '../../services/api/api.service';
@@ -23,7 +24,6 @@ describe('ShellTopbarComponent', () => {
   let routerMock: any;
   let notificationsMock: any;
   let filterMock: any;
-  let sidebarMock: any;
 
   const build = async () => {
     await TestBed.configureTestingModule({
@@ -33,8 +33,7 @@ describe('ShellTopbarComponent', () => {
         { provide: DataControlService, useValue: dataControlMock },
         { provide: Router, useValue: routerMock },
         { provide: ResultsNotificationsService, useValue: notificationsMock },
-        { provide: ResultsListFilterService, useValue: filterMock },
-        { provide: HlmSidebarService, useValue: sidebarMock }
+        { provide: ResultsListFilterService, useValue: filterMock }
       ],
       schemas: [NO_ERRORS_SCHEMA]
     })
@@ -63,7 +62,6 @@ describe('ShellTopbarComponent', () => {
       handlePopUpNotificationLastViewed: jest.fn()
     };
     filterMock = { text_to_search: signal('') };
-    sidebarMock = { toggleSidebar: jest.fn(), state: signal('expanded'), isMobile: signal(false) };
   });
 
   it('creates, and no longer syncs anything with the Results Center list filter', async () => {
@@ -139,12 +137,6 @@ describe('ShellTopbarComponent', () => {
   });
 
   // ------------------------------------------------------------- other chrome
-  it('toggleSidebar delegates to the sidebar service', async () => {
-    await build();
-    component.toggleSidebar();
-    expect(sidebarMock.toggleSidebar).toHaveBeenCalled();
-  });
-
   it('notificationBadgeLength is empty with no notifications', async () => {
     await build();
     expect(component.notificationBadgeLength()).toBe('');
@@ -270,5 +262,34 @@ describe('ShellTopbarComponent', () => {
     component.onEscape();
     expect(component.userMenuOpen()).toBe(false);
     expect(component.notificationsOpen()).toBe(false);
+  });
+
+  // ------------------------------------------------------- SPEC:changes/sidebar-toggle-consolidation
+  // STC-R-1 / STC-AC-1 — the sidebar collapse/expand control moved entirely into
+  // `reporting-nav-sidebar` (STC-DD-1): the topbar no longer owns, nor renders, any collapse
+  // control, and `[data-guide="sidebar-toggle"]` — the anchor `ReportingGuideService`'s
+  // discoverability hint targets — must resolve to ZERO elements here. Exactly one match still
+  // exists app-wide, but it now lives solely on whichever of the sidebar's own two buttons
+  // (`reporting-nav-sidebar.component.spec.ts`) is currently rendered.
+  //
+  // Same reason as `reporting-nav-sidebar.component.spec.ts`: every test above builds this fixture
+  // with its template overridden to `''`, so a `TestBed`-rendered DOM assertion isn't available
+  // here either. Parsing the actual `.html` file as markup proves the hook (and the control it sat
+  // on) is genuinely absent from the authored template, without touching that unrelated override.
+  describe('sidebar toggle data-guide hook removed from the topbar (STC-R-1/STC-AC-1)', () => {
+    const readTemplateDoc = (): Document => {
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+      return new DOMParser().parseFromString(html, 'text/html');
+    };
+
+    it('resolves [data-guide="sidebar-toggle"] to ZERO elements — no collapse control lives here any more', () => {
+      const doc = readTemplateDoc();
+      const hooks = doc.querySelectorAll('[data-guide="sidebar-toggle"]');
+      expect(hooks.length).toBe(0);
+
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+      expect(html).not.toContain('toggleSidebar()');
+      expect(html).not.toContain('aria-label="Toggle sidebar"');
+    });
   });
 });

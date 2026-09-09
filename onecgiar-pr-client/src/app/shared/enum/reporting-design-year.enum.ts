@@ -48,9 +48,15 @@ export const ReportingDesignYear = {
 
   /**
    * SIDS form reduction for Innovation Development (epic P2-3243) ships in the 2026 cycle: the
-   * "Demand of anticipated innovation user" section (P2-3263) and the Megatrends question (P2-3264)
-   * stop being shown. Results in the 2025 phase (and earlier) keep both, with their stored answers —
-   * the epic's governing rule is that previous phases must render exactly as they did.
+   * "Demand of anticipated innovation user" section (P2-3263), the Megatrends question (P2-3264)
+   * and the "Evidence of user need/user demand" block (P2-3641) stop being shown. Results in the
+   * 2025 phase (and earlier) keep all three, with their stored answers — the epic's governing rule
+   * is that previous phases must render exactly as they did.
+   *
+   * P2-3641 reuses this threshold instead of adding its own: the ticket declares itself a
+   * "Complement to: P2-3263", so it is the same rule reaching one more block of the same form,
+   * which is exactly what decision D2 of that change asked for (one threshold per rule, not per
+   * ticket). A future divergence between the blocks is the only reason to split it.
    *
    * Gated on the reporting phase YEAR, not on the portfolio: `isP25()` answers "which portfolio",
    * and the two are not interchangeable — the test environment holds 2025-phase results inside the

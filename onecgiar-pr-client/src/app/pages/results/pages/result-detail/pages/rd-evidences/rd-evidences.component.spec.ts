@@ -59,6 +59,9 @@ describe('RdEvidencesComponent', () => {
           result_type_id: 5
         },
         currentResultSectionName: signal<string>('Evidences')
+      },
+      rolesSE: {
+        readOnly: false
       }
     };
 
@@ -568,6 +571,153 @@ describe('RdEvidencesComponent', () => {
     it('evidenceDisplayName prefers file name then link', () => {
       expect(component.evidenceDisplayName({ sp_file_name: 'doc.pdf', link: 'x' })).toBe('doc.pdf');
       expect(component.evidenceDisplayName({ link: 'https://x' })).toBe('https://x');
+    });
+  });
+
+  // KPE-T-1 (bugfix/knowledge-product-evidence-edit): the edit (pencil) and delete buttons on an
+  // evidence card used to share ONE `*ngIf` that excluded Knowledge Product results from both
+  // actions. Per KPE-DD-1, each button now has its own `*ngIf`: edit drops the KP exclusion
+  // (`!api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status` only), delete keeps it.
+  describe('evidence card edit/delete gating (KPE-T-1)', () => {
+    let dataControlSE: DataControlService;
+
+    beforeEach(() => {
+      dataControlSE = TestBed.inject(DataControlService);
+      mockApiService.rolesSE = { readOnly: false };
+      mockApiService.dataControlSE.currentResult = { result_type_id: 6, status: 0 };
+      // Run the component's initial data load directly (NOT via fixture.detectChanges()) so
+      // the very first render already reflects the evidence card set up below — calling
+      // detectChanges() before AND after mutating bound state in the same test trips Angular's
+      // ExpressionChangedAfterItHasBeenCheckedError dev-mode guard.
+      component.ngOnInit();
+      component.evidencesBody.evidences = [{}];
+    });
+
+    const setKnowledgeProduct = (isKP: boolean) => {
+      // `dataControlSE.isKnowledgeProduct` (the real service the template reads for these
+      // buttons) derives from `currentResult.result_type_id == 6` — set on the REAL injected
+      // service instance, distinct from the mocked `api.dataControlSE` used for readOnly/status.
+      dataControlSE.currentResult = { result_type_id: isKP ? 6 : 1 } as any;
+    };
+
+    it('renders the edit button for a Knowledge Product evidence card, gated only on readOnly/status (KPE-AC-1)', () => {
+      setKnowledgeProduct(true);
+
+      fixture.detectChanges();
+
+      const editButton = fixture.nativeElement.querySelector('.ev_edit');
+      expect(editButton).toBeTruthy();
+    });
+
+    it('does NOT render the delete button for a Knowledge Product evidence card (readOnly=false, no status)', () => {
+      setKnowledgeProduct(true);
+
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.ev_delete')).toBeFalsy();
+    });
+
+    it('does NOT render the delete button for a Knowledge Product evidence card even when readOnly=true', () => {
+      setKnowledgeProduct(true);
+      mockApiService.rolesSE.readOnly = true;
+
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.ev_delete')).toBeFalsy();
+    });
+
+    it('does NOT render the delete button for a Knowledge Product evidence card even with a current result status', () => {
+      setKnowledgeProduct(true);
+      mockApiService.dataControlSE.currentResult.status = 1;
+
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.ev_delete')).toBeFalsy();
+    });
+
+    it('still renders both edit and delete for a non-Knowledge-Product evidence card (no regression)', () => {
+      setKnowledgeProduct(false);
+
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.ev_edit')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('.ev_delete')).toBeTruthy();
+    });
+
+    it('hides the "Add evidence" button for a Knowledge Product result (unchanged, no regression)', () => {
+      setKnowledgeProduct(true);
+      mockApiService.dataControlSE.isKnowledgeProduct = true;
+
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-add-button')).toBeFalsy();
+    });
+  });
+
+  // KPE-T-2 (bugfix/knowledge-product-evidence-edit): regression test reproducing Hector Tobon's
+  // exact bug report. A Knowledge Product result with a Principal (`'3'`) Impact-Area score and an
+  // existing evidence row whose matching `*_related` flag is `false` used to have NO way to clear
+  // the warning, because the only entry point into the edit modal (the pencil icon) was hidden for
+  // Knowledge Products (fixed by KPE-T-1). This suite proves the end-to-end path: pencil reachable
+  // (DOM, ties back to the KPE-T-1 assertion) → checkbox toggle simulated on the draft →
+  // confirmCreateEvidence() → evidenceSectionComplete flips to true / validateCheckBoxes() clears.
+  describe('KP evidence tag-marker edit satisfies a Principal impact-area score (KPE-T-2)', () => {
+    let dataControlSE: DataControlService;
+
+    beforeEach(() => {
+      dataControlSE = TestBed.inject(DataControlService);
+      mockApiService.rolesSE = { readOnly: false };
+      mockApiService.dataControlSE.currentResult = { result_type_id: 6, status: 0 };
+      // `dataControlSE.isKnowledgeProduct` (what the edit button's *ngIf actually reads, per
+      // KPE-T-1) derives from the REAL injected service's currentResult, distinct from the
+      // mocked `api.dataControlSE` used above for the readOnly/status guards.
+      dataControlSE.currentResult = { result_type_id: 6 } as any;
+      // Same fixture-sequencing workaround as the KPE-T-1 block: call ngOnInit() directly, then
+      // mutate evidencesBody afterwards, so we don't call detectChanges() both before and after
+      // mutating bound state (which trips ExpressionChangedAfterItHasBeenCheckedError).
+      component.ngOnInit();
+      component.evidencesBody = {
+        result_id: 1,
+        gender_tag_level: '3', // Principal
+        climate_change_tag_level: null,
+        nutrition_tag_level: null,
+        environmental_biodiversity_tag_level: null,
+        poverty_tag_level: null,
+        evidences: [{ gender_related: false }]
+      };
+    });
+
+    it('reproduces the bug: a Principal Gender score with unmarked KP evidence leaves the section incomplete with a warning', () => {
+      // Falsifiability guard: this must be incomplete/non-empty BEFORE the fix is exercised,
+      // proving the test starts from the actual failing case rather than a vacuous pass.
+      expect(component.evidenceSectionComplete).toBe(false);
+      expect(component.validateCheckBoxes()).toContain(
+        'A principal contribution score (2) has been recorded for Gender equality, youth and social inclusion tag. Please provide evidence to support this claim.'
+      );
+    });
+
+    it('confirms the edit trigger is reachable on this exact KP fixture (reuses the KPE-T-1 DOM assertion, so the two tasks cannot pass independently)', () => {
+      fixture.detectChanges();
+
+      const editButton = fixture.nativeElement.querySelector('.ev_edit');
+      expect(editButton).toBeTruthy();
+    });
+
+    it('allows a Knowledge Product evidence tag to be edited to satisfy a Principal impact-area score', () => {
+      const saveSpy = jest.spyOn(component, 'onSaveSection').mockResolvedValue(undefined);
+
+      // Reach the modal exactly as clicking the now-visible (KPE-T-1) pencil icon would:
+      component.editEvidence(0);
+      // Simulate the checkbox toggle inside the modal (evidence-item.component.html:105-128,
+      // unchanged — already correctly bound, only newly reachable):
+      component.draftEvidence.gender_related = true;
+      // Simulate clicking "Save changes":
+      component.confirmCreateEvidence();
+
+      expect(component.evidencesBody.evidences[0].gender_related).toBe(true);
+      expect(component.evidenceSectionComplete).toBe(true);
+      expect(component.validateCheckBoxes()).toBe('');
+      expect(saveSpy).toHaveBeenCalled();
     });
   });
 

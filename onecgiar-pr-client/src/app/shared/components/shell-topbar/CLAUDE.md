@@ -1,11 +1,19 @@
 # shell-topbar
 
-**Verified:** 2026-08-21 · branch performance-refactor · eed5bb706
+**Verified:** 2026-09-08 · branch qa-development-2026-ss · SPEC:changes/sidebar-toggle-consolidation (STC-T-2)
 
-The app shell header: sidebar toggle · centered Search · notifications popover · user menu. Rendered
+The app shell header: centered Search · notifications popover · user menu. Rendered
 by `app.component.html:38`, and hidden entirely when `dataControlSE.show_qa_full_screen` or
 `focusMode()` is on — so nothing in here exists in QA full-screen or focus mode, **including the
 `Cmd/Ctrl+K` listener**.
+
+⚠️ **The sidebar collapse/expand toggle no longer lives here.** Per
+`SPEC:changes/sidebar-toggle-consolidation` (STC-DD-1), the topbar's `pr-topbar-icon-btn` toggle
+button and its `data-guide="sidebar-toggle"` hook were removed — `reporting-nav-sidebar` now owns
+that control in both its expanded and collapsed states, and is the sole DOM anchor
+`ReportingGuideService.startResultSidebarHint()` targets. `toggleSidebar()` and the `HlmSidebarService`
+injection were removed from this component's `.ts` too (STC-T-2) — nothing here calls the sidebar
+service any more.
 
 ## Contract
 

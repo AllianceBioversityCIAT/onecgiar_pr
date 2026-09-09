@@ -22,6 +22,7 @@ import { InnoDevService } from './innovation_dev.service';
 import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
 import { ResultsInnovationsUseRepository } from './repositories/results-innovations-use.repository';
 import { ResultsByProjectsRepository } from '../results_by_projects/results_by_projects.repository';
+import { ResultInvestmentService } from '../result_budget/result-investment.service';
 
 describe('SummaryService', () => {
   let service: SummaryService;
@@ -47,6 +48,7 @@ describe('SummaryService', () => {
   let mockScalingStudyUrlRepository: any;
   let mockResultsInnovationsUseRepository: any;
   let mockResultsByProjectsRepository: any;
+  let mockResultInvestmentService: any;
 
   const user = { id: 10 } as any;
 
@@ -132,6 +134,16 @@ describe('SummaryService', () => {
     mockResultsByProjectsRepository = {
       find: jest.fn(),
     };
+    // P2-3390 — the three investment tables are delegated to this leaf service; the reads default to
+    // empty so every preexisting assertion on the response keeps its shape.
+    mockResultInvestmentService = {
+      getInvestmentPrograms: jest.fn().mockResolvedValue([]),
+      getInvestmentBilateral: jest.fn().mockResolvedValue([]),
+      getInvestmentPartners: jest.fn().mockResolvedValue([]),
+      saveInvestmentPrograms: jest.fn().mockResolvedValue(undefined),
+      saveInvestmentBilateral: jest.fn().mockResolvedValue(undefined),
+      saveInvestmentPartners: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -201,6 +213,10 @@ describe('SummaryService', () => {
         {
           provide: ResultsByProjectsRepository,
           useValue: mockResultsByProjectsRepository,
+        },
+        {
+          provide: ResultInvestmentService,
+          useValue: mockResultInvestmentService,
         },
       ],
     }).compile();
@@ -296,6 +312,58 @@ describe('SummaryService', () => {
           innovation_use_level_id: null,
         }),
       );
+    });
+
+    // P2-3390. The three "Investment (USD)" tables reach this endpoint as the flat contract and are
+    // delegated to the leaf service. An absent key must stay a no-op: the bilateral autosave sends
+    // one section at a time, so delegating an undefined array would clear stored amounts.
+    describe('investment tables (P2-3390)', () => {
+      const arrange = () => {
+        mockResultRepository.findOne.mockResolvedValueOnce({ id: 5 });
+        mockInnoDevService.saveAnticipatedInnoUser.mockResolvedValueOnce({});
+        mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+      };
+
+      it('delegates each array that the payload actually carries', async () => {
+        arrange();
+        const dto = {
+          investment_programs: [{ id: 90, kind_cash: 100 }],
+          investment_bilateral: [{ id: 4321, kind_cash: 200 }],
+          investment_partners: [{ id: 77, is_determined: true }],
+        } as any;
+
+        await service.saveInnovationUse(dto, 5, user);
+
+        expect(
+          mockResultInvestmentService.saveInvestmentPrograms,
+        ).toHaveBeenCalledWith(5, user.id, dto.investment_programs);
+        expect(
+          mockResultInvestmentService.saveInvestmentBilateral,
+        ).toHaveBeenCalledWith(5, user.id, dto.investment_bilateral);
+        expect(
+          mockResultInvestmentService.saveInvestmentPartners,
+        ).toHaveBeenCalledWith(5, user.id, dto.investment_partners);
+      });
+
+      it('does not delegate a table the payload omits', async () => {
+        arrange();
+
+        await service.saveInnovationUse(
+          { investment_programs: [{ id: 90, kind_cash: 1 }] } as any,
+          5,
+          user,
+        );
+
+        expect(
+          mockResultInvestmentService.saveInvestmentPrograms,
+        ).toHaveBeenCalled();
+        expect(
+          mockResultInvestmentService.saveInvestmentBilateral,
+        ).not.toHaveBeenCalled();
+        expect(
+          mockResultInvestmentService.saveInvestmentPartners,
+        ).not.toHaveBeenCalled();
+      });
     });
 
     // P2-3359. `results_innovations_use.results_id` is the join column of a OneToOne,
@@ -646,6 +714,30 @@ describe('SummaryService', () => {
     });
   });
 
+  describe('getInnovationUse investment tables (P2-3390)', () => {
+    it('returns the three flat arrays from the leaf service', async () => {
+      mockResultActorRepository.find.mockResolvedValueOnce([]);
+      mockResultIpMeasureRepository.find.mockResolvedValueOnce([]);
+      mockResultByIntitutionsTypeRepository.find.mockResolvedValueOnce([]);
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+      mockResultInvestmentService.getInvestmentPrograms.mockResolvedValueOnce([
+        { id: 90, kind_cash: null, is_determined: null },
+      ]);
+
+      const res = await service.getInnovationUse(15);
+      const response: any = res.response as any;
+
+      expect(
+        mockResultInvestmentService.getInvestmentPrograms,
+      ).toHaveBeenCalledWith(15);
+      expect(response.investment_programs).toEqual([
+        { id: 90, kind_cash: null, is_determined: null },
+      ]);
+      expect(response.investment_bilateral).toEqual([]);
+      expect(response.investment_partners).toEqual([]);
+    });
+  });
+
   describe('saveCapacityDevelopents', () => {
     it('creates capacity development entry and institutions when not existing', async () => {
       const dto = {
@@ -711,6 +803,72 @@ describe('SummaryService', () => {
   });
 
   describe('saveInnovationDev', () => {
+    // P2-3390. Innovation Development has BOTH families of investment keys: W1/W2 keeps sending the
+    // legacy `*_expected_investment` ones (handled by InnoDevService, which resolves the legacy
+    // non_pooled_project catalogue) and the bilateral form sends the flat ones. They must not
+    // interfere: sending one family never triggers the other's writer.
+    describe('investment tables (P2-3390)', () => {
+      const baseDto = {
+        short_title: 'x',
+        reference_materials: [],
+      };
+
+      const arrange = () => {
+        mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce(
+          null,
+        );
+        mockResultsInnovationsDevRepository.save.mockImplementation(
+          async (payload) => ({ result_innovation_dev_id: 1, ...payload }),
+        );
+      };
+
+      it('delegates the flat arrays without touching the legacy writers', async () => {
+        arrange();
+        const dto = {
+          ...baseDto,
+          investment_programs: [{ id: 90, kind_cash: 100 }],
+          investment_bilateral: [{ project_id: 4321, kind_cash: 200 }],
+          investment_partners: [{ id: 77, kind_cash: 300 }],
+        } as any;
+
+        await service.saveInnovationDev(dto, null as any, 11144, user);
+
+        expect(
+          mockResultInvestmentService.saveInvestmentPrograms,
+        ).toHaveBeenCalledWith(11144, user.id, dto.investment_programs);
+        expect(
+          mockResultInvestmentService.saveInvestmentBilateral,
+        ).toHaveBeenCalledWith(11144, user.id, dto.investment_bilateral);
+        expect(
+          mockResultInvestmentService.saveInvestmentPartners,
+        ).toHaveBeenCalledWith(11144, user.id, dto.investment_partners);
+        expect(
+          mockInnoDevService.saveBillateralInvestment,
+        ).not.toHaveBeenCalled();
+        expect(mockInnoDevService.savePartnerInvestment).not.toHaveBeenCalled();
+      });
+
+      it('leaves the legacy path alone: the nested keys still go to InnoDevService only', async () => {
+        arrange();
+        const dto = {
+          ...baseDto,
+          bilateral_expected_investment: [{ non_pooled_projetct_id: 1 }],
+          institutions_expected_investment: [{ result_institution_id: 3 }],
+        } as any;
+
+        await service.saveInnovationDev(dto, null as any, 11144, user);
+
+        expect(mockInnoDevService.saveBillateralInvestment).toHaveBeenCalled();
+        expect(mockInnoDevService.savePartnerInvestment).toHaveBeenCalled();
+        expect(
+          mockResultInvestmentService.saveInvestmentBilateral,
+        ).not.toHaveBeenCalled();
+        expect(
+          mockResultInvestmentService.saveInvestmentPartners,
+        ).not.toHaveBeenCalled();
+      });
+    });
+
     it('creates innovation-dev with result_object (not RelationId results_id alone)', async () => {
       const dto = {
         short_title: '',
@@ -1000,6 +1158,28 @@ describe('SummaryService', () => {
       mockResultByIntitutionsRepository.find.mockResolvedValue([]);
       mockResultInstitutionsBudgetRepository.find.mockResolvedValue([]);
       mockResultsByProjectsRepository.find.mockResolvedValue([]);
+    });
+
+    it('returns the flat investment arrays alongside the legacy nested keys (P2-3390)', async () => {
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce(
+        { result_innovation_dev_id: 50, innovation_readiness_level_id: 3 },
+      );
+      mockResultInvestmentService.getInvestmentBilateral.mockResolvedValueOnce([
+        { id: 4321, project_id: 4321, kind_cash: null },
+      ]);
+
+      const res = await service.getInnovationDev(11144);
+      const response: any = res.response as any;
+
+      expect(response.investment_bilateral).toEqual([
+        { id: 4321, project_id: 4321, kind_cash: null },
+      ]);
+      expect(response.investment_programs).toEqual([]);
+      expect(response.investment_partners).toEqual([]);
+      // The nested keys W1/W2 reads are untouched.
+      expect(response.bilateral_expected_investment).toEqual([]);
+      expect(response.initiative_expected_investment).toEqual([]);
+      expect(response.institutions_expected_investment).toEqual([]);
     });
 
     it('merges legacy (non_pooled_projetct_id) and results_by_projects (result_project_id) budget rows', async () => {

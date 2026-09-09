@@ -8,6 +8,7 @@ import { BilateralExpandableStateService } from '../../../services/bilateral-exp
 import { InnovationControlListService } from '../../../../../shared/services/global/innovation-control-list.service';
 import { InnovationUseResultsService } from '../../../../../shared/services/global/innovation-use-results.service';
 import { CustomFieldsModule } from '../../../../../custom-fields/custom-fields.module';
+import { EstimatesCgiarComponent } from '../../../../../shared/components/innovation-use-form/components/estimates/estimates.component';
 
 const SECTION_NAME = 'type-specific';
 
@@ -71,7 +72,7 @@ const USE_LEVEL_EXPLANATION_MAX = 9;
 
 @Component({
   selector: 'app-type-innovation-use',
-  imports: [FormsModule, CustomFieldsModule],
+  imports: [FormsModule, CustomFieldsModule, EstimatesCgiarComponent],
   templateUrl: './type-innovation-use.component.html',
   styleUrl: './type-innovation-use.component.scss',
 })
@@ -246,6 +247,7 @@ export class TypeInnovationUseComponent implements OnInit {
         this.hydrateOrganizations();
         this.hydrateStoredAnswers();
         this.hydrateInnovationLink();
+        this.hydrateInvestmentTables();
         this.loaded.set(true);
         this.updateMds();
       },
@@ -282,6 +284,17 @@ export class TypeInnovationUseComponent implements OnInit {
    * this story caps it at one ("UI enforces one selection maximum"), so the UI binds a single id and the
    * payload puts it back into the list.
    */
+  /**
+   * P2-3390 — the server sends one row per active link, but a result with no links at all (or a failed
+   * load) leaves the keys absent. The shared table component writes straight into these arrays, so they
+   * must exist as arrays before it renders.
+   */
+  private hydrateInvestmentTables(): void {
+    this.body.investment_programs = this.body.investment_programs ?? [];
+    this.body.investment_bilateral = this.body.investment_bilateral ?? [];
+    this.body.investment_partners = this.body.investment_partners ?? [];
+  }
+
   private hydrateInnovationLink(): void {
     const linked = this.body.linked_results;
     const first = Array.isArray(linked) ? linked[0] : linked;
@@ -452,10 +465,15 @@ export class TypeInnovationUseComponent implements OnInit {
       // P2-3424: everything below now round-trips through the legacy summary endpoint — its DTO
       // (server `api/results/summary/dto/create-innovation-use.dto.ts`) declares these keys and
       // `SummaryService.saveInnovationUse` persists them, so they survive a reload.
-      // ⚠️ `investment_bilateral_usd` is deliberately NOT here: no column exists for it anywhere in the
-      // server and the legacy controller has no `ValidationPipe`, so sending it only made the contract
-      // look supported while the value was dropped on arrival. The input is disabled and tagged
-      // `Coming soon` instead — see the note at the bottom of this file.
+      // P2-3390: the three investment tables. The server writes each one only when its key is present,
+      // so they are sent as-is — one row per entity, exactly as they were read. `investment_bilateral`
+      // carries `project_id` per row, which is what keys `non_pooled_projetct_budget` by
+      // `result_project_id`; the legacy `*_expected_investment` keys are NEVER sent from here, because the
+      // legacy writer resolves the `non_pooled_project` catalogue and would drop every bilateral row in
+      // silence (server `api/results/summary/innovation_dev.service.ts`).
+      investment_programs: this.body.investment_programs ?? [],
+      investment_bilateral: this.body.investment_bilateral ?? [],
+      investment_partners: this.body.investment_partners ?? [],
       has_scaling_studies: this.body.has_scaling_studies ?? null,
       scaling_studies_urls: this.body.scaling_studies_urls ?? [],
       innov_use_2030_to_be_determined: this.body.innov_use_2030_to_be_determined ?? null,
@@ -485,9 +503,9 @@ export class TypeInnovationUseComponent implements OnInit {
   }
 
   /**
-   * P2-3428 / P2-3331 AC1 — the MDS set is Actors, Other quantitative measures, Use level and the W3/bilateral
-   * investment amount. Only the first three are published here; see the TODO below for why the investment
-   * amount is rendered disabled (`Coming soon`) and gates nothing. The old `use-determined` entry is gone on
+   * P2-3428 / P2-3331 AC1 — the MDS set is Actors, Other quantitative measures and Use level. Investment is
+   * NOT one of them: P2-3390 delivered it as the three real tables inside the full metadata, optional by PO
+   * decision (Juan David, 9-sep-2026), so it publishes nothing here. The old `use-determined` entry is gone on
    * purpose: the story counts the "Innovation Use to be Determined" radio as part of the Actors rule, not as
    * a separate MDS field, and every extra entry here silently raises the bar Submit is gated on
    * (`overallStatus() === 'complete'`). Nothing revealed by the full-metadata toggle may appear below — AC16.
@@ -513,15 +531,13 @@ export class TypeInnovationUseComponent implements OnInit {
         label: 'How would you assess the current use level of the innovation?',
         filled: this.body.innovation_use_level_id != null,
       },
-      // TODO: `use-investment` no se publica al tracker a propósito, y desde el 26-ago-2026 el campo
-      // tampoco se pide como obligatorio: `investment_bilateral_usd` no existe en el servidor y el
-      // endpoint legacy lo descartaba en silencio, así que el usuario rellenaba un campo con asterisco
-      // rojo cuyo valor desaparecía al recargar, sin ningún aviso. Ahora se muestra DESHABILITADO con el
-      // tag `Coming soon` (regla de la casa) y no viaja en el payload. Habilitarlo exige repuntar a
-      // `PATCH /v2/api/innovation-use/...`, que modela el monto POR PROYECTO
-      // (`investment_bilateral: [{ id, kind_cash, is_determined }]`) y espera el NIVEL 0-9 en
-      // `innovation_use_level_id`, no el id del catálogo — y la historia no define cómo repartir un
-      // único total entre varios proyectos.
+      // P2-3390: `use-investment` sigue sin publicarse al tracker, ahora por decisión de producto y no
+      // por falta de almacenamiento. La inversión se reporta en las tres tablas del full metadata
+      // (`investment_programs` / `investment_bilateral` / `investment_partners`), es OPCIONAL y no entra
+      // ni al MDS ni al green check: agregar una entrada aquí subiría la barra que gatea el Submit
+      // (`overallStatus() === 'complete'`) y rompería AC16, que prohíbe que algo revelado por el toggle
+      // cuente. El monto ya no es uno solo: va POR ENTIDAD, así que el campo único que existía aquí no
+      // tenía a dónde guardarse.
     ]);
   }
 }

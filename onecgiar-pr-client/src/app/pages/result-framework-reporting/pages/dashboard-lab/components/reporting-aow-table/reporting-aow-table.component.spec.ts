@@ -1169,6 +1169,169 @@ describe('ReportingAowTableComponent', () => {
     });
   });
 
+  /**
+   * A target held by N centres is ONE row (P2-3255) whose scalar `center_acronym` is null by
+   * design. Reading only the scalar dropped those rows out of the chips AND out of the Center
+   * filter: SP-13 KPI 1.3.3 (one target, ten centres) showed no centre at all and vanished when
+   * any centre was picked. Owner decision (2026-09-09): show one chip per centre, and let a shared
+   * target count towards every centre that holds it.
+   */
+  describe('centres of a shared target', () => {
+    const shared = (over: Partial<ReportingIndicator> = {}) =>
+      row({
+        indicator_id: 133,
+        indicator_description: '1.3.3. Updated document on CGIAR accession management',
+        // The shape the backend sends for a shared target: the list is populated, the scalar is not.
+        centers: [
+          { center_id: 1, center_acronym: 'AfricaRice' },
+          { center_id: 2, center_acronym: 'IRRI' },
+          { center_id: 3, center_acronym: 'CIP' }
+        ],
+        center_acronym: undefined,
+        ...over
+      });
+
+    it('lists every centre of the target', async () => {
+      await build([group([shared()])]);
+      expect(component.centerAcronymsOf(shared())).toEqual(['AfricaRice', 'IRRI', 'CIP']);
+    });
+
+    it('falls back to the scalar when the row carries no list', async () => {
+      await build([group([row()])]);
+      expect(component.centerAcronymsOf(row({ centers: undefined, center_acronym: 'CIAT' }))).toEqual(['CIAT']);
+      expect(component.centerAcronymsOf(row({ centers: [], center_acronym: undefined }))).toEqual([]);
+    });
+
+    it('renders a chip per centre, not a single blank', async () => {
+      const g = group([shared()]);
+      await build([g]);
+      openAow();
+      const chips = text();
+      expect(chips).toContain('AfricaRice');
+      expect(chips).toContain('IRRI');
+      expect(chips).toContain('CIP');
+    });
+
+    it('counts a shared target towards EVERY centre that holds it', async () => {
+      const g = group([shared(), row({ indicator_id: 2, centers: undefined, center_acronym: 'IRRI' })]);
+      await build([g]);
+      const counts = component.centerCountsOf(g);
+      // IRRI holds the shared target AND owns one of its own → 2. The others → 1 each.
+      expect(counts.find(c => c.center === 'IRRI')?.count).toBe(2);
+      expect(counts.find(c => c.center === 'AfricaRice')?.count).toBe(1);
+      expect(counts.find(c => c.center === 'CIP')?.count).toBe(1);
+    });
+
+    it('keeps the row when the Center filter picks ANY of its centres', async () => {
+      const g = group([shared(), row({ indicator_id: 2, centers: undefined, center_acronym: 'CIMMYT' })]);
+      await build([g]);
+
+      component.setCenterFilter(g, 'CIP');
+      fixture.detectChanges();
+      // Before this change the shared row was filtered out by every centre, its own included.
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([133]);
+
+      component.setCenterFilter(g, 'CIMMYT');
+      fixture.detectChanges();
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([2]);
+    });
+
+    /**
+     * Owner call (2026-09-09): ten chips must not make the row look broken — show a few and put the
+     * rest behind a counter, and if the card is filtered by a centre, THAT centre has to be one of
+     * the visible ones.
+     */
+    describe('overflow, capped at three chips', () => {
+      const ten = (over: Partial<ReportingIndicator> = {}) =>
+        shared({
+          centers: ['AfricaRice', 'Bioversity', 'CIAT', 'CIMMYT', 'CIP', 'ICARDA', 'ICRISAT', 'IITA', 'ILRI', 'IRRI'].map(
+            (center_acronym, i) => ({ center_id: i + 1, center_acronym })
+          ),
+          ...over
+        });
+
+      it('shows three chips and counts the rest', async () => {
+        await build([group([ten()])]);
+        expect(component.rowCentersShown(ten())).toEqual(['AfricaRice', 'Bioversity', 'CIAT']);
+        expect(component.rowCentersHidden(ten())).toBe(7);
+      });
+
+      it('does not hide a single centre behind a counter that would take its place', async () => {
+        await build([group([shared()])]);
+        const four = shared({
+          centers: [1, 2, 3, 4].map(i => ({ center_id: i, center_acronym: `C${i}` }))
+        });
+        expect(component.rowCentersShown(four)).toHaveLength(4);
+        expect(component.rowCentersHidden(four)).toBe(0);
+      });
+
+      it('pins the filtered centre into the visible three', async () => {
+        await build([group([ten()])]);
+        // IRRI is LAST of the ten — without pinning it sits behind "+7 more" while the card is
+        // filtered by it, leaving the row on screen with no visible reason.
+        expect(component.rowCentersShown(ten(), 'IRRI')).toEqual(['IRRI', 'AfricaRice', 'Bioversity']);
+        expect(component.rowCentersHidden(ten(), 'IRRI')).toBe(7);
+      });
+
+      it('leaves the pinning alone when the active centre is not on the row', async () => {
+        await build([group([ten()])]);
+        expect(component.rowCentersShown(ten(), 'IWMI')).toEqual(['AfricaRice', 'Bioversity', 'CIAT']);
+      });
+
+      it('reveals every centre once expanded, and collapses back', async () => {
+        const g = group([ten()]);
+        await build([g]);
+
+        component.toggleRowCenters(ten(), new MouseEvent('click'));
+        fixture.detectChanges();
+        expect(component.rowCentersShown(ten())).toHaveLength(10);
+        expect(component.rowCentersHidden(ten())).toBe(0);
+        expect(component.areRowCentersExpanded(ten())).toBe(true);
+
+        component.toggleRowCenters(ten(), new MouseEvent('click'));
+        fixture.detectChanges();
+        expect(component.rowCentersShown(ten())).toHaveLength(3);
+      });
+
+      it('stops the click so expanding the centres does not open the row drawer', async () => {
+        await build([group([ten()])]);
+        const openRow = jest.fn();
+        component.openRow.subscribe(openRow);
+        const event = new MouseEvent('click');
+        const stop = jest.spyOn(event, 'stopPropagation');
+
+        component.toggleRowCenters(ten(), event);
+
+        expect(stop).toHaveBeenCalled();
+        expect(openRow).not.toHaveBeenCalled();
+      });
+
+      it('renders the counter in the DOM and drops it once expanded', async () => {
+        const g = group([ten()]);
+        await build([g]);
+        openAow();
+        expect(text()).toContain('+7 more');
+        expect(text()).not.toContain('IRRI');
+
+        component.toggleRowCenters(ten(), new MouseEvent('click'));
+        fixture.detectChanges();
+        expect(text()).toContain('IRRI');
+        expect(text()).toContain('Show less');
+      });
+    });
+
+    it('finds a shared target by any of its centres in the search box', async () => {
+      const g = group([shared(), row({ indicator_id: 2, centers: undefined, center_acronym: 'CIMMYT' })]);
+      await build([g], { search: 'irri' });
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([133]);
+    });
+
+    it('labels the flat table cell with every centre', async () => {
+      await build([group([shared()])], { viewMode: 'flat' });
+      expect(component.flatTableRows()[0].__centerLabel).toBe('AfricaRice, IRRI, CIP');
+    });
+  });
+
   // ── Intermediate Outcome Target tooltip (RES-R-1, RES-R-2, RES-AC-1, RES-AC-2) ─────────────
   // ── Grouped card ↔ By-AOW view alignment (owner request 2026-08-30) ──
   describe('By AOW header jump', () => {

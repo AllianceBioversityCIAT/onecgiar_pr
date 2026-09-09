@@ -266,6 +266,23 @@ export class InnovationDevInfoComponent {
       // multipart `files` (`innovation_dev.controller.ts:45-57`), so the user has to re-attach it —
       // and throwing away everything else they typed does not bring it back. Same contract as the
       // other two evidence surfaces: save the section, and name the files that did not make it.
+      // P2-3641 AC — "Removal does not affect existing saved data from prior reporting cycles".
+      //
+      // Hiding the block is only half the ticket, and shipping only that half would DELETE data.
+      // The evidence endpoint takes the WHOLE array and treats it as the new truth: an empty one
+      // deactivates every stored evidence of this type for the result
+      // (`evidences.service.ts` returns early on an empty array straight into
+      // `updateEvidences(result_id, [], …)`, which runs `UPDATE evidence SET is_active = 0`).
+      // Today `evidencesBody` survives only because the GET still repopulates it; the moment
+      // anybody tidies that call away, every 2026 result loses its stored evidence on the next save.
+      //
+      // So from 2026 the call is OMITTED, never sent empty — the same undefined-vs-value contract
+      // the MELIA study and P2-3550 already rely on. Nothing about the 2025 path changes.
+      if (this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
+        this.savePhaseP25SectionFields(false);
+        return;
+      }
+
       const failedUploads = await this.uploadPendingFiles();
       if (failedUploads.length) {
         this.showSaveError(
@@ -275,25 +292,7 @@ export class InnovationDevInfoComponent {
       }
 
       this.api.resultsSE.POST_createEvidenceDemandP25(this.evidencesBody).subscribe({
-        next: () => {
-          this.api.resultsSE.PATCH_innovationDevP25(this.buildSectionPayload()).subscribe({
-            next: () => {
-              this.getSectionInformationp25();
-              this.savingSection = false;
-            },
-            error: err => {
-              console.error('[innovation-dev-info] saving the section failed', err);
-              // The files reached SharePoint and the evidence record was written; only the
-              // section's own fields failed. Saying so keeps the user from re-attaching files
-              // that are already stored.
-              this.showSaveError(
-                'This section was not saved',
-                'Your evidence was stored, but the rest of the section could not be saved. Please try saving again.'
-              );
-              this.savingSection = false;
-            }
-          });
-        },
+        next: () => this.savePhaseP25SectionFields(true),
         error: err => {
           console.error('[innovation-dev-info] registering the evidence failed', err);
           this.showSaveError(
@@ -315,6 +314,34 @@ export class InnovationDevInfoComponent {
         }
       });
     }
+  }
+
+  /**
+   * The P25 half of the section save. Extracted from `onSaveSection` so P2-3641 can reach it
+   * WITHOUT the evidence request: from the 2026 cycle that block is not rendered, and sending the
+   * request with an empty array would deactivate the stored evidence.
+   *
+   * @param evidenceWasSaved whether the evidence request ran and succeeded. It only changes the
+   * wording of the failure notice — telling a 2026 user "your evidence was stored" when no evidence
+   * request was ever made would send them looking for something that does not exist.
+   */
+  private savePhaseP25SectionFields(evidenceWasSaved: boolean): void {
+    this.api.resultsSE.PATCH_innovationDevP25(this.buildSectionPayload()).subscribe({
+      next: () => {
+        this.getSectionInformationp25();
+        this.savingSection = false;
+      },
+      error: err => {
+        console.error('[innovation-dev-info] saving the section failed', err);
+        this.showSaveError(
+          'This section was not saved',
+          evidenceWasSaved
+            ? 'Your evidence was stored, but the rest of the section could not be saved. Please try saving again.'
+            : 'The section could not be saved. Please try saving again.'
+        );
+        this.savingSection = false;
+      }
+    });
   }
 
   /**
