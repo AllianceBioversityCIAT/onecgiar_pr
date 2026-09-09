@@ -71,7 +71,17 @@ class BandStubComponent {
 })
 class MyWorkBoardHarnessComponent {}
 
-const EMPTY_TOTALS: MyWorkTotals = { editing: 0, pending: 0, submitted: 0, approved: 0, discontinued: 0, other: 0, all: 0 };
+const EMPTY_TOTALS: MyWorkTotals = {
+  editing: 0,
+  pending: 0,
+  submitted: 0,
+  inQa: 0,
+  approved: 0,
+  discontinued: 0,
+  rejected: 0,
+  other: 0,
+  all: 0
+};
 
 /** Same signal surface as the Jest fake (`my-work-board.component.spec.ts`), plus `visibleRows` —
  *  the component's `showWholeBoardEmpty` computed reads it directly. */
@@ -133,9 +143,8 @@ function row(partial: Partial<ProgrammeResultRow> = {}): ProgrammeResultRow {
 }
 
 /** 12 Editing (varied completeness, incl. null and a couple at n===m to also exercise the "ready"
- *  card variant) + 1 Pending + 2 Submitted + 4 QAed (approved column) + 1 Discontinued — the exact
- *  mix `MWB-T-5` names. Fed through the REAL `groupByColumn`/`totals` so the five columns rendered
- *  are genuine, not hand-assembled. */
+ *  card variant) + 1 Pending + 2 Submitted + 4 In QA + 1 Discontinued — fed through the REAL
+ *  `groupByColumn`/`totals` so the seven columns rendered are genuine, not hand-assembled. */
 function buildFixtureRows(): ProgrammeResultRow[] {
   const editingCompleteness: Array<{ complete: number; total: number; missing: string[] } | null> = [
     null,
@@ -174,11 +183,11 @@ function buildFixtureRows(): ProgrammeResultRow[] {
     row({ id: 3002, code: 'SUBM-02', title: 'Submitted result 2', statusId: 3, statusName: 'Submitted', created: '2025-08-07T00:00:00.000Z' })
   ];
 
-  const approved = [1, 2, 3, 4].map(i =>
+  const inQa = [1, 2, 3, 4].map(i =>
     row({
       id: 4000 + i,
-      code: `APPR-0${i}`,
-      title: `Quality assessed result ${i}`,
+      code: `INQA-0${i}`,
+      title: `In QA result ${i}`,
       statusId: 2,
       statusName: 'Quality Assessed',
       created: `2025-08-0${i}T00:00:00.000Z`
@@ -189,7 +198,7 @@ function buildFixtureRows(): ProgrammeResultRow[] {
     row({ id: 5001, code: 'DISC-01', title: 'Discontinued result', statusId: 4, statusName: 'Discontinued', created: '2025-08-09T00:00:00.000Z' })
   ];
 
-  return [...editing, ...pending, ...submitted, ...approved, ...discontinued];
+  return [...editing, ...pending, ...submitted, ...inQa, ...discontinued];
 }
 
 /** Overrides `MyWorkBoardComponent`'s own component-level providers/imports (same technique as
@@ -310,14 +319,12 @@ function assertNoDragAndDrop(label: string) {
   cy.log(`${label}: no [draggable] / [dropzone] / [ondrop] anywhere on the board`);
 }
 
-/** Five columns, fixed order, each with an accessible name; the Closed group (Discontinued alone
- *  since `MWB-T-10` moved Quality assessed into the expanded *Done* group) collapsed to a
- *  `button[aria-expanded="false"]` rail by default (`MWB-DD-8`). */
+/** Seven columns; Discontinued and Rejected collapse to rails on desktop. */
 function assertColumnStructure(label: string) {
-  const expectedOrder = ['Editing', 'Pending review', 'Submitted', 'Quality assessed', 'Discontinued'];
+  const expectedOrder = ['Editing', 'Pending review', 'Submitted', 'In QA', 'Approved', 'Discontinued', 'Rejected'];
 
   cy.get('app-my-work-column').should($cols => {
-    expect($cols.length, `${label}: five columns rendered`).to.eq(5);
+    expect($cols.length, `${label}: seven columns rendered`).to.eq(7);
     $cols.each((i, hostEl) => {
       const section = hostEl.querySelector('section[role="region"]');
       const rail = hostEl.querySelector('button[aria-expanded]');
@@ -328,17 +335,15 @@ function assertColumnStructure(label: string) {
     });
   });
 
-  // Scoped to `app-my-work-column` — the toolbar's Filter button also renders an
-  // `aria-expanded="false"` button while closed, and is not part of the Closed group.
   cy.get('app-my-work-column button[aria-expanded="false"]').should($rails => {
-    expect($rails.length, `${label}: Discontinued is the only collapsed rail (MWB-T-10)`).to.eq(1);
+    expect($rails.length, `${label}: Discontinued and Rejected are collapsed rails`).to.eq(2);
   });
 
-  // `MWB-T-10`: Quality assessed is an EXPANDED region with its 4 cards, never a rail.
-  cy.get('section[aria-labelledby="my-work-column-approved"]').should($section => {
-    expect($section.length, `${label}: Quality assessed renders expanded`).to.eq(1);
-    expect($section[0].querySelectorAll('article').length, `${label}: Quality assessed shows its 4 cards`).to.eq(4);
+  cy.get('section[aria-labelledby="my-work-column-inQa"]').should($section => {
+    expect($section.length, `${label}: In QA renders expanded`).to.eq(1);
+    expect($section[0].querySelectorAll('article').length, `${label}: In QA shows its 4 cards`).to.eq(4);
   });
+  cy.get('section[aria-labelledby="my-work-column-approved"]').should('exist');
 }
 
 /** `MWB-T-10` (b): every expanded non-Editing column takes the SAME width, never less than the
@@ -418,7 +423,7 @@ describe('MyWorkBoardComponent — Cypress CT (MWB-T-5)', () => {
       assertBandAndToolbarStayInViewport(`${width}×${height}`, height);
       assertNoDragAndDrop(`${width}×${height}`);
       assertColumnStructure(`${width}×${height}`);
-      assertEqualExpandedColumnWidths(`${width}×${height}`, 3, editingWidth, floor);
+      assertEqualExpandedColumnWidths(`${width}×${height}`, 4, editingWidth, floor);
       assertStructuralAccessibility(`${width}×${height}`);
       // `MWB-T-11`: the jumper is a narrow-viewport affordance and must not exist here.
       cy.get('[data-testid="my-work-jumper"]').should('not.exist');
@@ -438,18 +443,19 @@ describe('MyWorkBoardComponent — Cypress CT (MWB-T-5)', () => {
       expect(win.innerWidth, `${label}: window.innerWidth`).to.eq(1280);
     });
 
-    // Collapsed default: 3 expanded non-Editing columns + 1 rail.
-    assertEqualExpandedColumnWidths('1280×720 collapsed', 3, 320, 240);
+    // Collapsed default: 4 expanded non-Editing columns + 2 rails.
+    assertEqualExpandedColumnWidths('1280×720 collapsed', 4, 320, 240);
 
-    cy.get('app-my-work-column button[aria-expanded="false"]').click();
+    cy.get('app-my-work-column button[aria-expanded="false"]').first().click();
 
-    // Expanded: 4 equal non-Editing columns, no rail, and the collapse control is present.
-    cy.get('app-my-work-column button[aria-expanded="false"]').should('not.exist');
+    cy.get('app-my-work-column button[aria-expanded="false"]').should($rails => {
+      expect($rails.length, `${label}: one rail remains after expanding Discontinued`).to.eq(1);
+    });
     cy.get('button[aria-label="Collapse Discontinued"]').should($btn => {
       expect($btn.length, `${label}: collapse control rendered in the expanded header`).to.eq(1);
       expect($btn[0].getAttribute('aria-expanded'), `${label}: collapse control aria-expanded`).to.eq('true');
     });
-    assertEqualExpandedColumnWidths(label, 4, 320, 240);
+    assertEqualExpandedColumnWidths(label, 5, 320, 240);
     // The board container may scroll horizontally (`MWB-R-9`); the DOCUMENT never may.
     assertNoBodyHorizontalOverflow(label, 1280);
     assertBandAndToolbarStayInViewport(label, 720);
@@ -458,9 +464,9 @@ describe('MyWorkBoardComponent — Cypress CT (MWB-T-5)', () => {
     cy.get('button[aria-label="Collapse Discontinued"]').click();
     cy.get('button[aria-label="Collapse Discontinued"]').should('not.exist');
     cy.get('app-my-work-column button[aria-expanded="false"]').should($rails => {
-      expect($rails.length, `${label}: Discontinued is a collapsed rail again`).to.eq(1);
+      expect($rails.length, `${label}: Discontinued and Rejected are collapsed rails again`).to.eq(2);
     });
-    assertEqualExpandedColumnWidths('1280×720 re-collapsed', 3, 320, 240);
+    assertEqualExpandedColumnWidths('1280×720 re-collapsed', 4, 320, 240);
     assertNoBodyHorizontalOverflow('1280×720 re-collapsed', 1280);
   });
   // `MWB-T-11` (5) — the regression the two wide cases above CANNOT see. At 1280/1440 with no
@@ -529,11 +535,11 @@ describe('MyWorkBoardComponent — Cypress CT (MWB-T-5)', () => {
       });
 
       // Every column — Editing included — is a fixed `min(85vw, 360px)` strip item. `shrink-0` is
-      // what makes that a WIDTH rather than a starting point: without it the five columns would
+      // what makes that a WIDTH rather than a starting point: without it the seven columns would
       // compress to fit and nothing would scroll (the task's FAIL input).
       cy.get('[data-testid="my-work-board-column-item"]').should($items => {
         const items = Array.from($items) as HTMLElement[];
-        expect(items.length, `${label}: five columns, rails rendered as normal columns`).to.eq(5);
+        expect(items.length, `${label}: seven columns, rails rendered as normal columns`).to.eq(7);
         items.forEach(item => {
           const itemWidth = item.getBoundingClientRect().width;
           expect(itemWidth, `${label}: ${item.dataset['columnKey']} width(${itemWidth.toFixed(1)}) <= 85vw(${(width * 0.85).toFixed(1)})`).to.be.at.most(
@@ -543,10 +549,11 @@ describe('MyWorkBoardComponent — Cypress CT (MWB-T-5)', () => {
         });
       });
 
-      // `MWB-T-11` (1): no rail and no collapse/expand control anywhere below the breakpoint — the
-      // Closed column is a full column the user can swipe to.
+      // `MWB-T-11` (1): no rail and no collapse/expand control anywhere below the breakpoint — every
+      // column is a full column the user can swipe to.
       cy.get('app-my-work-column button[aria-expanded]').should('not.exist');
       cy.get('section[aria-labelledby="my-work-column-discontinued"]').should('have.length', 1);
+      cy.get('section[aria-labelledby="my-work-column-rejected"]').should('have.length', 1);
 
       // …and each column's list no longer scrolls inside itself: the page does.
       editingList().should($list => {
@@ -563,12 +570,13 @@ describe('MyWorkBoardComponent — Cypress CT (MWB-T-5)', () => {
           'editing',
           'pending',
           'submitted',
+          'inQa',
           'approved',
-          'discontinued'
+          'discontinued',
+          'rejected'
         ]);
-        // Counts read from the SAME fixture the columns were grouped from (12/1/2/4/1).
         const counts = chips.map(chip => (chip.querySelectorAll('span')[1]?.textContent ?? '').trim());
-        expect(counts, `${label}: chip counts match the columns`).to.deep.eq(['12', '1', '2', '4', '1']);
+        expect(counts, `${label}: chip counts match the columns`).to.deep.eq(['12', '1', '2', '4', '0', '1', '0']);
         chips.forEach(chip => {
           expect(chip.getAttribute('role'), `${label}: chip role`).to.eq('tab');
           const controls = chip.getAttribute('aria-controls') as string;

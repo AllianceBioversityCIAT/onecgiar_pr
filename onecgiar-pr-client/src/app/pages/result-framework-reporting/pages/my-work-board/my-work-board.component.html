@@ -441,10 +441,8 @@
                column is a placeholder. `animate-pulse` sits on each column/rail shell — it animates
                `opacity` only, so nothing here transitions a transform or a height, and the pulse
                cascades to the card placeholders through the shell's own opacity. -->
-          <!-- `MWB-T-10`: one flat flex row of column items — Editing shell, three EQUAL shells
-               (Pending review, Submitted, Quality assessed) and one 44px rail (Discontinued),
-               each carrying its group label only on the group's first column, exactly as the real
-               board below. Same container classes, so the skeleton→content swap moves nothing. -->
+          <!-- One flat flex row — Editing shell, two waiting shells, two Done shells, two Closed
+               rails. Same container classes as the real board so the skeleton→content swap moves nothing. -->
           <!-- `MWB-T-11` (6): the skeleton follows BOTH breakpoints through the same class strings
                the real board uses (`mwb-board-strip`, `editingColumnItemClass`,
                `expandedColumnItemClass`), so the swap moves nothing at 390, 768, 1280 or 1440. -->
@@ -472,14 +470,15 @@
               </div>
             }
 
-            <!-- Done — the Quality assessed shell, same width as the two above (`MWB-T-10`). -->
-            <div [class]="expandedColumnItemClass">
-              <span
-                class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-status-approved-fg)]"
-                >Done</span
-              >
-              <ng-container *ngTemplateOutlet="skeletonColumn; context: { $implicit: skeletonWaitingCards }" />
-            </div>
+            @for (column of skeletonDoneColumns; track column; let first = $first) {
+              <div [class]="expandedColumnItemClass">
+                <span
+                  class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-text-subtle)]"
+                  >{{ first ? 'Done' : '' }}</span
+                >
+                <ng-container *ngTemplateOutlet="skeletonColumn; context: { $implicit: skeletonWaitingCards }" />
+              </div>
+            }
 
             <!-- Closed — one 44px rail, matching the collapsed default (`MWB-DD-8`). Below 900px
                  there are no rails (`closedIsRail()`), so the shell is a full column like the rest. -->
@@ -591,13 +590,11 @@
                 </div>
               }
 
-              <!-- Done — Quality assessed (`status_id` 2 + 6), the W1/W2 terminal success state.
-                   Expanded like the waiting columns, never a rail; the label wears the approved
-                   token family (`MWB-DD-7`, design.md §6.3). -->
+              <!-- Done — In QA (W1/W2) + Approved (W3). Always expanded, never rails. -->
               @for (col of doneColumns(); track col.key; let first = $first) {
                 <div [class]="expandedColumnItemClass" data-testid="my-work-board-column-item" [attr.data-column-key]="col.key">
                   <span
-                    class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-status-approved-fg)]"
+                    class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-text-subtle)]"
                     >{{ first ? 'Done' : '' }}</span
                   >
                   <app-my-work-column [column]="col" />
