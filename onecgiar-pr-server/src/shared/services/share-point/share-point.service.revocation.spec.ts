@@ -86,7 +86,9 @@ describe('SharePointService — sharing-link revocation (P2-3601 follow-up)', ()
     const http = makeHttp();
     http.get.mockReturnValue({
       toPromise: jest.fn().mockResolvedValue({
-        data: { value: [{ id: 'p1', link: { webUrl: 'u1' } }] },
+        data: {
+          value: [{ id: 'p1', link: { webUrl: 'u1', scope: 'anonymous' } }],
+        },
       }),
     });
     http.delete.mockReturnValue({
@@ -94,9 +96,11 @@ describe('SharePointService — sharing-link revocation (P2-3601 follow-up)', ()
     });
     const service = build(http);
 
-    const outcome = await service.removeAllFilePermissions('doc-1');
+    const outcome: any = await service.removeAllFilePermissions('doc-1');
 
-    expect(outcome).toEqual([{ permissionId: 'p1', ok: true, status: 204 }]);
+    expect(outcome.outcomes).toEqual([
+      { permissionId: 'p1', ok: true, status: 204 },
+    ]);
   });
 
   it('reports the failure instead of swallowing it when the delete is refused', async () => {
@@ -105,8 +109,11 @@ describe('SharePointService — sharing-link revocation (P2-3601 follow-up)', ()
       toPromise: jest.fn().mockResolvedValue({
         data: {
           value: [
-            { id: 'p-anonymous', link: { webUrl: 'u1' } },
-            { id: 'p-organization', link: { webUrl: 'u2' } },
+            { id: 'p-anonymous', link: { webUrl: 'u1', scope: 'anonymous' } },
+            {
+              id: 'p-organization',
+              link: { webUrl: 'u2', scope: 'organization' },
+            },
           ],
         },
       }),
@@ -122,9 +129,9 @@ describe('SharePointService — sharing-link revocation (P2-3601 follow-up)', ()
       });
     const service = build(http);
 
-    const outcome = await service.removeAllFilePermissions('doc-1');
+    const outcome: any = await service.removeAllFilePermissions('doc-1');
 
-    expect(outcome).toEqual([
+    expect(outcome.outcomes).toEqual([
       { permissionId: 'p-anonymous', ok: false, status: 403 },
       { permissionId: 'p-organization', ok: true, status: 204 },
     ]);
@@ -134,7 +141,11 @@ describe('SharePointService — sharing-link revocation (P2-3601 follow-up)', ()
     const http = makeHttp();
     http.get.mockReturnValue({
       toPromise: jest.fn().mockResolvedValue({
-        data: { value: [{ id: 'p-anonymous', link: { webUrl: 'u1' } }] },
+        data: {
+          value: [
+            { id: 'p-anonymous', link: { webUrl: 'u1', scope: 'anonymous' } },
+          ],
+        },
       }),
     });
     http.delete.mockReturnValue({
@@ -160,7 +171,11 @@ describe('SharePointService — sharing-link revocation (P2-3601 follow-up)', ()
     const http = makeHttp();
     http.get.mockReturnValue({
       toPromise: jest.fn().mockResolvedValue({
-        data: { value: [{ id: 'p-anonymous', link: { webUrl: 'u1' } }] },
+        data: {
+          value: [
+            { id: 'p-anonymous', link: { webUrl: 'u1', scope: 'anonymous' } },
+          ],
+        },
       }),
     });
     http.delete.mockReturnValue({
@@ -180,7 +195,7 @@ describe('SharePointService — sharing-link revocation (P2-3601 follow-up)', ()
     // the success contract the two callers read is untouched...
     expect(data.link.webUrl).toBe('https://sharepoint/new-link');
     // ...and the part that used to be lost is now visible
-    expect(data.revocation).toEqual([
+    expect(data.revocation.outcomes).toEqual([
       { permissionId: 'p-anonymous', ok: false, status: 403 },
     ]);
   });
@@ -189,7 +204,9 @@ describe('SharePointService — sharing-link revocation (P2-3601 follow-up)', ()
     const http = makeHttp();
     http.get.mockReturnValue({
       toPromise: jest.fn().mockResolvedValue({
-        data: { value: [{ id: 'p1', link: { webUrl: 'u1' } }] },
+        data: {
+          value: [{ id: 'p1', link: { webUrl: 'u1', scope: 'anonymous' } }],
+        },
       }),
     });
     http.delete.mockReturnValue({
@@ -204,10 +221,146 @@ describe('SharePointService — sharing-link revocation (P2-3601 follow-up)', ()
 
     const data: any = await service.addFileAccess('doc-1', true);
 
-    expect(data.revocation).toEqual([
+    expect(data.revocation.outcomes).toEqual([
       { permissionId: 'p1', ok: true, status: 204 },
     ]);
     expect(loggerError).not.toHaveBeenCalled();
+  });
+
+  it('VERIFIES the revocation by reading the permissions back: clean when nothing survives', async () => {
+    const http = makeHttp();
+    // first read: the link we must remove. second read (the verification): empty.
+    http.get
+      .mockReturnValueOnce({
+        toPromise: jest.fn().mockResolvedValue({
+          data: {
+            value: [{ id: 'p1', link: { webUrl: 'u1', scope: 'anonymous' } }],
+          },
+        }),
+      })
+      .mockReturnValueOnce({
+        toPromise: jest.fn().mockResolvedValue({ data: { value: [] } }),
+      });
+    http.delete.mockReturnValue({
+      toPromise: jest.fn().mockResolvedValue({ status: 204 }),
+    });
+    const service = build(http);
+
+    const outcome: any = await service.removeAllFilePermissions('doc-1');
+
+    expect(outcome.attempted).toBe(1);
+    expect(outcome.survivors).toEqual([]);
+    expect(outcome.verifiedPrivate).toBe(true);
+  });
+
+  it('🛑 catches the measured defect: the delete resolves fine and the permission is STILL there', async () => {
+    const http = makeHttp();
+    // Both reads return the same permission — exactly what prtest does today.
+    http.get.mockReturnValue({
+      toPromise: jest.fn().mockResolvedValue({
+        data: {
+          value: [
+            { id: 'p-anonymous', link: { webUrl: 'u1', scope: 'anonymous' } },
+          ],
+        },
+      }),
+    });
+    // ...and the DELETE reports success, which is why nobody noticed.
+    http.delete.mockReturnValue({
+      toPromise: jest.fn().mockResolvedValue({ status: 204 }),
+    });
+    const service = build(http);
+
+    const outcome: any = await service.removeAllFilePermissions('doc-1');
+
+    // Every delete "succeeded"...
+    expect(outcome.outcomes.every((o: any) => o.ok)).toBe(true);
+    // ...and the file is still shared. Only the read-back can tell.
+    expect(outcome.survivors).toEqual(['p-anonymous']);
+    expect(outcome.verifiedPrivate).toBe(false);
+  });
+
+  it('reports attempted: 0 when we never even saw a permission to remove', async () => {
+    const http = makeHttp();
+    http.get.mockReturnValue({
+      toPromise: jest.fn().mockResolvedValue({ data: { value: [] } }),
+    });
+    const service = build(http);
+
+    const outcome: any = await service.removeAllFilePermissions('doc-1');
+
+    // This is the OTHER live hypothesis, and it is now distinguishable from a refused
+    // delete without reading any container log: nothing was attempted at all.
+    expect(outcome.attempted).toBe(0);
+    expect(outcome.outcomes).toEqual([]);
+    expect(outcome.verifiedPrivate).toBe(true);
+    expect(http.delete).not.toHaveBeenCalled();
+  });
+
+  it('🛑 FAILS CLOSED: if the permissions cannot be read back, it does not claim the file is private', async () => {
+    const http = makeHttp();
+    http.get
+      .mockReturnValueOnce({
+        toPromise: jest.fn().mockResolvedValue({
+          data: {
+            value: [
+              { id: 'p-anonymous', link: { webUrl: 'u1', scope: 'anonymous' } },
+            ],
+          },
+        }),
+      })
+      // the verification read fails — "I could not look" must never read as "it is private"
+      .mockReturnValueOnce({
+        toPromise: jest
+          .fn()
+          .mockRejectedValue(graphRejection(500, 'internalServerError')),
+      });
+    http.delete.mockReturnValue({
+      toPromise: jest.fn().mockResolvedValue({ status: 204 }),
+    });
+    const service = build(http);
+
+    const outcome: any = await service.removeAllFilePermissions('doc-1');
+
+    expect(outcome.readBackFailed).toBe(true);
+    expect(outcome.verifiedPrivate).toBe(false);
+  });
+
+  it('does NOT count a surviving organization link as public — it is already private', async () => {
+    const http = makeHttp();
+    http.get
+      .mockReturnValueOnce({
+        toPromise: jest.fn().mockResolvedValue({
+          data: {
+            value: [
+              { id: 'p-anonymous', link: { webUrl: 'u1', scope: 'anonymous' } },
+            ],
+          },
+        }),
+      })
+      // after the delete only the organization link is left: the file IS private
+      .mockReturnValueOnce({
+        toPromise: jest.fn().mockResolvedValue({
+          data: {
+            value: [
+              {
+                id: 'p-organization',
+                link: { webUrl: 'u2', scope: 'organization' },
+              },
+            ],
+          },
+        }),
+      });
+    http.delete.mockReturnValue({
+      toPromise: jest.fn().mockResolvedValue({ status: 204 }),
+    });
+    const service = build(http);
+
+    const outcome: any = await service.removeAllFilePermissions('doc-1');
+
+    expect(outcome.survivors).toEqual(['p-organization']);
+    expect(outcome.publicSurvivors).toEqual([]);
+    expect(outcome.verifiedPrivate).toBe(true);
   });
 
   it('treats the token as expired inside the safety margin, so it cannot lapse mid-operation', () => {

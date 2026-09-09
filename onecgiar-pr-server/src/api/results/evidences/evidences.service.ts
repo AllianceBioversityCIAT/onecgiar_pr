@@ -268,13 +268,41 @@ export class EvidencesService {
       evidenceTypeId,
     );
 
+    // 🛑 Guarded per evidence, and it is not defensive dressing: `updateEvidences` above
+    // has ALREADY deactivated every evidence of the section, there is no transaction, and
+    // the writes are sequential. Before this guard, one evidence failing left the
+    // deactivations committed and silently dropped the evidences after it — the reporter
+    // lost work they never saw fail. Same shape as the per-evidence guard `replicateSPFiles`
+    // carries for the same reason.
     const limit = Math.min(evidencesArray.length, 6);
+    const failures: string[] = [];
     for (let index = 0; index < limit; index++) {
-      await this._upsertEvidenceItemV1(
-        result,
-        evidencesArray[index],
-        user,
-        evidenceTypeId,
+      try {
+        await this._upsertEvidenceItemV1(
+          result,
+          evidencesArray[index],
+          user,
+          evidenceTypeId,
+        );
+      } catch (error) {
+        const label =
+          evidencesArray[index]?.sp_file_name ??
+          evidencesArray[index]?.link ??
+          `evidence ${index + 1}`;
+        this._logger.error(
+          `REPORTING: evidence "${label}" of result ${createEvidenceDto.result_id} could not be saved: ${error?.message}`,
+        );
+        failures.push(`"${label}": ${error?.message}`);
+      }
+    }
+
+    // Everything that could be saved IS saved by now. Only then report what could not,
+    // so the reporter is told precisely what to fix instead of losing the whole section.
+    if (failures.length) {
+      throwServiceError(
+        failures.length === 1
+          ? `The rest of the section was saved. This piece of evidence was not: ${failures[0]}`
+          : `The rest of the section was saved. ${failures.length} pieces of evidence were not: ${failures.join(' | ')}`,
       );
     }
   }
@@ -435,26 +463,45 @@ export class EvidencesService {
             }`,
           );
         }
-        // 🛑 The save goes through either way — but say it out loud when we could not
-        // confirm the previous sharing link was removed. Measured on prtest on 9 Sep 2026:
-        // the anonymous link survives the switch to confidential and keeps serving the
-        // file, so a row reading is_public_file = false is not proof the file is private.
-        // Deliberately a log and not a throw: refusing the save would block a reporter
-        // who is doing nothing wrong, and the gate above means a retry would not even
-        // reach SharePoint again.
-        const failedRevocations = Array.isArray(data?.revocation)
-          ? data.revocation.filter((r: any) => !r?.ok)
-          : [];
+        // 🛑 THE PLATFORM MUST NOT RECORD A CONFIDENTIALITY IT DID NOT ACHIEVE.
+        //
+        // Measured on prtest on 9 Sep 2026 (result 9075, evidence 13081): switching an
+        // evidence to confidential leaves the file's anonymous permission alive, so the
+        // link that already circulated keeps downloading it. The row said false, four
+        // places in the UI drew a padlock and the words "Not public", and the file was
+        // one click away for anybody holding the old url.
+        //
+        // So when the file did not actually become private we refuse THIS evidence and
+        // tell the reporter what to do instead. Refusing is only safe because
+        // `_processMainEvidencesOnCreate` now guards each evidence: the rest of the
+        // section is saved, and only this one comes back with a reason.
+        // `verifiedPrivate` fails closed — "could not check" never reads as "private".
+        const revocation = data?.revocation;
         const wantsPrivate = !(
           evidence.is_public_file ?? evidenceSharepoint.is_public_file
         );
-        if (wantsPrivate && failedRevocations.length) {
+        if (
+          wantsPrivate &&
+          revocation &&
+          revocation.verifiedPrivate === false
+        ) {
           this._logger.error(
-            `REPORTING: evidence ${newEvidenceId} was saved as confidential but ${
-              failedRevocations.length
-            } previous sharing permission(s) on document ${documentId} could not be confirmed as removed (${failedRevocations
-              .map((r: any) => `${r.permissionId}:${r.status}`)
-              .join(', ')}) — a link that was public before may still be live.`,
+            revocation.readBackFailed
+              ? `REPORTING: refused to store evidence ${newEvidenceId} as confidential — reading the permissions of document ${documentId} failed, so the file could not be confirmed private.`
+              : `REPORTING: refused to store evidence ${newEvidenceId} as confidential — ${
+                  revocation.publicSurvivors.length
+                } anonymous sharing permission(s) still on document ${documentId} after trying to remove ${
+                  revocation.attempted
+                } (delete outcomes: ${
+                  revocation.outcomes
+                    .map((r: any) => `${r.permissionId}:${r.status}`)
+                    .join(', ') || 'none attempted'
+                }).`,
+          );
+          throwServiceError(
+            revocation.readBackFailed
+              ? 'This file could not be made confidential because the repository did not answer. It is still shared as it was. Please try saving again in a moment; if it keeps failing, upload the file again to get a fresh, private copy.'
+              : 'This file cannot be made confidential: it was shared publicly before and the repository did not remove that access, so the previous link still works. Upload the file again — the new copy will be private from the start — and remove this entry.',
           );
         }
 
