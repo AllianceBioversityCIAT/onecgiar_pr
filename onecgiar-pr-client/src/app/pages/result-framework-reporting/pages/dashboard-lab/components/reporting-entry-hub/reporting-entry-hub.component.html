@@ -354,19 +354,11 @@
                                 {{ programCode() }} <em class="font-bold not-italic">{{ copy.w3.allocationValue(project.allocation) }}</em>
                               </span>
                             </div>
-                            <button
-                              type="button"
-                              (click)="onCreateResult(project, center)"
-                              [attr.aria-disabled]="!center.acronym ? 'true' : null"
-                              [attr.title]="!center.acronym ? copy.w3.createResultDisabledTitle : null"
-                              [ngClass]="
-                                center.acronym
-                                  ? 'cursor-pointer bg-[var(--pr-color-primary-300)] text-white hover:bg-[var(--pr-color-primary-400)]'
-                                  : 'cursor-not-allowed border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-muted)]'
-                              "
-                              class="inline-flex h-[30px] shrink-0 items-center whitespace-nowrap rounded-[8px] px-[12px] text-[12.5px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
-                              {{ copy.w3.createResult }}
-                            </button>
+                            <span
+                              class="inline-flex h-[30px] shrink-0 items-center whitespace-nowrap rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[12px] text-[12.5px] font-semibold tabular-nums text-[var(--pr-text-secondary)]"
+                              [attr.title]="copy.w3.reportedResults(reportedCountFor(project))">
+                              {{ copy.w3.reportedResults(reportedCountFor(project)) }}
+                            </span>
                           </div>
                         }
 

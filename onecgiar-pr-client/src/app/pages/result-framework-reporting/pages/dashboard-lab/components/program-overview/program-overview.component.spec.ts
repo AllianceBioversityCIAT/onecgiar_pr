@@ -59,9 +59,9 @@ describe('ProgramOverviewComponent', () => {
   let component: ProgramOverviewComponent;
 
   const segments: StatusSegment[] = [
-    { key: 'in-progress', label: 'In progress', count: 6, bg: '#fef3c7', fg: '#b45309', statusName: 'Editing', link: { status: 'Editing' } },
+    { key: 'editing', label: 'Editing', count: 6, bg: '#fef3c7', fg: '#b45309', statusName: 'Editing', link: { status: 'Editing' } },
     { key: 'submitted', label: 'Submitted', count: 1, bg: '#dbeafe', fg: '#1d4ed8', statusName: 'Submitted', link: { status: 'Submitted' } },
-    { key: 'approved', label: 'Approved', count: 0, bg: '#d1fae5', fg: '#047857', statusName: 'Approved', link: null }
+    { key: 'in-qa', label: 'In QA', count: 0, bg: '#ede9fe', fg: '#7c3aed', statusName: 'In QA', link: null }
   ];
 
   const aows: AowProgressRow[] = [
@@ -110,7 +110,7 @@ describe('ProgramOverviewComponent', () => {
       }
     ],
     caption: 'W3/Bilateral results by center and category',
-    subtitle: 'Bilateral results in review (Submitted · In QA · Approved)'
+    subtitle: 'All bilateral results tagged to this program (Editing · Pending Review · Approved · Rejected)'
   };
 
   beforeEach(async () => {
@@ -189,7 +189,7 @@ describe('ProgramOverviewComponent', () => {
 
   it('shows the bilateral heatmap subtitle disclosing the review-status filter (OVW-R-3)', () => {
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Bilateral results in review (Submitted · In QA · Approved)');
+    expect(text).toContain('All bilateral results tagged to this program (Editing · Pending Review · Approved · Rejected)');
   });
 
   it('uses the programme name in the fallback description', () => {

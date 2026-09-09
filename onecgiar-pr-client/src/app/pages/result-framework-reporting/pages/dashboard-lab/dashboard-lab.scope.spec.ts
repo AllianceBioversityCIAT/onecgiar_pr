@@ -237,11 +237,9 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
       const segments = component.overviewStatusSegments().map(s => ({ key: s.key, count: s.count, statusName: s.statusName, link: s.link }));
       // Hand-computed from `PROGRAM_A.versions[0].statuses` (statusId 1→10, 3→5, everything else 0).
       expect(segments).toEqual([
-        { key: 'not-started', count: 0, statusName: 'Pending Review', link: null },
-        { key: 'in-progress', count: 10, statusName: 'Editing', link: { origin: 'W1/W2', status: 'Editing' } },
+        { key: 'editing', count: 10, statusName: 'Editing', link: { origin: 'W1/W2', status: 'Editing' } },
         { key: 'submitted', count: 5, statusName: 'Submitted', link: { origin: 'W1/W2', status: 'Submitted' } },
-        { key: 'in-qa', count: 0, statusName: 'Quality Assessed', link: null },
-        { key: 'approved', count: 0, statusName: 'Approved', link: null }
+        { key: 'in-qa', count: 0, statusName: 'Quality Assessed', link: null }
       ]);
     });
 
@@ -254,11 +252,9 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
       // Hand-computed from the seeded bucket's `byStatus` — DIFFERENT numbers than the unfiltered
       // test above, proving this branch reads the bucket and not `latestVersion().statuses`.
       expect(segments).toEqual([
-        { key: 'not-started', count: 0 },
-        { key: 'in-progress', count: 3 },
+        { key: 'editing', count: 3 },
         { key: 'submitted', count: 2 },
-        { key: 'in-qa', count: 0 },
-        { key: 'approved', count: 0 }
+        { key: 'in-qa', count: 0 }
       ]);
     });
 
@@ -382,7 +378,6 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
         expect(segments).toEqual([
           { key: 'editing', count: 1 },
           { key: 'pending', count: 0 },
-          { key: 'in-qa', count: 0 },
           { key: 'approved', count: 0 },
           { key: 'rejected', count: 0 }
         ]);
@@ -403,7 +398,6 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
         expect(segments).toEqual([
           { key: 'editing', count: 0 },
           { key: 'pending', count: 1 },
-          { key: 'in-qa', count: 0 },
           { key: 'approved', count: 1 },
           { key: 'rejected', count: 0 }
         ]);
@@ -415,7 +409,7 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
           cols: ['Cat A'],
           cells: [{ r: 0, c: 0, value: 2, link: { origin: 'W3/Bilaterals', center: 'CenterX', category: 'Cat A' } }],
           caption: 'W3/Bilateral results by center and category',
-          subtitle: 'Bilateral results in review (Submitted · In QA · Approved)',
+          subtitle: 'All bilateral results tagged to this program (Editing · Pending Review · Approved · Rejected)',
           shownOf: undefined
         });
       });
@@ -448,7 +442,7 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
           cols: [],
           cells: [],
           caption: 'W3/Bilateral results by center and category',
-          subtitle: 'Bilateral results in review (Submitted · In QA · Approved)'
+          subtitle: 'All bilateral results tagged to this program (Editing · Pending Review · Approved · Rejected)'
         });
       });
 
@@ -464,7 +458,7 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
           cols: ['Cat C'],
           cells: [{ r: 0, c: 0, value: 1, link: { origin: 'W3/Bilaterals', center: 'CenterZ', category: 'Cat C' } }],
           caption: 'W3/Bilateral results by center and category',
-          subtitle: 'Bilateral results in review (Submitted · In QA · Approved)',
+          subtitle: 'All bilateral results tagged to this program (Editing · Pending Review · Approved · Rejected)',
           shownOf: undefined
         });
       });

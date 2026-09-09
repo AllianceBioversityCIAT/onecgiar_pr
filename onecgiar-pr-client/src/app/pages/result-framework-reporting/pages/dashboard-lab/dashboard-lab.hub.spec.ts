@@ -180,25 +180,22 @@ describe('DashboardLabComponent — Reporting Entry Hub wiring (REH-TEST-4 b-f)'
     projects: [PROJECT]
   };
 
-  // (b) `REH-DD-4` / `REH-TEST-4` (b): `createResult` preselects the project THEN navigates —
-  // order matters (the creator reads the preselection from `ngOnInit`, which must already be set
-  // when the route lands).
-  it('(b) createResult calls selectProject with the exact project, then navigates to the center creator', async () => {
-    const order: string[] = [];
-    const selectProject = jest.fn(() => order.push('selectProject'));
-    const navigate = jest.fn(() => {
-      order.push('navigate');
-      return Promise.resolve(true);
+  // (b) W3 fetch also loads reported bilateral counts keyed by project id for the read-only hub lane.
+  it('(b) fetchW3Projects stores reported result counts by project id', async () => {
+    const api = apiMock({
+      GET_reportingEntryHubProjects: jest.fn().mockReturnValue(
+        of({ response: { programCode: 'SP02', activeYear: 2026, truncated: false, centers: [CENTER] } })
+      ),
+      GET_ResultToReview: jest.fn().mockReturnValue(
+        of({ response: [{ project_id: PROJECT.id, project_name: PROJECT.fullName, results: [{ id: 1 }, { id: 2 }] }] })
+      )
     });
-    const { component } = await createComponent(apiMock(), { navigate, selectProject });
+    const { component } = await createComponent(api);
 
-    component.onHubCreateResult({ project: PROJECT, center: CENTER });
+    (component as any).fetchW3Projects('SP02');
 
-    expect(selectProject).toHaveBeenCalledTimes(1);
-    expect(selectProject).toHaveBeenCalledWith(PROJECT);
-    expect(navigate).toHaveBeenCalledTimes(1);
-    expect(navigate).toHaveBeenCalledWith(['/bilateral', 'Alliance', 'create']);
-    expect(order).toEqual(['selectProject', 'navigate']);
+    expect(api.resultsSE.GET_ResultToReview).toHaveBeenCalled();
+    expect(component.w3ReportedResultsByProjectId().get(String(PROJECT.id))).toBe(2);
   });
 
   // (c) `REH-R-4.1`/(c): a `centers: []` response — the shape a user with no center role gets —

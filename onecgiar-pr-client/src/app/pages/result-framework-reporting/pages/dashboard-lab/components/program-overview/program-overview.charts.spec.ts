@@ -496,11 +496,9 @@ describe('program-overview.charts radarOption / radarTable / radarLinkFromClick'
 
 describe('program-overview.charts donut (OVW-T-4)', () => {
   const segments: StatusSegment[] = [
-    { key: 'not-started', label: 'Not started', count: 0, bg: '', fg: '', statusName: 'Not started', link: null },
-    { key: 'in-progress', label: 'In progress', count: 6, bg: '', fg: '', statusName: 'Editing', link: { status: 'Editing' } },
+    { key: 'editing', label: 'Editing', count: 6, bg: '', fg: '', statusName: 'Editing', link: { status: 'Editing' } },
     { key: 'submitted', label: 'Submitted', count: 1, bg: '', fg: '', statusName: 'Submitted', link: { status: 'Submitted' } },
-    { key: 'in-qa', label: 'In QA', count: 0, bg: '', fg: '', statusName: 'In QA', link: null },
-    { key: 'approved', label: 'Approved', count: 0, bg: '', fg: '', statusName: 'Approved', link: null }
+    { key: 'in-qa', label: 'In QA', count: 0, bg: '', fg: '', statusName: 'In QA', link: null }
   ];
 
   describe('donutOption', () => {
@@ -548,11 +546,9 @@ describe('program-overview.charts donut (OVW-T-4)', () => {
       expect(table.caption).toBe('Reporting status');
       expect(table.headers).toEqual(['Status', 'Results']);
       expect(table.rows).toEqual([
-        ['Not started', 0],
-        ['In progress', 6],
+        ['Editing', 6],
         ['Submitted', 1],
-        ['In QA', 0],
-        ['Approved', 0]
+        ['In QA', 0]
       ]);
     });
   });
@@ -563,7 +559,7 @@ describe('program-overview.charts donut (OVW-T-4)', () => {
     });
 
     it('resolves a zero-count sector (link: null) to null — no synthesized link', () => {
-      expect(sectorLinkFromClick({ name: 'Not started' }, segments)).toBeNull();
+      expect(sectorLinkFromClick({ name: 'In QA' }, segments)).toBeNull();
     });
 
     it('resolves an event with no matching name to null instead of throwing', () => {

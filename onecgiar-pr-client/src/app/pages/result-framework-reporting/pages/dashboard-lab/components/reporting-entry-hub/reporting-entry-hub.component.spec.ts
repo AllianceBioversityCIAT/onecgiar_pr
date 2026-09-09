@@ -84,6 +84,7 @@ describe('ReportingEntryHubComponent', () => {
     fixture.componentRef.setInput('programLevelRows', overrides['programLevelRows'] ?? programLevelRows);
     fixture.componentRef.setInput('canReportW1W2', overrides['canReportW1W2'] ?? true);
     fixture.componentRef.setInput('w3State', overrides['w3State'] ?? readyState);
+    fixture.componentRef.setInput('reportedResultsByProjectId', overrides['reportedResultsByProjectId'] ?? new Map());
     fixture.componentRef.setInput('myCentersCount', overrides['myCentersCount'] ?? 2);
     if (overrides['collapsed'] !== true && localStorage.getItem(COLLAPSE_KEY) !== 'true') {
       (component as any).userCollapsed.set(false);
@@ -263,27 +264,16 @@ describe('ReportingEntryHubComponent', () => {
     expect(component.liveMessage()).toContain('Africa Rice Center expanded');
   });
 
-  // (k) Create result emits {project, center}.
-  it('emits createResult with the project and center on click', async () => {
-    await setup();
-    const spy = jest.spyOn(component.createResult, 'emit');
-    component.onCreateResult(allianceProjects[0], alliance);
-    expect(spy).toHaveBeenCalledWith({ project: allianceProjects[0], center: alliance });
+  it('shows reported result counts per project instead of a create action', async () => {
+    const counts = new Map<string, number>([[String(allianceProjects[0].id), 3]]); // id is `B-A2000-0`
+    await setup({ reportedResultsByProjectId: counts });
+    expect(text()).toContain('3 results reported');
+    expect(text()).not.toContain('Create result');
   });
 
-  it('disables Create result and does not emit when the center has no acronym', async () => {
-    const noAcronymCenter: HubCenterProjects = { ...alliance, acronym: undefined };
-    await setup({
-      w3State: { status: 'ready', data: { programCode: 'SP02', activeYear: 2026, truncated: false, centers: [noAcronymCenter, africaRice] } }
-    });
-    const spy = jest.spyOn(component.createResult, 'emit');
-    component.onCreateResult(allianceProjects[0], noAcronymCenter);
-    expect(spy).not.toHaveBeenCalled();
-    const createButtons = fixture.debugElement
-      .queryAll(By.css('button'))
-      .filter(el => (el.nativeElement as HTMLElement).textContent?.trim() === 'Create result');
-    expect(createButtons[0].nativeElement.getAttribute('aria-disabled')).toBe('true');
-    expect(createButtons[0].nativeElement.getAttribute('title')).toBe('Center acronym missing — open it from My CGIAR Centers');
+  it('defaults to zero reported when a project id is absent from the lookup', async () => {
+    await setup({ reportedResultsByProjectId: new Map() });
+    expect(text()).toContain('0 results reported');
   });
 
   // (l) truncated → notice.

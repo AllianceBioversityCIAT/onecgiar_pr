@@ -93,11 +93,6 @@ export interface HubW3State {
   data?: HubW3Data;
 }
 
-export interface HubCreateResultEvent {
-  project: HubProject;
-  center: HubCenterProjects;
-}
-
 const COLLAPSE_STORAGE_KEY = 'pr.hub.collapsed';
 
 /**
@@ -137,6 +132,8 @@ export class ReportingEntryHubComponent {
   readonly programLevelRows = input<HubProgramLevelRow[]>([]);
   readonly canReportW1W2 = input<boolean>(true);
   readonly w3State = input<HubW3State>({ status: 'loading' });
+  /** Bilateral results reported to this program, keyed by Clarisa project id (string). */
+  readonly reportedResultsByProjectId = input<Map<string, number>>(new Map());
   readonly myCentersCount = input<number>(0);
   readonly isModal = input<boolean>(false);
 
@@ -145,7 +142,6 @@ export class ReportingEntryHubComponent {
   readonly reportEmerging = output<void>();
   readonly reportAow = output<string>();
   readonly reportProgramLevel = output<HubProgramLevelKind>();
-  readonly createResult = output<HubCreateResultEvent>();
   readonly retryW3 = output<void>();
   readonly collapsedChange = output<boolean>();
 
@@ -281,9 +277,8 @@ export class ReportingEntryHubComponent {
     this.reportProgramLevel.emit(row.kind);
   }
 
-  onCreateResult(project: HubProject, center: HubCenterProjects): void {
-    if (!center.acronym) return;
-    this.createResult.emit({ project, center });
+  reportedCountFor(project: HubProject): number {
+    return this.reportedResultsByProjectId().get(String(project.id)) ?? 0;
   }
 
   onRetry(): void {
