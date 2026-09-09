@@ -1,4 +1,4 @@
-// @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-2, BRH-R-1..4, R-6); parents changes/sp-bilateral-review-tab (BRT-T-4/T-5), changes/bilateral-review-ux-polish (BRP-T-2/T-3), changes/bilateral-review-viewport-and-table-polish (BRV-T-2)
+// @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-2, BRH-R-1..4, R-6; BRH-T-3, BRH-R-5, R-7, R-8, R-9, R-11); parents changes/sp-bilateral-review-tab (BRT-T-4/T-5), changes/bilateral-review-ux-polish (BRP-T-2/T-3), changes/bilateral-review-viewport-and-table-polish (BRV-T-2)
 import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal, untracked } from '@angular/core';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { HlmButton } from '@spartan/button';
@@ -95,6 +95,35 @@ export class BilateralReviewTableComponent {
    *  (group header `td`, grouped loading row, flat loading row) so none of them can drift from
    *  R-3's merged Alignment column arithmetic (judgment-day L-8: was hard-coded `8` at 3 sites). */
   readonly columnCount = computed<number>(() => (this.showCenterColumn() ? 7 : 6));
+
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-3 attempt 2/3, HITL fix, BRH-R-1)
+  /** Explicit per-column pixel widths driving the ONE shared `<colgroup>` (`colgroupTpl`) that
+   *  every table variant renders — the nested per-card table in BOTH grouped modes, and the flat
+   *  table. Before this, every table used `table-layout: auto`, so each card sized its own
+   *  columns from its OWN content — Lead Center/Status/Alignment/Submission Date/Actions drifted
+   *  left-right between cards on the live page (HITL finding), and one card's headers even
+   *  wrapped to two lines. Title carries NO entry here — its `<col>` gets no explicit width, so
+   *  `table-fixed` hands it 100% of the table's remaining width after every other column is
+   *  subtracted (same reason `min-w-[280px]` was dropped from the title `th`/`td` below: a min
+   *  bigger than that remainder at 1000px would force the exact horizontal overflow this fix
+   *  exists to remove). Same array for project mode (7 columns) and center mode (6, no Lead
+   *  Center) — and for the flat table, which always renders in "project" column shape.
+   *
+   *  Attempt-3 re-balance (Reviewer FAIL, issue 2): the attempt-2 widths (code 90 / center 140 /
+   *  status 130 / alignment 280 / date 110 / actions 110 = 860 non-title px) left Title only
+   *  ~136.5px total at 1000px — narrower than Alignment's own hard 280px, inverting BRV-R-3's
+   *  "Title is the merged column's primary beneficiary." Code is ALSO narrowed here (90 -> 96) on
+   *  purpose (issue 1): the Contributor chip moved to its own stacked line below the code+copy
+   *  line (template), so the code column no longer needs to fit code+chip+button on ONE line —
+   *  96px comfortably fits either line alone. New non-title sum = 96+110+120+220+100+100 = 746px,
+   *  so Title = 254px at 1000px (widest column; Alignment's 220px is now second) and 534px at
+   *  1280px — verified by Gate 7's "Title width >= every other column" assertion. */
+  readonly columnWidths = computed<string[]>(() => {
+    const widths: string[] = ['96px', '']; // code, title (title = remainder, no width)
+    if (this.showCenterColumn()) widths.push('110px'); // lead center
+    widths.push('120px', '220px', '100px', '100px'); // status, alignment, date, actions
+    return widths;
+  });
 
   /** Groups with at least one result — defensive drop of an empty group (BRT-R-10), even though
    *  the page never builds one today. */
@@ -211,21 +240,42 @@ export class BilateralReviewTableComponent {
     return [...centers];
   }
 
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-3, BRH-R-5, BRH-DD-4)
+  /** Writes `text` to the clipboard and shows the transient checkmark ONLY once the browser
+   *  confirms the write — `navigator.clipboard.writeText` returns a Promise that REJECTS on a
+   *  denied permission (T-2 called it fire-and-forget and set `copiedKey` unconditionally, so a
+   *  denied prompt still showed the green check). `stopPropagation` still fires synchronously so
+   *  the click never reaches an ancestor toggle/row regardless of how the promise settles. */
   copyText(text: string, key: string, event: Event): void {
     event.stopPropagation();
-    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(text);
-      this.copiedKey.set(key);
-      setTimeout(() => {
-        if (this.copiedKey() === key) {
-          this.copiedKey.set(null);
-        }
-      }, 2000);
-    }
+    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return;
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        this.copiedKey.set(key);
+        setTimeout(() => {
+          if (this.copiedKey() === key) {
+            this.copiedKey.set(null);
+          }
+        }, 2000);
+      })
+      .catch(() => {
+        // Denied permission / unavailable clipboard — no checkmark, no retry (R-5: the confirmation
+        // must be earned, not assumed).
+      });
   }
 
   isCopied(key: string): boolean {
     return this.copiedKey() === key;
+  }
+
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-3 remainder, BRH-R-5, BRH-US-4)
+  /** The "clean alignment string" the Alignment column's hover-copy button writes — the TOC
+   *  result and/or Indicator text, whichever are real values (never a dash, never a placeholder
+   *  label), joined the same way `cardCaption`'s segments are. Callers gate rendering on
+   *  `!alignmentBothPlaceholder(row)` so there is always something real to copy. */
+  alignmentCopyText(row: ResultToReview): string {
+    return [row.toc_title, row.indicator].filter(v => !this.isPlaceholder(v)).join(' · ');
   }
 
   private lastKeysFor(mode: BilateralReviewGroupMode): Map<string, boolean> {
@@ -441,6 +491,63 @@ export class BilateralReviewTableComponent {
    *  shift the label relative to the rows below it. */
   groupAccentClass(group: BilateralReviewGroup): string {
     return this.pendingCount(group) > 0 ? '!border-l-[var(--pr-status-in-progress-fg)]' : '!border-l-[var(--pr-border)]';
+  }
+
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-3, BRH-R-7, design.md §4.2)
+  /** Semantic badge tone keyed by the result's TYPE NAME. `ResultToReview` has NO
+   *  `result_type_name`/`result_type_id` field — the server (`results.service.ts
+   *  getResultsByProgramAndCenters`) maps `rt.name` (the `result_type` catalog row: "Policy
+   *  Change", "Innovation use", "Innovation Development", "Capacity Sharing for Development",
+   *  "Knowledge Product", "Other output"/"Other outcome" — `result_type` migrations) into
+   *  `indicator_category`, falling back to the literal string `'Not Applicable'` when the result
+   *  has no type. Case/whitespace-normalized so "Policy change" and "POLICY CHANGE" both resolve;
+   *  never invent a `result_type_name` fallback (folder CLAUDE.md gotcha).
+   *  ⚠️ `'innovation developmen'` (missing the trailing "t") is a REAL seeded value, not a typo to
+   *  "fix" here — `onecgiar-pr-server/src/migrations/1664912268260-controlListInserts.ts:37` and
+   *  `1665530247113-refactorResultLevels.ts:73` both insert the `result_type` row as
+   *  `'Innovation Developmen'`. Rows created against that seed carry the misspelling verbatim on
+   *  the wire, so it needs its own map entry (resolving to the SAME teal tone as the correctly
+   *  spelled name) or every one of those rows would silently fall through to the neutral badge. */
+  private static readonly RESULT_TYPE_TONE: Record<string, string> = {
+    'policy change': 'bg-violet-50 text-[var(--pr-color-primary-700)] border border-violet-200',
+    'innovation use': 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+    'innovation development': 'bg-teal-50 text-teal-700 border border-teal-200',
+    'innovation developmen': 'bg-teal-50 text-teal-700 border border-teal-200',
+    'capacity sharing for development': 'bg-amber-50 text-amber-800 border border-amber-200',
+    'knowledge product': 'bg-sky-50 text-sky-700 border border-sky-200',
+    'other output': 'bg-slate-100 text-slate-700 border border-slate-200',
+    'other outcome': 'bg-slate-100 text-slate-700 border border-slate-200'
+  };
+
+  /** Neutral fallback badge (design.md §4.2 "Other Output / Outcome" row) — also covers any type
+   *  name the map above doesn't recognize, so an unmapped/new catalog value never breaks styling. */
+  private static readonly RESULT_TYPE_NEUTRAL = 'bg-slate-100 text-slate-700 border border-slate-200';
+
+  resultTypeToneClass(row: ResultToReview): string {
+    const key = (row.indicator_category || '').trim().toLowerCase();
+    return BilateralReviewTableComponent.RESULT_TYPE_TONE[key] ?? BilateralReviewTableComponent.RESULT_TYPE_NEUTRAL;
+  }
+
+  /** Suppresses the badge for a placeholder/blank type (the server's `'Not Applicable'` fallback
+   *  included) — same rule the Alignment column uses (`isPlaceholder`), so a typeless result never
+   *  renders a hollow "Not Applicable" pill. */
+  hasResultTypeBadge(row: ResultToReview): boolean {
+    return !this.isPlaceholder(row.indicator_category);
+  }
+
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-3, BRH-R-8, design.md §4.3)
+  /** ROW-level 3px left border accent, matching the row's OWN status tone — distinct from
+   *  `groupAccentClass` below (the GROUP header's pending-vs-neutral accent, BRV-T-2/pre-existing).
+   *  Forward-pointer fix: the group card `<section>` used to carry the SAME accent classes as its
+   *  own header `<button>`, stacking two 3px edges at the card's left boundary; the `<section>`
+   *  accent is removed in the template so the group accent lives on the toggle button ONLY, and
+   *  this method's row-level accent (on the leftmost `<td>` / the card `<li>`) is the sole owner of
+   *  the per-RESULT accent design.md §4.3 asks for. */
+  rowAccentClass(row: ResultToReview): string {
+    if (isPending(row)) return '!border-l-[var(--pr-status-in-progress-fg)]';
+    if (isApproved(row)) return '!border-l-[var(--pr-status-approved-fg)]';
+    if (isRejected(row)) return '!border-l-[var(--pr-danger)]';
+    return '!border-l-[var(--pr-border)]';
   }
 
   private canReviewRow(row: ResultToReview): boolean {

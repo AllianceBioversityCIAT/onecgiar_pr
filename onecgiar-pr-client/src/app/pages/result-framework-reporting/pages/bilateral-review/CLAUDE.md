@@ -1,6 +1,6 @@
 # bilateral-review
 
-**Verified:** 2026-09-09 · branch qa-development-2026 · spec `changes/bilateral-review-hierarchy-ux` (BRH-T-2 — container card architecture replacing `app-pr-group-table`, monospace project-code badge, contributing-center chips, smart progressive disclosure, in-card quick filter); parents `changes/bilateral-review-viewport-and-table-polish` (BRV-T-1..T-3 — viewport lock, pinned toolbar + filter band, Alignment column, status token pairs, group accent, action emphasis), `changes/bilateral-review-ux-polish` (BRP-T-1..T-4 — filter band + Clear filters + stat bar, table density/placeholders/group-by-center, narrow cards, CT gates), `changes/bilateral-review-center-strip-and-phase` (BRC-T-1..T-3 — phase-scoped list + badge, Cycle selector, center chip strip) and `changes/sp-bilateral-review-tab` (BRT-T-1..T-8 — relocated from the legacy `bilateral-results` page into one toolbar/table shell).
+**Verified:** 2026-09-09 · branch qa-development-2026 · spec `changes/bilateral-review-hierarchy-ux` (BRH-T-2 — container card architecture replacing `app-pr-group-table`, monospace project-code badge, contributing-center chips, smart progressive disclosure, in-card quick filter; **BRH-T-3** — semantic result-type badges, per-row 3px status accent, hover-copy hardening, text selection); parents `changes/bilateral-review-viewport-and-table-polish` (BRV-T-1..T-3 — viewport lock, pinned toolbar + filter band, Alignment column, status token pairs, group accent, action emphasis), `changes/bilateral-review-ux-polish` (BRP-T-1..T-4 — filter band + Clear filters + stat bar, table density/placeholders/group-by-center, narrow cards, CT gates), `changes/bilateral-review-center-strip-and-phase` (BRC-T-1..T-3 — phase-scoped list + badge, Cycle selector, center chip strip) and `changes/sp-bilateral-review-tab` (BRT-T-1..T-8 — relocated from the legacy `bilateral-results` page into one toolbar/table shell).
 
 **What this owns:** the **Bilateral review** tab of the programme shell (`entity-details/:entityId/bilateral-review`) — one searchable, filterable, groupable list of W3/Bilateral results reported to this program, with a review drawer for approve/reject decisions.
 
@@ -82,8 +82,16 @@
   `groupPendingBadgeClass()` (same pending pair, never recomputed independently) — all three the
   design system's **fixed fg/bg pairs** (`--pr-status-*`/`--pr-danger*`,
   client hard rule 9: **never recombine** a foreground with another background). Group headers
-  carry a 3px left accent (pending tone if the group has pending rows, `--pr-border` otherwise).
-  `groups` generalized to `BilateralReviewGroup { key, label, caption,
+  carry a 3px left accent (pending tone if the group has pending rows, `--pr-border` otherwise) —
+  **on the toggle `<button>` ONLY** (BRH-T-3 forward-pointer fix: the group `<section>` used to
+  carry the SAME accent, stacking two 3px edges at the card's left boundary; removed from the
+  `<section>` in both the wide and narrow branches). Each RESULT (not group) also carries its own
+  3px left accent, `rowAccentClass(row)` — a SEPARATE method from `groupAccentClass`, keyed off the
+  row's own status (`!border-l-[var(--pr-status-in-progress-fg)]` pending /
+  `!border-l-[var(--pr-status-approved-fg)]` approved / `!border-l-[var(--pr-danger)]` rejected /
+  `!border-l-[var(--pr-border)]` neutral, design.md §4.3) — on the leftmost `<td>` (a `<tr>` has no
+  reliable left-border box in the separated-borders table model) in the wide/nested table, and on
+  the `<li>` itself in the narrow card branch. `groups` generalized to `BilateralReviewGroup { key, label, caption,
   center, results }` — project mode `key = project_name`; center mode `key = lead_center ||
   UNASSIGNED_CENTER_CODE`, pending desc then acronym asc, blank bucket always last. The component
   **owns** `expandedKeys: Set<string>` namespaced `${groupMode}::${key}` — SINGLE expansion source
@@ -169,3 +177,80 @@
   payload (`results.service.ts:getResultsByProgramAndCenters`) only maps `indicator_category` (from
   `result_category`) for a result's "type". The in-card Type quick filter (`distinctCardTypes`)
   reads `indicator_category` alone; don't reintroduce an invented `result_type_name` fallback.
+  ⚠️ **`indicator_category`'s ACTUAL source is the `result_type` catalog table**, not an indicator:
+  `result.repository.ts:getResultsByProgramAndCenters` selects `rt.name AS result_category` (joined
+  `result_type rt ON r.result_type_id = rt.id`) and the service aliases it to `indicator_category`,
+  falling back to the literal string `'Not Applicable'` when no type is set. The values are the
+  `result_type` migration rows: `'Policy Change'`, `'Innovation use'`, `'Innovation Development'`,
+  `'Capacity Sharing for Development'`, `'Knowledge Product'`, `'Other output'`/`'Other outcome'`.
+  This is what `resultTypeToneClass`/`hasResultTypeBadge` (BRH-T-3, BRH-R-7) key their semantic
+  badge colors on — case/whitespace-normalized lookup, neutral `slate` fallback for anything
+  unmapped, badge suppressed via the shared `isPlaceholder` check for the `'Not Applicable'`
+  fallback (never invent a display value the server didn't send).
+- **`copyText`'s clipboard write is awaited, not fire-and-forget (BRH-T-3).** `navigator.clipboard
+  .writeText(...)` returns a Promise that REJECTS on a denied permission — the checkmark
+  (`copiedKey.set(...)`) now sets only in `.then()`, with a no-op `.catch()`, so a denied prompt
+  never shows a false "Copied!". `stopPropagation` still runs synchronously regardless of how the
+  promise settles.
+- **Text selection (`cursor-text select-text`, BRH-R-5) is WIDE-header-only for the project code
+  chip and title** — both live inside the narrow header's `<button>` (whole-row toggle), so adding
+  selectable text there without `stopPropagation` on every text node risks an accidental
+  expand/collapse on a selection drag; the narrow group header intentionally does NOT get this
+  treatment (unchanged from before BRH-T-3). Result Code and the Alignment column's TOC/Indicator
+  spans DO get it in both branches — neither sits inside a clickable ancestor.
+- **Hover-copy buttons are NOT header-only** (BRH-T-3 remainder, BRH-US-4) — Result Code
+  (`bilateral-review-row-code`) and the Alignment cell/caption both carry their own copy button in
+  BOTH the wide table and narrow card branches, same `copyText(text, key, $event)` engine as the
+  project title/code button. Keys are `'code:' + row.result_code` / `'alignment:' + row.result_code`
+  — unique per row so two checkmarks can't light together. `alignmentCopyText(row)` builds the
+  clean copy string (`toc_title`/`indicator`, `isPlaceholder`-filtered, joined `' · '` — the SAME
+  join `cardCaption` uses, but WITHOUT category/center); the button is omitted entirely when
+  `alignmentBothPlaceholder(row)` (nothing real to copy). Wide buttons are `h-5 w-5`, hover-revealed
+  via `group` (on `<tr>`) + `group-hover:opacity-100`/`focus-visible:opacity-100` — matching the
+  pre-existing project-title button's always-visible convention would have been simpler but the
+  Leader asked for hover-reveal here. Narrow buttons are always-visible `h-[44px] w-[44px]` (R-11
+  touch target; narrow has no reliable hover) — this is why the two branches use different sizes/
+  visibility for the "same" button, not a design drift. The exact code text now lives on an inner
+  `data-testid="bilateral-review-row-code-value"` span (added so Jest's exact-text assertions on
+  the code don't pick up the copy button's icon ligature text) — the outer `bilateral-review-row-code`
+  testid is unchanged and still the one to query for "does this row have a code cell" checks.
+- ⚠️ **Every table variant is `table-fixed` with ONE shared `<colgroup>` (BRH-T-3 attempt 2/3, HITL
+  live-page finding, BRH-R-1).** Before this, each nested per-card `<table>` used `table-layout:
+  auto`, so a card's OWN content decided its own column widths — on the live page, Lead
+  Center/Status/Alignment/Submission Date/Actions drifted left-right between cards, and one
+  card's headers even wrapped. `columnWidths()` (component) returns one px-width array — **`96px`
+  code / `''` title / `110px` center [project mode only] / `120px` status / `220px` alignment /
+  `100px` date / `100px` actions** (attempt-3 re-balance; measured via CT: Title = 530.5px @1280,
+  250.5px @1000 — the WIDEST column at both, satisfying BRV-R-3's "Title is the merged column's
+  primary beneficiary") — rendered by `colgroupTpl` as the FIRST child of every `<table>`: the
+  nested grouped table in both modes AND the flat table. Title is the ONLY column with no entry,
+  so `table-fixed` hands it 100% of the remainder; its `min-w-[280px]` (`th`/`td`) was DROPPED for
+  the same reason. Other columns' pre-existing `min-w-*` classes were left alone (smaller than
+  their colgroup width, harmless no-ops under `table-fixed`).
+- ⚠️ **The Contributor chip lives on its OWN stacked line under the code+copy-button line**
+  (`flex flex-col`, BRH-T-3 attempt 3, Reviewer FAIL) — NOT inline with the code any more. Under
+  `table-fixed`'s hard 96px code column, code text + the "Contributor" chip (~76px) + the copy
+  button (20px) on ONE line was ~155-165px in a ~76px content box, painting over the Title cell
+  (a real production shape per `BRP-AC-8`, not a fixture-only edge case). Stacked, each line only
+  needs to fit alone. The type badge (BRH-R-7) got the same class of fix: `whitespace-nowrap
+  truncate max-w-full` (+ a `title` attr) so a long category name never wraps onto a 2nd/3rd line
+  now that Title is narrower at 1000px — a wrapped badge would have inflated row height in a shape
+  no test measured before Gate 7's badge-offsetHeight check.
+- ⚠️ **A `<section overflow-hidden>` measuring its own `scrollWidth <= clientWidth` is a
+  TAUTOLOGY, not a behavioral proof (BRH-T-3 attempt 3, Reviewer FAIL).** `bilateral-review-group-
+  card` sections clip their own content (`overflow-hidden`) and wrap a `div.overflow-x-auto`
+  around the nested `<table>` — the section's own scrollWidth can never exceed its clientWidth no
+  matter how wide the table inside renders. Both `bilateral-review-table.cy.ts` Gate 1 and Gate 7
+  now measure the REAL scroller (`.overflow-x-auto`, found via `querySelector` inside the section
+  — `null` on a COLLAPSED card, which renders no nested table at all; skip, don't fail, but assert
+  at least one scroller was actually checked so the test can't pass vacuously) and the `<table>`'s
+  own `scrollWidth` against that scroller's `clientWidth`.
+- ⚠️ **The type badge (BRH-R-7) has a browser rendering floor `mt-*`/`leading-*` CANNOT close.**
+  Measured via `getBoundingClientRect()`: a persistent ~3.5px gap sits between the `line-clamp-2`
+  title `<p>`'s own bottom and the badge's top even at `mt-0` — a `-webkit-line-clamp` box-model
+  quirk in this Chromium build, not a Tailwind/class problem. The badge is shrunk to `mt-0 py-0
+  leading-[12px]` (as tight as it can legibly get while keeping the `border` design.md §4.2
+  requires); the two-line-title-with-badge row still measures 66.5px, so `bilateral-review.cy.ts`'s
+  "Row height gate" cap for that ONE shape is re-based `64 -> 68` (measured + 1.5px buffer, same
+  convention its other two caps already use). The one-line-no-badge (44px) and one-line-with-badge
+  (49.5px) shapes were re-measured too and still fit their EXISTING caps unchanged.

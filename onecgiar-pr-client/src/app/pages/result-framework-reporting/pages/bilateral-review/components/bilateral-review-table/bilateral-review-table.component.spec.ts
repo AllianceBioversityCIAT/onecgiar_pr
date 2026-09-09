@@ -291,7 +291,9 @@ describe('BilateralReviewTableComponent', () => {
       fixture.detectChanges();
       fixture.detectChanges();
 
-      const codes = byTestId('bilateral-review-row-code').map(el => el.textContent?.trim());
+      // Exact code text lives on the inner `-value` span now that a hover-copy button (BRH-T-3
+      // remainder) shares the outer `bilateral-review-row-code` cell.
+      const codes = byTestId('bilateral-review-row-code-value').map(el => el.textContent?.trim());
       expect(codes).toEqual(['NEW', 'MID', 'OLD']);
     });
   });
@@ -391,7 +393,9 @@ describe('BilateralReviewTableComponent', () => {
     it('both present: renders two lines by data-testid, inner spans truncate with title — never the td', () => {
       render([GROUP_A]); // a1: toc_title "ToC", indicator "Indicator" — both real values.
       const cell = byTestId('bilateral-review-row-alignment')[0];
-      const spans = cell.querySelectorAll('span');
+      // Excludes the copy button's icon span (BRH-T-3 remainder) — this test targets the two
+      // content lines, not the hover-copy affordance beside them.
+      const spans = Array.from(cell.querySelectorAll('span')).filter(s => !s.closest('button'));
 
       expect(spans.length).toBe(2);
       expect(spans[0].textContent).toBe('ToC');
@@ -413,7 +417,7 @@ describe('BilateralReviewTableComponent', () => {
       const cell = byTestId('bilateral-review-row-alignment')[0];
 
       expect(cell.querySelectorAll('span[aria-hidden]').length).toBe(0);
-      const spans = Array.from(cell.querySelectorAll('span')).filter(s => !s.classList.contains('sr-only'));
+      const spans = Array.from(cell.querySelectorAll('span')).filter(s => !s.classList.contains('sr-only') && !s.closest('button'));
       expect(spans.length).toBe(1);
       expect(spans[0].textContent).toBe('HLO1.AOW1.IO1 Steer to impact');
     });
@@ -426,7 +430,7 @@ describe('BilateralReviewTableComponent', () => {
       const cell = byTestId('bilateral-review-row-alignment')[0];
 
       expect(cell.querySelectorAll('span[aria-hidden]').length).toBe(0);
-      const spans = Array.from(cell.querySelectorAll('span')).filter(s => !s.classList.contains('sr-only'));
+      const spans = Array.from(cell.querySelectorAll('span')).filter(s => !s.classList.contains('sr-only') && !s.closest('button'));
       expect(spans.length).toBe(1);
       expect(spans[0].textContent).toBe('Number of people trained');
     });
@@ -456,14 +460,14 @@ describe('BilateralReviewTableComponent', () => {
       expect(cell.querySelector('.sr-only')?.textContent).toContain(BILATERAL_REVIEW_COPY.table.notSpecified);
     });
 
-    it('th and td carry min-w-[220px]; the title column grows to min-w-[280px]', () => {
+    it('the alignment body cell keeps min-w-[220px]; the title header/cell carry NO min-w (BRH-T-3 attempt 2: table-fixed + colgroup govern width instead — a min-w here would reopen the horizontal-overflow defect)', () => {
       render([GROUP_A]);
       const headerCells = Array.from(root().querySelectorAll('thead th'));
-      const alignmentHeader = headerCells.find(th => th.textContent?.trim() === BILATERAL_REVIEW_COPY.table.headers.alignment) as HTMLElement;
       const titleHeader = headerCells[1] as HTMLElement;
+      const titleCell = byTestId('bilateral-review-row-code')[0].closest('tr')!.querySelectorAll('td')[1] as HTMLElement;
 
-      expect(alignmentHeader.className).toContain('min-w-[220px]');
-      expect(titleHeader.className).toContain('min-w-[280px]');
+      expect(titleHeader.className).not.toContain('min-w-[280px]');
+      expect(titleCell.className).not.toContain('min-w-[280px]');
       expect(byTestId('bilateral-review-row-alignment')[0].className).toContain('min-w-[220px]');
     });
   });
@@ -588,7 +592,7 @@ describe('BilateralReviewTableComponent', () => {
       fixture.detectChanges();
 
       expect(root().querySelector('table')).toBeNull();
-      const codes = byTestId('bilateral-review-row-code').map(el => el.textContent?.trim());
+      const codes = byTestId('bilateral-review-row-code-value').map(el => el.textContent?.trim());
       expect(codes).toEqual(['NEW', 'OLD']); // sortedFlatRows desc by submission_date
     });
 
@@ -913,7 +917,7 @@ describe('BilateralReviewTableComponent', () => {
       fixture.detectChanges();
       const rowsAfterCIP = byTestId('bilateral-review-row-code');
       expect(rowsAfterCIP.length).toBe(1);
-      expect(rowsAfterCIP[0].textContent?.trim()).toBe('BR-001');
+      expect(byTestId('bilateral-review-row-code-value')[0].textContent?.trim()).toBe('BR-001');
 
       // Reset in-card center filter
       component.setInCardCenterFilter(GROUP_A.key, null);
@@ -921,7 +925,7 @@ describe('BilateralReviewTableComponent', () => {
       expect(byTestId('bilateral-review-row-code').length).toBe(2);
     });
 
-    it('copy button copies project name to clipboard and shows transient check state (BRH-R-5)', () => {
+    it('copy button copies project name to clipboard and shows transient check state (BRH-R-5)', async () => {
       const writeTextSpy = jest.fn().mockResolvedValue(undefined);
       Object.assign(navigator, {
         clipboard: { writeText: writeTextSpy }
@@ -932,9 +936,299 @@ describe('BilateralReviewTableComponent', () => {
       jest.spyOn(event, 'stopPropagation');
 
       component.copyText('Test Copy String', 'test-key', event);
+      // `stopPropagation` is synchronous regardless of how the clipboard promise settles.
       expect(event.stopPropagation).toHaveBeenCalled();
       expect(writeTextSpy).toHaveBeenCalledWith('Test Copy String');
+      // The checkmark now sets inside `.then()` (BRH-T-3 hardening) — flush the microtask.
+      await Promise.resolve();
       expect(component.isCopied('test-key')).toBe(true);
+    });
+  });
+
+  // ── BRH-T-3: Semantic Result Type Badges, Status Tokens, 3px Left Accent & Hover Copy Engine ──
+  describe('BRH-T-3: Semantic Result Type Badges, Status Tokens, 3px Row Accent & Hover Copy Engine', () => {
+    const typeCases: Array<[string, string]> = [
+      ['Policy Change', 'bg-violet-50'],
+      ['Innovation use', 'bg-emerald-50'],
+      ['Innovation Development', 'bg-teal-50'],
+      ['Capacity Sharing for Development', 'bg-amber-50'],
+      ['Knowledge Product', 'bg-sky-50'],
+      ['Other output', 'bg-slate-100'],
+      ['Other outcome', 'bg-slate-100']
+    ];
+
+    it.each(typeCases)('renders a %s badge with the %s tone (BRH-R-7, design.md §4.2)', (typeName, expectedClass) => {
+      const group = projectGroup('P20 - Type Badge Project', [row({ id: 'type1', project_id: 'p20', project_name: 'P20 - Type Badge Project', indicator_category: typeName })]);
+      render([group]);
+      const badge = byTestId('bilateral-review-row-type-badge')[0];
+      expect(badge).toBeTruthy();
+      expect(badge.textContent?.trim()).toBe(typeName);
+      expect(badge.className).toContain(expectedClass);
+    });
+
+    it('resolves the seeded "Innovation Developmen" typo (migrations 1664912268260/1665530247113) to the SAME teal tone as the correctly spelled name — a real DB value, not a typo to "fix" here', () => {
+      const group = projectGroup('P27 - Typo Alias Project', [row({ id: 'type-typo1', project_id: 'p27', project_name: 'P27 - Typo Alias Project', indicator_category: 'Innovation Developmen' })]);
+      render([group]);
+      const badge = byTestId('bilateral-review-row-type-badge')[0];
+      expect(badge).toBeTruthy();
+      expect(badge.textContent?.trim()).toBe('Innovation Developmen');
+      expect(badge.className).toContain('bg-teal-50');
+    });
+
+    it('an unmapped/unknown type name still renders a badge, with the neutral fallback tone (forward pointer (d) — never invent a field, always degrade gracefully)', () => {
+      const group = projectGroup('P21 - Unknown Type Project', [row({ id: 'type2', project_id: 'p21', project_name: 'P21 - Unknown Type Project', indicator_category: 'Some Brand New Category' })]);
+      render([group]);
+      const badge = byTestId('bilateral-review-row-type-badge')[0];
+      expect(badge).toBeTruthy();
+      expect(badge.className).toContain('bg-slate-100');
+    });
+
+    it('suppresses the badge entirely for a placeholder/blank type ("Not Applicable", the server default)', () => {
+      const group = projectGroup('P22 - No Type Project', [row({ id: 'type3', project_id: 'p22', project_name: 'P22 - No Type Project', indicator_category: 'Not Applicable' })]);
+      render([group]);
+      expect(byTestId('bilateral-review-row-type-badge').length).toBe(0);
+    });
+
+    it('renders the type badge in the narrow card branch too (R-11 parity)', () => {
+      const group = projectGroup('P23 - Narrow Type Project', [row({ id: 'type4', project_id: 'p23', project_name: 'P23 - Narrow Type Project', indicator_category: 'Knowledge Product' })]);
+      render([group], { narrow: true });
+      const badge = byTestId('bilateral-review-row-type-badge')[0];
+      expect(badge).toBeTruthy();
+      expect(badge.className).toContain('bg-sky-50');
+    });
+
+    describe('Row status tokens & 3px left border accent (BRH-R-8, design.md §4.3)', () => {
+      it('a Pending Review row carries the amber status pill and the amber 3px left border accent', () => {
+        render([GROUP_A]); // a1: status_id 5, pending.
+        const statusPill = byTestId('bilateral-review-row-status')[0];
+        expect(statusPill.className).toContain('bg-[var(--pr-status-in-progress-bg)]');
+
+        const codeCell = byTestId('bilateral-review-row-code')[0];
+        expect(codeCell.className).toContain('!border-l-[3px]');
+        expect(codeCell.className).toContain('!border-l-[var(--pr-status-in-progress-fg)]');
+      });
+
+      it('an Editing/Draft row carries a structured neutral status pill and a neutral left border accent', () => {
+        const group = projectGroup('P24 - Draft Project', [row({ id: 'draft1', project_id: 'p24', project_name: 'P24 - Draft Project', status_id: 1, status_name: 'Editing' })]);
+        // Zero pending — the group cold-loads collapsed (BRH-R-4); force it open to reach the row.
+        render([group], { expandAllNonce: 1, allExpanded: true });
+        const statusPill = byTestId('bilateral-review-row-status')[0];
+        expect(statusPill.className).toContain('bg-[var(--pr-status-not-started-bg)]');
+        expect(statusPill.className).not.toContain('bg-[var(--pr-status-in-progress-bg)]');
+
+        const codeCell = byTestId('bilateral-review-row-code')[0];
+        expect(codeCell.className).toContain('!border-l-[var(--pr-border)]');
+        expect(codeCell.className).not.toContain('!border-l-[var(--pr-status-in-progress-fg)]');
+      });
+
+      it('an Approved row carries the emerald accent; a Rejected row carries the danger accent', () => {
+        render([GROUP_A, GROUP_B]); // a2 (GROUP_A[1]): approved; b1 (GROUP_B[0]): rejected.
+        const approvedCode = byTestId('bilateral-review-row-code')[1];
+        expect(approvedCode.className).toContain('!border-l-[var(--pr-status-approved-fg)]');
+
+        // GROUP_B has 0 pending so it cold-loads collapsed — expand it to reach its row.
+        (byTestId('bilateral-review-group-toggle')[1] as HTMLButtonElement).click();
+        fixture.detectChanges();
+        const rejectedCode = byTestId('bilateral-review-row-code')[byTestId('bilateral-review-row-code').length - 1];
+        expect(rejectedCode.className).toContain('!border-l-[var(--pr-danger)]');
+      });
+
+      it('the row accent is a SEPARATE mechanism from the group header accent — the group card no longer stacks its own left accent (forward pointer (a))', () => {
+        render([GROUP_A, GROUP_B]);
+        const cards = byTestId('bilateral-review-group-card');
+        // The group `<section>` itself carries no left-accent utility any more — only its header
+        // `<button>` (BRV-R-6, unchanged) and each row do.
+        expect(cards[0].className).not.toContain('!border-l-[3px]');
+      });
+
+      it('the narrow card itself carries the row-level accent (R-11: card container stays intact below 900px)', () => {
+        const group = projectGroup('P25 - Narrow Accent Project', [row({ id: 'narrow-acc1', project_id: 'p25', project_name: 'P25 - Narrow Accent Project', status_id: 5 })]);
+        render([group], { narrow: true });
+        const card = byTestId('bilateral-review-card')[0];
+        expect(card.className).toContain('!border-l-[3px]');
+        expect(card.className).toContain('!border-l-[var(--pr-status-in-progress-fg)]');
+      });
+    });
+
+    describe('Hover copy engine — checkmark timing and rejected-permission path (BRH-R-5, BRH-DD-4)', () => {
+      it('reverts to the default copy icon after exactly 2000ms (fake timers)', async () => {
+        jest.useFakeTimers();
+        try {
+          const writeTextSpy = jest.fn().mockResolvedValue(undefined);
+          Object.assign(navigator, { clipboard: { writeText: writeTextSpy } });
+          render([GROUP_A]);
+
+          component.copyText('Some text', 'timer-key', new MouseEvent('click'));
+          await Promise.resolve();
+          expect(component.isCopied('timer-key')).toBe(true);
+
+          jest.advanceTimersByTime(1999);
+          expect(component.isCopied('timer-key')).toBe(true);
+
+          jest.advanceTimersByTime(1);
+          expect(component.isCopied('timer-key')).toBe(false);
+        } finally {
+          jest.useRealTimers();
+        }
+      });
+
+      it('a denied clipboard permission (rejected promise) never shows the checkmark', async () => {
+        const writeTextSpy = jest.fn().mockRejectedValue(new Error('Permission denied'));
+        Object.assign(navigator, { clipboard: { writeText: writeTextSpy } });
+        render([GROUP_A]);
+        const event = new MouseEvent('click');
+        jest.spyOn(event, 'stopPropagation');
+
+        component.copyText('Some text', 'denied-key', event);
+        expect(event.stopPropagation).toHaveBeenCalled();
+        // Flush the rejected promise's `.catch()`.
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(component.isCopied('denied-key')).toBe(false);
+      });
+    });
+
+    // ── Remainder: hover-copy buttons on Result Code and Alignment (BRH-T-3 remainder, BRH-US-4,
+    // tasks.md description "Enable cursor-text select-text on titles and codes; add hover copy
+    // buttons"). Reuses the same `copyText` engine as the project title/code button. ────────────
+    describe('New hover-copy buttons — Result Code and Alignment (BRH-R-5, BRH-US-4)', () => {
+      it('wide: the Result Code copy button copies the exact code, shows the checkmark, and never triggers the row action', async () => {
+        const writeTextSpy = jest.fn().mockResolvedValue(undefined);
+        Object.assign(navigator, { clipboard: { writeText: writeTextSpy } });
+        render([GROUP_A], { canReview: true });
+        const openResultSpy = jest.fn();
+        component.openResult.subscribe(openResultSpy);
+
+        const codeCell = byTestId('bilateral-review-row-code')[0]; // a1: BR-001
+        const copyBtn = codeCell.querySelector('button') as HTMLButtonElement;
+        expect(copyBtn).toBeTruthy();
+        copyBtn.click();
+
+        expect(writeTextSpy).toHaveBeenCalledWith('BR-001');
+        await Promise.resolve();
+        fixture.detectChanges();
+        expect(component.isCopied('code:BR-001')).toBe(true);
+        expect(openResultSpy).not.toHaveBeenCalled();
+      });
+
+      it('wide: the Alignment copy button copies the clean TOC/indicator string (no dash, no markup), shows the checkmark, and never triggers the row action', async () => {
+        const writeTextSpy = jest.fn().mockResolvedValue(undefined);
+        Object.assign(navigator, { clipboard: { writeText: writeTextSpy } });
+        render([GROUP_A], { canReview: true }); // a1: toc_title 'ToC', indicator 'Indicator'
+        const openResultSpy = jest.fn();
+        component.openResult.subscribe(openResultSpy);
+
+        const alignmentCell = byTestId('bilateral-review-row-alignment')[0];
+        const copyBtn = alignmentCell.querySelector('button') as HTMLButtonElement;
+        expect(copyBtn).toBeTruthy();
+        copyBtn.click();
+
+        expect(writeTextSpy).toHaveBeenCalledWith('ToC · Indicator');
+        await Promise.resolve();
+        fixture.detectChanges();
+        expect(component.isCopied('alignment:BR-001')).toBe(true);
+        expect(openResultSpy).not.toHaveBeenCalled();
+      });
+
+      it('the Alignment copy button is omitted when both TOC and Indicator are placeholders (nothing real to copy)', () => {
+        const group = projectGroup('P26 - No Alignment Project', [
+          row({ id: 'noalign1', project_id: 'p26', project_name: 'P26 - No Alignment Project', toc_title: 'Not specified', indicator: 'Not Applicable' })
+        ]);
+        render([group]);
+        const alignmentCell = byTestId('bilateral-review-row-alignment')[0];
+        expect(alignmentCell.querySelector('button')).toBeNull();
+      });
+
+      it('narrow: both new copy buttons measure a 44x44 touch target (BRH-R-11) and copy the same clean strings', async () => {
+        const writeTextSpy = jest.fn().mockResolvedValue(undefined);
+        Object.assign(navigator, { clipboard: { writeText: writeTextSpy } });
+        render([GROUP_A], { narrow: true }); // a1: BR-001, toc_title 'ToC', indicator 'Indicator'
+
+        const card = byTestId('bilateral-review-card')[0];
+        const codeBtn = card.querySelector('[data-testid="bilateral-review-row-code"] button') as HTMLButtonElement;
+        expect(codeBtn).toBeTruthy();
+        expect(codeBtn.className).toContain('h-[44px]');
+        expect(codeBtn.className).toContain('w-[44px]');
+        codeBtn.click();
+        expect(writeTextSpy).toHaveBeenCalledWith('BR-001');
+
+        const captionEl = card.querySelector('[data-testid="bilateral-review-card-caption"]') as HTMLElement;
+        const alignBtn = captionEl.parentElement!.querySelector('button') as HTMLButtonElement;
+        expect(alignBtn).toBeTruthy();
+        expect(alignBtn.className).toContain('h-[44px]');
+        expect(alignBtn.className).toContain('w-[44px]');
+        alignBtn.click();
+        expect(writeTextSpy).toHaveBeenCalledWith('ToC · Indicator');
+      });
+
+      it('each copy button uses a key unique per row (code:<result_code> / alignment:<result_code>) so two checkmarks never light together', async () => {
+        const writeTextSpy = jest.fn().mockResolvedValue(undefined);
+        Object.assign(navigator, { clipboard: { writeText: writeTextSpy } });
+        render([GROUP_A], { canReview: true }); // a1 BR-001 (pending), a2 BR-002 (approved)
+
+        const codeCells = byTestId('bilateral-review-row-code');
+        (codeCells[0].querySelector('button') as HTMLButtonElement).click();
+        await Promise.resolve();
+        fixture.detectChanges();
+
+        expect(component.isCopied('code:BR-001')).toBe(true);
+        expect(component.isCopied('code:BR-002')).toBe(false);
+        expect(component.isCopied('alignment:BR-001')).toBe(false);
+      });
+    });
+
+    describe('Action tone parity (BRH-R-9 — already exercised in the BRV-R-7 block above; smoke-check here under the T-3 umbrella)', () => {
+      it('Review (primary tone) vs See (ghost/neutral) differ by canReviewRow, not just status', () => {
+        render([GROUP_A], { canReview: true });
+        const actions = byTestId('bilateral-review-row-action');
+        expect(actions[0].textContent).toContain(BILATERAL_REVIEW_COPY.table.reviewAction);
+        expect(actions[1].textContent).toContain(BILATERAL_REVIEW_COPY.table.seeAction);
+      });
+    });
+
+    // ── HITL fix (attempt 2): uniform column widths across every card (BRH-R-1) ──────────────────
+    describe('Uniform column widths — table-fixed + shared colgroup (BRH-R-1, HITL live-page finding)', () => {
+      it('every nested grouped table (project mode) carries table-fixed and a 7-<col> colgroup as its FIRST child', () => {
+        render([GROUP_A, GROUP_B], { expandAllNonce: 1, allExpanded: true });
+        const tables = Array.from(root().querySelectorAll('table'));
+        expect(tables.length).toBeGreaterThan(0);
+        tables.forEach(table => {
+          expect(table.className).toContain('table-fixed');
+          const colgroup = table.firstElementChild;
+          expect(colgroup?.tagName.toLowerCase()).toBe('colgroup');
+          expect(colgroup?.querySelectorAll('col').length).toBe(7);
+        });
+      });
+
+      it('center mode (grouped view) uses a 6-<col> colgroup — no Lead Center column', () => {
+        const centerGroup: BilateralReviewGroup = { key: 'CIP', label: 'CIP', caption: null, center: null, results: GROUP_A.results };
+        render([centerGroup], { groupMode: 'center', expandAllNonce: 1, allExpanded: true });
+        const table = root().querySelector('table') as HTMLTableElement;
+        const colgroup = table.firstElementChild;
+        expect(colgroup?.tagName.toLowerCase()).toBe('colgroup');
+        expect(colgroup?.querySelectorAll('col').length).toBe(6);
+      });
+
+      it('the flat table uses the SAME column-width definition (7 <col> in project mode)', () => {
+        fixture.componentRef.setInput('view', 'flat');
+        fixture.componentRef.setInput('flatRows', GROUP_A.results);
+        fixture.detectChanges();
+        fixture.detectChanges();
+        const table = byTestId('bilateral-review-flat-table')[0] as HTMLTableElement;
+        expect(table.className).toContain('table-fixed');
+        const colgroup = table.firstElementChild;
+        expect(colgroup?.tagName.toLowerCase()).toBe('colgroup');
+        expect(colgroup?.querySelectorAll('col').length).toBe(7);
+      });
+
+      it('the title <col> is the ONLY one with no explicit width — every other column has a fixed px width', () => {
+        render([GROUP_A], { expandAllNonce: 1, allExpanded: true });
+        const cols = Array.from(root().querySelectorAll('table')[0].querySelectorAll('col')) as HTMLElement[];
+        expect(cols.length).toBe(7);
+        expect(cols[1].style.width).toBe(''); // title = remainder, no explicit width
+        const widthed = cols.filter((_, i) => i !== 1);
+        widthed.forEach(col => expect(col.style.width).toMatch(/^\d+px$/));
+      });
     });
   });
 });

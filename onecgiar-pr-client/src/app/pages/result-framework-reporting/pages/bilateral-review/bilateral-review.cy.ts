@@ -1070,11 +1070,14 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
     });
   });
 
-  // ── Row height gate (BRP-T-4, R-8, AC-8; re-based BRV-T-2, R-11) — a dedicated 3-row, 1-group
-  // fixture: rh1's title is long enough to force the `line-clamp-2` wrap AND carries an
-  // `indicator_category` (so its caption renders too) — the two-line-title case; rh2's title fits
-  // on one line AND has no category (`''`, falsy — `@if (row.indicator_category)` never renders
-  // it) — the one-line-NO-caption case; rh3 (BRV-T-2 addition) is a one-line title WITH a caption
+  // ── Row height gate (BRP-T-4, R-8, AC-8; re-based BRV-T-2, R-11; BRH-T-3) — a dedicated 3-row,
+  // 1-group fixture: rh1's title is long enough to force the `line-clamp-2` wrap AND carries an
+  // `indicator_category` (so its type badge renders too, BRH-T-3 — `hasResultTypeBadge(row)`,
+  // stale comment fixed: this used to be a plain `@if (row.indicator_category)` caption before
+  // BRH-T-3 replaced it with the semantic badge pill) — the two-line-title case; rh2's title fits
+  // on one line AND has no category (`''`, a placeholder per `isPlaceholder` — `hasResultTypeBadge`
+  // never renders it) — the one-line-NO-badge case; rh3 (BRV-T-2 addition) is a one-line title WITH
+  // a badge
   // — R-11's third case, previously untested. All three land in the SAME project group
   // (`allExpanded` defaults `true`) so no interaction is needed to see them.
   //
@@ -1084,6 +1087,19 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   // 50, BRV-R-11's own arithmetic: title 17 + caption 14 + gap 2 + py 12 = 45, +4px measured
   // rounding/line-height slack, landing at 49 — the same distance the original two-line estimate
   // (62) sat from its own measurement (63)).
+  //
+  // RE-BASED (BRH-T-3 attempt 2, Reviewer FAIL, issue 1): the plain caption became the semantic
+  // type badge pill (`hasResultTypeBadge`/`resultTypeToneClass`). Re-measured on the SAME
+  // component (flat-table harness, `bilateral-review-table.cy.ts`, identical layout): one-line-
+  // no-badge row 44px — UNCHANGED, still fits the existing 44px cap; one-line-WITH-badge row
+  // 49.5px — still fits the existing 50px cap. Only the two-line-WITH-badge shape grew: measured
+  // 66.5px against the badge shrunk as far as it legibly can go (`mt-0 py-0 leading-[12px]`,
+  // component-file comment has the full trail) — a persistent ~3.5px gap between the
+  // `line-clamp-2` paragraph's own box and the next sibling (a `-webkit-line-clamp` box-model
+  // quirk in this Chromium build, verified with a dedicated `getBoundingClientRect()` probe, not
+  // closeable by badge-only class changes) sits on top of the arithmetic. The 64px cap for THIS
+  // ONE shape is re-based to 68px (measured 66.5 + 1.5px buffer, same convention the 50/44 caps
+  // already use above their own measurements) rather than fighting a browser rendering floor.
   describe('Row height gate (BRP-T-4, R-8/AC-8; re-based BRV-T-2, R-11)', () => {
     const ROW_HEIGHT_FIXTURE_ROWS: ResultToReview[] = [
       row({
@@ -1127,7 +1143,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       assertEffectiveWidth('1536 (row-height fixture)', 1536);
     });
 
-    it('one-line-with-caption <= 50px, one-line-no-caption <= 44px, two-line <= 64px (R-11 re-based)', () => {
+    it('one-line-with-badge <= 50px, one-line-no-badge <= 44px, two-line-with-badge <= 68px (R-11 re-based, BRH-T-3 attempt 2 re-base)', () => {
       cy.get('[data-testid="bilateral-review-row-code"]')
         .should('have.length', 3)
         .then($codes => {
@@ -1148,8 +1164,10 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
           ).to.deep.equal(['two-line+caption', 'one-line', 'one-line+caption']);
 
           measured.forEach(m => {
-            const cap = m.isTwoLine ? 64 : m.hasCaption ? 50 : 44;
-            const shape = `${m.isTwoLine ? 'two' : 'one'}-line${m.hasCaption ? ', with caption' : ', no caption'}`;
+            // Two-line cap re-based 64 -> 68 (BRH-T-3 attempt 2): the caption became the type
+            // badge pill, measured 66.5px at its tightest legible size — see the comment above.
+            const cap = m.isTwoLine ? 68 : m.hasCaption ? 50 : 44;
+            const shape = `${m.isTwoLine ? 'two' : 'one'}-line${m.hasCaption ? ', with badge' : ', no badge'}`;
             expect(m.rowHeight, `row "${m.code}" (${shape}): height(${m.rowHeight.toFixed(1)}) <= ${cap}px`).to.be.at.most(cap);
           });
         });

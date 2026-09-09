@@ -105,6 +105,8 @@
 
 ### `BRH-T-3` — Semantic Result Type Badges, Status Tokens, 3px Left Accent & Hover Copy Engine
 
+- [x] `BRH-T-3` — Semantic Result Type Badges, Status Tokens, 3px Left Accent & Hover Copy Engine
+
 - **Type:** client
 - **Estimate:** M
 - **Description:** Implement leaf-level visual styling, tokens, and micro-interactions in `BilateralReviewTableComponent`:
