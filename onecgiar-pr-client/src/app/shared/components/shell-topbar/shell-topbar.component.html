@@ -1,14 +1,5 @@
 @if (!dataControlSE.show_qa_full_screen && !dataControlSE.focusMode()) {
   <header class="pr-shell-topbar" role="banner">
-    <!-- Sidebar collapse (CURRENT left control) -->
-    <button
-      type="button"
-      class="pr-topbar-icon-btn"
-      aria-label="Toggle sidebar"
-      (click)="toggleSidebar()">
-      <ng-icon name="lucidePanelLeft" class="text-[20px]" />
-    </button>
-
     <!--
       Centered search — a BUTTON that opens the global palette, per the design
       (PRMS-Reporting.dc.html:232, `onClick="{{ openPalette }}"`). It is deliberately no longer a

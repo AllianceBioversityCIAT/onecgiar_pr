@@ -84,25 +84,30 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   /**
    * Whether the open section is complete.
    *
-   * P2-3542: this used to be `missingFields().length === 0`, i.e. the bar decided on its own by
-   * scanning the DOM. That scan only ever sees what is rendered, so it disagreed with the sections
-   * rail in two ways. Only the ACTIVE ToC tab is in the DOM (`multiple-wps.component.html` passes
-   * a single `[activeTab]`), so the other tabs' mandatory fields are invisible to it. And the
-   * requirements that live only in the validation function — a contributing partner, a
-   * contributing CGIAR Center — are not marked `.mandatory` anywhere, so the bar announced
-   * "Section complete" on results whose green check was returning red.
+   * RSC-1 (2026-09-08, supersedes P2-3542 for this pill only): back to `missingFields().length
+   * === 0` — a live, client-side DOM scan — for every route, not just IPSR/the result creator.
+   * P2-3542 moved this to the server-computed green check (`currentSectionIsDone()`) because the
+   * scan disagreed with it in two ways: (1) only the ACTIVE ToC tab is in the DOM, so other tabs'
+   * mandatory fields were invisible to the scan; (2) some completeness rules live only in
+   * validation logic with no rendered `.mandatory` marker (e.g. "at least one Contributing CGIAR
+   * Center"), so the scan could say "complete" when the green check said otherwise.
    *
-   * The green check is the single authority: it is what paints the rail and what gates Submit.
-   * The bar now reads that same value, and the DOM scan is demoted to naming WHAT is missing,
-   * never to deciding IF something is.
+   * Both reasons are addressed for the sections this component now covers: (1) `rd-theory-of-change`
+   * (the only section with hidden ToC tabs) is P22-only and this bar's autosave/live-completeness
+   * behavior is scoped to P25 — moot. (2) The one business rule known to lack a DOM marker
+   * (Contributing CGIAR Centers) now has one — see `rd-contributors-and-partners.component.html`'s
+   * `appFeedbackValidation` markers bound to `[isComplete]="contributingCentersComplete"` (P2-3249)
+   * — so the scan reflects that rule correctly today, verified by that component's own
+   * `*.zoneless.spec.ts` running the real scan against the real template.
    *
-   * The scan stays as the fallback for routes with no green check of their own: this bar is also
-   * used by IPSR and the result creator, outside the result-detail section list, where
-   * `hasCurrentSection()` is false.
+   * Trade-off accepted: the green check stays authoritative for the SIDEBAR RAIL and for gating
+   * Submit (`GreenChecksService`/`ResultSectionsService.currentSectionIsDone()` are untouched) — a
+   * save can still turn up a server-side rule this scan does not know about, in which case this
+   * pill and the rail can briefly disagree until the next save resolves it. What changes is only
+   * this bar's own pill: it now updates instantly as the user types, instead of waiting for a
+   * server round-trip, which was the actual ask this ticket exists for.
    */
-  readonly isComplete = computed(() =>
-    this.sectionsSE.hasCurrentSection() ? this.sectionsSE.currentSectionIsDone() : this.missingFields().length === 0
-  );
+  readonly isComplete = computed(() => this.missingFields().length === 0);
 
   /**
    * Label of the "incomplete" button. The count is only honest when the DOM scan is what found the

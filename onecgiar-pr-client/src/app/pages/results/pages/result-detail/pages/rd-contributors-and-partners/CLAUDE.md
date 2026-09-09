@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-09-02 · branch performance-refactor · P2-3420/P2-3421 (QA'd innovation link, single select)
+**Verified:** 2026-09-08 · branch qa-development-2026-ss · quick/lead-contact-clear-button (the read-only "Lead contact person" display, P2-2911 AC2, removed from this section)
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
@@ -328,6 +328,21 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
   human gate (local stack + auth token + a real ToC-mapped P25 result are all required and were not
   available at doc-update time).
 
+- ⚠️ **P2-3301 follow-up (2026-09-04): the "CGIAR Centers ... Section 2, Theory of Change" sentence
+  was REMOVED from `components/multiple-wps/components/knowledge-product-selector` (`CPKnowledgeProductSelectorComponent`),
+  not re-fixed.** P2-3301 had already turned the frozen `undefined` link into a working getter-based
+  deep link (`resultCode`/`versionId` re-evaluated on each CD pass). But the destination never made
+  sense for P25: `routing-data.ts` registers `theory-of-change` with `portfolioAcronym: 'P22'`, which
+  only hides it from the **sidebar** — there is no route guard — so P25 has no navigable Theory of
+  Change section at all, and even the copy was wrong (P25's own section order makes THIS section —
+  Contributors & partners — section 2, not Theory of Change; "Section 2" was P22-derived boilerplate).
+  `alertStatusMessage` is a plain string again (no getter, no `resultCode`/`versionId` — nothing else
+  in the component read them). If P25 ever gets a real ToC view, re-add the sentence pointing at
+  THAT route, don't resurrect the P22 copy or the `/theory-of-change` deep link.
+  🛑 The **legacy** `rd-partners/components/knowledge-product-selector` (P22, `KnowledgeProductSelectorComponent`)
+  keeps its getter-based ToC link untouched — P22 genuinely has Theory of Change as section 2, so
+  that copy is correct there. Don't apply this removal to the P22 twin.
+
 ## El enlace a la innovación QA'd (P2-3420 / P2-3421) — TRES caminos, no dos
 
 Desde el 2-sep-2026 la pregunta enlazado/agrupado tiene **tres** ramas en el template, no dos:
@@ -365,38 +380,27 @@ tenía enlazado el 6153, que el catálogo QA'd no devuelve.
 - El catálogo se pide por `effect()` (`ensureQaInnovationCatalogue`), solo cuando la rama aplica.
 - Tests: `rd-contributors-and-partners.innovation-link.spec.ts` (17).
 
-## Lead contact person (P2-2911 AC2) — displayed here, still saved in General Information
+## Lead contact person (P2-2911 AC2) — REMOVED from this section (2026-09-08)
 
-`<app-lead-contact-person-field>` renders right under the Lead center block
-(`html:272-280`, gated on `isCP2026()`), hydrated by `GET_leadContactPerson` (`component.ts:535`) and bound through the
-`leadContactBody` signal.
+🛑 **`<app-lead-contact-person-field>` no longer renders in this section.** `quick/lead-contact-clear-button`
+removed the read-only display that used to sit right under the Lead center block (was `html:259-285`),
+along with its hydration (`GET_leadContactPerson`, the `leadContactBody` signal, `isLeadContactPersonRequired`,
+`leadContactPersonNote`, the `LeadContactBody` interface) and its dedicated spec
+(`rd-contributors-and-partners.lead-contact-person.spec.ts`, deleted). The field is unchanged and still
+lives in `rd-general-information` and IPSR — only this section's read-only duplicate was pulled, per a
+direct product request that the duplicate display (input + a separate name/email card) read as
+confusing UI. `data-testid="cp-lead-contact-person"` no longer exists anywhere in this file.
 
-- 🛑 **`[readOnly]="true"` is not cosmetic — this section has NO write path for the field.**
-  `UpdateContributorsPartnersDto` declares neither `lead_contact_person` nor
-  `lead_contact_person_data`, and `resolveContributorsPartnersSections`
-  (`contributors-partners.service.ts`) would not recognise them as a section, so anything added to
-  the PATCH body for them is dropped. The only writer is the General Information save
-  (`results.service.ts:901-902`), and it is a **full-body overwrite** — it cannot be reused for a
-  two-key patch without risking title / description / impact areas. An editable copy here would
-  therefore be a mandatory field that silently loses input.
-- ⚠️ **The value is read through the General Information GET**, because this section's own GET does
-  not echo it and `GET api/results/get/:id` (which fills `currentResultSignal()`) does not carry it
-  either — verified against prtest on 2026-09-02. That is one extra request per section entry, and
-  it shares `saveButtonSE.isGettingSection` with this section's own GET, so the global
-  section spinner may clear on whichever of the two returns first. The section's own skeleton is
-  driven by `rdPartnersSE.sectionLoading`, so what the user sees is unaffected.
-- ⚠️ **`leadContactBody` must be REASSIGNED, never mutated.** The field only reacts through
-  `ngOnChanges`, which fires on a reference change.
-- ⚠️ **The hook is `data-testid="cp-lead-contact-person"`, deliberately NOT `cp-field-…`.** The
-  `cp-field-<payload path>` convention makes `save-contract.cy.ts` assert the key travels in the
-  PATCH body — and this one must not, because the server would drop it.
-- ⚠️ **No `appFeedbackValidation` marker here on purpose.** General Information already contributes
-  this field to `someMandatoryFieldIncompleteResultDetail`; a second marker would double-count a
-  field the user cannot fix from this screen.
-- ⚠️ The shared field's clear (✕) button has no `readOnly` guard, so it can still blank the local
-  display. Nothing persists from this section, and the next entry re-hydrates. Do **not** guard it
-  in the shared component — that would change P2-3520 behaviour for General Information, IPSR and
-  Bilateral.
+⚠️ **This reverses a documented AC (P2-2911 AC2 — "the field is DISPLAYED in Contributors & Partners").**
+If that AC is still tracked as delivered anywhere (ticket, `docs/prd.md`, `docs/specs/`), it needs to be
+revisited — this component no longer satisfies it. The reasoning that justified the ORIGINAL read-only
+display (no write path here; `UpdateContributorsPartnersDto` carries neither `lead_contact_person` nor
+`lead_contact_person_data`; the only writer is the General Information save, a full-body overwrite) still
+applies to why this section could never have had an EDITABLE copy — that was never in question. What's
+gone is the read-only display itself, by request, not a technical constraint.
+- The "Pending / not built" section below (AC4/AC5/AC7, the server-side carry of the two keys on the v2
+  Contributors & Partners GET/PATCH) is now moot for THIS section specifically, since there is no display
+  here to hydrate — but is still relevant if the field is ever reintroduced.
 
 ## Pending / not built
 
@@ -429,8 +433,8 @@ tenía enlazado el 6153, que el catálogo QA'd no devuelve.
 | `components/` | Chips y bloques de contribuidores/socios | Los dropdowns agrupados de admin tienen comportamiento propio: validar antes de cambiar bindings |
 
 ## Tests
-Cuatro suites (`*.lead-contact-person.spec.ts` cubre P2-2911 AC2 contra el DOM renderizado, con
-un stub que proyecta `[body]` para que la aserción sea sobre el binding y no sobre la propiedad).
+Tres suites (`*.lead-contact-person.spec.ts` — cubría P2-2911 AC2 contra el DOM renderizado — se
+eliminó el 2026-09-08 junto con el campo que probaba, ver la sección de arriba).
 `*.component.spec.ts` (incl. el describe `LC-T-2` que renderiza el
 componente completo con el servicio REAL para probar que la nota vacía de Lead center nunca
 aparece y que el `app-pr-select` recibe el catálogo completo, y el describe `LC-T-4: Lead center

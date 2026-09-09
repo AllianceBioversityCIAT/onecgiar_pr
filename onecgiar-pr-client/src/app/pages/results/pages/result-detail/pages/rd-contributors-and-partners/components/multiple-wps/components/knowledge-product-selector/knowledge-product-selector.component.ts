@@ -15,44 +15,15 @@ export class CPKnowledgeProductSelectorComponent {
   authorAffiliationsList: any[] = [{ part: { code: 5 } }];
 
   /**
-   * P2-3301 (same defect as P2-3276 in `app-estimates`): these were class-field initializers, so they
-   * were read ONCE while the component was being constructed. `result-detail` resets
-   * `dataControlSE.currentResult` on entry and only fills it when the async `GET_resultById` resolves,
-   * so both froze as `undefined` and the note rendered
-   * `/result/result-detail/undefined/theory-of-change?phase=undefined` — a 404 that bounced the user
-   * home with a raw "Result not found" dialog. As getters they are re-evaluated on every change
-   * detection, and they fall back to the code and phase `result-detail` assigns synchronously from the
-   * route, so the link is correct even on a direct URL entry or a refresh.
-   *
-   * They read `currentResultSignal()` first on purpose: `GET_resultById` writes the plain
-   * `currentResult` field and the signal together, and this template has no other reactive read, so
-   * without the signal the view is never marked dirty and the note keeps rendering the stale link even
-   * though the getter would now return the right value (same lesson as P2-3322).
+   * P2-3301 follow-up: P25 has no navigable "Theory of Change" section (not in this portfolio's
+   * result-detail sidebar — `routing-data.ts` only exposes `theory-of-change` for P22), and P25's own
+   * section order makes "Contributors & partners" section 2, not Theory of Change. The P22-derived
+   * copy this note used to carry ("...are directly linked to Section 2, Theory of Change") was
+   * therefore both mislabeled and pointed at a dead end for this portfolio, so the CGIAR Centers /
+   * Theory of Change sentence was dropped rather than re-fixed. `resultCode`/`versionId` getters and
+   * the deep link they built are gone with it — nothing else in this component read them.
    */
-  get resultCode() {
-    return (
-      this.api.dataControlSE?.currentResultSignal()?.result_code ??
-      this.api.dataControlSE?.currentResult?.result_code ??
-      this.api.resultsSE?.currentResultCode
-    );
-  }
-
-  get versionId() {
-    return (
-      this.api.dataControlSE?.currentResultSignal()?.version_id ??
-      this.api.dataControlSE?.currentResult?.version_id ??
-      this.api.resultsSE?.currentResultPhase
-    );
-  }
-
-  /**
-   * A getter, not a field: the template binds it into `app-alert-status`, so it has to be rebuilt on
-   * every change detection pass. Frozen as a string it would keep the `undefined` link even with the
-   * getters above.
-   */
-  get alertStatusMessage(): string {
-    return `Partner organizations you collaborated with or are currently collaborating with to generate this result. <li>Please note that CGIAR Centers are not listed here. They are directly linked to <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li>`;
-  }
+  alertStatusMessage = 'Partner organizations you collaborated with or are currently collaborating with to generate this result.';
 
   deliveryOptions = [
     { id: 1, name: 'Scaling' },

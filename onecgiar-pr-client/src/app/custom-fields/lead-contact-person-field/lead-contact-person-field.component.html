@@ -8,26 +8,20 @@
   [required]="required"
   [hasValue]="hasSelectedContact">
 <div class="lead-contact-container">
-  <div class="contact-select-wrapper">
+  <div class="contact-select-wrapper" [hidden]="isContactLocked">
     <app-pr-input
       fieldRef="[general-info]-lead_contact_person"
       type="text"
       [showFieldHeader]="false"
       [lockRequiredFromFieldManager]="true"
       [required]="false"
-      [disabled]="isContactLocked || readOnly"
+      [disabled]="readOnly"
       [(ngModel)]="userSearchService.searchQuery"
       (input)="onSearchInput($event)"
       (blur)="onContactBlur()"
       [class.invalid-contact]="!userSearchService.hasValidContact"
       autocomplete="off">
     </app-pr-input>
-
-    @if (isContactLocked && userSearchService?.selectedUser) {
-      <button class="clear-contact-btn" type="button" (click)="clearContact()" title="Clear selection">
-        <i class="clear-icon">✕</i>
-      </button>
-    }
   </div>
 
   @if (userSearchService.showContactError) {
@@ -43,6 +37,9 @@
         <div class="selected-user-name">{{ userSearchService?.selectedUser?.display_name }}</div>
         <div class="selected-user-info">{{ userSearchService?.selectedUser?.mail }} - {{ userSearchService?.selectedUser?.title }}</div>
       </div>
+      <button class="clear-contact-btn" type="button" (click)="clearContact()" title="Clear selection">
+        <i class="clear-icon">✕</i>
+      </button>
     </div>
   }
 </div>

@@ -39,11 +39,23 @@
             <ng-container *ngIf="evidence.last_updated_date"> | Updated: {{ evidence.last_updated_date | date: 'MMM d, y' }}</ng-container>
           </span>
         </div>
-        <div class="ev_actions" *ngIf="!dataControlSE.isKnowledgeProduct && !api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status">
-          <button type="button" class="ev_edit" prTooltip="Edit evidence" prTooltipPosition="top" (click)="editEvidence(i)">
+        <div class="ev_actions">
+          <button
+            type="button"
+            class="ev_edit"
+            *ngIf="!api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status"
+            prTooltip="Edit evidence"
+            prTooltipPosition="top"
+            (click)="editEvidence(i)">
             <i class="material-icons-round">edit</i>
           </button>
-          <button type="button" class="ev_delete" prTooltip="Delete evidence" prTooltipPosition="top" (click)="deleteEvidenceWithConfirm(i)">
+          <button
+            type="button"
+            class="ev_delete"
+            *ngIf="!dataControlSE.isKnowledgeProduct && !api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status"
+            prTooltip="Delete evidence"
+            prTooltipPosition="top"
+            (click)="deleteEvidenceWithConfirm(i)">
             <i class="material-icons-round">delete</i>
           </button>
         </div>

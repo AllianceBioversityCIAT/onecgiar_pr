@@ -14,12 +14,15 @@ export class HlmSidebarService {
   private readonly _open = signal<boolean>(true);
   private readonly _openMobile = signal<boolean>(false);
   private readonly _isMobile = signal<boolean>(false);
+  private readonly _isCompact = signal<boolean>(false);
   private readonly _variant = signal<SidebarVariant>('sidebar');
   private _mediaQuery: MediaQueryList | null = null;
+  private _compactMediaQuery: MediaQueryList | null = null;
 
   public readonly open: Signal<boolean> = this._open.asReadonly();
   public readonly openMobile: Signal<boolean> = this._openMobile.asReadonly();
   public readonly isMobile: Signal<boolean> = this._isMobile.asReadonly();
+  public readonly isCompact: Signal<boolean> = this._isCompact.asReadonly();
   public readonly variant: Signal<SidebarVariant> = this._variant.asReadonly();
 
   public readonly state = computed<'expanded' | 'collapsed'>(() => (this._open() ? 'expanded' : 'collapsed'));
@@ -35,6 +38,10 @@ export class HlmSidebarService {
       this._mediaQuery = this._window.matchMedia(`(max-width: ${this._config.mobileBreakpoint})`);
       this._isMobile.set(this._mediaQuery.matches);
 
+      // Initialize the compact-breakpoint MediaQueryList
+      this._compactMediaQuery = this._window.matchMedia(`(max-width: ${this._config.compactBreakpoint})`);
+      this._isCompact.set(this._compactMediaQuery.matches);
+
       // Add media query listener
       const mediaQueryHandler = (e: MediaQueryListEvent) => {
         this._isMobile.set(e.matches);
@@ -42,6 +49,12 @@ export class HlmSidebarService {
         if (!e.matches) this._openMobile.set(false);
       };
       this._mediaQuery.addEventListener('change', mediaQueryHandler);
+
+      // Add compact-breakpoint media query listener
+      const compactMediaQueryHandler = (e: MediaQueryListEvent) => {
+        this._isCompact.set(e.matches);
+      };
+      this._compactMediaQuery.addEventListener('change', compactMediaQueryHandler);
 
       // Add keyboard shortcut listener
       const keydownHandler = (event: KeyboardEvent) => {
@@ -60,6 +73,7 @@ export class HlmSidebarService {
         if (resizeTimeout) this._window.clearTimeout(resizeTimeout);
         resizeTimeout = this._window.setTimeout(() => {
           if (this._mediaQuery) this._isMobile.set(this._mediaQuery.matches);
+          if (this._compactMediaQuery) this._isCompact.set(this._compactMediaQuery.matches);
         }, 100);
       };
       this._window.addEventListener('resize', resizeHandler);
@@ -69,6 +83,7 @@ export class HlmSidebarService {
         if (!this._window) return;
 
         if (this._mediaQuery) this._mediaQuery.removeEventListener('change', mediaQueryHandler);
+        if (this._compactMediaQuery) this._compactMediaQuery.removeEventListener('change', compactMediaQueryHandler);
         this._window.removeEventListener('keydown', keydownHandler);
         this._window.removeEventListener('resize', resizeHandler);
         if (resizeTimeout) this._window.clearTimeout(resizeTimeout);
@@ -79,6 +94,16 @@ export class HlmSidebarService {
   public setOpen(open: boolean): void {
     this._open.set(open);
     this._document.cookie = `${this._config.sidebarCookieName}=${open}; path=/; max-age=${this._config.sidebarCookieMaxAge}`;
+  }
+
+  /**
+   * Forces the sidebar into the collapsed state as a transient, viewport-driven default —
+   * unlike `setOpen()`, this does NOT persist to the sidebar cookie. Use this for automatic
+   * collapse-on-entry behavior so a user's deliberately-chosen, cookie-persisted preference is
+   * never silently overwritten.
+   */
+  public collapseForCompactEntry(): void {
+    this._open.set(false);
   }
 
   public setOpenMobile(open: boolean): void {
