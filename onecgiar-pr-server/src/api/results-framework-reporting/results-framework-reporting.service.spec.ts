@@ -1040,6 +1040,117 @@ describe('ResultsFrameworkReportingService', () => {
       );
     });
 
+    /**
+     * P2-3336 rule 1. A ToC node with no work package is returned under EVERY Area of Work on
+     * purpose, and it keeps travelling in the payload — the legacy `entity-aow` screen renders it
+     * in its own labelled section, and its own endpoint serves the Intermediate Outcomes card.
+     * What it must NOT do is weigh on the Area of Work's percentage: the same node was averaged
+     * once inside every AoW of the programme, dragging them all toward a common figure.
+     *
+     * Rule 2 ("IOs inside an AoW but not unique to it") was withdrawn by the PO on 2026-09-09.
+     */
+    describe('a programme-level Intermediate Outcome does not weigh on the AoW (P2-3336)', () => {
+      const nodeWith = (over: Record<string, unknown> = {}) => ({
+        toc_result_id: 1,
+        category: 'OUTCOME',
+        result_title: 'Node',
+        related_node_id: 'N1',
+        indicators: [],
+        ...over,
+      });
+
+      const ownOutcome = nodeWith({
+        toc_result_id: 11,
+        is_aow: true,
+        result_title: 'Outcome of this AoW',
+        progress: {
+          progress_value: 100,
+          indicators_counted: 1,
+          indicators_total: 1,
+        },
+      });
+
+      const crossCutOutcome = nodeWith({
+        toc_result_id: 7483,
+        is_aow: false,
+        result_title: 'International and national organizations adopt...',
+        progress: {
+          progress_value: 0,
+          indicators_counted: 1,
+          indicators_total: 1,
+        },
+      });
+
+      const runFor = async (nodes: unknown[]) => {
+        mockReportingTocContextService.resolve.mockResolvedValueOnce({
+          reportingYear: 2026,
+          phaseUuid: 'PHASE-1',
+        });
+        mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce(
+          nodes,
+        );
+        return (await service.getWorkPackagesByProgramAndArea(
+          'SP13',
+          'AOW05',
+        )) as any;
+      };
+
+      it('leaves the cross-cutting node OUT of the roll-up', async () => {
+        const withCrossCut = await runFor([ownOutcome, crossCutOutcome]);
+        const withoutIt = await runFor([ownOutcome]);
+
+        // Averaging the shared 0% alongside the AoW's own 100% halved the figure.
+        expect(withCrossCut.response.progress).toEqual(
+          withoutIt.response.progress,
+        );
+        expect(withCrossCut.response.progress.progress_value).toBe(100);
+      });
+
+      it('still RETURNS it in the payload - the legacy AoW screen renders it', async () => {
+        const result = await runFor([ownOutcome, crossCutOutcome]);
+
+        expect(
+          result.response.tocResultsOutcomes.map((n: any) => n.toc_result_id),
+        ).toEqual([11, 7483]);
+        // `metadata` describes the payload, not the Area of Work.
+        expect(result.response.metadata.outcomes).toBe(2);
+      });
+
+      it('does NOT filter outputs - the rule speaks about Intermediate Outcomes only', async () => {
+        const crossCutOutput = nodeWith({
+          toc_result_id: 20,
+          category: 'OUTPUT',
+          is_aow: false,
+          progress: {
+            progress_value: 0,
+            indicators_counted: 1,
+            indicators_total: 1,
+          },
+        });
+        const withOutput = await runFor([ownOutcome, crossCutOutput]);
+        const outcomeOnly = await runFor([ownOutcome]);
+
+        expect(withOutput.response.progress.progress_value).not.toBe(
+          outcomeOnly.response.progress.progress_value,
+        );
+      });
+
+      it('treats a MISSING is_aow as belonging to the AoW (unchanged convention)', async () => {
+        const unflagged = nodeWith({
+          toc_result_id: 30,
+          progress: {
+            progress_value: 0,
+            indicators_counted: 1,
+            indicators_total: 1,
+          },
+        });
+        const result = await runFor([ownOutcome, unflagged]);
+
+        // 100 and 0 averaged - the node counted, exactly as before the flag existed.
+        expect(result.response.progress.progress_value).toBe(50);
+      });
+    });
+
     it('should attach contributing_synergy_program_initiative_ids (P2-3114)', async () => {
       const tocContext = { reportingYear: 2024, phaseUuid: 'PHASE-1' };
       mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
@@ -1477,6 +1588,99 @@ describe('ResultsFrameworkReportingService', () => {
           center_acronym: 'CIP',
         }),
       ]);
+    });
+  });
+
+  /**
+   * P2-3296 AC4's endpoint had NO spec at all, which is how the double-count survived: a ToC node
+   * with no work package is returned under EVERY Area of Work, so the Science Program average was
+   * counting the same node once per AoW. That is also what pulled every AoW toward one figure.
+   */
+  describe('getScienceProgramTocProgress (P2-3336)', () => {
+    beforeEach(() => {
+      mockTocResultsRepository.findWorkPackagesByProgram.mockReset();
+      mockTocResultsRepository.findByCompositeCode.mockReset();
+    });
+
+    const outcome = (
+      id: number,
+      isAow: boolean | undefined,
+      progressValue: number,
+    ) => ({
+      toc_result_id: id,
+      category: 'OUTCOME',
+      result_title: `Node ${id}`,
+      related_node_id: `N${id}`,
+      indicators: [],
+      ...(isAow === undefined ? {} : { is_aow: isAow }),
+      progress: {
+        progress_value: progressValue,
+        indicators_counted: 1,
+        indicators_total: 1,
+      },
+    });
+
+    /** The same programme-level node the SQL repeats under every Area of Work. */
+    const CROSS_CUT = () => outcome(7483, false, 0);
+
+    const runWithAreas = async (perArea: unknown[][]) => {
+      mockReportingTocContextService.resolve.mockResolvedValueOnce({
+        reportingYear: 2026,
+        phaseUuid: 'PHASE-1',
+      });
+      mockTocResultsRepository.findWorkPackagesByProgram.mockResolvedValueOnce(
+        perArea.map((_, i) => ({
+          code: `AOW0${i + 1}`,
+          name: `Area ${i + 1}`,
+          composeCode: `SP13-AOW0${i + 1}`,
+        })),
+      );
+      for (const nodes of perArea) {
+        mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce(
+          nodes,
+        );
+      }
+      return (await service.getScienceProgramTocProgress('SP13')) as any;
+    };
+
+    it('does not let one programme-level node weigh once per Area of Work', async () => {
+      const withCrossCut = await runWithAreas([
+        [outcome(11, true, 100), CROSS_CUT()],
+        [outcome(21, true, 50), CROSS_CUT()],
+      ]);
+      const withoutIt = await runWithAreas([
+        [outcome(11, true, 100)],
+        [outcome(21, true, 50)],
+      ]);
+
+      expect(withCrossCut.response.progress).toEqual(
+        withoutIt.response.progress,
+      );
+      // 100 and 50 -> 75. With the shared 0 counted twice it read 37.5.
+      expect(withCrossCut.response.progress.progress_value).toBe(75);
+    });
+
+    it('keeps each Area of Work on its own figure instead of a common one', async () => {
+      const result = await runWithAreas([
+        [outcome(11, true, 100), CROSS_CUT()],
+        [outcome(21, true, 0), CROSS_CUT()],
+      ]);
+
+      const byCode = Object.fromEntries(
+        result.response.areas.map((a: any) => [
+          a.code,
+          a.progress.progress_value,
+        ]),
+      );
+      expect(byCode).toEqual({ AOW01: 100, AOW02: 0 });
+    });
+
+    it('still counts an Area of Work own outcome with a missing is_aow', async () => {
+      const result = await runWithAreas([
+        [outcome(11, true, 100), outcome(12, undefined, 0)],
+      ]);
+
+      expect(result.response.areas[0].progress.progress_value).toBe(50);
     });
   });
 
