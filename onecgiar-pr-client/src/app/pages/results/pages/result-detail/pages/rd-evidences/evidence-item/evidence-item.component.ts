@@ -1,5 +1,6 @@
 import { Component, Input, EventEmitter, Output, signal } from '@angular/core';
 import { EvidencesCreateInterface } from '../model/evidencesBody.model';
+import { toNullableBoolean } from '../../../../../../../shared/utils/nullable-boolean.util';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { animate, state, style, transition, trigger } from '@angular/animations';
@@ -19,7 +20,39 @@ import { animate, state, style, transition, trigger } from '@angular/animations'
     standalone: false
 })
 export class EvidenceItemComponent {
-  @Input() evidence: EvidencesCreateInterface;
+  /**
+   * Normalises the two stored flags on the way IN, so the radios can actually show what
+   * the evidence holds.
+   *
+   * QA found both radio groups rendering with NOTHING selected when editing an existing
+   * evidence, even though the stored values were right (Cami, 9-Sep-2026, on P2-3601).
+   * It is the P2-3292 defect again, and it hits both groups for OPPOSITE reasons:
+   * `pr-radio-button` matches its `optionValue` by strict equality, and
+   *   - `is_sharepoint` arrives from the server as the NUMBER 1/0 (it is a tinyint) while
+   *     `evidencesType` offers boolean ids — deliberately boolean, see the note on that
+   *     array: a brand-new draft carries a real `false` and numeric ids broke THAT case;
+   *   - `is_public_file` arrives as a BOOLEAN while `isPubilcFileOptions` offers 0/1.
+   * Measured on prtest the same day (result 9075): `is_sharepoint: 1`, `is_public_file: false`.
+   *
+   * 🛑 Each flag is coerced to the type its own option list uses, so what the form SENDS
+   * is unchanged — this is a read-side fix only. `null` stays `null`: "not answered" is a
+   * third state the confidentiality question depends on (the alert below only renders when
+   * `is_public_file !== null`), and collapsing it would claim the reporter answered.
+   */
+  @Input() set evidence(value: EvidencesCreateInterface) {
+    if (value) {
+      const isSharepoint = toNullableBoolean(value.is_sharepoint);
+      if (isSharepoint !== null) value.is_sharepoint = isSharepoint;
+
+      const isPublic = toNullableBoolean(value.is_public_file);
+      if (isPublic !== null) (value as any).is_public_file = isPublic ? 1 : 0;
+    }
+    this._evidence = value;
+  }
+  get evidence(): EvidencesCreateInterface {
+    return this._evidence;
+  }
+  private _evidence: EvidencesCreateInterface;
   @Input() index: number;
   @Input() isSuppInfo: boolean;
   @Input() isOptional: boolean = false;
