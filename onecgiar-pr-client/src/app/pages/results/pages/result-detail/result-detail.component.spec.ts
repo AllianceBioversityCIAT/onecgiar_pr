@@ -572,37 +572,90 @@ describe('ResultDetailComponent', () => {
     });
   });
 
-  // SBAR-T-5 — the discoverability hint fires on the same id-change trigger as SBAR-T-2's
-  // auto-collapse, but its own gate is `isResultSidebarHintCompleted()`, never `isCompact()`.
-  describe('result-sidebar discoverability hint on result entry (SBAR-R-10/R-11)', () => {
-    it('Scenario "First-time discoverability hint": starts the hint once when it has not been seen', () => {
+  // SBAR-T-5 / STC-R-5 / STC-DD-2 — the discoverability hint fires on the same id-change trigger
+  // as SBAR-T-2's auto-collapse, gated only by `isResultSidebarHintCompleted()`, never
+  // `isCompact()`. Since `SPEC:changes/sidebar-toggle-consolidation` (STC-T-2), the actual
+  // `startResultSidebarHint()` call is deferred with `setTimeout(..., 0)` so it fires AFTER
+  // Angular renders the post-collapse DOM (the collapsed sidebar button is the sole
+  // `[data-guide="sidebar-toggle"]` anchor once the topbar's copy is removed — STC-DD-1/STC-DD-2).
+  // `jest.useFakeTimers()` is already active file-wide (see top of file); each test here restores
+  // real timers in its own `afterEach` so nothing leaks into sibling tests declared after this
+  // block.
+  describe('result-sidebar discoverability hint on result entry (SBAR-R-10/R-11, STC-R-5)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('Scenario "First-time discoverability hint": does NOT start the hint synchronously — the defer must actually defer', () => {
       mockReportingGuideService.isResultSidebarHintCompleted.mockReturnValue(false);
 
       paramsSubject.next({ id: '9043' });
 
+      // Regression guard for STC-DD-2: if this ever fires synchronously again, driver.js can race
+      // Angular's render of the collapsed-state button on compact viewports.
+      expect(mockReportingGuideService.startResultSidebarHint).not.toHaveBeenCalled();
+    });
+
+    it('Scenario "First-time discoverability hint": starts the hint exactly once after the deferred timer flushes', () => {
+      mockReportingGuideService.isResultSidebarHintCompleted.mockReturnValue(false);
+
+      paramsSubject.next({ id: '9043' });
+      jest.advanceTimersByTime(0);
+
       expect(mockReportingGuideService.startResultSidebarHint).toHaveBeenCalledTimes(1);
     });
 
-    it('does NOT start the hint when it has already been completed', () => {
+    it('does NOT start the hint when it has already been completed, even after the timer queue is flushed', () => {
       mockReportingGuideService.isResultSidebarHintCompleted.mockReturnValue(true);
 
       paramsSubject.next({ id: '9043' });
+      jest.runOnlyPendingTimers();
 
+      // The completion check stays synchronous and OUTSIDE the timeout (design.md §6.1) — flushing
+      // timers must not surface a call that a correct implementation never even scheduled.
       expect(mockReportingGuideService.startResultSidebarHint).not.toHaveBeenCalled();
     });
 
     // Disqualifying guard: this trigger must NOT be coupled to `isCompact()`. A desktop/expanded
     // viewport (isCompact() false) that would never auto-collapse the sidebar must still show the
     // hint — otherwise SBAR-R-10's scope would be silently narrowed to compact viewports only.
-    it('is NOT gated on isCompact(): a desktop viewport still starts the hint', () => {
+    it('is NOT gated on isCompact(): a desktop viewport still starts the hint once timers flush', () => {
       mockSidebarService.isCompact.set(false);
       mockSidebarService.state.set('expanded');
       mockReportingGuideService.isResultSidebarHintCompleted.mockReturnValue(false);
 
       paramsSubject.next({ id: '9043' });
+      jest.advanceTimersByTime(0);
 
       expect(mockSidebarService.collapseForCompactEntry).not.toHaveBeenCalled();
       expect(mockReportingGuideService.startResultSidebarHint).toHaveBeenCalledTimes(1);
+    });
+
+    // STC-DD-2 — the entire mitigation rests on `collapseForCompactEntry()` (the signal write that
+    // schedules Angular's render of the collapsed-state button) happening BEFORE the deferred hint
+    // queries the DOM for `[data-guide="sidebar-toggle"]`. Call-count assertions alone cannot prove
+    // this; only relative invocation order can.
+    it('Scenario "Compact entry" (STC-DD-2): collapseForCompactEntry() runs before the deferred hint fires', () => {
+      mockSidebarService.isCompact.set(true);
+      mockSidebarService.state.set('expanded');
+      mockReportingGuideService.isResultSidebarHintCompleted.mockReturnValue(false);
+
+      paramsSubject.next({ id: '9043' });
+
+      // Before the timer flush: the collapse has already happened synchronously, the hint has not.
+      expect(mockSidebarService.collapseForCompactEntry).toHaveBeenCalledTimes(1);
+      expect(mockReportingGuideService.startResultSidebarHint).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(0);
+
+      expect(mockReportingGuideService.startResultSidebarHint).toHaveBeenCalledTimes(1);
+      const collapseOrder = mockSidebarService.collapseForCompactEntry.mock.invocationCallOrder[0];
+      const hintOrder = mockReportingGuideService.startResultSidebarHint.mock.invocationCallOrder[0];
+      expect(collapseOrder).toBeLessThan(hintOrder);
     });
   });
 });

@@ -5,8 +5,7 @@ import { Component, ElementRef, HostListener, inject, signal, viewChild } from '
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideBell, lucideBug, lucidePanelLeft, lucideSearch } from '@ng-icons/lucide';
-import { HlmSidebarService } from '@spartan/sidebar';
+import { lucideBell, lucideBug, lucideSearch } from '@ng-icons/lucide';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { environment } from '../../../../environments/environment';
 import { ApiService } from '../../services/api/api.service';
@@ -18,7 +17,9 @@ import { ConsoleCaptureService } from '../../services/console-capture.service';
 
 /**
  * CURRENT shell topbar (PRMS-Shell.dc.html header):
- * sidebar toggle · centered Search · notifications · user chip.
+ * centered Search · notifications · user chip.
+ * The sidebar collapse/expand toggle moved into `reporting-nav-sidebar` (both states) —
+ * SPEC:changes/sidebar-toggle-consolidation.
  * Phase switcher intentionally omitted for now (owner request).
  */
 @Component({
@@ -35,7 +36,7 @@ import { ConsoleCaptureService } from '../../services/console-capture.service';
     GlobalSearchPaletteComponent,
     ReportFeedbackDialogComponent
   ],
-  providers: [provideIcons({ lucidePanelLeft, lucideSearch, lucideBell, lucideBug })],
+  providers: [provideIcons({ lucideSearch, lucideBell, lucideBug })],
   templateUrl: './shell-topbar.component.html',
   styleUrls: ['./shell-topbar.component.scss']
 })
@@ -44,7 +45,6 @@ export class ShellTopbarComponent {
   readonly dataControlSE = inject(DataControlService);
   readonly router = inject(Router);
   readonly resultsNotificationsSE = inject(ResultsNotificationsService);
-  private readonly sidebarSE = inject(HlmSidebarService);
 
   private readonly palette = viewChild(GlobalSearchPaletteComponent);
   private readonly searchTrigger = viewChild<ElementRef<HTMLButtonElement>>('searchTrigger');
@@ -91,10 +91,6 @@ export class ShellTopbarComponent {
   notificationBadgeLength(): string {
     const n = this.unreadNotifications.length;
     return n > 0 ? String(n) : '';
-  }
-
-  toggleSidebar(): void {
-    this.sidebarSE.toggleSidebar();
   }
 
   getUserInitials(): string {

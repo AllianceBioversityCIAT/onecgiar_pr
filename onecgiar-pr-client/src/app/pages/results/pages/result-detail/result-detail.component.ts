@@ -94,8 +94,17 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
         // SBAR-R-10/R-11: the discoverability hint fires on every genuine result entry,
         // independent of `isCompact()` — it is shown on ANY viewport, not only the compact one
         // that triggers the auto-collapse above. Do not gate this on `isCompact()`.
+        //
+        // SPEC:changes/sidebar-toggle-consolidation (STC-DD-2): the completion check above stays
+        // synchronous, but the call itself is deferred one tick. `collapseForCompactEntry()` above
+        // is a signal write — Angular schedules a render from it, it does not render synchronously
+        // — so on a compact viewport `driver.js` could otherwise query
+        // `[data-guide="sidebar-toggle"]` before the collapsed-state button (the sole remaining
+        // anchor once the topbar's own copy was removed, STC-DD-1) exists in the DOM. `setTimeout`
+        // yields to that render tick first; harmless on the non-compact path, which already has an
+        // anchor in the DOM before this fires.
         if (!this.reportingGuideSE.isResultSidebarHintCompleted()) {
-          this.reportingGuideSE.startResultSidebarHint();
+          setTimeout(() => this.reportingGuideSE.startResultSidebarHint(), 0);
         }
       });
   }

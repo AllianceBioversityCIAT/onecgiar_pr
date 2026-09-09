@@ -19,12 +19,14 @@ import {
  *  - `<hlm-sidebar>` carries `[attr.data-state]` = `'expanded' | 'collapsed'`
  *    (`src/app/spartan/sidebar/src/lib/hlm-sidebar.ts`). That is the ONE place the sidebar's
  *    open/closed state is directly observable in the DOM — assert on it, not on layout width.
- *  - `[data-guide="sidebar-toggle"]` exists on the ALWAYS-VISIBLE topbar toggle
- *    (`shell-topbar.component.html`) and, ADDITIONALLY, on the collapsed-rail toggle
- *    (`reporting-nav-sidebar.component.html`) — the latter only renders while the sidebar is
- *    collapsed. Clicking the toggle is therefore always scoped to the topbar's copy
- *    (`header.pr-shell-topbar [data-guide="sidebar-toggle"]`) so it resolves to exactly one
- *    element regardless of collapsed/expanded state.
+ *  - `SPEC:changes/sidebar-toggle-consolidation` (STC-DD-1): the collapse/expand hook now lives
+ *    exclusively on `reporting-nav-sidebar`'s own toggle — the topbar's copy was removed. The
+ *    sidebar renders it in BOTH states via two mutually exclusive `@if` branches
+ *    (`reporting-nav-sidebar.component.html`: `@if (!isCollapsed())` for the expanded-state
+ *    button, `@if (isCollapsed())` for the collapsed-rail one), and both carry
+ *    `[data-guide="sidebar-toggle"]`. Exactly one is ever in the DOM, so a selector scoped to the
+ *    sidebar host (`hlm-sidebar [data-guide="sidebar-toggle"]`) resolves to exactly one element
+ *    regardless of collapsed/expanded state.
  *  - The auto-collapse never writes the sidebar cookie (`collapseForCompactEntry()`), while a
  *    manual toggle click (`toggleSidebar()` → `setOpen()`) DOES. `cy.session` (used by
  *    `loginByToken`, which every helper below goes through) clears cookies/localStorage back to
@@ -41,7 +43,7 @@ import {
  */
 
 const SIDEBAR = 'hlm-sidebar';
-const TOPBAR_TOGGLE = 'header.pr-shell-topbar [data-guide="sidebar-toggle"]';
+const SIDEBAR_TOGGLE = `${SIDEBAR} [data-guide="sidebar-toggle"]`;
 const HINT_STORAGE_KEY = 'pr.tour.result-sidebar.completed';
 const RESIZE_DEBOUNCE_WAIT = 250; // > the service's 100ms debounce, with margin for CI jitter
 
@@ -148,8 +150,9 @@ describeWithToken('Result Detail — Sidebar auto-collapse (compact viewports)',
     // and the section-link click below if left open.
     dismissSidebarHint();
 
-    // Manual re-expand via the topbar toggle (always visible, unlike the collapsed-rail one).
-    cy.get(TOPBAR_TOGGLE).click();
+    // Manual re-expand via the sidebar's own toggle (the collapsed-rail button — the topbar no
+    // longer carries one, per SPEC:changes/sidebar-toggle-consolidation STC-DD-1).
+    cy.get(SIDEBAR_TOGGLE).click();
     sidebarState().should('eq', 'expanded');
 
     // Switch sections via the in-app result-sections-sidebar link (routerLink — an Angular
@@ -189,7 +192,7 @@ describeWithToken('Result Detail — Sidebar auto-collapse (compact viewports)',
 
     // Prove the next collapse is a REAL retrigger, not just "still collapsed from before": expand
     // manually first.
-    cy.get(TOPBAR_TOGGLE).click();
+    cy.get(SIDEBAR_TOGGLE).click();
     sidebarState().should('eq', 'expanded');
 
     // Fresh entry to a DIFFERENT result id, same (narrow) width → auto-collapse fires again. This
@@ -213,7 +216,7 @@ describeWithToken('Result Detail — Sidebar auto-collapse (compact viewports)',
     cy.get('.driver-popover', { timeout: 15000 }).should('be.visible');
     cy.get('.driver-popover-title').should('contain.text', 'Collapse the sidebar');
     // The popover targets the sidebar toggle regardless of viewport — referencing the control.
-    cy.get(TOPBAR_TOGGLE).should('have.attr', 'data-guide', 'sidebar-toggle');
+    cy.get(SIDEBAR_TOGGLE).should('have.attr', 'data-guide', 'sidebar-toggle');
 
     cy.get('.driver-popover-close-btn').click();
     cy.get('.driver-popover').should('not.exist');
