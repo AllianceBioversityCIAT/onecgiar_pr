@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { of, throwError, Subject } from 'rxjs';
@@ -129,7 +132,13 @@ describe('TypeInnovationDevComponent', () => {
       bilateralApi.GET_innovationDev.mockReturnValue(of({ response: null }));
       build();
       fixture.detectChanges();
-      expect(component.body).toEqual({});
+      // P2-3390 — `hydrateInvestmentTables` guarantees the three arrays exist before the shared table
+      // component renders, so an empty response is `{}` plus those three empty arrays.
+      expect(component.body).toEqual({
+        investment_programs: [],
+        investment_bilateral: [],
+        investment_partners: [],
+      });
     });
 
     it('marks the section as loaded once the body is in hand', () => {
@@ -447,10 +456,45 @@ describe('TypeInnovationDevComponent', () => {
           evidences_justification: 'Because...',
           reference_materials: [{ link: 'https://x.org' }],
           has_scaling_studies: true,
-          scaling_studies_urls: ['https://y.org']
+          scaling_studies_urls: ['https://y.org'],
+          // P2-3390 — always present, empty when the tables hold nothing (the server treats an empty
+          // array as a no-op, so an untouched table never clears stored amounts).
+          investment_programs: [],
+          investment_bilateral: [],
+          investment_partners: []
         },
         expect.objectContaining({ debounceMs: 800, statusKey: 'type-specific' })
       );
+    });
+
+    // P2-3390 — Innovation Development is the type that ALSO owns the legacy nested keys, so this pins
+    // that only the flat family leaves this form: the legacy writer resolves the `non_pooled_project`
+    // catalogue by `non_pooled_projetct_id` and drops every bilateral row in silence.
+    it('P2-3390 — sends the three flat investment arrays and never the legacy nested keys', () => {
+      build();
+      component.body = {
+        investment_programs: [{ id: 90, kind_cash: 1000, is_determined: null }],
+        investment_bilateral: [{ id: 4321, project_id: 4321, kind_cash: null, is_determined: true }],
+        investment_partners: [{ id: 77, kind_cash: 50, is_determined: null }]
+      };
+      component.onSave();
+
+      const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+      expect(payload.investment_programs).toEqual([{ id: 90, kind_cash: 1000, is_determined: null }]);
+      expect(payload.investment_bilateral).toEqual([
+        { id: 4321, project_id: 4321, kind_cash: null, is_determined: true }
+      ]);
+      expect(payload.investment_partners).toEqual([{ id: 77, kind_cash: 50, is_determined: null }]);
+      expect(payload).not.toHaveProperty('initiative_expected_investment');
+      expect(payload).not.toHaveProperty('bilateral_expected_investment');
+      expect(payload).not.toHaveProperty('institutions_expected_investment');
+    });
+
+    it('P2-3390 — renders the three investment tables in the full metadata instead of the dead panel', () => {
+      const html = readFileSync(join(__dirname, 'type-innovation-dev.component.html'), 'utf8');
+
+      expect(html).toContain('<app-estimates-cgiar [body]="body" [disabled]="loaded() !== true">');
+      expect(html).not.toContain('Not available yet');
     });
 
     it('omits the PK when creating, includes it when editing', () => {

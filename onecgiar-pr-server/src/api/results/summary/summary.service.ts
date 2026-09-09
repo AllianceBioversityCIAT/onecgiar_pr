@@ -35,6 +35,7 @@ import { Result } from '../entities/result.entity';
 import { ResultsInnovationsUseRepository } from './repositories/results-innovations-use.repository';
 import { ResultsInnovationsUse } from './entities/results-innovations-use.entity';
 import { ResultsByProjectsRepository } from '../results_by_projects/results_by_projects.repository';
+import { ResultInvestmentService } from '../result_budget/result-investment.service';
 
 @Injectable()
 export class SummaryService {
@@ -60,6 +61,7 @@ export class SummaryService {
     private readonly _dataSource: DataSource,
     private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
     private readonly _resultsByProjectsRepository: ResultsByProjectsRepository,
+    private readonly _resultInvestmentService: ResultInvestmentService,
   ) {}
 
   /**
@@ -157,6 +159,8 @@ export class SummaryService {
         user.id,
       );
 
+      await this.saveFlatInvestmentTables(resultId, user.id, innovationUseDto);
+
       await this._resultRepository.update(resultId, {
         last_updated_by: user.id,
         last_updated_date: new Date(),
@@ -169,6 +173,44 @@ export class SummaryService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  /**
+   * P2-3390 — writes the three "Investment (USD)" tables from the flat contract
+   * (`investment_programs` / `investment_bilateral` / `investment_partners`), shared by the
+   * Innovation Use and Innovation Development saves.
+   *
+   * Each array is delegated only when the caller actually sent the key, so a save that omits a table
+   * leaves its amounts untouched — the same rule the rest of this service follows. The legacy
+   * `*_expected_investment` handling in `saveInnovationDev` is independent and stays as it is: W1/W2
+   * sends that family, the bilateral form sends this one.
+   */
+  private async saveFlatInvestmentTables(
+    resultId: number,
+    userId: number,
+    dto: InnovationUseDto | CreateInnovationDevDto,
+  ): Promise<void> {
+    if (dto?.investment_programs != null) {
+      await this._resultInvestmentService.saveInvestmentPrograms(
+        resultId,
+        userId,
+        dto.investment_programs,
+      );
+    }
+    if (dto?.investment_bilateral != null) {
+      await this._resultInvestmentService.saveInvestmentBilateral(
+        resultId,
+        userId,
+        dto.investment_bilateral,
+      );
+    }
+    if (dto?.investment_partners != null) {
+      await this._resultInvestmentService.saveInvestmentPartners(
+        resultId,
+        userId,
+        dto.investment_partners,
+      );
     }
   }
 
@@ -340,6 +382,14 @@ export class SummaryService {
           innUseExists?.readiness_level_explanation ?? null,
         has_innovation_link: innUseExists?.has_innovation_link ?? null,
         linked_results,
+        // P2-3390 — the three "Investment (USD)" tables. One row per active link, so the bilateral
+        // full metadata has something to render even before any amount was typed. Purely additive.
+        investment_programs:
+          await this._resultInvestmentService.getInvestmentPrograms(resultId),
+        investment_bilateral:
+          await this._resultInvestmentService.getInvestmentBilateral(resultId),
+        investment_partners:
+          await this._resultInvestmentService.getInvestmentPartners(resultId),
         actors: actorsData,
         measures: await this._resultIpMeasureRepository.find({
           where: { result_id: resultId, is_active: true },
@@ -706,6 +756,12 @@ export class SummaryService {
         );
       }
 
+      await this.saveFlatInvestmentTables(
+        resultId,
+        user.id,
+        createInnovationDevDto,
+      );
+
       // Same gating rule as the v2 innovation-dev service: scaling studies only
       // apply once the innovation itself has reached readiness level 6+.
       if (
@@ -952,6 +1008,16 @@ export class SummaryService {
           initiative_expected_investment,
           bilateral_expected_investment,
           institutions_expected_investment,
+          // P2-3390 — the same three tables in the flat contract, ALONGSIDE the nested keys above:
+          // W1/W2 still reads those, the bilateral full metadata reads these.
+          investment_programs:
+            await this._resultInvestmentService.getInvestmentPrograms(resultId),
+          investment_bilateral:
+            await this._resultInvestmentService.getInvestmentBilateral(
+              resultId,
+            ),
+          investment_partners:
+            await this._resultInvestmentService.getInvestmentPartners(resultId),
           scaling_studies_urls,
           reference_materials,
           result,

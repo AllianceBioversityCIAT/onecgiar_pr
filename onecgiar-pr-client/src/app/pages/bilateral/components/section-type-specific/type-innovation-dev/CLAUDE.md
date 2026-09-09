@@ -1,11 +1,11 @@
 # type-innovation-dev (bilateral)
 
-**Verified:** 2026-09-02 · branch performance-refactor · f013c157b
+**Verified:** 2026-09-09 · branch feat/P2-3390-bilateral-investment-tables · 7d0215b13
 
 ## What it is
 Section 5 of the bilateral form: Innovation Development. Shows the **MDS** (2 mandatory fields since 2026-09-03: typology + readiness — the Innovation Developer is the Lead contact person of Section 1) and
 hides the rest of the pooled-funding form behind the **Complete full metadata** button (P2-3391,
-QA-verified via P2-3327).
+QA-verified via P2-3327). The full metadata includes the three "Investment (USD)" tables (P2-3390).
 
 ## Contract
 - Endpoint: **the same one pooled funding's summary uses** —
@@ -94,7 +94,27 @@ It would also need things outside this folder: a `GET result-questions/innovatio
 `bilateral-api.service.ts`, and reusing components that live in `pages/results/.../innovation-dev-info/`
 (declared in an NgModule, not standalone).
 
+## The three Investment (USD) tables (P2-3390)
+
+`app-estimates-cgiar` (`shared/components/innovation-use-form/components/estimates`) — the same component
+W1/W2 renders — over `investment_programs` / `investment_bilateral` / `investment_partners`, one row per
+entity already linked to the result. Optional; `updateMds()` is untouched, so it counts for nothing.
+
+- ⚠️ **This type has TWO investment key families on the SAME endpoint, and they must not be mixed.** W1/W2
+  sends `initiative_expected_investment` / `bilateral_expected_investment` /
+  `institutions_expected_investment`, written by `InnoDevService`, which resolves the legacy
+  `non_pooled_project` catalogue by `non_pooled_projetct_id` — for a bilateral project that lookup finds
+  nothing and the row is dropped **with no error**. This form sends only the flat family, written by
+  `ResultInvestmentService` (`api/results/result_budget`), which keys `non_pooled_projetct_budget` by
+  `result_project_id` and forces `non_pooled_projetct_id = null`. A spec pins that the legacy keys never
+  leave this form.
+- The rows come from the result's own links, so the tables are empty until Contributors & Partners has
+  something in them; there is no catalogue to pick from here, by design.
+- Disabled while `loaded() !== true`: `queueTypeSave` writes nothing in that state, so an editable table
+  would silently discard what the person types.
+
 ## Pending / Coming soon
 - AC11 (read-only in Pending Review / Approved / Rejected): **not implemented**, and no bilateral
   section has it — the read-only infrastructure does not exist in the bilateral flow.
-- "Investment (USD)" is three `Not available yet` rows — a placeholder inherited from `app-estimates`.
+- Making investment mandatory / part of the green check: needs the `validation_innovation_dev_P25` MySQL
+  function, applied by hand per environment. Out of P2-3390, which delivered it as optional.
