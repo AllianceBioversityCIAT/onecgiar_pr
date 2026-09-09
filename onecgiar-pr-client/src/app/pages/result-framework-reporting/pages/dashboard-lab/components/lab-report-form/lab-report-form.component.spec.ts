@@ -879,6 +879,28 @@ describe('LabReportFormComponent — Form 3-Card Architecture DOM Rendering (RFU
     expect(fix.nativeElement.textContent).not.toContain('The result');
   });
 
+  it('explains which collaboration fields are pre-filled from the ToC (RFUX-R-2)', async () => {
+    const fix = await mount({
+      indicator: {
+        indicator_id: 1,
+        result_type_id: 7,
+        result_level_id: OUTPUT_LEVEL,
+        type_name: 'Number of innovations',
+        center_acronym: 'CIMMYT'
+      },
+      tocNode: { result_level_id: OUTPUT_LEVEL, contributing_synergy_program_initiative_ids: [6] }
+    });
+
+    const note = fix.nativeElement.querySelector('[data-testid="toc-attribution-note"]') as HTMLElement;
+    expect(note).toBeTruthy();
+    expect(note.textContent).toContain('Pre-filled from your Theory of Change');
+    expect(note.textContent).toContain('Contributing CGIAR Centers');
+    expect(note.textContent).toContain('CIMMYT');
+    expect(note.textContent).toContain('Lead center');
+    expect(note.textContent).toContain('W3 and bilateral projects');
+    expect(note.textContent).toContain('not pre-filled');
+  });
+
   it('preserves Knowledge Product browse flow: renders only Card 1 before item selection', async () => {
     const fix = await mount({
       indicator: { indicator_id: 2, result_type_id: 6, result_level_id: OUTPUT_LEVEL, type_name: 'Number of knowledge products' },

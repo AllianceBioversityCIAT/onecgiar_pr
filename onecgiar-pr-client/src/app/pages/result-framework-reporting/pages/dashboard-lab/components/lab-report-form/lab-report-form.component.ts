@@ -365,13 +365,10 @@ export class LabReportFormComponent {
     return this.allInitiatives().filter((sp: any) => !tocIds.has(sp.id));
   });
 
-  // Copy of the notes shared with rd-contributors-and-partners (P2-2998 AC4).
-  readonly contributingCentersInfoNote =
-    "The CGIAR Centers listed below were identified in your 2026 ToC. To select a different Center, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
-  readonly noCentersNote = 'No CGIAR Centers related to the established HLO/Outcomes were found';
-  readonly contributingScienceInfoNote =
-    "The Science Programs listed below were identified in your 2026 ToC. To select a different Science Program, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
-  readonly noScienceProgramsNote = 'No Science Programs related to the established HLO/Outcomes were found';
+  /** Whether the mapped ToC node returned reference centers or science programs to pre-fill. */
+  readonly hasReferenceCenters = computed(() => this.tocCenters().length > 0);
+  readonly hasReferenceScience = computed(() => this.tocSciencePrograms().length > 0);
+  readonly leadCenterAcronym = computed(() => (this.indicator()?.center_acronym ?? '').trim().toUpperCase() || null);
 
   constructor() {
     // Re-arm for whichever indicator/category the drawer is showing, or for explicit emerging mode
