@@ -1,11 +1,11 @@
 # my-draft-results
 
-**Verified:** 2026-08-31 · branch performance-refactor · bf8df3930
+**Verified:** 2026-09-09 · branch performance-refactor · uncommitted
 
 ## What it is
-The **Drafts** tab of the bilateral center dashboard (P2-3169). Lists every AI-generated result
-suggestion the center still has to decide on, and offers Review (read-only aside), Create Result (creates
-the real result) and Delete on each one. P2-3319 added a **filter by project** on top of the list.
+The **Draft Results** tab of the bilateral center dashboard (P2-3169, P2-3315). Lists every AI-generated
+result suggestion the center still has to decide on, and offers Review (read-only aside), Create Result
+(creates the real result) and Delete on each one. P2-3319 added a **filter by project** on top of the list.
 
 ## Contract
 - Route: `/bilateral/:centerAcronym/drafts`. No inputs — everything comes from services.
@@ -22,6 +22,11 @@ the real result) and Delete on each one. P2-3319 added a **filter by project** o
   root — it must reset when the tab or the center is left. `drafts()` = filtered list rendered,
   `allDrafts()` = everything the center has; the pair is what separates "no drafts yet" from
   "the filter hid them all" (`isFilteredEmpty()`).
+- P2-3315 Center validation is a required, client-side confirmation in the existing Create Result dialog.
+  It resets on every open/cancel/complete and gates the single `onPromoteConfirm()` path before it calls
+  `BilateralAiService.promoteDraft`. It is deliberately not a persisted approval state: promotion still
+  changes the result to `Editing`, and the normal bilateral Submit for review flow is the only path toward
+  P/A review.
 
 ## Where it is used
 - `src/app/shared/routing/routing-data.ts` — the `drafts` child route of the bilateral center.

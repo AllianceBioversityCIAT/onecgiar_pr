@@ -41,7 +41,10 @@
   class="min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll">
   <div class="mdr">
     <div class="mdr-header">
-      <h2 class="mdr-title">My AI Draft Results</h2>
+      <h2 class="mdr-title">Draft Results</h2>
+      <p class="mdr-validation-note" role="note">
+        AI-generated drafts are pending validation by your Center. Review the extracted information and source evidence before creating a result.
+      </p>
       <p class="mdr-subtitle">
         @if (bilateralAiService.isDraftListLoaded()) {
           {{ subtitle() }}
@@ -262,11 +265,28 @@
           <span class="pr-dialog-meta-value">{{ ctx.centerAcronym() }}</span>
         </div>
       </div>
+      <div class="mdr-promote-validation" data-testid="draft-center-validation">
+        <app-pr-checkbox
+          [required]="false"
+          [isStatic]="true"
+          label="I confirm that my Center has reviewed and validated this AI-generated draft and its source evidence."
+          [ngModel]="centerValidationConfirmed()"
+          (ngModelChange)="centerValidationConfirmed.set($event)">
+        </app-pr-checkbox>
+      </div>
     </div>
   }
   <div pr-dialog-footer class="pr-dialog-footer">
     <button hlmBtn variant="outline" (click)="onPromoteCancel()">Cancel</button>
-    <button hlmBtn (click)="onPromoteConfirm()">Create Result</button>
+    <button
+      hlmBtn
+      data-testid="draft-promotion-confirm"
+      [disabled]="!centerValidationConfirmed()"
+      [attr.disabled]="!centerValidationConfirmed() ? '' : null"
+      [attr.aria-disabled]="!centerValidationConfirmed()"
+      (click)="onPromoteConfirm()">
+      Create Result
+    </button>
   </div>
 </app-pr-dialog>
 
