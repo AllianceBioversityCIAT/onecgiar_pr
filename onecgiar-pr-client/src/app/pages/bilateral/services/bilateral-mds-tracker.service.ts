@@ -17,6 +17,21 @@ export interface MdsFieldItem {
   invalid?: boolean;
   /** Shown to the user when Submit is refused. Required whenever `invalid` is true. */
   invalidReason?: string;
+  /**
+   * P2-3390-adjacent (9-sep-2026, PO decision): the field is listed for the reporter but does NOT
+   * count towards completeness, so it can never hold Submit for review back.
+   *
+   * 🥇 Why a flag instead of just not publishing the item: the fields stay on the checklist, which is
+   * what tells the reporter they exist and are worth filling. Only the ARITHMETIC changes — the
+   * counters, the percentage and therefore `overallStatus`, which is the single gate of the rail's
+   * Submit (`bilateral-result-creator.component.ts` → `canSubmitFromRail`).
+   *
+   * Today only the ToC mapping block uses it: the server's `submit-for-review` requires nothing but a
+   * lead centre the caller belongs to and an assigned Science Program
+   * (`bilateral-center.service.ts` → `submitForReview`), so demanding the whole ToC cascade was a
+   * client-only bar that blocked Pending Review with the primary program already chosen.
+   */
+  optional?: boolean;
 }
 
 export interface MdsSectionStatus {
@@ -123,8 +138,11 @@ export class BilateralMdsTrackerService {
   }
 
   private buildStatus(name: string, fields: MdsFieldItem[]): MdsSectionStatus {
-    const totalFields = fields.length;
-    const filledFields = fields.filter(f => f.filled).length;
+    // Optional items are listed in `fields` (the checklist renders them) but excluded from every
+    // counter, so they cannot move the percentage and cannot gate Submit. See `MdsFieldItem.optional`.
+    const counted = fields.filter(f => !f.optional);
+    const totalFields = counted.length;
+    const filledFields = counted.filter(f => f.filled).length;
     const percentage = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
     const status: MdsStatus = percentage === 0 ? 'empty' : percentage >= 100 ? 'complete' : 'partial';
     return {

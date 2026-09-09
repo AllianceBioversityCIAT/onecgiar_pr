@@ -145,4 +145,51 @@ describe('BilateralMdsTrackerService', () => {
       expect(service.overallStatus()).toBe('complete');
     });
   });
+
+  // PO decision (9-sep-2026): the ToC mapping block is listed for the reporter but must never hold
+  // Submit for review back — `overallStatus() === 'complete'` is the only gate of that button.
+  describe('optional fields', () => {
+    it('lists an optional field but keeps it out of every counter', () => {
+      service.setSectionFields('contributors', [
+        { key: 'lead-center', label: 'Lead center', filled: true },
+        { key: 'toc-planned', label: 'Mapped to planned ToC indicator', filled: false, optional: true },
+      ]);
+
+      const section = service.sectionStatus().find(s => s.sectionName === 'contributors')!;
+      expect(section.fields.map(f => f.key)).toEqual(['lead-center', 'toc-planned']);
+      expect(section.totalFields).toBe(1);
+      expect(section.filledFields).toBe(1);
+      expect(section.percentage).toBe(100);
+      expect(section.status).toBe('complete');
+    });
+
+    it('reaches complete overall with every optional field unanswered', () => {
+      service.setSectionFields('general-info', [{ key: 'title', label: 'Title', filled: true }]);
+      service.setSectionFields(
+        'contributors',
+        [{ key: 'lead-center', label: 'Lead center', filled: true }],
+        'partners'
+      );
+      service.setSectionFields(
+        'contributors',
+        [
+          { key: 'toc-planned', label: 'Mapped to planned ToC indicator', filled: false, optional: true },
+          { key: 'toc-node', label: 'ToC result', filled: false, optional: true },
+        ],
+        'toc'
+      );
+
+      expect(service.overallPercentage()).toBe(100);
+      expect(service.overallStatus()).toBe('complete');
+    });
+
+    it('a section made only of optional fields neither completes nor blocks', () => {
+      service.setSectionFields('geography', [{ key: 'scope', label: 'Scope', filled: false, optional: true }]);
+
+      const section = service.sectionStatus().find(s => s.sectionName === 'geography')!;
+      expect(section.totalFields).toBe(0);
+      expect(section.fields).toHaveLength(1);
+      expect(service.overallPercentage()).toBe(0);
+    });
+  });
 });

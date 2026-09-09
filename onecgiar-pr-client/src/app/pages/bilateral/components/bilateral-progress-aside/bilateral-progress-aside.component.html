@@ -52,6 +52,11 @@
                   {{ field.filled ? 'check_circle' : 'radio_button_unchecked' }}
                 </i>
                 <span>{{ field.label }}</span>
+                <!-- An optional item is listed but counts for nothing, so the section can read 100%
+                     with this circle still empty. Without the tag that looks like a bug. -->
+                @if (field.optional) {
+                  <span class="bpa-field-optional">optional</span>
+                }
               </li>
             }
           </ul>

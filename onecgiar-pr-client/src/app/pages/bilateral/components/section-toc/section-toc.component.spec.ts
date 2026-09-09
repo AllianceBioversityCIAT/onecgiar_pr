@@ -689,6 +689,45 @@ describe('SectionTocComponent', () => {
       const filledItems = tracker.setSectionFields.mock.calls.at(-1)[1];
       expect(filledItems.find((i: any) => i.key === 'toc-why-reported').filled).toBe(true);
     });
+
+    // 🛑 PO decision (Juan David Delgado, 9-sep-2026): choosing the Primary Science Program is enough
+    // to send a bilateral result to Pending Review, so NOTHING in the ToC mapping block may gate
+    // Submit. The server agrees — `submitForReview` asks only for a lead centre the caller belongs to
+    // and an assigned Science Program. Do NOT drop `optional` from these items to "make the checklist
+    // add up": that re-blocks Pending Review for every result whose ToC mapping is not finished.
+    describe('nothing in the ToC block is mandatory', () => {
+      const publishedItems = () => (TestBed.inject(BilateralMdsTrackerService) as any).setSectionFields.mock.calls.at(-1)[1];
+
+      it('publishes the unplanned branch as optional', () => {
+        component.isPlanned.set(false);
+        fixture.detectChanges();
+
+        const items = publishedItems();
+        expect(items.map((i: any) => i.key)).toEqual(['toc-planned', 'toc-why-reported']);
+        expect(items.every((i: any) => i.optional === true)).toBe(true);
+      });
+
+      it('publishes the whole planned cascade as optional', () => {
+        component.isPlanned.set(true);
+        component.selectedTocResultId.set(10);
+        component.selectedIndicatorId.set(20);
+        fixture.detectChanges();
+
+        const items = publishedItems();
+        expect(items.length).toBeGreaterThan(2);
+        expect(items.map((i: any) => i.key)).toEqual(expect.arrayContaining(['toc-node', 'toc-indicator', 'toc-contribution']));
+        expect(items.every((i: any) => i.optional === true)).toBe(true);
+      });
+
+      it('publishes the untouched question as optional too', () => {
+        component.isPlanned.set(null);
+        fixture.detectChanges();
+
+        const items = publishedItems();
+        expect(items).toHaveLength(1);
+        expect(items[0]).toMatchObject({ key: 'toc-planned', optional: true });
+      });
+    });
   });
 
   // ── display labels ─────────────────────────────────────────────────
