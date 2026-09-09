@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import {
   CreateEvidenceDto,
   EvidencesCreateInterface,
@@ -36,6 +36,8 @@ export class EvidencesService {
     private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
     private readonly _mqapService: MQAPService,
   ) {}
+
+  private readonly _logger = new Logger(EvidencesService.name);
 
   /**
    * The section marks an evidence row can carry, as stored: `tinyint NULL`.
@@ -455,6 +457,24 @@ export class EvidencesService {
     await createOrUpdateEvidenceSharepoint(existingEvidenceSharepoint);
   }
 
+  /**
+   * P2-3601 — copies each SharePoint evidence of a freshly rolled-over result into the
+   * NEW phase's folder and records the copy.
+   *
+   * 🛑 Must run AFTER the phase-change transaction commits (see `versioning.service.ts`).
+   * Both reads below go through the repository's own EntityManager, so inside the open
+   * transaction they query a pooled connection, find nothing, and this method copies
+   * nothing at all — which is exactly how the rollover silently shared one document
+   * between two phases from Feb 2024 on. It is also why the copy does not belong inside:
+   * `replicateFile` + `addFileAccess` are ~6 Microsoft Graph round-trips per evidence on
+   * an HttpModule with no timeout, and there is no compensating delete to undo them.
+   *
+   * Every write the copy produces has to land on the new phase's own rows: the
+   * `evidence_sharepoint.replicate` INSERT copies `document_id` / `folder_path` verbatim
+   * from the previous phase, and `saveSPData` later resolves which file to touch as
+   * `sp_document_id ?? evidenceSharepoint.document_id`. Persisting only `evidence.link`
+   * leaves that field pointing at the neighbour phase's file, so the defect survives.
+   */
   async replicateSPFiles(config: any) {
     const resultReplicatedId = config?.new_result_id;
     const { filePath } =
@@ -470,19 +490,53 @@ export class EvidencesService {
     for (const sharePointIterator of evidevenceList) {
       if (!sharePointIterator?.is_sharepoint) continue;
 
-      const document_id = await this._sharePointService.replicateFile(
-        sharePointIterator['sp_document_id'],
-        filePath,
-      );
+      // One evidence failing must not cost the remaining ones their copy: the phase
+      // change is already committed by the time this runs.
+      try {
+        const document_id = await this._sharePointService.replicateFile(
+          sharePointIterator['sp_document_id'],
+          filePath,
+        );
 
-      const accessData = await this._sharePointService.addFileAccess(
-        document_id,
-        sharePointIterator.is_public_file,
-      );
+        const accessData = await this._sharePointService.addFileAccess(
+          document_id,
+          sharePointIterator.is_public_file,
+        );
 
-      await this._evidencesRepository.update(sharePointIterator, {
-        link: accessData?.link?.webUrl,
-      });
+        // Same guard `saveSPData` carries: addFileAccess swallows its own HTTP errors
+        // and resolves with the raw Error, so without this an empty link would be
+        // persisted over a working one.
+        if (!accessData?.link?.webUrl) {
+          this._logger.error(
+            `REPORTING: SharePoint access call returned no link for document ${document_id} (evidence ${sharePointIterator.id}); the evidence keeps its previous link.`,
+          );
+          continue;
+        }
+
+        await this._evidencesRepository.update(sharePointIterator.id, {
+          link: accessData.link.webUrl,
+        });
+
+        // `sharePointIterator` is a raw aliased row, so the evidence_sharepoint id
+        // travels as `sp_evidence_id` (see `getEvidencesByResultId`).
+        // Written the way `saveSPData` writes it — assigned on the entity and saved —
+        // because `document_id` / `folder_path` carry no declared type on the entity,
+        // so a typed partial does not compile. `file_name` is deliberately left alone:
+        // the copy keeps the source name and that name is correct under the convention
+        // (`result-<result_code>-…`, and result_code is shared across phases on purpose).
+        const spEvidenceId = sharePointIterator['sp_evidence_id'];
+        if (spEvidenceId) {
+          const spRow = new EvidenceSharepoint();
+          spRow.id = spEvidenceId;
+          spRow.document_id = document_id;
+          spRow.folder_path = filePath;
+          await this._evidenceSharepointRepository.save(spRow);
+        }
+      } catch (error) {
+        this._logger.error(
+          `REPORTING: SharePoint replication failed for evidence ${sharePointIterator.id} of result ${resultReplicatedId}: ${error?.message}`,
+        );
+      }
     }
   }
 

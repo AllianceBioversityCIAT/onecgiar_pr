@@ -403,7 +403,6 @@ export class VersioningService {
       await this._linkedResultRepository.replicate(manager, config);
       await this._evidencesRepository.replicate(manager, config);
       await this._evidenceSharepointRepository.replicate(manager, config);
-      await this._evidencesService.replicateSPFiles(config);
 
       await this._resultInitiativeBudgetRepository.ensureMissingBudgetsForPrimaryInitiatives(
         manager,
@@ -413,6 +412,25 @@ export class VersioningService {
 
       return dataResult;
     });
+
+    // P2-3601 — the SharePoint copy is consumed AFTER the transaction commits, never
+    // inside it. Both reads it needs (the evidence list and the folder path) go through
+    // the repositories' own EntityManager, so from inside the open transaction they hit
+    // a pooled connection, never see the rows just replicated, and nothing gets copied:
+    // that is how both phases ended up sharing one document since Feb 2024. Moving it in
+    // is not an option either — it is ~6 Microsoft Graph round-trips per evidence on an
+    // HttpModule with no timeout, holding the transaction and the result_code_seq lock
+    // open, with no compensating delete if the transaction later rolls back.
+    // Never throws: the phase change is already committed by the time this runs, and a
+    // SharePoint failure must not turn a completed rollover into an error. Same doctrine
+    // as `bilateral.service.ts` and the notification emitters.
+    try {
+      await this._evidencesService.replicateSPFiles({ new_result_id: data.id });
+    } catch (error) {
+      this._logger.error(
+        `REPORTING: SharePoint replication failed for result ${data.id} after the phase change committed: ${error?.message}`,
+      );
+    }
 
     this._logger.log(
       `REPORTING: The change of phase of result ${result.id} is completed correctly.`,
