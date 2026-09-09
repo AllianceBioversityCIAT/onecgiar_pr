@@ -420,6 +420,43 @@ export class EvidencesService {
       existingEvidenceSharepoint?.file_name !== sp_file_name &&
       existingEvidenceSharepoint?.id;
 
+    // 🛑 A file in the repository with no answer to "can this be shared publicly?" is a
+    // state the platform must not store.
+    //
+    // The visibility radio IS mandatory (`pr-radio-button` defaults `required` to true, and
+    // its root reports `complete` only when the value is neither null nor undefined), so the
+    // form does warn — but the warning does not block the save. When it is ignored,
+    // `is_public_file` arrives as null and the gate below compares `undefined != null`,
+    // which is FALSE by loose equality: SharePoint is never called, no sharing link is ever
+    // created, and `evidence.link` stays empty. The row is then stored with the column
+    // default, so the platform shows an evidence whose file exists in the repository, has no
+    // link anyone can open, and whose visibility nobody ever chose.
+    // ⚠️ The repo's copy of the evidence validation also requires a non-empty link, which
+    // would mean the section never turns green either — but do NOT lean on that: the live
+    // `validation_*` functions are resolved by name at runtime and are NOT in this repo,
+    // and the committed copy is known to differ from what actually runs (it reads a column
+    // that was later renamed). Green check is Juan David's; this guard stands on its own
+    // reason — an uploaded file with no visibility answer never gets a link at all.
+    //
+    // Only refused when a document is actually there: a half-filled evidence whose file has
+    // not been uploaded yet must still be saveable.
+    const documentIdForVisibilityCheck =
+      sp_document_id ?? existingEvidenceSharepoint?.document_id;
+    const visibilityAnswer =
+      evidence?.is_public_file ?? existingEvidenceSharepoint?.is_public_file;
+    if (
+      evidence?.is_sharepoint &&
+      documentIdForVisibilityCheck &&
+      (visibilityAnswer === null || visibilityAnswer === undefined)
+    ) {
+      this._logger.error(
+        `REPORTING: refused to store evidence ${newEvidenceId} — its file (document ${documentIdForVisibilityCheck}) has no answer to the public/confidential question, so no sharing link would ever be created for it.`,
+      );
+      throwServiceError(
+        'Please answer whether this file can be shared publicly. Without that answer the file cannot be given a link, so the evidence would be saved without one and the section would never be complete.',
+      );
+    }
+
     if (
       existingEvidenceSharepoint &&
       (replaceFile || !evidence?.is_sharepoint)
