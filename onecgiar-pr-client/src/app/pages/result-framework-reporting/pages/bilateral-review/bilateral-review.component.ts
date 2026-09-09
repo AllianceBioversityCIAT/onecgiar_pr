@@ -2,7 +2,6 @@
 // @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, R-5, R-6, R-7, R-8, R-10, design.md §6.1, §6.2)
 // @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-2, R-1, R-2, R-3, R-4, R-9, R-20, R-21, design.md §6.1, §6.2)
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs/operators';
@@ -15,8 +14,6 @@ import { PhasesService } from '../../../../shared/services/global/phases.service
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../shared/enum/api.enum';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
-import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
-import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
 import { isAvisaInitiative } from '../../../../shared/utils/avisa-initiative.util';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
 import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
@@ -103,11 +100,8 @@ const UNASSIGNED_CENTER_CODE = '__unassigned__';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     NgIcon,
-    FormsModule,
     ReportingProgramBandComponent,
     WhereToReportModalComponent,
-    PrFilterMultiselectModule,
-    PrFilterSelectComponent,
     BilateralReviewTableComponent,
     ResultReviewDrawerComponent
   ],
@@ -145,13 +139,13 @@ export class BilateralReviewComponent {
   private readonly pinnedWrapper = viewChild<ElementRef<HTMLElement>>('pinnedWrapper');
   private pinnedResizeObserver?: ResizeObserver;
 
-  /** Leader-found defect fix (BRC-AC-6 + AC-8b): `app-pr-filter-select.pick()` toggles its OWN
-   *  `value` to `emptyValue` on a re-pick of the shown option, then emits it — our one-way
-   *  `[ngModel]="selectedVersionId()"` never re-pushes because, from this page's perspective,
-   *  nothing changed (the value was already Q). Left alone the trigger would show the muted
-   *  placeholder while the page silently stays on Q. `setPhase()` re-syncs the child directly via
-   *  its own CVA `writeValue` (a public method) whenever the emit is a no-op. */
-  private readonly cycleSelect = viewChild<PrFilterSelectComponent>('cycleSelect');
+  /** @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL fix) — the Cycle
+   *  pill grid and the Center/Project/Category checkbox lists below are OWNED, plain buttons (no
+   *  `app-pr-filter-select`/`app-pr-filter-multiselect` CVA child any more), so the re-pick resync
+   *  the old `cycleSelect` viewChild worked around no longer applies: `setPhase()`'s guard against a
+   *  no-op re-pick (BRC-AC-8b) is enough on its own, since a pill's "selected" look is derived
+   *  directly from `selectedVersionId()` on every render, not from a child's own internal state. */
+  private readonly filterButtonRef = viewChild<ElementRef<HTMLButtonElement>>('filterButton');
 
   readonly programmeCode = toSignal(this.route.paramMap.pipe(map(params => params.get('entityId') ?? '')), { initialValue: '' });
   readonly queryParams = toSignal(this.route.queryParamMap, { initialValue: this.route.snapshot.queryParamMap });
@@ -625,6 +619,62 @@ export class BilateralReviewComponent {
   readonly categoryFilterOptions = computed<BilateralReviewFilterOption[]>(() =>
     optionsOf(this.results.tableResults(), row => row.indicator_category).map(value => ({ value, label: value }))
   );
+
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL fix) — popover
+  // controls redesign: Center / Bilateral project / Indicator category dropped the legacy
+  // `app-pr-filter-select`/`app-pr-filter-multiselect` look (full-height purple chevron block, grey
+  // placeholder box) for the SAME token-styled checkbox-option-list grammar the Overview "Filters"
+  // popover uses (`dashboard-lab.component.html` Scope list) — a search box appears only once a
+  // dimension crosses this threshold, so a short list (e.g. 3 categories) is never cluttered by one.
+  private static readonly FILTER_OPTION_SEARCH_THRESHOLD = 8;
+
+  readonly centerOptionSearch = signal('');
+  readonly projectOptionSearch = signal('');
+  readonly categoryOptionSearch = signal('');
+
+  private static filterByLabel<T extends { label: string }>(options: T[], needle: string): T[] {
+    const trimmed = needle.trim().toLowerCase();
+    return trimmed ? options.filter(option => option.label.toLowerCase().includes(trimmed)) : options;
+  }
+
+  readonly filteredCenterFilterOptions = computed<BilateralReviewFilterOption[]>(() =>
+    BilateralReviewComponent.filterByLabel(this.centerFilterOptions(), this.centerOptionSearch())
+  );
+  readonly filteredProjectFilterOptions = computed<BilateralReviewFilterOption[]>(() =>
+    BilateralReviewComponent.filterByLabel(this.projectFilterOptions(), this.projectOptionSearch())
+  );
+  readonly filteredCategoryFilterOptions = computed<BilateralReviewFilterOption[]>(() =>
+    BilateralReviewComponent.filterByLabel(this.categoryFilterOptions(), this.categoryOptionSearch())
+  );
+
+  readonly showCenterOptionSearch = computed(() => this.centerFilterOptions().length > BilateralReviewComponent.FILTER_OPTION_SEARCH_THRESHOLD);
+  readonly showProjectOptionSearch = computed(() => this.projectFilterOptions().length > BilateralReviewComponent.FILTER_OPTION_SEARCH_THRESHOLD);
+  readonly showCategoryOptionSearch = computed(
+    () => this.categoryFilterOptions().length > BilateralReviewComponent.FILTER_OPTION_SEARCH_THRESHOLD
+  );
+
+  isCenterFilterSelected(value: string): boolean {
+    return this.centers().includes(value);
+  }
+  isProjectFilterSelected(value: string): boolean {
+    return this.projects().includes(value);
+  }
+  isCategoryFilterSelected(value: string): boolean {
+    return this.categories().includes(value);
+  }
+
+  /** Toggles ONE option in/out of the Center popover multi-select — the checkbox-list equivalent
+   *  of the old `app-pr-filter-multiselect`'s `(changed)` emit; still just a signal write, the
+   *  existing "state → URL" effect (constructor) reflects it to `?center=`. */
+  toggleCenterFilterOption(value: string): void {
+    this.centers.update(current => (current.includes(value) ? current.filter(v => v !== value) : [...current, value]));
+  }
+  toggleProjectFilterOption(value: string): void {
+    this.projects.update(current => (current.includes(value) ? current.filter(v => v !== value) : [...current, value]));
+  }
+  toggleCategoryFilterOption(value: string): void {
+    this.categories.update(current => (current.includes(value) ? current.filter(v => v !== value) : [...current, value]));
+  }
 
   /** BRP-R-5, design.md §6.1 (judgment-day L-2): the FIVE filter dimensions — search non-empty,
    *  status ≠ all (`onlyPending` is this dimension, not a second one), centers, projects,
@@ -1151,24 +1201,16 @@ export class BilateralReviewComponent {
   }
 
   // ── Cycle select (BRC-T-1, BRC-R-7) ────────────────────────────────────────────────────────
-  /** `(changed)` handler for the popover Cycle select. A no-op when the value is unchanged or not
-   *  a real number (BRC-AC-8b): `app-pr-filter-select.pick()` toggles to its `emptyValue` (default
-   *  `'all'`) when the SAME option is re-picked — this guard rejects that `NaN`-after-`Number()`
-   *  emit as well as a genuine repeat of the current numeric id. Deliberately NOT bound via
-   *  `[emptyValue]="selectedVersionId()"`: that binding would make the shared component's own
-   *  `hasValue` getter (`value !== emptyValue`) permanently false, so the trigger would never show
-   *  the phase name — a straight contradiction of BRC-AC-6. Writes `?phase=` only on an actual
+  /** Click handler for the popover Cycle pill grid. A no-op when the value is unchanged or not a
+   *  real number (BRC-AC-8b) — the pill's own "selected" look is derived straight from
+   *  `selectedVersionId()` on every render (BRH-T-1 attempt 2 replaced the old
+   *  `app-pr-filter-select` CVA child with a plain owned button grid), so a no-op re-pick needs no
+   *  resync of any child state; it simply does nothing further. Writes `?phase=` only on an actual
    *  change; picking the current phase clears the param instead of writing it explicitly (same
    *  "empty removes the key" convention the other five filter dimensions use). */
   setPhase(id: number): void {
     const next = Number(id);
-    if (Number.isNaN(next) || next === this.selectedVersionId()) {
-      // Leader-found defect: re-sync the child's OWN displayed value — see the `cycleSelect`
-      // field doc above. `writeValue` is a public CVA method; it re-renders the child (its own
-      // `cdr.markForCheck()`) without touching this page's state or issuing any request/navigation.
-      this.cycleSelect()?.writeValue(this.selectedVersionId());
-      return;
-    }
+    if (Number.isNaN(next) || next === this.selectedVersionId()) return;
     this.phaseParam.set(next === this.currentPhaseId() ? null : next);
     this.router.navigate([], {
       relativeTo: this.route,
@@ -1239,8 +1281,14 @@ export class BilateralReviewComponent {
     if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
   }
 
+  /** @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL fix) — Escape
+   *  closes the popover AND returns focus to its trigger (the redesigned popover's own keyboard
+   *  contract), so a keyboard user is never dropped onto `<body>`. */
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
+    if (this.filterPopoverOpen()) {
+      this.filterPopoverOpen.set(false);
+      this.filterButtonRef()?.nativeElement.focus();
+    }
   }
 }

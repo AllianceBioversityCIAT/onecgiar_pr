@@ -489,13 +489,13 @@ describe('BilateralReviewComponent', () => {
   });
 
   describe('URL hydration and write-back (BRT-AC-10)', () => {
-    it('hydrates all six keys on load', async () => {
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL fix) — the
+    // popover's Center dimension is now an owned checkbox-list (no `app-pr-filter-multiselect`
+    // CVA child, no deferred `[ngModel]` write), so the microtask wait the old assertion needed is
+    // gone too: the selected option's `aria-checked` reflects `centers()` synchronously.
+    it('hydrates all six keys on load', () => {
       fixture.destroy();
       build({ search: 'potato', status: 'pending', center: 'C1', project: 'P1 - Alpha Project', category: 'Policy', view: 'flat' });
-      // `[ngModel]` applies a programmatic model change one microtask later (NgModel's own
-      // `_updateValue`, deferred via `resolvedPromise.then(...)` to dodge
-      // ExpressionChangedAfterChecked) — wait for it before reading the multiselect's own label.
-      await fixture.whenStable();
       fixture.detectChanges();
 
       expect(component.search()).toBe('potato');
@@ -505,8 +505,8 @@ describe('BilateralReviewComponent', () => {
       expect(component.categories()).toEqual(['Policy']);
       expect(component.view()).toBe('flat');
 
-      const centerFilterText = root().querySelector('[data-dimension="center"] .text')?.textContent?.trim();
-      expect(centerFilterText).toBe('CIP');
+      const checkedCenterOption = root().querySelector('[data-dimension="center"] [data-testid="bilateral-review-filter-option-center"][aria-checked="true"] [data-testid="bilateral-review-filter-option-label"]');
+      expect(checkedCenterOption?.textContent?.trim()).toBe('CIP');
     });
 
     it('writes state changes back to the URL with replaceUrl: true', () => {
@@ -812,19 +812,19 @@ describe('BilateralReviewComponent', () => {
   });
 
   describe('?phase= hydration (BRC-AC-6)', () => {
-    it('a known phase Q in the URL loads with versionId=Q, the Cycle select shows Q, and the indicator is visible', async () => {
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL fix) — the Cycle
+    // select is now an owned pill grid (`aria-pressed`), no CVA child/deferred write to await.
+    it('a known phase Q in the URL loads with versionId=Q, the Cycle select shows Q, and the indicator is visible', () => {
       fixture.destroy();
       build({ phase: '34' });
-      // Same NgModel-deferred-write reason the center filter hydration test awaits (see above).
-      await fixture.whenStable();
       fixture.detectChanges();
 
       expect(GET_ResultToReview).toHaveBeenCalledWith('SP02', undefined, 34);
       expect(component.selectedVersionId()).toBe(34);
       expect(text('bilateral-review-phase-indicator')).toBe('Showing Reporting 2025');
 
-      const cycleSelectText = root().querySelector('[data-testid="bilateral-review-cycle-select"] .text')?.textContent?.trim();
-      expect(cycleSelectText).toBe('Reporting 2025');
+      const pressedPhasePill = root().querySelector('[data-testid="bilateral-review-cycle-select"] [aria-pressed="true"]');
+      expect(pressedPhasePill?.textContent?.trim()).toBe('Reporting 2025');
     });
 
     it('does not show the indicator when no phase param is set (selected === current)', () => {
@@ -913,36 +913,38 @@ describe('BilateralReviewComponent', () => {
     });
   });
 
-  // Leader-found defect (not caught by the report above): `app-pr-filter-select.pick()` toggles
-  // its OWN `value` to `emptyValue` on a re-pick and emits that — `setPhase` correctly no-ops
-  // (BRC-AC-8b), but the one-way `[ngModel]` binding never re-pushes `selectedVersionId()` since
-  // nothing changed from the page's perspective, so the trigger was left showing the muted
-  // placeholder instead of Q's name (contradicting BRC-AC-6). Real integration test: drives the
-  // ACTUAL `PrFilterSelectComponent` (not stubbed in this spec), not `component.setPhase()` directly.
-  describe('Re-pick visual resync (Leader-found defect, BRC-AC-6 + AC-8b)', () => {
-    it('keeps the Cycle trigger showing Q after the user re-picks the already-selected Q option', async () => {
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL fix) — superseded
+  // gate, rewritten to the new architecture rather than dropped (the original Leader-found defect
+  // this described no longer HAS a defense to defeat: there is no `app-pr-filter-select` CVA child
+  // any more whose own internal `value` could desync from the page's `selectedVersionId()`). The
+  // Cycle pill's "selected" look (`aria-pressed` + text) is now derived DIRECTLY from
+  // `selectedVersionId()` on every render, so a re-pick of the already-selected pill is structurally
+  // incapable of leaving a stale/muted trigger — this test proves that equivalent guarantee against
+  // the REAL rendered button, not a stub.
+  describe('Re-pick visual resync (BRC-AC-6 + AC-8b, re-based BRH-T-1 attempt 2 — owned pill grid)', () => {
+    it('keeps the Cycle pill showing Q, pressed, after the user re-picks the already-selected Q option', () => {
       fixture.destroy();
       build({ phase: '34' });
-      await fixture.whenStable();
       fixture.detectChanges();
 
       const cycleRoot = () => root().querySelector('[data-testid="bilateral-review-cycle-select"]') as HTMLElement;
-      const triggerText = () => cycleRoot().querySelector('.text')?.textContent?.trim();
-      expect(triggerText()).toBe('Reporting 2025');
+      const pressedPillText = () => cycleRoot().querySelector('[aria-pressed="true"]')?.textContent?.trim();
+      expect(pressedPillText()).toBe('Reporting 2025');
 
-      const qOption = Array.from(cycleRoot().querySelectorAll('.option')).find(o => o.textContent?.trim() === 'Reporting 2025') as HTMLElement;
+      const qOption = Array.from(cycleRoot().querySelectorAll('[data-testid="bilateral-review-cycle-option"]')).find(
+        o => o.textContent?.trim() === 'Reporting 2025'
+      ) as HTMLElement;
       expect(qOption).toBeTruthy();
+      expect(qOption.getAttribute('aria-pressed')).toBe('true');
 
       GET_ResultToReview.mockClear();
       router.navigate.mockClear();
-      qOption.click(); // re-pick the ALREADY-selected Q — pr-filter-select toggles to its emptyValue internally
+      qOption.click(); // re-pick the ALREADY-selected Q
       fixture.detectChanges();
 
       expect(GET_ResultToReview).not.toHaveBeenCalled();
       expect(router.navigate).not.toHaveBeenCalled();
-      // FAIL input: without the `writeValue` resync in `setPhase()`, this reads the muted
-      // placeholder ('Reporting 2025' would fail, becoming e.g. 'Cycle').
-      expect(triggerText()).toBe('Reporting 2025');
+      expect(pressedPillText()).toBe('Reporting 2025');
     });
   });
 
@@ -1060,18 +1062,19 @@ describe('BilateralReviewComponent', () => {
     });
 
     describe('Selecting a center (BRC-AC-2, R-2, R-3)', () => {
-      it('onCenterChipSelect sets centers() to [CIP code], creates active chip in Row 2, narrows rows to CIP, and reflects in the popover', async () => {
+      it('onCenterChipSelect sets centers() to [CIP code], creates active chip in Row 2, narrows rows to CIP, and reflects in the popover', () => {
         router.navigate.mockClear();
         component.onCenterChipSelect('C1');
-        fixture.detectChanges();
-        await fixture.whenStable();
         fixture.detectChanges();
 
         expect(component.centers()).toEqual(['C1']);
         expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(3);
 
-        const centerFilterText = root().querySelector('[data-dimension="center"] .text')?.textContent?.trim();
-        expect(centerFilterText).toBe('CIP');
+        // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL fix) — the
+        // popover Center dimension is an owned checkbox-list now; `aria-checked="true"` is the
+        // equivalent "reflects in the popover" proof for the new markup.
+        const checkedCenterOption = root().querySelector('[data-dimension="center"] [data-testid="bilateral-review-filter-option-center"][aria-checked="true"] [data-testid="bilateral-review-filter-option-label"]');
+        expect(checkedCenterOption?.textContent?.trim()).toBe('CIP');
 
         const chip = root().querySelector('[data-testid="bilateral-review-filter-chip"]');
         expect(chip?.textContent).toContain('Center: CIP');

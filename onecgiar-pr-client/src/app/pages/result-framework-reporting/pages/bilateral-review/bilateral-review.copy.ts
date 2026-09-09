@@ -44,10 +44,17 @@ export const BILATERAL_REVIEW_COPY = {
     flatView: 'All results',
     centerFilterLabel: 'Center',
     centerFilterPlaceholder: 'Center',
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — popover option-list
+    // search placeholder, shown only when a dimension carries > 8 options (see `filterBand`'s
+    // sibling constant, not `toolbar`'s own search — that one filters ROWS, this one filters the
+    // OPTION LIST of one popover dimension).
+    centerOptionSearchPlaceholder: 'Search centers',
     projectFilterLabel: 'Bilateral project',
     projectFilterPlaceholder: 'Bilateral project',
+    projectOptionSearchPlaceholder: 'Search projects',
     categoryFilterLabel: 'Indicator category',
     categoryFilterPlaceholder: 'Indicator category',
+    categoryOptionSearchPlaceholder: 'Search categories',
     // @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-7)
     cycleFilterLabel: 'Cycle',
     cycleFilterPlaceholder: 'Cycle',
