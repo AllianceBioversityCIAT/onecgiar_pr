@@ -245,17 +245,31 @@ export class BilateralProjectsService {
       );
     }
 
+    // P2-3313 (Nicoleta, 2026-09-08): a centre may only report against projects mapped to a
+    // Program/Accelerator in the W3 Registry. A project with no mapping is not reportable — the
+    // wizard's step 2 has no Science Program to offer and dead-ends — so it is not listed at all.
+    const reportableProjects = currentPhaseProjects.filter((p) =>
+      this.hasProgramMapping(p),
+    );
+    const unmappedCount =
+      currentPhaseProjects.length - reportableProjects.length;
+    if (unmappedCount > 0) {
+      this.logger.debug(
+        `${unmappedCount} project(s) of center code=${center.code} hidden: no mapping to a Program/Accelerator (P2-3313)`,
+      );
+    }
+
     const programCodes = [
       ...new Set(
-        currentPhaseProjects
-          .flatMap((p) => p.obj_project_mappings ?? [])
+        reportableProjects
+          .flatMap((p) => this.reportableMappings(p))
           .map((m) => m.programCode)
           .filter((code): code is string => !!code),
       ),
     ];
     const spByCode = await this.resolveScienceProgramNames(programCodes);
 
-    const mapped = currentPhaseProjects.map((project) => ({
+    const mapped = reportableProjects.map((project) => ({
       id: project.id,
       shortName: project.shortName,
       fullName: project.fullName,
@@ -268,7 +282,9 @@ export class BilateralProjectsService {
             acronym: project.obj_organization.acronym,
           }
         : null,
-      sciencePrograms: (project.obj_project_mappings ?? []).map((mapping) => {
+      // Only approved, addressable mappings are offered as Science Programs: the wizard's step 2
+      // picks the primary SP from this list, so an unapproved mapping must not be selectable.
+      sciencePrograms: this.reportableMappings(project).map((mapping) => {
         const initiative = mapping.programCode
           ? spByCode.get(mapping.programCode)
           : undefined;
@@ -294,4 +310,40 @@ export class BilateralProjectsService {
 
     return { projects: mapped };
   }
+
+  /**
+   * P2-3313 — a project is reportable when at least one of its W3 Registry mappings is both
+   * addressable and approved:
+   *
+   * - AC1: the mapping carries a `programCode` — that code is what the wizard's Science Program
+   *   step selects from, so a mapping without one is not reportable either.
+   * - AC2: the mapping is approved. The registry publishes only committee-agreed mappings and
+   *   marks them `agreed`; CLARISA translates that to its own enum as `Confirmed`
+   *   (`toMappingStatus`, clarisa-back `integration/w3`, 2026-09-08) and PRMS copies the value
+   *   verbatim into `clarisa_project_mappings.status`. `Confirmed` is also what CLARISA's
+   *   pre-registry mappings carry. Anything else — `Pending`, `Proposed`, `Rejected`, NULL — is
+   *   not approved and hides the project.
+   *
+   * ⚠️ Deploy order: this guard must reach an environment only AFTER CLARISA's fix is deployed
+   * there and both syncs (registry → CLARISA, CLARISA → PRMS) have re-run; otherwise every
+   * registry-fed project still sits at `Pending` and the picker empties.
+   */
+  private hasProgramMapping(project: ClarisaProject): boolean {
+    return this.reportableMappings(project).length > 0;
+  }
+
+  /** The project's mappings that carry a programCode AND an approved status. */
+  private reportableMappings(project: ClarisaProject) {
+    return (project.obj_project_mappings ?? []).filter(
+      (mapping) =>
+        !!mapping.programCode?.trim() &&
+        BilateralProjectsService.APPROVED_MAPPING_STATUSES.has(
+          mapping.status?.trim() ?? '',
+        ),
+    );
+  }
+
+  /** `clarisa_project_mappings.status` values that mean "approved" (see `hasProgramMapping`). */
+  private static readonly APPROVED_MAPPING_STATUSES: ReadonlySet<string> =
+    new Set(['Confirmed']);
 }
