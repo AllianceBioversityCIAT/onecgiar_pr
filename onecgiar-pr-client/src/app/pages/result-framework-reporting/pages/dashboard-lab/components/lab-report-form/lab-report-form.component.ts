@@ -319,6 +319,12 @@ export class LabReportFormComponent {
   readonly otherCentersSelected = signal<any[]>([]);
   readonly showOtherCenters = computed(() => this.contributingCenters().some((c: any) => c?.code === OTHER_CENTERS_CODE));
   readonly dropdown1Options = computed(() => [...this.tocCenters(), this.otherCentersSentinel]);
+  /**
+   * ERC-T-2: whether this node contributed ToC-scoped centers at all. When `false` (emerging, no
+   * ToC) the template binds the primary control directly to the full catalogue (`otherCentersList()`)
+   * instead of `dropdown1Options()`, which would otherwise contain ONLY the `Other(s)` sentinel.
+   */
+  readonly hasReferenceCenters = computed(() => this.tocCenters().length > 0);
   readonly otherCentersList = computed(() => {
     const tocCodes = new Set(this.tocCenters().map((c: any) => c.code));
     // P2-3554: read the catalogue through `centers()` (signal), NOT `centersList` (plain array). A plain array
@@ -344,6 +350,8 @@ export class LabReportFormComponent {
     const tocIds = new Set(this.tocSciencePrograms().map((sp: any) => sp.id));
     return this.allInitiatives().filter((sp: any) => !tocIds.has(sp.id));
   });
+  /** ERC-T-2: science-programs counterpart of `hasReferenceCenters`. */
+  readonly hasReferenceScience = computed(() => this.tocSciencePrograms().length > 0);
 
   // Copy of the notes shared with rd-contributors-and-partners (P2-2998 AC4).
   readonly contributingCentersInfoNote =
