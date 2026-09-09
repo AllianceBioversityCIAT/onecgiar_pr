@@ -2294,12 +2294,12 @@
         [programLevelRows]="hubProgramLevelRows()"
         [canReportW1W2]="entityAowService.canReportResults()"
         [w3State]="w3State()"
+        [reportedResultsByProjectId]="w3ReportedResultsByProjectId()"
         [myCentersCount]="myCenters().length"
         [canReportEmerging]="canReportEmerging()"
         (reportEmerging)="onHubReportEmerging()"
         (reportAow)="onHubReportAow($event)"
         (reportProgramLevel)="onHubReportProgramLevel($event)"
-        (createResult)="onHubCreateResult($event)"
         (retryW3)="retryW3()" />
     </div>
   </app-pr-dialog>

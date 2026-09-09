@@ -34,12 +34,8 @@ export const HUB_COPY = {
   },
   w3: {
     laneTitle: 'W3 · Bilateral projects',
-    laneSubtitle: (programCode: string, year: number | string | null) =>
-      // While the W3 payload (which carries the active year) is still loading, the sentence ends
-      // at the program — "…budget to SP04 in ." read like a bug, because it was one.
-      year === null || year === ''
-        ? `Reported through your CGIAR Center. Only projects that allocate budget to ${programCode}.`
-        : `Reported through your CGIAR Center. Only projects that allocate budget to ${programCode} in ${year}.`,
+    laneSubtitle: (_programCode?: string, _year?: number | string | null) =>
+      'Below are the W3/Bilateral projects mapped to your program by CGIAR Centers, showing the agreed % mapping and the number of results reported under the program by each Center.',
     totalsBadge: (total: number, centers: number) => `${total} projects · ${centers} centers`,
     searchLabel: 'Search projects by code or name',
     searchPlaceholder: 'Search by project code or name (e.g. B-A1368)',
@@ -51,8 +47,7 @@ export const HUB_COPY = {
     homeLinkSeparator: ' · ',
     showAll: (n: number) => `Show all ${n}`,
     showLess: 'Show less',
-    createResult: 'Create result',
-    createResultDisabledTitle: 'Center acronym missing — open it from My CGIAR Centers',
+    reportedResults: (count: number) => (count === 1 ? '1 result reported' : `${count} results reported`),
     /** The bolded percentage inside the allocation chip (the `<SP code>` half is the `programCode`
      * input, not copy). */
     allocationValue: (allocation: number) => `${allocation}%`,

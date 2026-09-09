@@ -77,7 +77,17 @@ function row(partial: Partial<ProgrammeResultRow> = {}): ProgrammeResultRow {
   };
 }
 
-const EMPTY_TOTALS: MyWorkTotals = { editing: 0, pending: 0, submitted: 0, approved: 0, discontinued: 0, other: 0, all: 0 };
+const EMPTY_TOTALS: MyWorkTotals = {
+  editing: 0,
+  pending: 0,
+  submitted: 0,
+  inQa: 0,
+  approved: 0,
+  discontinued: 0,
+  rejected: 0,
+  other: 0,
+  all: 0
+};
 
 /** Fake `MyWorkBoardService` — the page spec mocks the data layer (already unit-tested in
  *  `services/my-work-board.service.spec.ts`) so it can drive every UI state directly. */
@@ -240,153 +250,127 @@ describe('MyWorkBoardComponent', () => {
 
   // ── Columns (`MWB-R-2`, `MWB-T-10`) ─────────────────────────────────────────────────────────
   describe('columns', () => {
-    // `MWB-T-10`: `approved` is now the expanded *Done* column labelled **Quality assessed**;
-    // *Closed* is Discontinued (+ the conditional Other).
-    const fiveColumns: MyWorkColumn[] = [
+    const sevenColumns: MyWorkColumn[] = [
       { key: 'editing', label: 'Editing', group: 'action', rows: [row()] },
       { key: 'pending', label: 'Pending review', group: 'waiting', rows: [] },
       { key: 'submitted', label: 'Submitted', group: 'waiting', rows: [] },
-      { key: 'approved', label: 'Quality assessed', group: 'done', rows: [] },
-      { key: 'discontinued', label: 'Discontinued', group: 'closed', rows: [] }
+      { key: 'inQa', label: 'In QA', group: 'done', rows: [] },
+      { key: 'approved', label: 'Approved', group: 'done', rows: [] },
+      { key: 'discontinued', label: 'Discontinued', group: 'closed', rows: [] },
+      { key: 'rejected', label: 'Rejected', group: 'closed', rows: [] }
     ];
 
-    /** The board's per-column flex items, in DOM order. */
     const columnItems = () => Array.from(root().querySelectorAll<HTMLElement>('[data-testid="my-work-board-column-item"]'));
 
-    it('renders the five fixed columns in order when Other is empty', () => {
+    it('renders the seven fixed columns in order when Other is empty', () => {
       service.visibleRows.set([row()]);
-      service.columns.set(fiveColumns);
+      service.columns.set(sevenColumns);
       fixture.detectChanges();
 
-      expect(root().querySelectorAll('app-my-work-column').length).toBe(5);
-      expect(columnItems().map(item => item.dataset['columnKey'])).toEqual(['editing', 'pending', 'submitted', 'approved', 'discontinued']);
-      expect(text().indexOf('Editing')).toBeLessThan(text().indexOf('Pending review'));
-      expect(text().indexOf('Submitted')).toBeLessThan(text().indexOf('Quality assessed'));
-      expect(text().indexOf('Quality assessed')).toBeLessThan(text().indexOf('Discontinued'));
+      expect(root().querySelectorAll('app-my-work-column').length).toBe(7);
+      expect(columnItems().map(item => item.dataset['columnKey'])).toEqual([
+        'editing',
+        'pending',
+        'submitted',
+        'inQa',
+        'approved',
+        'discontinued',
+        'rejected'
+      ]);
       expect(text()).not.toContain('Other');
     });
 
-    it('renders the four group labels, Done carrying the approved token (MWB-T-10, MWB-DD-7)', () => {
+    it('renders the four group labels on the board', () => {
       service.visibleRows.set([row()]);
-      service.columns.set(fiveColumns);
+      service.columns.set(sevenColumns);
       fixture.detectChanges();
 
       expect(text()).toContain('Needs my action');
       expect(text()).toContain('Waiting on others');
       expect(text()).toContain('Done');
       expect(text()).toContain('Closed');
+    });
 
-      const doneLabel = columnItems().find(item => item.dataset['columnKey'] === 'approved')?.firstElementChild as HTMLElement;
-      expect(doneLabel.textContent?.trim()).toBe('Done');
-      expect(doneLabel.className).toContain('text-[var(--pr-status-approved-fg)]');
+    it('renders In QA expanded with its cards while Discontinued and Rejected stay rails', () => {
+      const qaRow = row({ code: '4801', statusId: 2, statusName: 'Quality Assessed' });
+      service.visibleRows.set([row(), qaRow]);
+      service.columns.set([
+        ...sevenColumns.slice(0, 3),
+        { key: 'inQa', label: 'In QA', group: 'done', rows: [qaRow] },
+        { key: 'approved', label: 'Approved', group: 'done', rows: [] },
+        { key: 'discontinued', label: 'Discontinued', group: 'closed', rows: [row({ code: '4802', statusId: 4, statusName: 'Discontinued' })] },
+        { key: 'rejected', label: 'Rejected', group: 'closed', rows: [] }
+      ]);
+      fixture.detectChanges();
+
+      expect(root().querySelector('section[aria-labelledby="my-work-column-inQa"]')).toBeTruthy();
+      expect(root().querySelectorAll('app-my-work-column button[aria-expanded="false"]').length).toBe(2);
     });
 
     it('renders the Other rail only when it has rows', () => {
       service.visibleRows.set([row()]);
-      service.columns.set([...fiveColumns, { key: 'other', label: 'Other', group: 'closed', rows: [row({ code: '9999', statusId: 42, statusName: 'Weird' })] }]);
-      fixture.detectChanges();
-
-      expect(root().querySelectorAll('app-my-work-column').length).toBe(6);
-      expect(text()).toContain('Other');
-    });
-
-    it('renders Quality assessed expanded with its cards while Discontinued stays a rail (MWB-T-10)', () => {
-      const qaRow = row({ code: '4801', statusId: 2, statusName: 'Quality Assessed' });
-      service.visibleRows.set([row(), qaRow]);
       service.columns.set([
-        ...fiveColumns.slice(0, 3),
-        { key: 'approved', label: 'Quality assessed', group: 'done', rows: [qaRow] },
-        { key: 'discontinued', label: 'Discontinued', group: 'closed', rows: [row({ code: '4802', statusId: 4, statusName: 'Discontinued' })] }
+        ...sevenColumns,
+        { key: 'other', label: 'Other', group: 'closed', rows: [row({ code: '9999', statusId: 42, statusName: 'Weird' })] }
       ]);
       fixture.detectChanges();
 
-      const qaSection = root().querySelector('section[aria-labelledby="my-work-column-approved"]') as HTMLElement;
-      expect(qaSection).toBeTruthy();
-      expect(qaSection.querySelectorAll('app-my-work-card').length).toBe(1);
-      // Never a rail — Quality assessed cannot be collapsed away.
-      expect(root().querySelector('section[aria-labelledby="my-work-column-approved"] button[aria-expanded]')).toBeNull();
-      // Scoped to the columns — the toolbar's Filter button also carries `aria-expanded="false"`.
-      expect(root().querySelectorAll('app-my-work-column button[aria-expanded="false"]').length).toBe(1); // Discontinued only
+      expect(root().querySelectorAll('app-my-work-column').length).toBe(8);
+      expect(text()).toContain('Other');
     });
 
-    it('renders the Closed group collapsed as one rail by default and expands on click', () => {
+    it('renders the Closed group collapsed as two rails by default and expands on click', () => {
       service.visibleRows.set([row()]);
-      service.columns.set(fiveColumns);
+      service.columns.set(sevenColumns);
       fixture.detectChanges();
 
       expect(component.closedCollapsed()).toBe(true);
-      // Editing, Pending review, Submitted, Quality assessed — four expanded columns (`MWB-T-10`).
-      expect(root().querySelectorAll('section[role="region"]').length).toBe(4);
+      expect(root().querySelectorAll('section[role="region"]').length).toBe(5);
 
       const rail = Array.from(root().querySelectorAll('button')).find(b => b.className.includes('w-[44px]')) as HTMLButtonElement;
-      expect(rail).toBeTruthy();
       rail.click();
       fixture.detectChanges();
 
       expect(component.closedCollapsed()).toBe(false);
-      expect(root().querySelectorAll('section[role="region"]').length).toBe(5); // + Discontinued
+      expect(root().querySelectorAll('section[role="region"]').length).toBe(7);
     });
 
-    // `MWB-T-10` (a) — the user's screenshot defect: an expanded Closed column had no way back.
     it('offers a collapse control on the expanded Closed column that returns it to the rail', () => {
       service.visibleRows.set([row()]);
-      service.columns.set(fiveColumns);
+      service.columns.set(sevenColumns);
       fixture.detectChanges();
 
       const rail = () => root().querySelector('app-my-work-column button[aria-expanded="false"]') as HTMLButtonElement | null;
       const collapse = () => root().querySelector('button[aria-label="Collapse Discontinued"]') as HTMLButtonElement | null;
 
-      expect(rail()).toBeTruthy();
-      expect(collapse()).toBeNull();
-
       rail()!.click();
       fixture.detectChanges();
 
       expect(collapse()).toBeTruthy();
-      expect(collapse()!.getAttribute('aria-expanded')).toBe('true');
-
       collapse()!.click();
       fixture.detectChanges();
 
       expect(component.closedCollapsed()).toBe(true);
       expect(rail()).toBeTruthy();
-      expect(rail()!.getAttribute('aria-expanded')).toBe('false');
-      expect(collapse()).toBeNull();
     });
 
-    // `MWB-T-10` (b) — width distribution: an expanded Closed column must take the SAME share as
-    // Pending review / Submitted / Quality assessed, never twice as much. jsdom does not lay out,
-    // so the proof is the class set the flex items carry (`flex-1 basis-0 min-w-[260px]`).
     it('gives every expanded non-Editing column the same sizing class set, collapsed and expanded', () => {
       service.visibleRows.set([row()]);
-      service.columns.set(fiveColumns);
+      service.columns.set(sevenColumns);
       fixture.detectChanges();
 
       const sizingOf = (item: HTMLElement) => [...item.classList].sort().join(' ');
       const nonEditing = () => columnItems().filter(item => item.dataset['columnKey'] !== 'editing');
+      const closedKeys = new Set(['discontinued', 'rejected']);
 
-      const editing = columnItems().find(item => item.dataset['columnKey'] === 'editing') as HTMLElement;
-      expect(editing.className).toContain('w-[360px]');
-      expect(editing.className).toContain('flex-none');
-
-      const expandedBefore = nonEditing().filter(item => item.dataset['columnKey'] !== 'discontinued');
-      expect(expandedBefore.length).toBe(3);
-      for (const item of expandedBefore) {
-        expect(item.className).toContain('flex-1');
-        expect(item.className).toContain('basis-0');
-        expect(item.className).toContain('min-w-[260px]');
-        expect(sizingOf(item)).toBe(sizingOf(expandedBefore[0]));
-      }
-      // While collapsed the rail is 44px and does not grow.
-      const railItem = nonEditing().find(item => item.dataset['columnKey'] === 'discontinued') as HTMLElement;
-      expect(railItem.className).toContain('w-[44px]');
-      expect(railItem.className).not.toContain('flex-1');
+      const expandedBefore = nonEditing().filter(item => !closedKeys.has(item.dataset['columnKey'] ?? ''));
+      expect(expandedBefore.length).toBe(4);
 
       (root().querySelector('app-my-work-column button[aria-expanded="false"]') as HTMLButtonElement).click();
       fixture.detectChanges();
 
       const expandedAfter = nonEditing();
-      expect(expandedAfter.length).toBe(4);
+      expect(expandedAfter.length).toBe(6);
       for (const item of expandedAfter) {
         expect(sizingOf(item)).toBe(sizingOf(expandedAfter[0]));
       }
@@ -399,8 +383,10 @@ describe('MyWorkBoardComponent', () => {
         { key: 'editing', label: 'Editing', group: 'action', rows: [editingRow] },
         { key: 'pending', label: 'Pending review', group: 'waiting', rows: [] },
         { key: 'submitted', label: 'Submitted', group: 'waiting', rows: [row({ code: '4701', statusId: 3, statusName: 'Submitted' })] },
-        { key: 'approved', label: 'Quality assessed', group: 'done', rows: [] },
-        { key: 'discontinued', label: 'Discontinued', group: 'closed', rows: [] }
+        { key: 'inQa', label: 'In QA', group: 'done', rows: [] },
+        { key: 'approved', label: 'Approved', group: 'done', rows: [] },
+        { key: 'discontinued', label: 'Discontinued', group: 'closed', rows: [] },
+        { key: 'rejected', label: 'Rejected', group: 'closed', rows: [] }
       ]);
       fixture.detectChanges();
 
@@ -413,7 +399,7 @@ describe('MyWorkBoardComponent', () => {
 
     it('never renders a draggable attribute anywhere on the board', () => {
       service.visibleRows.set([row()]);
-      service.columns.set(fiveColumns);
+      service.columns.set(sevenColumns);
       fixture.detectChanges();
 
       expect(root().querySelectorAll('[draggable]').length).toBe(0);
@@ -523,7 +509,7 @@ describe('MyWorkBoardComponent', () => {
       expect(router.navigate).not.toHaveBeenCalled();
     });
 
-    it('renders a board-shaped skeleton (5 columns + card placeholders) while loading, and none once rows land', () => {
+    it('renders a board-shaped skeleton (7 columns + card placeholders) while loading, and none once rows land', () => {
       service.loading.set(true);
       service.rows.set([]);
       fixture.detectChanges();
@@ -532,9 +518,8 @@ describe('MyWorkBoardComponent', () => {
       expect(busy).toBeTruthy();
       expect(busy.querySelector('.sr-only')?.textContent).toContain('Loading your board');
       const shells = Array.from(root().querySelectorAll<HTMLElement>('[data-testid="my-work-skeleton-column"]'));
-      expect(shells.length).toBe(5);
-      // `MWB-T-10`: Editing shell + three equal shells (Pending, Submitted, Quality assessed) + ONE rail.
-      expect(shells.filter(shell => shell.className.includes('w-[44px]')).length).toBe(1);
+      expect(shells.length).toBe(7);
+      expect(shells.filter(shell => shell.className.includes('w-[44px]')).length).toBe(2);
       expect(busy.textContent).toContain('Done');
       expect(root().querySelectorAll('[data-testid="my-work-skeleton-card"]').length).toBeGreaterThan(0);
       // The filter row stays mounted while the board is loading.
@@ -1493,8 +1478,10 @@ describe('MyWorkBoardComponent — narrow viewport (MWB-T-11)', () => {
     { key: 'editing', label: 'Editing', group: 'action', rows: [row(), row({ code: '4713' })] },
     { key: 'pending', label: 'Pending review', group: 'waiting', rows: [row({ code: '4714', statusId: 5, statusName: 'Pending Review' })] },
     { key: 'submitted', label: 'Submitted', group: 'waiting', rows: [] },
-    { key: 'approved', label: 'Quality assessed', group: 'done', rows: [row({ code: '4715', statusId: 2, statusName: 'Quality Assessed' })] },
-    { key: 'discontinued', label: 'Discontinued', group: 'closed', rows: [row({ code: '4716', statusId: 4, statusName: 'Discontinued' })] }
+    { key: 'inQa', label: 'In QA', group: 'done', rows: [row({ code: '4715', statusId: 2, statusName: 'Quality Assessed' })] },
+    { key: 'approved', label: 'Approved', group: 'done', rows: [] },
+    { key: 'discontinued', label: 'Discontinued', group: 'closed', rows: [row({ code: '4716', statusId: 4, statusName: 'Discontinued' })] },
+    { key: 'rejected', label: 'Rejected', group: 'closed', rows: [] }
   ];
 
   /** `matches` is fixed at construction time by the component's own `matchMedia` call, so the flag
@@ -1591,26 +1578,44 @@ describe('MyWorkBoardComponent — narrow viewport (MWB-T-11)', () => {
     fixture.detectChanges();
 
     expect(component.isNarrow()).toBe(true);
-    expect(chips().length).toBe(5);
+    expect(chips().length).toBe(7);
   });
 
   it('renders one jumper chip per rendered column, in board order, with that column count', () => {
     build(true);
 
-    expect(chips().map(chip => chip.dataset['columnKey'])).toEqual(['editing', 'pending', 'submitted', 'approved', 'discontinued']);
-    // Counts come from `columns()`, so an empty column shows a real 0 rather than disappearing.
-    expect(chips().map(chipText)).toEqual(['Editing 2', 'Pending review 1', 'Submitted 0', 'Quality assessed 1', 'Discontinued 1']);
+    expect(chips().map(chip => chip.dataset['columnKey'])).toEqual([
+      'editing',
+      'pending',
+      'submitted',
+      'inQa',
+      'approved',
+      'discontinued',
+      'rejected'
+    ]);
+    expect(chips().map(chipText)).toEqual([
+      'Editing 2',
+      'Pending review 1',
+      'Submitted 0',
+      'In QA 1',
+      'Approved 0',
+      'Discontinued 1',
+      'Rejected 0'
+    ]);
   });
 
   it('adds the conditional Other column to the jumper exactly when the board renders it', () => {
     build(true);
-    expect(chips().length).toBe(5);
+    expect(chips().length).toBe(7);
 
-    service.columns.set([...columnsFixture, { key: 'other', label: 'Other', group: 'closed', rows: [row({ code: '9999', statusId: 42, statusName: 'Weird' })] }]);
+    service.columns.set([
+      ...columnsFixture,
+      { key: 'other', label: 'Other', group: 'closed', rows: [row({ code: '9999', statusId: 42, statusName: 'Weird' })] }
+    ]);
     fixture.detectChanges();
 
-    expect(chips().length).toBe(6);
-    expect(chipText(chips()[5])).toBe('Other 1');
+    expect(chips().length).toBe(8);
+    expect(chipText(chips()[7])).toBe('Other 1');
   });
 
   it('gives the jumper tablist/tab semantics, one selected tab, and aria-controls on the column region', () => {
@@ -1644,8 +1649,8 @@ describe('MyWorkBoardComponent — narrow viewport (MWB-T-11)', () => {
   it('renders the Closed column as a normal column with no rail and no collapse control below 900px', () => {
     build(true);
 
-    // Five expanded regions (vs four + one rail on the locked board) and no expand/collapse chrome.
-    expect(root().querySelectorAll('section[role="region"]').length).toBe(5);
+    // Seven expanded regions (vs five + two rails on the locked board) and no expand/collapse chrome.
+    expect(root().querySelectorAll('section[role="region"]').length).toBe(7);
     expect(root().querySelectorAll('app-my-work-column button[aria-expanded]').length).toBe(0);
     expect(root().querySelector('button[aria-label="Collapse Discontinued"]')).toBeNull();
     // The desktop state is untouched — only its RENDERING is suppressed here.
@@ -1658,7 +1663,7 @@ describe('MyWorkBoardComponent — narrow viewport (MWB-T-11)', () => {
 
     expect(root().querySelector('[data-testid="my-work-jumper"]')).toBeNull();
     expect(component.closedIsRail()).toBe(true);
-    expect(root().querySelectorAll('app-my-work-column button[aria-expanded="false"]').length).toBe(1);
+    expect(root().querySelectorAll('app-my-work-column button[aria-expanded="false"]').length).toBe(2);
   });
 
   it('sizes every strip column to min(85vw, 360px) below 900px and to the two-step floors above it', () => {

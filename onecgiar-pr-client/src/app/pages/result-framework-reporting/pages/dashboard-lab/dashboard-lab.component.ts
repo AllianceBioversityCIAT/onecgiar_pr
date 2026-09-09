@@ -19,7 +19,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import {DecimalPipe, NgClass } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Clipboard } from '@angular/cdk/clipboard';
-import { Subscription } from 'rxjs';
+import { Subscription, forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { map } from 'rxjs/operators';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { SPProgress, Version } from '../../../../shared/interfaces/SP-progress.interface';
@@ -83,12 +84,10 @@ import {
   ReportingEntryHubComponent,
   HubProgramLevelKind,
   HubProgramLevelRow,
-  HubCreateResultEvent,
   HubW3State,
   HubW3Data
 } from './components/reporting-entry-hub/reporting-entry-hub.component';
-import { BilateralCreationService } from '../../../bilateral/services/bilateral-creation.service';
-import { BilateralProject } from '../../../bilateral/services/bilateral-creation.interfaces';
+import { buildReportedResultsByProjectId } from './components/reporting-entry-hub/reporting-entry-hub.util';
 import {
   applyZeroTargetRule,
   buildRatio,
@@ -113,23 +112,15 @@ import {
 import { NARRATIVE_COPY } from './components/narrative-panel/narrative-copy';
 
 /**
- * Reporting-status meter — the reference's five canonical states, in this exact order.
- * PRMS phase statuses map onto them: 5 "Pending" is a result nobody has opened yet, i.e.
- * "Not started"; 6 "Approved" has no rows in PRMS today but the reference always prints
- * "Approved 0", so the meter renders this fixed list rather than whatever the API returns.
- * Colours come from the `--pr-status-*` tokens, which already match the mockup's palette.
+ * W1/W2 reporting-status meter — the PRMS workflow states for pooled funding, in this order.
+ * Bilateral-only statuses (5 Pending Review, 6 Approved, 7 Rejected) are intentionally omitted:
+ * W1/W2 results never reach them, and "Not started" is not a meaningful PRMS lifecycle state.
+ * Colours come from the `--pr-status-*` tokens.
  */
 const OVERVIEW_STATUS_SLOTS: { key: string; label: string; statusId: number; bg: string; fg: string }[] = [
   {
-    key: 'not-started',
-    label: 'Not started',
-    statusId: 5,
-    bg: 'var(--pr-status-not-started-bg)',
-    fg: 'var(--pr-status-not-started-fg)'
-  },
-  {
-    key: 'in-progress',
-    label: 'In progress',
+    key: 'editing',
+    label: 'Editing',
     statusId: 1,
     bg: 'var(--pr-status-in-progress-bg)',
     fg: 'var(--pr-status-in-progress-fg)'
@@ -141,19 +132,12 @@ const OVERVIEW_STATUS_SLOTS: { key: string; label: string; statusId: number; bg:
     bg: 'var(--pr-status-submitted-bg)',
     fg: 'var(--pr-status-submitted-fg)'
   },
-  { key: 'in-qa', label: 'In QA', statusId: 2, bg: 'var(--pr-status-in-qa-bg)', fg: 'var(--pr-status-in-qa-fg)' },
-  {
-    key: 'approved',
-    label: 'Approved',
-    statusId: 6,
-    bg: 'var(--pr-status-approved-bg)',
-    fg: 'var(--pr-status-approved-fg)'
-  }
+  { key: 'in-qa', label: 'In QA', statusId: 2, bg: 'var(--pr-status-in-qa-bg)', fg: 'var(--pr-status-in-qa-fg)' }
 ];
 
 /**
- * Discontinued is not one of the reference's five states, but hiding real rows would make the
- * meter lie about the total — so it is appended after Approved, and only when it has rows.
+ * Discontinued is appended after the three W1/W2 slots, and only when it has rows, so the meter
+ * total still matches the programme result count.
  */
 const OVERVIEW_DISCONTINUED_SLOT = {
   key: 'discontinued',
@@ -198,6 +182,65 @@ const BILATERAL_PRIMARY_ROLE_ID = '1';
 
 /** `source_name` for W3/Bilateral results — the exact, PLURAL string the Results tab filters on. */
 const BILATERAL_ORIGIN = 'W3/Bilaterals';
+
+/** W3/Bilateral reporting-status meter — PRMS bilateral workflow only (not W1/W2 Submitted / In QA). */
+const BILATERAL_STATUS_SLOTS: { key: string; label: string; statusIds: number[]; bg: string; fg: string }[] = [
+  {
+    key: 'editing',
+    label: 'Editing',
+    statusIds: [1, 8],
+    bg: 'var(--pr-status-in-progress-bg)',
+    fg: 'var(--pr-status-in-progress-fg)'
+  },
+  {
+    key: 'pending',
+    label: 'Pending Review',
+    statusIds: [5],
+    bg: 'var(--pr-status-submitted-bg)',
+    fg: 'var(--pr-status-submitted-fg)'
+  },
+  {
+    key: 'approved',
+    label: 'Approved',
+    statusIds: [6],
+    bg: 'var(--pr-status-approved-bg)',
+    fg: 'var(--pr-status-approved-fg)'
+  },
+  {
+    key: 'rejected',
+    label: 'Rejected',
+    statusIds: [7],
+    bg: 'var(--pr-status-not-started-bg)',
+    fg: 'var(--pr-status-not-started-fg)'
+  }
+];
+
+const BILATERAL_DISCONTINUED_SLOT = {
+  key: 'discontinued',
+  label: 'Discontinued',
+  statusId: 4,
+  bg: 'var(--pr-status-not-started-bg)',
+  fg: 'var(--pr-status-not-started-fg)'
+};
+
+const BILATERAL_HEATMAP_SUBTITLE =
+  'All bilateral results tagged to this program (Editing · Pending Review · Approved · Rejected)';
+
+/** Resolve a bilateral row's workflow status — prefer `status_id`, fall back to `status_name`. */
+function resolveBilateralStatusId(row: ResultToReview): number {
+  const raw = row.status_id;
+  if (raw != null && raw !== '') {
+    const parsed = Number(raw);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  const name = row.status_name?.trim().toLowerCase() ?? '';
+  if (name.includes('approved')) return 6;
+  if (name.includes('rejected')) return 7;
+  if (name.includes('pending')) return 5;
+  if (name.includes('discontinued')) return 4;
+  if (name.includes('editing') || name.includes('draft')) return 1;
+  return 5;
+}
 
 /** "Intermediate Outcomes" → "Intermediate outcomes" (the reference uses sentence case). */
 function sentenceCaseOutcomes(name: string): string {
@@ -417,8 +460,6 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * It also owns `resultBody` / `cleanData()` for the emerging-result form below.
    */
   private readonly resultLevelSE = inject(ResultLevelService);
-  /** @akili-spec changes/reporting-entry-hub — `createResult` preselects the W3 project + navigates. */
-  private readonly bilateralCreationSE = inject(BilateralCreationService);
   /** @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1) — the My work tab's badge, shared with
    *  the other three band hosts via `MyWorkCountService`'s (programme, phase) cache. */
   private readonly myWorkCountSE = inject(MyWorkCountService);
@@ -1724,8 +1765,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Reporting-status meter + legend. Built from the fixed slot list, not from the API order, so
-   * the five reference states always show in the same order and `Approved` still reads `0`.
+   * Reporting-status meter + legend. Built from the fixed W1/W2 slot list, not from the API order,
+   * so Editing / Submitted / In QA always show in the same order.
    *
    * `overviewScope() === null` keeps the ORIGINAL unfiltered logic untouched (`OSF-AC-1`). Once a
    * scope is selected, the segments come from that scope's bucket `byStatus` instead (`OSF-R-4`,
@@ -1951,6 +1992,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   /** W3 lane state, owned here (not by the hub) — same place as `bilateralRows` above. */
   readonly w3State = signal<HubW3State>({ status: 'loading' });
+  readonly w3ReportedResultsByProjectId = signal<Map<string, number>>(new Map());
   /** The program code the current `w3State` was fetched for — dedupes the load effect. */
   private w3Code: string | null = null;
 
@@ -1965,8 +2007,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   private fetchW3Projects(code: string): void {
     this.w3State.set({ status: 'loading' });
-    this.api.resultsSE.GET_reportingEntryHubProjects(code).subscribe({
-      next: ({ response }: { response: HubW3Data }) => {
+    this.w3ReportedResultsByProjectId.set(new Map());
+    const versionId = this.dataControlSE.reportingCurrentPhase?.phaseId;
+    forkJoin({
+      projects: this.api.resultsSE.GET_reportingEntryHubProjects(code),
+      reported: this.api.resultsSE.GET_ResultToReview(code, undefined, versionId).pipe(catchError(() => of({ response: [] })))
+    }).subscribe({
+      next: ({ projects, reported }) => {
+        this.w3ReportedResultsByProjectId.set(buildReportedResultsByProjectId(reported?.response));
+        const response = projects?.response as HubW3Data;
         const status = (response?.centers?.length ?? 0) === 0 ? 'no-centers' : 'ready';
         this.w3State.set({ status, data: response });
       },
@@ -1987,28 +2036,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.onOpenAow(kind === '2030' ? OUTCOMES_2030_CODE : INTERMEDIATE_OUTCOMES_CODE);
   }
 
-  /** `(createResult)` — REH-DD-4: preselect the project, then navigate to that center's creator. */
-  onHubCreateResult(event: HubCreateResultEvent): void {
-    this.showWhereToReportModal.set(false);
-    if (!event.center.acronym) return;
-    // The hub's `HubProject` is shaped identically to `BilateralProject` PLUS `allocation`
-    // (design.md §4.1 REH-DD-4) — `id` is a bigint-backed string on the wire, hence the cast.
-    this.bilateralCreationSE.selectProject(event.project as unknown as BilateralProject);
-    this.router.navigate(['/bilateral', event.center.acronym, 'create']);
-  }
-
   // ── W3/Bilateral figures for the Overview tab (P2-3302) ───────────────────
   //
   // Source: GET /api/results/by-program-and-centers?programId=<SP>, the same call the bilateral
   // review screen makes. `centerIds` is deliberately omitted — the endpoint only narrows when
   // exactly ONE code is passed, so omitting it returns the programme's whole set.
   //
-  // ⚠️ TWO limitations to know before trusting these numbers:
-  //  1. The server filters `status_id IN (5,6,7)`, so bilateral results still in Editing /
-  //     Submitted / Draft are invisible. "Tagged" therefore means "tagged AND reached review".
-  //     P2-3302 asks for "tagged", full stop — the gap is documented, not papered over.
-  //  2. `initiative_role_id` and `status_id` arrive as STRINGS ('1', '5'). Compare with
-  //     String(...), never `=== 1`.
+  // ⚠️ `initiative_role_id` and `status_id` arrive as STRINGS ('1', '5'). Compare with
+  //     String(...), never `=== 1`. Overview loads with `statusScope=all` so Editing rows are
+  //     included alongside Pending Review / Approved / Rejected.
   /**
    * Cached by `${code}::${versionId}` — same `code::versionId` Map pattern as `summaryCacheKey`
    * (design.md DD-4, `changes/overview-phase-filter`): a late response for a phase the viewer has
@@ -2113,92 +2149,76 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   });
 
   /**
-   * Bilateral results reporting status segments (Pending Review, In QA, Approved, Rejected).
-   * `OSF-T-5`: reads the scope-narrowed rows, same population as `overviewBilateralCenters` /
-   * `overviewBilateralCategories` under any scope (`OSF-AC-4`).
+   * Bilateral results reporting status segments (Editing, Pending Review, Approved, Rejected).
+   * W1/W2-only states (Submitted, In QA, Not started) are omitted — bilateral workflow uses its
+   * own review path. `OSF-T-5`: reads the scope-narrowed rows, same population as
+   * `overviewBilateralCenters` / `overviewBilateralCategories` under any scope (`OSF-AC-4`).
    */
   readonly overviewBilateralStatusSegments = computed<OverviewStatusSegment[]>(() => {
     const rows = this.scopedBilateralRows();
     if (!rows.length) return [];
 
-    const byStatus = new Map<string, number>();
-    for (const r of rows) {
-      const name = r.status_name?.trim() || 'Pending Review';
-      byStatus.set(name, (byStatus.get(name) ?? 0) + 1);
+    const countByStatusId = new Map<number, number>();
+    for (const row of rows) {
+      const statusId = resolveBilateralStatusId(row);
+      countByStatusId.set(statusId, (countByStatusId.get(statusId) ?? 0) + 1);
     }
 
-    const slots: { key: string; label: string; bg: string; fg: string; matchers: string[] }[] = [
-      {
-        key: 'editing',
-        label: 'Editing',
-        bg: 'var(--pr-status-in-progress-bg)',
-        fg: 'var(--pr-status-in-progress-fg)',
-        matchers: ['editing', 'draft']
-      },
-      {
-        key: 'pending',
-        label: 'Pending Review',
-        bg: 'var(--pr-status-submitted-bg)',
-        fg: 'var(--pr-status-submitted-fg)',
-        matchers: ['pending review', 'pending', 'submitted']
-      },
-      {
-        key: 'in-qa',
-        label: 'In QA',
-        bg: 'var(--pr-status-in-qa-bg)',
-        fg: 'var(--pr-status-in-qa-fg)',
-        matchers: ['in qa', 'quality assessed']
-      },
-      {
-        key: 'approved',
-        label: 'Approved',
-        bg: 'var(--pr-status-approved-bg)',
-        fg: 'var(--pr-status-approved-fg)',
-        matchers: ['approved']
-      },
-      {
-        key: 'rejected',
-        label: 'Rejected',
-        bg: 'var(--pr-status-not-started-bg)',
-        fg: 'var(--pr-status-not-started-fg)',
-        matchers: ['rejected', 'discontinued']
-      }
-    ];
+    const slottedIds = new Set<number>([
+      ...BILATERAL_STATUS_SLOTS.flatMap(slot => slot.statusIds),
+      BILATERAL_DISCONTINUED_SLOT.statusId
+    ]);
 
-    const matchedNames = new Set<string>();
-    const segments: OverviewStatusSegment[] = [];
-
-    for (const slot of slots) {
-      let count = 0;
-      let matchedName = slot.label;
-      for (const [name, c] of byStatus.entries()) {
-        if (slot.matchers.includes(name.toLowerCase())) {
-          count += c;
-          matchedNames.add(name);
-          matchedName = name;
+    const countOf = (statusIds: number[]) => statusIds.reduce((sum, id) => sum + (countByStatusId.get(id) ?? 0), 0);
+    const statusNameOf = (statusIds: number[], fallback: string) => {
+      for (const id of statusIds) {
+        const c = countByStatusId.get(id) ?? 0;
+        if (c > 0) {
+          const row = rows.find(r => resolveBilateralStatusId(r) === id);
+          return row?.status_name?.trim() || OVERVIEW_STATUS_NAME_FALLBACK[id] || fallback;
         }
       }
-      segments.push({
+      return fallback;
+    };
+
+    const segments: OverviewStatusSegment[] = BILATERAL_STATUS_SLOTS.map(slot => {
+      const count = countOf(slot.statusIds);
+      const statusName = statusNameOf(slot.statusIds, slot.label);
+      return {
         key: slot.key,
         label: slot.label,
         count,
         bg: slot.bg,
         fg: slot.fg,
-        statusName: matchedName,
-        link: count > 0 ? { origin: BILATERAL_ORIGIN, status: matchedName } : null
+        statusName,
+        link: count > 0 ? { origin: BILATERAL_ORIGIN, status: statusName } : null
+      };
+    });
+
+    const discontinued = countByStatusId.get(BILATERAL_DISCONTINUED_SLOT.statusId) ?? 0;
+    if (discontinued > 0) {
+      segments.push({
+        key: BILATERAL_DISCONTINUED_SLOT.key,
+        label: BILATERAL_DISCONTINUED_SLOT.label,
+        count: discontinued,
+        bg: BILATERAL_DISCONTINUED_SLOT.bg,
+        fg: BILATERAL_DISCONTINUED_SLOT.fg,
+        statusName: OVERVIEW_STATUS_NAME_FALLBACK[BILATERAL_DISCONTINUED_SLOT.statusId],
+        link: { origin: BILATERAL_ORIGIN, status: OVERVIEW_STATUS_NAME_FALLBACK[BILATERAL_DISCONTINUED_SLOT.statusId] }
       });
     }
 
-    for (const [name, count] of byStatus.entries()) {
-      if (!matchedNames.has(name) && count > 0) {
+    for (const [statusId, count] of countByStatusId.entries()) {
+      if (count > 0 && !slottedIds.has(statusId)) {
+        const label = OVERVIEW_STATUS_NAME_FALLBACK[statusId] || `Status ${statusId}`;
         segments.push({
-          key: name.toLowerCase().replace(/\s+/g, '-'),
-          label: name,
+          key: `status-${statusId}`,
+          label,
           count,
           bg: 'var(--pr-status-in-progress-bg)',
           fg: 'var(--pr-status-in-progress-fg)',
-          statusName: name,
-          link: { origin: BILATERAL_ORIGIN, status: name }
+          statusName: label,
+          link: { origin: BILATERAL_ORIGIN, status: label }
         });
       }
     }
@@ -2258,7 +2278,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    */
   readonly overviewBilateralHeatmap = computed<HeatmapModel>(() => {
     const caption = 'W3/Bilateral results by center and category';
-    const subtitle = 'Bilateral results in review (Submitted · In QA · Approved)';
+    const subtitle = BILATERAL_HEATMAP_SUBTITLE;
     const rows = this.scopedBilateralRows();
     if (!rows.length) return { rows: [], cols: [], cells: [], caption, subtitle };
 
@@ -3304,26 +3324,25 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return achievement?.preliminary_progress_percentage ?? '—';
   }
 
-  achievementCoverage(achievement: TocAchievement | null | undefined): string {
-    const counted = achievement?.indicators_counted;
-    const total = achievement?.indicators_total;
+  achievementCoverage(achievement: TocAchievement | null | undefined, childNoun = 'Int. outcomes'): string {
+    const counted = achievement?.counted;
+    const total = achievement?.total;
     if (!Number.isFinite(counted) || !Number.isFinite(total) || !total) return '';
-    return counted === total ? `${total} indicators` : `${counted} of ${total} indicators`;
+    return counted === total ? `${total} ${childNoun}` : `${counted} of ${total} ${childNoun}`;
   }
 
   achievementTooltip(achievement: TocAchievement | null | undefined, childNoun = 'Intermediate Outcomes'): string {
     if (!achievement || !achievement.total) return 'Nothing has been planned here yet.';
-    const { counted, total, indicators_counted: withTarget, indicators_total: allIndicators } = achievement;
+    const { counted, total, indicators_total: kpiTotal } = achievement;
+    const scope = counted === total ? `${total} ${childNoun}` : `${counted} of ${total} ${childNoun}`;
+    const kpiNote = Number.isFinite(kpiTotal) && kpiTotal > 0 ? ` ${kpiTotal} KPIs sit under those nodes.` : '';
     if (!counted) {
-      return `None of the ${allIndicators} indicators has a target set, so no achievement percentage can be calculated.`;
+      return `No ${childNoun.toLowerCase()} with a measurable target yet, so no ToC achievement % is shown.${kpiNote} KPI reporting progress is counted separately on the left.`;
     }
-    const excluded = allIndicators - withTarget;
-    const base =
-      `QA ${this.achievementLabel(achievement)} and Preliminary ${this.preliminaryAchievementLabel(achievement)}, ` +
-      `averaged over ${counted} of ${total} ${childNoun}, covering ${withTarget} of ${allIndicators} indicators.`;
-    return excluded > 0
-      ? `${base} ${excluded} indicator${excluded === 1 ? ' is' : 's are'} excluded for having no target set.`
-      : base;
+    return (
+      `ToC achievement — QA ${this.achievementLabel(achievement)} and Preliminary ${this.preliminaryAchievementLabel(achievement)}, ` +
+      `averaged across ${scope}.${kpiNote} This is separate from the KPI reporting count (reported/planned) on the same row.`
+    );
   }
 
   /** Per-indicator meta for the By-AOW cards (labelled progress + state). @akili-spec changes/reporting-entry-hub */

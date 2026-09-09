@@ -15,27 +15,27 @@ import {
 // zero-target rule from the completion rule).
 
 describe('applyZeroTargetRule', () => {
-  it('excludes 3 of 10 KPIs (target=0 AND achieved=0), leaving denominators at 7 (MRF-AC-6)', () => {
+  it('counts every planned KPI, including target=0 with nothing reported yet', () => {
     const inds = [
-      { indicator_id: 1, target_value_sum: 0, actual_achieved_value_sum: 0 }, // zero-target
-      { indicator_id: 2, target_value_sum: 0, actual_achieved_value_sum: 0 }, // zero-target
-      { indicator_id: 3, target_value_sum: 0, actual_achieved_value_sum: 0 }, // zero-target
-      { indicator_id: 4, target_value_sum: 5, actual_achieved_value_sum: 5 }, // complete
-      { indicator_id: 5, target_value_sum: 5, actual_achieved_value_sum: 2 }, // in-progress
-      { indicator_id: 6, target_value_sum: 5, actual_achieved_value_sum: 0 }, // not-started
-      { indicator_id: 7, target_value_sum: 3, actual_achieved_value_sum: 3 }, // complete
-      { indicator_id: 8, target_value_sum: 10, actual_achieved_value_sum: 1 }, // in-progress
-      { indicator_id: 9, target_value_sum: 0, actual_achieved_value_sum: 4 }, // achieved without target
-      { indicator_id: 10, target_value_sum: 2, actual_achieved_value_sum: 0 } // not-started
+      { indicator_id: 1, target_value_sum: 0, actual_achieved_value_sum: 0 },
+      { indicator_id: 2, target_value_sum: 0, actual_achieved_value_sum: 0 },
+      { indicator_id: 3, target_value_sum: 0, actual_achieved_value_sum: 0 },
+      { indicator_id: 4, target_value_sum: 5, actual_achieved_value_sum: 5 },
+      { indicator_id: 5, target_value_sum: 5, actual_achieved_value_sum: 2 },
+      { indicator_id: 6, target_value_sum: 5, actual_achieved_value_sum: 0 },
+      { indicator_id: 7, target_value_sum: 3, actual_achieved_value_sum: 3 },
+      { indicator_id: 8, target_value_sum: 10, actual_achieved_value_sum: 1 },
+      { indicator_id: 9, target_value_sum: 0, actual_achieved_value_sum: 4 },
+      { indicator_id: 10, target_value_sum: 2, actual_achieved_value_sum: 0 }
     ];
 
     const { counted, zeroTarget } = applyZeroTargetRule(inds);
 
-    expect(zeroTarget).toBe(3);
-    expect(counted.map(i => i.indicator_id)).toEqual([4, 5, 6, 7, 8, 9, 10]);
+    expect(zeroTarget).toBe(0);
+    expect(counted.map(i => i.indicator_id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   });
 
-  it('keeps a KPI with achieved reported but no target — achieved-without-target still counts', () => {
+  it('keeps a KPI with achieved reported but no target', () => {
     const ind = { indicator_id: 1, actual_achieved_value_sum: 4 };
 
     const { counted, zeroTarget } = applyZeroTargetRule([ind]);
@@ -44,27 +44,27 @@ describe('applyZeroTargetRule', () => {
     expect(counted).toEqual([ind]);
   });
 
-  it('coerces string-typed numeric fixtures for both target and achieved', () => {
+  it('returns all string-typed fixtures in the counted set', () => {
     const zeroTargetString = { indicator_id: 1, target_value_sum: '0', actual_achieved_value_sum: '0' };
     const countedString = { indicator_id: 2, target_value_sum: '4', actual_achieved_value_sum: '2' };
 
     const { counted, zeroTarget } = applyZeroTargetRule([zeroTargetString, countedString]);
 
-    expect(zeroTarget).toBe(1);
-    expect(counted).toEqual([countedString]);
+    expect(zeroTarget).toBe(0);
+    expect(counted).toEqual([zeroTargetString, countedString]);
   });
 });
 
 describe('pendingOf', () => {
-  it('applies the MRF-R-1/R-7 precedence: a zero-target KPI is excluded even though its raw achieved/target reads as not-started', () => {
+  it('includes zero-target not-started KPIs alongside other pending KPIs', () => {
     const inds = [
-      { indicator_id: 1, target_value_sum: 0, actual_achieved_value_sum: 0 }, // zero-target — must be excluded
-      { indicator_id: 2, target_value_sum: 5, actual_achieved_value_sum: 0 }, // real not-started — stays visible
-      { indicator_id: 3, target_value_sum: 5, actual_achieved_value_sum: 2 }, // in-progress — stays visible
-      { indicator_id: 4, target_value_sum: 5, actual_achieved_value_sum: 5 } // complete — hidden
+      { indicator_id: 1, target_value_sum: 0, actual_achieved_value_sum: 0 },
+      { indicator_id: 2, target_value_sum: 5, actual_achieved_value_sum: 0 },
+      { indicator_id: 3, target_value_sum: 5, actual_achieved_value_sum: 2 },
+      { indicator_id: 4, target_value_sum: 5, actual_achieved_value_sum: 5 }
     ];
 
-    expect(pendingOf(inds).map(i => i.indicator_id)).toEqual([2, 3]);
+    expect(pendingOf(inds).map(i => i.indicator_id)).toEqual([1, 2, 3]);
   });
 });
 
@@ -128,16 +128,16 @@ describe('sortRemainingFirst', () => {
 });
 
 describe('groupPendingCount', () => {
-  it('counts pending KPIs within a group, applying the zero-target rule', () => {
+  it('counts pending KPIs within a group, including zero-target not-started KPIs', () => {
     const group = {
       indicators: [
-        { indicator_id: 1, target_value_sum: 0, actual_achieved_value_sum: 0 }, // zero-target, excluded
-        { indicator_id: 2, target_value_sum: 5, actual_achieved_value_sum: 5 }, // complete, excluded
-        { indicator_id: 3, target_value_sum: 5, actual_achieved_value_sum: 1 } // pending
+        { indicator_id: 1, target_value_sum: 0, actual_achieved_value_sum: 0 },
+        { indicator_id: 2, target_value_sum: 5, actual_achieved_value_sum: 5 },
+        { indicator_id: 3, target_value_sum: 5, actual_achieved_value_sum: 1 }
       ]
     };
 
-    expect(groupPendingCount(group)).toBe(1);
+    expect(groupPendingCount(group)).toBe(2);
   });
 
   it('returns 0 for a group with no indicators', () => {
@@ -357,12 +357,11 @@ describe('partitionProgramKpis (KCR-R-1)', () => {
 });
 
 describe('summarisePartition (KCR-R-2 / R-8 / R-9)', () => {
-  it('reads the requirements fixture as planned 11, zeroTarget 2, counted 9, reported 1', () => {
+  it('reads the requirements fixture as planned 11, counted 11, reported 1', () => {
     const partition = partitionProgramKpis(scenarioBundles(), scenarioIntermediate(), scenario2030());
 
-    // Hand-counted from the scenario, NOT from the helper: A 4 + B 4 + IO 2 + 2030 1 = 11 planned;
-    // zero-target = a4 and #902; counted = 9; reported = b2 (achieved 75) only.
-    expect(summarisePartition(partition)).toEqual({ planned: 11, zeroTarget: 2, counted: 9, reported: 1 });
+    // Hand-counted from the scenario: A 4 + B 4 + IO 2 + 2030 1 = 11 planned; reported = b2 only.
+    expect(summarisePartition(partition)).toEqual({ planned: 11, zeroTarget: 0, counted: 11, reported: 1 });
   });
 
   it('counts reported from achieved > 0 alone — a progress_percentage string never makes a KPI reported (KCR-R-9)', () => {

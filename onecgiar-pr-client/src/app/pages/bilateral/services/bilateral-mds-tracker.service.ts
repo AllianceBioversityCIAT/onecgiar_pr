@@ -30,6 +30,13 @@ export interface MdsFieldItem {
    * lead centre the caller belongs to and an assigned Science Program
    * (`bilateral-center.service.ts` → `submitForReview`), so demanding the whole ToC cascade was a
    * client-only bar that blocked Pending Review with the primary program already chosen.
+   *
+   * ⚠️ There is deliberately NO visual affordance for it. The live progress UI is the editor's rail
+   * (`.bcr-rail` in `bilateral-result-creator`), which shows section counts only — never per-field
+   * ticks — so nothing on screen can read "100% with an empty circle". The per-field checklist lives
+   * in `bilateral-progress-aside`, and that component has no host anywhere in the app (verified on
+   * prtest, build 56): the rail replaced it. Tagging optional items there was dead UI and was
+   * reverted. If the aside is ever remounted, add the tag then.
    */
   optional?: boolean;
 }

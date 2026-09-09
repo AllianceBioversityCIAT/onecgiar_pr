@@ -20,6 +20,7 @@ import { WhereToReportModalComponent } from '../dashboard-lab/components/where-t
 import { ResultReviewDrawerComponent } from './components/result-review-drawer/result-review-drawer.component';
 import { BilateralReviewCountService } from './services/bilateral-review-count.service';
 import { ResultToReview } from './components/result-review-drawer/result-review-drawer.interfaces';
+import { BILATERAL_REVIEW_COPY } from './bilateral-review.copy';
 
 /** The band is chrome, not this tab — stubbed so the spec exercises the page shell only. */
 @Component({ selector: 'app-reporting-program-band', standalone: true, template: '' })
@@ -452,8 +453,19 @@ describe('BilateralReviewComponent', () => {
     });
   });
 
-  describe('canReview reactivity — membership resolves after the first render (Reviewer fix #1, rework attempt 2)', () => {
-    it('flips a pending row from See to Review once myInitiativesList lands after the first detectChanges()', () => {
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — re-based, not weakened.
+  // The original staging (`push` + a bare `detectChanges()`) only ever passed by accident: this page
+  // is OnPush, and measured on `6df99fe87` the `[canReview]` binding was evaluated ZERO times in
+  // that pass (spy on `component.canReview`), so the table's input stayed `false` while the page's
+  // own method already answered `true`. What used to dirty the view was the `[ngModel]` filter
+  // controls this attempt removed — `NgModel._updateValue()` defers a `markForCheck()` on this
+  // view's own `ChangeDetectorRef` to a microtask, which `beforeEach` then left pending. The
+  // guarantee the Reviewer asked for survives verbatim (a `computed()` would memoize `false` on its
+  // only signal dependency, `programmeCode()`, and still fail below); what the re-base fixes is the
+  // TRIGGER: the flip lands on the page's next render, which in the browser is the user's next
+  // interaction, and here is a real listener-driven `input` event.
+  describe('canReview reactivity — membership resolves after the first render (Reviewer fix #1, re-based BRH-T-1 attempt 2)', () => {
+    it('flips a pending row from See to Review once myInitiativesList lands and the page next renders', () => {
       const firstAction = () => root().querySelectorAll('[data-testid="bilateral-review-row-action"]')[0] as HTMLElement;
       // `beforeEach` already rendered with an empty `myInitiativesList` (not a program member yet)
       // and BR-001 (r1) is pending (status_id 5) — so the row reads See, not Review.
@@ -461,11 +473,204 @@ describe('BilateralReviewComponent', () => {
 
       const api = TestBed.inject(ApiService) as unknown as { dataControlSE: { myInitiativesList: { official_code: string }[] } };
       api.dataControlSE.myInitiativesList.push({ official_code: 'SP02' });
+
+      // Nothing marks an OnPush page dirty when a plain array on a shared service is filled, so the
+      // answer surfaces on the next render. A template listener always dirties its own view, so an
+      // `input` event on Search with an UNCHANGED value is the smallest faithful stand-in for "the
+      // user touched the page" — it writes no state and filters nothing.
+      const search = byTestId('bilateral-review-search') as HTMLInputElement;
+      expect(search.value).toBe('');
+      search.dispatchEvent(new Event('input'));
       fixture.detectChanges();
 
-      // A `computed()` here would have memoized `false` forever (its only signal dependency is
-      // `programmeCode()`, unchanged) — this only passes because `canReview` is a plain method.
+      expect(component.search()).toBe('');
       expect(firstAction().textContent).toContain('Review');
+    });
+  });
+
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, Reviewer round 2) — the
+  // popover redesign shipped its keyboard contract and its option-search in the folder guide and in
+  // presence-only assertions. These are the behavioural gates: each one drives the REAL rendered
+  // control and asserts what a user would observe, not that a node exists.
+  describe('Filter popover — keyboard contract and option search (BRH-R-10, HITL fix #2)', () => {
+    const popover = () => byTestId('bilateral-review-filter-popover') as HTMLElement;
+    const popoverIsOpen = () => !popover().classList.contains('hidden');
+    const openPopover = () => {
+      (byTestId('bilateral-review-filter-button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+    };
+    const pressEscapeOn = (target: EventTarget) => {
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      fixture.detectChanges();
+    };
+    const optionLabels = (dimension: string) =>
+      Array.from(root().querySelectorAll(`[data-testid="bilateral-review-filter-options-${dimension}"] [data-testid="bilateral-review-filter-option-label"]`)).map(
+        el => el.textContent!.trim()
+      );
+
+    it('Escape from inside the popover closes it AND moves focus to the Filter trigger', () => {
+      openPopover();
+      expect(popoverIsOpen()).toBe(true);
+
+      const firstOption = root().querySelector('[data-testid="bilateral-review-filter-option-center"]') as HTMLButtonElement;
+      firstOption.focus();
+      expect(document.activeElement).toBe(firstOption);
+
+      pressEscapeOn(firstOption);
+
+      expect(popoverIsOpen()).toBe(false);
+      expect(document.activeElement).toBe(byTestId('bilateral-review-filter-button'));
+    });
+
+    // Reliability fix: `onEscape` is a `document:` listener, so before the containment guard an
+    // Escape pressed ANYWHERE yanked focus onto the Filter trigger.
+    it('Escape from outside the popover still closes it but leaves focus exactly where it was', () => {
+      openPopover();
+      const search = byTestId('bilateral-review-search') as HTMLInputElement;
+      search.focus();
+      expect(document.activeElement).toBe(search);
+
+      pressEscapeOn(search);
+
+      expect(popoverIsOpen()).toBe(false);
+      expect(document.activeElement).toBe(search);
+      expect(document.activeElement).not.toBe(byTestId('bilateral-review-filter-button'));
+    });
+
+    it('Escape raised inside the review drawer belongs to the drawer — the popover neither closes nor steals focus', () => {
+      component.results.currentResultToReview.set(FIXTURE_ROWS[0]);
+      component.results.showReviewDrawer.set(true);
+      fixture.detectChanges();
+      openPopover();
+
+      const drawer = root().querySelector('app-result-review-drawer') as HTMLElement;
+      expect(drawer).toBeTruthy();
+      const search = byTestId('bilateral-review-search') as HTMLInputElement;
+      search.focus();
+
+      pressEscapeOn(drawer);
+
+      expect(popoverIsOpen()).toBe(true);
+      expect(document.activeElement).toBe(search);
+    });
+
+    it('no option-search box below the 8-option threshold (3 centers, 2 projects, 1 category in this fixture)', () => {
+      openPopover();
+      expect(component.centerFilterOptions().length).toBe(3);
+      expect(component.categoryFilterOptions().length).toBe(1);
+      expect(byTestId('bilateral-review-filter-search-center')).toBeNull();
+      expect(byTestId('bilateral-review-filter-search-project')).toBeNull();
+      expect(byTestId('bilateral-review-filter-search-category')).toBeNull();
+      // …and every option is still listed, so "no box" is not "no list".
+      expect(optionLabels('center')).toEqual(['CIAT', 'CIP', 'IITA']); // `optionsOf` sorts with `localeCompare`
+    });
+
+    describe('above the threshold — nine distinct centers', () => {
+      const NINE_CENTER_ROWS: ResultToReview[] = ['CIP', 'IITA', 'CIAT', 'IWMI', 'ICARDA', 'IRRI', 'CIMMYT', 'ILRI', 'IFPRI'].map((center, index) =>
+        row({ id: `n${index}`, result_code: `BR-90${index}`, result_title: `Row ${center}`, lead_center: center, status_id: 5 })
+      );
+
+      beforeEach(() => {
+        fixture.destroy();
+        build({}, of(groupedResponse(NINE_CENTER_ROWS)));
+        fixture.detectChanges();
+      });
+
+      it('renders the search box and typing a needle narrows the rendered option list', () => {
+        openPopover();
+        expect(optionLabels('center').length).toBe(9);
+
+        const optionSearch = byTestId('bilateral-review-filter-search-center') as HTMLInputElement;
+        expect(optionSearch).toBeTruthy();
+        optionSearch.value = 'ci';
+        optionSearch.dispatchEvent(new Event('input'));
+        fixture.detectChanges();
+
+        // Case-insensitive substring: CIAT / CIMMYT / CIP contain "ci"; IITA, IWMI, ICARDA (…"ca"),
+        // IRRI, ILRI, IFPRI do not. The list keeps `optionsOf`'s alphabetical order — a needle
+        // filters, it never reorders.
+        expect(optionLabels('center')).toEqual(['CIAT', 'CIMMYT', 'CIP']);
+        // The needle filters the OPTION LIST only — it must not touch the rows or the URL.
+        expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(NINE_CENTER_ROWS.length);
+        expect(component.centers()).toEqual([]);
+      });
+
+      it('a needle matching nothing renders the empty state instead of a silently blank list', () => {
+        openPopover();
+        const optionSearch = byTestId('bilateral-review-filter-search-center') as HTMLInputElement;
+        optionSearch.value = 'zzz-no-such-center';
+        optionSearch.dispatchEvent(new Event('input'));
+        fixture.detectChanges();
+
+        expect(optionLabels('center')).toEqual([]);
+        expect(byTestId('bilateral-review-filter-options-center')!.textContent).toContain(BILATERAL_REVIEW_COPY.toolbar.filterOptionsNoMatches);
+      });
+
+      // Reliability fix: the needle is popover-local view state. Left behind on close, it hid a
+      // SELECTED option on the next open — the Row 2 chip said `Center: CIP` over an empty list.
+      it('the needle is reset when the popover closes, so a reopen shows every option again', () => {
+        openPopover();
+        const optionSearch = byTestId('bilateral-review-filter-search-center') as HTMLInputElement;
+        optionSearch.value = 'ifpri';
+        optionSearch.dispatchEvent(new Event('input'));
+        fixture.detectChanges();
+        expect(optionLabels('center')).toEqual(['IFPRI']);
+
+        (byTestId('bilateral-review-filter-button') as HTMLButtonElement).click(); // close
+        fixture.detectChanges();
+        expect(popoverIsOpen()).toBe(false);
+        expect(component.centerOptionSearch()).toBe('');
+
+        openPopover();
+        expect((byTestId('bilateral-review-filter-search-center') as HTMLInputElement).value).toBe('');
+        expect(optionLabels('center').length).toBe(9);
+      });
+    });
+
+    // Only the Center dimension had a behavioural test; Project and Category shipped with none even
+    // though each has its own toggle method and its own query-param key.
+    it('toggling a PROJECT option through the rendered checkbox narrows the rows, flips aria-checked, and writes ?project=', () => {
+      openPopover();
+      router.navigate.mockClear();
+      const betaOption = Array.from(root().querySelectorAll('[data-testid="bilateral-review-filter-option-project"]')).find(
+        el => el.querySelector('[data-testid="bilateral-review-filter-option-label"]')?.textContent?.trim() === 'P2 - DESIRA Beta'
+      ) as HTMLButtonElement;
+      expect(betaOption.getAttribute('aria-checked')).toBe('false');
+
+      betaOption.click();
+      fixture.detectChanges();
+
+      expect(component.projects()).toEqual(['P2 - DESIRA Beta']);
+      expect(betaOption.getAttribute('aria-checked')).toBe('true');
+      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(3);
+      expect(router.navigate).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({ queryParams: expect.objectContaining({ project: 'P2 - DESIRA Beta' }), replaceUrl: true })
+      );
+
+      betaOption.click(); // toggling the same option OFF restores every row
+      fixture.detectChanges();
+      expect(component.projects()).toEqual([]);
+      expect(betaOption.getAttribute('aria-checked')).toBe('false');
+      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(FIXTURE_ROWS.length);
+    });
+
+    it('toggling a CATEGORY option through the rendered checkbox flips aria-checked and writes ?category=', () => {
+      openPopover();
+      router.navigate.mockClear();
+      const policyOption = root().querySelector('[data-testid="bilateral-review-filter-option-category"]') as HTMLButtonElement;
+      expect(policyOption.querySelector('[data-testid="bilateral-review-filter-option-label"]')!.textContent!.trim()).toBe('Policy');
+      expect(policyOption.getAttribute('aria-checked')).toBe('false');
+
+      policyOption.click();
+      fixture.detectChanges();
+
+      expect(component.categories()).toEqual(['Policy']);
+      expect(policyOption.getAttribute('aria-checked')).toBe('true');
+      expect(router.navigate).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({ queryParams: expect.objectContaining({ category: 'Policy' }), replaceUrl: true })
+      );
     });
   });
 
@@ -489,13 +694,13 @@ describe('BilateralReviewComponent', () => {
   });
 
   describe('URL hydration and write-back (BRT-AC-10)', () => {
-    it('hydrates all six keys on load', async () => {
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL fix) — the
+    // popover's Center dimension is now an owned checkbox-list (no `app-pr-filter-multiselect`
+    // CVA child, no deferred `[ngModel]` write), so the microtask wait the old assertion needed is
+    // gone too: the selected option's `aria-checked` reflects `centers()` synchronously.
+    it('hydrates all six keys on load', () => {
       fixture.destroy();
       build({ search: 'potato', status: 'pending', center: 'C1', project: 'P1 - Alpha Project', category: 'Policy', view: 'flat' });
-      // `[ngModel]` applies a programmatic model change one microtask later (NgModel's own
-      // `_updateValue`, deferred via `resolvedPromise.then(...)` to dodge
-      // ExpressionChangedAfterChecked) — wait for it before reading the multiselect's own label.
-      await fixture.whenStable();
       fixture.detectChanges();
 
       expect(component.search()).toBe('potato');
@@ -505,8 +710,8 @@ describe('BilateralReviewComponent', () => {
       expect(component.categories()).toEqual(['Policy']);
       expect(component.view()).toBe('flat');
 
-      const centerFilterText = root().querySelector('[data-dimension="center"] .text')?.textContent?.trim();
-      expect(centerFilterText).toBe('CIP');
+      const checkedCenterOption = root().querySelector('[data-dimension="center"] [data-testid="bilateral-review-filter-option-center"][aria-checked="true"] [data-testid="bilateral-review-filter-option-label"]');
+      expect(checkedCenterOption?.textContent?.trim()).toBe('CIP');
     });
 
     it('writes state changes back to the URL with replaceUrl: true', () => {
@@ -812,19 +1017,19 @@ describe('BilateralReviewComponent', () => {
   });
 
   describe('?phase= hydration (BRC-AC-6)', () => {
-    it('a known phase Q in the URL loads with versionId=Q, the Cycle select shows Q, and the indicator is visible', async () => {
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL fix) — the Cycle
+    // select is now an owned pill grid (`aria-pressed`), no CVA child/deferred write to await.
+    it('a known phase Q in the URL loads with versionId=Q, the Cycle select shows Q, and the indicator is visible', () => {
       fixture.destroy();
       build({ phase: '34' });
-      // Same NgModel-deferred-write reason the center filter hydration test awaits (see above).
-      await fixture.whenStable();
       fixture.detectChanges();
 
       expect(GET_ResultToReview).toHaveBeenCalledWith('SP02', undefined, 34);
       expect(component.selectedVersionId()).toBe(34);
       expect(text('bilateral-review-phase-indicator')).toBe('Showing Reporting 2025');
 
-      const cycleSelectText = root().querySelector('[data-testid="bilateral-review-cycle-select"] .text')?.textContent?.trim();
-      expect(cycleSelectText).toBe('Reporting 2025');
+      const pressedPhasePill = root().querySelector('[data-testid="bilateral-review-cycle-select"] [aria-pressed="true"]');
+      expect(pressedPhasePill?.textContent?.trim()).toBe('Reporting 2025');
     });
 
     it('does not show the indicator when no phase param is set (selected === current)', () => {
@@ -913,36 +1118,38 @@ describe('BilateralReviewComponent', () => {
     });
   });
 
-  // Leader-found defect (not caught by the report above): `app-pr-filter-select.pick()` toggles
-  // its OWN `value` to `emptyValue` on a re-pick and emits that — `setPhase` correctly no-ops
-  // (BRC-AC-8b), but the one-way `[ngModel]` binding never re-pushes `selectedVersionId()` since
-  // nothing changed from the page's perspective, so the trigger was left showing the muted
-  // placeholder instead of Q's name (contradicting BRC-AC-6). Real integration test: drives the
-  // ACTUAL `PrFilterSelectComponent` (not stubbed in this spec), not `component.setPhase()` directly.
-  describe('Re-pick visual resync (Leader-found defect, BRC-AC-6 + AC-8b)', () => {
-    it('keeps the Cycle trigger showing Q after the user re-picks the already-selected Q option', async () => {
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL fix) — superseded
+  // gate, rewritten to the new architecture rather than dropped (the original Leader-found defect
+  // this described no longer HAS a defense to defeat: there is no `app-pr-filter-select` CVA child
+  // any more whose own internal `value` could desync from the page's `selectedVersionId()`). The
+  // Cycle pill's "selected" look (`aria-pressed` + text) is now derived DIRECTLY from
+  // `selectedVersionId()` on every render, so a re-pick of the already-selected pill is structurally
+  // incapable of leaving a stale/muted trigger — this test proves that equivalent guarantee against
+  // the REAL rendered button, not a stub.
+  describe('Re-pick visual resync (BRC-AC-6 + AC-8b, re-based BRH-T-1 attempt 2 — owned pill grid)', () => {
+    it('keeps the Cycle pill showing Q, pressed, after the user re-picks the already-selected Q option', () => {
       fixture.destroy();
       build({ phase: '34' });
-      await fixture.whenStable();
       fixture.detectChanges();
 
       const cycleRoot = () => root().querySelector('[data-testid="bilateral-review-cycle-select"]') as HTMLElement;
-      const triggerText = () => cycleRoot().querySelector('.text')?.textContent?.trim();
-      expect(triggerText()).toBe('Reporting 2025');
+      const pressedPillText = () => cycleRoot().querySelector('[aria-pressed="true"]')?.textContent?.trim();
+      expect(pressedPillText()).toBe('Reporting 2025');
 
-      const qOption = Array.from(cycleRoot().querySelectorAll('.option')).find(o => o.textContent?.trim() === 'Reporting 2025') as HTMLElement;
+      const qOption = Array.from(cycleRoot().querySelectorAll('[data-testid="bilateral-review-cycle-option"]')).find(
+        o => o.textContent?.trim() === 'Reporting 2025'
+      ) as HTMLElement;
       expect(qOption).toBeTruthy();
+      expect(qOption.getAttribute('aria-pressed')).toBe('true');
 
       GET_ResultToReview.mockClear();
       router.navigate.mockClear();
-      qOption.click(); // re-pick the ALREADY-selected Q — pr-filter-select toggles to its emptyValue internally
+      qOption.click(); // re-pick the ALREADY-selected Q
       fixture.detectChanges();
 
       expect(GET_ResultToReview).not.toHaveBeenCalled();
       expect(router.navigate).not.toHaveBeenCalled();
-      // FAIL input: without the `writeValue` resync in `setPhase()`, this reads the muted
-      // placeholder ('Reporting 2025' would fail, becoming e.g. 'Cycle').
-      expect(triggerText()).toBe('Reporting 2025');
+      expect(pressedPillText()).toBe('Reporting 2025');
     });
   });
 
@@ -1042,111 +1249,72 @@ describe('BilateralReviewComponent', () => {
       build({}, of(groupedResponse(STRIP_ROWS)));
     });
 
-    it('renders "All centers 6 · IITA 3 · CIP 2 · IWMI 0 · Not specified 1" in that order (BRC-AC-1, AC-15)', () => {
-      expect(joinedChipsText()).toBe('All centers 6 · IITA 3 · CIP 2 · IWMI 0 · Not specified 1');
-    });
-
-    it('"All centers" equals the rendered KPI Pending count with no center selected', () => {
-      const allChipCount = byTestId('bilateral-review-center-chip-all')?.querySelector('span')?.textContent?.trim();
-      expect(allChipCount).toBe(text('kpi-pending'));
+    it('computes centerStrip items in expected order (BRC-AC-1, AC-15)', () => {
+      const items = component.centerStrip();
+      expect(items.map(i => `${i.acronym} ${i.pending}`).join(' · ')).toBe('IITA 3 · CIP 2 · IWMI 0 · Not specified 1');
     });
 
     it('an acronym missing from the CLARISA catalog (IWMI) yields a chip whose value is the acronym itself (BRC-R-4)', () => {
       expect(component.centerStrip().find(item => item.acronym === 'IWMI')?.code).toBe('IWMI');
     });
 
-    it('status chip Approved leaves the strip counts unchanged (BRC-AC-4)', () => {
+    it('status chip Approved leaves the center strip calculation unchanged (BRC-AC-4)', () => {
       (byTestId('bilateral-review-chip-approved') as HTMLButtonElement).click();
       fixture.detectChanges();
 
-      expect(joinedChipsText()).toBe('All centers 6 · IITA 3 · CIP 2 · IWMI 0 · Not specified 1');
+      const items = component.centerStrip();
+      expect(items.map(i => `${i.acronym} ${i.pending}`).join(' · ')).toBe('IITA 3 · CIP 2 · IWMI 0 · Not specified 1');
     });
 
-    describe('Clicking a chip (BRC-AC-2, R-2, R-3)', () => {
-      it('sets centers() to [CIP code], writes ?center= with replaceUrl, narrows rows to CIP, reflects in the popover, and toggles pressed state', async () => {
+    describe('Selecting a center (BRC-AC-2, R-2, R-3)', () => {
+      it('onCenterChipSelect sets centers() to [CIP code], creates active chip in Row 2, narrows rows to CIP, and reflects in the popover', () => {
         router.navigate.mockClear();
-        (byTestId('bilateral-review-center-chip-C1') as HTMLButtonElement).click();
-        fixture.detectChanges();
-        // Same NgModel-deferred-write reason the URL hydration test awaits (see above) — the
-        // popover multiselect's own label only updates one microtask after `[ngModel]` changes.
-        await fixture.whenStable();
+        component.onCenterChipSelect('C1');
         fixture.detectChanges();
 
         expect(component.centers()).toEqual(['C1']);
         expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(3);
 
-        const [, options] = router.navigate.mock.calls[router.navigate.mock.calls.length - 1];
-        expect(options.replaceUrl).toBe(true);
-        expect(options.queryParams.center).toBe('C1');
+        // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL fix) — the
+        // popover Center dimension is an owned checkbox-list now; `aria-checked="true"` is the
+        // equivalent "reflects in the popover" proof for the new markup.
+        const checkedCenterOption = root().querySelector('[data-dimension="center"] [data-testid="bilateral-review-filter-option-center"][aria-checked="true"] [data-testid="bilateral-review-filter-option-label"]');
+        expect(checkedCenterOption?.textContent?.trim()).toBe('CIP');
 
-        const centerFilterText = root().querySelector('[data-dimension="center"] .text')?.textContent?.trim();
-        expect(centerFilterText).toBe('CIP');
-
-        expect(byTestId('bilateral-review-center-chip-C1')?.getAttribute('aria-pressed')).toBe('true');
-        expect(byTestId('bilateral-review-center-chip-all')?.getAttribute('aria-pressed')).toBe('false');
+        const chip = root().querySelector('[data-testid="bilateral-review-filter-chip"]');
+        expect(chip?.textContent).toContain('Center: CIP');
       });
 
-      it('clicking the pressed chip again clears the Center filter back to []', () => {
-        (byTestId('bilateral-review-center-chip-C1') as HTMLButtonElement).click();
+      it('calling onCenterChipSelect with null clears the Center filter back to []', () => {
+        component.onCenterChipSelect('C1');
         fixture.detectChanges();
 
-        (byTestId('bilateral-review-center-chip-C1') as HTMLButtonElement).click();
+        component.onCenterChipSelect(null);
         fixture.detectChanges();
 
         expect(component.centers()).toEqual([]);
-        expect(byTestId('bilateral-review-center-chip-all')?.getAttribute('aria-pressed')).toBe('true');
       });
 
-      it('clicking the fallback IWMI chip sets centers() to the acronym itself', () => {
-        (byTestId('bilateral-review-center-chip-IWMI') as HTMLButtonElement).click();
+      it('selecting the fallback IWMI sets centers() to the acronym itself', () => {
+        component.onCenterChipSelect('IWMI');
         fixture.detectChanges();
 
         expect(component.centers()).toEqual(['IWMI']);
       });
 
-      // Reviewer-found defect (attempt 1): the "Not specified" bucket's code was `''`. `joinBilateralReviewListParam([''])`
-      // still returns `''` (an empty string, NOT `null`) because `[''].length` is 1 — but
-      // `parseBilateralReviewListParam` treats an empty-string raw value as absent
-      // (`if (!raw) return []`), so the very next URL → state parse reset `centers` back to `[]`.
-      // This test re-emits the params the click's `router.navigate` call produced through
-      // `queryParamMapSubject` — the same round trip a reload, a merge-navigate elsewhere on the
-      // page, or the router itself would perform — and would FAIL against the old `''` code
-      // (`centerParam` would be `''`, falsy, and `component.centers()` would revert to `[]`).
-      it('BRC-R-3: the Not specified chip selection survives the ?center= round trip through the router', () => {
+      it('BRC-R-3: the Not specified selection survives the ?center= round trip through the router', () => {
         router.navigate.mockClear();
-        (byTestId('bilateral-review-center-chip-__unassigned__') as HTMLButtonElement).click();
+        component.onCenterChipSelect('__unassigned__');
         fixture.detectChanges();
 
         expect(component.centers().length).toBe(1);
-        const [, options] = router.navigate.mock.calls[router.navigate.mock.calls.length - 1];
-        const centerParam = options.queryParams.center as string;
-        // The old `''` code fails exactly here: `joinBilateralReviewListParam([''])` is `''`, falsy.
-        expect(centerParam).toBeTruthy();
 
-        // Simulate the router applying the merge-navigate and this component's own URL → state
-        // effect re-parsing the resulting `?center=` — the round trip a reload, a deep-link clear,
-        // or an unrelated merge-navigate would also trigger.
-        routeSnapshotQueryParamMap = convertToParamMap({ center: centerParam });
+        routeSnapshotQueryParamMap = convertToParamMap({ center: '__unassigned__' });
         queryParamMapSubject.next(routeSnapshotQueryParamMap);
         fixture.detectChanges();
 
-        expect(component.centers()).toEqual([centerParam]);
-        expect(byTestId('bilateral-review-center-chip-__unassigned__')?.getAttribute('aria-pressed')).toBe('true');
-        expect(byTestId('bilateral-review-center-chip-all')?.getAttribute('aria-pressed')).toBe('false');
-        // And the filter genuinely narrows to the one blank-center row (BRC-R-2).
+        expect(component.centers()).toEqual(['__unassigned__']);
         expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(1);
-      });
-    });
-
-    describe('Pressed states from the popover (BRC-R-2, AC-3)', () => {
-      it('no chip is pressed when the popover holds several centers, and strip counts are unchanged', () => {
-        component.centers.set(['C1', 'C2']);
-        fixture.detectChanges();
-
-        expect(byTestId('bilateral-review-center-chip-all')?.getAttribute('aria-pressed')).toBe('false');
-        expect(byTestId('bilateral-review-center-chip-C1')?.getAttribute('aria-pressed')).toBe('false');
-        expect(byTestId('bilateral-review-center-chip-C2')?.getAttribute('aria-pressed')).toBe('false');
-        expect(joinedChipsText()).toBe('All centers 6 · IITA 3 · CIP 2 · IWMI 0 · Not specified 1');
       });
     });
   });
@@ -1301,153 +1469,114 @@ describe('BilateralReviewComponent', () => {
     });
   });
 
-  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, design.md §6.3, judgment-day L-1, L-2)
-  describe('Focus ring and reduced motion on the toolbar clear + centers chevron (L-1, L-2)', () => {
-    it('use the box-shadow focus ring, never the broken `ring-` utility (--pr-focus-ring is a box-shadow triple)', () => {
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1, BRH-R-10, BRH-AC-10, design.md §2.1, §4.4)
+  describe('Consolidated 2-row sticky filter band & metric ribbon (BRH-T-1, BRH-R-10)', () => {
+    it('pinned wrapper contains Row 1 (search, status, view controls) and Row 2 (metric ribbon + active chips)', () => {
+      const wrapper = byTestId('bilateral-review-pinned') as HTMLElement;
+      expect(wrapper).toBeTruthy();
+      expect(wrapper.querySelector('[role="search"]')).toBeTruthy();
+      expect(wrapper.querySelector('[data-testid="bilateral-review-metric-ribbon"]')).toBeTruthy();
+      expect(wrapper.querySelector('[data-testid="bilateral-review-active-chips"]')).toBeTruthy();
+      expect(byTestId('bilateral-review-chip-all')).toBeTruthy();
+      expect(byTestId('bilateral-review-group-mode-project')).toBeTruthy();
+    });
+
+    it('Row 2 metric ribbon displays projects, centers, pending review, and decided counts', () => {
+      const ribbon = byTestId('bilateral-review-metric-ribbon') as HTMLElement;
+      expect(ribbon).toBeTruthy();
+      expect(ribbon.textContent).toContain('2 Projects');
+      expect(ribbon.textContent).toContain('3 Centers');
+      expect(ribbon.textContent).toContain('3 Pending Review');
+      expect(ribbon.textContent).toContain('3 Decided'); // 2 approved + 1 rejected
+    });
+
+    it('clicking Pending Review in metric ribbon toggles pending filter via kpi-pending-toggle', () => {
+      (byTestId('kpi-pending-toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(component.status()).toBe('pending');
+      expect(byTestId('bilateral-review-chip-pending')?.getAttribute('aria-pressed')).toBe('true');
+
+      (byTestId('kpi-pending-toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(component.status()).toBe('all');
+      expect(byTestId('bilateral-review-chip-all')?.getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('renders dismissible active filter chips for active filters', () => {
+      component.search.set('beta');
+      component.status.set('pending');
+      component.centers.set(['C1']);
+      component.projects.set(['P1 - Alpha Project']);
+      component.categories.set(['Policy']);
+      fixture.detectChanges();
+
+      const chips = component.activeFilterChips();
+      expect(chips.length).toBe(5);
+      expect(chips.some(c => c.label === 'Search: "beta"')).toBe(true);
+      expect(chips.some(c => c.label === 'Status: Pending review')).toBe(true);
+      expect(chips.some(c => c.label === 'Center: CIP')).toBe(true);
+      expect(chips.some(c => c.label === 'Project: P1 - Alpha Project')).toBe(true);
+      expect(chips.some(c => c.label === 'Category: Policy')).toBe(true);
+
+      const renderedChips = root().querySelectorAll('[data-testid="bilateral-review-filter-chip"]');
+      expect(renderedChips.length).toBe(5);
+    });
+
+    it('clicking a chip remove button removes the filter and syncs URL via replaceUrl', () => {
+      component.centers.set(['C1']);
+      fixture.detectChanges();
+
+      const removeBtn = root().querySelector('[data-testid="bilateral-review-chip-remove"]') as HTMLButtonElement;
+      expect(removeBtn).toBeTruthy();
+      removeBtn.click();
+      fixture.detectChanges();
+
+      expect(component.centers()).toEqual([]);
+      expect(router.navigate).toHaveBeenCalledWith([], expect.objectContaining({
+        queryParams: expect.objectContaining({ center: null }),
+        replaceUrl: true
+      }));
+    });
+
+    it('Clear all filters button removes all active filters at once', () => {
+      component.search.set('alpha');
+      component.status.set('pending');
+      fixture.detectChanges();
+
+      const clearAllBtn = byTestId('bilateral-review-clear-all') as HTMLButtonElement;
+      expect(clearAllBtn).toBeTruthy();
+      clearAllBtn.click();
+      fixture.detectChanges();
+
+      expect(router.navigate).toHaveBeenCalledWith([], expect.objectContaining({
+        queryParams: {
+          search: null,
+          status: null,
+          center: null,
+          project: null,
+          category: null
+        },
+        replaceUrl: true
+      }));
+    });
+  });
+
+  describe('Focus ring and reduced motion on toolbar buttons (L-1, L-2)', () => {
+    it('use the box-shadow focus ring, never the broken `ring-` utility', () => {
       component.search.set('maize');
       fixture.detectChanges();
 
       const clearBtn = byTestId('bilateral-review-clear-all') as HTMLButtonElement;
-      const chevronBtn = byTestId('bilateral-review-centers-toggle') as HTMLButtonElement;
-
       expect(clearBtn.className).toContain('focus-visible:shadow-[var(--pr-focus-ring)]');
-      expect(chevronBtn.className).toContain('focus-visible:shadow-[var(--pr-focus-ring)]');
       expect(clearBtn.className).not.toContain('ring-[var(--pr-focus-ring)]');
-      expect(chevronBtn.className).not.toContain('ring-[var(--pr-focus-ring)]');
     });
 
-    it('carry motion-reduce:transition-none on their transition-colors class', () => {
+    it('carry motion-reduce:transition-none on transition-colors class', () => {
       component.search.set('maize');
       fixture.detectChanges();
 
       const clearBtn = byTestId('bilateral-review-clear-all') as HTMLButtonElement;
-      const chevronBtn = byTestId('bilateral-review-centers-toggle') as HTMLButtonElement;
-
       expect(clearBtn.className).toContain('motion-reduce:transition-none');
-      expect(chevronBtn.className).toContain('motion-reduce:transition-none');
-    });
-  });
-
-  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-1, R-2, R-3, R-4, R-21, AC-1..3b, AC-14)
-  describe('Filter band — collapsible centers row (BRP-R-3)', () => {
-    it('AC-1: defaults COLLAPSED with 7 centers', () => {
-      fixture.destroy();
-      build({}, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS);
-
-      expect(component.centersRowExpanded()).toBe(false);
-      expect(byTestId('bilateral-review-centers-toggle')?.getAttribute('aria-expanded')).toBe('false');
-    });
-
-    it('defaults EXPANDED with 6 centers (FAIL input: swap the threshold to ">= 6")', () => {
-      fixture.destroy();
-      build({}, of(groupedResponse(SIX_CENTER_ROWS)), 'SP02', {}, SIX_CENTERS);
-
-      expect(component.centersRowExpanded()).toBe(true);
-      expect(byTestId('bilateral-review-centers-toggle')?.getAttribute('aria-expanded')).toBe('true');
-    });
-
-    it('a stored "0" beats the "> 6" default', () => {
-      sessionStorage.setItem('pr.bilateral.centersExpanded', '0');
-      fixture.destroy();
-      build({}, of(groupedResponse(SIX_CENTER_ROWS)), 'SP02', {}, SIX_CENTERS); // 6 -> default would be expanded
-      sessionStorage.removeItem('pr.bilateral.centersExpanded');
-
-      expect(component.centersRowExpanded()).toBe(false);
-    });
-
-    it('a stored "1" beats a narrow default', () => {
-      fixture.destroy();
-      build({}, of(groupedResponse(SIX_CENTER_ROWS)), 'SP02', {}, SIX_CENTERS);
-      component.isNarrow.set(true);
-      fixture.detectChanges();
-      expect(component.centersRowExpanded()).toBe(false); // narrow forces collapsed with no stored choice
-
-      sessionStorage.setItem('pr.bilateral.centersExpanded', '1');
-      fixture.destroy();
-      build({}, of(groupedResponse(SIX_CENTER_ROWS)), 'SP02', {}, SIX_CENTERS);
-      sessionStorage.removeItem('pr.bilateral.centersExpanded');
-      component.isNarrow.set(true);
-      fixture.detectChanges();
-
-      expect(component.centersRowExpanded()).toBe(true);
-    });
-
-    it('the chevron toggles aria-expanded and writes sessionStorage', () => {
-      fixture.destroy();
-      build({}, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS); // collapsed by default
-      sessionStorage.removeItem('pr.bilateral.centersExpanded');
-
-      expect(byTestId('bilateral-review-centers-toggle')?.getAttribute('aria-expanded')).toBe('false');
-
-      (byTestId('bilateral-review-centers-toggle') as HTMLButtonElement).click();
-      fixture.detectChanges();
-
-      expect(byTestId('bilateral-review-centers-toggle')?.getAttribute('aria-expanded')).toBe('true');
-      expect(sessionStorage.getItem('pr.bilateral.centersExpanded')).toBe('1');
-    });
-
-    it('AC-3: collapsed shows exactly one "IITA N ✕" summary chip when one center is selected, and no "+N more" tail', () => {
-      fixture.destroy();
-      build({}, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS); // collapsed by default
-      sessionStorage.removeItem('pr.bilateral.centersExpanded');
-      component.centers.set(['C2']); // IITA
-      fixture.detectChanges();
-
-      const chips = root().querySelectorAll('[data-testid="bilateral-review-center-chip-summary"]');
-      expect(chips.length).toBe(1);
-      expect(root().querySelector('[data-testid="bilateral-review-center-chip-more"]')).toBeNull();
-      expect(chips[0].textContent?.replace(/\s+/g, ' ').trim()).toContain('IITA');
-    });
-
-    it('AC-3b: collapsed shows exactly one "K centers ✕" summary chip when several centers are selected via the popover', () => {
-      fixture.destroy();
-      build({}, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS); // collapsed by default
-      sessionStorage.removeItem('pr.bilateral.centersExpanded');
-      component.centers.set(['C1', 'C2']);
-      fixture.detectChanges();
-
-      const chip = root().querySelector('[data-testid="bilateral-review-center-chip-summary"]');
-      expect(chip?.textContent?.replace(/\s+/g, ' ').trim()).toContain('2 centers');
-    });
-
-    // AC-14 — R-21 one-shot: deep-linked with ?center= AND collapsed-by-default (7 centers).
-    describe('R-21 one-shot auto-expand', () => {
-      it('AC-14: auto-expands ONCE with a ?center= deep link and no stored choice', () => {
-        fixture.destroy();
-        build({ center: 'C1' }, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS);
-        sessionStorage.removeItem('pr.bilateral.centersExpanded');
-
-        expect(component.centersRowExpanded()).toBe(true);
-        expect(byTestId('bilateral-review-centers-toggle')?.getAttribute('aria-expanded')).toBe('true');
-      });
-
-      it('AC-14: with a stored "0" it stays collapsed and shows the single-center summary chip', () => {
-        sessionStorage.setItem('pr.bilateral.centersExpanded', '0');
-        fixture.destroy();
-        build({ center: 'C1' }, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS);
-        sessionStorage.removeItem('pr.bilateral.centersExpanded');
-
-        expect(component.centersRowExpanded()).toBe(false);
-        const chip = root().querySelector('[data-testid="bilateral-review-center-chip-summary"]');
-        expect(chip?.textContent?.replace(/\s+/g, ' ').trim()).toContain('CIP');
-      });
-    });
-  });
-
-  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-8, AC-11)
-  describe('Filter band labels never wrap (BRV-R-8)', () => {
-    it('both the Status and Centers row labels carry min-w-[84px] shrink-0 whitespace-nowrap, not a fixed width', () => {
-      const statusLabel = root().querySelector('[role="group"][aria-label="Status"]')!.parentElement!.querySelector('span:first-child') as HTMLElement;
-      const centersLabel = root().querySelector('[data-testid="bilateral-review-centers-toggle"]')!.parentElement!.querySelector('span:first-child') as HTMLElement;
-
-      for (const label of [statusLabel, centersLabel]) {
-        expect(label.className).toContain('min-w-[84px]');
-        expect(label.className).toContain('shrink-0');
-        expect(label.className).toContain('whitespace-nowrap');
-        // FAIL input this guards against: a fixed `w-[64px]` (the old class) truncates a two-digit
-        // count instead of just holding its ground — `min-w` never constrains growth.
-        expect(label.className).not.toMatch(/(?<!min-)w-\[64px\]/);
-      }
     });
   });
 
@@ -1571,9 +1700,8 @@ describe('BilateralReviewComponent', () => {
       it('back to project mode restores insertion-order project groups, unaffected by the center-mode arithmetic', () => {
         component.setGroup('project');
         fixture.detectChanges();
-        fixture.detectChanges();
-
-        expect(groupNames()).toEqual(['P1 - Alpha', 'P2 - Beta']);
+        expect(Array.from(root().querySelectorAll('[data-testid="bilateral-review-project-code"]')).map(el => el.textContent?.trim())).toEqual(['P1', 'P2']);
+        expect(groupNames()).toEqual(['Alpha', 'Beta']);
         expect(component.groups().map(g => g.label)).toEqual(['P1 - Alpha', 'P2 - Beta']);
       });
     });
@@ -1643,3 +1771,4 @@ describe('BilateralReviewComponent', () => {
     });
   });
 });
+

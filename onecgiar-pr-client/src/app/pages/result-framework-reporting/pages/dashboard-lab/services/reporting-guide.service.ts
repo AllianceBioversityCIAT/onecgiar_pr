@@ -265,7 +265,7 @@ export class ReportingGuideService {
         element: '[data-guide="tab-my-results-view"]',
         popover: {
           title: 'My Results Board',
-          description: `${tabBadgeHtml('my-work')}<span class="pr-guide-step-copy">Track your personal workflow with a Kanban board grouped into Needs my action (drafts in Editing), Waiting on others (Pending review, Submitted), and Closed.</span>`,
+          description: `${tabBadgeHtml('my-work')}<span class="pr-guide-step-copy">Track your personal workflow with a Kanban board grouped into Needs my action (Editing), Waiting on others (Pending review, Submitted), Done (In QA, Approved), and Closed (Discontinued, Rejected).</span>`,
           side: 'top',
           align: 'start'
         }

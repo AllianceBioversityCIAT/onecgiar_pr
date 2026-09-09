@@ -73,7 +73,7 @@
       <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">Indicator category</p>
       <div
         class="flex h-[46px] items-center rounded-[10px] border border-[rgba(30,32,47,0.14)] bg-[var(--pr-color-accents-1)] px-3.5 text-[14px] text-[var(--pr-color-secondary-400)]">
-        {{ emergingCategory()?.name || indicator()?.result_type_name || indicator()?.type_name || 'Not provided' }}
+        {{ indicatorCategoryLabel() || 'Not provided' }}
       </div>
     </div>
   }
@@ -347,6 +347,55 @@
         <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">3. Collaboration & Attribution</h4>
       </div>
 
+      <div
+        data-testid="toc-attribution-note"
+        class="flex gap-2.5 rounded-lg border border-[var(--pr-color-primary-100,#e9e0ff)] bg-[color-mix(in_srgb,var(--pr-color-primary-50,#f5f3ff)_55%,white)] px-3.5 py-3">
+        <span class="material-icons-round shrink-0 text-[18px] text-[var(--pr-color-primary-300)]" aria-hidden="true">account_tree</span>
+        <div class="min-w-0 text-[12.5px] leading-relaxed text-[var(--pr-color-accents-6,#4b5563)]">
+          @if (hasReferenceCenters() || hasReferenceScience() || leadCenterAcronym()) {
+            <p class="m-0 font-semibold text-[var(--pr-color-secondary-400)]">Pre-filled from your Theory of Change</p>
+            <ul class="m-0 mt-1.5 list-none space-y-1 pl-0">
+              @if (hasReferenceCenters() || leadCenterAcronym()) {
+                <li class="flex gap-1.5">
+                  <span class="mt-[3px] text-[var(--pr-color-primary-300)]" aria-hidden="true">•</span>
+                  <span>
+                    <strong class="font-semibold text-[var(--pr-color-secondary-400)]">Contributing CGIAR Centers</strong>
+                    — partner institutions and KPI-owning centers mapped to this ToC node.
+                    @if (leadCenterAcronym()) {
+                      <strong class="font-semibold text-violet-800">{{ leadCenterAcronym() }}</strong> is the Lead center and cannot be removed.
+                    }
+                  </span>
+                </li>
+              }
+              @if (hasReferenceScience()) {
+                <li class="flex gap-1.5">
+                  <span class="mt-[3px] text-[var(--pr-color-primary-300)]" aria-hidden="true">•</span>
+                  <span>
+                    <strong class="font-semibold text-[var(--pr-color-secondary-400)]">Contributing Science Programs</strong>
+                    — programs linked to this ToC node.
+                  </span>
+                </li>
+              }
+              <li class="flex gap-1.5">
+                <span class="mt-[3px] text-[var(--pr-color-primary-300)]" aria-hidden="true">•</span>
+                <span>
+                  <strong class="font-semibold text-[var(--pr-color-secondary-400)]">W3 and bilateral projects</strong>
+                  — not pre-filled; select only when this result involves W3 or bilateral funding.
+                </span>
+              </li>
+            </ul>
+            <p class="m-0 mt-2 text-[12px] text-[var(--pr-text-muted,#6b7280)]">
+              Add more collaborators from the dropdowns below, or choose <em>Other(s)</em> to pick outside the ToC list.
+            </p>
+          } @else {
+            <p class="m-0 font-semibold text-[var(--pr-color-secondary-400)]">No ToC-mapped collaborators for this indicator</p>
+            <p class="m-0 mt-1.5">
+              Select Contributing CGIAR Centers and Science Programs manually. W3 and bilateral projects are optional and always chosen by you.
+            </p>
+          }
+        </div>
+      </div>
+
       <!-- Contributing CGIAR Centers. `optionValue` is the identity key pr-multi-select compares on: without it
            every option matches every value and each click deselects index 0 instead of adding. -->
       <div>
@@ -377,6 +426,11 @@
           } @else {
             <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
               {{ centerChipLabel(center) }}
+              @if (center.from_toc) {
+                <span class="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[var(--pr-color-primary-100,#e9e0ff)] text-[var(--pr-color-primary-400,#6b46e5)]">
+                  ToC
+                </span>
+              }
               <button
                 type="button"
                 (click)="removeCenter(center)"
@@ -442,6 +496,11 @@
         @for (sp of selectedScience(); track sp.id) {
           <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
             {{ scienceChipLabel(sp) }}
+            @if (sp.from_toc) {
+              <span class="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[var(--pr-color-primary-100,#e9e0ff)] text-[var(--pr-color-primary-400,#6b46e5)]">
+                ToC
+              </span>
+            }
             <button
               type="button"
               (click)="removeScience(sp)"

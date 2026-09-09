@@ -513,8 +513,8 @@
             <span class="text-[11px] font-medium text-emerald-700/80">Prel.</span>
             <span class="pr-figure-sm font-semibold text-emerald-600/80">{{ preliminaryLabel(programAchievement()) }}</span>
           </div>
-          @if (achievementCoverage(programAchievement())) {
-            <span class="text-[10.5px] font-medium text-emerald-700/70">{{ achievementCoverage(programAchievement()) }}</span>
+          @if (achievementCoverage(programAchievement(), 'Areas of Work')) {
+            <span class="text-[10.5px] font-medium text-emerald-700/70">{{ achievementCoverage(programAchievement(), 'Areas of Work') }}</span>
           }
         </div>
       }
@@ -1289,7 +1289,7 @@
         <div>
           <h2 class="m-0 mb-[4px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">W3/Bilateral Reporting Status</h2>
           <span class="text-[13px] font-normal text-[var(--pr-text-muted)]">
-            Status of bilateral results where this program is tagged
+            W3/Bilateral results tagged to this program by center review status
           </span>
         </div>
         <div class="inline-flex items-center gap-[6px] rounded-full bg-[var(--pr-surface-ground)] px-[11px] py-[3px] border border-[var(--pr-border)] shadow-2xs">
@@ -1460,7 +1460,7 @@
 
     @if (bilateralHeatmap()?.rows?.length || bilateralLoading()) {
       <span class="mb-[16px] text-[13px] font-normal text-[var(--pr-text-muted)]">
-        Bilateral results in review (Submitted · In QA · Approved)
+        All bilateral results tagged to this program (Editing · Pending Review · Approved · Rejected)
       </span>
       @if (bilateralHeatmap()?.shownOf; as shownOf) {
         <span class="mb-[12px] text-[12px] font-normal text-[var(--pr-text-muted)]">

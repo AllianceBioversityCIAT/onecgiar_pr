@@ -3,6 +3,7 @@ import { DecimalPipe } from '@angular/common';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Router } from '@angular/router';
 import { LabReportFormComponent } from '../lab-report-form/lab-report-form.component';
+import { resolveReportResultTypeId, resolveReportResultTypeName } from '../../../../shared/report-result/create-result-payload.util';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 // @akili-spec changes/report-result-form-ux (RFUX-T-1, RFUX-R-1, RFUX-R-8)
@@ -129,6 +130,12 @@ export class IndicatorDrawerComponent {
 
   /** The indicator being managed, plus the context it lives in. Null when `emerging` is true. */
   readonly indicator = input<any | null>(null);
+  readonly indicatorCategoryBadge = computed(() => {
+    const ind = this.indicator();
+    const resolvedId = resolveReportResultTypeId(ind);
+    const label = resolveReportResultTypeName(ind, resolvedId);
+    return label || null;
+  });
   /** Emerging create: no KPI, no contributor fetch, report tab only (`ERC-DD-1`). */
   readonly emerging = input<boolean>(false);
   readonly groupTitle = input<string>('');

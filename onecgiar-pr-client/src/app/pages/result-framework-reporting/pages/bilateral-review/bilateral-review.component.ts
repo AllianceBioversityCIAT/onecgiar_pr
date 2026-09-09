@@ -2,7 +2,6 @@
 // @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, R-5, R-6, R-7, R-8, R-10, design.md §6.1, §6.2)
 // @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-2, R-1, R-2, R-3, R-4, R-9, R-20, R-21, design.md §6.1, §6.2)
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs/operators';
@@ -15,8 +14,6 @@ import { PhasesService } from '../../../../shared/services/global/phases.service
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../shared/enum/api.enum';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
-import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
-import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
 import { isAvisaInitiative } from '../../../../shared/utils/avisa-initiative.util';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
 import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
@@ -27,13 +24,20 @@ import { BilateralReviewCountService } from './services/bilateral-review-count.s
 import { BilateralReviewAccessService } from './services/bilateral-review-access.service';
 import { ResultReviewDrawerComponent } from './components/result-review-drawer/result-review-drawer.component';
 import { GroupedResult, ResultToReview } from './components/result-review-drawer/result-review-drawer.interfaces';
-import { BilateralReviewKpis, BilateralReviewKpisComponent } from './components/bilateral-review-kpis/bilateral-review-kpis.component';
+import { BilateralReviewKpis } from './components/bilateral-review-kpis/bilateral-review-kpis.component';
 import { BilateralReviewGroup, BilateralReviewTableComponent } from './components/bilateral-review-table/bilateral-review-table.component';
 import {
-  BilateralReviewCenterStripComponent,
   BilateralReviewCenterStripItem
 } from './components/bilateral-review-center-strip/bilateral-review-center-strip.component';
 import { BILATERAL_REVIEW_COPY, chipCountClass } from './bilateral-review.copy';
+
+/** One entry of active dismissible filter chips (BRH-T-1). */
+export interface BilateralReviewFilterChip {
+  id: string;
+  dimension: 'center' | 'project' | 'category' | 'search' | 'status';
+  label: string;
+  value: string;
+}
 import {
   BILATERAL_REVIEW_QUERY_PARAM_MAP,
   BilateralReviewGroupMode,
@@ -96,14 +100,9 @@ const UNASSIGNED_CENTER_CODE = '__unassigned__';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     NgIcon,
-    FormsModule,
     ReportingProgramBandComponent,
     WhereToReportModalComponent,
-    PrFilterMultiselectModule,
-    PrFilterSelectComponent,
-    BilateralReviewKpisComponent,
     BilateralReviewTableComponent,
-    BilateralReviewCenterStripComponent,
     ResultReviewDrawerComponent
   ],
   viewProviders: [provideIcons({ lucideSearch, lucideChevronsUpDown, lucideChevronsDownUp, lucideChevronDown, lucideChevronUp, lucideX })]
@@ -140,13 +139,13 @@ export class BilateralReviewComponent {
   private readonly pinnedWrapper = viewChild<ElementRef<HTMLElement>>('pinnedWrapper');
   private pinnedResizeObserver?: ResizeObserver;
 
-  /** Leader-found defect fix (BRC-AC-6 + AC-8b): `app-pr-filter-select.pick()` toggles its OWN
-   *  `value` to `emptyValue` on a re-pick of the shown option, then emits it — our one-way
-   *  `[ngModel]="selectedVersionId()"` never re-pushes because, from this page's perspective,
-   *  nothing changed (the value was already Q). Left alone the trigger would show the muted
-   *  placeholder while the page silently stays on Q. `setPhase()` re-syncs the child directly via
-   *  its own CVA `writeValue` (a public method) whenever the emit is a no-op. */
-  private readonly cycleSelect = viewChild<PrFilterSelectComponent>('cycleSelect');
+  /** @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL fix) — the Cycle
+   *  pill grid and the Center/Project/Category checkbox lists below are OWNED, plain buttons (no
+   *  `app-pr-filter-select`/`app-pr-filter-multiselect` CVA child any more), so the re-pick resync
+   *  the old `cycleSelect` viewChild worked around no longer applies: `setPhase()`'s guard against a
+   *  no-op re-pick (BRC-AC-8b) is enough on its own, since a pill's "selected" look is derived
+   *  directly from `selectedVersionId()` on every render, not from a child's own internal state. */
+  private readonly filterButtonRef = viewChild<ElementRef<HTMLButtonElement>>('filterButton');
 
   readonly programmeCode = toSignal(this.route.paramMap.pipe(map(params => params.get('entityId') ?? '')), { initialValue: '' });
   readonly queryParams = toSignal(this.route.queryParamMap, { initialValue: this.route.snapshot.queryParamMap });
@@ -380,12 +379,25 @@ export class BilateralReviewComponent {
   }
 
   /** "Can this user review THIS program" (BRT-R-14) — gates the row action label (BRT-AC-8).
-   *  A plain method, NOT a `computed()`: `isProgramMember` reads non-reactive state
-   *  (`rolesSE.isAdmin`, `dataControlSE.myInitiativesList` — a plain array) that can resolve
-   *  AFTER this page's first render (hard load / deep link). A `computed()` here would memoize
-   *  whatever answer it saw on that first read — its only SIGNAL dependency is `programmeCode()`
-   *  — locking a genuine program member out of Review forever. A plain method is re-evaluated on
-   *  every change-detection pass instead (Reviewer fix, BRT-T-4 rework attempt 2). */
+   *  NOT a `computed()`: `isProgramMember` reads non-reactive state (`rolesSE.isAdmin`,
+   *  `dataControlSE.myInitiativesList` — a plain array assigned by `ApiService.updateUserData`)
+   *  that can resolve AFTER this page's first render (hard load / deep link). A `computed()` would
+   *  memoize whatever answer it saw on that first read — its only SIGNAL dependency is
+   *  `programmeCode()` — locking a genuine program member out of Review forever
+   *  (Reviewer fix, BRT-T-4 rework attempt 2).
+   *
+   *  @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — scope of the promise:
+   *  a plain method is re-evaluated on every render of THIS view, which on an `OnPush` page means
+   *  "the next time something marks it dirty", NOT "on every application tick". Nothing marks it
+   *  dirty when membership lands: `myInitiativesList` is a plain array on a shared service, and for
+   *  a NON-admin member `rolesSE.isAdmin` (signal-backed since P2-3322) goes false → false, which
+   *  notifies nothing. So a late-resolving membership shows up on the page's next render — the
+   *  user's next interaction — and until then the row still reads `See` (transient; the drawer
+   *  re-asks the same service, so nobody is locked out). Closing that last gap needs a reactive
+   *  `myInitiativesList` on `DataControlService` (the P2-3322 treatment), which is app-wide and out
+   *  of this spec's scope. Until BRH-T-1 attempt 2 this was invisible: the `[ngModel]` filter
+   *  controls that lived here made `NgModel._updateValue()` defer a `markForCheck()` on THIS view's
+   *  `ChangeDetectorRef` to a microtask, leaving the page dirty for the following pass. */
   canReview(): boolean {
     return this.accessService.isProgramMember(this.programmeCode());
   }
@@ -621,6 +633,62 @@ export class BilateralReviewComponent {
     optionsOf(this.results.tableResults(), row => row.indicator_category).map(value => ({ value, label: value }))
   );
 
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL fix) — popover
+  // controls redesign: Center / Bilateral project / Indicator category dropped the legacy
+  // `app-pr-filter-select`/`app-pr-filter-multiselect` look (full-height purple chevron block, grey
+  // placeholder box) for the SAME token-styled checkbox-option-list grammar the Overview "Filters"
+  // popover uses (`dashboard-lab.component.html` Scope list) — a search box appears only once a
+  // dimension crosses this threshold, so a short list (e.g. 3 categories) is never cluttered by one.
+  private static readonly FILTER_OPTION_SEARCH_THRESHOLD = 8;
+
+  readonly centerOptionSearch = signal('');
+  readonly projectOptionSearch = signal('');
+  readonly categoryOptionSearch = signal('');
+
+  private static filterByLabel<T extends { label: string }>(options: T[], needle: string): T[] {
+    const trimmed = needle.trim().toLowerCase();
+    return trimmed ? options.filter(option => option.label.toLowerCase().includes(trimmed)) : options;
+  }
+
+  readonly filteredCenterFilterOptions = computed<BilateralReviewFilterOption[]>(() =>
+    BilateralReviewComponent.filterByLabel(this.centerFilterOptions(), this.centerOptionSearch())
+  );
+  readonly filteredProjectFilterOptions = computed<BilateralReviewFilterOption[]>(() =>
+    BilateralReviewComponent.filterByLabel(this.projectFilterOptions(), this.projectOptionSearch())
+  );
+  readonly filteredCategoryFilterOptions = computed<BilateralReviewFilterOption[]>(() =>
+    BilateralReviewComponent.filterByLabel(this.categoryFilterOptions(), this.categoryOptionSearch())
+  );
+
+  readonly showCenterOptionSearch = computed(() => this.centerFilterOptions().length > BilateralReviewComponent.FILTER_OPTION_SEARCH_THRESHOLD);
+  readonly showProjectOptionSearch = computed(() => this.projectFilterOptions().length > BilateralReviewComponent.FILTER_OPTION_SEARCH_THRESHOLD);
+  readonly showCategoryOptionSearch = computed(
+    () => this.categoryFilterOptions().length > BilateralReviewComponent.FILTER_OPTION_SEARCH_THRESHOLD
+  );
+
+  isCenterFilterSelected(value: string): boolean {
+    return this.centers().includes(value);
+  }
+  isProjectFilterSelected(value: string): boolean {
+    return this.projects().includes(value);
+  }
+  isCategoryFilterSelected(value: string): boolean {
+    return this.categories().includes(value);
+  }
+
+  /** Toggles ONE option in/out of the Center popover multi-select — the checkbox-list equivalent
+   *  of the old `app-pr-filter-multiselect`'s `(changed)` emit; still just a signal write, the
+   *  existing "state → URL" effect (constructor) reflects it to `?center=`. */
+  toggleCenterFilterOption(value: string): void {
+    this.centers.update(current => (current.includes(value) ? current.filter(v => v !== value) : [...current, value]));
+  }
+  toggleProjectFilterOption(value: string): void {
+    this.projects.update(current => (current.includes(value) ? current.filter(v => v !== value) : [...current, value]));
+  }
+  toggleCategoryFilterOption(value: string): void {
+    this.categories.update(current => (current.includes(value) ? current.filter(v => v !== value) : [...current, value]));
+  }
+
   /** BRP-R-5, design.md §6.1 (judgment-day L-2): the FIVE filter dimensions — search non-empty,
    *  status ≠ all (`onlyPending` is this dimension, not a second one), centers, projects,
    *  categories. `phase` (a scope) and `group`/`view` (view modes) never count. Recomputed here in
@@ -636,6 +704,117 @@ export class BilateralReviewComponent {
     return count;
   });
   readonly filtersActive = computed(() => this.activeFilterCount() > 0);
+
+  // ── Active filter chips & removal (BRH-T-1, BRH-R-10, design.md §4.4) ──────────────────────
+  readonly activeFilterChips = computed<BilateralReviewFilterChip[]>(() => {
+    const chips: BilateralReviewFilterChip[] = [];
+
+    // Search chip
+    const searchVal = this.search().trim();
+    if (searchVal) {
+      chips.push({
+        id: 'search',
+        dimension: 'search',
+        label: `Search: "${searchVal}"`,
+        value: searchVal
+      });
+    }
+
+    // Centers chips
+    const codeToAcronym = this.codeToAcronym();
+    for (const code of this.centers()) {
+      const acronym = code === UNASSIGNED_CENTER_CODE ? this.copy.centerStrip.notSpecified : (codeToAcronym.get(code) ?? code);
+      chips.push({
+        id: `center-${code}`,
+        dimension: 'center',
+        label: `Center: ${acronym}`,
+        value: code
+      });
+    }
+
+    // Projects chips
+    for (const project of this.projects()) {
+      chips.push({
+        id: `project-${project}`,
+        dimension: 'project',
+        label: `Project: ${project}`,
+        value: project
+      });
+    }
+
+    // Categories chips
+    for (const category of this.categories()) {
+      chips.push({
+        id: `category-${category}`,
+        dimension: 'category',
+        label: `Category: ${category}`,
+        value: category
+      });
+    }
+
+    // Status chip (when not 'all')
+    const statusVal = this.status();
+    if (statusVal !== 'all') {
+      const statusLabel =
+        statusVal === 'pending'
+          ? this.copy.chips.pending
+          : statusVal === 'approved'
+            ? this.copy.chips.approved
+            : this.copy.chips.rejected;
+      chips.push({
+        id: 'status',
+        dimension: 'status',
+        label: `Status: ${statusLabel}`,
+        value: statusVal
+      });
+    }
+
+    return chips;
+  });
+
+  removeFilterChip(chip: BilateralReviewFilterChip): void {
+    let nextCenters = this.centers();
+    let nextProjects = this.projects();
+    let nextCategories = this.categories();
+    let nextSearch = this.search();
+    let nextStatus = this.status();
+
+    switch (chip.dimension) {
+      case 'search':
+        nextSearch = '';
+        this.search.set('');
+        break;
+      case 'status':
+        nextStatus = 'all';
+        this.status.set('all');
+        break;
+      case 'center':
+        nextCenters = nextCenters.filter(c => c !== chip.value);
+        this.centers.set(nextCenters);
+        break;
+      case 'project':
+        nextProjects = nextProjects.filter(p => p !== chip.value);
+        this.projects.set(nextProjects);
+        break;
+      case 'category':
+        nextCategories = nextCategories.filter(cat => cat !== chip.value);
+        this.categories.set(nextCategories);
+        break;
+    }
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        [BILATERAL_REVIEW_QUERY_PARAM_MAP.search]: nextSearch.trim() || null,
+        [BILATERAL_REVIEW_QUERY_PARAM_MAP.status]: nextStatus === 'all' ? null : nextStatus,
+        [BILATERAL_REVIEW_QUERY_PARAM_MAP.center]: joinBilateralReviewListParam(nextCenters),
+        [BILATERAL_REVIEW_QUERY_PARAM_MAP.project]: joinBilateralReviewListParam(nextProjects),
+        [BILATERAL_REVIEW_QUERY_PARAM_MAP.category]: joinBilateralReviewListParam(nextCategories)
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+  }
 
   // ── View states (BRT-R-31) — mutually exclusive ────────────────────────────────────────────
   /** BRC-R-5/AC-14: a phase-catalogue request failure, OR the catalogue settling with genuinely no
@@ -1035,24 +1214,16 @@ export class BilateralReviewComponent {
   }
 
   // ── Cycle select (BRC-T-1, BRC-R-7) ────────────────────────────────────────────────────────
-  /** `(changed)` handler for the popover Cycle select. A no-op when the value is unchanged or not
-   *  a real number (BRC-AC-8b): `app-pr-filter-select.pick()` toggles to its `emptyValue` (default
-   *  `'all'`) when the SAME option is re-picked — this guard rejects that `NaN`-after-`Number()`
-   *  emit as well as a genuine repeat of the current numeric id. Deliberately NOT bound via
-   *  `[emptyValue]="selectedVersionId()"`: that binding would make the shared component's own
-   *  `hasValue` getter (`value !== emptyValue`) permanently false, so the trigger would never show
-   *  the phase name — a straight contradiction of BRC-AC-6. Writes `?phase=` only on an actual
+  /** Click handler for the popover Cycle pill grid. A no-op when the value is unchanged or not a
+   *  real number (BRC-AC-8b) — the pill's own "selected" look is derived straight from
+   *  `selectedVersionId()` on every render (BRH-T-1 attempt 2 replaced the old
+   *  `app-pr-filter-select` CVA child with a plain owned button grid), so a no-op re-pick needs no
+   *  resync of any child state; it simply does nothing further. Writes `?phase=` only on an actual
    *  change; picking the current phase clears the param instead of writing it explicitly (same
    *  "empty removes the key" convention the other five filter dimensions use). */
   setPhase(id: number): void {
     const next = Number(id);
-    if (Number.isNaN(next) || next === this.selectedVersionId()) {
-      // Leader-found defect: re-sync the child's OWN displayed value — see the `cycleSelect`
-      // field doc above. `writeValue` is a public CVA method; it re-renders the child (its own
-      // `cdr.markForCheck()`) without touching this page's state or issuing any request/navigation.
-      this.cycleSelect()?.writeValue(this.selectedVersionId());
-      return;
-    }
+    if (Number.isNaN(next) || next === this.selectedVersionId()) return;
     this.phaseParam.set(next === this.currentPhaseId() ? null : next);
     this.router.navigate([], {
       relativeTo: this.route,
@@ -1065,11 +1236,25 @@ export class BilateralReviewComponent {
   // ── Filter popover ──────────────────────────────────────────────────────────────────────────
   toggleFilterPopover(event: Event): void {
     event.stopPropagation();
-    this.filterPopoverOpen.update(open => !open);
+    const opening = !this.filterPopoverOpen();
+    this.filterPopoverOpen.set(opening);
+    if (!opening) this.resetFilterOptionSearches();
   }
 
   closeFilterPopover(): void {
     this.filterPopoverOpen.set(false);
+    this.resetFilterOptionSearches();
+  }
+
+  /** @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, Reviewer round 2) — the
+   *  three option-search needles are POPOVER-LOCAL view state, not filter state: left behind, a
+   *  needle typed in one visit silently hides a SELECTED option on the next open (the chip in Row 2
+   *  still says `Center: CIP` while the popover shows an empty list). Reset on every close path and
+   *  on both clear actions, so the popover always reopens showing every option. */
+  private resetFilterOptionSearches(): void {
+    this.centerOptionSearch.set('');
+    this.projectOptionSearch.set('');
+    this.categoryOptionSearch.set('');
   }
 
   /** Clears the Center / Bilateral project / Indicator category popover filters only — the
@@ -1081,6 +1266,7 @@ export class BilateralReviewComponent {
     this.centers.set([]);
     this.projects.set([]);
     this.categories.set([]);
+    this.resetFilterOptionSearches();
   }
 
   /** The filtered-empty state's "Clear filters" (BRT-R-31): whatever combination of search,
@@ -1101,6 +1287,7 @@ export class BilateralReviewComponent {
    *  `group` and `view` are never touched (no key at all, not even `null`), and none of the five
    *  keys removed here is read by the list-loading effect, so no request results. */
   clearEverything(): void {
+    this.resetFilterOptionSearches();
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {
@@ -1120,11 +1307,27 @@ export class BilateralReviewComponent {
     const target = event?.target as HTMLElement | null;
     if (typeof target?.closest === 'function' && target.closest('.brt-filter-container')) return;
     if (target && typeof document !== 'undefined' && document.contains && !document.contains(target)) return;
-    if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
+    if (this.filterPopoverOpen()) this.closeFilterPopover();
   }
 
-  @HostListener('document:keydown.escape')
-  onEscape(): void {
-    if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
+  /** @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL fix + Reviewer
+   *  round 2) — Escape closes the popover and returns focus to its trigger, so a keyboard user is
+   *  never dropped onto `<body>` (client hard rule 4). Two containment guards, both needed because
+   *  this is a `document:` listener on a page that also hosts the review drawer:
+   *  1. An Escape raised INSIDE `app-result-review-drawer` belongs to the drawer — the popover must
+   *     not consume it, and must certainly not close and yank focus out of the open drawer.
+   *  2. Focus is moved to the trigger ONLY when the Escape came from inside the filter container
+   *     (trigger + popover, `.brt-filter-container` — the same boundary `onDocumentClick` uses).
+   *     Escape from anywhere else still dismisses the popover (rule 4) but leaves the user's own
+   *     focus exactly where it was: stealing it would be a worse a11y bug than the one this fixes. */
+  @HostListener('document:keydown.escape', ['$event'])
+  onEscape(event?: Event): void {
+    if (!this.filterPopoverOpen()) return;
+    const target = event?.target as HTMLElement | null;
+    const closest = typeof target?.closest === 'function' ? (selector: string) => target.closest(selector) : () => null;
+    if (closest('app-result-review-drawer')) return;
+    const fromInsideFilterContainer = !!closest('.brt-filter-container');
+    this.closeFilterPopover();
+    if (fromInsideFilterContainer) this.filterButtonRef()?.nativeElement.focus();
   }
 }

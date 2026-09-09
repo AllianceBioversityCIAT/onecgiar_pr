@@ -31,7 +31,13 @@ function row(partial: Partial<ProgrammeResultRow> = {}): ProgrammeResultRow {
 }
 
 function column(partial: Partial<MyWorkColumn> = {}): MyWorkColumn {
-  return { key: 'editing', label: 'Editing', group: 'action', rows: [], ...partial };
+  return {
+    key: 'editing',
+    label: 'Editing',
+    group: 'action',
+    rows: [],
+    ...partial
+  };
 }
 
 describe('MyWorkColumnComponent', () => {
@@ -141,7 +147,14 @@ describe('MyWorkColumnComponent', () => {
       });
 
       it('renders no collapse control on a non-collapsible column (default)', async () => {
-        await build({ column: column({ key: 'approved', label: 'Quality assessed', rows: [row()] }) });
+        await build({
+          column: column({
+            key: 'inQa',
+            label: 'In QA',
+            group: 'done',
+            rows: [row({ statusId: 2, statusName: 'Quality Assessed' })]
+          })
+        });
 
         expect(root().querySelector('button[aria-expanded]')).toBeNull();
         expect(root().querySelectorAll('button[aria-label^="Collapse"]').length).toBe(0);
@@ -151,7 +164,7 @@ describe('MyWorkColumnComponent', () => {
 
   describe('rail (collapsed) mode', () => {
     it('renders a 44px aria-expanded button carrying the count and the vertical label', async () => {
-      // `MWB-T-10`: Quality assessed is never a rail any more — Discontinued is the canonical one.
+      // Closed is the canonical rail column.
       await build({
         column: column({ key: 'discontinued', label: 'Discontinued', rows: [row(), row({ code: '2' }), row({ code: '3' }), row({ code: '4' })] }),
         rail: true,

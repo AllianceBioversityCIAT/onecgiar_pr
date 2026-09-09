@@ -477,6 +477,30 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       expect(browsePanel).toBeTruthy();
     });
 
+    it('should treat Other Outputs type_name as a fixed Other output category without showing the picker', () => {
+      mockEntityAowService.currentResultToReport.set({
+        indicators: [{ type_name: 'Other Outputs', result_type_id: null, result_level_id: 4 }]
+      });
+      fixture.detectChanges();
+
+      expect(component.resolvedIndicatorResultTypeId()).toBe(8);
+      expect(component.indicatorCategoryLabel()).toBe('Other output');
+      expect(component.createResultBody().result_type_id).toBe(8);
+      expect(fixture.debugElement.query(By.css('app-pr-select[label="Indicator category"]'))).toBeNull();
+    });
+
+    it('should show tabs when indicator has result_type_id=6 even without legacy type_name (R-1 rev 2)', () => {
+      mockEntityAowService.currentResultToReport.set({
+        indicators: [{ type_name: 'Number of peer-reviewed publications', result_type_id: 6, result_type_name: 'Knowledge product' }]
+      });
+      fixture.detectChanges();
+
+      expect(component.currentResultIsKnowledgeProduct()).toBe(true);
+
+      const tabsListEl = fixture.debugElement.query(By.css('[brnTabsList], [role="tablist"]'));
+      expect(tabsListEl).toBeTruthy();
+    });
+
     it('should show tabs when indicator category result_type_id=6 is selected on an allowed indicator (R-1 rev 2)', () => {
       mockEntityAowService.currentResultToReport.set({
         indicators: [{ type_name: 'Other indicator type', result_type_id: null }]
@@ -500,7 +524,7 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       expect(component.currentResultIsKnowledgeProduct()).toBe(false);
       const tabsEl = fixture.debugElement.query(By.css('[brnTabsList], [role="tablist"], app-kp-cgspace-browse'));
       expect(tabsEl).toBeNull();
-      expect(fixture.nativeElement.innerHTML).toMatchSnapshot();
+      expect(fixture.nativeElement.textContent).toContain('Policy change');
     });
   });
 

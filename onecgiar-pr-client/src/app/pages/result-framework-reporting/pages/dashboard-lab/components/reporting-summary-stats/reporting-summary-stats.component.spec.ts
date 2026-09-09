@@ -42,27 +42,22 @@ describe('ReportingSummaryStatsComponent', () => {
     expect(text).toContain('KPIs with Evidence');
   });
 
-  describe('Total KPIs zero-target disclosure (KCR-R-2.1)', () => {
+  describe('Total KPIs planned disclosure', () => {
     const kpiCard = (): HTMLElement => {
       const heading = Array.from(root().querySelectorAll('span')).find(s => s.textContent?.trim() === 'Total KPIs');
       return heading!.closest('div.flex.flex-col') as HTMLElement;
     };
     const totalKpisFigure = (): HTMLElement => kpiCard().querySelector('.pr-figure') as HTMLElement;
 
-    it('states planned and the plural exclusion', () => {
-      render({ totalKpis: 9, reportedKpis: 1, plannedKpis: 11, zeroTargetKpis: 2 });
-      expect(totalKpisFigure().textContent?.trim()).toBe('9');
-      expect(totalKpisFigure().getAttribute('title')).toBe('11 planned · excludes 2 zero-target KPIs');
-    });
-
-    it('drops the excludes clause when nothing was excluded', () => {
-      render({ totalKpis: 11, plannedKpis: 11, zeroTargetKpis: 0 });
+    it('states planned count when provided — every KPI counts, no exclusion clause', () => {
+      render({ totalKpis: 11, reportedKpis: 1, plannedKpis: 11, zeroTargetKpis: 0 });
+      expect(totalKpisFigure().textContent?.trim()).toBe('11');
       expect(totalKpisFigure().getAttribute('title')).toBe('11 planned');
     });
 
-    it('uses the singular noun for exactly one zero-target KPI', () => {
-      render({ totalKpis: 10, plannedKpis: 11, zeroTargetKpis: 1 });
-      expect(totalKpisFigure().getAttribute('title')).toBe('11 planned · excludes 1 zero-target KPI');
+    it('omits exclusion copy even when legacy zeroTargetKpis is present on the input', () => {
+      render({ totalKpis: 11, plannedKpis: 11, zeroTargetKpis: 2 });
+      expect(totalKpisFigure().getAttribute('title')).toBe('11 planned');
     });
 
     it('omits the title when no planned figure is provided', () => {

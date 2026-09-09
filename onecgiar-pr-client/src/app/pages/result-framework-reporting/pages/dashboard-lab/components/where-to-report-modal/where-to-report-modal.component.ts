@@ -5,18 +5,16 @@ import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { buildReportedResultsByProjectId } from '../reporting-entry-hub/reporting-entry-hub.util';
 
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { EntityAowService } from '../../../entity-aow/services/entity-aow.service';
-import { BilateralCreationService } from '../../../../../bilateral/services/bilateral-creation.service';
-import { BilateralProject } from '../../../../../bilateral/services/bilateral-creation.interfaces';
 import { PrDialogComponent } from '../../../../../../shared/components/pr-dialog/pr-dialog.component';
 import { isAvisaInitiative } from '../../../../../../shared/utils/avisa-initiative.util';
 import { buildRatio } from '../../reporting-burndown';
 import {
   HubAowRow,
-  HubCreateResultEvent,
   HubProgramLevelKind,
   HubProgramLevelRow,
   HubW3Data,
@@ -36,7 +34,6 @@ export class WhereToReportModalComponent {
   private readonly api = inject(ApiService);
   private readonly dataControlSE = inject(DataControlService);
   private readonly entityAowService = inject(EntityAowService);
-  private readonly bilateralCreationSE = inject(BilateralCreationService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -69,8 +66,10 @@ export class WhereToReportModalComponent {
   readonly internalAowRows = signal<HubAowRow[]>([]);
   readonly internalProgramLevelRows = signal<HubProgramLevelRow[]>([]);
   readonly internalW1W2Loading = signal<boolean>(false);
+  readonly internalReportedResultsByProjectId = signal<Map<string, number>>(new Map());
 
   readonly w3State = computed(() => this.customW3State() ?? this.internalW3State());
+  readonly reportedResultsByProjectId = computed(() => this.internalReportedResultsByProjectId());
   readonly aowRows = computed(() => this.customAowRows() ?? this.internalAowRows());
   readonly programLevelRows = computed(() => this.customProgramLevelRows() ?? this.internalProgramLevelRows());
   readonly w1w2Loading = computed(() => this.internalW1W2Loading());
@@ -99,10 +98,17 @@ export class WhereToReportModalComponent {
 
   private fetchW3(code: string): void {
     this.internalW3State.set({ status: 'loading' });
-    this.api.resultsSE.GET_reportingEntryHubProjects(code)
+    this.internalReportedResultsByProjectId.set(new Map());
+    const versionId = this.dataControlSE.reportingCurrentPhase?.phaseId;
+    forkJoin({
+      projects: this.api.resultsSE.GET_reportingEntryHubProjects(code),
+      reported: this.api.resultsSE.GET_ResultToReview(code, undefined, versionId).pipe(catchError(() => of({ response: [] })))
+    })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ response }: { response: HubW3Data }) => {
+        next: ({ projects, reported }) => {
+          this.internalReportedResultsByProjectId.set(buildReportedResultsByProjectId(reported?.response));
+          const response = projects?.response as HubW3Data;
           const status = (response?.centers?.length ?? 0) === 0 ? 'no-centers' : 'ready';
           this.internalW3State.set({ status, data: response });
         },
@@ -202,10 +208,4 @@ export class WhereToReportModalComponent {
     });
   }
 
-  onCreateResult(event: HubCreateResultEvent): void {
-    this.closeModal();
-    if (!event?.center?.acronym) return;
-    this.bilateralCreationSE.selectProject(event.project as unknown as BilateralProject);
-    this.router.navigate(['/bilateral', event.center.acronym, 'create']);
-  }
 }

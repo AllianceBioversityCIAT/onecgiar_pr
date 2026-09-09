@@ -36,12 +36,10 @@
         }
       </div>
       <div class="report-result-content_left_content">
-        @if (entityAowService.currentResultToReport().indicators?.[0]?.result_type_id) {
+        @if (resolvedIndicatorResultTypeId() != null) {
           <div class="report-result-content_left_content_indicator">
             <span class="report-result-content_left_content_label">Indicator category: </span>
-            <span class="report-result-content_left_content_value">{{
-              entityAowService.currentResultToReport()?.indicators?.[0]?.result_type_name
-            }}</span>
+            <span class="report-result-content_left_content_value">{{ indicatorCategoryLabel() }}</span>
           </div>
         } @else {
           <div>

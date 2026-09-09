@@ -282,6 +282,51 @@ describe('LabReportFormComponent', () => {
 
   // quick/category-picker-kp-reset (2026-09-04) — field bug: picking "Knowledge product" in the
   // category picker snapped back to "Select a category" while every other category stuck.
+  describe('Other output / Other outcome category resolution', () => {
+    it('skips the picker when result_type_name declares Other output without an id', async () => {
+      await setup({
+        indicator: indicator({
+          result_type_id: null,
+          result_type_name: 'Other output',
+          type_name: 'Number of custom deliverables'
+        }),
+        tocNode: { result_level_id: OUTPUT_LEVEL }
+      });
+
+      expect(component.needsCategoryChoice()).toBe(false);
+      expect(component.resolvedIndicatorResultTypeId()).toBe(8);
+      expect(component.indicatorCategoryLabel()).toBe('Other output');
+      expect(component.createResultBody().result_type_id).toBe(8);
+    });
+
+    it('skips the picker when type_name is Other Outputs', async () => {
+      await setup({
+        indicator: indicator({ result_type_id: null, type_name: 'Other Outputs' }),
+        tocNode: { result_level_id: OUTPUT_LEVEL }
+      });
+
+      expect(component.needsCategoryChoice()).toBe(false);
+      expect(component.resolvedIndicatorResultTypeId()).toBe(8);
+      expect(component.indicatorCategoryLabel()).toBe('Other output');
+    });
+  });
+
+  describe('indicator with result_type_id 6', () => {
+    it('enters KP mode from result_type_id even when type_name is not the legacy metric label', async () => {
+      await setup({
+        indicator: indicator({
+          result_type_id: 6,
+          result_type_name: 'Knowledge product',
+          type_name: 'Number of peer-reviewed publications'
+        }),
+        tocNode: {}
+      });
+
+      expect(component.currentResultIsKnowledgeProduct()).toBe(true);
+      expect(component.needsCategoryChoice()).toBe(false);
+    });
+  });
+
   describe('picking Knowledge product in the category picker', () => {
     it('keeps the choice, switches to KP mode and defaults the contribution to 1', async () => {
       await setup({ indicator: indicator({ result_type_id: null, type_name: 'Number of services' }), tocNode: { result_level_id: OUTPUT_LEVEL } });
@@ -832,6 +877,28 @@ describe('LabReportFormComponent — Form 3-Card Architecture DOM Rendering (RFU
     expect(card3?.classList.contains('rounded-xl')).toBe(true);
 
     expect(fix.nativeElement.textContent).not.toContain('The result');
+  });
+
+  it('explains which collaboration fields are pre-filled from the ToC (RFUX-R-2)', async () => {
+    const fix = await mount({
+      indicator: {
+        indicator_id: 1,
+        result_type_id: 7,
+        result_level_id: OUTPUT_LEVEL,
+        type_name: 'Number of innovations',
+        center_acronym: 'CIMMYT'
+      },
+      tocNode: { result_level_id: OUTPUT_LEVEL, contributing_synergy_program_initiative_ids: [6] }
+    });
+
+    const note = fix.nativeElement.querySelector('[data-testid="toc-attribution-note"]') as HTMLElement;
+    expect(note).toBeTruthy();
+    expect(note.textContent).toContain('Pre-filled from your Theory of Change');
+    expect(note.textContent).toContain('Contributing CGIAR Centers');
+    expect(note.textContent).toContain('CIMMYT');
+    expect(note.textContent).toContain('Lead center');
+    expect(note.textContent).toContain('W3 and bilateral projects');
+    expect(note.textContent).toContain('not pre-filled');
   });
 
   it('preserves Knowledge Product browse flow: renders only Card 1 before item selection', async () => {
