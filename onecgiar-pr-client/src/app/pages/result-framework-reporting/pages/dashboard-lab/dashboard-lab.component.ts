@@ -3213,18 +3213,34 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       const key = this.tocCacheKey(sp, aow.code);
       const toc = map.get(key);
       const fromTier = (groups: any[] | undefined, tier: 'output' | 'outcome') =>
-        (groups ?? []).flatMap((g: any) =>
-          (g?.indicators ?? []).map((i: any) => ({
-            ...i,
-            __aowCode: aow.code,
-            __aowName: aow.name,
-            __hlo: g?.result_title,
-            __tier: tier,
-            toc_result_id: g?.toc_result_id,
-            __hloNode: g,
-            __isIntermediateCrosscut: tier === 'outcome' && g?.is_aow !== true
-          }))
-        );
+        // P2-3336 rule 1, PO 2026-09-09: an Intermediate Outcome with no work package belongs to the
+        // Science Program, not to this AoW. The server returns it under EVERY AoW on purpose
+        // (`aow-bilateral.repository.ts`, `AND (wp.toc_id IS NOT NULL OR tr.wp_id IS NULL)`) and the
+        // `Intermediate outcomes` card already serves it from its own endpoint — so inside an AoW it
+        // was the same node drawn once per AoW of the programme.
+        //
+        // This is the ONLY door such a node uses to enter an AoW bundle, which is why the filter is
+        // here and not in each consumer: cards, By-AOW, the flat table, the panel and the filter
+        // counters all read this array. `dashboard-lab.toc-map.ts` already applies exactly this rule
+        // (`const owned = node?.is_aow === true`); this aligns the cards with it.
+        //
+        // OUTPUTS are deliberately untouched — the rule speaks about Intermediate Outcomes only. A
+        // missing `is_aow` still reads as belonging to the AoW (the stamp below reads it the other
+        // way round; see the CLAUDE.md note on the two conventions).
+        (groups ?? [])
+          .filter((g: any) => tier !== 'outcome' || g?.is_aow !== false)
+          .flatMap((g: any) =>
+            (g?.indicators ?? []).map((i: any) => ({
+              ...i,
+              __aowCode: aow.code,
+              __aowName: aow.name,
+              __hlo: g?.result_title,
+              __tier: tier,
+              toc_result_id: g?.toc_result_id,
+              __hloNode: g,
+              __isIntermediateCrosscut: tier === 'outcome' && g?.is_aow !== true
+            }))
+          );
       const indicators = [...fromTier(toc?.outputs, 'output'), ...fromTier(toc?.outcomes, 'outcome')];
       // `!toc` alone, NOT "key is in loadingTocKeys": before `loadToc` runs for this key the set
       // does not contain it, and that gap painted "0 KPIs · 0 of 0 · 0%" headers that then jumped

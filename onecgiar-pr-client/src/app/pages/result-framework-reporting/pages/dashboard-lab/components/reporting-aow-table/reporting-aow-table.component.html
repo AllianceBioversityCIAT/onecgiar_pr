@@ -497,6 +497,26 @@
             @if (group.loading) {
               <div class="px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">Loading indicators…</div>
             } @else {
+              <!--
+                P2-3336 rule 1. This card is now the only place a work-package-less Intermediate
+                Outcome appears — it used to be repeated inside every AoW card too. The note says
+                why it sits apart. Same icon+paragraph shape as the sibling legacy screens
+                (entity-aow-unplanned / entity-aow-aow), rebuilt in Tailwind with arbitrary px
+                because this template takes no rem-based utilities (html is 12px).
+              -->
+              @if (isIntermediateBucket(group)) {
+                <div
+                  class="mx-[24px] mt-[16px] flex items-start gap-[8px] rounded-[8px] border border-[var(--pr-color-primary-100)] bg-[var(--pr-color-primary-50)] px-[12px] py-[9px]">
+                  <span
+                    class="material-icons-round text-[16px] leading-[18px] text-[var(--pr-color-primary-400)]"
+                    aria-hidden="true">
+                    info
+                  </span>
+                  <p class="m-0 text-[12.5px] leading-[18px] text-[var(--pr-text-secondary)]">
+                    {{ intermediateBucketNote }}
+                  </p>
+                </div>
+              }
               <!-- ── In-Card Quick Breakdown & Jump-to Toolbar ── -->
               @let centers = centerCountsOf(group);
               @let visibleCenters = visibleCentersOf(group);
@@ -975,7 +995,7 @@
       <button
         type="button"
         class="block w-full border-0 bg-transparent p-0 text-center cursor-pointer group/target"
-        [prTooltip]="(isIntermediateRow(bucketKind) || isCrossCuttingIntermediate(row)) ? intermediateTargetTooltip : ''"
+        [prTooltip]="isIntermediateRow(bucketKind) ? intermediateTargetTooltip : ''"
         (click)="emitAndStop(openTarget, row, $event)">
         <span
           class="pr-figure-sm block text-[13px] font-semibold tabular-nums text-[var(--pr-text-heading)] group-hover/target:text-[var(--pr-color-primary-600)] transition-colors">
