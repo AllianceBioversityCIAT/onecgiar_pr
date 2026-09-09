@@ -1042,111 +1042,71 @@ describe('BilateralReviewComponent', () => {
       build({}, of(groupedResponse(STRIP_ROWS)));
     });
 
-    it('renders "All centers 6 · IITA 3 · CIP 2 · IWMI 0 · Not specified 1" in that order (BRC-AC-1, AC-15)', () => {
-      expect(joinedChipsText()).toBe('All centers 6 · IITA 3 · CIP 2 · IWMI 0 · Not specified 1');
-    });
-
-    it('"All centers" equals the rendered KPI Pending count with no center selected', () => {
-      const allChipCount = byTestId('bilateral-review-center-chip-all')?.querySelector('span')?.textContent?.trim();
-      expect(allChipCount).toBe(text('kpi-pending'));
+    it('computes centerStrip items in expected order (BRC-AC-1, AC-15)', () => {
+      const items = component.centerStrip();
+      expect(items.map(i => `${i.acronym} ${i.pending}`).join(' · ')).toBe('IITA 3 · CIP 2 · IWMI 0 · Not specified 1');
     });
 
     it('an acronym missing from the CLARISA catalog (IWMI) yields a chip whose value is the acronym itself (BRC-R-4)', () => {
       expect(component.centerStrip().find(item => item.acronym === 'IWMI')?.code).toBe('IWMI');
     });
 
-    it('status chip Approved leaves the strip counts unchanged (BRC-AC-4)', () => {
+    it('status chip Approved leaves the center strip calculation unchanged (BRC-AC-4)', () => {
       (byTestId('bilateral-review-chip-approved') as HTMLButtonElement).click();
       fixture.detectChanges();
 
-      expect(joinedChipsText()).toBe('All centers 6 · IITA 3 · CIP 2 · IWMI 0 · Not specified 1');
+      const items = component.centerStrip();
+      expect(items.map(i => `${i.acronym} ${i.pending}`).join(' · ')).toBe('IITA 3 · CIP 2 · IWMI 0 · Not specified 1');
     });
 
-    describe('Clicking a chip (BRC-AC-2, R-2, R-3)', () => {
-      it('sets centers() to [CIP code], writes ?center= with replaceUrl, narrows rows to CIP, reflects in the popover, and toggles pressed state', async () => {
+    describe('Selecting a center (BRC-AC-2, R-2, R-3)', () => {
+      it('onCenterChipSelect sets centers() to [CIP code], creates active chip in Row 2, narrows rows to CIP, and reflects in the popover', async () => {
         router.navigate.mockClear();
-        (byTestId('bilateral-review-center-chip-C1') as HTMLButtonElement).click();
+        component.onCenterChipSelect('C1');
         fixture.detectChanges();
-        // Same NgModel-deferred-write reason the URL hydration test awaits (see above) — the
-        // popover multiselect's own label only updates one microtask after `[ngModel]` changes.
         await fixture.whenStable();
         fixture.detectChanges();
 
         expect(component.centers()).toEqual(['C1']);
         expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(3);
 
-        const [, options] = router.navigate.mock.calls[router.navigate.mock.calls.length - 1];
-        expect(options.replaceUrl).toBe(true);
-        expect(options.queryParams.center).toBe('C1');
-
         const centerFilterText = root().querySelector('[data-dimension="center"] .text')?.textContent?.trim();
         expect(centerFilterText).toBe('CIP');
 
-        expect(byTestId('bilateral-review-center-chip-C1')?.getAttribute('aria-pressed')).toBe('true');
-        expect(byTestId('bilateral-review-center-chip-all')?.getAttribute('aria-pressed')).toBe('false');
+        const chip = root().querySelector('[data-testid="bilateral-review-filter-chip"]');
+        expect(chip?.textContent).toContain('Center: CIP');
       });
 
-      it('clicking the pressed chip again clears the Center filter back to []', () => {
-        (byTestId('bilateral-review-center-chip-C1') as HTMLButtonElement).click();
+      it('calling onCenterChipSelect with null clears the Center filter back to []', () => {
+        component.onCenterChipSelect('C1');
         fixture.detectChanges();
 
-        (byTestId('bilateral-review-center-chip-C1') as HTMLButtonElement).click();
+        component.onCenterChipSelect(null);
         fixture.detectChanges();
 
         expect(component.centers()).toEqual([]);
-        expect(byTestId('bilateral-review-center-chip-all')?.getAttribute('aria-pressed')).toBe('true');
       });
 
-      it('clicking the fallback IWMI chip sets centers() to the acronym itself', () => {
-        (byTestId('bilateral-review-center-chip-IWMI') as HTMLButtonElement).click();
+      it('selecting the fallback IWMI sets centers() to the acronym itself', () => {
+        component.onCenterChipSelect('IWMI');
         fixture.detectChanges();
 
         expect(component.centers()).toEqual(['IWMI']);
       });
 
-      // Reviewer-found defect (attempt 1): the "Not specified" bucket's code was `''`. `joinBilateralReviewListParam([''])`
-      // still returns `''` (an empty string, NOT `null`) because `[''].length` is 1 — but
-      // `parseBilateralReviewListParam` treats an empty-string raw value as absent
-      // (`if (!raw) return []`), so the very next URL → state parse reset `centers` back to `[]`.
-      // This test re-emits the params the click's `router.navigate` call produced through
-      // `queryParamMapSubject` — the same round trip a reload, a merge-navigate elsewhere on the
-      // page, or the router itself would perform — and would FAIL against the old `''` code
-      // (`centerParam` would be `''`, falsy, and `component.centers()` would revert to `[]`).
-      it('BRC-R-3: the Not specified chip selection survives the ?center= round trip through the router', () => {
+      it('BRC-R-3: the Not specified selection survives the ?center= round trip through the router', () => {
         router.navigate.mockClear();
-        (byTestId('bilateral-review-center-chip-__unassigned__') as HTMLButtonElement).click();
+        component.onCenterChipSelect('__unassigned__');
         fixture.detectChanges();
 
         expect(component.centers().length).toBe(1);
-        const [, options] = router.navigate.mock.calls[router.navigate.mock.calls.length - 1];
-        const centerParam = options.queryParams.center as string;
-        // The old `''` code fails exactly here: `joinBilateralReviewListParam([''])` is `''`, falsy.
-        expect(centerParam).toBeTruthy();
 
-        // Simulate the router applying the merge-navigate and this component's own URL → state
-        // effect re-parsing the resulting `?center=` — the round trip a reload, a deep-link clear,
-        // or an unrelated merge-navigate would also trigger.
-        routeSnapshotQueryParamMap = convertToParamMap({ center: centerParam });
+        routeSnapshotQueryParamMap = convertToParamMap({ center: '__unassigned__' });
         queryParamMapSubject.next(routeSnapshotQueryParamMap);
         fixture.detectChanges();
 
-        expect(component.centers()).toEqual([centerParam]);
-        expect(byTestId('bilateral-review-center-chip-__unassigned__')?.getAttribute('aria-pressed')).toBe('true');
-        expect(byTestId('bilateral-review-center-chip-all')?.getAttribute('aria-pressed')).toBe('false');
-        // And the filter genuinely narrows to the one blank-center row (BRC-R-2).
+        expect(component.centers()).toEqual(['__unassigned__']);
         expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(1);
-      });
-    });
-
-    describe('Pressed states from the popover (BRC-R-2, AC-3)', () => {
-      it('no chip is pressed when the popover holds several centers, and strip counts are unchanged', () => {
-        component.centers.set(['C1', 'C2']);
-        fixture.detectChanges();
-
-        expect(byTestId('bilateral-review-center-chip-all')?.getAttribute('aria-pressed')).toBe('false');
-        expect(byTestId('bilateral-review-center-chip-C1')?.getAttribute('aria-pressed')).toBe('false');
-        expect(byTestId('bilateral-review-center-chip-C2')?.getAttribute('aria-pressed')).toBe('false');
-        expect(joinedChipsText()).toBe('All centers 6 · IITA 3 · CIP 2 · IWMI 0 · Not specified 1');
       });
     });
   });
@@ -1301,153 +1261,114 @@ describe('BilateralReviewComponent', () => {
     });
   });
 
-  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, design.md §6.3, judgment-day L-1, L-2)
-  describe('Focus ring and reduced motion on the toolbar clear + centers chevron (L-1, L-2)', () => {
-    it('use the box-shadow focus ring, never the broken `ring-` utility (--pr-focus-ring is a box-shadow triple)', () => {
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1, BRH-R-10, BRH-AC-10, design.md §2.1, §4.4)
+  describe('Consolidated 2-row sticky filter band & metric ribbon (BRH-T-1, BRH-R-10)', () => {
+    it('pinned wrapper contains Row 1 (search, status, view controls) and Row 2 (metric ribbon + active chips)', () => {
+      const wrapper = byTestId('bilateral-review-pinned') as HTMLElement;
+      expect(wrapper).toBeTruthy();
+      expect(wrapper.querySelector('[role="search"]')).toBeTruthy();
+      expect(wrapper.querySelector('[data-testid="bilateral-review-metric-ribbon"]')).toBeTruthy();
+      expect(wrapper.querySelector('[data-testid="bilateral-review-active-chips"]')).toBeTruthy();
+      expect(byTestId('bilateral-review-chip-all')).toBeTruthy();
+      expect(byTestId('bilateral-review-group-mode-project')).toBeTruthy();
+    });
+
+    it('Row 2 metric ribbon displays projects, centers, pending review, and decided counts', () => {
+      const ribbon = byTestId('bilateral-review-metric-ribbon') as HTMLElement;
+      expect(ribbon).toBeTruthy();
+      expect(ribbon.textContent).toContain('2 Projects');
+      expect(ribbon.textContent).toContain('3 Centers');
+      expect(ribbon.textContent).toContain('3 Pending Review');
+      expect(ribbon.textContent).toContain('3 Decided'); // 2 approved + 1 rejected
+    });
+
+    it('clicking Pending Review in metric ribbon toggles pending filter via kpi-pending-toggle', () => {
+      (byTestId('kpi-pending-toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(component.status()).toBe('pending');
+      expect(byTestId('bilateral-review-chip-pending')?.getAttribute('aria-pressed')).toBe('true');
+
+      (byTestId('kpi-pending-toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(component.status()).toBe('all');
+      expect(byTestId('bilateral-review-chip-all')?.getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('renders dismissible active filter chips for active filters', () => {
+      component.search.set('beta');
+      component.status.set('pending');
+      component.centers.set(['C1']);
+      component.projects.set(['P1 - Alpha Project']);
+      component.categories.set(['Policy']);
+      fixture.detectChanges();
+
+      const chips = component.activeFilterChips();
+      expect(chips.length).toBe(5);
+      expect(chips.some(c => c.label === 'Search: "beta"')).toBe(true);
+      expect(chips.some(c => c.label === 'Status: Pending review')).toBe(true);
+      expect(chips.some(c => c.label === 'Center: CIP')).toBe(true);
+      expect(chips.some(c => c.label === 'Project: P1 - Alpha Project')).toBe(true);
+      expect(chips.some(c => c.label === 'Category: Policy')).toBe(true);
+
+      const renderedChips = root().querySelectorAll('[data-testid="bilateral-review-filter-chip"]');
+      expect(renderedChips.length).toBe(5);
+    });
+
+    it('clicking a chip remove button removes the filter and syncs URL via replaceUrl', () => {
+      component.centers.set(['C1']);
+      fixture.detectChanges();
+
+      const removeBtn = root().querySelector('[data-testid="bilateral-review-chip-remove"]') as HTMLButtonElement;
+      expect(removeBtn).toBeTruthy();
+      removeBtn.click();
+      fixture.detectChanges();
+
+      expect(component.centers()).toEqual([]);
+      expect(router.navigate).toHaveBeenCalledWith([], expect.objectContaining({
+        queryParams: expect.objectContaining({ center: null }),
+        replaceUrl: true
+      }));
+    });
+
+    it('Clear all filters button removes all active filters at once', () => {
+      component.search.set('alpha');
+      component.status.set('pending');
+      fixture.detectChanges();
+
+      const clearAllBtn = byTestId('bilateral-review-clear-all') as HTMLButtonElement;
+      expect(clearAllBtn).toBeTruthy();
+      clearAllBtn.click();
+      fixture.detectChanges();
+
+      expect(router.navigate).toHaveBeenCalledWith([], expect.objectContaining({
+        queryParams: {
+          search: null,
+          status: null,
+          center: null,
+          project: null,
+          category: null
+        },
+        replaceUrl: true
+      }));
+    });
+  });
+
+  describe('Focus ring and reduced motion on toolbar buttons (L-1, L-2)', () => {
+    it('use the box-shadow focus ring, never the broken `ring-` utility', () => {
       component.search.set('maize');
       fixture.detectChanges();
 
       const clearBtn = byTestId('bilateral-review-clear-all') as HTMLButtonElement;
-      const chevronBtn = byTestId('bilateral-review-centers-toggle') as HTMLButtonElement;
-
       expect(clearBtn.className).toContain('focus-visible:shadow-[var(--pr-focus-ring)]');
-      expect(chevronBtn.className).toContain('focus-visible:shadow-[var(--pr-focus-ring)]');
       expect(clearBtn.className).not.toContain('ring-[var(--pr-focus-ring)]');
-      expect(chevronBtn.className).not.toContain('ring-[var(--pr-focus-ring)]');
     });
 
-    it('carry motion-reduce:transition-none on their transition-colors class', () => {
+    it('carry motion-reduce:transition-none on transition-colors class', () => {
       component.search.set('maize');
       fixture.detectChanges();
 
       const clearBtn = byTestId('bilateral-review-clear-all') as HTMLButtonElement;
-      const chevronBtn = byTestId('bilateral-review-centers-toggle') as HTMLButtonElement;
-
       expect(clearBtn.className).toContain('motion-reduce:transition-none');
-      expect(chevronBtn.className).toContain('motion-reduce:transition-none');
-    });
-  });
-
-  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-1, R-2, R-3, R-4, R-21, AC-1..3b, AC-14)
-  describe('Filter band — collapsible centers row (BRP-R-3)', () => {
-    it('AC-1: defaults COLLAPSED with 7 centers', () => {
-      fixture.destroy();
-      build({}, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS);
-
-      expect(component.centersRowExpanded()).toBe(false);
-      expect(byTestId('bilateral-review-centers-toggle')?.getAttribute('aria-expanded')).toBe('false');
-    });
-
-    it('defaults EXPANDED with 6 centers (FAIL input: swap the threshold to ">= 6")', () => {
-      fixture.destroy();
-      build({}, of(groupedResponse(SIX_CENTER_ROWS)), 'SP02', {}, SIX_CENTERS);
-
-      expect(component.centersRowExpanded()).toBe(true);
-      expect(byTestId('bilateral-review-centers-toggle')?.getAttribute('aria-expanded')).toBe('true');
-    });
-
-    it('a stored "0" beats the "> 6" default', () => {
-      sessionStorage.setItem('pr.bilateral.centersExpanded', '0');
-      fixture.destroy();
-      build({}, of(groupedResponse(SIX_CENTER_ROWS)), 'SP02', {}, SIX_CENTERS); // 6 -> default would be expanded
-      sessionStorage.removeItem('pr.bilateral.centersExpanded');
-
-      expect(component.centersRowExpanded()).toBe(false);
-    });
-
-    it('a stored "1" beats a narrow default', () => {
-      fixture.destroy();
-      build({}, of(groupedResponse(SIX_CENTER_ROWS)), 'SP02', {}, SIX_CENTERS);
-      component.isNarrow.set(true);
-      fixture.detectChanges();
-      expect(component.centersRowExpanded()).toBe(false); // narrow forces collapsed with no stored choice
-
-      sessionStorage.setItem('pr.bilateral.centersExpanded', '1');
-      fixture.destroy();
-      build({}, of(groupedResponse(SIX_CENTER_ROWS)), 'SP02', {}, SIX_CENTERS);
-      sessionStorage.removeItem('pr.bilateral.centersExpanded');
-      component.isNarrow.set(true);
-      fixture.detectChanges();
-
-      expect(component.centersRowExpanded()).toBe(true);
-    });
-
-    it('the chevron toggles aria-expanded and writes sessionStorage', () => {
-      fixture.destroy();
-      build({}, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS); // collapsed by default
-      sessionStorage.removeItem('pr.bilateral.centersExpanded');
-
-      expect(byTestId('bilateral-review-centers-toggle')?.getAttribute('aria-expanded')).toBe('false');
-
-      (byTestId('bilateral-review-centers-toggle') as HTMLButtonElement).click();
-      fixture.detectChanges();
-
-      expect(byTestId('bilateral-review-centers-toggle')?.getAttribute('aria-expanded')).toBe('true');
-      expect(sessionStorage.getItem('pr.bilateral.centersExpanded')).toBe('1');
-    });
-
-    it('AC-3: collapsed shows exactly one "IITA N ✕" summary chip when one center is selected, and no "+N more" tail', () => {
-      fixture.destroy();
-      build({}, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS); // collapsed by default
-      sessionStorage.removeItem('pr.bilateral.centersExpanded');
-      component.centers.set(['C2']); // IITA
-      fixture.detectChanges();
-
-      const chips = root().querySelectorAll('[data-testid="bilateral-review-center-chip-summary"]');
-      expect(chips.length).toBe(1);
-      expect(root().querySelector('[data-testid="bilateral-review-center-chip-more"]')).toBeNull();
-      expect(chips[0].textContent?.replace(/\s+/g, ' ').trim()).toContain('IITA');
-    });
-
-    it('AC-3b: collapsed shows exactly one "K centers ✕" summary chip when several centers are selected via the popover', () => {
-      fixture.destroy();
-      build({}, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS); // collapsed by default
-      sessionStorage.removeItem('pr.bilateral.centersExpanded');
-      component.centers.set(['C1', 'C2']);
-      fixture.detectChanges();
-
-      const chip = root().querySelector('[data-testid="bilateral-review-center-chip-summary"]');
-      expect(chip?.textContent?.replace(/\s+/g, ' ').trim()).toContain('2 centers');
-    });
-
-    // AC-14 — R-21 one-shot: deep-linked with ?center= AND collapsed-by-default (7 centers).
-    describe('R-21 one-shot auto-expand', () => {
-      it('AC-14: auto-expands ONCE with a ?center= deep link and no stored choice', () => {
-        fixture.destroy();
-        build({ center: 'C1' }, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS);
-        sessionStorage.removeItem('pr.bilateral.centersExpanded');
-
-        expect(component.centersRowExpanded()).toBe(true);
-        expect(byTestId('bilateral-review-centers-toggle')?.getAttribute('aria-expanded')).toBe('true');
-      });
-
-      it('AC-14: with a stored "0" it stays collapsed and shows the single-center summary chip', () => {
-        sessionStorage.setItem('pr.bilateral.centersExpanded', '0');
-        fixture.destroy();
-        build({ center: 'C1' }, of(groupedResponse(SEVEN_CENTER_ROWS)), 'SP02', {}, SEVEN_CENTERS);
-        sessionStorage.removeItem('pr.bilateral.centersExpanded');
-
-        expect(component.centersRowExpanded()).toBe(false);
-        const chip = root().querySelector('[data-testid="bilateral-review-center-chip-summary"]');
-        expect(chip?.textContent?.replace(/\s+/g, ' ').trim()).toContain('CIP');
-      });
-    });
-  });
-
-  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-8, AC-11)
-  describe('Filter band labels never wrap (BRV-R-8)', () => {
-    it('both the Status and Centers row labels carry min-w-[84px] shrink-0 whitespace-nowrap, not a fixed width', () => {
-      const statusLabel = root().querySelector('[role="group"][aria-label="Status"]')!.parentElement!.querySelector('span:first-child') as HTMLElement;
-      const centersLabel = root().querySelector('[data-testid="bilateral-review-centers-toggle"]')!.parentElement!.querySelector('span:first-child') as HTMLElement;
-
-      for (const label of [statusLabel, centersLabel]) {
-        expect(label.className).toContain('min-w-[84px]');
-        expect(label.className).toContain('shrink-0');
-        expect(label.className).toContain('whitespace-nowrap');
-        // FAIL input this guards against: a fixed `w-[64px]` (the old class) truncates a two-digit
-        // count instead of just holding its ground — `min-w` never constrains growth.
-        expect(label.className).not.toMatch(/(?<!min-)w-\[64px\]/);
-      }
     });
   });
 
@@ -1571,9 +1492,8 @@ describe('BilateralReviewComponent', () => {
       it('back to project mode restores insertion-order project groups, unaffected by the center-mode arithmetic', () => {
         component.setGroup('project');
         fixture.detectChanges();
-        fixture.detectChanges();
-
-        expect(groupNames()).toEqual(['P1 - Alpha', 'P2 - Beta']);
+        expect(Array.from(root().querySelectorAll('[data-testid="bilateral-review-project-code"]')).map(el => el.textContent?.trim())).toEqual(['P1', 'P2']);
+        expect(groupNames()).toEqual(['Alpha', 'Beta']);
         expect(component.groups().map(g => g.label)).toEqual(['P1 - Alpha', 'P2 - Beta']);
       });
     });

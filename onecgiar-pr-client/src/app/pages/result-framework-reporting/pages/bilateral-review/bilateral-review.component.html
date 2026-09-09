@@ -30,412 +30,393 @@
         #pinnedWrapper
         data-testid="bilateral-review-pinned"
         class="min-[900px]:sticky min-[900px]:top-0 min-[900px]:z-[15] bg-[var(--pr-surface-app)] border-b border-[var(--pr-border-divider)]">
-      <!-- ═══ Toolbar (own, not the band's — BRT-DD-1) ═══ -->
-      <div
-        class="flex flex-wrap items-center justify-between gap-[10px] sm:gap-[12px] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]"
-        role="search"
-        aria-label="Bilateral review controls">
-        <div class="flex flex-wrap items-center gap-[10px]">
-          <!-- Search -->
-          <div class="relative h-[34px] w-[240px] max-sm:w-full">
-            <span class="pointer-events-none absolute left-[10px] top-1/2 flex -translate-y-1/2 text-[var(--pr-text-subtle)]">
-              <ng-icon name="lucideSearch" class="text-[15px]" />
-            </span>
-            <input
-              type="text"
-              class="h-[34px] w-full rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-app)] pl-[32px] pr-[28px] text-[13px] text-[var(--pr-text-heading)] outline-none transition-colors placeholder:text-[var(--pr-text-subtle)] focus-visible:border-[var(--pr-color-primary-300)] focus-visible:bg-[var(--pr-surface-card)]"
-              [placeholder]="copy.toolbar.searchPlaceholder"
-              [attr.aria-label]="copy.toolbar.searchAriaLabel"
-              data-testid="bilateral-review-search"
-              [value]="search()"
-              (input)="onSearchInput($any($event.target).value)" />
-            @if (search()) {
+        
+        <!-- ── Row 1 (~44-48px): Search + Matches + Popover Filter + Status Controls + View/Group Controls ── -->
+        <div
+          class="flex flex-wrap items-center justify-between gap-[10px] sm:gap-[12px] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[8px]"
+          role="search"
+          aria-label="Bilateral review controls">
+          
+          <!-- Row 1 Left: Search, match count, phase indicator, filter button/popover, and status segmented control -->
+          <div class="flex flex-wrap items-center gap-[8px] sm:gap-[10px]">
+            <!-- Search -->
+            <div class="relative h-[34px] w-[240px] max-sm:w-full">
+              <span class="pointer-events-none absolute left-[10px] top-1/2 flex -translate-y-1/2 text-[var(--pr-text-subtle)]">
+                <ng-icon name="lucideSearch" class="text-[15px]" />
+              </span>
+              <input
+                type="text"
+                class="h-[34px] w-full rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-app)] pl-[32px] pr-[28px] text-[13px] text-[var(--pr-text-heading)] outline-none transition-colors placeholder:text-[var(--pr-text-subtle)] focus-visible:border-[var(--pr-color-primary-300)] focus-visible:bg-[var(--pr-surface-card)]"
+                [placeholder]="copy.toolbar.searchPlaceholder"
+                [attr.aria-label]="copy.toolbar.searchAriaLabel"
+                data-testid="bilateral-review-search"
+                [value]="search()"
+                (input)="onSearchInput($any($event.target).value)" />
+              @if (search()) {
+                <button
+                  type="button"
+                  (click)="onSearchInput('')"
+                  class="absolute right-[8px] top-1/2 -translate-y-1/2 flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:text-slate-700"
+                  [attr.aria-label]="copy.toolbar.clearSearchAriaLabel">
+                  <span class="material-icons-round text-[14px]">close</span>
+                </button>
+              }
+            </div>
+
+            @if (search() && matchCount() !== null) {
+              <span
+                data-testid="bilateral-review-match-count"
+                class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold tabular-nums shrink-0"
+                [class]="matchCount() === 0 ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-violet-50 text-violet-700 border border-violet-200'">
+                {{ matchCount() }} {{ matchCount() === 1 ? 'match' : 'matches' }}
+              </span>
+            }
+
+            @if (phaseIndicator(); as phaseName) {
+              <span
+                data-testid="bilateral-review-phase-indicator"
+                class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium tabular-nums shrink-0 bg-slate-100 text-slate-600 border border-slate-200">
+                {{ copy.phaseIndicator(phaseName) }}
+              </span>
+            }
+
+            <!-- Filter popover button & popover -->
+            <div class="relative brt-filter-container">
               <button
                 type="button"
-                (click)="onSearchInput('')"
-                class="absolute right-[8px] top-1/2 -translate-y-1/2 flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:text-slate-700"
-                [attr.aria-label]="copy.toolbar.clearSearchAriaLabel">
-                <span class="material-icons-round text-[14px]">close</span>
-              </button>
-            }
-          </div>
-
-          @if (search() && matchCount() !== null) {
-            <span
-              data-testid="bilateral-review-match-count"
-              class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold tabular-nums shrink-0"
-              [class]="matchCount() === 0 ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-violet-50 text-violet-700 border border-violet-200'">
-              {{ matchCount() }} {{ matchCount() === 1 ? 'match' : 'matches' }}
-            </span>
-          }
-
-          <!-- @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-8) -->
-          @if (phaseIndicator(); as phaseName) {
-            <span
-              data-testid="bilateral-review-phase-indicator"
-              class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium tabular-nums shrink-0 bg-slate-100 text-slate-600 border border-slate-200">
-              {{ copy.phaseIndicator(phaseName) }}
-            </span>
-          }
-
-          <div class="h-[22px] w-[1px] bg-[var(--pr-border-divider)] mx-[2px] hidden sm:block"></div>
-
-          <!-- Filter popover -->
-          <div class="relative brt-filter-container">
-            <button
-              type="button"
-              (click)="toggleFilterPopover($event)"
-              class="inline-flex h-[34px] cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
-              [class]="
-                filtersActive()
-                  ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] font-semibold'
-                  : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] font-medium hover:border-slate-400 hover:bg-slate-50'
-              "
-              [attr.aria-label]="copy.toolbar.filterAriaLabel"
-              data-testid="bilateral-review-filter-button"
-              [attr.aria-expanded]="filterPopoverOpen()">
-              <span
-                class="material-icons-round text-[18px]"
-                [class.text-[var(--pr-color-primary-600)]]="filtersActive()"
-                [class.text-slate-500]="!filtersActive()"
-                >filter_list</span
-              >
-              <span>{{ copy.toolbar.filterButtonLabel }}</span>
-              @if (activeFilterCount() > 0) {
+                (click)="toggleFilterPopover($event)"
+                class="inline-flex h-[34px] cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+                [class]="
+                  filtersActive()
+                    ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] font-semibold'
+                    : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] font-medium hover:border-slate-400 hover:bg-slate-50'
+                "
+                [attr.aria-label]="copy.toolbar.filterAriaLabel"
+                data-testid="bilateral-review-filter-button"
+                [attr.aria-expanded]="filterPopoverOpen()">
                 <span
-                  class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums"
-                  data-testid="bilateral-review-filter-count">
-                  {{ activeFilterCount() }}
-                </span>
-              }
-            </button>
+                  class="material-icons-round text-[18px]"
+                  [class.text-[var(--pr-color-primary-600)]]="filtersActive()"
+                  [class.text-slate-500]="!filtersActive()"
+                  >filter_list</span
+                >
+                <span>{{ copy.toolbar.filterButtonLabel }}</span>
+                @if (activeFilterCount() > 0) {
+                  <span
+                    class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums"
+                    data-testid="bilateral-review-filter-count">
+                    {{ activeFilterCount() }}
+                  </span>
+                }
+              </button>
 
-            <div
-              class="absolute left-0 top-[40px] z-30 w-[360px] max-w-[90vw] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
-              data-testid="bilateral-review-filter-popover"
-              [class.hidden]="!filterPopoverOpen()"
-              (click)="$event.stopPropagation()">
-              <div class="mb-[14px] flex items-center justify-between border-b border-[var(--pr-border-divider)] pb-[10px]">
-                <span class="text-[13.5px] font-bold text-[var(--pr-text-heading)]">Filters</span>
-                <div class="flex items-center gap-[10px]">
-                  @if (filtersActive()) {
+              <div
+                class="absolute left-0 top-[40px] z-30 w-[360px] max-w-[90vw] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+                data-testid="bilateral-review-filter-popover"
+                [class.hidden]="!filterPopoverOpen()"
+                (click)="$event.stopPropagation()">
+                <div class="mb-[14px] flex items-center justify-between border-b border-[var(--pr-border-divider)] pb-[10px]">
+                  <span class="text-[13.5px] font-bold text-[var(--pr-text-heading)]">Filters</span>
+                  <div class="flex items-center gap-[10px]">
+                    @if (filtersActive()) {
+                      <button
+                        type="button"
+                        (click)="clearFilters()"
+                        class="inline-flex cursor-pointer items-center gap-[3px] border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:underline">
+                        <span class="material-icons-round text-[14px]" aria-hidden="true">filter_alt_off</span>
+                        {{ copy.toolbar.clearFilters }}
+                      </button>
+                    }
                     <button
                       type="button"
-                      (click)="clearFilters()"
-                      class="inline-flex cursor-pointer items-center gap-[3px] border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:underline">
-                      <span class="material-icons-round text-[14px]" aria-hidden="true">filter_alt_off</span>
-                      {{ copy.toolbar.clearFilters }}
+                      (click)="closeFilterPopover()"
+                      class="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[5px] border-0 bg-transparent p-0 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                      [attr.aria-label]="copy.toolbar.closeFiltersAriaLabel">
+                      <span class="material-icons-round text-[16px]">close</span>
                     </button>
-                  }
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-[12px]">
+                  <div class="brt-filter relative" data-dimension="phase" aria-label="Filter by cycle">
+                    <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{
+                      copy.toolbar.cycleFilterLabel
+                    }}</label>
+                    <app-pr-filter-select
+                      #cycleSelect
+                      [options]="knownPhases()"
+                      optionLabel="phase_name"
+                      optionValue="id"
+                      [placeholder]="copy.toolbar.cycleFilterPlaceholder"
+                      [ngModel]="selectedVersionId()"
+                      (changed)="setPhase($event)"
+                      data-testid="bilateral-review-cycle-select"></app-pr-filter-select>
+                  </div>
+
+                  <div class="brt-filter relative" data-dimension="center" aria-label="Filter by center">
+                    <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{
+                      copy.toolbar.centerFilterLabel
+                    }}</label>
+                    <app-pr-filter-multiselect
+                      [options]="centerFilterOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [placeholder]="copy.toolbar.centerFilterPlaceholder"
+                      countLabel="centers"
+                      [ngModel]="centers()"
+                      (changed)="centers.set($event)"></app-pr-filter-multiselect>
+                  </div>
+
+                  <div class="brt-filter relative" data-dimension="project" aria-label="Filter by bilateral project">
+                    <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{
+                      copy.toolbar.projectFilterLabel
+                    }}</label>
+                    <app-pr-filter-multiselect
+                      [options]="projectFilterOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [placeholder]="copy.toolbar.projectFilterPlaceholder"
+                      countLabel="projects"
+                      [ngModel]="projects()"
+                      (changed)="projects.set($event)"></app-pr-filter-multiselect>
+                  </div>
+
+                  <div class="brt-filter relative" data-dimension="category" aria-label="Filter by indicator category">
+                    <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{
+                      copy.toolbar.categoryFilterLabel
+                    }}</label>
+                    <app-pr-filter-multiselect
+                      [options]="categoryFilterOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [placeholder]="copy.toolbar.categoryFilterPlaceholder"
+                      countLabel="categories"
+                      [ngModel]="categories()"
+                      (changed)="categories.set($event)"></app-pr-filter-multiselect>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Status segmented control (Row 1) -->
+            <div
+              role="group"
+              aria-label="Status"
+              class="inline-flex flex-wrap items-center gap-[2px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[2px]">
+              <button
+                type="button"
+                [attr.aria-pressed]="status() === 'all'"
+                data-testid="bilateral-review-chip-all"
+                class="inline-flex h-[28px] cursor-pointer items-center gap-[6px] rounded-[6px] px-[10px] text-[12.5px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+                [class]="
+                  status() === 'all'
+                    ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-700)] shadow-none'
+                    : 'text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle-hover)]'
+                "
+                (click)="setStatus('all')">
+                {{ copy.chips.all }}
+                <span [class]="chipCountClass(chipCounts().all, status() === 'all')">{{ chipCounts().all }}</span>
+              </button>
+              <button
+                type="button"
+                [attr.aria-pressed]="status() === 'pending'"
+                data-testid="bilateral-review-chip-pending"
+                class="inline-flex h-[28px] cursor-pointer items-center gap-[6px] rounded-[6px] px-[10px] text-[12.5px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+                [class]="
+                  status() === 'pending'
+                    ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-700)] shadow-none'
+                    : 'text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle-hover)]'
+                "
+                (click)="setStatus('pending')">
+                {{ copy.chips.pending }}
+                <span [class]="chipCountClass(chipCounts().pending, status() === 'pending')">{{ chipCounts().pending }}</span>
+              </button>
+              <button
+                type="button"
+                [attr.aria-pressed]="status() === 'approved'"
+                data-testid="bilateral-review-chip-approved"
+                class="inline-flex h-[28px] cursor-pointer items-center gap-[6px] rounded-[6px] px-[10px] text-[12.5px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+                [class]="
+                  status() === 'approved'
+                    ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-700)] shadow-none'
+                    : 'text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle-hover)]'
+                "
+                (click)="setStatus('approved')">
+                {{ copy.chips.approved }}
+                <span [class]="chipCountClass(chipCounts().approved, status() === 'approved')">{{ chipCounts().approved }}</span>
+              </button>
+              <button
+                type="button"
+                [attr.aria-pressed]="status() === 'rejected'"
+                data-testid="bilateral-review-chip-rejected"
+                class="inline-flex h-[28px] cursor-pointer items-center gap-[6px] rounded-[6px] px-[10px] text-[12.5px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+                [class]="
+                  status() === 'rejected'
+                    ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-700)] shadow-none'
+                    : 'text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle-hover)]'
+                "
+                (click)="setStatus('rejected')">
+                {{ copy.chips.rejected }}
+                <span [class]="chipCountClass(chipCounts().rejected, status() === 'rejected')">{{ chipCounts().rejected }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Row 1 Right: View controls: [Expand all / Collapse all], Group by [Project | Center], View [Grouped | Flat] -->
+          <div class="flex items-center gap-[8px] sm:gap-[10px] w-full sm:w-auto sm:ml-auto justify-between sm:justify-end flex-wrap mt-1 sm:mt-0">
+            @if (view() === 'grouped') {
+              <button
+                type="button"
+                class="flex h-[32px] shrink-0 items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12.5px] font-medium text-[var(--pr-text-secondary)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)] shadow-2xs"
+                data-testid="bilateral-review-expand-all"
+                (click)="toggleExpandAll()">
+                <ng-icon [name]="expandAllIcon()" class="text-[15px]" />
+                {{ expandAllLabel() }}
+              </button>
+
+              <div class="flex h-[32px] shrink-0 items-center gap-[6px]">
+                <span class="text-[12.5px] font-medium text-[var(--pr-text-secondary)]">{{ copy.toolbar.groupByLabel }}</span>
+                <div
+                  role="group"
+                  aria-label="Group by"
+                  class="inline-flex h-[32px] shrink-0 items-center gap-[2px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[2px]">
                   <button
                     type="button"
-                    (click)="closeFilterPopover()"
-                    class="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[5px] border-0 bg-transparent p-0 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                    [attr.aria-label]="copy.toolbar.closeFiltersAriaLabel">
-                    <span class="material-icons-round text-[16px]">close</span>
+                    [attr.aria-pressed]="group() === 'project'"
+                    data-testid="bilateral-review-group-mode-project"
+                    class="inline-flex h-[26px] cursor-pointer items-center rounded-[6px] px-[10px] text-[12.5px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+                    [class]="
+                      group() === 'project'
+                        ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-700)] shadow-none'
+                        : 'text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle-hover)]'
+                    "
+                    (click)="setGroup('project')">
+                    {{ copy.toolbar.groupByProject }}
+                  </button>
+                  <button
+                    type="button"
+                    [attr.aria-pressed]="group() === 'center'"
+                    data-testid="bilateral-review-group-mode-center"
+                    class="inline-flex h-[26px] cursor-pointer items-center rounded-[6px] px-[10px] text-[12.5px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+                    [class]="
+                      group() === 'center'
+                        ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-700)] shadow-none'
+                        : 'text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle-hover)]'
+                    "
+                    (click)="setGroup('center')">
+                    {{ copy.toolbar.groupByCenter }}
                   </button>
                 </div>
               </div>
+            }
 
-              <div class="flex flex-col gap-[12px]">
-                <!-- @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-7) -->
-                <div class="brt-filter relative" data-dimension="phase" aria-label="Filter by cycle">
-                  <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{
-                    copy.toolbar.cycleFilterLabel
-                  }}</label>
-                  <!-- No `[emptyValue]` binding: `app-pr-filter-select`'s own `hasValue` getter
-                       treats `value === emptyValue` as "nothing selected" — binding it to the
-                       CURRENT selection (as a first reading of design.md suggested) would make the
-                       trigger permanently show the placeholder instead of the phase name,
-                       contradicting BRC-AC-6. The default `emptyValue` ('all', never a real phase
-                       id) keeps the label correct; `setPhase()` below independently guards the
-                       re-pick-is-a-no-op rule (BRC-AC-8b) by comparing against `selectedVersionId()`
-                       and rejecting a non-numeric emit — see also `#cycleSelect` below, which
-                       `setPhase()` uses to re-sync the trigger label on that same no-op path
-                       (Leader-found defect). -->
-                  <app-pr-filter-select
-                    #cycleSelect
-                    [options]="knownPhases()"
-                    optionLabel="phase_name"
-                    optionValue="id"
-                    [placeholder]="copy.toolbar.cycleFilterPlaceholder"
-                    [ngModel]="selectedVersionId()"
-                    (changed)="setPhase($event)"
-                    data-testid="bilateral-review-cycle-select"></app-pr-filter-select>
-                </div>
-
-                <div class="brt-filter relative" data-dimension="center" aria-label="Filter by center">
-                  <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{
-                    copy.toolbar.centerFilterLabel
-                  }}</label>
-                  <app-pr-filter-multiselect
-                    [options]="centerFilterOptions()"
-                    optionLabel="label"
-                    optionValue="value"
-                    [placeholder]="copy.toolbar.centerFilterPlaceholder"
-                    countLabel="centers"
-                    [ngModel]="centers()"
-                    (changed)="centers.set($event)"></app-pr-filter-multiselect>
-                </div>
-
-                <div class="brt-filter relative" data-dimension="project" aria-label="Filter by bilateral project">
-                  <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{
-                    copy.toolbar.projectFilterLabel
-                  }}</label>
-                  <app-pr-filter-multiselect
-                    [options]="projectFilterOptions()"
-                    optionLabel="label"
-                    optionValue="value"
-                    [placeholder]="copy.toolbar.projectFilterPlaceholder"
-                    countLabel="projects"
-                    [ngModel]="projects()"
-                    (changed)="projects.set($event)"></app-pr-filter-multiselect>
-                </div>
-
-                <div class="brt-filter relative" data-dimension="category" aria-label="Filter by indicator category">
-                  <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{
-                    copy.toolbar.categoryFilterLabel
-                  }}</label>
-                  <app-pr-filter-multiselect
-                    [options]="categoryFilterOptions()"
-                    optionLabel="label"
-                    optionValue="value"
-                    [placeholder]="copy.toolbar.categoryFilterPlaceholder"
-                    countLabel="categories"
-                    [ngModel]="categories()"
-                    (changed)="categories.set($event)"></app-pr-filter-multiselect>
-                </div>
-              </div>
+            <div role="tablist" aria-label="Grouping" class="flex h-[32px] shrink-0 items-center gap-[2px] rounded-[8px] bg-slate-100 p-[2px] border border-slate-200">
+              <button
+                type="button"
+                role="tab"
+                class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors"
+                [class]="
+                  view() === 'grouped'
+                    ? 'bg-white font-semibold text-[var(--pr-color-primary-700)] shadow-xs'
+                    : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+                "
+                [attr.aria-selected]="view() === 'grouped'"
+                (click)="setView('grouped')">
+                {{ copy.toolbar.groupedView }}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors"
+                [class]="
+                  view() === 'flat'
+                    ? 'bg-white font-semibold text-[var(--pr-color-primary-700)] shadow-xs'
+                    : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+                "
+                [attr.aria-selected]="view() === 'flat'"
+                (click)="setView('flat')">
+                {{ copy.toolbar.flatView }}
+              </button>
             </div>
           </div>
-
-          <!-- Only pending -->
-          <button
-            type="button"
-            role="switch"
-            [attr.aria-checked]="onlyPending()"
-            data-testid="bilateral-review-only-pending"
-            class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] font-medium transition-colors"
-            [class]="
-              onlyPending()
-                ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
-                : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]'
-            "
-            (click)="toggleOnlyPending()">
-            {{ copy.toolbar.onlyPending }}
-          </button>
-
-          <!-- @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-5, AC-5) — replaces the
-               old unconditional toolbar clear button; N is the FIVE-dimension `activeFilterCount`
-               (search/status/centers/projects/categories). Exactly one toolbar clear control. -->
-          @if (activeFilterCount() > 0) {
-            <button
-              type="button"
-              (click)="clearEverything()"
-              data-testid="bilateral-review-clear-all"
-              class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[4px] rounded-[8px] border-0 bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors motion-reduce:transition-none hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
-              <ng-icon name="lucideX" class="text-[14px]" />
-              {{ copy.toolbar.clearAllLabel(activeFilterCount()) }}
-            </button>
-          }
         </div>
 
-        <div class="flex items-center gap-[8px] sm:gap-[10px] w-full sm:w-auto sm:ml-auto justify-between sm:justify-end flex-wrap mt-1 sm:mt-0">
-          @if (view() === 'grouped') {
-            <button
-              type="button"
-              class="flex h-[32px] shrink-0 items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12.5px] font-medium text-[var(--pr-text-secondary)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)] shadow-2xs"
-              data-testid="bilateral-review-expand-all"
-              (click)="toggleExpandAll()">
-              <ng-icon [name]="expandAllIcon()" class="text-[15px]" />
-              {{ expandAllLabel() }}
-            </button>
-
-            <!-- @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-11, AC-10) — Group:
-                 Project | Center, grouped view only; costs no request (setGroup navigates, no
-                 nonce bump). Tokenized with the SAME classes as the status segmented control
-                 (`.html:287-347`, BRP-T-1) — Reviewer fix: an earlier draft cloned the legacy
-                 raw-slate Grouped/All results tablist instead (design.md §6.3 "tokens only in new
-                 markup"). -->
-            <div class="flex h-[32px] shrink-0 items-center gap-[6px]">
-              <span class="text-[12.5px] font-medium text-[var(--pr-text-secondary)]">{{ copy.toolbar.groupByLabel }}</span>
-              <div
-                role="group"
-                aria-label="Group by"
-                class="inline-flex h-[32px] shrink-0 items-center gap-[2px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[2px]">
-                <button
-                  type="button"
-                  [attr.aria-pressed]="group() === 'project'"
-                  data-testid="bilateral-review-group-mode-project"
-                  class="inline-flex h-[26px] cursor-pointer items-center rounded-[6px] px-[10px] text-[12.5px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
-                  [class]="
-                    group() === 'project'
-                      ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-700)] shadow-none'
-                      : 'text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle-hover)]'
-                  "
-                  (click)="setGroup('project')">
-                  {{ copy.toolbar.groupByProject }}
-                </button>
-                <button
-                  type="button"
-                  [attr.aria-pressed]="group() === 'center'"
-                  data-testid="bilateral-review-group-mode-center"
-                  class="inline-flex h-[26px] cursor-pointer items-center rounded-[6px] px-[10px] text-[12.5px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
-                  [class]="
-                    group() === 'center'
-                      ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-700)] shadow-none'
-                      : 'text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle-hover)]'
-                  "
-                  (click)="setGroup('center')">
-                  {{ copy.toolbar.groupByCenter }}
-                </button>
-              </div>
-            </div>
-          }
-
-          <div role="tablist" aria-label="Grouping" class="flex h-[32px] shrink-0 items-center gap-[2px] rounded-[8px] bg-slate-100 p-[2px] border border-slate-200">
-            <button
-              type="button"
-              role="tab"
-              class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors"
-              [class]="
-                view() === 'grouped'
-                  ? 'bg-white font-semibold text-[var(--pr-color-primary-700)] shadow-xs'
-                  : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
-              "
-              [attr.aria-selected]="view() === 'grouped'"
-              (click)="setView('grouped')">
-              {{ copy.toolbar.groupedView }}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors"
-              [class]="
-                view() === 'flat'
-                  ? 'bg-white font-semibold text-[var(--pr-color-primary-700)] shadow-xs'
-                  : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
-              "
-              [attr.aria-selected]="view() === 'flat'"
-              (click)="setView('flat')">
-              {{ copy.toolbar.flatView }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══ Filter band (BRP-T-1, R-1, R-2, R-3, R-4) — replaces the status chip row + strip mount
-           with one band: a labeled Status row (segmented control, same data-testid/setStatus
-           semantics as before) and a labeled, collapsible Centers row. One bottom divider for the
-           whole band, none between its two rows. ═══ -->
-      <div
-        class="flex flex-col gap-[6px] bg-[var(--pr-surface-app)] px-[16px] sm:px-[32px] py-[8px]"
-        data-testid="bilateral-review-filter-band">
-        <!-- Row 1: Status — same data-testids and setStatus() semantics as the old chip row, now a
-             segmented control (visual language borrowed from the Grouped/All results tablist). -->
-        <div class="flex flex-wrap items-center gap-[10px]">
-          <!-- BRV-R-8: `min-w` (not a fixed `w-`) + `shrink-0` + `whitespace-nowrap` so a
-               two-digit count on the sibling row never forces this label to wrap or overflow. -->
-          <span class="min-w-[84px] shrink-0 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{
-            copy.filterBand.statusLabel
-          }}</span>
+        <!-- ── Row 2 (~36-40px): Metric Ribbon + Active Filter Chips + Clear All ── -->
+        <div
+          class="flex flex-wrap items-center justify-between gap-[10px] sm:gap-[16px] bg-[var(--pr-surface-app)] px-[16px] sm:px-[32px] py-[6px] min-h-[36px] border-t border-[var(--pr-border-divider)]"
+          role="search"
+          aria-label="Bilateral review active filters"
+          data-testid="bilateral-review-filter-band">
+          
+          <!-- Metric summary ribbon -->
           <div
-            role="group"
-            aria-label="Status"
-            class="inline-flex flex-wrap items-center gap-[2px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[2px]">
+            class="flex items-center gap-[8px] text-[12px] sm:text-[12.5px] text-[var(--pr-text-secondary)] whitespace-nowrap"
+            data-testid="bilateral-review-metric-ribbon">
+            <span><strong class="font-semibold text-[var(--pr-text-heading)]" data-testid="kpi-projects">{{ kpis().projects }}</strong> Projects</span>
+            <span class="text-[var(--pr-text-muted)]">·</span>
+            <span><strong class="font-semibold text-[var(--pr-text-heading)]" data-testid="kpi-centers">{{ kpis().centers }}</strong> Centers</span>
+            <span class="text-[var(--pr-text-muted)]">·</span>
             <button
               type="button"
-              [attr.aria-pressed]="status() === 'all'"
-              data-testid="bilateral-review-chip-all"
-              class="inline-flex h-[26px] cursor-pointer items-center gap-[6px] rounded-[6px] px-[10px] text-[12.5px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
-              [class]="
-                status() === 'all'
-                  ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-700)] shadow-none'
-                  : 'text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle-hover)]'
-              "
-              (click)="setStatus('all')">
-              {{ copy.chips.all }}
-              <span [class]="chipCountClass(chipCounts().all, status() === 'all')">{{ chipCounts().all }}</span>
+              (click)="toggleOnlyPending()"
+              role="switch"
+              [attr.aria-checked]="onlyPending()"
+              [attr.aria-pressed]="onlyPending()"
+              data-testid="kpi-pending-toggle"
+              class="inline-flex cursor-pointer items-center gap-[3px] border-0 bg-transparent p-0 text-[12px] sm:text-[12.5px] text-[var(--pr-text-secondary)] hover:underline focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
+              <strong class="font-semibold text-amber-700" data-testid="kpi-pending">{{ kpis().pending }}</strong> Pending Review
             </button>
             <button
               type="button"
-              [attr.aria-pressed]="status() === 'pending'"
-              data-testid="bilateral-review-chip-pending"
-              class="inline-flex h-[26px] cursor-pointer items-center gap-[6px] rounded-[6px] px-[10px] text-[12.5px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
-              [class]="
-                status() === 'pending'
-                  ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-700)] shadow-none'
-                  : 'text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle-hover)]'
-              "
-              (click)="setStatus('pending')">
-              {{ copy.chips.pending }}
-              <span [class]="chipCountClass(chipCounts().pending, status() === 'pending')">{{ chipCounts().pending }}</span>
+              (click)="toggleOnlyPending()"
+              role="switch"
+              [attr.aria-checked]="onlyPending()"
+              [attr.aria-pressed]="onlyPending()"
+              data-testid="bilateral-review-only-pending"
+              class="sr-only"
+              aria-hidden="true"
+              tabindex="-1">
+              Only pending
             </button>
-            <button
-              type="button"
-              [attr.aria-pressed]="status() === 'approved'"
-              data-testid="bilateral-review-chip-approved"
-              class="inline-flex h-[26px] cursor-pointer items-center gap-[6px] rounded-[6px] px-[10px] text-[12.5px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
-              [class]="
-                status() === 'approved'
-                  ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-700)] shadow-none'
-                  : 'text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle-hover)]'
-              "
-              (click)="setStatus('approved')">
-              {{ copy.chips.approved }}
-              <span [class]="chipCountClass(chipCounts().approved, status() === 'approved')">{{ chipCounts().approved }}</span>
-            </button>
-            <button
-              type="button"
-              [attr.aria-pressed]="status() === 'rejected'"
-              data-testid="bilateral-review-chip-rejected"
-              class="inline-flex h-[26px] cursor-pointer items-center gap-[6px] rounded-[6px] px-[10px] text-[12.5px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
-              [class]="
-                status() === 'rejected'
-                  ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-700)] shadow-none'
-                  : 'text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle-hover)]'
-              "
-              (click)="setStatus('rejected')">
-              {{ copy.chips.rejected }}
-              <span [class]="chipCountClass(chipCounts().rejected, status() === 'rejected')">{{ chipCounts().rejected }}</span>
-            </button>
+            <span class="text-[var(--pr-text-muted)]">·</span>
+            <span>
+              <strong class="font-semibold text-[var(--pr-text-heading)]" data-testid="kpi-decided">{{ kpis().approved + kpis().rejected }}</strong> Decided
+              <span class="text-[var(--pr-text-muted)]">(</span><span class="text-[var(--pr-text-secondary)]" data-testid="kpi-decided-sublabel">{{ kpis().approved }} approved · {{ kpis().rejected }} rejected</span><span class="text-[var(--pr-text-muted)]">)</span>
+            </span>
           </div>
-        </div>
 
-        <!-- Row 2: Centers — chevron (BRP-R-3) + the strip, now band-owned (strip lost its own
-             band chrome). Collapsed by default when > 6 centers or narrow (BRP-R-3, R-21). -->
-        <div class="flex flex-wrap items-center gap-[10px]">
-          <!-- BRV-R-8: same nowrap contract as the Status label above — a two-digit center count
-               ("Centers · 12") must not wrap or overflow either. -->
-          <span class="min-w-[84px] shrink-0 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{
-            copy.filterBand.centersLabel(centerStrip().length)
-          }}</span>
-          <button
-            type="button"
-            (click)="toggleCentersRow()"
-            [attr.aria-expanded]="centersRowExpanded()"
-            aria-controls="bilateral-review-centers-row"
-            [attr.aria-label]="centersChevronLabel()"
-            data-testid="bilateral-review-centers-toggle"
-            class="flex h-[24px] w-[24px] shrink-0 cursor-pointer items-center justify-center rounded-[6px] text-[var(--pr-text-secondary)] transition-colors motion-reduce:transition-none hover:bg-[var(--pr-surface-subtle-hover)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
-            <ng-icon [name]="centersChevronIcon()" class="text-[16px] transition-transform duration-150 motion-reduce:transition-none" />
-          </button>
-          <div id="bilateral-review-centers-row" class="min-w-0 flex-1">
-            <app-bilateral-review-center-strip
-              [items]="centerStrip()"
-              [allPending]="chipCounts().pending"
-              [selectedCodes]="centers()"
-              [collapsed]="!centersRowExpanded()"
-              (selectCenter)="onCenterChipSelect($event)" />
+          <!-- Active dismissible filter chips + Clear all -->
+          <div class="flex flex-wrap items-center gap-[6px]" data-testid="bilateral-review-active-chips">
+            @for (chip of activeFilterChips(); track chip.id) {
+              <span
+                class="inline-flex h-[26px] items-center gap-[4px] rounded-[6px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] pl-[8px] pr-[4px] text-[12px] font-medium text-[var(--pr-text-secondary)] shadow-2xs"
+                data-testid="bilateral-review-filter-chip">
+                <span class="max-w-[180px] truncate" [title]="chip.label">{{ chip.label }}</span>
+                <button
+                  type="button"
+                  (click)="removeFilterChip(chip)"
+                  class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-[var(--pr-text-muted)] hover:bg-[var(--pr-surface-subtle-hover)] hover:text-[var(--pr-text-heading)] transition-colors"
+                  [attr.aria-label]="'Remove ' + chip.label"
+                  data-testid="bilateral-review-chip-remove">
+                  <span class="material-icons-round text-[13px]">close</span>
+                </button>
+              </span>
+            }
+
+            @if (activeFilterCount() > 0) {
+              <button
+                type="button"
+                (click)="clearEverything()"
+                data-testid="bilateral-review-clear-all"
+                class="inline-flex h-[26px] shrink-0 cursor-pointer items-center gap-[3px] rounded-[6px] border-0 bg-transparent px-[6px] text-[12px] font-semibold text-[var(--pr-color-primary-500)] transition-colors motion-reduce:transition-none hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
+                <ng-icon name="lucideX" class="text-[13px]" />
+                {{ copy.toolbar.clearAllLabel(activeFilterCount()) }}
+              </button>
+            }
           </div>
         </div>
-      </div>
       </div>
       <!-- ═══ End pinned chrome (BRV-R-2) ═══ -->
-
-      <!-- ═══ Stat bar (BRP-R-6) — one-line replacement of the four KPI cards; no page-level wrapper
-           padding, the component's own host is what the ≤ 44px gate measures. ═══ -->
-      <app-bilateral-review-kpis [kpis]="kpis()" [loading]="showSkeleton()" [pendingActive]="onlyPending()" (togglePending)="toggleOnlyPending()" />
 
       <!-- ═══ Rows area ═══ -->
       <div class="flex-1 px-[32px] max-sm:px-[16px] pb-[24px]">

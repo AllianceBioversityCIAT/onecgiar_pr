@@ -26,14 +26,20 @@ import { BilateralResultsService, REVIEW_RESULT_ID_QUERY_PARAM, REVIEW_RESULT_QU
 import { BilateralReviewCountService } from './services/bilateral-review-count.service';
 import { BilateralReviewAccessService } from './services/bilateral-review-access.service';
 import { ResultReviewDrawerComponent } from './components/result-review-drawer/result-review-drawer.component';
-import { GroupedResult, ResultToReview } from './components/result-review-drawer/result-review-drawer.interfaces';
-import { BilateralReviewKpis, BilateralReviewKpisComponent } from './components/bilateral-review-kpis/bilateral-review-kpis.component';
+import { BilateralReviewKpis } from './components/bilateral-review-kpis/bilateral-review-kpis.component';
 import { BilateralReviewGroup, BilateralReviewTableComponent } from './components/bilateral-review-table/bilateral-review-table.component';
 import {
-  BilateralReviewCenterStripComponent,
   BilateralReviewCenterStripItem
 } from './components/bilateral-review-center-strip/bilateral-review-center-strip.component';
 import { BILATERAL_REVIEW_COPY, chipCountClass } from './bilateral-review.copy';
+
+/** One entry of active dismissible filter chips (BRH-T-1). */
+export interface BilateralReviewFilterChip {
+  id: string;
+  dimension: 'center' | 'project' | 'category' | 'search' | 'status';
+  label: string;
+  value: string;
+}
 import {
   BILATERAL_REVIEW_QUERY_PARAM_MAP,
   BilateralReviewGroupMode,
@@ -101,9 +107,7 @@ const UNASSIGNED_CENTER_CODE = '__unassigned__';
     WhereToReportModalComponent,
     PrFilterMultiselectModule,
     PrFilterSelectComponent,
-    BilateralReviewKpisComponent,
     BilateralReviewTableComponent,
-    BilateralReviewCenterStripComponent,
     ResultReviewDrawerComponent
   ],
   viewProviders: [provideIcons({ lucideSearch, lucideChevronsUpDown, lucideChevronsDownUp, lucideChevronDown, lucideChevronUp, lucideX })]
@@ -636,6 +640,117 @@ export class BilateralReviewComponent {
     return count;
   });
   readonly filtersActive = computed(() => this.activeFilterCount() > 0);
+
+  // ── Active filter chips & removal (BRH-T-1, BRH-R-10, design.md §4.4) ──────────────────────
+  readonly activeFilterChips = computed<BilateralReviewFilterChip[]>(() => {
+    const chips: BilateralReviewFilterChip[] = [];
+
+    // Search chip
+    const searchVal = this.search().trim();
+    if (searchVal) {
+      chips.push({
+        id: 'search',
+        dimension: 'search',
+        label: `Search: "${searchVal}"`,
+        value: searchVal
+      });
+    }
+
+    // Centers chips
+    const codeToAcronym = this.codeToAcronym();
+    for (const code of this.centers()) {
+      const acronym = code === UNASSIGNED_CENTER_CODE ? this.copy.centerStrip.notSpecified : (codeToAcronym.get(code) ?? code);
+      chips.push({
+        id: `center-${code}`,
+        dimension: 'center',
+        label: `Center: ${acronym}`,
+        value: code
+      });
+    }
+
+    // Projects chips
+    for (const project of this.projects()) {
+      chips.push({
+        id: `project-${project}`,
+        dimension: 'project',
+        label: `Project: ${project}`,
+        value: project
+      });
+    }
+
+    // Categories chips
+    for (const category of this.categories()) {
+      chips.push({
+        id: `category-${category}`,
+        dimension: 'category',
+        label: `Category: ${category}`,
+        value: category
+      });
+    }
+
+    // Status chip (when not 'all')
+    const statusVal = this.status();
+    if (statusVal !== 'all') {
+      const statusLabel =
+        statusVal === 'pending'
+          ? this.copy.chips.pending
+          : statusVal === 'approved'
+            ? this.copy.chips.approved
+            : this.copy.chips.rejected;
+      chips.push({
+        id: 'status',
+        dimension: 'status',
+        label: `Status: ${statusLabel}`,
+        value: statusVal
+      });
+    }
+
+    return chips;
+  });
+
+  removeFilterChip(chip: BilateralReviewFilterChip): void {
+    let nextCenters = this.centers();
+    let nextProjects = this.projects();
+    let nextCategories = this.categories();
+    let nextSearch = this.search();
+    let nextStatus = this.status();
+
+    switch (chip.dimension) {
+      case 'search':
+        nextSearch = '';
+        this.search.set('');
+        break;
+      case 'status':
+        nextStatus = 'all';
+        this.status.set('all');
+        break;
+      case 'center':
+        nextCenters = nextCenters.filter(c => c !== chip.value);
+        this.centers.set(nextCenters);
+        break;
+      case 'project':
+        nextProjects = nextProjects.filter(p => p !== chip.value);
+        this.projects.set(nextProjects);
+        break;
+      case 'category':
+        nextCategories = nextCategories.filter(cat => cat !== chip.value);
+        this.categories.set(nextCategories);
+        break;
+    }
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        [BILATERAL_REVIEW_QUERY_PARAM_MAP.search]: nextSearch.trim() || null,
+        [BILATERAL_REVIEW_QUERY_PARAM_MAP.status]: nextStatus === 'all' ? null : nextStatus,
+        [BILATERAL_REVIEW_QUERY_PARAM_MAP.center]: joinBilateralReviewListParam(nextCenters),
+        [BILATERAL_REVIEW_QUERY_PARAM_MAP.project]: joinBilateralReviewListParam(nextProjects),
+        [BILATERAL_REVIEW_QUERY_PARAM_MAP.category]: joinBilateralReviewListParam(nextCategories)
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+  }
 
   // ── View states (BRT-R-31) — mutually exclusive ────────────────────────────────────────────
   /** BRC-R-5/AC-14: a phase-catalogue request failure, OR the catalogue settling with genuinely no
