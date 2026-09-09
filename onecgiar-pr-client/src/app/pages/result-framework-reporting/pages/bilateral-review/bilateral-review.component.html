@@ -193,7 +193,7 @@
                         (input)="centerOptionSearch.set($any($event.target).value)"
                         data-testid="bilateral-review-filter-search-center" />
                     }
-                    <div class="flex max-h-[160px] flex-col gap-[2px] overflow-y-auto rounded-[8px] border border-[var(--pr-border)] p-[4px] options" data-testid="bilateral-review-filter-options-center">
+                    <div class="flex max-h-[160px] flex-col gap-[2px] overflow-y-auto rounded-[8px] border border-[var(--pr-border)] p-[4px]" data-testid="bilateral-review-filter-options-center">
                       @for (opt of filteredCenterFilterOptions(); track opt.value) {
                         <button
                           type="button"
@@ -213,7 +213,7 @@
                           <span class="min-w-0 flex-1 truncate" [title]="opt.label" data-testid="bilateral-review-filter-option-label">{{ opt.label }}</span>
                         </button>
                       } @empty {
-                        <span class="px-[8px] py-[6px] text-[12px] text-[var(--pr-text-subtle)]">No matches</span>
+                        <span class="px-[8px] py-[6px] text-[12px] text-[var(--pr-text-subtle)]">{{ copy.toolbar.filterOptionsNoMatches }}</span>
                       }
                     </div>
                   </div>
@@ -236,7 +236,7 @@
                         (input)="projectOptionSearch.set($any($event.target).value)"
                         data-testid="bilateral-review-filter-search-project" />
                     }
-                    <div class="flex max-h-[160px] flex-col gap-[2px] overflow-y-auto rounded-[8px] border border-[var(--pr-border)] p-[4px] options" data-testid="bilateral-review-filter-options-project">
+                    <div class="flex max-h-[160px] flex-col gap-[2px] overflow-y-auto rounded-[8px] border border-[var(--pr-border)] p-[4px]" data-testid="bilateral-review-filter-options-project">
                       @for (opt of filteredProjectFilterOptions(); track opt.value) {
                         <button
                           type="button"
@@ -256,7 +256,7 @@
                           <span class="min-w-0 flex-1 truncate" [title]="opt.label" data-testid="bilateral-review-filter-option-label">{{ opt.label }}</span>
                         </button>
                       } @empty {
-                        <span class="px-[8px] py-[6px] text-[12px] text-[var(--pr-text-subtle)]">No matches</span>
+                        <span class="px-[8px] py-[6px] text-[12px] text-[var(--pr-text-subtle)]">{{ copy.toolbar.filterOptionsNoMatches }}</span>
                       }
                     </div>
                   </div>
@@ -279,7 +279,7 @@
                         (input)="categoryOptionSearch.set($any($event.target).value)"
                         data-testid="bilateral-review-filter-search-category" />
                     }
-                    <div class="flex max-h-[160px] flex-col gap-[2px] overflow-y-auto rounded-[8px] border border-[var(--pr-border)] p-[4px] options" data-testid="bilateral-review-filter-options-category">
+                    <div class="flex max-h-[160px] flex-col gap-[2px] overflow-y-auto rounded-[8px] border border-[var(--pr-border)] p-[4px]" data-testid="bilateral-review-filter-options-category">
                       @for (opt of filteredCategoryFilterOptions(); track opt.value) {
                         <button
                           type="button"
@@ -299,7 +299,7 @@
                           <span class="min-w-0 flex-1 truncate" [title]="opt.label" data-testid="bilateral-review-filter-option-label">{{ opt.label }}</span>
                         </button>
                       } @empty {
-                        <span class="px-[8px] py-[6px] text-[12px] text-[var(--pr-text-subtle)]">No matches</span>
+                        <span class="px-[8px] py-[6px] text-[12px] text-[var(--pr-text-subtle)]">{{ copy.toolbar.filterOptionsNoMatches }}</span>
                       }
                     </div>
                   </div>
@@ -457,9 +457,17 @@
           aria-label="Bilateral review active filters"
           data-testid="bilateral-review-filter-band">
           
-          <!-- Metric summary ribbon -->
+          <!-- Metric summary ribbon.
+               @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, BRH-R-11) — the
+               ribbon is `flex-wrap`/`min-w-0`, not a single nowrap run. Measured at 375px (effective
+               360): its intrinsic content is 448px against 344px of available content box, so as one
+               unbreakable row it pushed `documentElement.scrollWidth` to 464 and gave the DOCUMENT a
+               horizontal scrollbar — exactly what BRH-R-11 forbids. `whitespace-nowrap` stays on the
+               ITEMS (a KPI must never split mid-phrase); wrapping happens between them, and the
+               widest single item measures 188px, so it always fits. At >= 900px the ribbon still fits
+               on one line, so Row 2 keeps its ~36-40px budget there. -->
           <div
-            class="flex items-center gap-[8px] text-[12px] sm:text-[12.5px] text-[var(--pr-text-secondary)] whitespace-nowrap"
+            class="flex min-w-0 flex-wrap items-center gap-x-[8px] gap-y-[2px] text-[12px] sm:text-[12.5px] text-[var(--pr-text-secondary)] whitespace-nowrap"
             data-testid="bilateral-review-metric-ribbon">
             <span><strong class="font-semibold text-[var(--pr-text-heading)]" data-testid="kpi-projects">{{ kpis().projects }}</strong> Projects</span>
             <span class="text-[var(--pr-text-muted)]">·</span>

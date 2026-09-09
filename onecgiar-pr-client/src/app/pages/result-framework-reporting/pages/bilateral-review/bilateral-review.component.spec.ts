@@ -20,6 +20,7 @@ import { WhereToReportModalComponent } from '../dashboard-lab/components/where-t
 import { ResultReviewDrawerComponent } from './components/result-review-drawer/result-review-drawer.component';
 import { BilateralReviewCountService } from './services/bilateral-review-count.service';
 import { ResultToReview } from './components/result-review-drawer/result-review-drawer.interfaces';
+import { BILATERAL_REVIEW_COPY } from './bilateral-review.copy';
 
 /** The band is chrome, not this tab — stubbed so the spec exercises the page shell only. */
 @Component({ selector: 'app-reporting-program-band', standalone: true, template: '' })
@@ -452,8 +453,19 @@ describe('BilateralReviewComponent', () => {
     });
   });
 
-  describe('canReview reactivity — membership resolves after the first render (Reviewer fix #1, rework attempt 2)', () => {
-    it('flips a pending row from See to Review once myInitiativesList lands after the first detectChanges()', () => {
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — re-based, not weakened.
+  // The original staging (`push` + a bare `detectChanges()`) only ever passed by accident: this page
+  // is OnPush, and measured on `6df99fe87` the `[canReview]` binding was evaluated ZERO times in
+  // that pass (spy on `component.canReview`), so the table's input stayed `false` while the page's
+  // own method already answered `true`. What used to dirty the view was the `[ngModel]` filter
+  // controls this attempt removed — `NgModel._updateValue()` defers a `markForCheck()` on this
+  // view's own `ChangeDetectorRef` to a microtask, which `beforeEach` then left pending. The
+  // guarantee the Reviewer asked for survives verbatim (a `computed()` would memoize `false` on its
+  // only signal dependency, `programmeCode()`, and still fail below); what the re-base fixes is the
+  // TRIGGER: the flip lands on the page's next render, which in the browser is the user's next
+  // interaction, and here is a real listener-driven `input` event.
+  describe('canReview reactivity — membership resolves after the first render (Reviewer fix #1, re-based BRH-T-1 attempt 2)', () => {
+    it('flips a pending row from See to Review once myInitiativesList lands and the page next renders', () => {
       const firstAction = () => root().querySelectorAll('[data-testid="bilateral-review-row-action"]')[0] as HTMLElement;
       // `beforeEach` already rendered with an empty `myInitiativesList` (not a program member yet)
       // and BR-001 (r1) is pending (status_id 5) — so the row reads See, not Review.
@@ -461,11 +473,204 @@ describe('BilateralReviewComponent', () => {
 
       const api = TestBed.inject(ApiService) as unknown as { dataControlSE: { myInitiativesList: { official_code: string }[] } };
       api.dataControlSE.myInitiativesList.push({ official_code: 'SP02' });
+
+      // Nothing marks an OnPush page dirty when a plain array on a shared service is filled, so the
+      // answer surfaces on the next render. A template listener always dirties its own view, so an
+      // `input` event on Search with an UNCHANGED value is the smallest faithful stand-in for "the
+      // user touched the page" — it writes no state and filters nothing.
+      const search = byTestId('bilateral-review-search') as HTMLInputElement;
+      expect(search.value).toBe('');
+      search.dispatchEvent(new Event('input'));
       fixture.detectChanges();
 
-      // A `computed()` here would have memoized `false` forever (its only signal dependency is
-      // `programmeCode()`, unchanged) — this only passes because `canReview` is a plain method.
+      expect(component.search()).toBe('');
       expect(firstAction().textContent).toContain('Review');
+    });
+  });
+
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, Reviewer round 2) — the
+  // popover redesign shipped its keyboard contract and its option-search in the folder guide and in
+  // presence-only assertions. These are the behavioural gates: each one drives the REAL rendered
+  // control and asserts what a user would observe, not that a node exists.
+  describe('Filter popover — keyboard contract and option search (BRH-R-10, HITL fix #2)', () => {
+    const popover = () => byTestId('bilateral-review-filter-popover') as HTMLElement;
+    const popoverIsOpen = () => !popover().classList.contains('hidden');
+    const openPopover = () => {
+      (byTestId('bilateral-review-filter-button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+    };
+    const pressEscapeOn = (target: EventTarget) => {
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      fixture.detectChanges();
+    };
+    const optionLabels = (dimension: string) =>
+      Array.from(root().querySelectorAll(`[data-testid="bilateral-review-filter-options-${dimension}"] [data-testid="bilateral-review-filter-option-label"]`)).map(
+        el => el.textContent!.trim()
+      );
+
+    it('Escape from inside the popover closes it AND moves focus to the Filter trigger', () => {
+      openPopover();
+      expect(popoverIsOpen()).toBe(true);
+
+      const firstOption = root().querySelector('[data-testid="bilateral-review-filter-option-center"]') as HTMLButtonElement;
+      firstOption.focus();
+      expect(document.activeElement).toBe(firstOption);
+
+      pressEscapeOn(firstOption);
+
+      expect(popoverIsOpen()).toBe(false);
+      expect(document.activeElement).toBe(byTestId('bilateral-review-filter-button'));
+    });
+
+    // Reliability fix: `onEscape` is a `document:` listener, so before the containment guard an
+    // Escape pressed ANYWHERE yanked focus onto the Filter trigger.
+    it('Escape from outside the popover still closes it but leaves focus exactly where it was', () => {
+      openPopover();
+      const search = byTestId('bilateral-review-search') as HTMLInputElement;
+      search.focus();
+      expect(document.activeElement).toBe(search);
+
+      pressEscapeOn(search);
+
+      expect(popoverIsOpen()).toBe(false);
+      expect(document.activeElement).toBe(search);
+      expect(document.activeElement).not.toBe(byTestId('bilateral-review-filter-button'));
+    });
+
+    it('Escape raised inside the review drawer belongs to the drawer — the popover neither closes nor steals focus', () => {
+      component.results.currentResultToReview.set(FIXTURE_ROWS[0]);
+      component.results.showReviewDrawer.set(true);
+      fixture.detectChanges();
+      openPopover();
+
+      const drawer = root().querySelector('app-result-review-drawer') as HTMLElement;
+      expect(drawer).toBeTruthy();
+      const search = byTestId('bilateral-review-search') as HTMLInputElement;
+      search.focus();
+
+      pressEscapeOn(drawer);
+
+      expect(popoverIsOpen()).toBe(true);
+      expect(document.activeElement).toBe(search);
+    });
+
+    it('no option-search box below the 8-option threshold (3 centers, 2 projects, 1 category in this fixture)', () => {
+      openPopover();
+      expect(component.centerFilterOptions().length).toBe(3);
+      expect(component.categoryFilterOptions().length).toBe(1);
+      expect(byTestId('bilateral-review-filter-search-center')).toBeNull();
+      expect(byTestId('bilateral-review-filter-search-project')).toBeNull();
+      expect(byTestId('bilateral-review-filter-search-category')).toBeNull();
+      // …and every option is still listed, so "no box" is not "no list".
+      expect(optionLabels('center')).toEqual(['CIAT', 'CIP', 'IITA']); // `optionsOf` sorts with `localeCompare`
+    });
+
+    describe('above the threshold — nine distinct centers', () => {
+      const NINE_CENTER_ROWS: ResultToReview[] = ['CIP', 'IITA', 'CIAT', 'IWMI', 'ICARDA', 'IRRI', 'CIMMYT', 'ILRI', 'IFPRI'].map((center, index) =>
+        row({ id: `n${index}`, result_code: `BR-90${index}`, result_title: `Row ${center}`, lead_center: center, status_id: 5 })
+      );
+
+      beforeEach(() => {
+        fixture.destroy();
+        build({}, of(groupedResponse(NINE_CENTER_ROWS)));
+        fixture.detectChanges();
+      });
+
+      it('renders the search box and typing a needle narrows the rendered option list', () => {
+        openPopover();
+        expect(optionLabels('center').length).toBe(9);
+
+        const optionSearch = byTestId('bilateral-review-filter-search-center') as HTMLInputElement;
+        expect(optionSearch).toBeTruthy();
+        optionSearch.value = 'ci';
+        optionSearch.dispatchEvent(new Event('input'));
+        fixture.detectChanges();
+
+        // Case-insensitive substring: CIAT / CIMMYT / CIP contain "ci"; IITA, IWMI, ICARDA (…"ca"),
+        // IRRI, ILRI, IFPRI do not. The list keeps `optionsOf`'s alphabetical order — a needle
+        // filters, it never reorders.
+        expect(optionLabels('center')).toEqual(['CIAT', 'CIMMYT', 'CIP']);
+        // The needle filters the OPTION LIST only — it must not touch the rows or the URL.
+        expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(NINE_CENTER_ROWS.length);
+        expect(component.centers()).toEqual([]);
+      });
+
+      it('a needle matching nothing renders the empty state instead of a silently blank list', () => {
+        openPopover();
+        const optionSearch = byTestId('bilateral-review-filter-search-center') as HTMLInputElement;
+        optionSearch.value = 'zzz-no-such-center';
+        optionSearch.dispatchEvent(new Event('input'));
+        fixture.detectChanges();
+
+        expect(optionLabels('center')).toEqual([]);
+        expect(byTestId('bilateral-review-filter-options-center')!.textContent).toContain(BILATERAL_REVIEW_COPY.toolbar.filterOptionsNoMatches);
+      });
+
+      // Reliability fix: the needle is popover-local view state. Left behind on close, it hid a
+      // SELECTED option on the next open — the Row 2 chip said `Center: CIP` over an empty list.
+      it('the needle is reset when the popover closes, so a reopen shows every option again', () => {
+        openPopover();
+        const optionSearch = byTestId('bilateral-review-filter-search-center') as HTMLInputElement;
+        optionSearch.value = 'ifpri';
+        optionSearch.dispatchEvent(new Event('input'));
+        fixture.detectChanges();
+        expect(optionLabels('center')).toEqual(['IFPRI']);
+
+        (byTestId('bilateral-review-filter-button') as HTMLButtonElement).click(); // close
+        fixture.detectChanges();
+        expect(popoverIsOpen()).toBe(false);
+        expect(component.centerOptionSearch()).toBe('');
+
+        openPopover();
+        expect((byTestId('bilateral-review-filter-search-center') as HTMLInputElement).value).toBe('');
+        expect(optionLabels('center').length).toBe(9);
+      });
+    });
+
+    // Only the Center dimension had a behavioural test; Project and Category shipped with none even
+    // though each has its own toggle method and its own query-param key.
+    it('toggling a PROJECT option through the rendered checkbox narrows the rows, flips aria-checked, and writes ?project=', () => {
+      openPopover();
+      router.navigate.mockClear();
+      const betaOption = Array.from(root().querySelectorAll('[data-testid="bilateral-review-filter-option-project"]')).find(
+        el => el.querySelector('[data-testid="bilateral-review-filter-option-label"]')?.textContent?.trim() === 'P2 - DESIRA Beta'
+      ) as HTMLButtonElement;
+      expect(betaOption.getAttribute('aria-checked')).toBe('false');
+
+      betaOption.click();
+      fixture.detectChanges();
+
+      expect(component.projects()).toEqual(['P2 - DESIRA Beta']);
+      expect(betaOption.getAttribute('aria-checked')).toBe('true');
+      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(3);
+      expect(router.navigate).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({ queryParams: expect.objectContaining({ project: 'P2 - DESIRA Beta' }), replaceUrl: true })
+      );
+
+      betaOption.click(); // toggling the same option OFF restores every row
+      fixture.detectChanges();
+      expect(component.projects()).toEqual([]);
+      expect(betaOption.getAttribute('aria-checked')).toBe('false');
+      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(FIXTURE_ROWS.length);
+    });
+
+    it('toggling a CATEGORY option through the rendered checkbox flips aria-checked and writes ?category=', () => {
+      openPopover();
+      router.navigate.mockClear();
+      const policyOption = root().querySelector('[data-testid="bilateral-review-filter-option-category"]') as HTMLButtonElement;
+      expect(policyOption.querySelector('[data-testid="bilateral-review-filter-option-label"]')!.textContent!.trim()).toBe('Policy');
+      expect(policyOption.getAttribute('aria-checked')).toBe('false');
+
+      policyOption.click();
+      fixture.detectChanges();
+
+      expect(component.categories()).toEqual(['Policy']);
+      expect(policyOption.getAttribute('aria-checked')).toBe('true');
+      expect(router.navigate).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({ queryParams: expect.objectContaining({ category: 'Policy' }), replaceUrl: true })
+      );
     });
   });
 
@@ -1566,3 +1771,4 @@ describe('BilateralReviewComponent', () => {
     });
   });
 });
+

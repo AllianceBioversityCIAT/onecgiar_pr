@@ -1,6 +1,6 @@
 # bilateral-review
 
-**Verified:** 2026-09-09 · branch qa-development-2026 · spec `changes/bilateral-review-hierarchy-ux` (BRH-T-2 — container card architecture replacing `app-pr-group-table`, monospace project-code badge, contributing-center chips, smart progressive disclosure, in-card quick filter; **BRH-T-3** — semantic result-type badges, per-row 3px status accent, hover-copy hardening, text selection); parents `changes/bilateral-review-viewport-and-table-polish` (BRV-T-1..T-3 — viewport lock, pinned toolbar + filter band, Alignment column, status token pairs, group accent, action emphasis), `changes/bilateral-review-ux-polish` (BRP-T-1..T-4 — filter band + Clear filters + stat bar, table density/placeholders/group-by-center, narrow cards, CT gates), `changes/bilateral-review-center-strip-and-phase` (BRC-T-1..T-3 — phase-scoped list + badge, Cycle selector, center chip strip) and `changes/sp-bilateral-review-tab` (BRT-T-1..T-8 — relocated from the legacy `bilateral-results` page into one toolbar/table shell).
+**Verified:** 2026-09-09 · branch qa-development-2026 · spec `changes/bilateral-review-hierarchy-ux` (**BRH-T-1 attempt 2** — consolidated 2-row pinned band, token-styled Filter popover replacing `app-pr-filter-select`/`-multiselect`, KPI ribbon wrap fixing the 375px document overflow, page CT re-based off the superseded gates; BRH-T-2 — container card architecture replacing `app-pr-group-table`, monospace project-code badge, contributing-center chips, smart progressive disclosure, in-card quick filter; **BRH-T-3** — semantic result-type badges, per-row 3px status accent, hover-copy hardening, text selection); parents `changes/bilateral-review-viewport-and-table-polish` (BRV-T-1..T-3 — viewport lock, pinned toolbar + filter band, Alignment column, status token pairs, group accent, action emphasis), `changes/bilateral-review-ux-polish` (BRP-T-1..T-4 — filter band + Clear filters + stat bar, table density/placeholders/group-by-center, narrow cards, CT gates), `changes/bilateral-review-center-strip-and-phase` (BRC-T-1..T-3 — phase-scoped list + badge, Cycle selector, center chip strip) and `changes/sp-bilateral-review-tab` (BRT-T-1..T-8 — relocated from the legacy `bilateral-results` page into one toolbar/table shell).
 
 **What this owns:** the **Bilateral review** tab of the programme shell (`entity-details/:entityId/bilateral-review`) — one searchable, filterable, groupable list of W3/Bilateral results reported to this program, with a review drawer for approve/reject decisions.
 
@@ -15,17 +15,21 @@
   sits outside the shell frame, so the document still "scrolls" by that footer's height, same as
   every other locked tab. Below 900px only `display` changes; the mixin emits nothing, the
   document scrolls, cards branch unchanged.
-- **Pinned toolbar + filter band** (BRV-T-1, `BRV-DD-1/2`): both sit in one wrapper
-  (`data-testid="bilateral-review-pinned"`, `min-[900px]:sticky min-[900px]:top-0
-  min-[900px]:z-[15]`, one bottom divider, no `overflow`), measured ≤ **150px** at 1536 with the
-  centers row collapsed (142 measured + 8 margin). The wrapper's own measured height feeds
-  `--brv-pinned-h`, which rows/cards consume as `scroll-margin-top` (WCAG 2.4.11) so a
-  keyboard-focused row is never hidden under the chrome. The **stat bar is NOT pinned** — it and
-  the rows scroll beneath the chrome. The **center strip IS pinned** (it lives inside the filter
-  band's Centers row, `:423-430`, itself inside the wrapper, `:29-433`, so the cap holds only with
-  that row collapsed). Sibling tabs (`programme-results`, `my-work-board`) pin only the band —
-  this page's wider pin is a deliberate divergence, `onecgiar-pr-client/docs/DESIGN-DEVIATIONS.md`
-  #16.
+- **Pinned 2-row band** (BRV-T-1 · **BRH-T-1**, `BRV-DD-1/2`, `BRH-DD-5/6`): everything sits in one
+  wrapper (`data-testid="bilateral-review-pinned"`, `min-[900px]:sticky min-[900px]:top-0
+  min-[900px]:z-[15]`, one bottom divider, no `overflow`) — Row 1 (Search + Filter popover trigger
+  + Status segmented control | Group-by / View / Expand-all cluster) and Row 2
+  (`bilateral-review-filter-band`: KPI metric ribbon + dismissible chips + Clear all). BRH-T-1
+  folded away the separate stat bar AND the collapsible Centers row, so the band has ONE height.
+  ⚠️ **Measured (CT, BRH-T-1 attempt 2): 87px at 1536 — but 132px at 1280 and at 840, over
+  `BRH-R-10`'s 110px budget.** Row 1's two clusters are 748px + 462px intrinsic, so below ~1290px
+  they wrap to two lines (95px) and the wrapper busts the cap; the only gate today runs at 1536.
+  Not a BRH-T-1-attempt-2 regression (measured identical before the popover/ribbon work) — open
+  item, needs a Row 1 compression decision (design.md §4.4 pins Search at 240px). The wrapper's own
+  measured height feeds `--brv-pinned-h`, which rows/cards consume as `scroll-margin-top`
+  (WCAG 2.4.11) so a keyboard-focused row is never hidden under the chrome. Sibling tabs
+  (`programme-results`, `my-work-board`) pin only the band — this page's wider pin is a deliberate
+  divergence, `onecgiar-pr-client/docs/DESIGN-DEVIATIONS.md` #16.
 - Route: `entity-details/:entityId/bilateral-review` (`routing-data.ts:630`). The legacy address
   `entity-details/:entityId/results-review` is a `redirectTo` (`:653`) — path param and query
   params both survive (BRT-AC-11).
@@ -47,18 +51,52 @@
   `BilateralReviewCountService.setFromRows` **only when the selected phase equals the CURRENT
   phase** (BRC-R-6) — the tab's own Cycle selector never moves the tab badge. Cache key
   `CODE::<Number(versionId)>` — `version.id` arrives as a STRING on the wire.
-- **Filter band** (BRP-T-1): one labeled band, Status row (segmented control) + Centers row
-  (chevron `aria-expanded`/`aria-controls`, `sessionStorage['pr.bilateral.centersExpanded']`
-  `'1'|'0'`). Default collapsed when `> 6` centers **or** `isNarrow()`; a stored choice always wins.
-  R-21: one-shot auto-expand landing on `?center=` with no stored choice. The strip
-  (`BilateralReviewCenterStripComponent`) gains `collapsed` — one summary chip when collapsed,
-  unchanged 12-cap/sentinel/`selectCenter` behavior when expanded.
+- **Filter popover — four dimensions, ZERO shared filter components** (BRP-T-1 · **BRH-T-1 attempt
+  2**, HITL fix #2): the popover (`bilateral-review-filter-popover`, opened by
+  `bilateral-review-filter-button`, ≤ 400px wide) no longer hosts `app-pr-filter-select` /
+  `app-pr-filter-multiselect` — those rendered the legacy full-height purple chevron block and grey
+  placeholder box, off-grammar against the Overview "Filters" popover
+  (`dashboard-lab.component.html`, the reference). Every control is now OWNED markup:
+  - **Cycle** (`?phase`) — a 2-column **pill grid**, `bilateral-review-cycle-select` wrapping
+    `bilateral-review-cycle-option` `<button [attr.aria-pressed]>`; selected look derives straight
+    from `selectedVersionId()`, so a re-pick cannot desync a child's internal value.
+  - **Center** (`?center`), **Bilateral project** (`?project`), **Indicator category**
+    (`?category`) — identical **checkbox lists**: `bilateral-review-filter-options-<dim>` (a
+    `max-h-[160px] overflow-y-auto` box) of `bilateral-review-filter-option-<dim>`
+    `<button role="checkbox" [attr.aria-checked]>` + `bilateral-review-filter-option-label`, an
+    uppercase section label with a `bilateral-review-filter-count-<dim>` badge, and a
+    `bilateral-review-filter-search-<dim>` option-search `<input>` that appears **only above 8
+    options** (`FILTER_OPTION_SEARCH_THRESHOLD`) so a 3-category list is never cluttered.
+    ⚠️ Option search filters the OPTION LIST, not the rows — `bilateral-review-search` is the row
+    one. Toggling writes the page signal directly (`toggleCenterFilterOption`, …); the existing
+    "state → URL" effect reflects it, so all eight query-param bindings are untouched.
+  - No CVA child means no deferred `[ngModel]` write: Jest reads `aria-checked`/`aria-pressed`
+    synchronously and every `await fixture.whenStable()` those assertions needed is gone.
+  - **Escape (`document:keydown.escape`) has TWO containment guards** (Reviewer round 2) — it is a
+    `document:` listener on a page that also hosts the review drawer. An Escape raised inside
+    `app-result-review-drawer` is left entirely alone (the drawer owns it); every other Escape
+    dismisses the popover (client hard rule 4) but moves focus to the trigger **only** when the
+    event came from inside `.brt-filter-container` (trigger + popover — the same boundary
+    `onDocumentClick` uses). Stealing focus from wherever the user was is the worse a11y bug.
+  - **The three option-search needles are popover-local view state and reset on EVERY close path**
+    (`closeFilterPopover`, the trigger's own close, the outside-click close, Escape) **and on both
+    clears** (`clearFilters`, `clearEverything`). Left behind, a needle hid a SELECTED option on the
+    next open — the Row 2 chip reading `Center: CIP` over an empty list.
+  - The option list's empty state is `copy.toolbar.filterOptionsNoMatches`; the four now-unreferenced
+    `*FilterPlaceholder` keys went with the CVA children.
 - **Clear filters · N** (BRP-T-1): `clearEverything()` behind `@if (activeFilterCount() > 0)` —
   five dimensions (search, status ≠ all, centers, projects, categories); `phase`/`group`/`view`
   never count. One `router.navigate` sets the five keys `null`. The popover's own clear and the
   filtered-empty state's clear are separate controls; exactly one "Clear filters" node in the
   toolbar.
-- **Stat bar** (`BilateralReviewKpisComponent`, BRP-T-1): one line ≥ 900px, host `data-testid="bilateral-review-statbar"` ≤ 44px there, NOT pinned (see above). Six testids: `kpi-projects`, `kpi-centers`, `kpi-pending`, `kpi-pending-toggle`, `kpi-decided`, `kpi-decided-sublabel`.
+- **KPI metric ribbon** (was the `BilateralReviewKpisComponent` stat bar, BRP-T-1 → **BRH-T-1**):
+  the standalone `bilateral-review-statbar` host is GONE — the six figures now live inline in Row 2
+  of the pinned band as `bilateral-review-metric-ribbon`, beside the active-filter chips. Same six
+  testids: `kpi-projects`, `kpi-centers`, `kpi-pending`, `kpi-pending-toggle`, `kpi-decided`,
+  `kpi-decided-sublabel`. ⚠️ The ribbon is `flex-wrap min-w-0` with `whitespace-nowrap` on the ITEMS
+  (BRH-T-1 attempt 2, `BRH-R-11`) — as one unbreakable run its 448px of content overflowed the
+  375px viewport (`documentElement.scrollWidth` 464 vs 360) and put a horizontal scrollbar on the
+  DOCUMENT. Don't re-flatten it to a single nowrap row.
 - **Table** (`BilateralReviewTableComponent`, BRP-T-2/T-3, BRV-T-2, **BRH-T-2**): grouped rendering
   is a sequence of elevated `<section class="rounded-[12px] border ... bg-[var(--pr-surface-card)]
   shadow-xs overflow-hidden">` container cards — `app-pr-group-table`/`PrGroupTableComponent` is
@@ -110,12 +148,52 @@
 - **Cards** (BRP-T-3, `narrow` fed by the page's `isNarrow`): below 900px, `ul[role=list]` of
   `li[data-testid="bilateral-review-card"]`, no `<table>`, no `overflow-x`/`overflow-y` (R-15).
   Grouped bar carries the group accent (above); flat: `sortedFlatRows` order.
-- Cycle select: re-picking the shown phase is a no-op via `setPhase()`'s own guard +
-  `writeValue(selectedVersionId())` re-sync — never `[emptyValue]` bound to the selected id.
+- Cycle pills: re-picking the shown phase is a no-op via `setPhase()`'s own guard ALONE — the
+  `writeValue(selectedVersionId())` re-sync and the `cycleSelect` viewChild are gone with the CVA
+  child (BRH-T-1 attempt 2); a pill's pressed look is derived from `selectedVersionId()` every
+  render, so it is structurally incapable of going stale.
 - Computed pipeline order: `searchFiltered` → `chipCounts`/`kpis`/`centerStrip` (before the popover
   filters) → `visibleRows` (+ status/Center/Project/Category) → `groups`/`flatRows`.
 - Permission: `BilateralReviewAccessService.isProgramMember(code)` gates `canReview()`; the
   drawer's `canEditInDrawer()` calls the same service + `status_id == 5`.
+  ⚠️ **`canReview()` is a plain method and must stay one — but its promise is "re-read on this
+  page's next RENDER", not "every tick".** The page is `OnPush` and `myInitiativesList` is a plain
+  array on `DataControlService`; for a non-admin member nothing marks the view dirty when membership
+  lands (`rolesSE.isAdmin` goes false → false, notifying nothing), so a row can sit on `See` until
+  the user's next interaction. Until BRH-T-1 attempt 2 the `[ngModel]` filter controls hid this —
+  `NgModel._updateValue()` defers a `markForCheck()` on this view's own CDR to a microtask. Closing
+  the last gap needs a reactive `myInitiativesList` (the P2-3322 treatment `RolesService` already
+  has); app-wide, out of this spec. Do NOT "fix" it with `ngDoCheck`: measured in CT, a
+  `ViewContainerRef.createComponent`-mounted component (what the router outlet does) runs
+  `ngDoCheck` exactly ONCE, at init.
+
+## Page CT re-base (`bilateral-review.cy.ts`, BRH-T-1 attempt 2)
+
+48 tests, all green. The 24 gates that went red when T-1/T-2 replaced the surfaces they asserted
+were rewritten to the BRH requirements, not deleted — 19 of them carry an
+`@akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2)` note saying what replaced
+what. In summary:
+
+| Superseded gate | Became |
+|---|---|
+| `bilateral-review-statbar` host + its ≤44px / not-pinned claims | KPI figures measured inside Row 2's `bilateral-review-metric-ribbon` (`BRH-R-10`) |
+| `bilateral-review-centers-toggle`, center-strip wrap, `Centers · N`, the collapse round trip | DROPPED — no collapsible centers row exists; popover open/close is covered by the AC-15 focus-order and BRV-AC-3b popover-bounds gates |
+| `.pr-table-wrap`, group-header `td`, `colspan=6`, "6 headers grouped by center", 40px group bar | `bilateral-review-group-card` sections + the 52px card header (`BRH-R-1/2`) |
+| Pinned chrome ≤150px with the centers row collapsed | `BRH-R-10`: pinned wrapper ≤110px at 1536 (measured 87) + firstRow − workArea ≤130px |
+| Cycle `app-pr-filter-select` `.text`/`.option` queries | `bilateral-review-cycle-option` `aria-pressed` on the owned pill grid |
+| `app-pr-filter-multiselect` `.text` label reads | `bilateral-review-filter-option-<dim>` `aria-checked` on the owned checkbox lists |
+| 375px `assertEffectiveWidth(…, 360)` "harness quirk" | restored to the requested 375 once the real ribbon overflow was fixed; the full AC-4 fixture is back too |
+
+Added on top of the re-base (Reviewer round 2), so the popover's prose claims have detectors:
+`bilateral-review.cy.ts` asserts the opened popover contains **zero**
+`app-pr-filter-select`/`app-pr-filter-multiselect`/`.pr-filter-*`/legacy `.field`/`.options` nodes
+and measures **≤ 400px** wide (plus an anti-vacuity check that the four owned controls are present);
+`bilateral-review.component.spec.ts` gained nine behavioural tests for the keyboard contract, the
+containment guards, the 8-option threshold, needle narrowing / empty state / reset, and the Project
+and Category toggles (previously only Center was exercised).
+
+Every other `assertEffectiveWidth` call still asserts its own requested width; only the CT viewport
+HEIGHT was ever raised (375×3000) to clear the taller BRH cards.
 
 ## Where it is used
 
@@ -155,6 +233,11 @@
   axes on `.custom_scroll`. Below 900px `#workArea` has no overflow rule at all.
 - Narrow CT fixtures (cards, 9+ items) need **tall** viewports (1600, or 2400 for the 9-center
   fixture) — a native vertical scrollbar otherwise shaves ~15px off `documentElement.clientWidth`.
+  ⚠️ **But don't reach for that explanation first at 375px.** A 15px shave there was blamed on an
+  unavoidable `min-h-screen` harness quirk and the gate re-based to 360; it was actually the metric
+  ribbon overflowing HORIZONTALLY — that scrollbar ate 15px of viewport HEIGHT, and `min-height:
+  100vh` then forced the vertical one. Fixing the overflow restored a clean 375. Rule of thumb: if
+  `documentElement.scrollWidth > clientWidth`, the shave is a symptom, not the harness.
 - `cypress-axe` is **not installed**. Accessibility is checked structurally — not a substitute for
   a contrast check. Contrast (pills, accents, captions) is HITL-only, pre-audited ≥ 4.5.
 - The CT harness runs at effective root zoom `1` — `cy.viewport(w, h)` lands

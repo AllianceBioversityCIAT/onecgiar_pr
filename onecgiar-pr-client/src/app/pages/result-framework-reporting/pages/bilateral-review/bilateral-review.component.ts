@@ -379,12 +379,25 @@ export class BilateralReviewComponent {
   }
 
   /** "Can this user review THIS program" (BRT-R-14) — gates the row action label (BRT-AC-8).
-   *  A plain method, NOT a `computed()`: `isProgramMember` reads non-reactive state
-   *  (`rolesSE.isAdmin`, `dataControlSE.myInitiativesList` — a plain array) that can resolve
-   *  AFTER this page's first render (hard load / deep link). A `computed()` here would memoize
-   *  whatever answer it saw on that first read — its only SIGNAL dependency is `programmeCode()`
-   *  — locking a genuine program member out of Review forever. A plain method is re-evaluated on
-   *  every change-detection pass instead (Reviewer fix, BRT-T-4 rework attempt 2). */
+   *  NOT a `computed()`: `isProgramMember` reads non-reactive state (`rolesSE.isAdmin`,
+   *  `dataControlSE.myInitiativesList` — a plain array assigned by `ApiService.updateUserData`)
+   *  that can resolve AFTER this page's first render (hard load / deep link). A `computed()` would
+   *  memoize whatever answer it saw on that first read — its only SIGNAL dependency is
+   *  `programmeCode()` — locking a genuine program member out of Review forever
+   *  (Reviewer fix, BRT-T-4 rework attempt 2).
+   *
+   *  @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — scope of the promise:
+   *  a plain method is re-evaluated on every render of THIS view, which on an `OnPush` page means
+   *  "the next time something marks it dirty", NOT "on every application tick". Nothing marks it
+   *  dirty when membership lands: `myInitiativesList` is a plain array on a shared service, and for
+   *  a NON-admin member `rolesSE.isAdmin` (signal-backed since P2-3322) goes false → false, which
+   *  notifies nothing. So a late-resolving membership shows up on the page's next render — the
+   *  user's next interaction — and until then the row still reads `See` (transient; the drawer
+   *  re-asks the same service, so nobody is locked out). Closing that last gap needs a reactive
+   *  `myInitiativesList` on `DataControlService` (the P2-3322 treatment), which is app-wide and out
+   *  of this spec's scope. Until BRH-T-1 attempt 2 this was invisible: the `[ngModel]` filter
+   *  controls that lived here made `NgModel._updateValue()` defer a `markForCheck()` on THIS view's
+   *  `ChangeDetectorRef` to a microtask, leaving the page dirty for the following pass. */
   canReview(): boolean {
     return this.accessService.isProgramMember(this.programmeCode());
   }
@@ -1223,11 +1236,25 @@ export class BilateralReviewComponent {
   // ── Filter popover ──────────────────────────────────────────────────────────────────────────
   toggleFilterPopover(event: Event): void {
     event.stopPropagation();
-    this.filterPopoverOpen.update(open => !open);
+    const opening = !this.filterPopoverOpen();
+    this.filterPopoverOpen.set(opening);
+    if (!opening) this.resetFilterOptionSearches();
   }
 
   closeFilterPopover(): void {
     this.filterPopoverOpen.set(false);
+    this.resetFilterOptionSearches();
+  }
+
+  /** @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, Reviewer round 2) — the
+   *  three option-search needles are POPOVER-LOCAL view state, not filter state: left behind, a
+   *  needle typed in one visit silently hides a SELECTED option on the next open (the chip in Row 2
+   *  still says `Center: CIP` while the popover shows an empty list). Reset on every close path and
+   *  on both clear actions, so the popover always reopens showing every option. */
+  private resetFilterOptionSearches(): void {
+    this.centerOptionSearch.set('');
+    this.projectOptionSearch.set('');
+    this.categoryOptionSearch.set('');
   }
 
   /** Clears the Center / Bilateral project / Indicator category popover filters only — the
@@ -1239,6 +1266,7 @@ export class BilateralReviewComponent {
     this.centers.set([]);
     this.projects.set([]);
     this.categories.set([]);
+    this.resetFilterOptionSearches();
   }
 
   /** The filtered-empty state's "Clear filters" (BRT-R-31): whatever combination of search,
@@ -1259,6 +1287,7 @@ export class BilateralReviewComponent {
    *  `group` and `view` are never touched (no key at all, not even `null`), and none of the five
    *  keys removed here is read by the list-loading effect, so no request results. */
   clearEverything(): void {
+    this.resetFilterOptionSearches();
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {
@@ -1278,17 +1307,27 @@ export class BilateralReviewComponent {
     const target = event?.target as HTMLElement | null;
     if (typeof target?.closest === 'function' && target.closest('.brt-filter-container')) return;
     if (target && typeof document !== 'undefined' && document.contains && !document.contains(target)) return;
-    if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
+    if (this.filterPopoverOpen()) this.closeFilterPopover();
   }
 
-  /** @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL fix) — Escape
-   *  closes the popover AND returns focus to its trigger (the redesigned popover's own keyboard
-   *  contract), so a keyboard user is never dropped onto `<body>`. */
-  @HostListener('document:keydown.escape')
-  onEscape(): void {
-    if (this.filterPopoverOpen()) {
-      this.filterPopoverOpen.set(false);
-      this.filterButtonRef()?.nativeElement.focus();
-    }
+  /** @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL fix + Reviewer
+   *  round 2) — Escape closes the popover and returns focus to its trigger, so a keyboard user is
+   *  never dropped onto `<body>` (client hard rule 4). Two containment guards, both needed because
+   *  this is a `document:` listener on a page that also hosts the review drawer:
+   *  1. An Escape raised INSIDE `app-result-review-drawer` belongs to the drawer — the popover must
+   *     not consume it, and must certainly not close and yank focus out of the open drawer.
+   *  2. Focus is moved to the trigger ONLY when the Escape came from inside the filter container
+   *     (trigger + popover, `.brt-filter-container` — the same boundary `onDocumentClick` uses).
+   *     Escape from anywhere else still dismisses the popover (rule 4) but leaves the user's own
+   *     focus exactly where it was: stealing it would be a worse a11y bug than the one this fixes. */
+  @HostListener('document:keydown.escape', ['$event'])
+  onEscape(event?: Event): void {
+    if (!this.filterPopoverOpen()) return;
+    const target = event?.target as HTMLElement | null;
+    const closest = typeof target?.closest === 'function' ? (selector: string) => target.closest(selector) : () => null;
+    if (closest('app-result-review-drawer')) return;
+    const fromInsideFilterContainer = !!closest('.brt-filter-container');
+    this.closeFilterPopover();
+    if (fromInsideFilterContainer) this.filterButtonRef()?.nativeElement.focus();
   }
 }

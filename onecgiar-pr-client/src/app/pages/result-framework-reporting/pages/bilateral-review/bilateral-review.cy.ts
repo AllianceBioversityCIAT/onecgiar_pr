@@ -643,9 +643,12 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
     // "below pinned.bottom". The height cap is re-based directly to `BRH-R-10`'s own requirement
     // (2-row band, "maximum total height ≤ 110px") rather than the superseded 150px estimate.
     it('BRV-AC-2/BRH-R-10: after scrolling the work area by 600px, the pinned wrapper stays put, the rows move under it, and its height is ≤ 110px', () => {
-      // `.custom_scroll` matches 5 elements here (the work area + the closed multiselect panels'
-      // own scrollable option lists, which carry the same class) — `cy.scrollTo()` requires exactly
-      // one, so this scopes to the pinned wrapper's unique parent (the work area) instead.
+      // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, Reviewer round 2) —
+      // the old note here ("`.custom_scroll` matches 5 elements: the work area + the closed
+      // multiselect panels' own option lists") is stale: those `app-pr-filter-multiselect` panels
+      // are gone, and `custom_scroll` now appears exactly ONCE in this page's template (the work
+      // area itself). Still addressed as the pinned wrapper's parent — same element, and it names
+      // WHICH scroller is meant without depending on that count staying at one.
       cy.get('[data-testid="bilateral-review-pinned"]').parent().scrollTo(0, 600);
       cy.window().then(win => {
         const doc = win.document;
@@ -678,9 +681,12 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       // ± 1`), captured verbatim:
       //   pinned.top(-544.0) === workArea.top(56.0) ± 1: expected 600 to be at most 1
       // Committed here in its GREEN/positive form.
-      // `.custom_scroll` matches 5 elements here (the work area + the closed multiselect panels'
-      // own scrollable option lists, which carry the same class) — `cy.scrollTo()` requires exactly
-      // one, so this scopes to the pinned wrapper's unique parent (the work area) instead.
+      // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, Reviewer round 2) —
+      // the old note here ("`.custom_scroll` matches 5 elements: the work area + the closed
+      // multiselect panels' own option lists") is stale: those `app-pr-filter-multiselect` panels
+      // are gone, and `custom_scroll` now appears exactly ONCE in this page's template (the work
+      // area itself). Still addressed as the pinned wrapper's parent — same element, and it names
+      // WHICH scroller is meant without depending on that count staying at one.
       cy.get('[data-testid="bilateral-review-pinned"]').parent().scrollTo(0, 600);
       cy.document().then(doc => {
         const style = doc.createElement('style');
@@ -733,6 +739,34 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       it(`BRV-AC-3b: the ${dimension} checkbox-list option panel stays inside the (now-clipping) work area`, () => {
         byTestId('bilateral-review-filter-button').click();
         assertPanelInsideWorkArea(`[data-testid="bilateral-review-filter-options-${dimension}"]`, `${dimension} checkbox list`);
+      });
+    });
+
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL finding #2 — the
+    // gate that fold-in explicitly ordered). The popover's whole point was to STOP rendering the
+    // legacy `app-pr-filter-select` / `app-pr-filter-multiselect` look; "we deleted the imports" is
+    // a prose claim that a future `imports:` line can silently undo. This is the detector: zero
+    // legacy elements/classes inside the opened popover, and its own measured width within 400px.
+    it('BRH-T-1 (HITL #2): the opened popover contains no legacy pr-filter control and measures <= 400px wide', () => {
+      byTestId('bilateral-review-filter-button').click();
+      cy.get('[data-testid="bilateral-review-filter-popover"]').should($popover => {
+        const popover = $popover[0] as HTMLElement;
+        const legacy = popover.querySelectorAll(
+          'app-pr-filter-select, app-pr-filter-multiselect, .pr-filter-select, .pr-filter-multiselect, .brt-filter .field, .brt-filter .options'
+        );
+        const found = Array.from(legacy)
+          .map(el => `${el.tagName.toLowerCase()}.${(el.getAttribute('class') || '').split(' ').join('.')}`)
+          .join(', ');
+        expect(legacy.length, `legacy pr-filter controls inside the popover: [${found}]`).to.eq(0);
+
+        const width = popover.getBoundingClientRect().width;
+        expect(width, `popover width(${width.toFixed(1)}) <= 400px`).to.be.at.most(400);
+      });
+      // Anti-vacuity: the four owned controls the legacy ones were replaced BY are really there, so
+      // the zero above cannot be satisfied by an empty/unrendered popover.
+      byTestId('bilateral-review-cycle-select').should('exist');
+      (['center', 'project', 'category'] as const).forEach(dimension => {
+        byTestId(`bilateral-review-filter-options-${dimension}`).should('exist');
       });
     });
 
@@ -1610,45 +1644,35 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   });
 
   // ── Narrow — 375px (BRP-T-4, AC-12) — toolbar stacks, band wraps, single-column cards, no
-  // horizontal scroll. `cy.viewport()` caps height at 3000px, and even THAT is not enough to clear
-  // the native-scrollbar shave with the full 7-row/2-group AC-4 fixture rendered as BRH cards
-  // (52px+ headers, badges, taller rows — measured empirically at 375×3000: still 360 for a
-  // requested 375, height alone cannot fix it at this width once the ceiling is hit). Per the
-  // module's own documented remedy ("taller CT viewport OR leaner fixtures"), height is exhausted
-  // here — a LEANER, single-group 3-row fixture keeps this describe's own claims (cards render,
-  // one per row, no horizontal scroll; toolbar stacks) intact while fitting under the 3000px cap. ──
+  // horizontal scroll. @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2): the
+  // full AC-4 fixture and the requested-width baseline are BACK. Attempt 2 had slimmed this to a
+  // bespoke 3-row fixture and re-based the effective width to 360 to work around a "native
+  // scrollbar shave" believed to be a harness quirk; it was actually the metric ribbon overflowing
+  // 375px horizontally (see the `assertEffectiveWidth` note below). With that fixed the page fits,
+  // so this describe measures the real thing again: 7 cards, one per row, 375 effective, zero
+  // document overflow. The viewport stays TALL (3000) because BRH cards are taller than the compact
+  // rows the original 2200 was sized for — height still has to clear the content, that part of the
+  // module's documented rule is unchanged. ──
   describe('Narrow 375px (BRP-T-4, AC-12)', () => {
-    const NARROW_375_FIXTURE_ROWS: ResultToReview[] = [
-      row({ id: 'n375-1', project_id: 'p1', project_name: 'P1 - Alpha Project', result_code: 'BR-3751', result_title: 'Alpha result one', lead_center: 'CIP', status_id: 5 }),
-      row({ id: 'n375-2', project_id: 'p1', project_name: 'P1 - Alpha Project', result_code: 'BR-3752', result_title: 'Alpha result two', lead_center: 'IITA', status_id: 6 }),
-      row({ id: 'n375-3', project_id: 'p1', project_name: 'P1 - Alpha Project', result_code: 'BR-3753', result_title: 'Alpha result three', lead_center: 'CIP', status_id: 7 })
-    ];
-
     beforeEach(() => {
       cy.viewport(375, 3000);
-      mountPage({ rows: NARROW_375_FIXTURE_ROWS, centers: FIXTURE_CENTERS });
+      mountPage();
       waitForLoad();
-      // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — diagnosed with a
-      // dedicated debug probe: at 375×3000 (the `cy.viewport()` height ceiling), `documentElement`
-      // measures `scrollHeight === 3000` (exactly the requested viewport height, not exceeding
-      // it) while `clientHeight === 2985`. This is a DIFFERENT root cause from the >= 900px
-      // "content taller than viewport" quirk documented elsewhere in this file: below 900px the
-      // page's root `<section class="min-h-screen ...">` (`min-height: 100vh`) unconditionally
-      // pins document height to AT LEAST the viewport height — content-independent, so neither a
-      // taller `cy.viewport()` (already at its 3000px hard cap) nor a leaner fixture (proven with
-      // the 3-row fixture above, still 3000×2985) can make the DOCUMENT shorter than the viewport
-      // it is measured against. The resulting borderline height reliably reserves a native
-      // vertical scrollbar (a well-known browser boundary-case behavior once content height is
-      // pinned to exactly 100% of the viewport), shaving a deterministic, reproducible 15px off
-      // `clientWidth` at this ONE narrow breakpoint. 360 (375 − 15) is the harness's actual
-      // achievable "effective" width here, not an assumption — measured exactly like every other
-      // `assertEffectiveWidth` call in this file.
-      assertEffectiveWidth('375 (min-h-screen floor, scrollbar-shaved)', 360);
+      // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, BRH-R-11) — this
+      // briefly passed 360 with a long note calling the 15px shave an unavoidable `min-h-screen`
+      // harness quirk. It was not: the shave was a SYMPTOM of the very defect this describe exists
+      // to catch. The metric ribbon overflowed the viewport horizontally (measured: intrinsic 448px
+      // in a 344px content box, `documentElement.scrollWidth` 464), the resulting horizontal
+      // scrollbar ate 15px of viewport HEIGHT, and `min-height: 100vh` on the page's root section
+      // then guaranteed a vertical scrollbar, which shaved 15px off `clientWidth`. With the ribbon
+      // wrapping (`bilateral-review.component.html`, Row 2) the document needs neither scrollbar and
+      // the effective width measures the requested 375 exactly.
+      assertEffectiveWidth('375 narrow', 375);
     });
 
     it('AC-12: cards render (no <table>), one per row, no horizontal body scroll', () => {
       cy.get('[data-testid="bilateral-review-table"]').find('table').should('not.exist');
-      cy.get('[data-testid="bilateral-review-table"] ul[role="list"] li[data-testid="bilateral-review-card"]').should('have.length', NARROW_375_FIXTURE_ROWS.length);
+      cy.get('[data-testid="bilateral-review-table"] ul[role="list"] li[data-testid="bilateral-review-card"]').should('have.length', FIXTURE_ROWS.length);
       assertNoBodyHorizontalOverflow('375 cards');
     });
 

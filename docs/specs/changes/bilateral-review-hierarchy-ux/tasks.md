@@ -36,7 +36,7 @@
 
 ## 3. Task Breakdown
 
-- [~] `BRH-T-1` — Consolidated 2-Row Filter Band & Sticky Chrome Layout (reopened 2026-09-09: page CT `bilateral-review.cy.ts` 24 red gates owed — see execution.md attempt 2)
+- [x] `BRH-T-1` — Consolidated 2-Row Filter Band & Sticky Chrome Layout (attempt 2 closed 2026-09-09: page CT re-based and green, token-styled filter popover — see execution.md)
 
 - **Type:** client
 - **Estimate:** M
