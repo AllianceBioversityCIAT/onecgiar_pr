@@ -435,6 +435,29 @@ export class EvidencesService {
             }`,
           );
         }
+        // 🛑 The save goes through either way — but say it out loud when we could not
+        // confirm the previous sharing link was removed. Measured on prtest on 9 Sep 2026:
+        // the anonymous link survives the switch to confidential and keeps serving the
+        // file, so a row reading is_public_file = false is not proof the file is private.
+        // Deliberately a log and not a throw: refusing the save would block a reporter
+        // who is doing nothing wrong, and the gate above means a retry would not even
+        // reach SharePoint again.
+        const failedRevocations = Array.isArray(data?.revocation)
+          ? data.revocation.filter((r: any) => !r?.ok)
+          : [];
+        const wantsPrivate = !(
+          evidence.is_public_file ?? evidenceSharepoint.is_public_file
+        );
+        if (wantsPrivate && failedRevocations.length) {
+          this._logger.error(
+            `REPORTING: evidence ${newEvidenceId} was saved as confidential but ${
+              failedRevocations.length
+            } previous sharing permission(s) on document ${documentId} could not be confirmed as removed (${failedRevocations
+              .map((r: any) => `${r.permissionId}:${r.status}`)
+              .join(', ')}) — a link that was public before may still be live.`,
+          );
+        }
+
         await this._evidencesRepository.update(newEvidenceId, {
           link: data.link.webUrl,
         });
