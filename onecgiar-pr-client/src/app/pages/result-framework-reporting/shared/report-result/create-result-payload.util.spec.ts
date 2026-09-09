@@ -1,4 +1,13 @@
-import { buildCreateResultPayload, CreateResultPayloadOptions, OTHER_CENTERS_CODE, OTHER_SP_ID } from './create-result-payload.util';
+import {
+  buildCreateResultPayload,
+  CreateResultPayloadOptions,
+  isKnowledgeProductResultType,
+  OTHER_CENTERS_CODE,
+  OTHER_OUTPUT_TYPE_ID,
+  OTHER_SP_ID,
+  resolveReportResultTypeId,
+  resolveReportResultTypeName
+} from './create-result-payload.util';
 
 /**
  * One `it` per case of the indicator-category matrix (openspec `report-result-aside/design.md` §D2).
@@ -22,6 +31,54 @@ function options(overrides: Partial<CreateResultPayloadOptions> = {}): CreateRes
 function indicatorOfType(resultTypeId: number | null, extra: Record<string, any> = {}) {
   return { indicator_id: 7, result_type_id: resultTypeId, result_level_id: 4, number_target: 12, target_date: '2026-12-31', ...extra };
 }
+
+describe('resolveReportResultTypeId', () => {
+  it('infers Other output (8) from result_type_name when result_type_id is null', () => {
+    expect(resolveReportResultTypeId({ result_type_id: null, result_type_name: 'Other output' })).toBe(OTHER_OUTPUT_TYPE_ID);
+  });
+
+  it('infers Other output from plural / capitalized type_name labels', () => {
+    expect(resolveReportResultTypeId({ result_type_id: null, type_name: 'Other Outputs' })).toBe(OTHER_OUTPUT_TYPE_ID);
+    expect(resolveReportResultTypeId({ result_type_id: null, type_name: 'Other Output' })).toBe(OTHER_OUTPUT_TYPE_ID);
+  });
+
+  it('infers Other outcome (4) from result_type_name and Altmetric typology', () => {
+    expect(resolveReportResultTypeId({ result_type_name: 'Other outcome' })).toBe(4);
+    expect(resolveReportResultTypeId({ type_value: 'Altmetric score' })).toBe(4);
+  });
+
+  it('resolveReportResultTypeName prefers declared names and falls back to canonical labels', () => {
+    expect(resolveReportResultTypeName({ result_type_name: 'Other Output' }, 8)).toBe('Other Output');
+    expect(resolveReportResultTypeName({ type_name: 'Other Outputs' }, 8)).toBe('Other output');
+  });
+});
+
+describe('isKnowledgeProductResultType', () => {
+  it('returns true when result_type_id is 6 even if type_name is a metric label', () => {
+    expect(
+      isKnowledgeProductResultType({
+        result_type_id: 6,
+        result_type_name: 'Knowledge product',
+        type_name: 'Number of peer-reviewed publications'
+      })
+    ).toBe(true);
+  });
+
+  it('returns true for legacy type_name and emerging picker shape', () => {
+    expect(isKnowledgeProductResultType({ type_name: 'Number of knowledge products' })).toBe(true);
+    expect(isKnowledgeProductResultType({ id: 6, name: 'Knowledge product', levelId: 4 })).toBe(true);
+  });
+
+  it('returns false for non-KP categories', () => {
+    expect(
+      isKnowledgeProductResultType({
+        result_type_id: 7,
+        result_type_name: 'Innovation development',
+        type_name: 'Number of innovations'
+      })
+    ).toBe(false);
+  });
+});
 
 describe('buildCreateResultPayload — category matrix', () => {
   it('case A — Knowledge product (6) carries the retrieved metadata and the handle', () => {
@@ -76,6 +133,17 @@ describe('buildCreateResultPayload — category matrix', () => {
 
     expect(payload['result'].result_type_id).toBe(typeId);
     expect(payload['knowledge_product']).toBeNull();
+  });
+
+  it('case F2 — Other output inferred from result_type_name even when indicator id is null', () => {
+    const payload = buildCreateResultPayload(
+      options({
+        indicator: indicatorOfType(null, { result_type_name: 'Other output', type_name: 'Custom metric' }),
+        body: { ...emptyBody, result_name: 'An other output result' }
+      })
+    );
+
+    expect(payload['result'].result_type_id).toBe(8);
   });
 
   it('case F — an uncategorised indicator takes the type the user picked, never undefined', () => {

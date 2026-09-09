@@ -73,7 +73,7 @@
       <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">Indicator category</p>
       <div
         class="flex h-[46px] items-center rounded-[10px] border border-[rgba(30,32,47,0.14)] bg-[var(--pr-color-accents-1)] px-3.5 text-[14px] text-[var(--pr-color-secondary-400)]">
-        {{ emergingCategory()?.name || indicator()?.result_type_name || indicator()?.type_name || 'Not provided' }}
+        {{ indicatorCategoryLabel() || 'Not provided' }}
       </div>
     </div>
   }

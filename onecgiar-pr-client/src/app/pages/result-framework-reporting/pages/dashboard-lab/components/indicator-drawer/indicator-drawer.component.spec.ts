@@ -1143,6 +1143,7 @@ describe('IndicatorDrawerComponent — Verbatim Context Card & Empty State Micro
       target_value_sum: 15,
       center_acronym: 'IRRI',
       unit_messurament: 'varieties',
+      result_type_name: 'Knowledge product',
       type_name: 'Output'
     });
 
@@ -1157,8 +1158,9 @@ describe('IndicatorDrawerComponent — Verbatim Context Card & Empty State Micro
     expect(contextEl?.textContent).toContain('IRRI');
     expect(contextEl?.textContent).toContain('Unit:');
     expect(contextEl?.textContent).toContain('varieties');
-    expect(contextEl?.textContent).toContain('Indicator type:');
-    expect(contextEl?.textContent).toContain('Output');
+    expect(contextEl?.textContent).toContain('Indicator category:');
+    expect(contextEl?.textContent).toContain('Knowledge product');
+    expect(contextEl?.textContent).not.toContain('Indicator type:');
   });
 
   it('renders structured micro-empty-state card when reportedRows and existing results are 0 (RFUX-R-8)', async () => {

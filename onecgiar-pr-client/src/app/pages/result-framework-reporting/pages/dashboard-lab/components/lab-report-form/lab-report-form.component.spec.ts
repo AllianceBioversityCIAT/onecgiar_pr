@@ -282,6 +282,51 @@ describe('LabReportFormComponent', () => {
 
   // quick/category-picker-kp-reset (2026-09-04) — field bug: picking "Knowledge product" in the
   // category picker snapped back to "Select a category" while every other category stuck.
+  describe('Other output / Other outcome category resolution', () => {
+    it('skips the picker when result_type_name declares Other output without an id', async () => {
+      await setup({
+        indicator: indicator({
+          result_type_id: null,
+          result_type_name: 'Other output',
+          type_name: 'Number of custom deliverables'
+        }),
+        tocNode: { result_level_id: OUTPUT_LEVEL }
+      });
+
+      expect(component.needsCategoryChoice()).toBe(false);
+      expect(component.resolvedIndicatorResultTypeId()).toBe(8);
+      expect(component.indicatorCategoryLabel()).toBe('Other output');
+      expect(component.createResultBody().result_type_id).toBe(8);
+    });
+
+    it('skips the picker when type_name is Other Outputs', async () => {
+      await setup({
+        indicator: indicator({ result_type_id: null, type_name: 'Other Outputs' }),
+        tocNode: { result_level_id: OUTPUT_LEVEL }
+      });
+
+      expect(component.needsCategoryChoice()).toBe(false);
+      expect(component.resolvedIndicatorResultTypeId()).toBe(8);
+      expect(component.indicatorCategoryLabel()).toBe('Other output');
+    });
+  });
+
+  describe('indicator with result_type_id 6', () => {
+    it('enters KP mode from result_type_id even when type_name is not the legacy metric label', async () => {
+      await setup({
+        indicator: indicator({
+          result_type_id: 6,
+          result_type_name: 'Knowledge product',
+          type_name: 'Number of peer-reviewed publications'
+        }),
+        tocNode: {}
+      });
+
+      expect(component.currentResultIsKnowledgeProduct()).toBe(true);
+      expect(component.needsCategoryChoice()).toBe(false);
+    });
+  });
+
   describe('picking Knowledge product in the category picker', () => {
     it('keeps the choice, switches to KP mode and defaults the contribution to 1', async () => {
       await setup({ indicator: indicator({ result_type_id: null, type_name: 'Number of services' }), tocNode: { result_level_id: OUTPUT_LEVEL } });

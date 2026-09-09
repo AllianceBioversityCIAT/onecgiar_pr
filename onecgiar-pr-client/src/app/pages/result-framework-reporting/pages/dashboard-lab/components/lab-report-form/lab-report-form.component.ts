@@ -8,7 +8,16 @@ import { CentersService } from '../../../../../../shared/services/global/centers
 import { WordCounterService } from '../../../../../../shared/services/word-counter.service';
 import { ResultLevelService } from '../../../../../results/pages/result-creator/services/result-level.service';
 import { filterOutAvisaInitiatives } from '../../../../../../shared/utils/avisa-initiative.util';
-import { buildCreateResultPayload, OTHER_CENTERS_CODE, OTHER_SP_ID, ReportResultFormBody } from '../../../../shared/report-result/create-result-payload.util';
+import {
+  KNOWLEDGE_PRODUCT_TYPE_ID,
+  buildCreateResultPayload,
+  isKnowledgeProductResultType,
+  OTHER_CENTERS_CODE,
+  OTHER_SP_ID,
+  ReportResultFormBody,
+  resolveReportResultTypeId,
+  resolveReportResultTypeName
+} from '../../../../shared/report-result/create-result-payload.util';
 import { KP_HANDLE_NO_ERROR, KpHandleError, validateKpHandle } from '../../../../shared/report-result/kp-handle.validator';
 import {
   INNOVATION_LINK_QUESTION,
@@ -20,9 +29,6 @@ import {
   KpCgspaceBrowseComponent,
   CgspaceItemDto
 } from '../../../entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.component';
-
-/** `result_type_id` of Knowledge product — the ONLY category that branches this form. */
-const KNOWLEDGE_PRODUCT_TYPE_ID = 6;
 
 /** Which entry mode the knowledge-product block is on. */
 export type KpEntryMode = 'browse' | 'manual';
@@ -250,7 +256,17 @@ export class LabReportFormComponent {
    * The category picker is asked for whenever the indicator does not declare a category, and only
    * then. Emerging results always carry one from the entry card.
    */
-  readonly needsCategoryChoice = computed(() => !this.indicator()?.result_type_id && !this.emergingCategory());
+  readonly resolvedIndicatorResultTypeId = computed(() => resolveReportResultTypeId(this.indicator()));
+
+  readonly indicatorCategoryLabel = computed(() => {
+    const emerging = this.emergingCategory();
+    if (emerging) return resolveReportResultTypeName(emerging);
+    return resolveReportResultTypeName(this.indicator(), this.resolvedIndicatorResultTypeId());
+  });
+
+  readonly needsCategoryChoice = computed(
+    () => this.resolvedIndicatorResultTypeId() == null && !this.emergingCategory()
+  );
 
   /**
    * Options for that picker, DERIVED from the catalog rather than snapshotted into a signal.
@@ -283,9 +299,9 @@ export class LabReportFormComponent {
 
   readonly currentResultIsKnowledgeProduct = computed(
     () =>
-      this.indicator()?.type_name === 'Number of knowledge products' ||
+      isKnowledgeProductResultType(this.indicator()) ||
       this.createResultBody().result_type_id === KNOWLEDGE_PRODUCT_TYPE_ID ||
-      this.emergingCategory()?.id === KNOWLEDGE_PRODUCT_TYPE_ID
+      isKnowledgeProductResultType(this.emergingCategory())
   );
 
   // ---- P2-3420: link to a QA'd Innovation Development result --------------------------------
@@ -296,7 +312,11 @@ export class LabReportFormComponent {
 
   /** The category actually being created — the indicator wins, then the entry card, then the picker. */
   readonly resolvedResultTypeId = computed<number | null>(
-    () => this.indicator()?.result_type_id ?? this.emergingCategory()?.id ?? this.createResultBody().result_type_id ?? null
+    () =>
+      this.resolvedIndicatorResultTypeId() ??
+      resolveReportResultTypeId(this.emergingCategory()) ??
+      this.createResultBody().result_type_id ??
+      null
   );
 
   /**
@@ -379,6 +399,11 @@ export class LabReportFormComponent {
         if (emerging) {
           // Emerging: the category is fixed, so lock the result type and skip the picker.
           this.createResultBody.update(b => ({ ...b, result_type_id: emerging.id }));
+        } else if (ind) {
+          const resolvedTypeId = resolveReportResultTypeId(ind);
+          if (resolvedTypeId != null) {
+            this.createResultBody.update(b => ({ ...b, result_type_id: resolvedTypeId }));
+          }
         }
       });
     });

@@ -17,6 +17,104 @@ export const OTHER_CENTERS_CODE = '__OTHER_CENTERS__';
 /** Sentinel row that reveals the second "Other(s) Science Programs" dropdown. Never travels. */
 export const OTHER_SP_ID = -999;
 
+/** `result_type_id` for Knowledge product — the only category that branches the report form. */
+export const KNOWLEDGE_PRODUCT_TYPE_ID = 6;
+export const OTHER_OUTCOME_TYPE_ID = 4;
+export const OTHER_OUTPUT_TYPE_ID = 8;
+
+/** Indicator row, emerging picker card, or form body fragment — anything that might declare a category. */
+export interface ReportResultTypeCandidate {
+  result_type_id?: number | null;
+  result_type_name?: string | null;
+  type_name?: string | null;
+  type_value?: string | null;
+  /** Emerging-result picker uses `id` / `name` instead of `result_type_*`. */
+  id?: number | null;
+  name?: string | null;
+}
+
+const CANONICAL_RESULT_TYPE_NAMES: Record<number, string> = {
+  1: 'Policy change',
+  2: 'Innovation use',
+  4: 'Other outcome',
+  5: 'Capacity sharing for development',
+  6: 'Knowledge product',
+  7: 'Innovation development',
+  8: 'Other output'
+};
+
+/** Normalizes catalog / ToC labels ("Other Output", "Other Outputs") for lookup. */
+function normalizeResultTypeLabel(value: string | null | undefined): string {
+  return (value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+const RESULT_TYPE_LABEL_TO_ID: Record<string, number> = {
+  'policy change': 1,
+  'innovation use': 2,
+  'other outcome': OTHER_OUTCOME_TYPE_ID,
+  'other outcomes': OTHER_OUTCOME_TYPE_ID,
+  'capacity sharing for development': 5,
+  'knowledge product': KNOWLEDGE_PRODUCT_TYPE_ID,
+  'knowledge products': KNOWLEDGE_PRODUCT_TYPE_ID,
+  'number of knowledge products': KNOWLEDGE_PRODUCT_TYPE_ID,
+  'innovation development': 7,
+  'other output': OTHER_OUTPUT_TYPE_ID,
+  'other outputs': OTHER_OUTPUT_TYPE_ID
+};
+
+function inferResultTypeIdFromLabel(value: string | null | undefined): number | null {
+  const normalized = normalizeResultTypeLabel(value);
+  return normalized ? (RESULT_TYPE_LABEL_TO_ID[normalized] ?? null) : null;
+}
+
+/** Mirrors `indicatorResultTypeCaseSql` so rows missing `result_type_id` still resolve on the client. */
+function inferResultTypeIdFromTypology(typeValue: string | null | undefined): number | null {
+  const typology = (typeValue ?? '').trim();
+  if (!typology) return null;
+  if (typology.includes('Number of Policy')) return 1;
+  if (typology.includes('Innovation Use')) return 2;
+  if (typology.includes('Number of people trained')) return 5;
+  if (typology.includes('Number of knowledge products')) return KNOWLEDGE_PRODUCT_TYPE_ID;
+  if (typology.includes('Number of innovations')) return 7;
+  if (typology === 'Altmetric score') return OTHER_OUTCOME_TYPE_ID;
+  return null;
+}
+
+/**
+ * Resolve the PRMS result category for a reporting indicator.
+ * Precedence: explicit id → `result_type_name` / emerging `name` → legacy `type_name` label → `type_value` typology.
+ */
+export function resolveReportResultTypeId(input: ReportResultTypeCandidate | null | undefined): number | null {
+  if (!input) return null;
+
+  const explicitId = input.result_type_id ?? input.id;
+  if (explicitId != null && Number.isFinite(Number(explicitId))) return Number(explicitId);
+
+  return (
+    inferResultTypeIdFromLabel(input.result_type_name ?? input.name) ??
+    inferResultTypeIdFromLabel(input.type_name) ??
+    inferResultTypeIdFromTypology(input.type_value)
+  );
+}
+
+/** Human-readable category for read-only chips — never the ToC metric name when a category is known. */
+export function resolveReportResultTypeName(
+  input: ReportResultTypeCandidate | null | undefined,
+  resolvedTypeId: number | null = resolveReportResultTypeId(input)
+): string {
+  const declared = input?.result_type_name?.trim() || input?.name?.trim();
+  if (declared) return declared;
+  if (resolvedTypeId != null && CANONICAL_RESULT_TYPE_NAMES[resolvedTypeId]) {
+    return CANONICAL_RESULT_TYPE_NAMES[resolvedTypeId];
+  }
+  return input?.type_name?.trim() ?? '';
+}
+
+/** Whether the indicator / picker selection should render the knowledge-product (CGSpace) flow. */
+export function isKnowledgeProductResultType(input: ReportResultTypeCandidate | null | undefined): boolean {
+  return resolveReportResultTypeId(input) === KNOWLEDGE_PRODUCT_TYPE_ID;
+}
+
 /** The four fields the user actually types/picks in the form. */
 export interface ReportResultFormBody {
   handler: string;
@@ -62,7 +160,12 @@ export interface CreateResultPayloadOptions {
  * when the indicator declares none.
  */
 function resolveResultTypeId(options: CreateResultPayloadOptions): number | null {
-  return options.indicator?.['result_type_id'] ?? options.emergingCategory?.id ?? options.body.result_type_id ?? null;
+  return (
+    resolveReportResultTypeId(options.indicator) ??
+    resolveReportResultTypeId(options.emergingCategory) ??
+    options.body.result_type_id ??
+    null
+  );
 }
 
 /** The level is never chosen by the user: it comes from the indicator, then the node. */
