@@ -1166,6 +1166,17 @@ describe('ReportingProgramBandComponent', () => {
       expect(strip).toBeNull();
     });
 
+    it('does not pin quick typology in the band when the page is viewport-locked', async () => {
+      await build({
+        showToolbar: true,
+        compactFilters: false,
+        frameLocked: true,
+        scrollHost: document.createElement('div')
+      });
+
+      expect(root().querySelector('[data-testid="quick-typology-filters"]')).toBeNull();
+    });
+
     it('clicking a chip emits typologyChange with matchKey, and clicking active chip reverts to all', async () => {
       await build({
         showToolbar: true,
