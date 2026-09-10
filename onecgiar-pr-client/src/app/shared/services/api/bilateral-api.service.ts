@@ -28,6 +28,11 @@ export class BilateralApiService {
     return this.http.post<any>(`${environment.apiBaseUrl}api/bilateral/center/create-header`, body);
   }
 
+  /** P2-3233: W3-safe type conversion for an AI draft already promoted to Editing. */
+  PATCH_changeBilateralResultType(resultId: number | string, body: Record<string, unknown>) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/bilateral/center/change-type/${resultId}`, body);
+  }
+
   PATCH_plannedResult(resultId: number | string, body: Record<string, unknown>) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/bilateral/center/planned-result/${resultId}`, body);
   }

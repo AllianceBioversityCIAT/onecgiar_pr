@@ -10,7 +10,7 @@ This is the **module-level guide** for `api/bilateral`. It complements:
 >
 > `AGENTS.md` covers **what the module does** (ingestion flow, handlers, review workflow). This `CLAUDE.md` covers **how the code is laid out**, the security/contract rules that apply, and what to touch (or not) when extending it.
 
-**Verified:** 2026-09-09 · P2-3428 worktree implementation
+**Verified:** 2026-09-10 · P2-3233 bilateral-safe promoted-draft type conversion
 
 ---
 

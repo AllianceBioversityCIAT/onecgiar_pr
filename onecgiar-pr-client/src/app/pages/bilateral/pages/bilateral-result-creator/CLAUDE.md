@@ -1,6 +1,6 @@
 # bilateral-result-creator
 
-**Verified:** 2026-09-04 · branch performance-refactor (Save-failed alert carries the server reason)
+**Verified:** 2026-09-10 · P2-3233 (AI-promoted draft type conversion resets editor state before reloading)
 
 ## Qué es
 La página que hace de wizard de creación **y** de editor de un resultado W3/Bilateral. `isCreating()`

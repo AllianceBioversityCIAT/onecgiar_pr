@@ -36,6 +36,7 @@ describe('BilateralCenterService', () => {
   let yearRepository: YearRepository;
   let bilateralProjectsService: BilateralProjectsService;
   let bilateralService: BilateralService;
+  let resultsKnowledgeProductsService: ResultsKnowledgeProductsService;
 
   beforeEach(async () => {
     module = await Test.createTestingModule({
@@ -89,6 +90,7 @@ describe('BilateralCenterService', () => {
                   update: jest.fn().mockResolvedValue({}),
                   create: jest.fn((_entity, payload) => payload),
                   save: jest.fn().mockResolvedValue({}),
+                  query: jest.fn().mockResolvedValue({}),
                 }),
               ),
             },
@@ -194,6 +196,7 @@ describe('BilateralCenterService', () => {
           provide: RoleByUserRepository,
           useValue: {
             validationCenterPermissions: jest.fn().mockResolvedValue(1),
+            isUserAdmin: jest.fn().mockResolvedValue(false),
           },
         },
         {
@@ -218,6 +221,8 @@ describe('BilateralCenterService', () => {
           provide: ResultsKnowledgeProductsService,
           useValue: {
             populateKPFromCGSpace: jest.fn().mockResolvedValue({}),
+            validateBilateralKPHandle: jest.fn().mockResolvedValue({ title: 'KP', description: 'Metadata' }),
+            populateBilateralKPFromMetadata: jest.fn().mockResolvedValue({}),
           },
         },
         // P2-3443 — external partners live in `results_by_institution`, same table pool funding uses.
@@ -248,6 +253,9 @@ describe('BilateralCenterService', () => {
     bilateralService = module.get<BilateralService>(BilateralService);
     bilateralProjectsService = module.get<BilateralProjectsService>(
       BilateralProjectsService,
+    );
+    resultsKnowledgeProductsService = module.get<ResultsKnowledgeProductsService>(
+      ResultsKnowledgeProductsService,
     );
   });
 
@@ -1092,6 +1100,38 @@ describe('BilateralCenterService', () => {
         ]);
         expect(result.message).toContain('1 failed partners');
       });
+    });
+  });
+
+  describe('changeResultType', () => {
+    const user: TokenDto = { id: 42, email: 'center@cgiar.org', first_name: 'Center', last_name: 'User' };
+    const promotedDraft = {
+      id: 77, source: SourceEnum.Bilateral, is_active: true,
+      creation_method: 'AI', status_id: ResultStatusData.Editing.value,
+      result_level_id: 3, result_type_id: 2,
+    };
+
+    it('resets only type-specific records, updates the header and records the justification', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(promotedDraft);
+
+      const response = await service.changeResultType(user, 77, {
+        result_level_id: 4, result_type_id: 7, justification: 'Classification corrected',
+      });
+
+      expect(response.response).toEqual({ resultId: 77, result_level_id: 4, result_type_id: 7 });
+      expect(resultRepository.manager.transaction).toHaveBeenCalled();
+    });
+
+    it('refuses a manual bilateral result', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue({ ...promotedDraft, creation_method: 'MANUAL' });
+      await expect(service.changeResultType(user, 77, { result_level_id: 4, result_type_id: 7, justification: 'Correction' })).rejects.toThrow('Only a result promoted from an AI draft');
+    });
+
+    it('validates and hydrates a Knowledge Product without using the legacy converter', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(promotedDraft);
+      await service.changeResultType(user, 77, { result_level_id: 4, result_type_id: 6, justification: 'It is a repository item', handle: '10568/175322' });
+      expect(resultsKnowledgeProductsService.validateBilateralKPHandle).toHaveBeenCalledWith('10568/175322', user);
+      expect(resultsKnowledgeProductsService.populateBilateralKPFromMetadata).toHaveBeenCalledWith(77, expect.any(Object), '10568/175322', user);
     });
   });
 

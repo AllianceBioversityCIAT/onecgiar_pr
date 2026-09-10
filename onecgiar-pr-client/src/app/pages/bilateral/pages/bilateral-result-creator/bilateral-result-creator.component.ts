@@ -302,6 +302,16 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     this.creationService.loadResult(request.resultCode, request.versionId);
   }
 
+  /** P2-3233: staged MDS/autosave data belongs to the former type, so reload it cleanly. */
+  reloadAfterResultTypeChange(): void {
+    const request = this.lastLoadRequest;
+    if (!request) return;
+    this.resultId.set(null);
+    this.autoSaveService.reset();
+    this.mdsTracker.reset();
+    this.creationService.loadResult(request.resultCode, request.versionId);
+  }
+
   ngOnInit(): void {
     this.route.params.subscribe(params => {
       const id = params['id'];
