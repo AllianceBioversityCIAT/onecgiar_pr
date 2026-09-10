@@ -307,6 +307,8 @@
       .status-filter,
       .cgiar-filter,
       .entity-filter,
+      .table-filters-field,
+      .apply-filters-wrap,
       .clear-filter {
         display: flex;
         flex-direction: column;
@@ -315,6 +317,7 @@
         .status-label,
         .cgiar-label,
         .entity-label,
+        .filter-label,
         .clear-spacer {
           @include fonts.pr-typography('body-1');
           font-weight: 500;
@@ -331,7 +334,8 @@
       // plain white 40px field, muted border, no purple bar chrome.
       .status-filter,
       .cgiar-filter,
-      .entity-filter {
+      .entity-filter,
+      .table-filters-field {
         ::ng-deep .custom_select,
         ::ng-deep .pr-filter-ms {
           width: 100%;
@@ -405,12 +409,208 @@
       .clear-filter {
         margin-top: -6px;
       }
+
+      // ── P2-2043 ────────────────────────────────────────────────────────────────
+      // "Apply filters" button + the "Table filters" panel it opens.
+      .apply-filters-wrap {
+        position: relative;
+        min-width: 200px;
+
+        .apply-filters-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          height: 40px;
+          padding: 0 12px;
+          border: 1px solid var(--pr-border, #e3e3e8);
+          border-radius: 8px;
+          background: #fff;
+          @include fonts.pr-typography('body-1');
+          font-weight: 500;
+          color: var(--pr-text-heading, #191524);
+          cursor: pointer;
+          white-space: nowrap;
+
+          &:hover {
+            border-color: #d5d5dc;
+          }
+
+          &:focus-visible,
+          &.is-open {
+            border-color: var(--pr-color-primary-200, #a78bfa);
+            box-shadow: 0 0 0 3px rgba(107, 70, 229, 0.12);
+            outline: none;
+          }
+
+          .apply-filters-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: var(--pr-color-primary-500, #6b46e5);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+          }
+        }
+
+        .table-filters-panel {
+          position: absolute;
+          top: calc(100% + 6px);
+          left: 0;
+          z-index: 30;
+          width: 320px;
+          max-width: calc(100vw - 48px);
+          padding: 16px;
+          border: 1px solid var(--pr-border, #e3e3e8);
+          border-radius: 8px;
+          background: #fff;
+          box-shadow: 0 8px 24px rgba(25, 21, 36, 0.1);
+
+          .table-filters-header {
+            margin-bottom: 12px;
+
+            .table-filters-title {
+              @include fonts.pr-typography('body-1');
+              font-weight: 600;
+              color: var(--pr-text-heading, #191524);
+              margin: 0;
+            }
+
+            .table-filters-caption {
+              @include fonts.pr-typography('body-2');
+              color: var(--pr-text-subtle, #9691a8);
+              margin: 2px 0 0;
+            }
+          }
+
+          .table-filters-body {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            // The dropdowns open inside the panel, so it must be able to scroll on short screens
+            // without clipping them against the viewport.
+            max-height: min(60vh, 460px);
+            overflow-y: auto;
+          }
+
+          .table-filters-footer {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 16px;
+
+            .table-filters-done {
+              height: 32px;
+              padding: 0 16px;
+              border: none;
+              border-radius: 8px;
+              background: var(--pr-color-primary-500, #6b46e5);
+              color: #fff;
+              @include fonts.pr-typography('body-2');
+              font-weight: 600;
+              cursor: pointer;
+
+              &:hover {
+                filter: brightness(1.05);
+              }
+            }
+          }
+        }
+      }
+
+      // The story asks for Clear filters as a transparent button.
+      .clear-filters-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        height: 40px;
+        padding: 0 12px;
+        border: none;
+        border-radius: 8px;
+        background: transparent;
+        @include fonts.pr-typography('body-1');
+        font-weight: 500;
+        color: var(--pr-color-primary-500, #6b46e5);
+        cursor: pointer;
+        white-space: nowrap;
+
+        &:hover {
+          background: rgba(107, 70, 229, 0.08);
+        }
+
+        &:focus-visible {
+          outline: 2px solid var(--pr-color-primary-200, #a78bfa);
+          outline-offset: 2px;
+        }
+      }
     }
 
     .actions-group {
       display: flex;
       align-items: center;
       margin-top: 22px; // Align with input fields
+    }
+  }
+
+  // "Results filtered by:" — one removable chip per selected value.
+  .active-filters-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+
+    .active-filters-label {
+      @include fonts.pr-typography('body-2');
+      font-weight: 600;
+      color: var(--pr-color-secondary-400);
+    }
+
+    .active-filters-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .active-filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 26px;
+      padding: 0 6px 0 10px;
+      border: 1px solid var(--pr-border, #e3e3e8);
+      border-radius: 999px;
+      background: var(--pr-color-white, #fff);
+
+      &__text {
+        @include fonts.pr-typography('body-2');
+        color: var(--pr-text-heading, #191524);
+      }
+
+      &__x {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border: none;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--pr-text-secondary, #5d5872);
+        cursor: pointer;
+
+        &:hover {
+          background: rgba(25, 21, 36, 0.08);
+        }
+
+        &:focus-visible {
+          outline: 2px solid var(--pr-color-primary-200, #a78bfa);
+          outline-offset: 1px;
+        }
+      }
     }
   }
 }
