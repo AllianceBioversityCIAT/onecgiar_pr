@@ -12,9 +12,12 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCircleCheck, lucideGlobe, lucideTriangleAlert } from '@ng-icons/lucide';
 import { catchError, debounceTime, defer, distinctUntilChanged, finalize, map, of, retry, Subject, Subscription, switchMap, tap, timer } from 'rxjs';
 import { ResultsApiService } from 'src/app/shared/services/api/results-api.service';
 import { CustomFieldsModule } from 'src/app/custom-fields/custom-fields.module';
+import { ALL_KP_REPOSITORIES, KP_REPOSITORIES, KpRepository, KpRepositoryStatus } from './kp-repositories.constants';
 
 export interface CgspaceItemDto {
   uuid: string;
@@ -29,7 +32,41 @@ export interface CgspaceItemDto {
   countries: string[];
   doi: string | null;
   uri: string;
+  // @akili-spec changes/kp-multi-repository-browse — design §4.1 (additive)
+  /** Repository the item came from; absent on legacy single-source responses. */
+  repository?: KpRepository;
 }
+
+// @akili-spec changes/kp-multi-repository-browse — design §4.1
+/** Per-repository outcome of one fan-out search (`sources[]` in the response body). */
+export interface SourceStatusDto {
+  repository: KpRepository;
+  status: KpRepositoryStatus;
+  total: number;
+  hasMore: boolean;
+}
+
+// @akili-spec changes/kp-multi-repository-browse — KPM-DD-8
+/** View model of one source-strip chip (`KPM-R-1`, `KPM-R-2`, `KPM-R-6`). */
+export interface KpRepositoryChip {
+  key: KpRepository;
+  label: string;
+  /** `aria-pressed` — the repository is part of the current search. */
+  selected: boolean;
+  /** `aria-disabled` — the only repository left; toggling it is a no-op (`KPM-R-2`). */
+  disabled: boolean;
+  /** The source answered with `timeout | error | unconfigured` (`KPM-R-6`). */
+  unavailable: boolean;
+  /** Status of the last response for this repository, `null` before any search. */
+  status: KpRepositoryStatus | null;
+  /** Count badge text: the source total, `'unavailable'`, or `null` before a search. */
+  countLabel: string | null;
+  /** Tooltip — the disabled reason, else the unavailable reason, else no attribute. */
+  title: string | null;
+}
+
+/** `KPM-R-2` — accessible reason why the last selected chip cannot be turned off. */
+export const KP_LAST_REPOSITORY_TITLE = 'At least one repository must stay selected';
 
 export interface FacetOption {
   label: string;
@@ -153,9 +190,11 @@ export const DEFAULT_CGSPACE_CENTERS: FacetOption[] = [
 
 @Component({
   selector: 'app-kp-cgspace-browse',
-  imports: [CommonModule, FormsModule, CustomFieldsModule],
+  imports: [CommonModule, FormsModule, CustomFieldsModule, NgIcon],
   templateUrl: './kp-cgspace-browse.component.html',
   styleUrls: ['./kp-cgspace-browse.component.scss'],
+  // Client guide rule 21: every new icon in this component comes from @ng-icons/lucide.
+  providers: [provideIcons({ lucideCircleCheck, lucideGlobe, lucideTriangleAlert })],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
@@ -187,6 +226,14 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   readonly status = signal<'idle' | 'loading' | 'empty' | 'error' | 'results'>('idle');
   readonly loadingMore = signal<boolean>(false);
 
+  // @akili-spec changes/kp-multi-repository-browse — KPM-R-1 / KPM-R-2 / KPM-R-6
+  /** Every repository, in merge priority order — the strip renders one chip per entry. */
+  readonly allRepositories = ALL_KP_REPOSITORIES;
+  /** Repositories included in the next search. Init = all three (`KPM-R-1`, `KPM-AC-1`). */
+  readonly selectedRepositories = signal<KpRepository[]>([...ALL_KP_REPOSITORIES]);
+  /** `sources[]` of the last search response; empty before the first one (`KPM-R-6`). */
+  readonly sources = signal<SourceStatusDto[]>([]);
+
   readonly typeOptions = signal<FacetOption[]>(DEFAULT_CGSPACE_TYPES);
   readonly centerOptions = signal<FacetOption[]>(DEFAULT_CGSPACE_CENTERS);
   readonly loadingTypes = signal<boolean>(false);
@@ -200,6 +247,52 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
     }
     return options;
   });
+
+  // @akili-spec changes/kp-multi-repository-browse — KPM-DD-8
+  /** One view model per chip: selection, count, unavailable state and the last-chip lock. */
+  readonly repositoryChips = computed<KpRepositoryChip[]>(() => {
+    const selected = this.selectedRepositories();
+    const sources = this.sources();
+    const isLastSelected = selected.length === 1;
+
+    return this.allRepositories.map(key => {
+      const meta = KP_REPOSITORIES[key];
+      const isSelected = selected.includes(key);
+      const source = isSelected ? sources.find(s => s.repository === key) : undefined;
+      const status = source?.status ?? null;
+      // KPM-R-6: a failed source reads "unavailable", never "0".
+      const unavailable = status !== null && status !== 'ok';
+      const disabled = isSelected && isLastSelected;
+
+      let countLabel: string | null = null;
+      if (unavailable) {
+        countLabel = 'unavailable';
+      } else if (status === 'ok' && source) {
+        countLabel = String(source.total ?? 0);
+      }
+
+      let title: string | null = null;
+      if (disabled) {
+        title = KP_LAST_REPOSITORY_TITLE;
+      } else if (unavailable) {
+        title = this.unavailableReason(meta.label, status as KpRepositoryStatus);
+      }
+
+      return { key, label: meta.label, selected: isSelected, disabled, unavailable, status, countLabel, title };
+    });
+  });
+
+  /** KPM-R-6: the tooltip names the state without leaking hosts or env vars (`AC-9`). */
+  private unavailableReason(label: string, status: KpRepositoryStatus): string {
+    switch (status) {
+      case 'timeout':
+        return `${label} did not respond in time. Results below exclude it.`;
+      case 'unconfigured':
+        return `${label} is not available right now. Results below exclude it.`;
+      default:
+        return `${label} returned an error. Results below exclude it.`;
+    }
+  }
 
   /** Design §7 / §6.2: View details may only open these hosts. */
   readonly ALLOWED_HOSTS = ['cgspace.cgiar.org', 'hdl.handle.net'];
@@ -216,6 +309,11 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   private readonly centerPrefix$ = new Subject<string>();
   private centerPrefixSubscription?: Subscription;
 
+  // @akili-spec changes/kp-multi-repository-browse — design §6.2
+  /** Repository-selection changes reload the facet unions under the same 400 ms debounce. */
+  private readonly facetReload$ = new Subject<string>();
+  private facetReloadSubscription?: Subscription;
+
   constructor() {
     effect(() => {
       if (!this.busy()) {
@@ -228,12 +326,14 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
     this.selectedYear.set(this.phaseYear());
     this.loadFacets();
     this.initCenterTypeAhead();
+    this.initFacetReloadPipeline();
     this.initSearchPipeline();
   }
 
   ngOnDestroy(): void {
     this.searchSubscription?.unsubscribe();
     this.centerPrefixSubscription?.unsubscribe();
+    this.facetReloadSubscription?.unsubscribe();
   }
 
   private mapFacetValues(res: any): FacetOption[] {
@@ -258,6 +358,12 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
     });
   }
 
+  private initFacetReloadPipeline(): void {
+    this.facetReloadSubscription = this.facetReload$
+      .pipe(debounceTime(400), distinctUntilChanged())
+      .subscribe(() => this.loadFacets());
+  }
+
   private initCenterTypeAhead(): void {
     this.centerPrefixSubscription = this.centerPrefix$
       .pipe(
@@ -266,7 +372,7 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
         tap(() => this.loadingCenters.set(true)),
         switchMap(prefix =>
           this.resultsApiSE
-            .GET_cgspaceFacet('affiliation', prefix || undefined, 100)
+            .GET_cgspaceFacet('affiliation', prefix || undefined, 100, this.selectedRepositories())
             .pipe(
               finalize(() => this.loadingCenters.set(false)),
               catchError(() => of(null))
@@ -285,9 +391,12 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   }
 
   private loadFacets(): void {
+    // KPM-R-9: the option lists are the union over the selected repositories.
+    const repositories = this.selectedRepositories();
+
     this.loadingTypes.set(true);
     this.resultsApiSE
-      .GET_cgspaceFacet('itemtype')
+      .GET_cgspaceFacet('itemtype', undefined, undefined, repositories)
       .pipe(
         finalize(() => this.loadingTypes.set(false)),
         catchError(() => of(null))
@@ -308,7 +417,7 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
 
     this.loadingCenters.set(true);
     this.resultsApiSE
-      .GET_cgspaceFacet('affiliation')
+      .GET_cgspaceFacet('affiliation', undefined, undefined, repositories)
       .pipe(
         finalize(() => this.loadingCenters.set(false)),
         catchError(() => of(null))
@@ -369,8 +478,13 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
           this.status.set('error');
           this.items.set([]);
           this.total.set(0);
+          this.sources.set([]);
           return;
         }
+
+        // KPM-R-6: chip counts and unavailable states come from every response's sources[].
+        const sources: unknown = res?.response?.sources;
+        this.sources.set(Array.isArray(sources) ? (sources as SourceStatusDto[]) : []);
 
         const items: CgspaceItemDto[] = res?.response?.items ?? [];
         const total: number =
@@ -399,7 +513,8 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   }
 
   private buildSearchParams(page: number): Record<string, any> {
-    const params: Record<string, any> = { page, size: 10 };
+    // KPM-R-3 / KPM-R-8: one request covers every selected repository (comma-joined).
+    const params: Record<string, any> = { page, size: 10, repository: this.selectedRepositories().join(',') };
 
     const q = (this.query() || '').trim();
     // R-2 / AC-8: text shorter than MIN_QUERY_LENGTH is never sent upstream.
@@ -454,6 +569,7 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
       this.status.set('idle');
       this.items.set([]);
       this.total.set(0);
+      this.sources.set([]);
       return;
     }
     this.searchTrigger$.next({ page: 0, append: false, immediate: false });
@@ -464,6 +580,7 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
       this.status.set('idle');
       this.items.set([]);
       this.total.set(0);
+      this.sources.set([]);
       return;
     }
     this.searchTrigger$.next({ page: 0, append: false, immediate: false });
@@ -484,6 +601,46 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   onYearSelect(option: any): void {
     const val = option ? (option.value ?? option) : null;
     this.selectedYear.set(val);
+    this.onFilterChange();
+  }
+
+  // @akili-spec changes/kp-multi-repository-browse — KPM-R-2 / KPM-AC-2 / KPM-AC-3
+  /**
+   * Toggle one repository. The last selected one is an invariant, not a disabled button:
+   * a click on it changes nothing and issues no request (`KPM-AC-3`).
+   */
+  toggleRepository(key: KpRepository): void {
+    const selected = this.selectedRepositories();
+    const isSelected = selected.includes(key);
+
+    if (isSelected && selected.length === 1) {
+      return;
+    }
+
+    const next = isSelected
+      ? selected.filter(repository => repository !== key)
+      : this.allRepositories.filter(repository => selected.includes(repository) || repository === key);
+
+    this.selectedRepositories.set(next);
+    this.onRepositorySelectionChange();
+  }
+
+  /** KPM-R-2: restores the three repositories and re-runs the search once. */
+  selectAllRepositories(): void {
+    if (this.selectedRepositories().length === this.allRepositories.length) {
+      return;
+    }
+    this.selectedRepositories.set([...this.allRepositories]);
+    this.onRepositorySelectionChange();
+  }
+
+  /**
+   * A selection change reloads the facet unions and re-runs the current search through
+   * the existing debounce / identical-params pipeline. With `canSearch()` false,
+   * `onFilterChange()` only resets the panel to idle — the strip is the sole update.
+   */
+  private onRepositorySelectionChange(): void {
+    this.facetReload$.next(this.selectedRepositories().join(','));
     this.onFilterChange();
   }
 
@@ -510,6 +667,7 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
       this.status.set('idle');
       this.items.set([]);
       this.total.set(0);
+      this.sources.set([]);
       return;
     }
     this.searchTrigger$.next({ page, append, immediate: true });

@@ -214,7 +214,7 @@ Two Reviewers (`KPM-T-6`, `KPM-T-4` lens B) on `fable` were terminated by `HTTP 
 
 | Field | Value |
 |---|---|
-| Final status | _in progress — Reviewer relaunched on `sonnet` after a 429_ |
+| Final status | **PASS** (attempt 1 of 3) |
 | Date | 2026-09-10 |
 | Implementer | `akili-implementer` on `opus` (sonnet 429 fallback), effort `high`, skills `angular-developer`, `frontend-design` |
 | Requirements covered | `KPM-R-1`, `KPM-R-2` (all clauses), `KPM-R-3` (client half), `KPM-R-6` (chip states), `KPM-R-11` (placeholder/idle), `KPM-R-14` (idle/loading), `KPM-R-21`, `KPM-AC-1/2/3`; `KPM-DD-8`, `KPM-DD-9` |
@@ -225,5 +225,8 @@ Two Reviewers (`KPM-T-6`, `KPM-T-4` lens B) on `fable` were terminated by `HTTP 
 - Files changed: `kp-cgspace-browse/kp-repositories.constants.ts` (new — `KpRepository`, `KpRepositoryStatus`, `KP_REPOSITORIES`, `ALL_KP_REPOSITORIES`, `KP_ITEM_HOSTS`, `kpRepositoryLabel`), `kp-cgspace-browse.component.ts` (`selectedRepositories`/`sources` signals, `repositoryChips` computed, `toggleRepository`, `selectAllRepositories`, `facetReload$` debounce, `repository` in `buildSearchParams`, `sources` set from every response, lucide icons via `provideIcons`), `.component.html` (source strip; generalized placeholder/idle/loading copy), `.component.spec.ts` (5 assertions updated, 7 tests added → 38), `shared/services/api/results-api.service.ts` (`GET_cgspaceFacet(name, prefix?, size?, repositories?)`).
 - Implementer verification: component spec `Tests: 38 passed, 38 total`; mutation check (last-chip guard relaxed + `repository` dropped from params) → `6 failed, 32 passed`, restored → 38; `npx tsc --noEmit -p tsconfig.app.json` exit 0; `npx ng lint --quiet` → `All files pass linting.`; hosts + api-service suites `10 passed / 738 tests`.
 - Implementer `Not Done / Assumptions`: placeholder/idle copy taken from `proposal.md`; loading string `Searching the selected repositories…` is the Implementer's (R-14 idle/loading is T-6's per the coverage map); facet re-run uses its own `facetReload$` debounce rather than the search pipeline; `KP_ITEM_HOSTS` defined for T-7, `ALLOWED_HOSTS` untouched; idle branches clear `sources()`; reset-on-close tested via `fixture.destroy()` + re-create (the pr-dialog body is under `@if (visible)`). Leader: all passed to the Reviewer for adjudication (facet-pipeline reading and reset test meaningfulness flagged explicitly).
-- Reviewer: _pending._
+- **Reviewer (`sonnet`) — PASS.** Summary: strip, selection rules and the `repository` param match `KPM-R-1/2/3/6/11/14/21`, `AC-1/2/3`, design §6.2/§6.3, `KPM-DD-8/9`; the 38 tests assert `aria-pressed`/`aria-disabled`/`title` via `getAttribute` and request payloads via `objectContaining`, every debounce case advances `tick(400)` including the no-request cases; mutation evidence confirms load-bearing tests. Adjudications: (1) separate `facetReload$` debounce is an acceptable reading of "debounced through the same pipeline" (same 400 ms + distinct policy; the search pipeline emits searches) — not a violation; (2) reset-on-close test is meaningful — verified `aow-hlo-create-modal.component.html:80-81` keeps the panel mounted with `[hidden]` across Browse ↔ Manual (`KPB-DD-5`) while `pr-dialog.component.html:1` `@if (visible)` destroys the tree on close; (3) chip classes and lucide icons conform to §6.3. ADVISORY (recorded, no rework): strip container uses `gap-x-[10px] gap-y-[8px]` vs the design's `gap-[8px]` (cosmetic, 2 px); the 400 ms debounce constant is now duplicated between the search pipeline and `facetReload$`.
+
+**Decisions / issues**: none. Budget: 1 Reviewer round (after one runtime 429 kill). Gate: `auto-approved (pre-approved mode)`.
+
 

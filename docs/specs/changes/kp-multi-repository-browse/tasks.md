@@ -7,7 +7,7 @@
 | Spec path | `docs/specs/changes/kp-multi-repository-browse/` · Module code `KPM` |
 | Linked | `requirements.md` (KPM-R-*, KPM-AC-*) · `design.md` (KPM-DD-*, §3.3 adapter table, §4.1 contract) · `proposal.md` · `mockup/` |
 | Approval Mode | pre-approved (Phase 3 gate auto-approved, pre-approved mode) |
-| Status | in-progress (T-1..T-5 done 2026-09-10; T-10 docs half done) |
+| Status | in-progress (T-1..T-6 done 2026-09-10; T-10 docs half done; budget tripwire raised) |
 | Owner / driver | Juan Carlos Cadavid · AKILI Leader |
 | Budget (from `design.md` §14) | 10 tasks · ~1,250 LOC incl. tests · ≤ 1 Reviewer round per task; tripwire > 12 tasks or > 1,500 LOC → stop and escalate |
 
@@ -95,7 +95,7 @@
 - **Verification:** `merge.spec.ts`: DOI `10.1000/abc` vs `https://doi.org/10.1000/ABC` → one survivor (CGSpace) with `alsoIn[0].repository==='melspace'`; same title+type, years 2025/2026 → two; same title, both DOIs present and different → two; no DOI, same title/type/year → one; priority: MEL first in selection order but CGSpace survives; round-robin `[a1,b1,c1,a2,b2,a3]` for sizes 3/2/1; `totalElements` per source untouched. **Input that fails it:** drop the year from key₂ → the 2025/2026 pair collapses → fails. **Disqualifier:** tests that construct both items from the same object literal (identical everything) do not exercise normalization — vary case/prefix/punctuation explicitly.
 - **Definition of done:** red-then-green evidence in `execution.md` (first run fails, second passes); spec green; functions pure (no logger/HTTP imports).
 
-### [~] `KPM-T-6` — Client: repository constants, API params, source strip with selection rules
+### [x] `KPM-T-6` — Client: repository constants, API params, source strip with selection rules
 
 - **Type:** `client`
 - **Description:** Add `kp-repositories.constants.ts` (`KP_REPOSITORIES`, `ALL_KP_REPOSITORIES`, `KP_ITEM_HOSTS`). `ResultsApiService.GET_cgspaceFacet(name, prefix?, size?, repositories?)` appends `repository`; `GET_cgspaceSearch` unchanged (params carry it). `KpCgspaceBrowseComponent`: `selectedRepositories` signal (init all), `sources` signal from the last response, computed chip model (selected / count / unavailable / disabled-as-last), `toggleRepository`, `selectAllRepositories`, `repository` in `buildSearchParams`, facet loads pass the selection and re-run on change through the existing debounced pipeline; `canSearch()` false → strip updates only. Template: source strip per `design.md` §6.3 (lead-in text exactly `Searching 3 CGIAR knowledge repositories`, `role="group" aria-label="Repositories to search"`, `<button aria-pressed>` chips, `@ng-icons/lucide` icons only (client guide rule 21), count badge, unavailable style + `title`, last chip `aria-disabled` + `title`, **Select all** when `< 3`). Generalized placeholder + idle copy. Selection resets with the rest of the state on drawer close (existing reset path).

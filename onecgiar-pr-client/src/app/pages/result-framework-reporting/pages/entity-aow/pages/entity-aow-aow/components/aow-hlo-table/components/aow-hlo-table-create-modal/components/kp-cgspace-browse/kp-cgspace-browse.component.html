@@ -1,16 +1,70 @@
 <div class="flex flex-col gap-4 w-full">
   <!-- Search bar & Filters container -->
   <div class="flex flex-col gap-3">
+  <!-- @akili-spec changes/kp-multi-repository-browse — KPM-R-1 / KPM-R-2 / KPM-DD-8: repository source strip -->
+  <div
+    class="flex flex-wrap items-center gap-x-[10px] gap-y-[8px] rounded-[10px] border border-[var(--pr-color-primary-100)] bg-[var(--pr-color-primary-25)] p-[10px]"
+    role="group"
+    aria-label="Repositories to search"
+    data-test="kp-source-strip">
+    <span class="inline-flex items-center gap-1.5 pr-1 text-[12.5px] font-semibold text-[var(--pr-color-primary-700)]">
+      <ng-icon name="lucideGlobe" class="text-[16px]" aria-hidden="true" />
+      Searching 3 CGIAR knowledge repositories
+    </span>
+
+    @for (chip of repositoryChips(); track chip.key) {
+      <button
+        type="button"
+        class="inline-flex h-[30px] items-center gap-1.5 rounded-full border px-[10px] text-[12.5px] font-semibold transition-colors"
+        [ngClass]="{
+          'bg-white border-[var(--pr-color-primary-300)] text-[var(--pr-color-primary-700)]': chip.selected && !chip.unavailable,
+          'border-dashed border-amber-400 bg-amber-50 text-amber-800': chip.unavailable,
+          'bg-white border-[var(--pr-border)] text-[var(--pr-text-secondary)] hover:border-[var(--pr-border-strong)]': !chip.selected,
+          'cursor-not-allowed opacity-90': chip.disabled,
+          'cursor-pointer': !chip.disabled
+        }"
+        [attr.aria-pressed]="chip.selected"
+        [attr.aria-disabled]="chip.disabled ? 'true' : null"
+        [attr.title]="chip.title"
+        [attr.data-test]="'kp-repo-chip-' + chip.key"
+        (click)="toggleRepository(chip.key)">
+        @if (chip.unavailable) {
+          <ng-icon name="lucideTriangleAlert" class="text-[15px]" aria-hidden="true" />
+        } @else if (chip.selected) {
+          <ng-icon name="lucideCircleCheck" class="text-[15px]" aria-hidden="true" />
+        }
+        <span>{{ chip.label }}</span>
+        @if (chip.countLabel) {
+          <span
+            class="rounded-full px-[6px] py-[1px] text-[10.5px] font-bold tabular-nums"
+            [ngClass]="chip.unavailable ? 'bg-amber-100 text-amber-800' : 'bg-[var(--pr-color-primary-100)] text-[var(--pr-color-primary-700)]'">
+            {{ chip.countLabel }}
+          </span>
+        }
+      </button>
+    }
+
+    @if (selectedRepositories().length < allRepositories.length) {
+      <button
+        type="button"
+        class="ml-auto cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-300)] hover:underline"
+        data-test="kp-select-all-repos"
+        (click)="selectAllRepositories()">
+        Select all
+      </button>
+    }
+  </div>
+
     <!-- Free text search input -->
     <div class="relative w-full">
       <input
         type="text"
         class="w-full h-[38px] pl-9 pr-10 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[var(--pr-color-primary-300)] focus:border-[var(--pr-color-primary-300)] text-gray-800 placeholder-gray-400 font-normal transition-colors shadow-2xs"
-        placeholder="Search CGSpace by title, author, or DOI..."
+        placeholder="Search by title, author, or DOI across the selected repositories…"
         [value]="query()"
         (input)="onQueryInput($event)"
         (keydown.enter)="$event.preventDefault(); onEnter()"
-        aria-label="Search CGSpace" />
+        aria-label="Search the selected repositories" />
       <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
       @if (status() === 'loading') {
         <i class="pi pi-spin pi-spinner absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
@@ -109,7 +163,7 @@
     @if (status() === 'loading') {
       <div class="flex flex-col items-center justify-center py-10 gap-3 text-gray-500" data-test="cgspace-loading">
         <i class="pi pi-spin pi-spinner text-3xl text-[var(--pr-color-primary-300)]"></i>
-        <p class="text-sm font-medium">Searching CGSpace...</p>
+        <p class="text-sm font-medium">Searching the selected repositories…</p>
       </div>
     }
 
@@ -118,9 +172,9 @@
       <div class="flex flex-col items-center justify-center py-10 px-4 text-center border border-dashed border-gray-200 rounded-lg bg-gray-50" data-test="cgspace-idle">
         <i class="pi pi-search text-2xl text-gray-400 mb-2"></i>
         @if (query().trim().length > 0 && query().trim().length < 3 && !hasActiveFilter()) {
-          <p class="text-[14.5px] text-gray-700 font-medium">Please enter at least 3 characters to search CGSpace.</p>
+          <p class="text-[14.5px] text-gray-700 font-medium">Please enter at least 3 characters to search the selected repositories.</p>
         } @else {
-          <p class="text-[15px] text-gray-700 font-medium">Search CGSpace by title, author, or DOI to find a Knowledge Product.</p>
+          <p class="text-[15px] text-gray-700 font-medium">Search CGSpace, MELSpace and WorldFish by title, author, or DOI to find a Knowledge Product.</p>
           <p class="text-[13px] text-gray-500 mt-1">Type at least 3 characters or select a filter above.</p>
         }
       </div>
