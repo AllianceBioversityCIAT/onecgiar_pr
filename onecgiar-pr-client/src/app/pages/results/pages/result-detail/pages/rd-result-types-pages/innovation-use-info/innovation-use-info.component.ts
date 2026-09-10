@@ -1,8 +1,15 @@
-import { Component, effect, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { IpsrStep1Body } from '../../../../../../ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
 import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
+import {
+  INNOVATION_LINK_MIN_PHASE_YEAR,
+  INNOVATION_LINK_QUESTION,
+  INNOVATION_USE_RESULT_TYPE_ID,
+  QaInnovationDevelopmentOption,
+  QaInnovationDevelopmentResultsService
+} from '../../../../../../../shared/services/global/qa-innovation-development-results.service';
 
 @Component({
   selector: 'app-innovation-use-info',
@@ -34,6 +41,91 @@ export class InnovationUseInfoComponent {
       this.fieldsManagerSE.isP25() ? this.getSectionInformationp25() : this.getSectionInformation();
     }
   });
+
+  // ---------------------------------------------------------------------------------------------
+  // P2-3424 — the link to a QA'd Innovation Development result, as an OPTIONAL question of THIS
+  // section. PO decision (Ángel Jarrín, 10 Sep 2026): "la opción B es la correcta … lo mejor es
+  // mostrar la información en la sección de Innovation Use. Este campo no debería ser un MDS."
+  //
+  // 🛑 It was MOVED, not copied: `rd-contributors-and-partners` no longer renders it (nor sends it)
+  // for these results. Both questions answer the SAME stored field
+  // (`results_innovations_use.has_innovation_link` + the `linked_result` table), and two editing
+  // surfaces over one answer is the defect P2-3199 removed.
+  // ---------------------------------------------------------------------------------------------
+  private readonly qaInnovationsSE = inject(QaInnovationDevelopmentResultsService);
+
+  /** Verbatim wording from P2-3420 / P2-3421 — QA reads it back word for word. */
+  readonly innovationLinkQuestion = INNOVATION_LINK_QUESTION;
+
+  /**
+   * Innovation use + phase 2026 onwards.
+   * 🛑 A PHASE-YEAR gate, never `isP25()`: prtest holds 2025-phase results inside the P25 portfolio,
+   * and for those the question stays where it always was (Contributors and partners).
+   * 🛑 An UNKNOWN year renders NOTHING here — the same fail-towards-the-legacy-form rule the twin
+   * gate in `rd-contributors-and-partners` documents: in the detail the result can land after the
+   * section mounts, and the two gates must never both be off (the answer would be unreachable) nor
+   * both be on (two surfaces, one answer).
+   */
+  readonly showsInnovationLink = computed(() => {
+    const result = this.dataControlSE.currentResultSignal?.();
+    const year = result?.phase_year;
+    return Number(result?.result_type_id) === INNOVATION_USE_RESULT_TYPE_ID && typeof year === 'number' && year >= INNOVATION_LINK_MIN_PHASE_YEAR;
+  });
+
+  /**
+   * The catalogue is fetched only for the surface that uses it. The result (and with it its phase
+   * year) usually lands after the section mounts, hence an effect; `load()` is idempotent.
+   */
+  private readonly loadQaInnovationCatalogue = effect(() => this.ensureQaInnovationCatalogue());
+
+  /** The effect's body, callable so it can be asserted directly. */
+  ensureQaInnovationCatalogue(): void {
+    if (this.showsInnovationLink()) this.qaInnovationsSE.load();
+  }
+
+  /**
+   * Single selection over an array-shaped payload: `linked_results` stays an array both ways (the
+   * GET returns `number[]` and the PATCH contract is shared with the multi-select surfaces).
+   */
+  get linkedInnovationId(): number | null {
+    const first = (this.innovationUseInfoBody?.linked_results ?? [])[0];
+    const id = Number((first as any)?.id ?? first);
+    return Number.isFinite(id) ? id : null;
+  }
+  set linkedInnovationId(value: number | null) {
+    this.innovationUseInfoBody.linked_results = value == null ? [] : [value];
+  }
+
+  /**
+   * ⚠️ The stored link is just an id and the catalogue only lists what is linkable TODAY. A link
+   * saved before that innovation left those statuses would paint an EMPTY select, and saving the
+   * section would then wipe it without the user touching anything. So the stored id is kept as an
+   * option; its title is unknown here (this section loads no wider catalogue), which is why the
+   * fallback label says so instead of inventing one.
+   */
+  get qaInnovationOptions(): QaInnovationDevelopmentOption[] {
+    const options = this.qaInnovationsSE.options();
+    const selected = this.linkedInnovationId;
+    if (selected == null || options.some(option => option.id === selected)) return options;
+    return [
+      {
+        id: selected,
+        result_code: selected,
+        title: '',
+        status_id: 0,
+        phase_year: 0,
+        acronym: null,
+        display: `${selected} - (linked result outside the QA’d list)`
+      },
+      ...options
+    ];
+  }
+
+  /** "No" clears the selection — P2-3421 asks for it, and the server reads a false flag as "no link". */
+  onInnovationLinkChange(): void {
+    if (!this.showsInnovationLink()) return;
+    if (!this.innovationUseInfoBody.has_innovation_link) this.innovationUseInfoBody.linked_results = [];
+  }
 
   getSectionInformation() {
     this.api.resultsSE.GET_innovationUse().subscribe({
@@ -117,11 +209,15 @@ export class InnovationUseInfoComponent {
   onSaveSection() {
     this.savingSection = true;
 
-    // P2-3199: the innovation link question now lives only in Contributors and partners (section 2).
-    // This section no longer edits it, so it must re-read the current value right before saving —
-    // otherwise a stale value loaded on mount would overwrite the section 2 answer and, because the
-    // server treats a falsy value as "no link", delete the results linked there.
-    if (this.fieldsManagerSE.isP25()) {
+    // P2-3199: the innovation link question lives in Contributors and partners (section 2) for every
+    // result this section does not ask it for. There it must re-read the current value right before
+    // saving — otherwise a stale value loaded on mount would overwrite the section 2 answer and,
+    // because the server treats a falsy value as "no link", delete the results linked there.
+    //
+    // 🛑 P2-3424 — but NOT when the question lives here (Innovation use, phase 2026 onwards). Re-reading
+    // then would discard the answer the user just gave in this very section: the value on screen would
+    // be replaced by the one already stored, silently, with a green save toast.
+    if (this.fieldsManagerSE.isP25() && !this.showsInnovationLink()) {
       this.api.resultsSE.GET_innovationUseP25().subscribe({
         next: ({ response }) => this.saveSectionWith(this.innovationLinkFrom(response)),
         error: err => {

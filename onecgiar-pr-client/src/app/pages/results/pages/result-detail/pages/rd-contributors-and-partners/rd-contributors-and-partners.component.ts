@@ -10,10 +10,7 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
 import { InnovationUseResultsService } from '../../../../../../shared/services/global/innovation-use-results.service';
 import {
   INNOVATION_LINK_MIN_PHASE_YEAR,
-  INNOVATION_LINK_QUESTION,
-  INNOVATION_USE_RESULT_TYPE_ID,
-  QaInnovationDevelopmentOption,
-  QaInnovationDevelopmentResultsService
+  INNOVATION_USE_RESULT_TYPE_ID
 } from '../../../../../../shared/services/global/qa-innovation-development-results.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { filterOutAvisaInitiatives, isAvisaInitiative as checkAvisaInitiative } from '../../../../../../shared/utils/avisa-initiative.util';
@@ -31,7 +28,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   tocConsumed = true;
   disabledText = 'To remove this center, please contact your librarian';
   innovationUseResultsSE = inject(InnovationUseResultsService);
-  qaInnovationsSE = inject(QaInnovationDevelopmentResultsService);
   fieldsManagerSE = inject(FieldsManagerService);
   constructor(
     public api: ApiService,
@@ -98,39 +94,21 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   isCP2026 = computed(() => this.fieldsManagerSE.isContributorsPartners2026());
 
   /**
-   * P2-3420 / P2-3421 — Innovation use, phase 2026 onwards: the linked innovation is picked with a
-   * SINGLE select over the QA'd Innovation Development catalogue (QAed, Approved, Discontinued —
-   * portfolio-wide), type-ahead by result id and title. Every other surface this question serves
-   * (Innovation development, and the generic 2026 question of the remaining result types) keeps the
-   * legacy all-results multi-select untouched.
+   * P2-3424 (PO decision, 10 Sep 2026) — for Innovation use from the 2026 phase the link question and
+   * its picker moved OUT of this section and into the Innovation Use section
+   * (`rd-result-types-pages/innovation-use-info`), where they are optional. This computed is what
+   * takes them out here: the template hides the whole linked/bundled block, and `onSaveSection` drops
+   * `has_innovation_link` / `linked_results` from the payload so this section stops writing an answer
+   * it no longer asks. Every other surface (Innovation development, the generic 2026 question of the
+   * remaining result types, and any pre-2026 Innovation use) is untouched.
    *
    * 🛑 A phase gate, never `isP25()`: prtest holds 2025-phase results inside the P25 portfolio and
    * those must render exactly as they do today.
-   * 🛑 And, unlike the creation screens, an UNKNOWN year renders the legacy control here: in the
-   * detail the result can land AFTER the section mounts, so the safe side to fail towards is the old
-   * form — the same decision `FieldsManagerService.currentResultPhaseYear` documents at length.
+   * 🛑 And, unlike the creation screens, an UNKNOWN year keeps the LEGACY control here: in the detail
+   * the result can land AFTER the section mounts, so the safe side to fail towards is the old form —
+   * the same decision `FieldsManagerService.currentResultPhaseYear` documents at length. It is also
+   * the safe side for the omission above: an unresolved year keeps this section's save contract whole.
    */
-  /**
-   * The catalogue is fetched ONLY for the surface that uses it: every other result type keeps the
-   * legacy multi-select, so asking for it on entering any section would be a request for nothing.
-   * The result (and with it its phase year) usually lands after the section mounts, hence an effect
-   * and not a call in `ngOnInit`. `load()` is idempotent, so repeated ticks cost nothing.
-   */
-  private readonly loadQaInnovationCatalogue = effect(() => this.ensureQaInnovationCatalogue());
-
-  /**
-   * Verbatim from P2-3420 / P2-3421 — QA reads it back word for word. It REPLACES the generic 2026
-   * question ("linked or bundled with another CGIAR-reported result") for Innovation use only: both
-   * questions are answered by the same stored field, so showing the generic wording here would ask
-   * the user something different from what the creation screen asked, about the same answer.
-   */
-  innovationLinkQuestion = INNOVATION_LINK_QUESTION;
-
-  /** The whole body of the effect above, in one callable place so it can be asserted directly. */
-  ensureQaInnovationCatalogue(): void {
-    if (this.showsQaInnovationLink()) this.qaInnovationsSE.load();
-  }
-
   showsQaInnovationLink = computed(() => {
     // Optional call: several hosts (and specs) stub `dataControlSE` without the signal — same guard
     // `isAvisaInitiative` and `hideWhyReportedField` already use above.
@@ -138,57 +116,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     const year = result?.phase_year;
     return Number(result?.result_type_id) === INNOVATION_USE_RESULT_TYPE_ID && typeof year === 'number' && year >= INNOVATION_LINK_MIN_PHASE_YEAR;
   });
-
-  /**
-   * Single selection over an array-shaped payload: `linked_results` stays an array both ways (the
-   * PATCH contract and the GET are shared with the multi-select surfaces), so only one id lives in it.
-   */
-  get linkedInnovationId(): number | null {
-    const first = (this.rdPartnersSE.partnersBody?.linked_results ?? [])[0];
-    const id = Number((first as any)?.id ?? first);
-    return Number.isFinite(id) ? id : null;
-  }
-  set linkedInnovationId(value: number | null) {
-    this.rdPartnersSE.partnersBody.linked_results = value == null ? [] : [value];
-  }
-
-  /**
-   * ⚠️ The stored link is just an id, and the catalogue only lists what is linkable TODAY. A link
-   * saved before that innovation left those statuses would otherwise paint an EMPTY select — and
-   * saving the section would then wipe the link without the user ever touching it. So keep the stored
-   * id as an option, borrowing its title from the wider catalogue this section already loads.
-   */
-  get qaInnovationOptions(): QaInnovationDevelopmentOption[] {
-    const options = this.qaInnovationsSE.options();
-    const selected = this.linkedInnovationId;
-    if (selected == null || options.some(option => option.id === selected)) return options;
-    return [this.linkedInnovationFallbackOption(selected), ...options];
-  }
-
-  /** `status_id` / `phase_year` are left at 0: unknown for a fallback option, and nothing reads them. */
-  private linkedInnovationFallbackOption(id: number): QaInnovationDevelopmentOption {
-    const groups = (this.innovationUseResultsSE.resultsList ?? []) as any[];
-    const match = groups.flatMap(group => group?.options ?? group ?? []).find((option: any) => Number(option?.id) === id);
-    const code = Number(match?.result_code ?? id);
-    const title = `${match?.title ?? ''}`.trim();
-    return {
-      id,
-      result_code: code,
-      title,
-      status_id: 0,
-      phase_year: 0,
-      acronym: match?.acronym ?? null,
-      display: title ? `${code} - ${title}` : `${code} - (linked result outside the QA’d list)`
-    };
-  }
-
-  /** "No" clears the link — P2-3421 asks for it, and the server reads a false flag as "no link". */
-  onQaInnovationLinkChange(): void {
-    // The radio is shared with the Innovation development / legacy surfaces: only the 2026 Innovation
-    // use control owns this clearing behaviour, the others keep whatever they had.
-    if (!this.showsQaInnovationLink()) return;
-    if (!this.rdPartnersSE.partnersBody.has_innovation_link) this.rdPartnersSE.partnersBody.linked_results = [];
-  }
 
   // P2-3063 / P2-3036 AC6 (2026, unplanned scenario): single mandatory Yes/No radio
   // "Did the Program invest financial resources in the achievement of this result?".
@@ -754,7 +681,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         .filter((id: any) => id != null);
     }
 
-    const sendedData = {
+    const sendedData: any = {
       ...this.rdPartnersSE.partnersBody,
       contributing_center: contributingCenterPayload,
       institutions: institutionsPayload,
@@ -763,6 +690,21 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       ...(isCP2026 ? { cancel_pending_requests: cancelPendingRequests } : {}),
       email_template: 'email_template_contribution'
     };
+
+    // P2-3424 — this section no longer ASKS the innovation-link question for 2026 Innovation use, so
+    // it must not ANSWER it either. Both keys are dropped from the payload, which the server reads as
+    // "this save says nothing about the link" and leaves the stored answer alone
+    // (`contributors-partners.service.ts` → `hasInnovationLinkPayload`, only then
+    // `applyInnovationLinkSectionUpdate`).
+    // 🛑 Not cosmetic. Keeping them would resurrect a STALE answer: `partnersBody.has_innovation_link`
+    // is hydrated by this section's GET, which reads `result.has_innovation_link` in preference to
+    // `results_innovations_use.has_innovation_link` (`getInnovationLinkStatus`), and the Innovation Use
+    // section writes only the latter. A "Yes" set there, followed by any save here, would arrive as
+    // "No" and take the stored `linked_result` rows with it.
+    if (this.showsQaInnovationLink()) {
+      delete sendedData.has_innovation_link;
+      delete sendedData.linked_results;
+    }
 
     this.api.resultsSE.PATCH_ContributorsPartners(sendedData).subscribe(_resp => {
       this.rdPartnersSE.getSectionInformation(null, true);
