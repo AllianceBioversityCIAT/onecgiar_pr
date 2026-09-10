@@ -352,13 +352,13 @@ export class ReportingAowTableComponent {
   }
 
   /**
-   * Rule 17: the action reflects state — `Report` when nothing is in yet, `Continue` while in
-   * progress, and NO button once the target is met.
+   * The action reflects state — `Report` when nothing is in yet, `Continue` while in
+   * progress, and `Report` when achieved or overachieved (allowing users to report additional results).
    */
   actionLabel(row: ReportingIndicator): string | null {
     const s = this.statusOf(row);
-    if (s === 'achieved' || s === 'overachieved') return null;
-    return s === 'in-progress' ? 'Continue' : 'Report';
+    if (s === 'in-progress') return 'Continue';
+    return 'Report';
   }
 
   // ── Figures ───────────────────────────────────────────────────────────────
