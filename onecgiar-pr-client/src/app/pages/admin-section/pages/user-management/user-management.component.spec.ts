@@ -941,4 +941,69 @@ describe('UserManagementComponent', () => {
     });
   });
 
+
+  describe('P2-2043 - closing the Table filters panel', () => {
+    /**
+     * Found in the browser: the panel is absolutely positioned over the chips row, so with the panel
+     * open the chip X buttons are visible but the panel swallows the click. Playwright reported
+     * "subtree intercepts pointer events" on a button it had just confirmed visible and enabled.
+     */
+    const clickOn = (selector: string) => {
+      const element = fixture.debugElement.query(By.css(selector));
+      // Jest, not Jasmine: no withContext here. If the selector stops matching, this is the line
+      // that says so instead of a confusing null dereference below.
+      if (!element) throw new Error(`no element matched ${selector}`);
+      component.onDocumentClick({ target: element.nativeElement } as unknown as MouseEvent);
+      fixture.detectChanges();
+    };
+
+    beforeEach(() => {
+      component.showFiltersPanel.set(true);
+      fixture.detectChanges();
+    });
+
+    it('closes when the click lands outside', () => {
+      component.onDocumentClick({ target: document.body } as unknown as MouseEvent);
+
+      expect(component.showFiltersPanel()).toBe(false);
+    });
+
+    it('stays open when the click lands inside the panel', () => {
+      // The case that matters: if this closed, picking any filter option would dismiss the panel.
+      clickOn('#table-filters-panel');
+
+      expect(component.showFiltersPanel()).toBe(true);
+    });
+
+    it('stays open when the click lands on a filter control inside it', () => {
+      clickOn('#platformRolesSelect');
+
+      expect(component.showFiltersPanel()).toBe(true);
+    });
+
+    it('closes on Escape', () => {
+      component.onEscapeKey();
+
+      expect(component.showFiltersPanel()).toBe(false);
+    });
+
+    it('still closes the assignment overlay, and does so with no event at all', () => {
+      // The existing callers invoke this with no argument; that path must keep working.
+      component.assignmentOverlayOpen.set(true);
+
+      component.onDocumentClick();
+
+      expect(component.assignmentOverlayOpen()).toBe(false);
+    });
+
+    it('leaves the chips reachable once the panel is closed', () => {
+      component.selectedStatus.set('Active');
+      component.onEscapeKey();
+      fixture.detectChanges();
+
+      expect(fixture.debugElement.query(By.css('#table-filters-panel'))).toBeNull();
+      expect(fixture.debugElement.query(By.css('.active-filter-chip__x'))).toBeTruthy();
+    });
+  });
+
 });
