@@ -687,4 +687,92 @@ describe('RdContributorsAndPartnersService', () => {
       expect(service.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['T1', 'T2']);
     });
   });
+
+  /**
+   * docs/specs/changes/partner-role-exclusive-selection PRL-T-1: `isRoleBlockedByOther` reports true
+   * only for a non-`Other` role id when `Other` (id 4) is currently active on the row; `Other`'s own
+   * id is never reported as blocked, and nothing is blocked when `Other` is absent.
+   */
+  describe('isRoleBlockedByOther (PRL-R-1/PRL-R-2/PRL-R-3)', () => {
+    const otherActive = [{ partner_delivery_type_id: 4 }];
+
+    it('PRL-AC-3: returns true for Scaling/Demand/Innovation (ids 1/2/3) when Other is active', () => {
+      expect(service.isRoleBlockedByOther(otherActive, 1)).toBe(true);
+      expect(service.isRoleBlockedByOther(otherActive, 2)).toBe(true);
+      expect(service.isRoleBlockedByOther(otherActive, 3)).toBe(true);
+    });
+
+    it("never blocks Other's own id (4), even while Other is active", () => {
+      expect(service.isRoleBlockedByOther(otherActive, 4)).toBe(false);
+    });
+
+    it('PRL-AC-4: returns false for ids 1/2/3 when Other is not active (deliveries empty)', () => {
+      expect(service.isRoleBlockedByOther([], 1)).toBe(false);
+      expect(service.isRoleBlockedByOther([], 2)).toBe(false);
+      expect(service.isRoleBlockedByOther([], 3)).toBe(false);
+    });
+
+    it('PRL-R-4 (no regression): returns false for ids 1/2/3 when Scaling/Demand are active but Other is not', () => {
+      const scalingAndDemand = [{ partner_delivery_type_id: 1 }, { partner_delivery_type_id: 2 }];
+      expect(service.isRoleBlockedByOther(scalingAndDemand, 1)).toBe(false);
+      expect(service.isRoleBlockedByOther(scalingAndDemand, 3)).toBe(false);
+    });
+
+    it('returns false when deliveries is not an array (defensive)', () => {
+      expect(service.isRoleBlockedByOther(undefined as any, 1)).toBe(false);
+    });
+  });
+
+  /**
+   * docs/specs/changes/partner-role-exclusive-selection PRL-T-1: `onSelectDeliveryPartners` guard.
+   */
+  describe('onSelectDeliveryPartners — exclusive Other guard (PRL-R-2/PRL-R-4/PRL-R-5)', () => {
+    beforeEach(() => {
+      (mockApi as any).rolesSE = { readOnly: false };
+    });
+
+    it('PRL-AC-3: clicking Scaling/Demand/Innovation while Other is active is a true no-op — the delivery array is unchanged', () => {
+      const option: any = { delivery: [{ partner_delivery_type_id: 4 }] };
+      const before = option.delivery;
+
+      service.onSelectDeliveryPartners(option, 1);
+
+      expect(option.delivery).toBe(before); // same reference — never reassigned
+      expect(option.delivery).toEqual([{ partner_delivery_type_id: 4 }]);
+    });
+
+    it('PRL-R-3: clicking Other again (deselect) still works while Other is active — the guard never blocks id 4', () => {
+      const option: any = { delivery: [{ partner_delivery_type_id: 4 }] };
+
+      service.onSelectDeliveryPartners(option, 4);
+
+      expect(option.delivery).toEqual([]);
+    });
+
+    it('PRL-AC-1 (no regression): Scaling then Demand both become active — free multi-select when Other is not active', () => {
+      const option: any = { delivery: [] };
+
+      service.onSelectDeliveryPartners(option, 1);
+      service.onSelectDeliveryPartners(option, 2);
+
+      expect(option.delivery.map((d: any) => d.partner_delivery_type_id).sort()).toEqual([1, 2]);
+    });
+
+    it('PRL-AC-2 (no regression): selecting Other while Scaling+Demand are active clears them and activates only Other', () => {
+      const option: any = { delivery: [{ partner_delivery_type_id: 1 }, { partner_delivery_type_id: 2 }] };
+
+      service.onSelectDeliveryPartners(option, 4);
+
+      expect(option.delivery).toEqual([{ partner_delivery_type_id: 4 }]);
+    });
+
+    it('respects the readOnly guard ahead of the Other-exclusive guard', () => {
+      (mockApi as any).rolesSE = { readOnly: true };
+      const option: any = { delivery: [] };
+
+      service.onSelectDeliveryPartners(option, 1);
+
+      expect(option.delivery).toEqual([]);
+    });
+  });
 });

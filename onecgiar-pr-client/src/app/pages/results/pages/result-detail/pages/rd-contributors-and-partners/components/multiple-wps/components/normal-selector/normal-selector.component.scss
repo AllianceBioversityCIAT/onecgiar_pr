@@ -133,6 +133,13 @@
           opacity: 1;
         }
       }
+
+      // PRL-DD-1 (docs/specs/changes/partner-role-exclusive-selection): dim + click-guard, NOT
+      // `pointer-events: none` — the tooltip explaining the role must keep working on hover.
+      .delivery.blocked {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
     }
   }
 }

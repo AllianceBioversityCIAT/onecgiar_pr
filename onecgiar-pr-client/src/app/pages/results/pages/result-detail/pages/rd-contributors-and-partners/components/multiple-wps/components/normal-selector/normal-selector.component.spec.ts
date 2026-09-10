@@ -63,6 +63,7 @@ describe('CPNormalSelectorComponent — External Partners note suppressed on unm
       otherPartnersSelected: [],
       setPossibleLeadPartners: jest.fn(),
       validateDeliverySelectionPartners: () => false,
+      isRoleBlockedByOther: () => false,
       onSelectDeliveryPartners: jest.fn(),
       removePartner: jest.fn()
     };
@@ -125,5 +126,123 @@ describe('CPNormalSelectorComponent — External Partners note suppressed on unm
     const messages = pr_messages();
     expect(messages.length).toBeGreaterThan(0);
     expect(messages[0].textContent).toContain('No External Partners related to the established HLO/Outcomes were found');
+  });
+});
+
+/**
+ * PRL-T-1 (docs/specs/changes/partner-role-exclusive-selection) — the Scaling/Demand/Innovation
+ * pills render `blocked` + `aria-disabled="true"` and are click no-ops (through the REAL service,
+ * so the guard in `onSelectDeliveryPartners` is actually exercised) when `Other` is the active
+ * Partner role on that row, in BOTH duplicated selected-partner blocks (ToC + "Other(s)").
+ */
+describe('CPNormalSelectorComponent - Other-exclusive role block (PRL-T-1)', () => {
+  let fixture: ComponentFixture<CPNormalSelectorComponent>;
+  let rdPartnersSE: RdContributorsAndPartnersService;
+  let tocOption: any;
+  let otherOption: any;
+
+  @Pipe({ name: 'countInstitutionsTypes', standalone: false })
+  class CountInstitutionsTypesStubPipe implements PipeTransform {
+    transform(value: any[]): any[] {
+      return value || [];
+    }
+  }
+
+  const delivery = (id: number) => ({ partner_delivery_type_id: id });
+
+  const chipOption = (id: number, name: string, deliveries: any[]) => ({
+    institutions_id: id,
+    institutions_name: name,
+    full_name: name,
+    delivery: deliveries,
+    obj_institutions: { name, obj_institution_type_code: { name: 'NGO', id: 1 } }
+  });
+
+  const setup = (opts: { tocDeliveries?: any[]; otherDeliveries?: any[] } = {}) => {
+    tocOption = chipOption(10, 'ToC partner', opts.tocDeliveries ?? []);
+    otherOption = chipOption(20, 'Other partner', opts.otherDeliveries ?? []);
+
+    TestBed.configureTestingModule({
+      declarations: [CPNormalSelectorComponent, CountInstitutionsTypesStubPipe],
+      imports: [CommonModule],
+      providers: [
+        provideZonelessChangeDetection(),
+        {
+          provide: ApiService,
+          useValue: { dataControlSE: { currentResult: { result_code: 'R-1', version_id: 1 } }, rolesSE: { readOnly: false } }
+        },
+        { provide: RolesService, useValue: { readOnly: false } },
+        // Uses the REAL service (not a mock) so the guard added to onSelectDeliveryPartners is exercised end-to-end.
+        RdContributorsAndPartnersService,
+        {
+          provide: InstitutionsService,
+          useValue: { institutionsWithoutCentersListPartners: [], institutionsWithoutCentersPartners: signal<any[]>([]) }
+        },
+        { provide: GreenChecksService, useValue: {} },
+        { provide: DataControlService, useValue: { isKnowledgeProduct: false } },
+        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => true } }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    });
+
+    rdPartnersSE = TestBed.inject(RdContributorsAndPartnersService);
+    rdPartnersSE.partnersBody = { institutions: [tocOption], no_applicable_partner: false } as any;
+    rdPartnersSE.otherPartnersSelected = [otherOption];
+
+    fixture = TestBed.createComponent(CPNormalSelectorComponent);
+    fixture.detectChanges();
+  };
+
+  const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
+  const blocks = (): HTMLElement[] => Array.from(el().querySelectorAll('.chips_container'));
+  // Pills render in Scaling(1), Demand(2), Innovation(3), Other(4) order.
+  const pills = (container: HTMLElement) => Array.from(container.querySelectorAll('.delivery')) as HTMLElement[];
+
+  it('PRL-AC-3/PRL-R-1: Scaling/Demand/Innovation carry class "blocked" and aria-disabled="true" when Other is active, in BOTH blocks', () => {
+    setup({ tocDeliveries: [delivery(4)], otherDeliveries: [delivery(4)] });
+
+    blocks().forEach(container => {
+      const [scaling, demand, innovation, other] = pills(container);
+      [scaling, demand, innovation].forEach(pill => {
+        expect(pill.classList.contains('blocked')).toBe(true);
+        expect(pill.getAttribute('aria-disabled')).toBe('true');
+      });
+      // Other's own button is never blocked.
+      expect(other.classList.contains('blocked')).toBe(false);
+      expect(other.getAttribute('aria-disabled')).toBeNull();
+    });
+  });
+
+  it('PRL-AC-3/PRL-R-2: clicking a blocked pill is a true no-op - delivery is unchanged', () => {
+    setup({ tocDeliveries: [delivery(4)] });
+
+    const scalingPill = pills(blocks()[0])[0];
+    scalingPill.click();
+
+    expect(tocOption.delivery).toEqual([{ partner_delivery_type_id: 4 }]);
+  });
+
+  it('PRL-AC-4/PRL-R-3: deselecting Other restores Scaling/Demand/Innovation to normal, interactive, undimmed state', () => {
+    setup({ tocDeliveries: [] });
+
+    blocks().forEach(container => {
+      const [scaling, demand, innovation] = pills(container);
+      [scaling, demand, innovation].forEach(pill => {
+        expect(pill.classList.contains('blocked')).toBe(false);
+        expect(pill.getAttribute('aria-disabled')).toBeNull();
+      });
+    });
+  });
+
+  it('PRL-R-4 (no regression): Scaling/Demand remain a free multi-select and are clickable when Other is not active', () => {
+    setup({ tocDeliveries: [] });
+
+    const [scalingPill, demandPill] = pills(blocks()[0]);
+    scalingPill.click();
+    fixture.detectChanges();
+    demandPill.click();
+    fixture.detectChanges();
+
+    expect(tocOption.delivery.map((d: any) => d.partner_delivery_type_id).sort()).toEqual([1, 2]);
   });
 });
