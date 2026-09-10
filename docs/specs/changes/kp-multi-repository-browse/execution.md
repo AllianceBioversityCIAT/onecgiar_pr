@@ -88,3 +88,58 @@
 
 **Decisions / issues**: none. Budget: 1 Reviewer round. Gate: `auto-approved (pre-approved mode)`.
 
+### `KPM-T-5` — Merge (round-robin) and dedup (DOI → title|type|year) as pure functions, TDD
+
+| Field | Value |
+|---|---|
+| Final status | _in progress — see attempts below_ |
+| Date | 2026-09-10 |
+| Implementer | `akili-implementer` (`sonnet`), effort `xhigh` (algorithmic core; Leader raised from the `medium` default), skill `tdd` (`nestjs-expert` dropped — pure functions, no Nest surface) |
+| Reviewer | `akili-reviewer` (`opus`), lens checklist mode |
+| Requirements covered | `KPM-R-4` (ordering), `KPM-R-5` (all clauses), `KPM-AC-5`, `KPM-AC-6`, scenario `KPM-R-5`; `KPM-DD-3`, `KPM-DD-4` |
+| Ran in parallel with | `KPM-T-3` (disjoint files: `merge.ts`/`merge.spec.ts` vs mapper + spec) |
+
+**Attempt 1 — FAIL**
+
+- Files changed: `cgspace-discovery/merge.ts` (new), `cgspace-discovery/merge.spec.ts` (new, 18 tests). Exports `interleave<T>`, `normalizeDoi`, `normalizeTitle`, `dedupe(items, priorityOrder) → { items, dedupedCount }`.
+- Red → green evidence: red `TS2307: Cannot find module './merge' or its corresponding type declarations.` (spec written before `merge.ts` existed); green `Tests: 18 passed, 18 total`. `npx tsc --noEmit -p tsconfig.json` clean; eslint clean after a prettier `--fix`.
+- Implementer design note: `dedupe` grouped items with a union-find over the pairwise match rule "so an indirect chain merges transitively".
+- Reviewer verdict: **FAIL** (2 issues). Full report:
+  1. **Discovered Issue:** `dedupe` merges items with different DOIs through a DOI-less intermediary. With A `{doi 10.1/x, title T, type/year equal}`, B `{doi null, title T}`, C `{doi 10.1/y, title T}`, the union-find in `merge.ts:127-149` produces a single group; A and C collapse into one card and one of them is hidden behind an "Also in" note, so *Use this item* can hand the primary handle of a genuinely different publication to the submitter. `dedupedCount` is also inflated, which propagates to `totalElements = Σ ok − dedupedCount` in `KPM-T-4`. **Violated Rule:** `requirements.md` scenario `KPM-R-5` clause "two items whose titles match and whose DOIs are both present and different must NOT collapse"; `design.md` §5 Dedup "items with two different DOIs never collapse on title"; `tasks.md` `KPM-T-5` verification "same title, both DOIs present and different → two". **Remediation:** drop the transitive closure; group by key — (a) partition DOI-bearing items by exact key₁; (b) group DOI-less items among themselves by key₂; (c) attach a DOI-less group to a key₁ group iff exactly one key₁ group contains a member with an equal key₂; two or more candidates → attach to none. Record the tie rule in `design.md` §5. Keep survivor selection, group ordering, `alsoIn`, `dedupedCount`.
+  2. **Discovered Issue:** the 18 tests never contain a DOI-less item sharing key₂ with two different-DOI items, so the green run is not evidence for the clause. **Violated Rule:** `tasks.md` `KPM-T-5` Implements "`KPM-R-5` (all clauses)… scenario all four clauses". **Remediation:** add a red-first case A `{cgspace, doi '10.1000/first'}`, B `{melspace, doi null}`, C `{worldfish, doi 'https://doi.org/10.2000/SECOND'}` with equal key₂; assert A and C are never united.
+  - Verified clean: `normalizeTitle` steps, `normalizeDoi` prefixes, `interleave` order, survivor priority, `alsoIn` shape, purity, no input mutation, disqualifier satisfied.
+- Leader adjudication: FAIL upheld (the Leader had raised the same hypothesis in the Reviewer brief; the Reviewer traced it independently in the code). Rework attempt 2 spawned with the report verbatim plus one extra positive case (DOI-less item attaches to the single matching DOI group). Effort kept at `xhigh`: the routing rule forbids `max` on a T2 model, and moving the Implementer to `opus` would collapse author ≠ auditor.
+
+**ADVISORY from Reviewer round 1 (recorded — no rework, no new task)**
+
+- Reliability: the no-mutation test uses two items that never collapse, so the only mutating branch (`survivor.alsoIn`) is never executed.
+- Readability: `tasks.md` names `dedupKey1/2`; the module exports neither (`dedupKey2` private, key₁ is `normalizeDoi`).
+- Resilience: `normalizeDoi` strips only the three spec-listed prefixes; `https://dx.doi.org/` and `http://doi.org/` would degrade a DOI match to a title match.
+- Risk: the mapper falls back to `''` for absent title/type, so two DOI-less items with no metadata share key₂ `'||'` and collapse. Candidate for a follow-up proposal, not this spec.
+
+### `KPM-T-3` — Adapter-parameterized mapper
+
+| Field | Value |
+|---|---|
+| Final status | **PASS** (attempt 1 of 3) |
+| Date | 2026-09-10 |
+| Implementer | `akili-implementer` (`sonnet`), effort `medium`, skills `nestjs-expert`, `tdd` (fixture-driven red → green, per the design Skills row) |
+| Reviewer | `akili-reviewer` (`opus`), lens checklist mode |
+| Requirements covered | `KPM-R-8` clauses "metadata mapped with that repository's field names" and "`handleUrl`/`itemUrl` built from that repository's host"; `KPM-AC-13`; `KPM-DD-1` |
+| Ran in parallel with | `KPM-T-5` (disjoint files) |
+
+**Attempt 1**
+
+- Files changed: `cgspace-discovery.mapper.ts` (`toPage(hal, adapter)` / `toItem(node, adapter)` read `adapter.fields.*`, `adapter.itemHost`, `adapter.key`; `mapAuthors` ordered concat + de-dup; `affiliations → []` when the adapter declares none; `handleUrl` always `hdl.handle.net`; `countries` stays `cg.coverage.country`), `cgspace-discovery.mapper.spec.ts` (rewritten: pre-change CGSpace snapshot constants + MEL/WorldFish concrete assertions, 12 tests), `cgspace-discovery.service.ts` (one-line call site `toPage(res.data, KP_REPOSITORIES.cgspace)`).
+- Red → green: red `error TS2554: Expected 1 arguments, but got 2` × 11 call sites (new spec against the old mapper); green `Tests: 12 passed, 12 total`.
+- Implementer verification: whole folder `npx jest --silent --reporters=summary --forceExit …/cgspace-discovery` → `Test Suites: 5 passed · Tests: 71 passed, 71 total` (includes T-5's attempt-1 spec); `npx tsc --noEmit -p tsconfig.json` clean; eslint clean.
+- Implementer `Not Done / Assumptions`: the CGSpace regression asserts pre-change fields unchanged **plus** the new `repository: 'cgspace'` field rather than a literal deep-equal. Leader adjudication: the work order mandates `repository = adapter.key`, so the additive field is the spec's requirement; accepted, not scope owed.
+- Reviewer verdict: **PASS**. Summary: mapper fully adapter-parameterized per `KPM-DD-1`; the CGSpace snapshot was re-derived by the Reviewer from the fixture bytes through the old hardcoded keys and matches field by field (only delta = mandated `repository`); every MEL/WorldFish assertion re-derived from the fixture bytes is correct; the named failing input (`dc.date.issued` on MEL, absent from the fixture) is caught; no stale single-argument call site remains.
+
+**ADVISORY (4R, recorded — no rework, no new task)**
+
+- Reliability: MEL item 0 also carries `dcterms.issued` with the same value as `dcterms.available`, so a mutation of `melspace.fields.year` to `dcterms.issued` would pass; asserting `items[2].year === 2016` (an item with no `dcterms.issued`) would close it.
+- Readability: `CGSPACE_PRE_CHANGE_ITEMS` does not name the fixture/capture date it was derived from.
+
+**Decisions / issues**: none. Budget: 1 Reviewer round. Gate: `auto-approved (pre-approved mode)`.
+

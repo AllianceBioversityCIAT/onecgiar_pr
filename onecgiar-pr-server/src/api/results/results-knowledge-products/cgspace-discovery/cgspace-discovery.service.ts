@@ -5,6 +5,7 @@ import { CgspaceDiscoveryMapper } from './cgspace-discovery.mapper';
 import { CgspaceSearchQueryDto } from './dto/cgspace-search-query.dto';
 import { CgspaceFacetQueryDto } from './dto/cgspace-facet-query.dto';
 import { CgspaceSearchPageDto } from './dto/cgspace-item.dto';
+import { KP_REPOSITORIES } from './repositories.config';
 
 export interface CacheEntry<T> {
   expires: number;
@@ -222,7 +223,7 @@ export class CgspaceDiscoveryService {
       );
 
       const durationMs = Date.now() - start;
-      const pageDto = this.mapper.toPage(res.data);
+      const pageDto = this.mapper.toPage(res.data, KP_REPOSITORIES.cgspace);
       const result: CgspaceServiceResponse<CgspaceSearchPageDto> = {
         response: pageDto,
         message: 'CGSpace search results',

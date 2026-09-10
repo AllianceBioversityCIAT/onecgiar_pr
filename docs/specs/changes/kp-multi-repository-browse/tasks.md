@@ -7,7 +7,7 @@
 | Spec path | `docs/specs/changes/kp-multi-repository-browse/` · Module code `KPM` |
 | Linked | `requirements.md` (KPM-R-*, KPM-AC-*) · `design.md` (KPM-DD-*, §3.3 adapter table, §4.1 contract) · `proposal.md` · `mockup/` |
 | Approval Mode | pre-approved (Phase 3 gate auto-approved, pre-approved mode) |
-| Status | in-progress (T-1, T-2 done 2026-09-10) |
+| Status | in-progress (T-1, T-2, T-3 done 2026-09-10) |
 | Owner / driver | Juan Carlos Cadavid · AKILI Leader |
 | Budget (from `design.md` §14) | 10 tasks · ~1,250 LOC incl. tests · ≤ 1 Reviewer round per task; tripwire > 12 tasks or > 1,500 LOC → stop and escalate |
 
@@ -62,7 +62,7 @@
 - **Verification:** DTO spec through the same `ValidationPipe({ transform, whitelist, forbidNonWhitelisted })` options as the controller: `cgspace,foo` → 400; `repository=melspace&repository=worldfish` → `['melspace','worldfish']`; `CGSpace` → `cgspace`; omitted → all three; `cgspace,cgspace` → `['cgspace']`; empty string → 400. **Input that fails it:** removing `{ each: true }` makes `cgspace,foo` pass → test fails. **Disqualifier:** tests that call `plainToInstance` without `validate()` prove nothing about the 400 — they do not count.
 - **Definition of done:** DTO spec green; lint clean; Swagger shows the array enum; existing case `should fail validation when repository is not "cgspace"` (`dto.spec.ts:105`) updated to the unknown value `foo` (reversion challenge `design.md` §15 row 1).
 
-### `KPM-T-3` — Adapter-parameterized mapper
+### [x] `KPM-T-3` — Adapter-parameterized mapper
 
 - **Type:** `server`
 - **Description:** `CgspaceDiscoveryMapper.toPage(hal, adapter)` / `toItem(node, adapter)` read title, type, year, authors, affiliation, DOI and URI keys, item host and repository key from the adapter (`affiliations` → `[]` when the adapter declares no affiliation field); authors = ordered concat of `adapter.fields.authors[]` de-duplicated; `year` = first 4 digits of the adapter's year field; `handleUrl` always `hdl.handle.net`; `countries` from `cg.coverage.country` with `[]` fallback; `repository = adapter.key`. Existing CGSpace behavior byte-identical (regression on the existing fixture).
