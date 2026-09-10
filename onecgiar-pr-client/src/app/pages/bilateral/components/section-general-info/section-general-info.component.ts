@@ -95,7 +95,7 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
   @Output() resultTypeChanged = new EventEmitter<void>();
   private readonly autoSaveService = inject(BilateralAutoSaveService);
   private readonly mdsTracker = inject(BilateralMdsTrackerService);
-  private readonly creationService = inject(BilateralCreationService);
+  readonly creationService = inject(BilateralCreationService);
   private readonly userSearchService = inject(UserSearchService);
   selectedSubScores = signal<Record<string, number[]>>({});
   private readonly http = inject(HttpClient);
