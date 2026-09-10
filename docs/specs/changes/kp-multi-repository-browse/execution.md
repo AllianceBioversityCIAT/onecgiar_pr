@@ -364,3 +364,23 @@ Two Reviewers (`KPM-T-6`, `KPM-T-4` lens B) on `fable` were terminated by `HTTP 
 
 **Decisions / issues**: none beyond the test gap. **Budget:** 2 Reviewer rounds (round 2 PASSed — no escalation). Forward pointer from T-2 (prettier error at service `:1471`) closed here. Gate: `auto-approved (pre-approved mode)`.
 
+## Constitution Impact: KPM-T-2 / KPM-T-4 / KPM-T-6 / KPM-T-10
+
+- **Module reshaped (no new module):** `onecgiar-pr-server/src/api/results/results-knowledge-products/cgspace-discovery/` gained `repositories.config.ts` (adapter registry — the one file to edit for a fourth repository) and `merge.ts` (pure merge/dedup); the service is now a three-source fan-out. Public surface of `GET results-knowledge-products/cgspace/search|facets/:name` widened additively (`repository` list param, `sources[]`, `items[].repository`, `alsoIn[]`, `page.hasMore`, facet `values[].repositories`). Routes and class names deliberately keep `cgspace` (`KPM-R-31`).
+- **Client:** `kp-cgspace-browse/kp-repositories.constants.ts` is the single source of repository labels/colours/hosts (`KPM-DD-9`), imported by the browse component and the three hosts.
+- **Child guides:** `onecgiar-pr-server/src/CLAUDE.md` and `onecgiar-pr-server/AGENTS.md` updated in `KPM-T-10` (Discovery proxy row + three env vars). `lab-report-form/CLAUDE.md` re-stamped in `KPM-T-8`. No new child guide needed; `onecgiar-pr-client/src/CLAUDE.md` does not enumerate this component — nothing stale there.
+- **Parent index:** no `## Module Guides` change required (no new guide file).
+- **CodeGraph re-index pending** (new `repositories.config.ts`, `merge.ts`, `kp-repositories.constants.ts`, `kp-cgspace-browse.cy.ts`, `scripts/kp-copy-gate.sh`; service/mapper/DTO signatures changed).
+
+## Pending syncs for `/akili-archive` (shared-file discipline — apply on the default branch)
+
+| Target | Change | Source |
+|---|---|---|
+| `docs/trd/trd.md` integrations row | "DSpace Discovery proxy (CGSpace, MELSpace, WorldFish)" | `KPM-T-10` docs half |
+| `docs/specs/kaizen/changes--kp-cgspace-browse.md` pending #1 | mark done — server guide env list now carries the three Discovery vars | `KPM-T-10` docs half |
+| `design.md` §9 event inventory | add `kp.discovery.year_postfiltered { repository, kept, dropped }` (sixth event, `KPM-DD-7` path) | `KPM-T-4` lens B advisory |
+| `design.md` §8 (ux-ui) component rules | promote the chip-row source-selector pattern (`KPM-DD-8`) — as planned in `tasks.md` §8 | `KPM-T-6` |
+| `.agents/model-routing.md` registry | T1 Architect row still says `opus`; the Leader ran on a newer generation — refresh the row | Step 0 model checkpoint |
+| `design.md` §13 follow-ups | (a) CGSpace-only copy reachable with a MEL/WorldFish handle outside `KPM-R-11`'s list: `result-creator.component.html:101`, `change-result-type-modal.component.html:54,58,68`, server `_yearOutsideReportingPhasesMessage` (`results-knowledge-products.service.ts:861-876`); (b) `empty` state with a failed source shows no notice/retry (design §6.2 literal); (c) `scripts/kp-copy-gate.sh` not wired to `package.json`/CI; (d) `normalizeDoi` covers only the three spec-listed prefixes; (e) DOI-less items with empty title/type share key₂ `'||'` | `KPM-T-7`, `KPM-T-8`, `KPM-T-5` advisories |
+| Fixture docs | `fixtures/README.md` §7 says MEL DOI on "2 of 5" items — the capture has 3 of 5; `design.md` §3.3 row 70 carries an unsourced `/6115` | `KPM-T-1` advisory |
+
