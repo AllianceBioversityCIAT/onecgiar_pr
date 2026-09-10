@@ -13,11 +13,19 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideCircleCheck, lucideGlobe, lucideTriangleAlert } from '@ng-icons/lucide';
+import { lucideCircleCheck, lucideGlobe, lucideRefreshCw, lucideSplit, lucideTriangleAlert } from '@ng-icons/lucide';
 import { catchError, debounceTime, defer, distinctUntilChanged, finalize, map, of, retry, Subject, Subscription, switchMap, tap, timer } from 'rxjs';
 import { ResultsApiService } from 'src/app/shared/services/api/results-api.service';
 import { CustomFieldsModule } from 'src/app/custom-fields/custom-fields.module';
-import { ALL_KP_REPOSITORIES, KP_REPOSITORIES, KpRepository, KpRepositoryStatus } from './kp-repositories.constants';
+import {
+  ALL_KP_REPOSITORIES,
+  KP_ITEM_HOSTS,
+  KP_REPOSITORIES,
+  KpRepository,
+  KpRepositoryMeta,
+  KpRepositoryStatus,
+  kpRepositoryLabel
+} from './kp-repositories.constants';
 
 export interface CgspaceItemDto {
   uuid: string;
@@ -35,6 +43,9 @@ export interface CgspaceItemDto {
   // @akili-spec changes/kp-multi-repository-browse — design §4.1 (additive)
   /** Repository the item came from; absent on legacy single-source responses. */
   repository?: KpRepository;
+  // @akili-spec changes/kp-multi-repository-browse — design §4.1 / KPM-R-5 (additive)
+  /** Secondary repositories collapsed into this card by dedup; empty/absent when no match. */
+  alsoIn?: { repository: KpRepository; handle: string; handleUrl: string; itemUrl: string }[];
 }
 
 // @akili-spec changes/kp-multi-repository-browse — design §4.1
@@ -194,7 +205,7 @@ export const DEFAULT_CGSPACE_CENTERS: FacetOption[] = [
   templateUrl: './kp-cgspace-browse.component.html',
   styleUrls: ['./kp-cgspace-browse.component.scss'],
   // Client guide rule 21: every new icon in this component comes from @ng-icons/lucide.
-  providers: [provideIcons({ lucideCircleCheck, lucideGlobe, lucideTriangleAlert })],
+  providers: [provideIcons({ lucideCircleCheck, lucideGlobe, lucideRefreshCw, lucideSplit, lucideTriangleAlert })],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
@@ -225,6 +236,11 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   readonly page = signal<number>(0);
   readonly status = signal<'idle' | 'loading' | 'empty' | 'error' | 'results'>('idle');
   readonly loadingMore = signal<boolean>(false);
+  // @akili-spec changes/kp-multi-repository-browse — KPM-R-20
+  /** `page.hasMore` of the last response; drives *Load more* visibility (never `items().length < total()`). */
+  readonly hasMore = signal<boolean>(false);
+  /** Repository label of the item currently being retrieved, for the busy overlay (`design.md` §6.2). */
+  readonly selectingRepositoryLabel = signal<string | null>(null);
 
   // @akili-spec changes/kp-multi-repository-browse — KPM-R-1 / KPM-R-2 / KPM-R-6
   /** Every repository, in merge priority order — the strip renders one chip per entry. */
@@ -294,8 +310,56 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Design §7 / §6.2: View details may only open these hosts. */
-  readonly ALLOWED_HOSTS = ['cgspace.cgiar.org', 'hdl.handle.net'];
+  // @akili-spec changes/kp-multi-repository-browse — KPM-R-7 / KPM-R-23
+  /** `kpRepositoryLabel` exposed as a bound method so the template can call it directly. */
+  readonly kpRepositoryLabel = kpRepositoryLabel;
+
+  /** Display metadata (badge/dot classes, label) for one repository key, `undefined` when absent. */
+  repoMeta(key?: KpRepository | string | null): KpRepositoryMeta | undefined {
+    return key ? KP_REPOSITORIES[key as KpRepository] : undefined;
+  }
+
+  /** Selected repositories whose last response failed (`timeout | error | unconfigured`), KPM-R-7. */
+  readonly failedSources = computed<SourceStatusDto[]>(() => {
+    const selected = this.selectedRepositories();
+    return this.sources().filter(source => selected.includes(source.repository) && source.status !== 'ok');
+  });
+
+  /** `<Repo> a · <Repo> b …` over the selected repositories that answered `ok` (`KPM-R-4`). */
+  private readonly answeredSourcesText = computed<string>(() => {
+    const selected = this.selectedRepositories();
+    return this.sources()
+      .filter(source => selected.includes(source.repository) && source.status === 'ok')
+      .map(source => `${kpRepositoryLabel(source.repository)} ${source.total}`)
+      .join(' · ');
+  });
+
+  /** `Showing N of M items · <Repo> a · <Repo> b …` — the exact counter copy (`KPM-R-4`, `KPM-R-11`). */
+  readonly resultsCounterText = computed<string>(() => {
+    const base = `Showing ${this.items().length} of ${this.total()} items`;
+    const answered = this.answeredSourcesText();
+    return answered ? `${base} · ${answered}` : base;
+  });
+
+  /** Natural-language join ("A", "A and B", "A, B and C") for the error/empty copy (`KPM-R-7`, `KPM-R-11`). */
+  private formatRepositoryList(labels: string[]): string {
+    if (labels.length === 0) return '';
+    if (labels.length === 1) return labels[0];
+    return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
+  }
+
+  /** All currently selected repositories, named — the error state MUST name them (`KPM-R-7`, `KPM-AC-8`). */
+  readonly selectedRepositoriesText = computed<string>(() =>
+    this.formatRepositoryList(this.selectedRepositories().map(key => kpRepositoryLabel(key)))
+  );
+
+  /** The failed repositories, named — the partial notice MUST name them, never a CSS class alone (`KPM-R-7`). */
+  readonly failedRepositoriesText = computed<string>(() =>
+    this.formatRepositoryList(this.failedSources().map(source => kpRepositoryLabel(source.repository)))
+  );
+
+  /** Design §7 / §6.2 / `KPM-DD-10`: View details may only open these four exact hosts. */
+  readonly ALLOWED_HOSTS: readonly string[] = KP_ITEM_HOSTS;
 
   /** Minimum free-text length before a query is sent upstream (R-2, AC-8). */
   readonly MIN_QUERY_LENGTH = 3;
@@ -318,6 +382,7 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
     effect(() => {
       if (!this.busy()) {
         this.selectingItem.set(null);
+        this.selectingRepositoryLabel.set(null);
       }
     });
   }
@@ -458,7 +523,7 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
               // KCSR-R-1: proxy returns HTTP 200 with body { status: 502 } — treat as failure
               const bodyStatus: number | undefined = (res as any)?.response?.status ?? (res as any)?.response?.statusCode ?? (res as any)?.status ?? (res as any)?.statusCode;
               if (bodyStatus !== undefined && bodyStatus >= 400) {
-                throw new Error(`CGSpace proxy error: ${bodyStatus}`);
+                throw new Error(`Repository proxy error: ${bodyStatus}`);
               }
               return res;
             }),
@@ -479,12 +544,15 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
           this.items.set([]);
           this.total.set(0);
           this.sources.set([]);
+          this.hasMore.set(false);
           return;
         }
 
         // KPM-R-6: chip counts and unavailable states come from every response's sources[].
         const sources: unknown = res?.response?.sources;
         this.sources.set(Array.isArray(sources) ? (sources as SourceStatusDto[]) : []);
+        // KPM-R-20: *Load more* renders iff the last response reports page.hasMore.
+        this.hasMore.set(Boolean(res?.response?.page?.hasMore));
 
         const items: CgspaceItemDto[] = res?.response?.items ?? [];
         const total: number =
@@ -651,6 +719,12 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
     this.runSearch(0, false);
   }
 
+  /**
+   * Re-sends the full current selection at page 0 with the same params — used by the error-state
+   * "Try again" button AND by each per-repository "Retry <repo>" button in the partial notice
+   * (`KPM-R-7`, `design.md` §6.2). The server serves healthy sources from cache, so only the
+   * failed source is re-queried; there is no per-repository request from the client.
+   */
   retrySearch(): void {
     if (this.typeOptions().length === 0 || this.centerOptions().length === 0) {
       this.loadFacets();
@@ -682,6 +756,8 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
 
   onSelect(item: CgspaceItemDto): void {
     this.selectingItem.set(item.uuid || item.handle || null);
+    // KPM-R-11: the busy overlay names the item's own repository, never a hardcoded one.
+    this.selectingRepositoryLabel.set(kpRepositoryLabel(item.repository) || null);
     this.itemSelected.emit(item);
   }
 

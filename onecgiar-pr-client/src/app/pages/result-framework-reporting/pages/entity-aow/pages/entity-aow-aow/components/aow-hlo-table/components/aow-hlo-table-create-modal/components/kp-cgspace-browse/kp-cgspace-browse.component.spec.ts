@@ -29,7 +29,8 @@ describe('KpCgspaceBrowseComponent', () => {
     affiliations: ['Alliance of Bioversity and CIAT'],
     countries: ['Kenya', 'Colombia', 'Ethiopia', 'Peru'],
     doi: 'https://hdl.handle.net/10568/128401',
-    uri: 'https://hdl.handle.net/10568/128401'
+    uri: 'https://hdl.handle.net/10568/128401',
+    repository: 'cgspace'
   };
 
   const sampleItemSingleAuthor: CgspaceItemDto = {
@@ -236,7 +237,7 @@ describe('KpCgspaceBrowseComponent', () => {
       const emptyEl = fixture.debugElement.query(By.css('[data-test="cgspace-empty"]'));
       expect(emptyEl).toBeTruthy();
       expect(emptyEl.nativeElement.textContent).toContain(
-        'No items found in CGSpace for this search. Try different terms or use Manual entry.'
+        'No items found in the selected repositories for this search. Try different terms or use Manual entry.'
       );
     }));
   });
@@ -262,9 +263,12 @@ describe('KpCgspaceBrowseComponent', () => {
       expect(component.status()).toBe('error');
       const errorEl = fixture.debugElement.query(By.css('[data-test="cgspace-error"]'));
       expect(errorEl).toBeTruthy();
-      expect(errorEl.nativeElement.textContent).toContain(
-        'CGSpace search is temporarily unavailable — use Manual entry.'
-      );
+      expect(errorEl.nativeElement.textContent).toContain('Repository search is temporarily unavailable');
+      // KPM-R-7 / KPM-AC-8: error copy names every selected repository — never CGSpace-only.
+      expect(errorEl.nativeElement.textContent).toContain('CGSpace');
+      expect(errorEl.nativeElement.textContent).toContain('MELSpace');
+      expect(errorEl.nativeElement.textContent).toContain('WorldFish');
+      expect(errorEl.nativeElement.textContent).toContain('did not respond — use Manual entry.');
 
       const manualBtn = fixture.debugElement.query(By.css('[data-test="switch-to-manual-error"]'));
       expect(manualBtn).toBeTruthy();
@@ -375,9 +379,9 @@ describe('KpCgspaceBrowseComponent', () => {
 
       expect(component.status()).toBe('results');
 
-      // Counter text
+      // Counter text — no sources[] in this fixture, so no per-repository breakdown (KPM-R-4).
       const content = fixture.nativeElement.textContent;
-      expect(content).toContain('Showing 2 of 2 items from CGSpace');
+      expect(content).toContain('Showing 2 of 2 items');
 
       // Multi-author format: "firstAuthor et al."
       expect(content).toContain('Smith, John et al.');
@@ -484,8 +488,38 @@ describe('KpCgspaceBrowseComponent', () => {
 
       const overlay = fixture.nativeElement.querySelector('[data-test="cgspace-retrieving"]');
       expect(overlay).toBeTruthy();
-      expect(overlay.textContent).toContain('Retrieving metadata from CGSpace');
+      // @akili-spec changes/kp-multi-repository-browse — KPM-T-7: label is the item's own repository, not a hardcoded string.
+      expect(overlay.textContent).toContain('Retrieving metadata from CGSpace…');
       expect(useBtn.nativeElement.textContent).toContain('Retrieving');
+    }));
+
+    it('KPM-T-7: the overlay names the repository of the item being retrieved, not a hardcoded one', fakeAsync(() => {
+      const melspaceItem: CgspaceItemDto = {
+        ...sampleItemSingleAuthor,
+        uuid: 'melspace-uuid',
+        handle: '20.500.11766/1',
+        itemUrl: 'https://repo.mel.cgiar.org/items/melspace-uuid',
+        repository: 'melspace'
+      };
+      mockResultsApiService.GET_cgspaceSearch.mockReturnValue(
+        of({ response: { items: [melspaceItem], page: { totalElements: 1 } }, status: 200 })
+      );
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      component.query.set('maize');
+      component.runSearch(0);
+      tick();
+      fixture.detectChanges();
+
+      const useBtn = fixture.debugElement.query(By.css('button[aria-label="Use this item: Single Author Study"]'));
+      useBtn.nativeElement.click();
+      fixture.componentRef.setInput('busy', true);
+      fixture.detectChanges();
+
+      const overlay = fixture.nativeElement.querySelector('[data-test="cgspace-retrieving"]');
+      expect(overlay.textContent).toContain('Retrieving metadata from MELSpace…');
     }));
   });
 
@@ -539,13 +573,13 @@ describe('KpCgspaceBrowseComponent', () => {
   });
 
   describe('Load More Pagination (13)', () => {
-    it('should show Load more button when items().length < total() and append next page results', fakeAsync(() => {
+    it('should show Load more button iff page.hasMore and append next page results (KPM-R-20)', fakeAsync(() => {
       mockResultsApiService.GET_cgspaceSearch
         .mockReturnValueOnce(
           of({
             response: {
               items: [sampleItem1],
-              page: { totalElements: 2 }
+              page: { totalElements: 2, hasMore: true }
             },
             status: 200
           })
@@ -554,7 +588,7 @@ describe('KpCgspaceBrowseComponent', () => {
           of({
             response: {
               items: [sampleItemSingleAuthor],
-              page: { totalElements: 2 }
+              page: { totalElements: 2, hasMore: false }
             },
             status: 200
           })
@@ -585,6 +619,28 @@ describe('KpCgspaceBrowseComponent', () => {
       expect(component.items().length).toBe(2);
       expect(component.items()[0].handle).toBe('10568/128401');
       expect(component.items()[1].handle).toBe('10568/99999');
+      // page.hasMore:false on the second page → the button is gone (KPM-R-20).
+      expect(fixture.nativeElement.textContent).not.toContain('Load more');
+    }));
+
+    it('KPM-R-20: hasMore:false on the first response hides Load more entirely', fakeAsync(() => {
+      mockResultsApiService.GET_cgspaceSearch.mockReturnValue(
+        of({
+          response: { items: [sampleItem1], page: { totalElements: 1, hasMore: false } },
+          status: 200
+        })
+      );
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      component.query.set('maize');
+      component.runSearch(0);
+      tick();
+      fixture.detectChanges();
+
+      expect(component.status()).toBe('results');
+      expect(fixture.nativeElement.textContent).not.toContain('Load more');
     }));
   });
 
@@ -1109,5 +1165,238 @@ describe('KpCgspaceBrowseComponent', () => {
       reopened.destroy();
       flush();
     }));
+  });
+
+  // ─── KPM-T-7: badges, "Also in", counter, partial notice + retry, error copy, allow-list, Load more ───
+  describe('Badges, notice, retry, allow-list (KPM-T-7)', () => {
+    const sourceOk = (repository: string, total: number) => ({ repository, status: 'ok', total, hasMore: false });
+    const sourceFailed = (repository: string, status: 'timeout' | 'error' | 'unconfigured' = 'timeout') => ({
+      repository,
+      status,
+      total: 0,
+      hasMore: false
+    });
+
+    it('KPM-R-7 / KPM-AC-7: mixed response (2 ok + 1 timeout) renders items, WorldFish "unavailable", one Retry, and re-sends identical params without leaving "results"', fakeAsync(() => {
+      const cgspaceItem = { ...sampleItem1, repository: 'cgspace' as const };
+      const melspaceItem = { ...sampleItemSingleAuthor, repository: 'melspace' as const };
+
+      mockResultsApiService.GET_cgspaceSearch.mockReturnValue(
+        of({
+          response: {
+            items: [cgspaceItem, melspaceItem],
+            page: { number: 0, size: 10, totalElements: 24, totalPages: 3, hasMore: true },
+            sources: [sourceOk('cgspace', 18), sourceOk('melspace', 6), sourceFailed('worldfish', 'timeout')]
+          },
+          message: 'Repository search results',
+          status: 200
+        })
+      );
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      component.query.set('maize');
+      component.onQueryChange();
+      tick(400);
+      fixture.detectChanges();
+
+      // Items rendered
+      expect(component.status()).toBe('results');
+      expect(component.items().length).toBe(2);
+
+      // KPM-R-4: every rendered card carries a badge whose text equals its item's repository label
+      const cgspaceBadge = fixture.nativeElement.querySelector('[data-test="kp-item-badge-cgspace"]');
+      expect(cgspaceBadge).toBeTruthy();
+      expect(cgspaceBadge.textContent).toContain('CGSpace');
+
+      const melspaceBadge = fixture.nativeElement.querySelector('[data-test="kp-item-badge-melspace"]');
+      expect(melspaceBadge).toBeTruthy();
+      expect(melspaceBadge.textContent).toContain('MELSpace');
+
+      // WorldFish chip reads "unavailable"
+      const worldfishChip = fixture.nativeElement.querySelector('[data-test="kp-repo-chip-worldfish"]');
+      expect(worldfishChip.textContent).toContain('unavailable');
+
+      // Notice names WorldFish and carries exactly one retry button
+      const notice = fixture.nativeElement.querySelector('[data-test="kp-partial-notice"]');
+      expect(notice).toBeTruthy();
+      expect(notice.getAttribute('role')).toBe('status');
+      expect(notice.textContent).toContain('WorldFish');
+      const retryButtons = notice.querySelectorAll('button[data-test^="kp-retry-"]');
+      expect(retryButtons.length).toBe(1);
+      expect(retryButtons[0].getAttribute('data-test')).toBe('kp-retry-worldfish');
+      expect(retryButtons[0].textContent).toContain('Retry WorldFish');
+
+      const callsBefore = mockResultsApiService.GET_cgspaceSearch.mock.calls.length;
+      const paramsBefore = mockResultsApiService.GET_cgspaceSearch.mock.calls.slice(-1)[0][0];
+
+      (retryButtons[0] as HTMLButtonElement).click();
+      tick(400);
+      fixture.detectChanges();
+
+      // Retry sends exactly one more request with identical params (full selection, page 0)
+      expect(mockResultsApiService.GET_cgspaceSearch.mock.calls.length).toBe(callsBefore + 1);
+      expect(mockResultsApiService.GET_cgspaceSearch.mock.calls.slice(-1)[0][0]).toEqual(paramsBefore);
+      expect(component.status()).toBe('results');
+      flush();
+    }));
+
+    it('KPM-R-7: no notice renders when all 3 selected repositories answer ok', fakeAsync(() => {
+      mockResultsApiService.GET_cgspaceSearch.mockReturnValue(
+        of({
+          response: {
+            items: [sampleItem1],
+            page: { number: 0, size: 10, totalElements: 18, totalPages: 1, hasMore: false },
+            sources: [sourceOk('cgspace', 12), sourceOk('melspace', 4), sourceOk('worldfish', 2)]
+          },
+          status: 200
+        })
+      );
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      component.query.set('maize');
+      component.onQueryChange();
+      tick(400);
+      fixture.detectChanges();
+
+      expect(component.failedSources().length).toBe(0);
+      expect(fixture.nativeElement.querySelector('[data-test="kp-partial-notice"]')).toBeNull();
+    }));
+
+    it('KPM-R-4: counter equals "Showing 2 of 24 items · CGSpace 18 · MELSpace 6" for the mixed fixture', fakeAsync(() => {
+      mockResultsApiService.GET_cgspaceSearch.mockReturnValue(
+        of({
+          response: {
+            items: [{ ...sampleItem1, repository: 'cgspace' as const }, { ...sampleItemSingleAuthor, repository: 'melspace' as const }],
+            page: { number: 0, size: 10, totalElements: 24, totalPages: 3, hasMore: true },
+            sources: [sourceOk('cgspace', 18), sourceOk('melspace', 6), sourceFailed('worldfish', 'timeout')]
+          },
+          status: 200
+        })
+      );
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      component.query.set('maize');
+      component.onQueryChange();
+      tick(400);
+      fixture.detectChanges();
+
+      const counter = fixture.nativeElement.querySelector('[data-test="kp-results-counter"]');
+      expect(counter.textContent.trim()).toBe('Showing 2 of 24 items · CGSpace 18 · MELSpace 6');
+    }));
+
+    it('KPM-R-7 / KPM-AC-8: 502 wrapper enters error state with copy naming the three selected repositories and the Manual entry link', fakeAsync(() => {
+      mockResultsApiService.GET_cgspaceSearch.mockReturnValue(
+        throwError(() => new Error('Repository proxy 502 Service Unavailable'))
+      );
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      component.query.set('maize');
+      component.runSearch(0);
+      tick(0);
+      tick(0);
+      fixture.detectChanges();
+
+      expect(component.status()).toBe('error');
+      const errorCopy = fixture.nativeElement.querySelector('[data-test="cgspace-error-copy"]');
+      expect(errorCopy.textContent).toContain('CGSpace');
+      expect(errorCopy.textContent).toContain('MELSpace');
+      expect(errorCopy.textContent).toContain('WorldFish');
+
+      const manualBtn = fixture.debugElement.query(By.css('[data-test="switch-to-manual-error"]'));
+      expect(manualBtn).toBeTruthy();
+    }));
+
+    it('KPM-R-5: a deduplicated item renders one card with "Also in MELSpace" and the secondary handle, and Use this item emits the primary itemUrl', fakeAsync(() => {
+      const mergedItem: CgspaceItemDto = {
+        ...sampleItem1,
+        repository: 'cgspace',
+        alsoIn: [
+          {
+            repository: 'melspace',
+            handle: '20.500.11766/54321',
+            handleUrl: 'https://hdl.handle.net/20.500.11766/54321',
+            itemUrl: 'https://repo.mel.cgiar.org/items/22222222-3333-4444-5555-666666666666'
+          }
+        ]
+      };
+
+      mockResultsApiService.GET_cgspaceSearch.mockReturnValue(
+        of({
+          response: {
+            items: [mergedItem],
+            page: { number: 0, size: 10, totalElements: 1, totalPages: 1, hasMore: false },
+            sources: [sourceOk('cgspace', 1), sourceOk('melspace', 1), sourceOk('worldfish', 0)]
+          },
+          status: 200
+        })
+      );
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      const itemSelectedSpy = jest.fn();
+      component.itemSelected.subscribe(itemSelectedSpy);
+
+      component.query.set('maize');
+      component.onQueryChange();
+      tick(400);
+      fixture.detectChanges();
+
+      // One card only
+      expect(component.items().length).toBe(1);
+
+      // KPM-R-4 / KPM-R-5: the CGSpace badge (name + text, not color alone) is present
+      const badge = fixture.nativeElement.querySelector('[data-test="kp-item-badge-cgspace"]');
+      expect(badge).toBeTruthy();
+      expect(badge.textContent).toContain('CGSpace');
+
+      const alsoIn = fixture.nativeElement.querySelector('[data-test="kp-also-in-melspace"]');
+      expect(alsoIn).toBeTruthy();
+      expect(alsoIn.textContent).toContain('Also in MELSpace');
+
+      const secondaryHandle = fixture.nativeElement.querySelector('[data-test="kp-also-in-handle-melspace"]');
+      expect(secondaryHandle).toBeTruthy();
+      expect(secondaryHandle.textContent).toContain('20.500.11766/54321');
+
+      const useBtn = fixture.debugElement.query(By.css(`button[aria-label="Use this item: ${mergedItem.title}"]`));
+      useBtn.nativeElement.click();
+
+      expect(itemSelectedSpy).toHaveBeenCalledWith(expect.objectContaining({ itemUrl: mergedItem.itemUrl }));
+      flush();
+    }));
+
+    it('KPM-R-15 / KPM-AC-17: View details opens all four allowed hosts and refuses an untrusted host', () => {
+      const windowOpenSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+
+      component.openItemDetails({ ...sampleItem1, itemUrl: 'https://cgspace.cgiar.org/items/uuid-1' });
+      expect(windowOpenSpy).toHaveBeenLastCalledWith('https://cgspace.cgiar.org/items/uuid-1', '_blank', 'noopener,noreferrer');
+
+      component.openItemDetails({ ...sampleItem1, itemUrl: 'https://repo.mel.cgiar.org/items/uuid-2' });
+      expect(windowOpenSpy).toHaveBeenLastCalledWith('https://repo.mel.cgiar.org/items/uuid-2', '_blank', 'noopener,noreferrer');
+
+      component.openItemDetails({ ...sampleItem1, itemUrl: 'https://digitalarchive.worldfishcenter.org/items/uuid-3' });
+      expect(windowOpenSpy).toHaveBeenLastCalledWith(
+        'https://digitalarchive.worldfishcenter.org/items/uuid-3',
+        '_blank',
+        'noopener,noreferrer'
+      );
+
+      component.openItemDetails({ ...sampleItem1, itemUrl: 'https://hdl.handle.net/10568/1' });
+      expect(windowOpenSpy).toHaveBeenLastCalledWith('https://hdl.handle.net/10568/1', '_blank', 'noopener,noreferrer');
+
+      windowOpenSpy.mockClear();
+      component.openItemDetails({ ...sampleItem1, itemUrl: 'https://evil.example/items/x' });
+      expect(windowOpenSpy).not.toHaveBeenCalled();
+
+      windowOpenSpy.mockRestore();
+    });
   });
 });

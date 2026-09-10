@@ -7,7 +7,7 @@
 | Spec path | `docs/specs/changes/kp-multi-repository-browse/` · Module code `KPM` |
 | Linked | `requirements.md` (KPM-R-*, KPM-AC-*) · `design.md` (KPM-DD-*, §3.3 adapter table, §4.1 contract) · `proposal.md` · `mockup/` |
 | Approval Mode | pre-approved (Phase 3 gate auto-approved, pre-approved mode) |
-| Status | in-progress (T-1..T-6 done 2026-09-10; T-10 docs half done; budget tripwire raised) |
+| Status | in-progress (T-1..T-7 done 2026-09-10; T-10 docs half done; tripwire accepted by the user) |
 | Owner / driver | Juan Carlos Cadavid · AKILI Leader |
 | Budget (from `design.md` §14) | 10 tasks · ~1,250 LOC incl. tests · ≤ 1 Reviewer round per task; tripwire > 12 tasks or > 1,500 LOC → stop and escalate |
 
@@ -106,7 +106,7 @@
 - **Verification:** `npx jest --silent --reporters=summary --no-coverage <component spec>` + `npx tsc --noEmit -p tsconfig.app.json`: on open three chips `aria-pressed="true"` and no request; deselect MELSpace → one `GET_cgspaceSearch` with `repository: 'cgspace,worldfish'`; deselect down to one → last chip `aria-disabled="true"` with a non-empty `title`, click → no request; **Select all** appears when < 3 and restores three with exactly one request; with query `ab` and a chip toggle → no request, strip updated; facet call carries `repository`; close/reset → three selected. **Input that fails it:** allow toggling the last chip → `aria-disabled` assertion fails; forget `repository` in `buildSearchParams` → param assertion fails. **Disqualifiers:** asserting chip *classes* (presence) instead of `aria-pressed`/`aria-disabled` and the request payload; a test that never advances the fake timers past 400 ms cannot observe the debounced request — report as inconclusive.
 - **Definition of done:** spec green; `tsc` clean; lint clean; strings match `requirements.md` `KPM-R-11`.
 
-### `KPM-T-7` — Client: badges, "Also in", counter, partial notice with retry, error copy, allow-list, Load more
+### [x] `KPM-T-7` — Client: badges, "Also in", counter, partial notice with retry, error copy, allow-list, Load more
 
 - **Type:** `client`
 - **Description:** Card badge from `item.repository` (`KP_REPOSITORIES` classes + dot + text), "Also in <label>" note and secondary handles from `item.alsoIn`; counter `Showing N of M items · <label> a …` over ok sources; `failedSources()` computed → partial notice (`role="status"`, one **Retry <label>** per failed source calling `retrySearch()` — full selection, page 0, same params; the server serves healthy sources from cache); error state copy names all selected repositories and keeps the Manual entry link; empty copy generalized; `ALLOWED_HOSTS` → `KP_ITEM_HOSTS` (four exact hosts), `openItemDetails` keeps the `itemUrl → uri → handleUrl` chain and `'_blank', 'noopener,noreferrer'`; *Load more* shown iff `page.hasMore`; the template's own overlay string "Retrieving metadata from CGSpace…" (`html:104`) → repository label, and its assertion at `spec:483` updated; counter and notice inside the existing `aria-live` region.

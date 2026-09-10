@@ -246,3 +246,39 @@ Two Reviewers (`KPM-T-6`, `KPM-T-4` lens B) on `fable` were terminated by `HTTP 
 
 **Leader action:** per `/akili-execute` Step 2.4, execution stops here for the user's decision. Working tree is clean for spec files; every completed task is committed with PASS evidence. Next eligible task on resume: `KPM-T-7` (client badges, notice, retry, allow-list, Load more).
 
+**User decision (2026-09-10):** *Continue as-is* — overrun accepted as mandated test volume; T-7, T-8 ∥ T-9, then the T-10 HITL proceed under the original briefs. Budget note kept for the archive kaizen.
+
+### `KPM-T-7` — Client: badges, "Also in", counter, partial notice with retry, error copy, allow-list, Load more
+
+| Field | Value |
+|---|---|
+| Final status | **PASS** (attempt 2 of 3 — one rework round, test-only) |
+| Date | 2026-09-10 |
+| Implementer | `akili-implementer` (`sonnet`), effort `high` → `xhigh` on retry, skills `angular-developer`, `frontend-design` |
+| Reviewer | `akili-reviewer` (`opus`), lens checklist mode |
+| Requirements covered | `KPM-R-4`, `KPM-R-5` (client), `KPM-R-6`, `KPM-R-7` (all clauses), `KPM-R-11`, `KPM-R-14`, `KPM-R-15`, `KPM-R-20`, `KPM-R-23`, `KPM-AC-5/7/8/17`; scenario `KPM-R-7` (client) |
+
+**Attempt 1 — FAIL (verification gap only)**
+
+- Files changed: `kp-cgspace-browse.component.ts` (`failedSources()`, `resultsCounterText()`, `hasMore` from `page.hasMore`, `retrySearch()` re-sends the full selection at page 0, `ALLOWED_HOSTS = KP_ITEM_HOSTS`, `openItemDetails` chain kept with `'_blank','noopener,noreferrer'`, `alsoIn` on the client DTO, `lucideSplit`/`lucideRefreshCw` provided, internal `CGSpace proxy error` → `Repository proxy error`), `.component.html` (per-card badge dot + label, "Also in <label>" + secondary handles, counter over ok sources, amber `role="status"` notice with one `Retry <Label>` pill per failed source, generalized empty/error copy with Manual entry link, overlay `Retrieving metadata from {{ label }}…`, Load more iff `hasMore()`), `.component.spec.ts` (46 tests: 38 + 8; three pre-existing copy assertions and the Load-more fixtures updated for the new contract).
+- Implementer verification: `Tests: 46 passed, 46 total`; `npx tsc --noEmit -p tsconfig.app.json` clean; `npx ng lint --quiet` → `All files pass linting.`; `grep -n CGSpace` over the component `.ts`/`.html` → only the idle enumeration line (`html:177`).
+- Copy: counter `Showing N of M items · <label> <count> …` (ok sources only); notice `<failed labels> did not respond. Results below exclude it|them.`; error `Repository search is temporarily unavailable` / `<selected labels> did not respond — use Manual entry.`; empty `No items found in the selected repositories for this search. Try different terms or use Manual entry.`.
+- Implementer `Not Done / Assumptions`: `ALLOWED_HOSTS` kept as a `readonly` alias of `KP_ITEM_HOSTS`; three pre-existing copy assertions plus the Load-more fixtures updated for the new contract; internal error string generalized for the T-8 gate; retry buttons all call `retrySearch()` (server decides what is re-queried). Leader: accepted.
+- Reviewer verdict: **FAIL** (1 issue). Confirmed PASS on the seven Leader judgment points: error only on the 502 wrapper (`ts:542`), mixed ok/failed stays `results`; counter exact `Showing 2 of 24 items · CGSpace 18 · MELSpace 6` via `toBe`; allow-list four positive + one negative with `noopener,noreferrer`; Load more gates on `hasMore()` alone; no CGSpace-only copy left; counter and notice inside the single `aria-live="polite"` region; badges render dot + text. Issue: **Discovered Issue** — the primary repository badge is rendered but never asserted (`grep kp-item-badge` in the spec → nothing); the `KPM-R-5` test covers 2 of the scenario's 3 clauses; a regression dropping the badge keeps 46 tests green. **Violated Rule** — `KPM-R-4` ("Every card MUST carry a repository badge"), scenario `KPM-R-5` ("the CGSpace badge"), `KPM-AC-5`, §7 Accessibility ("badges carry text, not color alone"). **Remediation** — assert `[data-test="kp-item-badge-cgspace"]` exists with text containing `CGSpace` in the `KPM-R-5` test; no production change.
+- Leader adjudication: FAIL upheld (a test gap on a MUST clause). Rework attempt 2 spawned with the report verbatim plus: assert every card's badge text in the mixed test; verify the `data-test` name against the template; prove the assertion with a template mutation (red → green).
+
+**ADVISORY from Reviewer round 1 (recorded — no rework, no new task)**
+
+- Resilience (**design-level gap, carry to the `KPM-T-10` HITL**): with `sources = [cgspace ok / 0 items, worldfish timeout]` the panel shows `empty` with **no notice and no retry** — only the chip reads "unavailable". This follows design §6.2 verbatim (`@if (failedSources().length && items().length)`); candidate follow-up proposal: render the notice above the empty state too.
+- Readability: `ALLOWED_HOSTS` is now a pure alias of `KP_ITEM_HOSTS`; a rename or a one-line comment would stop a future host being added in the wrong place.
+- Reliability: `hasMore` defaults to `false`, so a response lacking `page.hasMore` hides Load more — correct per `KPM-R-20`, noted for the HITL.
+- Readability: `role="status"` inside an `aria-live="polite"` ancestor (both mandated by design §6.3) may announce twice on some screen readers — noted for the HITL a11y pass.
+
+**Attempt 2 — PASS**
+
+- Files changed: `kp-cgspace-browse.component.spec.ts` only — badge assertions added: `KPM-R-5` dedup test asserts `[data-test="kp-item-badge-cgspace"]` present with text containing `CGSpace`; `KPM-R-7`/`AC-7` mixed test asserts both `kp-item-badge-cgspace` (`CGSpace`) and `kp-item-badge-melspace` (`MELSpace`). No production code changed (template restore verified byte-identical).
+- Mutation evidence: `@if (item.repository)` → `@if (false)` around the badge → `Tests: 2 failed, 44 passed, 46 total`; restored → `Tests: 46 passed, 46 total`. `npx tsc --noEmit -p tsconfig.app.json` clean; `npx ng lint --quiet` → `All files pass linting.`
+- Reviewer verdict (round 2, same Reviewer, context intact): **PASS**. Summary: the round-1 issue is closed with text assertions (not `badgeClass`), so `KPM-R-4`, the badge clause of scenario `KPM-R-5`/`KPM-AC-5` and §7 "text, not colour alone" are behaviourally covered; the 2-failure mutation proves the checks are not vacuous; every round-1 PASS finding stands. Round-1 advisories carried unchanged (recorded above).
+
+**Decisions / issues**: none beyond the test gap. **Budget:** 2 Reviewer rounds (round 2 PASSed — no escalation). Gate: `auto-approved (pre-approved mode)`.
+

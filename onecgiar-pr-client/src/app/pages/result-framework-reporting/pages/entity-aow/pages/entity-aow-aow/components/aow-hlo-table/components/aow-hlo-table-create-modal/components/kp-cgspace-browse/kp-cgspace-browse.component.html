@@ -155,7 +155,7 @@
         aria-live="polite"
         data-test="cgspace-retrieving">
         <i class="pi pi-spin pi-spinner text-3xl text-[var(--pr-color-primary-300)]" aria-hidden="true"></i>
-        <p class="m-0 text-sm font-semibold text-[var(--pr-color-secondary-400)]">Retrieving metadata from CGSpace…</p>
+        <p class="m-0 text-sm font-semibold text-[var(--pr-color-secondary-400)]">Retrieving metadata from {{ selectingRepositoryLabel() || 'the repository' }}…</p>
         <p class="m-0 max-w-[280px] text-center text-xs text-gray-500">Fetching the title and repository details for this item.</p>
       </div>
     }
@@ -184,7 +184,7 @@
     @if (status() === 'empty') {
       <div aria-live="polite" class="flex flex-col items-center justify-center py-10 px-4 text-center border border-gray-200 rounded-lg bg-gray-50" data-test="cgspace-empty">
         <i class="pi pi-inbox text-3xl text-gray-400 mb-2"></i>
-        <p class="text-sm text-gray-700">No items found in CGSpace for this search. Try different terms or use <button type="button" data-test="switch-to-manual-empty" class="text-[var(--pr-color-primary-300)] hover:underline font-semibold cursor-pointer inline p-0 border-0 bg-transparent" (click)="switchToManual.emit()">Manual entry</button>.</p>
+        <p class="text-sm text-gray-700">No items found in the selected repositories for this search. Try different terms or use <button type="button" data-test="switch-to-manual-empty" class="text-[var(--pr-color-primary-300)] hover:underline font-semibold cursor-pointer inline p-0 border-0 bg-transparent" (click)="switchToManual.emit()">Manual entry</button>.</p>
       </div>
     }
 
@@ -194,9 +194,9 @@
         <div class="size-11 rounded-full bg-red-100 flex items-center justify-center text-red-600 mb-2.5">
           <i class="pi pi-exclamation-triangle text-xl"></i>
         </div>
-        <h4 class="m-0 text-sm font-bold text-red-900">CGSpace search is temporarily unavailable</h4>
-        <p class="m-0 mt-1 text-xs text-gray-600 max-w-md leading-relaxed">
-          CGSpace search is temporarily unavailable — use <button type="button" data-test="switch-to-manual-error" class="text-[var(--pr-color-primary-300)] hover:underline font-semibold cursor-pointer inline p-0 border-0 bg-transparent" (click)="switchToManual.emit()">Manual entry</button>.
+        <h4 class="m-0 text-sm font-bold text-red-900">Repository search is temporarily unavailable</h4>
+        <p class="m-0 mt-1 text-xs text-gray-600 max-w-md leading-relaxed" data-test="cgspace-error-copy">
+          {{ selectedRepositoriesText() }} did not respond — use <button type="button" data-test="switch-to-manual-error" class="text-[var(--pr-color-primary-300)] hover:underline font-semibold cursor-pointer inline p-0 border-0 bg-transparent" (click)="switchToManual.emit()">Manual entry</button>.
         </p>
 
         <div class="mt-4 flex items-center gap-3">
@@ -215,9 +215,35 @@
     <!-- Results State -->
     @if (status() === 'results') {
       <div class="flex flex-col gap-3">
-        <!-- Live region result counter -->
-        <div aria-live="polite" class="text-xs text-gray-500 font-medium">
-          Showing {{ items().length }} of {{ total() }} items from CGSpace
+        <!-- Live region: result counter + partial-failure notice (KPM-R-23) -->
+        <div aria-live="polite" class="flex flex-col gap-2">
+          <div class="text-xs text-gray-500 font-medium" data-test="kp-results-counter">
+            {{ resultsCounterText() }}
+          </div>
+
+          <!-- @akili-spec changes/kp-multi-repository-browse — KPM-R-7: partial notice + per-repo retry -->
+          @if (failedSources().length && items().length) {
+            <div
+              role="status"
+              class="flex flex-col gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+              data-test="kp-partial-notice">
+              <span data-test="kp-partial-notice-copy">
+                {{ failedRepositoriesText() }} did not respond. Results below exclude {{ failedSources().length === 1 ? 'it' : 'them' }}.
+              </span>
+              <div class="flex flex-wrap gap-1.5">
+                @for (source of failedSources(); track source.repository) {
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-800 transition-colors hover:bg-amber-100 cursor-pointer"
+                    [attr.data-test]="'kp-retry-' + source.repository"
+                    (click)="retrySearch()">
+                    <ng-icon name="lucideRefreshCw" class="text-[12px]" aria-hidden="true" />
+                    Retry {{ kpRepositoryLabel(source.repository) }}
+                  </button>
+                }
+              </div>
+            </div>
+          }
         </div>
 
         <!-- Cards list -->
@@ -226,6 +252,29 @@
             <div class="border border-gray-200 rounded-xl p-4 bg-white hover:border-gray-300 shadow-sm transition-all flex flex-col gap-2">
               <div class="flex items-start justify-between gap-4">
                 <div class="flex-1 min-w-0">
+                  <!-- @akili-spec changes/kp-multi-repository-browse — KPM-R-4 / KPM-R-5: repository badge + "Also in" -->
+                  <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+                    @if (item.repository) {
+                      <span
+                        class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                        [ngClass]="repoMeta(item.repository)?.badgeClass"
+                        [attr.data-test]="'kp-item-badge-' + item.repository">
+                        <span class="size-[7px] rounded-full" [ngClass]="repoMeta(item.repository)?.dotClass"></span>
+                        {{ kpRepositoryLabel(item.repository) }}
+                      </span>
+                    }
+                    @if (item.alsoIn && item.alsoIn.length) {
+                      @for (also of item.alsoIn; track also.repository) {
+                        <span
+                          class="inline-flex items-center gap-1 rounded-full border border-[var(--pr-border)] bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--pr-text-secondary)]"
+                          [attr.data-test]="'kp-also-in-' + also.repository">
+                          <ng-icon name="lucideSplit" class="text-[11px]" aria-hidden="true" />
+                          Also in {{ kpRepositoryLabel(also.repository) }}
+                        </span>
+                      }
+                    }
+                  </div>
+
                   <!-- Title -->
                   <h4 class="text-sm font-semibold text-gray-900 leading-snug">
                     {{ item.title }}
@@ -247,10 +296,17 @@
                     </div>
                   }
 
-                  <!-- Monospace handle -->
+                  <!-- Monospace handle (primary + secondary handles from item.alsoIn) -->
                   <div class="mt-2 text-xs font-mono text-gray-500">
                     {{ item.handle }}
                   </div>
+                  @if (item.alsoIn && item.alsoIn.length) {
+                    @for (also of item.alsoIn; track also.repository) {
+                      <div class="mt-0.5 text-xs font-mono text-gray-400" [attr.data-test]="'kp-also-in-handle-' + also.repository">
+                        {{ also.handle }}
+                      </div>
+                    }
+                  }
                 </div>
 
                 <!-- Right actions: Use this item button & View details link -->
@@ -282,8 +338,8 @@
           }
         </div>
 
-        <!-- Load More Button -->
-        @if (items().length < total()) {
+        <!-- Load More Button — iff the last response reports page.hasMore (KPM-R-20) -->
+        @if (hasMore()) {
           <div class="flex justify-center mt-3 mb-2">
             <button
               type="button"
