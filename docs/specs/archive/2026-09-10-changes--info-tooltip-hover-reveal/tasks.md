@@ -6,7 +6,7 @@
 - **Linked spec:** `docs/specs/changes/info-tooltip-hover-reveal/requirements.md` + `design.md`
 - **Ticket:** [P2-3635](https://cgiarmel.atlassian.net/browse/P2-3635)
 - **Owner / driver:** Santiago Sanchez Correa
-- **Status:** in-progress — all code/test tasks PASSed pending commit (`ITR-T-1`, `ITR-T-2`, `ITR-T-3`, `ITR-T-5`, `ITR-T-6`, `ITR-T-7`, `ITR-T-8`, `ITR-T-9`); `ITR-T-4` doc content approved but application deferred to `master` (non-default-branch rule); Jira comms note not yet posted. `ITR-T-5`–`ITR-T-9` added mid-execution after four rounds of live user design feedback post-`ITR-T-1` — see `execution.md` Pivot Records. Icon vertical-alignment concern remains open pending live-browser confirmation (no code defect found after two rounds of investigation).
+- **Status:** shipped — all 15 code/test tasks (`ITR-T-1`–`ITR-T-3`, `ITR-T-5`–`ITR-T-15`) PASSed, committed (`85b2d357f`), and pushed to `qa-development-2026-ss`. Icon vertical-alignment root cause found and fixed (`ITR-T-10`), confirmed correct live in-browser by the user. `ITR-T-4`'s `docs/ux-ui/design.md` doc content is approved and PASSed but its application is deferred to `master` (non-default-branch shared-file write discipline) — recorded as a pending item at archive time. Jira comms note on P2-3635 not yet posted (user-owned follow-up, outside AKILI scope). `ITR-T-5`–`ITR-T-15` were added mid-execution across nine rounds of live user design feedback post-`ITR-T-1` — see `execution.md` Pivot Records for the full trail.
 
 ## 2. Pre-flight checklist
 
