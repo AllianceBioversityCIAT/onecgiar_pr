@@ -1,0 +1,3166 @@
+{
+  "id" : null,
+  "scope" : null,
+  "query" : "fish",
+  "appliedFilters" : [ {
+    "filter" : "itemtype",
+    "operator" : "equals",
+    "value" : "Journal Article",
+    "label" : "Journal Article"
+  } ],
+  "sort" : null,
+  "configuration" : null,
+  "type" : "discover",
+  "_links" : {
+    "self" : {
+      "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals"
+    }
+  },
+  "_embedded" : {
+    "searchResult" : {
+      "_embedded" : {
+        "objects" : [ {
+          "hitHighlights" : {
+            "dc.description.abstract" : [ "The current study aims to compare the technical and economic performance of salted and fresh <em>fish</em> processing associated with Lake Nasser fisheries. The study concluded that investment cost in slated <em>fish</em> processing is lower than fresh <em>fish</em>", " processing. Salted <em>fish</em> processing generated higher return on investment compared to fresh <em>fish</em> processing. Further work in needed to improve return of fresh <em>fish</em> and minimize the impact of <em>fish</em> processing on the environment and ensure safety of product" ],
+            "dc.title" : [ "Comparison of technical and economic performance of fresh and salted <em>fish</em> processors in Lake Nasser" ]
+          },
+          "type" : "discover",
+          "_links" : {
+            "indexableObject" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/0e4f88fa-c2a7-4765-a4c8-8833c17562fe"
+            }
+          },
+          "_embedded" : {
+            "indexableObject" : {
+              "id" : "0e4f88fa-c2a7-4765-a4c8-8833c17562fe",
+              "uuid" : "0e4f88fa-c2a7-4765-a4c8-8833c17562fe",
+              "name" : "Comparison of technical and economic performance of fresh and salted fish processors in Lake Nasser",
+              "handle" : "20.500.12348/2662",
+              "metadata" : {
+                "cg.contribution.worldfishauthor" : [ {
+                  "value" : "Nasr-Allah, Ahmed ",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.affiliation" : [ {
+                  "value" : "WorldFish",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Agriculture Research Center Egypt",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                } ],
+                "cg.contributor.crp" : [ {
+                  "value" : "Livestock and Fish",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.funder" : [ {
+                  "value" : "Swiss Agency for Development and Cooperation (SDC)",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.project" : [ {
+                  "value" : "Youth Employment in Aswan Governorate (YEAG) project",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.coverage.country" : [ {
+                  "value" : "Egypt",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.creator.id" : [ {
+                  "value" : "Ahmed Nasr-Allah: 0000-0001-6299-8556",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.description.theme" : [ {
+                  "value" : "Aquaculture",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.identifier.status" : [ {
+                  "value" : "Open access",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.identifier.url" : [ {
+                  "value" : "http://abbassajournal.com/magazine/comparison-of-technical-and-economic-performance-of-fresh-and-salted-fish-processors-in-lake-nasser/",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.identifier.worldfish" : [ {
+                  "value" : "4346",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.subject.agrovoc" : [ {
+                  "value" : "fish processing",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "salted fish",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "surveys",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "tilapia",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                } ],
+                "dc.creator" : [ {
+                  "value" : "Nasr-Allah, Ahmed ",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Zakar, A.H.",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                } ],
+                "dc.date.accessioned" : [ {
+                  "value" : "2019-02-14T03:14:47Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.available" : [ {
+                  "value" : "2019-02-14T03:14:47Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.issued" : [ {
+                  "value" : "2018",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.description.abstract" : [ {
+                  "value" : "The current study aims to compare the technical and economic performance of salted and fresh fish processing associated with Lake Nasser fisheries. The study concluded that investment cost in slated fish processing is lower than fresh fish processing. Salted fish processing generated higher return on investment compared to fresh fish processing. Further work in needed to improve return of fresh fish and minimize the impact of fish processing on the environment and ensure safety of product to consumer health.",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.description.version" : [ {
+                  "value" : "Peer Review",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.format" : [ {
+                  "value" : "application/pdf",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier" : [ {
+                  "value" : "4346.pdf",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.citation" : [ {
+                  "value" : "Abbassa International Journal for Aquaculture, 11(1): 109-129",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.issn" : [ {
+                  "value" : "1687-7638",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.uri" : [ {
+                  "value" : "https://hdl.handle.net/20.500.12348/2662",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.language" : [ {
+                  "value" : "en",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.publisher" : [ {
+                  "value" : "Egyptian Society for Water, Aquaculture and Environment",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.source" : [ {
+                  "value" : "Abbassa International Journal for Aquaculture",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.title" : [ {
+                  "value" : "Comparison of technical and economic performance of fresh and salted fish processors in Lake Nasser",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.type" : [ {
+                  "value" : "Journal Article",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.bibliographicCitation" : [ {
+                  "value" : "Nasr-Allah, A.M.; Zakar, A.H. (2018). Comparison of technical and economic performance of fresh and salted fish processors in Lake Nasser. Abbassa International Journal for Aquaculture, 11(1): 109-129",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.subject.agrovoc" : [ {
+                  "value" : "surveys | http://aims.fao.org/aos/agrovoc/c_7537",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : -1
+                } ],
+                "worldfish.location.area" : [ {
+                  "value" : "Africa",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ]
+              },
+              "inArchive" : true,
+              "discoverable" : true,
+              "withdrawn" : false,
+              "lastModified" : "2020-01-20T13:37:38.832+00:00",
+              "entityType" : null,
+              "type" : "item",
+              "_links" : {
+                "accessStatus" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/0e4f88fa-c2a7-4765-a4c8-8833c17562fe/accessStatus"
+                },
+                "bundles" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/0e4f88fa-c2a7-4765-a4c8-8833c17562fe/bundles"
+                },
+                "identifiers" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/0e4f88fa-c2a7-4765-a4c8-8833c17562fe/identifiers"
+                },
+                "mappedCollections" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/0e4f88fa-c2a7-4765-a4c8-8833c17562fe/mappedCollections"
+                },
+                "owningCollection" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/0e4f88fa-c2a7-4765-a4c8-8833c17562fe/owningCollection"
+                },
+                "relationships" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/0e4f88fa-c2a7-4765-a4c8-8833c17562fe/relationships"
+                },
+                "version" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/0e4f88fa-c2a7-4765-a4c8-8833c17562fe/version"
+                },
+                "templateItemOf" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/0e4f88fa-c2a7-4765-a4c8-8833c17562fe/templateItemOf"
+                },
+                "thumbnail" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/0e4f88fa-c2a7-4765-a4c8-8833c17562fe/thumbnail"
+                },
+                "self" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/0e4f88fa-c2a7-4765-a4c8-8833c17562fe"
+                }
+              }
+            }
+          }
+        }, {
+          "hitHighlights" : {
+            "dc.description.abstract" : [ "Assessments of <em>fish</em> consumption are based primarily on data from household surveys that do not capture information on the intra-household distribution of the size or species of <em>fish</em> consumed. Such studies can yield partial or misleading information", " about the adequacy of aquatic food consumption. We address this gap by focusing on individual-level <em>fish</em> consumption within the household, using data from a survey conducted in a rural part of the Ayeyarwady Region in Myanmar—an area with high levels" ],
+            "dc.title" : [ "Small <em>fish</em> consumption in rural Myanmar" ]
+          },
+          "type" : "discover",
+          "_links" : {
+            "indexableObject" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/85172763-6efc-48a8-8d6b-212b859be972"
+            }
+          },
+          "_embedded" : {
+            "indexableObject" : {
+              "id" : "85172763-6efc-48a8-8d6b-212b859be972",
+              "uuid" : "85172763-6efc-48a8-8d6b-212b859be972",
+              "name" : "Small fish consumption in rural Myanmar",
+              "handle" : "20.500.12348/5495",
+              "metadata" : {
+                "cg.contribution.worldfishauthor" : [ {
+                  "value" : "Rizaldo, Q.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Belton, B.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                } ],
+                "cg.contributor.affiliation" : [ {
+                  "value" : "Michigan State University",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "WorldFish",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "University of Manitoba",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ],
+                "cg.contributor.funder" : [ {
+                  "value" : "Livelihoods and Food Security Fund",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.project" : [ {
+                  "value" : "Nutrient-rich small fish production, processing and marketing in Myanmar and Zambia",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.coverage.country" : [ {
+                  "value" : "Myanmar",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.coverage.region" : [ {
+                  "value" : "South-Eastern Asia",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.creator.id" : [ {
+                  "value" : "Quennie Rizaldo: 0000-0002-7958-2618",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.description.theme" : [ {
+                  "value" : "Fisheries",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.identifier.ISIindexed" : [ {
+                  "value" : "ISI indexed",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.identifier.status" : [ {
+                  "value" : "Open access",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.reviewStatus" : [ {
+                  "value" : "Peer Review",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.subject.agrovoc" : [ {
+                  "value" : "myanmar",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Fish",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                } ],
+                "dc.creator" : [ {
+                  "value" : "Rizaldo, Q.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Khaing, W.W.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "Belton, B.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ],
+                "dc.date.accessioned" : [ {
+                  "value" : "2023-05-08T18:02:26Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.available" : [ {
+                  "value" : "2023-05-08T18:02:26Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.issued" : [ {
+                  "value" : "2023",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.description.abstract" : [ {
+                  "value" : "Assessments of fish consumption are based primarily on data from household surveys that do not capture information on the intra-household distribution of the size or species of fish consumed. Such studies can yield partial or misleading information about the adequacy of aquatic food consumption. We address this gap by focusing on individual-level fish consumption within the household, using data from a survey conducted in a rural part of the Ayeyarwady Region in Myanmar—an area with high levels of fish consumption. We disaggregate fish consumption by the gender of household members and by the quantity, species, and size of fish eaten, estimating quantities of fish consumed using models for reference, to identify gendered patterns of fish consumption at the intrahousehold level. We find higher average levels of fish consumption than reported in previous consumption surveys in Myanmar. Moreover, small fish are consumed more frequently than larger-sized fish. The popularity of small fish species highlights the continued reliance of survey respondents on wild fish stocks, despite all surveyed households also practicing small-scale aquaculture. The average consumption of fresh fish reported by women was 36% lower than that reported by men. Men were more likely to eat large fish species, but women ate more small fish, which may contain higher levels of micronutrients vital for addressing nutrient deficiencies.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.citation" : [ {
+                  "value" : "Quennie Rizaldo, Wae Khaing, Ben Belton. (19/4/2023). Small fish consumption in rural Myanmar. Maritime Studies, 22.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.doi" : [ {
+                  "value" : "https://dx.doi.org/10.1007/s40152-023-00304-6",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.issn" : [ {
+                  "value" : "2212-9790",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "1872-7859",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                } ],
+                "dc.identifier.uri" : [ {
+                  "value" : "https://hdl.handle.net/20.500.12348/5495",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.language" : [ {
+                  "value" : "en",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.publisher" : [ {
+                  "value" : "Springer",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.rights" : [ {
+                  "value" : "Copyrighted; all rights reserved",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.source" : [ {
+                  "value" : "Maritime Studies;22,(2023)",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.subject" : [ {
+                  "value" : "food and nutrition security",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "aquatic foods",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "small indigenous fish species",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "fish-based processed products",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                } ],
+                "dc.title" : [ {
+                  "value" : "Small fish consumption in rural Myanmar",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.type" : [ {
+                  "value" : "Journal Article",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.subject.agrovoc" : [ {
+                  "value" : "myanmar | http://aims.fao.org/aos/agrovoc/c_1155",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Fish | http://aims.fao.org/aos/agrovoc/c_15903",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                } ]
+              },
+              "inArchive" : true,
+              "discoverable" : true,
+              "withdrawn" : false,
+              "lastModified" : "2026-02-10T07:18:56.567+00:00",
+              "entityType" : null,
+              "type" : "item",
+              "_links" : {
+                "accessStatus" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/85172763-6efc-48a8-8d6b-212b859be972/accessStatus"
+                },
+                "bundles" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/85172763-6efc-48a8-8d6b-212b859be972/bundles"
+                },
+                "identifiers" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/85172763-6efc-48a8-8d6b-212b859be972/identifiers"
+                },
+                "mappedCollections" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/85172763-6efc-48a8-8d6b-212b859be972/mappedCollections"
+                },
+                "owningCollection" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/85172763-6efc-48a8-8d6b-212b859be972/owningCollection"
+                },
+                "relationships" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/85172763-6efc-48a8-8d6b-212b859be972/relationships"
+                },
+                "version" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/85172763-6efc-48a8-8d6b-212b859be972/version"
+                },
+                "templateItemOf" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/85172763-6efc-48a8-8d6b-212b859be972/templateItemOf"
+                },
+                "thumbnail" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/85172763-6efc-48a8-8d6b-212b859be972/thumbnail"
+                },
+                "self" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/85172763-6efc-48a8-8d6b-212b859be972"
+                }
+              }
+            }
+          }
+        }, {
+          "hitHighlights" : {
+            "dc.description.abstract" : [ "Dried <em>fish</em>—here defined broadly as aquatic animals preserved using simple techniques, such as sun-drying, salting, fermentation, and smoking that permit storage as foods at ambient temperature for extended periods without specialized packaging", "—have received little direct attention in fisheries research. This lack of visibility belies their historical and contemporary importance. Prior to the introduction of refrigeration, dried <em>fish</em> were the main form in which fisheries catches were traded" ],
+            "dc.title" : [ "Dried <em>fish</em> at the intersection of food science, economy, and culture: A global survey" ]
+          },
+          "type" : "discover",
+          "_links" : {
+            "indexableObject" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/64f2146f-a51c-4ba2-bbc0-e557ed560816"
+            }
+          },
+          "_embedded" : {
+            "indexableObject" : {
+              "id" : "64f2146f-a51c-4ba2-bbc0-e557ed560816",
+              "uuid" : "64f2146f-a51c-4ba2-bbc0-e557ed560816",
+              "name" : "Dried fish at the intersection of food science, economy, and culture: A global survey",
+              "handle" : "20.500.12348/5177",
+              "metadata" : {
+                "cg.contribution.worldfishauthor" : [ {
+                  "value" : "Thilsted, S.H.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.affiliation" : [ {
+                  "value" : "Michigan State University",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "WorldFish",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "University of Manitoba",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "University of Toronto",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                }, {
+                  "value" : "Bangladesh Agricultural University",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 4
+                } ],
+                "cg.contributor.crp" : [ {
+                  "value" : "Fish",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.coverage.region" : [ {
+                  "value" : "Global",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.creator.id" : [ {
+                  "value" : "Shakuntala Haraksingh Thilsted: 0000-0002-4041-1651",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.description.theme" : [ {
+                  "value" : "Market and Value Chains",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.identifier.ISIindexed" : [ {
+                  "value" : "ISI indexed",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.identifier.status" : [ {
+                  "value" : "Open access",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.reviewStatus" : [ {
+                  "value" : "Peer Review",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.subject.agrovoc" : [ {
+                  "value" : "value chains",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "fish processing",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "smoked fish",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ],
+                "dc.creator" : [ {
+                  "value" : "Belton, B.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Johnson, D.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "Thrift, E.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "Olsen, J.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                }, {
+                  "value" : "Reza Hossain, M.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 4
+                }, {
+                  "value" : "Thilsted, S.H.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 5
+                } ],
+                "dc.date.accessioned" : [ {
+                  "value" : "2022-05-17T16:59:21Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.available" : [ {
+                  "value" : "2022-05-17T16:59:21Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.issued" : [ {
+                  "value" : "2022",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.description.abstract" : [ {
+                  "value" : "Dried fish—here defined broadly as aquatic animals preserved using simple techniques, such as sun-drying, salting, fermentation, and smoking that permit storage as foods at ambient temperature for extended periods without specialized packaging—have received little direct attention in fisheries research. This lack of visibility belies their historical and contemporary importance. Prior to the introduction of refrigeration, dried fish were the main form in which fisheries catches were traded and consumed. Dried fish products remain a core component of production, trade, diets, and cuisines across the world, particularly in the Global South. The dried fish sector provides employment for millions of people, particularly women, who comprise most of the fish-drying workforce in many locations. However, the sector also confronts and creates significant challenges including food safety concerns and exploitative labour conditions. This paper is the first systematic assessment of the global literature on dried fish, comprised of a sample of >1100 references. In contrast to the general fisheries literature, which is dominated by studies of ecology and governance and focusses mainly on primary production, the dried fish literature is dominated by studies from food science and concentrates on the processing segment of fish value chains. As such, it offers valuable reference point for fisheries research, which is becoming increasingly attentive to food systems. This paper uncovers a wealth of insights buried in this largely unheralded literature, and identifies key thematic intersections, gaps and research questions that remain to be addressed in the study of dried fish.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.format" : [ {
+                  "value" : "PDF",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.citation" : [ {
+                  "value" : "Belton, B. Johnson, D. S. Thrift, E. Olsen, J. Hossain, M. A. R. & Thilsted, S. H. (2022). Dried fish at the intersection of food science, economy, and culture: A global survey. Fish and Fisheries, 00, 1– 22. https://doi.org/10.1111/faf.12664",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.issn" : [ {
+                  "value" : "1467-2960",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "1467-2979",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                } ],
+                "dc.identifier.uri" : [ {
+                  "value" : "https://hdl.handle.net/20.500.12348/5177",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.language" : [ {
+                  "value" : "en",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.publisher" : [ {
+                  "value" : "Wiley (12 months)",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.rights" : [ {
+                  "value" : "CC-BY-4.0",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.source" : [ {
+                  "value" : "Fish and Fisheries;00,(2022) Pagination 1,22",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.subject" : [ {
+                  "value" : "food and nutrition security",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "fermented fish",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "foodways",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "Fish",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                } ],
+                "dc.title" : [ {
+                  "value" : "Dried fish at the intersection of food science, economy, and culture: A global survey",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.type" : [ {
+                  "value" : "Journal Article",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.subject.agrovoc" : [ {
+                  "value" : "value chains | http://aims.fao.org/aos/agrovoc/c_2cbe5456",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "fish processing | http://aims.fao.org/aos/agrovoc/c_29020",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "smoked fish | http://aims.fao.org/aos/agrovoc/c_7115",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ]
+              },
+              "inArchive" : true,
+              "discoverable" : true,
+              "withdrawn" : false,
+              "lastModified" : "2026-02-10T07:18:56.838+00:00",
+              "entityType" : null,
+              "type" : "item",
+              "_links" : {
+                "accessStatus" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/64f2146f-a51c-4ba2-bbc0-e557ed560816/accessStatus"
+                },
+                "bundles" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/64f2146f-a51c-4ba2-bbc0-e557ed560816/bundles"
+                },
+                "identifiers" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/64f2146f-a51c-4ba2-bbc0-e557ed560816/identifiers"
+                },
+                "mappedCollections" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/64f2146f-a51c-4ba2-bbc0-e557ed560816/mappedCollections"
+                },
+                "owningCollection" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/64f2146f-a51c-4ba2-bbc0-e557ed560816/owningCollection"
+                },
+                "relationships" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/64f2146f-a51c-4ba2-bbc0-e557ed560816/relationships"
+                },
+                "version" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/64f2146f-a51c-4ba2-bbc0-e557ed560816/version"
+                },
+                "templateItemOf" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/64f2146f-a51c-4ba2-bbc0-e557ed560816/templateItemOf"
+                },
+                "thumbnail" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/64f2146f-a51c-4ba2-bbc0-e557ed560816/thumbnail"
+                },
+                "self" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/64f2146f-a51c-4ba2-bbc0-e557ed560816"
+                }
+              }
+            }
+          }
+        }, {
+          "hitHighlights" : {
+            "dc.description.abstract" : [ "<em>Fish</em> is among the most important animal-sourced foods in Africa and is crucial in combating malnutrition. <em>Fish</em> demand in Africa has far outpaced supply as the import share rose from 16% in 1970 to 39% by 2017. Little is known about who is consuming", " the imports: rural versus urban, rich versus poor. This is the first <em>fish</em> consumption analysis in Africa distinguishing imported and domestic <em>fish</em>, and within domestic <em>fish</em>, fresh versus traditional-processed. We analyse three rounds of nationally" ],
+            "dc.title" : [ "Demand for imported versus domestic <em>fish</em> in Nigeria" ]
+          },
+          "type" : "discover",
+          "_links" : {
+            "indexableObject" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/10fc0ab6-259b-4fb7-9e4f-120e1a85df60"
+            }
+          },
+          "_embedded" : {
+            "indexableObject" : {
+              "id" : "10fc0ab6-259b-4fb7-9e4f-120e1a85df60",
+              "uuid" : "10fc0ab6-259b-4fb7-9e4f-120e1a85df60",
+              "name" : "Demand for imported versus domestic fish in Nigeria",
+              "handle" : "20.500.12348/4496",
+              "metadata" : {
+                "cg.contributor.affiliation" : [ {
+                  "value" : "WorldFish",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Michigan State University",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                } ],
+                "cg.contributor.crp" : [ {
+                  "value" : "Fish",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.funder" : [ {
+                  "value" : "United States Agency for International Development",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.coverage.country" : [ {
+                  "value" : "Nigeria",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.coverage.region" : [ {
+                  "value" : "Western Africa",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.description.theme" : [ {
+                  "value" : "Miscellaneous themes",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.identifier.ISIindexed" : [ {
+                  "value" : "ISI indexed",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.identifier.status" : [ {
+                  "value" : "Open access",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.reviewStatus" : [ {
+                  "value" : "Peer Review",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.subject.agrovoc" : [ {
+                  "value" : "africa",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "nigeria",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "imports",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "fish",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                } ],
+                "dc.creator" : [ {
+                  "value" : "Liverpool-Tasie, L.O.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Sanou, A.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "Reardon, T.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "Belton, B.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                } ],
+                "dc.date.accessioned" : [ {
+                  "value" : "2021-02-08T08:18:13Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.available" : [ {
+                  "value" : "2021-02-08T08:18:13Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.issued" : [ {
+                  "value" : "2021",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.description.abstract" : [ {
+                  "value" : "Fish is among the most important animal-sourced foods in Africa and is crucial in combating malnutrition. Fish demand in Africa has far outpaced supply as the import share rose from 16% in 1970 to 39% by 2017. Little is known about who is consuming the imports: rural versus urban, rich versus poor. This is the first fish consumption analysis in Africa distinguishing imported and domestic fish, and within domestic fish, fresh versus traditional-processed. We analyse three rounds of nationally representative data from Nigeria, disaggregating the richer South from the poorer North, and urban and rural. Frozen (imported) fish accounted for 34% of urban fish consumption in the North (23% for rural), compared with 67% in urban areas in the South (54% for rural). The large difference in frozen fish consumption between regions is due mainly to differences in income and refrigerator ownership. For other fish forms (fresh, dried, smoked), regional differences are far less pronounced. Income and price elasticities confirm that imported fish have become deeply incorporated into fish consumption habits. From a policy perspective, this intensifies concerns about import bills as fish demand grows. However, our elasticity results show that Nigerian consumers are keen to consume fresh fish as incomes increase, and that demand for smoked and dried fish also remains strong at high levels of income. Promoting aquaculture is a promising policy path to reduce import dependence. Domestic capture fisheries remain a major source of fish, making it important to maintain productivity at sustainable levels through better management.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.format" : [ {
+                  "value" : "PDF",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.citation" : [ {
+                  "value" : "Liverpool-Tasie, L. S. O. Sanou, A. Reardon, T. Belton, B. (2021). Demand for Imported versus Domestic Fish in Nigeria. Journal of Agricultural Economics, online 6 Feb. https://doi.org/10.1111/1477-9552.12423",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.doi" : [ {
+                  "value" : "https://dx.doi.org/10.1111/1477-9552.12423",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.issn" : [ {
+                  "value" : "0021-857X",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.uri" : [ {
+                  "value" : "https://hdl.handle.net/20.500.12348/4496",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.language" : [ {
+                  "value" : "en",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.publisher" : [ {
+                  "value" : "Wiley",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.rights" : [ {
+                  "value" : "CC-BY-NC-4.0",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.source" : [ {
+                  "value" : "Journal of Agricultural Economics;(2021)",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.subject" : [ {
+                  "value" : "demand systems",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "panel easi",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "Fish",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ],
+                "dc.title" : [ {
+                  "value" : "Demand for imported versus domestic fish in Nigeria",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.type" : [ {
+                  "value" : "Journal Article",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.subject.agrovoc" : [ {
+                  "value" : "africa | http://aims.fao.org/aos/agrovoc/c_165",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "nigeria | http://aims.fao.org/aos/agrovoc/c_5182",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "imports | http://aims.fao.org/aos/agrovoc/c_3815",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "fish | http://aims.fao.org/aos/agrovoc/c_15903",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                } ]
+              },
+              "inArchive" : true,
+              "discoverable" : true,
+              "withdrawn" : false,
+              "lastModified" : "2026-02-10T07:19:05.358+00:00",
+              "entityType" : null,
+              "type" : "item",
+              "_links" : {
+                "accessStatus" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/10fc0ab6-259b-4fb7-9e4f-120e1a85df60/accessStatus"
+                },
+                "bundles" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/10fc0ab6-259b-4fb7-9e4f-120e1a85df60/bundles"
+                },
+                "identifiers" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/10fc0ab6-259b-4fb7-9e4f-120e1a85df60/identifiers"
+                },
+                "mappedCollections" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/10fc0ab6-259b-4fb7-9e4f-120e1a85df60/mappedCollections"
+                },
+                "owningCollection" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/10fc0ab6-259b-4fb7-9e4f-120e1a85df60/owningCollection"
+                },
+                "relationships" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/10fc0ab6-259b-4fb7-9e4f-120e1a85df60/relationships"
+                },
+                "version" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/10fc0ab6-259b-4fb7-9e4f-120e1a85df60/version"
+                },
+                "templateItemOf" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/10fc0ab6-259b-4fb7-9e4f-120e1a85df60/templateItemOf"
+                },
+                "thumbnail" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/10fc0ab6-259b-4fb7-9e4f-120e1a85df60/thumbnail"
+                },
+                "self" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/10fc0ab6-259b-4fb7-9e4f-120e1a85df60"
+                }
+              }
+            }
+          }
+        }, {
+          "hitHighlights" : {
+            "dc.description.abstract" : [ "With rapidly increasing investment in water control infrastructure (WCI) and a recently ratified agriculture development strategy that promotes integrated farming of high-value products such as <em>fish</em>, agricultural production, already fundamental", " to Myanmar’s economy, will be central to driving the countries’ socioeconomic transformation. Water planners and managers have a unique opportunity to design and manage WCI to incorporate <em>fish</em> and, in so doing, reduce conflicts and optimise the benefits" ],
+            "dc.title" : [ "Integrating <em>fish</em> into irrigation infrastructure projects in Myanmar: rice-<em>fish</em> what if…?" ]
+          },
+          "type" : "discover",
+          "_links" : {
+            "indexableObject" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/f84f4849-b1cc-4971-bd1f-1ebc539e3df8"
+            }
+          },
+          "_embedded" : {
+            "indexableObject" : {
+              "id" : "f84f4849-b1cc-4971-bd1f-1ebc539e3df8",
+              "uuid" : "f84f4849-b1cc-4971-bd1f-1ebc539e3df8",
+              "name" : "Integrating fish into irrigation infrastructure projects in Myanmar: rice-fish what if…?",
+              "handle" : "20.500.12348/3780",
+              "metadata" : {
+                "cg.contribution.worldfishauthor" : [ {
+                  "value" : "Dubois, M.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Akester, M.J.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "Leemans, K.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "Teoh, S.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                } ],
+                "cg.contributor.affiliation" : [ {
+                  "value" : "WorldFish",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "International Rice Research Institute",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "Department of Fisheries Myanmar",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "International Water Management Institute, The CGIAR initiative on Comprehensive Assessment of Water Management in Agriculture",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                } ],
+                "cg.contributor.crp" : [ {
+                  "value" : "Fish",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.funder" : [ {
+                  "value" : "Australian Centre for International Agricultural Research",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.project" : [ {
+                  "value" : "Development of Rice Fish Systems (RFS) in the Ayeyarwady Delta, Myanmar (MYRice-Fish)",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.coverage.country" : [ {
+                  "value" : "Myanmar",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.coverage.region" : [ {
+                  "value" : "South-Eastern Asia",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.creator.id" : [ {
+                  "value" : "Mark  Dubois: 0000-0002-8092-6465",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Michael Joseph Akester: 0000-0001-6526-1613",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "Shwu Jiau  Teoh: 0000-0001-7676-8583",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ],
+                "cg.description.theme" : [ {
+                  "value" : "Fisheries",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.identifier.ISIindexed" : [ {
+                  "value" : "ISI indexed",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.identifier.status" : [ {
+                  "value" : "Timeless limited access",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.identifier.worldfish" : [ {
+                  "value" : "4427",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.subject.agrovoc" : [ {
+                  "value" : "sustainable development",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.creator" : [ {
+                  "value" : "Dubois, M.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Akester, M.J.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "Leemans, K.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "Teoh, S.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                }, {
+                  "value" : "Stuart, A.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 4
+                }, {
+                  "value" : "Thant, A.M.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 5
+                }, {
+                  "value" : "Shein, N.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 6
+                }, {
+                  "value" : "Leh, M.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 7
+                }, {
+                  "value" : "Moet, P.M.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 8
+                }, {
+                  "value" : "Radanielson, A.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 9
+                } ],
+                "dc.date.accessioned" : [ {
+                  "value" : "2019-09-03T03:24:08Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.available" : [ {
+                  "value" : "2019-09-03T03:24:08Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.issued" : [ {
+                  "value" : "2019",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.description.abstract" : [ {
+                  "value" : "With rapidly increasing investment in water control infrastructure (WCI) and a recently ratified agriculture development strategy that promotes integrated farming of high-value products such as fish, agricultural production, already fundamental to Myanmar’s economy, will be central to driving the countries’ socioeconomic transformation. Water planners and managers have a unique opportunity to design and manage WCI to incorporate fish and, in so doing, reduce conflicts and optimise the benefits to both people and the ecosystem services upon which they depend. Results from rice–fish culture experimental trials in Myanmar’s Ayeyarwady Delta are providing an evidence base for the importance of integrating fish into WCI, highlighting a range of both environmental and social benefits. By using less than 13% of paddy land area and through best management practices, existing rice productivity is sustained, alongside a 25% increase in economic returns for the same land area from fish. In addition, there are considerably more protein and micronutrients available from the fish produced in the system. Should these farming system innovations be adopted at scale, Myanmar stands to benefit from increased employment, incomes and nutritional value of farm plots (alongside associated reductions in pesticide pollution) and water use benefits.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.citation" : [ {
+                  "value" : "Marine and Freshwater Research, 70(9): 1229-1240",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.doi" : [ {
+                  "value" : "https://dx.doi.org/10.1071/MF19182",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.issn" : [ {
+                  "value" : "1323-1650",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.uri" : [ {
+                  "value" : "https://hdl.handle.net/20.500.12348/3780",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.language" : [ {
+                  "value" : "en",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.publisher" : [ {
+                  "value" : "CSIRO Publishing",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.rights" : [ {
+                  "value" : "CC-BY-NC-SA-4.0",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.subject" : [ {
+                  "value" : "no poverty",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "zero hunger",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "landscape approach",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "rice–fish systems",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                }, {
+                  "value" : "water managers",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 4
+                }, {
+                  "value" : "Fish",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 5
+                } ],
+                "dc.title" : [ {
+                  "value" : "Integrating fish into irrigation infrastructure projects in Myanmar: rice-fish what if…?",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.type" : [ {
+                  "value" : "Journal Article",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.bibliographicCitation" : [ {
+                  "value" : "Dubois, M.J. et al.(2019) Integrating fish into irrigation infrastructure projects in Myanmar: rice-fish what if…?.Marine and Freshwater Research, 70(9): 1229-1240",
+                  "language" : "",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.subject.agrovoc" : [ {
+                  "value" : "sustainable development | http://aims.fao.org/aos/agrovoc/c_35332",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : -1
+                } ]
+              },
+              "inArchive" : true,
+              "discoverable" : true,
+              "withdrawn" : false,
+              "lastModified" : "2020-06-05T07:32:13.703+00:00",
+              "entityType" : null,
+              "type" : "item",
+              "_links" : {
+                "accessStatus" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/f84f4849-b1cc-4971-bd1f-1ebc539e3df8/accessStatus"
+                },
+                "bundles" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/f84f4849-b1cc-4971-bd1f-1ebc539e3df8/bundles"
+                },
+                "identifiers" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/f84f4849-b1cc-4971-bd1f-1ebc539e3df8/identifiers"
+                },
+                "mappedCollections" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/f84f4849-b1cc-4971-bd1f-1ebc539e3df8/mappedCollections"
+                },
+                "owningCollection" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/f84f4849-b1cc-4971-bd1f-1ebc539e3df8/owningCollection"
+                },
+                "relationships" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/f84f4849-b1cc-4971-bd1f-1ebc539e3df8/relationships"
+                },
+                "version" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/f84f4849-b1cc-4971-bd1f-1ebc539e3df8/version"
+                },
+                "templateItemOf" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/f84f4849-b1cc-4971-bd1f-1ebc539e3df8/templateItemOf"
+                },
+                "thumbnail" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/f84f4849-b1cc-4971-bd1f-1ebc539e3df8/thumbnail"
+                },
+                "self" : {
+                  "href" : "https://digitalarchive.worldfishcenter.org/server/api/core/items/f84f4849-b1cc-4971-bd1f-1ebc539e3df8"
+                }
+              }
+            }
+          }
+        } ]
+      },
+      "page" : {
+        "number" : 0,
+        "size" : 5,
+        "totalPages" : 390,
+        "totalElements" : 1946
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=5"
+        },
+        "last" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal Article,equals&page=389&size=5"
+        },
+        "self" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal Article,equals&size=5"
+        }
+      }
+    },
+    "facets" : [ {
+      "name" : "author",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "minValue" : "A bd Elwahab, N.",
+      "maxValue" : "Zynudheen, A.A.",
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/author?query=fish&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/author?query=fish&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Allison, E.",
+          "count" : 84,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Allison,%20E.,equals"
+            }
+          }
+        }, {
+          "label" : "Belton, B.",
+          "count" : 61,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Belton,%20B.,equals"
+            }
+          }
+        }, {
+          "label" : "Benzie, J.",
+          "count" : 60,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Benzie,%20J.,equals"
+            }
+          }
+        }, {
+          "label" : "Thilsted, S.H.",
+          "count" : 60,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Thilsted,%20S.H.,equals"
+            }
+          }
+        }, {
+          "label" : "Cohen, P.J.",
+          "count" : 55,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Cohen,%20P.J.,equals"
+            }
+          }
+        }, {
+          "label" : "Phillips, M.",
+          "count" : 51,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Phillips,%20M.,equals"
+            }
+          }
+        }, {
+          "label" : "Pauly, D.",
+          "count" : 48,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Pauly,%20D.,equals"
+            }
+          }
+        }, {
+          "label" : "Chadag, V.",
+          "count" : 47,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Chadag,%20V.,equals"
+            }
+          }
+        }, {
+          "label" : "Ponzoni, R.W.",
+          "count" : 47,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Ponzoni,%20R.W.,equals"
+            }
+          }
+        }, {
+          "label" : "Dey, M.M.",
+          "count" : 44,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Dey,%20M.M.,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "subject",
+      "facetType" : "hierarchical",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/subject?query=fish&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/subject?query=fish&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "fish",
+          "count" : 474,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=fish,equals"
+            }
+          }
+        }, {
+          "label" : "aquaculture",
+          "count" : 425,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=aquaculture,equals"
+            }
+          }
+        }, {
+          "label" : "fisheries",
+          "count" : 279,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=fisheries,equals"
+            }
+          }
+        }, {
+          "label" : "tilapia",
+          "count" : 175,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=tilapia,equals"
+            }
+          }
+        }, {
+          "label" : "Fish",
+          "count" : 146,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=Fish,equals"
+            }
+          }
+        }, {
+          "label" : "small-scale fisheries",
+          "count" : 146,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=small-scale%20fisheries,equals"
+            }
+          }
+        }, {
+          "label" : "research",
+          "count" : 130,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=research,equals"
+            }
+          }
+        }, {
+          "label" : "food security",
+          "count" : 122,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=food%20security,equals"
+            }
+          }
+        }, {
+          "label" : "surveys",
+          "count" : 110,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=surveys,equals"
+            }
+          }
+        }, {
+          "label" : "fish culture",
+          "count" : 109,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=fish%20culture,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "dateIssued",
+      "facetType" : "date",
+      "facetLimit" : 10,
+      "minValue" : "1974",
+      "maxValue" : "2026",
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "self" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/dateIssued?query=fish&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "1978 - 1979",
+          "count" : 7,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.dateIssued=%5B1978%20TO%201979%5D,equals"
+            }
+          }
+        }, {
+          "label" : "1980 - 1989",
+          "count" : 161,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.dateIssued=%5B1980%20TO%201989%5D,equals"
+            }
+          }
+        }, {
+          "label" : "1990 - 1999",
+          "count" : 326,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.dateIssued=%5B1990%20TO%201999%5D,equals"
+            }
+          }
+        }, {
+          "label" : "2000 - 2009",
+          "count" : 398,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.dateIssued=%5B2000%20TO%202009%5D,equals"
+            }
+          }
+        }, {
+          "label" : "2010 - 2019",
+          "count" : 574,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.dateIssued=%5B2010%20TO%202019%5D,equals"
+            }
+          }
+        }, {
+          "label" : "2020 - 2026",
+          "count" : 480,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.dateIssued=%5B2020%20TO%202026%5D,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "entityType",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "_links" : {
+        "self" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/entityType?query=fish&dsoType=item&f.itemtype=Journal Article,equals"
+        }
+      },
+      "_embedded" : {
+        "values" : [ ]
+      }
+    }, {
+      "name" : "itemtype",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "self" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/itemtype?query=fish&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Journal Article",
+          "count" : 1946,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.itemtype=Journal%20Article,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "institute",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/institute?query=fish&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/institute?query=fish&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "WorldFish",
+          "count" : 1135,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=WorldFish,equals"
+            }
+          }
+        }, {
+          "label" : "ICLARM",
+          "count" : 109,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=ICLARM,equals"
+            }
+          }
+        }, {
+          "label" : "James Cook University",
+          "count" : 66,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=James%20Cook%20University,equals"
+            }
+          }
+        }, {
+          "label" : "Wageningen University & Research Centre",
+          "count" : 48,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=Wageningen%20University%20%26%20Research%20Centre,equals"
+            }
+          }
+        }, {
+          "label" : "James Cook University, ARC Centre of Excellence for Coral Reef Studies",
+          "count" : 47,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=James%20Cook%20University,%20ARC%20Centre%20of%20Excellence%20for%20Coral%20Reef%20Studies,equals"
+            }
+          }
+        }, {
+          "label" : "University of Stirling",
+          "count" : 42,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=University%20of%20Stirling,equals"
+            }
+          }
+        }, {
+          "label" : "University of Wollongong",
+          "count" : 41,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=University%20of%20Wollongong,equals"
+            }
+          }
+        }, {
+          "label" : "Michigan State University",
+          "count" : 40,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=Michigan%20State%20University,equals"
+            }
+          }
+        }, {
+          "label" : "Bangladesh Agricultural University",
+          "count" : 38,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=Bangladesh%20Agricultural%20University,equals"
+            }
+          }
+        }, {
+          "label" : "International Food Policy Research Institute",
+          "count" : 34,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=International%20Food%20Policy%20Research%20Institute,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "region",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/region?query=fish&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/region?query=fish&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Southern Asia",
+          "count" : 350,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Southern%20Asia,equals"
+            }
+          }
+        }, {
+          "label" : "South-Eastern Asia",
+          "count" : 242,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=South-Eastern%20Asia,equals"
+            }
+          }
+        }, {
+          "label" : "Global",
+          "count" : 100,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Global,equals"
+            }
+          }
+        }, {
+          "label" : "Eastern Africa",
+          "count" : 78,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Eastern%20Africa,equals"
+            }
+          }
+        }, {
+          "label" : "Northern Africa",
+          "count" : 71,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Northern%20Africa,equals"
+            }
+          }
+        }, {
+          "label" : "Western Africa",
+          "count" : 49,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Western%20Africa,equals"
+            }
+          }
+        }, {
+          "label" : "Melanesia",
+          "count" : 33,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Melanesia,equals"
+            }
+          }
+        }, {
+          "label" : "South America",
+          "count" : 24,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=South%20America,equals"
+            }
+          }
+        }, {
+          "label" : "Southern Africa",
+          "count" : 15,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Southern%20Africa,equals"
+            }
+          }
+        }, {
+          "label" : "Northern America",
+          "count" : 12,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Northern%20America,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "country",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/country?query=fish&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/country?query=fish&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Bangladesh",
+          "count" : 272,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Bangladesh,equals"
+            }
+          }
+        }, {
+          "label" : "Egypt",
+          "count" : 102,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Egypt,equals"
+            }
+          }
+        }, {
+          "label" : "Philippines",
+          "count" : 100,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Philippines,equals"
+            }
+          }
+        }, {
+          "label" : "India",
+          "count" : 98,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=India,equals"
+            }
+          }
+        }, {
+          "label" : "Solomon Islands",
+          "count" : 81,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Solomon%20Islands,equals"
+            }
+          }
+        }, {
+          "label" : "Malawi",
+          "count" : 58,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Malawi,equals"
+            }
+          }
+        }, {
+          "label" : "Viet Nam",
+          "count" : 58,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Viet%20Nam,equals"
+            }
+          }
+        }, {
+          "label" : "Indonesia",
+          "count" : 49,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Indonesia,equals"
+            }
+          }
+        }, {
+          "label" : "Cambodia",
+          "count" : 46,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Cambodia,equals"
+            }
+          }
+        }, {
+          "label" : "Kenya",
+          "count" : 44,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Kenya,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "crp",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/crp?query=fish&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/crp?query=fish&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Fish",
+          "count" : 384,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=Fish,equals"
+            }
+          }
+        }, {
+          "label" : "Aquatic Agricultural Systems",
+          "count" : 68,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=Aquatic%20Agricultural%20Systems,equals"
+            }
+          }
+        }, {
+          "label" : "Livestock and Fish",
+          "count" : 20,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=Livestock%20and%20Fish,equals"
+            }
+          }
+        }, {
+          "label" : "Policies, Institutions, and Markets",
+          "count" : 16,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=Policies,%20Institutions,%20and%20Markets,equals"
+            }
+          }
+        }, {
+          "label" : "Climate Change, Agriculture and Food Security",
+          "count" : 10,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=Climate%20Change,%20Agriculture%20and%20Food%20Security,equals"
+            }
+          }
+        }, {
+          "label" : "Water, Land and Ecosystems",
+          "count" : 6,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=Water,%20Land%20and%20Ecosystems,equals"
+            }
+          }
+        }, {
+          "label" : "Agriculture for Nutrition and Health",
+          "count" : 4,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=Agriculture%20for%20Nutrition%20and%20Health,equals"
+            }
+          }
+        }, {
+          "label" : "Big Data",
+          "count" : 4,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=Big%20Data,equals"
+            }
+          }
+        }, {
+          "label" : "Grain Legumes and Dryland Cereals",
+          "count" : 4,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=Grain%20Legumes%20and%20Dryland%20Cereals,equals"
+            }
+          }
+        }, {
+          "label" : "Livestock",
+          "count" : 3,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=Livestock,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "sdg",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/sdg?query=fish&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/sdg?query=fish&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "SDG 14 - Life below water",
+          "count" : 140,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%2014%20-%20Life%20below%20water,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 2 - Zero hunger",
+          "count" : 88,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%202%20-%20Zero%20hunger,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 1 - No poverty",
+          "count" : 80,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%201%20-%20No%20poverty,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 12 - Responsible consumption and production",
+          "count" : 52,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%2012%20-%20Responsible%20consumption%20and%20production,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 3 - Good health and well-being",
+          "count" : 44,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%203%20-%20Good%20health%20and%20well-being,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 13 - Climate action",
+          "count" : 32,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%2013%20-%20Climate%20action,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 5 - Gender equality",
+          "count" : 24,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%205%20-%20Gender%20equality,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 8 - Decent work and economic growth",
+          "count" : 23,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%208%20-%20Decent%20work%20and%20economic%20growth,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 6 - Clean water and sanitation",
+          "count" : 7,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%206%20-%20Clean%20water%20and%20sanitation,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 11 - Sustainable cities and communities",
+          "count" : 6,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%2011%20-%20Sustainable%20cities%20and%20communities,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "initiative",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/initiative?query=fish&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/initiative?query=fish&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Aquatic Foods",
+          "count" : 103,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Aquatic%20Foods,equals"
+            }
+          }
+        }, {
+          "label" : "Asian Mega-Deltas",
+          "count" : 18,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Asian%20Mega-Deltas,equals"
+            }
+          }
+        }, {
+          "label" : "One Health",
+          "count" : 9,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=One%20Health,equals"
+            }
+          }
+        }, {
+          "label" : "Agroecology",
+          "count" : 3,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Agroecology,equals"
+            }
+          }
+        }, {
+          "label" : "Low-Emission Food Systems",
+          "count" : 3,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Low-Emission%20Food%20Systems,equals"
+            }
+          }
+        }, {
+          "label" : "Diversification in East and Southern Africa",
+          "count" : 2,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Diversification%20in%20East%20and%20Southern%20Africa,equals"
+            }
+          }
+        }, {
+          "label" : "Foresight",
+          "count" : 2,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Foresight,equals"
+            }
+          }
+        }, {
+          "label" : "Transforming Agrifood Systems in South Asia",
+          "count" : 2,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Transforming%20Agrifood%20Systems%20in%20South%20Asia,equals"
+            }
+          }
+        }, {
+          "label" : "Fragility to Resilience in Central and West Asia and North Africa",
+          "count" : 1,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Fragility%20to%20Resilience%20in%20Central%20and%20West%20Asia%20and%20North%20Africa,equals"
+            }
+          }
+        }, {
+          "label" : "Fruits and Vegetables",
+          "count" : 1,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Fruits%20and%20Vegetables,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "action_area",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "self" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/action_area?query=fish&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Resilient Agrifood Systems",
+          "count" : 118,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.action_area=Resilient%20Agrifood%20Systems,equals"
+            }
+          }
+        }, {
+          "label" : "Systems Transformation",
+          "count" : 11,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.action_area=Systems%20Transformation,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "impact_area",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "self" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/impact_area?query=fish&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Nutrition, health and food security",
+          "count" : 132,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.impact_area=Nutrition,%20health%20and%20food%20security,equals"
+            }
+          }
+        }, {
+          "label" : "Gender equality, youth and social inclusion",
+          "count" : 106,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.impact_area=Gender%20equality,%20youth%20and%20social%20inclusion,equals"
+            }
+          }
+        }, {
+          "label" : "Climate adaptation and mitigation",
+          "count" : 84,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.impact_area=Climate%20adaptation%20and%20mitigation,equals"
+            }
+          }
+        }, {
+          "label" : "Environmental health and biodiversity",
+          "count" : 69,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.impact_area=Environmental%20health%20and%20biodiversity,equals"
+            }
+          }
+        }, {
+          "label" : "Poverty reduction, livelihoods and jobs",
+          "count" : 46,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.impact_area=Poverty%20reduction,%20livelihoods%20and%20jobs,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "project",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/project?query=fish&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/project?query=fish&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Increased Sustainability in the Aquaculture Sector in SSA, through improved Aquatic Animal Health Management (AHA)",
+          "count" : 18,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=Increased%20Sustainability%20in%20the%20Aquaculture%20Sector%20in%20SSA,%20through%20improved%20Aquatic%20Animal%20Health%20Management%20(AHA),equals"
+            }
+          }
+        }, {
+          "label" : "AABS - ASIA-AFRICA BLUETECH SUPERHIGHWAY PROJECT under the Climate and Ocean Adaptation and Sustainable Transition programme (COAST)",
+          "count" : 13,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=AABS%20-%20ASIA-AFRICA%20BLUETECH%20SUPERHIGHWAY%20PROJECT%20under%20the%20Climate%20and%20Ocean%20Adaptation%20and%20Sustainable%20Transition%20programme%20(COAST),equals"
+            }
+          }
+        }, {
+          "label" : "Abbassa Facilities",
+          "count" : 12,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=Abbassa%20Facilities,equals"
+            }
+          }
+        }, {
+          "label" : "EcoFish_II - Enhanced Coastal Fisheries in Bangladesh phase 2 (EcoFish II)",
+          "count" : 12,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=EcoFish_II%20-%20Enhanced%20Coastal%20Fisheries%20in%20Bangladesh%20phase%202%20(EcoFish%20II),equals"
+            }
+          }
+        }, {
+          "label" : "Enhanced Coastal Fisheries in Bangladesh phase 2 (EcoFish II)",
+          "count" : 12,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=Enhanced%20Coastal%20Fisheries%20in%20Bangladesh%20phase%202%20(EcoFish%20II),equals"
+            }
+          }
+        }, {
+          "label" : "(IFAD) Improving the Technological Foundations for Sustainable Aquaculture",
+          "count" : 8,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=(IFAD)%20Improving%20the%20Technological%20Foundations%20for%20Sustainable%20Aquaculture,equals"
+            }
+          }
+        }, {
+          "label" : "WorldFish and Fish knowledge and data products",
+          "count" : 8,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=WorldFish%20and%20Fish%20knowledge%20and%20data%20products,equals"
+            }
+          }
+        }, {
+          "label" : "Enhanced Coastal Fisheries in Bangladesh - EcoFish Phase I",
+          "count" : 6,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=Enhanced%20Coastal%20Fisheries%20in%20Bangladesh%20-%20EcoFish%20Phase%20I,equals"
+            }
+          }
+        }, {
+          "label" : "W1/W2 - PIM Phase 2",
+          "count" : 6,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=W1/W2%20-%20PIM%20Phase%202,equals"
+            }
+          }
+        }, {
+          "label" : "Aquaculture for Income and Nutrition (AIN)",
+          "count" : 5,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=Aquaculture%20for%20Income%20and%20Nutrition%20(AIN),equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "scienceprogram",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/scienceprogram?query=fish&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/facets/scienceprogram?query=fish&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "CGIAR Science Program on Sustainable Animal and Aquatic Foods",
+          "count" : 25,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=CGIAR%20Science%20Program%20on%20Sustainable%20Animal%20and%20Aquatic%20Foods,equals"
+            }
+          }
+        }, {
+          "label" : "CGIAR Science Program on Better Diets and Nutrition",
+          "count" : 9,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=CGIAR%20Science%20Program%20on%20Better%20Diets%20and%20Nutrition,equals"
+            }
+          }
+        }, {
+          "label" : "Sustainable Animal and Aquatic Foods",
+          "count" : 6,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=Sustainable%20Animal%20and%20Aquatic%20Foods,equals"
+            }
+          }
+        }, {
+          "label" : "Better Diets and Nutrition",
+          "count" : 5,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=Better%20Diets%20and%20Nutrition,equals"
+            }
+          }
+        }, {
+          "label" : "CGIAR Science Program on Scaling for Impact",
+          "count" : 5,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=CGIAR%20Science%20Program%20on%20Scaling%20for%20Impact,equals"
+            }
+          }
+        }, {
+          "label" : "Climate Action",
+          "count" : 5,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=Climate%20Action,equals"
+            }
+          }
+        }, {
+          "label" : "Digital Transformation",
+          "count" : 4,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=Digital%20Transformation,equals"
+            }
+          }
+        }, {
+          "label" : "Gender Equality and Inclusion",
+          "count" : 4,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=Gender%20Equality%20and%20Inclusion,equals"
+            }
+          }
+        }, {
+          "label" : "Multifunctional Landscapes",
+          "count" : 4,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=Multifunctional%20Landscapes,equals"
+            }
+          }
+        }, {
+          "label" : "CGIAR Accelerator on Digital Transformation",
+          "count" : 3,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://digitalarchive.worldfishcenter.org/server/api/discover/search/objects?query=fish&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=CGIAR%20Accelerator%20on%20Digital%20Transformation,equals"
+            }
+          }
+        } ]
+      }
+    } ]
+  }
+}

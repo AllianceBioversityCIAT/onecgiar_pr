@@ -1,8 +1,10 @@
-# CGSpace Discovery HAL fixture — metadata contract
+# Discovery API fixtures — metadata contract (CGSpace, MELSpace, WorldFish)
 
-Live-captured, trimmed fixture from the public CGSpace DSpace 7 Discovery API, consumed by
-`cgspace-discovery.mapper.spec.ts` and `cgspace-discovery.service.spec.ts`. Pins the upstream
-contract described in `docs/specs/changes/kp-cgspace-browse/design.md` §3.3 / §4.1.
+Live-captured fixtures from the three public DSpace 7 Discovery APIs PRMS's Knowledge Product
+Browse tab reads from. §1–6 below pin the original CGSpace fixture (task `KPB-T-1`). §7 pins the
+MELSpace and WorldFish fixtures added by task `KPM-T-1`, consumed by
+`fixtures-keys.spec.ts` and the adapter registry (`docs/specs/changes/kp-multi-repository-browse/design.md`
+§3.3).
 
 - **Captured:** 2026-08-26 (task `KPB-T-1`), with `curl -m 30`, no auth, no key.
 - **Base URL:** `https://cgspace.cgiar.org/server/api` (public host; the runtime value comes from `CGSPACE_DISCOVERY_URL`).
@@ -102,4 +104,73 @@ resolution. The HITL smoke must run the same three links with a valid key and re
 ## 6. Security note
 
 Public repository metadata only. No credentials, keys or non-public hosts are present in this
+directory; env var names are cited, values never.
+
+## 7. MELSpace and WorldFish fixtures (task `KPM-T-1`)
+
+Pins the *capture*/*confirm* cells of `docs/specs/changes/kp-multi-repository-browse/design.md` §3.3
+for the `melspace` and `worldfish` adapter rows.
+
+- **Captured:** 2026-09-10 (`date -u` → `Thu Sep 10 18:46:xx UTC 2026`), with `curl -s -m 30`, no auth,
+  no key.
+- **Base URLs:** `https://repo.mel.cgiar.org/server/api` (`MELSPACE_DISCOVERY_URL`),
+  `https://digitalarchive.worldfishcenter.org/server/api` (`WORLDFISH_DISCOVERY_URL`).
+- **Files:** `melspace-search.hal.json`, `worldfish-search.hal.json` (each one untrimmed HAL search
+  response, byte-identical to its `curl` output — no pretty-print, no manual edits), `melspace-facets.json`,
+  `worldfish-facets.json` (each an object with keys `facetsIndex` / `itemtypeFacet` / `instituteFacet`,
+  built by parsing the three raw `curl` captures below with a small Python script that only nests the
+  parsed objects under those keys — no value was hand-typed or edited).
+
+### 7.1 Requests used (all returned HTTP 200)
+
+| # | Host | Path (relative to base URL) | Purpose | Result |
+|---|---|---|---|---|
+| 1 | MEL | `/discover/search/objects?dsoType=item&query=wheat&size=5&f.itemtype=Journal%20Article,equals` | search fixture | `totalElements=1157`; 5 items, all `Journal Article`; 2 of 5 carry `cg.identifier.doi` |
+| 2 | MEL | `/discover/facets` | facet index | `facetsIndex`; 15 facets incl. `itemtype` (text), `institute` (text), `dateIssued` (date) |
+| 3 | MEL | `/discover/facets/itemtype?size=20` | type facet | `itemtypeFacet`; top value `Journal Article` (4258) |
+| 4 | MEL | `/discover/facets/institute?size=20` | center facet | `instituteFacet`; top value `International Center for Agricultural Research in the Dry Areas - ICARDA` (10412) |
+| 5 | WorldFish | `/discover/search/objects?dsoType=item&query=fish&size=5&f.itemtype=Journal%20Article,equals` | search fixture | `totalElements=1946`; 5 items, all `Journal Article`; 3 of 5 carry `dc.identifier.doi` |
+| 6 | WorldFish | `/discover/facets` | facet index | `facetsIndex`; 15 facets incl. `itemtype` (text), `institute` (text), `dateIssued` (date) |
+| 7 | WorldFish | `/discover/facets/itemtype?size=20` | type facet | `itemtypeFacet`; top value `Journal Article` (2344) |
+| 8 | WorldFish | `/discover/facets/institute?size=20` | center facet | `instituteFacet`; top value `WorldFish` (3900) |
+
+Year-filter probe (not stored as a fixture — a live cross-check only, same pattern as CGSpace §1 #5–8):
+`f.dateIssued=[2024 TO 2024],equals` on the same `query`/`f.itemtype` combination constrained
+`totalElements` from 1157 → 89 (MEL) and from 1946 → 506 (WorldFish); both hosts accept the same
+bracketed-range form CGSpace uses.
+
+### 7.2 Metadata keys confirmed present (at least one item in each search fixture)
+
+| Field | MELSpace key | WorldFish key |
+|---|---|---|
+| Title | `dc.title` | `dc.title` |
+| Type | `dc.type` | `dc.type` |
+| Year | `dcterms.available` (all 5 items) | `dc.date.issued` (all 5 items) |
+| Authors | `dc.creator` (+ `dc.contributor` on some items) | `dc.creator` |
+| DOI | `cg.identifier.doi` (2 of 5 items; absent → no `null`-only fixture, the field is simply missing on the other 3) | `dc.identifier.doi` (3 of 5 items) |
+| URI | `dc.identifier.uri` (all 5 items) | `dc.identifier.uri` (all 5 items) |
+| Affiliation / center | `cg.contributor.center` (all 5 items) | `cg.contributor.affiliation` (all 5 items) |
+
+Both design-doc placeholders resolved as: MEL affiliation field is `cg.contributor.center`
+(**not** `cg.contributor.affiliation`, which does not appear on any MEL item in this capture);
+WorldFish affiliation field is `cg.contributor.affiliation`, matching the design's default guess.
+`dc.identifier.uri` is confirmed (not merely assumed) for both hosts.
+
+### 7.3 Facet contract
+
+- **Facet index** (`GET /discover/facets`) lists the same 15 facet names on both hosts:
+  `author, subject, dateIssued, entityType, itemtype, institute, region, country, crp, sdg,
+  initiative, action_area, impact_area, scienceprogram, project` (order varies slightly by host).
+- **Type facet:** physical name `itemtype` on both hosts (same name CGSpace uses).
+- **Center facet:** physical name `institute` on both hosts (confirms the design doc's "observed
+  `institute`" note for MEL, and extends it to WorldFish, which was previously unconfirmed).
+- **Year filter:** `f.dateIssued=[YYYY TO YYYY],equals` works on both hosts (verified constraining,
+  §7.1). **No fallback is needed for either host** — `KPM-DD-7`'s server-side post-filter path is
+  not exercised by MEL or WorldFish.
+- Neither host lacks an affiliation field, a center facet, or a year facet — `KPM-OQ-3`'s "hide the
+  Center filter" branch does not apply to either new host.
+
+### 7.4 Security note
+
+Public repository metadata only. No credentials, keys, or non-public hosts are present in this
 directory; env var names are cited, values never.
