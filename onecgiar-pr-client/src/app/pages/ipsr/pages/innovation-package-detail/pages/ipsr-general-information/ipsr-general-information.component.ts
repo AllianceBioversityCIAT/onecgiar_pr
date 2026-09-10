@@ -91,6 +91,29 @@ export class IpsrGeneralInformationComponent implements OnInit {
     this.ipsrGeneralInformationBody[fieldName] = currentArray;
   }
 
+  /**
+   * P2-3210 — whether the "Evidence" field of one Impact Area block is rendered.
+   *
+   * The field has always existed, but only for the older portfolios: in the current one every one
+   * of the five blocks was wrapped in `@if (!isP25())`, so a score of 2 (principal) told the person
+   * to attach evidence and left them with nowhere on the form to put it. The note next to the score
+   * links to step 3 "Package and Assess", which holds the readiness/use-level evidence — a
+   * different thing. Angel (PO) settled it on 10-Sep-2026: the behaviour to add in IPSR is the one
+   * the older portfolios already have, with the field under each score in General information.
+   *
+   * - Older portfolios: unchanged — the field shows as soon as a score is picked (any of 0/1/2) and
+   *   is required only at 2, which is what those results were reported with.
+   * - Current portfolio: the field shows exactly when the score is 2 (principal), the only case the
+   *   requirement and the green check ask evidence for. A score of 0 or 1 is not asked for any.
+   *
+   * Deliberately NOT a portfolio-year gate: this is "which portfolio", not "from which phase on".
+   * The older portfolios keep their own rule, so the two cannot be collapsed into one threshold.
+   */
+  showImpactAreaEvidenceField(tagLevelId: number | string | null | undefined): boolean {
+    if (this.fieldsManagerSE.isP25()) return Number(tagLevelId) === 3;
+    return tagLevelId != null;
+  }
+
   getImpactAreaFieldLabel(fieldRef: string): string {
     const field = this.fieldsManagerSE.fields()[fieldRef];
     return field?.label || '';

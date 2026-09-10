@@ -136,15 +136,18 @@
     }
   }
 
-  @if (!this.fieldsManagerSE.isP25()) {
-    <div *ngIf="this.ipsrGeneralInformationBody.gender_tag_level_id != null">
-      <app-pr-input
-        label="Evidence"
-        [required]="this.ipsrGeneralInformationBody.gender_tag_level_id == 3"
-        placeholder="Link"
-        [(ngModel)]="this.ipsrGeneralInformationBody.evidence_gender_tag">
-      </app-pr-input>
-    </div>
+  <!-- P2-3210: this Impact Area evidence field used to render for the older portfolios ONLY, so a
+       score of 2 in the current one asked for evidence the person had nowhere to enter — the note
+       above sent them to step 3, which holds the readiness/use evidence, a different thing.
+       `showImpactAreaEvidenceField()` keeps the older-portfolio rule untouched and adds the current
+       portfolio, where the field appears exactly when the score is 2 (principal). -->
+  @if (this.showImpactAreaEvidenceField(this.ipsrGeneralInformationBody.gender_tag_level_id)) {
+    <app-pr-input
+      label="Evidence"
+      [required]="this.ipsrGeneralInformationBody.gender_tag_level_id == 3"
+      placeholder="Link"
+      [(ngModel)]="this.ipsrGeneralInformationBody.evidence_gender_tag">
+    </app-pr-input>
   }
 </div>
 
@@ -192,15 +195,14 @@
     }
   }
 
-  @if (!this.fieldsManagerSE.isP25()) {
-    <div *ngIf="this.ipsrGeneralInformationBody.climate_change_tag_level_id != null">
-      <app-pr-input
-        label="Evidence"
-        [required]="this.ipsrGeneralInformationBody.climate_change_tag_level_id == 3"
-        placeholder="Link"
-        [(ngModel)]="this.ipsrGeneralInformationBody.evidence_climate_tag">
-      </app-pr-input>
-    </div>
+  <!-- P2-3210 — see the gender block above. -->
+  @if (this.showImpactAreaEvidenceField(this.ipsrGeneralInformationBody.climate_change_tag_level_id)) {
+    <app-pr-input
+      label="Evidence"
+      [required]="this.ipsrGeneralInformationBody.climate_change_tag_level_id == 3"
+      placeholder="Link"
+      [(ngModel)]="this.ipsrGeneralInformationBody.evidence_climate_tag">
+    </app-pr-input>
   }
 </div>
 
@@ -249,15 +251,14 @@
     }
   }
 
-  @if (!this.fieldsManagerSE.isP25()) {
-    <div *ngIf="this.ipsrGeneralInformationBody.nutrition_tag_level_id != null">
-      <app-pr-input
-        label="Evidence"
-        [required]="this.ipsrGeneralInformationBody.nutrition_tag_level_id == 3"
-        placeholder="Link"
-        [(ngModel)]="this.ipsrGeneralInformationBody.evidence_nutrition_tag">
-      </app-pr-input>
-    </div>
+  <!-- P2-3210 — see the gender block above. -->
+  @if (this.showImpactAreaEvidenceField(this.ipsrGeneralInformationBody.nutrition_tag_level_id)) {
+    <app-pr-input
+      label="Evidence"
+      [required]="this.ipsrGeneralInformationBody.nutrition_tag_level_id == 3"
+      placeholder="Link"
+      [(ngModel)]="this.ipsrGeneralInformationBody.evidence_nutrition_tag">
+    </app-pr-input>
   }
 </div>
 
@@ -306,15 +307,14 @@
     }
   }
 
-  @if (!this.fieldsManagerSE.isP25()) {
-    <div *ngIf="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id != null">
-      <app-pr-input
-        label="Evidence"
-        [required]="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id == 3"
-        placeholder="Link"
-        [(ngModel)]="this.ipsrGeneralInformationBody.evidence_environment_tag">
-      </app-pr-input>
-    </div>
+  <!-- P2-3210 — see the gender block above. -->
+  @if (this.showImpactAreaEvidenceField(this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id)) {
+    <app-pr-input
+      label="Evidence"
+      [required]="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id == 3"
+      placeholder="Link"
+      [(ngModel)]="this.ipsrGeneralInformationBody.evidence_environment_tag">
+    </app-pr-input>
   }
 </div>
 
@@ -363,15 +363,14 @@
     }
   }
 
-  @if (!this.fieldsManagerSE.isP25()) {
-    <div *ngIf="this.ipsrGeneralInformationBody.poverty_tag_level_id != null">
-      <app-pr-input
-        label="Evidence"
-        [required]="this.ipsrGeneralInformationBody.poverty_tag_level_id == 3"
-        placeholder="Link"
-        [(ngModel)]="this.ipsrGeneralInformationBody.evidence_poverty_tag">
-      </app-pr-input>
-    </div>
+  <!-- P2-3210 — see the gender block above. -->
+  @if (this.showImpactAreaEvidenceField(this.ipsrGeneralInformationBody.poverty_tag_level_id)) {
+    <app-pr-input
+      label="Evidence"
+      [required]="this.ipsrGeneralInformationBody.poverty_tag_level_id == 3"
+      placeholder="Link"
+      [(ngModel)]="this.ipsrGeneralInformationBody.evidence_poverty_tag">
+    </app-pr-input>
   }
 </div>
 
