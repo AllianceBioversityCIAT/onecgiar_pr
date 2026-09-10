@@ -166,6 +166,12 @@ describe('an Area of Work rolls up BOTH tiers, not outcomes alone', () => {
   });
 
   // The shared outcomes every AoW carries; the outputs are what tells them apart.
+  //
+  // ⚠️ P2-3336 (2026-09-09) removed this population from the caller: a programme-level Intermediate
+  // Outcome no longer reaches `rollUpChildren` from an Area of Work — the service filters it out
+  // first (`results-framework-reporting.service.ts`, `belongsToTheAreaOfWork`). These cases still
+  // hold as a property of the FUNCTION, which averages whatever array it is handed and knows
+  // nothing about `is_aow`; they no longer describe what the AoW endpoint actually sends.
   const sharedOutcomes = [node(10, 16)];
 
   it('gives two AoWs different figures once their outputs are included', () => {

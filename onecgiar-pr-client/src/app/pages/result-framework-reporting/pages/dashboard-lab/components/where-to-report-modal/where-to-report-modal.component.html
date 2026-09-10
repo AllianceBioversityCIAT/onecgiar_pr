@@ -41,12 +41,12 @@
         [programLevelRows]="programLevelRows()"
         [canReportW1W2]="canReportW1W2()"
         [w3State]="w3State()"
+        [reportedResultsByProjectId]="reportedResultsByProjectId()"
         [myCentersCount]="myCentersCount()"
         [canReportEmerging]="canReportEmerging()"
         (reportEmerging)="onReportEmerging()"
         (reportAow)="onReportAow($event)"
         (reportProgramLevel)="onReportProgramLevel($event)"
-        (createResult)="onCreateResult($event)"
         (retryW3)="retryW3()" />
     </div>
   </app-pr-dialog>

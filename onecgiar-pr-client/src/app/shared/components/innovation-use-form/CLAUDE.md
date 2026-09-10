@@ -1,6 +1,6 @@
 # innovation-use-form
 
-**Verified:** 2026-09-02 · branch performance-refactor · 300d9b560
+**Verified:** 2026-09-09 · branch feat/P2-3390-bilateral-investment-tables · 7d0215b13
 
 ## What it is
 The shared Innovation Use questionnaire: use level (0-9), narrative/actors blocks, the
@@ -122,7 +122,8 @@ not IPSR, and `body.current_use_previous` is not null.
 ## Children without their own file
 | Component | What it does | Trap |
 |---|---|---|
-| `components/` | local sub-blocks of the form | Keep them dumb; the phase gates live in the parent. |
+| `components/estimates` (`app-estimates-cgiar`) | the three "Investment (USD)" tables over `body.investment_programs` / `investment_bilateral` / `investment_partners` | ⚠️ **STANDALONE since P2-3390** and imported by the two bilateral sections (`pages/bilateral/.../type-innovation-use`, `type-innovation-dev`) — a change here reaches them too. It owns no catalogue and no add-row button: one row per entity the server sends. `InnovationUseFormModule` imports and re-exports it, so W1/W2 is unchanged. |
+| `components/studies-link` | local sub-block of the form | Keep it dumb; the phase gates live in the parent. |
 
 ## Tickets that shaped this folder
 - P2-3199 · P2-3294 (scaling-studies hidden from level 6, 2026+) · P2-3295 ("2030 Use Projection"

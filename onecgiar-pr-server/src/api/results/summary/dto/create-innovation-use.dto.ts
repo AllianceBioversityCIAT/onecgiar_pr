@@ -1,6 +1,7 @@
 import { ResultIpMeasure } from '../../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
 import { ResultActor } from '../../result-actors/entities/result-actor.entity';
 import { ResultsByInstitutionType } from '../../results_by_institution_types/entities/results_by_institution_type.entity';
+import { InvestmentRowDto } from '../../result_budget/dto/investment-row.dto';
 
 export class InnovationUseDto {
   public result_innovation_use_id?: number;
@@ -28,6 +29,19 @@ export class InnovationUseDto {
   public readiness_level_explanation?: string;
   public has_innovation_link?: boolean;
   public linked_results?: (number | string)[];
+
+  /**
+   * P2-3390 — the three "Investment (USD)" tables, flat contract (`{ id, kind_cash, is_determined }`),
+   * the same one the v2 innovation-use endpoint uses and `app-estimates-cgiar` round-trips. Optional,
+   * and an absent key is a no-op: the section save only sends what the open form holds, so an omitted
+   * table must never clear stored amounts.
+   *
+   * The bilateral form sends ONLY these keys — never the legacy `*_expected_investment` ones — which is
+   * what keeps the legacy `non_pooled_projetct_id`-based writer out of the picture.
+   */
+  public investment_programs?: InvestmentRowDto[];
+  public investment_bilateral?: InvestmentRowDto[];
+  public investment_partners?: InvestmentRowDto[];
 }
 
 interface otherMeasuresInterface {

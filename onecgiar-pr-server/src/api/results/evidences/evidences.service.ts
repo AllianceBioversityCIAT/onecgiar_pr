@@ -268,13 +268,41 @@ export class EvidencesService {
       evidenceTypeId,
     );
 
+    // 🛑 Guarded per evidence, and it is not defensive dressing: `updateEvidences` above
+    // has ALREADY deactivated every evidence of the section, there is no transaction, and
+    // the writes are sequential. Before this guard, one evidence failing left the
+    // deactivations committed and silently dropped the evidences after it — the reporter
+    // lost work they never saw fail. Same shape as the per-evidence guard `replicateSPFiles`
+    // carries for the same reason.
     const limit = Math.min(evidencesArray.length, 6);
+    const failures: string[] = [];
     for (let index = 0; index < limit; index++) {
-      await this._upsertEvidenceItemV1(
-        result,
-        evidencesArray[index],
-        user,
-        evidenceTypeId,
+      try {
+        await this._upsertEvidenceItemV1(
+          result,
+          evidencesArray[index],
+          user,
+          evidenceTypeId,
+        );
+      } catch (error) {
+        const label =
+          evidencesArray[index]?.sp_file_name ??
+          evidencesArray[index]?.link ??
+          `evidence ${index + 1}`;
+        this._logger.error(
+          `REPORTING: evidence "${label}" of result ${createEvidenceDto.result_id} could not be saved: ${error?.message}`,
+        );
+        failures.push(`"${label}": ${error?.message}`);
+      }
+    }
+
+    // Everything that could be saved IS saved by now. Only then report what could not,
+    // so the reporter is told precisely what to fix instead of losing the whole section.
+    if (failures.length) {
+      throwServiceError(
+        failures.length === 1
+          ? `The rest of the section was saved. This piece of evidence was not: ${failures[0]}`
+          : `The rest of the section was saved. ${failures.length} pieces of evidence were not: ${failures.join(' | ')}`,
       );
     }
   }
@@ -392,6 +420,43 @@ export class EvidencesService {
       existingEvidenceSharepoint?.file_name !== sp_file_name &&
       existingEvidenceSharepoint?.id;
 
+    // 🛑 A file in the repository with no answer to "can this be shared publicly?" is a
+    // state the platform must not store.
+    //
+    // The visibility radio IS mandatory (`pr-radio-button` defaults `required` to true, and
+    // its root reports `complete` only when the value is neither null nor undefined), so the
+    // form does warn — but the warning does not block the save. When it is ignored,
+    // `is_public_file` arrives as null and the gate below compares `undefined != null`,
+    // which is FALSE by loose equality: SharePoint is never called, no sharing link is ever
+    // created, and `evidence.link` stays empty. The row is then stored with the column
+    // default, so the platform shows an evidence whose file exists in the repository, has no
+    // link anyone can open, and whose visibility nobody ever chose.
+    // ⚠️ The repo's copy of the evidence validation also requires a non-empty link, which
+    // would mean the section never turns green either — but do NOT lean on that: the live
+    // `validation_*` functions are resolved by name at runtime and are NOT in this repo,
+    // and the committed copy is known to differ from what actually runs (it reads a column
+    // that was later renamed). Green check is Juan David's; this guard stands on its own
+    // reason — an uploaded file with no visibility answer never gets a link at all.
+    //
+    // Only refused when a document is actually there: a half-filled evidence whose file has
+    // not been uploaded yet must still be saveable.
+    const documentIdForVisibilityCheck =
+      sp_document_id ?? existingEvidenceSharepoint?.document_id;
+    const visibilityAnswer =
+      evidence?.is_public_file ?? existingEvidenceSharepoint?.is_public_file;
+    if (
+      evidence?.is_sharepoint &&
+      documentIdForVisibilityCheck &&
+      (visibilityAnswer === null || visibilityAnswer === undefined)
+    ) {
+      this._logger.error(
+        `REPORTING: refused to store evidence ${newEvidenceId} — its file (document ${documentIdForVisibilityCheck}) has no answer to the public/confidential question, so no sharing link would ever be created for it.`,
+      );
+      throwServiceError(
+        'Please answer whether this file can be shared publicly. Without that answer the file cannot be given a link, so the evidence would be saved without one and the section would never be complete.',
+      );
+    }
+
     if (
       existingEvidenceSharepoint &&
       (replaceFile || !evidence?.is_sharepoint)
@@ -435,6 +500,48 @@ export class EvidencesService {
             }`,
           );
         }
+        // 🛑 THE PLATFORM MUST NOT RECORD A CONFIDENTIALITY IT DID NOT ACHIEVE.
+        //
+        // Measured on prtest on 9 Sep 2026 (result 9075, evidence 13081): switching an
+        // evidence to confidential leaves the file's anonymous permission alive, so the
+        // link that already circulated keeps downloading it. The row said false, four
+        // places in the UI drew a padlock and the words "Not public", and the file was
+        // one click away for anybody holding the old url.
+        //
+        // So when the file did not actually become private we refuse THIS evidence and
+        // tell the reporter what to do instead. Refusing is only safe because
+        // `_processMainEvidencesOnCreate` now guards each evidence: the rest of the
+        // section is saved, and only this one comes back with a reason.
+        // `verifiedPrivate` fails closed — "could not check" never reads as "private".
+        const revocation = data?.revocation;
+        const wantsPrivate = !(
+          evidence.is_public_file ?? evidenceSharepoint.is_public_file
+        );
+        if (
+          wantsPrivate &&
+          revocation &&
+          revocation.verifiedPrivate === false
+        ) {
+          this._logger.error(
+            revocation.readBackFailed
+              ? `REPORTING: refused to store evidence ${newEvidenceId} as confidential — reading the permissions of document ${documentId} failed, so the file could not be confirmed private.`
+              : `REPORTING: refused to store evidence ${newEvidenceId} as confidential — ${
+                  revocation.publicSurvivors.length
+                } anonymous sharing permission(s) still on document ${documentId} after trying to remove ${
+                  revocation.attempted
+                } (delete outcomes: ${
+                  revocation.outcomes
+                    .map((r: any) => `${r.permissionId}:${r.status}`)
+                    .join(', ') || 'none attempted'
+                }).`,
+          );
+          throwServiceError(
+            revocation.readBackFailed
+              ? 'This file could not be made confidential because the repository did not answer. It is still shared as it was. Please try saving again in a moment; if it keeps failing, upload the file again to get a fresh, private copy.'
+              : 'This file cannot be made confidential: it was shared publicly before and the repository did not remove that access, so the previous link still works. Upload the file again — the new copy will be private from the start — and remove this entry.',
+          );
+        }
+
         await this._evidencesRepository.update(newEvidenceId, {
           link: data.link.webUrl,
         });

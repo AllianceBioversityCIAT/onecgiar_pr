@@ -6,15 +6,12 @@ import { WhereToReportModalComponent } from './where-to-report-modal.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { EntityAowService } from '../../../entity-aow/services/entity-aow.service';
-import { BilateralCreationService } from '../../../../../bilateral/services/bilateral-creation.service';
 
 describe('WhereToReportModalComponent', () => {
   let fixture: ComponentFixture<WhereToReportModalComponent>;
   let component: WhereToReportModalComponent;
   let apiMock: any;
   let routerMock: any;
-  let bilateralCreationMock: any;
-
   beforeEach(async () => {
     apiMock = {
       resultsSE: {
@@ -65,6 +62,11 @@ describe('WhereToReportModalComponent', () => {
               ]
             }
           })
+        ),
+        GET_ResultToReview: jest.fn().mockReturnValue(
+          of({
+            response: [{ project_id: 1, project_name: 'Project 1', results: [{ id: 10 }] }]
+          })
         )
       },
       rolesSE: {
@@ -74,10 +76,6 @@ describe('WhereToReportModalComponent', () => {
 
     routerMock = {
       navigate: jest.fn()
-    };
-
-    bilateralCreationMock = {
-      selectProject: jest.fn()
     };
 
     await TestBed.configureTestingModule({
@@ -101,7 +99,6 @@ describe('WhereToReportModalComponent', () => {
             canReportResults: jest.fn().mockReturnValue(true)
           }
         },
-        { provide: BilateralCreationService, useValue: bilateralCreationMock },
         { provide: Router, useValue: routerMock }
       ]
     }).compileComponents();
@@ -124,7 +121,9 @@ describe('WhereToReportModalComponent', () => {
     await fixture.whenStable();
 
     expect(apiMock.resultsSE.GET_reportingEntryHubProjects).toHaveBeenCalledWith('SP01');
+    expect(apiMock.resultsSE.GET_ResultToReview).toHaveBeenCalledWith('SP01', undefined, 36);
     expect(apiMock.resultsSE.GET_ScienceProgramTocProgress).toHaveBeenCalledWith('SP01', 36);
+    expect(component.reportedResultsByProjectId().get('1')).toBe(1);
     expect(component.aowRows().length).toBe(1);
     expect(component.aowRows()[0].code).toBe('AOW01');
     expect(component.programLevelRows().length).toBe(2);
@@ -159,15 +158,4 @@ describe('WhereToReportModalComponent', () => {
     });
   });
 
-  it('selects project and navigates to bilateral create on onCreateResult', () => {
-    const project = { id: 1, shortName: 'P1', fullName: 'Project 1', allocation: 100 };
-    const center = { code: 'CIAT', name: 'Alliance', acronym: 'CIAT', total: 10, matching: 1, projects: [project] };
-
-    component.visible.set(true);
-    component.onCreateResult({ project, center });
-
-    expect(component.visible()).toBe(false);
-    expect(bilateralCreationMock.selectProject).toHaveBeenCalledWith(project);
-    expect(routerMock.navigate).toHaveBeenCalledWith(['/bilateral', 'CIAT', 'create']);
-  });
 });

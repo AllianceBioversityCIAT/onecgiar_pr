@@ -6,32 +6,37 @@ import { ProgrammeResultRow } from '../programme-results/services/programme-resu
 /**
  * One board column key, in render order (`STATUS_COLUMN_MAP`, design.md §5).
  *
- * `MWB-T-10`: the `approved` KEY is deliberately kept after the column was relabelled *Quality
- * assessed* and moved to the *Done* group. It is the id the visual tokens (`MY_WORK_COLUMN_META`,
- * `--pr-status-approved-*` — `MWB-DD-7`), the `MyWorkTotals` field and the CT/Jest fixtures are all
- * keyed on; renaming it would be a wide, purely cosmetic sweep with no behavioural gain. The label
- * is what the user reads, and the label IS "Quality assessed".
+ * Vocabulary mirrors the Overview reporting-status meters: W1/W2 uses Editing · Submitted · In QA;
+ * W3/Bilateral uses Editing · Pending review · Approved · Rejected. Each `status_id` maps to
+ * exactly one column — no merged buckets.
  */
-export type MyWorkColumnKey = 'editing' | 'pending' | 'submitted' | 'approved' | 'discontinued' | 'other';
+export type MyWorkColumnKey =
+  | 'editing'
+  | 'pending'
+  | 'submitted'
+  | 'inQa'
+  | 'approved'
+  | 'discontinued'
+  | 'rejected'
+  | 'other';
 
-/** Which of the four visual groups a column belongs to (`MWB-R-2`). `done` (`MWB-T-10`) renders
- *  expanded like `waiting`; only `closed` collapses to rails (`MWB-DD-8`). */
+/** Which of the four visual groups a column belongs to (`MWB-R-2`). `done` renders expanded like
+ *  `waiting`; only `closed` collapses to rails (`MWB-DD-8`). */
 export type MyWorkColumnGroup = 'action' | 'waiting' | 'done' | 'closed';
 
 /** The board's scope segment. Only `'mine'` ever feeds the tab badge (`MWB-R-1`, `MWB-R-3`). */
 export type MyWorkScope = 'mine' | 'all';
 
-/** `status_id` -> column key (`MWB-DD-1b`, the single vocabulary, design.md §5). Merged ids keep
- *  their real `status_name` on the card chip — only the COLUMN they land in is merged. */
+/** `status_id` -> column key (`MWB-DD-1b`, the single vocabulary, design.md §5). */
 export const STATUS_COLUMN_MAP: Readonly<Record<number, MyWorkColumnKey>> = Object.freeze({
   1: 'editing', // Editing
   8: 'editing', // Draft
   5: 'pending', // Pending Review
   3: 'submitted', // Submitted
-  2: 'approved', // Quality Assessed
-  6: 'approved', // Approved
+  2: 'inQa', // Quality Assessed / In QA (W1/W2)
+  6: 'approved', // Approved (W3/Bilateral)
   4: 'discontinued', // Discontinued
-  7: 'discontinued' // Rejected
+  7: 'rejected' // Rejected (W3/Bilateral)
 });
 
 /** Any `status_id` not in `STATUS_COLUMN_MAP` (including `null`) lands in the `Other` rail. */
@@ -47,19 +52,15 @@ export interface MyWorkColumnDef {
   group: MyWorkColumnGroup;
 }
 
-/** Fixed column order (design.md §5). `groupByColumn` always emits the first five; `other` only
- *  when it has rows (`MWB-R-2` *Collapsed closed group*).
- *
- *  `MWB-T-10` (user request 2026-09-05, "el resultado fue sometido y ya pasó por QA"): ids 2
- *  (Quality Assessed) and 6 (Approved, bilateral API) are the W1/W2 terminal SUCCESS state, so the
- *  column reads **Quality assessed** and sits in its own expanded **Done** group — never a rail.
- *  *Closed* is now only Discontinued (4 + 7 Rejected) and the conditional Other. */
+/** Fixed column order (design.md §5). Labels match Overview W1/W2 + W3 status meters. */
 export const MY_WORK_COLUMN_DEFS: readonly MyWorkColumnDef[] = Object.freeze([
   { key: 'editing', label: 'Editing', group: 'action' },
   { key: 'pending', label: 'Pending review', group: 'waiting' },
   { key: 'submitted', label: 'Submitted', group: 'waiting' },
-  { key: 'approved', label: 'Quality assessed', group: 'done' },
+  { key: 'inQa', label: 'In QA', group: 'done' },
+  { key: 'approved', label: 'Approved', group: 'done' },
   { key: 'discontinued', label: 'Discontinued', group: 'closed' },
+  { key: 'rejected', label: 'Rejected', group: 'closed' },
   { key: 'other', label: 'Other', group: 'closed' }
 ]);
 
@@ -73,10 +74,11 @@ export interface MyWorkTotals {
   editing: number;
   pending: number;
   submitted: number;
+  inQa: number;
   approved: number;
   discontinued: number;
+  rejected: number;
   other: number;
-  /** Every row in the scope, whatever its status (`MWB-R-2` *Merged and unmapped statuses*). */
   all: number;
 }
 
@@ -89,8 +91,6 @@ export function filterByPhase(rows: ProgrammeResultRow[], label: string | null |
 
 function completenessRatio(row: ProgrammeResultRow): number {
   const completeness = row?.completeness;
-  // `null`/absent sorts before every real ratio (MWB-R-5 "null first"). Real ratios are 0..1, so
-  // a sentinel below 0 always wins the ascending sort without needing a second sort key.
   if (!completeness || completeness.total <= 0) return -1;
   return completeness.complete / completeness.total;
 }
@@ -117,7 +117,7 @@ export function orderByCreatedDesc(rows: ProgrammeResultRow[]): ProgrammeResultR
 
 /**
  * Buckets rows by `columnForStatus`, orders each bucket (`orderEditing` for Editing,
- * `orderByCreatedDesc` for the rest), and emits the five fixed columns plus `other` only when it
+ * `orderByCreatedDesc` for the rest), and emits the seven fixed columns plus `other` only when it
  * is non-empty (`MWB-R-2`).
  */
 export function groupByColumn(rows: ProgrammeResultRow[]): MyWorkColumn[] {
@@ -125,8 +125,10 @@ export function groupByColumn(rows: ProgrammeResultRow[]): MyWorkColumn[] {
     editing: [],
     pending: [],
     submitted: [],
+    inQa: [],
     approved: [],
     discontinued: [],
+    rejected: [],
     other: []
   };
 
@@ -152,19 +154,26 @@ export function readyCount(rows: ProgrammeResultRow[]): number {
 /**
  * The tab badge's value for one load (`MWB-R-1`, `MWB-R-3` *Switch scope* — "BUT NOT change the
  * tab badge"). Only a **Mine** load can move the badge: `scope === 'all'` returns `null`, which
- * callers read as "no update — keep whatever the badge already shows," never as zero. This is
- * what keeps the badge pinned to the Mine Editing count no matter which segment the board is
- * currently displaying.
+ * callers read as "no update — keep whatever the badge already shows," never as zero.
  */
 export function badgeCount(columns: readonly MyWorkColumn[], scope: MyWorkScope): number | null {
   if (scope !== 'mine') return null;
   return columns.find(column => column.key === 'editing')?.rows.length ?? 0;
 }
 
-/** Per-column + grand-total counts (`MWB-R-2` *Merged and unmapped statuses* — "count all three
- *  in the scope total so the total equals the number of rows loaded"). */
+/** Per-column + grand-total counts (`MWB-R-2`). */
 export function totals(rows: ProgrammeResultRow[]): MyWorkTotals {
-  const counts: MyWorkTotals = { editing: 0, pending: 0, submitted: 0, approved: 0, discontinued: 0, other: 0, all: 0 };
+  const counts: MyWorkTotals = {
+    editing: 0,
+    pending: 0,
+    submitted: 0,
+    inQa: 0,
+    approved: 0,
+    discontinued: 0,
+    rejected: 0,
+    other: 0,
+    all: 0
+  };
   for (const row of rows ?? []) {
     counts[columnForStatus(row?.statusId)]++;
     counts.all++;

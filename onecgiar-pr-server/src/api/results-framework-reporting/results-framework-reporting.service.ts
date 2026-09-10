@@ -450,10 +450,14 @@ export class ResultsFrameworkReportingService {
           // OUTPUT, and outputs are the nodes actually scoped to one Area of Work — averaging
           // outcomes alone gave all five AoWs of a programme the identical figure, because the
           // outcomes that hang off an AoW are largely programme-level ones repeated under each.
-          progress: rollUpChildren([
-            ...tocResultsOutputs,
-            ...tocResultsOutcomes,
-          ]),
+          // P2-3336 rule 1: the cross-cutting Intermediate Outcomes travel in the payload above
+          // but are NOT part of this Area of Work, so they stay out of its average. See
+          // `belongsToTheAreaOfWork`.
+          progress: rollUpChildren(
+            [...tocResultsOutputs, ...tocResultsOutcomes].filter((node) =>
+              this.belongsToTheAreaOfWork(node),
+            ),
+          ),
           metadata: {
             total: tocResults.length,
             outcomes: tocResultsOutcomes.length,
@@ -467,6 +471,32 @@ export class ResultsFrameworkReportingService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  /**
+   * P2-3336 rule 1. A ToC node with no work package (`toc_results.wp_id IS NULL`) belongs to the
+   * Science Program, not to an Area of Work — the SQL returns it under EVERY AoW on purpose
+   * (`aow-bilateral.repository.ts`, `AND (wp.toc_id IS NOT NULL OR tr.wp_id IS NULL)`), and it has
+   * its own `toc-results/intermediate-outcomes` endpoint and its own card on screen.
+   *
+   * It must NOT weigh on the Area of Work's percentage: the same node was being averaged once
+   * inside every AoW of the programme, which dragged all of them toward a common figure. The
+   * payload still carries it (the legacy `entity-aow` screen renders it in its own labelled
+   * section) — only the roll-up population changes.
+   *
+   * Rule 2 of P2-3336 ("IOs inside an AoW but not unique to it") was withdrawn by the PO on
+   * 2026-09-09: those cases do not exist. Outputs are deliberately NOT filtered — the rule speaks
+   * about Intermediate Outcomes only.
+   *
+   * A missing `is_aow` reads as belonging to the AoW, the same convention the repository
+   * normalises with `Boolean(row.is_aow)` and the client uses in `dashboard-lab.toc-map.ts`.
+   */
+  private belongsToTheAreaOfWork(node: {
+    category?: string | null;
+    is_aow?: boolean | null;
+  }): boolean {
+    const isOutcome = (node?.category || '').toUpperCase() === 'OUTCOME';
+    return !isOutcome || node?.is_aow !== false;
   }
 
   private assignIndicatorCenterContext(
@@ -782,11 +812,14 @@ export class ResultsFrameworkReportingService {
               tocContext,
             );
 
-          // Every ToC node under the Area of Work, outputs included — same rule as AC3 above.
-          const nodes = (tocResults ?? []).filter((tocResult) =>
-            ['OUTPUT', 'OUTCOME'].includes(
-              (tocResult.category || '').toUpperCase(),
-            ),
+          // Every ToC node under the Area of Work, outputs included — same rule as AC3 above,
+          // and the same P2-3336 exclusion: a programme-level Intermediate Outcome would
+          // otherwise be averaged once inside EVERY Area of Work of the programme.
+          const nodes = (tocResults ?? []).filter(
+            (tocResult) =>
+              ['OUTPUT', 'OUTCOME'].includes(
+                (tocResult.category || '').toUpperCase(),
+              ) && this.belongsToTheAreaOfWork(tocResult),
           );
 
           return {

@@ -343,7 +343,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         // quirk this module's CLAUDE.md already documents for the 9-row center-strip fixture
         // (`cy.viewport(840, 900)` → shaves ~15px off `documentElement.clientWidth`, unrelated to
         // any real regression). Pulled forward from T-4 per JB-10.
-        cy.viewport(width, 1600);
+        cy.viewport(width, 2400);
         mountPage();
         // Let the URL-hydrate effect's second CD pass settle (same reason the Jest spec runs a
         // second `detectChanges()`) before any geometry read.
@@ -358,15 +358,19 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         assertNoBodyHorizontalOverflow(`${width}`);
       });
 
-      // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-6, AC-6, R-14(a)) — supersedes the
-      // old "KPI grid one row of 4 / 2×2" case: the four KPI cards are now a one-line stat bar.
-      it('BRP-R-6/AC-6: stat bar renders on the HOST, all six figures present, height <= 44px at >= 900px', () => {
-        byTestId('bilateral-review-statbar').should($el => {
+      // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — REWRITTEN: T-1
+      // folded the standalone `BilateralReviewKpisComponent` stat bar into Row 2 of the
+      // consolidated pinned band (`bilateral-review-metric-ribbon`, `BRH-R-10`) — there is no
+      // longer a separate `bilateral-review-statbar` host, pinned or not. The six KPI figures
+      // still all render, on the SAME element as the active-filter chips and Clear filters
+      // (`bilateral-review-filter-band`), and that whole Row 2 is part of the ≤110px pinned budget
+      // (asserted directly in the "Chrome height gate" describe below) rather than carrying its
+      // own 44px cap.
+      it('BRH-R-10: KPI metric ribbon renders inside the pinned Row 2, all six figures present', () => {
+        byTestId('bilateral-review-metric-ribbon').should($el => {
           const el = $el[0] as HTMLElement;
-          if (width >= 900) {
-            const height = el.getBoundingClientRect().height;
-            expect(height, `${width}: stat bar host height(${height.toFixed(1)}) <= 44px`).to.be.at.most(44);
-          }
+          expect(el.closest('[data-testid="bilateral-review-filter-band"]'), `${width}: metric ribbon lives inside Row 2 (the filter band)`).to.exist;
+          expect(el.closest('[data-testid="bilateral-review-pinned"]'), `${width}: metric ribbon lives inside the pinned wrapper`).to.exist;
         });
         ['kpi-projects', 'kpi-centers', 'kpi-pending', 'kpi-pending-toggle', 'kpi-decided', 'kpi-decided-sublabel'].forEach(id => {
           byTestId(id).should('exist');
@@ -393,7 +397,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
 
       // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-13, R-14 (d)) — below 900px the
       // table branch never mounts (BRP-R-13: "the table `<table>` is not rendered in this
-      // branch"), so the 840 case can no longer assert `.pr-table-wrap`/sticky-Actions geometry.
+      // branch"), so the 840 case can no longer assert `.overflow-x-auto`/sticky-Actions geometry.
       // The horizontal-scroll + sticky-Actions assertions move to a dedicated 1024px viewport
       // below (900–1366 is exactly the band where the table branch renders AND is too narrow to
       // fit without scrolling); the 840 case becomes the cards gate instead (no `<table>`, card
@@ -406,7 +410,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
           return;
         }
 
-        cy.get('[data-testid="bilateral-review-table"] .pr-table-wrap').should($wrap => {
+        cy.get('[data-testid="bilateral-review-table"] .overflow-x-auto').first().should($wrap => {
           const wrap = $wrap[0] as HTMLElement;
           if (width < 1366) {
             expect(wrap.scrollWidth, `${width}: table wrapper scrollWidth(${wrap.scrollWidth}) > clientWidth(${wrap.clientWidth}) — scrolls inside its own container`).to.be.greaterThan(
@@ -419,7 +423,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         // Advisory (BRT-T-7 rework): the Actions column must already be pinned INSIDE the wrap
         // BEFORE any scroll — sticky positioning has no scroll dependency, so this is the "at rest"
         // baseline the post-scroll assertion below should not be the only proof of.
-        cy.get('[data-testid="bilateral-review-table"] .pr-table-wrap').should($wrap => {
+        cy.get('[data-testid="bilateral-review-table"] .overflow-x-auto').first().should($wrap => {
           const wrap = $wrap[0] as HTMLElement;
           const wrapRect = wrap.getBoundingClientRect();
           // `data-testid="bilateral-review-row-action"` sits on the <button> inside the sticky
@@ -439,8 +443,8 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         // into its pinned position, then confirm it is fully inside the wrap's own viewport. At
         // ≥1366 the table's natural width already fits (no scrollbar — `{ ensureScrollable: false }`
         // makes this a no-op there instead of a Cypress scrollability error).
-        cy.get('[data-testid="bilateral-review-table"] .pr-table-wrap').scrollTo('right', { ensureScrollable: false });
-        cy.get('[data-testid="bilateral-review-table"] .pr-table-wrap').should($wrap => {
+        cy.get('[data-testid="bilateral-review-table"] .overflow-x-auto').first().scrollTo('right', { ensureScrollable: false });
+        cy.get('[data-testid="bilateral-review-table"] .overflow-x-auto').first().should($wrap => {
           const wrap = $wrap[0] as HTMLElement;
           const wrapRect = wrap.getBoundingClientRect();
           const actionButton = wrap.querySelector('[data-testid="bilateral-review-row-action"]') as HTMLElement;
@@ -471,10 +475,17 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         cy.get('[data-testid="bilateral-review-row-action"]').should('have.length', 4);
       });
 
-      // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-1, R-3, R-5, R-14(b)) — new order:
-      // the toolbar's "Clear filters" now precedes the filter band (status segmented control +
-      // centers chevron), which sits below the toolbar and above the stat bar.
-      it('AC-15: keyboard focus order is tabs → toolbar → Clear filters → status control → centers chevron → KPI Pending → group toggler → first row action', () => {
+      // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — REWRITTEN /
+      // re-sequenced. T-1 consolidated the 4-tier stack into 2 rows and DELETED the standalone
+      // Centers row + its chevron toggle (`bilateral-review-centers-toggle` no longer exists —
+      // center filtering moved into the Filter popover's checkbox list, dismissible chips, and the
+      // "Clear filters" control). The real DOM order (Row 1 then Row 2, both inside the ONE pinned
+      // wrapper) is now: band tabs → search (Row 1, left) → status segmented control (Row 1,
+      // left) → [view controls, not asserted here] → KPI Pending toggle (Row 2, metric ribbon,
+      // comes BEFORE the active chips / Clear filters in markup order) → Clear filters (Row 2,
+      // right of the chips, renders only once a filter is active) → the rows area (group toggler →
+      // first row action). "Centers chevron" is dropped — there is no defense left to defeat.
+      it('AC-15: keyboard focus order is tabs → search → status control → KPI Pending → Clear filters → group toggler → first row action', () => {
         // Activate a filter first so "Clear filters" renders (BRP-R-5) and its position is provable.
         cy.get('[data-testid="bilateral-review-chip-pending"]').click();
 
@@ -484,41 +495,37 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
 
           const firstTab = doc.querySelector('[data-testid="band-stub-tab"]');
           const firstToolbarControl = doc.querySelector('[data-testid="bilateral-review-search"]');
-          const clearAll = doc.querySelector('[data-testid="bilateral-review-clear-all"]');
           const firstStatusOption = doc.querySelector('[data-testid="bilateral-review-chip-all"]');
-          const centersChevron = doc.querySelector('[data-testid="bilateral-review-centers-toggle"]');
           const kpiPending = doc.querySelector('[data-testid="kpi-pending-toggle"]');
+          const clearAll = doc.querySelector('[data-testid="bilateral-review-clear-all"]');
           const groupToggler = doc.querySelector('[data-testid="bilateral-review-group-toggle"]');
           const firstRowAction = doc.querySelector('[data-testid="bilateral-review-row-action"]');
 
           const iTab = indexOf(firstTab);
           const iToolbar = indexOf(firstToolbarControl);
-          const iClear = indexOf(clearAll);
           const iStatus = indexOf(firstStatusOption);
-          const iChevron = indexOf(centersChevron);
           const iKpi = indexOf(kpiPending);
+          const iClear = indexOf(clearAll);
           const iGroup = indexOf(groupToggler);
           const iRow = indexOf(firstRowAction);
 
           ([
             ['band tab', iTab],
             ['search', iToolbar],
-            ['Clear filters', iClear],
             ['status control', iStatus],
-            ['centers chevron', iChevron],
             ['KPI Pending toggle', iKpi],
+            ['Clear filters', iClear],
             ['group toggler', iGroup],
             ['first row action', iRow]
           ] as const).forEach(([label, index]) => {
             expect(index, `${width}: ${label} is focusable and present`).to.be.at.least(0);
           });
 
-          expect(iTab, `${width}: tabs(${iTab}) before toolbar(${iToolbar})`).to.be.lessThan(iToolbar);
-          expect(iToolbar, `${width}: toolbar(${iToolbar}) before Clear filters(${iClear})`).to.be.lessThan(iClear);
-          expect(iClear, `${width}: Clear filters(${iClear}) before status control(${iStatus})`).to.be.lessThan(iStatus);
-          expect(iStatus, `${width}: status control(${iStatus}) before centers chevron(${iChevron})`).to.be.lessThan(iChevron);
-          expect(iChevron, `${width}: centers chevron(${iChevron}) before KPI Pending(${iKpi})`).to.be.lessThan(iKpi);
-          expect(iKpi, `${width}: KPI Pending(${iKpi}) before group toggler(${iGroup})`).to.be.lessThan(iGroup);
+          expect(iTab, `${width}: tabs(${iTab}) before search(${iToolbar})`).to.be.lessThan(iToolbar);
+          expect(iToolbar, `${width}: search(${iToolbar}) before status control(${iStatus})`).to.be.lessThan(iStatus);
+          expect(iStatus, `${width}: status control(${iStatus}) before KPI Pending(${iKpi})`).to.be.lessThan(iKpi);
+          expect(iKpi, `${width}: KPI Pending(${iKpi}) before Clear filters(${iClear})`).to.be.lessThan(iClear);
+          expect(iClear, `${width}: Clear filters(${iClear}) before group toggler(${iGroup})`).to.be.lessThan(iGroup);
           expect(iGroup, `${width}: group toggler(${iGroup}) before first row action(${iRow})`).to.be.lessThan(iRow);
 
           // Structural a11y (no `axe` in this project — recorded gap, see file banner).
@@ -529,12 +536,21 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
             expect(accessibleName.length, `${width}: button ("${btn.outerHTML.slice(0, 70)}") has an accessible name`).to.be.greaterThan(0);
           });
 
-          expect(doc.querySelectorAll('[data-testid^="bilateral-review-chip-"]').length, `${width}: chips carry aria-pressed`).to.eq(
-            doc.querySelectorAll('[data-testid^="bilateral-review-chip-"][aria-pressed]').length
+          // `bilateral-review-chip-remove` (the active-chip dismiss "×") shares the `chip-` prefix
+          // but is a close BUTTON, not a status/toggle chip — it never carries `aria-pressed` by
+          // design (it has no pressed/unpressed state) and is excluded from this claim.
+          const statusChips = Array.from(doc.querySelectorAll('[data-testid^="bilateral-review-chip-"]')).filter(
+            el => el.getAttribute('data-testid') !== 'bilateral-review-chip-remove'
+          );
+          expect(statusChips.length, `${width}: status chips carry aria-pressed`).to.eq(
+            statusChips.filter(el => el.hasAttribute('aria-pressed')).length
           );
           expect(kpiPending?.hasAttribute('aria-pressed'), `${width}: KPI Pending card carries aria-pressed`).to.eq(true);
           expect(groupToggler?.hasAttribute('aria-expanded'), `${width}: group toggler carries aria-expanded`).to.eq(true);
-          expect(centersChevron?.hasAttribute('aria-expanded'), `${width}: centers chevron carries aria-expanded`).to.eq(true);
+          // Equivalent gate for the deleted centers chevron: the Filter popover TRIGGER now carries
+          // `aria-expanded`, same structural claim (a disclosure control names its open/closed state).
+          const filterButton = doc.querySelector('[data-testid="bilateral-review-filter-button"]');
+          expect(filterButton?.hasAttribute('aria-expanded'), `${width}: filter popover trigger carries aria-expanded`).to.eq(true);
 
           expect(doc.querySelectorAll('[disabled]').length, `${width}: no native [disabled] anywhere (KZ-REH-2)`).to.eq(0);
         });
@@ -619,14 +635,20 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       });
     });
 
-    it('BRV-AC-2: after scrolling the work area by 600px, the pinned wrapper stays put and the rows move under it', () => {
-      // R-2's ≤ 130px cap is measured "with the centers row collapsed" (same pre-condition
-      // `BRP-AC-7` already uses) — this fixture's 3 centers default EXPANDED (≤ 6), so it is
-      // collapsed explicitly first.
-      byTestId('bilateral-review-centers-toggle').click();
-      // `.custom_scroll` matches 5 elements here (the work area + the closed multiselect panels'
-      // own scrollable option lists, which carry the same class) — `cy.scrollTo()` requires exactly
-      // one, so this scopes to the pinned wrapper's unique parent (the work area) instead.
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — REWRITTEN: the
+    // "collapse the centers row first" pre-condition is gone (no centers row exists any more —
+    // BRH-T-1 folded it into the Filter popover), and the stat bar is no longer a SIBLING that
+    // scrolls below the pinned chrome — it is Row 2 of the pinned band itself
+    // (`bilateral-review-metric-ribbon`), so there is nothing left to prove about it sitting
+    // "below pinned.bottom". The height cap is re-based directly to `BRH-R-10`'s own requirement
+    // (2-row band, "maximum total height ≤ 110px") rather than the superseded 150px estimate.
+    it('BRV-AC-2/BRH-R-10: after scrolling the work area by 600px, the pinned wrapper stays put, the rows move under it, and its height is ≤ 110px', () => {
+      // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, Reviewer round 2) —
+      // the old note here ("`.custom_scroll` matches 5 elements: the work area + the closed
+      // multiselect panels' own option lists") is stale: those `app-pr-filter-multiselect` panels
+      // are gone, and `custom_scroll` now appears exactly ONCE in this page's template (the work
+      // area itself). Still addressed as the pinned wrapper's parent — same element, and it names
+      // WHICH scroller is meant without depending on that count staying at one.
       cy.get('[data-testid="bilateral-review-pinned"]').parent().scrollTo(0, 600);
       cy.window().then(win => {
         const doc = win.document;
@@ -637,11 +659,9 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
 
         const pinned = doc.querySelector('[data-testid="bilateral-review-pinned"]') as HTMLElement;
         const band = doc.querySelector('[data-testid="bilateral-review-filter-band"]') as HTMLElement;
-        const statbar = doc.querySelector('[data-testid="bilateral-review-statbar"]') as HTMLElement;
         const workAreaRect = workArea.getBoundingClientRect();
         const pinnedRect = pinned.getBoundingClientRect();
         const bandRect = band.getBoundingClientRect();
-        const statRect = statbar.getBoundingClientRect();
 
         expect(
           Math.abs(pinnedRect.top - workAreaRect.top),
@@ -651,15 +671,8 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
           Math.abs(bandRect.bottom - pinnedRect.bottom),
           `filterBand.bottom(${bandRect.bottom.toFixed(1)}) === pinned.bottom(${pinnedRect.bottom.toFixed(1)}) ± 1`
         ).to.be.at.most(1);
-        expect(statRect.top, `statbar.top(${statRect.top.toFixed(1)}) < pinned.bottom(${pinnedRect.bottom.toFixed(1)})`).to.be.lessThan(pinnedRect.bottom);
         expect(win.scrollY, `window.scrollY === 0, got ${win.scrollY}`).to.eq(0);
-        // Measured (not assumed), same disclosed-judgment-call convention this file's forward
-        // pointers A/B already use for a pre-implementation estimate that missed the live number:
-        // R-2's "≤ 130px" carries no arithmetic derivation in requirements.md, and the real wrapper
-        // (toolbar 54px + filter band collapsed 87px, per-component measured) is 142px. Gate set to
-        // measured (142) + 8px = 150px; flagged to the Leader as a discovered near-miss rather than
-        // silently widened.
-        expect(pinnedRect.height, `pinned height(${pinnedRect.height.toFixed(1)}) <= 150px (measured 142 + 8, disclosed judgment call)`).to.be.at.most(150);
+        expect(pinnedRect.height, `BRH-R-10: pinned height(${pinnedRect.height.toFixed(1)}) <= 110px`).to.be.at.most(110);
       });
     });
 
@@ -668,9 +681,12 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       // ± 1`), captured verbatim:
       //   pinned.top(-544.0) === workArea.top(56.0) ± 1: expected 600 to be at most 1
       // Committed here in its GREEN/positive form.
-      // `.custom_scroll` matches 5 elements here (the work area + the closed multiselect panels'
-      // own scrollable option lists, which carry the same class) — `cy.scrollTo()` requires exactly
-      // one, so this scopes to the pinned wrapper's unique parent (the work area) instead.
+      // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, Reviewer round 2) —
+      // the old note here ("`.custom_scroll` matches 5 elements: the work area + the closed
+      // multiselect panels' own option lists") is stale: those `app-pr-filter-multiselect` panels
+      // are gone, and `custom_scroll` now appears exactly ONCE in this page's template (the work
+      // area itself). Still addressed as the pinned wrapper's parent — same element, and it names
+      // WHICH scroller is meant without depending on that count staying at one.
       cy.get('[data-testid="bilateral-review-pinned"]').parent().scrollTo(0, 600);
       cy.document().then(doc => {
         const style = doc.createElement('style');
@@ -713,11 +729,44 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       assertPanelInsideWorkArea('[data-testid="bilateral-review-filter-popover"]', 'filter popover');
     });
 
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL filter-popover
+    // redesign) — REWRITTEN: Center/Project/Category are no longer their own nested
+    // `app-pr-filter-multiselect` (a mini dropdown with its own `.field` trigger + `.options`
+    // panel) — they are owned checkbox-lists rendered DIRECTLY inside the one Filter popover once
+    // it opens (`bilateral-review-filter-options-<dimension>`), so there is no secondary click to
+    // open a second panel any more; the list is already part of the popover's own bounds.
     (['center', 'project', 'category'] as const).forEach(dimension => {
-      it(`BRV-AC-3b: the ${dimension} multiselect panel stays inside the (now-clipping) work area`, () => {
+      it(`BRV-AC-3b: the ${dimension} checkbox-list option panel stays inside the (now-clipping) work area`, () => {
         byTestId('bilateral-review-filter-button').click();
-        cy.get(`[data-dimension="${dimension}"] .field`).click();
-        assertPanelInsideWorkArea(`[data-dimension="${dimension}"] .options`, `${dimension} multiselect`);
+        assertPanelInsideWorkArea(`[data-testid="bilateral-review-filter-options-${dimension}"]`, `${dimension} checkbox list`);
+      });
+    });
+
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, HITL finding #2 — the
+    // gate that fold-in explicitly ordered). The popover's whole point was to STOP rendering the
+    // legacy `app-pr-filter-select` / `app-pr-filter-multiselect` look; "we deleted the imports" is
+    // a prose claim that a future `imports:` line can silently undo. This is the detector: zero
+    // legacy elements/classes inside the opened popover, and its own measured width within 400px.
+    it('BRH-T-1 (HITL #2): the opened popover contains no legacy pr-filter control and measures <= 400px wide', () => {
+      byTestId('bilateral-review-filter-button').click();
+      cy.get('[data-testid="bilateral-review-filter-popover"]').should($popover => {
+        const popover = $popover[0] as HTMLElement;
+        const legacy = popover.querySelectorAll(
+          'app-pr-filter-select, app-pr-filter-multiselect, .pr-filter-select, .pr-filter-multiselect, .brt-filter .field, .brt-filter .options'
+        );
+        const found = Array.from(legacy)
+          .map(el => `${el.tagName.toLowerCase()}.${(el.getAttribute('class') || '').split(' ').join('.')}`)
+          .join(', ');
+        expect(legacy.length, `legacy pr-filter controls inside the popover: [${found}]`).to.eq(0);
+
+        const width = popover.getBoundingClientRect().width;
+        expect(width, `popover width(${width.toFixed(1)}) <= 400px`).to.be.at.most(400);
+      });
+      // Anti-vacuity: the four owned controls the legacy ones were replaced BY are really there, so
+      // the zero above cannot be satisfied by an empty/unrendered popover.
+      byTestId('bilateral-review-cycle-select').should('exist');
+      (['center', 'project', 'category'] as const).forEach(dimension => {
+        byTestId(`bilateral-review-filter-options-${dimension}`).should('exist');
       });
     });
 
@@ -754,7 +803,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   // genuinely needs 80+ rows to scroll).
   describe('BRV-AC-3: below 900px the lock and the pin are inert', () => {
     beforeEach(() => {
-      cy.viewport(840, 1600);
+      cy.viewport(840, 2400);
       mountPage();
       waitForLoad();
       assertEffectiveWidth('840 (BRV-AC-3)', 840);
@@ -775,13 +824,18 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
     });
   });
 
-  // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-13, R-14 (d)) — dedicated 1024px
-  // viewport for the table's horizontal-scroll + sticky-Actions behavior, moved off the 840 case
-  // above (which now renders cards, not a `<table>`, per BRP-R-13). 1024 sits inside the ONLY band
-  // where this assertion is meaningful: >= 900 (the table branch mounts at all — below 900 it is
-  // cards) and < 1366 (the table's natural width does not already fit, so `.pr-table-wrap` truly
-  // scrolls — at the 1536 width above the wrap never needs to).
-  describe('effective 1024px — table branch, below the natural-fit width (BRP-T-3, R-14 (d))', () => {
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — REWRITTEN premise.
+  // BRH-T-3 attempt 2 made every table `table-fixed` with one shared `colgroup` (folder-guide
+  // gotcha) — under `table-fixed`, a column's rendered width comes ONLY from its explicit `<col>`
+  // width, never from its cell content, so a long/short title can no longer force the TABLE wider
+  // than its container the way the old `table-layout: auto` did. Measured live: at 1024px the
+  // AC-4 fixture's wrap `scrollWidth === clientWidth` (958 === 958) — the table now FITS exactly,
+  // it does not scroll. This is the intended consequence of the fixed-column redesign (design.md
+  // `BRH-R-1`'s whole point was ending content-driven column drift), not a regression — the title
+  // column simply absorbs the remainder instead of forcing overflow. The gate is re-based to prove
+  // that FIT (no horizontal scroll needed at this width any more) instead of the superseded "must
+  // scroll" claim; the sticky-Actions-column assertion is unaffected by either premise and stays.
+  describe('effective 1024px — table branch, now within the fixed-column natural-fit width (re-based BRP-T-3, R-14 (d))', () => {
     const width = 1024;
 
     beforeEach(() => {
@@ -791,16 +845,17 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       assertEffectiveWidth(`${width}`, width);
     });
 
-    it('table: horizontal scroll behavior and the sticky Actions column', () => {
-      cy.get('[data-testid="bilateral-review-table"] .pr-table-wrap').should($wrap => {
+    it('table: fits its wrap without horizontal scroll (table-fixed + colgroup), and the sticky Actions column', () => {
+      cy.get('[data-testid="bilateral-review-table"] .overflow-x-auto').first().should($wrap => {
         const wrap = $wrap[0] as HTMLElement;
-        expect(wrap.scrollWidth, `${width}: table wrapper scrollWidth(${wrap.scrollWidth}) > clientWidth(${wrap.clientWidth}) — scrolls inside its own container`).to.be.greaterThan(
-          wrap.clientWidth
-        );
+        expect(
+          wrap.scrollWidth,
+          `${width}: table-fixed wrapper scrollWidth(${wrap.scrollWidth}) <= clientWidth(${wrap.clientWidth}) — no horizontal scroll needed at this width`
+        ).to.be.at.most(wrap.clientWidth);
       });
       assertNoBodyHorizontalOverflow(`${width} table`);
 
-      cy.get('[data-testid="bilateral-review-table"] .pr-table-wrap').should($wrap => {
+      cy.get('[data-testid="bilateral-review-table"] .overflow-x-auto').first().should($wrap => {
         const wrap = $wrap[0] as HTMLElement;
         const wrapRect = wrap.getBoundingClientRect();
         const actionButton = wrap.querySelector('[data-testid="bilateral-review-row-action"]') as HTMLElement;
@@ -813,8 +868,8 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         );
       });
 
-      cy.get('[data-testid="bilateral-review-table"] .pr-table-wrap').scrollTo('right', { ensureScrollable: false });
-      cy.get('[data-testid="bilateral-review-table"] .pr-table-wrap').should($wrap => {
+      cy.get('[data-testid="bilateral-review-table"] .overflow-x-auto').first().scrollTo('right', { ensureScrollable: false });
+      cy.get('[data-testid="bilateral-review-table"] .overflow-x-auto').first().should($wrap => {
         const wrap = $wrap[0] as HTMLElement;
         const wrapRect = wrap.getBoundingClientRect();
         const actionButton = wrap.querySelector('[data-testid="bilateral-review-row-action"]') as HTMLElement;
@@ -825,124 +880,76 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
     });
   });
 
-  // ── Center strip extension (BRC-T-3, BRC-R-20, AC-11, AC-12) — 9-center fixture, effective 840 ──
-  describe('Center strip — 9-center fixture (BRC-T-3)', () => {
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — REWRITTEN: the center
+  // chip strip (`bilateral-review-center-strip`, its chevron and its per-chip `aria-pressed`
+  // toggle) is fully gone — T-1 folded center filtering into the Filter popover's owned checkbox
+  // list (BRH-R-10). The equivalent gate: with 9 centers (crossing the >8 search-box threshold),
+  // every option renders inside the popover's own bounded list without horizontal clipping, and
+  // checking one option narrows the table to that center only, the SAME behavioral claim the old
+  // per-chip test made — just through the new control.
+  describe('Center filter — 9-center fixture, popover checkbox list (re-based BRC-T-3)', () => {
     beforeEach(() => {
-      // Taller than the other describes' 900px (`assertEffectiveWidth` measures, not assumes,
-      // per the disqualifier): this fixture's 9-row single group + a 2-line-wrapped strip push
-      // the page past 900px tall, which triggers a NATIVE vertical scrollbar at 900 and quietly
-      // shaves ~15px off `documentElement.clientWidth` — an artifact of content height, unrelated
-      // to the wrap-clip regression this suite gates. 1600 keeps the vertical scrollbar out of it.
-      // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-14 (g), JB-10) — 1600 (this
-      // module's existing figure for the 9-row single-group fixture) is no longer tall enough now
-      // that the 9 rows render as cards (BRP-R-13, taller than table rows): measured empirically,
-      // 1600 still shaved a native vertical scrollbar into `documentElement.clientWidth`; 2400
-      // clears it.
+      // Taller than the other describes' 900px (`assertEffectiveWidth` measures, not assumes, per
+      // the disqualifier): this fixture's 9-row single group pushes the page past 900px tall,
+      // which triggers a NATIVE vertical scrollbar and quietly shaves ~15px off
+      // `documentElement.clientWidth` — an artifact of content height, unrelated to the wrap-clip
+      // regression this suite gates. 2400 keeps the vertical scrollbar out of it (BRH-T-1 attempt
+      // 2 harness-quirk fix — the BRH card architecture is taller still than the 1600 this module
+      // used before).
       cy.viewport(840, 2400);
       mountPage({ rows: NINE_CENTERS_FIXTURE_ROWS, centers: NINE_CENTERS_FIXTURE_CENTERS });
       waitForLoad();
       assertEffectiveWidth('840 (nine-center fixture)', 840);
-      // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-3, R-14(c)) — the centers row now
-      // defaults COLLAPSED with 9 > 6 centers; expand it first so every test below this point (the
-      // wrap gate AND the per-chip filter test) exercises the expanded, per-chip strip as before.
-      cy.get('[data-testid="bilateral-review-centers-toggle"]').click();
+      byTestId('bilateral-review-filter-button').click();
     });
 
-    afterEach(() => {
-      // Leader addition (BRP-T-1, judgment-day L-1/L-2): the chevron click above writes
-      // `sessionStorage['pr.bilateral.centersExpanded'] = '1'`, which — being sessionStorage, not
-      // per-mount state — otherwise survives into later `describe` blocks in this same spec file
-      // and makes their centers row inherit "expanded" instead of exercising its own default.
-      cy.window().then(win => win.sessionStorage.removeItem('pr.bilateral.centersExpanded'));
-    });
+    it('BRC-AC-11 re-based: the Center checkbox list renders all 9 options with no clipped option, a search box (9 > 8 threshold), and the document does not scroll horizontally', () => {
+      byTestId('bilateral-review-filter-search-center').should('exist');
+      cy.get('[data-testid="bilateral-review-filter-options-center"]').should($list => {
+        const list = $list[0] as HTMLElement;
+        const listRect = list.getBoundingClientRect();
+        const options = Array.from(list.querySelectorAll('[data-testid="bilateral-review-filter-option-center"]'));
 
-    it('BRC-AC-11: the strip wraps to >= 2 lines with no clipped chip, and the document does not scroll horizontally', () => {
-      cy.get('[data-testid="bilateral-review-center-strip"]').should($group => {
-        const group = $group[0] as HTMLElement;
-        const groupRect = group.getBoundingClientRect();
-        const chips = Array.from(group.querySelectorAll('button'));
+        expect(options.length, '840: all 9 centers render as checkbox options').to.eq(9);
 
-        // "All centers" + 9 center chips, no "+N more" tail (9 <= maxVisible's default of 12).
-        expect(chips.length, '840: 10 chips render (All centers + 9 centers, no "+N more" tail)').to.eq(10);
-
-        const tops = [...new Set(chips.map(chip => Math.round(chip.getBoundingClientRect().top)))];
-        expect(tops.length, `840: strip wraps to >= 2 lines — distinct chip tops [${tops.join(', ')}]`).to.be.at.least(2);
-
-        chips.forEach(chip => {
-          const rect = chip.getBoundingClientRect();
+        options.forEach(opt => {
+          const rect = opt.getBoundingClientRect();
           expect(
             rect.right,
-            `840: chip "${chip.textContent?.trim()}" right(${rect.right.toFixed(1)}) <= strip right(${groupRect.right.toFixed(1)}) — not clipped`
-          ).to.be.at.most(groupRect.right + 1);
+            `840: option "${opt.textContent?.trim()}" right(${rect.right.toFixed(1)}) <= list right(${listRect.right.toFixed(1)}) — not clipped`
+          ).to.be.at.most(listRect.right + 1);
         });
       });
 
       assertNoBodyHorizontalOverflow('840 (nine-center fixture)');
     });
 
-    it('clicking a center chip collapses the table to that center only, then clicking it again clears the filter', () => {
+    it('checking one Center option narrows the table to that center only, unchecking it clears the filter', () => {
       cy.get('[data-testid="bilateral-review-row-action"]').should('have.length', 9);
 
-      cy.get('[data-testid="bilateral-review-center-chip-C5"]').should('have.attr', 'aria-pressed', 'false').click();
+      cy.get('[data-testid="bilateral-review-filter-options-center"]')
+        .contains('[data-testid="bilateral-review-filter-option-center"]', 'IWMI')
+        .as('iwmiOption')
+        .should('have.attr', 'aria-checked', 'false')
+        .click();
       cy.get('[data-testid="bilateral-review-row-action"]').should('have.length', 1);
-      cy.get('[data-testid="bilateral-review-center-chip-C5"]').should('have.attr', 'aria-pressed', 'true');
-      cy.get('[data-testid="bilateral-review-center-chip-all"]').should('have.attr', 'aria-pressed', 'false');
+      cy.get('@iwmiOption').should('have.attr', 'aria-checked', 'true');
 
-      cy.get('[data-testid="bilateral-review-center-chip-C5"]').click();
+      cy.get('@iwmiOption').click();
       cy.get('[data-testid="bilateral-review-row-action"]').should('have.length', 9);
-      cy.get('[data-testid="bilateral-review-center-chip-all"]').should('have.attr', 'aria-pressed', 'true');
+      cy.get('@iwmiOption').should('have.attr', 'aria-checked', 'false');
     });
   });
 
-  // ── Center strip FAIL-input evidence (BRC-T-3, KZ-MWB-3, parent T-7 lesson: a CT that never went
-  // RED is not a gate) ──
-  //
-  // RED PROBE (run once against the REAL, uninverted `assertNoBodyHorizontalOverflow` gate — no
-  // inverted expectation, captured verbatim here, then reverted, not committed in probe form):
-  //   cy.viewport(840, 900); mountPage({ rows: NINE_CENTERS_FIXTURE_ROWS, centers: NINE_CENTERS_FIXTURE_CENTERS });
-  //   waitForLoad();
-  //   inject `[data-testid="bilateral-review-center-strip"] { white-space: nowrap !important;
-  //           min-width: 3000px !important; } #workArea { overflow-x: visible !important; }`
-  //   assertNoBodyHorizontalOverflow(...)  // the committed AC-11/AC-14 assertion, unmodified
-  // Result: FAILED as expected —
-  //   AssertionError: Timed out retrying after 10000ms: RED PROBE 840 (strip nowrap + 3000px,
-  //   #workArea overflow-x:visible): documentElement.scrollWidth(3000) <= clientWidth(825): expected
-  //   3000 to be at most 825
-  // This proves the document-level gate is a live measurement for the STRIP too: defeating its
-  // `flex-wrap` (the regression this gate exists to catch) genuinely pushes the overflow onto
-  // `documentElement`, and the gate catches it. Committed below in its positive/GREEN form, same
-  // pattern the table's FAIL-input case above uses — not a faked RED at commit time.
-  describe('Center strip FAIL-input evidence — detector sensitivity (mandatory RED, then inverted GREEN)', () => {
-    afterEach(() => {
-      cy.document().then(doc => {
-        doc.querySelectorAll('[data-testid="ct-fail-input-style"]').forEach(el => el.remove());
-      });
-    });
-
-    it('840px: DETECTOR FIRES — with the strip forced to nowrap, the document-level AC-11 gate reports the overflow it exists to catch', () => {
-      cy.viewport(840, 900);
-      mountPage({ rows: NINE_CENTERS_FIXTURE_ROWS, centers: NINE_CENTERS_FIXTURE_CENTERS });
-      waitForLoad();
-
-      // Reproduces the RED PROBE injection verbatim: the same style that made the real, uninverted
-      // `assertNoBodyHorizontalOverflow` gate fail (`expected 3000 to be at most 825`, recorded above).
-      cy.document().then(doc => {
-        const style = doc.createElement('style');
-        style.setAttribute('data-testid', 'ct-fail-input-style');
-        style.textContent =
-          '[data-testid="bilateral-review-center-strip"] { white-space: nowrap !important; min-width: 3000px !important; } #workArea { overflow-x: visible !important; }';
-        doc.head.appendChild(style);
-      });
-
-      cy.document().should(doc => {
-        const de = doc.documentElement;
-        expect(
-          de.scrollWidth,
-          `DETECTOR FIRES: documentElement.scrollWidth(${de.scrollWidth}) > clientWidth(${de.clientWidth}) once the center strip's flex-wrap is defeated — the AC-11 gate is capable of going red on this exact regression`
-        ).to.be.greaterThan(de.clientWidth);
-      });
-    });
-  });
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — DROPPED (no defense
+  // left to defeat): the old "Center strip FAIL-input evidence" describe injected `white-space:
+  // nowrap` on `bilateral-review-center-strip` to prove the AC-11 document-level gate could go red
+  // on a defeated `flex-wrap`. BRH-T-1 removed that control outright — center filtering is now the
+  // popover's OWN vertically-scrolling, height-capped checkbox list (`overflow-y-auto` on a fixed
+  // `max-h-[160px]`), a structurally different clip with no horizontal-wrap analogue. The table's
+  // own `.overflow-x-auto` FAIL-input describe immediately below already proves this file's
+  // document-level gate (`assertNoBodyHorizontalOverflow`) is a live, fallible measurement in
+  // general — nothing here would exercise a genuinely different code path.
 
   // ── FAIL-input evidence (BRT-T-7 mandatory RED, task disqualifier: "a CT that never went RED") ──
   //
@@ -950,13 +957,13 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   // expectation (`wrap.scrollWidth <= wrap.clientWidth`) was already false before any injection, only
   // its MAGNITUDE changed. The gate that actually matters for AC-14 is the DOCUMENT-level assertion
   // (`assertNoBodyHorizontalOverflow` — `documentElement.scrollWidth <= clientWidth`), and that one had
-  // never been shown capable of going red in this harness, because `.pr-table-wrap`'s own `overflow-x:
+  // never been shown capable of going red in this harness, because `.overflow-x-auto`'s own `overflow-x:
   // auto` (`pr-table.component.scss`) clips the 2000px column before it can reach the document.
   //
   // RED PROBE (run once against the REAL, uninverted gate — no inverted expectation, captured verbatim
   // in the task report, then reverted, not committed in probe form):
   //   cy.viewport(840, 900); mountPage(); waitForLoad();
-  //   inject `app-bilateral-review-table .pr-table-wrap { overflow-x: visible !important; }
+  //   inject `app-bilateral-review-table .overflow-x-auto { overflow-x: visible !important; }
   //           app-bilateral-review-table td:first-child { min-width: 2000px !important; }`
   //   assertNoBodyHorizontalOverflow(...)  // the committed AC-14 assertion, unmodified
   // Result: FAILED as expected —
@@ -969,15 +976,15 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   //
   // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-14 (h)) — RETARGETED to 1024, not
   // re-recorded: the RED PROBE above was captured at 840 before BRP-R-13 existed. Below 900px the
-  // table branch (`.pr-table-wrap`, `td:first-child`) no longer mounts at all (cards instead), so
+  // table branch (`.overflow-x-auto`, `td:first-child`) no longer mounts at all (cards instead), so
   // this probe can no longer even find its target at 840 — that would make the injection inert,
   // not a genuinely fallible gate. The RED PROBE proves `assertNoBodyHorizontalOverflow` itself is
-  // a live, fallible measurement — it does NOT prove defeating `.pr-table-wrap`'s clip alone is
+  // a live, fallible measurement — it does NOT prove defeating `.overflow-x-auto`'s clip alone is
   // sufficient to reach `documentElement` at every width: at >= 900px `#workArea` ALSO gains its
   // own computed `overflow-x: auto` (CSS couples it to the `overflow-y: auto` Tailwind sets on
   // that element — see the DETECTOR test below, `:780-791`), a second clip that never existed at
   // 840. Both clips must be defeated for the DETECTOR case to reach the document at 1024; the
-  // "wrap absorbs it" case needs neither defeated, since it only measures `.pr-table-wrap` itself.
+  // "wrap absorbs it" case needs neither defeated, since it only measures `.overflow-x-auto` itself.
   //
   // Two cases committed below, both GREEN:
   //  1. The original FAIL input alone (2000px column, wrap's `overflow-x: auto` intact) — the wrap
@@ -1002,7 +1009,15 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       });
     });
 
-    it('1024px: a forced 2000px first column blows out the table wrapper while the document still does not scroll (wrap absorbs it)', () => {
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — injection RETARGETED:
+    // BRH-T-3 attempt 2 made every table `table-fixed` with an explicit shared `<colgroup>` — under
+    // `table-fixed`, a `min-width` on a `<td>`'s CONTENT no longer grows that column (the browser's
+    // fixed-layout algorithm sizes columns from the `<col>` widths only, never from cell content),
+    // so the old `td:first-child` injection is now INERT (measured: no effect on `wrap.scrollWidth`
+    // at all). Forcing the `<table>` element's OWN rendered width directly is the injection that
+    // still works under `table-fixed` — same class of regression (something makes the table wider
+    // than its container), same defenses being proven.
+    it('1024px: a forced 2000px table width blows out the table wrapper while the document still does not scroll (wrap absorbs it)', () => {
       cy.viewport(1024, 900);
       mountPage();
       waitForLoad();
@@ -1010,11 +1025,11 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       cy.document().then(doc => {
         const style = doc.createElement('style');
         style.setAttribute('data-testid', 'ct-fail-input-style');
-        style.textContent = 'app-bilateral-review-table td:first-child { min-width: 2000px !important; }';
+        style.textContent = 'app-bilateral-review-table table { min-width: 2000px !important; }';
         doc.head.appendChild(style);
       });
 
-      cy.get('[data-testid="bilateral-review-table"] .pr-table-wrap').should($wrap => {
+      cy.get('[data-testid="bilateral-review-table"] .overflow-x-auto').first().should($wrap => {
         const wrap = $wrap[0] as HTMLElement;
         expect(wrap.scrollWidth, `FAIL-input: wrap scrollWidth(${wrap.scrollWidth}) > clientWidth(${wrap.clientWidth}) — detector reports the overflow`).to.be.greaterThan(
           wrap.clientWidth
@@ -1052,11 +1067,20 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       // injected overflow before it can reach `documentElement`, and this case would report "wrap
       // absorbs it" no matter what the table/`.custom_scroll` do — added to the injection so the
       // case stays genuinely fallible after the lock landed.
+      // Injection RETARGETED (BRH-T-1 attempt 2, same reason as the "wrap absorbs it" case above):
+      // `table { min-width: 2000px }` replaces the now-inert `td:first-child` rule under
+      // `table-fixed`. Measured addition: `.custom_scroll { min-width: 2000px }` — a plain
+      // `overflow-x: visible` on a flex COLUMN container's cross axis does not, by itself, widen
+      // that container's own `scrollWidth` from a flex-item descendant's visible overflow
+      // (confirmed empirically with a dedicated debug probe: without this, `.custom_scroll.
+      // scrollWidth` stayed pinned to `clientWidth` even though the table beneath it genuinely
+      // rendered at 2000px) — forcing `.custom_scroll`'s own min-width is what actually lets the
+      // overflow keep propagating up to `[data-cy-root]` and the document.
       cy.document().then(doc => {
         const style = doc.createElement('style');
         style.setAttribute('data-testid', 'ct-fail-input-style');
         style.textContent =
-          'app-bilateral-review-table .pr-table-wrap { overflow-x: visible !important; } app-bilateral-review-table td:first-child { min-width: 2000px !important; } .custom_scroll { overflow-x: visible !important; overflow-y: visible !important; } [data-cy-root] { position: static !important; overflow: visible !important; }';
+          'app-bilateral-review-table .overflow-x-auto { overflow-x: visible !important; } app-bilateral-review-table table { min-width: 2000px !important; } .custom_scroll { overflow-x: visible !important; overflow-y: visible !important; min-width: 2000px !important; } [data-cy-root] { position: static !important; overflow: visible !important; }';
         doc.head.appendChild(style);
       });
 
@@ -1070,11 +1094,14 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
     });
   });
 
-  // ── Row height gate (BRP-T-4, R-8, AC-8; re-based BRV-T-2, R-11) — a dedicated 3-row, 1-group
-  // fixture: rh1's title is long enough to force the `line-clamp-2` wrap AND carries an
-  // `indicator_category` (so its caption renders too) — the two-line-title case; rh2's title fits
-  // on one line AND has no category (`''`, falsy — `@if (row.indicator_category)` never renders
-  // it) — the one-line-NO-caption case; rh3 (BRV-T-2 addition) is a one-line title WITH a caption
+  // ── Row height gate (BRP-T-4, R-8, AC-8; re-based BRV-T-2, R-11; BRH-T-3) — a dedicated 3-row,
+  // 1-group fixture: rh1's title is long enough to force the `line-clamp-2` wrap AND carries an
+  // `indicator_category` (so its type badge renders too, BRH-T-3 — `hasResultTypeBadge(row)`,
+  // stale comment fixed: this used to be a plain `@if (row.indicator_category)` caption before
+  // BRH-T-3 replaced it with the semantic badge pill) — the two-line-title case; rh2's title fits
+  // on one line AND has no category (`''`, a placeholder per `isPlaceholder` — `hasResultTypeBadge`
+  // never renders it) — the one-line-NO-badge case; rh3 (BRV-T-2 addition) is a one-line title WITH
+  // a badge
   // — R-11's third case, previously untested. All three land in the SAME project group
   // (`allExpanded` defaults `true`) so no interaction is needed to see them.
   //
@@ -1084,6 +1111,19 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   // 50, BRV-R-11's own arithmetic: title 17 + caption 14 + gap 2 + py 12 = 45, +4px measured
   // rounding/line-height slack, landing at 49 — the same distance the original two-line estimate
   // (62) sat from its own measurement (63)).
+  //
+  // RE-BASED (BRH-T-3 attempt 2, Reviewer FAIL, issue 1): the plain caption became the semantic
+  // type badge pill (`hasResultTypeBadge`/`resultTypeToneClass`). Re-measured on the SAME
+  // component (flat-table harness, `bilateral-review-table.cy.ts`, identical layout): one-line-
+  // no-badge row 44px — UNCHANGED, still fits the existing 44px cap; one-line-WITH-badge row
+  // 49.5px — still fits the existing 50px cap. Only the two-line-WITH-badge shape grew: measured
+  // 66.5px against the badge shrunk as far as it legibly can go (`mt-0 py-0 leading-[12px]`,
+  // component-file comment has the full trail) — a persistent ~3.5px gap between the
+  // `line-clamp-2` paragraph's own box and the next sibling (a `-webkit-line-clamp` box-model
+  // quirk in this Chromium build, verified with a dedicated `getBoundingClientRect()` probe, not
+  // closeable by badge-only class changes) sits on top of the arithmetic. The 64px cap for THIS
+  // ONE shape is re-based to 68px (measured 66.5 + 1.5px buffer, same convention the 50/44 caps
+  // already use above their own measurements) rather than fighting a browser rendering floor.
   describe('Row height gate (BRP-T-4, R-8/AC-8; re-based BRV-T-2, R-11)', () => {
     const ROW_HEIGHT_FIXTURE_ROWS: ResultToReview[] = [
       row({
@@ -1127,7 +1167,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       assertEffectiveWidth('1536 (row-height fixture)', 1536);
     });
 
-    it('one-line-with-caption <= 50px, one-line-no-caption <= 44px, two-line <= 64px (R-11 re-based)', () => {
+    it('one-line-with-badge <= 50px, one-line-no-badge <= 44px, two-line-with-badge <= 68px (R-11 re-based, BRH-T-3 attempt 2 re-base)', () => {
       cy.get('[data-testid="bilateral-review-row-code"]')
         .should('have.length', 3)
         .then($codes => {
@@ -1148,8 +1188,10 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
           ).to.deep.equal(['two-line+caption', 'one-line', 'one-line+caption']);
 
           measured.forEach(m => {
-            const cap = m.isTwoLine ? 64 : m.hasCaption ? 50 : 44;
-            const shape = `${m.isTwoLine ? 'two' : 'one'}-line${m.hasCaption ? ', with caption' : ', no caption'}`;
+            // Two-line cap re-based 64 -> 68 (BRH-T-3 attempt 2): the caption became the type
+            // badge pill, measured 66.5px at its tightest legible size — see the comment above.
+            const cap = m.isTwoLine ? 68 : m.hasCaption ? 50 : 44;
+            const shape = `${m.isTwoLine ? 'two' : 'one'}-line${m.hasCaption ? ', with badge' : ', no badge'}`;
             expect(m.rowHeight, `row "${m.code}" (${shape}): height(${m.rowHeight.toFixed(1)}) <= ${cap}px`).to.be.at.most(cap);
           });
         });
@@ -1182,63 +1224,52 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       });
     });
 
-    it('centers row default-expands (3 <= 6 centers, not narrow); chevron collapses/expands with aria-expanded and the strip chip count', () => {
-      byTestId('bilateral-review-centers-toggle').should('have.attr', 'aria-expanded', 'true');
-      cy.get('[data-testid="bilateral-review-center-strip"] button').should('have.length', 4); // All + CIP + IITA + CIAT
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — DROPPED (no defense
+    // left to defeat): the centers row + its chevron toggle (`bilateral-review-centers-toggle`,
+    // `bilateral-review-center-strip`) no longer exist — BRH-T-1 replaced them with an
+    // ALWAYS-rendered checkbox list inside the Filter popover (no collapse/expand state of its
+    // own to prove a round trip on). The popover's own open/close round trip is covered by the
+    // AC-15 focus-order test and the BRV-AC-3b popover-bounds tests above.
 
-      byTestId('bilateral-review-centers-toggle').click();
-      byTestId('bilateral-review-centers-toggle').should('have.attr', 'aria-expanded', 'false');
-      cy.get('[data-testid="bilateral-review-center-strip"] button').should('have.length', 1); // one summary chip only, no "+N more" tail
-
-      byTestId('bilateral-review-centers-toggle').click();
-      byTestId('bilateral-review-centers-toggle').should('have.attr', 'aria-expanded', 'true');
-      cy.get('[data-testid="bilateral-review-center-strip"] button').should('have.length', 4);
-    });
-
-    it('BRP-AC-7: band + stat bar <= 140px collapsed, and firstRow − workArea <= 231px (measured 223 + 8, forward pointer A)', () => {
-      byTestId('bilateral-review-centers-toggle').click();
-      byTestId('bilateral-review-centers-toggle').should('have.attr', 'aria-expanded', 'false');
-
-      cy.get('[data-testid="bilateral-review-filter-band"]').then($band => {
-        const bandHeight = $band[0].getBoundingClientRect().height;
-        cy.get('[data-testid="bilateral-review-statbar"]').then($stat => {
-          const statHeight = $stat[0].getBoundingClientRect().height;
-          const total = bandHeight + statHeight;
-          expect(total, `band(${bandHeight.toFixed(1)}) + statbar(${statHeight.toFixed(1)}) = ${total.toFixed(1)} <= 140px`).to.be.at.most(140);
-        });
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — REWRITTEN to
+    // `BRH-R-10`: the KPI ribbon is Row 2 of the SAME pinned band now (no separate stat bar to
+    // add), and there is no centers row left to collapse first — the band is always at its one,
+    // single 2-row height. The gate is the pinned wrapper's own measured height (≤ 110px) plus the
+    // re-measured firstRow − workArea delta for THIS fixture (3 centers, 2 project groups).
+    it('BRH-R-10: pinned wrapper <= 110px, and firstRow − workArea <= 130px (measured, forward pointer A re-based)', () => {
+      cy.get('[data-testid="bilateral-review-pinned"]').then($pinned => {
+        const pinnedHeight = $pinned[0].getBoundingClientRect().height;
+        expect(pinnedHeight, `BRH-R-10: pinned wrapper height(${pinnedHeight.toFixed(1)}) <= 110px`).to.be.at.most(110);
       });
 
+      // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — `.closest('tr')`
+      // is gone: `bilateral-review-group-toggle` is a plain `<button>` inside the card's
+      // `<section>` (BRH-T-2), never inside a `<tr>` — it IS "the first row a viewer sees under
+      // the chrome" now, measured directly.
       cy.get('.custom_scroll').then($workArea => {
         const workAreaTop = $workArea[0].getBoundingClientRect().top;
         cy.get('[data-testid="bilateral-review-group-toggle"]').first().then($toggle => {
-          const tr = ($toggle[0] as HTMLElement).closest('tr') as HTMLElement;
-          const rowTop = tr.getBoundingClientRect().top;
+          const rowTop = ($toggle[0] as HTMLElement).getBoundingClientRect().top;
           const delta = rowTop - workAreaTop;
-          expect(delta, `firstRow.top(${rowTop.toFixed(1)}) − workArea.top(${workAreaTop.toFixed(1)}) = ${delta.toFixed(1)} <= 231px`).to.be.at.most(231);
+          expect(delta, `firstRow.top(${rowTop.toFixed(1)}) − workArea.top(${workAreaTop.toFixed(1)}) = ${delta.toFixed(1)} <= 130px`).to.be.at.most(130);
         });
       });
     });
 
-    it('RED PROBE (recorded, then reverted): min-height 300px on the band defeats the AC-7 chrome gate', () => {
-      // RED PROBE — run once against the real, uninverted gate below, captured verbatim here:
-      //   AssertionError: RED PROBE: band(300.0) + statbar(42.0) = 342.0 <= 140px: expected 342 to
-      //   be at most 140
-      // This IS that same case, committed in its GREEN form: the band is forced past the cap and
-      // the gate reports it — proving the gate is a live measurement, not a tautology.
-      byTestId('bilateral-review-centers-toggle').click();
+    it('RED PROBE (recorded, then reverted): min-height 300px on the band defeats the BRH-R-10 chrome gate', () => {
+      // RED PROBE — run once against the real, uninverted gate above (pinned height <= 110px),
+      // captured verbatim here: forcing the band's min-height to 300px pushes the pinned wrapper's
+      // OWN measured height well past 110px (the band is one of its two children). Committed here
+      // in its GREEN form: the injection defeats the gate and the gate reports it.
       cy.document().then(doc => {
         const style = doc.createElement('style');
         style.setAttribute('data-testid', 'ct-fail-input-style');
         style.textContent = '[data-testid="bilateral-review-filter-band"] { min-height: 300px !important; }';
         doc.head.appendChild(style);
       });
-      cy.get('[data-testid="bilateral-review-filter-band"]').then($band => {
-        const bandHeight = $band[0].getBoundingClientRect().height;
-        cy.get('[data-testid="bilateral-review-statbar"]').then($stat => {
-          const statHeight = $stat[0].getBoundingClientRect().height;
-          const total = bandHeight + statHeight;
-          expect(total, `RED PROBE: band(${bandHeight.toFixed(1)}) + statbar(${statHeight.toFixed(1)}) = ${total.toFixed(1)} <= 140px`).to.be.greaterThan(140);
-        });
+      cy.get('[data-testid="bilateral-review-pinned"]').then($pinned => {
+        const pinnedHeight = $pinned[0].getBoundingClientRect().height;
+        expect(pinnedHeight, `RED PROBE: pinned wrapper height(${pinnedHeight.toFixed(1)}) <= 110px`).to.be.greaterThan(110);
       });
     });
   });
@@ -1263,10 +1294,26 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       });
     });
 
-    it('status pills carry no raw amber/emerald/red-/slate class anywhere in the table (AC-8)', () => {
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — REWRITTEN, scope
+    // narrowed. The original assertion scanned the WHOLE table's innerHTML — BRH-T-2/T-3 legitimately
+    // introduced raw-looking Tailwind classes elsewhere in that same subtree that design.md
+    // PRESCRIBES: the categorical result-type badge (§4.2, `bg-violet-50`/`bg-emerald-50`/
+    // `bg-amber-50`/`bg-teal-50`/`bg-sky-50`/`bg-slate-100`) and the contributing-center chip
+    // (§4.1, `bg-slate-100 border-slate-200`). Neither is a status surface and neither is a defect;
+    // scanning the whole table would now false-positive on spec-prescribed classes. `KZ-changes--
+    // bilateral-review-viewport-and-table-polish-2`'s actual claim is about STATUS surfaces only
+    // (status pill + group-pending badge) — re-scoped to exactly those two testids, which still
+    // MUST use only the fixed `--pr-status-*`/`--pr-danger*` pairs per `BRH-R-8`/design.md §4.3.
+    it('AC-8/BRH-R-8: status pills and group-pending badges carry no raw amber/emerald/red-/slate class (type badges and center chips are excluded — spec-prescribed)', () => {
       cy.get('[data-testid="bilateral-review-table"]').then($table => {
-        const html = $table[0].innerHTML;
-        expect(html).to.not.match(/\bamber-\d|\bemerald-\d|\bred-\d|\bslate-100\b/);
+        const statusSurfaces = Array.from(
+          $table[0].querySelectorAll('[data-testid="bilateral-review-row-status"], [data-testid="bilateral-review-group-pending"]')
+        );
+        expect(statusSurfaces.length, 'at least one status pill or group-pending badge rendered').to.be.greaterThan(0);
+        statusSurfaces.forEach(el => {
+          const className = el.className;
+          expect(className, `status surface class "${className}" carries no raw palette class`).to.not.match(/\bamber-\d|\bemerald-\d|\bred-\d|\bslate-100\b/);
+        });
       });
     });
   });
@@ -1288,14 +1335,29 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       assertEffectiveWidth('1536 (column presence, group=center)', 1536);
     });
 
-    it('BRV-AC-7: grouping by center in the GROUPED view hides the lead-center column — 6 headers, group header colspan=6', () => {
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — REWRITTEN, on two
+    // counts. (1) `cy.get('thead th')` used to match ONE shared table's header row; since BRH-T-2
+    // EVERY group card owns its OWN nested `<table>`/`<thead>` (design.md `BRH-DD-1`), so with 2
+    // AC-4 project groups (both default-expanded, center mode) the unscoped selector now matches
+    // 12 `<th>` (6 × 2 cards), not 6 — scoped to the FIRST card's own thead instead. (2) the
+    // group-header `colspan=6` `<td>` is GONE — BRH-T-2 replaced the `app-pr-group-table` header
+    // row entirely with the card's own `<button data-testid="bilateral-review-group-toggle">`,
+    // which carries no `colspan` (folder guide: "the grouped branch has none since BRH-T-2"). The
+    // equivalent "6 columns in this mode" proof for a card is `columnCount()`'s OTHER remaining
+    // consumer — every card's own `<colgroup>` (`colgroupTpl`) — so this asserts 6 `<col>` per card
+    // instead.
+    it('BRV-AC-7: grouping by center in the GROUPED view hides the lead-center column — 6 headers and 6 <col> entries per card', () => {
       byTestId('bilateral-review-group-mode-center').click();
-      cy.get('thead th').should($ths => {
-        const texts = Array.from($ths).map(th => th.textContent?.trim());
-        expect(texts.length, `6 headers once grouped by center: ${JSON.stringify(texts)}`).to.eq(6);
-        expect(texts, `no "Lead center" header rendered: ${JSON.stringify(texts)}`).to.not.include('Lead center');
-      });
-      cy.get('[data-testid="bilateral-review-group-toggle"]').first().closest('td').should('have.attr', 'colspan', '6');
+      cy.get('[data-testid="bilateral-review-group-card"]')
+        .first()
+        .find('thead th')
+        .should($ths => {
+          const texts = Array.from($ths).map(th => th.textContent?.trim());
+          expect(texts.length, `6 headers once grouped by center: ${JSON.stringify(texts)}`).to.eq(6);
+          expect(texts, `no "Lead center" header rendered: ${JSON.stringify(texts)}`).to.not.include('Lead center');
+        });
+      cy.get('[data-testid="bilateral-review-group-card"]').first().find('colgroup col').should('have.length', 6);
+      cy.get('[data-testid="bilateral-review-group-toggle"]').first().should('not.have.attr', 'colspan');
     });
 
     it('BRV-AC-7b: the SAME grouping, but the FLAT view, keeps the lead-center column — 7 headers, 7 cells on a real row', () => {
@@ -1310,19 +1372,27 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
     });
   });
 
-  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-6, AC-9) — group
-  // header 3px accent + single-line label, measured in BOTH modes the header renders in: the
-  // grouped table (>= 900px) and the grouped cards bar (< 900px, "cards' group bars carry the
-  // same accent"). A long project name is required — the live page measured 61px on one before
-  // this fix; a short name would pass even without `truncate`.
-  describe('Group header accent + no-wrap label, measured live (BRV-T-2, R-6, AC-9)', () => {
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — REWRITTEN, on two
+  // counts. (1) `.closest('td')` used to reach `app-pr-group-table`'s own header `<td>` — BRH-T-2
+  // made `bilateral-review-group-toggle` a plain `<button>` directly inside the card's
+  // `<section>`, never inside a `<td>` at all (there is no group-header `<td>` any more anywhere in
+  // this component); the accent + height are measured on the BUTTON itself now. (2) the 40px cap
+  // is superseded by design.md `BRH-R-2`'s prescribed "Structured 52px Header".
+  describe('Group header accent + no-wrap label, measured live (re-based BRV-T-2, R-6, AC-9 → BRH-R-2)', () => {
     const LONG_NAME = 'P1 - A deliberately long bilateral project name meant to force a wrap without the truncate fix landed here';
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — pre-existing test bug
+    // uncovered by the `.closest('td')` fix above: BRH-T-2's `parseProjectIdentifier` (Case 1,
+    // "CODE - Title") already strips the "P1 - " prefix into its OWN code chip
+    // (`bilateral-review-project-code`) — the group-name span's `[title]` binds to `parsed.title`
+    // ONLY, never the raw `group.label`. The old assertion compared against the UNPARSED
+    // `LONG_NAME` and could never have passed once this code path actually ran.
+    const LONG_NAME_TITLE_ONLY = 'A deliberately long bilateral project name meant to force a wrap without the truncate fix landed here';
     const LONG_NAME_ROWS: ResultToReview[] = [
       row({ id: 'gh1', project_id: 'p1', project_name: LONG_NAME, result_code: 'BR-201', lead_center: 'CIP', status_id: 5 }),
       row({ id: 'gh2', project_id: 'p1', project_name: LONG_NAME, result_code: 'BR-202', lead_center: 'CIP', status_id: 6 })
     ];
 
-    it('1536 (grouped table): header height <= 40px, computed border-left-width 3px, pending-tone colour on a group with a pending row', () => {
+    it('1536 (grouped card header button): height <= 52px, computed border-left-width 3px, pending-tone colour on a group with a pending row', () => {
       cy.viewport(1536, 900);
       mountPage({ rows: LONG_NAME_ROWS, centers: FIXTURE_CENTERS });
       waitForLoad();
@@ -1330,12 +1400,11 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
 
       cy.get('[data-testid="bilateral-review-group-toggle"]')
         .first()
-        .closest('td')
-        .should($td => {
-          const el = $td[0] as HTMLElement;
+        .should($toggle => {
+          const el = $toggle[0] as HTMLElement;
           const style = getComputedStyle(el);
           const height = el.getBoundingClientRect().height;
-          expect(height, `group header td height(${height.toFixed(1)}) <= 40px`).to.be.at.most(40);
+          expect(height, `BRH-R-2: group header button height(${height.toFixed(1)}) <= 52px`).to.be.at.most(52);
           expect(style.borderLeftWidth, 'computed border-left-width is "3px"').to.eq('3px');
           // GROUP has one pending row (gh1, status_id 5) — pending tone colour resolves to the
           // fixed --pr-status-in-progress-fg token (#b45309 = rgb(180, 83, 9)), never the neutral
@@ -1346,7 +1415,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       cy.get('[data-testid="bilateral-review-group-name"]').first().should($name => {
         const el = $name[0] as HTMLElement;
         expect(getComputedStyle(el).textOverflow, 'label computed text-overflow is "ellipsis" (truncate)').to.eq('ellipsis');
-        expect(el.getAttribute('title'), 'label carries the full name in title').to.eq(LONG_NAME);
+        expect(el.getAttribute('title'), 'label carries the parsed (code-stripped) title').to.eq(LONG_NAME_TITLE_ONLY);
       });
     });
 
@@ -1360,16 +1429,19 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
 
       cy.get('[data-testid="bilateral-review-group-toggle"]')
         .first()
-        .closest('td')
-        .should($td => {
-          const style = getComputedStyle($td[0] as HTMLElement);
+        .should($toggle => {
+          const style = getComputedStyle($toggle[0] as HTMLElement);
           expect(style.borderLeftWidth, 'computed border-left-width is "3px"').to.eq('3px');
           expect(style.borderLeftColor, `computed border-left-color(${style.borderLeftColor}) is the neutral --pr-border token`).to.eq('rgb(227, 227, 232)');
         });
     });
 
-    it('840 (cards): the group bar header height <= 40px, the accent survives on THIS element (proves `border-0` did not eat it), and the label never wraps', () => {
-      cy.viewport(840, 1600);
+    // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-2 attempt 2, folder-guide gotcha) —
+    // the narrow group header is now TWO stacked rows (`min-h-[44px] flex-col`, not a fixed 44/40px
+    // row): chevron + identity + count/pending on row 1, the capped center chips (project mode) on
+    // an indented row 2 underneath. 40px cannot fit two rows; re-based to a measured cap.
+    it('840 (cards): the group bar header (two stacked rows) has the accent on THIS element (proves `border-0` did not eat it), and the label never wraps', () => {
+      cy.viewport(840, 2400);
       mountPage({ rows: LONG_NAME_ROWS, centers: FIXTURE_CENTERS });
       waitForLoad();
       assertEffectiveWidth('840 (group header, long name, cards)', 840);
@@ -1380,7 +1452,10 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
           const el = $toggle[0] as HTMLElement;
           const style = getComputedStyle(el);
           const height = el.getBoundingClientRect().height;
-          expect(height, `cards group bar height(${height.toFixed(1)}) <= 40px`).to.be.at.most(40);
+          // Re-based (BRH-T-2 attempt 2, two-stacked-row narrow header — see the describe's own
+          // comment): 90px is a generous, measured-then-padded cap for chevron+identity (min-h-44)
+          // + the indented center-chips row, NOT the old single-row 40px figure.
+          expect(height, `cards group bar height(${height.toFixed(1)}) <= 90px`).to.be.at.most(90);
           // Reviewer FAIL #1 (remediated): the cards bar is a plain button (`!border-l-[3px]`,
           // no `border-0` competing for the same axis after the fix) — a DIFFERENT cascade from
           // the table's `td`. Asserting computed style HERE (not just the class, and not just on
@@ -1396,86 +1471,16 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
     });
   });
 
-  // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-8, AC-11) — both
-  // filter band labels stay a fixed height and never scroll, at a single-digit (6) AND a
-  // double-digit (12) center count — the two-digit case is the one a fixed `w-[64px]` used to
-  // clip.
-  describe('Filter band labels never wrap or clip — single- and double-digit counts (BRV-R-8, AC-11)', () => {
-    const SIX_CENTERS_FIXTURE = FIXTURE_CENTERS.concat([
-      { code: 'C4', acronym: 'IRRI', name: 'International Rice Research Institute' },
-      { code: 'C5', acronym: 'ILRI', name: 'International Livestock Research Institute' },
-      { code: 'C6', acronym: 'IWMI', name: 'International Water Management Institute' }
-    ]) as typeof FIXTURE_CENTERS;
-    const SIX_CENTERS_FIXTURE_ROWS: ResultToReview[] = SIX_CENTERS_FIXTURE.map((center, i) =>
-      row({ id: `sc${i + 1}`, project_id: 'p1', project_name: 'P1 - Six Centers', result_code: `BR-6${i + 1}`, lead_center: center.acronym, status_id: 5 })
-    );
-    const TWELVE_CENTERS_FIXTURE = NINE_CENTERS_FIXTURE_CENTERS.concat([
-      { code: 'C10', acronym: 'CIFOR', name: 'Center for International Forestry Research' },
-      { code: 'C11', acronym: 'ICRAF', name: 'World Agroforestry' },
-      { code: 'C12', acronym: 'BIOVERSITY', name: 'Bioversity International' }
-    ]) as typeof FIXTURE_CENTERS;
-    const TWELVE_CENTERS_FIXTURE_ROWS: ResultToReview[] = TWELVE_CENTERS_FIXTURE.map((center, i) =>
-      row({ id: `tc${i + 1}`, project_id: 'p1', project_name: 'P1 - Twelve Centers', result_code: `BR-12-${i + 1}`, lead_center: center.acronym, status_id: 5 })
-    );
-
-    function assertBothLabelsFit(): void {
-      cy.get('[role="group"][aria-label="Status"]')
-        .parent()
-        .find('span')
-        .first()
-        .should($label => {
-          const el = $label[0] as HTMLElement;
-          expect(el.getBoundingClientRect().height, `Status label height <= 18px`).to.be.at.most(18);
-          expect(el.scrollWidth, `Status label scrollWidth(${el.scrollWidth}) <= clientWidth(${el.clientWidth})`).to.be.at.most(el.clientWidth);
-        });
-      cy.get('[data-testid="bilateral-review-centers-toggle"]')
-        .parent()
-        .find('span')
-        .first()
-        .should($label => {
-          const el = $label[0] as HTMLElement;
-          expect(el.getBoundingClientRect().height, `Centers label height <= 18px`).to.be.at.most(18);
-          expect(el.scrollWidth, `Centers label scrollWidth(${el.scrollWidth}) <= clientWidth(${el.clientWidth}) — count "${el.textContent}"`).to.be.at.most(el.clientWidth);
-        });
-    }
-
-    it('6 centers: both labels fit on one line', () => {
-      cy.viewport(1536, 900);
-      mountPage({ rows: SIX_CENTERS_FIXTURE_ROWS, centers: SIX_CENTERS_FIXTURE });
-      waitForLoad();
-      cy.contains('[data-testid="bilateral-review-filter-band"] span', 'Centers · 6').should('exist');
-      assertBothLabelsFit();
-    });
-
-    it('12 centers (two-digit count): both labels still fit on one line (FAIL input this guards against: the old fixed w-[64px])', () => {
-      cy.viewport(1536, 900);
-      mountPage({ rows: TWELVE_CENTERS_FIXTURE_ROWS, centers: TWELVE_CENTERS_FIXTURE });
-      waitForLoad();
-      cy.contains('[data-testid="bilateral-review-filter-band"] span', 'Centers · 12').should('exist');
-      assertBothLabelsFit();
-
-      // Leader addition (ADVISORY, examined, in scope): AC-11's "the two labels share the same
-      // left edge for the controls" is a WIDTH-equality claim, not just a no-clip claim — the
-      // `min-w-[84px]` gives both labels the same floor, so as long as neither's content pushes it
-      // past 84px (proven above by the scrollWidth<=clientWidth check) their rendered widths must
-      // match, which is what actually puts the Status group and the Centers toggle at the same x.
-      cy.get('[role="group"][aria-label="Status"]')
-        .parent()
-        .find('span')
-        .first()
-        .then($statusLabel => {
-          const statusWidth = ($statusLabel[0] as HTMLElement).getBoundingClientRect().width;
-          cy.get('[data-testid="bilateral-review-centers-toggle"]')
-            .parent()
-            .find('span')
-            .first()
-            .should($centersLabel => {
-              const centersWidth = ($centersLabel[0] as HTMLElement).getBoundingClientRect().width;
-              expect(centersWidth, `Status label width(${statusWidth.toFixed(1)}) === Centers label width(${centersWidth.toFixed(1)}) — same left edge for the controls`).to.eq(statusWidth);
-            });
-        });
-    });
-  });
+  // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — DROPPED (no defense
+  // left to defeat): this described the "Centers · N" label NEXT TO the now-deleted centers-row
+  // chevron and a shared `min-w-[84px]`/fixed `w-[64px]` box the Status group and that toggle both
+  // sat in (the "same left edge" claim was specific to that 2-control row). BRH-T-1 removed BOTH
+  // the row and the fixed-width box outright — every remaining digit count in the redesigned band
+  // (`kpi-centers` in the metric ribbon, the popover's `bilateral-review-filter-count-<dimension>`
+  // badges) renders in an auto-width, `whitespace-nowrap` container with no fixed-width ancestor,
+  // so there is no structurally equivalent "two-digit count clips a fixed box" regression left to
+  // reproduce here. `kpi-centers`'s own single-line rendering is already covered by the
+  // `BRH-R-10: KPI metric ribbon renders...` test above (all six figures asserted to exist).
 
   // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-4, AC-6) — the
   // lead-center column's inner-span truncation, measured live in a real 150px-wide cell.
@@ -1507,7 +1512,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   });
 
   // ── Single-scroller gate (BRP-T-4, R-15) — no descendant of `.custom_scroll` (`#workArea`)
-  // other than the table's own `.pr-table-wrap` (>= 900px, computes overflow-y:auto too via the
+  // other than the table's own `.overflow-x-auto` (>= 900px, computes overflow-y:auto too via the
   // CSS axis-coupling rule this file already documents) / `.overflow-x-auto` wrapper (< 900px flat
   // table — not reached below 900 since that branch renders cards, kept for completeness) may
   // compute `overflow-y: auto|scroll`. Closed custom-fields dropdown panels (`pr-select`/
@@ -1519,11 +1524,11 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         const workArea = $workArea[0];
         const offenders: string[] = [];
         workArea.querySelectorAll('*').forEach(el => {
-          if (el.closest('.pr-table-wrap')) return;
-          // Leader addition (Reviewer FAIL, attempt 1): scope the `.overflow-x-auto` exemption to
-          // the TABLE's own wrapper subtree — not any element anywhere in the work area that
-          // happens to carry that utility class (a future unrelated `overflow-x-auto` div
-          // elsewhere in the row content must NOT get a free pass from this gate).
+          // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — the ONE
+          // exemption (`.overflow-x-auto` is gone, BRH-T-2's per-card `div.overflow-x-auto` is its
+          // replacement): scoped to the TABLE's own wrapper subtree — not any element anywhere in
+          // the work area that happens to carry that utility class (a future unrelated
+          // `overflow-x-auto` div elsewhere in the row content must NOT get a free pass here).
           if (el.classList.contains('overflow-x-auto') && el.closest('[data-testid="bilateral-review-table"]')) return;
           const rect = (el as HTMLElement).getBoundingClientRect();
           if (rect.width === 0 && rect.height === 0) return;
@@ -1542,7 +1547,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
 
     ([
       [1536, 900],
-      [840, 1600]
+      [840, 2400]
     ] as const).forEach(([width, height]) => {
       it(`${width}px: no extra vertical scroller inside the work area besides the table's own overflow-x wrapper`, () => {
         cy.viewport(width, height);
@@ -1570,7 +1575,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       //   expected 2 to equal 0
       // (the two card-list `<ul role="list">`, one per expanded project group.) Committed here in
       // its GREEN form: the injection defeats the gate and the gate reports exactly those elements.
-      cy.viewport(840, 1600);
+      cy.viewport(840, 2400);
       mountPage();
       waitForLoad();
       cy.document().then(doc => {
@@ -1595,7 +1600,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
 
     ([1536, 840] as const).forEach(width => {
       it(`${width}px: no Clear filters control with no filter active; exactly one once a filter is active`, () => {
-        cy.viewport(width, width === 840 ? 1600 : 900);
+        cy.viewport(width, width === 840 ? 2400 : 900);
         mountPage();
         waitForLoad();
         toolbarClearButtons().should('have.length', 0);
@@ -1620,7 +1625,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   // toolbar (out of T-4's Files) in a follow-up.
   describe('Cards below 900px — firstCard gate (BRP-T-4, AC-11)', () => {
     beforeEach(() => {
-      cy.viewport(840, 1600);
+      cy.viewport(840, 2400);
       mountPage();
       waitForLoad();
       assertEffectiveWidth('840 (firstCard fixture)', 840);
@@ -1639,19 +1644,30 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   });
 
   // ── Narrow — 375px (BRP-T-4, AC-12) — toolbar stacks, band wraps, single-column cards, no
-  // horizontal scroll. Taller viewport (2200, not 1600) — measured empirically: at 375 the
-  // toolbar/band wrap further than at 840, pushing this fixture's content past 1600px tall and
-  // shaving the native-scrollbar few px off `documentElement.clientWidth` (this module's own
-  // documented quirk). No `firstCard − workArea` numeric gate here (unlike AC-11 at 840):
-  // measured 454.5px at this width — legitimately larger, not a regression, because AC-12 itself
-  // calls for MORE wrapping at 375 (search full width, band rows wrap) than AC-11 requires at 840.
-  // Asserting AC-11's number here would fail on the spec's OWN intended layout. ──
+  // horizontal scroll. @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2): the
+  // full AC-4 fixture and the requested-width baseline are BACK. Attempt 2 had slimmed this to a
+  // bespoke 3-row fixture and re-based the effective width to 360 to work around a "native
+  // scrollbar shave" believed to be a harness quirk; it was actually the metric ribbon overflowing
+  // 375px horizontally (see the `assertEffectiveWidth` note below). With that fixed the page fits,
+  // so this describe measures the real thing again: 7 cards, one per row, 375 effective, zero
+  // document overflow. The viewport stays TALL (3000) because BRH cards are taller than the compact
+  // rows the original 2200 was sized for — height still has to clear the content, that part of the
+  // module's documented rule is unchanged. ──
   describe('Narrow 375px (BRP-T-4, AC-12)', () => {
     beforeEach(() => {
-      cy.viewport(375, 2200);
+      cy.viewport(375, 3000);
       mountPage();
       waitForLoad();
-      assertEffectiveWidth('375', 375);
+      // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, BRH-R-11) — this
+      // briefly passed 360 with a long note calling the 15px shave an unavoidable `min-h-screen`
+      // harness quirk. It was not: the shave was a SYMPTOM of the very defect this describe exists
+      // to catch. The metric ribbon overflowed the viewport horizontally (measured: intrinsic 448px
+      // in a 344px content box, `documentElement.scrollWidth` 464), the resulting horizontal
+      // scrollbar ate 15px of viewport HEIGHT, and `min-height: 100vh` on the page's root section
+      // then guaranteed a vertical scrollbar, which shaved 15px off `clientWidth`. With the ribbon
+      // wrapping (`bilateral-review.component.html`, Row 2) the document needs neither scrollbar and
+      // the effective width measures the requested 375 exactly.
+      assertEffectiveWidth('375 narrow', 375);
     });
 
     it('AC-12: cards render (no <table>), one per row, no horizontal body scroll', () => {
@@ -1674,18 +1690,19 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   });
 
   // ── Forward pointer B (T-3 Reviewer): a wrap-clip regression at >= 900px is invisible to the
-  // `documentElement`-level gate alone — add a computed-overflow-x assertion on `.pr-table-wrap`
+  // `documentElement`-level gate alone — add a computed-overflow-x assertion on `.overflow-x-auto`
   // itself, so a lost wrapper (someone deletes the class or the SCSS rule) is caught even if some
   // other ancestor happens to still contain the overflow at the document level. ──
-  describe('Forward pointer B — .pr-table-wrap computed overflow-x at 1024 (BRP-T-4)', () => {
+  describe('Forward pointer B — .overflow-x-auto computed overflow-x at 1024 (BRP-T-4)', () => {
     it('the table wrap keeps computed overflow-x auto|scroll at 1024', () => {
       cy.viewport(1024, 900);
       mountPage();
       waitForLoad();
-      cy.get('[data-testid="bilateral-review-table"] .pr-table-wrap').should($wrap => {
+      cy.get('[data-testid="bilateral-review-table"] .overflow-x-auto').first().should($wrap => {
         const overflowX = getComputedStyle($wrap[0]).overflowX;
-        expect(['auto', 'scroll'], `.pr-table-wrap computed overflow-x is "${overflowX}"`).to.include(overflowX);
+        expect(['auto', 'scroll'], `.overflow-x-auto computed overflow-x is "${overflowX}"`).to.include(overflowX);
       });
     });
   });
+
 });

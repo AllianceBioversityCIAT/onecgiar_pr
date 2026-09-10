@@ -19,6 +19,11 @@ import {
   innovationLinkAnswerIsComplete,
   showsInnovationLinkQuestion
 } from '../../../../../../../../../../shared/services/global/qa-innovation-development-results.service';
+import {
+  isKnowledgeProductResultType,
+  resolveReportResultTypeId,
+  resolveReportResultTypeName
+} from '../../../../../../../../shared/report-result/create-result-payload.util';
 
 interface CreateResultBody {
   handler: string;
@@ -106,10 +111,17 @@ export class AowHloCreateModalComponent implements OnInit {
   phaseYear = computed(() => this.api.dataControlSE?.reportingCurrentPhase?.phaseYear ?? new Date().getFullYear());
   isAdmin = computed(() => !!this.api.rolesSE?.isAdmin);
 
+  readonly reportingIndicator = computed(() => this.entityAowService.currentResultToReport()?.indicators?.[0] ?? null);
+
+  readonly resolvedIndicatorResultTypeId = computed(() => resolveReportResultTypeId(this.reportingIndicator()));
+
+  readonly indicatorCategoryLabel = computed(() =>
+    resolveReportResultTypeName(this.reportingIndicator(), this.resolvedIndicatorResultTypeId())
+  );
+
   currentResultIsKnowledgeProduct = computed(() => {
     return (
-      this.entityAowService.currentResultToReport()?.indicators?.[0]?.type_name === 'Number of knowledge products' ||
-      this.createResultBody().result_type_id === 6
+      isKnowledgeProductResultType(this.reportingIndicator()) || this.createResultBody().result_type_id === 6
     );
   });
 
@@ -121,7 +133,7 @@ export class AowHloCreateModalComponent implements OnInit {
 
   /** The category actually being created — the indicator wins over the picker, as in the payload. */
   resolvedResultTypeId = computed<number | null>(
-    () => this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_type_id ?? this.createResultBody().result_type_id ?? null
+    () => this.resolvedIndicatorResultTypeId() ?? this.createResultBody().result_type_id ?? null
   );
 
   /**
@@ -222,7 +234,8 @@ export class AowHloCreateModalComponent implements OnInit {
       this.preselectTocSciencePrograms(all);
     });
 
-    if (!this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_type_id) {
+    const resolvedTypeId = resolveReportResultTypeId(this.reportingIndicator());
+    if (resolvedTypeId == null) {
       this.resultTypes.set(
         this.resultsListFilterSE.filters.resultLevel?.find(
           item =>
@@ -231,6 +244,8 @@ export class AowHloCreateModalComponent implements OnInit {
               this.entityAowService.currentResultToReport()?.result_level_id)
         )?.options
       );
+    } else {
+      this.createResultBody.update(body => ({ ...body, result_type_id: resolvedTypeId }));
     }
 
     this.preselectTocCenters();
@@ -512,7 +527,7 @@ export class AowHloCreateModalComponent implements OnInit {
 
     const body = {
       result: {
-        result_type_id: this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_type_id ?? this.createResultBody().result_type_id,
+        result_type_id: this.resolvedResultTypeId(),
         result_level_id:
           this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_level_id ||
           this.entityAowService.currentResultToReport().result_level_id,

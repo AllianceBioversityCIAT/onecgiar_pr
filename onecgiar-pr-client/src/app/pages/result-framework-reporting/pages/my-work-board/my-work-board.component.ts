@@ -616,14 +616,14 @@ export class MyWorkBoardComponent {
   readonly skeletonEditingCards = [1, 2, 3];
   readonly skeletonWaitingCards = [1, 2];
   readonly skeletonWaitingColumns = [1, 2];
-  /** `MWB-T-10`: ONE rail now (Discontinued) — Quality assessed left the Closed group, and Other
-   *  is conditional so the skeleton never promises it. */
-  readonly skeletonRails = [1];
+  /** Two Closed rails (Discontinued + Rejected); Other is conditional. */
+  readonly skeletonRails = [1, 2];
+  readonly skeletonDoneColumns = [1, 2];
 
   // ── Board layout groups (design.md §6.3, `MWB-R-2`) ────────────────────────────────────────
   readonly editingColumn = computed(() => this.data.columns().find(column => column.key === 'editing') ?? null);
   readonly waitingColumns = computed(() => this.data.columns().filter(column => column.group === 'waiting'));
-  /** `MWB-T-10` — *Done*: Quality assessed (ids 2 + 6), always expanded, never a rail. */
+  /** *Done*: In QA (W1/W2) + Approved (W3) — always expanded, never rails. */
   readonly doneColumns = computed(() => this.data.columns().filter(column => column.group === 'done'));
   readonly closedColumns = computed(() => this.data.columns().filter(column => column.group === 'closed'));
 

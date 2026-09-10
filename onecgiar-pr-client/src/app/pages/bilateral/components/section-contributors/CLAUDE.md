@@ -1,6 +1,6 @@
 # section-contributors
 
-**Verified:** 2026-09-04 · branch performance-refactor (contributing programs stage share-request drafts; SP chips carry the full name)
+**Verified:** 2026-09-09 · branch feat/P2-3390-bilateral-investment-tables (el bloque de ToC ya no gatea el Submit)
 
 ## Qué es
 Sección 2 del formulario bilateral (W3/Bilateral): a quién se atribuye el resultado — centro líder,
@@ -24,6 +24,12 @@ centros CGIAR contribuyentes, proyectos W3/bilaterales, programas científicos, 
 - **Progreso / Submit:** `BilateralMdsTrackerService.setSectionFields('contributors', […],
   'partners')` con tres ítems: `lead-center`, `lead-project`, `external-partners`. Este último va
   `filled: partnersHydrated() && externalPartnersSatisfied()` — ver la invariante abajo.
+  ⚠️ **El grupo `toc` que publica `<app-section-toc>` en este mismo bucket va todo
+  `optional: true` desde el 9-sep-2026** (decisión del PO): se lista en el checklist pero **no
+  cuenta** para el porcentaje ni para `overallStatus()`, que es el único gate del "Submit for
+  review". Con el Primary Science Program elegido ya se puede pasar a Pending Review; el servidor
+  nunca pidió más (`bilateral-center.service.ts → submitForReview`: centro líder del que el usuario
+  es miembro + Science Program asignado). Los tres ítems de `partners` **sí** siguen contando.
 - **Coming soon:** `unpersistedFieldsComingSoon` (constante `true`) apaga los tres controles que no
   se pueden guardar.
 - **Gates del template expuestos como computeds**: el spec sobreescribe el template, así que un

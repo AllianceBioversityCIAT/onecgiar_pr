@@ -1,9 +1,9 @@
 /**
  * Pure burn-down helpers for the Reporting-tab surfaces (By-AOW banner, grouped header ratio,
- * band controls, session counter). Single home of the zero-target rule (MRF-R-7): a KPI with
- * `target = 0 AND achieved = 0` is excluded from denominators/pending counts and hidden by
- * Only-pending (visible == counted — MRF-R-1/R-7 precedence). No Angular imports — pure functions
- * only, testable in isolation and safe to call from any Reporting-tab surface.
+ * band controls, session counter). Every planned KPI counts toward reporting progress — including
+ * KPIs whose target is zero or unset (centers may still report; the row may read overachieved).
+ * No Angular imports — pure functions only, testable in isolation and safe to call from any
+ * Reporting-tab surface.
  *
  * Scope: the WHOLE Program shell. `bugfix/kpi-count-reconciliation` ended the divergence this
  * paragraph used to record — that only the hero's `overviewAowProgressRich` delegated here while
@@ -72,20 +72,13 @@ function isPending(ind: BurndownIndicator | null | undefined): boolean {
 }
 
 /**
- * Splits `inds` into the counted set (denominators/pending/visible use this) and the number
- * excluded by the zero-target rule. `buildAowBannerStats` and the grouped header ratio delegate
- * here (MRF-R-7, MRF-AC-6 — identical everywhere).
+ * Returns every KPI for denominators/pending/visible. `zeroTarget` is always `0` — kept in the
+ * return shape so existing callers compile; disclosure titles that read it stay silent.
  *
  * @akili-spec changes/mass-reporting-flow
  */
 export function applyZeroTargetRule<T extends BurndownIndicator>(inds: T[]): { counted: T[]; zeroTarget: number } {
-  const counted: T[] = [];
-  let zeroTarget = 0;
-  for (const ind of inds) {
-    if (isZeroTarget(ind)) zeroTarget++;
-    else counted.push(ind);
-  }
-  return { counted, zeroTarget };
+  return { counted: [...inds], zeroTarget: 0 };
 }
 
 /**
@@ -315,9 +308,8 @@ export function partitionProgramKpis<T extends PartitionIndicator>(
 
 /**
  * Program-wide totals over the partition (KCR-R-2, R-8, R-9): `planned` = every KPI counted once;
- * `zeroTarget` = how many the MRF-R-7 rule excludes; `counted` = the only denominator the shell may
- * show; `reported` = counted KPIs with `achieved > 0` — `achieved > 0` ONLY, never
- * `progress_percentage` (KCR-R-9: that clause read a `'1500%'` string and was dead).
+ * `counted` = same set (every planned KPI is in the denominator); `reported` = KPIs with
+ * `achieved > 0` — `achieved > 0` ONLY, never `progress_percentage`.
  *
  * @akili-spec bugfix/kpi-count-reconciliation
  */

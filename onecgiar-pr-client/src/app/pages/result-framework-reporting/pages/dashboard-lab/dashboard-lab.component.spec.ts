@@ -147,7 +147,19 @@ describe('DashboardLabComponent — indicatorsByAow() / fromTier stamping (RES-T
     return component.indicatorsByAow().find(x => x.aow.code === AOW_CODE)?.indicators ?? [];
   }
 
-  it('stamps __isIntermediateCrosscut: true for an outcome-tier group with is_aow: false', async () => {
+  /**
+   * ⚠️ INVERTED on 2026-09-09 (P2-3336 rule 1, PO). This used to assert that an `is_aow: false`
+   * outcome group DID enter the AoW bundle carrying the stamp. It no longer enters at all: an
+   * Intermediate Outcome with no work package belongs to the Science Program, the server returns
+   * it under every AoW only because there is no work package to join on, and its own card serves
+   * it. Rule 2 of the ticket — the one that justified showing it inside each AoW with a note — was
+   * withdrawn by the PO: those cases do not exist.
+   *
+   * The STAMP itself is deliberately still produced by `fromTier` (see the `is_aow: true` case
+   * below and `hloTaxonomy()`, which reads it for the `IO` badge). What changed is the filter in
+   * front of it.
+   */
+  it('keeps an outcome-tier group with is_aow: false OUT of the AoW bundle', async () => {
     const component = await createComponent();
     setToc(component, {
       outcomes: [
@@ -160,9 +172,33 @@ describe('DashboardLabComponent — indicatorsByAow() / fromTier stamping (RES-T
       ]
     });
 
+    expect(indicatorsFor(component)).toEqual([]);
+  });
+
+  it('still admits an outcome-tier group whose is_aow is MISSING (unchanged convention)', async () => {
+    const component = await createComponent();
+    setToc(component, {
+      outcomes: [
+        {
+          toc_result_id: 503,
+          result_title: 'Outcome with no flag',
+          indicators: [{ indicator_id: 'IND-4', indicator_name: 'Indicator 4' }]
+        }
+      ]
+    });
+
     const [row] = indicatorsFor(component);
-    expect(row.__isIntermediateCrosscut).toBe(true);
     expect(row.__tier).toBe('outcome');
+    // ⚠️ The two conventions disagree on a MISSING flag, and both are kept on purpose:
+    //   · the P2-3336 FILTER reads absent as "belongs to this AoW" (`is_aow !== false`), so the
+    //     row is admitted — the pre-flag behaviour, and what the server normalises to anyway
+    //     (`Boolean(row.is_aow)`);
+    //   · the STAMP reads absent as cross-cut (`is_aow !== true`), which predates this change and
+    //     is what `ratioBase()` excludes from the denominator.
+    // So an unflagged row renders but sits outside the ratio. That is pre-existing (see
+    // dashboard-lab/CLAUDE.md "Dos convenciones opuestas para is_aow"), not introduced here — it is
+    // pinned so a future harmonisation of the two has to face it deliberately.
+    expect(row.__isIntermediateCrosscut).toBe(true);
   });
 
   it(
@@ -283,24 +319,24 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
     ]);
 
     const segments = component.overviewStatusSegments();
-    const inProgress = segments.find(s => s.key === 'in-progress');
+    const editing = segments.find(s => s.key === 'editing');
     const inQa = segments.find(s => s.key === 'in-qa');
 
-    expect(inProgress?.statusName).toBe('Editing');
-    expect(inProgress?.link).toEqual({ origin: 'W1/W2', status: 'Editing' });
+    expect(editing?.statusName).toBe('Editing');
+    expect(editing?.link).toEqual({ origin: 'W1/W2', status: 'Editing' });
     expect(inQa?.link).toBeNull();
   });
 
   it('falls back to the 8-entry catalogue name when the wire statusName is missing/empty', async () => {
-    const component = await createComponent([{ statusId: 5, statusName: '', count: 2 }]);
+    const component = await createComponent([{ statusId: 2, statusName: '', count: 2 }]);
 
-    const notStarted = component.overviewStatusSegments().find(s => s.key === 'not-started');
+    const inQa = component.overviewStatusSegments().find(s => s.key === 'in-qa');
 
-    expect(notStarted?.statusName).toBe('Pending Review');
-    expect(notStarted?.link).toEqual({ origin: 'W1/W2', status: 'Pending Review' });
+    expect(inQa?.statusName).toBe('Quality Assessed');
+    expect(inQa?.link).toEqual({ origin: 'W1/W2', status: 'Quality Assessed' });
   });
 
-  it('maps every one of the six status slots (incl. the appended discontinued slot) to its own statusName + link', async () => {
+  it('maps every W1/W2 status slot (incl. the appended discontinued slot) to its own statusName + link', async () => {
     const component = await createComponent([
       { statusId: 1, statusName: 'Editing', count: 3 },
       { statusId: 2, statusName: 'Quality Assessed', count: 1 },
@@ -312,14 +348,12 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
 
     const triples = component.overviewStatusSegments().map(s => [s.key, s.statusName, s.link?.status]);
 
-    // not-started/in-progress/submitted/in-qa/approved keep OVERVIEW_STATUS_SLOTS order; discontinued
-    // is appended LAST by the separate branch (dashboard-lab.component.ts ~917-928).
+    // editing/submitted/in-qa keep OVERVIEW_STATUS_SLOTS order; bilateral-only ids 5/6 are omitted;
+    // discontinued is appended LAST when it has rows.
     expect(triples).toEqual([
-      ['not-started', 'Pending Review', 'Pending Review'],
-      ['in-progress', 'Editing', 'Editing'],
+      ['editing', 'Editing', 'Editing'],
       ['submitted', 'Submitted', 'Submitted'],
       ['in-qa', 'Quality Assessed', 'Quality Assessed'],
-      ['approved', 'Approved', 'Approved'],
       ['discontinued', 'Discontinued', 'Discontinued']
     ]);
   });
@@ -2326,6 +2360,7 @@ describe('DashboardLabComponent — URL state synchronization, focus recovery & 
               GET_ScienceProgramTocProgress: jest.fn().mockReturnValue(of({ response: { progress: null, areas: [] } })),
               GET_IndicatorContributionSummary: jest.fn().mockReturnValue(of({ response: { totalsByType: [] } })),
               GET_reportingEntryHubProjects: jest.fn().mockReturnValue(of({ response: {} })),
+              GET_ResultToReview: jest.fn().mockReturnValue(of({ response: [] })),
               GET_IntermediateOutcomes: jest.fn().mockReturnValue(of({ response: { tocResults: [] } })),
               GET_2030Outcomes: jest.fn().mockReturnValue(of({ response: { tocResults: [] } })),
               GET_tocByInitiativeId: jest.fn().mockReturnValue(of({ response: {} }))

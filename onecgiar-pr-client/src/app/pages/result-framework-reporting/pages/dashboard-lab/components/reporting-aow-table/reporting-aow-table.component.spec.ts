@@ -976,8 +976,8 @@ describe('ReportingAowTableComponent', () => {
       const banner = buildAowBannerStats(inds);
       const ratio = component.ratioOf(g);
       expect(ratio).toEqual({ done: banner.done, total: banner.total, percent: banner.pct });
-      // Denominator excludes the one zero-target KPI: 2 counted, 1 reported.
-      expect(ratio).toEqual({ done: 1, total: 2, percent: 50 });
+      // Every planned KPI counts, including zero-target: 3 total, 1 reported.
+      expect(ratio).toEqual({ done: 1, total: 3, percent: 33 });
     });
 
     // MRF-AC-5: Only-pending narrows `indicators`, so the host stashes the pre-toggle set on
@@ -1006,21 +1006,16 @@ describe('ReportingAowTableComponent', () => {
       expect(component.ratioOf(g)).toEqual({ done: 1, total: 2, percent: 50 });
     });
 
-    // MRF-AC-6: every % surface must SAY it dropped KPIs from its denominator.
-    it('titles the header ratio with the zero-target exclusion count, and only when there is one', async () => {
+    it('omits a zero-target exclusion title — every planned KPI is in the denominator', async () => {
       const withZeros = group([
         row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }),
         row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '0' }),
         row({ indicator_id: 3, actual_achieved_value_sum: 0, target_value_sum: '0' })
       ]);
       await build([withZeros]);
-      expect(component.ratioTitle(withZeros)).toBe('excludes 2 zero-target KPIs');
-      const titled = (fixture.nativeElement as HTMLElement).querySelector('[title="excludes 2 zero-target KPIs"]');
-      expect(titled).not.toBeNull();
-
-      // Singular reads as one KPI, and a card with none carries no title attribute at all.
-      const one = group([row({ indicator_id: 1, actual_achieved_value_sum: 0, target_value_sum: '0' })]);
-      expect(component.ratioTitle(one)).toBe('excludes 1 zero-target KPI');
+      expect(component.ratioTitle(withZeros)).toBe('');
+      expect((fixture.nativeElement as HTMLElement).querySelector('[title*="zero-target"]')).toBeNull();
+      expect(component.ratioTitle(group([row({ indicator_id: 1, actual_achieved_value_sum: 0, target_value_sum: '0' })]))).toBe('');
       expect(component.ratioTitle(group([row()]))).toBe('');
     });
   });
@@ -1069,18 +1064,15 @@ describe('ReportingAowTableComponent', () => {
       expect(titled).toBeTruthy();
     });
 
-    // The zero-target `ratioTitle` fallback must survive — OSF-T-16 composes onto it, not over it.
-    it('keeps the zero-target ratioTitle when there is no achievement', async () => {
+    it('rowTitle is empty when there is no achievement and no exclusion copy', async () => {
       const withZeros = group([
         row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }),
         row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '0' })
       ]);
-      expect(component.rowTitle(withZeros)).toBe(component.ratioTitle(withZeros));
-      expect(component.rowTitle(withZeros)).toBe('excludes 1 zero-target KPI');
+      expect(component.rowTitle(withZeros)).toBe('');
     });
 
-    // Both fallbacks compose when both conditions are true — neither must silently drop the other.
-    it('composes the zero-target exclusion and the achievement figures when both apply', async () => {
+    it('rowTitle carries achievement figures when present, without a zero-target exclusion clause', async () => {
       const g = group(
         [
           row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }),
@@ -1089,7 +1081,7 @@ describe('ReportingAowTableComponent', () => {
         { achievement: achievement() }
       );
       const title = component.rowTitle(g);
-      expect(title).toContain('excludes 1 zero-target KPI');
+      expect(title).not.toContain('zero-target');
       expect(title).toContain('QA 40%');
     });
   });
@@ -1177,6 +1169,169 @@ describe('ReportingAowTableComponent', () => {
     });
   });
 
+  /**
+   * A target held by N centres is ONE row (P2-3255) whose scalar `center_acronym` is null by
+   * design. Reading only the scalar dropped those rows out of the chips AND out of the Center
+   * filter: SP-13 KPI 1.3.3 (one target, ten centres) showed no centre at all and vanished when
+   * any centre was picked. Owner decision (2026-09-09): show one chip per centre, and let a shared
+   * target count towards every centre that holds it.
+   */
+  describe('centres of a shared target', () => {
+    const shared = (over: Partial<ReportingIndicator> = {}) =>
+      row({
+        indicator_id: 133,
+        indicator_description: '1.3.3. Updated document on CGIAR accession management',
+        // The shape the backend sends for a shared target: the list is populated, the scalar is not.
+        centers: [
+          { center_id: 1, center_acronym: 'AfricaRice' },
+          { center_id: 2, center_acronym: 'IRRI' },
+          { center_id: 3, center_acronym: 'CIP' }
+        ],
+        center_acronym: undefined,
+        ...over
+      });
+
+    it('lists every centre of the target', async () => {
+      await build([group([shared()])]);
+      expect(component.centerAcronymsOf(shared())).toEqual(['AfricaRice', 'IRRI', 'CIP']);
+    });
+
+    it('falls back to the scalar when the row carries no list', async () => {
+      await build([group([row()])]);
+      expect(component.centerAcronymsOf(row({ centers: undefined, center_acronym: 'CIAT' }))).toEqual(['CIAT']);
+      expect(component.centerAcronymsOf(row({ centers: [], center_acronym: undefined }))).toEqual([]);
+    });
+
+    it('renders a chip per centre, not a single blank', async () => {
+      const g = group([shared()]);
+      await build([g]);
+      openAow();
+      const chips = text();
+      expect(chips).toContain('AfricaRice');
+      expect(chips).toContain('IRRI');
+      expect(chips).toContain('CIP');
+    });
+
+    it('counts a shared target towards EVERY centre that holds it', async () => {
+      const g = group([shared(), row({ indicator_id: 2, centers: undefined, center_acronym: 'IRRI' })]);
+      await build([g]);
+      const counts = component.centerCountsOf(g);
+      // IRRI holds the shared target AND owns one of its own → 2. The others → 1 each.
+      expect(counts.find(c => c.center === 'IRRI')?.count).toBe(2);
+      expect(counts.find(c => c.center === 'AfricaRice')?.count).toBe(1);
+      expect(counts.find(c => c.center === 'CIP')?.count).toBe(1);
+    });
+
+    it('keeps the row when the Center filter picks ANY of its centres', async () => {
+      const g = group([shared(), row({ indicator_id: 2, centers: undefined, center_acronym: 'CIMMYT' })]);
+      await build([g]);
+
+      component.setCenterFilter(g, 'CIP');
+      fixture.detectChanges();
+      // Before this change the shared row was filtered out by every centre, its own included.
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([133]);
+
+      component.setCenterFilter(g, 'CIMMYT');
+      fixture.detectChanges();
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([2]);
+    });
+
+    /**
+     * Owner call (2026-09-09): ten chips must not make the row look broken — show a few and put the
+     * rest behind a counter, and if the card is filtered by a centre, THAT centre has to be one of
+     * the visible ones.
+     */
+    describe('overflow, capped at three chips', () => {
+      const ten = (over: Partial<ReportingIndicator> = {}) =>
+        shared({
+          centers: ['AfricaRice', 'Bioversity', 'CIAT', 'CIMMYT', 'CIP', 'ICARDA', 'ICRISAT', 'IITA', 'ILRI', 'IRRI'].map(
+            (center_acronym, i) => ({ center_id: i + 1, center_acronym })
+          ),
+          ...over
+        });
+
+      it('shows three chips and counts the rest', async () => {
+        await build([group([ten()])]);
+        expect(component.rowCentersShown(ten())).toEqual(['AfricaRice', 'Bioversity', 'CIAT']);
+        expect(component.rowCentersHidden(ten())).toBe(7);
+      });
+
+      it('does not hide a single centre behind a counter that would take its place', async () => {
+        await build([group([shared()])]);
+        const four = shared({
+          centers: [1, 2, 3, 4].map(i => ({ center_id: i, center_acronym: `C${i}` }))
+        });
+        expect(component.rowCentersShown(four)).toHaveLength(4);
+        expect(component.rowCentersHidden(four)).toBe(0);
+      });
+
+      it('pins the filtered centre into the visible three', async () => {
+        await build([group([ten()])]);
+        // IRRI is LAST of the ten — without pinning it sits behind "+7 more" while the card is
+        // filtered by it, leaving the row on screen with no visible reason.
+        expect(component.rowCentersShown(ten(), 'IRRI')).toEqual(['IRRI', 'AfricaRice', 'Bioversity']);
+        expect(component.rowCentersHidden(ten(), 'IRRI')).toBe(7);
+      });
+
+      it('leaves the pinning alone when the active centre is not on the row', async () => {
+        await build([group([ten()])]);
+        expect(component.rowCentersShown(ten(), 'IWMI')).toEqual(['AfricaRice', 'Bioversity', 'CIAT']);
+      });
+
+      it('reveals every centre once expanded, and collapses back', async () => {
+        const g = group([ten()]);
+        await build([g]);
+
+        component.toggleRowCenters(ten(), new MouseEvent('click'));
+        fixture.detectChanges();
+        expect(component.rowCentersShown(ten())).toHaveLength(10);
+        expect(component.rowCentersHidden(ten())).toBe(0);
+        expect(component.areRowCentersExpanded(ten())).toBe(true);
+
+        component.toggleRowCenters(ten(), new MouseEvent('click'));
+        fixture.detectChanges();
+        expect(component.rowCentersShown(ten())).toHaveLength(3);
+      });
+
+      it('stops the click so expanding the centres does not open the row drawer', async () => {
+        await build([group([ten()])]);
+        const openRow = jest.fn();
+        component.openRow.subscribe(openRow);
+        const event = new MouseEvent('click');
+        const stop = jest.spyOn(event, 'stopPropagation');
+
+        component.toggleRowCenters(ten(), event);
+
+        expect(stop).toHaveBeenCalled();
+        expect(openRow).not.toHaveBeenCalled();
+      });
+
+      it('renders the counter in the DOM and drops it once expanded', async () => {
+        const g = group([ten()]);
+        await build([g]);
+        openAow();
+        expect(text()).toContain('+7 more');
+        expect(text()).not.toContain('IRRI');
+
+        component.toggleRowCenters(ten(), new MouseEvent('click'));
+        fixture.detectChanges();
+        expect(text()).toContain('IRRI');
+        expect(text()).toContain('Show less');
+      });
+    });
+
+    it('finds a shared target by any of its centres in the search box', async () => {
+      const g = group([shared(), row({ indicator_id: 2, centers: undefined, center_acronym: 'CIMMYT' })]);
+      await build([g], { search: 'irri' });
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([133]);
+    });
+
+    it('labels the flat table cell with every centre', async () => {
+      await build([group([shared()])], { viewMode: 'flat' });
+      expect(component.flatTableRows()[0].__centerLabel).toBe('AfricaRice, IRRI, CIP');
+    });
+  });
+
   // ── Intermediate Outcome Target tooltip (RES-R-1, RES-R-2, RES-AC-1, RES-AC-2) ─────────────
   // ── Grouped card ↔ By-AOW view alignment (owner request 2026-08-30) ──
   describe('By AOW header jump', () => {
@@ -1242,7 +1397,7 @@ describe('ReportingAowTableComponent', () => {
       expect(component.nextPendingRow()?.indicator_id).toBe(2);
     });
 
-    it('skips reported and zero-target rows', async () => {
+    it('skips reported rows but includes zero-target not-started rows', async () => {
       const rows = [
         row({ indicator_id: 1, actual_achieved_value_sum: 1, target_value_sum: '1' }),
         row({ indicator_id: 2, actual_achieved_value_sum: 2, target_value_sum: '2' }), // reported
@@ -1250,7 +1405,7 @@ describe('ReportingAowTableComponent', () => {
         row({ indicator_id: 4, actual_achieved_value_sum: 0, target_value_sum: '5' }) // the answer
       ];
       await build([group(rows)], { lastReported: { id: 1, aowCode: 'AOW01' } });
-      expect(component.nextPendingRow()?.indicator_id).toBe(4);
+      expect(component.nextPendingRow()?.indicator_id).toBe(3);
     });
 
     it('is null when nothing pending remains (the row shows the all-reported note)', async () => {
@@ -1334,10 +1489,21 @@ describe('ReportingAowTableComponent', () => {
       return targetButton.injector.get(PrTooltipDirective).text;
     };
 
-    it('binds the tooltip string on an AoW card Outcomes-band row that is cross-cutting', async () => {
+    /**
+     * ⚠️ INVERTED on 2026-09-09 (P2-3336 rule 1, PO). `RES-R-3` put this tooltip on a cross-cut row
+     * inside an AoW card. Such a row no longer reaches an AoW card at all — the host filters it in
+     * `dashboard-lab.indicatorsByAow()` — so the disjunct that read the stamp was unreachable and
+     * came out. `RES-R-1` survives: the tooltip still fires inside the Intermediate Outcomes card,
+     * keyed off the bucket kind alone (asserted in the sibling describe above).
+     *
+     * This component is presentational, so it still RENDERS whatever row it is handed; what it no
+     * longer does is disclose it as cross-cutting, because in an AoW card that is now a
+     * contradiction rather than a disclosure.
+     */
+    it('binds NO tooltip on an AoW card row, cross-cut stamp or not (RES-R-3 superseded)', async () => {
       await build([group([row({ __tier: 'outcome', __isIntermediateCrosscut: true })], { kind: 'aow' })]);
       openAow();
-      expect(targetTooltipText()).toBe(component.intermediateTargetTooltip);
+      expect(targetTooltipText()).toBe('');
     });
 
     it('binds an empty string on an AoW card Outcomes-band row that is NOT cross-cutting (AoW-exclusive)', async () => {
@@ -1395,16 +1561,27 @@ describe('ReportingAowTableComponent', () => {
       return fixture.debugElement.query(de => de.nativeElement === button).injector.get(PrTooltipDirective).text;
     };
 
-    it('A header reads "4 KPIs" and "0 of 3" — own Planned beside its own Counted ratio', async () => {
+    it('A header reads "4 KPIs" and "0 of 4" — own Planned beside its own Counted ratio', async () => {
       await build([groupA()]);
 
       const header = (fixture.nativeElement as HTMLElement).querySelector('section > button') as HTMLElement;
       const headerText = (header.textContent ?? '').replace(/\s+/g, ' ');
       expect(headerText).toContain('4 KPIs');
-      expect(headerText).toContain('0 of 3');
+      expect(headerText).toContain('0 of 4');
     });
 
-    it('still renders #901 and #902 in the Outcomes band, each with the RES-R-3 cross-cut tooltip', async () => {
+    /**
+     * ⚠️ AMENDED on 2026-09-09 (P2-3336 rule 1, PO). `KCR-AC-5` guaranteed that excluding cross-cut
+     * rows from the AoW's DENOMINATOR did not also drop them from the CARD. The PO has now dropped
+     * them from the card too — deliberately, one level up: `dashboard-lab.indicatorsByAow()` never
+     * puts them in an AoW bundle, so this fixture no longer describes anything the host can send.
+     *
+     * The half of KCR-AC-5 that is this component's business is unchanged and still asserted: the
+     * header pair (`4 KPIs` / `0 of 4`) is AoW-own, so it did not move. Kept as a rendering
+     * property of a presentational component: hand it such a row and it draws it, minus the
+     * superseded RES-R-3 disclosure.
+     */
+    it('renders a cross-cut row it is handed, but without the superseded RES-R-3 tooltip', async () => {
       await build([groupA()]);
       openAow('A');
 
@@ -1413,8 +1590,7 @@ describe('ReportingAowTableComponent', () => {
         'IO-1 Cross-cutting outcome one',
         'IO-2 Cross-cutting outcome two'
       ]);
-      outcomeRows.forEach(el => expect(targetTooltipOf(el)).toBe('This target is not exclusive to that AoW.'));
-      expect(component.intermediateTargetTooltip).toBe('This target is not exclusive to that AoW.');
+      outcomeRows.forEach(el => expect(targetTooltipOf(el)).toBe(''));
     });
 
     it('leaves the AoW-own output rows undisclosed — the tooltip marks cross-cuts, not every row', async () => {
@@ -1424,6 +1600,42 @@ describe('ReportingAowTableComponent', () => {
       const outputRows = Array.from(bandBody('High level outputs').querySelectorAll('.pr-reporting-row'));
       expect(outputRows.length).toBe(4);
       outputRows.forEach(el => expect(targetTooltipOf(el)).toBe(''));
+    });
+  });
+
+  /**
+   * P2-3336 rule 1, PO 2026-09-09. The Intermediate Outcomes card is now the ONLY place a
+   * work-package-less Intermediate Outcome appears, so it carries a line saying why it sits apart.
+   */
+  describe('the Intermediate Outcomes card explains itself', () => {
+    const bucket = (kind: 'intermediate' | '2030' | 'aow') =>
+      group([row()], {
+        aow: { code: kind === 'aow' ? 'AOW01' : `${kind}-outcomes`, name: 'Card' },
+        kind
+      } as any);
+
+    it('shows the note on the Intermediate Outcomes card', async () => {
+      await build([bucket('intermediate')]);
+      component.toggle('aow::intermediate-outcomes', false);
+      fixture.detectChanges();
+
+      expect(text()).toContain('These Intermediate Outcomes are not assigned to any AoW.');
+    });
+
+    it('shows it on NO other card — not an AoW, not 2030', async () => {
+      await build([bucket('aow'), bucket('2030')]);
+      component.toggle('aow::AOW01', false);
+      component.toggle('aow::2030-outcomes', false);
+      fixture.detectChanges();
+
+      expect(text()).not.toContain('not assigned to any AoW');
+    });
+
+    it('isIntermediateBucket is true only for the intermediate kind', async () => {
+      await build([bucket('intermediate')]);
+      expect(component.isIntermediateBucket(bucket('intermediate'))).toBe(true);
+      expect(component.isIntermediateBucket(bucket('2030'))).toBe(false);
+      expect(component.isIntermediateBucket(bucket('aow'))).toBe(false);
     });
   });
 

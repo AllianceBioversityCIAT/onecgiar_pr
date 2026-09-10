@@ -1048,6 +1048,48 @@ describe('InnovationDevInfoComponent', () => {
   });
 
   /**
+   * P2-3641, same epic and the same rule reaching one more block: the "Evidence of user
+   * need/user demand" uploader. It rides the P2-3263 threshold because the ticket declares itself a
+   * complement to it.
+   *
+   * 🛑 This block was gated on `isP25()` ALONE, which is the wrong question — it answers "which
+   * portfolio", and the P25 portfolio contains the 2025 phase too. Both conditions are required:
+   * the block never existed before P25, and from 2026 it is gone.
+   */
+  describe('P2-3641 — the "Evidence of user need/user demand" block', () => {
+    const render = (isP25: boolean, reduced: boolean) => {
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(isP25 as any);
+      jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(reduced as any);
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    };
+
+    const evidenceBlock = (el: HTMLElement) =>
+      Array.from(el.querySelectorAll('app-pr-field-header')).find(h =>
+        (h.getAttribute('label') ?? h.textContent ?? '').includes('Evidence of user need/user demand')
+      ) ?? el.querySelector('.evidences');
+
+    it('renders on a 2025-phase P25 result', () => {
+      expect(evidenceBlock(render(true, false))).toBeTruthy();
+    });
+
+    it('does not render from the 2026 phase on', () => {
+      expect(evidenceBlock(render(true, true))).toBeFalsy();
+    });
+
+    // Unchanged behaviour, kept as a guard: the block never belonged to P22 in the first place, so
+    // the new condition must not resurrect it there. One render per test — re-rendering the same
+    // fixture with different gate values trips NG0100.
+    it('does not render outside P25 on a pre-2026 phase', () => {
+      expect(evidenceBlock(render(false, false))).toBeFalsy();
+    });
+
+    it('does not render outside P25 from 2026 on either', () => {
+      expect(evidenceBlock(render(false, true))).toBeFalsy();
+    });
+  });
+
+  /**
    * P2-3272 / P2-3513, same epic P2-3243. From the 2026 phase the four Intellectual Property
    * questions are replaced by one consolidated question. Earlier phases must keep the four with
    * their stored answers — the epic's governing rule — so the two blocks are mutually exclusive
@@ -1317,7 +1359,14 @@ describe('InnovationDevInfoComponent', () => {
     beforeEach(() => {
       jest.spyOn(console, 'error').mockImplementation(() => undefined);
       // `buildSectionPayload()` also reads the P2-3550 gate, so the stub has to carry it.
-      (component as any).fieldsManagerSE = { isP25: () => true, isInnovationReferenceMaterialsRemoved2026: () => false };
+      (component as any).fieldsManagerSE = {
+        isP25: () => true,
+        isInnovationReferenceMaterialsRemoved2026: () => false,
+        // P2-3641 — `onSaveSection` now asks this before deciding whether to call the evidence
+        // endpoint, so the stub has to answer it. Defaults to a 2025-phase result, which is what
+        // every test in this block was written against.
+        isInnovationDevFormReduced2026: jest.fn(() => false)
+      };
       (component as any).api.dataControlSE.currentResult = { id: 1 };
       (component as any).innovationDevInfoBody = { innovation_nature_id: 1, innovatonUse: { organization: [] } };
       (component as any).evidencesBody = { evidences: [] };
@@ -1396,6 +1445,58 @@ describe('InnovationDevInfoComponent', () => {
       await component.onSaveSection();
 
       expect(mockApiService.alertsFe.show).not.toHaveBeenCalled();
+    });
+
+    /**
+     * P2-3641 — the AC is "Removal does not affect existing saved data from prior reporting
+     * cycles", and this is the test that enforces it. The evidence endpoint takes the whole array
+     * as the new truth: an empty one deactivates every stored evidence of the type. Hiding the
+     * block while still calling that endpoint would therefore delete data on the next save, so
+     * from 2026 the call is OMITTED — never sent empty.
+     */
+    describe('P2-3641 — the 2026 form does not touch the evidence endpoint at all', () => {
+      beforeEach(() => {
+        jest.spyOn(component as any, 'uploadPendingFiles').mockResolvedValue([]);
+        jest.spyOn(component as any, 'getSectionInformationp25').mockImplementation(() => undefined);
+      });
+
+      it('skips the evidence request and still saves the section fields', async () => {
+        jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(true as any);
+        const postEvidence = jest.spyOn(mockApiService.resultsSE, 'POST_createEvidenceDemandP25');
+        const patchSection = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDevP25');
+
+        await component.onSaveSection();
+
+        expect(postEvidence).not.toHaveBeenCalled();
+        expect(patchSection).toHaveBeenCalledTimes(1);
+        expect((component as any).savingSection).toBe(false);
+      });
+
+      // The negative control: without this, the test above would also pass if the evidence call
+      // had been deleted outright, which would break every 2025-phase result instead.
+      it('still calls it for a 2025-phase result', async () => {
+        jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(false as any);
+        const postEvidence = jest.spyOn(mockApiService.resultsSE, 'POST_createEvidenceDemandP25');
+        const patchSection = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDevP25');
+
+        await component.onSaveSection();
+
+        expect(postEvidence).toHaveBeenCalledTimes(1);
+        expect(patchSection).toHaveBeenCalledTimes(1);
+      });
+
+      // Wording: a 2026 user never sent an evidence request, so promising that "your evidence was
+      // stored" would send them looking for something that was never written.
+      it('does not claim the evidence was stored when the section fails in 2026', async () => {
+        jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(true as any);
+        mockApiService.resultsSE.PATCH_innovationDevP25 = () => throwError(() => new Error('500'));
+
+        await component.onSaveSection();
+
+        expect(lastAlert().status).toBe('error');
+        expect(lastAlert().description).not.toMatch(/evidence was stored/i);
+        expect((component as any).savingSection).toBe(false);
+      });
     });
   });
   /**

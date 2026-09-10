@@ -99,6 +99,7 @@ Si un disparador debería haber funcionado y no lo hizo, se arregla en el mismo 
 
 | Archivo | Qué contiene |
 |---|---|
+| **`2026-09-09-cadena-de-defectos-por-requisitos-incompletos.md`** | 🥇 **El inventario de lo que costó cada requisito incompleto**, con el defecto concreto que produjo cada hueco (petición de Yeck, 9-sep). El patrón raíz: **nunca se escribió un requisito del cambio de ronda**, y sus siete piezas se han descubierto de a una como bugs sueltos. Incluye los 19 meses invisibles de P2-3601, la pregunta que quedó huérfana tres veces, el ticket que no podía cerrarse nunca, y las tres cosas que pediría para que no se repita |
 | `orden-2026-08-26.md` | El alcance vigente: qué se ataca hoy, en qué orden, quién prueba |
 | `pre-planes.md` | Dónde vive el contexto verificado de cada actividad en Jira (par front/back) |
 | `conceptos.md` | El modelo mental del dominio: pool funding vs bilateral, tipos de resultado, manual vs IA |

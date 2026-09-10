@@ -117,10 +117,10 @@
               <span class="font-bold text-slate-800">{{ indicator()?.unit_messurament }}</span>
             </div>
           }
-          @if (indicator()?.type_name) {
+          @if (indicatorCategoryBadge()) {
             <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-50 text-gray-700 border border-gray-200 text-[12px] font-medium">
-              <span class="text-gray-500">Indicator type:</span>
-              <span class="font-bold text-gray-800">{{ indicator()?.type_name }}</span>
+              <span class="text-gray-500">Indicator category:</span>
+              <span class="font-bold text-gray-800">{{ indicatorCategoryBadge() }}</span>
             </div>
           }
         </div>

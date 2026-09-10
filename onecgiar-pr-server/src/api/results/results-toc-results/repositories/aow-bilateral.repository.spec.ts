@@ -60,7 +60,7 @@ describe('AoWBilateralRepository', () => {
       'PHASE-1',
     ]);
     expect(query).toContain(
-      'COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum',
+      'COALESCE(MAX(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum',
     );
     expect(query).toContain('GROUP BY');
     expect(query).toContain('ORDER BY tr.id ASC, tri.id ASC');
@@ -594,6 +594,34 @@ describe('AoWBilateralRepository', () => {
       expect(select).toContain('centers_concat');
     });
 
+    /**
+     * The half P2-3255 left behind. Collapsing the ROWS was only one side of it: the centre joins
+     * stay in the FROM, so the group still holds one row per centre, and `SUM(trit.target_value)`
+     * went on counting the same target once per centre. SP-13 KPI 1.3.3 (target 1, ten centres)
+     * kept reading 10 in production after the ticket shipped — same figure, new cause.
+     */
+    it('takes the target value with MAX, so the centre rows inside the group cannot inflate it', () => {
+      const { query } = buildQuery();
+      const select = query.slice(0, query.indexOf('FROM'));
+
+      expect(select).toContain(
+        'COALESCE(MAX(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum',
+      );
+      expect(select).not.toContain('SUM(CAST(trit.target_value');
+    });
+
+    it('still joins the centres it no longer groups by — which is WHY the aggregate cannot be SUM', () => {
+      const { query } = buildQuery();
+      const groupBy = query.slice(query.indexOf('GROUP BY'));
+
+      // These two facts together are the whole bug. If a later change drops the centre join, MAX
+      // and SUM become equivalent again and this test is what says the choice was never arbitrary.
+      expect(query).toContain(
+        'LEFT JOIN toc_test.toc_result_indicator_target_center tritc',
+      );
+      expect(groupBy).not.toContain('tritc.center_id');
+    });
+
     it('does not order by a column it no longer groups by', () => {
       const { query } = buildQuery();
 
@@ -756,6 +784,34 @@ describe('AoWBilateralRepository', () => {
       const indicator = result[0].indicators[0];
       expect(indicator.preliminary_achieved_value_sum).toBe(0);
       expect(indicator.preliminary_progress_percentage).toBe('0%');
+    });
+
+    /**
+     * The wrong fix for the 1.3.3 inflation, pinned so nobody ships it: overwriting the row's
+     * target with `getIndicatorContributions`' figure. That query sums ALL of an indicator's
+     * targets for the year (SP-13 KPI 1.3.1 = 2480 over 9 per-centre targets), while a row here is
+     * ONE target — the payload emits nine of them. Stamping the total on each would trade a 10x
+     * error on one KPI for a 9-row error on every multi-target one.
+     */
+    it('keeps each row on its own target value, never the indicator-wide total', async () => {
+      mockResolveContext();
+      dataSourceQueryMock
+        .mockResolvedValueOnce([
+          rowFor({ target_value_sum: 140, toc_indicator_target_id: 563493 }),
+          rowFor({ target_value_sum: 10, toc_indicator_target_id: 563504 }),
+          rowFor({ target_value_sum: 800, toc_indicator_target_id: 563526 }),
+        ])
+        .mockResolvedValueOnce([contributionFor({ target_value_sum: 2480 })]);
+
+      const result = await repository.findByCompositeCode(
+        'SP01',
+        'SP01-AOW01',
+        defaultContext,
+      );
+
+      expect(result[0].indicators.map((i: any) => i.target_value_sum)).toEqual([
+        140, 10, 800,
+      ]);
     });
 
     it('attaches the AC2 roll-up to every node', async () => {

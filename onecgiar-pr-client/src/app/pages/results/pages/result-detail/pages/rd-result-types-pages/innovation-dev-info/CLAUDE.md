@@ -1,6 +1,6 @@
 # innovation-dev-info
 
-**Verified:** 2026-09-03 · branch qa-development-2026-ss · `innovation-team-diversity/` now has completeness tracking (`isComplete` getter + `appFeedbackValidation` marker, matching its siblings) — see `docs/specs/bugfix/innovation-team-diversity-missing-alert/`.
+**Verified:** 2026-09-09 · branch performance-refactor · P2-3641 drops the "Evidence of user need/user demand" block from the 2026 form: its gate is no longer `isP25()` alone, and the evidence POST is now omitted instead of sent empty; prior: 2026-09-03 · `innovation-team-diversity/` completeness tracking.
 
 ## What it is
 The "Innovation Development" section of the result detail. It mixes **two sources** that are easy to
@@ -32,7 +32,7 @@ confuse: fields owned by the summary (`InnovationDevInfoBody`) and a **backend-s
 | `partners-policies-safeguards/` | questionnaire (q4 up to 2025) | ✅ `isP25()` + `!isInnovationDevFormReduced2026()` — P2-3467 |
 | `intellectual-property-rights/` | questionnaire (q1..q4) | ❌ none |
 | `innovation-team-diversity/` | questionnaire (question 112, 3 levels) | ❌ none |
-| `user-evidence/` | evidences (upload → `SharePointUploadService`) | ✅ `isP25()` |
+| `user-evidence/` | evidences (upload → `SharePointUploadService`) | ✅ `isP25()` + `!isInnovationDevFormReduced2026()` — P2-3641 |
 | `innovation-links/` | summary (`body.reference_materials`) | ✅ `!isInnovationReferenceMaterialsRemoved2026()` — P2-3550 |
 
 > Line numbers were removed on purpose (went stale twice) — search the selector in the template.
@@ -102,6 +102,14 @@ template, and the spec pins that neither ever renders alongside the other.
   with `[{ link: '' }]`. `buildSectionPayload()` destructures the key out — never send it empty, and
   assert the key is ABSENT, not `toBeUndefined()`. The `is_replicated` half means "not the first
   version", so a 2026-born result rolled to 2027 gets the block back (needs data we never send).
+- 🛑 **P2-3641 — same shape as P2-3550, different mechanism: the whole REQUEST is skipped, not a
+  key.** The evidence endpoint takes the array as the new truth, so an empty one deactivates every
+  stored type-6 evidence of the result (`evidences.service.ts` returns early on an empty array
+  straight into `updateEvidences(result_id, [], …)` → `UPDATE evidence SET is_active = 0`). Hiding
+  the block alone survives **only** because the GET still repopulates `evidencesBody`: tidy that
+  call away and every 2026 result loses its evidence on the next save. `onSaveSection` therefore
+  returns through `savePhaseP25SectionFields(false)` before the POST. The spec pins both directions
+  — skipped in 2026, still called in 2025.
 - ⚠️ **Orphan data in 2026, unmigrated by design:** `has_scaling_studies` / `scaling_studies_urls`
   are neither cleared nor migrated and still travel in the PATCH — per the PO ("Remove never means
   delete the data"), so the green-check AC depends entirely on the server-side SQL function.
@@ -119,8 +127,10 @@ template, and the spec pins that neither ever renders alongside the other.
   "2026 onwards" the correct gate is a `ReportingDesignYear` threshold over `phase_year` — prtest
   holds **phase-2025 results inside the P25 portfolio**, so a portfolio gate would strip the section
   from them and break the governing rule of epic P2-3243. Two gates with different meanings coexist
-  in this template: `assumptions-examination` still uses only `isP25()`, and
-  `partners-policies-safeguards` carries both.
+  in this template: `partners-policies-safeguards` and `user-evidence` (P2-3641) carry both, and
+  **`assumptions-examination` is now the only block left on `isP25()` alone** — which is exactly
+  what P2-3642 has to change, and why that ticket cannot be shipped by hiding the block: question
+  136 is a live block of `validation_innovation_dev_P25`, so the green check would never turn.
 - ⚠️ **The ungated blocks**: hiding one "for 2026" unwrapped also removes it from earlier phases.
 - ⚠️ **Questions ARE versioned by phase even though the HTML is not:** `result_questions.version` is `enum('P22','P25')` (`result-question.entity.ts:62-67`) and the `…V2` service methods filter
   `version: 'P25'`. Adding/removing a 2026 question = **a migration over P25 rows**, never a global
