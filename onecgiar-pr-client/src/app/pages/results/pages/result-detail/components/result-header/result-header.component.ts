@@ -11,8 +11,6 @@ import { ResultMetadataPanelService } from '../../../../../../shared/components/
 interface MetaRow {
   label: string;
   value: string;
-  /** Sin dato disponible todavía: la fila se muestra con la etiqueta `Coming soon`. */
-  pending?: boolean;
 }
 
 /** Owning Area of Work resolved from the primary / first planned submitter ToC mapping. */
@@ -231,31 +229,32 @@ export class ResultHeaderComponent implements DoCheck {
   }
 
   /**
-   * Las filas que el mockup pone en este popover: Center, Phase, Portfolio, Origin, Created by.
+   * Las filas que el mockup pone en este popover: Center, Phase, Portfolio, Created by.
    *
    * Ya NO repite Status / Level / Funding. Level y Funding siguen en la tira; Status, Code y
    * Category viven en el riel de secciones; el ⓘ va al lado del título.
    *
-   * Tres de las cinco no tienen dato en `GET /api/results/get/:id` y van marcadas `pending`:
-   *  · Center — el payload trae la Science Program (`initiative_*`), que es otra cosa;
-   *  · Origin — no existe ningún campo equivalente;
-   *  · Created by — sólo llega `created_by` como id numérico, sin forma de resolver el nombre.
-   * Se muestran igual, con la etiqueta `Coming soon`, porque esconderlas dejaría el popover
-   * mintiendo por omisión sobre lo que la pantalla va a ofrecer.
+   * `Origin` se cayó del cuadro por decisión del PO (P2-3458, 10-sep-2026): era el Funding Source,
+   * que ya vive en la tira de identidad como `Funding`, así que la fila repetía el dato.
+   *
+   * Center y Created by ya llegan en `GET /api/results/get/:id` (`lead_center` y
+   * `created_by_name`). **Ninguna fila queda con `Coming soon`**: la que no trae dato simplemente
+   * no se pinta — un centro sólo existe cuando el resultado tiene uno marcado como líder, y el PO
+   * pidió expresamente que no quedara nada anunciado y vacío.
    */
   get metaRows(): MetaRow[] {
     const result = this.dataControlSE.currentResult;
     const phase = result?.phase_name ?? '';
     const portfolio = result?.portfolio ?? '';
-    return [
-      { label: 'Center', value: '', pending: true },
+    const rows: MetaRow[] = [
+      { label: 'Center', value: (result?.lead_center ?? '').trim() },
       { label: 'Phase', value: [phase, portfolio].filter(Boolean).join(' - ') },
       // El acrónimo, que es el dato real. El mockup escribe el nombre largo ("CGIAR Portfolio
       // 2025-2030") y el payload no lo trae: inventar la cadena sería escribir contenido.
       { label: 'Portfolio', value: portfolio },
-      { label: 'Origin', value: '', pending: true },
-      { label: 'Created by', value: '', pending: true }
+      { label: 'Created by', value: (result?.created_by_name ?? '').trim() }
     ];
+    return rows.filter(row => !!row.value);
   }
 
   /**

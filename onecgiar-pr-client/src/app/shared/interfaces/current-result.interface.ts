@@ -17,6 +17,10 @@ export interface CurrentResult {
   status_id?: string | number;
   status_name?: string;
   created_by?: number;
+  /** Display name of the creator, resolved server-side from `created_by` (P2-3458). */
+  created_by_name?: string;
+  /** Acronym of the lead center, when one is flagged for the result (P2-3458). */
+  lead_center?: string;
   last_updated_by?: number;
   reported_year_id?: number;
   created_date?: string;

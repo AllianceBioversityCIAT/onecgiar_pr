@@ -103,11 +103,17 @@ está excluido de Jest, su gate son los Cypress CT.
   con el handle en JetBrains Mono). No se implementó porque el dato no está: `GET /api/results/:id`
   no devuelve handle ni nada de CGSpace, y la interfaz `Result` solo tiene un `handler` que es
   otra cosa. Hace falta confirmar de dónde sale antes de construirlo.
-- **El popover del ⓘ tiene 3 filas en `Coming soon`** → P2-3458 (asignado a Ángel). `Center`,
-  `Origin` y `Created by` no llegan en `GET /api/results/get/:id` — `created_by` sólo viene como
-  id numérico, sin forma de resolver el nombre. `Portfolio` muestra el acrónimo (`P25`): el
-  mockup escribe el nombre largo y el payload no lo trae, así que inventarlo sería redactar
-  contenido. Verificado leyendo `currentResult` en vivo (49 claves) el 24-ago-2026.
+- ~~**El popover del ⓘ tiene 3 filas en `Coming soon`**~~ → **resuelto en P2-3458** (10-sep-2026,
+  decisión del PO). `Origin` se quitó del cuadro: era el Funding Source, que ya sale en la tira de
+  identidad. `Created by` y `Center` ahora llegan en `GET /api/results/get/:id` como
+  `created_by_name` (join a `users`) y `lead_center` (subconsulta escalar
+  `results_center` → `clarisa_center` → `clarisa_institutions`, con
+  `is_leading_result = 1 OR is_primary = 1`). **Ya no queda ningún `Coming soon` en el cuadro**: la
+  fila sin dato no se pinta. ⚠️ Medido en prtest el 10-sep-2026: los resultados P25 nuevos
+  (11607, 11610) tienen centros contribuyentes pero **ninguno marcado como líder**, así que la
+  fila `Center` no sale para ellos — es el "en algunos casos" que dijo el PO, no un bug.
+  `Portfolio` sigue mostrando el acrónimo (`P25`): el mockup escribe el nombre largo y el payload
+  no lo trae, así que inventarlo sería redactar contenido.
 - **Falta `sectionName`** en la tira de identidad, entre el nivel y el funding (el mockup lo pone bajo `pg.showSectionName`).
 - Cards individuales por sección, como el mockup — sin ticket todavía.
 - **Los Impact Area scores siguen siendo 5 bloques sueltos.** El mockup los presenta como UNA tabla

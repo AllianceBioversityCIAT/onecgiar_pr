@@ -1583,7 +1583,48 @@ WHERE
         clarisa_portfolios cp
       WHERE
         cp.id = v.portfolio_id
-    ) AS portfolio
+    ) AS portfolio,
+    /*
+     * Display name of the user who created the result. \`r.created_by\` alone is a numeric id the
+     * client cannot resolve. Same \`users\` lookup the results list already does
+     * (\`AllResultsByRoleUserAndInitiativeFiltered\`, \`create_first_name\` / \`create_last_name\`),
+     * collapsed into one string here because the metadata popover shows one line. Empty when the
+     * user row is gone: never a bare id, never a fabricated name. (P2-3458)
+     */
+    (
+      SELECT
+        NULLIF(
+          TRIM(
+            CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))
+          ),
+          ''
+        )
+      FROM
+        users u
+      WHERE
+        u.id = r.created_by
+    ) AS created_by_name,
+    /*
+     * Lead center, when one is recorded. Same definition the rest of the server uses
+     * (\`is_leading_result = 1 OR is_primary = 1\`, see the \`lead_centers\` CTE in
+     * \`getResultsByProgramAndCenters\`) and the same two hops the name needs:
+     * \`results_center\` -> \`clarisa_center\` -> \`clarisa_institutions\`. A scalar subquery, not a
+     * join, so a result with several contributing centers still returns exactly one row.
+     * NULL when no center is flagged as the lead — the popover hides the line. (P2-3458)
+     */
+    (
+      SELECT
+        COALESCE(NULLIF(TRIM(ci2.acronym), ''), ci2.name)
+      FROM
+        results_center rc
+        INNER JOIN clarisa_center cc ON cc.code = rc.center_id
+        INNER JOIN clarisa_institutions ci2 ON ci2.id = cc.institutionId
+      WHERE
+        rc.result_id = r.id
+        AND rc.is_active = 1
+        AND (rc.is_leading_result = 1 OR rc.is_primary = 1)
+      LIMIT 1
+    ) AS lead_center
 FROM
     \`result\` r
     inner join result_level rl on rl.id = r.result_level_id 
