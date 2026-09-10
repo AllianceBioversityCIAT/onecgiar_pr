@@ -2,7 +2,7 @@
 <div class="segment">
     <app-pr-field-header
         [label]="'Estimation of total USD-value of investment by CGIAR Programs during the reporting period'"
-        [description]="headerDescriptions().n1" [useColon]="false"></app-pr-field-header>
+        [tooltip]="headerDescriptions().n1" [useColon]="false"></app-pr-field-header>
     <table [style]="!body.investment_programs?.length ? 'margin-bottom: 5px;' : null" aria-label="Table showing estimation of total USD-value of investment by CGIAR Programs during the reporting period">
         <tr>
             <th>Entity</th>
@@ -40,7 +40,7 @@
 <div class="segment">
     <app-pr-field-header
         label="Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period"
-        [description]="headerDescriptions().n2" [useColon]="false"></app-pr-field-header>
+        [tooltip]="headerDescriptions().n2" [useColon]="false"></app-pr-field-header>
 
     <table style="margin-bottom: 5px;" aria-label="Table showing estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period">
         <tr>
@@ -81,7 +81,7 @@
 @if (shows('partners')) {
 <div class="segment">
     <app-pr-field-header label="Estimated total USD-value of (co-)investment by partners during the reporting period"
-        [description]="headerDescriptions().n3" [useColon]="false"></app-pr-field-header>
+        [tooltip]="headerDescriptions().n3" [useColon]="false"></app-pr-field-header>
 
     <table style="margin-bottom: 5px;" aria-label="Table showing Estimated total USD-value of (co-)investment by partners during the reporting period">
         <tr>

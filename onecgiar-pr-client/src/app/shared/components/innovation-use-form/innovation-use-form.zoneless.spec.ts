@@ -78,7 +78,16 @@ describe('InnovationUseFormComponent (zoneless change detection) — validateYou
           provide: FieldsManagerService,
           // P2-3537 §7: the template calls the age-fallback gate on every render, so a mock
           // without it throws before any assertion runs.
-          useValue: { isP25: () => false, isInnovationUse2030Projection2026: () => false, isInnovationUseAgeFallback2026: () => false }
+          useValue: {
+            isP25: () => false,
+            isInnovationUse2030Projection2026: () => false,
+            isInnovationUseAgeFallback2026: () => false,
+            // quick/innovation-use-descriptions-boxed: template reads these two descriptions for the boxed alert-status note.
+            fields: () => ({
+              '[innovation-use-form]-core-innovation': { description: 'Depending on the innovation, users may be groups of actors or be organizations.' },
+              '[innovation-use-form]-2030-to-be-determined': { description: 'Depending on the innovation, users may be groups of actors or be organizations.' }
+            })
+          }
         },
         { provide: InnovationControlListService, useValue: { readinessLevelsList: [] } }
       ],
