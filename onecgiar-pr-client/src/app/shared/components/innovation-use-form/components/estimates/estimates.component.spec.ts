@@ -33,15 +33,27 @@ describe('EstimatesCgiarComponent', () => {
   });
 
   it('onRadioChange should clear kind_cash when is_determined is true', () => {
+    const changed = jest.spyOn(component.changed, 'emit');
     const item: any = { is_determined: true, kind_cash: 100 };
     component.onRadioChange(item);
     expect(item.kind_cash).toBeNull();
+    expect(changed).toHaveBeenCalled();
   });
 
   it('onInputChange should clear is_determined when kind_cash has value', () => {
+    const changed = jest.spyOn(component.changed, 'emit');
     const item: any = { is_determined: true, kind_cash: 250 };
     component.onInputChange(item);
     expect(item.is_determined).toBeNull();
+    expect(changed).toHaveBeenCalled();
+  });
+
+  it('keeps W1/W2 defaults and exposes bilateral as an optional selectable section', () => {
+    expect(component.shows('programs')).toBe(true);
+    expect(component.shows('bilateral')).toBe(true);
+    expect(component.isRequired('bilateral')).toBe(false);
+    component.requiredSections = ['bilateral'];
+    expect(component.isRequired('bilateral')).toBe(true);
   });
 
   describe('checkValueAlert', () => {
@@ -58,5 +70,4 @@ describe('EstimatesCgiarComponent', () => {
     });
   });
 });
-
 
