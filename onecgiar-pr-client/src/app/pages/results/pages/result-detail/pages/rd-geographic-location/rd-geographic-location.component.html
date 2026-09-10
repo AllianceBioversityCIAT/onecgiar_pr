@@ -14,10 +14,8 @@
 
   <app-geoscope-management
     [description]="
-      this.fieldsManagerSE.isP25() && this.fieldsManagerSE.isAnInnovation()
-        ? this.fieldsManagerSE.isGeographicLocation2026()
-          ? 'Geographic focus refers to the country, region, or global area where this result is reasonably expected to create benefit — directly or through partners.'
-          : 'This should reflect geographies where the innovation development, testing and/or use has taken place'
+      this.fieldsManagerSE.isP25() && this.fieldsManagerSE.isAnInnovation() && !this.fieldsManagerSE.isGeographicLocation2026()
+        ? 'This should reflect geographies where the innovation development, testing and/or use has taken place'
         : undefined
     "
     [label]="geographicFocusLabel()"

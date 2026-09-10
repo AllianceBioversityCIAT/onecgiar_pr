@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { LabReportFormComponent } from './lab-report-form.component';
@@ -170,6 +171,121 @@ describe('LabReportFormComponent', () => {
       expect(template).toContain('@if (needsResultLevelChoice())');
       expect(template).toContain('data-testid="emerging-result-level-chooser"');
       expect(template).not.toMatch(/reporting phase|phase picker|name="phase"/i);
+    });
+  });
+
+  describe('ERC-T-2: full-catalogue-direct fallback when there is no ToC data', () => {
+    const centersCatalogue = [
+      { code: 'ABC', name: 'Alliance of Bioversity and CIAT', acronym: 'ABC', institutionId: 100 },
+      { code: 'CIP', name: 'International Potato Center', acronym: 'CIP', institutionId: 101 }
+    ];
+    const scienceCatalogue = [
+      { id: 201, official_code: 'SP01', full_name: 'Science Program 1' },
+      { id: 202, official_code: 'SP02', full_name: 'Science Program 2' }
+    ];
+
+    it('reports no ToC reference centers/science and exposes the full catalogue via the otherX computeds (emerging, tocNode: null)', async () => {
+      await setup(
+        { emergingMode: true, emergingCategory: null, indicator: null, tocNode: null },
+        { centersService: { getData: () => Promise.resolve(), centersList: centersCatalogue, centers: signal(centersCatalogue) } }
+      );
+      component.allInitiatives.set(scienceCatalogue);
+
+      // Pre-fix, `hasReferenceCenters`/`hasReferenceScience` do not exist on the component at all —
+      // this assertion is the red-before-green-after seam for the bug.
+      expect(component.hasReferenceCenters()).toBe(false);
+      expect(component.hasReferenceScience()).toBe(false);
+
+      // The bug: `dropdown1Options()`/`dropdown1ScienceOptions()` carry ONLY the `Other(s)` sentinel
+      // when there is no ToC data — that is exactly what must NOT be what the template binds to in
+      // this branch.
+      expect(component.dropdown1Options()).toEqual([component.otherCentersSentinel]);
+      expect(component.dropdown1ScienceOptions().map((sp: any) => sp.id)).toEqual([component.OTHER_SP_ID]);
+
+      // The fix: the full catalogue is available directly through the already-existing computeds.
+      expect(component.otherCentersList().map((c: any) => c.code)).toEqual(['ABC', 'CIP']);
+      expect(component.otherScienceList().map((sp: any) => sp.id)).toEqual([201, 202]);
+    });
+
+    it('regression: a node with ToC data still reports reference centers/science (ToC + Other(s) split unchanged)', async () => {
+      await setup(
+        {
+          indicator: indicator(),
+          tocNode: {
+            result_level_id: OUTPUT_LEVEL,
+            toc_partner_institution_ids: [100],
+            contributing_synergy_program_initiative_ids: [201]
+          }
+        },
+        { centersService: { getData: () => Promise.resolve(), centersList: centersCatalogue, centers: signal(centersCatalogue) } }
+      );
+      component.allInitiatives.set(scienceCatalogue);
+      // `loadInitiatives()` already ran (during setup's `detectChanges`) against the default empty
+      // `GET_AllInitiatives` mock, so the ToC preselection it computes reflects an empty catalogue.
+      // Setting `allInitiatives` afterwards does not retroactively re-run that preselection — mirror
+      // it directly, exactly as `loadInitiatives()` would have with this catalogue in place.
+      component.tocSciencePrograms.set(scienceCatalogue.filter((sp: any) => sp.id === 201).map((sp: any) => ({ ...sp, from_toc: true })));
+      await component.preselectCentersP;
+
+      expect(component.hasReferenceCenters()).toBe(true);
+      expect(component.hasReferenceScience()).toBe(true);
+      expect(component.tocCenters().map((c: any) => c.code)).toEqual(['ABC']);
+      expect(component.tocSciencePrograms().map((sp: any) => sp.id)).toEqual([201]);
+      expect(component.dropdown1Options().some((c: any) => c.code === component.OTHER_CENTERS_CODE)).toBe(true);
+      expect(component.dropdown1ScienceOptions().some((sp: any) => sp.id === component.OTHER_SP_ID)).toBe(true);
+    });
+
+    it('binds the primary Centers and Science Programs controls to the full catalogue in the real template (no lone Other(s) entry)', async () => {
+      const localApi = makeApiMock();
+      localApi.resultsSE.GET_AllInitiatives = jest.fn().mockReturnValue(of({ response: scienceCatalogue }));
+      const resultLevelSigLocal = signal<any[]>([]);
+      const outputOutcomeLevelsSigLocal = computed(() => {
+        const levels = resultLevelSigLocal();
+        return levels.length < 4 ? [] : levels.slice(2, 4).reverse();
+      });
+      const centersMock = { getData: () => Promise.resolve(), centersList: centersCatalogue, centers: signal(centersCatalogue) };
+
+      await TestBed.configureTestingModule({
+        imports: [LabReportFormComponent],
+        providers: [
+          { provide: ApiService, useValue: localApi },
+          { provide: CentersService, useValue: centersMock },
+          { provide: ResultLevelService, useValue: { resultLevelListSig: resultLevelSigLocal, outputOutcomeLevelsSig: outputOutcomeLevelsSigLocal } },
+          { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
+        ],
+        schemas: [NO_ERRORS_SCHEMA]
+      }).compileComponents();
+
+      const fix = TestBed.createComponent(LabReportFormComponent);
+      fix.componentRef.setInput('initiativeId', 42);
+      fix.componentRef.setInput('canReport', true);
+      fix.componentRef.setInput('emergingMode', true);
+      fix.componentRef.setInput('emergingCategory', null);
+      fix.componentRef.setInput('indicator', null);
+      fix.componentRef.setInput('tocNode', null);
+      fix.detectChanges();
+      await fix.whenStable();
+      fix.detectChanges();
+
+      const comp = fix.componentInstance;
+      expect(comp.hasReferenceCenters()).toBe(false);
+      expect(comp.hasReferenceScience()).toBe(false);
+
+      const multiSelects = fix.debugElement.queryAll(By.css('app-pr-multi-select'));
+      const centersControl = multiSelects.find(de => de.attributes['name'] === 'centers');
+      const scienceControl = multiSelects.find(de => de.attributes['name'] === 'science');
+
+      expect(centersControl).toBeTruthy();
+      expect(scienceControl).toBeTruthy();
+
+      const centersOptions = centersControl!.componentInstance.options();
+      const scienceOptions = scienceControl!.componentInstance.options();
+
+      expect(centersOptions.map((c: any) => c.code)).toEqual(['ABC', 'CIP']);
+      expect(centersOptions.some((c: any) => c.code === comp.OTHER_CENTERS_CODE)).toBe(false);
+
+      expect(scienceOptions.map((sp: any) => sp.id)).toEqual([201, 202]);
+      expect(scienceOptions.some((sp: any) => sp.id === comp.OTHER_SP_ID)).toBe(false);
     });
   });
 

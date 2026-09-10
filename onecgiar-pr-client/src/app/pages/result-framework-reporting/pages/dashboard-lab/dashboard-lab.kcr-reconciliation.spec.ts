@@ -379,16 +379,35 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
     expect(component.plannedReportingSummaryStats().totalKpis).toBe(COUNTED_IDS.length);
   });
 
-  // ── Visibility preserved (KCR-R-7 / the scenario's last AND clause) ───────────────────────────
-  it('still renders #901 and #902 inside A\'s and B\'s Outcomes band, stamped as cross-cuts', async () => {
+  // ── Visibility (KCR-R-7 / the scenario's last AND clause) ────────────────────────────────────
+  /**
+   * ⚠️ INVERTED on 2026-09-09 (P2-3336 rule 1, PO). KCR-R-7 kept #901/#902 visible inside A's and
+   * B's Outcomes band because, at the time, showing a programme-level Intermediate Outcome under
+   * every AoW was the agreed behaviour (P2-3336 rule 2, with a "not exclusive" note). The PO
+   * withdrew that rule — those cases do not exist — so the nodes now live only in the Intermediate
+   * Outcomes card.
+   *
+   * What KCR actually guaranteed survives untouched and is asserted below: the KPI universe still
+   * counts them exactly once, in the Intermediate bucket, and no total moves. Only their duplicate
+   * rendering inside each AoW is gone.
+   */
+  it('no longer renders #901 and #902 inside A\'s or B\'s Outcomes band', async () => {
     const component = await createComponent();
 
     const groups = groupByAowCode(component);
     const crosscutIdsIn = (code: string) =>
       (groups[code].indicators ?? []).filter(row => row.__isIntermediateCrosscut === true).map(row => row.indicator_id);
 
-    expect(crosscutIdsIn('A')).toEqual([901, 902]);
-    expect(crosscutIdsIn('B')).toEqual([901, 902]);
+    expect(crosscutIdsIn('A')).toEqual([]);
+    expect(crosscutIdsIn('B')).toEqual([]);
+  });
+
+  it('still counts #901 and #902 exactly once, in the Intermediate bucket (KCR-R-1 unchanged)', async () => {
+    const component = await createComponent();
+
+    const chips = byCode(component.overviewXcutProgress());
+    expect(chips[INTERMEDIATE_OUTCOMES_CODE].total).toBe(2);
+    expect(component.plannedReportingSummaryStats().totalKpis).toBe(COUNTED_IDS.length);
   });
 
   // ── Reported predicate (KCR-R-9, both scenario clauses) ──────────────────────────────────────

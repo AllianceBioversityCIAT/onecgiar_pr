@@ -332,6 +332,13 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     return deliveries.find(delivery => delivery.partner_delivery_type_id == deliveryId);
   }
 
+  // PRL-R-1/PRL-R-2 (docs/specs/changes/partner-role-exclusive-selection): true when `Other` (id 4) is
+  // the active Partner role on this row AND the id being checked is NOT `Other` itself — `Other`'s own
+  // button is never blocked. Pure/read-only, safe to call from the template every change-detection pass.
+  isRoleBlockedByOther(deliveries, deliveryId: number) {
+    return deliveryId !== 4 && !!this.validateDeliverySelectionPartners(deliveries, 4);
+  }
+
   onSelectContributingInitiative() {
     this.partnersBody?.contributing_initiatives.accepted_contributing_initiatives.forEach((resp: any) => {
       const contributorFinded = this.partnersBody.contributors_result_toc_result?.find((result: any) => result?.initiative_id === resp.id);
@@ -345,6 +352,12 @@ export class RdContributorsAndPartnersService implements OnDestroy {
 
   onSelectDeliveryPartners(option, deliveryId: number) {
     if (this.api.rolesSE.readOnly) return;
+    // PRL-R-2 (docs/specs/changes/partner-role-exclusive-selection): while `Other` is active, clicking
+    // Scaling/Demand/Innovation is a no-op. PRL-DD-2: the "remove Other" branch below never runs for
+    // this blocked case anymore (this guard returns first) but stays in place — it is still correct and
+    // needed for the legitimate "Other not active" path (e.g. stripping a stray Other entry after a
+    // data-load edge case).
+    if (this.isRoleBlockedByOther(option.delivery, deliveryId)) return;
 
     const index = option.delivery.findIndex(delivery => delivery.partner_delivery_type_id === deliveryId);
 

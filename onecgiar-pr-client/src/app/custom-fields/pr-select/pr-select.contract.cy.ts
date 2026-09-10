@@ -21,6 +21,18 @@ const OPTIONS = [
   { code: 'C3', full_name: 'IFPRI' }
 ];
 
+// PSEL-T-3 (spec: custom-fields/pr-select-hide-search-under-five-options) hides the dropdown's
+// search box below 5 selectable options. `OPTIONS` above has only 3, so the two search-specific
+// tests below need a 5+ item fixture to keep exercising `.search_input_container` at all — the
+// 3-item fixture is intentionally left untouched everywhere else in this file.
+const SEARCHABLE_OPTIONS = [
+  { code: 'C1', full_name: 'Alliance Bioversity-CIAT' },
+  { code: 'C2', full_name: 'IWMI' },
+  { code: 'C3', full_name: 'IFPRI' },
+  { code: 'C4', full_name: 'ILRI' },
+  { code: 'C5', full_name: 'CIMMYT' }
+];
+
 /** The shape used by the majority of the 53 consumers. */
 const FIELD = `
   <app-pr-select
@@ -207,8 +219,10 @@ describe('PrSelectComponent — contract', () => {
     });
 
     it('filters the visible options without touching the model', () => {
+      // PSEL-T-3: needs 5+ options — the search box is hidden under threshold, so this must use
+      // `SEARCHABLE_OPTIONS`, not the 3-item `OPTIONS` this suite otherwise mounts everywhere.
       mountCFHost(FIELD, {
-        componentProperties: { options: OPTIONS, value: 'C1', required: false },
+        componentProperties: { options: SEARCHABLE_OPTIONS, value: 'C1', required: false },
         editable: true
       });
 
@@ -221,8 +235,9 @@ describe('PrSelectComponent — contract', () => {
     });
 
     it('restores the full list when the search is cleared', () => {
+      // PSEL-T-3: needs 5+ options — see note above.
       mountCF(FIELD, {
-        componentProperties: { options: OPTIONS, value: null, required: false },
+        componentProperties: { options: SEARCHABLE_OPTIONS, value: null, required: false },
         editable: true
       });
 
