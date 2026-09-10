@@ -122,8 +122,7 @@
         @if (activeTab.indicators[0].related_node_id) {
           <div>
             <!-- P2-3036 (AC7): contribution-to-target is mandatory in 2026 (red asterisk). -->
-            <app-pr-field-header label="Contribution to indicator target" [required]="isCP2026()"></app-pr-field-header>
-            <app-alert-status status="info" [description]="contributionTargetNote()" inlineStyles="margin: 0; margin-bottom: 10px !important;"></app-alert-status>
+            <app-pr-field-header label="Contribution to indicator target" [required]="isCP2026()" [tooltip]="contributionTargetNote()"></app-pr-field-header>
             <!-- P2-3036 (AC7): 2025 keeps Unit/Target here; 2026 renders them grouped under Indicator Tipology above. -->
             @if (!isCP2026()) {
               <div style="margin: 8px 0" *ngIf="selectedIndicatorData()">

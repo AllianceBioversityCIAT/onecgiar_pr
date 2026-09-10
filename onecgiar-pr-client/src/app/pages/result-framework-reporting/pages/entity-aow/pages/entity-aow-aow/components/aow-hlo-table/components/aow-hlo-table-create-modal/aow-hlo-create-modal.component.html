@@ -206,15 +206,20 @@
         <div class="separator"></div>
 
         <div>
-          <app-pr-field-header label="Contribution to indicator target" [required]="false" [labelDescInlineStyles]="'margin-top: 0 !important'">
+          <app-pr-field-header
+            label="Contribution to indicator target"
+            [required]="false"
+            [labelDescInlineStyles]="'margin-top: 0 !important'"
+            [tooltip]="
+              'Indicate in this box the numerical value that your result contributes toward the ' +
+              entityAowService.reportingPhaseYear +
+              ' target of the indicator.<br><br><strong>Example:</strong> If the ' +
+              entityAowService.reportingPhaseYear +
+              ' indicator target is 200 (people trained) and your result (e.g., a capacity-sharing activity) provides evidence of 90 people trained, enter <strong>90</strong> in this box.<br><br>The values entered here will be aggregated at the end of the reporting cycle to assess progress toward the planned ' +
+              entityAowService.reportingPhaseYear +
+              ' target for the indicator.'
+            ">
           </app-pr-field-header>
-
-          <app-alert-status
-            status="info"
-            description="Indicate in this box the numerical value that your result contributes toward the {{ entityAowService.reportingPhaseYear }} target of the indicator.<br>
-            <br><strong>Example:</strong> If the {{ entityAowService.reportingPhaseYear }} indicator target is 200 (people trained) and your result (e.g., a capacity-sharing activity) provides evidence of 90 people trained, enter <strong>90</strong> in this box.<br>
-            <br>The values entered here will be aggregated at the end of the reporting cycle to assess progress toward the planned {{ entityAowService.reportingPhaseYear }} target for the indicator."
-            inlineStyles="margin: 0; margin-bottom: 10px !important;"></app-alert-status>
 
           <input
             type="number"
@@ -230,7 +235,7 @@
         <div>
           @if (hasReferenceCenters()) {
             <!-- QA 2026-07-14: ToC parity info note, identical wording to rd-contributors-and-partners. -->
-            <app-alert-status [description]="contributingCentersInfoNote"></app-alert-status>
+            <app-alert-status [description]="contributingCentersInfoNote" [collapsible]="false"></app-alert-status>
             <app-pr-multi-select
               [options]="dropdown1Options()"
               label="Contributing CGIAR Centers"
@@ -307,7 +312,7 @@
           <!-- P2-3114: Contributing Science Programs split into "from ToC" (dropdown 1) + "Other(s)" (dropdown 2). -->
           @if (hasReferenceScience()) {
             <!-- QA 2026-07-14: ToC parity info note, identical wording to rd-contributors-and-partners. -->
-            <app-alert-status [description]="contributingScienceInfoNote"></app-alert-status>
+            <app-alert-status [description]="contributingScienceInfoNote" [collapsible]="false"></app-alert-status>
             <app-pr-filter-multiselect
               [options]="dropdown1ScienceOptions()"
               optionLabel="sp_label"
