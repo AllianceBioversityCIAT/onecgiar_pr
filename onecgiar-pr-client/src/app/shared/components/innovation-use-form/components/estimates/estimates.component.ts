@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../../custom-fields/custom-fields.module';
@@ -27,6 +27,19 @@ import { FeedbackValidationDirectiveModule } from '../../../../directives/feedba
 export class EstimatesCgiarComponent {
     @Input() body: any = {};
     @Input() disabled: boolean = false;
+    /** Defaults preserve the W1/W2 form: all three optional investment tables. */
+    @Input() sections: Array<'programs' | 'bilateral' | 'partners'> = ['programs', 'bilateral', 'partners'];
+    /** P2-3428 uses only the W3/bilateral-project table as an MDS. */
+    @Input() requiredSections: Array<'programs' | 'bilateral' | 'partners'> = [];
+    @Output() changed = new EventEmitter<void>();
+
+    shows(section: 'programs' | 'bilateral' | 'partners'): boolean {
+        return this.sections.includes(section);
+    }
+
+    isRequired(section: 'programs' | 'bilateral' | 'partners'): boolean {
+        return this.requiredSections.includes(section);
+    }
 
     headerDescriptions() {
         const n1 = `<ul>
@@ -62,11 +75,13 @@ export class EstimatesCgiarComponent {
         if (item.is_determined) {
             item.kind_cash = null;
         }
+        this.changed.emit();
     }
 
     onInputChange(item: any) {
         if (item.kind_cash) {
             item.is_determined = null;
         }
+        this.changed.emit();
     }
 }

@@ -24,6 +24,7 @@
           '?'
         : 'Select regions'
     "
+    [tooltip]="this.body.has_regions !== false || this.body.geo_scope_id == 2 ? this.thereAnyText(false) : null"
     [hideOptions]="this.body.geo_scope_id != 1"
     [(ngModel)]="this.body.has_regions"
     [required]="!(this.body.geo_scope_id != 2)">
@@ -32,7 +33,7 @@
 @if (this.body?.geo_scope_id && (this.body.geo_scope_id == 2 || this.body.has_regions)) {
   <app-pr-multi-select
     [options]="this.regionsCountriesSE.regionsList"
-    [description]="this.body.has_regions !== false || this.body.geo_scope_id == 2 ? this.thereAnyText(false) : null"
+    [tooltip]="this.internalModule.name === 'reporting' ? null : this.body.has_regions !== false || this.body.geo_scope_id == 2 ? this.thereAnyText(false) : null"
     [label]="this.internalModule.name === 'reporting' ? null : this.readOnly ? 'Regions(s) selected' : 'Select regions'"
     selectedLabel="Regions(s) selected"
     [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct"
@@ -62,7 +63,7 @@
 @if (this.body?.geo_scope_id && (this.includesScope([5, 3]) || (this.body.has_countries && this.internalModule.name === 'reporting'))) {
   <app-pr-multi-select
     [options]="this.regionsCountriesSE.countriesList"
-    [description]="this.body.has_countries !== false || this.body.geo_scope_id == 3 ? this.thereAnyText(true) : null"
+    [tooltip]="this.body.has_countries !== false || this.body.geo_scope_id == 3 ? this.thereAnyText(true) : null"
     [label]="this.readOnly ? 'Countries selected' : 'Select countries'"
     selectedLabel="Countries selected"
     [selectedOptionLabel]="!this.includesScope([5, 50]) ? 'name' : ''"

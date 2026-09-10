@@ -40,6 +40,7 @@ import { VersionRepository } from '../../../api/versioning/versioning.repository
 import { GlobalParameterRepository } from '../../../api/global-parameter/repositories/global-parameter.repository';
 import { ClarisaCentersRepository } from '../../../clarisa/clarisa-centers/clarisa-centers.repository';
 import { ClarisaCenter } from '../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
+import { RoleLevelId } from '../role/role-level-id.enum';
 
 @Injectable()
 export class UserService {
@@ -865,9 +866,18 @@ export class UserService {
     cgIAR?: 'Yes' | 'No';
     status?: 'Active' | 'Inactive' | 'Read Only';
     entityIds?: number[];
+    platformRoleIds?: number[];
+    reportingRoleIds?: number[];
   }) {
     try {
-      const { user, cgIAR, status, entityIds } = filters;
+      const {
+        user,
+        cgIAR,
+        status,
+        entityIds,
+        platformRoleIds,
+        reportingRoleIds,
+      } = filters;
       const query = this._userRepository
         .createQueryBuilder('users')
         .leftJoin(
@@ -1013,6 +1023,57 @@ export class UserService {
             return 'users.id IN ' + subQuery;
           },
           { entityIds },
+        );
+      }
+
+      /**
+       * P2-2043 - Platform role.
+       *
+       * The Application-level role is what the SELECT already exposes as `appRole`, but that column
+       * is a MAX() over the grouped rows, so it cannot be filtered in a WHERE. The subquery matches
+       * the same thing at row level instead: an ACTIVE role_by_user row whose role sits at the
+       * Application level and is one of the selected ones.
+       */
+      if (platformRoleIds && platformRoleIds.length > 0) {
+        query.andWhere(
+          (qb) => {
+            const subQuery = qb
+              .subQuery()
+              .select('rbu_plat.user')
+              .from('role_by_user', 'rbu_plat')
+              .innerJoin('role', 'rol_plat', 'rol_plat.id = rbu_plat.role')
+              .where('rbu_plat.role IN (:...platformRoleIds)')
+              .andWhere('rol_plat.role_level_id = :platformLevelId')
+              .andWhere('rbu_plat.active = 1')
+              .getQuery();
+            return 'users.id IN ' + subQuery;
+          },
+          { platformRoleIds, platformLevelId: RoleLevelId.APPLICATION },
+        );
+      }
+
+      /**
+       * P2-2043 - Reporting role.
+       *
+       * Initiative-level roles are held per entity, so a user can hold several. This matches users
+       * holding AT LEAST ONE of the selected roles, which is how the Entity filter right above
+       * behaves and what the chips in the UI say ("Reporting role: Lead, Member" reads as either).
+       */
+      if (reportingRoleIds && reportingRoleIds.length > 0) {
+        query.andWhere(
+          (qb) => {
+            const subQuery = qb
+              .subQuery()
+              .select('rbu_rep.user')
+              .from('role_by_user', 'rbu_rep')
+              .innerJoin('role', 'rol_rep', 'rol_rep.id = rbu_rep.role')
+              .where('rbu_rep.role IN (:...reportingRoleIds)')
+              .andWhere('rol_rep.role_level_id = :reportingLevelId')
+              .andWhere('rbu_rep.active = 1')
+              .getQuery();
+            return 'users.id IN ' + subQuery;
+          },
+          { reportingRoleIds, reportingLevelId: RoleLevelId.INITIATIVE },
         );
       }
 

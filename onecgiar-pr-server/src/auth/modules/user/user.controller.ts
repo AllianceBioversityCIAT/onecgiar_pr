@@ -30,6 +30,19 @@ import {
 import { ChangeUserStatusDto } from './dto/change-user-status.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
+/**
+ * P2-2043: the search endpoint takes three comma-separated id lists. `filter(Boolean)` is what the
+ * entityIds parsing already did and it is kept deliberately - it drops both NaN (a non-numeric
+ * segment) and 0, and no id in these catalogues is 0.
+ */
+const parseIdList = (raw?: string): number[] | undefined =>
+  raw
+    ? raw
+        .split(',')
+        .map((id) => Number(id.trim()))
+        .filter(Boolean)
+    : undefined;
+
 @ApiTags('Users')
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -184,19 +197,20 @@ export class UserController {
     @Query('cgIAR') cgIAR?: 'Yes' | 'No',
     @Query('status') status?: 'Active' | 'Inactive' | 'Read Only',
     @Query('entityIds') entityIdsRaw?: string,
+    @Query('platformRoleIds') platformRoleIdsRaw?: string,
+    @Query('reportingRoleIds') reportingRoleIdsRaw?: string,
   ) {
-    const entityIds = entityIdsRaw
-      ? entityIdsRaw
-          .split(',')
-          .map((id) => Number(id.trim()))
-          .filter(Boolean)
-      : undefined;
+    const entityIds = parseIdList(entityIdsRaw);
+    const platformRoleIds = parseIdList(platformRoleIdsRaw);
+    const reportingRoleIds = parseIdList(reportingRoleIdsRaw);
 
     const result = await this.userService.searchUsers({
       user,
       cgIAR,
       status,
       entityIds,
+      platformRoleIds,
+      reportingRoleIds,
     });
 
     if (result.response.length === 0) {

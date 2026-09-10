@@ -1,7 +1,7 @@
 <div class="local_container">
   <div class="pr-h3">Key result story</div>
 
-  <app-alert-status [description]="alertInformation()"> </app-alert-status>
+  <app-alert-status [collapsible]="false" [description]="alertInformation()"> </app-alert-status>
 
   <app-no-data-text title="There is no information for this Initiative." *ngIf="!this.tablesList.length"></app-no-data-text>
 

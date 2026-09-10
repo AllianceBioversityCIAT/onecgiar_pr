@@ -251,11 +251,11 @@ describe('TypeInnovationUseComponent', () => {
 
       // Same reason as the sibling section (P2-3355): publishing no checklist at all leaves the section
       // at "0/0 fields", which reads as "nothing required here" instead of as incomplete.
-      it('still publishes the three unfilled MDS items, so the section stays honestly incomplete', () => {
+      it('still publishes the four unfilled MDS items, so the section stays honestly incomplete', () => {
         failLoad();
         build();
         const fields = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
-        expect(fields.map((f: any) => f.key)).toEqual(['use-actors', 'use-measures', 'use-level']);
+        expect(fields.map((f: any) => f.key)).toEqual(['use-actors', 'use-measures', 'use-level', 'use-investment']);
         expect(fields.every((f: any) => f.filled === false)).toBe(true);
       });
     });
@@ -486,7 +486,7 @@ describe('TypeInnovationUseComponent', () => {
     };
     const INVESTMENT = {
       key: 'use-investment',
-      label: 'Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period',
+      label: 'Investment by CGIAR W3 or bilateral projects',
     };
 
     const lastFields = () => mdsTracker.setSectionFields.mock.calls.at(-1)[1];
@@ -499,6 +499,7 @@ describe('TypeInnovationUseComponent', () => {
         { ...ACTORS, filled: false },
         { ...MEASURES, filled: false },
         { ...LEVEL, filled: false },
+        { ...INVESTMENT, filled: false },
       ]);
     });
 
@@ -506,7 +507,7 @@ describe('TypeInnovationUseComponent', () => {
       build();
       component.body = { innov_use_to_be_determined: true };
       component.updateMds();
-      expect(lastFields().map((f: any) => f.key)).toEqual(['use-actors', 'use-measures', 'use-level']);
+      expect(lastFields().map((f: any) => f.key)).toEqual(['use-actors', 'use-measures', 'use-level', 'use-investment']);
     });
 
     it('AC4 — counts Actors as satisfied when the use is to be determined, with no actor added', () => {
@@ -573,20 +574,17 @@ describe('TypeInnovationUseComponent', () => {
       expect(lastFields()).toContainEqual({ ...LEVEL, filled: true });
     });
 
-    // P2-3390 (9-sep-2026) — REPLACES the 26-ago-2026 lock that pinned a disabled `Coming soon` amount
-    // here. The single amount had nowhere to be stored; investment is per ENTITY, so the section now
-    // renders the same three tables W1/W2 does, inside the full metadata, and the placeholder input is
-    // gone. It stays OPTIONAL and out of the MDS by PO decision — see the tracker test below.
-    it('AC8 / P2-3390 — renders the three investment tables in the full metadata, not a disabled amount', () => {
+    it('P2-3428 — renders bilateral investment as MDS and optional Program/Partner tables as full metadata', () => {
       const html = readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
 
-      expect(html).toContain('<app-estimates-cgiar [body]="body" [disabled]="loaded() !== true">');
+      expect(html).toContain("[sections]=\"['bilateral']\"");
+      expect(html).toContain("[requiredSections]=\"['bilateral']\"");
+      expect(html).toContain("[sections]=\"['programs', 'partners']\"");
       // The old placeholder and its tag are gone for good.
       expect(html).not.toContain('body.investment_bilateral_usd');
       expect(html).not.toContain('use-investment-coming-soon');
       expect(html).not.toContain('Not available yet');
-      // And the tables live BELOW the full-metadata toggle, never in the always-visible MDS block.
-      expect(html.indexOf('mdsInfoNote')).toBeLessThan(html.indexOf('<app-estimates-cgiar'));
+      expect(html.indexOf("[sections]=\"['bilateral']\"")).toBeLessThan(html.indexOf('mdsInfoNote'));
     });
 
     it('P2-3390 — sends the three investment arrays in the payload', () => {
@@ -630,27 +628,32 @@ describe('TypeInnovationUseComponent', () => {
       expect(payload).not.toHaveProperty('investment_bilateral_usd');
     });
 
-    // 🛑 DO NOT "fix" this by adding the item back.
-    // P2-3390 (9-sep-2026) — the amount IS persisted now, in three tables, so the old reason
-    // ("no column on the server") is obsolete. The item still must not be published: the PO decided
-    // investment is OPTIONAL and lives in the full metadata, and AC16 forbids anything revealed by the
-    // toggle from counting. Publishing it would raise the bar Submit is gated on
-    // (`overallStatus() === 'complete'`) for every bilateral Innovation Use result.
-    it('does NOT publish use-investment to the MDS tracker — optional by PO decision (P2-3390)', () => {
+    it('P2-3428 — publishes bilateral investment to the MDS tracker', () => {
       build();
-      component.body = { investment_bilateral_usd: 15000 };
+      component.body = { investment_bilateral: [{ kind_cash: 15000, is_determined: null }] };
       component.updateMds();
-      expect(lastFields().map((f: any) => f.key)).toEqual(['use-actors', 'use-measures', 'use-level']);
-      expect(lastFields().some((f: any) => f.key === INVESTMENT.key)).toBe(false);
+      expect(lastFields()).toContainEqual({ ...INVESTMENT, filled: true });
     });
 
-    it('AC14 — the published MDS fields alone are enough to complete the section', () => {
+    it('accepts an explicit yet-to-be-determined answer and rejects zero or blank investment', () => {
+      build();
+      component.body = { investment_bilateral: [{ kind_cash: null, is_determined: true }] };
+      component.updateMds();
+      expect(lastFields()).toContainEqual({ ...INVESTMENT, filled: true });
+
+      component.body = { investment_bilateral: [{ kind_cash: 0, is_determined: null }] };
+      component.updateMds();
+      expect(lastFields()).toContainEqual({ ...INVESTMENT, filled: false });
+    });
+
+    it('P2-3428 — all four MDS fields are needed to complete the section', () => {
       build();
       component.body = {
         innov_use_to_be_determined: false,
         actors: [{ actor_type_id: 1, is_active: true }],
         measures: [{ unit_of_measure: 'ha', quantity: 3, is_active: true }],
         innovation_use_level_id: '6',
+        investment_bilateral: [{ kind_cash: 500, is_determined: null }],
       };
       component.updateMds();
       expect(lastFields().every((f: any) => f.filled)).toBe(true);
@@ -1029,7 +1032,7 @@ describe('TypeInnovationUseComponent', () => {
       component.updateMds();
       const keys = mdsTracker.setSectionFields.mock.calls.at(-1)[1].map((f: any) => f.key);
       expect(keys).not.toContain('innovation-link');
-      expect(keys).toHaveLength(3);
+      expect(keys).toHaveLength(4);
     });
 
     it('hydrates the single selection out of the stored linked_results list', () => {

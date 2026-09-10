@@ -45,6 +45,7 @@ import { ResultByIntitutionsRepository } from '../../results/results_by_institut
 import { ResultsKnowledgeProductsRepository } from '../../results/results-knowledge-products/repositories/results-knowledge-products.repository';
 import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
+import { InnovationUseMdsValidator } from './innovation-use-mds-validator.service';
 
 @Injectable()
 export class BilateralCenterService {
@@ -71,6 +72,7 @@ export class BilateralCenterService {
     private readonly resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
     private readonly shareResultRequestRepository: ShareResultRequestRepository,
+    private readonly innovationUseMdsValidator: InnovationUseMdsValidator,
   ) {}
 
   async getProjects(centerId: number) {
@@ -1140,6 +1142,10 @@ export class BilateralCenterService {
       throw new BadRequestException(
         'The result has no Science Program assigned. Select a Science Program before submitting for review.',
       );
+    }
+
+    if (result.result_type_id === ResultTypeEnum.INNOVATION_USE) {
+      await this.innovationUseMdsValidator.assertPersistedMds(parsedResultId);
     }
 
     await this.resultRepository.manager.transaction(async (manager) => {

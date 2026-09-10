@@ -77,6 +77,8 @@ import { TemplateRepository } from '../platform-report/repositories/template.rep
 import { NotificationModule } from '../notification/notification.module';
 import { BilateralWebhookController } from './bilateral-webhook.controller';
 import { BilateralWebhookService } from './services/bilateral-webhook.service';
+import { SummaryModule } from '../results/summary/summary.module';
+import { InnovationUseMdsValidator } from './services/innovation-use-mds-validator.service';
 
 @Module({
   imports: [
@@ -121,6 +123,7 @@ import { BilateralWebhookService } from './services/bilateral-webhook.service';
     ClarisaPolicyTypesModule,
     ClarisaPolicyStagesModule,
     InnovationUseModule,
+    SummaryModule,
     ResultsByInititiativesModule,
     ShareResultRequestModule,
     PathwayModule,
@@ -152,6 +155,7 @@ import { BilateralWebhookService } from './services/bilateral-webhook.service';
     BilateralService,
     BilateralProjectsService,
     BilateralCenterService,
+    InnovationUseMdsValidator,
     KnowledgeProductBilateralHandler,
     CapacityChangeBilateralHandler,
     InnovationDevelopmentBilateralHandler,

@@ -3,10 +3,10 @@
        ⓘ of the section heading (published from the component into `currentResultSectionGuidance`).
        Every other result type and every earlier phase keeps this grey box exactly as it was. -->
   @if (!policyChangeGuidanceAsTooltip()) {
-    <app-alert-status [description]="alertStatus()"> </app-alert-status>
+    <app-alert-status [collapsible]="false" [description]="alertStatus()"> </app-alert-status>
   }
 
-  <app-alert-status *ngIf="isOptional" description="No evidence is required for innovations that are at innovation readiness level 0 (idea).">
+  <app-alert-status *ngIf="isOptional" [collapsible]="false" description="No evidence is required for innovations that are at innovation readiness level 0 (idea).">
   </app-alert-status>
 
   @if (this.api.dataControlSE.currentResult?.result_type_id === 7 && !validateHasInnoReadinessLevelEvidence()) {

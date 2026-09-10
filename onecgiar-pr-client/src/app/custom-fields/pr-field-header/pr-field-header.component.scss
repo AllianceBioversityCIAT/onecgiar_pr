@@ -12,10 +12,28 @@
 }
 
 // P2-3061: label + info icon row (only used when a tooltip is provided)
+// ITR-T-10: `.pr_label` (custom-fields.scss, global) carries `margin-top: 20px; margin-bottom: 6px`
+// authored for the STANDALONE label case. Reused here as a flex sibling of the icon button, that
+// asymmetric margin inflates `.pr_label`'s flex margin-box far past the icon's 18x18 box, so
+// `align-items: center` (which centers each item's MARGIN box) visually lowers the label text
+// relative to the icon. Fix: own the spacing at the ROW level instead (identical values, so the
+// row's spacing relative to whatever precedes/follows it is unchanged) and zero it out on the
+// nested `.pr_label` below — `.pr_label_row .pr_label` (2 classes) is more specific than the bare
+// `.pr_label` (1 class) regardless of source order, so this wins without `::ng-deep`: both selectors
+// resolve inside this component's own emulated-encapsulation template (the `.pr_label` div here is
+// declared directly in pr-field-header's own HTML, not projected), so Angular scopes both sides of
+// `.pr_label_row .pr_label` with the same `_ngcontent` attribute and it matches normally.
 .pr_label_row {
   display: flex;
   align-items: center;
   gap: 4px;
+  margin-top: 20px;
+  margin-bottom: 6px;
+
+  .pr_label {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
 }
 
 .pr_label_tooltip {

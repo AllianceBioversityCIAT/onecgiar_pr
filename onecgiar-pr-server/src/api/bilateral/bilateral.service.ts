@@ -283,6 +283,8 @@ export class BilateralService {
 
         const bilateralDto = result.data;
 
+        await this.runResultTypePreflight(bilateralDto);
+
         // Validate science_program_id BEFORE starting the transaction
         await this.validateTocMappingInitiatives(
           bilateralDto.toc_mapping,
@@ -4105,6 +4107,14 @@ export class BilateralService {
       bilateralDto: context.bilateralDto,
       isDuplicateResult: context.isDuplicateResult,
     });
+  }
+
+  private async runResultTypePreflight(
+    bilateralDto: CreateBilateralDto,
+  ): Promise<void> {
+    const handler = this.resultTypeHandlerMap.get(bilateralDto.result_type_id);
+    if (!handler?.validateBeforeCreate) return;
+    await handler.validateBeforeCreate({ bilateralDto });
   }
 
   private async ensureUniqueTitle(title: string, versionId: number) {

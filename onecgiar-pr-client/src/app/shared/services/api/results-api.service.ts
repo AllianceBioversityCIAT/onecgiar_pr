@@ -342,6 +342,29 @@ export class ResultsApiService {
     return firstValueFrom(this.http.put<any>(link, file, options));
   }
 
+  /**
+   * Uploads ONE byte range of an existing upload session.
+   *
+   * P2-3318 — Microsoft Graph refuses any single upload request of 60 MiB or more
+   * ("the maximum bytes in any given request is less than 60 MiB",
+   * https://learn.microsoft.com/en-us/graph/api/driveitem-createuploadsession), while the evidence
+   * forms advertise and validate files up to 1 GB. `PUT_loadFileInUploadSession` sends the whole
+   * file as one request, so anything that big — a PowerPoint deck is the usual one — could never
+   * arrive. Large files come through here instead, one fragment per call, in order.
+   *
+   * Graph answers every fragment but the last with 202 and no driveItem, so only the response of
+   * the final call carries `webUrl`/`id`/`name`.
+   */
+  PUT_loadFileFragmentInUploadSession(fragment: Blob, link: string, start: number, end: number, total: number) {
+    const options = {
+      headers: new HttpHeaders({
+        'Content-Type': 'application/octet-stream',
+        'Content-Range': `bytes ${start}-${end}/${total}`
+      })
+    };
+    return firstValueFrom(this.http.put<any>(link, fragment, options));
+  }
+
   GET_loadFileInUploadSession(link) {
     return firstValueFrom(this.http.get<any>(link));
   }
@@ -1353,19 +1376,28 @@ export class ResultsApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/change/status`, body);
   }
 
-  GET_searchUser(search?: string, cgIAR?: 'Yes' | 'No' | '', status?: 'Active' | 'Inactive' | 'Read Only' | '', entityIds?: number[]) {
+  GET_searchUser(
+    search?: string,
+    cgIAR?: 'Yes' | 'No' | '',
+    status?: 'Active' | 'Inactive' | 'Read Only' | '',
+    entityIds?: number[],
+    platformRoleIds?: number[],
+    reportingRoleIds?: number[]
+  ) {
     const queryParams: string[] = [];
 
     if (search) queryParams.push(`user=${search}`);
     if (cgIAR) queryParams.push(`cgIAR=${cgIAR}`);
     if (status) queryParams.push(`status=${status}`);
-    // Convert array of objects to array of ids if needed
 
-    if (entityIds.length) {
-      const entityIdArray =
-        Array.isArray(entityIds) && entityIds.length && typeof entityIds[0] === 'object' ? entityIds.map((item: any) => item.id) : entityIds;
-      queryParams.push(`entityIds=${entityIdArray.map(id => id.toString()).join(',')}`);
-    }
+    // The multiselects hand back either ids or whole option objects depending on the control, so both
+    // shapes are normalised before they reach the query string.
+    const toIdList = (values?: any[]): string =>
+      (values ?? []).map(value => (value && typeof value === 'object' ? value.id : value)).join(',');
+
+    if (entityIds?.length) queryParams.push(`entityIds=${toIdList(entityIds)}`);
+    if (platformRoleIds?.length) queryParams.push(`platformRoleIds=${toIdList(platformRoleIds)}`);
+    if (reportingRoleIds?.length) queryParams.push(`reportingRoleIds=${toIdList(reportingRoleIds)}`);
 
     const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
     return this.http.get<any>(`${environment.apiBaseUrl}auth/user/search${queryString}`);
@@ -1379,8 +1411,14 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
   }
 
-  GET_roles() {
-    return this.http.get<any>(`${environment.apiBaseUrl}auth/role`);
+  /**
+   * P2-2043: `levelId` selects the role level. Omitted, the server keeps answering the Initiative
+   * roles it has always answered (Lead / Co-Lead / Coordinator / Member), so every existing caller
+   * is untouched. Level 1 returns the Platform roles (Admin / Guest).
+   */
+  GET_roles(levelId?: number) {
+    const query = levelId ? `?levelId=${levelId}` : '';
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/role${query}`);
   }
   PATCH_changeUserStatus(body: any) {
     return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/change/status`, body);
