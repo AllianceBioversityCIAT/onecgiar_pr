@@ -152,7 +152,7 @@
   </div>
 
   <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
-    <app-alert-status class="flex-1" status="info" [description]="mdsInfoNote"></app-alert-status>
+    <app-alert-status class="flex-1" status="info" [collapsible]="false" [description]="mdsInfoNote"></app-alert-status>
     <button type="button" class="tsf-save-btn shrink-0" (click)="toggleShowAll()">
       {{ showAllFields() ? 'Hide full metadata' : 'Complete full metadata' }}
     </button>

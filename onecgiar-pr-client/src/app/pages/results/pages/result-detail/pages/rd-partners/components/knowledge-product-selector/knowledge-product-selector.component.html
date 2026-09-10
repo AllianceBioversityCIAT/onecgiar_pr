@@ -1,6 +1,7 @@
-<app-alert-status [description]="alertStatusMessage"> </app-alert-status>
+<app-alert-status [collapsible]="false" [description]="alertStatusMessage"> </app-alert-status>
 
 <app-alert-status
+  [collapsible]="false"
   [description]="
     'If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in ' +
     sourceLabel +
@@ -10,6 +11,7 @@
 
 <app-alert-status
   *ngIf="!this.api.rolesSE.readOnly"
+  [collapsible]="false"
   description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
 </app-alert-status>
 

@@ -372,7 +372,6 @@ export class LabReportFormComponent {
   });
   /** ERC-T-2: science-programs counterpart of `hasReferenceCenters`. */
   readonly hasReferenceScience = computed(() => this.tocSciencePrograms().length > 0);
-
   readonly leadCenterAcronym = computed(() => (this.indicator()?.center_acronym ?? '').trim().toUpperCase() || null);
 
   constructor() {
