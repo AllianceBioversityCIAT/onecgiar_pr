@@ -11,13 +11,14 @@
 
   <app-alert-status
     *ngIf="this.api.dataControlSE.isKnowledgeProduct"
+    [collapsible]="false"
     description="In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
   </app-alert-status>
 
   <!-- P2-3201 (INC-158283): the AI assistant note renders once, between "Change result type" and
        "Title of Result", so it covers both the title and the description field. 2026 portfolio only. -->
   @if (guidanceAsTooltip()) {
-    <app-alert-status [description]="aiAssistantTitlesNote" icon="auto_awesome"></app-alert-status>
+    <app-alert-status [collapsible]="false" [description]="aiAssistantTitlesNote" icon="auto_awesome"></app-alert-status>
   }
 
   <!-- P2-3201: from 2026 the guidance leaves the grey "Description" box and becomes an ⓘ tooltip
@@ -60,7 +61,7 @@
   <!-- P2-3201: the AI-assisted notification sits above the heading and covers the whole section.
        Static block by explicit request — not collapsible, no "How it works" link. 2026 only. -->
   @if (guidanceAsTooltip()) {
-    <app-alert-status [description]="aiImpactAreaScoresNote" icon="auto_awesome"></app-alert-status>
+    <app-alert-status [collapsible]="false" [description]="aiImpactAreaScoresNote" icon="auto_awesome"></app-alert-status>
   }
 
   <!-- P2-3201: from 2026 the 0/1/2 scoring guidance moves into an ⓘ tooltip on the heading so the
@@ -80,7 +81,7 @@
     </h1>
   } @else {
     <h1 class="pr_label">Impact Area scores:</h1>
-    <app-alert-status [description]="impactAreaScoresInfo()"> </app-alert-status>
+    <app-alert-status [collapsible]="false" [description]="impactAreaScoresInfo()"> </app-alert-status>
   }
 
   <!-- Reusable template for the Impact Area component checkboxes (P25).

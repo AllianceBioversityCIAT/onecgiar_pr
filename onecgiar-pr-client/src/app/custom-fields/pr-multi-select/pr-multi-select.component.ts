@@ -29,6 +29,8 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   readonly nextSelectedLabel = input<string>();
   readonly selectedOptionLabel = input<string>();
   readonly description = input<string>();
+  // ITR-R-32: optional info tooltip rendered next to the label (forwarded to app-pr-field-header).
+  readonly tooltip = input<string>('');
   readonly readOnly = input<boolean>();
   readonly hideSelect = input<boolean>(false);
   readonly isStatic = input<boolean>(false);

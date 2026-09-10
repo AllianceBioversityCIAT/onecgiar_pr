@@ -1,5 +1,5 @@
 <div class="detail_container" [appSectionSkeleton]="rdPartnersSE.sectionLoading()">
-  <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage"> </app-alert-status>
+  <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [collapsible]="false" [description]="alertStatusMessage"> </app-alert-status>
 
   <!-- ! Submitter: shown in ALL reporting phases. Removed in the 2026 redesign (P2-3036 Level 2) but restored by business decision (Nicoleta / Santi) — it must not be phase-gated. changePrimaryInit is still set in the service, so save is unaffected. -->
   @if (this.rdPartnersSE.getConsumed()) {
@@ -41,10 +41,9 @@
     [required]="!isAvisaInitiative() && !isCP2026()"
     [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
     (selectOptionEvent)="onPlannedResultChange(this.rdPartnersSE.partnersBody?.result_toc_result)"
-    [readOnly]="isAvisaInitiative()">
+    [readOnly]="isAvisaInitiative()"
+    [tooltip]="tocQuestionInfoNote()">
   </app-pr-yes-or-not>
-
-  <app-alert-status [description]="tocQuestionInfoNote()"> </app-alert-status>
 
   @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== null) {
     <!-- P2-3063 / P2-3036 AC6 (2026, unplanned): mandatory Yes/No "financial resources" radio + info note.
@@ -54,10 +53,9 @@
         label="Did the Program invest financial resources in the achievement of this result?"
         [required]="true"
         [hideDescription]="true"
-        [(ngModel)]="programInvestedFinancialResources">
+        [(ngModel)]="programInvestedFinancialResources"
+        [tooltip]="financialResourcesInfoNote">
       </app-pr-yes-or-not>
-
-      <app-alert-status [description]="financialResourcesInfoNote"></app-alert-status>
 
       <!-- Hidden marker so the single radio counts in the section's mandatory-field validation. -->
       <div
@@ -99,7 +97,7 @@
   <!-- P2-2998 / P2-3036 (2026): Contributing CGIAR Centers split into "from ToC" + "Other(s)". SAVE NOT ADDRESSED YET. -->
   @if (isCP2026() && this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== false) {
     @if (hasReferenceCenters()) {
-      <app-alert-status [description]="contributingCentersInfoNote"></app-alert-status>
+      <app-alert-status [description]="contributingCentersInfoNote" [collapsible]="false"></app-alert-status>
 
       <app-pr-multi-select
         data-testid="cp-field-contributing_center"
@@ -238,7 +236,6 @@
        the open dropdown list isn't painted under later positioned siblings (bilateral-projects
        loading overlay, Science Program note). -->
   <div class="mt-16" style="position: relative; z-index: 3">
-    <app-alert-status [description]="getMessageLeadCenter()"></app-alert-status>
     @if (!this.rdPartnersSE.updatingLeadData) {
       <app-pr-select
         data-testid="cp-field-contributing_center~lead"
@@ -251,7 +248,8 @@
         optionValue="code"
         placeholder="Select a lead center..."
         [showClear]="true"
-        [readOnly]="this.api.rolesSE.readOnly">
+        [readOnly]="this.api.rolesSE.readOnly"
+        [tooltip]="getMessageLeadCenter()">
       </app-pr-select>
     }
   </div>
@@ -388,7 +386,7 @@
          reachable: the Other(s) full-catalog dropdown at the bottom of this block auto-activates whenever
          hasReferenceScience() is false, mapped or not. -->
     @if (hasReferenceScience() && this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== false) {
-      <app-alert-status [description]="contributingScienceInfoNote"></app-alert-status>
+      <app-alert-status [description]="contributingScienceInfoNote" [collapsible]="false"></app-alert-status>
 
       <!-- Node with Science Programs from the ToC: main dropdown with the pre-selected SP + the "Other(s)" option. -->
       <app-pr-multi-select
@@ -498,7 +496,7 @@
 
   <!-- P2-3171 (AC5): External Partners are inherited from the HLO/Outcome level in the ToC. P25 (2026) only. -->
   @if (isCP2026()) {
-    <app-alert-status [description]="externalPartnersInfoNote"></app-alert-status>
+    <app-alert-status [description]="externalPartnersInfoNote" [collapsible]="false"></app-alert-status>
   }
   <app-knowledge-product-selector *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-knowledge-product-selector>
   <app-normal-selector></app-normal-selector>

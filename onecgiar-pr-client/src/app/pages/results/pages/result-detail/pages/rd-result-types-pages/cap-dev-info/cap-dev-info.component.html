@@ -1,5 +1,5 @@
 <div class="detail_container" [appSectionSkeleton]="sectionLoading()">
-  <app-alert-status description="Please fill in the following required fields for this indicator category."> </app-alert-status>
+  <app-alert-status [collapsible]="false" description="Please fill in the following required fields for this indicator category."> </app-alert-status>
   <app-pr-field-header label="Number of people trained" [description]="peopleTrainedDesc"> </app-pr-field-header>
   <!-- In the case where the gender balance of trainees is not known (e.g. online training), assume 50-50 split. -->
   <!-- P2-3241: the four counts are `[required]="true"` because the green check does NOT come from the

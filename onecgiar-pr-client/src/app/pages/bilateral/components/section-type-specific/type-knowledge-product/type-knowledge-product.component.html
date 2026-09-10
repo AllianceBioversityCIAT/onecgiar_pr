@@ -20,11 +20,13 @@
     <!-- Server-generated warnings first: they say what is missing in the repository record, so they
          belong above the questions the user is about to answer. -->
     @for (warning of body.warnings; track warning) {
-      <app-alert-status [description]="warning"></app-alert-status>
+      <app-alert-status [collapsible]="false" [description]="warning"></app-alert-status>
     }
     <app-alert-status
+      [collapsible]="false"
       description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in {{ sourceName }}. Before the end of the reporting period, metadata will be automatically refreshed on this page."></app-alert-status>
     <app-alert-status
+      [collapsible]="false"
       description="Some information in this section is automatically collected from external sources such as the Web of Science, Scopus, and Unpaywall using the DOI (Digital Object Identifier) linked to this knowledge product in {{ sourceName }}. In the case of any discrepancies, the CGIAR Quality Assurance team will manually validate the record."></app-alert-status>
 
     <!-- ── MELIA: the only editable block in this section ───────────────────────────────── -->
