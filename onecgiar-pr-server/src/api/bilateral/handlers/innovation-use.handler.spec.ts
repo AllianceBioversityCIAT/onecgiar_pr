@@ -41,6 +41,7 @@ describe('InnovationUseBilateralHandler', () => {
   let innovationUseServiceStub: any;
   let useLevelRepoStub: any;
   let actorTypeRepoStub: any;
+  let mdsValidatorStub: any;
 
   beforeEach(() => {
     innovationUseServiceStub = {
@@ -69,10 +70,20 @@ describe('InnovationUseBilateralHandler', () => {
       ),
       find: jest.fn().mockResolvedValue(ACTOR_TYPES),
     };
+    // P2-3428 added InnovationUseMdsValidator as the handler's fourth dependency and this spec was
+    // still constructing it with three, so the backend test stage failed to compile (TS2554) and
+    // took the whole shared build with it. Stubbed as a no-op on purpose: what the validator does is
+    // covered by innovation-use-mds-validator.service.spec.ts, and letting it run here would make
+    // every case in this file depend on MDS rules it is not testing.
+    mdsValidatorStub = {
+      assertExternalCreateMds: jest.fn().mockResolvedValue(undefined),
+      assertPersistedMds: jest.fn().mockResolvedValue(undefined),
+    };
     handler = new InnovationUseBilateralHandler(
       innovationUseServiceStub,
       useLevelRepoStub,
       actorTypeRepoStub,
+      mdsValidatorStub,
     );
   });
 

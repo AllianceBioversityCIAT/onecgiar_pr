@@ -4,6 +4,7 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { Repository } from 'typeorm';
 import { Role } from './entities/role.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+import { RoleLevelId } from './role-level-id.enum';
 
 @Injectable()
 export class RoleService {
@@ -20,12 +21,22 @@ export class RoleService {
     }
   }
 
-  async findAll(): Promise<{ id: number; descripcion: string }[]> {
+  /**
+   * P2-2043: the level is now a parameter so the User Management filters can ask for the
+   * Application-level roles (Admin / Guest) as well as the Initiative-level ones.
+   *
+   * The default stays 2 (Initiative) ON PURPOSE: every existing caller - the role dropdowns in the
+   * manage-user modal among them - calls this with no argument and must keep receiving exactly the
+   * same list it received before. This extends the endpoint, it does not change it.
+   */
+  async findAll(
+    levelId: number = RoleLevelId.INITIATIVE,
+  ): Promise<{ id: number; descripcion: string }[]> {
     return this._roleRepository
       .createQueryBuilder('role')
       .select(['role.id', 'role.description'])
       .where('role.active = :active', { active: true })
-      .andWhere('role.role_level_id = :levelId', { levelId: 2 })
+      .andWhere('role.role_level_id = :levelId', { levelId })
       .getRawMany();
   }
 

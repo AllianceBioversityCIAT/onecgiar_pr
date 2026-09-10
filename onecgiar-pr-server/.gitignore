@@ -35,6 +35,8 @@ lerna-debug.log*
 !.vscode/extensions.json
 
 .env
+.env.*
+.env.bak*
 
 #Lambda
 .build

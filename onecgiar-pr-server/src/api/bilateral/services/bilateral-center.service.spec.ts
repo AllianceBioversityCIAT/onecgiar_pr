@@ -25,6 +25,7 @@ import { ResultByIntitutionsRepository } from '../../results/results_by_institut
 import { ResultsKnowledgeProductsRepository } from '../../results/results-knowledge-products/repositories/results-knowledge-products.repository';
 import { ShareResultRequestRepository } from '../../results/share-result-request/share-result-request.repository';
 import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
+import { InnovationUseMdsValidator } from './innovation-use-mds-validator.service';
 
 describe('BilateralCenterService', () => {
   let service: BilateralCenterService;
@@ -147,6 +148,23 @@ describe('BilateralCenterService', () => {
           provide: ClarisaCentersRepository,
           useValue: {
             find: jest.fn().mockResolvedValue([]),
+          },
+        },
+        {
+          /**
+           * P2-3428 added InnovationUseMdsValidator as the service's last constructor dependency
+           * without registering it here, so Nest could not build the service at all and every case
+           * in this file failed with "can't resolve dependencies … at index [20]".
+           *
+           * Stubbed rather than provided for real: BilateralCenterService only holds the reference
+           * and never calls it, and what the validator does is covered by
+           * innovation-use-mds-validator.service.spec.ts. The two methods are mocked so that a
+           * future call site fails loudly here instead of hitting undefined.
+           */
+          provide: InnovationUseMdsValidator,
+          useValue: {
+            assertExternalCreateMds: jest.fn().mockResolvedValue(undefined),
+            assertPersistedMds: jest.fn().mockResolvedValue(undefined),
           },
         },
         {

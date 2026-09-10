@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, inject, signal, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject, signal, computed, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -21,6 +21,7 @@ import { DynamicPanelServiceService } from '../../../../shared/components/dynami
 import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { UserRolesInfoModalComponent } from '../../../../shared/components/user-roles-info-modal/user-roles-info-modal.component';
+import { GetRolesService } from '../../../../shared/services/global/get-roles.service';
 
 interface UserColumn {
   label: string;
@@ -36,6 +37,17 @@ interface StatusOption {
 interface CgiarOption {
   label: string;
   value: string;
+}
+
+/** P2-2043: which filter a chip belongs to, so removing it clears the right one. */
+type FilterType = 'status' | 'cgiar' | 'entity' | 'platformRole' | 'reportingRole';
+
+interface FilterChip {
+  category: string;
+  label: string;
+  filterType: FilterType;
+  /** Present for the multi-value filters; the single-value ones clear wholesale. */
+  value?: number;
 }
 
 @Component({
@@ -62,6 +74,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   resultsApiService = inject(ResultsApiService);
   api = inject(ApiService);
   initiativesService = inject(InitiativesService);
+  getRolesService = inject(GetRolesService);
   dynamicPanelService = inject(DynamicPanelServiceService);
   exportTablesSE = inject(ExportTablesService);
 
@@ -80,6 +93,11 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   selectedStatus = signal<string>('');
   selectedCgiar = signal<string>('');
   selectedEntities = signal<number[]>([]);
+
+  // P2-2043 - the two filters this story adds, plus the panel that now holds all five.
+  selectedPlatformRoles = signal<number[]>([]);
+  selectedReportingRoles = signal<number[]>([]);
+  showFiltersPanel = signal<boolean>(false);
   loading = signal<boolean>(false);
   isActivatingUser = signal<boolean>(false);
   isEditingUser = signal<boolean>(false);
@@ -96,6 +114,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.getUsers();
+    // P2-2043: the Platform role catalogue is not loaded at app start, only where it is used.
+    this.getRolesService.getPlatformRoles();
   }
 
   ngOnDestroy() {
@@ -108,7 +128,14 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   getUsers() {
     this.loading.set(true);
     this.resultsApiService
-      .GET_searchUser(this.searchQuery(), this.selectedCgiar() as any, this.selectedStatus() as any, this.selectedEntities())
+      .GET_searchUser(
+        this.searchQuery(),
+        this.selectedCgiar() as any,
+        this.selectedStatus() as any,
+        this.selectedEntities(),
+        this.selectedPlatformRoles(),
+        this.selectedReportingRoles()
+      )
       .subscribe({
         next: res => {
           this.users.set(res.response);
@@ -172,6 +199,154 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.userTable?.reset();
   }
 
+  /**
+   * P2-2043 - Platform role filter.
+   *
+   * Filters apply as they are picked, which is how the three existing ones already behave; the panel
+   * is only a container. That is also what makes the chips below it update while the panel is open,
+   * which is the feedback the story asks for.
+   */
+  onPlatformRolesChange(value: number[]) {
+    this.selectedPlatformRoles.set(this.toIds(value));
+    this.getUsers();
+    this.userTable?.reset();
+  }
+
+  /** P2-2043 - Reporting role filter. */
+  onReportingRolesChange(value: number[]) {
+    this.selectedReportingRoles.set(this.toIds(value));
+    this.getUsers();
+    this.userTable?.reset();
+  }
+
+  /**
+   * The multiselects hand back either plain ids or whole option objects depending on how the control
+   * was bound. Both shapes are flattened here so everything downstream - the request, the chips and
+   * the remove buttons - only ever deals with ids.
+   */
+  private toIds(value: any[]): number[] {
+    return (value ?? []).map(item => (item && typeof item === 'object' ? item.id : item)).filter((id: any) => id != null);
+  }
+
+  /**
+   * P2-2043 - the Entity filter must list P25 entities BEFORE P22 ones.
+   *
+   * The catalogue endpoint returns them the other way round (measured on the testing environment:
+   * P22 with 43 entities first, then P25 with 14), so anyone looking for a P25 entity had to scroll
+   * past all 43. Ordered here rather than server-side: that endpoint is CLARISA's and is consumed by
+   * other screens that do not ask for this order.
+   *
+   * Sorted by the portfolio number descending, so a future P28 lands on top on its own instead of
+   * needing this list edited again. Groups whose name does not carry a number keep their relative
+   * order at the end.
+   */
+  orderedEntityGroups = computed(() => {
+    const portfolioNumber = (group: any): number => {
+      const match = /(\d+)/.exec(group?.name ?? '');
+      return match ? Number(match[1]) : -1;
+    };
+
+    return [...this.initiativesService.allInitiatives()].sort((a, b) => portfolioNumber(b) - portfolioNumber(a));
+  });
+
+  /**
+   * P2-2043 - the chips under the filter bar: one per selected value, each removable on its own.
+   *
+   * Built from the filter signals rather than kept as separate state, so a chip can never disagree
+   * with what is actually being filtered.
+   */
+  activeFilterChips = computed<FilterChip[]>(() => {
+    const chips: FilterChip[] = [];
+
+    if (this.selectedStatus()) {
+      chips.push({ category: 'Status', label: this.selectedStatus(), filterType: 'status' });
+    }
+
+    if (this.selectedCgiar()) {
+      chips.push({ category: 'Is CGIAR', label: this.selectedCgiar(), filterType: 'cgiar' });
+    }
+
+    const entityNames = new Map<number, string>();
+    this.initiativesService.allInitiatives().forEach((group: any) =>
+      (group?.entities ?? []).forEach((entity: any) => entityNames.set(entity.id, entity.official_code ?? entity.name))
+    );
+    this.selectedEntities().forEach(id =>
+      chips.push({ category: 'Entity', label: entityNames.get(id) ?? String(id), filterType: 'entity', value: id })
+    );
+
+    const roleName = (roles: any[], id: number): string =>
+      roles.find(role => (role.role_id ?? role.id) === id)?.role_description ?? roles.find(role => (role.role_id ?? role.id) === id)?.description ?? String(id);
+
+    this.selectedPlatformRoles().forEach(id =>
+      chips.push({
+        category: 'Platform role',
+        label: roleName(this.getRolesService.platformRoles(), id),
+        filterType: 'platformRole',
+        value: id
+      })
+    );
+
+    this.selectedReportingRoles().forEach(id =>
+      chips.push({
+        category: 'Reporting role',
+        label: roleName(this.getRolesService.roles(), id),
+        filterType: 'reportingRole',
+        value: id
+      })
+    );
+
+    return chips;
+  });
+
+  /** P2-2043 - removes exactly one chip's filter and reloads. */
+  removeFilter(chip: FilterChip) {
+    switch (chip.filterType) {
+      case 'status':
+        this.selectedStatus.set('');
+        this.resetSelectControl(this.statusSelect, '');
+        break;
+      case 'cgiar':
+        this.selectedCgiar.set('');
+        this.resetSelectControl(this.cgiarSelect, '');
+        break;
+      case 'entity': {
+        const remaining = this.selectedEntities().filter(id => id !== chip.value);
+        this.selectedEntities.set(remaining);
+        this.resetSelectControl(this.entitiesSelect, remaining);
+        break;
+      }
+      case 'platformRole':
+        this.selectedPlatformRoles.set(this.selectedPlatformRoles().filter(id => id !== chip.value));
+        break;
+      case 'reportingRole':
+        this.selectedReportingRoles.set(this.selectedReportingRoles().filter(id => id !== chip.value));
+        break;
+    }
+
+    this.getUsers();
+    this.userTable?.reset();
+  }
+
+  /**
+   * The pr-select controls keep their own copy of the value, so clearing the signal is not enough to
+   * clear what the user sees. This mirrors what onClearFilters already did for each control.
+   */
+  private resetSelectControl(control: any, value: any) {
+    if (!control) return;
+    control.writeValue(value);
+    control._value = value;
+    if (!Array.isArray(value)) control.fullValue = {};
+  }
+
+  /** P2-2043 - opens and closes the "Table filters" panel. */
+  toggleFiltersPanel() {
+    this.showFiltersPanel.update(open => !open);
+  }
+
+  closeFiltersPanel() {
+    this.showFiltersPanel.set(false);
+  }
+
   // Method to clear all filters
   onClearFilters() {
     // Clear search timeout if exists
@@ -185,6 +360,9 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.selectedStatus.set('');
     this.selectedCgiar.set('');
     this.selectedEntities.set([]);
+    // P2-2043: the two filters this story adds clear with the rest.
+    this.selectedPlatformRoles.set([]);
+    this.selectedReportingRoles.set([]);
 
     // Clear the visual state of select components using writeValue
     if (this.statusSelect) {

@@ -1114,6 +1114,94 @@ describe('UserService', () => {
       expect(queryBuilderMock.getRawMany).toHaveBeenCalled();
     });
 
+    /**
+     * P2-2043 - the two role filters.
+     *
+     * These assert the PARAMETERS handed to andWhere rather than the generated SQL: the subquery is
+     * built through a callback that TypeORM invokes, which a plain mock never runs. The parameters
+     * are what actually decides which rows come back, and they carry the role level - the part that
+     * separates a Platform role filter from a Reporting role one.
+     */
+    const paramsPassedToAndWhere = (queryBuilderMock: any): any[] =>
+      (queryBuilderMock.andWhere as jest.Mock).mock.calls
+        .map((call) => call[1])
+        .filter(Boolean);
+
+    const runSearch = async (filters: any) => {
+      const queryBuilderMock = createQueryBuilderMock();
+      queryBuilderMock.getRawMany.mockResolvedValue([]);
+      (userRepository.createQueryBuilder as jest.Mock).mockReturnValue(
+        queryBuilderMock,
+      );
+      await service.searchUsers(filters);
+      return queryBuilderMock;
+    };
+
+    it('filters by Platform role at the Application level', async () => {
+      const queryBuilderMock = await runSearch({ platformRoleIds: [1, 2] });
+
+      expect(paramsPassedToAndWhere(queryBuilderMock)).toContainEqual({
+        platformRoleIds: [1, 2],
+        platformLevelId: 1,
+      });
+    });
+
+    it('filters by Reporting role at the Initiative level', async () => {
+      const queryBuilderMock = await runSearch({ reportingRoleIds: [3, 4] });
+
+      expect(paramsPassedToAndWhere(queryBuilderMock)).toContainEqual({
+        reportingRoleIds: [3, 4],
+        reportingLevelId: 2,
+      });
+    });
+
+    it('does not use the same role level for both filters', async () => {
+      const queryBuilderMock = await runSearch({
+        platformRoleIds: [1],
+        reportingRoleIds: [3],
+      });
+      const params = paramsPassedToAndWhere(queryBuilderMock);
+
+      const platform = params.find((param) => 'platformLevelId' in param);
+      const reporting = params.find((param) => 'reportingLevelId' in param);
+      expect(platform.platformLevelId).not.toBe(reporting.reportingLevelId);
+    });
+
+    it('adds no role condition when neither filter is supplied', async () => {
+      const queryBuilderMock = await runSearch({ user: 'Test' });
+      const params = paramsPassedToAndWhere(queryBuilderMock);
+
+      expect(params.some((param) => 'platformRoleIds' in param)).toBe(false);
+      expect(params.some((param) => 'reportingRoleIds' in param)).toBe(false);
+    });
+
+    it('adds no role condition for an empty list, so "nothing selected" is not "match nothing"', async () => {
+      const queryBuilderMock = await runSearch({
+        platformRoleIds: [],
+        reportingRoleIds: [],
+      });
+      const params = paramsPassedToAndWhere(queryBuilderMock);
+
+      expect(params.some((param) => 'platformRoleIds' in param)).toBe(false);
+      expect(params.some((param) => 'reportingRoleIds' in param)).toBe(false);
+    });
+
+    it('keeps the filters that already existed working alongside the new ones', async () => {
+      const queryBuilderMock = await runSearch({
+        cgIAR: 'Yes',
+        entityIds: [7],
+        platformRoleIds: [1],
+      });
+      const params = paramsPassedToAndWhere(queryBuilderMock);
+
+      expect(params).toContainEqual({ isCgiar: 1 });
+      expect(params).toContainEqual({ entityIds: [7] });
+      expect(params).toContainEqual({
+        platformRoleIds: [1],
+        platformLevelId: 1,
+      });
+    });
+
     it('should handle errors in searchUsers', async () => {
       const filters = { user: 'Fail' };
       const error = new Error('Error message');

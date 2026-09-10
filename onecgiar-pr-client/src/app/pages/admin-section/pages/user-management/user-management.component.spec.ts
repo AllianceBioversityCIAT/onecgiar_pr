@@ -45,6 +45,11 @@ const mockResultsApiService = {
 };
 
 // Mock para InitiativesService
+// P2-2043: the catalogue arrives P22 FIRST from the endpoint — measured on the testing environment.
+// The tests below depend on that order being the WRONG one, so the sort has something to prove.
+const P22_GROUP = { name: 'P22', entities: [{ id: 91, official_code: 'INIT-22' }] };
+const P25_GROUP = { name: 'P25', entities: [{ id: 5, official_code: 'SP05' }] };
+
 const mockInitiativesService = {
   allInitiatives: jest.fn().mockReturnValue([]),
   allInitiativesList: [],
@@ -350,14 +355,21 @@ describe('UserManagementComponent', () => {
 
     it('should write the entity selection back and send it to GET_searchUser', () => {
       const searchSpy = jest.spyOn(mockResultsApiService, 'GET_searchUser');
-      const multiselect = fixture.debugElement.query(By.directive(PrFilterMultiselectComponent))
-        .componentInstance as PrFilterMultiselectComponent;
+      // P2-2043: the filters now live inside the "Table filters" panel, so it has to be open before
+      // the control exists in the DOM at all.
+      component.showFiltersPanel.set(true);
+      fixture.detectChanges();
+
+      const multiselects = fixture.debugElement.queryAll(By.directive(PrFilterMultiselectComponent));
+      // Platform role, Reporting role, Entity - in the order the panel renders them.
+      expect(multiselects.length).toBe(3);
+      const entitiesMultiselect = multiselects[2].componentInstance as PrFilterMultiselectComponent;
       const entity = { id: 5, official_code: 'SP05' };
 
-      multiselect.toggle(entity);
+      entitiesMultiselect.toggle(entity);
 
       expect(component.selectedEntities()).toEqual([entity]);
-      expect(searchSpy).toHaveBeenCalledWith('', '', '', [entity]);
+      expect(searchSpy).toHaveBeenCalledWith('', '', '', [entity], [], []);
     });
   });
 
@@ -779,4 +791,154 @@ describe('UserManagementComponent', () => {
       jest.useRealTimers();
     });
   });
+
+  // ── P2-2043 ──────────────────────────────────────────────────────────────────────
+  describe('P2-2043 - Table filters panel', () => {
+    it('starts closed, so the filters are behind the Apply filters button', () => {
+      expect(component.showFiltersPanel()).toBe(false);
+      expect(fixture.debugElement.query(By.css('[data-testid="apply-filters-button"]'))).toBeTruthy();
+      expect(fixture.debugElement.query(By.css('#table-filters-panel'))).toBeNull();
+    });
+
+    it('opens and closes on the button', () => {
+      const button = fixture.debugElement.query(By.css('[data-testid="apply-filters-button"]'));
+
+      button.nativeElement.click();
+      fixture.detectChanges();
+      expect(component.showFiltersPanel()).toBe(true);
+      expect(fixture.debugElement.query(By.css('#table-filters-panel'))).toBeTruthy();
+
+      button.nativeElement.click();
+      fixture.detectChanges();
+      expect(component.showFiltersPanel()).toBe(false);
+    });
+
+    it('names the mechanism and caption the story asks for', () => {
+      component.showFiltersPanel.set(true);
+      fixture.detectChanges();
+
+      expect(fixture.debugElement.query(By.css('.table-filters-title')).nativeElement.textContent.trim()).toBe('Table filters');
+      expect(fixture.debugElement.query(By.css('.table-filters-caption')).nativeElement.textContent.trim()).toBe(
+        'filter your data by applying custom criteria'
+      );
+    });
+
+    it('starts with every filter unselected', () => {
+      expect(component.selectedStatus()).toBe('');
+      expect(component.selectedCgiar()).toBe('');
+      expect(component.selectedEntities()).toEqual([]);
+      expect(component.selectedPlatformRoles()).toEqual([]);
+      expect(component.selectedReportingRoles()).toEqual([]);
+    });
+  });
+
+  describe('P2-2043 - Entity order: P25 before P22', () => {
+    it('puts the P25 group first even though the catalogue arrives P22 first', () => {
+      mockInitiativesService.allInitiatives.mockReturnValue([P22_GROUP, P25_GROUP]);
+
+      expect(component.orderedEntityGroups().map(group => group.name)).toEqual(['P25', 'P22']);
+    });
+
+    it('is a real sort and not a fixed two-item swap: a higher portfolio leads', () => {
+      mockInitiativesService.allInitiatives.mockReturnValue([P22_GROUP, P25_GROUP, { name: 'P28', entities: [] }]);
+
+      expect(component.orderedEntityGroups().map(group => group.name)).toEqual(['P28', 'P25', 'P22']);
+    });
+
+    it('does not drop groups whose name carries no number', () => {
+      mockInitiativesService.allInitiatives.mockReturnValue([P22_GROUP, { name: 'Other', entities: [] }, P25_GROUP]);
+
+      expect(component.orderedEntityGroups().map(group => group.name)).toEqual(['P25', 'P22', 'Other']);
+    });
+  });
+
+  describe('P2-2043 - role filters reach the request', () => {
+    beforeEach(() => {
+      component.userTable = { reset: jest.fn() } as any;
+    });
+
+    it('sends the selected Platform roles', () => {
+      const searchSpy = jest.spyOn(mockResultsApiService, 'GET_searchUser');
+
+      component.onPlatformRolesChange([1, 2]);
+
+      expect(component.selectedPlatformRoles()).toEqual([1, 2]);
+      expect(searchSpy).toHaveBeenCalledWith('', '', '', [], [1, 2], []);
+    });
+
+    it('sends the selected Reporting roles', () => {
+      const searchSpy = jest.spyOn(mockResultsApiService, 'GET_searchUser');
+
+      component.onReportingRolesChange([3]);
+
+      expect(component.selectedReportingRoles()).toEqual([3]);
+      expect(searchSpy).toHaveBeenCalledWith('', '', '', [], [], [3]);
+    });
+
+    it('flattens whole option objects down to ids', () => {
+      component.onPlatformRolesChange([{ id: 7, description: 'Admin' }] as any);
+
+      expect(component.selectedPlatformRoles()).toEqual([7]);
+    });
+  });
+
+  describe('P2-2043 - "Results filtered by" chips', () => {
+    beforeEach(() => {
+      component.userTable = { reset: jest.fn() } as any;
+      mockInitiativesService.allInitiatives.mockReturnValue([P22_GROUP, P25_GROUP]);
+    });
+
+    it('shows no chip row while nothing is filtered', () => {
+      expect(component.activeFilterChips()).toEqual([]);
+      expect(fixture.debugElement.query(By.css('[data-testid="active-filters-row"]'))).toBeNull();
+    });
+
+    it('names the entity by its code, not by its id', () => {
+      component.selectedEntities.set([5]);
+
+      expect(component.activeFilterChips()).toEqual([{ category: 'Entity', label: 'SP05', filterType: 'entity', value: 5 }]);
+    });
+
+    it('renders one chip per selected value and labels it category: value', () => {
+      component.selectedStatus.set('Active');
+      component.selectedCgiar.set('Yes');
+      fixture.detectChanges();
+
+      const chipTexts = fixture.debugElement
+        .queryAll(By.css('.active-filter-chip__text'))
+        .map(chip => chip.nativeElement.textContent.trim());
+      expect(chipTexts).toEqual(['Status: Active', 'Is CGIAR: Yes']);
+    });
+
+    it('removes only the chip that was clicked, leaving the others filtering', () => {
+      component.selectedEntities.set([5, 91]);
+
+      component.removeFilter({ category: 'Entity', label: 'SP05', filterType: 'entity', value: 5 });
+
+      expect(component.selectedEntities()).toEqual([91]);
+      expect(component.activeFilterChips().map(chip => chip.label)).toEqual(['INIT-22']);
+    });
+
+    it('clears a single-value filter through its chip', () => {
+      component.selectedStatus.set('Active');
+
+      component.removeFilter({ category: 'Status', label: 'Active', filterType: 'status' });
+
+      expect(component.selectedStatus()).toBe('');
+      expect(component.activeFilterChips()).toEqual([]);
+    });
+
+    it('Clear filters wipes the two new filters as well', () => {
+      component.selectedPlatformRoles.set([1]);
+      component.selectedReportingRoles.set([3]);
+      component.selectedStatus.set('Active');
+
+      component.onClearFilters();
+
+      expect(component.selectedPlatformRoles()).toEqual([]);
+      expect(component.selectedReportingRoles()).toEqual([]);
+      expect(component.activeFilterChips()).toEqual([]);
+    });
+  });
+
 });

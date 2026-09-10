@@ -953,6 +953,26 @@ describe('ResultsApiService', () => {
     });
   });
 
+  /**
+   * P2-3318 — the header IS the contract here: Graph validates `Content-Range` against the session
+   * and rejects the fragment on any mismatch, so the exact bytes-start-end/total string is pinned.
+   */
+  describe('PUT_loadFileFragmentInUploadSession', () => {
+    it('should PUT the fragment with its own Content-Range and no leftover header', () => {
+      const fragment = new Blob(['abc']);
+      const mockLink = 'http://example.com';
+
+      service.PUT_loadFileFragmentInUploadSession(fragment, mockLink, 10485760, 20971519, 65011712);
+
+      const req = httpMock.expectOne(mockLink);
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toBe(fragment);
+      expect(req.request.headers.get('Content-Range')).toBe('bytes 10485760-20971519/65011712');
+      expect(req.request.headers.get('Content-Type')).toBe('application/octet-stream');
+      expect(req.request.headers.keys().sort()).toEqual(['Content-Range', 'Content-Type']);
+    });
+  });
+
   describe('GET_loadFileInUploadSession', () => {
     it('should call GET_loadFileInUploadSession with correct arguments', () => {
       const mockLink = 'http://example.com';
