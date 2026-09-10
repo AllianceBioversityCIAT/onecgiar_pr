@@ -27,4 +27,4 @@
  * this checkout at once, and two of them bumping blind leaves QA with a number that does not carry
  * the fix they were asked to verify.
  */
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.1.0';
