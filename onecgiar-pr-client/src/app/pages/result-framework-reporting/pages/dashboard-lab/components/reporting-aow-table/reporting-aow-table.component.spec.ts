@@ -1489,10 +1489,21 @@ describe('ReportingAowTableComponent', () => {
       return targetButton.injector.get(PrTooltipDirective).text;
     };
 
-    it('binds the tooltip string on an AoW card Outcomes-band row that is cross-cutting', async () => {
+    /**
+     * ⚠️ INVERTED on 2026-09-09 (P2-3336 rule 1, PO). `RES-R-3` put this tooltip on a cross-cut row
+     * inside an AoW card. Such a row no longer reaches an AoW card at all — the host filters it in
+     * `dashboard-lab.indicatorsByAow()` — so the disjunct that read the stamp was unreachable and
+     * came out. `RES-R-1` survives: the tooltip still fires inside the Intermediate Outcomes card,
+     * keyed off the bucket kind alone (asserted in the sibling describe above).
+     *
+     * This component is presentational, so it still RENDERS whatever row it is handed; what it no
+     * longer does is disclose it as cross-cutting, because in an AoW card that is now a
+     * contradiction rather than a disclosure.
+     */
+    it('binds NO tooltip on an AoW card row, cross-cut stamp or not (RES-R-3 superseded)', async () => {
       await build([group([row({ __tier: 'outcome', __isIntermediateCrosscut: true })], { kind: 'aow' })]);
       openAow();
-      expect(targetTooltipText()).toBe(component.intermediateTargetTooltip);
+      expect(targetTooltipText()).toBe('');
     });
 
     it('binds an empty string on an AoW card Outcomes-band row that is NOT cross-cutting (AoW-exclusive)', async () => {
@@ -1559,7 +1570,18 @@ describe('ReportingAowTableComponent', () => {
       expect(headerText).toContain('0 of 4');
     });
 
-    it('still renders #901 and #902 in the Outcomes band, each with the RES-R-3 cross-cut tooltip', async () => {
+    /**
+     * ⚠️ AMENDED on 2026-09-09 (P2-3336 rule 1, PO). `KCR-AC-5` guaranteed that excluding cross-cut
+     * rows from the AoW's DENOMINATOR did not also drop them from the CARD. The PO has now dropped
+     * them from the card too — deliberately, one level up: `dashboard-lab.indicatorsByAow()` never
+     * puts them in an AoW bundle, so this fixture no longer describes anything the host can send.
+     *
+     * The half of KCR-AC-5 that is this component's business is unchanged and still asserted: the
+     * header pair (`4 KPIs` / `0 of 4`) is AoW-own, so it did not move. Kept as a rendering
+     * property of a presentational component: hand it such a row and it draws it, minus the
+     * superseded RES-R-3 disclosure.
+     */
+    it('renders a cross-cut row it is handed, but without the superseded RES-R-3 tooltip', async () => {
       await build([groupA()]);
       openAow('A');
 
@@ -1568,8 +1590,7 @@ describe('ReportingAowTableComponent', () => {
         'IO-1 Cross-cutting outcome one',
         'IO-2 Cross-cutting outcome two'
       ]);
-      outcomeRows.forEach(el => expect(targetTooltipOf(el)).toBe('This target is not exclusive to that AoW.'));
-      expect(component.intermediateTargetTooltip).toBe('This target is not exclusive to that AoW.');
+      outcomeRows.forEach(el => expect(targetTooltipOf(el)).toBe(''));
     });
 
     it('leaves the AoW-own output rows undisclosed — the tooltip marks cross-cuts, not every row', async () => {
@@ -1579,6 +1600,42 @@ describe('ReportingAowTableComponent', () => {
       const outputRows = Array.from(bandBody('High level outputs').querySelectorAll('.pr-reporting-row'));
       expect(outputRows.length).toBe(4);
       outputRows.forEach(el => expect(targetTooltipOf(el)).toBe(''));
+    });
+  });
+
+  /**
+   * P2-3336 rule 1, PO 2026-09-09. The Intermediate Outcomes card is now the ONLY place a
+   * work-package-less Intermediate Outcome appears, so it carries a line saying why it sits apart.
+   */
+  describe('the Intermediate Outcomes card explains itself', () => {
+    const bucket = (kind: 'intermediate' | '2030' | 'aow') =>
+      group([row()], {
+        aow: { code: kind === 'aow' ? 'AOW01' : `${kind}-outcomes`, name: 'Card' },
+        kind
+      } as any);
+
+    it('shows the note on the Intermediate Outcomes card', async () => {
+      await build([bucket('intermediate')]);
+      component.toggle('aow::intermediate-outcomes', false);
+      fixture.detectChanges();
+
+      expect(text()).toContain('These Intermediate Outcomes are not assigned to any AoW.');
+    });
+
+    it('shows it on NO other card — not an AoW, not 2030', async () => {
+      await build([bucket('aow'), bucket('2030')]);
+      component.toggle('aow::AOW01', false);
+      component.toggle('aow::2030-outcomes', false);
+      fixture.detectChanges();
+
+      expect(text()).not.toContain('not assigned to any AoW');
+    });
+
+    it('isIntermediateBucket is true only for the intermediate kind', async () => {
+      await build([bucket('intermediate')]);
+      expect(component.isIntermediateBucket(bucket('intermediate'))).toBe(true);
+      expect(component.isIntermediateBucket(bucket('2030'))).toBe(false);
+      expect(component.isIntermediateBucket(bucket('aow'))).toBe(false);
     });
   });
 

@@ -1,4 +1,10 @@
 <div class="sgi-fields">
+  @if (canChangeResultType()) {
+    <div class="sgi-change-type">
+      <div><strong>Need to correct the result classification?</strong><span>Changing type clears type-specific information and keeps your common W3 information.</span></div>
+      <button type="button" (click)="openChangeResultType()">Change result type</button>
+    </div>
+  }
   <app-pr-input
     label="Title of Result"
     type="text"
@@ -42,6 +48,7 @@
     <app-alert-status
       class="flex-1"
       status="info"
+      [collapsible]="false"
       description="The fields above are the minimum data standards required to report a bilateral result. Add the full metadata if you need to report more.">
     </app-alert-status>
     <button
@@ -122,3 +129,11 @@
     </div>
   }
 </div>
+
+<app-bilateral-change-result-type-dialog
+  [visible]="showChangeTypeDialog()"
+  (visibleChange)="showChangeTypeDialog.set($event)"
+  [resultId]="creationService.currentResultId()!"
+  [currentTypeId]="creationService.resultTypeId()"
+  [currentLevelId]="creationService.resultLevelId()"
+  (changed)="resultTypeChanged.emit()" />

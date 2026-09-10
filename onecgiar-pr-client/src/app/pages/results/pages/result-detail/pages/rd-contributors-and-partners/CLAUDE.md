@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-09-08 · branch qa-development-2026-ss · quick/lead-contact-clear-button (the read-only "Lead contact person" display, P2-2911 AC2, removed from this section)
+**Verified:** 2026-09-10 · branch qa-development-2026-ss · changes/info-tooltip-hover-reveal (`externalPartnersInfoNote`'s `app-alert-status`, `html:499`, now has `[collapsible]="false"` — boxed, always-visible, not the collapsible/hover style); prior: 2026-09-08 · quick/lead-contact-clear-button (the read-only "Lead contact person" display, P2-2911 AC2, removed from this section)
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios

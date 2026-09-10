@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
   UseInterceptors,
 } from '@nestjs/common';
 import { RoleService } from './role.service';
@@ -26,9 +27,19 @@ export class RoleController {
     return this.roleService.create(createRoleDto);
   }
 
+  /**
+   * P2-2043: `levelId` is optional. Called without it the endpoint answers exactly what it answered
+   * before (Initiative roles), so no existing consumer changes. The User Management filters pass
+   * `levelId=1` to get the Platform roles.
+   */
   @Get()
-  async findAll(): Promise<any> {
-    const roles = await this.roleService.findAll();
+  async findAll(@Query('levelId') levelId?: string): Promise<any> {
+    const parsedLevelId = Number(levelId);
+    const roles = await this.roleService.findAll(
+      Number.isInteger(parsedLevelId) && parsedLevelId > 0
+        ? parsedLevelId
+        : undefined,
+    );
     return {
       response: roles,
       statusCode: 200,

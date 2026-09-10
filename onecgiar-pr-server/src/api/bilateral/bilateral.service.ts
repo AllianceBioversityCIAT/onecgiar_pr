@@ -22,6 +22,7 @@ import { VersioningService } from '../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
+import { resolveInitialStatusId } from './constants/initial-status.constants';
 import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
 import { CENTER_ALIAS_TO_CLARISA_CENTER_CODE } from './constants/w3-center-alias.constants';
 import { HandlersError } from '../../shared/handlers/error.utils';
@@ -282,6 +283,8 @@ export class BilateralService {
         }
 
         const bilateralDto = result.data;
+
+        await this.runResultTypePreflight(bilateralDto);
 
         // Validate science_program_id BEFORE starting the transaction
         await this.validateTocMappingInitiatives(
@@ -4034,7 +4037,7 @@ export class BilateralService {
         created_date: bilateralDto.created_date,
       }),
       source: SourceEnum.Bilateral,
-      status_id: ResultStatusData.PendingReview.value,
+      status_id: resolveInitialStatusId(bilateralDto),
       ...(leadContact ?? {}),
     });
 
@@ -4105,6 +4108,14 @@ export class BilateralService {
       bilateralDto: context.bilateralDto,
       isDuplicateResult: context.isDuplicateResult,
     });
+  }
+
+  private async runResultTypePreflight(
+    bilateralDto: CreateBilateralDto,
+  ): Promise<void> {
+    const handler = this.resultTypeHandlerMap.get(bilateralDto.result_type_id);
+    if (!handler?.validateBeforeCreate) return;
+    await handler.validateBeforeCreate({ bilateralDto });
   }
 
   private async ensureUniqueTitle(title: string, versionId: number) {

@@ -4,7 +4,7 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { In } from 'typeorm';
+import { EntityManager, In } from 'typeorm';
 import { BilateralProjectsService } from './bilateral-projects.service';
 import { BilateralService } from '../bilateral.service';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
@@ -45,6 +45,8 @@ import { ResultByIntitutionsRepository } from '../../results/results_by_institut
 import { ResultsKnowledgeProductsRepository } from '../../results/results-knowledge-products/repositories/results-knowledge-products.repository';
 import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
+import { InnovationUseMdsValidator } from './innovation-use-mds-validator.service';
+import { ChangeCenterResultTypeDto } from '../dto/change-center-result-type.dto';
 
 @Injectable()
 export class BilateralCenterService {
@@ -71,6 +73,7 @@ export class BilateralCenterService {
     private readonly resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
     private readonly shareResultRequestRepository: ShareResultRequestRepository,
+    private readonly innovationUseMdsValidator: InnovationUseMdsValidator,
   ) {}
 
   async getProjects(centerId: number) {
@@ -236,6 +239,142 @@ export class BilateralCenterService {
         lead_center_resolved: leadCenterResolved,
       },
     };
+  }
+
+  /**
+   * P2-3233 — W3's equivalent of W1/W2 "Change result type".
+   *
+   * The legacy delete/recover service physically removes result-centre and
+   * project records. A promoted bilateral draft must retain those common W3
+   * links, so this path resets only type-specific rows and records the change
+   * as an auditable review-history update.
+   */
+  async changeResultType(
+    user: TokenDto,
+    resultId: number,
+    dto: ChangeCenterResultTypeDto,
+  ) {
+    const parsedResultId = Number(resultId);
+    if (!Number.isFinite(parsedResultId) || parsedResultId <= 0) {
+      throw new BadRequestException(
+        'The resultId parameter must be a valid positive number.',
+      );
+    }
+
+    const result = await this.resultRepository.findOne({
+      where: {
+        id: parsedResultId,
+        source: SourceEnum.Bilateral,
+        is_active: true,
+      },
+    });
+    if (!result) throw new BadRequestException('Bilateral result not found');
+
+    if (result.creation_method !== ResultCreationMethod.AI) {
+      throw new BadRequestException(
+        'Only a result promoted from an AI draft can change result type.',
+      );
+    }
+    if (Number(result.status_id) !== ResultStatusData.Editing.value) {
+      throw new BadRequestException(
+        'Only a promoted draft in Editing can change result type.',
+      );
+    }
+
+    if (
+      Number(result.result_level_id) === Number(dto.result_level_id) &&
+      Number(result.result_type_id) === Number(dto.result_type_id)
+    ) {
+      throw new BadRequestException(
+        'Select a result type or level different from the current one.',
+      );
+    }
+
+    const target = await this.resultByLevelRepository.getByTypeAndLevel(
+      dto.result_level_id,
+      dto.result_type_id,
+    );
+    if (!target) {
+      throw new BadRequestException(
+        `Invalid combination of result_level_id (${dto.result_level_id}) and result_type_id (${dto.result_type_id}).`,
+      );
+    }
+
+    const isAdmin = await this.roleByUserRepository.isUserAdmin(user.id);
+    if (!isAdmin) await this.assertCenterPermission(user, parsedResultId);
+
+    // W1/W2 validates a Knowledge Product handle before its conversion. Do the
+    // same here, but persist it with the bilateral-safe hydrator below.
+    const knowledgeProductMetadata =
+      dto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT
+        ? await this.resultsKnowledgeProductsService.validateBilateralKPHandle(
+            dto.handle,
+            user,
+          )
+        : null;
+
+    await this.resultRepository.manager.transaction(async (manager) => {
+      await this.clearTypeSpecificData(manager, parsedResultId, user.id);
+      await manager.update(
+        Result,
+        { id: parsedResultId },
+        {
+          result_level_id: dto.result_level_id,
+          result_type_id: dto.result_type_id,
+          last_updated_by: user.id,
+        },
+      );
+      await manager.save(
+        ResultReviewHistory,
+        manager.create(ResultReviewHistory, {
+          result_id: parsedResultId,
+          action: ReviewActionEnum.UPDATE,
+          comment:
+            `Result type changed from level ${result.result_level_id}, type ${result.result_type_id} ` +
+            `to level ${dto.result_level_id}, type ${dto.result_type_id}. ${dto.justification}`,
+          created_by: user.id,
+        }),
+      );
+    });
+
+    if (knowledgeProductMetadata) {
+      await this.resultsKnowledgeProductsService.populateBilateralKPFromMetadata(
+        parsedResultId,
+        knowledgeProductMetadata,
+        dto.handle,
+        user,
+      );
+    }
+
+    return {
+      response: {
+        resultId: parsedResultId,
+        result_level_id: dto.result_level_id,
+        result_type_id: dto.result_type_id,
+      },
+      message: 'Result type changed successfully. Complete the new type-specific fields before submitting for review.',
+    };
+  }
+
+  /** Reset only data owned by a result type; common W3 links intentionally stay untouched. */
+  private async clearTypeSpecificData(
+    manager: EntityManager,
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    const updates: Array<[string, unknown[]]> = [
+      ['UPDATE results_policy_changes SET is_active = 0, last_updated_by = ? WHERE result_id = ?', [userId, resultId]],
+      ['UPDATE results_innovations_use_measures m INNER JOIN results_innovations_use u ON u.result_innovation_use_id = m.result_innovation_use_id SET m.is_active = 0, m.last_updated_by = ? WHERE u.results_id = ?', [userId, resultId]],
+      ['UPDATE results_innovations_use SET is_active = 0, last_updated_by = ? WHERE results_id = ?', [userId, resultId]],
+      ['UPDATE results_innovations_dev SET is_active = 0, last_updated_by = ? WHERE results_id = ?', [userId, resultId]],
+      ['UPDATE results_capacity_developments SET is_active = 0, last_updated_by = ? WHERE result_id = ?', [userId, resultId]],
+      ['UPDATE result_actors SET is_active = 0, last_updated_by = ? WHERE result_id = ?', [userId, resultId]],
+      ['UPDATE results_knowledge_product SET is_active = 0, last_updated_by = ? WHERE results_id = ?', [userId, resultId]],
+      ['UPDATE non_pooled_projetct_budget budget INNER JOIN results_by_projects project ON project.id = budget.result_project_id SET budget.is_active = 0, budget.last_updated_by = ? WHERE project.result_id = ?', [userId, resultId]],
+      ['UPDATE result_initiative_budget budget INNER JOIN results_by_inititiative initiative ON initiative.id = budget.result_initiative_id SET budget.is_active = 0, budget.last_updated_by = ? WHERE initiative.result_id = ?', [userId, resultId]],
+      ['UPDATE result_institutions_budget budget INNER JOIN results_by_institution institution ON institution.id = budget.result_institution_id SET budget.is_active = 0, budget.last_updated_by = ? WHERE institution.result_id = ?', [userId, resultId]],
+    ];
+    for (const [sql, parameters] of updates) await manager.query(sql, parameters);
   }
 
   async getResultInitiativeId(resultId: number) {
@@ -1140,6 +1279,10 @@ export class BilateralCenterService {
       throw new BadRequestException(
         'The result has no Science Program assigned. Select a Science Program before submitting for review.',
       );
+    }
+
+    if (result.result_type_id === ResultTypeEnum.INNOVATION_USE) {
+      await this.innovationUseMdsValidator.assertPersistedMds(parsedResultId);
     }
 
     await this.resultRepository.manager.transaction(async (manager) => {

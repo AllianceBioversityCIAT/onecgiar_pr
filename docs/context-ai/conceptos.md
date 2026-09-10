@@ -121,6 +121,15 @@ prometerle a nadie una relación muchos-a-muchos que no existe.
 `toc_results.wp_id` apunta a **un** work package (Area of Work). Un IO pertenece a **una** AoW
 o a **ninguna** — no hay tabla puente. De ahí sale todo:
 
+> 🛑 **ACTUALIZADO 2026-09-09 (P2-3336 regla 1).** Lo de abajo sigue describiendo bien el MODELO y
+> el SQL, que no cambiaron. Lo que cambió es qué hace el producto con eso: la **regla 2 la anuló el
+> PO** ("this rule no apply anymore", P2-3336, 09:42) y los IO sin AoW **ya no se muestran dentro de
+> las tarjetas de AoW del Reporting tab** (`dashboard-lab.indicatorsByAow()` los filtra), ni pesan
+> en el % del AoW ni del programa (`results-framework-reporting.service.ts`,
+> `belongsToTheAreaOfWork`). El payload los sigue trayendo, y la pantalla legacy `entity-aow-aow`
+> los sigue mostrando en su sección aparte — decisión explícita, por eso el corte no se hizo en el
+> SQL.
+
 - `wp_id IS NULL` → el nodo es del Science Program entero, y el server lo devuelve **bajo todas
   las AoW** del programa a propósito. El predicado está en
   `onecgiar-pr-server/.../repositories/aow-bilateral.repository.ts` (~línea 442):

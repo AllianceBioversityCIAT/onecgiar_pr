@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-09-09 · working tree on feat/P2-3390-bilateral-investment-tables (adds "Centros de un target compartido" below — chips desde `centers[]`, tope de 3 + `+N more`, centro filtrado pineado; el fix del target inflado va en `aow-bilateral.repository.ts`) · prior: 2026-09-04 · branch qa-development-2026-ss · merge of origin/performance-refactor 85fdfc8c3 into 9b9c032ba (RTA-T-1's sticky-pin grid was superseded by this branch's tabular redesign — see the RTA-T-1 note below)
+**Verified:** 2026-09-09 · feat/P2-3336-io-without-aow (nota de la tarjeta Intermediate + `RES-R-3` retirado — ver "Intermediate Outcomes" abajo) · antes ese mismo día, en `performance-refactor` (a4b52dcd9): "Centros de un target compartido" — chips desde `centers[]`, tope de 3 + `+N more`, centro filtrado pineado · prior: 2026-09-04 · branch qa-development-2026-ss · merge of origin/performance-refactor 85fdfc8c3 into 9b9c032ba (RTA-T-1's sticky-pin grid was superseded by this branch's tabular redesign — see the RTA-T-1 note below)
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjetas colapsables por Area
@@ -153,6 +153,20 @@ centro** — SP-13 KPI 1.3.3 (un target, diez centros) no mostraba ninguno. Ahor
   Sin eso, filtrar por IRRI (último de los diez) dejaba la fila en pantalla sin ninguna razón
   visible. El `activeCenter` llega por el contexto del `ng-template #indicatorRow` (`:815`, desde el
   `@let selCenter` de la tarjeta); la vista plana no lo pasa porque no tiene filtro por tarjeta.
+
+## Intermediate Outcomes: la nota y el tooltip retirado (P2-3336, 2026-09-09)
+- La tarjeta `kind: 'intermediate'` lleva una nota bajo la cabecera:
+  *"These Intermediate Outcomes are not assigned to any AoW."* (`intermediateBucketNote`, texto
+  literal del PO). Es la única tarjeta que la muestra — `isIntermediateBucket(group)`, que **no** es
+  `isBucket()`: la de 2030 no la lleva.
+- ⚠️ **El tooltip del Target ya no lee `isCrossCuttingIntermediate(row)`.** `RES-R-3` ponía
+  *"This target is not exclusive to that AoW."* en filas cross-cut dentro de una tarjeta de AoW;
+  esas filas ya no llegan (`dashboard-lab.indicatorsByAow()` las filtra), así que el disyunto era
+  inalcanzable. Queda solo `isIntermediateRow(bucketKind)` — `RES-R-1`, dentro del bucket.
+- `isCrossCuttingIntermediate` y el stamp **siguen existiendo**: `hloTaxonomy()` los usa para la
+  píldora `IO`. No los borres porque "no los usa nadie".
+- Este componente es **presentacional**: si le pasan una fila cross-cut la dibuja igual. El filtro
+  vive en el host, y los tests lo dicen así.
 
 ## Pendiente / Coming soon
 - Cuerpo del popover ⓘ (falta descripción de AoW en el backend) → P2-3405, aviso a Ángel.

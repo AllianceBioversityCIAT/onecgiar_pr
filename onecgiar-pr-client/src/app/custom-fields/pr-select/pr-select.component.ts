@@ -259,6 +259,16 @@ export class PrSelectComponent implements ControlValueAccessor, OnDestroy {
     return clones;
   });
 
+  /**
+   * Selectable rows for the 5-item search threshold (PSEL-R-1/2/10) — group-label rows
+   * (`option.isLabel`, used by the `group`/`groupCode` grouping feature) don't count: a
+   * grouped list with 4 real items and 2 label rows must still hide the search box.
+   */
+  readonly selectableOptionCount = computed(() => this.optionsIntance().filter((o: any) => !o?.isLabel).length);
+
+  /** PSEL-R-1/R-2: search input only earns its place once there's enough to search through. */
+  readonly showSearchInput = computed(() => this.selectableOptionCount() >= 5);
+
   onSelectOption(option) {
     if (option?.disabled) return;
     this.fullValue = option;

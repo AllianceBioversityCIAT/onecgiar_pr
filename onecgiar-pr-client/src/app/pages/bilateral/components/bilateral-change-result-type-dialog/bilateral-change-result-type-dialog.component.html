@@ -1,0 +1,11 @@
+<app-pr-dialog [(visible)]="visible" [modal]="true" [showHeader]="false" [dismissableMask]="false" [closeOnEscape]="!submitting" styleClass="bilateral-change-type-dialog" (onHide)="close()">
+  <div class="bctd-header"><div><h2>Change result type</h2><p>Type-specific information will be cleared. Your common W3 information will stay unchanged.</p></div><button type="button" class="bctd-close" [disabled]="submitting" (click)="close()" aria-label="Close">×</button></div>
+  <div class="bctd-body">
+    <p class="bctd-label">Select the new result type <span aria-hidden="true">*</span></p>
+    <div class="bctd-options">@for (option of options; track option.id) { <button type="button" class="bctd-option" [class.bctd-option--selected]="selected?.id === option.id" [disabled]="isCurrent(option) || submitting" (click)="select(option)"><span>{{ option.label }}</span><small>{{ option.levelLabel }}{{ isCurrent(option) ? ' · Current type' : '' }}</small></button> }</div>
+    @if (requiresHandle()) { <label class="bctd-field">CGSpace handle <span aria-hidden="true">*</span><input type="text" [(ngModel)]="handle" [disabled]="submitting" placeholder="10568/175322" /></label><p class="bctd-note">The handle is validated against CGSpace using the same rules as W1/W2. The repository title and description will replace the current values.</p> }
+    <label class="bctd-field">Why is this change needed? <span aria-hidden="true">*</span><textarea [(ngModel)]="justification" [disabled]="submitting" rows="3" placeholder="Explain the correction for the review history."></textarea></label>
+    @if (errorMessage) { <p class="bctd-error" role="alert">{{ errorMessage }}</p> }
+  </div>
+  <div pr-dialog-footer class="bctd-footer"><button hlmBtn variant="outline" type="button" [disabled]="submitting" (click)="close()">Cancel</button><button hlmBtn type="button" [disabled]="!canSubmit()" (click)="submit()">{{ submitting ? 'Changing…' : 'Change result type' }}</button></div>
+</app-pr-dialog>

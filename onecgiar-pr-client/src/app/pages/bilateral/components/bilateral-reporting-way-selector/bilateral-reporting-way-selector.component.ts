@@ -1,7 +1,7 @@
 import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-type ReportingWay = 'ai' | 'manual' | 'bulk';
+type ReportingWay = 'ai' | 'manual';
 
 interface ReportingWayOption {
   id: ReportingWay;
@@ -42,15 +42,6 @@ export class BilateralReportingWaySelectorComponent {
       description: '',
       enabled: true
     },
-    {
-      id: 'bulk',
-      icon: 'upload_file',
-      label: 'Bulk Upload Results',
-      title: 'Upload multiple bilateral results at once using the PRMS bulk upload template.',
-      description: '',
-      enabled: false,
-      badge: 'Coming soon'
-    }
   ];
 
   isOptionDisabled(option: ReportingWayOption): boolean {

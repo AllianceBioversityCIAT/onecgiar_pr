@@ -39,60 +39,132 @@
             </span>
           </div>
 
-          <!-- Status filter -->
+          <!--
+            P2-2043: the five filters moved behind this button. The button is called "Apply filters"
+            and the panel it opens is the "Table filters" mechanism the story names.
+          -->
+          <div class="apply-filters-wrap">
+            <div class="clear-spacer">&nbsp;</div>
+            <button
+              type="button"
+              class="apply-filters-btn"
+              [class.is-open]="showFiltersPanel()"
+              [attr.aria-expanded]="showFiltersPanel()"
+              aria-haspopup="dialog"
+              aria-controls="table-filters-panel"
+              data-testid="apply-filters-button"
+              (click)="toggleFiltersPanel()">
+              <span class="material-icons-round text-[18px]">filter_alt</span>
+              <span>Apply filters</span>
+              @if (activeFilterChips().length) {
+                <span class="apply-filters-count" aria-hidden="true">{{ activeFilterChips().length }}</span>
+              }
+              <span class="material-icons-round text-[18px]">{{ showFiltersPanel() ? 'expand_less' : 'expand_more' }}</span>
+            </button>
 
-          <div class="status-filter">
-            <label class="status-label" for="statusSelect">Status:</label>
-            <app-pr-select
-              #statusSelect
-              id="statusSelect"
-              [options]="statusOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="All"
-              [ngModel]="selectedStatus()"
-              (ngModelChange)="onStatusChange($event)"
-              [required]="false"
-              [indexReference]="1"></app-pr-select>
-          </div>
+            @if (showFiltersPanel()) {
+              <div class="table-filters-panel" id="table-filters-panel" role="dialog" aria-label="Table filters">
+                <div class="table-filters-header">
+                  <h2 class="table-filters-title">Table filters</h2>
+                  <p class="table-filters-caption">filter your data by applying custom criteria</p>
+                </div>
 
-          <!-- CGIAR filter -->
-          <div class="cgiar-filter">
-            <label class="cgiar-label" for="cgiarSelect">Is CGIAR:</label>
-            <app-pr-select
-              #cgiarSelect
-              id="cgiarSelect"
-              [options]="isCGIAROptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="All"
-              [ngModel]="selectedCgiar()"
-              (ngModelChange)="onCgiarChange($event)"
-              [required]="false"
-              [indexReference]="2"></app-pr-select>
-          </div>
+                <div class="table-filters-body">
+                  <!-- Platform role filter -->
+                  <div class="table-filters-field">
+                    <label class="filter-label" for="platformRolesSelect">Platform role:</label>
+                    <app-pr-filter-multiselect
+                      #platformRolesSelect
+                      id="platformRolesSelect"
+                      [options]="getRolesService.platformRoles()"
+                      optionLabel="role_description"
+                      optionValue="role_id"
+                      placeholder="All"
+                      [ngModel]="selectedPlatformRoles()"
+                      (ngModelChange)="onPlatformRolesChange($event)">
+                    </app-pr-filter-multiselect>
+                  </div>
 
-          <!-- Entity filter -->
-          <div class="entity-filter">
-            <label class="entity-label" for="entitiesSelect">Entity:</label>
-            <app-pr-filter-multiselect
-              #entitiesSelect
-              [options]="initiativesService.allInitiatives()"
-              optionLabel="official_code"
-              placeholder="All"
-              [ngModel]="selectedEntities()"
-              (ngModelChange)="onEntitiesChange($event)"
-              [group]="true"
-              optionGroupChildren="entities"
-              optionGroupLabel="name">
-            </app-pr-filter-multiselect>
+                  <!-- Reporting role filter -->
+                  <div class="table-filters-field">
+                    <label class="filter-label" for="reportingRolesSelect">Reporting role:</label>
+                    <app-pr-filter-multiselect
+                      #reportingRolesSelect
+                      id="reportingRolesSelect"
+                      [options]="getRolesService.roles()"
+                      optionLabel="role_description"
+                      optionValue="role_id"
+                      placeholder="All"
+                      [ngModel]="selectedReportingRoles()"
+                      (ngModelChange)="onReportingRolesChange($event)">
+                    </app-pr-filter-multiselect>
+                  </div>
+
+                  <!-- Status filter -->
+                  <div class="table-filters-field">
+                    <label class="filter-label" for="statusSelect">Status:</label>
+                    <app-pr-select
+                      #statusSelect
+                      id="statusSelect"
+                      [options]="statusOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="All"
+                      [ngModel]="selectedStatus()"
+                      (ngModelChange)="onStatusChange($event)"
+                      [required]="false"
+                      [indexReference]="1"></app-pr-select>
+                  </div>
+
+                  <!-- CGIAR filter -->
+                  <div class="table-filters-field">
+                    <label class="filter-label" for="cgiarSelect">Is CGIAR:</label>
+                    <app-pr-select
+                      #cgiarSelect
+                      id="cgiarSelect"
+                      [options]="isCGIAROptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="All"
+                      [ngModel]="selectedCgiar()"
+                      (ngModelChange)="onCgiarChange($event)"
+                      [required]="false"
+                      [indexReference]="2"></app-pr-select>
+                  </div>
+
+                  <!-- Entity filter - P25 groups first, see orderedEntityGroups -->
+                  <div class="table-filters-field">
+                    <label class="filter-label" for="entitiesSelect">Entity:</label>
+                    <app-pr-filter-multiselect
+                      #entitiesSelect
+                      id="entitiesSelect"
+                      [options]="orderedEntityGroups()"
+                      optionLabel="official_code"
+                      placeholder="All"
+                      [ngModel]="selectedEntities()"
+                      (ngModelChange)="onEntitiesChange($event)"
+                      [group]="true"
+                      optionGroupChildren="entities"
+                      optionGroupLabel="name">
+                    </app-pr-filter-multiselect>
+                  </div>
+                </div>
+
+                <div class="table-filters-footer">
+                  <button type="button" class="table-filters-done" (click)="closeFiltersPanel()">Done</button>
+                </div>
+              </div>
+            }
           </div>
         </div>
 
         <!-- Clear filters button -->
         <div class="clear-filter">
           <div class="clear-spacer">&nbsp;</div>
-          <app-pr-button text="Clear filters" icon="filter_alt_off" colorType="secondary" (clickEvent)="onClearFilters()"></app-pr-button>
+          <button type="button" class="clear-filters-btn" data-testid="clear-filters-button" (click)="onClearFilters()">
+            <span class="material-icons-round text-[18px]">filter_alt_off</span>
+            <span>Clear filters</span>
+          </button>
         </div>
       </div>
 
@@ -101,6 +173,30 @@
         <app-pr-button text="Add a user" icon="add_circle" colorType="primary" (clickEvent)="onAddUser()"></app-pr-button>
       </div>
     </div>
+
+    <!--
+      P2-2043: feedback about what is being filtered. Built from the filter signals themselves, so a
+      chip can never disagree with the request that produced the table below.
+    -->
+    @if (activeFilterChips().length) {
+      <div class="active-filters-row" data-testid="active-filters-row">
+        <span class="active-filters-label">Results filtered by:</span>
+        <div class="active-filters-chips">
+          @for (chip of activeFilterChips(); track chip.filterType + '-' + (chip.value ?? chip.label)) {
+            <span class="active-filter-chip">
+              <span class="active-filter-chip__text">{{ chip.category }}: {{ chip.label }}</span>
+              <button
+                type="button"
+                class="active-filter-chip__x"
+                [attr.aria-label]="'Remove filter ' + chip.category + ' ' + chip.label"
+                (click)="removeFilter(chip)">
+                <span class="material-icons-round text-[14px]">close</span>
+              </button>
+            </span>
+          }
+        </div>
+      </div>
+    }
   </div>
 
   <!-- export button -->

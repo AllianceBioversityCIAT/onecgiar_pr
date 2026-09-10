@@ -17,6 +17,7 @@ describe('SharePointUploadService', () => {
     POST_createUploadSession: jest.Mock;
     POST_createUploadSessionP25: jest.Mock;
     PUT_loadFileInUploadSession: jest.Mock;
+    PUT_loadFileFragmentInUploadSession: jest.Mock;
     GET_loadFileInUploadSession: jest.Mock;
   };
 
@@ -35,6 +36,7 @@ describe('SharePointUploadService', () => {
       POST_createUploadSession: jest.fn().mockResolvedValue({ response: UPLOAD_URL }),
       POST_createUploadSessionP25: jest.fn().mockReturnValue(of({ response: UPLOAD_URL })),
       PUT_loadFileInUploadSession: jest.fn().mockResolvedValue(SP_RESPONSE),
+      PUT_loadFileFragmentInUploadSession: jest.fn().mockResolvedValue(SP_RESPONSE),
       GET_loadFileInUploadSession: jest.fn().mockResolvedValue({ nextExpectedRanges: ['512-1024'] })
     };
 
@@ -241,6 +243,114 @@ describe('SharePointUploadService', () => {
 
       releasePut!(SP_RESPONSE);
       await pending;
+    });
+  });
+
+  /**
+   * P2-3318 — "Evidence upload fails for PPT". Microsoft Graph refuses any single upload request of
+   * 60 MiB or more, and `PUT_loadFileInUploadSession` sends the whole file as one request, so every
+   * file at or above that size failed while the forms promised (and validated) up to 1 GB.
+   *
+   * These cases are written around the two things that can regress: a file that works today must
+   * still take the exact same single request, and a file that never could must go up in fragments
+   * Graph will actually accept — in order, 320-KiB-aligned, and with the driveItem read off the LAST
+   * one, because Graph answers all the others with 202 and no body worth copying.
+   */
+  describe('files too big for one request (P2-3318)', () => {
+    const MiB = 1024 * 1024;
+    const CAP = 60 * MiB;
+    const FRAGMENT = 10 * MiB;
+
+    /** A File of an arbitrary size whose `slice` reports the range asked for instead of bytes. */
+    const sized = (name: string, size: number) => {
+      const f = new File([], name);
+      Object.defineProperty(f, 'size', { value: size });
+      jest.spyOn(f, 'slice').mockImplementation(((start = 0, end = size) => ({ start, end })) as any);
+      return f;
+    };
+
+    const rangesOf = () => api.PUT_loadFileFragmentInUploadSession.mock.calls.map(c => [c[2], c[3], c[4]]);
+
+    it('leaves a file that fits in one request on the single PUT, untouched', async () => {
+      const item: any = { file: sized('deck.pptx', CAP - 1) };
+
+      await service.uploadPending([item], { resultId: 1 });
+
+      expect(api.PUT_loadFileInUploadSession).toHaveBeenCalledWith(item.file, UPLOAD_URL);
+      expect(api.PUT_loadFileFragmentInUploadSession).not.toHaveBeenCalled();
+    });
+
+    /**
+     * 60 MiB exactly is already too big: the limit is "less than 60 MiB", so the boundary itself has
+     * to fragment or the fix stops one byte short of the files it exists for.
+     */
+    it('fragments a file of exactly the cap — the limit is "less than 60 MiB"', async () => {
+      await service.uploadPending([{ file: sized('deck.pptx', CAP) }], { resultId: 1 });
+
+      expect(api.PUT_loadFileInUploadSession).not.toHaveBeenCalled();
+      expect(api.PUT_loadFileFragmentInUploadSession).toHaveBeenCalledTimes(6);
+    });
+
+    it('sends a 62 MiB deck as sequential, gapless, 320-KiB-aligned fragments of the whole file', async () => {
+      const size = 62 * MiB;
+
+      await service.uploadPending([{ file: sized('deck.pptx', size) }], { resultId: 1 });
+
+      const ranges = rangesOf();
+      expect(ranges).toHaveLength(7);
+      // Covers the file end to end with no gap and no overlap, and every range declares the true total.
+      expect(ranges[0]).toEqual([0, FRAGMENT - 1, size]);
+      ranges.forEach(([start, end, total], i) => {
+        expect(total).toBe(size);
+        if (i > 0) expect(start).toBe(ranges[i - 1][1] + 1);
+        expect(end - start + 1).toBe(i === ranges.length - 1 ? size - (ranges.length - 1) * FRAGMENT : FRAGMENT);
+        // Graph rejects any fragment but the last that is not a multiple of 320 KiB.
+        if (i < ranges.length - 1) expect((end - start + 1) % (320 * 1024)).toBe(0);
+      });
+      expect(ranges[6][1]).toBe(size - 1);
+    });
+
+    it('slices exactly the bytes it declares in each Content-Range', async () => {
+      const size = 62 * MiB;
+      const item: any = { file: sized('deck.pptx', size) };
+
+      await service.uploadPending([item], { resultId: 1 });
+
+      const sliced = (item.file.slice as jest.Mock).mock.calls.map(([start, end]) => [start, end]);
+      // Both sides come from the same run, so the comparison is vacuous unless something was sliced.
+      expect(sliced).toHaveLength(7);
+      expect(sliced).toEqual(rangesOf().map(([start, end]) => [start, end + 1]));
+    });
+
+    /**
+     * Graph answers every fragment but the last with 202 and no driveItem. Copying the first
+     * response would leave the evidence with an empty link and no `sp_document_id` — saved, and
+     * pointing at nothing.
+     */
+    it('writes back the LAST fragment response, not the first', async () => {
+      const size = 62 * MiB;
+      const item: any = { file: sized('deck.pptx', size) };
+      api.PUT_loadFileFragmentInUploadSession.mockImplementation((_f: any, _l: any, _s: number, end: number, total: number) =>
+        Promise.resolve(end + 1 === total ? SP_RESPONSE : { nextExpectedRanges: [`${end + 1}-${total - 1}`] })
+      );
+
+      await service.uploadPending([item], { resultId: 1 });
+
+      expect(item.link).toBe(SP_RESPONSE.webUrl);
+      expect(item.sp_document_id).toBe('doc-1');
+      expect(item.sp_file_name).toBe('report.pdf');
+      expect(item.sp_folder_path).toBe('/PRMS/2026');
+    });
+
+    it('reports the file by name when a fragment fails, and saves the rest', async () => {
+      api.PUT_loadFileFragmentInUploadSession.mockRejectedValue(new Error('413'));
+      const big: any = { file: sized('deck.pptx', 62 * MiB) };
+      const small: any = { file: file('note.pdf') };
+
+      const failed = await service.uploadPending([big, small], { resultId: 1 });
+
+      expect(failed).toEqual(['deck.pptx']);
+      expect(small.link).toBe(SP_RESPONSE.webUrl);
     });
   });
 });

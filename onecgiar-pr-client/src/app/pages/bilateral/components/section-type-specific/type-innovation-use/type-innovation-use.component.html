@@ -138,19 +138,27 @@
     </app-pr-range-level>
   </div>
 
-  <!-- P2-3390 — the single disabled `Coming soon` amount that used to sit here is gone: investment is
-       now the same three real tables W1/W2 has, inside the full metadata below. It stays OPTIONAL and
-       outside the MDS by PO decision (Juan David, 9-sep-2026), which is why it is not painted here. -->
+  <!-- P2-3428 — only the W3/bilateral-project investment is MDS. Program and partner investment stay
+       optional under Full Metadata below. -->
+  <div class="flex flex-col gap-2">
+    <span class="tsf-label">Investment (USD)</span>
+    <app-estimates-cgiar
+      [body]="body"
+      [sections]="['bilateral']"
+      [requiredSections]="['bilateral']"
+      [disabled]="loaded() !== true"
+      (changed)="onFieldChange()">
+    </app-estimates-cgiar>
+  </div>
 
   <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
-    <app-alert-status class="flex-1" status="info" [description]="mdsInfoNote"></app-alert-status>
+    <app-alert-status class="flex-1" status="info" [collapsible]="false" [description]="mdsInfoNote"></app-alert-status>
     <button type="button" class="tsf-save-btn shrink-0" (click)="toggleShowAll()">
       {{ showAllFields() ? 'Hide full metadata' : 'Complete full metadata' }}
     </button>
   </div>
 
-  <!-- Everything below the toggle is STRICTLY OPTIONAL (P2-3428 AC11) and counts for nothing in the MDS
-       tracker or the green check (AC14/AC16). Order mirrors the W1/W2 pooled-funding form. -->
+  <!-- Everything below the toggle is optional full metadata and counts for nothing in the MDS tracker. -->
   @if (showAllFields()) {
     <div class="flex flex-col gap-[18px]">
       <div>
@@ -322,16 +330,18 @@
         </div>
       }
 
-      <!-- P2-3390 — the three "Investment (USD)" tables, the very same component the W1/W2 Innovation Use
-           form renders (`shared/components/innovation-use-form/components/estimates`). One row per entity
-           already linked to this result: the person types an amount or ticks "yet to be determined", and
-           there is no catalogue to pick from on purpose. Optional, and deliberately NOT published to the
-           MDS tracker or the green check (AC16 still holds) — see `updateMds()`. -->
+      <!-- Optional full metadata: CGIAR Programs and partners only. The bilateral-project table is the
+           visible MDS above the toggle. -->
       <div class="flex flex-col gap-2">
         <span class="tsf-label">Investment (USD)</span>
         <!-- Disabled while the section could not be loaded: `queueTypeSave` writes nothing in that state
              (see the `loaded` doc), so an editable table would silently discard what the person types. -->
-        <app-estimates-cgiar [body]="body" [disabled]="loaded() !== true"></app-estimates-cgiar>
+        <app-estimates-cgiar
+          [body]="body"
+          [sections]="['programs', 'partners']"
+          [disabled]="loaded() !== true"
+          (changed)="onFieldChange()">
+        </app-estimates-cgiar>
       </div>
     </div>
   }

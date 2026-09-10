@@ -169,6 +169,10 @@ describe('CPNormalSelectorComponent — partner role group DOM (PRS-R-1..3)', ()
         if (!Array.isArray(deliveries)) return false;
         return deliveries.find((d: any) => d.partner_delivery_type_id == deliveryId);
       },
+      isRoleBlockedByOther: (deliveries: any, deliveryId: number) => {
+        if (!Array.isArray(deliveries)) return false;
+        return deliveryId !== 4 && !!deliveries.find((d: any) => d.partner_delivery_type_id == 4);
+      },
       onSelectDeliveryPartners: jest.fn(),
       removePartner: jest.fn(),
       setPossibleLeadPartners: jest.fn()
@@ -333,6 +337,7 @@ describe('CPNormalSelectorComponent — "Other(s) External Partners" label (EPT-
       otherPartnersSelected: [],
       setPossibleLeadPartners: jest.fn(),
       validateDeliverySelectionPartners: () => false,
+      isRoleBlockedByOther: () => false,
       onSelectDeliveryPartners: jest.fn(),
       removePartner: jest.fn()
     };

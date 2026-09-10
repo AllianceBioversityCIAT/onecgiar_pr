@@ -1,6 +1,6 @@
 # lab-report-form
 
-**Verified:** 2026-09-05 · qa-development-2026 · b2d5f1c31
+**Verified:** 2026-09-09 · qa-development-2026-ss · b1ca9ef1f (ERC-T-2: adds `hasReferenceCenters`/`hasReferenceScience` + the full-catalogue-direct template branch below); prior: 2026-09-05 · qa-development-2026 · b2d5f1c31
 
 ## Qué es
 El formulario de creación de resultado que vive **dentro del aside** (`indicator-drawer`). Copia
@@ -26,6 +26,17 @@ signals  canSave · currentResultIsKnowledgeProduct · needsResultLevelChoice ·
 - `../indicator-drawer/indicator-drawer.component.html:69` — tab `report` del aside.
 
 ## Trampas (⚠️ = ya rompió algo)
+- ⚠️ **Sin ToC (`tocNode: null`, emerging), el desplegable primario de Centers/Science Programs
+  DEBE apuntar a `otherCentersList()`/`otherScienceList()` (catálogo completo), no a
+  `dropdown1Options()`/`dropdown1ScienceOptions()`.** Estos últimos SIEMPRE incluyen el centinela
+  `Other(s)`, así que sin la rama el usuario veía un desplegable con UN SOLO elemento ("Other(s)")
+  y tenía que abrirlo para llegar al catálogo real (P2-3554-adjacent, spec
+  `bugfix/emerging-result-contributor-catalog` ERC-T-2 — pivot desde `ERC-T-1`, que arregló
+  `aow-hlo-create-modal.component.ts` pero ese ya no es el entry point vivo de "Report emerging
+  result"). Los computeds `hasReferenceCenters`/`hasReferenceScience`
+  (`this.tocCenters().length > 0` / `this.tocSciencePrograms().length > 0`) son el switch de rama
+  en el template; el bloque secundario "Other(s)" queda doblemente gateado
+  (`hasReferenceX() && showOtherX()`) para que no pueda renderizar en la rama sin ToC.
 - ⚠️ **`isStatic` es lo que mantiene un campo editable, no `editable`.** `editable` está declarado
   en `pr-input` pero **nunca se lee** en su plantilla (solo `pr-select` lo usa). Y
   `RolesService.readOnly` vale `true` por defecto, así que sin `[isStatic]="true"` el campo se pinta

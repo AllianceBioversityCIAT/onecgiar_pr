@@ -809,6 +809,18 @@ export class ResultsService {
           debug: true,
         });
       }
+      // P2-3597: the duplicate-title check has to run BEFORE the first write of this method.
+      // It used to sit further down, after the discontinuation block had already committed six
+      // writes with no transaction around them, so a 409 left the result half-answered: the
+      // reason the person ticked was stored while the screen said nothing had been saved.
+      // Everything above this line is read-only, so validating here means a rejected save
+      // leaves the result exactly as it was. `createOwnerResult` already validates first.
+      const trimmedGeneralTitle = await this.assertUniqueActiveResultTitle(
+        resultGeneralInformation.result_name,
+        result.version_id,
+        result.id,
+      );
+
       if (
         resultGeneralInformation?.is_discontinued &&
         (result.result_type_id == 7 || result.result_type_id == 2)
@@ -890,12 +902,6 @@ export class ResultsService {
           );
         }
       }
-
-      const trimmedGeneralTitle = await this.assertUniqueActiveResultTitle(
-        resultGeneralInformation.result_name,
-        result.version_id,
-        result.id,
-      );
 
       const updateResult = await this._resultRepository.save({
         id: result.id,

@@ -260,6 +260,19 @@ export class AowHloCreateModalComponent implements OnInit {
   private preselectTocCenters(): void {
     this.centersSE.getData().then(() => {
       const node = this.entityAowService.currentResultToReport();
+
+      // ERC-R-1 (bugfix/emerging-result-contributor-catalog): an emerging (unplanned) report opens this
+      // modal with `indicators: []` while node-level ToC fields (toc_partner_institution_ids,
+      // contributing_synergy_program_initiative_ids) can still be present. Only an indicator-linked
+      // report (indicators.length > 0) should inherit the ToC centers preselection — otherwise the
+      // full-catalogue `@else` branch must stay reachable.
+      const hasIndicator = (node?.indicators?.length ?? 0) > 0;
+      if (!hasIndicator) {
+        this.tocCenters.set([]);
+        this.contributingCenters.set([]);
+        return;
+      }
+
       const tocAcronyms = (node?.indicators?.[0]?.targets_by_center?.centers ?? [])
         .map((center: any) => center?.center_acronym)
         .filter(Boolean);
@@ -304,7 +317,18 @@ export class AowHloCreateModalComponent implements OnInit {
   // P2-3114: preselect the Science Programs mapped in the selected indicator's ToC node.
   // Backend exposes contributing_synergy_program_initiative_ids per node (clarisa_initiatives.id[]); join by id.
   private preselectTocSciencePrograms(allInits: any[]): void {
-    const tocSpIds: number[] = this.entityAowService.currentResultToReport()?.contributing_synergy_program_initiative_ids ?? [];
+    const node = this.entityAowService.currentResultToReport();
+
+    // ERC-R-1 (bugfix/emerging-result-contributor-catalog): mirror the gate in preselectTocCenters() —
+    // an emerging (unplanned) report (indicators: []) must not inherit node-level ToC Science Programs.
+    const hasIndicator = (node?.indicators?.length ?? 0) > 0;
+    if (!hasIndicator) {
+      this.tocSciencePrograms.set([]);
+      this.entityAowService.selectedEntities.set([]);
+      return;
+    }
+
+    const tocSpIds: number[] = node?.contributing_synergy_program_initiative_ids ?? [];
 
     const preselected = (allInits ?? [])
       .filter((sp: any) => tocSpIds.includes(sp.id))

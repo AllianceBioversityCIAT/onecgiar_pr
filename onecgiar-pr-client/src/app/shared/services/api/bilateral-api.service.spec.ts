@@ -51,6 +51,15 @@ describe('BilateralApiService', () => {
     req.flush(mockResponse);
   });
 
+  it('PATCH_changeBilateralResultType should PATCH the bilateral-safe change endpoint', done => {
+    const body = { result_level_id: 4, result_type_id: 7, justification: 'Correction' };
+    service.PATCH_changeBilateralResultType(10, body).subscribe(response => { expect(response).toEqual(mockResponse); done(); });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}api/bilateral/center/change-type/10`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual(body);
+    req.flush(mockResponse);
+  });
+
   it('PATCH_plannedResult should PATCH planned-result', done => {
     const body = { planned_result: true };
     service.PATCH_plannedResult(10, body).subscribe(response => {

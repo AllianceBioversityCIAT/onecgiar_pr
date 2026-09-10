@@ -4,6 +4,7 @@ export interface CustomField {
   type?: string;
   hide?: boolean;
   description?: string;
+  tooltip?: string;
   required?: boolean;
   useColon?: boolean;
 }

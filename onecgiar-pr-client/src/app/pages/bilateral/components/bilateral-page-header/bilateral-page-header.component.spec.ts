@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { RouterModule } from '@angular/router';
 import { By } from '@angular/platform-browser';
+import { environment } from '../../../../../environments/environment';
 import { BilateralPageHeaderComponent } from './bilateral-page-header.component';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
@@ -49,7 +50,7 @@ describe('BilateralPageHeaderComponent', () => {
     ctx.setCenter('SMO', 'CGIAR System Organization');
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('nav')).toBeNull();
-    expect(fixture.nativeElement.textContent).not.toContain('Report emerging result');
+    expect(fixture.nativeElement.textContent).not.toContain('Bulk Results Uploader');
   });
 
   it('shows the tab bar, icons, and marks the active tab when activeTab is set', () => {
@@ -75,7 +76,7 @@ describe('BilateralPageHeaderComponent', () => {
     // Active tab assertions
     const active = links.find(l => l.nativeElement.getAttribute('aria-current') === 'page');
     expect(active?.nativeElement.textContent.trim()).toContain('Results');
-    expect(fixture.nativeElement.textContent).toContain('Report emerging result');
+    expect(fixture.nativeElement.textContent).toContain('Bulk Results Uploader');
 
     // Horizontal scroll and styling
     const nav = fixture.debugElement.query(By.css('nav[aria-label="Center sections"]'));
@@ -318,18 +319,65 @@ describe('BilateralPageHeaderComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('CGIAR System Organization');
   });
 
-  it('links the Report emerging result CTA and tabs to the current center', () => {
+  it('points the Bulk Results Uploader CTA at the external platform, in a new tab', () => {
     ctx.setCenter('SMO', 'CGIAR System Organization');
     fixture.componentRef.setInput('activeTab', 'overview');
     fixture.detectChanges();
 
-    const cta = fixture.debugElement.query(By.css('a[href*="create"]'));
-    expect(cta.nativeElement.getAttribute('href')).toBe('/bilateral/SMO/create');
+    const cta = fixture.debugElement.query(By.css('[data-testid="bilateral-bulk-uploader-cta"]'));
+    expect(cta).toBeTruthy();
+    // Asserted against the configured value rather than a literal: `environment.bulkUploaderUrl`
+    // is supplied per environment by CI, so a hardcoded URL here would be a different bug in
+    // every deployment.
+    expect(cta.nativeElement.getAttribute('href')).toBe(component.bulkUploaderUrl());
+    expect(cta.nativeElement.getAttribute('target')).toBe('_blank');
+    // Without noopener the opened page gets a handle on this one via window.opener.
+    expect(cta.nativeElement.getAttribute('rel')).toContain('noopener');
+  });
 
-      const draftsTab = fixture.debugElement.queryAll(By.css('nav a')).find(l =>
-        l.nativeElement.textContent.includes('Draft Results'),
+  it('leaves the tabs pointing at the current center', () => {
+    ctx.setCenter('SMO', 'CGIAR System Organization');
+    fixture.componentRef.setInput('activeTab', 'overview');
+    fixture.detectChanges();
+
+    const draftsTab = fixture.debugElement.queryAll(By.css('nav a')).find(l =>
+      l.nativeElement.textContent.includes('Draft Results'),
     );
     expect(draftsTab?.nativeElement.getAttribute('href')).toBe('/bilateral/SMO/drafts');
+  });
+
+  /**
+   * How PROD behaves until the bulk platform has a destination there: the key is simply absent
+   * from that environment's config and the CTA does not render. No feature flag, no dead link.
+   */
+  it('hides the CTA when no bulk uploader URL is configured', () => {
+    const configured = (environment as Record<string, unknown>)['bulkUploaderUrl'];
+    (environment as Record<string, unknown>)['bulkUploaderUrl'] = '';
+    try {
+      ctx.setCenter('SMO', 'CGIAR System Organization');
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      fixture.detectChanges();
+
+      expect(component.showBulkCta()).toBe(false);
+      expect(fixture.debugElement.query(By.css('[data-testid="bilateral-bulk-uploader-cta"]'))).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('Bulk Results Uploader');
+    } finally {
+      (environment as Record<string, unknown>)['bulkUploaderUrl'] = configured;
+    }
+  });
+
+  /**
+   * The CTA replaced "Report emerging result" in the same slot, so `/create` is no longer
+   * reachable from this header on any tab. Pinned because it is a deliberate product decision,
+   * not an oversight: the Reporting tab's per-project "Create result" buttons own that entry now.
+   */
+  it('no longer offers the Report emerging result CTA', () => {
+    ctx.setCenter('SMO', 'CGIAR System Organization');
+    fixture.componentRef.setInput('activeTab', 'reporting');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Report emerging result');
+    expect(fixture.debugElement.query(By.css('a[href="/bilateral/SMO/create"]'))).toBeNull();
   });
 
   describe('detail variant (result editor)', () => {

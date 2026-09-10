@@ -10,6 +10,8 @@ This is the **module-level guide** for `api/bilateral`. It complements:
 >
 > `AGENTS.md` covers **what the module does** (ingestion flow, handlers, review workflow). This `CLAUDE.md` covers **how the code is laid out**, the security/contract rules that apply, and what to touch (or not) when extending it.
 
+**Verified:** 2026-09-10 · P2-3233 bilateral-safe promoted-draft type conversion
+
 ---
 
 ## 1. What this module is
@@ -102,9 +104,14 @@ See `AGENTS.md` §Ingestion Flow for the **flow**. Rules that apply here:
   - Interface: [`handlers/bilateral-result-type-handler.interface.ts`](./handlers/bilateral-result-type-handler.interface.ts):
     - `readonly resultType: number` — the `ResultTypeEnum` value the handler claims.
     - `initializeResultHeader?(context)` — first call; can return `{ resultHeader, isDuplicate? }` or `null` (defaults to standard creation).
+    - `validateBeforeCreate?(context)` — preflight MDS gate before the transaction; use it when an
+      external payload must not create an incomplete Pending Review result.
     - `afterCreate?(context)` — second call; persist type-specific blocks after the result row is in place.
   - `NoopBilateralHandler` is registered for `OTHER_OUTPUT` — accept but do nothing extra. Mirror this pattern when adding a new "no extra processing" result type.
 - **`KnowledgeProductBilateralHandler`** is the only handler that **does NOT** take title/description from the payload — it uses the `handle` to call `ResultsKnowledgeProductsService` and fetches authoritative metadata from CGSpace. Don't generalise this pattern unless the new type genuinely has a third-party master.
+- **Innovation Use bilateral MDS (P2-3428):** validate Actors, quantitative measures, use level and
+  W3/bilateral-project investment before external create; centre drafts remain editable but
+  `submit-for-review` repeats the persisted-data gate. Program and partner investment are optional.
 
 ---
 

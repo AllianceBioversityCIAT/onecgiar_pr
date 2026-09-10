@@ -21,12 +21,23 @@ export interface HandlerAfterCreateContext {
   bilateralDto: CreateBilateralDto;
 }
 
+/**
+ * Runs before the ingest transaction starts. This is intentionally separate from
+ * `afterCreate`: external bilateral payloads must fail their MDS gate before a
+ * Pending Review result (or any of its linked rows) can be written.
+ */
+export interface HandlerBeforeCreateContext {
+  bilateralDto: CreateBilateralDto;
+}
+
 export interface BilateralResultTypeHandler {
   readonly resultType: number;
 
   initializeResultHeader?(
     context: HandlerInitializeContext,
   ): Promise<HandlerInitializeResult | null>;
+
+  validateBeforeCreate?(context: HandlerBeforeCreateContext): Promise<void>;
 
   afterCreate?(context: HandlerAfterCreateContext): Promise<void>;
 }

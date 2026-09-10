@@ -1,6 +1,6 @@
 # pr-multi-select
 
-**Verified:** 2026-08-25 · branch performance-refactor · bc25304fb
+**Verified:** 2026-09-10 · branch qa-development-2026-ss · c307e5816 (adds `tooltip` input, forwarded to the internal `app-pr-field-header` — spec `changes/info-tooltip-hover-reveal` ITR-T-8, mirrors `pr-select`'s existing pattern); prior: 2026-08-25 · performance-refactor · bc25304fb
 
 ## Qué es
 
@@ -14,6 +14,10 @@ El dropdown multi-selección de toda la app: buscador, `select all` opcional, mo
   `optionGroupLabel` / `optionGroupChildren`.
 - `group`, `showSelectAll`, `flagsCode`, `logicalDeletion`, `confirmDeletion`,
   `cannotRemoveOptionValues`, `disableOptions`, `displayLabelFormatter`.
+- `tooltip` — string opcional, default `''` (no-op). Forwarded como `[tooltip]` al
+  `app-pr-field-header` interno: cuando no está vacío, pinta el ⓘ inline junto al label
+  (`PrTooltipDirective`, click/`Enter`/`Space` para fijar, mismo patrón que `pr-select` y
+  `pr-yes-or-not`). Ninguna de las ~80 instancias existentes lo usa hoy — es aditivo.
 - Gates de render: `readOnly` · `RolesService.readOnly` (global, **default TRUE**) ·
   `isStatic` (fuerza el control aunque sea read-only) · `hideSelect`.
 - `required` — **default `true`**. Ver la trampa ⚠️ #1: hoy es casi inerte.

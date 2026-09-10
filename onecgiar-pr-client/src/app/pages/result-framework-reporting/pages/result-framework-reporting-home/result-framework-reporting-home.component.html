@@ -80,6 +80,7 @@
           } @else {
             <div>
               <app-alert-status
+                [collapsible]="false"
                 inlineStyles="background-color: var(--pr-color-white); margin: 0;"
                 description="You currently do not have a Center User role in any CGIAR Center. If you require access, please contact your system administrator."></app-alert-status>
             </div>
@@ -115,6 +116,7 @@
             } @else {
               <div>
                 <app-alert-status
+                  [collapsible]="false"
                   inlineStyles="background-color: var(--pr-color-white); margin: 0;"
                   description=" You currently do not have a member role in any Science Program or Accelerator. If you require access or permissions, please contact
                 your Science Program or Accelerator coordinator."></app-alert-status>

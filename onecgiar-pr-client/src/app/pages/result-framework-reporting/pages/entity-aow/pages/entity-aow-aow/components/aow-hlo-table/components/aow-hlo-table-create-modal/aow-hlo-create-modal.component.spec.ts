@@ -983,6 +983,50 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
     });
   });
 
+  // ERC-T-1 (ERC-AC-1 / ERC-AC-2): preselectTocCenters()/preselectTocSciencePrograms() must gate on
+  // whether an indicator is actually being reported, not merely on node-level ToC fields being present.
+  describe('preselectToc* gating on indicators.length (ERC-AC-1, ERC-AC-2)', () => {
+    it('ERC-AC-1: emerging report (indicators: []) does NOT inherit node-level ToC centers/science programs', async () => {
+      mockApiService.resultsSE.GET_AllInitiatives.mockReturnValue(
+        of({ response: [{ id: 51, initiative_id: 51, official_code: 'SP02', name: 'Sustainable Farming' }] })
+      );
+      mockEntityAowService.currentResultToReport.set({
+        indicators: [],
+        toc_partner_institution_ids: [100],
+        contributing_synergy_program_initiative_ids: [51]
+      });
+
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.tocCenters()).toEqual([]);
+      expect(component.tocSciencePrograms()).toEqual([]);
+      expect(component.hasReferenceCenters()).toBe(false);
+      expect(component.hasReferenceScience()).toBe(false);
+    });
+
+    it('ERC-AC-2: indicator/ToC report (indicators non-empty) keeps matching node-level ToC centers/science programs as today', async () => {
+      mockApiService.resultsSE.GET_AllInitiatives.mockReturnValue(
+        of({ response: [{ id: 51, initiative_id: 51, official_code: 'SP02', name: 'Sustainable Farming' }] })
+      );
+      mockEntityAowService.currentResultToReport.set({
+        indicators: [{ indicator_description: 'Indicator', result_type_id: 1, targets_by_center: { centers: [] } }],
+        toc_partner_institution_ids: [100],
+        contributing_synergy_program_initiative_ids: [51]
+      });
+
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.tocCenters().map((c: any) => c.code)).toEqual(['ABC']);
+      expect(component.tocSciencePrograms().map((sp: any) => sp.id)).toEqual([51]);
+      expect(component.hasReferenceCenters()).toBe(true);
+      expect(component.hasReferenceScience()).toBe(true);
+    });
+  });
+
 });
 
 /**

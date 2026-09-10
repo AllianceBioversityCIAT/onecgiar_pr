@@ -414,15 +414,37 @@ export class ReportingAowTableComponent {
    */
   readonly intermediateTargetTooltip = 'This target is not exclusive to that AoW.';
 
+  /**
+   * P2-3336 rule 1, PO 2026-09-09. The note under the Intermediate Outcomes card header. These
+   * nodes have no work package, so they belong to the Science Program and this card is now the
+   * ONLY place they appear — they used to be drawn inside every AoW card as well, which is what
+   * this line replaces. Wording is the PO's, verbatim.
+   *
+   * Inline string on purpose: nothing under `pages/result-framework-reporting/` goes through
+   * `src/app/internationalization/` (the module's own AGENTS.md says so), and every neighbouring
+   * string here is a literal too.
+   */
+  readonly intermediateBucketNote = 'These Intermediate Outcomes are not assigned to any AoW.';
+
+  /** True when the card is the Intermediate Outcomes bucket — the only card that shows the note. */
+  isIntermediateBucket(group: ReportingAowGroup): boolean {
+    return (group.kind ?? 'aow') === 'intermediate';
+  }
+
   /** True when the row's card is the Intermediate Outcomes bucket (`group.kind === 'intermediate'`). */
   isIntermediateRow(bucketKind: string): boolean {
     return bucketKind === 'intermediate';
   }
 
   /**
-   * True when an `aow` card's Outcomes-band row is a cross-cutting Intermediate Outcome that also
-   * appears in the Intermediate Outcomes card (RES-R-3, RES-DD-2). Driven by the `__isIntermediateCrosscut`
-   * stamp `dashboard-lab.indicatorsByAow()` adds from the backend's `is_aow` field.
+   * True when a row is a cross-cutting Intermediate Outcome, from the `__isIntermediateCrosscut`
+   * stamp `dashboard-lab.indicatorsByAow()` adds off the backend's `is_aow` field.
+   *
+   * ⚠️ P2-3336 (2026-09-09) stopped such rows from entering an `aow` card at all, so this no longer
+   * drives the Target tooltip (`RES-R-3` is superseded; `RES-R-1`, the tooltip inside the
+   * Intermediate Outcomes card, still stands and now keys off `isIntermediateRow` alone). Kept
+   * because the stamp is still produced and `hloTaxonomy()` reads it for the `IO` badge — a payload
+   * that starts flagging these differently must not silently lose that.
    */
   isCrossCuttingIntermediate(row: ReportingIndicator): boolean {
     return !!row?.__isIntermediateCrosscut;

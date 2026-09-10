@@ -205,6 +205,111 @@ describe('EvidencesService — confidentiality of an uploaded file', () => {
     });
   });
 
+  describe('saveSPData — a file with no visibility answer', () => {
+    it('refuses when the file is there and the public/confidential question is unanswered', async () => {
+      mockEvidenceSharepointRepository.findOne.mockResolvedValue(undefined);
+
+      await expect(
+        service.saveSPData(
+          {
+            id: 600,
+            is_sharepoint: true,
+            is_public_file: null,
+            sp_document_id: 'DOC-NEW',
+            sp_file_name: 'result-9075-Document.pdf',
+          } as any,
+          600,
+        ),
+      ).rejects.toThrow(/answer whether this file can be shared publicly/i);
+
+      // and SharePoint was never called, so nothing was half-done
+      expect(mockSharePointService.addFileAccess).not.toHaveBeenCalled();
+    });
+
+    it('refuses when the answer is undefined too, not only null', async () => {
+      mockEvidenceSharepointRepository.findOne.mockResolvedValue(undefined);
+
+      await expect(
+        service.saveSPData(
+          {
+            id: 601,
+            is_sharepoint: true,
+            sp_document_id: 'DOC-NEW',
+          } as any,
+          601,
+        ),
+      ).rejects.toThrow(/answer whether this file can be shared publicly/i);
+    });
+
+    it('🛑 still saves a half-filled evidence whose file is not uploaded yet', async () => {
+      mockEvidenceSharepointRepository.findOne.mockResolvedValue(undefined);
+      mockSharePointService.addFileAccess.mockResolvedValue({
+        link: { webUrl: 'https://sharepoint/link' },
+        revocation: {
+          attempted: 0,
+          outcomes: [],
+          survivors: [],
+          publicSurvivors: [],
+          verifiedPrivate: true,
+          readBackFailed: false,
+        },
+      });
+
+      // The user switched the source to "Upload file" and saved before picking a file.
+      // There is no document, so there is nothing to decide the visibility of yet.
+      await expect(
+        service.saveSPData(
+          { id: 602, is_sharepoint: true, is_public_file: null } as any,
+          602,
+        ),
+      ).resolves.not.toThrow();
+    });
+
+    it('does not interfere with a link-only evidence', async () => {
+      mockEvidenceSharepointRepository.findOne.mockResolvedValue(undefined);
+
+      // Bilateral and innovation-dev both send is_public_file: null when the user picks
+      // "Link" as the source — is_sharepoint is false there, so this must never fire.
+      await expect(
+        service.saveSPData(
+          {
+            id: 603,
+            is_sharepoint: false,
+            is_public_file: null,
+            link: 'https://example.org/evidence',
+          } as any,
+          603,
+        ),
+      ).resolves.not.toThrow();
+    });
+
+    it('lets a stored answer satisfy the check when the payload omits it', async () => {
+      mockEvidenceSharepointRepository.findOne.mockResolvedValue({
+        id: 78,
+        document_id: 'DOC-OLD',
+        is_public_file: false,
+      });
+      mockSharePointService.addFileAccess.mockResolvedValue({
+        link: { webUrl: 'https://sharepoint/link' },
+        revocation: {
+          attempted: 0,
+          outcomes: [],
+          survivors: [],
+          publicSurvivors: [],
+          verifiedPrivate: true,
+          readBackFailed: false,
+        },
+      });
+
+      await expect(
+        service.saveSPData(
+          { id: 604, is_sharepoint: true, sp_evidence_id: 78 } as any,
+          604,
+        ),
+      ).resolves.not.toThrow();
+    });
+  });
+
   describe('_processMainEvidencesOnCreate — one bad evidence must not cost the others', () => {
     it('saves every evidence it can and only then reports the ones it could not', async () => {
       const failing = {

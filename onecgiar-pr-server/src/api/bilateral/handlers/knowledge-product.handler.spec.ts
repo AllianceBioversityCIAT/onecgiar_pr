@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { KnowledgeProductBilateralHandler } from './knowledge-product.handler';
+import { ResultStatusData } from '../../../shared/constants/result-status.enum';
 
 describe('KnowledgeProductBilateralHandler', () => {
   const baseDto: any = {
@@ -75,6 +76,33 @@ describe('KnowledgeProductBilateralHandler', () => {
         }),
       ).rejects.toThrow(BadRequestException);
       expect(resultRepository.save).not.toHaveBeenCalled();
+    });
+
+    /**
+     * P2-3428. This handler returns its own header and therefore never reaches the generic
+     * `initializeResultHeader` in BilateralService — a keep_editing mapping applied only there
+     * would leave Knowledge Products silently ignoring the flag. These two cases are what
+     * catch that regression.
+     */
+    it('creates the KP in Editing when keep_editing is true', async () => {
+      await handler.initializeResultHeader({
+        ...baseInitContext,
+        bilateralDto: { ...baseDto, keep_editing: true },
+      });
+
+      expect(resultRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status_id: ResultStatusData.Editing.value }),
+      );
+    });
+
+    it('creates the KP in Pending Review when keep_editing is absent', async () => {
+      await handler.initializeResultHeader(baseInitContext);
+
+      expect(resultRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status_id: ResultStatusData.PendingReview.value,
+        }),
+      );
     });
 
     it('creates a new result when knowledge_product and handle are present', async () => {

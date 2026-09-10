@@ -139,6 +139,7 @@ The three agreed rules (Nicoleta Trifa / CGIAR System Organization) are all refl
 
 - Rule 1 (IOs outside an AoW): their own Intermediate Outcomes page in the Science Program menu. Component entity-aow-unplanned/.
 - Rule 2 (IOs inside an AoW but not unique to it): on the AoW Outcomes tab, shared IOs are split below the main table under "Intermediate Outcomes not exclusive to this Area of Work", with an info message and a "Not exclusive to this AoW" tag. Informational only. Delivered by 0c153a116.
+  > 🛑 **WITHDRAWN 2026-09-09.** The PO cancelled rule 2 on the ticket ("this rule no apply anymore", 09:42): those cases do not exist. Consequence, shipped the same day: the Reporting tab (`dashboard-lab`) no longer renders AoW-less IOs inside AoW cards, and neither the AoW nor the Science Program percentage counts them. The legacy `entity-aow-aow` split section described above STAYS - explicit decision, which is why the cut was made in the client + the roll-up, not in the SQL. See `dashboard-lab/CLAUDE.md`, section "IO sin AoW".
 - Rule 3 (IOs unique to an AoW): unchanged.
 
 ### The model that decides all three
