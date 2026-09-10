@@ -128,7 +128,7 @@
 - **Verification:** host specs: emitting a MEL item (`itemUrl = https://repo.mel.cgiar.org/items/<uuid>`) → regex passes, `GET_mqapValidation` called with that URL, banner text "Selected from MELSpace", and the `POST_createResult` body deep-equals the Manual-entry body for the same URL (extend the existing parity test); server spec: the four messages contain no "CGSpace". Gate: `bash scripts/kp-copy-gate.sh` exits 0. **Input that fails it:** leave "Selected from CGSpace" literal in one host → gate exits 1; hard-code `'cgspace'` in the banner → MEL banner assertion fails. **Disqualifier:** an allow-list broad enough to match the whole word `CGSpace` (e.g. `/CGSpace/i`) makes the gate incapable of failing — the allow-list must be an explicit set of phrases, and the task must show the gate failing on the pre-change tree (run it once before editing and record the non-zero exit).
 - **Definition of done:** three host specs + server spec green; gate green after edits **and** demonstrably red before; `tsc` + `ng lint` clean.
 
-### `KPM-T-9` — Cypress CT sweep of the browse component (chip row wraps, no overflow, notice renders)
+### [x] `KPM-T-9` — Cypress CT sweep of the browse component (chip row wraps, no overflow, notice renders)
 
 - **Type:** `tests`
 - **Description:** New `kp-cgspace-browse.cy.ts` mounting `KpCgspaceBrowseComponent` with a stubbed `ResultsApiService` (fixture: 2 ok sources + 1 timeout, one deduplicated item). Sweep 1536 / 840 / 375 px: `documentElement.scrollWidth <= clientWidth`; chip row (`[role=group]`) height at 375 > one chip height (wrapped) and every chip `getBoundingClientRect().height >= 24`; notice visible; badges visible; requested viewport measured (`assertEffectiveWidth` pattern from `bilateral-review.cy.ts`).

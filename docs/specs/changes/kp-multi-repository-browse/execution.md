@@ -282,3 +282,48 @@ Two Reviewers (`KPM-T-6`, `KPM-T-4` lens B) on `fable` were terminated by `HTTP 
 
 **Decisions / issues**: none beyond the test gap. **Budget:** 2 Reviewer rounds (round 2 PASSed — no escalation). Gate: `auto-approved (pre-approved mode)`.
 
+### `KPM-T-9` — Cypress CT sweep of the browse component (chip row wraps, no overflow, notice renders)
+
+| Field | Value |
+|---|---|
+| Final status | **PASS** (attempt 2 of 3 — one rework round) |
+| Date | 2026-09-10 |
+| Implementer | `akili-implementer` (`sonnet`), effort `medium` → `high` on retry, skill `angular-developer` |
+| Reviewer | `akili-reviewer` (`opus`), lens checklist mode |
+| Requirements covered | `KPM-AC-15`; NFR Responsiveness / Accessibility (`requirements.md` §7); `design.md` §6.3 responsive line |
+| Ran in parallel with | `KPM-T-8` (hosts + server copy; Jest only — CT dev server on port 8091 is this task's alone) |
+
+**Attempt 1 — FAIL**
+
+- File added: `kp-cgspace-browse/kp-cgspace-browse.cy.ts` — mounts `KpCgspaceBrowseComponent` with a `useValue`-stubbed `ResultsApiService` (sources cgspace ok/18, melspace ok/6, worldfish timeout/0; two CGSpace items, one with `alsoIn` melspace; facets empty), types `maize`, waits on `[data-test="kp-results-counter"]`, sweeps 1536 / 840 / 375 with the exemplar's `assertEffectiveWidth` (≤ 4 px).
+- Command: `CT_DEV_SERVER_PORT=8091 ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--max-old-space-size=2048 npx cypress run --component --spec src/app/pages/result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.cy.ts`
+- Run output (verbatim):
+  ```
+  KpCgspaceBrowseComponent — Cypress CT (KPM-T-9)
+    effective 1536px — desktop
+      ✓ KPM-AC-15: no horizontal document overflow at 1536px (772ms)
+      ✓ KPM-R-7: the partial notice names WorldFish and the repository badges render (602ms)
+    effective 840px — tablet
+      ✓ KPM-AC-15: no horizontal document overflow at 840px (584ms)
+      ✓ KPM-R-7: the partial notice names WorldFish and the repository badges render (581ms)
+    effective 375px — mobile
+      ✓ KPM-AC-15: no horizontal document overflow at 375px (589ms)
+      ✓ KPM-R-7: the partial notice names WorldFish and the repository badges render (593ms)
+      ✓ KPM-AC-15: the chip row wraps at 375px — strip height exceeds one chip, every chip >= 24px tall (603ms)
+  7 passing (5s)
+  ✔ All specs passed! 7 7 - - -
+  ```
+  Primeicons / `TS2322 ct-utils` noise present (known, non-blocking); run reached "All specs passed" — conclusive. `assertEffectiveWidth` ≤ 4 px held at all three widths. `npx tsc --noEmit -p tsconfig.app.json` clean (CT spec outside that program, confirmed via `--listFiles`); `npx ng lint --quiet` clean.
+- Implementer `Not Done / Assumptions`: the `flex-nowrap` mutation probe was not run (the Leader's brief forbade editing the component; the task's "you may prove it" is optional).
+- Reviewer verdict: **FAIL** (2 issues). Checklist PASS on effective-width guard, document-level overflow assertion, visible-by-text notice/badges, real `results` state with a failed source, no HTTP, exemplar conventions. Reviewer's mutation reasoning: the *overflow* gate is failure-capable under `flex-nowrap` (min-content ≈ 520 px vs 355 px, no clipping ancestor); the *wrap* gate is not. **Issue 1 — Discovered Issue:** the 375 px wrap assertion compares strip height to one chip height; with `p-[10px]` on the strip and `h-[30px]` chips an unwrapped row measures 50 px and already passes; it would pass at 1536 px and under `flex-nowrap`; the `>= 24` chip check is satisfied by the literal `h-[30px]`. **Violated Rule:** `KPM-AC-15` "chip row wraps", §7 Responsiveness, design §6.3 "at 375 px chips wrap to two rows", §10 CT bullet. **Remediation:** assert row occupancy — distinct rounded `top` values across the chips ≥ 2 at 375 and exactly 1 at 1536. **Issue 2 — Discovered Issue:** DoD requires the run output pasted into `execution.md`; no `KPM-T-9` entry existed at review time. **Violated Rule:** `tasks.md` § `KPM-T-9` DoD. **Remediation:** append the verbatim summary and the port-8091 command (done above by the Leader — the entry is written at finalize by design; recorded here so the trail shows the Reviewer's check).
+- Leader adjudication: issue 1 upheld (tautology on a MUST clause — the exact pattern project memory warns about); issue 2 is the Leader's own finalize step, satisfied by this entry. Rework attempt 2 spawned with the report verbatim; row-occupancy form required, with the instruction to report measured `top` values rather than loosen the assertion if the harness does not wrap the chips.
+
+**Attempt 2 — PASS**
+
+- File changed: `kp-cgspace-browse.cy.ts` only. Wrap gate replaced by row occupancy over the three `[data-test^="kp-repo-chip-"]` buttons: `tops = chips.map(c => Math.round(c.getBoundingClientRect().top)); rowCount = new Set(tops).size` → 375 px `expect(rowCount).to.be.at.least(2)`; new 1536 px inverse `expect(rowCount).to.eq(1)`; `>= 24 px` chip check kept in the shared helper. Scope decision documented in-file: the lead-in span and the conditional `ml-auto` Select-all are excluded (design §6.3 "chips wrap to two rows"). `cy.log` inside `.should()` threw (`CypressError: invoked a command inside the callback`) → `Cypress.log` + `console.log`.
+- Measured (temporary diagnostic, reverted): 1536 px → `tops=[11,11,11] rows=1`; 375 px → `tops=[38,38,76] rows=2` — the third chip drops to a second row; wrap observed, not assumed.
+- Run (same port-8091 command as attempt 1): `8 passing (5s)`, 0 failing — the 7 attempt-1 cases plus the 1536 px inverse. `npx ng lint --quiet` → `All files pass linting.`
+- Reviewer verdict (round 2, same Reviewer): **PASS**. Summary: the tautology is closed — `rowCount` changes only when chips land on different lines; the 375 `>= 2` / 1536 `=== 1` pair proves the breakpoint in both directions and is failure-capable under `flex-nowrap` and under an always-wrap regression without touching the component; measurements consistent with the 30 px chip + 8 px `gap-y` geometry; scope exclusion accepted and documented; round-1 items 1, 2, 4–7 unchanged; issue 2 resolved by this entry. ADVISORY: refresh the pasted run output to the attempt-2 count — done above (`8 passing`).
+
+**Decisions / issues**: `flex-nowrap` mutation probe not run (component edit forbidden while T-8 ran); the row-occupancy form is failure-capable by construction per the Reviewer. **Budget:** 2 Reviewer rounds (round 2 PASSed — no escalation). Gate: `auto-approved (pre-approved mode)`.
+
