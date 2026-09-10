@@ -32,6 +32,14 @@ describe('ReportingSummaryStatsComponent', () => {
 
   const root = () => fixture.nativeElement as HTMLElement;
 
+  it('uses a single column in panel variant', () => {
+    fixture.componentRef.setInput('variant', 'panel');
+    fixture.detectChanges();
+
+    const grid = root().querySelector('[data-testid="reporting-summary-stats"] > div') as HTMLElement;
+    expect(grid.className).toContain('grid-cols-1');
+  });
+
   it('renders the four summary cards', () => {
     const text = root().textContent || '';
     expect(text).toContain('Programs/Accelerators');

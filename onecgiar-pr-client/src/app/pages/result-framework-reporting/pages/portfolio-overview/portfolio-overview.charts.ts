@@ -449,6 +449,8 @@ export function programRankingVerticalOption(
       data: rows.map(row => row.code),
       axisLabel: {
         interval: 0,
+        rotate: rows.length > 8 ? 35 : 0,
+        hideOverlap: true,
         fontWeight: 600,
         color: tokens.primaryStrong || '#6B46E5',
         fontSize: 11

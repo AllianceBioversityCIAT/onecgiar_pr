@@ -134,6 +134,14 @@ describe('ShellTopbarComponent', () => {
       expect(component.getMyCenters()).toEqual([{ center_id: 'CIAT', center_name: 'CIAT', role_name: 'Member' }]);
       expect(apiMock.rolesSE.getMyCenters).toHaveBeenCalled();
     });
+
+    it('shouldShowAssignmentRole hides the generic Center User label', async () => {
+      await build();
+      expect(component.shouldShowAssignmentRole('Center User')).toBe(false);
+      expect(component.shouldShowAssignmentRole(' center user ')).toBe(false);
+      expect(component.shouldShowAssignmentRole('Coordinator')).toBe(true);
+      expect(component.shouldShowAssignmentRole('')).toBe(false);
+    });
   });
 
   // ------------------------------------------------------------- other chrome

@@ -9,6 +9,8 @@ export interface ReportingSummaryStats {
   zeroTargetKpis?: number;
 }
 
+export type ReportingSummaryStatsVariant = 'inline' | 'panel';
+
 @Component({
   selector: 'app-reporting-summary-stats',
   standalone: true,
@@ -18,6 +20,8 @@ export interface ReportingSummaryStats {
 export class ReportingSummaryStatsComponent {
   readonly stats = input.required<ReportingSummaryStats>();
   readonly loading = input(false);
+  /** `inline` = former band grid above AoW cards; `panel` = vertical stack inside the insights rail. */
+  readonly variant = input<ReportingSummaryStatsVariant>('inline');
 
   totalKpisTitle(stats: ReportingSummaryStats): string | null {
     const planned = stats.plannedKpis;

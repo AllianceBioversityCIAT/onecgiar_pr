@@ -8,13 +8,13 @@
   and #8B7CC4 = --pr-chart-2-muted (the bilateral fill, per DESIGN-DEVIATIONS §8 — NON-TEXT ONLY).
   #6B6580 = --pr-text-muted exactly, and #CFC9DE = --pr-text-disabled (the zero-cell grey).
 -->
-<section class="min-h-screen bg-[var(--pr-surface-app)] p-[32px]">
+<section class="min-h-screen bg-[var(--pr-surface-app)] p-4 sm:p-6 lg:p-[32px]">
   <div class="flex flex-col gap-[20px]">
     <!-- ── Title block ─────────────────────────────────────────────────────────────────────── -->
     <header class="flex flex-col">
       <span class="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">{{ eyebrow() }}</span>
-      <h1 class="mt-[4px] text-[30px] font-extrabold tracking-[-0.02em] text-[var(--pr-text)]">Portfolio overview</h1>
-      <p class="mt-[4px] text-[14px] font-normal text-[var(--pr-text-muted)]">Reporting progress across all science programs.</p>
+      <h1 class="mt-[4px] text-[24px] sm:text-[30px] font-extrabold tracking-[-0.02em] text-[var(--pr-text)]">Portfolio overview</h1>
+      <p class="mt-[4px] text-[13px] sm:text-[14px] font-normal text-[var(--pr-text-muted)]">Reporting progress across all science programs.</p>
       @if (data.closedPhase()) {
         <!-- Only when NO phase is open: the figures are then a closed cycle's and will not move. -->
         <p class="mt-[4px] text-[13px] font-medium text-[var(--pr-status-in-progress-fg)]">Viewing a closed phase. Figures are final.</p>
@@ -27,7 +27,81 @@
     </header>
 
     @if (isLoading()) {
-      <p class="text-[14px] font-normal text-[var(--pr-text-muted)]" aria-live="polite" aria-busy="true">Loading portfolio figures…</p>
+      <!-- ── Modern Skeleton Loading State ─────────────────────────────────────────── -->
+      <div class="flex flex-col gap-[20px]" aria-busy="true" aria-label="Loading portfolio figures" data-testid="portfolio-overview-skeleton">
+        <!-- Top Deck 4 Skeleton KPI Cards -->
+        <div class="grid grid-cols-1 gap-[16px] sm:grid-cols-2 lg:grid-cols-4">
+          @for (card of [1, 2, 3, 4]; track card) {
+            <div class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] flex flex-col justify-between gap-[14px] min-h-[135px]">
+              <div class="flex items-center justify-between gap-[8px]">
+                <div class="pr-skeleton h-[12px] w-[110px] rounded-[4px]"></div>
+                <div class="pr-skeleton h-[22px] w-[75px] rounded-full"></div>
+              </div>
+              <div class="flex items-baseline gap-[8px]">
+                <div class="pr-skeleton h-[30px] w-[70px] rounded-[6px]"></div>
+                <div class="pr-skeleton h-[13px] w-[45px] rounded-[4px]"></div>
+              </div>
+              <div class="flex items-center justify-between gap-[8px]">
+                <div class="pr-skeleton h-[12px] w-[130px] rounded-[4px]"></div>
+                <div class="pr-skeleton h-[12px] w-[65px] rounded-[4px]"></div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Skeleton Portfolio reporting status -->
+        <div class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] flex flex-col gap-[20px]">
+          <div>
+            <div class="pr-skeleton h-[18px] w-[210px] rounded-[4px] mb-[6px]"></div>
+            <div class="pr-skeleton h-[13px] w-[320px] max-w-full rounded-[4px]"></div>
+          </div>
+          <div class="grid grid-cols-1 items-center gap-[24px] lg:grid-cols-12">
+            <div class="lg:col-span-4 flex items-center justify-center">
+              <div class="pr-skeleton h-[200px] w-[200px] rounded-full"></div>
+            </div>
+            <div class="flex flex-col gap-[14px] lg:col-span-8">
+              <div class="pr-skeleton h-[24px] w-full rounded-full"></div>
+              <div class="grid grid-cols-1 min-[440px]:grid-cols-2 sm:grid-cols-3 gap-[10px]">
+                @for (seg of [1, 2, 3, 4, 5, 6]; track seg) {
+                  <div class="pr-skeleton h-[54px] rounded-[10px]"></div>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Skeleton Science Programs Output Ranking -->
+        <div class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] flex flex-col gap-[20px]">
+          <div class="flex flex-wrap items-center justify-between gap-[16px]">
+            <div>
+              <div class="pr-skeleton h-[18px] w-[240px] rounded-[4px] mb-[6px]"></div>
+              <div class="pr-skeleton h-[13px] w-[360px] max-w-full rounded-[4px]"></div>
+            </div>
+            <div class="pr-skeleton h-[34px] w-[270px] max-w-full rounded-[8px]"></div>
+          </div>
+          <div class="pr-skeleton h-[300px] w-full rounded-[8px]"></div>
+        </div>
+
+        <!-- Skeleton Progress by Science Program Matrix -->
+        <div class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] flex flex-col gap-[16px]">
+          <div class="flex flex-wrap items-center justify-between gap-[12px]">
+            <div>
+              <div class="pr-skeleton h-[18px] w-[230px] rounded-[4px] mb-[6px]"></div>
+              <div class="pr-skeleton h-[13px] w-[340px] max-w-full rounded-[4px]"></div>
+            </div>
+            <div class="flex items-center gap-[10px]">
+              <div class="pr-skeleton h-[34px] w-[170px] rounded-[8px]"></div>
+              <div class="pr-skeleton h-[34px] w-[110px] rounded-[7px]"></div>
+            </div>
+          </div>
+          <div class="pr-skeleton h-[38px] w-full rounded-[7px]"></div>
+          <div class="flex flex-col gap-[8px]">
+            @for (row of [1, 2, 3, 4, 5]; track row) {
+              <div class="pr-skeleton h-[44px] w-full rounded-[6px]"></div>
+            }
+          </div>
+        </div>
+      </div>
     }
 
     @if (hasError()) {
@@ -64,7 +138,7 @@
             </span>
             <span class="text-[13px] font-medium text-purple-200">results</span>
           </div>
-          <div class="relative z-10 flex items-center justify-between text-[12px] w-full">
+          <div class="relative z-10 flex flex-wrap items-center justify-between gap-[6px] text-[12px] w-full">
             <div class="flex items-center gap-[6px] text-purple-100 font-medium">
               <span>{{ kpis().w1w2Count }} W1/W2</span>
               <span class="text-purple-300">·</span>
@@ -95,9 +169,9 @@
             </span>
             <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">results</span>
           </div>
-          <div class="flex items-center justify-between text-[12px] text-[var(--pr-text-secondary)] w-full">
+          <div class="flex flex-wrap items-center justify-between gap-[6px] text-[12px] text-[var(--pr-text-secondary)] w-full">
             <span>Across {{ kpis().w1w2CategoriesCount }} result categories</span>
-            <span class="text-[11px] font-semibold text-[var(--pr-color-primary-600)] opacity-0 group-hover:opacity-100 transition-opacity">
+            <span class="text-[11px] font-semibold text-[var(--pr-color-primary-600)] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               Results Center &rarr;
             </span>
           </div>
@@ -122,9 +196,9 @@
             </span>
             <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">results</span>
           </div>
-          <div class="flex items-center justify-between text-[12px] text-[var(--pr-text-secondary)] w-full">
+          <div class="flex flex-wrap items-center justify-between gap-[6px] text-[12px] text-[var(--pr-text-secondary)] w-full">
             <span>Reported across {{ kpis().activeProgramsCount }} science programs</span>
-            <span class="text-[11px] font-semibold text-purple-700 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span class="text-[11px] font-semibold text-purple-700 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               Bilateral &rarr;
             </span>
           </div>
@@ -149,9 +223,9 @@
             </span>
             <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">programs</span>
           </div>
-          <div class="flex items-center justify-between text-[12px] text-[var(--pr-text-secondary)] w-full">
+          <div class="flex flex-wrap items-center justify-between gap-[6px] text-[12px] text-[var(--pr-text-secondary)] w-full">
             <span>{{ kpis().portfolioProgressPercent }}% portfolio progress</span>
-            <span class="text-[11px] font-semibold text-emerald-700 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span class="text-[11px] font-semibold text-emerald-700 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               View Matrix &darr;
             </span>
           </div>
@@ -194,7 +268,7 @@
             </div>
 
             <!-- Dynamic interactive status metric tiles with mini progress indicators -->
-            <div class="grid grid-cols-2 gap-[10px] sm:grid-cols-3">
+            <div class="grid grid-cols-1 min-[440px]:grid-cols-2 sm:grid-cols-3 gap-[10px]">
               @for (segment of statusSegments(); track segment.key) {
                 <button
                   type="button"
@@ -235,11 +309,11 @@
             </div>
 
             @if (selectedStatusFilter()) {
-              <div class="flex items-center justify-between rounded-[8px] bg-[var(--pr-color-primary-50)] px-[14px] py-[8px] border border-[var(--pr-color-primary-200)]">
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-[8px] rounded-[8px] bg-[var(--pr-color-primary-50)] px-[14px] py-[8px] border border-[var(--pr-color-primary-200)]">
                 <span class="text-[12px] font-medium text-[var(--pr-color-primary-800)]">
                   Active filter: <strong class="font-bold capitalize">{{ selectedStatusFilter() }}</strong>
                 </span>
-                <div class="flex items-center gap-[12px]">
+                <div class="flex flex-wrap items-center gap-[12px] self-end sm:self-auto">
                   <button
                     type="button"
                     (click)="navigateToResultsCenter('all', { status: selectedStatusFilter()! })"
@@ -271,7 +345,7 @@
           </div>
 
           <!-- View Mode Switcher: Vertical Bar | Horizontal Bar | Heatmap -->
-          <div class="inline-flex items-center rounded-[8px] bg-[var(--pr-surface-ground)] p-[3px] border border-[var(--pr-border)]">
+          <div class="inline-flex max-w-full overflow-x-auto items-center rounded-[8px] bg-[var(--pr-surface-ground)] p-[3px] border border-[var(--pr-border)]">
             <button
               type="button"
               (click)="setAnalysisViewMode('vertical')"
@@ -370,11 +444,11 @@
               </div>
 
               <!-- Science Program Filter -->
-              <div class="flex items-center gap-[6px]">
+              <div class="flex items-center gap-[6px] w-full sm:w-auto flex-1 sm:flex-initial">
                 <select
                   [value]="selectedProgramFilter()"
                   (change)="setProgramFilter($any($event.target).value)"
-                  class="h-[34px] rounded-[7px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[10px] text-[12px] font-medium text-[var(--pr-text-heading)] focus:outline-none focus:ring-1 focus:ring-[var(--pr-color-primary-500)] cursor-pointer max-w-[180px] truncate"
+                  class="h-[34px] w-full rounded-[7px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[10px] text-[12px] font-medium text-[var(--pr-text-heading)] focus:outline-none focus:ring-1 focus:ring-[var(--pr-color-primary-500)] cursor-pointer max-w-full sm:max-w-[180px] truncate"
                   aria-label="Filter by Science Program">
                   <option value="all">All Science Programs</option>
                   @for (prog of availablePrograms(); track prog.code) {
@@ -384,11 +458,11 @@
               </div>
 
               <!-- Indicator Type Filter -->
-              <div class="flex items-center gap-[6px]">
+              <div class="flex items-center gap-[6px] w-full sm:w-auto flex-1 sm:flex-initial">
                 <select
                   [value]="selectedIndicatorFilter()"
                   (change)="setIndicatorFilter($any($event.target).value)"
-                  class="h-[34px] rounded-[7px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[10px] text-[12px] font-medium text-[var(--pr-text-heading)] focus:outline-none focus:ring-1 focus:ring-[var(--pr-color-primary-500)] cursor-pointer max-w-[180px] truncate"
+                  class="h-[34px] w-full rounded-[7px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[10px] text-[12px] font-medium text-[var(--pr-text-heading)] focus:outline-none focus:ring-1 focus:ring-[var(--pr-color-primary-500)] cursor-pointer max-w-full sm:max-w-[180px] truncate"
                   aria-label="Filter by Indicator Type">
                   <option value="all">All Indicator Types</option>
                   @for (cat of availableCategories(); track cat) {
@@ -422,7 +496,7 @@
 
                 @if (isColumnPickerOpen()) {
                   <div class="fixed inset-0 z-20" (click)="isColumnPickerOpen.set(false)"></div>
-                  <div class="absolute right-0 top-[40px] z-30 w-[280px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px] shadow-lg">
+                  <div class="absolute left-0 sm:left-auto sm:right-0 top-[40px] z-30 w-[280px] max-w-[calc(100vw-48px)] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px] shadow-lg">
                     <div class="mb-[8px] flex items-center justify-between border-b border-[var(--pr-border)] pb-[8px]">
                       <span class="text-[11.5px] font-bold uppercase tracking-wider text-[var(--pr-text-muted)]">Indicator Columns</span>
                       <div class="flex items-center gap-[8px]">
@@ -500,7 +574,7 @@
                       <th
                         scope="col"
                         class="relative whitespace-nowrap border-y border-[var(--pr-border)] px-[8px] text-[11px] font-semibold uppercase tracking-[0.06em] select-none"
-                        [class]="first ? 'pl-[20px] pr-[14px] text-left sticky left-0 bg-[var(--pr-surface-app)] z-10 border-r border-[var(--pr-border-divider)]' : 'text-center'"
+                        [class]="first ? 'pl-[20px] pr-[14px] text-left sm:sticky sm:left-0 bg-[var(--pr-surface-app)] z-10 border-r border-[var(--pr-border-divider)]' : 'text-center'"
                         [style.width.px]="getColumnWidth(column)"
                         [style.minWidth.px]="getColumnWidth(column)"
                         [style.maxWidth.px]="getColumnWidth(column)"
@@ -524,9 +598,9 @@
                           }
                         </button>
 
-                        <!-- Column Resizer Handle (Draggable on all columns including first) -->
+                        <!-- Column Resizer Handle (Desktop only) -->
                         <div
-                          class="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[var(--pr-color-primary-400)] active:bg-[var(--pr-color-primary-600)] transition-colors z-30 flex items-center justify-center group"
+                          class="hidden sm:flex absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[var(--pr-color-primary-400)] active:bg-[var(--pr-color-primary-600)] transition-colors z-30 items-center justify-center group"
                           (mousedown)="onResizeStart($event, column)"
                           [title]="'Resize ' + column.label + ' column'">
                           <div class="w-[1.5px] h-[16px] bg-[var(--pr-border)] group-hover:bg-[var(--pr-color-primary-500)] transition-colors"></div>
@@ -548,7 +622,7 @@
                     <tr class="min-h-[48px] border-b border-[var(--pr-border-divider)] transition-colors hover:bg-[var(--pr-surface-ground)]">
                       <!-- Improved First Column (Science Program) with dynamic resizing -->
                       <td
-                        class="py-[10px] pl-[20px] pr-[14px] sticky left-0 bg-[var(--pr-surface-card)] z-10 border-r border-[var(--pr-border-divider)] overflow-hidden"
+                        class="py-[10px] pl-[20px] pr-[14px] sm:sticky sm:left-0 bg-[var(--pr-surface-card)] z-10 border-r border-[var(--pr-border-divider)] overflow-hidden"
                         [style.width.px]="getColumnWidth(columns()[0])"
                         [style.minWidth.px]="getColumnWidth(columns()[0])"
                         [style.maxWidth.px]="getColumnWidth(columns()[0])">
@@ -599,7 +673,7 @@
                   <!-- The closing summary row -->
                   <tr class="min-h-[48px] bg-[var(--pr-surface-ground)] font-bold">
                     <td
-                      class="py-[12px] pl-[20px] pr-[14px] text-[13px] font-bold text-[var(--pr-text-heading)] sticky left-0 bg-[var(--pr-surface-ground)] z-10 border-r border-[var(--pr-border-divider)] overflow-hidden"
+                      class="py-[12px] pl-[20px] pr-[14px] text-[13px] font-bold text-[var(--pr-text-heading)] sm:sticky sm:left-0 bg-[var(--pr-surface-ground)] z-10 border-r border-[var(--pr-border-divider)] overflow-hidden"
                       [style.width.px]="getColumnWidth(columns()[0])"
                       [style.minWidth.px]="getColumnWidth(columns()[0])"
                       [style.maxWidth.px]="getColumnWidth(columns()[0])">

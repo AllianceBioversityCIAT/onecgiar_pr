@@ -28,6 +28,12 @@ function clearCookies(): void {
   });
 }
 
+function pointerEvent(type: string, clientX: number): PointerEvent {
+  const event = new Event(type, { bubbles: true }) as PointerEvent;
+  Object.defineProperty(event, 'clientX', { value: clientX, configurable: true });
+  return event;
+}
+
 describe('HlmSidebarService', () => {
   let originalMatchMedia: any;
 
@@ -345,6 +351,77 @@ describe('HlmSidebarService', () => {
 
       jest.advanceTimersByTime(100);
       expect(service.isMobile()).toBe(true);
+    });
+  });
+
+  describe('sidebar width', () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    afterEach(() => {
+      localStorage.clear();
+      document.body.classList.remove('sidebar-width-resizing');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    });
+
+    it('defaults to 260px until the wrapper seeds a CSS width', () => {
+      const service = setup();
+      expect(service.widthPx()).toBe(260);
+      service.applyDefaultWidthFromCss('260px');
+      expect(service.widthPx()).toBe(260);
+    });
+
+    it('restores a stored width from localStorage', () => {
+      localStorage.setItem('sidebar_width_px', '340');
+      const service = setup();
+      expect(service.widthPx()).toBe(340);
+      expect(service.sidebarWidthCss()).toBe('340px');
+    });
+
+    it('clamps width between configured min/max bounds', () => {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1600 });
+      const service = setup([
+        provideHlmSidebarConfig({ sidebarWidthMinPx: 220, sidebarWidthMaxPx: 480 })
+      ]);
+      service.setWidthPx(180);
+      expect(service.widthPx()).toBe(220);
+      service.setWidthPx(900);
+      expect(service.widthPx()).toBe(480);
+    });
+
+    it('persists width on setWidthPx', () => {
+      const service = setup();
+      service.setWidthPx(312);
+      expect(localStorage.getItem('sidebar_width_px')).toBe('312');
+    });
+
+    it('updates width while dragging the rail and persists on release', () => {
+      const service = setup();
+      service.applyDefaultWidthFromCss('260px');
+      render();
+
+      service.startWidthResize({ clientX: 300 } as PointerEvent);
+      window.dispatchEvent(pointerEvent('pointermove', 340));
+      window.dispatchEvent(pointerEvent('pointerup', 340));
+
+      expect(service.widthPx()).toBe(300);
+      expect(localStorage.getItem('sidebar_width_px')).toBe('300');
+      expect(service.consumeRailToggleSuppression()).toBe(true);
+    });
+
+    it('does not resize when the sidebar is collapsed', () => {
+      const service = setup();
+      service.setOpen(false);
+      service.applyDefaultWidthFromCss('260px');
+      render();
+
+      service.startWidthResize({ clientX: 300 } as PointerEvent);
+      window.dispatchEvent(pointerEvent('pointermove', 360));
+      window.dispatchEvent(pointerEvent('pointerup', 360));
+
+      expect(service.widthPx()).toBe(260);
     });
   });
 

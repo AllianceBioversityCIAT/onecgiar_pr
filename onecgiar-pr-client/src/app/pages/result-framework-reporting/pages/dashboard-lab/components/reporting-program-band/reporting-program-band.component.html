@@ -773,6 +773,24 @@
       </div>
 
       <div class="ml-auto flex items-center gap-[8px] sm:gap-[10px]">
+        @if (showInsightsToggle()) {
+          <button
+            type="button"
+            (click)="insightsToggle.emit()"
+            [attr.aria-pressed]="insightsOpen()"
+            aria-label="Reporting insights"
+            title="Reporting insights"
+            data-testid="reporting-insights-toggle"
+            class="inline-flex size-[34px] shrink-0 cursor-pointer items-center justify-center rounded-[8px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+            [class]="
+              insightsOpen()
+                ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]'
+                : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:border-slate-400 hover:bg-slate-50 hover:text-[var(--pr-text-heading)]'
+            ">
+            <span class="material-icons-round text-[18px]" aria-hidden="true">insights</span>
+          </button>
+        }
+
         @if (compactFilters()) {
           <button
             type="button"

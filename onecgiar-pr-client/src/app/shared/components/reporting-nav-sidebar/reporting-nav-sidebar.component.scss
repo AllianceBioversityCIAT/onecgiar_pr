@@ -50,6 +50,18 @@ hlm-sidebar {
     border-right: 1px solid var(--pr-sidebar-border) !important;
   }
 
+  // Rail sits on the right edge — stronger hover while expanded so resize is discoverable.
+  [data-slot='sidebar-rail'] {
+    &::after {
+      transition: background-color 150ms ease, width 150ms ease;
+    }
+
+    &:hover::after {
+      width: 3px;
+      background-color: var(--pr-sidebar-accent);
+    }
+  }
+
   // Inner shell used when collapsible=icon — must stay a fixed-height flex column
   // so sidebar-content can shrink and scroll.
   [data-slot='sidebar-inner'],

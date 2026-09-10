@@ -251,6 +251,10 @@ export class ReportingProgramBandComponent {
   readonly canExpandAll = input<boolean>(true);
   /** Overview has no filters, so the band renders on its own there. */
   readonly showToolbar = input<boolean>(true);
+  /** JIRA-style insights rail toggle — only on the Areas of Work reporting view. */
+  readonly showInsightsToggle = input(false);
+  readonly insightsOpen = input(false);
+  readonly insightsToggle = output<void>();
   /**
    * Whether the emerging-result CTA is offered at all. False hides BOTH copies (expanded and
    * condensed) — the host uses it for AVISA/SGP-02, a deactivated project whose results are view
