@@ -1,7 +1,7 @@
 <div class="column_title required">
   {{ dataControlSE.isKnowledgeProduct ? 'Additional partners' : 'External partners' }}
 </div>
-<div [ngSwitch]="this.rolesSE.readOnly">
+<div [ngSwitch]="this.rolesSE.readOnly" class="mt-8">
   <div *ngSwitchCase="true">{{ this.rdPartnersSE.partnersBody.no_applicable_partner ? 'Marked as not applicable' : '' }}</div>
   <div *ngSwitchCase="false">
     <app-pr-checkbox
@@ -13,12 +13,14 @@
 </div>
 <app-alert-status
   *ngIf="dataControlSE.isKnowledgeProduct"
+  [collapsible]="false"
   description="In this section you can include additional partners. If you do not find the partner in the dropdown menu, you can <a class='open_route alert-event'>request</a> to have it added to the list. Once approved, it may take up to an hour for the partner to appear in the CLARISA institutions list">
 </app-alert-status>
 
 <app-alert-status
   [hidden]="this.rdPartnersSE.partnersBody.no_applicable_partner"
   *ngIf="!this.rolesSE.readOnly && !dataControlSE.isKnowledgeProduct"
+  [collapsible]="false"
   description="In this section you can include additional partners. If you do not find the partner in the dropdown menu, you can <a class='open_route alert-event'>request</a> to have it added to the list. Once approved, it may take up to an hour for the partner to appear in the CLARISA institutions list.">
 </app-alert-status>
 

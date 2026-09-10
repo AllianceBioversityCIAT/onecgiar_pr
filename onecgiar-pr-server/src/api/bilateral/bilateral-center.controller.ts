@@ -16,6 +16,7 @@ import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { CreateCenterResultDto } from './dto/create-center-result.dto';
 import { SaveBilateralTocMappingDto } from './dto/save-bilateral-toc-mapping.dto';
 import { SaveBilateralContributorsDto } from './dto/save-bilateral-contributors.dto';
+import { ChangeCenterResultTypeDto } from './dto/change-center-result-type.dto';
 
 @Controller('center')
 @ApiTags('Bilateral Center')
@@ -48,6 +49,20 @@ export class BilateralCenterController {
     @Body() dto: CreateCenterResultDto,
   ) {
     return this.bilateralCenterService.createResultHeader(user, dto);
+  }
+
+  @Patch('change-type/:resultId')
+  @ApiOperation({
+    summary: 'Change the type of a promoted bilateral AI draft',
+    description:
+      'Only an active bilateral result promoted from an AI draft and still in Editing can change type. Common W3 associations are preserved while type-specific data is reset.',
+  })
+  async changeResultType(
+    @UserToken() user: TokenDto,
+    @Param('resultId') resultId: number,
+    @Body() dto: ChangeCenterResultTypeDto,
+  ) {
+    return this.bilateralCenterService.changeResultType(user, resultId, dto);
   }
 
   @Patch('submit-for-review/:resultId')

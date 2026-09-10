@@ -79,7 +79,12 @@ describe('InnovationUseInfoComponent', () => {
       // P2-3537: the shared form calls this gate on every render, so a mock without it throws
       // before any assertion runs — even in specs that have nothing to do with the block.
       isInnovationUseAgeFallback2026: signal(false),
-      innovationUse2030ProjectionTooltip: signal('')
+      innovationUse2030ProjectionTooltip: signal(''),
+      // quick/innovation-use-descriptions-boxed: template reads these two descriptions for the boxed alert-status note.
+      fields: () => ({
+        '[innovation-use-form]-core-innovation': { description: 'Depending on the innovation, users may be groups of actors or be organizations.' },
+        '[innovation-use-form]-2030-to-be-determined': { description: 'Depending on the innovation, users may be groups of actors or be organizations.' }
+      })
     };
 
     mockDataControlService = {

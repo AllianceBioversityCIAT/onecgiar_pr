@@ -48,17 +48,38 @@ describe('AlertStatusComponent — contract', () => {
       cy.get('.alert_badge i').should('contain.text', 'warning');
     });
 
-    it('[contract] gives info and warning visually distinct backgrounds', () => {
+    it('[contract] collapsed info has no visible background, unlike warning (ITR-R-1)', () => {
+      // ITR-T-5 (approved requirement change, ITR-R-1): the collapsed `info` container is now
+      // deliberately bare — icon only, no box/background/label. This replaces the old contract
+      // ("info and warning have visually distinct tinted backgrounds"), which assumed `info`
+      // always carried its own tint. `warning` is unaffected and keeps its tinted background.
       mountCFHost(`<app-alert-status status="info" description="x"></app-alert-status>`);
       cy.get('.pr_alert')
         .then($el => window.getComputedStyle($el[0]).backgroundColor)
         .then(infoBg => {
-          expect(String(infoBg), 'info has a tinted background').to.not.match(/rgba\(0, 0, 0, 0\)|transparent/);
+          expect(String(infoBg), 'collapsed info has no background of its own').to.match(/rgba\(0, 0, 0, 0\)|transparent/);
 
           mountCFHost(`<app-alert-status status="warning" description="x"></app-alert-status>`);
           cy.get('.pr_alert').then($el => {
-            expect(window.getComputedStyle($el[0]).backgroundColor, 'warning differs from info').to.not.equal(String(infoBg));
+            const warningBg = window.getComputedStyle($el[0]).backgroundColor;
+            expect(String(warningBg), 'warning keeps its own tinted background').to.not.match(/rgba\(0, 0, 0, 0\)|transparent/);
+            expect(String(warningBg), 'warning differs from collapsed info').to.not.equal(String(infoBg));
           });
+        });
+    });
+
+    it('[contract] expanding the info panel reveals its own tinted surface on .alert_popover', () => {
+      // The "visually distinct surface" behaviour didn't disappear with ITR-T-5 — it relocated
+      // from the always-visible `.pr_alert.info` container to the on-demand `.alert_popover`
+      // (background-color: var(--pr-surface-card)), which only exists once expanded.
+      mountCFHost(`<app-alert-status status="info" description="x"></app-alert-status>`);
+
+      cy.get('.alert_toggle').click();
+      cy.get('.alert_popover')
+        .should('be.visible')
+        .then($el => window.getComputedStyle($el[0]).backgroundColor)
+        .then(popoverBg => {
+          expect(String(popoverBg), 'expanded popover has its own tinted background').to.not.match(/rgba\(0, 0, 0, 0\)|transparent/);
         });
     });
 
@@ -125,5 +146,59 @@ describe('AlertStatusComponent — contract', () => {
       cy.get('.pr_alert').should('have.class', 'error');
       cy.get('.alert_badge i').should('contain.text', 'error');
     });
+  });
+});
+
+/**
+ * ITR-T-3: the `status="info"` collapse/expand disclosure added by ITR-T-1
+ * (docs/specs/changes/info-tooltip-hover-reveal/design.md §6.2). This is NEW behaviour on this
+ * branch, not a `master`-derived contract, so it is intentionally not `[contract]`-prefixed like
+ * the rest of this file.
+ *
+ * These assertions deliberately use `.should('be.visible')` / `.should('not.be.visible')` — never
+ * `contain.text` alone — because `[hidden]` keeps `.alert_text` in the DOM regardless of expanded
+ * state, so a `textContent`-only check cannot prove the disclosure actually toggles rendering
+ * (see the disqualifier in tasks.md `ITR-T-3`).
+ */
+describe('collapsible info panel', () => {
+  it('collapses the info panel by default with the toggle reporting aria-expanded="false"', () => {
+    mountCFHost(`<app-alert-status status="info" description="Longer guidance text"></app-alert-status>`);
+    cy.get('.alert_toggle').should('have.attr', 'aria-expanded', 'false');
+    cy.get('.alert_text').should('not.be.visible');
+  });
+
+  it('reveals the description on click and re-collapses on a second click', () => {
+    mountCFHost(`<app-alert-status status="info" description="Longer guidance text"></app-alert-status>`);
+
+    cy.get('.alert_toggle').click();
+    cy.get('.alert_toggle').should('have.attr', 'aria-expanded', 'true');
+    cy.get('.alert_text').should('be.visible');
+
+    cy.get('.alert_toggle').click();
+    cy.get('.alert_toggle').should('have.attr', 'aria-expanded', 'false');
+    cy.get('.alert_text').should('not.be.visible');
+  });
+
+  it('reveals the description identically via Enter and Space keyboard activation', () => {
+    mountCFHost(`<app-alert-status status="info" description="Longer guidance text"></app-alert-status>`);
+
+    cy.get('.alert_toggle').focus().type('{enter}');
+    cy.get('.alert_toggle').should('have.attr', 'aria-expanded', 'true');
+    cy.get('.alert_text').should('be.visible');
+
+    cy.get('.alert_toggle').focus().type(' ');
+    cy.get('.alert_toggle').should('have.attr', 'aria-expanded', 'false');
+    cy.get('.alert_text').should('not.be.visible');
+  });
+
+  it('renders no toggle at all for the warning, error, and success variants', () => {
+    mountCFHost(`<app-alert-status status="warning" description="Careful"></app-alert-status>`);
+    cy.get('.alert_toggle').should('not.exist');
+
+    mountCFHost(`<app-alert-status status="error" description="Failed"></app-alert-status>`);
+    cy.get('.alert_toggle').should('not.exist');
+
+    mountCFHost(`<app-alert-status status="success" description="Done"></app-alert-status>`);
+    cy.get('.alert_toggle').should('not.exist');
   });
 });

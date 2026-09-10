@@ -7,11 +7,13 @@
   <app-pr-radio-button
     [readOnly]="saving"
     fieldRef="[innovation-use-form]-core-innovation"
+    [hideDescription]="true"
     [options]="[{ value: true, label: 'This is yet to be determined' }]"
     optionLabel="label"
     [(ngModel)]="body.innov_use_to_be_determined"
     optionValue="value">
   </app-pr-radio-button>
+  <app-alert-status status="info" [collapsible]="false" [description]="this.fieldsManagerSE.fields()['[innovation-use-form]-core-innovation'].description"></app-alert-status>
 }
 @if (
   !body.innov_use_to_be_determined ||
@@ -441,11 +443,13 @@
   <app-pr-radio-button
     [readOnly]="saving"
     fieldRef="[innovation-use-form]-2030-to-be-determined"
+    [hideDescription]="true"
     [options]="[{ value: true, label: 'This is yet to be determined' }]"
     optionLabel="label"
     [(ngModel)]="body.innov_use_2030_to_be_determined"
     optionValue="value">
   </app-pr-radio-button>
+  <app-alert-status status="info" [collapsible]="false" [description]="this.fieldsManagerSE.fields()['[innovation-use-form]-2030-to-be-determined'].description"></app-alert-status>
 
   <!--
     P2-3295 §2 — the story asks for the projection to be introduced by its own mandatory label,

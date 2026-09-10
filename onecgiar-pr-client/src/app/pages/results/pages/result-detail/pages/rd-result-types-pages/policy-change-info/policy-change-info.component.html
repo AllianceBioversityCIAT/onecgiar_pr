@@ -1,7 +1,7 @@
 <div class="detail_container" [appSectionSkeleton]="sectionLoading()">
-  <app-alert-status description="Please fill in the following required fields for this indicator category."> </app-alert-status>
+  <app-alert-status [collapsible]="false" description="Please fill in the following required fields for this indicator category."> </app-alert-status>
 
-  <app-alert-status [description]="policyTypeDescriptions()"> </app-alert-status>
+  <app-alert-status [collapsible]="false" [description]="policyTypeDescriptions()"> </app-alert-status>
 
   <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
     <app-pr-select

@@ -1408,6 +1408,112 @@ export class ResultsKnowledgeProductsService {
     }
   }
 
+  /**
+   * P2-3233 — preflight used by the W3 centre form before it changes a promoted
+   * AI draft into a Knowledge Product. This intentionally retains W1/W2's MQAP
+   * validation: a real handle, no duplicate and the reporting-cycle rules.
+   */
+  async validateBilateralKPHandle(
+    handle: string,
+    user: TokenDto,
+  ): Promise<ResultsKnowledgeProductDto> {
+    const activeVersion = await this._versioningService.$_findActivePhase(
+      AppModuleIdEnum.REPORTING,
+    );
+    const response = await this.findOnCGSpace(
+      this.extractHandleIdentifier(handle),
+      user,
+      activeVersion?.phase_year ?? null,
+      true,
+    );
+    if (response.status !== HttpStatus.OK) {
+      throw this._handlersError.returnErrorRes({ error: response });
+    }
+    return response.response as ResultsKnowledgeProductDto;
+  }
+
+  /**
+   * Hydrates a converted bilateral result without calling delete/recover or the
+   * normal bilateral creator. Those paths respectively delete, or rewrite,
+   * shared W3 associations (centres, projects, programs and geography).
+   */
+  async populateBilateralKPFromMetadata(
+    resultId: number,
+    metadata: ResultsKnowledgeProductDto,
+    handle: string,
+    user: TokenDto,
+  ): Promise<ResultsKnowledgeProduct> {
+    const existingResult = await this._resultRepository.findOne({
+      where: { id: resultId },
+    });
+    if (!existingResult) {
+      throw new NotFoundException(`Result with id ${resultId} not found`);
+    }
+
+    const globalParameter = await this._globalParameterRepository.findOne({
+      where: { name: 'kp_mqap_institutions_confidence' },
+      select: ['value'],
+    });
+    if (!globalParameter) {
+      throw new Error(
+        "Global parameter 'kp_mqap_institutions_confidence' not found",
+      );
+    }
+
+    let knowledgeProduct = this._resultsKnowledgeProductMapper.updateEntity(
+      new ResultsKnowledgeProduct(),
+      metadata,
+      user.id,
+      resultId,
+    );
+    knowledgeProduct.is_melia = false;
+    knowledgeProduct.result_object = existingResult;
+    knowledgeProduct = await this._resultsKnowledgeProductRepository.save(
+      knowledgeProduct,
+    );
+    knowledgeProduct = this._resultsKnowledgeProductMapper.populateKPRelations(
+      knowledgeProduct,
+      metadata,
+      Number(globalParameter.value),
+    );
+
+    await this._resultsKnowledgeProductAltmetricRepository.save(
+      knowledgeProduct.result_knowledge_product_altmetric_array ?? [],
+    );
+    await this._resultsKnowledgeProductAuthorRepository.save(
+      knowledgeProduct.result_knowledge_product_author_array ?? [],
+    );
+    await this._resultsKnowledgeProductKeywordRepository.save(
+      knowledgeProduct.result_knowledge_product_keyword_array ?? [],
+    );
+    await this._resultsKnowledgeProductMetadataRepository.save(
+      knowledgeProduct.result_knowledge_product_metadata_array ?? [],
+    );
+
+    await this._resultRepository.update(
+      { id: resultId },
+      { title: metadata.title, description: metadata.description },
+    );
+
+    const handleId = this.extractHandleIdentifier(handle);
+    const evidenceLink = `https://hdl.handle.net/${handleId}`;
+    const existingEvidence = await this._evidenceRepository.findOne({
+      where: { link: evidenceLink, result_id: resultId },
+    });
+    if (!existingEvidence) {
+      await this._evidenceRepository.save({
+        link: evidenceLink,
+        result_id: resultId,
+        knowledge_product_related: resultId,
+        created_by: user.id,
+        is_supplementary: false,
+        evidence_type_id: 1,
+      });
+    }
+
+    return knowledgeProduct;
+  }
+
   private async validateAndSanitizePredictedInstitutions(
     institutions: ResultsKnowledgeProductInstitution[],
   ): Promise<void> {

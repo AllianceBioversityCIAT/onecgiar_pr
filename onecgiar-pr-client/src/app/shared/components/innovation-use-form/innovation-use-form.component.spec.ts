@@ -56,7 +56,17 @@ describe('InnovationUseFormComponent', () => {
       isInnovationUse2030Projection2026: jest.fn().mockReturnValue(true),
       innovationUse2030ProjectionTooltip: jest.fn().mockReturnValue(''),
       // P2-3537 §7: the age-only fallback rides on its own 2026 phase threshold.
-      isInnovationUseAgeFallback2026: jest.fn().mockReturnValue(true)
+      isInnovationUseAgeFallback2026: jest.fn().mockReturnValue(true),
+      // quick/innovation-use-descriptions-boxed: the template reads these two descriptions directly
+      // to feed the boxed `app-alert-status` note beside each radio group.
+      fields: jest.fn().mockReturnValue({
+        '[innovation-use-form]-core-innovation': {
+          description: 'Depending on the innovation, users may be groups of actors or be organizations. Multiple actors or organizations can be selected.'
+        },
+        '[innovation-use-form]-2030-to-be-determined': {
+          description: 'Depending on the innovation, users may be groups of actors or be organizations. Multiple actors or organizations can be selected.'
+        }
+      })
     };
 
     innovationControlListServiceMock = {

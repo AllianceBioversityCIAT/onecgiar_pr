@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnInit, OnDestroy, EventEmitter, Output } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -8,6 +8,7 @@ import { BilateralCreationService } from '../../services/bilateral-creation.serv
 import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
+import { BilateralChangeResultTypeDialogComponent } from '../bilateral-change-result-type-dialog/bilateral-change-result-type-dialog.component';
 import { UserSearchService } from '../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
 import { User } from '../../../results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
 import { environment } from '../../../../../environments/environment';
@@ -86,14 +87,15 @@ const TAG_LEVELS = [
 
 @Component({
   selector: 'app-section-general-info',
-  imports: [FormsModule, FormSkeletonComponent, CustomFieldsModule, PrTooltipDirectiveModule],
+  imports: [FormsModule, FormSkeletonComponent, CustomFieldsModule, PrTooltipDirectiveModule, BilateralChangeResultTypeDialogComponent],
   templateUrl: './section-general-info.component.html',
   styleUrl: './section-general-info.component.scss'
 })
 export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
+  @Output() resultTypeChanged = new EventEmitter<void>();
   private readonly autoSaveService = inject(BilateralAutoSaveService);
   private readonly mdsTracker = inject(BilateralMdsTrackerService);
-  private readonly creationService = inject(BilateralCreationService);
+  readonly creationService = inject(BilateralCreationService);
   private readonly userSearchService = inject(UserSearchService);
   selectedSubScores = signal<Record<string, number[]>>({});
   private readonly http = inject(HttpClient);
@@ -124,6 +126,14 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
   readonly isInnovationDevelopment = computed(() => this.creationService.resultTypeId() === 7);
 
   showAllFields = signal(this.loadShowAllFromStorage());
+  showChangeTypeDialog = signal(false);
+
+  /** P2-3233: backend remains authoritative; only AI-promoted drafts expose the action. */
+  readonly canChangeResultType = computed(() => this.creationService.isAiGenerated() && !this.readOnly());
+
+  openChangeResultType(): void {
+    if (this.canChangeResultType()) this.showChangeTypeDialog.set(true);
+  }
 
   dacAreas = DAC_AREAS;
   tagLevels = signal(TAG_LEVELS.map(l => ({ ...l })));

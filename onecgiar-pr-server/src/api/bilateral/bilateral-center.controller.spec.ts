@@ -27,6 +27,7 @@ describe('BilateralCenterController', () => {
             createResultHeader: jest.fn().mockResolvedValue({
               response: { id: 99, status_id: 1 },
             }),
+            changeResultType: jest.fn().mockResolvedValue({ response: { resultId: 99 } }),
             getResultInitiativeId: jest.fn().mockResolvedValue({
               response: { initiativeId: 1 },
             }),
@@ -69,6 +70,12 @@ describe('BilateralCenterController', () => {
       user,
       dto,
     );
+  });
+
+  it('changeResultType should delegate the promoted-draft conversion to the service', async () => {
+    const dto = { result_level_id: 4, result_type_id: 7, justification: 'Correction' } as any;
+    await controller.changeResultType(user, 99, dto);
+    expect(bilateralCenterService.changeResultType).toHaveBeenCalledWith(user, 99, dto);
   });
 
   it('getResultInitiativeId should delegate to service', async () => {

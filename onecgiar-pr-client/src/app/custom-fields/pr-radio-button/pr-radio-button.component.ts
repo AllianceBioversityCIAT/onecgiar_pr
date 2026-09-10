@@ -23,6 +23,13 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   @Input() label: string;
   @Input() description: string;
   @Input() tooltip: string = '';
+  /**
+   * When true, suppresses the plain-text description block inside `app-field-card` (which sits
+   * directly on the white form background) without touching `label`/`tooltip`/`required`. For a
+   * caller that wants its own visually-distinct container (e.g. `app-alert-status`) around that
+   * same guidance text instead.
+   */
+  @Input() hideDescription: boolean = false;
   @Input() subLabel: string;
   @Input() required: boolean = true;
   @Input() hideOptions: boolean;

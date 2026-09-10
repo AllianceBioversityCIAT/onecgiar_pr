@@ -727,9 +727,7 @@ describe('IndicatorDrawerComponent — Reported results table (IRR-T-3)', () => 
   // ── IRR-R-6 / IRR-R-6.1 / IRR-AC-5 ────────────────────────────────────────
   it('sorts by a header click and reflects the direction in aria-sort (IRR-R-6)', async () => {
     const fixture = await mount();
-    const contributionTh: HTMLElement = Array.from(fixture.nativeElement.querySelectorAll('th')).find(
-      (th: any) => squash(th.textContent).startsWith('Contribution')
-    ) as HTMLElement;
+    const contributionTh: HTMLElement = fixture.nativeElement.querySelector('th[prsortablecolumn="contribution"]') as HTMLElement;
 
     expect(contributionTh.getAttribute('aria-sort')).toBeNull();
     contributionTh.click();

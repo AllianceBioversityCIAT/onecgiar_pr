@@ -5,6 +5,21 @@
   min-height: 0;
 }
 
+.lrf-field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--pr-color-red-300);
+}
+
+.lrf-card--invalid {
+  border-color: color-mix(in srgb, var(--pr-color-red-300) 35%, var(--pr-border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pr-color-red-300) 12%, transparent);
+}
+
 .contribution-input {
   appearance: textfield;
   -moz-appearance: textfield;
@@ -17,6 +32,13 @@
 }
 
 :host ::ng-deep {
+  .lrf-field--invalid .custom_select .field,
+  .lrf-field--invalid app-pr-input .field,
+  .lrf-field--invalid app-pr-input input {
+    border-color: var(--pr-color-red-300) !important;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--pr-color-red-300) 25%, transparent) !important;
+  }
+
   .custom_select {
     width: 100%;
 

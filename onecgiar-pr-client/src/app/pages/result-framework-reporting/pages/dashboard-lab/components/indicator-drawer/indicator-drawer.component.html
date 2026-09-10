@@ -20,7 +20,7 @@
     aria-label="Resize panel"></div>
   <!-- ---------- context: what you are about to report against ---------- -->
   <!-- Top bar: Drawer title & Close button -->
-  <div class="flex shrink-0 items-center justify-between border-b border-[rgba(30,32,47,0.08)] px-6 py-3.5 bg-white">
+  <div class="flex shrink-0 items-center justify-between border-b border-[rgba(30,32,47,0.08)] bg-white px-4 py-3 min-[640px]:px-6 min-[640px]:py-3.5">
     <div class="flex items-center gap-2">
       <!-- @akili-spec changes/indicator-reported-results — title/icon come from the tab map (IRR-R-10) -->
       <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">{{ tabIcon() }}</span>
@@ -37,7 +37,7 @@
 
   <!-- Context header: Indicator details (planned KPI only — hidden in emerging mode) -->
   @if (!emerging()) {
-  <header class="shrink-0 border-b border-[rgba(30,32,47,0.08)] px-6 py-3 bg-white">
+  <header class="shrink-0 border-b border-[rgba(30,32,47,0.08)] bg-white px-4 py-3 min-[640px]:px-6">
     <div class="flex items-center gap-2 mb-2 flex-wrap">
       <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[13px] font-bold bg-[#6461bc]/10 text-[var(--pr-color-primary-300)] tracking-wide">
         <span class="material-icons-round text-[15px]">folder</span>
@@ -128,7 +128,7 @@
     }
   </header>
   } @else {
-  <header class="shrink-0 border-b border-[rgba(30,32,47,0.08)] px-6 py-3 bg-white">
+  <header class="shrink-0 border-b border-[rgba(30,32,47,0.08)] bg-white px-4 py-3 min-[640px]:px-6">
     <p class="m-0 text-[13px] text-[var(--pr-text-secondary)]">
       For achievements that were not planned in this program’s Theory of Change.
     </p>
@@ -136,7 +136,7 @@
   }
 
   <!-- ---------- panel ---------- -->
-  <div class="custom_scroll flex-1 overflow-y-auto px-6 pt-5 pb-0 flex flex-col">
+  <div class="custom_scroll flex flex-1 flex-col overflow-y-auto px-4 pb-0 pt-4 min-[640px]:px-6 min-[640px]:pt-5">
     <!-- Follow-up 2026-09-04 (quick/indicator-reported-results-followups): the Report case is a
          persistent wrapper, not a @switch case — "See them in detail" must not unmount the form
          the user is filling. The other two tabs are conditional as before. -->
@@ -291,6 +291,7 @@
                carrying the status pill and the row menu the table gave them. The strip, the split
                and the search box sit above this switch and are unaffected (IRR-R-8.1). -->
           @if (tableLayout()) {
+            <div class="irr-table-scroll min-w-0" data-testid="irr-table-scroll">
             <app-pr-table #tbl styleClass="irr-table" [value]="visibleRows()">
               <!-- HEADER — Code · Result · Category · Status · Contribution · Phase · actions.
                    `aria-sort` is host-bound by prSortableColumn; never set it here too. -->
@@ -317,13 +318,14 @@
                     Status {{ sortArrow(tbl, 'statusName') }}
                   </th>
                   <th
-                    class="irr-th irr-th--sortable irr-th--num"
+                    class="irr-th irr-th--sortable irr-th--num irr-th--contrib"
                     scope="col"
                     tabindex="0"
                     prSortableColumn="contribution"
+                    title="Contribution"
                     [style.color]="sortColor(tbl, 'contribution')"
                     (keydown.enter)="tbl.sort('contribution')">
-                    Contribution {{ sortArrow(tbl, 'contribution') }}
+                    Contrib. {{ sortArrow(tbl, 'contribution') }}
                   </th>
                   <th
                     class="irr-th irr-th--sortable"
@@ -404,6 +406,7 @@
                 </tr>
               </ng-template>
             </app-pr-table>
+            </div>
           } @else {
             <div class="flex flex-col gap-2" data-testid="irr-cards">
               @for (row of visibleRows(); track $index) {
