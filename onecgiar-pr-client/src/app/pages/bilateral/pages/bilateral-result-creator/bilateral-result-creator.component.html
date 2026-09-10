@@ -228,7 +228,7 @@
             </section>
 
             <section class="bcr-section-body" data-section="general-info" [hidden]="!isActiveSection('general-info')">
-              <app-section-general-info></app-section-general-info>
+              <app-section-general-info (resultTypeChanged)="reloadAfterResultTypeChange()"></app-section-general-info>
             </section>
 
             <section class="bcr-section-body" data-section="contributors" [hidden]="!isActiveSection('contributors')">

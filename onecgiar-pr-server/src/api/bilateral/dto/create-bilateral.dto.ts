@@ -1103,6 +1103,33 @@ export class CreateBilateralDto {
   @MaxLength(191)
   external_reference?: string;
 
+  /**
+   * P2-3428 — the platform's user wants to finish this result in PRMS, so it is born in
+   * Editing instead of Pending Review.
+   *
+   * **Per result, not per batch, and that is forced by the transport.** The Fetcher rebuilds
+   * the ingestion envelope as `{tenant, op, jobId, results}` and drops every other top-level
+   * key (`services/fetcher/src/server.mjs:154`), so a batch-level flag never reaches us. Inside
+   * `data` it survives untouched: the Fetcher's schemas declare `additionalProperties: true`,
+   * so nothing strips it upstream — this DTO's `whitelist: true` was the only thing dropping it.
+   *
+   * Absent or `false` keeps today's behaviour (Pending Review). `true` means the result skips
+   * the review queue *for now*: the centre completes the non-MDS fields and submits from the
+   * PRMS form, which is what finally moves it to Pending Review.
+   *
+   * The decision webhook is unaffected — it is gated on `external_platform_id`, which is
+   * stamped at creation and untouched by `submitForReview`.
+   */
+  @ApiPropertyOptional({
+    description:
+      'Create the result in Editing instead of Pending Review, so the reporting user completes it in PRMS and submits it from there. Absent or false keeps the default (Pending Review). Send it inside each result: a batch-level flag is dropped before it reaches this endpoint.',
+    example: false,
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  keep_editing?: boolean;
+
   @ApiProperty({
     description: 'Result type identifier for the bilateral',
     example: 6,

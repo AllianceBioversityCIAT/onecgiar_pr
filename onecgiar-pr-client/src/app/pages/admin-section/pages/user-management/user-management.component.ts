@@ -582,9 +582,36 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.assignmentOverlayOpen.set(true);
   }
 
-  @HostListener('document:click')
-  onDocumentClick() {
+  /**
+   * `event` is optional so the existing callers that invoke this with no argument keep working; with
+   * no event there is nothing to test against, so only the overlay closes, as before.
+   */
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event?: MouseEvent) {
     if (this.assignmentOverlayOpen()) this.assignmentOverlayOpen.set(false);
+
+    /**
+     * P2-2043: close the Table filters panel when the click lands outside it.
+     *
+     * Found in the browser, not in a test: the panel is absolutely positioned and sits ON TOP of the
+     * "Results filtered by" chips underneath, so with the panel open the chip X buttons are visible
+     * but unclickable — the panel swallows the pointer event. Without a click-outside the only way
+     * out was the Done button, which is not where anyone looks first.
+     *
+     * The whole `.apply-filters-wrap` is treated as inside on purpose: it holds the trigger button,
+     * the panel, and the dropdown option lists the multiselects render within it. Testing against
+     * the panel alone would close it the moment someone picked an option.
+     */
+    if (!this.showFiltersPanel() || !event) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest?.('.apply-filters-wrap')) return;
+    this.showFiltersPanel.set(false);
+  }
+
+  /** P2-2043: Escape closes the panel, the way every other dismissible layer behaves. */
+  @HostListener('document:keydown.escape')
+  onEscapeKey() {
+    if (this.showFiltersPanel()) this.showFiltersPanel.set(false);
   }
 
   @HostListener('window:scroll')

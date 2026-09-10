@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-bilateral-page-header',
@@ -70,7 +71,24 @@ export class BilateralPageHeaderComponent {
     return name ? `${name} (${acronym})` : acronym;
   });
 
-  readonly reportCtaLabel = computed(() => 'Report emerging result');
+  readonly bulkCtaLabel = computed(() => 'Bulk Results Uploader');
+
+  /**
+   * Destination of the Bulk Results Uploader CTA — the external bulk platform, opened in a new tab.
+   *
+   * Read off `environment` through an index signature **on purpose**. `src/environments/*.ts` is
+   * gitignored and supplied per environment by CI, so this key does not travel with the merge that
+   * introduces it: a typed `environment.bulkUploaderUrl` would fail the build in every environment
+   * whose config predates the key. Read loosely, a missing key is an empty string.
+   *
+   * Empty hides the CTA (`showBulkCta`), which is also how PROD behaves until the bulk platform has
+   * a destination there — no flag needed, just an absent key.
+   */
+  readonly bulkUploaderUrl = computed(
+    () => ((environment as Record<string, unknown>)['bulkUploaderUrl'] as string | undefined)?.trim() ?? '',
+  );
+
+  readonly showBulkCta = computed(() => !!this.bulkUploaderUrl());
 
   /** Optional explicit override for the back button label. */
   readonly backLabelOverride = input<string>('');

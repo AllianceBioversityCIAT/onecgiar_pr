@@ -123,16 +123,22 @@
         </div>
       }
 
-      <!-- Action area right-aligned: [Back to Centers] completely removed from tabbed variant; [+ Report emerging result] preserved -->
-      @if (activeTab()) {
+      <!-- Action area right-aligned: the slot the [+ Report emerging result] CTA used to hold. It now
+           opens the external Bulk Results Uploader, and it renders on all three tabbed pages exactly
+           as the previous CTA did. `/create` stays reachable from the per-project "Create result"
+           buttons on the Reporting tab and the Draft Results empty state. -->
+      @if (activeTab() && showBulkCta()) {
         <div class="absolute right-[16px] sm:right-[32px] top-1/2 z-[22] flex -translate-y-1/2 items-center gap-[8px] sm:gap-[10px]">
           <a
             class="flex h-[32px] sm:h-[36px] shrink-0 items-center gap-[6px] sm:gap-[8px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[10px] sm:px-[14px] text-[12px] sm:text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
-            [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']"
-            [attr.aria-label]="reportCtaLabel()">
-            <span class="material-icons-round text-[16px] sm:text-[18px]">add_circle</span>
-            <span class="hidden sm:inline">{{ reportCtaLabel() }}</span>
-            <span class="sm:hidden">Report</span>
+            [href]="bulkUploaderUrl()"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="bilateral-bulk-uploader-cta"
+            [attr.aria-label]="bulkCtaLabel()">
+            <span class="material-icons-round text-[16px] sm:text-[18px]">upload_file</span>
+            <span class="hidden sm:inline">{{ bulkCtaLabel() }}</span>
+            <span class="sm:hidden">Bulk</span>
           </a>
         </div>
       }

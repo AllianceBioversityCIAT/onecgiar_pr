@@ -6,7 +6,7 @@ import {
   HandlerInitializeResult,
 } from './bilateral-result-type-handler.interface';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
-import { ResultStatusData } from '../../../shared/constants/result-status.enum';
+import { resolveInitialStatusId } from '../constants/initial-status.constants';
 import { ResultRepository } from '../../results/result.repository';
 import { ResultsKnowledgeProductsService } from '../../results/results-knowledge-products/results-knowledge-products.service';
 import { SourceEnum } from '../../results/entities/result.entity';
@@ -63,7 +63,7 @@ export class KnowledgeProductBilateralHandler
         created_date: bilateralDto.created_date,
       }),
       source: SourceEnum.Bilateral,
-      status_id: ResultStatusData.PendingReview.value,
+      status_id: resolveInitialStatusId(bilateralDto),
     });
 
     return { resultHeader, isDuplicate: false };
