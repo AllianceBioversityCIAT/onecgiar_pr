@@ -31,9 +31,10 @@ export class ResultsKnowledgeProductsController {
 
   @ApiTags('Knowledge Products - CGSpace')
   @ApiOperation({
-    summary: 'Search CGSpace (DSpace 7 discovery) for knowledge products',
+    summary:
+      'Search CGSpace, MELSpace and WorldFish (DSpace 7 discovery) for knowledge products',
     description:
-      'Proxies the CGSpace discovery search. `query` (3-200 chars) is required unless at least one of `type`, `year`, `center` is set. `size` is capped at 25. Unknown query params are rejected with 400.',
+      'Proxies the discovery search across the `repository` list (repeatable or comma-separated; default all three; any other value is rejected with 400). `query` (3-200 chars) is required unless at least one of `type`, `year`, `center` is set. `size` is capped at 25 and applies PER SOURCE (merged page holds at most size × selected repositories). Response adds `sources[]` (one entry per selected repository with its status) next to `items`/`page`. Unknown query params are rejected with 400.',
   })
   @Get('cgspace/search')
   cgspaceSearch(
@@ -51,9 +52,10 @@ export class ResultsKnowledgeProductsController {
 
   @ApiTags('Knowledge Products - CGSpace')
   @ApiOperation({
-    summary: 'List CGSpace facet values (item type or affiliation)',
+    summary:
+      'List facet values (item type or affiliation), unioned across repositories',
     description:
-      'Proxies a CGSpace discovery facet. `size` is capped at 100. Unknown query params are rejected with 400.',
+      'Proxies a discovery facet across the `repository` list (repeatable or comma-separated; default all three; any other value is rejected with 400). `size` is capped at 100, PER SOURCE. Response adds `sources[]`. Unknown query params are rejected with 400.',
   })
   @ApiParam({
     name: 'name',

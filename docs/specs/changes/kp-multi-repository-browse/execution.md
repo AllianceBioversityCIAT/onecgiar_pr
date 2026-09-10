@@ -59,3 +59,32 @@
 
 **Decisions / issues**: none beyond the adjudication above. Budget: 1 Reviewer round (within the ≤ 1 mandate). Gate: `auto-approved (pre-approved mode)`.
 
+### `KPM-T-2` — Adapter registry and DTO contract (`repository` list, `sources[]`, item `repository`/`alsoIn`)
+
+| Field | Value |
+|---|---|
+| Final status | **PASS** (attempt 1 of 3) |
+| Date | 2026-09-10 |
+| Implementer | `akili-implementer` (`sonnet`), effort `medium`, skills `nestjs-expert`, `api-design-principles` (task list followed) |
+| Reviewer | `akili-reviewer` (`opus`), lens checklist mode |
+| Requirements covered | `KPM-R-8` (contract + validation clauses), `KPM-AC-10`; `KPM-DD-1`, `KPM-DD-5`; design §15 row 1 (reversion challenge closed) |
+
+**Attempt 1**
+
+- Files changed: `cgspace-discovery/repositories.config.ts` (new — `KP_REPOSITORY_VALUES`, `KpRepository`, `ALL_REPOSITORIES`, `RepositoryAdapter`, `KP_REPOSITORIES` filled from the pinned §3.3 table, `normalizeRepositoryParam`, `translateParams` skeleton), `dto/cgspace-search-query.dto.ts`, `dto/cgspace-facet-query.dto.ts` (`repository?: KpRepository[]` with Transform + `@IsArray/@ArrayMinSize(1)/@IsIn(each)`; `size` documented per source), `dto/cgspace-item.dto.ts` (`repository?`, `alsoIn?`, `CgspaceAlsoInDto`, `SourceStatusDto`, `page.hasMore?`, `sources?`), `dto/cgspace-search-query.dto.spec.ts` (reversion case → `foo`; six cases through the controller's `ValidationPipe`), `results-knowledge-products.controller.ts` (Swagger text only).
+- Implementer verification: `npx jest --silent --reporters=summary --forceExit src/api/results/results-knowledge-products/cgspace-discovery` → `Test Suites: 4 passed, 4 total · Tests: 48 passed, 48 total`; `npx tsc --noEmit -p tsconfig.json` → clean; `npx eslint "src/api/results/results-knowledge-products/**/*.ts" --quiet` → one **pre-existing** prettier error at `results-knowledge-products.service.ts:1471` (file untouched by this task; Leader confirmed via `git diff`).
+- Implementer `Not Done / Assumptions`: (1) `CgspaceItemDto.repository`, `CgspacePageMetaDto.hasMore`, `CgspaceSearchPageDto.sources` typed **optional** so mapper/service compile unchanged (their files belong to T-3/T-4). (2) `translateParams` is a skeleton (dsoType/page/size) per the task wording; body lands in T-4.
+- Leader adjudication: both accepted as staging decisions, not scope owed. **Forward pointer → `KPM-T-3`/`KPM-T-4`:** tighten `repository`, `hasMore`, `sources` to required once populated.
+- Reviewer verdict: **PASS**. Summary: registry reproduces `design.md` §3.3 rows 68–70 cell-for-cell; the CGSpace row reproduces today's live param names; the `repository` list contract matches `KPM-R-8`, `KPM-AC-10`, §7 and `KPM-DD-5`; the six new cases run through a real `ValidationPipe` with the controller's exact options, so the disqualifier does not trigger. Route paths untouched.
+
+**ADVISORY (4R, recorded — no rework, no new task)**
+
+- Reliability: the three rejection cases use bare `.rejects.toThrow()`; `toThrow(BadRequestException)` would pin the 400 that `KPM-AC-10` names.
+- Reliability — **forward pointer → `KPM-T-4`:** `cgspace-discovery.service.ts` `buildFacetCacheKey` keys on `(name, prefix, size)` only; design §4.1 facets Cache row requires `(name, prefix, size, repository)`. T-4's verification list never asserts the facet key — add that assertion.
+- Reliability — **forward pointer → `KPM-T-4`:** `buildSearchCacheKey` now serializes an array with a dead `?? 'cgspace'` fallback; replace with the per-source key.
+- Readability: `cgspace-item.dto.ts` repeats the literal `['cgspace','melspace','worldfish']` in four Swagger enums instead of importing `KP_REPOSITORY_VALUES`.
+
+**Other pre-existing finding (not this task's):** prettier error at `results-knowledge-products.service.ts:1471` — **forward pointer → `KPM-T-8`** (the only task that edits that file) to fix in passing.
+
+**Decisions / issues**: none. Budget: 1 Reviewer round. Gate: `auto-approved (pre-approved mode)`.
+

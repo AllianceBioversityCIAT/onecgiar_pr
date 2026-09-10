@@ -7,7 +7,7 @@
 | Spec path | `docs/specs/changes/kp-multi-repository-browse/` · Module code `KPM` |
 | Linked | `requirements.md` (KPM-R-*, KPM-AC-*) · `design.md` (KPM-DD-*, §3.3 adapter table, §4.1 contract) · `proposal.md` · `mockup/` |
 | Approval Mode | pre-approved (Phase 3 gate auto-approved, pre-approved mode) |
-| Status | in-progress (T-1 done 2026-09-10) |
+| Status | in-progress (T-1, T-2 done 2026-09-10) |
 | Owner / driver | Juan Carlos Cadavid · AKILI Leader |
 | Budget (from `design.md` §14) | 10 tasks · ~1,250 LOC incl. tests · ≤ 1 Reviewer round per task; tripwire > 12 tasks or > 1,500 LOC → stop and escalate |
 
@@ -51,7 +51,7 @@
   - [x] `design.md` §3.3 has no *capture* placeholder left; any missing facet recorded in §13.
   - [x] No hostnames in test names or logs beyond the README (fixtures are data, allowed).
 
-### `KPM-T-2` — Adapter registry and DTO contract (`repository` list, `sources[]`, item `repository`/`alsoIn`)
+### [x] `KPM-T-2` — Adapter registry and DTO contract (`repository` list, `sources[]`, item `repository`/`alsoIn`)
 
 - **Type:** `server`
 - **Description:** Add `repositories.config.ts` (`KpRepository` enum/union, `RepositoryAdapter` type, `KP_REPOSITORIES` registry filled from §3.3, `ALL_REPOSITORIES` priority order, `translateParams(dto, adapter)` helper skeleton). Extend `CgspaceSearchQueryDto` and `CgspaceFacetQueryDto` with `repository?: KpRepository[]` (one Transform handling `undefined` → default all three, `string` → split `,`, `string[]` → flatten through the same split; then trim, lowercase, dedupe; validators `@IsArray()`, `@ArrayMinSize(1)`, `@IsIn(..., { each: true })`). `size` stays 1–25 and is documented as **per source** in Swagger. Extend `cgspace-item.dto.ts` with `repository`, `alsoIn?`, `SourceStatusDto`, `page.hasMore`, `sources`. Swagger annotations. Keep route paths (`KPM-R-31`).

@@ -1,7 +1,21 @@
 import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { ArgumentMetadata, ValidationPipe } from '@nestjs/common';
 import { CgspaceSearchQueryDto } from './cgspace-search-query.dto';
+
+/** Same options the controller applies to `@Query()` (`results-knowledge-products.controller.ts`). */
+const controllerValidationPipe = () =>
+  new ValidationPipe({
+    transform: true,
+    whitelist: true,
+    forbidNonWhitelisted: true,
+  });
+
+const queryMetadata: ArgumentMetadata = {
+  type: 'query',
+  metatype: CgspaceSearchQueryDto,
+};
 
 describe('CgspaceSearchQueryDto', () => {
   it('should pass validation when a valid query alone is provided', async () => {
@@ -13,7 +27,7 @@ describe('CgspaceSearchQueryDto', () => {
     expect(dto.query).toBe('maize');
     expect(dto.page).toBe(0);
     expect(dto.size).toBe(10);
-    expect(dto.repository).toBe('cgspace');
+    expect(dto.repository).toEqual(['cgspace', 'melspace', 'worldfish']);
   });
 
   it('should pass validation when a valid filter alone is provided (no query, year="2026")', async () => {
@@ -102,8 +116,8 @@ describe('CgspaceSearchQueryDto', () => {
     expect(pageError).toBeDefined();
   });
 
-  it('should fail validation when repository is not "cgspace"', async () => {
-    const plain = { query: 'maize', repository: 'melspace' };
+  it('should fail validation when repository contains an unknown value', async () => {
+    const plain = { query: 'maize', repository: 'foo' };
     const dto = plainToInstance(CgspaceSearchQueryDto, plain);
     const errors = await validate(dto);
 
@@ -135,5 +149,61 @@ describe('CgspaceSearchQueryDto', () => {
 
     expect(errors).toHaveLength(0);
     expect(dto.query).toBe('climate change');
+  });
+
+  describe('repository list — through the controller ValidationPipe (KPM-R-8, KPM-AC-10)', () => {
+    it('should reject an unknown value in a comma-separated list with 400, no upstream call', async () => {
+      await expect(
+        controllerValidationPipe().transform(
+          { query: 'maize', repository: 'cgspace,foo' },
+          queryMetadata,
+        ),
+      ).rejects.toThrow();
+    });
+
+    it('should accept the repeatable-param form and keep selection order', async () => {
+      const result = await controllerValidationPipe().transform(
+        { query: 'maize', repository: ['melspace', 'worldfish'] },
+        queryMetadata,
+      );
+
+      expect(result.repository).toEqual(['melspace', 'worldfish']);
+    });
+
+    it('should lowercase a mixed-case value', async () => {
+      const result = await controllerValidationPipe().transform(
+        { query: 'maize', repository: 'CGSpace' },
+        queryMetadata,
+      );
+
+      expect(result.repository).toEqual(['cgspace']);
+    });
+
+    it('should default to all three repositories when omitted', async () => {
+      const result = await controllerValidationPipe().transform(
+        { query: 'maize' },
+        queryMetadata,
+      );
+
+      expect(result.repository).toEqual(['cgspace', 'melspace', 'worldfish']);
+    });
+
+    it('should dedupe a repeated value in a comma-separated list', async () => {
+      const result = await controllerValidationPipe().transform(
+        { query: 'maize', repository: 'cgspace,cgspace' },
+        queryMetadata,
+      );
+
+      expect(result.repository).toEqual(['cgspace']);
+    });
+
+    it('should reject an empty string with 400 (ArrayMinSize(1) after normalization)', async () => {
+      await expect(
+        controllerValidationPipe().transform(
+          { query: 'maize', repository: '' },
+          queryMetadata,
+        ),
+      ).rejects.toThrow();
+    });
   });
 });

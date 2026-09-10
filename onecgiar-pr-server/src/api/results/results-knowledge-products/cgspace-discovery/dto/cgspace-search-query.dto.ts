@@ -1,4 +1,6 @@
 import {
+  ArrayMinSize,
+  IsArray,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -13,6 +15,12 @@ import {
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  ALL_REPOSITORIES,
+  KP_REPOSITORY_VALUES,
+  KpRepository,
+  normalizeRepositoryParam,
+} from '../repositories.config';
 
 export class CgspaceSearchQueryDto {
   @ApiPropertyOptional({
@@ -45,7 +53,8 @@ export class CgspaceSearchQueryDto {
   page?: number = 0;
 
   @ApiPropertyOptional({
-    description: 'Page size',
+    description:
+      'Page size, PER SOURCE (not the merged total): the merged page holds at most size × selected repositories.',
     default: 10,
     minimum: 1,
     maximum: 25,
@@ -86,11 +95,15 @@ export class CgspaceSearchQueryDto {
   center?: string;
 
   @ApiPropertyOptional({
-    description: 'Source repository',
-    enum: ['cgspace'],
-    default: 'cgspace',
+    description:
+      'Repositories to search: repeatable (`repository=cgspace&repository=melspace`) or comma-separated (`repository=cgspace,melspace`). Case-insensitive, deduped. Defaults to all three when omitted. Any other value returns 400.',
+    isArray: true,
+    enum: KP_REPOSITORY_VALUES,
+    default: KP_REPOSITORY_VALUES,
   })
-  @IsOptional()
-  @IsIn(['cgspace'])
-  repository?: string = 'cgspace';
+  @Transform(({ value }) => normalizeRepositoryParam(value))
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsIn(KP_REPOSITORY_VALUES, { each: true })
+  repository?: KpRepository[] = [...ALL_REPOSITORIES];
 }
