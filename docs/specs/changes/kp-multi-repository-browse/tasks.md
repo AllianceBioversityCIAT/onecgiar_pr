@@ -223,7 +223,7 @@ Server coverage thresholds (5/20/35/40) and client (50/60/60/60) unaffected; new
 - [ ] PR strategy (recommended, ~1,250 LOC): **PR 1 — server** (`T-1..T-5` + `T-10` config/docs half; review first: `merge.ts`, then the service fan-out, then DTO/mapper; out of scope: any UI). **PR 2 — client** (`T-6..T-9`; review first: chip invariant and `buildSearchParams`, then the notice/retry, then hosts; links PR 1 as prerequisite; out of scope: server behavior). Both bodies follow `cognitive-doc-design` review-empathy rules.
 - [ ] CI green (lint, jest, build, `migration:check:ci` unaffected, SonarCloud).
 - [ ] Env vars set on QA before the HITL; on TEST/PROD before merging PR 1 (missing → `unconfigured`, no outage).
-- [ ] HITL smoke (`T-10`) evidence recorded.
+- [~] HITL smoke (`T-10`) evidence recorded — local stack done (`execution.md`), QA run owed.
 - [ ] Telemetry: `kp.discovery.search` visible in logs after deploy; no hostname strings.
 
 ## 8. Cleanup & follow-ups

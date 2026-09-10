@@ -235,6 +235,15 @@ None.
 - Rate limits unknown (asked); mitigated by cache + debounce.
 - Component/route rename (`KPM-R-31`), `KPB-DD-8` SCSS removal, `pi-*` → `@ng-icons/lucide` migration of the pre-existing icons in this component — all deferred.
 - Kaizen pending item from `KPB` (server guide env list) is naturally closed by the docs task here.
+- **Execution follow-ups filed by `/akili-execute` (2026-09-10, `KPM-T-7/T-8/T-10` Reviewer and HITL findings):**
+  - (a) CGSpace-only copy still reachable with a MEL/WorldFish handle outside `KPM-R-11`'s MUST list: `result-creator.component.html:101` ("Fetching metadata from CGSpace"), `change-result-type-modal.component.html:54,58,68` ("CGSpace link" ×2, "Fetching metadata from CGSpace"), server `_yearOutsideReportingPhasesMessage` (`results-knowledge-products.service.ts:861-876`). Candidate for a copy-only follow-up proposal.
+  - (b) `empty` state with a failed source renders no partial notice and no Retry (§6.2 gates the notice on `items().length`); only the chip reads "unavailable". Decide whether the notice should also sit above the empty state.
+  - (c) `onecgiar-pr-client/scripts/kp-copy-gate.sh` is not wired to `package.json` or CI; add an `npm run kp:copy-gate` alias so the gate keeps running.
+  - (d) `normalizeDoi` strips only the three spec-listed prefixes (`https://doi.org/`, `http://dx.doi.org/`, `doi:`); `https://dx.doi.org/` and `http://doi.org/` would degrade a DOI match to a title match. Live captures show MEL/WorldFish items frequently without a DOI, so key₂ normalization carries most of the real dedup load.
+  - (e) Two DOI-less items with empty title and type share key₂ `'||'` and collapse; consider treating an empty normalized title as non-matchable.
+  - (f) In the AoW-indicator host (`aow-hlo-create-modal`), *Use this item* persists a draft Result and navigates to the editor immediately, so the "Selected from {{ label }}" banner (§2.2 / `KPM-AC-12`) has no observable state in that host; decide whether the AC is scoped to the `lab-report-form` / `result-creator` hosts or the AoW flow should pause on the synced banner. The banner clause is unverified live until the QA smoke runs it through `lab-report-form`.
+  - (g) Idle strip renders the search input inside the strip panel; `mockup/browse-repositories.html` shows two separate boxes. Accept as-is or align at archive.
+  - (h) `kp.discovery.year_postfiltered { repository, kept, dropped }` is a sixth telemetry event not listed in §9 (only the `KPM-DD-7` fallback path emits it); add it to §9.
 
 ## 14. Size check (Step 2.4)
 Estimate: **10 tasks · ~1,250 LOC incl. tests · 1 review round per task** (rev 1 said ~1,150; judgment-day added the existing-spec updates, folder guide and two copy siblings). Standard holds: no DB/auth/payload-contract change (not Full), far more than one task (not Lite). The proposal estimated 8–10 tasks; the CT sweep and the allow-list finding added scope but not risk class. Tripwire for `/akili-execute`: > 12 tasks or > 1,500 LOC → stop and escalate.
