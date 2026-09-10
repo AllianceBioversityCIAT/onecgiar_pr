@@ -92,7 +92,7 @@
 
 | Field | Value |
 |---|---|
-| Final status | _in progress — see attempts below_ |
+| Final status | **PASS** (attempt 2 of 3 — one rework round) |
 | Date | 2026-09-10 |
 | Implementer | `akili-implementer` (`sonnet`), effort `xhigh` (algorithmic core; Leader raised from the `medium` default), skill `tdd` (`nestjs-expert` dropped — pure functions, no Nest surface) |
 | Reviewer | `akili-reviewer` (`opus`), lens checklist mode |
@@ -142,4 +142,17 @@
 - Readability: `CGSPACE_PRE_CHANGE_ITEMS` does not name the fixture/capture date it was derived from.
 
 **Decisions / issues**: none. Budget: 1 Reviewer round. Gate: `auto-approved (pre-approved mode)`.
+
+**Attempt 2 — PASS**
+
+- Files changed: `cgspace-discovery/merge.ts` (union-find removed; `dedupe` now partitions DOI-bearing items by exact key₁, DOI-less items by key₂, and attaches a DOI-less group to a DOI group iff exactly one DOI group has a member with an equal key₂ — a tie leaves it on its own card; survivor/order/`alsoIn`/`dedupedCount` unchanged), `cgspace-discovery/merge.spec.ts` (+2 cases: the A/B/C bridge regression, the positive single-group attach; 20 tests), `design.md` §5 Dedup bullet (tie rule recorded: "Grouping is by key, not by pairwise/transitive closure … a DOI-less item joins a DOI group only when exactly one DOI group shares its key₂ — a tie leaves the DOI-less item on its own card").
+- Red → green: red `dedupe › a DOI-less item sharing the title with two different-DOI items must NOT bridge them onto one card — Expected: >= 2, Received: 1 — Tests: 1 failed, 19 passed, 20 total` (against the attempt-1 closure); green `Tests: 20 passed, 20 total`. `npx tsc --noEmit -p tsconfig.json` clean; eslint clean after a prettier `--fix`.
+- Implementer `Not Done / Assumptions`: none.
+- Reviewer verdict (round 2): **PASS**. Summary: the key-based partition with the "exactly one candidate DOI group" rule makes the A→B→C bridge unreachable by construction, not merely untested; the two new red-first cases exercise the real bridge and the positive attach with normalization-dependent keys (case-varied titles, `https://doi.org/` prefix); the 18 earlier cases and all survivor/order/`alsoIn`/`dedupedCount` behaviour are unchanged; purity holds; `design.md` §5 records the tie rule. Round-1 FAIL closed.
+
+**ADVISORY from Reviewer round 2 (recorded — no rework)**
+
+- Reliability: `Math.min(...a)` in the group sort spreads a group's index array; safe at page-local sizes (< 30 items), would hit the argument limit if `dedupe` were reused over a full accumulated set. `a.reduce((m, i) => (i < m ? i : m))` removes the ceiling.
+
+**Decisions / issues**: the grouping/tie rule was under-specified in the design; the Reviewer's remediation clause was adopted and written into `design.md` §5 (spec's own file, exempt from the shared-file discipline). **Budget:** 2 Reviewer rounds on this task (the mandate allows one round and escalation on a *second FAIL*; the second round PASSed, so no escalation). Gate: `auto-approved (pre-approved mode)`.
 

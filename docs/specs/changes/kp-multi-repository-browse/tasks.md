@@ -7,7 +7,7 @@
 | Spec path | `docs/specs/changes/kp-multi-repository-browse/` · Module code `KPM` |
 | Linked | `requirements.md` (KPM-R-*, KPM-AC-*) · `design.md` (KPM-DD-*, §3.3 adapter table, §4.1 contract) · `proposal.md` · `mockup/` |
 | Approval Mode | pre-approved (Phase 3 gate auto-approved, pre-approved mode) |
-| Status | in-progress (T-1, T-2, T-3 done 2026-09-10) |
+| Status | in-progress (T-1, T-2, T-3, T-5 done 2026-09-10) |
 | Owner / driver | Juan Carlos Cadavid · AKILI Leader |
 | Budget (from `design.md` §14) | 10 tasks · ~1,250 LOC incl. tests · ≤ 1 Reviewer round per task; tripwire > 12 tasks or > 1,500 LOC → stop and escalate |
 
@@ -84,7 +84,7 @@
 - **Verification:** service spec with a mocked `HttpService`: (a) three ok → three upstream calls, each with its adapter's `f.<facet>` names and base URL, `sources.length === 3`; (b) one source rejects with a timeout code → 200, `status:'timeout'`, others' items present; (c) one 500 → `status:'error'`, `upstreamStatus` logged as a number only; (d) `WORLDFISH_DISCOVERY_URL` unset → `status:'unconfigured'`, one `warn`; (e) all three `timeout`/`error` → `{ status: 502 }` wrapper; (e′) all three `unconfigured` → HTTP 200, `items: []`, three `unconfigured` rows; (e″) merged `totalElements` equals Σ ok totals − `dedupedCount` for a fixture with one cross-source duplicate; (e‴) after a mixed outcome the failed source is re-queried on the next identical call while the ok source hits the cache; (f) **every** `response`, `message` and every logger call argument stringified contains none of the three hostnames nor the env var names; (g) cache: second identical call hits cache for the ok source only after a mixed outcome; (h) facets union: two sources with `Journal Article` / `journal article` → one value, counts summed, `repositories: ['cgspace','melspace']`; one facet source failing → union of the others, 200. **Input that fails it:** replace `allSettled` with `all` → (b) rejects (the per-source call rejects by design); cache the failed source → (e‴) serves the cached failure → fails; log the caught Axios error object → (f) finds `repo.mel.cgiar.org` in the message. **Disqualifiers:** asserting only `toHaveBeenCalledTimes(3)` without inspecting per-call params does not prove translation; mocking `HttpService.get` to resolve synchronously hides the timeout branch — use a rejected promise with `code: 'ECONNABORTED'`.
 - **Definition of done:** spec green; `npx jest` for the whole `cgspace-discovery/` folder green; no hostname in any log string; lint clean.
 
-### `KPM-T-5` — Merge (round-robin) and dedup (DOI → title|type|year) as pure functions, TDD
+### [x] `KPM-T-5` — Merge (round-robin) and dedup (DOI → title|type|year) as pure functions, TDD
 
 - **Type:** `server`
 - **Description:** `cgspace-discovery/merge.ts` (or inside the service as pure exported functions): `interleave(sourcesInSelectionOrder)`; `normalizeDoi`, `normalizeTitle` (lowercase, NFKD, strip diacritics/punctuation, collapse whitespace), `dedupKey1/2`, `dedupe(items, priorityOrder)` → survivors with `alsoIn[]` + `dedupedCount`. Red-green (`tdd` skill).
