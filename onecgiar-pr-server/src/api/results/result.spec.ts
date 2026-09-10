@@ -1065,6 +1065,94 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect(updated.description).toBe(resultDescription);
   }, 20000);
 
+  /**
+   * P2-3597. The duplicate-title check has to reject BEFORE the discontinuation block writes.
+   * This is a lock on the ORDERING, not on the check, so the repository expectations come first:
+   * what must never happen is a write reaching the database on a save that reports an error.
+   *
+   * Mutation measured on 10 Sep 2026: moving the check back below the discontinuation block turns
+   * this test red on the very first expectation (`inactiveData` gets called). The status stops
+   * being 409 too — it comes back 500, because the block then runs against repository methods this
+   * spec does not mock. That is why the order of the expectations matters: asserting the status
+   * first would report a 500 and hide which line actually broke.
+   */
+  it('P2-3597: a duplicate title rejects the save without writing any part of the discontinuation answer', async () => {
+    const duplicatedTitle = 'Innovation use result that already exists';
+    const editedResultId = 11496;
+
+    (mockResultRepository.getResultById as jest.Mock).mockResolvedValueOnce({
+      id: editedResultId,
+      version_id: 1,
+      result_type_id: ResultTypeEnum.INNOVATION_USE,
+      result_level_id: ResultLevelEnum.INITIATIVE_OUTCOME,
+      status_id: 1,
+    });
+
+    const findOneImplementation = (
+      mockResultRepository.findOne as jest.Mock
+    ).getMockImplementation();
+    (mockResultRepository.findOne as jest.Mock).mockImplementation(
+      async (opts: any) =>
+        opts?.where?.title === duplicatedTitle
+          ? {
+              id: 987654,
+              result_code: 9999,
+              title: duplicatedTitle,
+              version_id: 1,
+            }
+          : null,
+    );
+
+    (mockInvestmentDiscontinuedRepo.inactiveData as jest.Mock).mockClear();
+    (mockInnovationMergeSplitRepo.replaceForResult as jest.Mock).mockClear();
+    (mockResultRepository.save as jest.Mock).mockClear();
+
+    const newResult: CreateGeneralInformationResultDto = {
+      result_id: editedResultId,
+      initiative_id: 1,
+      result_type_id: ResultTypeEnum.INNOVATION_USE,
+      result_level_id: ResultLevelEnum.INITIATIVE_OUTCOME,
+      result_name: duplicatedTitle,
+      result_description: 'Description that must not be saved either',
+      gender_tag_id: 3,
+      gender_impact_area_id: 201,
+      climate_change_tag_id: 3,
+      climate_impact_area_id: 202,
+      nutrition_tag_level_id: 3,
+      nutrition_impact_area_id: 203,
+      environmental_biodiversity_tag_level_id: 3,
+      environmental_biodiversity_impact_area_id: 204,
+      poverty_tag_level_id: 3,
+      poverty_impact_area_id: 205,
+      institutions: [],
+      institutions_type: [],
+      krs_url: null,
+      is_krs: false,
+      lead_contact_person: 'John Doe',
+      is_discontinued: true,
+      discontinued_options: [
+        { investment_discontinued_option_id: 19, is_active: true } as any,
+      ],
+    } as CreateGeneralInformationResultDto;
+
+    const results: returnFormatService =
+      await resultService.createResultGeneralInformation(newResult, userTest);
+
+    // The lock, asserted first: nothing of the discontinuation answer may reach the database.
+    expect(mockInvestmentDiscontinuedRepo.inactiveData).not.toHaveBeenCalled();
+    expect(
+      mockInnovationMergeSplitRepo.replaceForResult,
+    ).not.toHaveBeenCalled();
+    expect(mockResultRepository.save).not.toHaveBeenCalled();
+
+    expect(results.status).toBe(HttpStatus.CONFLICT);
+    expect(results.message).toBe('A result with this title already exists.');
+
+    (mockResultRepository.findOne as jest.Mock).mockImplementation(
+      findOneImplementation,
+    );
+  });
+
   it('should delete a result', async () => {
     const results: returnFormatService = await resultService.deleteResult(
       currentResultId,
