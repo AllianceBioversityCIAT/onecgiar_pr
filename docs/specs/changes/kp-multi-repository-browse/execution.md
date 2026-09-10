@@ -156,3 +156,31 @@
 
 **Decisions / issues**: the grouping/tie rule was under-specified in the design; the Reviewer's remediation clause was adopted and written into `design.md` §5 (spec's own file, exempt from the shared-file discipline). **Budget:** 2 Reviewer rounds on this task (the mandate allows one round and escalation on a *second FAIL*; the second round PASSed, so no escalation). Gate: `auto-approved (pre-approved mode)`.
 
+### Runtime note — 2026-09-10 14:27 (Bogota)
+
+Both Implementers spawned for `KPM-T-4` and the `KPM-T-10` docs half were terminated by the harness with `HTTP 429 — session limit, resets 4:40pm (America/Bogota), model claude-sonnet-5` before writing any file (working tree verified clean). Per the `/akili-execute` runtime-failure fallback (retry once, then degrade by role) and the project's standing practice on sonnet rate limits, the retry uses the Implementer wrapper with a `model: opus` override; to preserve **author ≠ auditor**, the Reviewers for those tasks run on `fable` (session model, fresh context) instead of the wrapper's `opus`. Not a work FAIL; no rework attempt consumed.
+
+### `KPM-T-10` — Config, docs, and HITL smoke on QA — **docs/config half** (task stays `[~]`)
+
+| Field | Value |
+|---|---|
+| Status | **`[~]` — docs/config half PASS (attempt 1); HITL half owed after `KPM-T-8`/`T-9`** |
+| Date | 2026-09-10 |
+| Implementer | `akili-implementer` on `opus` (sonnet 429 fallback, see runtime note), effort `low`, skill `aws-serverless` |
+| Reviewer | `akili-reviewer` on `fable` (author ≠ auditor kept), lens checklist mode |
+| Requirements covered (this half) | `KPM-R-13` (deploy-order independence documented), `KPM-R-10` (docs), design §11 Env; closes the content of `KPB` kaizen pending #1 (server guide env list) |
+
+**Attempt 1 (docs/config half)**
+
+- Files changed: `onecgiar-pr-server/serverless.yaml` (`MELSPACE_DISCOVERY_URL: ${env:…}`, `WORLDFISH_DISCOVERY_URL: ${env:…}` after the CGSpace line), `README.md` §Environment (three Discovery vars, `unconfigured` degradation), `docs/infrastructure.md` Env templates row, `onecgiar-pr-server/src/CLAUDE.md` (new "KP Discovery proxy" bullet), `onecgiar-pr-server/AGENTS.md` (new dependency-map row). `docs/trd/trd.md` untouched.
+- Verification: `grep -n "MELSPACE_DISCOVERY_URL\|WORLDFISH_DISCOVERY_URL" onecgiar-pr-server/serverless.yaml README.md docs/infrastructure.md` → 3 files hit (`serverless.yaml:24,25`, `README.md:162`, `docs/infrastructure.md:101`); guides `src/CLAUDE.md:183`, `AGENTS.md:161`.
+- Implementer `Not Done / Assumptions`: HITL half not done (owed by design); YAML checked by eye (no parser in sandbox); `docs/specs/kaizen/changes--kp-cgspace-browse.md` pending item #1 not flipped (outside the file list).
+- Reviewer verdict: **PASS** (docs/config half). Summary: DoD items 1–3 met; `serverless.yaml` mirrors the CGSpace precedent; README/infrastructure/guide copy accurate to `KPM-R-13` and §10; no secrets; TRD untouched with the pending row recorded. Note: guides describe `unconfigured` ahead of `KPM-T-4` landing it — permitted by `tasks.md` ("docs half can run in parallel from the start"); the HITL half is the live proof.
+
+**Pending (apply on the default branch — shared-file discipline)**
+
+- `docs/trd/trd.md` integrations row → "DSpace Discovery proxy (CGSpace, MELSpace, WorldFish)".
+- `docs/specs/kaizen/changes--kp-cgspace-browse.md` pending item #1 (server guide env list) → mark done (content now in both server guides).
+
+**Still owed for `[x]`:** HITL smoke on QA with all three URLs set (MEL-only title, WorldFish-only title, DOI in two repositories, deselect to one chip, one URL blackholed → partial notice + retry, *Use this item* on a MEL item, visual vs mockup, keyboard pass) with screenshots + measured `sources[]` JSON. Pre-flight item "QA env has the two URLs" is a user/infra action (agents never deploy cloud).
+
