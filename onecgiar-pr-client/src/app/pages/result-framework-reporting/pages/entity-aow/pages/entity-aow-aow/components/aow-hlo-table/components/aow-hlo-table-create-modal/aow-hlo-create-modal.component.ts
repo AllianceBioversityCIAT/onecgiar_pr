@@ -13,6 +13,7 @@ import { CentersService } from '../../../../../../../../../../shared/services/gl
 import { filterOutAvisaInitiatives } from '../../../../../../../../../../shared/utils/avisa-initiative.util';
 import { BrnTabsImports } from '@spartan-ng/brain/tabs';
 import { KpCgspaceBrowseComponent, CgspaceItemDto } from './components/kp-cgspace-browse/kp-cgspace-browse.component';
+import { KpRepository, kpRepositoryLabel } from './components/kp-cgspace-browse/kp-repositories.constants';
 import {
   INNOVATION_LINK_QUESTION,
   QaInnovationDevelopmentResultsService,
@@ -107,6 +108,9 @@ export class AowHloCreateModalComponent implements OnInit {
   resultTypes = signal<any[]>([]);
   kpEntryMode = signal<'browse' | 'manual'>('browse');
   handleSource = signal<'browse' | 'manual'>('manual');
+  /** @akili-spec changes/kp-multi-repository-browse — KPM-DD-9. Default `cgspace`: the item's own repository until Browse sets it. */
+  selectedKpRepository = signal<KpRepository>('cgspace');
+  readonly repositoryLabel = computed(() => kpRepositoryLabel(this.selectedKpRepository()));
 
   phaseYear = computed(() => this.api.dataControlSE?.reportingCurrentPhase?.phaseYear ?? new Date().getFullYear());
   isAdmin = computed(() => !!this.api.rolesSE?.isAdmin);
@@ -453,6 +457,7 @@ export class AowHloCreateModalComponent implements OnInit {
     this.createResultBody.update(b => ({ ...b, handler: '', result_name: '' }));
     this.mqapJson.set(null);
     this.mqapUrlError.set({ status: false, message: '' });
+    this.selectedKpRepository.set('cgspace');
   }
 
   navigateToResult(item: any) {
@@ -468,6 +473,7 @@ export class AowHloCreateModalComponent implements OnInit {
     const url = item.itemUrl || item.handleUrl || item.handle;
     this.validatingHandler.set(true);
     this.handleSource.set('browse');
+    this.selectedKpRepository.set(item.repository ?? 'cgspace');
     this.mqapUrlError.set({ status: false, message: '' });
 
     this.api.resultsSE.GET_mqapValidation(url).subscribe({
@@ -495,6 +501,7 @@ export class AowHloCreateModalComponent implements OnInit {
   cleanModal(): void {
     this.kpEntryMode.set('browse');
     this.handleSource.set('manual');
+    this.selectedKpRepository.set('cgspace');
     this.createResultBody.set({
       handler: '',
       result_name: '',

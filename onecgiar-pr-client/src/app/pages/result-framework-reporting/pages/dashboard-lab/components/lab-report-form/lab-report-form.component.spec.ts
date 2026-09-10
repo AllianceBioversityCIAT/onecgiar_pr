@@ -618,10 +618,10 @@ describe('LabReportFormComponent', () => {
       expect(component.kpBrowseEnabled).toBe(true);
     });
 
-    it('renders both Browse CGSpace and Manual entry tabs in template', () => {
+    it('renders both Browse repositories and Manual entry tabs in template', () => {
       const template = readFileSync(join(__dirname, 'lab-report-form.component.html'), 'utf8');
 
-      expect(template.indexOf('Browse CGSpace')).toBeGreaterThan(-1);
+      expect(template.indexOf('Browse repositories')).toBeGreaterThan(-1);
       expect(template.indexOf('Manual entry')).toBeGreaterThan(-1);
       expect(template.indexOf('app-kp-cgspace-browse')).toBeGreaterThan(-1);
       expect(template.indexOf('Repository link/handle')).toBeGreaterThan(-1);
@@ -781,6 +781,39 @@ describe('LabReportFormComponent', () => {
       expect(api.resultsSE.POST_createResult).toHaveBeenCalledTimes(1);
       const body = api.resultsSE.POST_createResult.mock.calls[0][0];
       expect(body.contributing_indicator).toBe(1);
+    });
+
+    // @akili-spec changes/kp-multi-repository-browse — KPM-T-8, KPM-R-12, KPM-AC-12.
+    it('KPM-T-8 — a MELSpace item passes the regex, names MELSpace in the banner label, and produces the same POST_createResult body as Manual entry', async () => {
+      await setup(
+        { indicator: kpIndicator(), tocNode: { toc_result_id: 'toc-kp', result_level_id: OUTPUT_LEVEL } },
+        { centersService: { getData: () => Promise.resolve(), centersList: [ilriCenter], centers: signal<any[]>([ilriCenter]) } }
+      );
+      const melUrl = 'https://repo.mel.cgiar.org/items/11111111-1111-1111-1111-111111111111';
+      api.resultsSE.GET_mqapValidation.mockReturnValue(of({ response: { title: 'MEL Retrieved Title', metadata: [{ source: 'MELSpace' }] } }));
+
+      component.onCgspaceItemSelected({ itemUrl: melUrl, repository: 'melspace' } as any);
+      await flushAsync();
+
+      expect(api.resultsSE.GET_mqapValidation).toHaveBeenCalledWith(melUrl);
+      expect(component.mqapUrlError().status).toBe(false);
+      expect(component.selectedKpRepository()).toBe('melspace');
+      expect(component.repositoryLabel()).toBe('MELSpace'); // drives the "Selected from {{ repositoryLabel() }}" banner
+      expect(api.resultsSE.POST_createResult).toHaveBeenCalledTimes(1);
+      const browseBody = api.resultsSE.POST_createResult.mock.calls[0][0];
+
+      // Manual entry: same handle typed by hand and validated via validateHandle() — no Browse
+      // selection at all — must produce the identical create body (KPM-R-12).
+      api.resultsSE.POST_createResult.mockClear();
+      component.clearSelectedKpItem();
+      component.patch('handler', melUrl);
+      component.handleSource.set('manual');
+      component.validateHandle();
+      await flushAsync();
+
+      expect(api.resultsSE.POST_createResult).toHaveBeenCalledTimes(1);
+      const manualBody = api.resultsSE.POST_createResult.mock.calls[0][0];
+      expect(browseBody).toEqual(manualBody);
     });
 
     // quick/kp-create-navigation-hardening (2026-09-04) — field report: after "Use this item" the

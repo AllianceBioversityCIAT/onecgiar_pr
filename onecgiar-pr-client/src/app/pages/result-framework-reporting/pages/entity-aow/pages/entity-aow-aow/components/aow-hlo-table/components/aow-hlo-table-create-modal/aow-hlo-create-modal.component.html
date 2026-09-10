@@ -66,7 +66,7 @@
                 type="button"
                 class="flex-1 rounded-lg py-2 text-[15px] font-semibold text-center transition-all cursor-pointer border-0 focus:outline-none"
                 [ngClass]="kpEntryMode() === 'browse' ? 'bg-white text-[var(--pr-color-primary-300)] shadow-sm' : 'bg-transparent text-gray-500 hover:text-gray-900'">
-                Browse CGSpace
+                Browse repositories
               </button>
               <button
                 brnTabsTrigger="manual"
@@ -84,7 +84,7 @@
                   <div class="flex items-center justify-between gap-3">
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800 border border-emerald-200">
                       <i class="pi pi-check text-[10px]"></i>
-                      Selected from CGSpace
+                      Selected from {{ repositoryLabel() }}
                     </span>
                     <button
                       type="button"
@@ -99,7 +99,7 @@
                     @if (validatingHandler()) {
                       <div class="flex items-center gap-2 py-1 text-sm font-semibold text-emerald-800">
                         <i class="pi pi-spin pi-spinner text-emerald-600"></i>
-                        <span>Retrieving metadata from CGSpace…</span>
+                        <span>Retrieving metadata from {{ repositoryLabel() }}…</span>
                       </div>
                     } @else {
                       <h4 class="m-0 text-sm font-bold text-gray-900 leading-snug">

@@ -29,6 +29,10 @@ import {
   KpCgspaceBrowseComponent,
   CgspaceItemDto
 } from '../../../entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.component';
+import {
+  KpRepository,
+  kpRepositoryLabel
+} from '../../../entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-repositories.constants';
 
 /** Which entry mode the knowledge-product block is on. */
 export type KpEntryMode = 'browse' | 'manual';
@@ -262,9 +266,13 @@ export class LabReportFormComponent {
   preselectCentersP?: Promise<void>;
 
   /**
-   * P2-3479 / P2-3231: Browsing CGSpace is now available via KpCgspaceBrowseComponent.
+   * P2-3479 / P2-3231: Browsing repositories is now available via KpCgspaceBrowseComponent.
    */
   readonly kpBrowseEnabled = true;
+
+  /** @akili-spec changes/kp-multi-repository-browse — KPM-DD-9. Default `cgspace` until Browse sets it. */
+  readonly selectedKpRepository = signal<KpRepository>('cgspace');
+  readonly repositoryLabel = computed(() => kpRepositoryLabel(this.selectedKpRepository()));
 
   readonly phaseYear = computed(() => this.api.dataControlSE?.reportingCurrentPhase?.phaseYear ?? new Date().getFullYear());
   readonly isAdmin = computed(() => !!this.api.rolesSE?.isAdmin);
@@ -273,6 +281,7 @@ export class LabReportFormComponent {
     const url = item.itemUrl || item.handleUrl || item.handle;
     this.validatingHandler.set(true);
     this.handleSource.set('browse');
+    this.selectedKpRepository.set(item.repository ?? 'cgspace');
 
     const error = validateKpHandle(url);
     this.mqapUrlError.set(error);
@@ -281,7 +290,7 @@ export class LabReportFormComponent {
       this.api.alertsFe.show({
         id: 'reportResultError',
         title: 'Error!',
-        description: error.message || 'Invalid CGSpace URL',
+        description: error.message || 'Invalid repository item URL',
         status: 'error'
       });
       return;
@@ -704,6 +713,7 @@ export class LabReportFormComponent {
     this.patch('result_name', '');
     this.mqapJson.set(null);
     this.mqapUrlError.set({ ...KP_HANDLE_NO_ERROR });
+    this.selectedKpRepository.set('cgspace');
   }
 
   // ---- chip removal: every multi-value field shows its selection as removable chips ----

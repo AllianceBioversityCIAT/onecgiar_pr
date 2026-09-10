@@ -632,7 +632,7 @@ export class ResultsKnowledgeProductsService {
       if (!mqapResponse) {
         throw {
           response: {},
-          message: `Please add a valid handle (received: ${handle}). Only handles from CGSpace can be reported.`,
+          message: `Please add a valid handle (received: ${handle}). Only handles from a supported repository can be reported.`,
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -650,7 +650,7 @@ export class ResultsKnowledgeProductsService {
         if (!mqapResponse?.Handle) {
           throw {
             response: {},
-            message: `No knowledge product was found in CGSpace for handle ${handle}. Please check the number and try again.`,
+            message: `No knowledge product was found in the repository for handle ${handle}. Please check the number and try again.`,
             status: HttpStatus.BAD_REQUEST,
           };
         }
@@ -681,9 +681,9 @@ export class ResultsKnowledgeProductsService {
               response: { title: mqapResponse?.Title },
               message: `Only journal articles published in ${versionCgspaceYear} are eligible for this reporting cycle.<br>
                 Kindly review the rules provided at the beginning of the submission.<br><br>
-                If you believe this is an error, please contact your Center’s knowledge management team to review this information in CGSpace.<br><br>
+                If you believe this is an error, please contact your Center’s knowledge management team to review this information in the repository.<br><br>
                 <b>About this error:</b><br>
-                Please be aware that for journal articles, the reporting system automatically verifies the “Date Issued” field in CGSpace when the "Date Online" is not present. For details on the rules applied with dates, refer to the knowledge product guidance document.`,
+                Please be aware that for journal articles, the reporting system automatically verifies the “Date Issued” field in the repository when the "Date Online" is not present. For details on the rules applied with dates, refer to the knowledge product guidance document.`,
               status: HttpStatus.UNPROCESSABLE_ENTITY,
             };
           }
@@ -693,7 +693,7 @@ export class ResultsKnowledgeProductsService {
             message:
               `Reporting knowledge products from years outside the current reporting cycle (${versionCgspaceYear}) is not possible. ` +
               'Should you require assistance in modifying the publication year for this knowledge product, ' +
-              'please contact your Center’s knowledge management team to review this information in CGSpace.',
+              'please contact your Center’s knowledge management team to review this information in the repository.',
             status: HttpStatus.UNPROCESSABLE_ENTITY,
           };
         }
@@ -1468,9 +1468,8 @@ export class ResultsKnowledgeProductsService {
     );
     knowledgeProduct.is_melia = false;
     knowledgeProduct.result_object = existingResult;
-    knowledgeProduct = await this._resultsKnowledgeProductRepository.save(
-      knowledgeProduct,
-    );
+    knowledgeProduct =
+      await this._resultsKnowledgeProductRepository.save(knowledgeProduct);
     knowledgeProduct = this._resultsKnowledgeProductMapper.populateKPRelations(
       knowledgeProduct,
       metadata,

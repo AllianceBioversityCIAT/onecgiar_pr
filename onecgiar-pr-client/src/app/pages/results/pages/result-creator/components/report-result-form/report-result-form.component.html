@@ -58,7 +58,7 @@
                 (click)="kpEntryMode.set('browse')"
                 class="kp-entry__tab"
                 [class.kp-entry__tab--active]="kpEntryMode() === 'browse'">
-                Browse CGSpace
+                Browse repositories
               </button>
               <button
                 type="button"
@@ -79,7 +79,7 @@
                   <div class="kp-selected__bar">
                     <span class="kp-selected__badge">
                       <i class="pi pi-check" aria-hidden="true"></i>
-                      Selected from CGSpace
+                      Selected from {{ repositoryLabel() }}
                     </span>
                     <button type="button" class="kp-selected__change" (click)="clearSelectedKpItem()" aria-label="Change selected knowledge product">
                       <span class="material-icons-round" aria-hidden="true">swap_horiz</span>
@@ -89,7 +89,7 @@
                   @if (validating) {
                     <p class="kp-selected__status" role="status">
                       <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
-                      Retrieving metadata from CGSpace…
+                      Retrieving metadata from {{ repositoryLabel() }}…
                     </p>
                   } @else {
                     <h4 class="kp-selected__title">{{ resultLevelSE.resultBody.result_name }}</h4>
@@ -157,7 +157,7 @@
                 : this.resultLevelSE.resultBody.handler?.includes('20.500.12348')
                   ? 'Title retrieved from WorldFish DSpace'
                   : this.resultLevelSE.resultBody.handler
-                    ? 'Title retrieved from CGSpace'
+                    ? 'Title retrieved from the repository'
                     : ''
               : 'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'
           "
