@@ -33,6 +33,18 @@ import {
 /** Which entry mode the knowledge-product block is on. */
 export type KpEntryMode = 'browse' | 'manual';
 
+/** Keys for required fields that can be highlighted when validation is shown. */
+export type ReportFormFieldKey = 'category' | 'title' | 'handler' | 'contribution' | 'innovationLink';
+
+const MISSING_FIELD_KEY: Readonly<Record<string, ReportFormFieldKey>> = Object.freeze({
+  'Indicator category': 'category',
+  'Result title': 'title',
+  'Result title exceeds 30 words': 'title',
+  'Repository link/handle': 'handler',
+  'Contribution to indicator target': 'contribution',
+  'Linked Innovation Development result': 'innovationLink'
+});
+
 /**
  * LAB REPORT FORM — the create form, driven by inputs instead of shared state.
  *
@@ -72,10 +84,50 @@ export class LabReportFormComponent {
   readonly targetValueSum = computed(() => this.indicator()?.target_value_sum ?? 0);
   readonly achievedValueSum = computed(() => this.indicator()?.actual_achieved_value_sum ?? 0);
 
+  readonly contributionDescribedBy = computed(() => {
+    const ids = ['contribution-helper', 'contribution-target-reference'];
+    if (this.unitMeasurement()) ids.push('contribution-unit-suffix');
+    if (this.fieldInvalid('contribution')) ids.push('contribution-error');
+    return ids.join(' ');
+  });
+
   // @akili-spec changes/report-result-form-ux (RFUX-T-6, RFUX-R-6)
   readonly categoryContainer = viewChild<ElementRef<HTMLElement>>('categoryContainer');
+  readonly handlerContainer = viewChild<ElementRef<HTMLElement>>('handlerContainer');
+  readonly innovationLinkSection = viewChild<ElementRef<HTMLElement>>('innovationLinkSection');
+
+  /** When true, missing required fields are outlined and labelled inline. */
+  readonly showValidationErrors = signal(false);
+
+  readonly invalidFieldKeys = computed(() => {
+    const keys = new Set<ReportFormFieldKey>();
+    for (const label of this.missingFields()) {
+      const key = MISSING_FIELD_KEY[label];
+      if (key) keys.add(key);
+    }
+    return keys;
+  });
+
+  fieldInvalid(key: ReportFormFieldKey): boolean {
+    return this.showValidationErrors() && this.invalidFieldKeys().has(key);
+  }
+
+  revealValidationErrors(): void {
+    if (this.missingFields().length) this.showValidationErrors.set(true);
+  }
+
+  onFormSubmit(event: Event): void {
+    event.preventDefault();
+    if (!this.canSave()) {
+      this.revealValidationErrors();
+      this.focusFirstMissingField();
+      return;
+    }
+    this.createResult();
+  }
 
   focusFirstMissingField(): void {
+    this.revealValidationErrors();
     if (this.needsCategoryChoice() && !this.createResultBody().result_type_id) {
       const container = this.categoryContainer()?.nativeElement;
       const target = container?.querySelector<HTMLElement>('a.field, select, input, [tabindex]') || container;
@@ -83,9 +135,26 @@ export class LabReportFormComponent {
       target?.focus();
       return;
     }
+    if (this.currentResultIsKnowledgeProduct() && !this.mqapJson()) {
+      const container = this.handlerContainer()?.nativeElement;
+      const target = container?.querySelector<HTMLElement>('input, textarea, a.field, [tabindex]') || container;
+      target?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+      target?.focus();
+      return;
+    }
     if (!this.createResultBody().result_name?.trim() || this.titleWordCount() > 30) {
       this.titleInput()?.nativeElement?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
       this.titleInput()?.nativeElement?.focus();
+      return;
+    }
+    if (
+      this.showsInnovationLink() &&
+      !innovationLinkAnswerIsComplete(this.hasInnovationLink(), this.linkedResultId())
+    ) {
+      const section = this.innovationLinkSection()?.nativeElement;
+      const target = section?.querySelector<HTMLElement>('input, a.field, select, [tabindex]') || section;
+      target?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+      target?.focus();
       return;
     }
     if (this.createResultBody().contribution_to_indicator_target == null || `${this.createResultBody().contribution_to_indicator_target}`.trim() === '') {
@@ -440,6 +509,7 @@ export class LabReportFormComponent {
     this.selectedBilateral.set([]);
     this.dirty.set(false);
     this.dirtyChange.emit(false);
+    this.showValidationErrors.set(false);
   }
 
   private loadInitiatives(): void {
@@ -511,6 +581,7 @@ export class LabReportFormComponent {
   patch<K extends keyof ReportResultFormBody>(key: K, value: ReportResultFormBody[K]): void {
     this.createResultBody.update(body => ({ ...body, [key]: value }));
     this.markDirty();
+    if (this.missingFields().length === 0) this.showValidationErrors.set(false);
   }
 
   onResultLevelChange(resultLevelId: number | null): void {
@@ -678,10 +749,7 @@ export class LabReportFormComponent {
     return sp?.official_code ?? sp?.short_name ?? sp?.name ?? '';
   }
 
-  /**
-   * What the footer counts down. The design surfaces "N fields left before you can create" instead
-   * of marking each field individually, so the list here IS the requiredness contract.
-   */
+  /** Requiredness contract — each label maps to a `ReportFormFieldKey` via `MISSING_FIELD_KEY`. */
   readonly missingFields = computed<string[]>(() => {
     const body = this.createResultBody();
     const missing: string[] = [];

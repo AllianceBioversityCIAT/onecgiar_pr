@@ -51,14 +51,22 @@
 // exact fix (`programme-results.component.ts` styles).
 // ─────────────────────────────────────────────────────────────────────────────
 
+.irr-table-scroll {
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 // Header and data rows are ONE grid: the tracks live in a single place so a column can never be
 // added to the header without shifting every cell under it.
+:host ::ng-deep .irr-table .pr-table {
+  min-width: 680px;
+}
+
 :host ::ng-deep .irr-table .pr-table tr.irr-row {
   display: grid;
-  // Follow-up 2026-09-04: tracks sum to 654px so the table fits the 760px floor minus the panel's
-  // 48px of padding (712px) — the previous 752px forced a second, horizontal scroller inside the
-  // drawer's own vertical one.
-  grid-template-columns: 72px minmax(150px, 1fr) 116px 104px 84px 96px 32px;
+  // Tracks sum to 680px — fits the 760px floor with padding; scrolls horizontally when narrower.
+  grid-template-columns: 68px minmax(140px, 1.4fr) minmax(96px, 0.9fr) 92px 72px 92px 32px;
   gap: 0;
   align-items: stretch;
 }
@@ -94,6 +102,10 @@
 
 :host ::ng-deep .irr-table .pr-table thead th.irr-th--num {
   justify-content: flex-end;
+}
+
+:host ::ng-deep .irr-table .pr-table thead th.irr-th--contrib {
+  letter-spacing: 0.04em;
 }
 
 :host ::ng-deep .irr-table .pr-table thead th.irr-th--sortable {

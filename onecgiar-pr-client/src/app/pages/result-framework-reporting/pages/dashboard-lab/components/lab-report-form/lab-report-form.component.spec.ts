@@ -1278,9 +1278,13 @@ describe('LabReportFormComponent — Interactive Readiness Action & Brand CTA (R
 
     const button: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="missing-fields-button"]');
     button.click();
+    fixture.detectChanges();
 
     expect(focusSpy).toHaveBeenCalled();
     expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+    expect(component.showValidationErrors()).toBe(true);
+    expect(fixture.nativeElement.querySelector('[data-testid="field-title"].lrf-field--invalid')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-testid="missing-fields-list"]')).toBeTruthy();
   });
 
   it('clicking missing fields button focuses contribution input when only contribution is missing (RFUX-R-6, RFUX-AC-6)', () => {
@@ -1309,19 +1313,31 @@ describe('LabReportFormComponent — Interactive Readiness Action & Brand CTA (R
     expect(fixture.nativeElement.querySelector('[data-testid="missing-fields-button"]')).toBeNull();
   });
 
-  it('submit CTA button has brand gradient classes and is enabled when form is complete (RFUX-AC-8)', () => {
+  it('submit CTA button has brand gradient classes and stays clickable while incomplete (RFUX-AC-8)', () => {
     const submitBtn: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="create-result-submit-btn"]');
     expect(submitBtn).toBeTruthy();
     expect(submitBtn.className).toContain('bg-gradient-to-r');
     expect(submitBtn.className).toContain('from-[var(--pr-color-primary-300)]');
     expect(submitBtn.className).toContain('to-[var(--pr-color-primary-400)]');
-    expect(submitBtn.disabled).toBe(true);
+    expect(submitBtn.disabled).toBe(false);
 
     component.patch('result_name', 'Valid title');
     component.patch('contribution_to_indicator_target', 10);
     fixture.detectChanges();
 
     expect(submitBtn.disabled).toBe(false);
+  });
+
+  it('submitting an incomplete form reveals inline field errors without creating a result', () => {
+    const createSpy = jest.spyOn(component, 'createResult');
+    const form: HTMLFormElement = fixture.nativeElement.querySelector('form');
+    form.requestSubmit();
+    fixture.detectChanges();
+
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(component.showValidationErrors()).toBe(true);
+    expect(fixture.nativeElement.querySelector('[data-testid="field-contribution"].lrf-field--invalid')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-testid="field-title"].lrf-field--invalid')).toBeTruthy();
   });
 });
 

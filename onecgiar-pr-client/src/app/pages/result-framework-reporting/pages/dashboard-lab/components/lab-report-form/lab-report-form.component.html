@@ -1,7 +1,7 @@
 <!-- Layout follows the PRMS Form UX Pattern (RFUX-R-2, RFUX-AC-2): 3 distinct semantic cards
      (Result Identity, Target Contribution, Collaboration & Attribution) with 4/8px spacing rhythm,
      WCAG AA contrast, and sticky footer with readiness indicator. -->
-<form class="relative flex flex-col gap-4 flex-1 min-h-0" (ngSubmit)="createResult()" [attr.aria-busy]="creatingResult()">
+<form class="relative flex flex-col gap-4 flex-1 min-h-0" (ngSubmit)="onFormSubmit($event)" [attr.aria-busy]="creatingResult()">
   @if (creatingResult()) {
     <div
       class="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2.5 bg-[color-mix(in_srgb,white_80%,transparent)]"
@@ -15,7 +15,8 @@
   <!-- ==================== CARD 1: RESULT IDENTITY ==================== -->
   <section
     data-testid="card-result-identity"
-    class="rounded-xl border border-[var(--pr-border)] bg-white p-4.5 shadow-2xs flex flex-col gap-4">
+    class="rounded-xl border border-[var(--pr-border)] bg-white p-4 shadow-2xs flex flex-col gap-4 min-[640px]:p-4.5"
+    [class.lrf-card--invalid]="fieldInvalid('category') || fieldInvalid('title') || fieldInvalid('handler') || fieldInvalid('innovationLink')">
     <div class="flex items-center gap-2 border-b border-[var(--pr-border)] pb-3">
       <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">edit_note</span>
       <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">1. Result Identity</h4>
@@ -42,9 +43,12 @@
 
   <!-- indicator category: a picker only when the ToC node does not fix it -->
   @if (needsCategoryChoice()) {
-    <div>
-      <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+    <div class="lrf-field" [class.lrf-field--invalid]="fieldInvalid('category')" data-testid="field-category">
+      <p class="m-0 mb-2 flex items-center gap-1.5 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
         Indicator category <span class="text-[var(--pr-color-red-300)]">*</span>
+        @if (fieldInvalid('category')) {
+          <span class="material-icons-round text-[16px] text-[var(--pr-color-red-300)]" aria-hidden="true">error_outline</span>
+        }
       </p>
       @if (categoryUnavailable()) {
         <!-- No level → no option list will ever arrive. Say so instead of showing an empty control. -->
@@ -65,6 +69,9 @@
             (selectOptionEvent)="onCategoryChange($event?.id ?? null)"
             name="resultType" />
         </div>
+      }
+      @if (fieldInvalid('category')) {
+        <p class="lrf-field-error" role="alert">Select an indicator category to continue.</p>
       }
     </div>
   } @else if (!currentResultIsKnowledgeProduct()) {
@@ -165,11 +172,14 @@
       </div>
 
       <!-- Manual entry panel -->
-      <div [hidden]="kpEntryMode() !== 'manual'">
-        <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+      <div [hidden]="kpEntryMode() !== 'manual'" #handlerContainer class="lrf-field" [class.lrf-field--invalid]="fieldInvalid('handler')" data-testid="field-handler">
+        <p class="m-0 mb-2 flex items-center gap-1.5 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
           Repository link/handle <span class="text-[var(--pr-color-red-300)]">*</span>
+          @if (fieldInvalid('handler')) {
+            <span class="material-icons-round text-[16px] text-[var(--pr-color-red-300)]" aria-hidden="true">error_outline</span>
+          }
         </p>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div class="min-w-0 flex-1">
             <!-- `isStatic` is what keeps a field editable: `editable` is declared on pr-input but never
                  read, and RolesService.readOnly defaults to true. -->
@@ -195,6 +205,9 @@
           <!-- The server's own message can carry links; rendering it as text would swallow them. -->
           <p class="error__link m-0 mt-1.5 text-[12.5px] text-[var(--pr-color-red-300)]" [innerHTML]="mqapUrlError().message"></p>
         }
+        @if (fieldInvalid('handler')) {
+          <p class="lrf-field-error" role="alert">Sync a valid repository handle before creating the result.</p>
+        }
       </div>
     </div>
   }
@@ -202,10 +215,13 @@
   @if (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler) {
     <!-- result title. For a knowledge product it is filled by the sync and stays locked: `disabled`
          is the lever that does that — `readOnly` is inert while `isStatic` is on. -->
-    <div>
+    <div class="lrf-field" [class.lrf-field--invalid]="fieldInvalid('title')" data-testid="field-title">
       <div class="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
-        <label for="result-title-input" class="m-0 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+        <label for="result-title-input" class="m-0 flex items-center gap-1.5 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
           {{ titleLabel() }} <span class="text-[var(--pr-color-red-300)]">*</span>
+          @if (fieldInvalid('title')) {
+            <span class="material-icons-round text-[16px] text-[var(--pr-color-red-300)]" aria-hidden="true">error_outline</span>
+          }
         </label>
         @if (!currentResultIsKnowledgeProduct()) {
           <span
@@ -237,18 +253,33 @@
           (ngModelChange)="patch('result_name', $event)"
           placeholder="Brief, descriptive title for this result…"
           class="w-full rounded-[10px] border border-[var(--pr-border)] p-3 text-[13.5px] leading-relaxed resize-none transition-all focus:border-[var(--pr-color-primary-300)] focus:ring-2 focus:ring-[var(--pr-color-primary-100)] focus:outline-none"
-          [class.border-red-400]="titleWordCount() > 30"
-          aria-describedby="title-helper"
+          [class.border-red-400]="titleWordCount() > 30 || fieldInvalid('title')"
+          [class.ring-2]="fieldInvalid('title')"
+          [class.ring-red-100]="fieldInvalid('title')"
+          [attr.aria-invalid]="fieldInvalid('title') ? 'true' : null"
+          [attr.aria-describedby]="fieldInvalid('title') ? 'title-helper title-error' : 'title-helper'"
           (input)="adjustTextareaHeight($event)"></textarea>
+      }
+      @if (fieldInvalid('title')) {
+        <p id="title-error" class="lrf-field-error" role="alert">
+          @if (titleWordCount() > 30) {
+            Shorten the title to 30 words or fewer.
+          } @else {
+            Enter a result title to continue.
+          }
+        </p>
       }
     </div>
 
   <!-- P2-3420 — link to a QA'd Innovation Development result. Innovation use only, 2026 phase
        onwards only. Sits directly below the title, exactly where the story puts it. -->
   @if (showsInnovationLink()) {
-    <div>
+    <div #innovationLinkSection class="lrf-field" [class.lrf-field--invalid]="fieldInvalid('innovationLink')" data-testid="field-innovation-link">
       <p class="m-0 mb-2 flex items-center gap-1.5 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
         {{ innovationLinkQuestion }} <span class="text-[var(--pr-color-red-300)]">*</span>
+        @if (fieldInvalid('innovationLink')) {
+          <span class="material-icons-round text-[16px] text-[var(--pr-color-red-300)]" aria-hidden="true">error_outline</span>
+        }
       </p>
       <app-pr-radio-button
         [options]="[
@@ -282,6 +313,9 @@
           name="linkedResultId">
         </app-pr-select>
       }
+      @if (fieldInvalid('innovationLink')) {
+        <p class="lrf-field-error" role="alert">Select an Innovation Development result, or choose No.</p>
+      }
     </div>
   }
 }
@@ -291,16 +325,20 @@
     <!-- ==================== CARD 2: TARGET CONTRIBUTION ==================== -->
     <section
       data-testid="card-target-contribution"
-      class="rounded-xl border border-[var(--pr-border)] bg-white p-4.5 shadow-2xs flex flex-col gap-4">
+      class="rounded-xl border border-[var(--pr-border)] bg-white p-4 shadow-2xs flex flex-col gap-4 min-[640px]:p-4.5"
+      [class.lrf-card--invalid]="fieldInvalid('contribution')">
       <div class="flex items-center gap-2 border-b border-[var(--pr-border)] pb-3">
         <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">track_changes</span>
         <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">2. Target Contribution</h4>
       </div>
 
       <!-- contribution to the indicator target -->
-      <div>
-        <label for="contribution-input" class="m-0 mb-1.5 block text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+      <div class="lrf-field" [class.lrf-field--invalid]="fieldInvalid('contribution')" data-testid="field-contribution">
+        <label for="contribution-input" class="m-0 mb-1.5 flex items-center gap-1.5 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
           Contribution to indicator target <span class="text-[var(--pr-color-red-300)]">*</span>
+          @if (fieldInvalid('contribution')) {
+            <span class="material-icons-round text-[16px] text-[var(--pr-color-red-300)]" aria-hidden="true">error_outline</span>
+          }
         </label>
         <p id="contribution-helper" class="m-0 mb-2.5 text-[12px] leading-normal text-gray-500">
           Enter the numerical amount this specific result contributes toward the target.
@@ -317,8 +355,12 @@
             [ngModelOptions]="{ standalone: true }"
             (ngModelChange)="patch('contribution_to_indicator_target', $event)"
             [disabled]="creatingResult() || currentResultIsKnowledgeProduct()"
-            [attr.aria-describedby]="unitMeasurement() ? 'contribution-helper contribution-target-reference contribution-unit-suffix' : 'contribution-helper contribution-target-reference'"
-            class="contribution-input w-[132px] shrink-0 rounded-[10px] border border-[var(--pr-border)] px-3 py-2.5 text-[14px] font-semibold text-gray-900 transition-all focus:border-[var(--pr-color-primary-300)] focus:ring-2 focus:ring-[var(--pr-color-primary-100)] focus:outline-none disabled:bg-gray-50 disabled:text-gray-400" />
+            [attr.aria-describedby]="contributionDescribedBy()"
+            [attr.aria-invalid]="fieldInvalid('contribution') ? 'true' : null"
+            class="contribution-input w-full max-w-[160px] shrink-0 rounded-[10px] border border-[var(--pr-border)] px-3 py-2.5 text-[14px] font-semibold text-gray-900 transition-all focus:border-[var(--pr-color-primary-300)] focus:ring-2 focus:ring-[var(--pr-color-primary-100)] focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
+            [class.border-red-400]="fieldInvalid('contribution')"
+            [class.ring-2]="fieldInvalid('contribution')"
+            [class.ring-red-100]="fieldInvalid('contribution')" />
           @if (unitMeasurement()) {
             <span
               id="contribution-unit-suffix"
@@ -335,13 +377,16 @@
           <span class="material-icons-round text-[14px] text-gray-400">flag</span>
           <span>2026 Target: <strong class="font-semibold text-gray-700">{{ targetValueSum() }}</strong> · Achieved so far: <strong class="font-semibold text-gray-700">{{ achievedValueSum() }}</strong></span>
         </p>
+        @if (fieldInvalid('contribution')) {
+          <p id="contribution-error" class="lrf-field-error" role="alert">Enter how much this result contributes toward the target.</p>
+        }
       </div>
     </section>
 
     <!-- ==================== CARD 3: COLLABORATION & ATTRIBUTION ==================== -->
     <section
       data-testid="card-collaboration"
-      class="rounded-xl border border-[var(--pr-border)] bg-white p-4.5 shadow-2xs flex flex-col gap-4">
+      class="rounded-xl border border-[var(--pr-border)] bg-white p-4 shadow-2xs flex flex-col gap-4 min-[640px]:p-4.5">
       <div class="flex items-center gap-2 border-b border-[var(--pr-border)] pb-3">
         <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">groups</span>
         <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">3. Collaboration & Attribution</h4>
@@ -595,38 +640,54 @@
   <div class="h-6 shrink-0"></div>
 
   <!-- sticky footer: anchored to bottom: 0 with NO space below it -->
-  <div class="sticky bottom-0 -mx-6 mt-auto flex items-center justify-between gap-4 border-t border-[rgba(30,32,47,0.1)] bg-white px-6 py-3.5 z-30 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+  <div class="sticky bottom-0 -mx-4 mt-auto flex flex-col gap-3 border-t border-[rgba(30,32,47,0.1)] bg-white px-4 py-3.5 z-30 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] min-[640px]:-mx-6 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between min-[640px]:gap-4 min-[640px]:px-6">
     @if (missingFields().length) {
-      <button
-        type="button"
-        (click)="focusFirstMissingField()"
-        data-testid="missing-fields-button"
-        class="inline-flex items-center gap-2 text-[13px] text-[var(--pr-color-accents-6)] bg-transparent border-0 p-0 cursor-pointer hover:text-[var(--pr-color-primary-400)] transition-colors text-left"
-        [title]="'Click to focus missing field: ' + missingFields().join(' · ')">
-        <span class="size-[7px] shrink-0 rounded-full bg-[var(--pr-color-orange-500)]"></span>
-        <span class="underline decoration-dotted underline-offset-4">
-          {{ missingFields().length }} field{{ missingFields().length === 1 ? '' : 's' }} left before you can create
-        </span>
-      </button>
+      <div class="min-w-0 flex-1">
+        <button
+          type="button"
+          (click)="focusFirstMissingField()"
+          data-testid="missing-fields-button"
+          class="inline-flex w-full min-[640px]:w-auto items-start gap-2 text-[13px] text-[var(--pr-color-accents-6)] bg-transparent border-0 p-0 cursor-pointer hover:text-[var(--pr-color-primary-400)] transition-colors text-left"
+          [title]="'Click to focus missing field: ' + missingFields().join(' · ')">
+          <span class="mt-[5px] size-[7px] shrink-0 rounded-full bg-[var(--pr-color-orange-500)]"></span>
+          <span>
+            <span class="underline decoration-dotted underline-offset-4">
+              {{ missingFields().length }} field{{ missingFields().length === 1 ? '' : 's' }} left before you can create
+            </span>
+            @if (showValidationErrors()) {
+              <ul class="m-0 mt-1.5 list-none space-y-0.5 p-0 text-[12px] text-[var(--pr-color-red-300)]" data-testid="missing-fields-list">
+                @for (field of missingFields(); track field) {
+                  <li class="flex items-center gap-1">
+                    <span class="material-icons-round text-[14px]" aria-hidden="true">error_outline</span>
+                    {{ field }}
+                  </li>
+                }
+              </ul>
+            }
+          </span>
+        </button>
+      </div>
     } @else {
       <span data-testid="ready-to-create-indicator" class="flex items-center gap-2 text-[13px] text-[var(--pr-color-accents-6)] font-medium">
         <span class="size-[7px] shrink-0 rounded-full bg-[var(--pr-color-green-500)]"></span> Ready to create
       </span>
     }
 
-    <div class="flex shrink-0 items-center gap-2.5">
+    <div class="flex w-full shrink-0 items-stretch gap-2.5 min-[640px]:w-auto min-[640px]:items-center">
       <button
         type="button"
         (click)="cancelled.emit()"
-        class="appearance-none rounded-[10px] border border-[rgba(30,32,47,0.16)] bg-white px-5 py-2.5 text-[13.5px] font-semibold text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)] cursor-pointer">
+        class="flex-1 appearance-none rounded-[10px] border border-[rgba(30,32,47,0.16)] bg-white px-5 py-2.5 text-[13.5px] font-semibold text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)] cursor-pointer min-[640px]:flex-none">
         Cancel
       </button>
       @if (canReport()) {
         <button
           type="submit"
           data-testid="create-result-submit-btn"
-          [disabled]="!canSave() || creatingResult()"
-          class="inline-flex appearance-none items-center gap-2 rounded-[10px] border-0 bg-gradient-to-r from-[var(--pr-color-primary-300)] to-[var(--pr-color-primary-400)] px-5 py-2.5 text-[13.5px] font-semibold text-white shadow-xs hover:opacity-95 disabled:cursor-not-allowed disabled:bg-none disabled:bg-[#e7e1fb] disabled:text-[#b3a4e8] disabled:shadow-none cursor-pointer transition-all">
+          [disabled]="creatingResult()"
+          [attr.aria-disabled]="!canSave() && !creatingResult() ? 'true' : null"
+          class="inline-flex flex-1 appearance-none items-center justify-center gap-2 rounded-[10px] border-0 bg-gradient-to-r from-[var(--pr-color-primary-300)] to-[var(--pr-color-primary-400)] px-5 py-2.5 text-[13.5px] font-semibold text-white shadow-xs hover:opacity-95 disabled:cursor-not-allowed disabled:bg-none disabled:bg-[#e7e1fb] disabled:text-[#b3a4e8] disabled:shadow-none cursor-pointer transition-all min-[640px]:flex-none"
+          [class.opacity-60]="!canSave() && !creatingResult()">
           {{ creatingResult() ? 'Creating…' : 'Create and continue' }}
           @if (creatingResult()) {
             <i class="pi pi-spin pi-spinner text-[16px]" aria-hidden="true"></i>
