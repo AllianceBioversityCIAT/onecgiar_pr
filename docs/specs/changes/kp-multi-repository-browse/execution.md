@@ -429,7 +429,7 @@ Environment restored: `.env` carries the three real URLs; `onecgiar-pr-server/sr
 | KPM-T-3 mapper | PASS | 1 / 1 | `6fb44c691` |
 | KPM-T-5 merge/dedup | PASS | 2 / 2 (transitive-closure defect) | `078a44e3f` |
 | KPM-T-4 fan-out | PASS | 1 / 1 (two lenses) | `2d290607b` |
-| KPM-T-6 source strip | PASS | 1 / 1 | `a982d35b0`→ see log (`feat(kp-cgspace-browse) [KPM-T-6]`) |
+| KPM-T-6 source strip | PASS | 1 / 1 | `745ce785a` |
 | KPM-T-7 badges/notice | PASS | 2 / 2 (badge assertion gap) | `947ce9e5c` |
 | KPM-T-9 CT sweep | PASS | 2 / 2 (tautological wrap gate) | `2a4d965e9` |
 | KPM-T-8 hosts + gate | PASS | 2 / 2 (aliased parity test) | `d47af7412` |
