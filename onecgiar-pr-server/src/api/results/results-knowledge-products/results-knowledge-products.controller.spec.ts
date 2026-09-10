@@ -200,7 +200,8 @@ describe('ResultsKnowledgeProductsController', () => {
         expect(dto.query).toBe('maize');
         expect(dto.page).toBe(0);
         expect(dto.size).toBe(10);
-        expect(dto.repository).toBe('cgspace');
+        // KPM-T-2: `repository` is a list, defaulting to all three when omitted.
+        expect(dto.repository).toEqual(['cgspace', 'melspace', 'worldfish']);
       });
 
       it('GET /cgspace/search?query=maize&size=100 returns 400 (size > 25)', async () => {

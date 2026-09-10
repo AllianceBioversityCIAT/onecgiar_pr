@@ -150,21 +150,85 @@ export function normalizeRepositoryParam(value: unknown): string[] {
 }
 
 /**
- * Translates a validated search/facet query DTO into upstream Discovery-API params for one
- * adapter. **Skeleton only** — Solr-escaped `query`, `f.<facets.type>`, `f.<facets.center>`
- * (skipped when the adapter has none), the year filter via `yearFilterField`, and the
- * `sort=dc.date.accessioned,DESC` no-query fallback land in `KPM-T-4`, which also wires this
- * into `CgspaceDiscoveryService.search`/`facets` per selected source (design.md §5).
+ * Sanitizes a Solr query string: strips leading wildcards and escapes the Solr special
+ * characters. Lives here (not on the service) so `translateParams` stays a pure function that
+ * the service can call per source; `CgspaceDiscoveryService.escapeSolr` delegates to it, so
+ * there is exactly one implementation.
+ */
+export function escapeSolrQuery(query?: string | null): string {
+  if (!query || typeof query !== 'string') {
+    return '';
+  }
+  let sanitized = query.trim();
+  if (!sanitized) {
+    return '';
+  }
+  sanitized = sanitized.replace(/^[*?]+/, '');
+  if (!sanitized) {
+    return '';
+  }
+  // Escape Solr special characters: \ + - & | ! ( ) { } [ ] ^ " ~ * ? :
+  sanitized = sanitized.replace(/([\\+\-&|!(){}[\]^"~*?:])/g, '\\$1');
+  return sanitized;
+}
+
+/**
+ * The subset of `CgspaceSearchQueryDto` `translateParams` reads. Declared structurally so this
+ * module stays free of DTO imports (the DTOs import *this* file for `KpRepository`).
+ */
+export interface TranslatableSearchParams {
+  query?: string;
+  page?: number;
+  size?: number;
+  type?: string;
+  year?: string;
+  center?: string;
+}
+
+/**
+ * Translates a validated search query DTO into upstream Discovery-API params for one adapter
+ * (`design.md` §5 "Adapter registry", `KPM-R-8` "each with that repository's facet/field
+ * translation"):
+ *
+ * - `dsoType=item`, `page`/`size` (the per-source page size, `KPM-R-8`);
+ * - Solr-escaped `query` when present, else `sort=dc.date.accessioned,DESC`;
+ * - `f.<facets.type>=<type>,equals` for the item-type filter;
+ * - `f.<facets.center>=<center>,equals` — **skipped** when the adapter declares no center facet,
+ *   leaving that repository unconstrained by the Center filter (`KPM-OQ-3`);
+ * - `f.<yearFilterField>=[Y TO Y],equals` — when the adapter declares no year filter field the
+ *   param is omitted and the service post-filters the mapped `year` instead (`KPM-DD-7`).
+ *
+ * Pure: no env reads, no logging, no host/base-URL knowledge.
  */
 export function translateParams(
-  dto: { page?: number; size?: number },
+  dto: TranslatableSearchParams,
   adapter: RepositoryAdapter,
 ): Record<string, any> {
-  // TODO(KPM-T-4): query escaping, f.<type>/f.<center> facet params, year filter, sort fallback.
-  void adapter;
-  return {
+  const params: Record<string, any> = {
     dsoType: 'item',
     page: dto.page ?? 0,
     size: dto.size ?? 10,
   };
+
+  const escapedQuery = escapeSolrQuery(dto.query);
+  if (escapedQuery) {
+    params.query = escapedQuery;
+  } else {
+    params.sort = 'dc.date.accessioned,DESC';
+  }
+
+  if (dto.type) {
+    params[`f.${adapter.facets.type}`] = `${dto.type},equals`;
+  }
+
+  if (dto.center && adapter.facets.center) {
+    params[`f.${adapter.facets.center}`] = `${dto.center},equals`;
+  }
+
+  if (dto.year && adapter.yearFilterField) {
+    params[`f.${adapter.yearFilterField}`] =
+      `[${dto.year} TO ${dto.year}],equals`;
+  }
+
+  return params;
 }

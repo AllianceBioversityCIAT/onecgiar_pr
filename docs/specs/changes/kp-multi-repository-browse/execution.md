@@ -184,3 +184,46 @@ Both Implementers spawned for `KPM-T-4` and the `KPM-T-10` docs half were termin
 
 **Still owed for `[x]`:** HITL smoke on QA with all three URLs set (MEL-only title, WorldFish-only title, DOI in two repositories, deselect to one chip, one URL blackholed → partial notice + retry, *Use this item* on a MEL item, visual vs mockup, keyboard pass) with screenshots + measured `sources[]` JSON. Pre-flight item "QA env has the two URLs" is a user/infra action (agents never deploy cloud).
 
+### Runtime note — 2026-09-10 ~16:20 (Bogota)
+
+Two Reviewers (`KPM-T-6`, `KPM-T-4` lens B) on `fable` were terminated by `HTTP 429 — session limit, resets 5:40pm (America/Bogota), model claude-fable-5-1` before producing a verdict. `KPM-T-4` lens A completed (PASS, below). At 16:44 the `sonnet` limit had reset; both reviews were relaunched on `sonnet` — the T-4/T-6 Implementers ran on `opus`, so author ≠ auditor holds. No rework attempt consumed.
+
+### `KPM-T-4` — Parallel fan-out, per-source cache, statuses, telemetry, facet union
+
+| Field | Value |
+|---|---|
+| Final status | **PASS** (attempt 1 of 3 — both lens Reviewers PASS) |
+| Date | 2026-09-10 |
+| Implementer | `akili-implementer` on `opus` (sonnet 429 fallback), effort `xhigh`, skills `nestjs-expert`, `error-handling-patterns`, `api-design-principles` (`tdd` not assigned — integration wiring against a fully specified test list) |
+| Reviewers | parallel lens mode (effort `xhigh` + leak surface): lens A reliability/resilience on `fable` — **PASS**; lens B risk/security/readability — relaunched on `sonnet` after a 429 |
+| Requirements covered | `KPM-R-8` (parallel, 8 s per source, own cache key, settled, no hostnames/bodies), `KPM-R-9`, `KPM-R-13`, `KPM-R-22`, `KPM-AC-4/7/9/11/16`; `KPM-DD-2`, `KPM-DD-6`, `KPM-DD-7`; scenario `KPM-R-8` four clauses |
+| Ran in parallel with | `KPM-T-10` docs half, then `KPM-T-6` (client package) |
+
+**Attempt 1**
+
+- Files changed: `cgspace-discovery.service.ts` (fan-out `Promise.allSettled` over `searchOne`/`facetOne`; `SourceFailure` classification; ok-only per-source cache 600/60 with `repository` in both keys; merge via `interleave` + `dedupe`; page meta `totalElements = Σ ok − dedupedCount`; `sources[]`; 502 only when every source `timeout|error`, all-`unconfigured` → 200; facet union; telemetry renamed to `kp.discovery.*`; `applyYearFallback` for `KPM-DD-7`), `cgspace-discovery.service.spec.ts` (rewritten, 31 tests), `repositories.config.ts` (`translateParams` body, pure `escapeSolrQuery`), `dto/cgspace-item.dto.ts` (`CgspaceItemDto.repository` required; new `CgspaceMergedSearchPageDto`/`CgspaceMergedPageMetaDto` make `hasMore`/`sources` required at the `search` return boundary; Swagger to `@ApiProperty`), plus `results-knowledge-products.controller.spec.ts:203-204` (stale pre-T-2 `toBe('cgspace')` → `toEqual([...all three])`, Leader-approved fold-in — a T-2 escape: T-2's verification was folder-scoped and never ran the controller spec).
+- Implementer verification: `npx jest … cgspace-discovery` → `Test Suites: 5 passed · Tests: 85 passed, 85 total` (stable over 4 runs); KP module `npx jest … results-knowledge-products` → `7 suites / 122 tests` green; `npx tsc --noEmit -p tsconfig.json` clean; eslint clean. Mutation gates (applied, run, reverted): `allSettled → all` → 8 failed incl. (b); cache the failed source → 1 failed ((e‴)/(g)); facet key without `repository` → 3 failed; log the caught Axios error → 3 failed ((f)).
+- Implementer `Not Done / Assumptions` and Leader adjudication: (1) controller spec red — folded in (above). (2) `hasMore`/`sources` narrowed via the new Merged DTOs rather than tightened on the base classes (the mapper uses those classes per source) — accepted. (3) mixed `unconfigured` + `timeout|error` with no ok source → 200 — conformant per design §4.1/`KPM-DD-2`/`KPM-R-13` (lens A confirmed). (4) `escapeSolrQuery` moved to `repositories.config.ts`; an adapter without a center facet contributes `ok` with zero values — accepted. (5) `KPM-DD-7` post-filter implemented, untested (no adapter lacks a year facet) — advisory, not a gate (lens A).
+- **Reviewer lens A (reliability/resilience) — PASS.** Summary: fan-out, classification, per-source ok-only caching, 502/200 rules, page arithmetic and facet union all match design.md §4.1/§5 and `KPM-R-8/9/13/20`; every (a)–(h) case is asserted by effect with per-call params and rejected-promise failures; mutation gates live. ADVISORY (recorded, no rework): telemetry `outcome` reads `'partial'` when zero sources are ok (mixed unconfigured + failed) — a distinct label such as `'degraded'` would read better on dashboards; `applyYearFallback` is dead code today with no test — a synthetic adapter case would cover it; `resolveRepositories` does not dedupe repeated keys on a direct service call (the DTO transform prevents it); `unionFacetValues` silently drops blank labels (not in design §4.1 — recorded here so the contract note stays accurate).
+- **Reviewer lens B (risk/security/readability, `sonnet`) — PASS.** Summary: leak-clean — `classifyFailure`/`normalizeOutcome` reduce every caught Axios error to primitives before it reaches a `SourceFailure`, a body or a log; (c) numeric `upstreamStatus`, (d) once-per-process warn via a `Set`, (f)/(f2) full-response/full-log sweeps for the three hostnames and three env names; 502 copy and `unconfigured` path never name a host or variable (`resolveBaseUrl` logs only `adapter.key`); all five old `cgspace.*` events gone, the four new ones match design §9/§4.1 field-for-field; `escapeSolrQuery` byte-identical to the relocated logic; dead `?? 'cgspace'` fallback gone; controller-spec assertion correctly updated. ADVISORY (recorded, no rework): `kp.discovery.year_postfiltered` is a sixth telemetry event not in design §9 (payload = counts only, no leak surface, path unexercised today) — **pending spec sync for `/akili-archive`: add it to `design.md` §9's event list.**
+
+**Decisions / issues**: parallel lens mode used (xhigh + security surface); Reviewer models diverged from the wrapper (`fable`, then `sonnet`) because of the rate limits — author ≠ auditor preserved in every round. Budget: 1 Reviewer round (two lenses). Gate: `auto-approved (pre-approved mode)`.
+
+
+### `KPM-T-6` — Client: repository constants, API params, source strip with selection rules
+
+| Field | Value |
+|---|---|
+| Final status | _in progress — Reviewer relaunched on `sonnet` after a 429_ |
+| Date | 2026-09-10 |
+| Implementer | `akili-implementer` on `opus` (sonnet 429 fallback), effort `high`, skills `angular-developer`, `frontend-design` |
+| Requirements covered | `KPM-R-1`, `KPM-R-2` (all clauses), `KPM-R-3` (client half), `KPM-R-6` (chip states), `KPM-R-11` (placeholder/idle), `KPM-R-14` (idle/loading), `KPM-R-21`, `KPM-AC-1/2/3`; `KPM-DD-8`, `KPM-DD-9` |
+| Ran in parallel with | `KPM-T-4` (server package — disjoint files, separate `node_modules`) |
+
+**Attempt 1**
+
+- Files changed: `kp-cgspace-browse/kp-repositories.constants.ts` (new — `KpRepository`, `KpRepositoryStatus`, `KP_REPOSITORIES`, `ALL_KP_REPOSITORIES`, `KP_ITEM_HOSTS`, `kpRepositoryLabel`), `kp-cgspace-browse.component.ts` (`selectedRepositories`/`sources` signals, `repositoryChips` computed, `toggleRepository`, `selectAllRepositories`, `facetReload$` debounce, `repository` in `buildSearchParams`, `sources` set from every response, lucide icons via `provideIcons`), `.component.html` (source strip; generalized placeholder/idle/loading copy), `.component.spec.ts` (5 assertions updated, 7 tests added → 38), `shared/services/api/results-api.service.ts` (`GET_cgspaceFacet(name, prefix?, size?, repositories?)`).
+- Implementer verification: component spec `Tests: 38 passed, 38 total`; mutation check (last-chip guard relaxed + `repository` dropped from params) → `6 failed, 32 passed`, restored → 38; `npx tsc --noEmit -p tsconfig.app.json` exit 0; `npx ng lint --quiet` → `All files pass linting.`; hosts + api-service suites `10 passed / 738 tests`.
+- Implementer `Not Done / Assumptions`: placeholder/idle copy taken from `proposal.md`; loading string `Searching the selected repositories…` is the Implementer's (R-14 idle/loading is T-6's per the coverage map); facet re-run uses its own `facetReload$` debounce rather than the search pipeline; `KP_ITEM_HOSTS` defined for T-7, `ALLOWED_HOSTS` untouched; idle branches clear `sources()`; reset-on-close tested via `fixture.destroy()` + re-create (the pr-dialog body is under `@if (visible)`). Leader: all passed to the Reviewer for adjudication (facet-pipeline reading and reset test meaningfulness flagged explicitly).
+- Reviewer: _pending._
+

@@ -7,8 +7,15 @@ export class CgspacePageMetaDto {
   totalElements: number;
   totalPages: number;
 
-  // Optional for now (KPM-T-2): the mapper/service populate it once the fan-out lands (KPM-T-4).
-  @ApiPropertyOptional({
+  /**
+   * True when any ok source reports a next page (`KPM-R-20`).
+   *
+   * Always present on the endpoint response — hence `@ApiProperty`. It stays optional in
+   * TypeScript only because `CgspaceDiscoveryMapper.toPage` reuses this class for the *per-source*
+   * page it builds before the merge, where `hasMore` is not yet known. Consumers of the endpoint
+   * should type the response as `CgspaceMergedSearchPageDto`, which requires it.
+   */
+  @ApiProperty({
     description: 'True when any ok source reports a next page.',
   })
   hasMore?: boolean;
@@ -38,14 +45,13 @@ export class CgspaceItemDto {
   doi: string | null;
   uri: string;
 
-  // Optional for now (KPM-T-2): the mapper populates it from `adapter.key` once it takes an
-  // adapter parameter (KPM-T-3).
-  @ApiPropertyOptional({
+  /** Always set by the mapper from `adapter.key` (`KPM-T-3`, `KPM-R-8`). */
+  @ApiProperty({
     description:
       'Repository this item was returned by (the survivor repository after dedup).',
     enum: ['cgspace', 'melspace', 'worldfish'],
   })
-  repository?: KpRepository;
+  repository: KpRepository;
 
   @ApiPropertyOptional({
     description:
@@ -80,7 +86,34 @@ export class CgspaceSearchPageDto {
   items: CgspaceItemDto[];
   page: CgspacePageMetaDto;
 
-  // Optional for now (KPM-T-2): the service populates it once the fan-out lands (KPM-T-4).
-  @ApiPropertyOptional({ type: () => [SourceStatusDto] })
+  /**
+   * One row per selected repository, in selection order (`KPM-R-8`).
+   *
+   * Always present on the endpoint response — hence `@ApiProperty`. Optional in TypeScript only
+   * because `CgspaceDiscoveryMapper.toPage` reuses this class for the per-source page it builds
+   * before the fan-out is assembled. See `CgspaceMergedSearchPageDto`.
+   */
+  @ApiProperty({ type: () => [SourceStatusDto] })
   sources?: SourceStatusDto[];
+}
+
+/**
+ * The merged, service-level page meta (`design.md` §4.1): `hasMore` is always populated once the
+ * fan-out has settled.
+ */
+export interface CgspaceMergedPageMetaDto extends CgspacePageMetaDto {
+  hasMore: boolean;
+}
+
+/**
+ * The frozen search response contract (`design.md` §4.1, `KPM-R-8`) — what
+ * `CgspaceDiscoveryService.search` returns and what the client (`KPM-T-6`/`KPM-T-7`) consumes:
+ * `page.hasMore` and `sources[]` are guaranteed, on every status including the 502 wrapper.
+ *
+ * It narrows `CgspaceSearchPageDto` rather than tightening it in place so the mapper's per-source
+ * output — built before the merge, without `hasMore`/`sources` — keeps type-checking.
+ */
+export interface CgspaceMergedSearchPageDto extends CgspaceSearchPageDto {
+  page: CgspaceMergedPageMetaDto;
+  sources: SourceStatusDto[];
 }

@@ -1,34 +1,169 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
-import { of, throwError } from 'rxjs';
-import * as fs from 'fs';
-import * as path from 'path';
+import { defer, of } from 'rxjs';
 import { CgspaceDiscoveryService } from './cgspace-discovery.service';
 import { CgspaceDiscoveryMapper } from './cgspace-discovery.mapper';
 import { CgspaceSearchQueryDto } from './dto/cgspace-search-query.dto';
 import { CgspaceFacetQueryDto } from './dto/cgspace-facet-query.dto';
+import { KP_REPOSITORIES, KpRepository } from './repositories.config';
+
+/**
+ * `KPM-T-4` — parallel fan-out, per-source cache, statuses, telemetry, facet union.
+ *
+ * Verification cases (a)-(h) of the `KPM-T-4` work order, plus the two forward pointers
+ * (facet cache key includes `repository`; the search cache key is per source).
+ *
+ * Two deliberate choices, both from the task's disqualifier list:
+ *  - every upstream failure is a **rejected promise** (`defer(() => Promise.reject(err))`), never a
+ *    synchronous `throwError`, so the timeout branch and the `allSettled` isolation are really
+ *    exercised;
+ *  - upstream params are asserted **per call, per repository** — a bare
+ *    `toHaveBeenCalledTimes(3)` would not prove the adapter translation.
+ */
+
+const BASE_URLS: Record<KpRepository, string> = {
+  cgspace: 'https://cgspace.cgiar.org/server/api',
+  melspace: 'https://repo.mel.cgiar.org/server/api',
+  worldfish: 'https://digitalarchive.worldfishcenter.org/server/api',
+};
+
+/** The upstream hostnames and env var names that must never reach a response body or a log. */
+const HOSTNAMES = [
+  'cgspace.cgiar.org',
+  'repo.mel.cgiar.org',
+  'digitalarchive.worldfishcenter.org',
+];
+const ENV_NAMES = [
+  'CGSPACE_DISCOVERY_URL',
+  'MELSPACE_DISCOVERY_URL',
+  'WORLDFISH_DISCOVERY_URL',
+];
+
+const ALL: KpRepository[] = ['cgspace', 'melspace', 'worldfish'];
+
+interface HalItemOptions {
+  uuid: string;
+  handle: string;
+  title: string;
+  type?: string;
+  year?: string;
+  doi?: string;
+}
+
+/** Builds one DSpace HAL object node using *that repository's* metadata field names. */
+function halNode(repository: KpRepository, options: HalItemOptions) {
+  const fields = KP_REPOSITORIES[repository].fields;
+  const metadata: Record<string, { value: string }[]> = {
+    [fields.title]: [{ value: options.title }],
+    [fields.type]: [{ value: options.type ?? 'Journal Article' }],
+    [fields.year]: [{ value: options.year ?? '2026' }],
+    [fields.authors[0]]: [{ value: 'Jane Doe' }],
+    [fields.uri]: [{ value: `https://hdl.handle.net/${options.handle}` }],
+  };
+  if (options.doi) {
+    metadata[fields.doi] = [{ value: options.doi }];
+  }
+  return {
+    _embedded: {
+      indexableObject: {
+        uuid: options.uuid,
+        handle: options.handle,
+        metadata,
+      },
+    },
+  };
+}
+
+function halPage(
+  repository: KpRepository,
+  items: HalItemOptions[],
+  page: Partial<{
+    number: number;
+    size: number;
+    totalElements: number;
+    totalPages: number;
+  }> = {},
+) {
+  return {
+    _embedded: {
+      searchResult: {
+        _embedded: { objects: items.map((item) => halNode(repository, item)) },
+        page: {
+          number: page.number ?? 0,
+          size: page.size ?? 10,
+          totalElements: page.totalElements ?? items.length,
+          totalPages: page.totalPages ?? (items.length > 0 ? 1 : 0),
+        },
+      },
+    },
+  };
+}
+
+function facetHal(values: { label: string; count: number }[]) {
+  return { _embedded: { values } };
+}
+
+type SourceBehavior = { data: any } | { error: any };
 
 describe('CgspaceDiscoveryService', () => {
   let service: CgspaceDiscoveryService;
   let httpService: { get: jest.Mock };
   let loggerLogSpy: jest.SpyInstance;
   let loggerWarnSpy: jest.SpyInstance;
-  let halFixture: any;
 
-  beforeAll(() => {
-    const fixturePath = path.resolve(
-      __dirname,
-      'fixtures/cgspace-search.hal.json',
+  /** Which repository a request URL belongs to (base URLs are distinct per adapter). */
+  function repositoryOf(url: string): KpRepository {
+    const found = ALL.find((key) => url.startsWith(BASE_URLS[key]));
+    if (!found) {
+      throw new Error(`Unexpected upstream URL in test: ${url}`);
+    }
+    return found;
+  }
+
+  /**
+   * Routes each upstream call to a per-repository behavior. Failures are **rejected promises**,
+   * deferred so nothing rejects before subscription.
+   */
+  function mockSources(map: Partial<Record<KpRepository, SourceBehavior>>) {
+    httpService.get.mockImplementation((url: string) => {
+      const behavior = map[repositoryOf(url)];
+      if (!behavior) {
+        return of({ data: halPage(repositoryOf(url), []) });
+      }
+      if ('error' in behavior) {
+        return defer(() => Promise.reject(behavior.error));
+      }
+      return of({ data: behavior.data });
+    });
+  }
+
+  /** The single upstream call issued for `repository`, as `[url, config]`. */
+  function callFor(repository: KpRepository): [string, any] {
+    const call = httpService.get.mock.calls.find((args: any[]) =>
+      String(args[0]).startsWith(BASE_URLS[repository]),
     );
-    halFixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
-  });
+    expect(call).toBeDefined();
+    return call as [string, any];
+  }
+
+  function allLoggerCalls(): any[][] {
+    return [...loggerLogSpy.mock.calls, ...loggerWarnSpy.mock.calls];
+  }
+
+  function searchEvent(): any {
+    const call = loggerLogSpy.mock.calls.find(
+      (args: any[]) => args[0]?.message === 'kp.discovery.search',
+    );
+    expect(call).toBeDefined();
+    return call![0];
+  }
 
   beforeEach(async () => {
-    process.env.CGSPACE_DISCOVERY_URL = 'https://cgspace.cgiar.org/server/api';
+    process.env.CGSPACE_DISCOVERY_URL = BASE_URLS.cgspace;
+    process.env.MELSPACE_DISCOVERY_URL = BASE_URLS.melspace;
+    process.env.WORLDFISH_DISCOVERY_URL = BASE_URLS.worldfish;
 
-    httpService = {
-      get: jest.fn(),
-    };
+    httpService = { get: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -50,6 +185,8 @@ describe('CgspaceDiscoveryService', () => {
 
   afterEach(() => {
     delete process.env.CGSPACE_DISCOVERY_URL;
+    delete process.env.MELSPACE_DISCOVERY_URL;
+    delete process.env.WORLDFISH_DISCOVERY_URL;
     jest.restoreAllMocks();
     jest.clearAllMocks();
   });
@@ -72,603 +209,1134 @@ describe('CgspaceDiscoveryService', () => {
     });
 
     it('should escape Solr special characters', () => {
-      // input: *:* OR (a"b) -> leading * stripped -> :* OR (a"b) -> escaped -> \:\* OR \(a\"b\)
       expect(service.escapeSolr('*:* OR (a"b)')).toBe('\\:\\* OR \\(a\\"b\\)');
 
       const complexInput =
         'title:beans +climate -drought (dry || wet) [2020 TO 2024] {opt} ^2 ~3 ?test *wild! \\slash';
-      const escaped = service.escapeSolr(complexInput);
-      expect(escaped).toBe(
+      expect(service.escapeSolr(complexInput)).toBe(
         'title\\:beans \\+climate \\-drought \\(dry \\|\\| wet\\) \\[2020 TO 2024\\] \\{opt\\} \\^2 \\~3 \\?test \\*wild\\! \\\\slash',
       );
     });
 
     it('should escape characters without truncating query strings', () => {
       const longQuery = 'a'.repeat(300);
-      const escaped = service.escapeSolr(longQuery);
-      expect(escaped.length).toBe(300);
-      expect(escaped).toBe('a'.repeat(300));
+      expect(service.escapeSolr(longQuery).length).toBe(300);
     });
   });
 
-  describe('search', () => {
-    const defaultSearchDto: CgspaceSearchQueryDto = {
-      query: 'maize',
-      page: 0,
-      size: 10,
-    };
-
-    it('1. Successful search with query -> returns 200 and mapped items', async () => {
-      httpService.get.mockReturnValueOnce(of({ data: halFixture }));
-
-      const result = await service.search(defaultSearchDto);
-
-      expect(httpService.get).toHaveBeenCalledWith(
-        'https://cgspace.cgiar.org/server/api/discover/search/objects',
-        {
-          params: {
-            dsoType: 'item',
-            page: 0,
-            size: 10,
-            query: 'maize',
-          },
-          paramsSerializer: {
-            encode: expect.any(Function),
-          },
-          timeout: 8000,
+  describe('search — fan-out, statuses and telemetry', () => {
+    it('(a) three ok sources -> three upstream calls, each with its own base URL and adapter facet names, sources.length === 3', async () => {
+      mockSources({
+        cgspace: {
+          data: halPage('cgspace', [
+            { uuid: 'cg-1', handle: '10568/1', title: 'Maize in CGSpace' },
+          ]),
         },
-      );
-
-      expect(result.status).toBe(200);
-      expect(result.message).toBe('CGSpace search results');
-      expect(result.response.items).toHaveLength(3);
-      expect(result.response.items[0]).toMatchObject({
-        uuid: '679513e4-eeba-4a06-a017-015862e7b9b3',
-        handle: '10568/74449',
-        handleUrl: 'https://hdl.handle.net/10568/74449',
-        itemUrl:
-          'https://cgspace.cgiar.org/items/679513e4-eeba-4a06-a017-015862e7b9b3',
-        title: expect.stringContaining('Effect of Lablab purpureus'),
-        type: 'Journal Article',
-        year: 2015,
-      });
-      expect(result.response.page).toEqual({
-        number: 0,
-        size: 3,
-        totalElements: 3,
-        totalPages: 1,
+        melspace: {
+          data: halPage('melspace', [
+            {
+              uuid: 'mel-1',
+              handle: '20.500.11766/1',
+              title: 'Maize in MELSpace',
+            },
+          ]),
+        },
+        worldfish: {
+          data: halPage('worldfish', [
+            {
+              uuid: 'wf-1',
+              handle: '20.500.12348/1',
+              title: 'Maize in WorldFish',
+            },
+          ]),
+        },
       });
 
-      expect(loggerLogSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'cgspace.search',
-          queryLength: 5,
-          page: 0,
-          size: 10,
-          hasType: false,
-          hasCenter: false,
-          outcome: 'success',
-          total: 3,
-        }),
-      );
-    });
-
-    it('2. Successful search without query -> sends sort: dc.date.accessioned,DESC', async () => {
-      httpService.get.mockReturnValueOnce(of({ data: halFixture }));
-
-      const dto: CgspaceSearchQueryDto = {
-        type: 'Journal Article',
-        page: 1,
-        size: 20,
-      };
-
-      const result = await service.search(dto);
-
-      expect(httpService.get).toHaveBeenCalledWith(
-        'https://cgspace.cgiar.org/server/api/discover/search/objects',
-        {
-          params: {
-            dsoType: 'item',
-            page: 1,
-            size: 20,
-            sort: 'dc.date.accessioned,DESC',
-            'f.itemtype': 'Journal Article,equals',
-          },
-          paramsSerializer: {
-            encode: expect.any(Function),
-          },
-          timeout: 8000,
-        },
-      );
-
-      expect(result.status).toBe(200);
-      expect(result.message).toBe('CGSpace search results');
-    });
-
-    it('3. Filters applied: type, center, year mapped to f.itemtype, f.affiliation, f.dateIssued=[YYYY TO YYYY],equals', async () => {
-      httpService.get.mockReturnValueOnce(of({ data: halFixture }));
-
-      const dto: CgspaceSearchQueryDto = {
-        query: 'cassava',
-        type: 'Journal Article',
-        center: 'Alliance of Bioversity and CIAT',
-        year: '2024',
+      const result = await service.search({
+        query: 'maize',
         page: 0,
         size: 10,
-      };
+        type: 'Journal Article',
+        center: 'Alliance of Bioversity and CIAT',
+        year: '2026',
+        repository: [...ALL],
+      });
 
-      const result = await service.search(dto);
+      expect(httpService.get).toHaveBeenCalledTimes(3);
 
-      expect(httpService.get).toHaveBeenCalledWith(
-        'https://cgspace.cgiar.org/server/api/discover/search/objects',
-        {
-          params: {
-            dsoType: 'item',
-            page: 0,
-            size: 10,
-            query: 'cassava',
-            'f.itemtype': 'Journal Article,equals',
-            'f.affiliation': 'Alliance of Bioversity and CIAT,equals',
-            'f.dateIssued': '[2024 TO 2024],equals',
-          },
-          paramsSerializer: {
-            encode: expect.any(Function),
-          },
-          timeout: 8000,
-        },
-      );
+      const [cgUrl, cgConfig] = callFor('cgspace');
+      expect(cgUrl).toBe(`${BASE_URLS.cgspace}/discover/search/objects`);
+      expect(cgConfig.timeout).toBe(8000);
+      expect(cgConfig.params).toEqual({
+        dsoType: 'item',
+        page: 0,
+        size: 10,
+        query: 'maize',
+        'f.itemtype': 'Journal Article,equals',
+        'f.affiliation': 'Alliance of Bioversity and CIAT,equals',
+        'f.dateIssued': '[2026 TO 2026],equals',
+      });
+
+      const [melUrl, melConfig] = callFor('melspace');
+      expect(melUrl).toBe(`${BASE_URLS.melspace}/discover/search/objects`);
+      // MELSpace's center facet is `institute`, not `affiliation` (design.md §3.3).
+      expect(melConfig.params).toEqual({
+        dsoType: 'item',
+        page: 0,
+        size: 10,
+        query: 'maize',
+        'f.itemtype': 'Journal Article,equals',
+        'f.institute': 'Alliance of Bioversity and CIAT,equals',
+        'f.dateIssued': '[2026 TO 2026],equals',
+      });
+      expect(melConfig.params['f.affiliation']).toBeUndefined();
+
+      const [wfUrl, wfConfig] = callFor('worldfish');
+      expect(wfUrl).toBe(`${BASE_URLS.worldfish}/discover/search/objects`);
+      expect(wfConfig.params).toEqual({
+        dsoType: 'item',
+        page: 0,
+        size: 10,
+        query: 'maize',
+        'f.itemtype': 'Journal Article,equals',
+        'f.institute': 'Alliance of Bioversity and CIAT,equals',
+        'f.dateIssued': '[2026 TO 2026],equals',
+      });
 
       expect(result.status).toBe(200);
+      expect(result.response.sources).toHaveLength(3);
+      expect(result.response.sources.map((s) => s.repository)).toEqual(ALL);
+      expect(result.response.sources.every((s) => s.status === 'ok')).toBe(
+        true,
+      );
+
+      // Every item carries its own repository and that repository's item host (KPM-R-8).
+      expect(result.response.items.map((i) => i.repository).sort()).toEqual([
+        'cgspace',
+        'melspace',
+        'worldfish',
+      ]);
+      expect(
+        result.response.items.find((i) => i.repository === 'melspace')!.itemUrl,
+      ).toBe('https://repo.mel.cgiar.org/items/mel-1');
+
+      expect(searchEvent()).toMatchObject({
+        message: 'kp.discovery.search',
+        repositories: ALL,
+        merged: 3,
+        dedupedCount: 0,
+        page: 0,
+        size: 10,
+        hasQuery: true,
+        outcome: 'success',
+      });
+      expect(searchEvent().sources).toEqual([
+        {
+          repository: 'cgspace',
+          status: 'ok',
+          durationMs: expect.any(Number),
+          total: 1,
+        },
+        {
+          repository: 'melspace',
+          status: 'ok',
+          durationMs: expect.any(Number),
+          total: 1,
+        },
+        {
+          repository: 'worldfish',
+          status: 'ok',
+          durationMs: expect.any(Number),
+          total: 1,
+        },
+      ]);
     });
 
-    it('4. Solr escaping: input *:* OR (a"b) -> escaped query sent', async () => {
-      httpService.get.mockReturnValueOnce(of({ data: halFixture }));
+    it('(a2) a selection of two queries only those two sources, in selection order (scenario KPM-R-8)', async () => {
+      mockSources({
+        cgspace: {
+          data: halPage('cgspace', [
+            { uuid: 'cg-1', handle: '10568/1', title: 'Maize' },
+          ]),
+        },
+        melspace: {
+          data: halPage('melspace', [
+            { uuid: 'mel-1', handle: '20.500.11766/1', title: 'Maiz' },
+          ]),
+        },
+      });
 
-      const dto: CgspaceSearchQueryDto = {
+      const result = await service.search({
+        query: 'maize',
+        page: 0,
+        size: 10,
+        repository: ['cgspace', 'melspace'],
+      });
+
+      expect(httpService.get).toHaveBeenCalledTimes(2);
+      expect(result.response.sources.map((s) => s.repository)).toEqual([
+        'cgspace',
+        'melspace',
+      ]);
+      expect(
+        httpService.get.mock.calls.some((args: any[]) =>
+          String(args[0]).startsWith(BASE_URLS.worldfish),
+        ),
+      ).toBe(false);
+    });
+
+    it('(a3) without a query, every source gets sort=dc.date.accessioned,DESC instead of query', async () => {
+      mockSources({});
+
+      await service.search({
+        type: 'Report',
+        page: 1,
+        size: 20,
+        repository: ['cgspace', 'melspace'],
+      });
+
+      for (const repository of ['cgspace', 'melspace'] as KpRepository[]) {
+        const [, config] = callFor(repository);
+        expect(config.params.sort).toBe('dc.date.accessioned,DESC');
+        expect(config.params.query).toBeUndefined();
+        expect(config.params.page).toBe(1);
+        expect(config.params.size).toBe(20);
+      }
+    });
+
+    it('(a4) the query is Solr-escaped for every source', async () => {
+      mockSources({});
+
+      await service.search({
         query: '*:* OR (a"b)',
         page: 0,
         size: 10,
-      };
+        repository: [...ALL],
+      });
 
-      const result = await service.search(dto);
-
-      expect(httpService.get).toHaveBeenCalledWith(
-        'https://cgspace.cgiar.org/server/api/discover/search/objects',
-        expect.objectContaining({
-          params: expect.objectContaining({
-            query: '\\:\\* OR \\(a\\"b\\)',
-          }),
-        }),
-      );
-
-      expect(result.status).toBe(200);
+      for (const repository of ALL) {
+        const [, config] = callFor(repository);
+        expect(config.params.query).toBe('\\:\\* OR \\(a\\"b\\)');
+      }
     });
 
-    it('5. Cache hit: second call with same query within 60s returns cached result without second HTTP call', async () => {
-      httpService.get.mockReturnValueOnce(of({ data: halFixture }));
+    it('(b) one source rejects with a timeout code -> HTTP 200, status "timeout", the other sources\' items are present', async () => {
+      mockSources({
+        cgspace: {
+          data: halPage('cgspace', [
+            { uuid: 'cg-1', handle: '10568/1', title: 'CGSpace item' },
+          ]),
+        },
+        melspace: {
+          data: halPage('melspace', [
+            { uuid: 'mel-1', handle: '20.500.11766/1', title: 'MELSpace item' },
+          ]),
+        },
+        worldfish: {
+          error: {
+            code: 'ECONNABORTED',
+            message: `timeout of 8000ms exceeded at ${BASE_URLS.worldfish}`,
+            config: { url: `${BASE_URLS.worldfish}/discover/search/objects` },
+          },
+        },
+      });
 
-      const firstCall = await service.search(defaultSearchDto);
-      expect(httpService.get).toHaveBeenCalledTimes(1);
-      expect(firstCall.status).toBe(200);
+      const result = await service.search({
+        query: 'maize',
+        page: 0,
+        size: 10,
+        repository: [...ALL],
+      });
 
-      // Second call within TTL
-      const secondCall = await service.search(defaultSearchDto);
-      expect(httpService.get).toHaveBeenCalledTimes(1);
-      expect(secondCall).toEqual(firstCall);
+      expect(result.status).toBe(200);
+      expect(result.response.sources).toEqual([
+        { repository: 'cgspace', status: 'ok', total: 1, hasMore: false },
+        { repository: 'melspace', status: 'ok', total: 1, hasMore: false },
+        {
+          repository: 'worldfish',
+          status: 'timeout',
+          total: 0,
+          hasMore: false,
+        },
+      ]);
+      expect(result.response.items.map((i) => i.title)).toEqual([
+        'CGSpace item',
+        'MELSpace item',
+      ]);
+      expect(loggerWarnSpy).toHaveBeenCalledWith({
+        message: 'kp.discovery.source_failed',
+        repository: 'worldfish',
+        status: 'timeout',
+      });
+    });
 
-      // Call with different params causes fresh HTTP fetch
-      httpService.get.mockReturnValueOnce(of({ data: halFixture }));
-      const differentDto: CgspaceSearchQueryDto = {
+    it('(b2) ETIMEDOUT and a bare "timeout" message classify as timeout; anything else as error', async () => {
+      mockSources({
+        cgspace: { error: { code: 'ETIMEDOUT', message: 'socket hang up' } },
+        melspace: { error: { message: 'Timeout awaiting response' } },
+        worldfish: {
+          error: { code: 'ECONNREFUSED', message: 'connect refused' },
+        },
+      });
+
+      const result = await service.search({
+        query: 'maize',
+        page: 0,
+        size: 10,
+        repository: [...ALL],
+      });
+
+      expect(result.response.sources.map((s) => s.status)).toEqual([
+        'timeout',
+        'timeout',
+        'error',
+      ]);
+    });
+
+    it('(c) one source returns 500 -> status "error", upstreamStatus logged as a number and nothing else', async () => {
+      mockSources({
+        cgspace: {
+          data: halPage('cgspace', [
+            { uuid: 'cg-1', handle: '10568/1', title: 'CGSpace item' },
+          ]),
+        },
+        melspace: {
+          error: {
+            message: `Request failed with status code 500 at ${BASE_URLS.melspace}`,
+            response: {
+              status: 500,
+              data: `Fatal Solr exception for ${BASE_URLS.melspace}`,
+            },
+          },
+        },
+        worldfish: {
+          data: halPage('worldfish', [
+            { uuid: 'wf-1', handle: '20.500.12348/1', title: 'WorldFish item' },
+          ]),
+        },
+      });
+
+      const result = await service.search({
+        query: 'maize',
+        page: 0,
+        size: 10,
+        repository: [...ALL],
+      });
+
+      expect(result.status).toBe(200);
+      expect(
+        result.response.sources.find((s) => s.repository === 'melspace'),
+      ).toEqual({
+        repository: 'melspace',
+        status: 'error',
+        total: 0,
+        hasMore: false,
+      });
+
+      const failedWarn = loggerWarnSpy.mock.calls.find(
+        (args: any[]) =>
+          args[0]?.message === 'kp.discovery.source_failed' &&
+          args[0]?.repository === 'melspace',
+      );
+      expect(failedWarn![0]).toEqual({
+        message: 'kp.discovery.source_failed',
+        repository: 'melspace',
+        status: 'error',
+        upstreamStatus: 500,
+      });
+      expect(typeof failedWarn![0].upstreamStatus).toBe('number');
+      expect(searchEvent().outcome).toBe('partial');
+    });
+
+    it('(d) WORLDFISH_DISCOVERY_URL unset -> status "unconfigured", no HTTP call for it, exactly one warn (once per process)', async () => {
+      delete process.env.WORLDFISH_DISCOVERY_URL;
+      mockSources({});
+
+      const result = await service.search({
+        query: 'maize',
+        page: 0,
+        size: 10,
+        repository: [...ALL],
+      });
+
+      expect(httpService.get).toHaveBeenCalledTimes(2);
+      expect(
+        httpService.get.mock.calls.some((args: any[]) =>
+          String(args[0]).startsWith(BASE_URLS.worldfish),
+        ),
+      ).toBe(false);
+      expect(
+        result.response.sources.find((s) => s.repository === 'worldfish'),
+      ).toEqual({
+        repository: 'worldfish',
+        status: 'unconfigured',
+        total: 0,
+        hasMore: false,
+      });
+      expect(result.status).toBe(200);
+
+      const configWarns = loggerWarnSpy.mock.calls.filter(
+        (args: any[]) => args[0]?.message === 'kp.discovery.config.missing',
+      );
+      expect(configWarns).toHaveLength(1);
+      expect(configWarns[0][0]).toEqual({
+        message: 'kp.discovery.config.missing',
+        repository: 'worldfish',
+      });
+
+      // A second search does not warn again — once per process (design.md §4.1).
+      await service.search({
         query: 'wheat',
         page: 0,
         size: 10,
-      };
-      const thirdCall = await service.search(differentDto);
-      expect(httpService.get).toHaveBeenCalledTimes(2);
-      expect(thirdCall.status).toBe(200);
+        repository: [...ALL],
+      });
+      expect(
+        loggerWarnSpy.mock.calls.filter(
+          (args: any[]) => args[0]?.message === 'kp.discovery.config.missing',
+        ),
+      ).toHaveLength(1);
     });
 
-    it('5b. Cache expiry: call after 60s re-fetches from upstream', async () => {
-      jest.useFakeTimers();
-      httpService.get.mockReturnValue(of({ data: halFixture }));
+    it('(d2) a blank env value is treated as unconfigured', async () => {
+      process.env.MELSPACE_DISCOVERY_URL = '   ';
+      mockSources({});
 
-      await service.search(defaultSearchDto);
+      const result = await service.search({
+        query: 'maize',
+        page: 0,
+        size: 10,
+        repository: ['cgspace', 'melspace'],
+      });
+
+      expect(
+        result.response.sources.find((s) => s.repository === 'melspace')!
+          .status,
+      ).toBe('unconfigured');
+      expect(result.status).toBe(200);
+    });
+
+    it('(e) every selected source timeout/error -> the legacy 502 wrapper with generalized copy', async () => {
+      mockSources({
+        cgspace: { error: { code: 'ECONNABORTED', message: 'timeout' } },
+        melspace: { error: { response: { status: 500 } } },
+        worldfish: { error: { code: 'ECONNRESET', message: 'socket reset' } },
+      });
+
+      const result = await service.search({
+        query: 'maize',
+        page: 0,
+        size: 10,
+        repository: [...ALL],
+      });
+
+      expect(result.status).toBe(502);
+      expect(result.message).toBe(
+        'Repository search is temporarily unavailable',
+      );
+      expect(result.response.items).toEqual([]);
+      expect(result.response.page).toEqual({
+        number: 0,
+        size: 10,
+        totalElements: 0,
+        totalPages: 0,
+        hasMore: false,
+      });
+      expect(result.response.sources.map((s) => s.status)).toEqual([
+        'timeout',
+        'error',
+        'error',
+      ]);
+      expect(searchEvent().outcome).toBe('failure');
+    });
+
+    it("(e′) every selected source unconfigured -> HTTP 200, items: [], three 'unconfigured' rows, no HTTP call", async () => {
+      delete process.env.CGSPACE_DISCOVERY_URL;
+      delete process.env.MELSPACE_DISCOVERY_URL;
+      delete process.env.WORLDFISH_DISCOVERY_URL;
+
+      const result = await service.search({
+        query: 'maize',
+        page: 0,
+        size: 10,
+        repository: [...ALL],
+      });
+
+      expect(httpService.get).not.toHaveBeenCalled();
+      expect(result.status).toBe(200);
+      expect(result.response.items).toEqual([]);
+      expect(result.response.sources).toEqual([
+        {
+          repository: 'cgspace',
+          status: 'unconfigured',
+          total: 0,
+          hasMore: false,
+        },
+        {
+          repository: 'melspace',
+          status: 'unconfigured',
+          total: 0,
+          hasMore: false,
+        },
+        {
+          repository: 'worldfish',
+          status: 'unconfigured',
+          total: 0,
+          hasMore: false,
+        },
+      ]);
+      expect(searchEvent().outcome).toBe('unconfigured');
+
+      // KPM-R-13: nothing in the body names the missing variable.
+      const serialized = JSON.stringify(result);
+      for (const envName of ENV_NAMES) {
+        expect(serialized).not.toContain(envName);
+      }
+    });
+
+    it('(e″) merged totalElements equals Σ ok totals − dedupedCount for one cross-source duplicate', async () => {
+      mockSources({
+        cgspace: {
+          data: halPage(
+            'cgspace',
+            [
+              {
+                uuid: 'cg-1',
+                handle: '10568/1',
+                title: 'Shared knowledge product',
+                doi: '10.1000/DUP',
+              },
+              { uuid: 'cg-2', handle: '10568/2', title: 'CGSpace only' },
+            ],
+            { totalElements: 18, totalPages: 2 },
+          ),
+        },
+        melspace: {
+          data: halPage(
+            'melspace',
+            [
+              {
+                uuid: 'mel-1',
+                handle: '20.500.11766/1',
+                title: 'Shared knowledge product',
+                doi: 'https://doi.org/10.1000/dup',
+              },
+            ],
+            { totalElements: 6, totalPages: 1 },
+          ),
+        },
+      });
+
+      const result = await service.search({
+        query: 'maize',
+        page: 0,
+        size: 10,
+        repository: ['cgspace', 'melspace'],
+      });
+
+      // One duplicate collapsed: 3 merged items -> 2 survivors.
+      expect(result.response.items).toHaveLength(2);
+      const survivor = result.response.items[0];
+      expect(survivor.repository).toBe('cgspace');
+      expect(survivor.alsoIn).toEqual([
+        {
+          repository: 'melspace',
+          handle: '20.500.11766/1',
+          handleUrl: 'https://hdl.handle.net/20.500.11766/1',
+          itemUrl: 'https://repo.mel.cgiar.org/items/mel-1',
+        },
+      ]);
+
+      expect(result.response.page.totalElements).toBe(18 + 6 - 1);
+      expect(result.response.page.totalPages).toBe(2);
+      expect(result.response.page.hasMore).toBe(true);
+      expect(result.response.page.number).toBe(0);
+      expect(result.response.page.size).toBe(10);
+
+      // Per-source totals stay raw (never dedup-adjusted).
+      expect(result.response.sources).toEqual([
+        { repository: 'cgspace', status: 'ok', total: 18, hasMore: true },
+        { repository: 'melspace', status: 'ok', total: 6, hasMore: false },
+      ]);
+      expect(searchEvent()).toMatchObject({ merged: 2, dedupedCount: 1 });
+    });
+
+    it('(e‴)/(g) after a mixed outcome the failed source is re-queried while the ok sources are served from cache', async () => {
+      const dto: CgspaceSearchQueryDto = {
+        query: 'maize',
+        page: 0,
+        size: 10,
+        repository: [...ALL],
+      };
+
+      mockSources({
+        cgspace: {
+          data: halPage('cgspace', [
+            { uuid: 'cg-1', handle: '10568/1', title: 'CGSpace item' },
+          ]),
+        },
+        melspace: {
+          data: halPage('melspace', [
+            { uuid: 'mel-1', handle: '20.500.11766/1', title: 'MELSpace item' },
+          ]),
+        },
+        worldfish: { error: { code: 'ECONNABORTED', message: 'timeout' } },
+      });
+
+      const first = await service.search(dto);
+      expect(httpService.get).toHaveBeenCalledTimes(3);
+      expect(
+        first.response.sources.find((s) => s.repository === 'worldfish')!
+          .status,
+      ).toBe('timeout');
+
+      // Only the ok sources are cached — the failure is never cached (KPM-DD-2).
+      expect(service.searchCache.size).toBe(2);
+      expect(
+        [...service.searchCache.keys()].some((key) =>
+          key.includes('"repository":"worldfish"'),
+        ),
+      ).toBe(false);
+      expect(
+        [...service.searchCache.keys()].filter(
+          (key) =>
+            key.includes('"repository":"cgspace"') ||
+            key.includes('"repository":"melspace"'),
+        ),
+      ).toHaveLength(2);
+
+      // WorldFish recovers; the identical retry re-queries it and only it.
+      httpService.get.mockClear();
+      mockSources({
+        cgspace: { data: halPage('cgspace', []) },
+        melspace: { data: halPage('melspace', []) },
+        worldfish: {
+          data: halPage('worldfish', [
+            { uuid: 'wf-1', handle: '20.500.12348/1', title: 'WorldFish item' },
+          ]),
+        },
+      });
+
+      const second = await service.search(dto);
+
+      expect(httpService.get).toHaveBeenCalledTimes(1);
+      expect(String(httpService.get.mock.calls[0][0])).toBe(
+        `${BASE_URLS.worldfish}/discover/search/objects`,
+      );
+      expect(second.response.sources.map((s) => s.status)).toEqual([
+        'ok',
+        'ok',
+        'ok',
+      ]);
+      // The cached CGSpace/MELSpace items came back, not the (now empty) fresh responses.
+      expect(second.response.items.map((i) => i.title)).toEqual([
+        'CGSpace item',
+        'MELSpace item',
+        'WorldFish item',
+      ]);
+    });
+
+    it('(g2) the search cache key is per source: a different selection reuses each cached source', async () => {
+      mockSources({
+        cgspace: {
+          data: halPage('cgspace', [
+            { uuid: 'cg-1', handle: '10568/1', title: 'CGSpace item' },
+          ]),
+        },
+        melspace: {
+          data: halPage('melspace', [
+            { uuid: 'mel-1', handle: '20.500.11766/1', title: 'MELSpace item' },
+          ]),
+        },
+      });
+
+      await service.search({
+        query: 'maize',
+        page: 0,
+        size: 10,
+        repository: ['cgspace'],
+      });
       expect(httpService.get).toHaveBeenCalledTimes(1);
 
-      // Advance time by 61 seconds
+      // CGSpace is served from cache; only MELSpace goes upstream.
+      await service.search({
+        query: 'maize',
+        page: 0,
+        size: 10,
+        repository: ['cgspace', 'melspace'],
+      });
+      expect(httpService.get).toHaveBeenCalledTimes(2);
+      expect(String(httpService.get.mock.calls[1][0])).toBe(
+        `${BASE_URLS.melspace}/discover/search/objects`,
+      );
+    });
+
+    it('(g3) cache expiry: an identical call after the 60 s TTL re-queries every source', async () => {
+      jest.useFakeTimers();
+      mockSources({});
+
+      const dto: CgspaceSearchQueryDto = {
+        query: 'maize',
+        page: 0,
+        size: 10,
+        repository: ['cgspace'],
+      };
+
+      await service.search(dto);
+      expect(httpService.get).toHaveBeenCalledTimes(1);
+
+      await service.search(dto);
+      expect(httpService.get).toHaveBeenCalledTimes(1);
+
       jest.advanceTimersByTime(61_000);
 
-      await service.search(defaultSearchDto);
+      await service.search(dto);
       expect(httpService.get).toHaveBeenCalledTimes(2);
 
       jest.useRealTimers();
     });
 
-    it('6. Cache eviction: inserting 201st search key evicts oldest', async () => {
-      httpService.get.mockReturnValue(of({ data: halFixture }));
+    it('(g4) search cache is bounded at 600 entries and evicts the oldest key', async () => {
+      mockSources({});
 
-      // Fill cache with 200 entries
-      for (let i = 0; i < 200; i++) {
-        await service.search({ query: `query-${i}`, page: 0, size: 10 });
+      for (let i = 0; i < 600; i++) {
+        await service.search({
+          query: `query-${i}`,
+          page: 0,
+          size: 10,
+          repository: ['cgspace'],
+        });
       }
-      expect(service.searchCache.size).toBe(200);
-      expect(httpService.get).toHaveBeenCalledTimes(200);
+      expect(service.searchCache.size).toBe(600);
 
-      // 1st entry (query-0) should currently be in cache
-      expect(
-        service.searchCache.has(
-          JSON.stringify({
-            query: 'query-0',
-            page: 0,
-            size: 10,
-            type: '',
-            center: '',
-            year: '',
-            repository: 'cgspace',
-          }),
-        ),
-      ).toBe(true);
+      const oldestKey = JSON.stringify({
+        query: 'query-0',
+        page: 0,
+        size: 10,
+        type: '',
+        center: '',
+        year: '',
+        repository: 'cgspace',
+      });
+      expect(service.searchCache.has(oldestKey)).toBe(true);
 
-      // Insert 201st entry (query-200)
-      await service.search({ query: 'query-200', page: 0, size: 10 });
-      expect(service.searchCache.size).toBe(200);
-      expect(httpService.get).toHaveBeenCalledTimes(201);
-
-      // query-0 must have been evicted (oldest key)
-      expect(
-        service.searchCache.has(
-          JSON.stringify({
-            query: 'query-0',
-            page: 0,
-            size: 10,
-            type: '',
-            center: '',
-            year: '',
-            repository: 'cgspace',
-          }),
-        ),
-      ).toBe(false);
-
-      // query-1 and query-200 should be in cache
-      expect(
-        service.searchCache.has(
-          JSON.stringify({
-            query: 'query-1',
-            page: 0,
-            size: 10,
-            type: '',
-            center: '',
-            year: '',
-            repository: 'cgspace',
-          }),
-        ),
-      ).toBe(true);
-      expect(
-        service.searchCache.has(
-          JSON.stringify({
-            query: 'query-200',
-            page: 0,
-            size: 10,
-            type: '',
-            center: '',
-            year: '',
-            repository: 'cgspace',
-          }),
-        ),
-      ).toBe(true);
+      await service.search({
+        query: 'query-600',
+        page: 0,
+        size: 10,
+        repository: ['cgspace'],
+      });
+      expect(service.searchCache.size).toBe(600);
+      expect(service.searchCache.has(oldestKey)).toBe(false);
     });
 
-    it('7. Upstream timeout / 500 / network error -> returns 502 wrapper with generic message (never throws)', async () => {
-      const networkError = new Error('connect ECONNREFUSED 127.0.0.1:443');
-      httpService.get.mockReturnValueOnce(throwError(() => networkError));
-
-      const result = await service.search(defaultSearchDto);
-
-      expect(result).toEqual({
-        response: {
-          items: [],
-          page: {
-            number: 0,
-            size: 10,
-            totalElements: 0,
-            totalPages: 0,
-          },
-        },
-        message: 'CGSpace search is temporarily unavailable',
-        status: 502,
-      });
-
-      // 500 status error
-      const server500Error = {
-        response: {
-          status: 500,
-          data: { error: 'Internal server error in DSpace Solr' },
-        },
-      };
-      httpService.get.mockReturnValueOnce(throwError(() => server500Error));
-
-      const result500 = await service.search({
-        query: 'wheat',
-        page: 1,
-        size: 5,
-      });
-
-      expect(result500).toEqual({
-        response: {
-          items: [],
-          page: {
-            number: 1,
-            size: 5,
-            totalElements: 0,
-            totalPages: 0,
-          },
-        },
-        message: 'CGSpace search is temporarily unavailable',
-        status: 502,
-      });
-    });
-
-    it('8. Upstream 404 / 4xx -> returns 502 and logs cgspace.search.upstream_4xx with status', async () => {
-      const http404Error = {
-        response: {
-          status: 404,
-          data: { message: 'Not Found' },
-        },
-      };
-      httpService.get.mockReturnValueOnce(throwError(() => http404Error));
-
-      const result = await service.search(defaultSearchDto);
-
-      expect(result.status).toBe(502);
-      expect(result.message).toBe('CGSpace search is temporarily unavailable');
-      expect(result.response.items).toEqual([]);
-
-      expect(loggerWarnSpy).toHaveBeenCalledWith({
-        message: 'cgspace.search.upstream_4xx',
-        status: 404,
-      });
-    });
-
-    it('9. Security / No-leak assertion: Inspect all logger calls and returned 502 payload under JSON.stringify()', async () => {
-      const secretUrl =
-        'https://cgspace.cgiar.org/server/api/discover/search/objects';
+    it('(f) no upstream hostname, env var name or upstream body reaches the response or any log line', async () => {
       const rawQuery = 'very-sensitive-private-query';
-      const axiosError = {
-        message: `Request failed with status code 500 at ${secretUrl}?query=${rawQuery}`,
-        config: { url: secretUrl, params: { query: rawQuery } },
-        response: {
-          status: 500,
-          data: `Fatal Solr exception for ${secretUrl}`,
+      mockSources({
+        cgspace: {
+          error: {
+            message: `Request failed with status code 500 at ${BASE_URLS.cgspace}?query=${rawQuery}`,
+            config: { url: BASE_URLS.cgspace, params: { query: rawQuery } },
+            response: {
+              status: 500,
+              data: `Fatal Solr exception for ${BASE_URLS.cgspace}`,
+            },
+          },
         },
-      };
-
-      httpService.get.mockReturnValueOnce(throwError(() => axiosError));
+        melspace: {
+          error: {
+            code: 'ECONNABORTED',
+            message: `timeout of 8000ms exceeded at ${BASE_URLS.melspace}`,
+            config: { url: BASE_URLS.melspace },
+          },
+        },
+        worldfish: {
+          error: {
+            message: `getaddrinfo ENOTFOUND digitalarchive.worldfishcenter.org`,
+            config: { url: BASE_URLS.worldfish },
+          },
+        },
+      });
 
       const result = await service.search({
         query: rawQuery,
         page: 0,
         size: 10,
+        repository: [...ALL],
       });
 
       const serializedResponse = JSON.stringify(result);
-      expect(serializedResponse).not.toContain('cgspace.cgiar.org');
+      for (const hostname of [...HOSTNAMES, ...ENV_NAMES]) {
+        expect(serializedResponse).not.toContain(hostname);
+      }
       expect(serializedResponse).not.toContain(rawQuery);
       expect(serializedResponse).not.toContain('Solr');
+      expect(result.message).toBe(
+        'Repository search is temporarily unavailable',
+      );
 
-      // Check all logger invocations
-      const allLogCalls = [
-        ...loggerLogSpy.mock.calls,
-        ...loggerWarnSpy.mock.calls,
-      ];
-      for (const callArgs of allLogCalls) {
+      for (const callArgs of allLoggerCalls()) {
         const serializedLog = JSON.stringify(callArgs);
-        expect(serializedLog).not.toContain('cgspace.cgiar.org');
+        for (const hostname of [...HOSTNAMES, ...ENV_NAMES]) {
+          expect(serializedLog).not.toContain(hostname);
+        }
         expect(serializedLog).not.toContain(rawQuery);
+        expect(serializedLog).not.toContain('Solr');
       }
     });
 
-    it('handles missing or empty CGSPACE_DISCOVERY_URL gracefully', async () => {
-      delete process.env.CGSPACE_DISCOVERY_URL;
+    it("(f2) on a partial failure the failed repository's hostname appears nowhere, and no env name leaks even though ok items carry their own item host", async () => {
+      const rawQuery = 'another-private-query';
+      mockSources({
+        cgspace: {
+          data: halPage('cgspace', [
+            { uuid: 'cg-1', handle: '10568/1', title: 'CGSpace item' },
+          ]),
+        },
+        melspace: { data: halPage('melspace', []) },
+        worldfish: {
+          error: {
+            code: 'ECONNABORTED',
+            message: `timeout of 8000ms exceeded at ${BASE_URLS.worldfish}`,
+            response: {
+              status: 504,
+              data: `gateway timeout ${BASE_URLS.worldfish}`,
+            },
+          },
+        },
+      });
 
-      const resultUndefined = await service.search(defaultSearchDto);
+      const result = await service.search({
+        query: rawQuery,
+        page: 0,
+        size: 10,
+        repository: [...ALL],
+      });
 
-      expect(httpService.get).not.toHaveBeenCalled();
-      expect(loggerWarnSpy).toHaveBeenCalledWith('cgspace.config.missing');
-      expect(resultUndefined.status).toBe(502);
-      expect(resultUndefined.message).toBe(
-        'CGSpace search is temporarily unavailable',
+      const serializedResponse = JSON.stringify(result);
+      // The failed source contributes nothing, so its host is absent from the body...
+      expect(serializedResponse).not.toContain(
+        'digitalarchive.worldfishcenter.org',
       );
-
-      loggerWarnSpy.mockClear();
-      process.env.CGSPACE_DISCOVERY_URL = '   ';
-
-      const resultWhitespace = await service.search(defaultSearchDto);
-      expect(loggerWarnSpy).toHaveBeenCalledWith('cgspace.config.missing');
-      expect(resultWhitespace.status).toBe(502);
-      expect(resultWhitespace.message).toBe(
-        'CGSpace search is temporarily unavailable',
+      // ...while an ok item legitimately carries its own public item URL (KPM-R-8).
+      expect(result.response.items[0].itemUrl).toBe(
+        'https://cgspace.cgiar.org/items/cg-1',
       );
+      for (const envName of ENV_NAMES) {
+        expect(serializedResponse).not.toContain(envName);
+      }
+
+      // No log line may carry any hostname, env name or the query text.
+      for (const callArgs of allLoggerCalls()) {
+        const serializedLog = JSON.stringify(callArgs);
+        for (const hostname of [...HOSTNAMES, ...ENV_NAMES]) {
+          expect(serializedLog).not.toContain(hostname);
+        }
+        expect(serializedLog).not.toContain(rawQuery);
+      }
+      expect(searchEvent().hasQuery).toBe(true);
+    });
+
+    it('(f3) Promise.allSettled is load-bearing: a rejecting source never rejects search()', async () => {
+      mockSources({
+        cgspace: {
+          data: halPage('cgspace', [
+            { uuid: 'cg-1', handle: '10568/1', title: 'CGSpace item' },
+          ]),
+        },
+        melspace: { error: { response: { status: 503 } } },
+        worldfish: { error: { code: 'ECONNABORTED', message: 'timeout' } },
+      });
+
+      await expect(
+        service.search({
+          query: 'maize',
+          page: 0,
+          size: 10,
+          repository: [...ALL],
+        }),
+      ).resolves.toMatchObject({ status: 200 });
     });
   });
 
-  describe('facets', () => {
-    const mockItemTypeHalResponse = {
-      _embedded: {
-        values: [
-          { label: 'Journal Article', count: 12000 },
-          { label: 'Book Chapter', count: 3500 },
-          { label: 'Working Paper', count: 1800 },
-        ],
-      },
-    };
-
-    const mockAffiliationHalResponse = {
-      _embedded: {
-        values: [
-          {
-            label: 'International Institute of Tropical Agriculture',
-            count: 5400,
-          },
-          {
-            label: 'Alliance of Bioversity International and CIAT',
-            count: 4200,
-          },
-        ],
-      },
-    };
-
-    it('10. Facets success for itemtype and affiliation', async () => {
-      httpService.get.mockReturnValueOnce(
-        of({ data: mockItemTypeHalResponse }),
-      );
-
-      const itemTypeDto: CgspaceFacetQueryDto = {
-        prefix: 'Jour',
-        size: 10,
-      };
-
-      const itemTypeResult = await service.facets('itemtype', itemTypeDto);
-
-      expect(httpService.get).toHaveBeenCalledWith(
-        'https://cgspace.cgiar.org/server/api/discover/facets/itemtype',
-        {
-          params: {
-            prefix: 'Jour',
-            size: 10,
-          },
-          paramsSerializer: {
-            encode: expect.any(Function),
-          },
-          timeout: 8000,
+  describe('facets — union across repositories', () => {
+    it('(h) two sources with "Journal Article" / "journal article" -> one value, counts summed, repositories listed', async () => {
+      mockSources({
+        cgspace: {
+          data: facetHal([
+            { label: 'Journal Article', count: 12000 },
+            { label: 'Book Chapter', count: 3500 },
+          ]),
         },
-      );
+        melspace: {
+          data: facetHal([
+            { label: 'journal article', count: 40 },
+            { label: 'Brief', count: 9 },
+          ]),
+        },
+      });
 
-      expect(itemTypeResult).toEqual({
-        response: {
+      const result = await service.facets('itemtype', {
+        size: 50,
+        repository: ['cgspace', 'melspace'],
+      });
+
+      expect(result.status).toBe(200);
+      expect(result.message).toBe('Repository facet results');
+      expect(result.response.values).toHaveLength(3);
+      expect(result.response.values[0]).toEqual({
+        label: 'Journal Article',
+        value: 'Journal Article',
+        count: 12040,
+        repositories: ['cgspace', 'melspace'],
+      });
+      expect(result.response.values[1]).toEqual({
+        label: 'Book Chapter',
+        value: 'Book Chapter',
+        count: 3500,
+        repositories: ['cgspace'],
+      });
+      expect(result.response.values[2]).toEqual({
+        label: 'Brief',
+        value: 'Brief',
+        count: 9,
+        repositories: ['melspace'],
+      });
+      expect(result.response.sources).toEqual([
+        { repository: 'cgspace', status: 'ok', total: 2, hasMore: false },
+        { repository: 'melspace', status: 'ok', total: 2, hasMore: false },
+      ]);
+      expect(loggerLogSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'kp.discovery.facets',
           name: 'itemtype',
-          values: [
-            {
-              label: 'Journal Article',
-              value: 'Journal Article',
-              count: 12000,
-            },
-            { label: 'Book Chapter', value: 'Book Chapter', count: 3500 },
-            { label: 'Working Paper', value: 'Working Paper', count: 1800 },
-          ],
-        },
-        message: 'CGSpace facet results',
-        status: 200,
-      });
-
-      // Affiliation facet
-      httpService.get.mockReturnValueOnce(
-        of({ data: mockAffiliationHalResponse }),
+          repositories: ['cgspace', 'melspace'],
+          total: 3,
+          outcome: 'success',
+        }),
       );
-      const affDto: CgspaceFacetQueryDto = { size: 50 };
-      const affResult = await service.facets('affiliation', affDto);
-
-      expect(httpService.get).toHaveBeenCalledWith(
-        'https://cgspace.cgiar.org/server/api/discover/facets/affiliation',
-        {
-          params: {
-            size: 50,
-          },
-          paramsSerializer: {
-            encode: expect.any(Function),
-          },
-          timeout: 8000,
-        },
-      );
-
-      expect(affResult.status).toBe(200);
-      expect(affResult.response.name).toBe('affiliation');
-      expect(affResult.response.values).toHaveLength(2);
-      expect(affResult.response.values[0]).toEqual({
-        label: 'International Institute of Tropical Agriculture',
-        value: 'International Institute of Tropical Agriculture',
-        count: 5400,
-      });
     });
 
-    it('10b. Facets cache hit works within 10 min TTL and evicts oldest at 20 entries', async () => {
-      httpService.get.mockReturnValue(of({ data: mockItemTypeHalResponse }));
+    it('(h2) each source is asked for its own physical facet name (affiliation vs institute)', async () => {
+      mockSources({
+        cgspace: { data: facetHal([{ label: 'IITA', count: 10 }]) },
+        melspace: { data: facetHal([{ label: 'ICARDA', count: 5 }]) },
+        worldfish: { data: facetHal([{ label: 'WorldFish', count: 2 }]) },
+      });
 
-      const dto: CgspaceFacetQueryDto = { prefix: 'A', size: 10 };
-      const first = await service.facets('itemtype', dto);
-      expect(httpService.get).toHaveBeenCalledTimes(1);
+      await service.facets('affiliation', { size: 50, repository: [...ALL] });
 
-      const second = await service.facets('itemtype', dto);
-      expect(httpService.get).toHaveBeenCalledTimes(1);
-      expect(second).toEqual(first);
+      expect(callFor('cgspace')[0]).toBe(
+        `${BASE_URLS.cgspace}/discover/facets/affiliation`,
+      );
+      expect(callFor('melspace')[0]).toBe(
+        `${BASE_URLS.melspace}/discover/facets/institute`,
+      );
+      expect(callFor('worldfish')[0]).toBe(
+        `${BASE_URLS.worldfish}/discover/facets/institute`,
+      );
+      expect(callFor('cgspace')[1].params).toEqual({ size: 50 });
+      expect(callFor('cgspace')[1].timeout).toBe(8000);
+    });
 
-      // Test facet cache eviction on 21st key (max 20 entries)
-      for (let i = 0; i < 20; i++) {
-        await service.facets('itemtype', { prefix: `P-${i}`, size: 10 });
+    it('(h3) one facet source failing yields the union of the others with HTTP 200', async () => {
+      mockSources({
+        cgspace: {
+          data: facetHal([{ label: 'Journal Article', count: 12000 }]),
+        },
+        melspace: { data: facetHal([{ label: 'Journal Article', count: 40 }]) },
+        worldfish: {
+          error: {
+            response: { status: 500 },
+            message: `Request failed at ${BASE_URLS.worldfish}`,
+          },
+        },
+      });
+
+      const result = await service.facets('itemtype', {
+        size: 50,
+        repository: [...ALL],
+      });
+
+      expect(result.status).toBe(200);
+      expect(result.response.values).toEqual([
+        {
+          label: 'Journal Article',
+          value: 'Journal Article',
+          count: 12040,
+          repositories: ['cgspace', 'melspace'],
+        },
+      ]);
+      expect(result.response.sources.map((s) => s.status)).toEqual([
+        'ok',
+        'ok',
+        'error',
+      ]);
+      expect(loggerWarnSpy).toHaveBeenCalledWith({
+        message: 'kp.discovery.source_failed',
+        repository: 'worldfish',
+        status: 'error',
+        upstreamStatus: 500,
+      });
+
+      for (const callArgs of allLoggerCalls()) {
+        const serializedLog = JSON.stringify(callArgs);
+        for (const hostname of [...HOSTNAMES, ...ENV_NAMES]) {
+          expect(serializedLog).not.toContain(hostname);
+        }
       }
-      expect(service.facetCache.size).toBe(20);
+    });
 
-      // Original 'A' key should have been evicted
+    it("(h4) the facet cache key includes the repository — one source never serves another's values", async () => {
+      mockSources({
+        cgspace: {
+          data: facetHal([{ label: 'Journal Article', count: 12000 }]),
+        },
+        melspace: { data: facetHal([{ label: 'Brief', count: 7 }]) },
+      });
+
+      const dto: CgspaceFacetQueryDto = {
+        prefix: 'J',
+        size: 10,
+        repository: ['cgspace'],
+      };
+      await service.facets('itemtype', dto);
+      expect(httpService.get).toHaveBeenCalledTimes(1);
+      expect(service.facetCache.size).toBe(1);
+      expect([...service.facetCache.keys()][0]).toBe(
+        JSON.stringify({
+          name: 'itemtype',
+          prefix: 'J',
+          size: 10,
+          repository: 'cgspace',
+        }),
+      );
+
+      // Same (name, prefix, size) but a different repository must NOT hit the cache.
+      const result = await service.facets('itemtype', {
+        prefix: 'J',
+        size: 10,
+        repository: ['melspace'],
+      });
+      expect(httpService.get).toHaveBeenCalledTimes(2);
+      expect(result.response.values).toEqual([
+        {
+          label: 'Brief',
+          value: 'Brief',
+          count: 7,
+          repositories: ['melspace'],
+        },
+      ]);
+      expect(service.facetCache.size).toBe(2);
+
+      // And the identical call is served from cache.
+      await service.facets('itemtype', dto);
+      expect(httpService.get).toHaveBeenCalledTimes(2);
+    });
+
+    it('(h5) only ok facet results are cached; a failed source is re-queried on the next call', async () => {
+      mockSources({
+        cgspace: { data: facetHal([{ label: 'Journal Article', count: 1 }]) },
+        melspace: { error: { code: 'ECONNABORTED', message: 'timeout' } },
+      });
+
+      await service.facets('itemtype', {
+        size: 50,
+        repository: ['cgspace', 'melspace'],
+      });
+      expect(service.facetCache.size).toBe(1);
       expect(
-        service.facetCache.has(
-          JSON.stringify({ name: 'itemtype', prefix: 'A', size: 10 }),
+        [...service.facetCache.keys()].some((key) =>
+          key.includes('"repository":"melspace"'),
         ),
       ).toBe(false);
+
+      httpService.get.mockClear();
+      await service.facets('itemtype', {
+        size: 50,
+        repository: ['cgspace', 'melspace'],
+      });
+      expect(httpService.get).toHaveBeenCalledTimes(1);
+      expect(String(httpService.get.mock.calls[0][0])).toBe(
+        `${BASE_URLS.melspace}/discover/facets/itemtype`,
+      );
     });
 
-    it('11. Facets error handling and invalid facet name', async () => {
-      // Invalid facet name
-      const invalidResult = await service.facets('country', { size: 50 });
-      expect(invalidResult).toEqual({
-        response: { name: 'country', values: [] },
+    it('(h6) facet cache is bounded at 60 entries', async () => {
+      mockSources({ cgspace: { data: facetHal([{ label: 'X', count: 1 }]) } });
+
+      for (let i = 0; i < 60; i++) {
+        await service.facets('itemtype', {
+          prefix: `P-${i}`,
+          size: 10,
+          repository: ['cgspace'],
+        });
+      }
+      expect(service.facetCache.size).toBe(60);
+
+      const oldestKey = JSON.stringify({
+        name: 'itemtype',
+        prefix: 'P-0',
+        size: 10,
+        repository: 'cgspace',
+      });
+      expect(service.facetCache.has(oldestKey)).toBe(true);
+
+      await service.facets('itemtype', {
+        prefix: 'P-60',
+        size: 10,
+        repository: ['cgspace'],
+      });
+      expect(service.facetCache.size).toBe(60);
+      expect(service.facetCache.has(oldestKey)).toBe(false);
+    });
+
+    it('(h7) an unknown facet name is rejected with 400 before any upstream call', async () => {
+      const result = await service.facets('country', {
+        size: 50,
+        repository: [...ALL],
+      });
+
+      expect(result).toEqual({
+        response: { name: 'country', values: [], sources: [] },
         message: "Invalid facet 'country'. Allowed: itemtype, affiliation",
         status: 400,
       });
       expect(httpService.get).not.toHaveBeenCalled();
-
-      // Upstream 500 error
-      const error500 = { response: { status: 500 } };
-      httpService.get.mockReturnValueOnce(throwError(() => error500));
-
-      const errorResult = await service.facets('itemtype', { size: 50 });
-      expect(errorResult).toEqual({
-        response: { name: 'itemtype', values: [] },
-        message: 'CGSpace search is temporarily unavailable',
-        status: 502,
-      });
-
-      // Upstream 4xx error
-      const error404 = { response: { status: 404 } };
-      httpService.get.mockReturnValueOnce(throwError(() => error404));
-
-      const error4xxResult = await service.facets('affiliation', { size: 50 });
-      expect(error4xxResult.status).toBe(502);
-      expect(loggerWarnSpy).toHaveBeenCalledWith({
-        message: 'cgspace.facets.upstream_4xx',
-        status: 404,
-      });
     });
 
-    it('facets handles missing or empty CGSPACE_DISCOVERY_URL gracefully', async () => {
+    it('(h8) every facet source failing keeps the legacy 502 wrapper; every source unconfigured stays 200', async () => {
+      mockSources({
+        cgspace: { error: { response: { status: 500 } } },
+        melspace: { error: { code: 'ECONNABORTED', message: 'timeout' } },
+      });
+
+      const failed = await service.facets('itemtype', {
+        size: 50,
+        repository: ['cgspace', 'melspace'],
+      });
+      expect(failed.status).toBe(502);
+      expect(failed.message).toBe(
+        'Repository search is temporarily unavailable',
+      );
+      expect(failed.response.values).toEqual([]);
+      expect(failed.response.sources.map((s) => s.status)).toEqual([
+        'error',
+        'timeout',
+      ]);
+
       delete process.env.CGSPACE_DISCOVERY_URL;
-
-      const resultUndefined = await service.facets('itemtype', { size: 50 });
-
-      expect(httpService.get).not.toHaveBeenCalled();
-      expect(loggerWarnSpy).toHaveBeenCalledWith('cgspace.config.missing');
-      expect(resultUndefined.status).toBe(502);
-      expect(resultUndefined.message).toBe(
-        'CGSpace search is temporarily unavailable',
-      );
-
-      loggerWarnSpy.mockClear();
-      process.env.CGSPACE_DISCOVERY_URL = '';
-
-      const resultEmpty = await service.facets('itemtype', { size: 50 });
-      expect(loggerWarnSpy).toHaveBeenCalledWith('cgspace.config.missing');
-      expect(resultEmpty.status).toBe(502);
-      expect(resultEmpty.message).toBe(
-        'CGSpace search is temporarily unavailable',
-      );
+      delete process.env.MELSPACE_DISCOVERY_URL;
+      const unconfigured = await service.facets('itemtype', {
+        size: 50,
+        repository: ['cgspace', 'melspace'],
+      });
+      expect(unconfigured.status).toBe(200);
+      expect(unconfigured.response.values).toEqual([]);
+      expect(unconfigured.response.sources.map((s) => s.status)).toEqual([
+        'unconfigured',
+        'unconfigured',
+      ]);
     });
   });
 });
