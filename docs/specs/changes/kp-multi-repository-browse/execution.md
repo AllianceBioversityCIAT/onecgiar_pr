@@ -12,7 +12,7 @@
 | Implementer / Reviewer | `.claude/agents/akili-implementer.md` (`sonnet`) / `.claude/agents/akili-reviewer.md` (`opus`) — author ≠ auditor by wrapper binding |
 | Branch / checkout | `qa-development-2026` (shared worktree — explicit-path commits only) |
 | Started | 2026-09-10 |
-| Status | in-progress |
+| Status | **paused 2026-09-10 — 9/10 tasks `[x]`; `KPM-T-10` `[~]` awaiting the QA smoke (branch deployed to QA with `MELSPACE_DISCOVERY_URL` / `WORLDFISH_DISCOVERY_URL`). Resume with `/akili-resume changes/kp-multi-repository-browse`.** |
 
 ### Pre-flight (2026-09-10)
 
@@ -446,4 +446,6 @@ Final regression after the last worker (tree quiet): server `npx jest … result
 - ADVISORY (recorded): Run B item 3 (identical retry params), item 5 attributes, item 8 focus order and item 9 contrast are narrative-only; capture them as text artifacts at the QA run.
 
 **Owed QA-run checklist (for `/akili-resume` once the branch is deployed to QA with both env vars):** (1) search with all three chips → `sources[]` JSON with three `ok` rows; (2) unset one var on QA → `unconfigured` row, chip unavailable, no env name in the body (`KPM-AC-9`); (3) *Use this item* on a MEL item in the `lab-report-form` host → banner "Selected from MELSpace" captured from `innerText` (`KPM-AC-12`); (4) save the retry request params, chip attributes, focus order and contrast values as text artifacts.
+
+**User decision (2026-09-10):** *Pause; resume after QA deploy.* T-10 stays `[~]` with the owed QA checklist above. Next session: deploy this branch to QA with both env vars, then `/akili-resume` runs the QA smoke (three-`ok` `sources[]`, `unconfigured` case, `lab-report-form` banner, text artifacts) and closes T-10.
 
