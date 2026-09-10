@@ -384,3 +384,57 @@ Two Reviewers (`KPM-T-6`, `KPM-T-4` lens B) on `fable` were terminated by `HTTP 
 | `design.md` §13 follow-ups | (a) CGSpace-only copy reachable with a MEL/WorldFish handle outside `KPM-R-11`'s list: `result-creator.component.html:101`, `change-result-type-modal.component.html:54,58,68`, server `_yearOutsideReportingPhasesMessage` (`results-knowledge-products.service.ts:861-876`); (b) `empty` state with a failed source shows no notice/retry (design §6.2 literal); (c) `scripts/kp-copy-gate.sh` not wired to `package.json`/CI; (d) `normalizeDoi` covers only the three spec-listed prefixes; (e) DOI-less items with empty title/type share key₂ `'||'` | `KPM-T-7`, `KPM-T-8`, `KPM-T-5` advisories |
 | Fixture docs | `fixtures/README.md` §7 says MEL DOI on "2 of 5" items — the capture has 3 of 5; `design.md` §3.3 row 70 carries an unsourced `/6115` | `KPM-T-1` advisory |
 
+### `KPM-T-10` — HITL smoke half (local stack, 2026-09-10 ~17:50–18:20 Bogota)
+
+| Field | Value |
+|---|---|
+| Status | HITL executed on the **local stack**; the QA-environment run stays owed (see below). Reviewer audit of the evidence pending. |
+| Tester | `akili-tester` (`sonnet`), skill `orca-cli`; Orca embedded browser with the existing PRMS session on `http://localhost:4200`; backend `nest start --watch` from this worktree on `:3400` with all three Discovery URLs in `.env` (Leader added the two new ones; backend restarted via a transient `main.ts` edit, reverted byte-identical) |
+| Evidence | `docs/specs/changes/kp-multi-repository-browse/hitl/hitl-report.md` + 7 PNG + 3 `sources[]` JSON (no tokens/cookies; grep for `eyJ`/`Bearer`/`auth` → nothing) |
+| Entry point | Reporting → "Where to report" → AOW03 → Knowledge-product indicator → Report → drawer **Browse repositories** tab |
+
+**Run A — all three URLs configured (search behaviour)**
+
+| # | Item | Result | Evidence |
+|---|---|---|---|
+| 1 | Idle strip vs mockup | PASS | `runA-01-idle.png` — lead-in + three pressed chips; only cosmetic difference: search input shares the panel with the strip (mockup shows two boxes) |
+| 2 | MEL-only title → MEL badge | PASS | `runA-02-mel-badge.png`, `runA-sources-mel.json` → `cgspace ok/1 · melspace ok/1 · worldfish ok/0` |
+| 3 | WorldFish-only title → WorldFish badge | PASS | `runA-03-worldfish-badge.png`, `runA-sources-worldfish.json` → `cgspace ok/3 · melspace ok/0 · worldfish ok/2` |
+| 4 | DOI/title in two repositories → "Also in" card | **NOT OBSERVED** | three live queries (`wheat`, `climate resilient agriculture`, `genebank durum wheat diversity`, 25/source); one same-title MEL pair with different `type` correctly not collapsed. Mechanism covered by `merge.spec.ts` (20) and the T-7 client tests |
+| 5 | Deselect to one chip | PASS | `runA-04-single-repo.png` — last chip `aria-pressed="true" aria-disabled="true" title="At least one repository must stay selected"`, **Select all** shown, requests carried `repository=cgspace,melspace` then `repository=cgspace` |
+| 6 | *Use this item* (MEL) → handle / MQAP / banner | **PARTIAL** | MQAP called with `https://repo.mel.cgiar.org/items/53d67b9b-…` (regex-valid, `KPM-AC-12`); title/authors/type synced from MELSpace; the AoW drawer **auto-created draft Result #9146** (EDITING, unsubmitted) and navigated to the editor, so the "Selected from MELSpace" banner was not observed live (host unit tests assert it). Draft left in the local dev DB; "Submit" never clicked |
+| 7 | *View details* (WorldFish) | PASS | `runA-05-view-details-worldfish.png`; instrumented `window.open("https://digitalarchive.worldfishcenter.org/items/39293cf0-…", "_blank", "noopener,noreferrer")` |
+| 8 | Keyboard pass | PASS | Shift+Tab from search: WorldFish → MELSpace → CGSpace chip → Manual entry tab → Browse tab; Tab forward: Filter by type → Filter by center; chips toggle with Space and Enter |
+| 9 | Badge contrast | PASS | CGSpace 11.60:1 · MELSpace 6.94:1 · WorldFish 8.01:1 (canvas-resolved oklch); notice contrast judged visually against the amber tokens, not measured |
+
+**Run B — `WORLDFISH_DISCOVERY_URL` blackholed (`http://10.255.255.1/server/api`) — tests `KPM-R-7`/`KPM-AC-7`, kept separate from Run A**
+
+| # | Item | Result | Evidence |
+|---|---|---|---|
+| 1 | Env change + watch-mode restart (main.ts transient edit, reverted) | PASS | new pid both times, `/api` 200 |
+| 2 | Search → WorldFish unavailable + notice + Retry | PASS | `runB-02-partial.png`, `runB-sources-timeout.json` → HTTP 200 (not the 502 wrapper), 8050 ms, `cgspace ok/485 · melspace ok/29 · worldfish timeout/0`; chip "unavailable"; notice "WorldFish did not respond. Results below exclude it." + **Retry WorldFish**; other items rendered |
+| 3 | Retry → one new request, identical params | PASS | network log: same `repository=cgspace,melspace,worldfish&query=wheat&year=2026` |
+| 4 | Restore URL → count returns | PASS | `runB-03-restored.png` — chip "WorldFish 5". `unconfigured` (unset var) not exercised live (covered by server unit tests T-4 (d)/(e′)) |
+
+Environment restored: `.env` carries the three real URLs; `onecgiar-pr-server/src/main.ts` byte-identical to HEAD.
+
+**Still owed for the task as written:** the same smoke against **QA** once this branch is deployed there with `MELSPACE_DISCOVERY_URL` / `WORLDFISH_DISCOVERY_URL` set (pre-flight item; a user/infra action — agents never deploy cloud). **Operational note for the user:** draft Result #9146 (Knowledge Product, EDITING) was auto-created in the dev database the local backend points at; delete it if that database is the shared dev instance.
+
+## Run summary (2026-09-10)
+
+| Task | Status | Attempts / Reviewer rounds | Commit |
+|---|---|---|---|
+| KPM-T-1 fixtures | PASS | 1 / 1 | `149759fc8` |
+| KPM-T-2 registry + DTOs | PASS | 1 / 1 | `88d1c9a18` |
+| KPM-T-3 mapper | PASS | 1 / 1 | `6fb44c691` |
+| KPM-T-5 merge/dedup | PASS | 2 / 2 (transitive-closure defect) | `078a44e3f` |
+| KPM-T-4 fan-out | PASS | 1 / 1 (two lenses) | `2d290607b` |
+| KPM-T-6 source strip | PASS | 1 / 1 | `a982d35b0`→ see log (`feat(kp-cgspace-browse) [KPM-T-6]`) |
+| KPM-T-7 badges/notice | PASS | 2 / 2 (badge assertion gap) | `947ce9e5c` |
+| KPM-T-9 CT sweep | PASS | 2 / 2 (tautological wrap gate) | `2a4d965e9` |
+| KPM-T-8 hosts + gate | PASS | 2 / 2 (aliased parity test) | `d47af7412` |
+| KPM-T-10 docs half | PASS | 1 / 1 | `f0939c926` |
+| KPM-T-10 HITL half | local stack done; QA owed | — | this entry |
+
+Final regression after the last worker (tree quiet): server `npx jest … results-knowledge-products` → `7 suites / 122 tests` green, eslint + tsc clean; client KP suites (browse component, three hosts, api service) → `7 suites / 603 tests` green, `tsc --noEmit -p tsconfig.app.json` clean, `ng lint` clean, `bash scripts/kp-copy-gate.sh` exit 0; Cypress CT `8 passing`. Runtime: five worker kills by model rate limits (sonnet 16:40 reset, fable 17:40) handled by model rotation with author ≠ auditor preserved; no rework attempt consumed by them. Budget tripwire raised after T-6 and accepted by the user (test volume).
+
