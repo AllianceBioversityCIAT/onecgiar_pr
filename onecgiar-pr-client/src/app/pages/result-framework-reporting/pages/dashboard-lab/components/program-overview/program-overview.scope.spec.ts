@@ -831,6 +831,20 @@ describe('ProgramOverviewComponent — AoW row responsive ladder (OSF-T-2b)', ()
     expect(coverageLine.className).toContain('@max-[700px]:hidden');
   });
 
+  it('tracks 3, 4, and 5 carry fixed widths across rows to guarantee table-like vertical column alignment', () => {
+    const row = realRow();
+    const figures = row.querySelector('.flex.flex-col.items-end:not(.leading-tight)') as HTMLElement;
+    const achievementCell = row.querySelector('.leading-tight') as HTMLElement;
+    const actions = row.querySelector('.flex.justify-end') as HTMLElement;
+
+    expect(figures.className).toContain('w-[76px]');
+    expect(figures.className).toContain('min-w-[76px]');
+    expect(achievementCell.className).toContain('w-[144px]');
+    expect(achievementCell.className).toContain('min-w-[144px]');
+    expect(actions.className).toContain('w-[118px]');
+    expect(actions.className).toContain('min-w-[118px]');
+  });
+
   it('the row-tooltip fallback is a focusable, keyboard-and-touch-reachable BUTTON whose accessible name carries the real figures — not a generic label', () => {
     const row = realRow();
     // Scoped to the identity block so this can't accidentally match the achievement cell's own

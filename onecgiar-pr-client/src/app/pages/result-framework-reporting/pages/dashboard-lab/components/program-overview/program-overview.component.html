@@ -585,9 +585,9 @@
                 </button>
               </div>
               <span class="h-[12px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)] @max-[560px]:[grid-column:1] @max-[560px]:[grid-row:2]"></span>
-              <span class="h-[16px] w-[76px] animate-pulse justify-self-end rounded-[4px] bg-[var(--pr-surface-ground)] @max-[560px]:[grid-column:2] @max-[560px]:[grid-row:2]"></span>
-              <span class="h-[16px] w-[64px] animate-pulse justify-self-end rounded-[4px] bg-[var(--pr-surface-ground)] @max-[630px]:hidden"></span>
-              <span class="h-[32px] w-[118px] animate-pulse justify-self-end rounded-[8px] bg-[var(--pr-surface-ground)] @max-[560px]:[grid-column:2] @max-[560px]:[grid-row:1]"></span>
+              <span class="h-[16px] w-[76px] min-w-[76px] animate-pulse justify-self-end rounded-[4px] bg-[var(--pr-surface-ground)] @max-[560px]:[grid-column:2] @max-[560px]:[grid-row:2]"></span>
+              <span class="h-[16px] w-[144px] min-w-[144px] animate-pulse justify-self-end rounded-[4px] bg-[var(--pr-surface-ground)] @max-[700px]:w-[74px] @max-[700px]:min-w-[74px] @max-[630px]:hidden"></span>
+              <span class="h-[32px] w-[118px] min-w-[118px] animate-pulse justify-self-end rounded-[8px] bg-[var(--pr-surface-ground)] @max-[560px]:[grid-column:2] @max-[560px]:[grid-row:1]"></span>
             </div>
 
             <!-- `RGS-T-2` parity note: the real row's border became `border-2` (selected-state
@@ -752,12 +752,12 @@
                       {{ row.name }}
                     </span>
                     @if (isRowComplete(row)) {
-                      <span class="inline-flex items-center gap-[5px] text-[11.5px] font-semibold text-emerald-700">
-                        <span class="material-icons-round text-[12px]" aria-hidden="true">check</span>
-                        {{ rowSubline(row) }}
+                      <span class="inline-flex min-w-0 items-center gap-[5px] truncate text-[11.5px] font-semibold text-emerald-700">
+                        <span class="material-icons-round text-[12px] shrink-0" aria-hidden="true">check</span>
+                        <span class="truncate">{{ rowSubline(row) }}</span>
                       </span>
                     } @else {
-                      <span class="text-[11.5px] text-[var(--pr-text-muted)]">{{ rowSubline(row) }}</span>
+                      <span class="truncate text-[11.5px] text-[var(--pr-text-muted)]">{{ rowSubline(row) }}</span>
                     }
                   </div>
                 </button>
@@ -807,7 +807,7 @@
               </span>
 
               <!-- Mono figures: reported/total + % -->
-              <div class="flex flex-col items-end @max-[560px]:[grid-column:2] @max-[560px]:[grid-row:2]">
+              <div class="flex w-[76px] min-w-[76px] flex-col items-end justify-self-end @max-[560px]:[grid-column:2] @max-[560px]:[grid-row:2]">
                 <span class="pr-figure text-[16px] font-bold text-[var(--pr-text-heading)]">
                   {{ row.reported }}<span class="font-semibold text-[var(--pr-text-muted)]">/{{ row.total }}</span>
                 </span>
@@ -830,7 +830,7 @@
                    shrinking this cell's own max-content footprint from `A_wide` to `A_narrow`
                    (design.md §8.2's "restacked, not removed" step, now container-keyed). -->
               <div
-                class="flex flex-col items-end leading-tight @max-[630px]:hidden"
+                class="flex w-[144px] min-w-[144px] flex-col items-end leading-tight justify-self-end @max-[700px]:w-[74px] @max-[700px]:min-w-[74px] @max-[630px]:hidden"
                 [prTooltip]="row.achievement ? achievementTooltip(row.achievement) : ''"
                 prTooltipPosition="top">
                 @if (row.achievement) {
@@ -856,7 +856,7 @@
                    (single path, DD-6). A fully-reported row swaps to the quiet "View results"
                    treatment (RowStates.dc.html "Complete" block). -->
               @if (isRowComplete(row)) {
-                <div class="flex justify-end @max-[560px]:[grid-column:2] @max-[560px]:[grid-row:1]">
+                <div class="flex w-[118px] min-w-[118px] justify-end justify-self-end @max-[560px]:[grid-column:2] @max-[560px]:[grid-row:1]">
                   <button
                     type="button"
                     (click)="onOpenAowRowAction(row, $event)"
@@ -865,7 +865,7 @@
                   </button>
                 </div>
               } @else {
-                <div class="flex justify-end gap-[6px] @max-[560px]:[grid-column:2] @max-[560px]:[grid-row:1]">
+                <div class="flex w-[118px] min-w-[118px] justify-end justify-self-end gap-[6px] @max-[560px]:[grid-column:2] @max-[560px]:[grid-row:1]">
                   <!-- Report (REH-R-7/REH-AC-15): inline reporting entry point. No native
                        `disabled` — a natively disabled button drops out of the tab order, so a
                        keyboard/screen-reader user could not reach it or hear the `title`
