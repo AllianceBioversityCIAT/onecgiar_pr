@@ -230,3 +230,19 @@ Two Reviewers (`KPM-T-6`, `KPM-T-4` lens B) on `fable` were terminated by `HTTP 
 **Decisions / issues**: none. Budget: 1 Reviewer round (after one runtime 429 kill). Gate: `auto-approved (pre-approved mode)`.
 
 
+## Budget Tripwire — 2026-09-10 (after `KPM-T-6`)
+
+`design.md` §14 / `tasks.md` Document Control: **10 tasks · ~1,250 LOC incl. tests · tripwire > 12 tasks or > 1,500 LOC → stop and escalate.**
+
+| Measure | Budget | Actual after T-1..T-6 + T-10 docs half | Delta |
+|---|---|---|---|
+| Tasks | 10 | 10 (6 `[x]`, 1 `[~]`, 3 `[ ]`) | 0 |
+| LOC (code + tests, JSON fixtures excluded) | ~1,250 · tripwire 1,500 | committed spec commits: +3,817 / −812 → **≈ 3,000 net** | **+1,750 net over budget, +1,500 over the tripwire** |
+| of which production code | (server ~500 + client ~430 estimated) | ≈ 800 net (server ~600, client ~250 so far) | within estimate |
+| of which tests | (implied ~300) | ≈ 2,200 net (`cgspace-discovery.service.spec.ts` alone +1,572 / −460) | **the overrun** |
+| Remaining estimate | — | T-7 ~200 · T-8 ~160 · T-9 ~100 · T-10 HITL 0 → ≈ +460 | final ≈ 3,450 net |
+
+**Cause:** test volume. Every task's verification list mandated a large enumerated case set with disqualifiers (T-4 alone: cases (a)–(h) plus (e′)/(e″)/(e‴), four mutation gates; T-5: 20 red-first cases; T-6: 38 tests with a mutation check). The production code tracks the estimate; the tests are 6–7× the implied test budget. Reviewer rounds: 8 rounds over 7 tasks (T-5 needed a rework round) — within the ≤ 1-round mandate except T-5, which PASSed on round 2 without escalation.
+
+**Leader action:** per `/akili-execute` Step 2.4, execution stops here for the user's decision. Working tree is clean for spec files; every completed task is committed with PASS evidence. Next eligible task on resume: `KPM-T-7` (client badges, notice, retry, allow-list, Load more).
+
