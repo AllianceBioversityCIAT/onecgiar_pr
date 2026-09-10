@@ -41,16 +41,16 @@
             <ng-icon name="lucidePanelLeft" class="text-[18px]" />
           </button>
 
-          <!-- Build number, in the free right half the header's `justify-between` already leaves.
+          <!-- App version, in the free right half the header's `justify-between` already leaves.
                It tells one deployed build apart from the next, so QA can see whether the
-               environment picked up a delivery instead of guessing. A plain counter on purpose —
-               read out loud and compared at a glance. Value + bump rule:
-               shared/constants/app-version.constants.ts. -->
+               environment picked up a delivery instead of guessing. Semantic versioning
+               (MAJOR.MINOR.PATCH) since 10-Sep-2026 — before that it was a counter that ended at 57.
+               Value, format and bump rule: shared/constants/app-version.constants.ts. -->
           <span
             class="shrink-0 rounded-full bg-white/10 px-2 py-[4px] text-[11px] font-semibold leading-none tracking-tight text-white/70"
             [attr.data-app-version]="appVersion"
-            [title]="'Build ' + appVersion">
-            <span class="sr-only">Build</span>
+            [title]="'Version ' + appVersion">
+            <span class="sr-only">Version</span>
             v{{ appVersion }}
           </span>
         </div>
