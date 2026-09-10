@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ResultsInnovationOutputListComponent } from './results-innovation-output-list.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { FilterByTextPipe } from '../../../../../../shared/pipes/filter-by-text.pipe';
-import { TableModule } from 'primeng/table';
 import { FormsModule } from '@angular/forms';
 
 describe('ResultsInnovationOutputListComponent', () => {
@@ -17,7 +16,6 @@ describe('ResultsInnovationOutputListComponent', () => {
       ],
       imports: [
         HttpClientTestingModule,
-        TableModule,
         FormsModule
       ],
     })

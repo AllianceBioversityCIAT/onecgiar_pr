@@ -1,0 +1,188 @@
+:host {
+  display: block;
+}
+
+.badd {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 28px;
+}
+
+.badd-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.badd-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #2B6CB0;
+  text-decoration: none;
+  padding: 6px 12px;
+  border: 1.5px solid #BEE3F8;
+  border-radius: 8px;
+  transition: all 150ms ease;
+
+  i { font-size: 16px; }
+
+  &:hover {
+    background: #EBF4FF;
+  }
+}
+
+.badd-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.badd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all 150ms ease;
+  white-space: nowrap;
+
+  i { font-size: 16px; }
+
+  // P2-3437: the promote/discard buttons are locked while a promote is in
+  // flight so the draft cannot be promoted twice.
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  &--promote {
+    background: linear-gradient(135deg, #047857, #059669);
+    color: #FFFFFF;
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2);
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    }
+  }
+
+  &--discard {
+    background: #FFF5F5;
+    color: #C53030;
+    border-color: #FED7D7;
+    &:hover {
+      background: #FED7D7;
+      color: #991B1B;
+      border-color: #FEB2B2;
+    }
+  }
+}
+
+// ── Content Layout ─────────────────────────────────────────────────────
+
+.badd-content {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+  align-items: start;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.badd-main {
+  min-width: 0;
+}
+
+.badd-sidebar {
+  min-width: 0;
+}
+
+// ── Error State ────────────────────────────────────────────────────────
+
+.badd-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: #FFF5F5;
+  border: 1px solid #FED7D7;
+  border-radius: 10px;
+
+  i {
+    font-size: 20px;
+    color: #E53E3E;
+    flex-shrink: 0;
+  }
+}
+
+.badd-error-content {
+  flex: 1;
+
+  strong {
+    display: block;
+    font-size: 13px;
+    color: #991B1B;
+    margin-bottom: 4px;
+  }
+
+  p {
+    font-size: 12px;
+    color: #742A2A;
+    margin: 0;
+    line-height: 1.5;
+  }
+}
+
+.badd-error-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #2B6CB0;
+  text-decoration: none;
+  flex-shrink: 0;
+
+  i { font-size: 14px; }
+}
+
+// ── Loading ────────────────────────────────────────────────────────────
+
+.badd-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 28px;
+
+  p {
+    font-size: 13px;
+    color: #A0AEC0;
+    margin: 0;
+  }
+}
+
+.badd-loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #E2E8F0;
+  border-top-color: #059669;
+  border-radius: 50%;
+  animation: badd-spin 0.7s linear infinite;
+}
+
+@keyframes badd-spin {
+  to { transform: rotate(360deg); }
+}

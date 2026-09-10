@@ -1,0 +1,116 @@
+@use '../../../../styles/fonts' as fonts;
+
+.pr-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+
+  // Vertical-scroll mode ([scrollable] / scrollHeight): the header stays put.
+  &--scroll {
+    overflow-y: auto;
+
+    ::ng-deep thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+  }
+}
+
+// ::ng-deep: header/body rows are PROJECTED templates from the parent component,
+// so emulated encapsulation never matched them — these styles must pierce.
+.pr-table {
+  width: 100%;
+  // separate (not collapse) so the header's top corners can be rounded
+  border-collapse: separate;
+  border-spacing: 0;
+  @include fonts.pr-typography('body-2');
+}
+
+:host ::ng-deep .pr-table {
+  // Dark "chrome" header: the same navy-carbon gradient as the rebrand navbar/nav-pill,
+  // with white text and a violet accent edge. Compact uppercase "label" typography keeps
+  // long titles on one line (or a short 2-line wrap) instead of blowing up the header
+  // height on narrow fixed columns.
+  thead th {
+    text-align: left;
+    font-weight: 700;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    line-height: 1;
+    vertical-align: middle;
+    color: var(--pr-color-white);
+    background: var(--pr-sidebar-bg);
+    padding: 3px 12px;
+    border-bottom: 2px solid var(--pr-color-primary-400);
+
+    &:first-child {
+      border-top-left-radius: 10px;
+    }
+
+    &:last-child {
+      border-top-right-radius: 10px;
+    }
+  }
+
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--pr-color-accents-2);
+    color: var(--pr-color-secondary-400);
+    vertical-align: middle;
+  }
+
+  &.pr-table--selectable tbody tr:hover {
+    background: var(--pr-color-primary-25);
+  }
+}
+
+.pr-paginator {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 10px 4px;
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--pr-color-accents-2);
+    border-radius: 6px;
+    background: var(--pr-color-white);
+    cursor: pointer;
+    color: var(--pr-color-secondary-400);
+    transition: background-color 0.15s ease-in-out;
+
+    &:hover:not(:disabled) {
+      background: var(--pr-color-accents-1);
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    i {
+      font-size: 18px;
+    }
+  }
+
+  &__label {
+    @include fonts.pr-typography('body-3');
+    color: var(--pr-color-accents-6);
+  }
+
+  &__size {
+    height: 30px;
+    border: 1px solid var(--pr-color-accents-2);
+    border-radius: 6px;
+    background: var(--pr-color-white);
+    color: var(--pr-color-secondary-400);
+    padding: 0 6px;
+    cursor: pointer;
+  }
+}

@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import { env } from 'node:process';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { isReportingMetadataExportQueueConfigured } from './shared/microservices/reporting-metadata-export-queue/reporting-metadata-export-queue.constants';
+import { isBilateralAiProcessingQueueConfigured } from './shared/microservices/bilateral-ai-processing-queue/bilateral-ai-processing-queue.constants';
 
 import { json, urlencoded } from 'express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -59,6 +60,10 @@ async function bootstrap() {
     },
   });
 
+  const hasConfiguredMicroservices =
+    isReportingMetadataExportQueueConfigured() ||
+    isBilateralAiProcessingQueueConfigured();
+
   if (isReportingMetadataExportQueueConfigured()) {
     app.connectMicroservice<MicroserviceOptions>({
       transport: Transport.RMQ,
@@ -72,6 +77,24 @@ async function bootstrap() {
         prefetchCount: 1,
       },
     });
+  }
+
+  if (isBilateralAiProcessingQueueConfigured()) {
+    app.connectMicroservice<MicroserviceOptions>({
+      transport: Transport.RMQ,
+      options: {
+        urls: [env.RABBITMQ_URL],
+        queue: env.BILATERAL_AI_PROCESSING_QUEUE,
+        noAck: false,
+        queueOptions: {
+          durable: true,
+        },
+        prefetchCount: 1,
+      },
+    });
+  }
+
+  if (hasConfiguredMicroservices) {
     await app.startAllMicroservices();
   }
 

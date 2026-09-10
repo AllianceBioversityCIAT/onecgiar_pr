@@ -23,6 +23,16 @@ import { EmailTemplate } from '../../../shared/microservices/email-notification-
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
+import { AdUserRepository } from '../../ad_users/repository/ad-users.repository';
+
+/**
+ * P2-3272. From this phase on, the IP emails use the wording business supplied for the single
+ * consolidated IPR question. Earlier phases keep the body that describes the four separate
+ * questions, because those are still answered and can still be submitted.
+ *
+ * 🛑 PHASE, not portfolio: P25 contains both 2025 and 2026 results.
+ */
+const IP_EMAIL_2026_WORDING_YEAR = 2026;
 
 @Injectable()
 export class SubmissionsService {
@@ -42,6 +52,7 @@ export class SubmissionsService {
     private readonly _templateRepository: TemplateRepository,
     private readonly _emailNotificationManagementService: EmailNotificationManagementService,
     private readonly _resultCenterRepository: ResultsCenterRepository,
+    private readonly _adUserRepository: AdUserRepository,
   ) {}
 
   async submitFunction(
@@ -384,6 +395,87 @@ export class SubmissionsService {
     for (const email of emails) {
       await this._sendEmailToIpExpert(email, sp, emailData);
     }
+
+    // P2-3272 email 2. Sent after the specialists, and only once, telling the Lead Contact
+    // Person who was contacted. Skipped silently for earlier phases: this email did not exist
+    // before 2026 and nobody was promised it.
+    await this._sendIpSupportConfirmation(emails, sp, emailData);
+  }
+
+  /**
+   * P2-3272 email 2 — confirmation to the Lead Contact Person that the referral went out.
+   *
+   * Never throws. It runs after the submission has already been recorded and after the emails
+   * that the reporter actually depends on, so a failure here must not surface as a failed submit.
+   */
+  private async _sendIpSupportConfirmation(
+    expertEmails: any[],
+    sp: any,
+    emailData: any,
+  ): Promise<void> {
+    if (!emailData?.usesNewWording) {
+      return;
+    }
+
+    const recipient = emailData.leadContactPerson;
+    if (!recipient?.mail) {
+      this._logger.warn(
+        'No lead contact person to confirm the IP referral to. Skipping the confirmation email.',
+      );
+      return;
+    }
+
+    if (!emailData.confirmationTemplate) {
+      this._logger.warn(
+        'IP support confirmation template not found. Skipping the confirmation email.',
+      );
+      return;
+    }
+
+    // "Referral sent to: [Center IP Focal Point Name(s) / Email(s)]" — the story asks for both.
+    const referralRecipients =
+      expertEmails
+        .map((e) => {
+          const name = `${e.first_name ?? ''} ${e.last_name ?? ''}`.trim();
+          return name ? `${name} &lt;${e.email}&gt;` : e.email;
+        })
+        .filter(Boolean)
+        .join(', ') || 'the Centre IP Focal Point';
+
+    try {
+      const compiledTemplate = handlebars.compile(
+        emailData.confirmationTemplate.template,
+      );
+
+      this._emailNotificationManagementService.sendEmail({
+        from: {
+          email: process.env.EMAIL_SENDER,
+          name: 'PRMS Reporting Tool -',
+        },
+        emailBody: {
+          subject: `PRMS – Your IP Support Request Has Been Referred | Result Code: ${emailData.result.result_code}`,
+          to: [recipient.mail],
+          cc: [],
+          bcc: emailData.bccEmails?.value,
+          message: {
+            text: 'IP support request referred',
+            socketFile: compiledTemplate({
+              contactPersonName: recipient.display_name?.trim() || 'colleague',
+              resultTitle: emailData.result.title,
+              resultCode: emailData.result.result_code,
+              resultUrl: `${process.env.RESULTS_URL}${emailData.result.result_code}/general-information?phase=${emailData.result.version_id}`,
+              spName: sp?.name,
+              spCode: sp?.official_code,
+              referralRecipients,
+            }),
+          },
+        },
+      });
+    } catch (error) {
+      this._logger.warn(
+        `Failed to send the IP support confirmation email: ${error.message}`,
+      );
+    }
   }
 
   private async _prepareEmailData(result: any, resultId: number) {
@@ -435,15 +527,35 @@ export class SubmissionsService {
       select: { value: true },
     });
 
+    const usesNewWording =
+      Number(result?.phase_year ?? 0) >= IP_EMAIL_2026_WORDING_YEAR;
+
     const template = await this._templateRepository.findOne({
-      where: { name: EmailTemplate.IP_EXPERTS_SUPPORT },
+      where: {
+        name: usesNewWording
+          ? EmailTemplate.IP_EXPERTS_SUPPORT_2026
+          : EmailTemplate.IP_EXPERTS_SUPPORT,
+      },
     });
     if (!template) {
       this._logger.warn(
-        'Email template technical_team_email not found. Skipping notification.',
+        'IP experts email template not found. Skipping notification.',
       );
       return null;
     }
+
+    // Only for the new wording, and looked up separately because the confirmation email goes to
+    // this person, not to the submitter. `contactPerson` above is whoever pressed Submit; the
+    // Lead Contact Person is a field of General Information and the two are often different.
+    const leadContactPerson = usesNewWording
+      ? await this._findLeadContactPerson(result)
+      : null;
+
+    const confirmationTemplate = usesNewWording
+      ? await this._templateRepository.findOne({
+          where: { name: EmailTemplate.IP_SUPPORT_CONFIRMATION_2026 },
+        })
+      : null;
 
     if (!leadCenter) {
       this._logger.warn('No lead center found for result');
@@ -456,7 +568,45 @@ export class SubmissionsService {
       contributingCenters,
       bccEmails,
       template,
+      usesNewWording,
+      leadContactPerson,
+      confirmationTemplate,
     };
+  }
+
+  /**
+   * The Lead Contact Person recorded in General Information.
+   *
+   * Fails soft on purpose: this runs inside a submission, and an unreadable contact must never
+   * cost the reporter their submit. A null here means the confirmation email is skipped and a
+   * warning is logged — the request to the IP specialist still goes out, which is the half that
+   * matters to the reporter.
+   */
+  private async _findLeadContactPerson(result: any): Promise<any | null> {
+    if (!result?.lead_contact_person_id) {
+      return null;
+    }
+
+    try {
+      return await this._adUserRepository.findOne({
+        where: { id: result.lead_contact_person_id, is_active: true },
+      });
+    } catch (error) {
+      this._logger.warn(
+        `Failed to resolve the lead contact person for result ${result?.id}: ${error.message}`,
+      );
+      return null;
+    }
+  }
+
+  /** "Name <mail>" for the Lead Contact Person, or null when there is nothing usable. */
+  private _formatLeadContact(person: any): string | null {
+    if (!person?.mail) {
+      return null;
+    }
+
+    const name = person.display_name?.trim();
+    return name ? `${name} <${person.mail}>` : person.mail;
   }
 
   private async _sendEmailToIpExpert(
@@ -480,9 +630,17 @@ export class SubmissionsService {
       spCode: sp.official_code,
       spName: sp.name,
       resultUrl: `${process.env.RESULTS_URL}${emailData.result.result_code}/general-information?phase=${emailData.result.version_id}`,
+      // P2-3272 asks for the record id in the body, not only inside the link.
+      resultCode: emailData.result.result_code,
       resultTitle: emailData.result.title,
       leadCenter: leadCenterName || undefined,
-      contactPerson: contactPersonInfo,
+      // The 2026 wording says "Requesting user", and business means the Lead Contact Person of
+      // General Information — not whoever pressed Submit. Falls back to the submitter when the
+      // contact could not be resolved, so the specialist always has somebody to write to.
+      contactPerson: emailData.usesNewWording
+        ? (this._formatLeadContact(emailData.leadContactPerson) ??
+          contactPersonInfo)
+        : contactPersonInfo,
       contributingCenters: emailData.contributingCenters,
     };
 

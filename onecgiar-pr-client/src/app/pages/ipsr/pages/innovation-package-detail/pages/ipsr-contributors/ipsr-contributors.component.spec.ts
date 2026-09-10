@@ -19,6 +19,9 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 import { RdContributorsAndPartnersService } from '../../../../../results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.service';
 import { IpsrCompletenessStatusService } from '../../../../services/ipsr-completeness-status.service';
 import { ChangeDetectorRef } from '@angular/core';
+import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
+import { CentersService } from '../../../../../../shared/services/global/centers.service';
+import { Subject } from 'rxjs';
 
 describe('IpsrContributorsComponent', () => {
   let component: IpsrContributorsComponent;
@@ -878,6 +881,128 @@ describe('IpsrContributorsComponent', () => {
       const contributor = { official_code: 'OC1', short_name: 'SN1', result_toc_results: [{ planned_result: true }] };
       const result = component.getContributorDescription(contributor);
       expect(result).toContain('Does this result align');
+    });
+  });
+
+  // LC-T-3 (docs/specs/bugfix/lead-center-full-catalog): IPSR injects the SAME
+  // RdContributorsAndPartnersService singleton as Result Detail. Per LC-DD-1 (fixed in LC-T-1),
+  // `setPossibleLeadCenters()` unconditionally sources the full mapped CLARISA centers catalog,
+  // independent of Contributing CGIAR Centers. This describe block deliberately does NOT mock
+  // RdContributorsAndPartnersService itself (the disqualifying-mock clause in LC-T-3) — it provides
+  // the REAL service with only its own dependencies (ApiService/InstitutionsService/CentersService)
+  // stubbed, so the assertion actually exercises the shared-service fix rather than a local double.
+  describe('LC-T-3: Lead Center full catalog inherited from the shared service', () => {
+    let ipsrComponent: IpsrContributorsComponent;
+    let ipsrFixture: ComponentFixture<IpsrContributorsComponent>;
+    let realRdPartnersSE: RdContributorsAndPartnersService;
+    let mockCentersSE: { centersList: { code: string; full_name: string }[]; loadedCenters: Subject<boolean> };
+
+    beforeEach(async () => {
+      const mockApiForRealService: any = {
+        resultsSE: {
+          GET_ContributorsPartners: jest.fn(),
+          GETContributorsByIpsrResultId: () => of({ response: mockResponse }),
+          GET_AllCLARISACenters: () => of({ response: [] }),
+          GET_allInstitutions: () => of({ response: [] }),
+          GET_allInstitutionTypes: () => of({ response: [] }),
+          GET_allChildlessInstitutionTypes: () => of({ response: [] }),
+          PATCHContributorsByIpsrResultId: () => of({ response: [] }),
+          GET_AllWithoutResults: () => of({ response: [] }),
+          GET_TypeByResultLevel: () => of({ response: [] }),
+          GET_ClarisaProjects: () => of({ response: [] }),
+          GET_innovationUseResults: () => of({ response: [] }),
+          ipsrDataControlSE: { inContributos: false },
+          get_vesrsionDashboard: () => of({ response: [] })
+        },
+        dataControlSE: {
+          findClassTenSeconds: () => Promise.resolve(),
+          detailSectionTitle: jest.fn(),
+          currentResult: { portfolio: 'test' }
+        },
+        rolesSE: { platformIsClosed: false, readOnly: false }
+      };
+      const mockInstitutionsSE: any = {
+        institutionsList: [],
+        institutionsWithoutCentersList: [],
+        loadedInstitutions: new Subject<boolean>()
+      };
+      // LC-T-1's anti-gaming clause: 3+ centers so a full-catalog length and a Contributing-Centers-union
+      // length remain distinguishable — see rd-contributors-and-partners.service.spec.ts for the rationale.
+      mockCentersSE = {
+        centersList: [
+          { code: 'C1', full_name: 'Center One' },
+          { code: 'C2', full_name: 'Center Two' },
+          { code: 'C3', full_name: 'Center Three' }
+        ],
+        loadedCenters: new Subject<boolean>()
+      };
+
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        declarations: [
+          IpsrContributorsComponent,
+          SaveButtonComponent,
+          IpsrContributorsCentersComponent,
+          PrMultiSelectComponent,
+          PrFieldHeaderComponent,
+          IpsrContributorsNonCgiarPartnersComponent,
+          IpsrNonPooledProjectsComponent,
+          NoDataTextComponent,
+          IpsrContributorsTocComponent,
+          TocInitiativeOutComponent,
+          PrYesOrNotComponent
+        ],
+        imports: [HttpClientTestingModule, FormsModule, TermPipe],
+        providers: [
+          RdContributorsAndPartnersService, // real service — no useValue mock (LC-T-3 disqualifying-mock clause)
+          { provide: ApiService, useValue: mockApiForRealService },
+          { provide: FieldsManagerService, useValue: { isP25: jest.fn().mockReturnValue(true), isP22: jest.fn().mockReturnValue(false), fields: jest.fn().mockReturnValue({}) } },
+          { provide: InstitutionsService, useValue: mockInstitutionsSE },
+          { provide: CentersService, useValue: mockCentersSE },
+          { provide: IpsrCompletenessStatusService, useValue: { updateGreenChecks: jest.fn() } }
+        ]
+      }).compileComponents();
+
+      ipsrFixture = TestBed.createComponent(IpsrContributorsComponent);
+      ipsrComponent = ipsrFixture.componentInstance;
+      realRdPartnersSE = TestBed.inject(RdContributorsAndPartnersService);
+    });
+
+    it('LC-TEST-8: possibleLeadCenters is populated with the full catalog when 0 Contributing CGIAR Centers are selected', () => {
+      // Arrange: 0 Contributing Centers (ToC-less/fresh result), going through setPossibleLeadCenters
+      // via the component's own getTocLogicp25 flow — not a hand-set fixture bypassing the service.
+      realRdPartnersSE.partnersBody.contributing_center = [];
+      realRdPartnersSE.otherCentersSelected = [];
+      realRdPartnersSE.partnersBody.contributing_and_primary_initiative = [];
+      realRdPartnersSE.partnersBody.impactsTarge = [];
+      realRdPartnersSE.partnersBody.sdgTargets = [];
+      realRdPartnersSE.partnersBody.contributing_initiatives = {
+        accepted_contributing_initiatives: [],
+        pending_contributing_initiatives: []
+      };
+      realRdPartnersSE.partnersBody.result_toc_result = { initiative_id: 1, result_toc_results: null };
+      realRdPartnersSE.partnersBody.contributors_result_toc_result = null;
+      ipsrComponent.contributorsBody.bilateral_projects = [];
+
+      const response = {
+        linked_results: [],
+        result_toc_result: { initiative_id: 1, result_toc_results: null },
+        contributors_result_toc_result: null,
+        contributing_and_primary_initiative: [],
+        impactsTarge: null,
+        sdgTargets: null,
+        contributing_initiatives: { accepted_contributing_initiatives: [], pending_contributing_initiatives: [] },
+        bilateral_projects: []
+      };
+
+      // Act: exercise the REAL shared service through the component's normal P25 load path
+      // (getTocLogicp25 calls rdPartnersSE.setPossibleLeadCenters(true) — service.ts:178).
+      ipsrComponent.getTocLogicp25(response);
+
+      // Assert (LC-AC-1, IPSR surface): the Lead Center dropdown source is non-empty and equals the
+      // full mapped CLARISA catalog, not a subset filtered by (empty) Contributing Centers.
+      expect(realRdPartnersSE.possibleLeadCenters.length).toBeGreaterThan(0);
+      expect(realRdPartnersSE.possibleLeadCenters.map(c => c.code).sort()).toEqual(mockCentersSE.centersList.map(c => c.code).sort());
     });
   });
 });

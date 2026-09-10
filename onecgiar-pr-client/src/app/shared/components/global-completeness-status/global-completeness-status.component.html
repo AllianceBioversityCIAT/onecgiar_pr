@@ -48,7 +48,7 @@
       [icon]="show_full_screen ? 'close_fullscreen' : 'open_in_full'"></app-pr-button>
   </div>
 
-  <p-table
+  <app-pr-table
     sortField="result_code"
     [sortOrder]="-1"
     [value]="this.resultsList | filterByText: this.textToFind"
@@ -56,17 +56,17 @@
     [paginator]="true"
     [rowsPerPageOptions]="[10, 50, 100]"
     [rows]="10"
-    scrollHeight="calc(100vh - 303px)"
-    [style]="{ 'min-width': '200px', 'max-width': show_full_screen ? '100vw' : 'calc(100vw - 287px)' }">
-    <ng-template pTemplate="header">
+    [scrollHeight]="'calc(100vh - 303px)'"
+    [style]="{ display: 'block', 'min-width': '200px', 'max-width': show_full_screen ? '100vw' : 'calc(100vw - 287px)' }">
+    <ng-template prTableHeader>
       <tr>
-        <th [style.minWidth.px]="column.minWidth" *ngFor="let column of columnOrder" pSortableColumn="{{ column.attr }}" id="{{ column.attr }}">
-          {{ column.title }}<p-sortIcon *ngIf="!column.noSort" field="{{ column.attr }}"></p-sortIcon>
+        <th [style.minWidth.px]="column.minWidth" *ngFor="let column of columnOrder" prSortableColumn="{{ column.attr }}" id="{{ column.attr }}">
+          {{ column.title }}<pr-sort-icon *ngIf="!column.noSort" field="{{ column.attr }}"></pr-sort-icon>
         </th>
       </tr>
     </ng-template>
 
-    <ng-template pTemplate="body" let-result>
+    <ng-template prTableBody let-result>
       <tr>
         <td style="min-width: 200px">{{ result.result_code }}</td>
         <td style="min-width: 500px">{{ result.result_title }}</td>
@@ -118,7 +118,7 @@
         </td>
       </tr>
     </ng-template>
-  </p-table>
+  </app-pr-table>
   <div class="counter">
     <div class="name">Results:</div>
     {{ (this.resultsList | filterByText: this.textToFind)?.length }}/{{ this.resultsList?.length }}

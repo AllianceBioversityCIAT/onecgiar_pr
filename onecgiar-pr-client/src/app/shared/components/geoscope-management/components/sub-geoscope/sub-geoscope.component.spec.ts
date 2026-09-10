@@ -37,10 +37,12 @@ describe('SubGeoscopeComponent', () => {
     it('should delete subNational', () => {
       const index = 0;
       component.obj_country.sub_national = [{ name: 'SubNational' }];
+      const emitSpy = jest.spyOn(component.changed, 'emit');
 
       component.deleteSubNational(index);
 
       expect(component.obj_country.sub_national).toEqual([]);
+      expect(emitSpy).toHaveBeenCalled();
     });
   });
 
@@ -48,11 +50,21 @@ describe('SubGeoscopeComponent', () => {
     it('should delete country', () => {
       const index = 0;
       component.obj_countrySelected = [{ name: 'Country' }];
+      const emitSpy = jest.spyOn(component.changed, 'emit');
 
       component.deleteCountry(index);
 
       expect(component.obj_countrySelected).toEqual([]);
+      expect(emitSpy).toHaveBeenCalled();
     });
+  });
+
+  it('should emit when sub-national selections change', () => {
+    const emitSpy = jest.spyOn(component.changed, 'emit');
+
+    component.onSubNationalChange();
+
+    expect(emitSpy).toHaveBeenCalled();
   });
 
   describe('ngOnInit()', () => {

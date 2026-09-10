@@ -7,10 +7,7 @@ import { PrTextareaComponent } from '../../../../../../custom-fields/pr-textarea
 import { PrWordCounterComponent } from '../../../../../../custom-fields/pr-word-counter/pr-word-counter.component';
 import { PrFieldHeaderComponent } from '../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { PrFieldValidationsComponent } from '../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
-import { DialogModule } from 'primeng/dialog';
-import { TooltipModule } from 'primeng/tooltip';
 import { FormsModule } from '@angular/forms';
-import { TextareaModule } from 'primeng/textarea';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 
@@ -52,10 +49,7 @@ describe('SubmissionModalComponent', () => {
       ],
       imports: [
         HttpClientTestingModule,
-        DialogModule,
-        TooltipModule,
-        FormsModule,
-        TextareaModule
+        FormsModule
       ],
       providers: [
         {

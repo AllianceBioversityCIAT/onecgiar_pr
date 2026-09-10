@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { OutcomeIndicatorService } from '../../../outcome-indicator/services/outcome-indicator.service';
 import { TypeOneReportService } from '../../type-one-report.service';
-import { MessageService } from 'primeng/api';
+import { PrToastService } from 'src/app/shared/components/pr-toast';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 
 @Component({
@@ -16,7 +16,7 @@ export class TorProgressWpsComponent implements OnInit, OnDestroy {
   constructor(
     public outcomeIService: OutcomeIndicatorService,
     public typeOneReportSE: TypeOneReportService,
-    private readonly messageService: MessageService,
+    private readonly messageService: PrToastService,
     public exportTablesSE: ExportTablesService
   ) {}
 

@@ -60,6 +60,7 @@ import { EvidencesRepository } from '../results/evidences/evidences.repository';
 import { ResultsKnowledgeProductFairScoreRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import { ResultsService } from '../results/results.service';
+import { ResultInnovationMergeSplitModule } from '../results/result-innovation-merge-split/result-innovation-merge-split.module';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultTypesService } from '../results/result_types/result_types.service';
 import { VersionsService } from '../results/versions/versions.service';
@@ -76,6 +77,8 @@ import { GenderTagRepository } from '../results/gender_tag_levels/genderTag.repo
 import { ElasticService } from '../../elastic/elastic.service';
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
 import { VersioningService } from '../versioning/versioning.service';
+// Same reason as in toc-results.module.ts: this module provides VersioningService directly.
+import { BilateralVersioningRulesModule } from '../bilateral/versioning-rules/bilateral-versioning-rules.module';
 import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
 import { ResultTypeRepository } from '../results/result_types/resultType.repository';
 import { VersionRepository } from '../versioning/versioning.repository';
@@ -199,6 +202,8 @@ import { ResultDeletionAuditModule } from '../results/result-deletion-audit/resu
   ],
   imports: [
     HttpModule,
+    ResultInnovationMergeSplitModule,
+    BilateralVersioningRulesModule,
     PrmsTablesTypesModule,
     SharePointModule,
     ImpactAreasScoresComponentsModule,

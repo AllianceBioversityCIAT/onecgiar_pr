@@ -61,6 +61,33 @@ export class ResultActor extends BaseEntity {
   })
   sex_and_age_disaggregation: boolean;
 
+  /**
+   * P2-3537 — the reporter cannot disaggregate THIS actor row by age, although they can
+   * by sex. Distinct from `sex_and_age_disaggregation`, which switches both off at once.
+   * Nullable with no default: `false` would state the reporter said age data IS
+   * available, when the truth is that they never answered.
+   */
+  @Column({
+    name: 'age_disaggregation_not_available',
+    type: 'boolean',
+    nullable: true,
+  })
+  age_disaggregation_not_available: boolean | null;
+
+  /**
+   * P2-3537 — the youth / non-youth figures on this row were split 50/50 by the system
+   * instead of reported. 🥇 This is what keeps a system estimate from being read as
+   * reported data downstream, which the story requires explicitly. Do NOT try to derive
+   * it by comparing `women_youth` against half of `women`: a reporter whose real split
+   * happens to be half would be recorded as an estimate.
+   */
+  @Column({
+    name: 'youth_split_applied_by_system',
+    type: 'boolean',
+    nullable: true,
+  })
+  youth_split_applied_by_system: boolean | null;
+
   @Column({
     name: 'how_many',
     type: 'bigint',

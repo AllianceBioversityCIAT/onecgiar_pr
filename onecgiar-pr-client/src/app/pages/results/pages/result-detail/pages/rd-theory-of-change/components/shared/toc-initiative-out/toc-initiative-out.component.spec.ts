@@ -6,6 +6,51 @@ import { PrYesOrNotComponent } from '../../../../../../../../../custom-fields/pr
 import { PrFieldHeaderComponent } from '../../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
+import { CommonModule } from '@angular/common';
+import { Component, EventEmitter, Input, Output, provideZonelessChangeDetection } from '@angular/core';
+import { FeedbackValidationDirective } from '../../../../../../../../../shared/directives/feedback-validation.directive';
+import { FieldsManagerService } from '../../../../../../../../../shared/services/fields-manager.service';
+import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-changes-services.service';
+
+// Minimal stand-ins for the two children the template renders, so the assertions can be made on the
+// real rendered DOM without pulling PrimeNG / the whole ToC tree into the fixture.
+@Component({
+  selector: 'app-pr-yes-or-not',
+  template: `<button data-testid="pick-no" (click)="pick(false)">No</button>`,
+  standalone: false
+})
+class StubPrYesOrNotComponent {
+  @Input() label: string;
+  @Input() description: string;
+  @Input() readOnly: boolean;
+  @Input() editable: boolean;
+  @Input() required: boolean;
+  @Input() hideOptions: boolean;
+  @Input() hideDescription: boolean;
+  @Input() ngModel: any;
+  @Output() ngModelChange = new EventEmitter<any>();
+  @Output() selectOptionEvent = new EventEmitter<boolean>();
+
+  pick(value: boolean) {
+    this.ngModelChange.emit(value);
+    this.selectOptionEvent.emit(value);
+  }
+}
+
+@Component({
+  selector: 'app-multiple-wps',
+  template: `<div data-testid="wps-content" *ngIf="showMultipleWPsContent">Level / HLO / KPI form</div>`,
+  standalone: false
+})
+class StubMultipleWPsComponent {
+  @Input() editable: boolean;
+  @Input() initiative: any;
+  @Input() resultLevelId: number | string;
+  @Input() isIpsr: boolean;
+  @Input() isContributor: boolean;
+  @Input() isNotifications: boolean;
+  @Input() showMultipleWPsContent: boolean = true;
+}
 
 jest.useFakeTimers();
 
@@ -21,6 +66,9 @@ describe('TocInitiativeOutComponent', () => {
     mockApiService = {
       resultsSE: {
         get_vesrsionDashboard: () => of({ response: mockResponse })
+      },
+      dataControlSE: {
+        tocUrl: ''
       }
     };
 
@@ -259,5 +307,82 @@ describe('TocInitiativeOutComponent', () => {
       expect(spy).toHaveBeenCalledWith(123, false);
       expect(spyConsoleError).toHaveBeenCalledWith(errorMessage);
     });
+  });
+});
+
+// P2-3320: `clearTocResultId()` hides the mapping (`showMultipleWPsContent = false`) and brings it
+// back inside a `setTimeout`. That flag lives on the external `initiative` object, so — unlike
+// P2-3245 / P2-3275, where it was a component field that could be turned into a signal — nothing in
+// this component can track it: under zoneless change detection the second write never scheduled a
+// render pass and the ToC mapping stayed hidden after changing the "planned result" answer.
+// These tests drive the real DOM (click on the yes/no field) and assert on the rendered output, so
+// they fail if the re-render notification is removed.
+describe('TocInitiativeOutComponent — zoneless re-render after changing the planned result answer', () => {
+  let zFixture: ComponentFixture<TocInitiativeOutComponent>;
+  let zComponent: TocInitiativeOutComponent;
+
+  const contentEl = () => zFixture.nativeElement.querySelector('[data-testid="wps-content"]');
+  const pickNo = () => zFixture.nativeElement.querySelector('[data-testid="pick-no"]') as HTMLButtonElement;
+  const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  beforeEach(async () => {
+    jest.useRealTimers();
+    TestBed.resetTestingModule();
+
+    const apiMock = {
+      resultsSE: { get_vesrsionDashboard: () => of({ response: { version_id: '123' } }) },
+      dataControlSE: { tocUrl: 'https://toc.example/' },
+      rolesSE: { platformIsClosed: false, isAdmin: true, validateInitiative: () => true }
+    };
+
+    await TestBed.configureTestingModule({
+      declarations: [TocInitiativeOutComponent, StubPrYesOrNotComponent, StubMultipleWPsComponent, FeedbackValidationDirective],
+      imports: [CommonModule],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: ApiService, useValue: apiMock },
+        { provide: FieldsManagerService, useValue: { isP25: () => false, fields: () => ({}) } },
+        { provide: RdTheoryOfChangesServicesService, useValue: {} }
+      ]
+    }).compileComponents();
+
+    zFixture = TestBed.createComponent(TocInitiativeOutComponent);
+    zComponent = zFixture.componentInstance;
+    zComponent.editable = true;
+    zComponent.resultLevelId = 1;
+    zComponent.initiative = {
+      initiative_id: 1,
+      official_code: 'INIT-01',
+      short_name: 'INIT',
+      planned_result: true,
+      showMultipleWPsContent: true,
+      result_toc_results: [{ toc_level_id: 1, planned_result: true, toc_result_id: 5, initiative_id: 1 }]
+    };
+
+    zFixture.detectChanges();
+    await zFixture.whenStable();
+  });
+
+  afterEach(() => {
+    jest.useFakeTimers();
+  });
+
+  it('renders the mapping content once the component is set up', () => {
+    expect(contentEl()).toBeTruthy();
+  });
+
+  it('renders the mapping content again after the answer changes', async () => {
+    pickNo().click();
+    await zFixture.whenStable();
+
+    // The hide half already worked before the fix — the listener itself schedules a pass.
+    expect(contentEl()).toBeFalsy();
+
+    await wait(100);
+    await zFixture.whenStable();
+
+    expect(zComponent.initiative.showMultipleWPsContent).toBe(true);
+    // The regression: the flag flipped back but the view stayed frozen on the hidden state.
+    expect(contentEl()).toBeTruthy();
   });
 });

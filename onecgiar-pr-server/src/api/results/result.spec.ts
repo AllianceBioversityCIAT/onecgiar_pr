@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpStatus } from '@nestjs/common';
 import { ResultsService } from './results.service';
+import { W1_W2_RESULT_SOURCE_FILTER } from '../../shared/constants/w1-w2-result-source-filter.constant';
 import { ResultRepository } from './result.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultTypesService } from './result_types/result_types.service';
@@ -36,6 +37,7 @@ import { ResultsKnowledgeProductFairScoreRepository } from './results-knowledge-
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
 import { VersioningService } from '../versioning/versioning.service';
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
+import { ResultInnovationMergeSplitRepository } from './result-innovation-merge-split/result-innovation-merge-split.repository';
 import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
 import { ResultsCenterRepository } from './results-centers/results-centers.repository';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
@@ -350,6 +352,15 @@ describe('ResultsService (unit, pure mocks)', () => {
     })),
   } as any;
 
+  /**
+   * P2-3292 Step 3. `replaceForResult` rides the discontinuation save, so every general-information
+   * test reaches it; `findActiveByResult` is on the read path. Both resolve empty — the assertions
+   * that matter about this repository live in its own spec.
+   */
+  const mockInnovationMergeSplitRepo = {
+    replaceForResult: jest.fn().mockResolvedValue(undefined),
+    findActiveByResult: jest.fn().mockResolvedValue([]),
+  };
   const mockInvestmentDiscontinuedRepo = {
     inactiveData: jest.fn().mockResolvedValue(undefined),
     find: jest.fn().mockResolvedValue([]),
@@ -362,6 +373,10 @@ describe('ResultsService (unit, pure mocks)', () => {
   const mockRoleByUserRepository = {
     find: jest.fn().mockResolvedValue([]),
     validationRolePermissions: jest.fn().mockResolvedValue(0),
+    // P2-3154: the Data Standards review-update is admin-gated on the server. The suite's
+    // pre-existing update tests exercise the admin path, so the default is true; the guard
+    // test flips it per-case.
+    isUserAdmin: jest.fn().mockResolvedValue(true),
   } as any;
 
   const mockResultInitiativeBudgetRepository = {
@@ -650,6 +665,10 @@ describe('ResultsService (unit, pure mocks)', () => {
           useValue: mockInvestmentDiscontinuedRepo,
         },
         {
+          provide: ResultInnovationMergeSplitRepository,
+          useValue: mockInnovationMergeSplitRepo,
+        },
+        {
           provide: ResultInitiativeBudgetRepository,
           useValue: mockResultInitiativeBudgetRepository,
         },
@@ -909,9 +928,16 @@ describe('ResultsService (unit, pure mocks)', () => {
 
     const result = await resultService.getScienceProgramProgress(userTest);
 
+    // W12-R-1: the meter MUST scope to W1/W2 origin (source = 'Result') while
+    // keeping the existing phase scoping (versionId) — regression for the
+    // bilateral-leak bug (Overview meter counted W3/bilateral results too).
     expect(
       mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered,
-    ).toHaveBeenCalledWith(userTest.id, { portfolioId: 3, versionId: 1 });
+    ).toHaveBeenCalledWith(userTest.id, {
+      portfolioId: 3,
+      versionId: 1,
+      fundingSource: ['Result'],
+    });
 
     const payload = result.response as ScienceProgramProgressResponseDto;
 
@@ -936,6 +962,33 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect(otherSp.entityTypeCode).toBe(102);
     expect(otherSp.entityTypeName).toBe('Accelerator');
     expect(otherSp.versions).toHaveLength(0);
+  });
+
+  // OSF-T-3 (FIND-01 single-homing): `getScienceProgramProgress`'s
+  // `r.source` predicate MUST be the exact same exported constant the
+  // Overview's scope-bucket query filters on
+  // (`W1_W2_RESULT_SOURCE_FILTER`), not a value that merely happens to
+  // equal it. A test asserting only `fundingSource: ['Result']` would still
+  // pass the day someone re-inlines a literal here and the two W1/W2
+  // populations silently diverge again — so this asserts reference
+  // identity, not value equality.
+  it('single-homes the r.source population predicate with OSF-T-3 (identity, not just value)', async () => {
+    mockClarisaInitiativesRepository.find.mockResolvedValueOnce([]);
+    mockRoleByUserRepository.find.mockResolvedValueOnce([]);
+    mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered.mockResolvedValueOnce(
+      { results: [], total: 0 },
+    );
+
+    await resultService.getScienceProgramProgress(userTest);
+
+    const [, filtersArg] =
+      mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered.mock
+        .calls[0];
+
+    expect(filtersArg.fundingSource).toBe(W1_W2_RESULT_SOURCE_FILTER);
+    expect(
+      Object.is(filtersArg.fundingSource, W1_W2_RESULT_SOURCE_FILTER),
+    ).toBe(true);
   });
 
   it('should error when creating a new result with invalid result type', async () => {
@@ -2003,6 +2056,31 @@ describe('ResultsService (unit, pure mocks)', () => {
       result_type_id: ResultTypeEnum.POLICY_CHANGE,
     };
 
+    /**
+     * P2-3154 BR1 — the MDS lock is now enforced on the server, not only hidden in the UI.
+     * A reviewer who is not a platform admin gets a 403 before anything is read or written;
+     * the ToC-metadata endpoint stays open to SP Leaders (AC2) and is not touched by this gate.
+     */
+    it('refuses a non-admin reviewer with 403 before touching anything (P2-3154 BR1)', async () => {
+      mockRoleByUserRepository.isUserAdmin.mockResolvedValueOnce(false);
+      (
+        mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
+      ).mockClear();
+      mockDataSource.transaction.mockClear();
+
+      const res = await resultService.updateBilateralResultReview(
+        100,
+        { commonFields: { id: 100 } } as ReviewUpdateDto,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.FORBIDDEN);
+      expect(
+        mockResultRepository.getCommonFieldsBilateralResultById,
+      ).not.toHaveBeenCalled();
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
+    });
+
     it('should successfully update contributingCenters', async () => {
       const reviewUpdateDto: ReviewUpdateDto = {
         commonFields: {
@@ -2042,6 +2120,113 @@ describe('ResultsService (unit, pure mocks)', () => {
       expect(
         mockContributorsPartnersService.updatePartnersV2,
       ).toHaveBeenCalled();
+    });
+
+    /**
+     * 🛑 THE REVIEWER MUST NOT WIPE THE REPORTER'S ANSWER. `is_attending_for_organization` used to be
+     * hardcoded to false in the Capacity Sharing branch, so every "Save changes" a reviewer pressed
+     * erased an answer the reporter had given — and the completion check requires it, so the section
+     * stopped being green with nothing on screen to explain why.
+     */
+    describe('Capacity Sharing review must preserve what the reporter answered', () => {
+      const capdevReview = {
+        commonFields: {
+          id: 100,
+          result_type_id: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+        },
+        resultTypeResponse: { female_using: 4, male_using: 6 },
+      } as unknown as ReviewUpdateDto;
+
+      const withStoredAttending = (stored: boolean | null) => {
+        const repo = {
+          findOne: jest
+            .fn()
+            .mockResolvedValue(
+              stored === null
+                ? null
+                : { is_attending_for_organization: stored },
+            ),
+          save: jest.fn(),
+          create: jest.fn(),
+        };
+        (resultService as any)._dataSource = {
+          ...mockDataSource,
+          getRepository: jest.fn().mockReturnValue(repo),
+        };
+        return repo;
+      };
+
+      beforeEach(() => {
+        (mockSummaryService.saveCapacityDevelopents as jest.Mock).mockClear();
+      });
+
+      it('keeps a stored "Yes" instead of overwriting it with false', async () => {
+        withStoredAttending(true);
+
+        await (resultService as any)._handleResultTypeUpdate(
+          ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+          100,
+          capdevReview,
+          userTest,
+        );
+
+        const [dto] = (mockSummaryService.saveCapacityDevelopents as jest.Mock)
+          .mock.calls[0];
+        expect(dto.is_attending_for_organization).toBe(true);
+      });
+
+      it('does not blank the organizations: institutions never reaches the DTO', async () => {
+        withStoredAttending(true);
+
+        await (resultService as any)._handleResultTypeUpdate(
+          ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+          100,
+          capdevReview,
+          userTest,
+        );
+
+        const [dto] = (mockSummaryService.saveCapacityDevelopents as jest.Mock)
+          .mock.calls[0];
+        // An empty array would be harmless today (the writer is guarded by institutions?.length),
+        // but sending nothing is what actually states the intent: the reviewer does not touch them.
+        expect(dto.institutions).toBeUndefined();
+      });
+
+      it("lets the reviewer's own answer win when the payload carries one", async () => {
+        withStoredAttending(true);
+
+        await (resultService as any)._handleResultTypeUpdate(
+          ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+          100,
+          {
+            ...capdevReview,
+            resultTypeResponse: {
+              female_using: 4,
+              is_attending_for_organization: false,
+            },
+          } as unknown as ReviewUpdateDto,
+          userTest,
+        );
+
+        const [dto] = (mockSummaryService.saveCapacityDevelopents as jest.Mock)
+          .mock.calls[0];
+        expect(dto.is_attending_for_organization).toBe(false);
+      });
+
+      it('falls back to false when nothing is stored yet', async () => {
+        withStoredAttending(null);
+
+        await (resultService as any)._handleResultTypeUpdate(
+          ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+          100,
+          capdevReview,
+          userTest,
+        );
+
+        const [dto] = (mockSummaryService.saveCapacityDevelopents as jest.Mock)
+          .mock.calls[0];
+        expect(dto.is_attending_for_organization).toBe(false);
+      });
     });
 
     it('should successfully update evidence', async () => {
@@ -2141,6 +2326,47 @@ describe('ResultsService (unit, pure mocks)', () => {
       // So we verify that _updateContributingInitiatives was called by checking share_result_request operations
       expect(mockShareResultRequestRepository.update).toHaveBeenCalled();
       expect(mockResultByInitiativesRepository.findOne).toHaveBeenCalled();
+    });
+
+    it('should not cancel pending share requests when pending_contributing_initiatives is omitted', async () => {
+      const reviewUpdateDto: ReviewUpdateDto = {
+        commonFields: {
+          id: 100,
+          result_type_id: ResultTypeEnum.POLICY_CHANGE,
+        },
+        contributingInitiatives: {
+          accepted_contributing_initiatives: [{ id: 2 }],
+        } as ReviewUpdateDto['contributingInitiatives'],
+        updateExplanation: 'Updated accepted initiatives only',
+      };
+
+      mockDataSource.transaction.mockImplementationOnce(async (callback) => {
+        const manager = {
+          findOne: jest.fn().mockResolvedValueOnce(mockResult),
+          update: jest.fn(),
+          create: jest.fn(),
+          save: jest.fn().mockResolvedValueOnce({ id: 1 }),
+        };
+        return callback(manager);
+      });
+
+      (
+        mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
+      ).mockResolvedValueOnce(mockCommonFields);
+
+      mockShareResultRequestRepository.update.mockClear();
+      (
+        mockResultByInitiativesRepository.findOne as jest.Mock
+      ).mockResolvedValueOnce({ initiative_id: 1, is_active: true });
+
+      const res = await resultService.updateBilateralResultReview(
+        100,
+        reviewUpdateDto,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect(mockShareResultRequestRepository.update).not.toHaveBeenCalled();
     });
   });
 

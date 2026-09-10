@@ -8,18 +8,17 @@ import { InstitutionsPipesModule } from '../rd-general-information/pipes/institu
 import { NormalSelectorComponent } from './components/normal-selector/normal-selector.component';
 import { KnowledgeProductSelectorComponent } from './components/knowledge-product-selector/knowledge-product-selector.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
-import { TooltipModule } from 'primeng/tooltip';
 import { FormsModule } from '@angular/forms';
+import { SectionBottomBarComponent } from '../../components/section-bottom-bar/section-bottom-bar.component';
 
 @NgModule({
   declarations: [RdPartnersComponent, InstToInstTypesPipe, NormalSelectorComponent, KnowledgeProductSelectorComponent],
-  imports: [
+  imports: [SectionBottomBarComponent,
     CommonModule,
     RdPartnersRoutingModule,
     CustomFieldsModule,
     InstitutionsPipesModule,
     FeedbackValidationDirectiveModule,
-    TooltipModule,
     FormsModule
   ],
   exports: [InstToInstTypesPipe, NormalSelectorComponent, KnowledgeProductSelectorComponent]

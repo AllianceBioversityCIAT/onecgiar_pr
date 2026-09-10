@@ -23,8 +23,12 @@ import {
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import { RootResultsDto } from './dto/create-bilateral.dto';
 import { ListResultsQueryDto } from './dto/list-results-query.dto';
+import { VersionResultDto } from './dto/version-result.dto';
+import { BilateralVersioningService } from './services/bilateral-versioning.service';
 import { ClarisaApiKeyGuard } from './guards/clarisa-api-key.guard';
 import { BilateralClarisaEndpoint } from './decorators/bilateral-clarisa-endpoint.decorator';
+import { ExternalPlatform } from './decorators/external-platform.decorator';
+import { ClarisaApiKeyValidationMis } from './interfaces/clarisa-api-key-validation.interface';
 
 @Controller()
 @ApiTags('Bilaterals')
@@ -37,7 +41,10 @@ import { BilateralClarisaEndpoint } from './decorators/bilateral-clarisa-endpoin
 @SkipThrottle()
 @UseInterceptors(ResponseInterceptor)
 export class BilateralController {
-  constructor(private readonly bilateralService: BilateralService) {}
+  constructor(
+    private readonly bilateralService: BilateralService,
+    private readonly bilateralVersioningService: BilateralVersioningService,
+  ) {}
 
   @Post('create')
   @BilateralClarisaEndpoint('/api/bilateral/create')
@@ -51,8 +58,36 @@ export class BilateralController {
       }),
     )
     body: RootResultsDto,
+    // P2-3166: the calling system, as CLARISA authenticated it from the API key.
+    @ExternalPlatform() platform?: ClarisaApiKeyValidationMis,
   ) {
-    return this.bilateralService.create(body);
+    return this.bilateralService.create(body, platform);
+  }
+
+  // P2-3228. Continues an approved result from a previous phase instead of creating a new
+  // one, which is what a centre reporting through STAR/MEL/TIP had to do until now — and
+  // which broke the trace between phases.
+  @Post('version')
+  @BilateralClarisaEndpoint('/api/bilateral/version')
+  @ApiOperation({
+    summary:
+      'Carry an approved result from a previous phase into the current one',
+    description:
+      'Creates a new version of an approved W3/Bilateral result in the open reporting phase, linked to the original by its result code. The approved prior-phase record is not modified. The new version lands in Draft: this operation continues the result, it does not report on it — whoever edits it afterwards is who submits it for review. Knowledge Products cannot be carried forward. Only the platform that reported a result may carry it forward.',
+  })
+  @ApiBody({ type: VersionResultDto })
+  async version(
+    @Body(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: false,
+        transform: true,
+      }),
+    )
+    body: VersionResultDto,
+    @ExternalPlatform() platform?: ClarisaApiKeyValidationMis,
+  ) {
+    return this.bilateralVersioningService.versionResult(body, platform);
   }
 
   @Get()

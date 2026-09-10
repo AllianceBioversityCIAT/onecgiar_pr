@@ -1,7 +1,7 @@
 import { HttpStatus } from '@nestjs/common';
 
 export type ServiceError = Error & {
-  response: Record<string, unknown>;
+  response: unknown;
   status: HttpStatus;
 };
 
@@ -12,9 +12,10 @@ export type ServiceError = Error & {
 export function throwServiceError(
   message: string,
   status: HttpStatus = HttpStatus.BAD_REQUEST,
+  response: unknown = {},
 ): never {
   const error = new Error(message) as ServiceError;
-  error.response = {};
+  error.response = response;
   error.status = status;
   throw error;
 }

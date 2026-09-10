@@ -1,6 +1,6 @@
-<p-dialog appendTo="body" header="Title" [(visible)]="this.visible" (onHide)="cleanObject()"
-    [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
-    [style]="{padding: '0px'}">
+<app-pr-dialog [(visible)]="this.visible" (onHide)="cleanObject()"
+    [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
+    styleClass="step-n4-add-partner-dialog">
     <div class="modal_title">Add Partner</div>
     <div class="modal_container partners-request-container" *ngIf="showForm">
 
@@ -24,7 +24,7 @@
             [icon]="this.requesting?'loop':'send'" padding="medium" (click)="onAddPartner()"></app-pr-button>
     </div>
 
-</p-dialog>
+</app-pr-dialog>
 <div style="width: 120px;">
     <app-pr-button (click)="visible= true;" padding="small" text="Add partner" icon="add_box"
         *ngIf="!this.rolesSE.readOnly"></app-pr-button>

@@ -1,4 +1,4 @@
-# AGENTS.md - `onecgiar-pr-client` (Angular 19 frontend)
+# AGENTS.md - `onecgiar-pr-client` (Angular 21 frontend)
 
 This is the package-level guide for any AI coding agent working in the PRMS Angular client. It complements the root `../AGENTS.md`, the source-tree guide at `src/AGENTS.md`, and the SDD baseline under `../docs/`.
 
@@ -14,8 +14,8 @@ Legacy note: `CLAUDE.md` is the Claude-specific mirror. This file is standalone 
 Frontend work must follow the SDD methodology:
 
 - `../docs/prd.md`: product baseline, personas, goals, `AC-1..AC-9`.
-- `../docs/system-design/design.md`: UI/UX system blueprint, tokens, components, flows, accessibility. This is the canonical reference for visual or interaction decisions.
-- `../docs/detailed-design/detailed-design.md`: technical blueprint, frontend module layout, API surfaces, integrations.
+- `../docs/ux-ui/design.md`: UI/UX system blueprint, tokens, components, flows, accessibility. This is the canonical reference for visual or interaction decisions.
+- `../docs/trd/trd.md`: technical blueprint, frontend module layout, API surfaces, integrations.
 - `../docs/specs/general-setup/`: templates for module specs.
 
 ## Project Overview
@@ -24,8 +24,11 @@ PRMS is the Planning and Reporting Management System frontend used by result sub
 
 | Item | Value |
 |---|---|
-| Framework | Angular 19.2 |
-| UI library | PrimeNG 19 + `@primeng/themes/aura` via `src/app/theme/reportingTheme.ts` |
+| Framework | Angular 21.2 (`@angular/*` ^21.2.18) |
+| UI library | Spartan UI: `@spartan-ng/brain` ^1.1.0 + Helm components in `src/app/spartan` (`components.json`, alias `@spartan`, style `vega`) |
+| CSS | Tailwind CSS 4 (^4.3.2) + `@spartan-ng/brain/hlm-tailwind-preset.css`, entry `src/styles.scss` |
+| Icons | `@ng-icons/lucide`; `primeicons` CSS still imported for legacy icon classes |
+| PrimeNG | Removed. Not in `package.json`, 0 `primeng` imports under `src/`, no `providePrimeNG(...)` |
 | Unit tests | Jest with `jest-preset-angular` |
 | E2E tests | Cypress |
 | State | Services + Angular signals / `BehaviorSubject`; no NgRx |
@@ -82,8 +85,13 @@ npm run lint
 npm run lint:fix
 npm run cypress:open
 npm run cypress:run
-npm run cypress:run:record
+npm run cypress:component
+npm run test:ct
 ```
+
+Cypress is local-only (no GitHub Actions workflow). `npm run test:ct` runs **all 23** custom-fields
+component specs (`src/app/custom-fields/**/*.cy.ts`, **67 tests**) — expected to be green before
+committing any `custom-fields/` change (especially signals refactors).
 
 Coverage thresholds enforced in `package.json`:
 
@@ -108,7 +116,7 @@ src/
 │   ├── shared/
 │   ├── internationalization/
 │   ├── sockets/
-│   ├── theme/reportingTheme.ts
+│   ├── spartan/
 │   └── custom-fields/
 ├── environments/
 ├── styles/
@@ -133,16 +141,18 @@ Prefer this layout for new features. Cross-cutting primitives go to `shared/`.
 
 ## Theming And Design System
 
-Authoritative reference: `../docs/system-design/design.md`.
+Authoritative reference: `../docs/ux-ui/design.md`.
 
 - SCSS tokens live in `src/styles/colors.scss` and `src/styles/fonts.scss`.
 - Custom variables and classes use `--pr-` and `.pr-` prefixes.
-- PrimeNG theme lives in `src/app/theme/reportingTheme.ts` and mirrors SCSS.
-- Change SCSS first, then mirror in the TypeScript theme.
-- PrimeNG is configured in `app.module.ts` with `providePrimeNG` and `darkModeSelector: 'light'`; dark mode is not supported.
-- Typography is Poppins with base size 12px.
-- Use `pr-typography($type)` or `.pr-*` typography utilities.
-- Prefer PrimeNG primitives plus shared section components over bespoke forms.
+- `src/app/theme/reportingTheme.ts` **does not exist** — deleted with PrimeNG (commit `50710ea38`). There is no TypeScript theme, so there is nothing to mirror.
+- SCSS is the single source of truth. `src/styles.scss` re-exposes the `--pr-*` tokens to Tailwind in an `@theme inline` block (`--color-brand-*`, `--color-surface-*`, `--color-ink-*`, `--font-mono`) and maps the Helm keys (`--background`, `--primary`, `--ring`, `--sidebar*`) onto them.
+- Do not redeclare Helm-owned keys such as `--color-sidebar` / `--color-sidebar-foreground`; set the raw `--sidebar*` var instead.
+- Light only: `color-scheme: light` is pinned on `:root` and the unreachable `:root.dark` block was removed. The dark sidebar is a token family, not dark mode.
+- Typography: Manrope (variable 200-800) for display/UI text and JetBrains Mono (400/500/600) for codes and figures, base size 12px on `html, body` (`src/styles/fonts.scss:14`). `'Poppins'` remains in the stack only as a fallback alias for legacy declarations.
+- Use `pr-typography($type)` or `.pr-*` typography utilities; mono via `.pr-code`, `.pr-figure`, `.pr-figure-sm` (keep `tabular-nums`).
+- Prefer `custom-fields` primitives and Spartan/Helm components plus shared section components over bespoke forms. Never a bare native control.
+- Deliberate departures from the visual reference belong in `docs/DESIGN-DEVIATIONS.md`, with the measurement that justifies them.
 - Tables use `src/styles/table-custom-styles.scss`.
 - Filter strips use `src/styles/filters-list.scss`.
 - Alerts use `src/styles/custom-alert.scss`.
@@ -194,11 +204,12 @@ Authoritative reference: `../docs/system-design/design.md`.
 | Auth header | `auth: <JWT>`, not `Authorization: Bearer` |
 | API method names | `HTTP_METHOD_descriptiveName` |
 | Strings | Use `src/app/internationalization/` for domain/user-facing terms |
-| Theming | SCSS tokens first, mirror in `reportingTheme.ts` |
-| Tokens/utilities | Prefix `--pr-*` and `.pr-*` |
+| Theming | SCSS tokens (`styles/colors.scss`, `styles/fonts.scss`) are the only source of truth; Tailwind sees them through the `@theme inline` block in `styles.scss`. No TS theme exists. |
+| Tokens/utilities | Prefix `--pr-*` and `.pr-*`; don't collide with Helm preset keys |
+| Folder docs | Touching any file in a folder that has its own `CLAUDE.md` means updating that file and re-stamping its `**Verified:**` line in the SAME commit — convention in `docs/COMPONENT-DOCS.md` |
 | Page modules | Use standard feature module shape |
 | Shared sections | Reuse `shared/sections-components/` |
-| Forms | Prefer project custom fields and PrimeNG controls with accessible labels |
+| Forms | Prefer project custom fields and Spartan/Helm controls with accessible labels |
 | Dark mode | Not supported |
 | Real-time | Reconcile via API before mutating state |
 | Coverage | Keep thresholds at 50/60/60/60 or higher |
@@ -211,12 +222,12 @@ When working on a frontend feature or fix:
 1. Open `src/AGENTS.md` before editing under `src/`.
 2. Confirm the spec under `../docs/specs/<module>/`.
 3. If the spec is missing, create or request it using the templates in `../docs/specs/general-setup/`.
-4. Cite relevant `G#`, `US-*`, and `AC-*` IDs from `../docs/prd.md` and screen/flow/component rules from `../docs/system-design/design.md`.
+4. Cite relevant `G#`, `US-*`, and `AC-*` IDs from `../docs/prd.md` and screen/flow/component rules from `../docs/ux-ui/design.md`.
 5. Implement using routing, interceptor, service, shared-component, token, and i18n conventions.
 6. Test with Jest and Cypress where applicable.
 7. Verify UI changes in the browser; a passing build is not enough.
-8. Update `../docs/system-design/design.md` when establishing a reusable UX pattern.
-9. Update `../docs/detailed-design/detailed-design.md` when adding a client surface or integration.
+8. Update `../docs/ux-ui/design.md` when establishing a reusable UX pattern.
+9. Update `../docs/trd/trd.md` when adding a client surface or integration.
 10. Commit only when explicitly asked, using project commit format.
 
 ## Quick Reference Paths
@@ -230,7 +241,9 @@ When working on a frontend feature or fix:
 - Main API service: `src/app/shared/services/api/results-api.service.ts`
 - API aggregator: `src/app/shared/services/api/api.service.ts`
 - Guards: `src/app/shared/guards/check-login.guard.ts`, `src/app/shared/guards/check-admin.guard.ts`
-- Theme: `src/app/theme/reportingTheme.ts`
+- Global styles + token bridge: `src/styles.scss`
+- Folder-doc convention: `docs/COMPONENT-DOCS.md`
+- Design deviations: `docs/DESIGN-DEVIATIONS.md`
 - Tokens: `src/styles/colors.scss`, `src/styles/fonts.scss`
 - Environments: `src/environments/environment.ts`, `src/environments/environment.prod.ts`
 - Jest setup: `src/setup-jest.ts`

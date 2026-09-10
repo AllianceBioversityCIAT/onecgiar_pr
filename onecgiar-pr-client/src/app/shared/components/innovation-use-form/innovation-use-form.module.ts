@@ -6,13 +6,20 @@ import { StudiesLinkComponent } from './components/studies-link/studies-link.com
 import { CustomFieldsModule } from '../../../custom-fields/custom-fields.module';
 import { YmzListStructureItemModule } from '../../directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { FeedbackValidationDirectiveModule } from '../../directives/feedback-validation-directive.module';
-import { MessageModule } from 'primeng/message';
-import { MultiSelectModule } from 'primeng/multiselect';
 import { EstimatesCgiarComponent } from './components/estimates/estimates.component';
 
 @NgModule({
-  declarations: [InnovationUseFormComponent, StudiesLinkComponent, EstimatesCgiarComponent],
+  declarations: [InnovationUseFormComponent, StudiesLinkComponent],
   exports: [InnovationUseFormComponent, StudiesLinkComponent, EstimatesCgiarComponent],
-  imports: [CommonModule, FormsModule, CustomFieldsModule, YmzListStructureItemModule, FeedbackValidationDirectiveModule, MessageModule, MultiSelectModule]
+  // P2-3390: EstimatesCgiarComponent is standalone (the bilateral sections import it directly), so it
+  // is imported here and re-exported — the W1/W2 templates that use `app-estimates-cgiar` are unchanged.
+  imports: [
+    CommonModule,
+    FormsModule,
+    CustomFieldsModule,
+    YmzListStructureItemModule,
+    FeedbackValidationDirectiveModule,
+    EstimatesCgiarComponent
+  ]
 })
 export class InnovationUseFormModule {}

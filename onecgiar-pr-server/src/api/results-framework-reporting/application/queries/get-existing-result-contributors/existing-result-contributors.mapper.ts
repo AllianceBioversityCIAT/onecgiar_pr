@@ -70,6 +70,9 @@ export function mapContributorRecords(
         contrib,
         tocResultIndicatorId,
       ),
+      // @akili-spec changes/indicator-reported-results — null-safe (IRR-R-2.2)
+      result_type_id: contrib.obj_results?.result_type_id ?? null,
+      result_type_name: contrib.obj_results?.obj_result_type?.name ?? null,
     };
   });
 }

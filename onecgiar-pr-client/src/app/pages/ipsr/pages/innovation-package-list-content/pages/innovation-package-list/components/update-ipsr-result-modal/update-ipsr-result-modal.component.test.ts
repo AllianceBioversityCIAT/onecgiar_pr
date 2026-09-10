@@ -4,8 +4,6 @@ import { UpdateIpsrResultModalComponent } from './update-ipsr-result-modal.compo
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { RetrieveModalService } from '../../../../../../../results/pages/result-detail/components/retrieve-modal/retrieve-modal.service';
-import { TableModule } from 'primeng/table';
-import { DialogModule } from 'primeng/dialog';
 import { PrFieldHeaderComponent } from '../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { InnovationPackageListFilterPipe } from '../innovation-package-custom-table/pipes/innovation-package-list-filter.pipe';
 import { IpsrToUpdateFilterPipe } from './ipsr-to-update-filter.pipe';
@@ -20,7 +18,7 @@ describe('UpdateIpsrResultModalComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [UpdateIpsrResultModalComponent, InnovationPackageListFilterPipe, PrFieldHeaderComponent, IpsrToUpdateFilterPipe],
       providers: [ApiService, IpsrDataControlService, RetrieveModalService],
-      imports: [HttpClientModule, TableModule, DialogModule]
+      imports: [HttpClientModule]
     }).compileComponents();
   });
 

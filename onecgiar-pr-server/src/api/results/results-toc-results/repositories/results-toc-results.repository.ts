@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { env } from 'process';
+import { env } from 'node:process';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
+import { indicatorResultTypeCaseSql } from '../../../../shared/constants/indicator-type-mapping.constant';
 import { ResultsTocResult } from '../entities/results-toc-result.entity';
 import {
   ReplicableConfigInterface,
@@ -29,7 +30,7 @@ export class ResultsTocResultRepository
   );
 
   constructor(
-    private dataSource: DataSource,
+    private readonly dataSource: DataSource,
     private readonly _handlersError: HandlersError,
     private readonly _resultsTocResultIndicatorRepository: ResultsTocResultIndicatorsRepository,
     private readonly _resultsTocImpactAreaTargetRepository: ResultsTocImpactAreaTargetRepository,
@@ -396,6 +397,7 @@ export class ResultsTocResultRepository
         rtr.initiative_id,
         rtr.toc_progressive_narrative,
         rtr.toc_level_id,
+        rtr.program_invested_financial_resources,
         ci.official_code,
         ci.short_name,
         ci.name,
@@ -408,7 +410,11 @@ export class ResultsTocResultRepository
         rit.contributing_indicator,
         rit.target_date,
         rit.target_progress_narrative,
-        rit.indicator_question
+        rit.indicator_question,
+        -- P2-2932: the indicator's own result type, so the consistency check can tell a box that
+        -- belongs to the result's type from one that does not. Section 4 only holds data for the
+        -- type the result was created as, so an indicator of another type has no counterpart there.
+        ${indicatorResultTypeCaseSql('toc_tri.type_value')} AS indicator_result_type_id
       FROM results_toc_result rtr
       LEFT JOIN clarisa_initiatives ci
         ON ci.id = rtr.initiative_id
@@ -419,6 +425,18 @@ export class ResultsTocResultRepository
       LEFT JOIN result_indicators_targets rit
         ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
         AND rit.is_active = 1
+      -- P2-2932. Matched on either key on purpose: \`toc_results_indicator_id\` is a text column
+      -- holding the ToC node's \`related_node_id\` for some rows and the numeric \`id\` for others.
+      -- The same two-way match already exists at \`result.repository.ts:1024-1025\`; narrowing it to
+      -- one key would silently drop the type for whichever half does not use it.
+      LEFT JOIN ${env.DB_TOC}.toc_results_indicators toc_tri
+        ON toc_tri.is_active = 1
+        AND (
+          CONVERT(toc_tri.related_node_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            = CONVERT(rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+          OR CONVERT(CAST(toc_tri.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            = CONVERT(rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+        )
       WHERE
         rtr.results_id = ?
         AND rtr.is_active = 1
@@ -432,6 +450,123 @@ export class ResultsTocResultRepository
 
     try {
       return await this.query(queryData, params);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * P2-3086 / P2-3003: ToC fields for Contribution Request review (notification-item).
+   * Returns one row per mapped indicator for the contributor initiative on a result.
+   */
+  async getContributionReviewTocByResultAndInitiative(
+    resultId: number,
+    initiativeId: number,
+  ) {
+    const query = `
+      SELECT
+        rtr.result_toc_result_id,
+        rtr.toc_result_id,
+        rtr.planned_result,
+        rtr.toc_level_id,
+        rtr.toc_progressive_narrative,
+        tl.name AS level_name,
+        tr.result_title AS outcome_label,
+        tr.result_description AS outcome_statement,
+        rtri.result_toc_result_indicator_id,
+        rtri.toc_results_indicator_id,
+        tri.indicator_description,
+        tri.type_name AS statement,
+        tri.type_value AS indicator_typology,
+        tri.unit_messurament AS unit_of_measurement,
+        (
+          SELECT trit2.target_value
+          FROM ${env.DB_TOC}.toc_result_indicator_target trit2
+          WHERE trit2.id_indicator = tri.id
+          ORDER BY trit2.target_date DESC
+          LIMIT 1
+        ) AS target_value,
+        (
+          SELECT trit3.number_target
+          FROM ${env.DB_TOC}.toc_result_indicator_target trit3
+          WHERE trit3.id_indicator = tri.id
+          ORDER BY trit3.target_date DESC
+          LIMIT 1
+        ) AS number_target,
+        rit.contributing_indicator AS contribution_target
+      FROM results_toc_result rtr
+      LEFT JOIN toc_level tl
+        ON tl.toc_level_id = rtr.toc_level_id
+      LEFT JOIN ${env.DB_TOC}.toc_results tr
+        ON tr.id = rtr.toc_result_id
+      LEFT JOIN results_toc_result_indicators rtri
+        ON rtri.results_toc_results_id = rtr.result_toc_result_id
+        AND rtri.is_active = 1
+        AND (rtri.is_not_aplicable = 0 OR rtri.is_not_aplicable IS NULL)
+      LEFT JOIN ${env.DB_TOC}.toc_results_indicators tri
+        ON CONVERT(tri.related_node_id USING utf8mb4) = CONVERT(rtri.toc_results_indicator_id USING utf8mb4)
+        AND tri.is_active = 1
+      LEFT JOIN result_indicators_targets rit
+        ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+        AND rit.is_active = 1
+      WHERE
+        rtr.results_id = ?
+        AND rtr.initiative_id = ?
+        AND rtr.is_active = 1
+      ORDER BY
+        rtr.result_toc_result_id,
+        rtri.result_toc_result_indicator_id;
+    `;
+
+    try {
+      const rows = await this.query(query, [resultId, initiativeId]);
+      return (rows ?? []).map((row: Record<string, unknown>) => {
+        const targetValue = this.toNumberOrNull(row?.target_value);
+        const numberTarget = this.toNumberOrNull(row?.number_target);
+
+        return {
+          result_toc_result_id: this.toNumberOrNull(row?.result_toc_result_id),
+          toc_result_id: this.toNumberOrNull(row?.toc_result_id),
+          planned_result:
+            row?.planned_result === null || row?.planned_result === undefined
+              ? null
+              : Boolean(row.planned_result),
+          toc_level_id: this.toNumberOrNull(row?.toc_level_id),
+          toc_progressive_narrative:
+            typeof row?.toc_progressive_narrative === 'string'
+              ? row.toc_progressive_narrative
+              : null,
+          level: typeof row?.level_name === 'string' ? row.level_name : null,
+          outcome_label:
+            typeof row?.outcome_label === 'string' ? row.outcome_label : null,
+          outcome_statement:
+            typeof row?.outcome_statement === 'string'
+              ? row.outcome_statement
+              : null,
+          indicator_description:
+            typeof row?.indicator_description === 'string'
+              ? row.indicator_description
+              : null,
+          statement: typeof row?.statement === 'string' ? row.statement : null,
+          indicator_typology:
+            typeof row?.indicator_typology === 'string'
+              ? row.indicator_typology
+              : null,
+          unit_of_measurement:
+            typeof row?.unit_of_measurement === 'string'
+              ? row.unit_of_measurement
+              : null,
+          target: targetValue ?? numberTarget,
+          contribution_target: this.toNumberOrNull(row?.contribution_target),
+          toc_results_indicator_id: this.toStringOrNull(
+            row?.toc_results_indicator_id,
+          ),
+        };
+      });
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
@@ -1635,7 +1770,8 @@ export class ResultsTocResultRepository
       for (const itemIndicator of targetsIndicator) {
         const indicatorId =
           itemIndicator.toc_results_indicator_id ||
-          itemIndicator.related_node_id;
+          itemIndicator.related_node_id ||
+          itemIndicator.id;
         if (!indicatorId) continue;
 
         const targetIndicators =
@@ -1709,7 +1845,7 @@ export class ResultsTocResultRepository
 
               const payload = {
                 is_active: true,
-                contributing_indicator: this.toNumberOrNull(
+                contributing_indicator: this.toContributingIndicator(
                   target.contributing_indicator ?? target.contributing,
                 ),
                 indicator_question:
@@ -1773,7 +1909,7 @@ export class ResultsTocResultRepository
               await this._resultTocIndicatorTargetRepository.save({
                 result_toc_result_indicator_id:
                   resultTocResultIndicator.result_toc_result_indicator_id,
-                contributing_indicator: this.toNumberOrNull(
+                contributing_indicator: this.toContributingIndicator(
                   target.contributing_indicator ?? target.contributing,
                 ),
                 indicator_question:
@@ -2339,6 +2475,28 @@ select *
     if (value === null || value === undefined) return null;
     const num = Number(value);
     return Number.isFinite(num) ? num : null;
+  }
+
+  /**
+   * P2-3608: `contributing_indicator` is a contribution towards a target, so a
+   * negative value is never valid. It is clamped to 0 - the same value the form
+   * already writes when a negative one is typed - instead of being dropped, so a
+   * row that already counted as answered keeps counting as answered.
+   * null/undefined stay null ("not answered yet"), and 0 is preserved on
+   * purpose: it is a real answer for qualitative indicators (P2-3089).
+   */
+  private toContributingIndicator(value: any): number | null {
+    const num = this.toNumberOrNull(value);
+    if (num === null) return null;
+    return num < 0 ? 0 : num;
+  }
+
+  private toStringOrNull(value: unknown): string | null {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+    return null;
   }
 
   private extractYear(value: any): number | null {

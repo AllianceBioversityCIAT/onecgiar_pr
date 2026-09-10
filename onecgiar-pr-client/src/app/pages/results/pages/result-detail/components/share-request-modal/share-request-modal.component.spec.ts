@@ -6,19 +6,16 @@ import { RouterTestingModule } from '@angular/router/testing';
 import { Router } from '@angular/router';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { RetrieveModalService } from '../retrieve-modal/retrieve-modal.service';
-import { DialogModule } from 'primeng/dialog';
 import { ShareRequestModalService } from './share-request-modal.service';
 import { PrButtonComponent } from '../../../../../../custom-fields/pr-button/pr-button.component';
 import { PrSelectComponent } from '../../../../../../custom-fields/pr-select/pr-select.component';
 import { FormsModule } from '@angular/forms';
 import { LabelNamePipe } from '../../../../../../custom-fields/pr-select/label-name.pipe';
 import { ListFilterByTextAndAttrPipe } from '../../../../../../custom-fields/pr-multi-select/pipes/list-filter-by-text-and-attr.pipe';
-import { TooltipModule } from 'primeng/tooltip';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { PrFieldHeaderComponent } from '../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { ShareRequestBody } from './model/shareRequestBody.model';
 import { ResultsNotificationsService } from '../../../results-outlet/pages/results-notifications/results-notifications.service';
-import { SelectModule } from 'primeng/select';
 
 jest.useFakeTimers();
 describe('ShareRequestModalComponent', () => {
@@ -79,7 +76,7 @@ describe('ShareRequestModalComponent', () => {
         ListFilterByTextAndAttrPipe,
         PrFieldHeaderComponent
       ],
-      imports: [HttpClientTestingModule, RouterTestingModule, DialogModule, FormsModule, TooltipModule, ScrollingModule, SelectModule],
+      imports: [HttpClientTestingModule, RouterTestingModule, FormsModule, ScrollingModule],
       providers: [
         {
           provide: ApiService,

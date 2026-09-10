@@ -3,12 +3,10 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { KnowledgeProductsComponent } from './knowledge-products.component';
 import { PrButtonComponent } from '../../../../custom-fields/pr-button/pr-button.component';
 import { PrInputComponent } from '../../../../custom-fields/pr-input/pr-input.component';
-import { InputNumberModule } from 'primeng/inputnumber';
 import { GlobalVariablesService } from '../../../../shared/services/global-variables.service';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
-import { MessageService } from 'primeng/api';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../shared/enum/api.enum';
 
 describe('KnowledgeProductsComponent', () => {
@@ -19,8 +17,8 @@ describe('KnowledgeProductsComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [KnowledgeProductsComponent, PrButtonComponent, PrInputComponent],
-      imports: [HttpClientTestingModule, InputNumberModule],
-      providers: [GlobalVariablesService, ExportTablesService, ApiService, MessageService]
+      imports: [HttpClientTestingModule],
+      providers: [GlobalVariablesService, ExportTablesService, ApiService]
     }).compileComponents();
 
     fixture = TestBed.createComponent(KnowledgeProductsComponent);

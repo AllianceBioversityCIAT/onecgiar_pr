@@ -1,4 +1,4 @@
-import { Component, computed, effect } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { InnovationDevInfoBody } from './model/innovationDevInfoBody';
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
@@ -8,7 +8,16 @@ import { InnovationDevelopmentLinks } from './model/InnovationDevelopmentLinks.m
 import { EvidencesBody } from '../../../../result-detail/pages/rd-evidences/model/evidencesBody.model';
 import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
-import { firstValueFrom } from 'rxjs';
+import { SharePointUploadService } from '../../../../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
+
+/**
+ * Guidance printed under "Innovation Developer" up to the 2025 phase. Kept verbatim — P2-3272 Part 4
+ * drops it from 2026 on, and epic P2-3243 requires earlier phases to render exactly as they did.
+ * `app-field-card` paints no description block at all when it receives an empty string.
+ */
+const LEGACY_INNOVATION_DEVELOPER_DESCRIPTION = `Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person
+        Innovation developer will be first author of the Innovation Profile document and the prime contact for the innovation.<br>
+        Please provide information such as first name, family name, email address and organizational affiliations.`;
 
 @Component({
   selector: 'app-innovation-dev-info',
@@ -24,6 +33,22 @@ export class InnovationDevInfoComponent {
   innovationDevelopmentLinks: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
 
   evidencesBody: EvidencesBody = new EvidencesBody();
+
+  /**
+   * P2-3220 — the SharePoint upload sequence is NOT owned here any more. This section used to keep
+   * its own copy (its own session loop, its own progress interval, its own `sp_*` assignments) and
+   * it was the only one of the three that called `POST_createUploadSessionP25`, so "every upload
+   * goes through the shared flow" was not something the code could enforce.
+   */
+  private readonly sharePointUploadSE = inject(SharePointUploadService);
+
+  /**
+   * Drives `[appSectionSkeleton]`. TRUE from construction and NOT from "a request is in flight":
+   * this section loads from an `effect()` gated on `currentResultSignal()?.portfolio`, so between
+   * first paint and the GET there is no request at all and the empty body would paint as a
+   * mandatory-but-empty form. Released on `next` AND `error`.
+   */
+  readonly sectionLoading = signal(true);
 
   constructor(
     private readonly api: ApiService,
@@ -41,6 +66,14 @@ export class InnovationDevInfoComponent {
     }
   });
 
+  /**
+   * P2-3272 Part 4 — from the 2026 phase on the field is pre-filled from the Lead contact person,
+   * so its long guidance note is dropped. Phases <= 2025 keep the note verbatim.
+   */
+  innovationDeveloperDescription = computed(() =>
+    this.fieldsManagerSE.isInnovationDeveloperAutoFilled2026() ? '' : LEGACY_INNOVATION_DEVELOPER_DESCRIPTION
+  );
+
   collaboratorsDescription = computed(() => {
     return `Provide the full name(s), email address and organizational affiliation(s)  of other CGIAR and/or partner colleagues that contribute to this innovation
         Names of key contributors will feature as co-authors on the Innovation Profile document in the same order as provided below. <br>
@@ -52,11 +85,20 @@ export class InnovationDevInfoComponent {
   });
 
   getSectionInformationp25(): void {
-    this.api.resultsSE.GET_innovationDevP25().subscribe(({ response }) => {
-      this.innovationDevInfoBody = response;
-      this.convertOrganizations(response?.innovatonUse?.organization);
-      this.normalizeInnovationDevBooleans();
-      this.savingSection = false;
+    this.api.resultsSE.GET_innovationDevP25().subscribe({
+      next: ({ response }) => {
+        this.innovationDevInfoBody = response;
+        this.convertOrganizations(response?.innovatonUse?.organization);
+        this.normalizeInnovationDevBooleans();
+        this.applyInnovationDeveloperAutoFill();
+        this.savingSection = false;
+        this.sectionLoading.set(false);
+      },
+      error: err => {
+        console.error(err);
+        this.savingSection = false;
+        this.sectionLoading.set(false);
+      }
     });
     this.api.resultsSE.GET_questionsInnovationDevelopmentP25().subscribe(({ response }) => {
       this.innovationDevelopmentQuestions = response;
@@ -96,11 +138,14 @@ export class InnovationDevInfoComponent {
         this.convertOrganizations(response?.innovatonUse?.organization);
         this.innovationDevInfoBody = response;
         this.normalizeInnovationDevBooleans();
+        this.applyInnovationDeveloperAutoFill();
         this.savingSection = false;
+        this.sectionLoading.set(false);
       },
       error: err => {
         console.error(err);
         this.savingSection = false;
+        this.sectionLoading.set(false);
       }
     });
   }
@@ -118,6 +163,27 @@ export class InnovationDevInfoComponent {
         item.institution_types_id = item?.parent_institution_type_id;
       }
     });
+  }
+
+  /**
+   * P2-3272 Part 4 — pre-fill "Innovation Developer" with the Lead contact person captured in
+   * General Information, from the 2026 phase on.
+   *
+   * Only when the field is still empty: overwriting would silently discard a name the reporter
+   * typed themselves, and the requirement asks for a starting point, not a locked value. The field
+   * stays editable, and it is not part of the green check (`validation_innovation_dev_P25` does not
+   * read `innovation_developers`), so pre-filling can never block a submission.
+   *
+   * ⚠️ The value is only persisted when the section is saved. A reporter who clears the field and
+   * reloads without saving sees it pre-filled again — that is the cost of "pre-fill when empty",
+   * and the alternative (a stored "was cleared on purpose" flag) needs a column nobody asked for.
+   */
+  private applyInnovationDeveloperAutoFill(): void {
+    if (!this.fieldsManagerSE.isInnovationDeveloperAutoFilled2026()) return;
+    if (this.innovationDevInfoBody?.innovation_developers?.trim()) return;
+    const leadContactPerson = `${this.dataControlSE.currentResultSignal()?.lead_contact_person ?? ''}`.trim();
+    if (!leadContactPerson) return;
+    this.innovationDevInfoBody.innovation_developers = leadContactPerson;
   }
 
   private normalizeInnovationDevBooleans(): void {
@@ -143,6 +209,42 @@ export class InnovationDevInfoComponent {
     });
   }
 
+  /**
+   * P2-3218 — a save failure has to reach the user, not just the console.
+   *
+   * Same shape as the fix applied to the other two evidence surfaces in e014ee987, so the three
+   * upload points now react to failure identically instead of three different ways.
+   */
+  private showSaveError(title: string, description: string): void {
+    this.api.alertsFe.show({
+      id: 'innovation-dev-save-failed',
+      title,
+      description,
+      status: 'error'
+    });
+  }
+
+  /**
+   * P2-3550 AC4 — "Stored reference materials are not deleted, cleared or migrated".
+   *
+   * Hiding the block is not enough, and doing only that would DELETE data. The server's
+   * `InnovationDevService.saveEvidence` returns early **only** when the array is `null`/`undefined`
+   * (`onecgiar-pr-server/src/api/results/summary/innovation_dev.service.ts:99-101`); with any other
+   * value it walks every stored evidence of type 4 and sets `is_active = 0` on the ones whose link
+   * is not in the payload (`:110-125`). Since `InnovationDevInfoBody` seeds `reference_materials`
+   * with `[{ link: '' }]`, a hidden-but-still-sent field would wipe the references of every 2026
+   * result on the next save (real case in prtest: result 11082, phase 2026, `is_replicated` 0,
+   * evidence 12818 = `link.com`).
+   *
+   * So the key is **omitted**, never sent empty — the same undefined-vs-value contract as the
+   * MELIA-study fix. Destructuring (instead of `delete`) is what guarantees the key is absent from
+   * the JSON rather than present with `undefined`.
+   */
+  private buildSectionPayload(): Record<string, any> {
+    const { reference_materials, ...rest } = { ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions } as Record<string, any>;
+    return this.fieldsManagerSE.isInnovationReferenceMaterialsRemoved2026() ? rest : { ...rest, reference_materials };
+  }
+
   async onSaveSection() {
     this.savingSection = true;
     this.convertOrganizationsTosave();
@@ -154,34 +256,54 @@ export class InnovationDevInfoComponent {
       const resultId = (this.api.dataControlSE?.currentResult as any)?.result_id ?? (this.api.dataControlSE?.currentResult as any)?.id;
       (this.evidencesBody as any).result_id = resultId;
 
-      try {
-        await this.uploadPendingFiles();
-      } catch (error) {
-        console.error('Error uploading files:', error);
-        this.savingSection = false;
+      // P2-3218: this method had three failure paths and all three were silent — a console.error,
+      // the spinner off, and nothing on screen. The user pressed Save, saw the spinner stop, and
+      // walked away believing the section was stored. The same defect was fixed for the other two
+      // evidence surfaces in e014ee987 (P2-3220); this one was left out of that pass.
+      //
+      // P2-3220: the failure is still SHOWN, and now by file name, but it no longer abandons the
+      // save. The file is lost either way — the 2026 endpoint parses only `jsonData` and drops the
+      // multipart `files` (`innovation_dev.controller.ts:45-57`), so the user has to re-attach it —
+      // and throwing away everything else they typed does not bring it back. Same contract as the
+      // other two evidence surfaces: save the section, and name the files that did not make it.
+      // P2-3641 AC — "Removal does not affect existing saved data from prior reporting cycles".
+      //
+      // Hiding the block is only half the ticket, and shipping only that half would DELETE data.
+      // The evidence endpoint takes the WHOLE array and treats it as the new truth: an empty one
+      // deactivates every stored evidence of this type for the result
+      // (`evidences.service.ts` returns early on an empty array straight into
+      // `updateEvidences(result_id, [], …)`, which runs `UPDATE evidence SET is_active = 0`).
+      // Today `evidencesBody` survives only because the GET still repopulates it; the moment
+      // anybody tidies that call away, every 2026 result loses its stored evidence on the next save.
+      //
+      // So from 2026 the call is OMITTED, never sent empty — the same undefined-vs-value contract
+      // the MELIA study and P2-3550 already rely on. Nothing about the 2025 path changes.
+      if (this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
+        this.savePhaseP25SectionFields(false);
         return;
       }
 
+      const failedUploads = await this.uploadPendingFiles();
+      if (failedUploads.length) {
+        this.showSaveError(
+          `${failedUploads.length} file(s) could not be stored: ${failedUploads.join(', ')}`,
+          'The rest of the section is being saved, but those files are not in SharePoint. Please re-attach them and save again.'
+        );
+      }
+
       this.api.resultsSE.POST_createEvidenceDemandP25(this.evidencesBody).subscribe({
-        next: () => {
-          this.api.resultsSE.PATCH_innovationDevP25({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions }).subscribe({
-            next: () => {
-              this.getSectionInformationp25();
-              this.savingSection = false;
-            },
-            error: err => {
-              console.error(err);
-              this.savingSection = false;
-            }
-          });
-        },
+        next: () => this.savePhaseP25SectionFields(true),
         error: err => {
-          console.error(err);
+          console.error('[innovation-dev-info] registering the evidence failed', err);
+          this.showSaveError(
+            'Your evidence was not saved',
+            'The files were uploaded but could not be registered against this result, so this section was not saved. Please try saving again.'
+          );
           this.savingSection = false;
         }
       });
     } else {
-      this.api.resultsSE.PATCH_innovationDev({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions }).subscribe({
+      this.api.resultsSE.PATCH_innovationDev(this.buildSectionPayload()).subscribe({
         next: ({ response }) => {
           this.getSectionInformation();
           this.savingSection = false;
@@ -194,56 +316,61 @@ export class InnovationDevInfoComponent {
     }
   }
 
-  private async uploadPendingFiles(): Promise<void> {
-    if (!Array.isArray(this.evidencesBody.evidences)) {
-      return;
-    }
-
-    const resultId = (this.api.dataControlSE?.currentResult as any)?.result_id ?? (this.api.dataControlSE?.currentResult as any)?.id;
-    let count = 0;
-
-    for (const evidence of this.evidencesBody.evidences) {
-      if (evidence.file && !evidence.link) {
-        count++;
-        try {
-          const { response: uploadUrl } = await firstValueFrom(
-            this.api.resultsSE.POST_createUploadSessionP25({
-              resultId,
-              fileName: evidence.file.name,
-              count
-            })
-          );
-
-          const intervalId = setInterval(async () => {
-            try {
-              const response = await this.api.resultsSE.GET_loadFileInUploadSession(uploadUrl);
-              if (response?.nextExpectedRanges?.[0]) {
-                const nextRange = response?.nextExpectedRanges[0];
-                const [startByte, totalBytes] = nextRange.split('-').map(Number);
-                if (totalBytes) {
-                  const progressPercentage = (startByte / totalBytes) * 100;
-                  (evidence as any).percentage = Number.isFinite(progressPercentage) ? progressPercentage.toFixed(0) : (evidence as any).percentage;
-                }
-              }
-            } catch (_) {
-              clearInterval(intervalId);
-              (evidence as any).percentage = 100;
-            }
-          }, 2000);
-
-          const response = await this.api.resultsSE.PUT_loadFileInUploadSession(evidence.file, uploadUrl);
-          clearInterval(intervalId);
-          (evidence as any).percentage = 100;
-          evidence.link = response?.webUrl;
-          (evidence as any).sp_document_id = response?.id;
-          evidence.sp_file_name = response?.name || evidence.file.name;
-          (evidence as any).sp_folder_path = response?.parentReference?.path?.split('root:')?.pop();
-        } catch (error) {
-          console.error('Error uploading evidence file:', error);
-          throw error;
-        }
+  /**
+   * The P25 half of the section save. Extracted from `onSaveSection` so P2-3641 can reach it
+   * WITHOUT the evidence request: from the 2026 cycle that block is not rendered, and sending the
+   * request with an empty array would deactivate the stored evidence.
+   *
+   * @param evidenceWasSaved whether the evidence request ran and succeeded. It only changes the
+   * wording of the failure notice — telling a 2026 user "your evidence was stored" when no evidence
+   * request was ever made would send them looking for something that does not exist.
+   */
+  private savePhaseP25SectionFields(evidenceWasSaved: boolean): void {
+    this.api.resultsSE.PATCH_innovationDevP25(this.buildSectionPayload()).subscribe({
+      next: () => {
+        this.getSectionInformationp25();
+        this.savingSection = false;
+      },
+      error: err => {
+        console.error('[innovation-dev-info] saving the section failed', err);
+        this.showSaveError(
+          'This section was not saved',
+          evidenceWasSaved
+            ? 'Your evidence was stored, but the rest of the section could not be saved. Please try saving again.'
+            : 'The section could not be saved. Please try saving again.'
+        );
+        this.savingSection = false;
       }
-    }
+    });
+  }
+
+  /**
+   * P2-3220 — delegates to the single shared upload flow and returns the names of the files that
+   * did not reach SharePoint (empty when all went up). Never throws.
+   *
+   * Why each option is what it is:
+   * - `flow: 'innovation-development'` → the v2 `evidence_demand/createUploadSession` door, the one
+   *   this section has always used. The caller no longer names an endpoint.
+   * - `skipAlreadyUploaded: true` → reproduces the old `if (evidence.file && !evidence.link)`.
+   * - `trackProgress: true` → MEASURED, not assumed: `components/user-evidence/` renders both the
+   *   percentage and the animated bar (`user-evidence.component.html:68-77`).
+   * - `fallbackToLocalName: true` → the old copy did `response?.name || evidence.file.name`, and
+   *   that fallback is load-bearing HERE: the same template gates the whole uploaded-file row on
+   *   `sp_file_name`, so a nameless response would drop the just-attached file back to the
+   *   drag-and-drop box. The two surfaces migrated before this one never had the fallback, hence
+   *   an explicit option rather than a new default for all three.
+   */
+  private async uploadPendingFiles(): Promise<string[]> {
+    const resultId = (this.api.dataControlSE?.currentResult as any)?.result_id ?? (this.api.dataControlSE?.currentResult as any)?.id;
+
+    return this.sharePointUploadSE.uploadPending(this.evidencesBody.evidences, {
+      resultId,
+      flow: 'innovation-development',
+      skipAlreadyUploaded: true,
+      trackProgress: true,
+      fallbackToLocalName: true,
+      logLabel: 'innovation-dev-info'
+    });
   }
 
   pdfOptions = [
@@ -324,5 +451,56 @@ export class InnovationDevInfoComponent {
     const selectedId = this.innovationDevInfoBody.innovation_readiness_level_id;
     const index = this.innovationControlListSE.readinessLevelsList.findIndex(level => level.id === selectedId);
     return index >= 0 ? index : -1;
+  }
+
+  /**
+   * The catalogue's numeric `level` (0-9) for the currently selected readiness level, or `null`
+   * when nothing is selected / the catalogue has not loaded yet.
+   *
+   * P2-3265 / P2-3359: read the catalogue row's `level` field, never the row `id` (auto-increment,
+   * unrelated to the level number) nor its array position. `getReadinessLevelIndex()` above happens
+   * to line up with `level` only because CLARISA currently returns the rows pre-sorted 0..9 with no
+   * gaps — that is an accident of today's data, not a guarantee.
+   */
+  private getSelectedReadinessLevelValue(): number | null {
+    const selectedId = this.innovationDevInfoBody?.innovation_readiness_level_id;
+    if (selectedId === null || selectedId === undefined || !this.innovationControlListSE?.readinessLevelsList) {
+      return null;
+    }
+    const selected = this.innovationControlListSE.readinessLevelsList.find((level: any) => level.id === selectedId);
+    if (!selected) {
+      return null;
+    }
+    const levelValue = Number(selected.level);
+    return Number.isNaN(levelValue) ? null : levelValue;
+  }
+
+  /**
+   * P2-3265 (epic P2-3243): whether the "Have any studies been conducted to inform the innovation
+   * scaling strategy design..." question (and its follow-up studies-link list) should render.
+   *
+   * Ticket's own Conditional Logic table: "< 6: Not applicable (question was not shown at these
+   * levels)" + "= 6 [confirmed >= 6 by the PO, Ángel Jarrín, Jira P2-3265, 26-Aug-2026 16:14]:
+   * Remove — question must no longer appear". The union of both rows covers every level (0-9): the
+   * question is dropped entirely for the 2026 phase onward, regardless of the selected readiness
+   * level — there is no level at which it should newly appear. (An earlier pass of this gate showed
+   * it for levels 1-5, misreading a follow-up paraphrase as reversing the "< 6: not applicable" row;
+   * corrected 26-Aug-2026 after re-reading the ticket's literal table against this same file's
+   * pre-existing `>= 6` condition, which the table's "< 6" row was describing all along.)
+   *
+   * Phases up to and including 2025 must keep rendering exactly as before this change (Ángel Jarrín,
+   * Jira P2-3243 epic note, 23-Aug-2026): visible only from level 6 up. Gated on the reporting PHASE
+   * YEAR via `isInnovationDevFormReduced2026()` (already 2026-thresholded for this same epic), never
+   * on `isP25()`/portfolio — prtest holds 2025-phase results inside the P25 portfolio.
+   */
+  showScalingStudiesQuestion(): boolean {
+    if (this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
+      return false;
+    }
+    const levelValue = this.getSelectedReadinessLevelValue();
+    if (levelValue === null) {
+      return false;
+    }
+    return levelValue >= 6;
   }
 }

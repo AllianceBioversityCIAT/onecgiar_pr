@@ -1,0 +1,39 @@
+<div class="fsk">
+  @for (i of counter(rows()); track i) {
+    <div class="fsk-row" [class.fsk-row--last]="i === rows() - 1">
+      @if (hasLabel()) {
+        <div class="fsk-label"></div>
+      }
+      <div class="fsk-bar" [style.width.%]="i === 0 ? 70 : i === rows() - 1 ? 55 : 90 - i * 8"></div>
+    </div>
+  }
+
+  @if (hasExtra()) {
+    <a class="fsk-link"></a>
+    <div class="fsk-extra">
+      @if (hasLabel()) {
+        <div class="fsk-row">
+          <div class="fsk-label"></div>
+          <div class="fsk-bar fsk-bar--lg"></div>
+        </div>
+      }
+      @for (i of counter(extraRows()); track i) {
+        <div class="fsk-row fsk-row--compact">
+          <div class="fsk-label fsk-label--sm"></div>
+          <div class="fsk-pills">
+            <div class="fsk-pill"></div>
+            <div class="fsk-pill"></div>
+            <div class="fsk-pill"></div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  @for (i of counter(3); track i) {
+    <div class="fsk-row fsk-row--compact">
+      <div class="fsk-label fsk-label--sm"></div>
+      <div class="fsk-bar fsk-bar--short"></div>
+    </div>
+  }
+</div>

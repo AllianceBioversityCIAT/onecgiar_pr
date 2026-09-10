@@ -31,19 +31,29 @@ export class ResultsValidationModuleService {
         return this._handlersError.returnErrorRes({
           error: new NotFoundException('Result not found'),
         });
-      const submit = response.reduce(
-        (previousValue, currentValue: any) =>
-          previousValue * parseInt(currentValue.validation),
-        1,
-      );
+      /**
+       * P2-3552: coerce through `Number`, never `Boolean` on the raw value.
+       *
+       * The procedure's column is a BOOLEAN, but a driver or a procedure change that hands the value back as
+       * a STRING would make `Boolean('0')` -> `true` and paint EVERY section green — a false green, which is
+       * strictly worse than a false red: it unlocks Submit on an incomplete result. `Number` reads '0', 0,
+       * '1' and 1 the same way.
+       */
+      const isValid = (value: unknown) => Number(value) === 1;
+      // `[].every(...)` is `true`, and the old `reduce` seeded at 1 answered the same way: an empty result set
+      // unlocked Submit on a result whose sections were never evaluated. An answer with no sections in it is
+      // not evidence of completeness.
+      const submit =
+        response.length > 0 &&
+        response.every((item: any) => isValid(item.validation));
 
       return ReturnResponseUtil.format({
         response: {
           green_checks: response.map((item) => ({
             section_name: item.section_name,
-            validation: Boolean(item.validation),
+            validation: isValid(item.validation),
           })),
-          submit: Boolean(submit),
+          submit,
         },
         message: 'Validation sections calculated successfully',
         statusCode: HttpStatus.OK,

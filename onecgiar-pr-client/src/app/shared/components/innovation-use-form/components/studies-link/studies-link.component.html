@@ -16,16 +16,21 @@
     </button>
   </div>
 
+  <!-- P2-3426: never in `disabled` mode — a retired, read-only question must render no empty
+       placeholder block at all. -->
   <app-no-data-text
-    *ngIf="!this.body.scaling_studies_urls.length && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+    *ngIf="!this.body.scaling_studies_urls.length && !disabled && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
     title="No study link added"></app-no-data-text>
 
   <br />
 
+  <!-- P2-3426: `[disabled]` is kept for the pre-existing greyed-out cases; `*ngIf` now also drops
+       the control entirely in read-only mode, matching the delete button above, because the
+       retired question must offer no way to add an entry. -->
   <app-add-button
     name="Add another study link"
     (clickEvent)="addStudiesLink()"
     [disabled]="disabled"
-    *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
+    *ngIf="!disabled && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
   </app-add-button>
 </div>

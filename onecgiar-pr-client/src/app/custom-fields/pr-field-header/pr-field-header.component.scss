@@ -1,12 +1,27 @@
 .required::after {
   content: '*';
-  color: var(--pr-color-red-100);
+  // `--pr-field-required-fg` = #b42318 (mockup). Era --pr-color-red-100 (#fc7c7c), un rosa que a
+  // 14px casi no se veía — justo lo contrario de lo que un marcador de obligatorio debe hacer.
+  color: var(--pr-field-required-fg);
   margin-left: 2px;
 }
 
 .simpleStyle {
   color: var(--pr-color-primary-300) !important;
   opacity: 0.8;
+}
+
+// P2-3061: label + info icon row (only used when a tooltip is provided)
+.pr_label_row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pr_label_tooltip {
+  font-size: 16px;
+  color: var(--pr-color-primary-300);
+  cursor: pointer;
 }
 
 .pr_description.readOnly {

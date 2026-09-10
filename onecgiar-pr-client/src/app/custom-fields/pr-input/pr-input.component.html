@@ -1,117 +1,122 @@
-@if (this.preventFieldRender()) {
+@if (shouldRender()) {
   <div class="position-relative">
-    <app-under-construction-point *ngIf="this.underConstruction"></app-under-construction-point>
-    @if (showFieldHeader) {
-      <app-pr-field-header
-        [label]="customLabel || this.label"
-        [description]="this.description"
-        [required]="this.required"
-        [readOnly]="(readOnly || this.rolesSE.readOnly) && !isStatic"
-        [showDescriptionLabel]="this.showDescription"
-        [descInlineStyles]="descInlineStyles"
-        [labelDescInlineStyles]="labelDescInlineStyles"
-        [useColon]="useColon">
-      </app-pr-field-header>
+    <app-under-construction-point *ngIf="underConstruction()"></app-under-construction-point>
+    @if (showFieldHeader()) {
+      <app-field-card
+        [label]="customLabel() || effectiveLabel()"
+        [description]="effectiveDescription()"
+        [tooltip]="tooltip()"
+        [required]="effectiveRequired()"
+        [hasValue]="hasValue"
+        [hasError]="!!maxWords() && wordCount() > maxWords() && !autogenerate()"
+        [showDescription]="showDescription()"
+        [descInlineStyles]="descInlineStyles()">
+        <ng-container *ngTemplateOutlet="bodyTpl"></ng-container>
+      </app-field-card>
+    } @else {
+      <ng-container *ngTemplateOutlet="bodyTpl"></ng-container>
     }
+  </div>
+}
+
+<ng-template #bodyTpl>
+  <div
+    [ngSwitch]="(readOnly() || this.rolesSE.readOnly) && !isStatic()"
+    [ngClass]="{ mandatory: effectiveRequired(), readOnly: (readOnly() || this.rolesSE.readOnly) && !isStatic() }"
+    class="pr-input position-relative"
+    [style]="InlineStyles()">
     <div
-      [ngSwitch]="(readOnly || this.rolesSE.readOnly) && !isStatic"
-      [ngClass]="{ mandatory: this.required, readOnly: (readOnly || this.rolesSE.readOnly) && !isStatic }"
-      class="pr-input position-relative"
-      [style]="InlineStyles">
-      <div
-        class="text-secondary-400 pr-body-2"
-        *ngSwitchCase="true"
-        [innerHtml]="
-          this.type == 'link'
-            ? aTag(value)
-            : value == '0'
-              ? 0
-              : (value | yesOrNotByBoolean) || this.noDataText || (this.required ? this.notProvidedText : 'Not applicable')
-        "></div>
-      <div class="p-fluid input_container" *ngSwitchCase="false">
-        <div class="input-validation">{{ value }}</div>
+      class="text-secondary-400 pr-body-2"
+      *ngSwitchCase="true"
+      [innerHtml]="
+        type() == 'link'
+          ? aTag(value)
+          : value == '0'
+            ? 0
+            : (value | yesOrNotByBoolean) || noDataText() || (effectiveRequired() ? this.notProvidedText : 'Not applicable')
+      "></div>
+    <div class="p-fluid input_container" *ngSwitchCase="false">
+      <div class="input-validation">{{ value }}</div>
+      <input
+        *ngIf="type() != 'currency' && type() != 'number' && type() != 'email'"
+        [disabled]="disabled()"
+        hlmInput
+        [type]="type()"
+        [placeholder]="effectivePlaceholder()"
+        [(ngModel)]="value"
+        [attr.prValid]="true"
+        [ngClass]="{
+          'pr-valid': true,
+          'pr-body-2': true,
+          invalid: wordCount() > maxWords() && !autogenerate(),
+          warning: wordCount() > maxWords() && autogenerate()
+        }"
+        [style]="{ 'max-height': variant() === 'sm' ? '30px' : variant() === 'xs' ? '25px' : 'auto', width: '100%' }" />
+
+      <div style="display: flex; flex-direction: column; gap: 2px" *ngIf="type() == 'email'">
         <input
-          *ngIf="this.type != 'currency' && this.type != 'number' && this.type != 'email'"
-          [disabled]="this.disabled"
-          pInputText
-          [type]="this.type"
-          [placeholder]="this.placeholder"
+          [disabled]="disabled()"
+          hlmInput
+          type="email"
+          [placeholder]="effectivePlaceholder()"
           [(ngModel)]="value"
+          #emailInput="ngModel"
+          [required]="effectiveRequired()"
+          email
           [attr.prValid]="true"
           [ngClass]="{
             'pr-valid': true,
             'pr-body-2': true,
-            invalid: wordCount > maxWords && !autogenerate,
-            warning: wordCount > maxWords && autogenerate
+            invalid: emailInput.invalid || (wordCount() > maxWords() && !autogenerate()),
+            warning: wordCount() > maxWords() && autogenerate()
           }"
-          [style]="{ 'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%' }" />
-
-        <div style="display: flex; flex-direction: column; gap: 2px" *ngIf="this.type == 'email'">
-          <input
-            [disabled]="this.disabled"
-            pInputText
-            type="email"
-            [placeholder]="this.placeholder"
-            [(ngModel)]="value"
-            #emailInput="ngModel"
-            [required]="this.required"
-            email
-            [attr.prValid]="true"
-            [ngClass]="{
-              'pr-valid': true,
-              'pr-body-2': true,
-              invalid: emailInput.invalid || (wordCount > maxWords && !autogenerate),
-              warning: wordCount > maxWords && autogenerate
-            }"
-            [style]="{ 'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%' }" />
-          @if (emailInput.invalid) {
-            <p-message severity="error" size="small" variant="simple">
-              @if (emailInput.hasError('required')) {
-                Email is Required.
-              }
-              @if (emailInput.hasError('email')) {
-                Please enter a valid email.
-              }
-            </p-message>
-          }
-        </div>
-
-        <p-inputNumber
-          class=""
-          *ngIf="this.type == 'number'"
-          [(ngModel)]="value"
-          [disabled]="this.disabled"
-          [mode]="this.numberMode"
-          [minFractionDigits]="this.numberMode && 2"
-          [maxFractionDigits]="this.numberMode && this.maxDecimals"
-          [min]="0"
-          [ngClass]="{ 'pr-body-2': true }"
-          [style]="{ 'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%' }"
-          [placeholder]="this.placeholder">
-        </p-inputNumber>
-
-        <p-inputNumber
-          class=""
-          *ngIf="this.type == 'currency'"
-          [(ngModel)]="value"
-          mode="currency"
-          currency="USD"
-          [ngClass]="{ 'pr-body-2': true }"
-          locale="en-US"
-          [disabled]="this.disabled"
-          [placeholder]="this.placeholder"
-          [min]="0"
-          [style]="{ width: '100%' }">
-        </p-inputNumber>
-        <div class="hints_container">
-          <div class="hint">{{ this.hint }}</div>
-          <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords" [autogenerate]="autogenerate"> </app-pr-word-counter>
-        </div>
-        <div class="custom_validation_tooltip_container" *ngIf="this.type == 'link' && badLink && !readOnly && !this.rolesSE.readOnly && this.value">
-          <app-custom-validation-tooltip></app-custom-validation-tooltip>
-        </div>
+          [style]="{ 'max-height': variant() === 'sm' ? '30px' : variant() === 'xs' ? '25px' : 'auto', width: '100%' }" />
+        @if (emailInput.invalid) {
+          <div class="pr-body-3 text-red-300 pr-input-error">
+            @if (emailInput.hasError('required')) {
+              Email is Required.
+            }
+            @if (emailInput.hasError('email')) {
+              Please enter a valid email.
+            }
+          </div>
+        }
       </div>
-      <app-pr-field-validations></app-pr-field-validations>
+
+      <input
+        *ngIf="type() == 'number'"
+        hlmInput
+        type="text"
+        inputmode="decimal"
+        [(ngModel)]="numberRaw"
+        (ngModelChange)="onNumberInput()"
+        (focus)="onNumberFocus()"
+        (blur)="onNumberBlur()"
+        [disabled]="disabled()"
+        [placeholder]="effectivePlaceholder()"
+        [ngClass]="{ 'pr-body-2': true }"
+        [style]="{ 'max-height': variant() === 'sm' ? '30px' : variant() === 'xs' ? '25px' : 'auto', width: '100%' }" />
+
+      <input
+        *ngIf="type() == 'currency'"
+        hlmInput
+        type="text"
+        inputmode="decimal"
+        [(ngModel)]="currencyRaw"
+        (focus)="onCurrencyFocus()"
+        (blur)="onCurrencyBlur()"
+        [disabled]="disabled()"
+        [placeholder]="effectivePlaceholder()"
+        [ngClass]="{ 'pr-body-2': true }"
+        [style]="{ width: '100%' }" />
+      <div class="hints_container">
+        <div class="hint">{{ hint() }}</div>
+        <app-pr-word-counter *ngIf="maxWords()" [wordCount]="wordCount()" [maxWords]="maxWords()" [autogenerate]="autogenerate()"> </app-pr-word-counter>
+      </div>
+      <div class="custom_validation_tooltip_container" *ngIf="type() == 'link' && badLink && !readOnly() && !this.rolesSE.readOnly && value">
+        <app-custom-validation-tooltip></app-custom-validation-tooltip>
+      </div>
     </div>
+    <app-pr-field-validations></app-pr-field-validations>
   </div>
-}
+</ng-template>

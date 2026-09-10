@@ -3,6 +3,7 @@ import { GetExistingResultContributorsToIndicatorsQuery } from './get-existing-r
 import { ExistingResultContributorsLoaderService } from './existing-result-contributors-loader.service';
 import { ContributorsRoleResolverService } from './contributors-role-resolver.service';
 import { mapContributorRecords } from './existing-result-contributors.mapper';
+import type { ExistingResultContributorsScope } from './existing-result-contributors.types';
 
 @Injectable()
 export class GetExistingResultContributorsToIndicatorsHandler {
@@ -21,10 +22,15 @@ export class GetExistingResultContributorsToIndicatorsHandler {
         query.tocResultIndicatorId,
       );
 
+    // @akili-spec changes/indicator-reported-results — anything other than 'all' normalises to 'reviewed' (IRR-R-3.1)
+    const scope: ExistingResultContributorsScope =
+      query.scope === 'all' ? 'all' : 'reviewed';
+
     const resultContributionExists =
       await this._existingResultContributorsLoaderService.loadContributions(
         parsedResultTocResultId,
         tocResultIndicatorId,
+        scope,
       );
 
     const filteredContributors =

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "spartan-ui": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@spartan-ng/mcp"
+      ],
+      "env": {}
+    }
+  }
+}

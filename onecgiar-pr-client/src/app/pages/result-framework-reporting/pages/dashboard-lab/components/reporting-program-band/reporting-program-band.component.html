@@ -1,0 +1,847 @@
+<!--
+  Program band + tabs + Reporting toolbar.
+  Reference: docs/design-references/prms-shell-CURRENT/PRMS-Shell.dc.html:315-395 (band) and
+             :883-1002 (toolbar). Every px below is read from that markup, not inferred.
+  Spec:      docs/reporting-redesign/PROGRAM-SHELL-SPEC.md §3
+
+  ⚠️ html/body is 12px — NEVER use rem Tailwind spacing/type here (px-8 ≠ 32px, h-12 ≠ 48px).
+     Always arbitrary px: p-[32px], h-[48px], text-[14px] (UI-RULES §1.3).
+
+  Two boxes on purpose: only the tinted band is sticky. In the reference the toolbar lives inside
+  the 32px content pad (`:736`), NOT inside the band — pinning it too would double the sticky
+  chrome and eat a third of the viewport on a laptop.
+-->
+
+<!-- ═══ BAND — #F7F4FD. Hairline lives on the TABS row so the active 2px underline
+     can sit flush on it (mb-[-1px] covers the 1px edge — no double-line step).
+     -mt-px and top: calc(... - 1px) tuck the band 1px behind the shell topbar border
+     so scrolling content never bleeds through a subpixel gap between the two sticky surfaces. ═══ -->
+<div
+  class="sticky z-20 flex-none -mt-px bg-[var(--pr-surface-band)] transition-shadow duration-[180ms] ease-out"
+  style="top: calc(var(--pr-shell-header-height, 56px) - 1px);"
+  [class]="
+    (isScrolled() || bandCollapsed() ? 'shadow-[0_2px_8px_rgba(25,21,36,0.08)]' : 'shadow-none') +
+    (frameLocked() ? ' min-[900px]:static min-[900px]:!top-auto' : '')
+  ">
+  <!-- ── Identity: 88px, pad 0 32px, gap 6px (reference :329).
+       Scrolled past (bandCollapsed) it animates to 0 and the band is just the 48px tabs row —
+       the reference's `bandCollapsed` variant (:383). Height is animated instead of swapping
+       blocks so the band condenses instead of jumping. `overflow-hidden` is applied ONLY while
+       collapsed: when expanded it would clip the ⓘ popover, which overflows this box by design.
+       `inert` (not `aria-hidden`) because this box still holds the ⓘ button and the 36px CTA: once
+       clipped they must leave the a11y tree AND the tab order, or keyboard focus lands on an
+       invisible link. `aria-hidden` alone would hide them while keeping them tabbable. ── -->
+  <div
+    class="relative flex flex-col justify-center gap-[4px] px-[16px] sm:px-[32px] transition-[height,opacity] duration-[180ms] ease-out"
+    [class]="bandCollapsed() ? 'h-0 overflow-hidden opacity-0' : 'h-[64px] opacity-100'"
+    [attr.inert]="bandCollapsed() ? '' : null">
+    <!-- Eyebrow: dot + SP01 · REPORTING CYCLE 2026 · P25 -->
+    <div class="flex items-center gap-[7px]">
+      <span class="h-[7px] w-[7px] shrink-0 rounded-full" [style.background]="programDotColor()"></span>
+      @if (programCode()) {
+        <!-- `font-mono` (not the global `.pr-code`): that class is UNLAYERED SCSS, so its 12px/500
+             beat the layered Tailwind utilities next to it and the code rendered a notch bigger and
+             lighter than the rest of the eyebrow. Same metric both spans now — 11px/600/0.88px
+             (reference :338-339), only the family differs. -->
+        <span
+          class="font-mono text-[11px] font-semibold leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
+          {{ programCode() }}
+        </span>
+      }
+      <span
+        class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
+        {{ eyebrowCycle() }}
+      </span>
+      <!-- `48 DAYS LEFT` chip intentionally absent — no cycle end date in the client. -->
+    </div>
+
+    <!-- Title row + ⓘ popover (reference :343-358). Click, not hover. -->
+    <div class="relative flex min-w-0 items-center gap-[8px] pr-[140px] sm:pr-[240px] min-[900px]:pr-[380px]" data-guide="sp-identity">
+      <h1
+        class="m-0 min-w-0 truncate text-[18px] sm:text-[21px] font-bold leading-[1.25] tracking-[-0.015em] text-[var(--pr-text-heading)]">
+        {{ programName() }}
+      </h1>
+
+      <button
+        type="button"
+        class="flex h-[22px] w-[22px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] transition-all hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+        aria-label="About this program and view"
+        [attr.aria-expanded]="infoOpen()"
+        [attr.aria-controls]="'pr-band-info-popover'"
+        (click)="toggleInfo($event)">
+        <ng-icon name="lucideInfo" class="text-[13px]" />
+      </button>
+
+      @if (infoOpen()) {
+        <!--
+          460×auto, radius 14, border #E3E3E8, shadow, pad 18.
+          left:0 top:32 under the title row.
+          stopPropagation so document:click does not close it mid-interaction.
+        -->
+        <div
+          id="pr-band-info-popover"
+          role="dialog"
+          aria-label="About this program and view"
+          class="absolute left-0 top-[32px] z-30 w-[460px] max-w-[90vw] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+          (click)="$event.stopPropagation()">
+          <div class="mb-[12px] flex items-center justify-between gap-[8px]">
+            <div class="flex items-center gap-[8px] min-w-0">
+              <span class="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[6px] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]">
+                <ng-icon name="lucideInfo" class="text-[14px]" />
+              </span>
+              <span class="min-w-0 truncate text-[14.5px] font-bold text-[var(--pr-text-heading)]">
+                {{ programName() }}
+              </span>
+            </div>
+            <button
+              type="button"
+              class="flex h-[24px] w-[24px] shrink-0 cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--pr-text-secondary)] transition-colors hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)]"
+              aria-label="Close"
+              (click)="closeInfo()">
+              <ng-icon name="lucideX" class="text-[14px]" />
+            </button>
+          </div>
+
+          <!-- Active view context -->
+          <div class="mb-[14px] rounded-[10px] bg-[var(--pr-color-primary-25)] border border-[var(--pr-color-primary-100)] p-[12px]">
+            <div class="mb-[4px] flex items-center gap-[6px]">
+              <span class="inline-block rounded-full bg-[var(--pr-color-primary-100)] px-[8px] py-[2px] text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-color-primary-700)]">
+                {{ activeTabInfo().title }}
+              </span>
+              <span class="text-[11.5px] font-medium text-[var(--pr-text-subtle)]">Active view</span>
+            </div>
+            <p class="m-0 text-[12.5px] font-normal leading-[1.5] text-[var(--pr-text-secondary)]">
+              {{ activeTabInfo().description }}
+            </p>
+          </div>
+
+          <!-- Program overview -->
+          <div>
+            <span class="block mb-[4px] text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">
+              Program overview
+            </span>
+            <div
+              class="max-h-[140px] overflow-y-auto text-[13px] font-normal leading-[1.55] text-[var(--pr-text)] [text-wrap:pretty]">
+              {{ resolvedDescription() }}
+            </div>
+          </div>
+
+          <div
+            class="mt-[14px] border-t border-[var(--pr-border-divider)] pt-[10px] text-[12px] font-medium text-[var(--pr-text-secondary)] flex items-center justify-between">
+            <span>{{ programMeta() }}</span>
+            <span class="font-mono text-[11px] text-[var(--pr-text-subtle)]">{{ programCode() }}</span>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Top-right action: Where to report. Smart Back was removed — after sibling-skip
+         it always read “Back to Science programs” and did not return Overview ↔ Reporting. -->
+    <!-- Top-right actions: Guided Tour + Where to report -->
+    <div class="absolute right-[16px] sm:right-[32px] top-1/2 z-[22] flex -translate-y-1/2 items-center gap-[6px] sm:gap-[10px]">
+      <button
+        type="button"
+        class="flex h-[32px] sm:h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[8px] sm:px-[12px] text-[12px] sm:text-[13px] font-semibold text-[var(--pr-text-secondary)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+        (click)="startSpTour()"
+        data-guide="sp-tour-trigger"
+        aria-label="Start guided tour">
+        <span class="material-icons-round text-[16px] text-[var(--pr-color-primary-500)]">explore</span>
+        <span class="hidden sm:inline">Tour</span>
+      </button>
+
+      <!-- `@akili-spec changes/emerging-result-cta-placement` ERC-T-1, ERC-DD-3, §6.2/§6.3 — a
+           THIRD, distinct outline control between Tour and Where to report. Tour's own chrome
+           (outline, 32/36px), never the filled-brand treatment of Where to report (UI-RULES §1: one
+           brand button per screen). `aria-label` is unconditional so the accessible name stays
+           "Report emerging result" even once the visible label collapses (ERC-R-1 narrow
+           viewport). Fail-closed: `canReportEmerging` defaults false, so a forgetful host hides
+           this entirely rather than leaking create chrome on AVISA (ERC-R-5, KZ-REH-2 — no native
+           `[disabled]`). Click emits ONLY `reportEmerging` (ERC-R-2) via `onReportEmergingClick`. -->
+      @if (canReportEmerging()) {
+        <button
+          type="button"
+          class="flex h-[32px] sm:h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[8px] sm:px-[12px] text-[12px] sm:text-[13px] font-semibold text-[var(--pr-text-secondary)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+          (click)="onReportEmergingClick()"
+          data-testid="program-band-report-emerging-btn"
+          aria-label="Report emerging result">
+          <span class="material-icons-round text-[16px] sm:text-[18px] text-[var(--pr-color-primary-500)]">add_circle</span>
+          <span class="hidden sm:inline">Report emerging result</span>
+        </button>
+      }
+
+      @if (canReport()) {
+        <button
+          type="button"
+          class="flex h-[32px] sm:h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[6px] sm:gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[10px] sm:px-[14px] text-[12px] sm:text-[13.5px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+          (click)="onWhereToReportClick()"
+          data-testid="program-band-where-to-report-btn">
+          <span class="material-icons-round text-[16px] sm:text-[18px]">explore</span>
+          <span class="hidden min-[480px]:inline">Where to report</span>
+          <span class="min-[480px]:hidden">Report</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- ── Tabs: 48px + full-width hairline. Active tab paints a 2px violet line that
+       overlaps the hairline (mb-[-1px]) so you never see grey under the violet. ── -->
+  <nav
+    class="flex h-[48px] items-stretch gap-[16px] sm:gap-[24px] border-b border-[var(--pr-border-band)] px-[16px] sm:px-[32px] overflow-x-auto no-scrollbar"
+    aria-label="Program sections"
+    data-guide="sp-tabs">
+    @if (bandCollapsed()) {
+      <!-- Collapsed identity — reference :384-386: dot + name at 15px/600, then 24px to the tabs
+           (16px gap + the 8px the reference puts on the tab strip). Lives INSIDE the tabs row so the
+           band is a single 48px bar, not two stacked ones. -->
+      <div class="pr-band-fade flex shrink-0 items-center gap-[12px] sm:gap-[16px]">
+        <span class="h-[8px] w-[8px] shrink-0 rounded-full" [style.background]="programDotColor()"></span>
+        <span class="whitespace-nowrap text-[14px] sm:text-[15px] font-semibold text-[var(--pr-text-heading)]">
+          {{ programName() }}
+        </span>
+      </div>
+    }
+    <a
+      class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
+      [class]="
+        activeTab() === 'overview'
+          ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+          : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+      "
+      [attr.aria-current]="activeTab() === 'overview' ? 'page' : null"
+      [routerLink]="overviewPath()"
+      queryParamsHandling="preserve">
+      <span
+        class="material-icons-round text-[18px] transition-colors"
+        [class]="activeTab() === 'overview' ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
+        aria-hidden="true">
+        space_dashboard
+      </span>
+      <span class="pr-tab-label">Overview</span>
+    </a>
+    <a
+      class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
+      [class]="
+        activeTab() === 'reporting'
+          ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+          : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+      "
+      [attr.aria-current]="activeTab() === 'reporting' ? 'page' : null"
+      [routerLink]="reportingPath()"
+      queryParamsHandling="preserve">
+      <span
+        class="material-icons-round text-[18px] transition-colors"
+        [class]="activeTab() === 'reporting' ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
+        aria-hidden="true">
+        track_changes
+      </span>
+      <span class="pr-tab-label">Reporting</span>
+    </a>
+    <a
+      class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
+      [class]="
+        activeTab() === 'results'
+          ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+          : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+      "
+      [attr.aria-current]="activeTab() === 'results' ? 'page' : null"
+      [routerLink]="resultsPath()"
+      queryParamsHandling="preserve">
+      <span
+        class="material-icons-round text-[18px] transition-colors"
+        [class]="activeTab() === 'results' ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
+        aria-hidden="true">
+        table_chart
+      </span>
+      <span class="pr-tab-label">Results</span>
+    </a>
+    <!-- @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-R-1, BRT-R-2) — fifth tab,
+         between Results and My results, cloned from the My results anchor below. Badge from the
+         injected BilateralReviewCountService (BRT-DD-2), not a host input. -->
+    <a
+      class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
+      [class]="
+        activeTab() === 'bilateral-review'
+          ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+          : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+      "
+      [attr.aria-current]="activeTab() === 'bilateral-review' ? 'page' : null"
+      [routerLink]="bilateralReviewPath()"
+      queryParamsHandling="preserve">
+      <span
+        class="material-icons-round text-[18px] transition-colors"
+        [class]="activeTab() === 'bilateral-review' ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
+        aria-hidden="true">
+        fact_check
+      </span>
+      <span class="pr-tab-label">{{ copy.tabLabel }}</span>
+      @if ((bilateralReviewCount() ?? 0) > 0) {
+        <span
+          class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums"
+          [attr.aria-label]="copy.badgeAriaLabel(bilateralReviewCount()!)">
+          {{ bilateralReviewCount() }}
+        </span>
+      }
+    </a>
+    <!-- @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1) — fourth programme-view tab, after
+         Results. NOT the design's reserved `Drafts` slot (see `myWorkPath`'s docstring, MWB-DD-12). -->
+    <a
+      class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
+      [class]="
+        activeTab() === 'my-work'
+          ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+          : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+      "
+      [attr.aria-current]="activeTab() === 'my-work' ? 'page' : null"
+      [routerLink]="myWorkPath()"
+      queryParamsHandling="preserve">
+      <span
+        class="material-icons-round text-[18px] transition-colors"
+        [class]="activeTab() === 'my-work' ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
+        aria-hidden="true">
+        view_kanban
+      </span>
+      <span class="pr-tab-label">My results</span>
+      @if ((myWorkCount() ?? 0) > 0) {
+        <span
+          class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums"
+          [attr.aria-label]="myWorkCount() + ' results in editing'">
+          {{ myWorkCount() }}
+        </span>
+      }
+    </a>
+    <!-- ⚠️ The design's FOURTH tab, `Drafts` (PRMS-Reporting.dc.html:420 / :443), sits inside an
+         `sc-if` on `centerMode` — it is a CENTER-view tab, not a programme-view one, so it is
+         deliberately absent here. This is not a missed tab; do not "fix" it.
+         One strip serves both shapes: the design duplicates the tabs for its `bandCollapsed`
+         variant (:439-443), this nav is shared by the expanded and condensed band, so a tab added
+         here appears in both. -->
+
+    @if (bandCollapsed() && (canReport() || canReportEmerging())) {
+      <!-- `min-w-0` here is the OSF-T-10 fix: this group had no automatic-minimum override of its
+           own, so as a nested flex item it kept a min-content width equal to the sum of its
+           children even while `ml-auto` let it shrink visually. Smart Back was removed from this
+           group (it no longer shared the 900px budget with the CTA).
+           `@akili-spec changes/emerging-result-cta-placement` ERC-T-1 — the outer gate was widened
+           to `canReport() || canReportEmerging()` so the collapsed bar still renders when only the
+           emerging control is enabled (e.g. AVISA with no programme CTA). -->
+      <div
+        class="ml-auto flex min-w-0 items-center gap-[6px] sm:gap-[8px] self-center"
+        data-testid="program-band-collapsed-actions">
+        <button
+          type="button"
+          class="group relative flex h-[32px] min-w-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[8px] sm:px-[10px] text-[12px] font-semibold text-[var(--pr-text-secondary)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+          (click)="startSpTour()"
+          aria-label="Start guided tour">
+          <span class="material-icons-round shrink-0 text-[15px] text-[var(--pr-color-primary-500)]">explore</span>
+          <span class="hidden sm:inline min-w-0 truncate">Tour</span>
+        </button>
+
+        <!-- `@akili-spec changes/emerging-result-cta-placement` ERC-T-1, ERC-R-20 — collapsed copy
+             of the standalone emerging control, between Tour and Where to report (same tab order as
+             the expanded cluster). `ERC-R-20` permits shortening the VISIBLE label to "Emerging" in
+             this 32px bar; `aria-label` keeps the accessible name full so AT users hear the same
+             control name in both states. Same fail-closed gate, same split emit
+             (`onReportEmergingClick`, ERC-R-2) — no `[disabled]` fallback. -->
+        @if (canReportEmerging()) {
+          <button
+            type="button"
+            class="group relative flex h-[32px] min-w-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[8px] sm:px-[10px] text-[12px] font-semibold text-[var(--pr-text-secondary)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+            (click)="onReportEmergingClick()"
+            data-testid="program-band-report-emerging-btn-condensed"
+            aria-label="Report emerging result">
+            <span class="material-icons-round shrink-0 text-[15px] text-[var(--pr-color-primary-500)]">add_circle</span>
+            <span class="hidden sm:inline min-w-0 truncate">Emerging</span>
+          </button>
+        }
+
+        @if (canReport()) {
+          <!-- The 36px CTA of the identity block is clipped away with it, so the collapsed bar
+               carries its own 32px copy (reference :396-399). Same action, same label, same tooltip. -->
+          <button
+            type="button"
+            class="pr-band-fade group relative flex h-[32px] min-w-0 cursor-pointer appearance-none items-center gap-[6px] sm:gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[10px] sm:px-[12px] text-[12px] sm:text-[13px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] shadow-2xs"
+            (click)="onWhereToReportClick()"
+            data-testid="program-band-where-to-report-btn-condensed">
+            <span class="material-icons-round shrink-0 text-[16px]">explore</span>
+            <span class="min-w-0 truncate">Where to report</span>
+            <span
+              class="pointer-events-none absolute right-0 top-full z-[30] mt-[8px] w-[220px] rounded-[8px] bg-[var(--pr-color-secondary-400)] px-[12px] py-[8px] text-[12px] font-normal leading-[1.4] text-white opacity-0 shadow-lg transition-opacity delay-150 group-hover:opacity-100">
+              Find the right reporting pathway or report achievements that emerged during the year.
+            </span>
+          </button>
+        }
+      </div>
+    }
+  </nav>
+</div>
+
+<!-- ═══ REPORTING CONTROLS & CONTENT ═══ -->
+@if (showToolbar()) {
+  <!-- 1. Top Controls Bar — consistent with Overview top bar -->
+  <div
+    class="flex flex-wrap items-center justify-between gap-[10px] sm:gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]"
+    role="search"
+    aria-label="Reporting controls"
+    data-guide="sp-actions-toolbar">
+    <div class="flex flex-wrap items-center gap-[10px]">
+      <!-- Search Input -->
+      <div class="relative h-[34px] w-[220px] max-sm:w-full">
+        <span class="pointer-events-none absolute left-[10px] top-1/2 flex -translate-y-1/2 text-[var(--pr-text-subtle)]">
+          <ng-icon name="lucideSearch" class="text-[15px]" />
+        </span>
+        <input
+          type="text"
+          class="h-[34px] w-full rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-app)] pl-[32px] pr-[28px] text-[13px] text-[var(--pr-text-heading)] outline-none transition-colors placeholder:text-[var(--pr-text-subtle)] focus-visible:border-[var(--pr-color-primary-300)] focus-visible:bg-[var(--pr-surface-card)]"
+          placeholder="Search AoW, outcomes, outputs or indicators"
+          aria-label="Search by Area of Work, outcome, output or indicator"
+          [value]="search()"
+          (input)="onSearchInput($any($event.target).value)" />
+        @if (search()) {
+          <button
+            type="button"
+            (click)="onClearSearch()"
+            class="absolute right-[8px] top-1/2 -translate-y-1/2 flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:text-slate-700"
+            aria-label="Clear search">
+            <span class="material-icons-round text-[14px]">close</span>
+          </button>
+        }
+      </div>
+
+      @if (search() && matchCount() !== null && matchCount() !== undefined) {
+        <span
+          data-testid="search-match-count"
+          class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold tabular-nums shrink-0"
+          [class]="matchCount() === 0
+            ? 'bg-amber-50 text-amber-800 border border-amber-200'
+            : 'bg-violet-50 text-violet-700 border border-violet-200'">
+          {{ matchCount() }} {{ matchCount() === 1 ? 'match' : 'matches' }}
+        </span>
+      }
+
+      <!-- Divider -->
+      <div class="h-[22px] w-[1px] bg-[var(--pr-border-divider)] mx-[2px] hidden sm:block"></div>
+
+      <!-- Compact By-AOW Switcher when compactFilters is active -->
+      @if (compactFilters()) {
+        <div class="pr-band-filter w-[230px]" aria-label="Switch Area of Work">
+          <app-pr-filter-select
+            [options]="aowSingleOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Area of Work"
+            [ngModel]="activeAowCode()"
+            (changed)="aowSwitch.emit($event)"></app-pr-filter-select>
+        </div>
+      }
+
+      <!-- JIRA-style Filter Button & Popover -->
+      <div class="relative pr-reporting-filter-container">
+        <button
+          type="button"
+          (click)="toggleFilterPopover($event)"
+          class="inline-flex h-[34px] cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+          [class]="hasActiveFilters()
+            ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] font-semibold'
+            : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] font-medium hover:border-slate-400 hover:bg-slate-50'"
+          aria-label="Filter indicators"
+          [attr.aria-expanded]="filterPopoverOpen()">
+          <span class="material-icons-round text-[18px]" [class.text-[var(--pr-color-primary-600)]]="hasActiveFilters()" [class.text-slate-500]="!hasActiveFilters()">filter_list</span>
+          <span>Filter</span>
+          @if (activeFilterCount() > 0) {
+            <span class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums">
+              {{ activeFilterCount() }}
+            </span>
+          }
+        </button>
+
+        <div
+          class="absolute left-0 top-[40px] z-30 w-[360px] max-w-[90vw] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+          [class.hidden]="!filterPopoverOpen()"
+          (click)="$event.stopPropagation()">
+          <!-- Popover Header -->
+          <div class="mb-[14px] flex items-center justify-between border-b border-[var(--pr-border-divider)] pb-[10px]">
+            <span class="text-[13.5px] font-bold text-[var(--pr-text-heading)]">Filters</span>
+            <div class="flex items-center gap-[10px]">
+              @if (hasActiveFilters()) {
+                <button
+                  type="button"
+                  (click)="clearAllFilters.emit()"
+                  class="inline-flex cursor-pointer items-center gap-[3px] border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:underline">
+                  <span class="material-icons-round text-[14px]" aria-hidden="true">filter_alt_off</span>
+                  Clear all
+                </button>
+              }
+              <button
+                type="button"
+                (click)="closeFilterPopover()"
+                class="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[5px] border-0 bg-transparent p-0 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close filters">
+                <span class="material-icons-round text-[16px]">close</span>
+              </button>
+            </div>
+          </div>
+
+          @if (compactFilters()) {
+            <!-- Center -->
+            @if (centerOptions().length > 0) {
+              <div class="pr-band-filter mb-[12px]" aria-label="Filter by center">
+                <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                  Center
+                </label>
+                <app-pr-filter-select
+                  [options]="centerOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="All centers"
+                  emptyValue="all"
+                  [ngModel]="centerValue() || 'all'"
+                  (changed)="centerChange.emit($event === 'all' ? null : $event)"></app-pr-filter-select>
+              </div>
+            }
+
+            <!-- Result Type & Status in 2 columns -->
+            <div class="mb-[12px] grid grid-cols-2 gap-[10px]">
+              <div class="pr-band-filter" aria-label="Filter by result type">
+                <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                  Result Type
+                </label>
+                <app-pr-filter-select
+                  [options]="byAowTypeOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="All types"
+                  emptyValue="all"
+                  [ngModel]="byAowTypeValue() || 'all'"
+                  (changed)="byAowTypeChange.emit($event === 'all' ? null : $event)"></app-pr-filter-select>
+              </div>
+              <div class="pr-band-filter pr-band-filter--align-right" aria-label="Filter by status">
+                <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                  Status
+                </label>
+                <app-pr-filter-multiselect
+                  [options]="cleanStatusOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="All statuses"
+                  countLabel="statuses"
+                  [ngModel]="statusValue()"
+                  (changed)="statusChange.emit($event)"></app-pr-filter-multiselect>
+              </div>
+            </div>
+          } @else {
+            <!-- Section (AoW) -->
+            <div class="pr-band-filter mb-[12px]" aria-label="Filter by section">
+              <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                Section / Area of Work
+              </label>
+              <app-pr-filter-multiselect
+                [options]="aowOptions()"
+                [group]="true"
+                optionGroupLabel="label"
+                optionGroupChildren="items"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select sections"
+                countLabel="sections"
+                [ngModel]="aowValue()"
+                (changed)="aowChange.emit($event)"></app-pr-filter-multiselect>
+            </div>
+
+            <!-- Type & Category in 2 columns -->
+            <div class="mb-[12px] grid grid-cols-2 gap-[10px]">
+              <div class="pr-band-filter" aria-label="Filter by type">
+                <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                  Type
+                </label>
+                <app-pr-filter-multiselect
+                  [options]="cleanTypeOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="All types"
+                  countLabel="types"
+                  [ngModel]="typeValue()"
+                  (changed)="typeChange.emit($event)"></app-pr-filter-multiselect>
+              </div>
+              <div class="pr-band-filter pr-band-filter--align-right" aria-label="Filter by category">
+                <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                  Category
+                </label>
+                <app-pr-filter-multiselect
+                  [options]="cleanTypologyOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="All categories"
+                  countLabel="categories"
+                  [ngModel]="typologyValue()"
+                  (changed)="typologyChange.emit($event)"></app-pr-filter-multiselect>
+              </div>
+            </div>
+
+            <!-- Status -->
+            <div class="pr-band-filter mb-[12px]" aria-label="Filter by status">
+              <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                Status
+              </label>
+              <app-pr-filter-multiselect
+                [options]="cleanStatusOptions()"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="All statuses"
+                countLabel="statuses"
+                [ngModel]="statusValue()"
+                (changed)="statusChange.emit($event)"></app-pr-filter-multiselect>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Active Filter Chips -->
+      @if (compactFilters()) {
+        @if (activeCenterLabel(); as centerLbl) {
+          <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+            <span class="text-slate-500 font-normal">Center:</span>
+            <span class="font-semibold max-w-[140px] truncate" [title]="centerLbl">{{ centerLbl }}</span>
+            <button
+              type="button"
+              (click)="removeCenterChip()"
+              class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Remove center filter">
+              <span class="material-icons-round text-[13px]">close</span>
+            </button>
+          </span>
+        }
+        @if (activeByAowTypeLabel(); as aowTypeLbl) {
+          <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+            <span class="text-slate-500 font-normal">Type:</span>
+            <span class="font-semibold max-w-[140px] truncate" [title]="aowTypeLbl">{{ aowTypeLbl }}</span>
+            <button
+              type="button"
+              (click)="removeByAowTypeChip()"
+              class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Remove type filter">
+              <span class="material-icons-round text-[13px]">close</span>
+            </button>
+          </span>
+        }
+      } @else {
+        @for (chip of activeAowChips(); track chip.value) {
+          <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+            <span class="text-slate-500 font-normal">Section:</span>
+            <span class="font-semibold max-w-[140px] truncate" [title]="chip.label">{{ chip.label }}</span>
+            <button
+              type="button"
+              (click)="removeAowChip(chip.value)"
+              class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Remove section filter">
+              <span class="material-icons-round text-[13px]">close</span>
+            </button>
+          </span>
+        }
+
+        @for (chip of activeTypeChips(); track chip.value) {
+          <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+            <span class="text-slate-500 font-normal">Type:</span>
+            <span class="font-semibold max-w-[120px] truncate" [title]="chip.label">{{ chip.label }}</span>
+            <button
+              type="button"
+              (click)="removeTypeChip(chip.value)"
+              class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Remove type filter">
+              <span class="material-icons-round text-[13px]">close</span>
+            </button>
+          </span>
+        }
+
+        @for (chip of activeTypologyChips(); track chip.value) {
+          <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+            <span class="text-slate-500 font-normal">Category:</span>
+            <span class="font-semibold max-w-[140px] truncate" [title]="chip.label">{{ chip.label }}</span>
+            <button
+              type="button"
+              (click)="removeTypologyChip(chip.value)"
+              class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Remove category filter">
+              <span class="material-icons-round text-[13px]">close</span>
+            </button>
+          </span>
+        }
+      }
+
+      @for (chip of activeStatusChips(); track chip.value) {
+        <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+          <span class="text-slate-500 font-normal">Status:</span>
+          <span class="font-semibold" [title]="chip.label">{{ chip.label }}</span>
+          <button
+            type="button"
+            (click)="removeStatusChip(chip.value)"
+            class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+            aria-label="Remove status filter">
+            <span class="material-icons-round text-[13px]">close</span>
+          </button>
+        </span>
+      }
+
+      <!-- Only pending button switch directly in top bar -->
+      <button
+        type="button"
+        role="switch"
+        [attr.aria-checked]="onlyPending()"
+        class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] font-medium transition-colors"
+        [class]="
+          onlyPending()
+            ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
+            : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]'
+        "
+        (click)="onlyPendingChange.emit(!onlyPending())">
+        Only pending
+      </button>
+
+      <!-- Favorites-only switch, hidden in the By-AOW compact view (no stars rendered there). @akili-spec changes/reporting-favorite-indicators -->
+      @if (!compactFilters()) {
+        <button
+          type="button"
+          role="switch"
+          [attr.aria-checked]="favoritesOnly()"
+          data-testid="favorites-switch"
+          class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] font-medium transition-colors"
+          [class]="
+            favoritesOnly()
+              ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
+              : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]'
+          "
+          (click)="favoritesOnlyChange.emit(!favoritesOnly())">
+          <span class="material-icons-round text-[16px]" aria-hidden="true">{{ favoritesOnly() ? 'star' : 'star_outline' }}</span>
+          Favorites
+          <span class="tabular-nums text-[12px] text-[var(--pr-text-subtle)]">({{ favoritesCount() }})</span>
+        </button>
+      }
+
+      <!-- Sort tablist directly in top bar -->
+      <div
+        role="tablist"
+        aria-label="Sort"
+        class="flex h-[34px] shrink-0 items-center gap-[2px] rounded-[8px] bg-slate-100 p-[2px] border border-slate-200">
+        <button
+          type="button"
+          role="tab"
+          class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors cursor-pointer"
+          [class]="
+            burndownSort() === 'catalogue'
+              ? 'bg-white font-semibold text-[var(--pr-color-primary-600)] shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          [attr.aria-selected]="burndownSort() === 'catalogue'"
+          (click)="burndownSortChange.emit('catalogue')">
+          Catalogue
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors cursor-pointer"
+          [class]="
+            burndownSort() === 'remaining'
+              ? 'bg-white font-semibold text-[var(--pr-color-primary-600)] shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          [attr.aria-selected]="burndownSort() === 'remaining'"
+          (click)="burndownSortChange.emit('remaining')">
+          Remaining work
+        </button>
+      </div>
+
+      <!-- Clear filters button -->
+      @if (filtersActive() || hasActiveFilters()) {
+        <button
+          type="button"
+          (click)="clearAllFilters.emit()"
+          class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[4px] rounded-[8px] border-0 bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+          <span class="material-icons-round text-[15px]" aria-hidden="true">filter_alt_off</span>
+          Clear filters
+        </button>
+      }
+    </div>
+
+
+    <!-- Right side controls: Expand all + Segmented view switch -->
+    <div class="flex items-center gap-[8px] sm:gap-[10px] w-full sm:w-auto sm:ml-auto justify-between sm:justify-end flex-wrap mt-1 sm:mt-0">
+      @if (compactFilters()) {
+        <button
+          type="button"
+          (click)="allAowsClick.emit()"
+          class="inline-flex h-[32px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs transition-colors">
+          <span class="material-icons-round text-[16px]" aria-hidden="true">grid_view</span>
+          All Areas of Work
+        </button>
+      }
+
+      @if (viewMode() === 'grouped' && canExpandAll()) {
+        <button
+          type="button"
+          class="flex h-[32px] shrink-0 items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12.5px] font-medium text-[var(--pr-text-secondary)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)] shadow-2xs"
+          (click)="toggleExpandAll.emit()">
+          <ng-icon [name]="allExpanded() ? 'lucideChevronsDownUp' : 'lucideChevronsUpDown'" class="text-[15px]" />
+          {{ allExpanded() ? 'Collapse all' : 'Expand all' }}
+        </button>
+      }
+
+      @if (!compactFilters()) {
+        <div
+          role="tablist"
+          aria-label="Grouping"
+          class="flex h-[32px] shrink-0 items-center gap-[2px] rounded-[8px] bg-slate-100 p-[2px] border border-slate-200">
+          <button
+            type="button"
+            role="tab"
+            class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors"
+            [class]="viewMode() === 'grouped'
+              ? 'bg-white font-semibold text-[var(--pr-color-primary-700)] shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'"
+            [attr.aria-selected]="viewMode() === 'grouped'"
+            (click)="viewModeChange.emit('grouped')">
+            Grouped
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors"
+            [class]="viewMode() === 'flat'
+              ? 'bg-white font-semibold text-[var(--pr-color-primary-700)] shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'"
+            [attr.aria-selected]="viewMode() === 'flat'"
+            (click)="viewModeChange.emit('flat')">
+            All indicators
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (!compactFilters()) {
+    <div
+      class="flex items-center gap-1.5 px-[16px] sm:px-[32px] py-[8px] bg-[var(--pr-surface-app)] border-b border-[var(--pr-border-divider)] overflow-x-auto custom_scroll"
+      role="group"
+      aria-label="Quick typology filters"
+      data-testid="quick-typology-filters">
+      @for (chip of quickChips(); track chip.id) {
+        <button
+          type="button"
+          (click)="onQuickChipClick(chip)"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] transition-all border cursor-pointer shrink-0"
+          [class]="chip.active
+            ? 'bg-[var(--pr-color-primary-400)] border-[var(--pr-color-primary-400)] text-white shadow-xs font-semibold'
+            : 'bg-[var(--pr-surface-card)] border-[var(--pr-border)] text-[var(--pr-text-secondary)] hover:border-[var(--pr-color-primary-300)] font-medium'"
+          [attr.aria-pressed]="chip.active">
+          <span>{{ chip.label }}</span>
+          @if (chip.count !== undefined && chip.count !== null) {
+            <span
+              class="text-[10.5px] px-1.5 py-0.2 rounded-full tabular-nums"
+              [class]="chip.active ? 'bg-white/20 text-white font-bold' : 'bg-slate-100 text-slate-600 font-medium'">
+              {{ chip.count }}
+            </span>
+          }
+        </button>
+      }
+    </div>
+  }
+}
+

@@ -1,0 +1,403 @@
+/**
+ * Reporting tab — only what Tailwind cannot express cleanly lives here (the grid template, the
+ * line clamps, the status-mark host). Everything else is a utility in the template, per the
+ * client's Tailwind-first rule.
+ *
+ * The two things taken from the approved design and kept verbatim: the ten-track row grid
+ * (status | title | gap | Target | gap | Achieved | gap | action | gap | menu, with the gap tracks
+ * keeping Target, Achieved and the action aligned down the table), and the status mark — a
+ * concentric bullseye, always brand violet, never a traffic-light ring: workflow state is carried
+ * by the action label, the tooltip and the filters, not by recolouring the mark.
+ */
+
+:host {
+  display: block;
+}
+
+/* ── Animated disclosure (AoW + HLO).
+   `RGS-T-3` (changes/aow-row-gesture-split): the `.pr-collapse` / `.pr-collapse-inner` rule that
+   used to live HERE moved to the shared `src/styles/collapse.scss` — `program-overview`'s AoW
+   progress section now reuses it too. Do not re-add a local copy; extend the shared file instead.
+   @akili-spec changes/aow-row-gesture-split ── */
+
+/* ── Shared Reporting Grid Definition ──
+   Used identically by .pr-hlo-head, .pr-hlo-row, and .pr-reporting-row so all headers, HLO
+   metric totals, and indicator rows align with pixel precision. */
+$pr-reporting-tracks: 24px minmax(280px, 1fr) 72px 72px 104px 124px 140px 28px;
+$pr-reporting-gap: 12px;
+$pr-reporting-pad: 8px 16px;
+
+/* ── Subgroup table column header ── */
+.pr-hlo-head {
+  display: grid;
+  grid-template-columns: $pr-reporting-tracks;
+  align-items: center;
+  gap: $pr-reporting-gap;
+  height: 28px;
+  padding: 0 16px;
+  background: rgba(248, 250, 252, 0.5);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  border-left: 3px solid transparent;
+  box-sizing: border-box;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  user-select: none;
+  min-width: 852px;
+}
+
+/* ── HLO row (tabular tree-table node) ── */
+.pr-hlo-row {
+  display: grid;
+  grid-template-columns: $pr-reporting-tracks;
+  align-items: center;
+  gap: $pr-reporting-gap;
+  min-height: 48px;
+  padding: $pr-reporting-pad;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 852px;
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: -2px;
+  }
+}
+
+/* ── The row. Grid + pad are the design verbatim (spacers keep Target / Achieved / action aligned). ── */
+.pr-reporting-row {
+  display: grid;
+  grid-template-columns: $pr-reporting-tracks;
+  align-items: center;
+  gap: $pr-reporting-gap;
+  min-height: 48px;
+  padding: $pr-reporting-pad;
+  border-bottom: 1px solid var(--pr-border-divider);
+  background: var(--pr-surface-card);
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 852px;
+  cursor: pointer;
+  transition: background 150ms ease;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: rgba(248, 250, 252, 0.8);
+  }
+
+  // The row is a keyboard-reachable control, so it needs a real indicator. The global
+  // `outline-ring/50` rule sets only outline-COLOR — never a width — so it renders nothing.
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: -2px;
+  }
+}
+
+/* Merge note 2026-09-04 (performance-refactor → qa-development-2026): the RTA sticky-pin rules
+   (`.pr-pin-actions` / `.pr-pin-menu` / `.pr-hlo-pin-*`, `bugfix/reporting-table-actions-clipped`) were
+   NOT carried over — this branch's tabular redesign (shared `$pr-reporting-tracks`, no "Next pending"
+   button, in-card popovers) has no pinned tracks and no `min-width: 1048px` grid. Revisit that bugfix
+   against this layout before re-adding anything. */
+
+/* ── Status mark — the design's concentric bullseye (archery target), 18×18, always violet.
+   Outer ring + mid ring + filled centre. Not a half-fill circle; not a progress arc.
+   SVG is in the template; this only hosts size/color. ── */
+.pr-status-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--pr-color-primary-300);
+
+  svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+  }
+
+  // Status still drives tooltip/action; mark colour stays the brand bullseye so the mark
+  // reads as the same icon family as the reference (not a traffic-light ring).
+  &--not-started,
+  &--in-progress,
+  &--achieved,
+  &--overachieved {
+    color: var(--pr-color-primary-300);
+  }
+}
+
+/* ── Clamping. Rule 16: long text is clamped, never broken. ── */
+.pr-clamp-1,
+.pr-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pr-clamp-1 {
+  -webkit-line-clamp: 1;
+}
+
+.pr-clamp-2 {
+  -webkit-line-clamp: 2;
+}
+
+/* ── Row action. This is the `brandSoft` recipe, inlined because the row action is not an
+   hlmBtn (it must not inherit the base recipe's focus ring inside a clickable row).
+   Border is -300, not the design's #DDD6FE: on a white card that tint measures 1.39:1,
+   under the WCAG 1.4.11 3:1 floor. A deliberate, decided deviation — recorded in
+   docs/DESIGN-DEVIATIONS.md; do not "correct" it back. ── */
+.pr-row-action {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--pr-color-primary-300);
+  border-radius: 6px;
+  background: var(--pr-surface-card);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--pr-color-primary-400);
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+
+  &:hover {
+    background: var(--pr-color-primary-50);
+    border-color: var(--pr-color-primary-400);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+  }
+}
+
+/* `.pr-figure-sm` (the 13px mono figure) now lives in src/styles/fonts.scss next to `.pr-code`
+   and `.pr-figure` — the Overview tab needs the same recipe, and a second local copy would drift. */
+
+/* ── Overlays (info popover + row menu) and the empty-state recovery button.
+   These live in SCSS, not utilities, because they are absolutely-positioned boxes with a shadow
+   and an entry animation — an at-rule Tailwind cannot express cleanly (client CLAUDE.md §5). ── */
+
+@keyframes prPop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card-header ⓘ popover — 420px, per the design. Anchored under the icon, left-aligned with it. */
+.pr-info-pop {
+  position: absolute;
+  top: 26px;
+  left: 0;
+  z-index: 30;
+  width: 420px;
+  max-width: min(420px, calc(100vw - 64px));
+  padding: 16px;
+  cursor: default;
+  text-align: left;
+  white-space: normal;
+  background: var(--pr-surface-card);
+  border: 1px solid var(--pr-border);
+  border-radius: 12px;
+  box-shadow: var(--pr-shadow-2);
+  animation: prPop 120ms ease-out;
+}
+
+/* Row overflow menu styles moved to src/styles/row-menu.scss so CDK Connected Overlay panels
+   (attached to document.body outside this component host) receive styling cleanly. */
+
+/* Empty-state recovery. Ghost button, per the design's `Clear filters`. */
+.pr-clear-filters {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--pr-color-primary-400);
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+
+  &:hover {
+    background: var(--pr-color-primary-50);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+  }
+}
+
+/* ── ALL INDICATORS table.
+   Header row and body rows are ONE grid built from the same track list.
+   Tracks: [indicator minmax] [aow] [target] [achieved] [progress] [actions] ── */
+$pr-flat-tracks: minmax(240px, 1fr) 72px 80px 84px 104px 184px;
+
+.pr-flat-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+:host ::ng-deep .pr-flat-table {
+  width: 100%;
+
+  .pr-table-wrap {
+    width: 100%;
+  }
+
+  table,
+  thead,
+  tbody {
+    display: block;
+    width: 100%;
+    border-collapse: collapse;
+  }
+}
+
+.pr-flat-row {
+  display: grid;
+  grid-template-columns: $pr-flat-tracks;
+  gap: 0;
+  align-items: stretch;
+  width: 100%;
+  padding: 0;
+  box-sizing: border-box;
+
+  @media (min-width: 1200px) {
+    grid-template-columns: minmax(300px, 1fr) 96px 116px 124px 150px 210px;
+  }
+
+  @media (min-width: 1500px) {
+    grid-template-columns: minmax(360px, 1fr) 110px 130px 140px 170px 224px;
+  }
+}
+
+.pr-flat-head {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  height: 38px;
+  background: var(--pr-surface-subtle);
+  border-bottom: 1px solid var(--pr-border);
+  padding: 0;
+  box-sizing: border-box;
+
+  .pr-flat-cell {
+    border-right: 1px solid var(--pr-border);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    height: 100%;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--pr-text-secondary);
+    text-transform: uppercase;
+    white-space: nowrap;
+    background: transparent;
+    border-top: 0;
+    border-left: 0;
+    border-bottom: 0;
+    cursor: pointer;
+    user-select: none;
+    box-sizing: border-box;
+    transition: color 150ms ease, background 150ms ease;
+
+    &:first-child {
+      padding-left: 20px;
+      padding-right: 12px;
+    }
+
+    &:last-child {
+      border-right: none;
+      padding-right: 16px;
+      cursor: default;
+    }
+
+    &:hover:not(:last-child) {
+      color: var(--pr-color-primary-500);
+      background: rgba(0, 0, 0, 0.025);
+
+      ::ng-deep .pr-sort-icon {
+        color: var(--pr-color-primary-500);
+        opacity: 1;
+      }
+    }
+
+    ::ng-deep .pr-sort-icon {
+      margin-left: 4px;
+    }
+  }
+}
+
+.pr-flat-body {
+  min-height: 54px;
+  padding: 0;
+  box-sizing: border-box;
+  cursor: pointer;
+  background: var(--pr-surface-card);
+  border-top: 1px solid var(--pr-border);
+  transition: background 150ms ease;
+
+  &:first-child {
+    border-top: none;
+  }
+
+  &:hover {
+    background: var(--pr-surface-ground);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: -2px;
+  }
+
+  .pr-flat-cell {
+    border-right: 1px solid var(--pr-border);
+    padding: 10px 10px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: 100%;
+    background: transparent;
+
+    &:first-child {
+      padding-left: 20px;
+      padding-right: 14px;
+      align-items: flex-start;
+    }
+
+    &:last-child {
+      border-right: none;
+      padding-right: 16px;
+      padding-left: 8px;
+    }
+  }
+}
+
+.pr-flat-cell {
+  min-width: 0;
+  display: block;
+  text-align: left;
+
+  &.text-center {
+    text-align: center;
+  }
+}
+
+/* ── Clean HLO badge (RAJ-R-1, RAJ-DD-2) ── */
+.pr-hlo-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}

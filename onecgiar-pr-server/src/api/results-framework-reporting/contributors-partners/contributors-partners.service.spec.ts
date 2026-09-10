@@ -15,10 +15,12 @@ import { LinkedResultRepository } from '../../results/linked-results/linked-resu
 import { LinkedResultsService } from '../../results/linked-results/linked-results.service';
 import { ResultsInnovationsDevRepository } from '../../results/summary/repositories/results-innovations-dev.repository';
 import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
+import { ContributionConsistencyService } from './contribution-consistency.service';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 
 describe('ContributorsPartnersService', () => {
   let service: ContributorsPartnersService;
+  let consistencyService: { check: jest.Mock };
   let resultRepository: jest.Mocked<ResultRepository>;
   let resultByInitiativesRepository: jest.Mocked<ResultByInitiativesRepository>;
   let resultByInstitutionsRepository: jest.Mocked<ResultByIntitutionsRepository>;
@@ -42,7 +44,9 @@ describe('ContributorsPartnersService', () => {
           useValue: {
             getResultById: jest.fn(),
             find: jest.fn(),
+            findOne: jest.fn(),
             update: jest.fn().mockResolvedValue(undefined),
+            query: jest.fn(),
           },
         },
         {
@@ -113,6 +117,22 @@ describe('ContributorsPartnersService', () => {
           },
         },
         {
+          // P2-2932. Stubbed to the quiet outcome so the existing assertions keep testing what
+          // they were written for; the check has its own suite.
+          provide: ContributionConsistencyService,
+          useValue: {
+            check: jest.fn().mockResolvedValue({
+              status: 'NOTHING_TO_COMPARE',
+              expected: null,
+              reported: null,
+              boxesCounted: 0,
+              boxesTotal: 0,
+              boxesOfAnotherType: 0,
+              defaultValue: null,
+            }),
+          },
+        },
+        {
           provide: HandlersError,
           useValue: handlersError,
         },
@@ -120,6 +140,7 @@ describe('ContributorsPartnersService', () => {
     }).compile();
 
     service = module.get(ContributorsPartnersService);
+    consistencyService = module.get(ContributionConsistencyService);
     resultRepository = module.get(
       ResultRepository,
     ) as jest.Mocked<ResultRepository>;
@@ -341,6 +362,16 @@ describe('ContributorsPartnersService', () => {
           is_lead_by_partner: true,
           has_innovation_link: true,
           linked_results: [1001, 1002],
+          // P2-2932 — stubbed to the quiet outcome above; the check has its own suite.
+          contribution_consistency: {
+            status: 'NOTHING_TO_COMPARE',
+            expected: null,
+            reported: null,
+            boxesCounted: 0,
+            boxesTotal: 0,
+            boxesOfAnotherType: 0,
+            defaultValue: null,
+          },
         },
         message: 'Contributors and Partners fetched successfully (P25)',
         status: HttpStatus.OK,
@@ -356,6 +387,62 @@ describe('ContributorsPartnersService', () => {
       expect(
         linkedResultRepository.getActiveLinkedResultIds,
       ).toHaveBeenCalledWith(resultId);
+    });
+
+    it('should return from_toc on partner institutions in GET response (P2-3066)', async () => {
+      const resultId = 8387;
+      const mockResult = {
+        id: resultId,
+        result_code: 'R-8387',
+        title: 'Test result',
+        result_level_id: 3,
+        no_applicable_partner: false,
+        is_lead_by_partner: false,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+      } as any;
+      resultRepository.getResultById.mockResolvedValue(mockResult);
+      resultByInitiativesRepository.getOwnerInitiativeByResult.mockResolvedValue(
+        { id: 50, official_code: 'SP01' } as any,
+      );
+      resultsTocResultsService.getTocByResultV2.mockResolvedValue({
+        response: {
+          contributing_initiatives: {
+            accepted_contributing_initiatives: [],
+            pending_contributing_initiatives: [],
+          },
+        },
+        status: HttpStatus.OK,
+        message: 'ok',
+      } as any);
+      resultsByInstitutionsService.getInstitutionsPartnersByResultIdV2.mockResolvedValue(
+        {
+          response: {
+            no_applicable_partner: false,
+            institutions: [
+              { institutions_id: 1, from_toc: true, delivery: [] },
+              { institutions_id: 2, from_toc: false, delivery: [] },
+            ],
+            mqap_institutions: [],
+            bilateral_projects: [],
+            contributing_center: [],
+            is_lead_by_partner: false,
+          },
+          status: HttpStatus.OK,
+          message: 'ok',
+        } as any,
+      );
+      resultRepository.findOne.mockResolvedValue({
+        has_innovation_link: false,
+      } as any);
+      linkedResultRepository.getActiveLinkedResultIds.mockResolvedValue([]);
+
+      const response =
+        await service.getContributorsPartnersByResultId(resultId);
+
+      expect((response.response as any).institutions).toEqual([
+        expect.objectContaining({ institutions_id: 1, from_toc: true }),
+        expect.objectContaining({ institutions_id: 2, from_toc: false }),
+      ]);
     });
 
     it('should delegate errors to the handler when result is missing', async () => {
@@ -526,6 +613,10 @@ describe('ContributorsPartnersService', () => {
         expect.stringContaining('INSERT INTO results_innovations_dev'),
         [55, 1, user.id, user.id],
       );
+      expect(resultRepository.update).toHaveBeenCalledWith(55, {
+        has_innovation_link: true,
+        last_updated_by: user.id,
+      });
       expect(resultRepository.query).toHaveBeenCalledWith(
         expect.stringContaining('SELECT id FROM result'),
         [1001, 1002],
@@ -543,9 +634,253 @@ describe('ContributorsPartnersService', () => {
           has_innovation_link: true,
           linked_results: [1001, 1002],
         },
-        message: 'Innovation linkage updated.',
+        message: 'Linked result state updated.',
         status: HttpStatus.OK,
       });
+    });
+
+    it('should manage linked results for non-innovation result types via result table', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 77,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+      } as any);
+      resultRepository.findOne.mockResolvedValue({
+        has_innovation_link: true,
+      } as any);
+      linkedResultRepository.getActiveLinkedResultIds.mockResolvedValue([2001]);
+      const payload: UpdateContributorsPartnersDto = {
+        has_innovation_link: true,
+        linked_results: [2001],
+      };
+      const user = { id: 3 } as TokenDto;
+
+      (resultRepository.query as jest.Mock).mockResolvedValue([{ id: 2001 }]);
+
+      const result = await service.updateContributorsAndPartners(
+        77,
+        payload,
+        user,
+      );
+
+      expect(resultRepository.update).toHaveBeenCalledWith(77, {
+        has_innovation_link: true,
+        last_updated_by: user.id,
+      });
+      expect(resultsInnovationsDevRepository.query).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        response: {
+          has_innovation_link: true,
+          linked_results: [2001],
+        },
+        message: 'Linked result state updated.',
+        status: HttpStatus.OK,
+      });
+    });
+
+    it('should persist an explicit "Yes" to the linked/bundled question even when no linked result was picked', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 88,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+      } as any);
+      linkedResultRepository.getActiveLinkedResultIds.mockResolvedValue([]);
+      (resultRepository.query as jest.Mock).mockResolvedValue([]);
+
+      const payload: UpdateContributorsPartnersDto = {
+        has_innovation_link: true,
+        linked_results: [],
+      };
+      const user = { id: 4 } as TokenDto;
+
+      const result = await service.updateContributorsAndPartners(
+        88,
+        payload,
+        user,
+      );
+
+      expect(resultRepository.update).toHaveBeenCalledWith(88, {
+        has_innovation_link: true,
+        last_updated_by: user.id,
+      });
+      expect(result.response).toEqual({
+        has_innovation_link: true,
+        linked_results: [],
+      });
+    });
+
+    it('should persist an explicit "Yes" for innovation results with no linked result picked', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 89,
+        result_type_id: ResultTypeEnum.INNOVATION_USE,
+      } as any);
+      linkedResultRepository.getActiveLinkedResultIds.mockResolvedValue([]);
+      (resultRepository.query as jest.Mock).mockResolvedValue([]);
+      resultsInnovationsUseRepository.query = jest
+        .fn()
+        .mockImplementation(async (sql: string) => {
+          if (sql.includes('SELECT result_innovation_use_id')) {
+            return [{ result_innovation_use_id: 700 }];
+          }
+          return [];
+        });
+
+      const payload: UpdateContributorsPartnersDto = {
+        has_innovation_link: true,
+        linked_results: [],
+      };
+      const user = { id: 6 } as TokenDto;
+
+      await service.updateContributorsAndPartners(89, payload, user);
+
+      expect(resultsInnovationsUseRepository.query).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE results_innovations_use'),
+        [1, user.id, 700],
+      );
+      expect(resultRepository.update).toHaveBeenCalledWith(89, {
+        has_innovation_link: true,
+        last_updated_by: user.id,
+      });
+    });
+
+    it('should still store "No" when the client answers No', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 90,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+      } as any);
+      linkedResultRepository.getActiveLinkedResultIds.mockResolvedValue([]);
+      (resultRepository.query as jest.Mock).mockResolvedValue([]);
+
+      const payload: UpdateContributorsPartnersDto = {
+        has_innovation_link: false,
+        linked_results: [123],
+      };
+      const user = { id: 7 } as TokenDto;
+
+      const result = await service.updateContributorsAndPartners(
+        90,
+        payload,
+        user,
+      );
+
+      expect(linkedResultsService.createForInnovationUse).toHaveBeenCalledWith(
+        90,
+        [],
+        user,
+      );
+      expect(resultRepository.update).toHaveBeenCalledWith(90, {
+        has_innovation_link: false,
+        last_updated_by: user.id,
+      });
+      expect(result.response).toEqual({
+        has_innovation_link: false,
+        linked_results: [],
+      });
+    });
+
+    it('should keep inferring the flag from the links when the client omits has_innovation_link', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 91,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+      } as any);
+      linkedResultRepository.getActiveLinkedResultIds.mockResolvedValue([]);
+      (resultRepository.query as jest.Mock).mockResolvedValue([]);
+
+      const payload: UpdateContributorsPartnersDto = {
+        linked_results: [],
+      };
+      const user = { id: 8 } as TokenDto;
+
+      await service.updateContributorsAndPartners(91, payload, user);
+
+      expect(resultRepository.update).toHaveBeenCalledWith(91, {
+        has_innovation_link: false,
+        last_updated_by: user.id,
+      });
+    });
+  });
+
+  /**
+   * P2-2932 — the extraction, not the comparison. `contributionBoxesOf` walks node → indicators[]
+   * → targets[] and must carry each indicator's own category through, or the mixed-type rule has
+   * nothing to act on. A mutation removing that one line passed every other test in this repo.
+   */
+  describe('P2-2932 — the boxes handed to the consistency check', () => {
+    const tocWithMixedIndicators = {
+      contributing_initiatives: {
+        accepted_contributing_initiatives: [],
+        pending_contributing_initiatives: [],
+      },
+      contributing_and_primary_initiative: [],
+      result_toc_result: {
+        indicators: [
+          {
+            indicator_result_type_id: 5,
+            targets: [{ contributing_indicator: 120 }],
+          },
+          {
+            indicator_result_type_id: 7,
+            targets: [{ contributing_indicator: 999 }],
+          },
+          // No recognised category — must arrive as undefined, not as null or 0.
+          {
+            indicator_result_type_id: null,
+            targets: [{ contributing_indicator: 50 }],
+          },
+        ],
+      },
+      contributors_result_toc_result: [],
+      impacts: null,
+      impactsTarge: null,
+      sdgTargets: null,
+    };
+
+    it("carries each indicator's own type onto every one of its boxes", async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 10,
+        result_code: 900,
+        title: 't',
+        result_level_id: 3,
+        result_type_id: 5,
+      } as any);
+      resultByInitiativesRepository.getOwnerInitiativeByResult.mockResolvedValue(
+        { id: 1 } as any,
+      );
+      resultsTocResultsService.getTocByResultV2.mockResolvedValue({
+        response: tocWithMixedIndicators,
+      } as any);
+
+      await service.getContributorsPartnersByResultId(10);
+
+      const boxes = consistencyService.check.mock.calls.at(-1)?.[2];
+
+      expect(boxes).toEqual([
+        { contributingIndicator: 120, indicatorResultTypeId: 5 },
+        { contributingIndicator: 999, indicatorResultTypeId: 7 },
+        { contributingIndicator: 50, indicatorResultTypeId: undefined },
+      ]);
+    });
+
+    it("passes the result's own type, not the indicator's", async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 10,
+        result_code: 900,
+        title: 't',
+        result_level_id: 3,
+        result_type_id: 5,
+      } as any);
+      resultByInitiativesRepository.getOwnerInitiativeByResult.mockResolvedValue(
+        { id: 1 } as any,
+      );
+      resultsTocResultsService.getTocByResultV2.mockResolvedValue({
+        response: tocWithMixedIndicators,
+      } as any);
+
+      await service.getContributorsPartnersByResultId(10);
+
+      expect(consistencyService.check).toHaveBeenCalledWith(
+        10,
+        5,
+        expect.any(Array),
+      );
     });
   });
 });

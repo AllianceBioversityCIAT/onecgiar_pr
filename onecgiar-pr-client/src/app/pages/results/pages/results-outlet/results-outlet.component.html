@@ -1,5 +1,12 @@
-<app-page-header>Results Center</app-page-header>
-<app-alert-global-info className="section_container"></app-alert-global-info>
-<div class="local_container section_container">
+@if (!isResultsList()) {
+  <app-page-header>Results Center</app-page-header>
+}
+@if (!isResultsList()) {
+  <app-alert-global-info className="section_container"></app-alert-global-info>
+}
+<div
+  class="local_container"
+  [class.section_container]="!isResultsList()"
+  [class.local_container--flush]="isResultsList()">
   <router-outlet></router-outlet>
 </div>

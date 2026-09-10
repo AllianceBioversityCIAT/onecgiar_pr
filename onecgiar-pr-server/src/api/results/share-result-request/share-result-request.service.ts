@@ -4,12 +4,19 @@ import {
   Inject,
   Injectable,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ShareResultRequestRepository } from './share-result-request.repository';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ShareResultRequest } from './entities/share-result-request.entity';
+import { NotificationService } from '../../notification/notification.service';
+import {
+  NotificationLevelEnum,
+  NotificationTypeEnum,
+} from '../../notification/enum/notification.enum';
+import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { ResultRepository } from '../result.repository';
 import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
@@ -29,7 +36,7 @@ import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiativ
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import Handlebars from 'handlebars';
 import { ResultsTocResultsService } from '../results-toc-results/results-toc-results.service';
-import { env } from 'process';
+import { env } from 'node:process';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
@@ -37,12 +44,23 @@ import { UserNotificationSettingRepository } from '../../user-notification-setti
 import { VersioningService } from '../../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
-import { SocketManagementService } from '../../../shared/microservices/socket-management/socket-management.service';
-import { NotificationDto } from '../../../shared/microservices/socket-management/dto/create-socket.dto';
 
 @Injectable()
 export class ShareResultRequestService {
   private readonly _logger = new Logger(ShareResultRequestService.name);
+
+  /**
+   * P2-3188 — `request_status_id` → notification type. Only the two terminal decisions are here;
+   * `1` (pending) and anything added later map to undefined and emit nothing, which is safer than
+   * a default that would label an unknown status as one of these two.
+   */
+  private static readonly CONTRIBUTION_DECISION_TYPES: Record<
+    number,
+    NotificationTypeEnum
+  > = {
+    2: NotificationTypeEnum.RESULT_CONTRIBUTION_ACCEPTED,
+    3: NotificationTypeEnum.RESULT_CONTRIBUTION_DECLINED,
+  };
 
   constructor(
     private readonly _handlersError: HandlersError,
@@ -62,8 +80,14 @@ export class ShareResultRequestService {
     @Inject(forwardRef(() => VersioningService))
     private readonly _versioningService: VersioningService,
     private readonly _userRepository: UserRepository,
-    @Inject(forwardRef(() => SocketManagementService))
-    private readonly _socketManagementService: SocketManagementService,
+    // P2-3188. `ResultsCenterRepository` resolves the lead centre; `NotificationService` comes in
+    // behind a forwardRef because `NotificationModule` imports this module for one method
+    // (`getReceivedResultRequestPopUp`). @Optional() keeps every existing spec that builds this
+    // service without it compiling — the one caller null-checks it.
+    private readonly _resultsCenterRepository: ResultsCenterRepository,
+    @Optional()
+    @Inject(forwardRef(() => NotificationService))
+    private readonly _notificationService?: NotificationService,
   ) {}
 
   async resultRequest(
@@ -138,11 +162,23 @@ export class ShareResultRequestService {
         ),
       ]);
 
-      // If initiative is already an active contributor, or is a pending/accepted/rejected contribution, skip
-      if (
-        initExist?.is_active ||
-        (requestExist && requestExist.request_status_id !== 4)
-      ) {
+      if (initExist?.is_active) {
+        continue;
+      }
+
+      if (requestExist && requestExist.request_status_id !== 4) {
+        const existingShare = this.buildShareResultRequest(
+          createTocShareResult,
+          resultId,
+          initiativeId,
+          shareInitId,
+          user,
+        );
+        existingShare.share_result_request_id =
+          requestExist.share_result_request_id;
+        existingShare.request_status_id = requestExist.request_status_id;
+        existingShare.is_active = true;
+        shareInitRequests.push(existingShare);
         continue;
       }
 
@@ -211,10 +247,21 @@ export class ShareResultRequestService {
       ? shareInitId
       : initiativeId;
     newShare.is_map_to_toc = !!createTocShareResult?.isToc;
+    newShare.from_toc =
+      !!createTocShareResult?.initiativeFromToc?.[shareInitId];
     newShare.requested_by = user.id;
     return newShare;
   }
 
+  /**
+   * Persists the requests and mails the receiving programme. Deliberately NO `notification` row
+   * (P2-3430, 2026-09-08): the bell already shows every pending request the user can act on —
+   * `NotificationService.getPopUpNotifications` merges unread `notification` rows with
+   * `getReceivedResultRequestPopUp`, and the Requests tab lists them too — so the request row in
+   * `share_result_request` IS the durable in-app notification. Emitting a second row here would
+   * show the same request twice in the pop-up. The socket push that used to sit next to the mail
+   * was dead code (no caller since a0892e2e8, and sockets are off on both ends); removed.
+   */
   private async saveShareResultRequests(
     shareInitRequests: ShareResultRequest[],
     emailTemplate: string,
@@ -240,6 +287,7 @@ export class ShareResultRequestService {
               is_active: req.is_active,
               requested_by: req.requested_by,
               requested_date: req.requested_date,
+              from_toc: req.from_toc,
             },
           ),
         ),
@@ -269,7 +317,7 @@ export class ShareResultRequestService {
       const [initOwner, result, initContributing, initMembers] =
         await this.getRequestRelatedData(request, resultId, emailTemplate);
 
-      const to = await this.getEmailAndNotificationRecipients(
+      const to = await this.getEmailRecipients(
         initMembers,
         emailTemplate,
         request.shared_inititiative_id,
@@ -323,78 +371,6 @@ export class ShareResultRequestService {
     }
   }
 
-  private async sendSocketNotification(
-    shareInitRequests: ShareResultRequest[],
-    resultId: number,
-    emailTemplate: string,
-  ) {
-    try {
-      const usersOnlineResponse =
-        await this._socketManagementService.getActiveUsers();
-
-      const usersOnlineIds = usersOnlineResponse.response.map(
-        (user: { userId: number }) => user.userId,
-      );
-
-      for (const request of shareInitRequests) {
-        const [initOwner, result, , initMembers] =
-          await this.getRequestRelatedData(request, resultId, emailTemplate);
-
-        const receivers = await this.getEmailAndNotificationRecipients(
-          initMembers,
-          emailTemplate,
-          request.shared_inititiative_id,
-          initOwner.id,
-        );
-
-        if (!receivers.userNotification.length) {
-          this._logger.warn(
-            `No recipients found for request ID: ${request.share_result_request_id}`,
-          );
-          continue;
-        }
-
-        const matchUsers = receivers.userNotification.filter((userId) =>
-          usersOnlineIds.includes(userId),
-        );
-
-        if (!matchUsers.length) {
-          this._logger.warn(
-            `No online users to notify for request ID: ${request.share_result_request_id}`,
-          );
-          continue;
-        }
-
-        const data = await this._shareResultRequestRepository.findOne({
-          select: this.getRequestSelectFields(),
-          relations: this.getRequestRelations(),
-          where: {
-            result_id: result.id,
-            shared_inititiative_id: request.shared_inititiative_id,
-          },
-        });
-
-        const description = data.is_map_to_toc
-          ? `Request as contributor for result ${result.result_code}`
-          : `Contribution request for result ${result.result_code}`;
-
-        const notification: NotificationDto = {
-          title: 'Contribution request',
-          desc: description,
-          result: data,
-        };
-
-        await this._socketManagementService.sendNotificationToUsers(
-          matchUsers.map(String),
-          notification,
-        );
-      }
-    } catch (error) {
-      this._logger.error('Error sending socket notifications', error);
-      this._handlersError.returnErrorRes({ error, debug: true });
-    }
-  }
-
   private async getRequestRelatedData(
     request: ShareResultRequest,
     resultId: number,
@@ -422,7 +398,8 @@ export class ShareResultRequestService {
     ]);
   }
 
-  private async getEmailAndNotificationRecipients(
+  /** Members of the receiving programme who opted in to contribution-request mails. */
+  private async getEmailRecipients(
     initMembers: any[],
     emailTemplate: string,
     sharedInitiativeId?: number,
@@ -443,22 +420,8 @@ export class ShareResultRequestService {
       },
     );
 
-    const usersNotification = initMembers.map((m) => m.obj_user.id);
-    const userNotificationEnable =
-      await this._userNotificationSettingsRepository.find({
-        where: {
-          user_id: In(usersNotification),
-          email_notifications_updates_enabled: true,
-          initiative_id:
-            emailTemplate === EmailTemplate.CONTRIBUTION
-              ? sharedInitiativeId
-              : initOwner,
-        },
-        relations: { obj_user: true },
-      });
     return {
       userEmail: userEmailEnable.map((u) => u.obj_user.email),
-      userNotification: userNotificationEnable.map((u) => u.obj_user.id),
     };
   }
 
@@ -646,7 +609,7 @@ export class ShareResultRequestService {
       where: whereCondition,
     });
 
-    return results.map((result: any) => {
+    const mapped = results.map((result: any) => {
       if (result.obj_result && !Array.isArray(result.obj_result)) {
         result.obj_result = {
           ...result.obj_result,
@@ -656,12 +619,91 @@ export class ShareResultRequestService {
       }
       return result;
     });
+
+    return this.enrichRequestsWithTocContributionReview(mapped);
+  }
+
+  /**
+   * P2-3086 / P2-3003: attach ToC review fields for contribution-request notifications.
+   */
+  private async enrichRequestsWithTocContributionReview(
+    requests: any[],
+  ): Promise<any[]> {
+    if (!requests?.length) {
+      return requests;
+    }
+
+    const pairMap = new Map<
+      string,
+      { resultId: number; initiativeId: number }
+    >();
+
+    for (const request of requests) {
+      if (!request?.is_map_to_toc) {
+        continue;
+      }
+
+      const resultId = Number(request.result_id);
+      const contributorInitiativeId = Number(
+        request.shared_inititiative_id ?? request.obj_shared_inititiative?.id,
+      );
+
+      if (
+        !Number.isFinite(resultId) ||
+        !Number.isFinite(contributorInitiativeId)
+      ) {
+        continue;
+      }
+
+      pairMap.set(`${resultId}:${contributorInitiativeId}`, {
+        resultId,
+        initiativeId: contributorInitiativeId,
+      });
+    }
+
+    const reviewCache = new Map<string, any[]>();
+    await Promise.all(
+      Array.from(pairMap.entries()).map(async ([cacheKey, pair]) => {
+        reviewCache.set(
+          cacheKey,
+          await this._resultsTocResultRepository.getContributionReviewTocByResultAndInitiative(
+            pair.resultId,
+            pair.initiativeId,
+          ),
+        );
+      }),
+    );
+
+    return requests.map((request) => {
+      if (!request?.is_map_to_toc) {
+        return request;
+      }
+
+      const resultId = Number(request.result_id);
+      const contributorInitiativeId = Number(
+        request.shared_inititiative_id ?? request.obj_shared_inititiative?.id,
+      );
+
+      if (
+        !Number.isFinite(resultId) ||
+        !Number.isFinite(contributorInitiativeId)
+      ) {
+        return { ...request, toc_contribution_review: [] };
+      }
+
+      const cacheKey = `${resultId}:${contributorInitiativeId}`;
+      return {
+        ...request,
+        toc_contribution_review: reviewCache.get(cacheKey) ?? [],
+      };
+    });
   }
 
   private getRequestSelectFields(): FindOptionsSelect<ShareResultRequest> {
     return {
       share_result_request_id: true,
       result_id: true,
+      shared_inititiative_id: true,
       requested_date: true,
       aprovaed_date: true,
       request_status_id: true,
@@ -926,6 +968,14 @@ export class ShareResultRequestService {
         createShareResultsRequestDto,
       );
 
+      // P2-3188: tell the reporting centre what the SP contributor decided. Last thing in the
+      // flow and non-blocking on purpose — the decision is already persisted.
+      await this.emitContributionDecisionNotification(
+        findShare,
+        request_status_id,
+        user,
+      );
+
       return {
         response: 'requestData',
         message: 'The requests have been updated successfully',
@@ -935,6 +985,134 @@ export class ShareResultRequestService {
       this._logger.error('Error updating share result request', error);
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  /**
+   * P2-3188 — notify the reporting centre when a Science Program contributor accepts or declines a
+   * contribution.
+   *
+   * Recipients are the users of the result's **lead centre**, not of the owning initiative. The
+   * `share_result_request` rows are initiative-scoped (`owner_initiative_id` /
+   * `requester_initiative_id`) and the story asks for the centre, so the centre is derived from
+   * `results_center`. A user belongs to a centre through `role_by_user.center_id` with
+   * `role = CENTER_USER`, which is exactly what `getUserIdsByCenter` already queries.
+   *
+   * Never throws: accepting or declining must not fail because a notification could not be sent.
+   */
+  private async emitContributionDecisionNotification(
+    findShare: any,
+    requestStatusId: number,
+    user: TokenDto,
+  ): Promise<void> {
+    try {
+      const notificationType =
+        ShareResultRequestService.CONTRIBUTION_DECISION_TYPES[requestStatusId];
+
+      // Only the two terminal decisions notify. Anything else (a request still pending, or a
+      // status added later) is deliberately silent rather than sending a misleading message.
+      if (!notificationType) {
+        return;
+      }
+
+      if (!this._notificationService) {
+        this._logger.warn(
+          `NotificationService unavailable; skipping contribution decision notification for result ${findShare?.result_id}`,
+        );
+        return;
+      }
+
+      const resultId = Number(findShare?.result_id);
+      if (!Number.isFinite(resultId) || resultId <= 0) {
+        return;
+      }
+
+      const leadCenterCode = await this.resolveLeadCenterCode(resultId);
+      if (!leadCenterCode) {
+        // A result with no lead centre has nobody to tell. Normal for initiative-only results.
+        this._logger.log(
+          `Result ${resultId} has no lead centre; no contribution decision notification sent`,
+        );
+        return;
+      }
+
+      const recipientIds =
+        await this._roleByUserRepository.getUserIdsByCenter(leadCenterCode);
+
+      const recipients = recipientIds.filter((id) => id !== user.id);
+      if (!recipients.length) {
+        this._logger.log(
+          `No centre users to notify for result ${resultId} (centre ${leadCenterCode})`,
+        );
+        return;
+      }
+
+      const suffix = await this.buildContributionDecisionSuffix(
+        findShare,
+        requestStatusId,
+      );
+
+      await this._notificationService.emitResultNotification(
+        NotificationLevelEnum.RESULT,
+        notificationType,
+        recipients,
+        user.id,
+        resultId,
+        suffix,
+      );
+    } catch (error) {
+      this._logger.error(
+        `Failed to emit contribution decision notification for result ${findShare?.result_id}`,
+        error as Error,
+      );
+    }
+  }
+
+  /** CLARISA code of the result's lead centre, or null when none is flagged. */
+  private async resolveLeadCenterCode(
+    resultId: number,
+  ): Promise<string | null> {
+    const centers =
+      await this._resultsCenterRepository.getAllResultsCenterByResultId(
+        resultId,
+      );
+
+    const leadCenter = (centers ?? []).find(
+      (center: any) => Number(center?.is_leading_result) === 1,
+    );
+
+    return leadCenter?.code ? String(leadCenter.code) : null;
+  }
+
+  /**
+   * The half of the sentence that cannot be derived when the notification is read: which Science
+   * Program decided, and what it decided. Stored on `notification.text`; the client supplies the
+   * `"The result <code> - <title>"` lead-in. Same split as P2-3214.
+   */
+  private async buildContributionDecisionSuffix(
+    findShare: any,
+    requestStatusId: number,
+  ): Promise<string> {
+    const verb = requestStatusId === 2 ? 'accepted' : 'declined';
+
+    let programCode: string | null = null;
+    const sharedInitiativeId = Number(findShare?.shared_inititiative_id);
+
+    if (Number.isFinite(sharedInitiativeId) && sharedInitiativeId > 0) {
+      try {
+        const initiative = await this._clarisaInitiativeRepository.findOne({
+          where: { id: sharedInitiativeId },
+        });
+        programCode = initiative?.official_code ?? null;
+      } catch (error) {
+        this._logger.warn(
+          `Could not resolve the deciding Science Program for initiative ${sharedInitiativeId}`,
+          error as Error,
+        );
+      }
+    }
+
+    const by = programCode ? ` by ${programCode}` : '';
+    return `contribution was ${verb}${by}. Click to see the result.`;
   }
 
   private createInvalidShareRequestResponse() {
@@ -976,6 +1154,7 @@ export class ShareResultRequestService {
         user,
         is_map_to_toc,
         dto,
+        !!findShare?.from_toc,
       );
     } else {
       await this.deactivateTocResults(result_id, shared_inititiative_id);
@@ -989,6 +1168,7 @@ export class ShareResultRequestService {
     user: TokenDto,
     is_map_to_toc: boolean,
     dto: CreateShareResultRequestDto,
+    from_toc = false,
   ) {
     try {
       const exists =
@@ -1003,6 +1183,7 @@ export class ShareResultRequestService {
           shared_inititiative_id,
           result_id,
           user,
+          from_toc,
         );
         await this.createBudgetForInitiative(newReIni.id, user);
 
@@ -1017,7 +1198,7 @@ export class ShareResultRequestService {
           await this.saveIndicatorsForPrimarySubmitter(dto, result_id);
         }
       } else {
-        await this.activateExistingInitiativeEntry(exists, user);
+        await this.activateExistingInitiativeEntry(exists, user, from_toc);
         await this.createOrUpdateBudgetForInitiative(exists.id, user);
         if (!is_map_to_toc) {
           await this.mapWorkPackagesToInitiative(
@@ -1040,6 +1221,7 @@ export class ShareResultRequestService {
     shared_initiative_id: number,
     result_id: number,
     user: TokenDto,
+    from_toc = false,
   ) {
     const newResultByInitiative = new ResultsByInititiative();
     newResultByInitiative.initiative_id = shared_initiative_id;
@@ -1047,6 +1229,7 @@ export class ShareResultRequestService {
     newResultByInitiative.result_id = result_id;
     newResultByInitiative.last_updated_by = user.id;
     newResultByInitiative.created_by = user.id;
+    newResultByInitiative.from_toc = from_toc;
 
     return await this._resultByInitiativesRepository.save(
       newResultByInitiative,
@@ -1064,9 +1247,14 @@ export class ShareResultRequestService {
     });
   }
 
-  private async activateExistingInitiativeEntry(exists: any, user: TokenDto) {
+  private async activateExistingInitiativeEntry(
+    exists: any,
+    user: TokenDto,
+    from_toc = false,
+  ) {
     await this._resultByInitiativesRepository.update(exists.id, {
       is_active: true,
+      from_toc,
       last_updated_by: user.id,
     });
   }
@@ -1218,6 +1406,17 @@ export class ShareResultRequestService {
         createShareResultsRequestDto,
       );
 
+      // P2-3188 / P2-3187: the reporting centre is told what the SP contributor decided on BOTH
+      // endpoint versions. Until 2026-09-04 only V1 emitted, which made the notification depend on
+      // which version the client happened to route to (an accident of global state — see the
+      // client-side notification-item trap notes). Last thing in the flow and non-blocking on
+      // purpose — the decision is already persisted.
+      await this.emitContributionDecisionNotification(
+        findShare,
+        request_status_id,
+        user,
+      );
+
       return {
         response: 'requestData',
         message: 'The requests have been updated successfully',
@@ -1262,6 +1461,7 @@ export class ShareResultRequestService {
         user,
         is_map_to_toc,
         dto,
+        !!findShare?.from_toc,
       );
     } else {
       // Reuse common method if logic is the same
@@ -1280,6 +1480,7 @@ export class ShareResultRequestService {
     user: TokenDto,
     is_map_to_toc: boolean,
     dto: CreateShareResultRequestDto,
+    from_toc = false,
   ) {
     try {
       const exists =
@@ -1295,6 +1496,7 @@ export class ShareResultRequestService {
           shared_inititiative_id,
           result_id,
           user,
+          from_toc,
         );
         await this.createBudgetForInitiative(newReIni.id, user);
 
@@ -1310,7 +1512,7 @@ export class ShareResultRequestService {
         }
       } else {
         // Reuse common methods if logic is the same
-        await this.activateExistingInitiativeEntry(exists, user);
+        await this.activateExistingInitiativeEntry(exists, user, from_toc);
         await this.createOrUpdateBudgetForInitiative(exists.id, user);
         if (!is_map_to_toc) {
           await this.mapWorkPackagesToInitiativeV2(

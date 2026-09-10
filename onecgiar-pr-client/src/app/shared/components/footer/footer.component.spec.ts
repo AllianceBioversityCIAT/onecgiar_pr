@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 
 import { FooterComponent } from './footer.component';
@@ -49,5 +50,49 @@ describe('FooterComponent', () => {
   it('should set isHover to false on mouse leave', () => {
     component.onMouseLeave();
     expect(component.isHover).toBe(false);
+  });
+
+  // FOVL-AC-1: footer and hover trap must NOT render on any Result Detail URL.
+  // Red regression — fails on current code while /result/result-detail/ is still in the allow-list.
+  it('should not render footer or hover trap on result detail URL (FOVL-AC-1)', () => {
+    component.router = { url: '/result/result-detail/9004/general-information' } as Router;
+
+    const result = component.showIfRouteIsInList();
+    expect(result).toBe(false);
+
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.footer')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.footer-blocker')).toBeNull();
+  });
+
+  // FOVL-AC-3: listed non-detail path (Results list) must still mount the footer.
+  it('should render footer on results-list URL (FOVL-AC-3)', () => {
+    component.router = { url: '/result/results-outlet/results-list' } as Router;
+    const result = component.showIfRouteIsInList();
+    expect(result).toBe(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.footer')).not.toBeNull();
+  });
+
+  // FOVL-R-3: a remaining floating route must still set isFloating.
+  it('should set isFloating for type-one-report URL', () => {
+    component.router = { url: '/type-one-report' } as Router;
+    component.showIfRouteIsInList();
+    expect(component.isFloating).toBe(true);
+  });
+
+  // P2-3145: the glossary link is the only way the Reporting Tool points at the
+  // centralized CLARISA glossary, so both the label and the destination are asserted.
+  it('should render the glossary link in the footer', () => {
+    component.routes = [{ path: '/' }];
+    fixture.detectChanges();
+
+    const anchors: HTMLAnchorElement[] = Array.from(fixture.nativeElement.querySelectorAll('.footer a.f-button'));
+    const glossary = anchors.find(anchor => anchor.textContent?.trim() === 'Glossary of Terms');
+
+    expect(glossary).toBeTruthy();
+    expect(glossary?.getAttribute('href')).toBe('https://clarisa.cgiar.org/landing-page/glossary');
+    expect(glossary?.getAttribute('target')).toBe('_blank');
   });
 });

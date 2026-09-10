@@ -1,0 +1,689 @@
+<!--
+  Results tab of the programme shell.
+  Design: `PRMS Reporting.dc.html` → `<sc-if value="{{ showProgResults }}">` (:1333-1540).
+  Every measurement is an arbitrary px value on purpose: `html` is 12px, so rem-based Tailwind
+  utilities land 25% short of the mockup (client CLAUDE.md §5 / UI-RULES §1.3).
+-->
+
+<!-- The "Coming soon" tag. One markup, one wording, five places — so QA and the Jira tickets
+     describe the same thing everywhere. -->
+<ng-template #comingSoon>
+  <span
+    class="inline-flex h-[16px] flex-none items-center rounded-full bg-[var(--pr-color-primary-50)] px-[6px] text-[10px] font-semibold uppercase leading-none tracking-[0.06em] text-[var(--pr-color-primary-400)]">
+    Coming soon
+  </span>
+</ng-template>
+
+<section
+  class="min-h-screen bg-[var(--pr-surface-app)] p-0 min-[900px]:min-h-0 min-[900px]:flex-1 min-[900px]:flex min-[900px]:flex-col">
+  <article class="flex w-full min-w-0 flex-col min-[900px]:flex-1 min-[900px]:min-h-0">
+    <!-- Same band, same tab strip, third tab active. `showToolbar` off: this tab owns its own
+         filter row (the band's toolbar belongs to Reporting). `canReport` off: the emerging-result
+         CTA opens a modal this surface does not host. `frameLocked`/`scrollHost`: the band drops
+         `sticky` and reads offsets from the work area instead of `window` (`SAV-DD-4`, `SAV-DD-5`). -->
+    <app-reporting-program-band
+      [programCode]="programmeCode()"
+      [programName]="programmeName()"
+      [cycleYear]="cycleYear"
+      [cyclePhase]="cyclePhase"
+      activeTab="results"
+      [myWorkCount]="myWorkCount()"
+      [canReport]="true"
+      [canReportEmerging]="canReportEmerging()"
+      [showToolbar]="false"
+      [frameLocked]="true"
+      [scrollHost]="workAreaEl()"
+      (whereToReport)="openWhereToReport()"
+      (reportEmerging)="openEmergingReport()" />
+
+    <!-- #workArea: the only scroller ≥ 900px (`SAV-DD-1`, `SAV-DD-7`) — filter row, counters and
+         table all scroll together; below `md` the mixin is inert and this stays a plain block. -->
+    <div
+      #workArea
+      class="min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll">
+      <!-- ═══════════════ RESULTS TOP CONTROLS BAR (consistent with Overview & Reporting) ═══════════════ -->
+    <div
+      class="flex flex-wrap items-center justify-between gap-[12px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]"
+      role="search"
+      aria-label="Results filters">
+      <!-- Left controls: Search + Filter button + Active chips + Clear all -->
+      <div class="flex flex-wrap items-center gap-[10px]">
+        <!-- Search: 240px × 34px -->
+        <div class="relative h-[34px] w-[240px] max-sm:w-full">
+          <span class="pointer-events-none absolute left-[10px] top-1/2 flex -translate-y-1/2 text-[var(--pr-text-subtle)]">
+            <ng-icon name="lucideSearch" class="text-[15px]" />
+          </span>
+          <input
+            type="text"
+            class="h-[34px] w-full rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-app)] pl-[32px] pr-[28px] text-[13px] text-[var(--pr-text-heading)] outline-none transition-colors placeholder:text-[var(--pr-text-subtle)] focus-visible:border-[var(--pr-color-primary-300)] focus-visible:bg-[var(--pr-surface-card)]"
+            placeholder="Search results or indicators…"
+            aria-label="Search results or indicators"
+            [value]="searchDraft()"
+            (input)="onSearchInput($any($event.target).value)" />
+          @if (searchDraft()) {
+            <button
+              type="button"
+              (click)="onSearchInput('')"
+              class="absolute right-[8px] top-1/2 -translate-y-1/2 flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:text-slate-700"
+              aria-label="Clear search">
+              <span class="material-icons-round text-[14px]">close</span>
+            </button>
+          }
+        </div>
+
+        <!-- Divider -->
+        <div class="h-[22px] w-[1px] bg-[var(--pr-border-divider)] mx-[2px] hidden sm:block"></div>
+
+        <!-- JIRA-style Filter Button & Popover -->
+        <div class="relative pr-results-filter-container">
+          <button
+            type="button"
+            (click)="toggleFilterPopover($event)"
+            class="inline-flex h-[34px] cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+            [class]="filter.hasActiveFilters()
+              ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] font-semibold'
+              : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] font-medium hover:border-slate-400 hover:bg-slate-50'"
+            aria-label="Filter results"
+            [attr.aria-expanded]="filterPopoverOpen()">
+            <span class="material-icons-round text-[18px]" [class.text-[var(--pr-color-primary-600)]]="filter.hasActiveFilters()" [class.text-slate-500]="!filter.hasActiveFilters()">filter_list</span>
+            <span>Filter</span>
+            @if (activeFilterCount() > 0) {
+              <span class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums">
+                {{ activeFilterCount() }}
+              </span>
+            }
+          </button>
+
+          <!-- Popover Modal -->
+          <div
+            class="absolute left-0 md:left-auto md:right-0 lg:left-0 lg:right-auto top-[40px] z-30 w-[420px] max-w-[calc(100vw-32px)] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+            [class.hidden]="!filterPopoverOpen()"
+            (click)="$event.stopPropagation()">
+            <!-- Popover Header -->
+            <div class="mb-[14px] flex items-center justify-between border-b border-[var(--pr-border-divider)] pb-[10px]">
+              <span class="text-[13.5px] font-bold text-[var(--pr-text-heading)]">Filters</span>
+              <div class="flex items-center gap-[10px]">
+                @if (filter.hasActiveFilters()) {
+                  <button
+                    type="button"
+                    (click)="clearAll()"
+                    class="inline-flex cursor-pointer items-center gap-[3px] border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:underline">
+                    <span class="material-icons-round text-[14px]" aria-hidden="true">filter_alt_off</span>
+                    Clear all
+                  </button>
+                }
+                <button
+                  type="button"
+                  (click)="closeFilterPopover()"
+                  class="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[5px] border-0 bg-transparent p-0 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  aria-label="Close filters">
+                  <span class="material-icons-round text-[16px]">close</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Filter Grid inside Popover -->
+            <div class="flex flex-col gap-[12px]">
+              <!-- Row 1: Phase & Status -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
+                <div class="pgr-filter" aria-label="Filter by phase">
+                  <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                    Phase
+                  </label>
+                  <app-pr-filter-select
+                    [options]="phaseSelectOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Phase"
+                    [ngModel]="selectValue(filter.selectedPhase())"
+                    (changed)="onPhaseChange($event)"></app-pr-filter-select>
+                </div>
+                <div class="pgr-filter" aria-label="Filter by status">
+                  <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                    Status
+                  </label>
+                  <app-pr-filter-select
+                    [options]="statusSelectOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Status"
+                    [ngModel]="selectValue(filter.selectedStatus())"
+                    (changed)="onStatusChange($event)"></app-pr-filter-select>
+                </div>
+              </div>
+
+              <!-- Row 2: Category & Funding source — MWB-T-13: both MULTI-select, the same
+                   `app-pr-filter-multiselect` this popover already mounts for Section, inside the
+                   unchanged `.pgr-filter` wrapper so the popover's shell styling still applies. -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
+                <div class="pgr-filter" aria-label="Filter by category">
+                  <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                    Category
+                  </label>
+                  <app-pr-filter-multiselect
+                    [options]="categorySelectOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Category"
+                    countLabel="categories"
+                    [ngModel]="filter.selectedCategories()"
+                    (changed)="filter.selectedCategories.set($event)"></app-pr-filter-multiselect>
+                </div>
+                <div class="pgr-filter" aria-label="Filter by funding source">
+                  <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                    Funding source
+                  </label>
+                  <app-pr-filter-multiselect
+                    [options]="originSelectOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Funding source"
+                    countLabel="sources"
+                    [ngModel]="filter.selectedOrigins()"
+                    (changed)="filter.selectedOrigins.set($event)"></app-pr-filter-multiselect>
+                </div>
+              </div>
+
+              <!-- Row 3: Center & Created by -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
+                <div class="pgr-filter" aria-label="Filter by center">
+                  <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                    Contributing Center
+                  </label>
+                  <app-pr-filter-multiselect
+                    [options]="centerSelectOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Center"
+                    countLabel="centers"
+                    [ngModel]="filter.selectedCenters()"
+                    (changed)="filter.selectedCenters.set($event)"></app-pr-filter-multiselect>
+                </div>
+                <div class="pgr-filter" aria-label="Filter by created by">
+                  <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                    Created by
+                  </label>
+                  <app-pr-filter-select
+                    [options]="createdBySelectOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Created by"
+                    [filter]="true"
+                    filterPlaceholder="Search user..."
+                    [ngModel]="selectValue(filter.selectedCreatedBy())"
+                    (changed)="onCreatedByChange($event)"></app-pr-filter-select>
+                </div>
+              </div>
+
+              <!-- Row 4: Section — RAC-T-3 (P2-3398 closed): live multi-select over the bucket-key
+                   vocabulary, grouped Areas of work / Program-level with counts (RAC-R-3). -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
+                <div class="pgr-filter pgr-filter--section" aria-label="Filter by section">
+                  <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                    Section
+                  </label>
+                  <app-pr-filter-multiselect
+                    [options]="sectionOptions()"
+                    [group]="true"
+                    optionGroupLabel="label"
+                    optionGroupChildren="items"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Section"
+                    countLabel="sections"
+                    [ngModel]="filter.selectedSections()"
+                    (changed)="filter.selectedSections.set($event)"></app-pr-filter-multiselect>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Filter Chips inline in toolbar -->
+        @if (filter.hasActiveFilters()) {
+          @for (chip of filter.activeChips(); track chip.dimension + '|' + chip.value) {
+            <span class="pr-chip pgr-chip">
+              {{ chip.label }}
+              <button type="button" class="pgr-chip-remove" aria-label="Remove filter" (click)="clearChip(chip)">
+                <ng-icon name="lucideX" size="10px" strokeWidth="2.6" />
+              </button>
+            </span>
+          }
+          <!-- quick/filters-clear-button-everywhere (2026-09-04): same control as Overview and Reporting;
+               hidden while the only chip is the phase, which Clear deliberately keeps. -->
+          @if (hasClearableFilters()) {
+          <button
+            type="button"
+            data-testid="results-clear-filters"
+            class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[4px] rounded-[8px] border-0 bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+            (click)="clearAll()">
+            <span class="material-icons-round text-[15px]" aria-hidden="true">filter_alt_off</span>
+            Clear filters
+          </button>
+          }
+        }
+      </div>
+
+      <!-- Right controls: Columns picker + Export CSV -->
+      <div class="w-full sm:w-auto sm:ml-auto flex items-center justify-between sm:justify-end gap-[10px] mt-1 sm:mt-0">
+        <!-- Columns picker -->
+        <div class="relative flex-none">
+          <button
+            type="button"
+            class="flex h-[34px] items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] text-[13px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-surface-app)] shadow-2xs cursor-pointer"
+            [attr.aria-expanded]="columnsOpen()"
+            aria-haspopup="dialog"
+            (click)="toggleColumnsPanel($event)">
+            <span>Columns</span>
+            <ng-icon name="lucideCog" size="14px" strokeWidth="1.8" class="text-[var(--pr-text-secondary)]" />
+          </button>
+
+          @if (columnsOpen()) {
+            <div
+              role="dialog"
+              aria-label="Optional columns"
+              (click)="$event.stopPropagation()"
+              class="pgr-pop absolute right-0 top-[40px] z-30 w-[220px] cursor-default rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[6px] shadow-[0_8px_24px_rgba(25,21,36,0.10)]">
+              <div
+                class="px-[10px] pb-[6px] pt-[8px] text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
+                Optional columns
+              </div>
+              @for (column of optionalColumns; track column.key) {
+                <button
+                  type="button"
+                  role="menuitemcheckbox"
+                  [attr.aria-checked]="isColumnVisible(column.key)"
+                  class="flex h-[36px] w-full items-center gap-[10px] rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-normal text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-surface-app)] cursor-pointer"
+                  (click)="toggleColumn(column.key, $event)">
+                  <span
+                    class="flex size-[16px] flex-none items-center justify-center rounded-[4px] border-[1.5px]"
+                    [class]="
+                      isColumnVisible(column.key)
+                        ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-300)]'
+                        : 'border-[var(--pr-border-strong)] bg-[var(--pr-surface-card)]'
+                    "
+                    aria-hidden="true">
+                    @if (isColumnVisible(column.key)) {
+                      <ng-icon name="lucideCheck" size="11px" strokeWidth="2.2" class="text-white" />
+                    }
+                  </span>
+                  {{ column.label }}
+                </button>
+              }
+              @if (hasCustomWidths()) {
+                <div class="mt-[6px] border-t border-[var(--pr-border-divider)] pt-[6px]">
+                  <button
+                    type="button"
+                    class="flex h-[32px] w-full items-center gap-[8px] rounded-[6px] border-0 bg-transparent px-[10px] text-left text-[12px] font-medium text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
+                    (click)="resetAllColumnWidths()">
+                    <span class="material-icons-round text-[15px]">restart_alt</span>
+                    <span>Reset column widths</span>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Export CSV -->
+        <button
+          type="button"
+          class="flex h-[34px] flex-none items-center gap-[6px] rounded-[8px] border-0 bg-[var(--pr-color-primary-500)] px-[12px] text-[13px] font-semibold text-white transition-colors hover:bg-[var(--pr-color-primary-600)] disabled:cursor-not-allowed disabled:opacity-50 shadow-2xs cursor-pointer"
+          [disabled]="!filteredRows().length"
+          [attr.title]="filteredRows().length ? 'Download the filtered rows and visible columns as CSV.' : 'There is nothing to export.'"
+          (click)="exportCsv()">
+          <ng-icon name="lucideDownload" size="14px" strokeWidth="1.8" class="text-white" />
+          <span>Export CSV</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB BODY — design :762: flex:1, 32px pad, ONE flex column at 16px. -->
+    <div class="flex flex-1 flex-col gap-[16px] p-[16px] sm:p-[24px] lg:p-[32px]" data-guide="tab-results-view">
+
+      <!-- ════════════════════════════ 4. COUNTS ROW ═════════════════════════════
+           Counts are computed over the rows filtered by EVERYTHING EXCEPT status, so each pill
+           keeps a meaningful number while one status is selected — which is what makes them
+           clickable in the first place. -->
+      <div class="flex flex-wrap items-center gap-[12px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
+        <span class="font-medium text-[var(--pr-text-heading)]">{{ totalLabel() }}</span>
+
+        @for (count of statusCounts(); track count.statusName) {
+          <span class="flex items-center gap-[12px]">
+            <span class="h-[14px] w-px bg-[var(--pr-border)] hidden sm:block" aria-hidden="true"></span>
+            <button
+              type="button"
+              class="flex h-[26px] items-center gap-[7px] rounded-full border-0 px-[9px] text-[13px] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+              [class]="
+                isStatusActive(count.statusName)
+                  ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
+                  : 'bg-transparent font-normal text-[var(--pr-text-secondary)]'
+              "
+              [attr.aria-pressed]="isStatusActive(count.statusName)"
+              (click)="onStatusCountClick(count.statusName)">
+              <span class="size-[6px] flex-none rounded-full" [style.background]="statusFg(count.statusId)" aria-hidden="true"></span>
+              <span class="font-mono font-medium tabular-nums">{{ count.count }}</span>
+              {{ count.statusName }}
+            </button>
+          </span>
+        }
+      </div>
+
+      <!-- ══════════════════════════════ 5. TABLE ════════════════════════════════ -->
+      @if (isFirstLoad()) {
+        <!-- The mockup draws no loading state; shipping none would be a regression on the spinner
+             the other results tables already have. Skeletons keep the 52px row rhythm. -->
+        <div class="flex flex-col gap-[8px]" aria-live="polite" aria-busy="true">
+          <span class="sr-only">Loading results</span>
+          @for (skeleton of [1, 2, 3, 4, 5, 6]; track skeleton) {
+            <div class="h-[52px] animate-pulse rounded-[8px] bg-[var(--pr-surface-card)]"></div>
+          }
+        </div>
+      } @else if (data.error(); as errorMessage) {
+        <!-- Also not in the mockup. A silent failure that looks like "no results" is worse. -->
+        <div
+          role="alert"
+          class="flex max-h-[160px] flex-col items-start gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[32px]">
+          <p class="m-0 text-[14px] font-normal text-[var(--pr-text-secondary)]">{{ errorMessage }}</p>
+        </div>
+      } @else if (hasRows()) {
+        <app-pr-table
+          #tbl
+          styleClass="pgr-table"
+          sortField="code"
+          [sortOrder]="-1"
+          [value]="filteredRows()"
+          [loading]="data.loading()">
+          <!-- HEADER. The LAST cell is the sticky spacer that keeps the header aligned with the
+               sticky actions cell. -->
+          <ng-template prTableHeader>
+            <tr class="pgr-row pgr-head" [style.grid-template-columns]="grid()" [style.min-width]="minWidth()">
+              @for (column of visibleColumns(); track column.key) {
+                <th
+                  #thEl
+                  class="pgr-th pgr-th--sortable relative"
+                  scope="col"
+                  tabindex="0"
+                  [prSortableColumn]="column.sortField"
+                  [style.color]="sortColor(tbl, column.sortField)"
+                  (keydown.enter)="tbl.sort(column.sortField)">
+                  <span class="truncate">{{ column.label }} {{ sortArrow(tbl, column.sortField) }}</span>
+                  <div
+                    class="pgr-col-resizer"
+                    role="separator"
+                    aria-orientation="vertical"
+                    [attr.aria-label]="'Resize ' + column.label + ' column'"
+                    title="Drag to resize column. Double-click to reset."
+                    (mousedown)="onResizeStart($event, column, thEl)"
+                    (dblclick)="onResizeReset(column, $event)"
+                    (click)="$event.stopPropagation()"></div>
+                </th>
+              }
+              <th class="pgr-sticky-head" scope="col" aria-hidden="true"></th>
+            </tr>
+          </ng-template>
+
+          <!-- ROWS. One @for over the SAME visible-column list as the header, so a column toggle
+               can never leave header and cells out of step. -->
+          <ng-template prTableBody let-row>
+            <tr
+              class="pgr-row pgr-data-row"
+              [style.grid-template-columns]="grid()"
+              [style.min-width]="minWidth()"
+              tabindex="0"
+              role="button"
+              [attr.aria-label]="'Open result ' + row.code"
+              (click)="openResult(row)"
+              (keydown.enter)="onRowKeydown($event, row)"
+              (keydown.space)="onRowKeydown($event, row)">
+              @for (column of visibleColumns(); track column.key) {
+                @switch (column.key) {
+                  @case ('code') {
+                    <!-- 2 · CODE — mono, tabular, no truncation, no tooltip. -->
+                    <td class="pgr-td font-mono text-[12px] font-medium tabular-nums text-[var(--pr-text-heading)]">{{ row.code }}</td>
+                  }
+                  @case ('title') {
+                    <!-- 3 · RESULT — two lines at 2px: title, then the indicator / KPI line. -->
+                    <td class="pgr-td">
+                      <span class="flex w-full min-w-0 flex-col gap-[2px]">
+                        <span class="truncate text-[14px] font-medium text-[var(--pr-text-heading)]" [attr.title]="row.title">
+                          {{ row.title }}
+                        </span>
+                        <span
+                          class="flex min-w-0 items-center gap-[6px] text-[13px] font-normal text-[var(--pr-text-secondary)]"
+                          title="The indicator this result reports against is not in the results feed yet.">
+                          <span class="truncate">{{ row.indicator }}</span>
+                        </span>
+                      </span>
+                    </td>
+                  }
+                  @case ('category') {
+                    <!-- 5 · CATEGORY — truncated + native tooltip. -->
+                    <td class="pgr-td truncate text-[13px] font-normal text-[var(--pr-text)]" [attr.title]="row.category">
+                      {{ row.category }}
+                    </td>
+                  }
+                  @case ('aow') {
+                    <!-- @akili-spec changes/results-aow-column-filter (RAC-T-2)
+                         AREA OF WORK (RAC-R-2 / R-2.1) — code / fixed label / `+N` with every
+                         code in `title`; skeleton while the scope request is in flight; `—` +
+                         explanatory `title` on error or a phase mismatch (A-1). -->
+                    <td class="pgr-td">
+                      @switch (row.sectionState) {
+                        @case ('loading') {
+                          <span class="sr-only">Loading area of work</span>
+                          <span
+                            class="inline-block h-[14px] w-[64px] animate-pulse rounded-[4px] bg-[var(--pr-surface-app)]"
+                            aria-hidden="true"></span>
+                        }
+                        @case ('error') {
+                          <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]" [attr.title]="aowTitle(row)">—</span>
+                        }
+                        @case ('version-mismatch') {
+                          <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]" [attr.title]="aowTitle(row)">—</span>
+                        }
+                        @default {
+                          @if ((row.aowCodes ?? []).length > 1) {
+                            <!-- RAC-DD-3 / design.md §6.3 — the code in the mono heading colour,
+                                 `+N` in `--pr-text-muted`. The suffix span's own text starts with
+                                 the space, so the cell's textContent still reads `AOW01 +1`. -->
+                            <span class="truncate" [attr.title]="aowTitle(row)">
+                              <span class="font-mono text-[12px] font-medium text-[var(--pr-text-heading)]">{{ row.section }}</span
+                              ><span class="text-[12px] font-medium text-[var(--pr-text-muted)]"> +{{ (row.aowCodes ?? []).length - 1 }}</span>
+                            </span>
+                          } @else if (row.section && (row.aowCodes ?? []).length === 1) {
+                            <span class="truncate font-mono text-[12px] font-medium text-[var(--pr-text-heading)]">{{ row.section }}</span>
+                          } @else {
+                            <span class="truncate text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ cellText(row, 'aow') }}</span>
+                          }
+                        }
+                      }
+                    </td>
+                  }
+                  @case ('status') {
+                    <!-- 6 · STATUS — pill from the fixed --pr-status-* fg/bg PAIR (UI-RULES 9). -->
+                    <td class="pgr-td">
+                      <span
+                        class="inline-block whitespace-nowrap rounded-full px-[9px] py-[3px] text-[12px] font-medium"
+                        [style.color]="statusFg(row.statusId)"
+                        [style.background]="statusBg(row.statusId)">
+                        {{ row.statusName }}
+                      </span>
+                    </td>
+                  }
+                  @case ('phase') {
+                    <!-- PHASE (optional) — truncated + tooltip. -->
+                    <td class="pgr-td truncate text-[13px] font-normal text-[var(--pr-text)]" [attr.title]="cellText(row, 'phase')">
+                      {{ cellText(row, 'phase') }}
+                    </td>
+                  }
+                  @case ('createdBy') {
+                    <!-- 7 · CREATED BY (optional) — truncated + tooltip. -->
+                    <td class="pgr-td truncate text-[13px] font-normal text-[var(--pr-text)]" [attr.title]="row.createdBy">
+                      {{ row.createdBy }}
+                    </td>
+                  }
+                  @case ('created') {
+                    <!-- 8 · CREATED (optional) — muted date, nowrap, no tooltip. -->
+                    <td class="pgr-td whitespace-nowrap text-[13px] font-normal text-[var(--pr-text-secondary)]">
+                      {{ cellText(row, 'created') }}
+                    </td>
+                  }
+                  @case ('origin') {
+                    <!-- 9 · ORIGIN (optional) — nowrap, no tooltip. -->
+                    <td class="pgr-td whitespace-nowrap text-[13px] font-normal text-[var(--pr-text)]">{{ row.origin }}</td>
+                  }
+                  @case ('center') {
+                    <!-- 10 · CENTER (optional) — truncated + tooltip. -->
+                    <td class="pgr-td truncate text-[13px] font-normal text-[var(--pr-text)]" [attr.title]="row.center">
+                      {{ row.center }}
+                    </td>
+                  }
+                  @case ('updated') {
+                    <!-- 11 · UPDATED — always visible, after the four optional columns.
+                         Blank-tolerant: the list payload carries no last-updated timestamp today. -->
+                    <td class="pgr-td whitespace-nowrap text-[13px] font-normal text-[var(--pr-text-secondary)]">
+                      {{ cellText(row, 'updated') }}
+                    </td>
+                  }
+                }
+              }
+
+              <!-- 12 · ACTIONS — sticky right, `background: inherit` so the row / hover colour
+                   follows it and scrolled cells never bleed through. -->
+              <td class="pgr-td pgr-actions" [class.pgr-actions--open]="isMenuOpen(row)">
+                <button
+                  type="button"
+                  class="flex size-[32px] items-center justify-center rounded-[8px] border-0 bg-transparent text-[var(--pr-text-secondary)] transition-colors hover:bg-[#f3f2f7]"
+                  aria-label="More actions"
+                  aria-haspopup="menu"
+                  [attr.aria-expanded]="isMenuOpen(row)"
+                  (click)="toggleRowMenu(row, $event)">
+                  <ng-icon name="lucideMoreHorizontal" size="18px" strokeWidth="2" />
+                </button>
+
+                @if (isMenuOpen(row)) {
+                  <div
+                    role="menu"
+                    class="pgr-pop pgr-pop--menu absolute right-0 top-[36px] z-30 w-[248px] cursor-default rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[6px] shadow-[0_8px_24px_rgba(25,21,36,0.10)]"
+                    (click)="$event.stopPropagation()">
+                    <!-- 1 · Open result — the same handler as the row click. -->
+                    <button
+                      type="button"
+                      role="menuitem"
+                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+                      (click)="openResult(row)">
+                      Open result
+                    </button>
+
+                    <!-- 1b · Update result. P2-3508 — P/A users reach a previously reported result
+                         through this menu to carry it into the current phase and map it to the 2026
+                         ToC. Same eligibility branch and same modal as the old Results list; hidden
+                         (not disabled) when the row is not eligible, which is how that list behaves. -->
+                    @if (canUpdateResult(row)) {
+                      <button
+                        type="button"
+                        role="menuitem"
+                        class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+                        (click)="updateResult(row)">
+                        Update result
+                      </button>
+                    }
+
+                    <!-- 2 · View indicator. P2-3395 — visible, disabled, tagged: no results payload
+                         carries `toc_result_id` / `toc_results_indicator_id`, and the indicator
+                         drawer needs a whole indicator row, so there is nothing to open. -->
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled
+                      aria-disabled="true"
+                      title="Opening the indicator behind a result is not available yet — the results feed does not include it."
+                      class="flex h-[36px] w-full cursor-not-allowed items-center justify-between gap-[6px] whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] opacity-50">
+                      View indicator
+                      <ng-container [ngTemplateOutlet]="comingSoon"></ng-container>
+                    </button>
+
+                    <!-- 3 · Download PDF — the anchor the app already uses in two other places. -->
+                    <a
+                      role="menuitem"
+                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] no-underline transition-colors hover:bg-[var(--pr-color-primary-50)]"
+                      [href]="pdfHref(row)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      (click)="closeRowMenu()">
+                      Download PDF
+                    </a>
+
+                    <!-- 4 · Copy link — copies the ABSOLUTE url of the same destination "Open result"
+                         opens. P2-3396 closed on 2026-08-24: "Download PDF" above already hands out
+                         the report url, so this one gives out the result page itself. -->
+                    <button
+                      type="button"
+                      role="menuitem"
+                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+                      (click)="copyLink(row)">
+                      Copy link
+                    </button>
+                  </div>
+                }
+              </td>
+            </tr>
+          </ng-template>
+
+          <!-- Only ever seen on a RELOAD — the first load is the skeleton above. -->
+          <ng-template prTableLoading>
+            <tr class="pgr-row" [style.grid-template-columns]="'1fr'" [style.min-width]="minWidth()">
+              <td class="pgr-td flex h-[52px] items-center text-[13px] text-[var(--pr-text-secondary)]" aria-live="polite" aria-busy="true">
+                Loading results…
+              </td>
+            </tr>
+          </ng-template>
+        </app-pr-table>
+      }
+
+      <!-- ══════════════════════════ 6. EMPTY STATES ═════════════════════════════
+           Mutually exclusive computeds, unlike the mockup's three independent blocks. The toolbar,
+           the chips and the counts stay OUTSIDE them, so they remain visible in both. -->
+      @if (isFilteredEmpty()) {
+        <div
+          class="flex max-h-[160px] flex-col items-start gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[32px]">
+          <p class="m-0 text-[14px] font-normal text-[var(--pr-text-secondary)]">No results match these filters.</p>
+          <button
+            type="button"
+            class="h-[32px] rounded-[8px] border-0 bg-transparent px-[12px] text-[13px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+            (click)="clearAll()">
+            Clear all filters
+          </button>
+        </div>
+      }
+
+      @if (isNothingYet()) {
+        <div
+          class="flex max-h-[160px] flex-col items-start gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[32px]">
+          <p class="m-0 text-[14px] font-normal text-[var(--pr-text-secondary)]">No results reported in this program yet.</p>
+          <button
+            type="button"
+            class="flex h-[32px] items-center rounded-[8px] border-0 bg-transparent px-[12px] text-[13px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+            (click)="goToReporting()">
+            Go to Reporting
+          </button>
+        </div>
+      }
+    </div>
+    </div>
+  </article>
+</section>
+
+<!-- P2-3508 · The phase-replication modal reads `DataControlService.currentResult` and its own
+     `chagePhaseModal` flag, so it only needs to be on the page — no inputs. It is NOT mounted in
+     the shell: `results-list` and `innovation-package-list` each mount their own copy, and this
+     screen now does the same — but lazily, because its ngOnInit fires two requests. -->
+@if (changePhaseModalMounted()) {
+  <app-change-phase-modal></app-change-phase-modal>
+}
+
+<app-where-to-report-modal
+  [programCode]="programmeCode()"
+  returnTab="results"
+  [(visible)]="showWhereToReportModal" />

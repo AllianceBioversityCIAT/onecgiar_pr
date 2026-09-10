@@ -1,0 +1,8 @@
+<dl [class]="listClass">
+  @for (row of rows; track row.label) {
+    <div [class]="rowClass">
+      <dt class="shrink-0 text-[var(--pr-color-accents-5)]">{{ row.label }}</dt>
+      <dd class="m-0 font-semibold text-[var(--pr-color-primary-500)]" [class.text-right]="orientation === 'stacked'">{{ row.value }}</dd>
+    </div>
+  }
+</dl>

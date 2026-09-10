@@ -1,6 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { StepN1ScalingAmbitionBlurbComponent } from './step-n1-scaling-ambition-blurb.component';
-import { ToastModule } from 'primeng/toast';
 
 describe('StepN1ScalingAmbitionBlurbComponent', () => {
   let component: StepN1ScalingAmbitionBlurbComponent;
@@ -9,7 +8,7 @@ describe('StepN1ScalingAmbitionBlurbComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [StepN1ScalingAmbitionBlurbComponent],
-      imports: [ToastModule]
+      imports: []
     }).compileComponents();
 
     fixture = TestBed.createComponent(StepN1ScalingAmbitionBlurbComponent);

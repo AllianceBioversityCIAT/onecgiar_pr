@@ -1,10 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { SkeletonModule } from 'primeng/skeleton';
 
 @Component({
     selector: 'app-skeleton-notification-item',
-    imports: [CommonModule, SkeletonModule],
+    imports: [CommonModule],
     templateUrl: './skeleton-notification-item.component.html',
     styleUrl: './skeleton-notification-item.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush

@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges, computed } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { GeneralInfoBody } from '../../models/generalInfoBody';
 import { ResultsListFilterService } from '../../../../../../../../pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
@@ -28,11 +28,23 @@ export class ChangeResultTypeModalComponent implements OnChanges {
   selectedResultType: IOption | null = null;
   alertStatusDesc =
     'Currently, the functionality to change result type is still under development for results at the <strong>"Initiative output"</strong> level except for <strong>"other output"</strong> to <strong>"knowledge product"</strong>. We are actively working to extend this possibility to all output types.';
-  alertStatusDescKnowledgeProduct = `<dl>
+  /**
+   * Year used by the knowledge-product guidance. This copy had been left at a hardcoded 2023 (three phases stale).
+   * `reportingCurrentPhase` is a PLAIN object, so the computed depends on `reportingPhaseVersion()` — bumped by
+   * `getCurrentPhases()` — to re-render once the phases land; the calendar-year fallback prevents a "null" year.
+   */
+  readonly kpGuidanceYear = computed(() => {
+    this.api.dataControlSE.reportingPhaseVersion?.();
+    return Number(this.api.dataControlSE.reportingCurrentPhase?.phaseYear ?? new Date().getFullYear());
+  });
+
+  readonly alertStatusDescKnowledgeProduct = computed(
+    () => `<dl>
   <dt>Please add the handle generated in CGSpace to report your knowledge product. Only knowledge products entered into CGSpace are accepted in the PRMS Reporting Tool. The PRMS Reporting Tool will automatically retrieve all metadata entered into CGSpace. This metadata cannot be edited in the PRMS.</dt> <br/>
-  <dt>The handle will be verified, and only knowledge products from 2023 will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace (“Date Online”). Articles Published online for a previous years will not be accepted to prevent double counting across consecutive years. </dt> <br/>
+  <dt>The handle will be verified, and only knowledge products from ${this.kpGuidanceYear()} will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace (“Date Online”). Articles Published online for a previous years will not be accepted to prevent double counting across consecutive years. </dt> <br/>
   <dt>1If you need support to modify any of the harvested metadata from CGSpace, contact your Center’s knowledge manager. <strong>And do the sync again.</strong></dt>
-</dl>`;
+</dl>`
+  );
   isChagingType: boolean = false;
   IOutcome = [1, 2];
 

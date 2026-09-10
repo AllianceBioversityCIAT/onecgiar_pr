@@ -1,4 +1,4 @@
-<div class="detail_container">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
   <app-alert-status [description]="warning" *ngFor="let warning of this.knowledgeProductBody?.warnings"> </app-alert-status>
   <app-alert-status
     description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in {{
@@ -55,7 +55,7 @@
   </div>
 
   <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Handle" [required]="false" [disabled]="true"> </app-pr-input>
-  <div class="auto_fit_container">
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
     <app-pr-input
       [(ngModel)]="knowledgeProductBody.onlineYearCG"
       [label]="`Date online (${knowledgeProductBody.source})`"
@@ -84,7 +84,7 @@
   </div>
 
   <app-pr-input [(ngModel)]="knowledgeProductBody.type" label="Knowledge product type" [required]="false" [readOnly]="true"> </app-pr-input>
-  <div class="auto_fit_container">
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
     <app-pr-input
       [(ngModel)]="knowledgeProductBody.is_peer_reviewed_CG"
       [label]="`Peer reviewed (${knowledgeProductBody.source})`"
@@ -99,18 +99,18 @@
       [readOnly]="true">
     </app-pr-input>
   </div>
-  <div class="auto_fit_container">
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
     <div>
       <app-pr-input
         [(ngModel)]="knowledgeProductBody.is_isi_CG"
         [label]="`Web of Science Core Collection (former ISI) (${knowledgeProductBody.source})`"
         [required]="false"
         [readOnly]="true"></app-pr-input>
-      <p-message
+      <app-alert-status
         *ngIf="knowledgeProductBody.isJournalArticle && (!knowledgeProductBody.is_isi_CG || knowledgeProductBody.is_isi_CG === 'Not provided')"
-        [style]="{ width: '100%', 'justify-content': 'flex-start', 'margin-top': '10px' }"
-        severity="info"
-        text="Please update the ISI Status field in CGSpace before proceeding with the Quality Assurance process."></p-message>
+        inlineStyles="width: 100%; margin-top: 10px"
+        status="info"
+        description="Please update the ISI Status field in CGSpace before proceeding with the Quality Assurance process."></app-alert-status>
     </div>
     <app-pr-input
       *ngIf="knowledgeProductBody.is_isi_WOS != undefined"
@@ -122,21 +122,21 @@
   </div>
 
   <app-pr-input [(ngModel)]="knowledgeProductBody.doi" label="DOI" [required]="false" [readOnly]="true"> </app-pr-input>
-  <div class="auto_fit_container">
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
     <div>
       <app-pr-input
         [(ngModel)]="knowledgeProductBody.accessibility_CG"
         [label]="`Accessibility (${knowledgeProductBody.source})`"
         [required]="false"
         [readOnly]="true"></app-pr-input>
-      <p-message
+      <app-alert-status
         *ngIf="
           knowledgeProductBody.isJournalArticle &&
           (!knowledgeProductBody.accessibility_CG || knowledgeProductBody.accessibility_CG === 'Not provided')
         "
-        [style]="{ width: '100%', 'justify-content': 'flex-start', 'margin-top': '10px' }"
-        severity="info"
-        text="Please update the Open Access field in CGSpace before proceeding with the Quality Assurance process."></p-message>
+        inlineStyles="width: 100%; margin-top: 10px"
+        status="info"
+        description="Please update the Open Access field in CGSpace before proceeding with the Quality Assurance process."></app-alert-status>
     </div>
     <app-pr-input
       *ngIf="knowledgeProductBody.accessibility_WOS"
@@ -198,6 +198,6 @@
     <div class="text-secondary-400">Not Available</div>
   </ng-template>
 </div>
-<app-save-button class="position_sticky" (clickSave)="onSaveSection()" *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
+<app-section-bottom-bar (clickSave)="onSaveSection()" *ngIf="this.api.dataControlSE.isKnowledgeProduct" />
 
 <app-sync-button (clickSave)="onSyncSection()" *ngIf="knowledgeProductBody.type != 'Journal Article' || this.rolesSE.isAdmin"></app-sync-button>

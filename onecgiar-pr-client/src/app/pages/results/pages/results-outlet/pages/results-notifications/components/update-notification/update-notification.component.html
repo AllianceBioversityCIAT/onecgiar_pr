@@ -1,7 +1,11 @@
 @let emitterName = notification?.obj_emitter_user?.first_name + ' ' + notification?.obj_emitter_user?.last_name;
 @let initOfficialCode = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.official_code;
+<!-- 2026-09-05: "submitted for your review" links to the SP's review queue — the detail route does
+     not serve a bilateral result to its reviewer; the queue's drawer does. -->
 @let resultUrl =
-  '/result/result-detail/' + notification?.obj_result?.result_code + '/general-information?phase=' + notification?.obj_result?.obj_version?.id;
+  isBilateralSubmitted
+    ? '/result-framework-reporting/entity-details/' + initOfficialCode + '/bilateral-review'
+    : '/result/result-detail/' + notification?.obj_result?.result_code + '/general-information?phase=' + notification?.obj_result?.obj_version?.id;
 
 <div
   [ngSwitch]="notification?.obj_notification_level?.notifications_level_id"
@@ -46,18 +50,22 @@
   <div *ngSwitchCase="2" class="update_notification_content">
     <div class="update_notification_content_body">
       <p class="update_notification_content_body_text">
-        @if (notification?.notification_type === 1 || notification?.notification_type === 2 || notification?.notification_type === 5) {
-          <b> {{ emitterName }} has {{ getNotificationAction(notification?.notification_type) }} the result </b>
-        } @else {
-          The result
+        @let parts = textParts;
+
+        @if (parts.prefix) {
+          @if (parts.emphasizePrefix) {
+            <b> {{ parts.prefix }} </b>
+          } @else {
+            {{ parts.prefix }}
+          }
         }
 
         <a [href]="resultUrl" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: var(--pr-color-black)">
           {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
         </a>
 
-        @if (notification?.notification_type === 3) {
-          <b> was successfully Quality Assessed. </b>
+        @if (parts.suffix) {
+          <b> {{ parts.suffix }} </b>
         }
       </p>
     </div>

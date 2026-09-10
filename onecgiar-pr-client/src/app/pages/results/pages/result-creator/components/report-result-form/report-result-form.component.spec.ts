@@ -13,6 +13,8 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
 import { ResultLevelCardsComponent } from '../result-level-cards/result-level-cards.component';
 import { signal } from '@angular/core';
+import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
+import { KpCgspaceBrowseComponent } from '../../../../../result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.component';
 
 describe('ReportResultFormComponent', () => {
   let component: ReportResultFormComponent;
@@ -42,11 +44,14 @@ describe('ReportResultFormComponent', () => {
     mockApiService = {
       dataControlSE: {
         getCurrentPhases: jest.fn(() => of({})),
-        reportingCurrentPhase: { portfolioAcronym: 'P25' },
+        reportingPhaseVersion: signal(0),
+        reportingCurrentPhase: { portfolioAcronym: 'P25', phaseYear: 2026 },
+        previousReportingPhase: { phaseYear: 2025 },
         myInitiativesListReportingByPortfolio: mockInitiatives,
         myInitiativesList: [],
         validateBody: jest.fn(),
-        someMandatoryFieldIncompleteResultDetail: jest.fn()
+        someMandatoryFieldIncompleteResultDetail: jest.fn(),
+        fieldFeedbackList: jest.fn(() => [])
       },
       rolesSE: {
         validateReadOnly: jest.fn(() => Promise.resolve()),
@@ -58,11 +63,19 @@ describe('ReportResultFormComponent', () => {
       resultsSE: {
         GET_AllInitiatives: jest.fn(() => of({ response: mockInitiatives })),
         GET_cgiarEntityTypes: jest.fn(() => of({ response: mockEntityTypes })),
-        GET_FindResultsElastic: jest.fn(() => of([])),
+        GET_depthSearch: jest.fn(() => of([])),
         GET_checkTitleUniqueness: jest.fn(() => of({ response: { isUnique: true, existing: null } })),
         POST_resultCreateHeader: jest.fn(() => of({ response: { result_code: 'R001', version_id: 1 } })),
         POST_createWithHandle: jest.fn(() => of({ response: { result_code: 'R001', version_id: 1 } })),
-        GET_mqapValidation: jest.fn(() => of({ response: { title: 'Test Title' } }))
+        GET_mqapValidation: jest.fn(() => of({ response: { title: 'Test Title' } })),
+        // P2-3421 — catalogue behind the link-to-a-QA'd-innovation dropdown.
+        GET_qaInnovationDevelopmentResults: jest.fn(() =>
+          of({
+            response: [
+              { id: 501, result_code: 5501, title: 'Drought-tolerant bean variety', status_id: 2, phase_year: 2025, acronym: 'P25' }
+            ]
+          })
+        )
       },
       updateUserData: jest.fn(callback => callback())
     };
@@ -98,12 +111,13 @@ describe('ReportResultFormComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [ReportResultFormComponent, ResultLevelCardsComponent],
-      imports: [HttpClientTestingModule, RouterTestingModule, CustomFieldsModule, TermPipe],
+      imports: [HttpClientTestingModule, RouterTestingModule, CustomFieldsModule, TermPipe, KpCgspaceBrowseComponent],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: ResultLevelService, useValue: mockResultLevelService },
         { provide: PhasesService, useValue: mockPhasesService },
-        { provide: TerminologyService, useValue: mockTerminologyService }
+        { provide: TerminologyService, useValue: mockTerminologyService },
+        { provide: ResultsApiService, useValue: { GET_cgspaceSearch: jest.fn(() => of({ response: { items: [], total: 0 } })) } }
       ]
     }).compileComponents();
 
@@ -218,6 +232,24 @@ describe('ReportResultFormComponent', () => {
     });
   });
 
+  describe('reportForDisplay getter', () => {
+    it('joins official code and short name', () => {
+      mockResultLevelService.resultBody.initiative_id = 1;
+      component.availableInitiativesSig.set([
+        { id: 1, official_code: 'SP02', short_name: 'Sustainable Farming', full_name: 'SP02 - Sustainable Farming - Sustainable Farming' }
+      ]);
+      expect(component.reportForDisplay).toBe('SP02 · Sustainable Farming');
+    });
+
+    it('collapses a duplicated full_name when short name is missing', () => {
+      mockResultLevelService.resultBody.initiative_id = 1;
+      component.availableInitiativesSig.set([
+        { id: 1, full_name: 'SP02 - Sustainable Farming - Sustainable Farming' }
+      ]);
+      expect(component.reportForDisplay).toBe('SP02 · Sustainable Farming');
+    });
+  });
+
   describe('resultTypeNamePlaceholder getter', () => {
     it('should return type name with "title..." suffix when type exists', () => {
       mockResultLevelService.currentResultTypeList = [{ id: 1, name: 'Innovation' }];
@@ -274,13 +306,62 @@ describe('ReportResultFormComponent', () => {
     });
   });
 
+  describe('CGSpace browse (emerging KP)', () => {
+    const cgspaceItem = {
+      uuid: '12345678-1234-1234-1234-123456789012',
+      handle: '10568/1',
+      handleUrl: 'https://hdl.handle.net/10568/1',
+      itemUrl: 'https://cgspace.cgiar.org/items/12345678-1234-1234-1234-123456789012',
+      title: 'From browse',
+      type: 'Report',
+      year: 2026,
+      authors: [],
+      affiliations: [],
+      countries: [],
+      doi: null,
+      uri: ''
+    };
+
+    it('template offers Browse CGSpace and Manual entry for Knowledge products', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const template = fs.readFileSync(path.join(__dirname, 'report-result-form.component.html'), 'utf8');
+
+      expect(template).toContain('Browse CGSpace');
+      expect(template).toContain('Manual entry');
+      expect(template).toContain('app-kp-cgspace-browse');
+      expect(template).toContain('emerging-kp-entry');
+      expect(template).toContain('emerging-report-for');
+      expect(template).toContain('kp-manual-row');
+      expect(template).toContain('kp-manual-sync');
+    });
+
+    it('fills handler and title from a CGSpace selection', () => {
+      component.onCgspaceItemSelected(cgspaceItem as any);
+
+      expect(mockResultLevelService.resultBody.handler).toBe(cgspaceItem.itemUrl);
+      expect(mockResultLevelService.resultBody.result_name).toBe('Test Title');
+      expect(component.validating).toBe(false);
+    });
+
+    it('clears the selected item so the user can pick another', () => {
+      mockResultLevelService.resultBody.handler = cgspaceItem.itemUrl;
+      mockResultLevelService.resultBody.result_name = 'From browse';
+
+      component.clearSelectedKpItem();
+
+      expect(mockResultLevelService.resultBody.handler).toBe('');
+      expect(mockResultLevelService.resultBody.result_name).toBe('');
+    });
+  });
+
   describe('depthSearch', () => {
     it('should search for results and update depthSearchList', () => {
       const mockResults = [
         { id: 1, title: 'Test Result', version_id: 1 },
         { id: 2, title: 'Another Result', version_id: 2 }
       ];
-      mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() => of(mockResults));
+      mockApiService.resultsSE.GET_depthSearch = jest.fn(() => of(mockResults));
       mockApiService.resultsSE.GET_checkTitleUniqueness = jest.fn(() =>
         of({ response: { isUnique: true, existing: null } })
       );
@@ -293,7 +374,7 @@ describe('ReportResultFormComponent', () => {
     });
 
     it('should set exactTitleFound from MySQL uniqueness check when title conflicts', () => {
-      mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() => of([]));
+      mockApiService.resultsSE.GET_depthSearch = jest.fn(() => of([]));
       mockApiService.resultsSE.GET_checkTitleUniqueness = jest.fn(() =>
         of({
           response: {
@@ -312,7 +393,7 @@ describe('ReportResultFormComponent', () => {
     });
 
     it('should block save and not show green when uniqueness check fails', () => {
-      mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() => of([]));
+      mockApiService.resultsSE.GET_depthSearch = jest.fn(() => of([]));
       mockApiService.resultsSE.GET_checkTitleUniqueness = jest.fn(() => throwError(() => new Error('Error')));
       component.depthSearch('Test');
       expect(component.depthSearchList).toEqual([]);
@@ -321,8 +402,8 @@ describe('ReportResultFormComponent', () => {
       expect(component.blockingExactTitleFound()).toBe(true);
     });
 
-    it('should keep similar results when Elastic succeeds but uniqueness fails', () => {
-      mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() =>
+    it('should keep similar results when the similarity search succeeds but uniqueness fails', () => {
+      mockApiService.resultsSE.GET_depthSearch = jest.fn(() =>
         of([{ id: 1, title: 'Similar', version_id: 1 }])
       );
       mockApiService.resultsSE.GET_checkTitleUniqueness = jest.fn(() => throwError(() => new Error('Error')));
@@ -407,9 +488,19 @@ describe('ReportResultFormComponent', () => {
   });
 
   describe('ngDoCheck', () => {
-    it('should call someMandatoryFieldIncompleteResultDetail', () => {
+    it('should call someMandatoryFieldIncompleteResultDetail in a coalesced rAF', () => {
+      // Scan is now throttled + coalesced into a requestAnimationFrame run outside Angular's zone (P2-2971).
+      const rafSpy = jest.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb: any) => {
+        cb(0);
+        return 0;
+      });
+      (component as any).lastScanAt = 0;
+      (component as any).scanScheduled = false;
+
       component.ngDoCheck();
+
       expect(mockApiService.dataControlSE.someMandatoryFieldIncompleteResultDetail).toHaveBeenCalledWith('.report_container');
+      rafSpy.mockRestore();
     });
   });
 
@@ -583,15 +674,15 @@ describe('ReportResultFormComponent', () => {
     it('should debounce title search requests', () => {
       jest.useFakeTimers();
       fixture.detectChanges();
-      mockApiService.resultsSE.GET_FindResultsElastic.mockClear();
+      mockApiService.resultsSE.GET_depthSearch.mockClear();
       mockApiService.resultsSE.GET_checkTitleUniqueness.mockClear();
 
       component.onTitleChange('test title');
       expect(component.loadingDepthSearch()).toBe(true);
-      expect(mockApiService.resultsSE.GET_FindResultsElastic).not.toHaveBeenCalled();
+      expect(mockApiService.resultsSE.GET_depthSearch).not.toHaveBeenCalled();
 
       jest.advanceTimersByTime(500);
-      expect(mockApiService.resultsSE.GET_FindResultsElastic).toHaveBeenCalledWith('test title', '');
+      expect(mockApiService.resultsSE.GET_depthSearch).toHaveBeenCalledWith('test title', '');
       expect(mockApiService.resultsSE.GET_checkTitleUniqueness).toHaveBeenCalledWith('test title');
       jest.useRealTimers();
     });
@@ -600,14 +691,14 @@ describe('ReportResultFormComponent', () => {
       jest.useFakeTimers();
       fixture.detectChanges();
       component.allPhases = mockPhases.reporting;
-      const firstElastic$ = new Subject<any[]>();
-      const secondElastic$ = new Subject<any[]>();
+      const firstSimilar$ = new Subject<any[]>();
+      const secondSimilar$ = new Subject<any[]>();
       const uniqueness$ = of({ response: { isUnique: true, existing: null } });
 
-      mockApiService.resultsSE.GET_FindResultsElastic = jest
+      mockApiService.resultsSE.GET_depthSearch = jest
         .fn()
-        .mockReturnValueOnce(firstElastic$.asObservable())
-        .mockReturnValueOnce(secondElastic$.asObservable());
+        .mockReturnValueOnce(firstSimilar$.asObservable())
+        .mockReturnValueOnce(secondSimilar$.asObservable());
       mockApiService.resultsSE.GET_checkTitleUniqueness = jest.fn(() => uniqueness$);
 
       component.onTitleChange('first title');
@@ -615,14 +706,14 @@ describe('ReportResultFormComponent', () => {
       component.onTitleChange('second title');
       jest.advanceTimersByTime(500);
 
-      secondElastic$.next([{ id: 2, title: 'second title', version_id: 1 }]);
-      secondElastic$.complete();
+      secondSimilar$.next([{ id: 2, title: 'second title', version_id: 1 }]);
+      secondSimilar$.complete();
 
       expect(component.exactTitleFound()).toBe(false);
       expect(component.depthSearchList[0]?.title).toBe('second title');
 
-      firstElastic$.next([{ id: 1, title: 'first title', version_id: 1 }]);
-      firstElastic$.complete();
+      firstSimilar$.next([{ id: 1, title: 'first title', version_id: 1 }]);
+      firstSimilar$.complete();
 
       expect(component.depthSearchList[0]?.title).toBe('second title');
       expect(component.blockingExactTitleFound()).toBe(false);
@@ -634,7 +725,7 @@ describe('ReportResultFormComponent', () => {
       fixture.detectChanges();
       component.allPhases = mockPhases.reporting;
 
-      mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() => of([]));
+      mockApiService.resultsSE.GET_depthSearch = jest.fn(() => of([]));
       mockApiService.resultsSE.GET_checkTitleUniqueness = jest.fn(() =>
         of({
           response: {
@@ -654,18 +745,18 @@ describe('ReportResultFormComponent', () => {
       jest.useRealTimers();
     });
 
-    it('should resolve gate before slow Elastic finishes', () => {
+    it('should resolve gate before a slow similarity search finishes', () => {
       jest.useFakeTimers();
       fixture.detectChanges();
       component.allPhases = mockPhases.reporting;
-      const elastic$ = new Subject<any[]>();
+      const similar$ = new Subject<any[]>();
 
       mockApiService.resultsSE.GET_checkTitleUniqueness = jest.fn(() =>
         of({ response: { isUnique: true, existing: null } })
       );
-      mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() => elastic$.asObservable());
+      mockApiService.resultsSE.GET_depthSearch = jest.fn(() => similar$.asObservable());
 
-      component.onTitleChange('slow elastic title');
+      component.onTitleChange('slow similarity title');
       jest.advanceTimersByTime(500);
 
       expect(component.loadingDepthSearch()).toBe(false);
@@ -673,8 +764,8 @@ describe('ReportResultFormComponent', () => {
       expect(component.titleCheckFailed()).toBe(false);
       expect(component.depthSearchList).toEqual([]);
 
-      elastic$.next([{ id: 1, title: 'slow elastic title', version_id: 1 }]);
-      elastic$.complete();
+      similar$.next([{ id: 1, title: 'slow similarity title', version_id: 1 }]);
+      similar$.complete();
 
       expect(component.depthSearchList.length).toBe(1);
       expect(component.loadingDepthSearch()).toBe(false);
@@ -789,6 +880,181 @@ describe('ReportResultFormComponent', () => {
     it('should convert undefined to null', () => {
       component.selectedInitiativeId = undefined;
       expect((component as any)._selectedInitiativeId).toBe(null);
+    });
+  });
+
+  /**
+   * P2-3053-style fix: the knowledge-product guidance used to hardcode 2025/2026/2024. It now derives every year
+   * from the active reporting phase. `reportingCurrentPhase` is a plain object, so the computed depends on the
+   * `reportingPhaseVersion` signal to re-render once `getCurrentPhases()` lands.
+   */
+  describe('kpAlertDescription — reporting-phase years', () => {
+    it('uses the active phase year, the next year and the previous phase year', () => {
+      const text = component.kpAlertDescription();
+
+      expect(text).toContain('only knowledge products from <strong>2026</strong> will be accepted');
+      expect(text).toContain('published online in <strong>2026</strong> but issued in <strong>2027</strong>');
+      expect(text).toContain('accepted for the <strong>2026</strong> reporting phase');
+      expect(text).toContain('published online in <strong>2025</strong> but issued in <strong>2026</strong> will not be accepted');
+      expect(text).not.toContain('2024');
+    });
+
+    it('re-renders when the phases resolve after the first paint (never leaves the stale year)', () => {
+      expect(component.kpAlertDescription()).toContain('<strong>2026</strong>');
+
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2027;
+      mockApiService.dataControlSE.previousReportingPhase.phaseYear = 2026;
+      mockApiService.dataControlSE.reportingPhaseVersion.set(1);
+
+      expect(component.kpAlertDescription()).toContain('only knowledge products from <strong>2027</strong> will be accepted');
+    });
+
+    it('never paints "null" while the phases have not loaded yet', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = null;
+      mockApiService.dataControlSE.previousReportingPhase.phaseYear = null;
+      mockApiService.dataControlSE.reportingPhaseVersion.set(2);
+
+      const text = component.kpAlertDescription();
+
+      expect(text).not.toContain('null');
+      expect(text).not.toContain('NaN');
+      expect(text).toContain(`<strong>${new Date().getFullYear()}</strong>`);
+    });
+  });
+  /**
+   * P2-3421 — link to a QA'd Innovation Development result, EMERGENT (non-ToC) pathway only.
+   * The same component also renders the standalone legacy creator, so every test here pins one of
+   * the three gates: the surface opt-in, the indicator category, and the 2026 PHASE year.
+   */
+  describe('P2-3421: link to a QA\'d Innovation Development result', () => {
+    const INNOVATION_USE = 2;
+
+    function armEmergentInnovationUse() {
+      component.showInnovationLinkQuestion = true;
+      mockResultLevelService.resultBody.result_type_id = INNOVATION_USE;
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2026;
+    }
+
+    it('defaults the answer to NO, as the story requires', () => {
+      expect(component.hasInnovationLink).toBe(false);
+      expect(component.linkedResultId).toBeNull();
+    });
+
+    it('shows the question on the emergent pathway for Innovation use in 2026', () => {
+      armEmergentInnovationUse();
+
+      expect(component.showsInnovationLink).toBe(true);
+    });
+
+    it('🛑 never shows it on the standalone legacy creator, which renders this very component', () => {
+      armEmergentInnovationUse();
+      component.showInnovationLinkQuestion = false;
+
+      expect(component.showsInnovationLink).toBe(false);
+    });
+
+    it('🛑 never shows it for a 2025 phase — earlier phases must look exactly as they do today', () => {
+      armEmergentInnovationUse();
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2025;
+
+      expect(component.showsInnovationLink).toBe(false);
+    });
+
+    it('never shows it for any other indicator category', () => {
+      armEmergentInnovationUse();
+      mockResultLevelService.resultBody.result_type_id = 7;
+
+      expect(component.showsInnovationLink).toBe(false);
+    });
+
+    it('loads the shared catalogue on init only when the surface opted in', () => {
+      component.showInnovationLinkQuestion = true;
+      component.ngOnInit();
+
+      expect(mockApiService.resultsSE.GET_qaInnovationDevelopmentResults).toHaveBeenCalled();
+    });
+
+    it('blocks "Save and continue" while the answer is YES with no innovation chosen', () => {
+      armEmergentInnovationUse();
+      component.hasInnovationLink = true;
+      component.linkedResultId = null;
+
+      expect(component.innovationLinkIncomplete).toBe(true);
+    });
+
+    it('unblocks it once an innovation is chosen', () => {
+      armEmergentInnovationUse();
+      component.hasInnovationLink = true;
+      component.linkedResultId = 501;
+
+      expect(component.innovationLinkIncomplete).toBe(false);
+    });
+
+    it('never blocks on the default NO', () => {
+      armEmergentInnovationUse();
+
+      expect(component.innovationLinkIncomplete).toBe(false);
+    });
+
+    it('drops the selection when the user switches back to NO', () => {
+      armEmergentInnovationUse();
+      component.hasInnovationLink = true;
+      component.linkedResultId = 501;
+
+      component.hasInnovationLink = false;
+      component.onInnovationLinkChange();
+
+      expect(component.linkedResultId).toBeNull();
+    });
+
+    it('resets the answer when the indicator category changes', () => {
+      armEmergentInnovationUse();
+      component.hasInnovationLink = true;
+      component.linkedResultId = 501;
+
+      component.clean();
+
+      expect(component.hasInnovationLink).toBe(false);
+      expect(component.linkedResultId).toBeNull();
+    });
+
+    it('sends the answer INSIDE the create body, not as a chained PATCH', () => {
+      armEmergentInnovationUse();
+      mockResultLevelService.resultBody.initiative_id = 1;
+      mockResultLevelService.resultBody.result_name = 'An innovation use result';
+      component.hasInnovationLink = true;
+      component.linkedResultId = 501;
+
+      component.onSaveSection();
+
+      const body = mockApiService.resultsSE.POST_resultCreateHeader.mock.calls.at(-1)[0];
+      expect(body.has_innovation_link).toBe(true);
+      expect(body.linked_results).toEqual([501]);
+    });
+
+    it('sends has_innovation_link=false and no links when the user leaves the default NO', () => {
+      armEmergentInnovationUse();
+      mockResultLevelService.resultBody.initiative_id = 1;
+      mockResultLevelService.resultBody.result_name = 'An innovation use result';
+
+      component.onSaveSection();
+
+      const body = mockApiService.resultsSE.POST_resultCreateHeader.mock.calls.at(-1)[0];
+      expect(body.has_innovation_link).toBe(false);
+      expect(body.linked_results).toEqual([]);
+    });
+
+    it('🛑 leaves the create body untouched when the question was never shown (2025 phase)', () => {
+      armEmergentInnovationUse();
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2025;
+      mockResultLevelService.resultBody.initiative_id = 1;
+      mockResultLevelService.resultBody.result_name = 'A 2025 result';
+
+      component.onSaveSection();
+
+      const body = mockApiService.resultsSE.POST_resultCreateHeader.mock.calls.at(-1)[0];
+      expect(body).not.toHaveProperty('has_innovation_link');
+      expect(body).not.toHaveProperty('linked_results');
     });
   });
 });

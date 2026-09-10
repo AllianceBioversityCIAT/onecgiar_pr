@@ -1,0 +1,124 @@
+<div class="sgi-fields">
+  <app-pr-input
+    label="Title of Result"
+    type="text"
+    [maxWords]="30"
+    [required]="true"
+    placeholder="Enter result title"
+    [valueValid]="!isPlaceholderTitle(title())"
+    [readOnly]="readOnly()"
+    [ngModel]="title()"
+    (ngModelChange)="onTitleChange($event)"
+    (focusout)="onTitleBlur()">
+  </app-pr-input>
+
+  <app-pr-textarea
+    label="Description of Result"
+    [maxWords]="300"
+    [required]="true"
+    [rows]="4"
+    placeholder="Describe the result"
+    [readOnly]="readOnly()"
+    [ngModel]="description()"
+    (ngModelChange)="onDescriptionChange($event)"
+    (focusout)="onDescriptionBlur()">
+  </app-pr-textarea>
+
+  <app-lead-contact-person-field [body]="leadContactBody()" [required]="true" [readOnly]="readOnly()" />
+
+  <!-- For innovations the Lead contact person doubles as the Innovation Developer: that field was
+       removed from Section 5 (Nicoleta Trifa via Ángel Jarrín, 2026-09-03). -->
+  @if (isInnovationDevelopment()) {
+    <p class="sgi-lead-contact-note" data-testid="lead-contact-developer-note">
+      <i class="material-icons-round" aria-hidden="true">info_outline</i>
+      For innovations, the lead contact person is also the innovation developer/lead.
+    </p>
+  }
+
+  <!-- Minimum-data banner + Full Metadata toggle, BELOW the MDS fields — same placement, copy shape
+       and button style as Contributors & Partners (feedback 2026-09-04): the button sits right where
+       the extra fields (Impact Area Scores) unfold, so no auto-scroll is needed. -->
+  <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
+    <app-alert-status
+      class="flex-1"
+      status="info"
+      description="The fields above are the minimum data standards required to report a bilateral result. Add the full metadata if you need to report more.">
+    </app-alert-status>
+    <button
+      type="button"
+      class="shrink-0 rounded-[6px] border border-[var(--pr-color-primary-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+      (click)="toggleShowAll()">
+      {{ showAllFields() ? 'Hide full metadata' : 'Complete full metadata' }}
+    </button>
+  </div>
+
+  @if (showHiddenFieldsNote()) {
+    <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">
+      <span class="font-mono font-medium">{{ hiddenFieldsWithValues() }}</span>
+      hidden fields have values and will be saved.
+    </span>
+  }
+
+  @if (showAllFields()) {
+    <div class="sgi-extra">
+      <!-- P2-3519 · Full-metadata note. Same copy Section 2 (Contributors & Partners) already
+           renders on its own toggle; Section 1 was the only one expanding without it. -->
+      <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">You are completing the full metadata for this section. These fields are optional.</span>
+
+      @if (isLoadingDac()) {
+        <app-form-skeleton [rows]="2" [hasLabel]="true" [hasExtra]="false" />
+      } @else {
+        <div class="sgi-dac-section">
+          <label class="sgi-label sgi-dac-title">Impact Area Scores</label>
+          @for (area of dacAreas; track area.key) {
+            <div class="sgi-dac-row">
+              <div class="sgi-dac-label">
+                <span>{{ area.label }}</span>
+                <!-- P2-3323: pinnable, like every other .sgi-dac-info trigger. The Impact Area
+                     guidance is several paragraphs long, so a click must pin it open instead of
+                     hiding it. -->
+                <button
+                  type="button"
+                  class="sgi-dac-info"
+                  [prTooltip]="area.tooltip"
+                  prTooltipPosition="right"
+                  prTooltipStyleClass="sgi-dac-tooltip"
+                  aria-label="More information about {{ area.label }}">
+                  <app-pr-info-icon />
+                </button>
+              </div>
+              <div class="sgi-dac-tags">
+                @for (level of tagLevels(); track level.value) {
+                  <button
+                    type="button"
+                    class="sgi-radio"
+                    [class.sgi-radio--selected]="selectedDacLevels()[area.key] === level.value"
+                    [disabled]="readOnly()"
+                    (click)="onDacTagChange(area.key, level.value)"
+                  >
+                    {{ level.label }}
+                  </button>
+                }
+              </div>
+              @if (selectedDacLevels()[area.key] == 3) {
+                <div class="sgi-dac-subscores">
+                  @for (opt of (impactAreaSubScores()[area.key] ?? []); track opt.id) {
+                    <button
+                      type="button"
+                      class="sgi-checkbox"
+                      [class.sgi-checkbox--checked]="(selectedSubScores()[area.key] ?? []).includes(opt.id)"
+                      [disabled]="readOnly()"
+                      (click)="toggleSubScore(area.key, opt.id)"
+                    >
+                      {{ opt.title }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

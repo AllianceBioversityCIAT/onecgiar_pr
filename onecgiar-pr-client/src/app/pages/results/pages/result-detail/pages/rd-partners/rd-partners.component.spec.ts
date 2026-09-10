@@ -44,6 +44,8 @@ describe('RdPartnersComponent', () => {
     mockRdPartnersService = {
       getSectionInformation: jest.fn(),
       getCenterInformation: jest.fn(),
+      // Raised by the component on entry (root-singleton service) to drive [appSectionSkeleton].
+      sectionLoading: signal(true),
       partnersBody: {
         no_applicable_partner: true,
         institutions: [],

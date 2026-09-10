@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { By } from '@angular/platform-browser';
 
 import UserManagementComponent from './user-management.component';
+import { PrFilterMultiselectComponent } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
@@ -25,6 +27,7 @@ const mockApiService = {
   },
   resultsSE: {
     GET_AllInitiatives: () => of({ response: [] }),
+    GET_AllCLARISACenters: () => of({ response: [] }),
     GET_roles: () => of({ response: [] }),
     GET_platformGlobalVariablesByCategoryId: () => of({ response: [] })
   },
@@ -89,9 +92,11 @@ describe('UserManagementComponent', () => {
 
   it('should have proper column configuration', () => {
     expect(component.columns).toBeDefined();
-    expect(component.columns.length).toBe(8);
+    expect(component.columns.length).toBe(9);
     expect(component.columns[0].label).toBe('User name');
     expect(component.columns[1].label).toBe('Email');
+    expect(component.columns[3].label).toBe('Science Programs');
+    expect(component.columns[4].label).toBe('Centers');
   });
 
   it('should filter users by status', () => {
@@ -195,16 +200,17 @@ describe('UserManagementComponent', () => {
     expect(getUsersSpy).toHaveBeenCalled();
   });
 
-  it('should handle entity display methods', () => {
-    const entities = ['Entity1', 'Entity2', 'Entity3', 'Entity4'];
+  it('should handle assignment display methods', () => {
+    const items = ['Entity1', 'Entity2', 'Entity3', 'Entity4'];
 
-    expect(component.getDisplayEntities(entities)).toEqual(['Entity1', 'Entity2']);
-    expect(component.hasMoreEntities(entities)).toBe(true);
-    expect(component.getRemainingEntities(entities)).toEqual(['Entity3', 'Entity4']);
+    expect(component.getDisplayAssignments(items)).toEqual(['Entity1']);
+    expect(component.hasMoreAssignments(items)).toBe(true);
+    expect(component.getAssignmentCountLabel(items, 'program', 'programs')).toBe('4 programs');
 
-    const shortEntities = ['Entity1', 'Entity2'];
-    expect(component.hasMoreEntities(shortEntities)).toBe(false);
-    expect(component.getRemainingEntities(shortEntities)).toEqual([]);
+    const shortItems = ['Entity1'];
+    expect(component.hasMoreAssignments(shortItems)).toBe(false);
+    expect(component.getAssignmentCountLabel(shortItems, 'center', 'centers')).toBe('1 center');
+    expect(component.getAssignmentCountLabel([], 'center', 'centers')).toBe('');
   });
 
   it('should handle user editing', async () => {
@@ -323,6 +329,35 @@ describe('UserManagementComponent', () => {
       expect(component.selectedStatus()).toBe('Inactive');
       expect(getUsersSpy).toHaveBeenCalled();
       expect(component.userTable.reset).toHaveBeenCalled();
+    });
+  });
+
+  describe('onEntitiesChange', () => {
+    it('should set selectedEntities and call getUsers', () => {
+      const getUsersSpy = jest.spyOn(component, 'getUsers').mockImplementation(() => {});
+      component.userTable = { reset: jest.fn() } as any;
+      component.onEntitiesChange([1, 2]);
+      expect(component.selectedEntities()).toEqual([1, 2]);
+      expect(getUsersSpy).toHaveBeenCalled();
+      expect(component.userTable.reset).toHaveBeenCalled();
+    });
+
+    it('should default to an empty array when value is null', () => {
+      jest.spyOn(component, 'getUsers').mockImplementation(() => {});
+      component.onEntitiesChange(null as any);
+      expect(component.selectedEntities()).toEqual([]);
+    });
+
+    it('should write the entity selection back and send it to GET_searchUser', () => {
+      const searchSpy = jest.spyOn(mockResultsApiService, 'GET_searchUser');
+      const multiselect = fixture.debugElement.query(By.directive(PrFilterMultiselectComponent))
+        .componentInstance as PrFilterMultiselectComponent;
+      const entity = { id: 5, official_code: 'SP05' };
+
+      multiselect.toggle(entity);
+
+      expect(component.selectedEntities()).toEqual([entity]);
+      expect(searchSpy).toHaveBeenCalledWith('', '', '', [entity]);
     });
   });
 
@@ -545,43 +580,110 @@ describe('UserManagementComponent', () => {
     });
   });
 
-  describe('showEntityOverlay', () => {
-    it('should toggle overlay when entities has more than 2', () => {
-      const overlay = { toggle: jest.fn() };
-      const event = {};
-      const entities = ['E1', 'E2', 'E3'];
-      component.showEntityOverlay(event, overlay, entities);
-      expect(overlay.toggle).toHaveBeenCalledWith(event);
+  describe('parseAssignmentLabel', () => {
+    it('should split entity and role from API label', () => {
+      expect(component.parseAssignmentLabel('SP01 - Member')).toEqual({
+        entity: 'SP01',
+        role: 'Member'
+      });
     });
 
-    it('should not toggle overlay when entities has 2 or less', () => {
-      const overlay = { toggle: jest.fn() };
-      const event = {};
-      const entities = ['E1', 'E2'];
-      component.showEntityOverlay(event, overlay, entities);
-      expect(overlay.toggle).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('getDisplayEntities edge cases', () => {
-    it('should return empty array for null entities', () => {
-      expect(component.getDisplayEntities(null as any)).toEqual([]);
+    it('should handle labels without role separator', () => {
+      expect(component.parseAssignmentLabel('CIMMYT')).toEqual({
+        entity: 'CIMMYT',
+        role: ''
+      });
     });
 
-    it('should return empty array for empty entities', () => {
-      expect(component.getDisplayEntities([])).toEqual([]);
+    it('should handle empty string', () => {
+      expect(component.parseAssignmentLabel('')).toEqual({ entity: '', role: '' });
     });
   });
 
-  describe('hasMoreEntities edge cases', () => {
-    it('should return false for null entities', () => {
-      expect(component.hasMoreEntities(null as any)).toBeFalsy();
+  describe('openAssignmentOverlay', () => {
+    // jsdom viewport: 1024x768
+    const makeEvent = (rect: Partial<DOMRect> = { top: 0, bottom: 10, right: 400 }) =>
+      ({
+        stopPropagation: jest.fn(),
+        currentTarget: { getBoundingClientRect: () => rect }
+      }) as unknown as Event;
+
+    it('should open overlay with assignment data anchored to the trigger button', () => {
+      const event = makeEvent();
+      const items = ['E1', 'E2', 'E3'];
+
+      component.openAssignmentOverlay(event, 'CGIAR Centers', items, true);
+
+      expect((event as any).stopPropagation).toHaveBeenCalled();
+      expect(component.assignmentOverlayOpen()).toBe(true);
+      expect(component.assignmentOverlayTitle()).toBe('CGIAR Centers');
+      expect(component.assignmentOverlayItems()).toEqual(items);
+      expect(component.assignmentOverlayIsCenter()).toBe(true);
+      expect(component.overlayTop).toBe(16);
+      expect(component.overlayFlippedAbove).toBe(false);
+      expect(component.overlayLeft).toBe(400);
+    });
+
+    it('should clamp the panel inside the viewport when the trigger is near the left edge', () => {
+      // right: 20 would place the 320px-wide, right-anchored panel off-screen to the left
+      component.openAssignmentOverlay(makeEvent({ top: 0, bottom: 10, right: 20 }), 'CGIAR Centers', ['E1', 'E2', 'E3'], true);
+
+      expect(component.overlayLeft).toBe(328); // 8px margin + 320px panel width
+    });
+
+    it('should flip above the trigger when there is not enough space below', () => {
+      // bottom: 750 leaves less room than the estimated panel height in a 768px viewport
+      component.openAssignmentOverlay(makeEvent({ top: 728, bottom: 750, right: 400 }), 'CGIAR Centers', ['E1', 'E2', 'E3'], true);
+
+      expect(component.assignmentOverlayOpen()).toBe(true);
+      expect(component.overlayFlippedAbove).toBe(true);
+      expect(component.overlayBottom).toBe(46); // 768 - 728 + 6 → panel bottom sits 6px above the trigger
+    });
+
+    it('should not open overlay when items are within inline limit', () => {
+      const event = makeEvent();
+
+      component.openAssignmentOverlay(event, 'CGIAR Centers', ['E1'], true);
+
+      expect(component.assignmentOverlayOpen()).toBe(false);
+    });
+
+    it('should close overlay when triggered again with the same items', () => {
+      const items = ['E1', 'E2', 'E3'];
+
+      component.openAssignmentOverlay(makeEvent(), 'CGIAR Centers', items, true);
+      expect(component.assignmentOverlayOpen()).toBe(true);
+
+      component.openAssignmentOverlay(makeEvent(), 'CGIAR Centers', items, true);
+      expect(component.assignmentOverlayOpen()).toBe(false);
+    });
+
+    it('should close overlay on document click and window scroll', () => {
+      component.openAssignmentOverlay(makeEvent(), 'CGIAR Centers', ['E1', 'E2'], true);
+      expect(component.assignmentOverlayOpen()).toBe(true);
+
+      component.onDocumentClick();
+      expect(component.assignmentOverlayOpen()).toBe(false);
+
+      component.openAssignmentOverlay(makeEvent(), 'CGIAR Centers', ['E1', 'E2'], true);
+      component.onWindowScroll();
+      expect(component.assignmentOverlayOpen()).toBe(false);
     });
   });
 
-  describe('getRemainingEntities edge cases', () => {
-    it('should return empty array for null entities', () => {
-      expect(component.getRemainingEntities(null as any)).toEqual([]);
+  describe('getDisplayAssignments edge cases', () => {
+    it('should return empty array for null items', () => {
+      expect(component.getDisplayAssignments(null as any)).toEqual([]);
+    });
+
+    it('should return empty array for empty items', () => {
+      expect(component.getDisplayAssignments([])).toEqual([]);
+    });
+  });
+
+  describe('hasMoreAssignments edge cases', () => {
+    it('should return false for null items', () => {
+      expect(component.hasMoreAssignments(null as any)).toBeFalsy();
     });
   });
 
@@ -620,13 +722,15 @@ describe('UserManagementComponent', () => {
             firstName: 'John',
             isCGIAR: 'Yes',
             isActive: 'Active',
-            entities: 'Entity1, Entity2'
+            sciencePrograms: 'Entity1, Entity2',
+            centers: 'Not applicable'
           }),
           expect.objectContaining({
             firstName: 'Not applicable',
             isCGIAR: 'No',
             isActive: 'Inactive',
-            entities: 'Not applicable'
+            sciencePrograms: 'Not applicable',
+            centers: 'Not applicable'
           })
         ]),
         'user_report',

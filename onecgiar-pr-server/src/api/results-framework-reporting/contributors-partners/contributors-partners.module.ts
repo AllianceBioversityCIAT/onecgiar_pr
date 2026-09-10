@@ -12,6 +12,11 @@ import { LinkedResultsModule } from '../../results/linked-results/linked-results
 import { ResultsInnovationsDevRepository } from '../../results/summary/repositories/results-innovations-dev.repository';
 import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
 
+import { ContributionConsistencyService } from './contribution-consistency.service';
+import { ResultsCapacityDevelopmentsRepository } from '../../results/summary/repositories/results-capacity-developments.repository';
+import { ResultActorRepository } from '../../results/result-actors/repositories/result-actors.repository';
+import { ResultsPolicyChangesRepository } from '../../results/summary/repositories/results-policy-changes.repository';
+import { ResultAnswerRepository } from '../../results/result-questions/repository/result-answers.repository';
 @Module({
   controllers: [ContributorsPartnersController],
   providers: [
@@ -23,12 +28,18 @@ import { ResultsInnovationsUseRepository } from '../../results/summary/repositor
     LinkedResultRepository,
     ResultsInnovationsDevRepository,
     ResultsInnovationsUseRepository,
+    // P2-2932 — the Section 2 vs Section 4 consistency check and the two repositories it reads.
+    ContributionConsistencyService,
+    ResultsCapacityDevelopmentsRepository,
+    ResultActorRepository,
+    ResultsPolicyChangesRepository,
+    ResultAnswerRepository,
   ],
   imports: [
     ResultsByInstitutionsModule,
     ResultsTocResultsModule,
     LinkedResultsModule,
   ],
-  exports: [ContributorsPartnersService],
+  exports: [ContributorsPartnersService, ContributionConsistencyService],
 })
 export class ContributorsPartnersModule {}

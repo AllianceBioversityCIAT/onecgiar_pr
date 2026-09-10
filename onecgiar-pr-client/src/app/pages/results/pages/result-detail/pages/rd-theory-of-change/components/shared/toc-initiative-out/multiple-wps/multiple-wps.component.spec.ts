@@ -1,12 +1,38 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { Component, Input, provideZonelessChangeDetection } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { of } from 'rxjs';
 import { MultipleWPsComponent } from './multiple-wps.component';
 import { jest } from '@jest/globals';
 import { MultipleWPsContentComponent } from './components/multiple-wps-content/multiple-wps-content.component';
 import { MappedResultsModalComponent } from './components/mapped-results-modal/mapped-results-modal.component';
-import { DialogModule } from 'primeng/dialog';
-import { TableModule } from 'primeng/table';
+import { FilterOutcomeLevelByBooleanPipe } from './components/multiple-wps-content/pipes/filter-outcome-level-by-boolean.pipe';
 import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
+import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
+import { CustomizedAlertsFeService } from '../../../../../../../../../../shared/services/customized-alerts-fe.service';
+import { FieldsManagerService } from '../../../../../../../../../../shared/services/fields-manager.service';
+
+@Component({
+  selector: 'app-multiple-wps-content',
+  template: `<div data-testid="wps-content" *ngIf="showMultipleWPsContent">Level / HLO / KPI form</div>`,
+  standalone: false
+})
+class StubMultipleWPsContentComponent {
+  @Input() editable: boolean;
+  @Input() initiative: any;
+  @Input() activeTab: any;
+  @Input() resultLevelId: number | string;
+  @Input() isIpsr: boolean;
+  @Input() showMultipleWPsContent: boolean = true;
+  @Input() outcomeList: any;
+  @Input() eoiList: any;
+  @Input() outputList: any;
+  @Input() allTabsCreated: any;
+  @Input() selectedOptionsOutput: any;
+  @Input() selectedOptionsOutcome: any;
+  @Input() selectedOptionsEOI: any;
+}
 
 jest.useFakeTimers();
 
@@ -55,8 +81,8 @@ describe('MultipleWPsComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [MultipleWPsComponent, MultipleWPsContentComponent, MappedResultsModalComponent],
-      imports: [HttpClientTestingModule, DialogModule, TableModule],
+      declarations: [MultipleWPsComponent, MultipleWPsContentComponent, MappedResultsModalComponent, FilterOutcomeLevelByBooleanPipe],
+      imports: [HttpClientTestingModule],
       providers: [
         {
           provide: RdTheoryOfChangesServicesService,
@@ -288,6 +314,9 @@ describe('MultipleWPsComponent', () => {
   describe('onActiveTab', () => {
     it('should set activeTab and showMultipleWPsContent on onActiveTab', () => {
       const tab = { uniqueId: '123' };
+      // `showMultipleWPsContent` is signal-backed now, so flipping it back schedules a real render
+      // pass: the child template needs an `initiative` to bind against.
+      component.initiative = { planned_result: true, result_toc_results: [] };
       component.showMultipleWPsContent = false;
       component.onActiveTab(tab);
 
@@ -515,6 +544,88 @@ describe('MultipleWPsComponent', () => {
       component.deleteTabLogic(tab);
 
       expect(component.activeTab).toBeUndefined();
+    });
+  });
+
+  // P2-3245 / P2-3275: the `false -> setTimeout -> true` toggle in onActiveTab() used to leave the
+  // view frozen on `false` under zoneless change detection, so the Level/HLO/KPI form never came
+  // back after switching tabs or pressing "Add other TOC result".
+  describe('zoneless re-render after the show/hide toggle', () => {
+    let zFixture: ComponentFixture<MultipleWPsComponent>;
+    let zComponent: MultipleWPsComponent;
+
+    const contentEl = () => zFixture.nativeElement.querySelector('[data-testid="wps-content"]');
+    const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    beforeEach(async () => {
+      jest.useRealTimers();
+      TestBed.resetTestingModule();
+
+      const apiMock = {
+        dataControlSE: { currentNotification: null, currentResult: { id: 100 } },
+        tocApiSE: {
+          GET_tocLevelsByconfig: jest.fn((_resultId: any, _initiativeId: any, level: number) =>
+            of({ response: level === 1 ? [{ work_package_id: 1 }, { work_package_id: 2 }, { work_package_id: 3 }] : [] })
+          )
+        }
+      };
+
+      await TestBed.configureTestingModule({
+        declarations: [MultipleWPsComponent, StubMultipleWPsContentComponent],
+        imports: [CommonModule],
+        providers: [
+          provideZonelessChangeDetection(),
+          { provide: ApiService, useValue: apiMock },
+          { provide: CustomizedAlertsFeService, useValue: { show: jest.fn() } },
+          { provide: FieldsManagerService, useValue: { isP25: () => false } },
+          { provide: RdTheoryOfChangesServicesService, useValue: mockTheoryOfChangesServicesService }
+        ]
+      }).compileComponents();
+
+      zFixture = TestBed.createComponent(MultipleWPsComponent);
+      zComponent = zFixture.componentInstance;
+      zComponent.editable = true;
+      zComponent.resultLevelId = 1;
+      zComponent.initiative = {
+        initiative_id: 1,
+        official_code: 'INIT-01',
+        short_name: 'INIT',
+        planned_result: true,
+        result_toc_results: [{ uniqueId: 'a' }, { uniqueId: 'b' }]
+      };
+      zComponent.activeTab = zComponent.initiative.result_toc_results[0];
+      zFixture.detectChanges();
+      await zFixture.whenStable();
+    });
+
+    afterEach(() => {
+      jest.useFakeTimers();
+    });
+
+    it('renders the content again after switching tabs', async () => {
+      zFixture.nativeElement.querySelectorAll('.tab-content')[1].click();
+      await zFixture.whenStable();
+
+      expect(contentEl()).toBeFalsy();
+
+      await wait(100);
+      await zFixture.whenStable();
+
+      expect(zComponent.showMultipleWPsContent).toBe(true);
+      expect(contentEl()).toBeTruthy();
+    });
+
+    it('renders the content again after "Add other TOC result"', async () => {
+      zFixture.nativeElement.querySelector('.tab-add-button').click();
+      await zFixture.whenStable();
+
+      expect(contentEl()).toBeFalsy();
+
+      await wait(100);
+      await zFixture.whenStable();
+
+      expect(zComponent.initiative.result_toc_results.length).toBe(3);
+      expect(contentEl()).toBeTruthy();
     });
   });
 });

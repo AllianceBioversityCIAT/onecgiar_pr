@@ -10,7 +10,7 @@
 
 1. Copy this file to `docs/specs/<module>/design.md`. Replace placeholders.
 2. The design MUST be implementable from this document alone — no critical decisions deferred to "we'll figure it out in tasks".
-3. Every cross-cutting decision MUST cite the source of authority (`docs/prd.md`, `docs/detailed-design/detailed-design.md`, `bilateral-result-summaries.en.md`, etc.).
+3. Every cross-cutting decision MUST cite the source of authority (`docs/prd.md`, `docs/trd/trd.md`, `bilateral-result-summaries.en.md`, etc.).
 4. Use the section headings below verbatim — `/sdd-validate` checks for them.
 5. Numbering for ADRs / DDs: `<MOD>-DD-<n>` (e.g., `RES-DD-1`).
 
@@ -32,7 +32,7 @@ Link the corresponding `requirements.md` and the relevant sections in the projec
 
 ### 2.1 Where this lives in the system
 
-Reference the modules in `docs/detailed-design/detailed-design.md`:
+Reference the modules in `docs/trd/trd.md`:
 
 - **Server modules touched:** `api/<...>`, `shared/<...>`, `auth/<...>`, etc.
 - **Client modules touched:** `pages/<feature>/...`, `shared/services/api/...`.
@@ -95,7 +95,7 @@ For each endpoint:
 | Field | Value |
 |---|---|
 | **Method + path** | `PATCH /api/results/{id}/submit` |
-| **Version** | `api` or `v2/api` (per `docs/detailed-design/detailed-design.md` §4). |
+| **Version** | `api` or `v2/api` (per `docs/trd/trd.md` §4). |
 | **Auth** | JWT required / JWT-excluded (justify any exclusion). |
 | **Role** | `<role(s)>` (`results.submitter`, `qa.reviewer`, `admin`, ...). |
 | **Request DTO** | DTO name, `class-validator` rules, sample JSON. |
@@ -125,7 +125,7 @@ Walk through the implementation in plain prose:
 - Background jobs: cron entries, RMQ producers/consumers, retry / DLQ behaviour.
 - Cross-module side effects (notifications, audit rows, soft deletes).
 
-Cite the relevant project-level workflow (W1..W8 in `docs/detailed-design/detailed-design.md`).
+Cite the relevant project-level workflow (W1..W8 in `docs/trd/trd.md`).
 
 ---
 
@@ -147,8 +147,8 @@ Cite the relevant project-level workflow (W1..W8 in `docs/detailed-design/detail
 
 - PrimeNG components used.
 - Tokens from `src/styles/colors.scss` and typography from `src/styles/fonts.scss`.
-- Responsive plan (which breakpoints behave specially — follow `docs/system-design/design.md` §9).
-- A11y notes — focus order, labels, live regions per `docs/system-design/design.md` §10.
+- Responsive plan (which breakpoints behave specially — follow `docs/ux-ui/design.md` §9).
+- A11y notes — focus order, labels, live regions per `docs/ux-ui/design.md` §10.
 - i18n keys touched under `src/app/internationalization/`.
 
 ### 6.4 Real-time / notification UX
@@ -195,7 +195,7 @@ Cite the relevant project-level workflow (W1..W8 in `docs/detailed-design/detail
 - Integration tests: controller + repository + DB via `@nestjs/testing` (or Cypress for client).
 - Workflow tests: full status / phase transitions through `result-review-history`.
 - Payload tests: bilateral / platform-report shapes (compare to fixtures derived from `bilateral-result-summaries.en.md`).
-- Coverage uplift: name modules expected to cross the 60/60/60/50 thresholds (server) and 60/60/60/50 (client) per `docs/detailed-design/detailed-design.md` §10.
+- Coverage uplift: name modules expected to cross the 60/60/60/50 thresholds (server) and 60/60/60/50 (client) per `docs/trd/trd.md` §10.
 
 ---
 
@@ -220,7 +220,7 @@ Capture each non-obvious choice. Lightweight ADR format — no need for a separa
 - **Alternatives considered:** at least two, with one-line reasons we rejected them.
 - **Consequences:** trade-offs, follow-ups, things we're now stuck with.
 
-Promote cross-cutting decisions to `docs/system-design/design.md` §12 (UX) or `docs/detailed-design/detailed-design.md` §11 (technical) instead of duplicating them per module.
+Promote cross-cutting decisions to `docs/ux-ui/design.md` §12 (UX) or `docs/trd/trd.md` §11 (technical) instead of duplicating them per module.
 
 ---
 
@@ -237,5 +237,5 @@ Promote cross-cutting decisions to `docs/system-design/design.md` §12 (UX) or `
 Every approved `design.md` MUST link to:
 
 - `docs/specs/<module>/requirements.md` (same folder).
-- `docs/prd.md`, `docs/system-design/design.md`, `docs/detailed-design/detailed-design.md`.
+- `docs/prd.md`, `docs/ux-ui/design.md`, `docs/trd/trd.md`.
 - Authoritative module docs (e.g., `onecgiar-pr-server/docs/bilateral-result-summaries.en.md`) when changing payloads.

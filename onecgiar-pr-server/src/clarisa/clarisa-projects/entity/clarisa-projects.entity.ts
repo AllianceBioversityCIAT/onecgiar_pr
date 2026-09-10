@@ -9,6 +9,8 @@ import {
 } from 'typeorm';
 import { ResultsByProjects } from '../../../api/results/results_by_projects/entities/results_by_projects.entity';
 import { ClarisaInstitution } from '../../clarisa-institutions/entities/clarisa-institution.entity';
+import { ClarisaProjectCountry } from './clarisa-project-country.entity';
+import { ClarisaProjectMapping } from './clarisa-project-mapping.entity';
 
 @Entity('clarisa_projects')
 export class ClarisaProject {
@@ -115,9 +117,62 @@ export class ClarisaProject {
   @Column({ name: 'updated_by', type: 'bigint', nullable: true })
   updatedBy: number | null;
 
+  @Column({ type: 'int', nullable: true })
+  phase: number | null;
+
+  @Column({
+    name: 'external_source',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
+  externalSource: string | null;
+
+  @Column({
+    name: 'external_project_id',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  externalProjectId: string | null;
+
+  @Column({
+    name: 'external_code',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  externalCode: string | null;
+
+  @Index('IDX_clarisa_projects_source_center_acronym')
+  @Column({
+    name: 'source_center_acronym',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
+  sourceCenterAcronym: string | null;
+
+  @Column({ name: 'source_center_name', type: 'text', nullable: true })
+  sourceCenterName: string | null;
+
+  @Column({
+    name: 'source_status',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
+  sourceStatus: string | null;
+
   @OneToMany(
     () => ResultsByProjects,
     (resultProject) => resultProject.obj_clarisa_project,
   )
   obj_results_by_projects: ResultsByProjects[];
+
+  @OneToMany(() => ClarisaProjectMapping, (mapping) => mapping.obj_project)
+  obj_project_mappings: ClarisaProjectMapping[];
+
+  @OneToMany(() => ClarisaProjectCountry, (country) => country.obj_project)
+  obj_project_countries: ClarisaProjectCountry[];
 }

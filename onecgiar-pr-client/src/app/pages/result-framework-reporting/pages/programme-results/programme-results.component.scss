@@ -1,0 +1,16 @@
+// Viewport lock (`sp-shell-app-viewport`, `SAV-T-4`) — this page always serves the Results tab, so
+// the mixin is included unconditionally (contrast `dashboard-lab`, which gates it on `isProgramShell()`
+// via `:host(.pr-viewport-page)`; `SAV-DD-1`, `SAV-DD-3`). The `pr-viewport-page` host class is still
+// applied (see the `host:` metadata in `programme-results.component.ts`) so it stays discoverable and
+// consistent with the other two adopters.
+@use '../../../../../styles/viewport-page' as vp;
+
+:host {
+  // `display: block` lives HERE, not in the component's inline `styles` array, because Angular 21
+  // emits `styleUrls` content BEFORE inline `styles` at equal specificity (reviewer-verified against
+  // @angular/compiler-cli). Keeping both `:host` rules in this one sheet, with the mixin's
+  // `@media (min-width: 900px)` block coming later in source order, guarantees the flex-column
+  // layout wins over this base `display: block` instead of being silently overridden by it.
+  display: block;
+  @include vp.pr-viewport-page;
+}

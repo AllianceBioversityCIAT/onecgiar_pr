@@ -1,7 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { TableModule } from 'primeng/table';
-import { MenuModule } from 'primeng/menu';
 import { InnovationPackageCustomTableComponent } from './innovation-package-custom-table.component';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { of, throwError } from 'rxjs';
@@ -55,7 +53,7 @@ describe('InnovationPackageCustomTableComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [InnovationPackageCustomTableComponent],
-      imports: [HttpClientTestingModule, TableModule, MenuModule],
+      imports: [HttpClientTestingModule],
       providers: [{ provide: ApiService, useValue: mockApiService }]
     }).compileComponents();
 

@@ -40,4 +40,31 @@ Esta regla se aplica a:
 - Documentación
 - Logs y debugging
 
-**TODA VIOLACIÓN DE ESTA REGLA ES CONSIDERADA UN GRAVE ERROR DE SEGURIDAD** 
+**TODA VIOLACIÓN DE ESTA REGLA ES CONSIDERADA UN GRAVE ERROR DE SEGURIDAD**
+
+---
+
+## 🧪 TESTS UNITARIOS — SOLO MÓDULOS MODIFICADOS
+
+### ⛔ PROHIBIDO
+- Ejecutar el suite completo de Jest en `onecgiar-pr-server` o `onecgiar-pr-client`
+- `npm run test` sin filtro de path
+- Patrones amplios que arrastren muchos specs no relacionados
+
+### ✅ OBLIGATORIO
+- Correr **únicamente** los specs del módulo/archivo que se modificó:
+
+```bash
+# ✅ Correcto — solo el módulo tocado
+cd onecgiar-pr-server && npm run test -- --testPathPattern="bilateral-center.service.spec"
+cd onecgiar-pr-client && npm run test -- --testPathPattern="bilateral-auto-save.service.spec"
+
+# ❌ Prohibido
+cd onecgiar-pr-server && npm run test
+cd onecgiar-pr-client && npm run test
+```
+
+- Preferir el `*.spec.ts` co-localizado del archivo editado
+- Si hay varios archivos de un feature, usar un patrón estrecho (p. ej. con `|`)
+- Suite completa **solo** si el usuario lo pide explícitamente
+ 

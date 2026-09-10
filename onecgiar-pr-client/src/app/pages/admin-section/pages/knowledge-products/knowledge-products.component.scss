@@ -74,6 +74,23 @@
         align-items: flex-end;
         gap: 1rem;
         margin-top: 10px;
+
+        .kp_confidence_field {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .kp_confidence_input {
+          width: 55px;
+          padding: 8px;
+          border: 1px solid var(--pr-color-neutral-1000);
+          border-radius: 6px;
+        }
+
+        .kp_confidence_suffix {
+          color: var(--pr-color-accents-4);
+        }
       }
     }
   }

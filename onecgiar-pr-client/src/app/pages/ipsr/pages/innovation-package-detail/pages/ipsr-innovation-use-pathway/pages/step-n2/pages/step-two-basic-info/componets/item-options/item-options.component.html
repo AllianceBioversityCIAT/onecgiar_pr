@@ -2,13 +2,13 @@
 <ul>
 <div *ngFor="let category of optionsInnovations?.subCategories" class="field-checkbox">
     <li>
-        <p-checkbox name="group" [value]="category" [inputId]="category.id" [(ngModel)]="selectedCategories" (click)="selectes(category)"></p-checkbox>
+        <input type="checkbox" prCheckboxValue class="pr-native-check" name="group" [value]="category" [id]="category.id" [(ngModel)]="selectedCategories" (ngModelChange)="selectes(category)" />
         <label [for]="category.id"> {{ category.group }}</label>
     </li>
     <ul>
         <li>
             <div *ngFor="let categories of category?.subCategories" class="field-checkbox">
-                <p-checkbox name="group" [value]="categories" [inputId]="categories.id" [(ngModel)]="selectedOne" (click)="subSelectes(category)"></p-checkbox>
+                <input type="checkbox" prCheckboxValue class="pr-native-check" name="group" [value]="categories" [id]="categories.id" [(ngModel)]="selectedOne" (ngModelChange)="subSelectes(category)" />
                 <label [for]="categories.id">{{ categories.group }}</label>
                 
             </div>

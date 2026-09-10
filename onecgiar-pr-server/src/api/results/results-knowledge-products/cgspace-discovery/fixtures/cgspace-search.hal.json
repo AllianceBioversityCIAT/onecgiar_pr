@@ -1,0 +1,332 @@
+{
+  "type": "discover",
+  "_links": {
+    "self": {
+      "href": "https://cgspace.cgiar.org/server/api/discover/search/objects?query=maize&dsoType=item"
+    }
+  },
+  "_embedded": {
+    "searchResult": {
+      "page": {
+        "number": 0,
+        "size": 3,
+        "totalElements": 3,
+        "totalPages": 1
+      },
+      "_links": {
+        "self": {
+          "href": "https://cgspace.cgiar.org/server/api/discover/search/objects?query=maize&dsoType=item&size=3"
+        }
+      },
+      "_embedded": {
+        "objects": [
+          {
+            "type": "discover",
+            "_links": {
+              "indexableObject": {
+                "href": "https://cgspace.cgiar.org/server/api/core/items/679513e4-eeba-4a06-a017-015862e7b9b3"
+              }
+            },
+            "_embedded": {
+              "indexableObject": {
+                "id": "679513e4-eeba-4a06-a017-015862e7b9b3",
+                "uuid": "679513e4-eeba-4a06-a017-015862e7b9b3",
+                "name": "Effect of Lablab purpureus L. cover crop and imidazolinone resistant (IR) maize on weeds in drought prone areas, Kenya",
+                "handle": "10568/74449",
+                "entityType": null,
+                "type": "item",
+                "metadata": {
+                  "dc.title": [
+                    {
+                      "value": "Effect of Lablab purpureus L. cover crop and imidazolinone resistant (IR) maize on weeds in drought prone areas, Kenya",
+                      "language": "en",
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ],
+                  "dc.contributor.author": [
+                    {
+                      "value": "Mwangi, H.W.",
+                      "language": null,
+                      "authority": null,
+                      "confidence": 500,
+                      "place": 0
+                    },
+                    {
+                      "value": "Kihurani, A.W.",
+                      "language": null,
+                      "authority": null,
+                      "confidence": 500,
+                      "place": 1
+                    },
+                    {
+                      "value": "Wesonga, J.M.",
+                      "language": null,
+                      "authority": null,
+                      "confidence": 500,
+                      "place": 2
+                    },
+                    {
+                      "value": "Ariga, E.S.",
+                      "language": null,
+                      "authority": null,
+                      "confidence": 500,
+                      "place": 3
+                    },
+                    {
+                      "value": "Kanampiu, F.K.",
+                      "language": null,
+                      "authority": null,
+                      "confidence": 500,
+                      "place": 4
+                    }
+                  ],
+                  "dcterms.issued": [
+                    {
+                      "value": "2015-06",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ],
+                  "dcterms.type": [
+                    {
+                      "value": "Journal Article",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ],
+                  "cg.contributor.affiliation": [
+                    {
+                      "value": "Kenya Agricultural Research Institute",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    },
+                    {
+                      "value": "University of Agriculture Science and Technology, Kenya",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 1
+                    },
+                    {
+                      "value": "University of Nairobi",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 2
+                    },
+                    {
+                      "value": "International Institute of Tropical Agriculture",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 3
+                    }
+                  ],
+                  "dc.identifier.uri": [
+                    {
+                      "value": "https://hdl.handle.net/10568/74449",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ],
+                  "cg.identifier.doi": [
+                    {
+                      "value": "https://doi.org/10.1016/j.cropro.2015.02.013",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ],
+                  "cg.coverage.country": [
+                    {
+                      "value": "Kenya",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "discover",
+            "_links": {
+              "indexableObject": {
+                "href": "https://cgspace.cgiar.org/server/api/core/items/8914c5a5-2102-4eae-954d-3cfcce27246c"
+              }
+            },
+            "_embedded": {
+              "indexableObject": {
+                "id": "8914c5a5-2102-4eae-954d-3cfcce27246c",
+                "uuid": "8914c5a5-2102-4eae-954d-3cfcce27246c",
+                "name": "MAIZE cover letter to full proposal 2017-2022",
+                "handle": "10947/4262",
+                "entityType": null,
+                "type": "item",
+                "metadata": {
+                  "dc.title": [
+                    {
+                      "value": "MAIZE cover letter to full proposal 2017-2022",
+                      "language": "en",
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ],
+                  "dc.contributor.author": [
+                    {
+                      "value": "CGIAR Research Program on Maize",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ],
+                  "dcterms.issued": [
+                    {
+                      "value": "2016-04",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ],
+                  "dcterms.type": [
+                    {
+                      "value": "Proposal",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ],
+                  "cg.contributor.affiliation": [
+                    {
+                      "value": "CGIAR Research Program on Maize",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ],
+                  "dc.identifier.uri": [
+                    {
+                      "value": "https://hdl.handle.net/10947/4262",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "discover",
+            "_links": {
+              "indexableObject": {
+                "href": "https://cgspace.cgiar.org/server/api/core/items/5dcef492-2ed6-4453-9745-f2d66d87b501"
+              }
+            },
+            "_embedded": {
+              "indexableObject": {
+                "id": "5dcef492-2ed6-4453-9745-f2d66d87b501",
+                "uuid": "5dcef492-2ed6-4453-9745-f2d66d87b501",
+                "name": "Expanding the benefits niche: a systems approach to crop-livestock integration for smallholder farmers",
+                "handle": "10568/159697",
+                "entityType": null,
+                "type": "item",
+                "metadata": {
+                  "dc.title": [
+                    {
+                      "value": "Expanding the benefits niche: a systems approach to crop-livestock integration for smallholder farmers",
+                      "language": "en",
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ],
+                  "dc.contributor.author": [
+                    {
+                      "value": "Omondi, John Okoth",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    },
+                    {
+                      "value": "Kyei-Boahen, Stephen",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 1
+                    }
+                  ],
+                  "dcterms.issued": [
+                    {
+                      "value": "2024-11",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ],
+                  "dcterms.type": [
+                    {
+                      "value": "Presentation",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ],
+                  "cg.contributor.affiliation": [
+                    {
+                      "value": "International Institute of Tropical Agriculture",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ],
+                  "dc.identifier.uri": [
+                    {
+                      "value": "https://hdl.handle.net/10568/159697",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ],
+                  "cg.coverage.country": [
+                    {
+                      "value": "Malawi",
+                      "language": null,
+                      "authority": null,
+                      "confidence": -1,
+                      "place": 0
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

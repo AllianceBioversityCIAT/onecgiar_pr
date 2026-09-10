@@ -1,0 +1,36 @@
+// Tailwind-first (onecgiar-pr-client/CLAUDE.md §5) — `writing-mode` has no Tailwind utility, so
+// the rail's vertical label is the one rule that lives here (task brief: SCSS only for this).
+:host {
+  display: contents;
+}
+
+.pr-my-work-rail-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+/**
+ * `MWB-T-7` (3) — expanded column entrance fade. `prmsFade` (portfolio-overview.component.ts) /
+ * `pr-band-fade` (reporting-program-band) are component-local, not global (no shared keyframe to
+ * import), so this mirrors the same ~160ms opacity fade locally, per task brief ("SCSS only for
+ * keyframes not already global").
+ */
+@keyframes pr-my-work-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.pr-my-work-fade {
+  animation: pr-my-work-fade 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-my-work-fade {
+    animation: none;
+  }
+}

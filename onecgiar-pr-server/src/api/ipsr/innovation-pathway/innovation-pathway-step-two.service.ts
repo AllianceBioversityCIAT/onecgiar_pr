@@ -66,7 +66,24 @@ export class InnovationPathwayStepTwoService {
 
   async findInnovationsAndComplementary() {
     try {
-      const results = await this._resultRepository.getResultByTypes([7, 11]);
+      // P2-3572 (epic P2-3243): Step 2 of Innovation Packages also offers Policy Change (1),
+      // Innovation Use (2) and Capacity Sharing for Development (5) as candidate enablers, next to
+      // Innovation Development (7). Knowledge Product (6) is excluded by the story, explicitly.
+      // Complementary innovation (11) is the ad-hoc entry the modal creates and stays as it was.
+      //
+      // Additive on purpose, and the ONLY thing that changes here. The phase gate lives in the
+      // client (`complementary-innovation.component.ts`): this endpoint takes no resultId, so it
+      // cannot know which package is being edited. A package on a phase <= 2025 keeps listing type 7
+      // only, which is what the epic's backward-compatibility rule requires.
+      //
+      // The status filter in `getResultByTypes` is deliberately untouched: its WHERE reduces — by
+      // AND/OR precedence — to `status_id IN (2,3) OR (type = 11 AND status_id = 1)`, so the three
+      // new types enter with Quality Assessed (2) and Submitted (3), which is literally what the
+      // story asks for. Careful if anyone ever "clarifies" that WHERE: the `OR r.status_id = 3` that
+      // makes status 3 apply to every type sits inside the type-11 branch.
+      const results = await this._resultRepository.getResultByTypes([
+        1, 2, 5, 7, 11,
+      ]);
       return {
         response: results,
         message: 'Successful response',

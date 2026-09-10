@@ -138,6 +138,31 @@ describe('AuthMicroserviceService', () => {
       );
     });
 
+    it('should include redirectUri in the request body when provided', async () => {
+      const provider = 'AzureAD';
+      const redirectUri = 'https://prtest.ciat.cgiar.org/auth';
+      mockHttpService.post.mockReturnValueOnce(of(mockAuthUrlResponse));
+
+      const result = await service.getAuthenticationUrl(provider, redirectUri);
+
+      expect(result).toEqual(mockAuthUrlResponse.data);
+      expect(httpService.post).toHaveBeenCalledWith(
+        `${mockEnv.MS_AUTH_URL}/auth/login/provider`,
+        { provider, redirectUri },
+        expect.objectContaining({ headers: expect.any(Object) }),
+      );
+    });
+
+    it('should not include redirectUri in the request body when omitted', async () => {
+      const provider = 'AzureAD';
+      mockHttpService.post.mockReturnValueOnce(of(mockAuthUrlResponse));
+
+      await service.getAuthenticationUrl(provider);
+
+      const calledBody = (httpService.post as jest.Mock).mock.calls[0][1];
+      expect(calledBody).not.toHaveProperty('redirectUri');
+    });
+
     it('should throw HttpException when the request fails', async () => {
       const provider = 'AzureAD';
       const errorResponse = {
@@ -189,6 +214,31 @@ describe('AuthMicroserviceService', () => {
           },
         },
       );
+    });
+
+    it('should include redirectUri in the request body when provided', async () => {
+      const code = 'test-auth-code';
+      const redirectUri = 'https://d11q2gkl6a1qr7.cloudfront.net/auth';
+      mockHttpService.post.mockReturnValueOnce(of(mockTokenResponse));
+
+      const result = await service.validateAuthorizationCode(code, redirectUri);
+
+      expect(result).toEqual(mockTokenResponse.data);
+      expect(httpService.post).toHaveBeenCalledWith(
+        `${mockEnv.MS_AUTH_URL}/auth/validate/code`,
+        { code, redirectUri },
+        expect.objectContaining({ headers: expect.any(Object) }),
+      );
+    });
+
+    it('should not include redirectUri in the request body when omitted', async () => {
+      const code = 'test-auth-code';
+      mockHttpService.post.mockReturnValueOnce(of(mockTokenResponse));
+
+      await service.validateAuthorizationCode(code);
+
+      const calledBody = (httpService.post as jest.Mock).mock.calls[0][1];
+      expect(calledBody).not.toHaveProperty('redirectUri');
     });
 
     it('should throw HttpException when token validation fails with error response', async () => {

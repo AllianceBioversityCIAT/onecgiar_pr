@@ -13,7 +13,13 @@ import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { LinkedResultRepository } from '../../results/linked-results/linked-results.repository';
 import { LinkedResultsService } from '../../results/linked-results/linked-results.service';
 import { ResultsInnovationsDevRepository } from '../../results/summary/repositories/results-innovations-dev.repository';
+import { ContributionConsistencyService } from './contribution-consistency.service';
+import { ContributionBox } from '../../results/results-toc-results/achieved-value-derivation';
 import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
+import {
+  throwServiceError,
+  formatUnknownError,
+} from '../../../shared/utils/service-error.util';
 
 @Injectable()
 export class ContributorsPartnersService {
@@ -30,6 +36,7 @@ export class ContributorsPartnersService {
     private readonly _linkedResultsService: LinkedResultsService,
     private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
     private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
+    private readonly _contributionConsistencyService: ContributionConsistencyService,
   ) {}
 
   async getContributorsPartnersByResultId(resultId: number) {
@@ -41,11 +48,11 @@ export class ContributorsPartnersService {
         );
 
       if (!result?.id || !resultInit?.id) {
-        throw {
-          response: { resultId },
-          message: 'Result or Initiative not found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throwServiceError(
+          'Result or Initiative not found',
+          HttpStatus.NOT_FOUND,
+          { resultId },
+        );
       }
 
       const resultTypeId = Number(result.result_type_id);
@@ -108,8 +115,8 @@ export class ContributorsPartnersService {
         sdgTargets: tocResponse.sdgTargets ?? null,
       };
 
-      let hasInnovationLink: boolean | null = null;
-      let linkedResultIds: number[] | null = null;
+      let hasInnovationLink = false;
+      let linkedResultIds: number[] = [];
 
       const noApplicablePartner =
         partnersResponse.no_applicable_partner ??
@@ -117,17 +124,26 @@ export class ContributorsPartnersService {
       const isLeadByPartner =
         partnersResponse.is_lead_by_partner ?? !!result.is_lead_by_partner;
 
-      if (
-        resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT ||
-        resultTypeId === ResultTypeEnum.INNOVATION_USE
-      ) {
-        const [linkFlag, linkedIds] = await Promise.all([
-          this.getInnovationLinkStatus(result.id, resultTypeId),
-          this._linkedResultRepository.getActiveLinkedResultIds(result.id),
-        ]);
+      const [linkFlag, linkedIds] = await Promise.all([
+        this.getInnovationLinkStatus(result.id, resultTypeId),
+        this._linkedResultRepository.getActiveLinkedResultIds(result.id),
+      ]);
 
-        hasInnovationLink = linkFlag;
-        linkedResultIds = linkedIds ?? [];
+      hasInnovationLink = linkFlag;
+      linkedResultIds = linkedIds ?? [];
+
+      // P2-2932. Fails soft on purpose: this is an advisory reading on a section that must load
+      // whether or not the check can run. A failure here must never cost the user their form.
+      let contributionConsistency = null;
+      try {
+        contributionConsistency =
+          await this._contributionConsistencyService.check(
+            result.id,
+            resultTypeId,
+            this.contributionBoxesOf(tocMapping.result_toc_result),
+          );
+      } catch (error) {
+        this._handlersError.returnErrorRes({ error, debug: true });
       }
 
       return {
@@ -146,6 +162,7 @@ export class ContributorsPartnersService {
           is_lead_by_partner: isLeadByPartner,
           has_innovation_link: hasInnovationLink,
           linked_results: linkedResultIds,
+          contribution_consistency: contributionConsistency,
         },
         message: 'Contributors and Partners fetched successfully (P25)',
         status: HttpStatus.OK,
@@ -153,6 +170,40 @@ export class ContributorsPartnersService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  /**
+   * P2-2932 — every contribution box on the result, one per mapped ToC indicator.
+   *
+   * The value lives three levels down: node → indicators[] → targets[]. Only the OWNER's node is
+   * read: the comparison is between what this reporter typed and what this reporter recorded in
+   * Section 4, not what contributing initiatives entered against their own sections.
+   *
+   * `indicatorResultTypeId` now carries the indicator's own category, joined from the ToC side in
+   * `getRTRPrimaryV2`. That is what makes the PO's mixed-type rule bite: a Capacity Sharing result
+   * that later picks up an Innovation Development indicator compares only its Capacity Sharing
+   * boxes, because Section 4 holds nothing to check the other one against.
+   *
+   * ⚠️ Null is passed through as undefined on purpose. An indicator whose `type_value` matches no
+   * known pattern is "cannot tell", not "another type" — comparing it is the safe direction, since
+   * dropping it would hide a real disagreement behind an unrecognised label.
+   */
+  private contributionBoxesOf(resultTocResult: any): ContributionBox[] {
+    const nodes = Array.isArray(resultTocResult)
+      ? resultTocResult
+      : resultTocResult
+        ? [resultTocResult]
+        : [];
+
+    return nodes.flatMap((node: any) =>
+      (node?.indicators ?? []).flatMap((indicator: any) =>
+        (indicator?.targets ?? []).map((target: any) => ({
+          contributingIndicator: target?.contributing_indicator,
+          indicatorResultTypeId:
+            indicator?.indicator_result_type_id ?? undefined,
+        })),
+      ),
+    );
   }
 
   async updateTocMappingV2(
@@ -185,47 +236,19 @@ export class ContributorsPartnersService {
       const result = await this._resultRepository.getResultById(resultId);
 
       if (!result?.id) {
-        throw {
-          response: { resultId },
-          message: 'Result not found.',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throwServiceError('Result not found.', HttpStatus.NOT_FOUND, {
+          resultId,
+        });
       }
 
       const resultTypeId = Number(result.result_type_id);
-      const isInnovationResult =
-        resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT ||
-        resultTypeId === ResultTypeEnum.INNOVATION_USE;
+      const sections = this.resolveContributorsPartnersSections(payload);
 
-      const hasProp = (key: string) =>
-        Object.prototype.hasOwnProperty.call(payload ?? {}, key);
-
-      const hasUnifiedToc = [
-        'contributing_initiatives',
-        'accepted_contributing_initiatives',
-        'pending_contributing_initiatives',
-        'changePrimaryInit',
-        'email_template',
-        'result_toc_result',
-        'contributors_result_toc_result',
-        'cancel_pending_requests',
-      ].some(hasProp);
-
-      const hasUnifiedPartners = [
-        'institutions',
-        'mqap_institutions',
-        'contributing_center',
-        'bilateral_projects',
-        'bilateral_project',
-        'no_applicable_partner',
-        'is_lead_by_partner',
-      ].some(hasProp);
-
-      const hasInnovationLinkPayload =
-        isInnovationResult &&
-        (hasProp('has_innovation_link') || hasProp('linked_results'));
-
-      if (!hasUnifiedToc && !hasUnifiedPartners && !hasInnovationLinkPayload) {
+      if (
+        !sections.hasUnifiedToc &&
+        !sections.hasUnifiedPartners &&
+        !sections.hasInnovationLinkPayload
+      ) {
         return {
           response: {},
           message: 'No payload provided to update.',
@@ -237,92 +260,54 @@ export class ContributorsPartnersService {
       const statuses: number[] = [];
       const messages: string[] = [];
 
-      if (hasUnifiedToc) {
-        const tocPayload: CreateResultsTocResultV2Dto & {
-          contributing_initiatives?: UpdateContributorsPartnersDto['contributing_initiatives'];
-        } = {
-          contributing_initiatives: payload.contributing_initiatives,
-          accepted_contributing_initiatives:
-            payload.accepted_contributing_initiatives,
-          pending_contributing_initiatives:
-            payload.pending_contributing_initiatives,
-          cancel_pending_requests: payload.cancel_pending_requests,
-          changePrimaryInit: payload.changePrimaryInit,
-          email_template: payload.email_template,
-          result_toc_result: payload.result_toc_result,
-          contributors_result_toc_result:
-            payload.contributors_result_toc_result,
-        };
-
-        const tocRes = await this.updateTocMappingV2(
+      if (sections.hasUnifiedToc) {
+        const tocUpdate = await this.applyTocMappingSectionUpdate(
           resultId,
-          tocPayload,
+          payload,
           user,
         );
-        response['toc_mapping'] = tocRes.response;
-        statuses.push(tocRes.status ?? HttpStatus.OK);
-        if (tocRes.message) messages.push(tocRes.message);
+        this.appendSectionUpdate(
+          response,
+          statuses,
+          messages,
+          tocUpdate.fields,
+          tocUpdate.status,
+          tocUpdate.message,
+        );
       }
 
-      if (hasUnifiedPartners) {
-        const partnersPayload: SavePartnersV2Dto = {
-          result_id: resultId,
-          institutions: payload.institutions,
-          mqap_institutions: payload.mqap_institutions,
-          contributing_center: payload.contributing_center,
-          bilateral_project:
-            (payload as any).bilateral_project ?? payload.bilateral_projects,
-          no_applicable_partner: payload.no_applicable_partner,
-          is_lead_by_partner: payload.is_lead_by_partner,
-        };
-
-        const partnersRes = await this.updatePartnersV2(
+      if (sections.hasUnifiedPartners) {
+        const partnersUpdate = await this.applyPartnersSectionUpdate(
           resultId,
-          partnersPayload,
+          payload,
           user,
         );
-        response['partners'] = partnersRes.response;
-        statuses.push(partnersRes.status ?? HttpStatus.OK);
-        if (partnersRes.message) messages.push(partnersRes.message);
+        this.appendSectionUpdate(
+          response,
+          statuses,
+          messages,
+          partnersUpdate.fields,
+          partnersUpdate.status,
+          partnersUpdate.message,
+        );
       }
 
-      if (hasInnovationLinkPayload) {
-        const normalizedLinkedIds = this.normalizeLinkedResultIds(
-          payload.linked_results,
-        );
-        const requestedHasInnovationLink = hasProp('has_innovation_link')
-          ? Boolean(payload.has_innovation_link)
-          : normalizedLinkedIds.length > 0;
-
-        const filteredLinkedIds = requestedHasInnovationLink
-          ? await this.filterActiveLinkedResults(normalizedLinkedIds)
-          : [];
-
-        await this._linkedResultsService.createForInnovationUse(
+      if (sections.hasInnovationLinkPayload) {
+        const innovationUpdate = await this.applyInnovationLinkSectionUpdate(
           resultId,
-          filteredLinkedIds,
-          user,
-        );
-
-        const persistedLinkedIds =
-          (await this._linkedResultRepository.getActiveLinkedResultIds(
-            resultId,
-          )) ?? [];
-
-        const finalHasInnovationLink =
-          requestedHasInnovationLink && persistedLinkedIds.length > 0;
-
-        await this.updateInnovationSummaryLink(
           resultTypeId,
-          resultId,
-          finalHasInnovationLink,
-          user.id,
+          payload,
+          user,
+          sections.hasInnovationLinkProp,
         );
-
-        response['has_innovation_link'] = finalHasInnovationLink;
-        response['linked_results'] = persistedLinkedIds;
-        statuses.push(HttpStatus.OK);
-        messages.push('Innovation linkage updated.');
+        this.appendSectionUpdate(
+          response,
+          statuses,
+          messages,
+          innovationUpdate.fields,
+          innovationUpdate.status,
+          innovationUpdate.message,
+        );
       }
 
       await this._resultRepository.update(resultId, {
@@ -330,9 +315,7 @@ export class ContributorsPartnersService {
         last_updated_date: new Date(),
       });
 
-      const status = statuses.length
-        ? statuses.reduce((max, curr) => (curr > max ? curr : max), statuses[0])
-        : HttpStatus.OK;
+      const status = statuses.length ? Math.max(...statuses) : HttpStatus.OK;
 
       return {
         response,
@@ -344,11 +327,203 @@ export class ContributorsPartnersService {
     }
   }
 
+  private resolveContributorsPartnersSections(
+    payload: UpdateContributorsPartnersDto,
+  ): {
+    hasUnifiedToc: boolean;
+    hasUnifiedPartners: boolean;
+    hasInnovationLinkPayload: boolean;
+    hasInnovationLinkProp: boolean;
+  } {
+    const hasProp = (key: string) =>
+      Object.prototype.hasOwnProperty.call(payload ?? {}, key);
+
+    return {
+      hasUnifiedToc: [
+        'contributing_initiatives',
+        'accepted_contributing_initiatives',
+        'pending_contributing_initiatives',
+        'changePrimaryInit',
+        'email_template',
+        'result_toc_result',
+        'contributors_result_toc_result',
+        'cancel_pending_requests',
+      ].some(hasProp),
+      hasUnifiedPartners: [
+        'institutions',
+        'mqap_institutions',
+        'contributing_center',
+        'bilateral_projects',
+        'bilateral_project',
+        'no_applicable_partner',
+        'is_lead_by_partner',
+      ].some(hasProp),
+      hasInnovationLinkPayload:
+        hasProp('has_innovation_link') || hasProp('linked_results'),
+      hasInnovationLinkProp: hasProp('has_innovation_link'),
+    };
+  }
+
+  private appendSectionUpdate(
+    response: Record<string, any>,
+    statuses: number[],
+    messages: string[],
+    fields: Record<string, any>,
+    status: number,
+    message?: string,
+  ): void {
+    Object.assign(response, fields);
+    statuses.push(status);
+    if (message) {
+      messages.push(message);
+    }
+  }
+
+  private async applyTocMappingSectionUpdate(
+    resultId: number,
+    payload: UpdateContributorsPartnersDto,
+    user: TokenDto,
+  ): Promise<{
+    fields: Record<string, any>;
+    status: number;
+    message?: string;
+  }> {
+    const tocPayload: CreateResultsTocResultV2Dto & {
+      contributing_initiatives?: UpdateContributorsPartnersDto['contributing_initiatives'];
+    } = {
+      contributing_initiatives: payload.contributing_initiatives,
+      accepted_contributing_initiatives:
+        payload.accepted_contributing_initiatives,
+      pending_contributing_initiatives:
+        payload.pending_contributing_initiatives,
+      cancel_pending_requests: payload.cancel_pending_requests,
+      changePrimaryInit: payload.changePrimaryInit,
+      email_template: payload.email_template,
+      result_toc_result: payload.result_toc_result,
+      contributors_result_toc_result: payload.contributors_result_toc_result,
+    };
+
+    const tocRes = await this.updateTocMappingV2(resultId, tocPayload, user);
+
+    return {
+      fields: { toc_mapping: tocRes.response },
+      status: tocRes.status ?? HttpStatus.OK,
+      message: tocRes.message,
+    };
+  }
+
+  private async applyPartnersSectionUpdate(
+    resultId: number,
+    payload: UpdateContributorsPartnersDto,
+    user: TokenDto,
+  ): Promise<{
+    fields: Record<string, any>;
+    status: number;
+    message?: string;
+  }> {
+    const partnersPayload: SavePartnersV2Dto = {
+      result_id: resultId,
+      institutions: payload.institutions,
+      mqap_institutions: payload.mqap_institutions,
+      contributing_center: payload.contributing_center,
+      bilateral_project:
+        (payload as any).bilateral_project ?? payload.bilateral_projects,
+      no_applicable_partner: payload.no_applicable_partner,
+      is_lead_by_partner: payload.is_lead_by_partner,
+    };
+
+    const partnersRes = await this.updatePartnersV2(
+      resultId,
+      partnersPayload,
+      user,
+    );
+
+    return {
+      fields: { partners: partnersRes.response },
+      status: partnersRes.status ?? HttpStatus.OK,
+      message: partnersRes.message,
+    };
+  }
+
+  private async applyInnovationLinkSectionUpdate(
+    resultId: number,
+    resultTypeId: number,
+    payload: UpdateContributorsPartnersDto,
+    user: TokenDto,
+    hasInnovationLinkProp: boolean,
+  ): Promise<{
+    fields: Record<string, any>;
+    status: number;
+    message: string;
+  }> {
+    const normalizedLinkedIds = this.normalizeLinkedResultIds(
+      payload.linked_results,
+    );
+    const requestedHasInnovationLink = hasInnovationLinkProp
+      ? Boolean(payload.has_innovation_link)
+      : normalizedLinkedIds.length > 0;
+
+    const filteredLinkedIds = requestedHasInnovationLink
+      ? await this.filterActiveLinkedResults(normalizedLinkedIds)
+      : [];
+
+    await this._linkedResultsService.createForInnovationUse(
+      resultId,
+      filteredLinkedIds,
+      user,
+    );
+
+    const persistedLinkedIds =
+      (await this._linkedResultRepository.getActiveLinkedResultIds(resultId)) ??
+      [];
+
+    // An explicit answer must survive the save. Deriving the stored flag from the persisted links
+    // turned a "Yes" with no result picked yet into "No" (the picker only renders for P25, so on
+    // every other portfolio the user's Yes was silently downgraded on every save). Only infer the
+    // flag from the links when the client did not send `has_innovation_link` at all.
+    const finalHasInnovationLink = hasInnovationLinkProp
+      ? requestedHasInnovationLink
+      : requestedHasInnovationLink && persistedLinkedIds.length > 0;
+
+    await this.updateInnovationSummaryLink(
+      resultTypeId,
+      resultId,
+      finalHasInnovationLink,
+      user.id,
+    );
+
+    await this._resultRepository.update(resultId, {
+      has_innovation_link: finalHasInnovationLink,
+      last_updated_by: user.id,
+    });
+
+    return {
+      fields: {
+        has_innovation_link: finalHasInnovationLink,
+        linked_results: persistedLinkedIds,
+      },
+      status: HttpStatus.OK,
+      message: 'Linked result state updated.',
+    };
+  }
+
   private async getInnovationLinkStatus(
     resultId: number,
     resultTypeId: number,
   ): Promise<boolean> {
     try {
+      const result = await this._resultRepository.findOne({
+        where: { id: resultId, is_active: true },
+        select: { has_innovation_link: true },
+      });
+
+      if (
+        result?.has_innovation_link !== null &&
+        result?.has_innovation_link !== undefined
+      ) {
+        return Boolean(result.has_innovation_link);
+      }
+
       if (resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT) {
         const rows = await this._resultsInnovationsDevRepository.query(
           `
@@ -396,89 +571,114 @@ export class ContributorsPartnersService {
     hasInnovationLink: boolean,
     userId: number,
   ) {
-    try {
-      if (resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT) {
-        const [existing] = await this._resultsInnovationsDevRepository.query(
-          `
-            SELECT result_innovation_dev_id
-            FROM results_innovations_dev
-            WHERE results_id = ?
-            ORDER BY is_active DESC, result_innovation_dev_id DESC
-            LIMIT 1
-          `,
-          [resultId],
-        );
+    const isInnovationDev =
+      resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT;
+    const isInnovationUse = resultTypeId === ResultTypeEnum.INNOVATION_USE;
 
-        if (existing?.result_innovation_dev_id) {
-          await this._resultsInnovationsDevRepository.query(
-            `
-              UPDATE results_innovations_dev
-              SET has_innovation_link = ?, is_active = 1, last_updated_by = ?, last_updated_date = NOW()
-              WHERE result_innovation_dev_id = ?
-            `,
-            [
-              hasInnovationLink ? 1 : 0,
-              userId,
-              existing.result_innovation_dev_id,
-            ],
-          );
-        } else {
-          await this._resultsInnovationsDevRepository.query(
-            `
-              INSERT INTO results_innovations_dev
-                (results_id, has_innovation_link, is_active, created_by, last_updated_by, created_date, last_updated_date)
-              VALUES (?, ?, 1, ?, ?, NOW(), NOW())
-            `,
-            [resultId, hasInnovationLink ? 1 : 0, userId, userId],
-          );
-        }
+    if (!isInnovationDev && !isInnovationUse) {
+      return;
+    }
+
+    try {
+      if (isInnovationDev) {
+        await this.upsertInnovationDevHasLink(
+          resultId,
+          hasInnovationLink,
+          userId,
+        );
         return;
       }
 
-      if (resultTypeId === ResultTypeEnum.INNOVATION_USE) {
-        const [existing] = await this._resultsInnovationsUseRepository.query(
-          `
-            SELECT result_innovation_use_id
-            FROM results_innovations_use
-            WHERE results_id = ?
-            ORDER BY is_active DESC, result_innovation_use_id DESC
-            LIMIT 1
-          `,
-          [resultId],
-        );
-
-        if (existing?.result_innovation_use_id) {
-          await this._resultsInnovationsUseRepository.query(
-            `
-              UPDATE results_innovations_use
-              SET has_innovation_link = ?, is_active = 1, last_updated_by = ?, last_updated_date = NOW()
-              WHERE result_innovation_use_id = ?
-            `,
-            [
-              hasInnovationLink ? 1 : 0,
-              userId,
-              existing.result_innovation_use_id,
-            ],
-          );
-        } else {
-          await this._resultsInnovationsUseRepository.query(
-            `
-              INSERT INTO results_innovations_use
-                (results_id, has_innovation_link, is_active, created_by, last_updated_by, created_date, last_updated_date)
-              VALUES (?, ?, 1, ?, ?, NOW(), NOW())
-            `,
-            [resultId, hasInnovationLink ? 1 : 0, userId, userId],
-          );
-        }
-      }
+      await this.upsertInnovationUseHasLink(
+        resultId,
+        hasInnovationLink,
+        userId,
+      );
     } catch (error) {
-      throw {
-        response: { resultId, resultTypeId, hasInnovationLink },
-        message: 'Failed to persist innovation link state for the result.',
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-        error,
-      };
+      throwServiceError(
+        `Failed to persist innovation link state for the result. ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        { resultId, resultTypeId, hasInnovationLink },
+      );
     }
+  }
+
+  private async upsertInnovationDevHasLink(
+    resultId: number,
+    hasInnovationLink: boolean,
+    userId: number,
+  ): Promise<void> {
+    const linkValue = hasInnovationLink ? 1 : 0;
+    const [existing] = await this._resultsInnovationsDevRepository.query(
+      `
+        SELECT result_innovation_dev_id
+        FROM results_innovations_dev
+        WHERE results_id = ?
+        ORDER BY is_active DESC, result_innovation_dev_id DESC
+        LIMIT 1
+      `,
+      [resultId],
+    );
+
+    if (existing?.result_innovation_dev_id) {
+      await this._resultsInnovationsDevRepository.query(
+        `
+          UPDATE results_innovations_dev
+          SET has_innovation_link = ?, is_active = 1, last_updated_by = ?, last_updated_date = NOW()
+          WHERE result_innovation_dev_id = ?
+        `,
+        [linkValue, userId, existing.result_innovation_dev_id],
+      );
+      return;
+    }
+
+    await this._resultsInnovationsDevRepository.query(
+      `
+        INSERT INTO results_innovations_dev
+          (results_id, has_innovation_link, is_active, created_by, last_updated_by, created_date, last_updated_date)
+        VALUES (?, ?, 1, ?, ?, NOW(), NOW())
+      `,
+      [resultId, linkValue, userId, userId],
+    );
+  }
+
+  private async upsertInnovationUseHasLink(
+    resultId: number,
+    hasInnovationLink: boolean,
+    userId: number,
+  ): Promise<void> {
+    const linkValue = hasInnovationLink ? 1 : 0;
+    const [existing] = await this._resultsInnovationsUseRepository.query(
+      `
+        SELECT result_innovation_use_id
+        FROM results_innovations_use
+        WHERE results_id = ?
+        ORDER BY is_active DESC, result_innovation_use_id DESC
+        LIMIT 1
+      `,
+      [resultId],
+    );
+
+    if (existing?.result_innovation_use_id) {
+      await this._resultsInnovationsUseRepository.query(
+        `
+          UPDATE results_innovations_use
+          SET has_innovation_link = ?, is_active = 1, last_updated_by = ?, last_updated_date = NOW()
+          WHERE result_innovation_use_id = ?
+        `,
+        [linkValue, userId, existing.result_innovation_use_id],
+      );
+      return;
+    }
+
+    await this._resultsInnovationsUseRepository.query(
+      `
+        INSERT INTO results_innovations_use
+          (results_id, has_innovation_link, is_active, created_by, last_updated_by, created_date, last_updated_date)
+        VALUES (?, ?, 1, ?, ?, NOW(), NOW())
+      `,
+      [resultId, linkValue, userId, userId],
+    );
   }
 
   private normalizeLinkedResultIds(
@@ -519,12 +719,7 @@ export class ContributorsPartnersService {
         }
 
         if (typeof value === 'object') {
-          const { id, result_id, selected, is_active } = value as {
-            id?: number | string;
-            result_id?: number | string;
-            selected?: boolean;
-            is_active?: boolean;
-          };
+          const { id, result_id, selected, is_active } = value;
 
           if (
             selected === false ||

@@ -1,5 +1,10 @@
-<div class="detail_container">
-  <app-alert-status [description]="alertStatus()"> </app-alert-status>
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
+  <!-- P2-3262: for Policy change results from the 2026 phase on, this guidance moves into the single
+       ⓘ of the section heading (published from the component into `currentResultSectionGuidance`).
+       Every other result type and every earlier phase keeps this grey box exactly as it was. -->
+  @if (!policyChangeGuidanceAsTooltip()) {
+    <app-alert-status [description]="alertStatus()"> </app-alert-status>
+  }
 
   <app-alert-status *ngIf="isOptional" description="No evidence is required for innovations that are at innovation readiness level 0 (idea).">
   </app-alert-status>
@@ -25,8 +30,8 @@
             class="material-icons-round ev_lock"
             [class.public]="evidence.is_public_file"
             [class.private]="!evidence.is_public_file"
-            [pTooltip]="evidence.is_public_file ? 'Public' : 'Private'"
-            tooltipPosition="top">
+            [prTooltip]="evidence.is_public_file ? 'Public' : 'Private'"
+            prTooltipPosition="top">
             {{ evidence.is_public_file ? 'lock_open' : 'lock' }}
           </i>
           <span class="ev_date" *ngIf="evidence.creation_date || evidence.last_updated_date">
@@ -34,11 +39,23 @@
             <ng-container *ngIf="evidence.last_updated_date"> | Updated: {{ evidence.last_updated_date | date: 'MMM d, y' }}</ng-container>
           </span>
         </div>
-        <div class="ev_actions" *ngIf="!dataControlSE.isKnowledgeProduct && !api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status">
-          <button type="button" class="ev_edit" pTooltip="Edit evidence" tooltipPosition="top" (click)="editEvidence(i)">
+        <div class="ev_actions">
+          <button
+            type="button"
+            class="ev_edit"
+            *ngIf="!api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status"
+            prTooltip="Edit evidence"
+            prTooltipPosition="top"
+            (click)="editEvidence(i)">
             <i class="material-icons-round">edit</i>
           </button>
-          <button type="button" class="ev_delete" pTooltip="Delete evidence" tooltipPosition="top" (click)="deleteEvidenceWithConfirm(i)">
+          <button
+            type="button"
+            class="ev_delete"
+            *ngIf="!dataControlSE.isKnowledgeProduct && !api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status"
+            prTooltip="Delete evidence"
+            prTooltipPosition="top"
+            (click)="deleteEvidenceWithConfirm(i)">
             <i class="material-icons-round">delete</i>
           </button>
         </div>
@@ -50,7 +67,7 @@
           <!-- While the file is being uploaded: show its name + a skeleton, then switch to the link -->
           <span class="ev_ro_uploading" *ngIf="isEvidenceUploading(evidence); else evidenceReady">
             <span class="ev_ro_name">{{ evidenceUploadingName(evidence) }}</span>
-            <p-skeleton width="160px" height="9px" borderRadius="6px" styleClass="ev_ro_skeleton"></p-skeleton>
+            <div class="pr-skeleton ev_ro_skeleton" style="width:160px;height:9px;border-radius:6px"></div>
           </span>
           <ng-template #evidenceReady>
             <a
@@ -102,27 +119,27 @@
   <div appFeedbackValidation labelText="Empty, repeated or invalid link" [isComplete]="!this.validateButtonDisabled"></div>
 </div>
 
-<app-save-button class="position_sticky" [disabled]="this.validateButtonDisabled" (clickSave)="onSaveSection()"> </app-save-button>
+<app-section-bottom-bar [disabled]="this.validateButtonDisabled" (clickSave)="onSaveSection()" />
 
 <!-- P2-2935: evidence creation modal -->
-<p-dialog
-  appendTo="body"
+<app-pr-dialog
   [(visible)]="showCreateModal"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="false"
   (onHide)="cancelCreateEvidence()"
-  [style]="{ width: '720px', maxWidth: '95vw' }">
+  styleClass="evidence-create-dialog">
   <div class="evidence_modal">
     <div class="modal_header">
       <div class="modal_title">{{ isEditingEvidence ? 'Edit Evidence' : 'Add New Evidence' }}</div>
-      <button type="button" class="modal_close" pTooltip="Close" (click)="cancelCreateEvidence()">
+      <button type="button" class="modal_close" prTooltip="Close" (click)="cancelCreateEvidence()">
         <i class="material-icons-round">close</i>
       </button>
     </div>
-    <app-evidence-item *ngIf="showCreateModal" [evidence]="draftEvidence" [embedded]="true" [isOptional]="isOptional"></app-evidence-item>
+    <div class="modal_body">
+      <app-evidence-item *ngIf="showCreateModal" [evidence]="draftEvidence" [embedded]="true" [isOptional]="isOptional"></app-evidence-item>
+    </div>
     <div class="buttons">
       <app-pr-button padding="medium" text="Cancel" colorType="secondary" (click)="cancelCreateEvidence()"></app-pr-button>
       <app-pr-button
@@ -133,4 +150,4 @@
         (click)="confirmCreateEvidence()"></app-pr-button>
     </div>
   </div>
-</p-dialog>
+</app-pr-dialog>

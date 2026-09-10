@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, effect, ViewChild, computed } from '@angular/core';
+import { Component, OnInit, inject, effect, ViewChild, computed, signal } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeneralInfoBody } from './models/generalInfoBody';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
@@ -13,7 +13,9 @@ import { UserSearchService } from './services/user-search-service.service';
 import { GetImpactAreasScoresService } from '../../../../../../shared/services/global/get-impact-areas-scores.service';
 import { AiReviewService } from '../../../../../../shared/services/api/ai-review.service';
 import { SaveConfirmationModalComponent } from './components/save-confirmation-modal/save-confirmation-modal.component';
+import { LeadContactPersonFieldComponent } from '../../../../../../custom-fields/lead-contact-person-field/lead-contact-person-field.component';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
+import { toNullableBoolean } from '../../../../../../shared/utils/nullable-boolean.util';
 
 @Component({
   selector: 'app-rd-general-information',
@@ -23,14 +25,82 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 })
 export class RdGeneralInformationComponent implements OnInit {
   @ViewChild('saveConfirmationModal') saveConfirmationModal!: SaveConfirmationModalComponent;
+  /** Read only to tell a typed contact name from one loaded with the result — see `onSaveSection`. */
+  @ViewChild(LeadContactPersonFieldComponent) leadContactPersonField?: LeadContactPersonFieldComponent;
 
   generalInfoBody = new GeneralInfoBody();
+
+  /** Los cinco tags que componen la escala de Impact Areas, en el orden en que se renderizan. */
+  private static readonly IMPACT_AREA_TAG_FIELDS: (keyof GeneralInfoBody)[] = [
+    'gender_tag_id',
+    'climate_change_tag_id',
+    'nutrition_tag_level_id',
+    'environmental_biodiversity_tag_level_id',
+    'poverty_tag_level_id'
+  ];
+
+  readonly IMPACT_AREAS_TOTAL = RdGeneralInformationComponent.IMPACT_AREA_TAG_FIELDS.length;
+
+  /**
+   * Cuántos Impact Areas tienen una puntuación elegida. Cuenta el tag por presencia, NO por
+   * verdad: `0 — Not targeted` tiene id 1 y es una respuesta válida, así que un `!value` daría
+   * cuatro de cinco en cuanto alguien puntúa un área con cero.
+   */
+  get impactAreasScored(): number {
+    return RdGeneralInformationComponent.IMPACT_AREA_TAG_FIELDS.filter(field => {
+      const value = this.generalInfoBody[field];
+      return value !== null && value !== undefined && value !== '';
+    }).length;
+  }
   toggle = 0;
   isPhaseOpen = false;
 
   getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
   isP25 = computed(() => this.dataControlSE.currentResultSignal()?.portfolio === 'P25');
   fieldsManagerSE = inject(FieldsManagerService);
+
+  /**
+   * P2-3201 (INC-158283) — reporting-form guidance redesign, scoped to the CURRENT portfolio.
+   *
+   * The PO confirmed on 18 Aug 2026 that this ticket applies to the 2026 portfolio only, so the
+   * gate is the shared phase-year threshold in {@link ReportingDesignYear} (via FieldsManager) and
+   * NOT a hand-rolled year comparison. Results from earlier phases keep their inline grey guidance
+   * boxes and never see the AI notes.
+   */
+  readonly guidanceAsTooltip = computed(() => this.fieldsManagerSE.isReportingFormGuidance2026());
+
+  /**
+   * P2-3225 — Lead Contact Person is a mandatory MDS field for P25 from the 2026 phase on.
+   *
+   * Gates both the asterisk and the incomplete-fields widget entry, so that what the form asks for
+   * matches what `validation_general_information_P25` actually enforces for the green check.
+   * Deliberately NOT `isP25()`: the 2025 cycle is closed and keeps the field optional.
+   */
+  readonly isLeadContactPersonRequired = computed(() => this.fieldsManagerSE.isLeadContactPersonMandatory2026());
+
+  /**
+   * Approved AI notes (P2-3201, points 1 and 2). Static blocks by explicit request: not collapsible
+   * and with no "How it works" link — an earlier draft of the ticket proposed both and the revised
+   * description rules them out.
+   *
+   * Copy is the ticket's literal text; only the leading label and the "AI Review" button name are
+   * emphasised, as in the approved mockup.
+   */
+  readonly aiAssistantTitlesNote =
+    '<strong>AI Assistant for result Titles and Descriptions:</strong> PRMS includes an AI assistant that generates suggested titles and descriptions for results based on the information entered by users. During the 2025 reporting cycle, its use contributed to a reduction in QA comments on result titles and descriptions, from 28% to 16%. Based on this positive experience and user feedback, we encourage Programs/Accelerators to use the AI assistant to improve the quality and consistency of reported results. To use the assistant, click <strong>AI Review</strong> once it becomes available. The button is automatically enabled once all sections are completed. All AI-generated text should be carefully reviewed, validated, and, where necessary, refined before submission.';
+
+  readonly aiImpactAreaScoresNote =
+    "<strong>AI-assisted Notification for Impact Area Scores:</strong> PRMS includes an AI assistant that reviews the result's metadata (and supporting evidence for scores of 2), it assesses whether the information provided is consistent with and adequately supports the selected score, and flags potential mismatches. The assistant does not select or recommend a score; responsibility for assigning the score remains with the user. To use the assistant, click <strong>AI Review</strong> once it becomes available. Any AI-generated notifications should be carefully reviewed and used to validate, and, where necessary, revise the selected Impact Area score and its supporting evidence before submission.";
+
+  /**
+   * Drives `[appSectionSkeleton]`. TRUE from construction: the form is built from an empty
+   * `GeneralInfoBody()` and only filled inside the GET's subscriber, so between first paint and
+   * the response every field would otherwise read as "mandatory, empty". Released on BOTH `next`
+   * and `error` so a failed request can never leave the section shimmering forever.
+   * Deliberately NOT raised again by the post-save reload — the save spinner already covers that
+   * round-trip and a second flash reads as a glitch.
+   */
+  readonly sectionLoading = signal(true);
 
   constructor(
     public api: ApiService,
@@ -108,22 +178,51 @@ export class RdGeneralInformationComponent implements OnInit {
     return field?.description || '';
   }
 
+  /**
+   * P2-3201: the guidance a field used to render inside its grey "Description" box, returned as
+   * tooltip content once the 2026 presentation applies. Empty string before 2026 so the caller
+   * keeps the inline box and grows no ⓘ trigger.
+   */
+  guidanceTooltip(fieldRef: string): string {
+    return this.guidanceAsTooltip() ? this.getImpactAreaFieldDescription(fieldRef) : '';
+  }
+
+  /** P2-3201: same rule for guidance authored in this component instead of FieldsManager. */
+  sectionGuidanceTooltip(guidance: string): string {
+    return this.guidanceAsTooltip() ? guidance : '';
+  }
+
   getImpactAreaFieldRequired(fieldRef: string): boolean {
     const field = this.fieldsManagerSE.fields()[fieldRef];
     return field?.required ?? true;
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_generalInformationByResultId(this.dataControlSE.currentResultSignal()?.portfolio === 'P25').subscribe(({ response }) => {
-      this.generalInfoBody = response;
-      this.generalInfoBody.reporting_year = response['phase_year'];
-      this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
+    this.api.resultsSE.GET_generalInformationByResultId(this.dataControlSE.currentResultSignal()?.portfolio === 'P25').subscribe({
+      next: ({ response }) => {
+        // Released FIRST, before any mapping. The mask carries `inert`, so an exception thrown
+        // further down (`[...institutions_type]` spreads a possibly-absent key) would leave the
+        // section permanently uneditable — strictly worse than the half-filled-but-usable form
+        // the same exception produced before the skeleton existed. Same tick, so no visual change.
+        this.sectionLoading.set(false);
+        this.generalInfoBody = response;
+        this.generalInfoBody.reporting_year = response['phase_year'];
+        // P2-3292 (QA 7-Sep-2026) — `is_discontinued` is a MySQL `tinyint(1)`, so it arrives as the
+        // NUMBER 1, and the Annual updating radio offers `value: false` / `value: true`. `1` matches
+        // neither, so the control rendered BLANK on every reload of a discontinued result while the
+        // reason, the merge targets and the status badge all hydrated correctly — because they are
+        // read with truthiness, which `1` satisfies. Measured on prtest: result 6432 answers
+        // `is_discontinued: 1` on this very endpoint.
+        this.generalInfoBody.is_discontinued = toNullableBoolean(response['is_discontinued']) as any;
+        this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
 
-      // Normalize impact area fields to arrays (backend returns arrays, but handle single numbers for backward compatibility)
-      this.normalizeImpactAreaFields();
+        // Normalize impact area fields to arrays (backend returns arrays, but handle single numbers for backward compatibility)
+        this.normalizeImpactAreaFields();
 
-      this.GET_investmentDiscontinuedOptions(response.result_type_id);
-      this.isPhaseOpen = !!this.api?.dataControlSE?.currentResult?.is_phase_open;
+        this.GET_investmentDiscontinuedOptions(response.result_type_id);
+        this.isPhaseOpen = !!this.api?.dataControlSE?.currentResult?.is_phase_open;
+      },
+      error: () => this.sectionLoading.set(false)
     });
   }
 
@@ -144,7 +243,9 @@ export class RdGeneralInformationComponent implements OnInit {
       this.generalInfoBody.gender_impact_area_id = this.toSingleNumber(this.generalInfoBody.gender_impact_area_id);
       this.generalInfoBody.climate_impact_area_id = this.toSingleNumber(this.generalInfoBody.climate_impact_area_id);
       this.generalInfoBody.nutrition_impact_area_id = this.toSingleNumber(this.generalInfoBody.nutrition_impact_area_id);
-      this.generalInfoBody.environmental_biodiversity_impact_area_id = this.toSingleNumber(this.generalInfoBody.environmental_biodiversity_impact_area_id);
+      this.generalInfoBody.environmental_biodiversity_impact_area_id = this.toSingleNumber(
+        this.generalInfoBody.environmental_biodiversity_impact_area_id
+      );
       this.generalInfoBody.poverty_impact_area_id = this.toSingleNumber(this.generalInfoBody.poverty_impact_area_id);
     }
   }
@@ -155,15 +256,17 @@ export class RdGeneralInformationComponent implements OnInit {
     }
     if (Array.isArray(value)) {
       // Extract IDs from objects if they are objects, otherwise use the values directly
-      return value.map((item: any) => {
-        if (typeof item === 'object' && item !== null) {
-          // Extract the ID property (can be string or number, convert to number)
-          const id = item.id ?? null;
-          return id !== null && id !== undefined ? Number(id) : null;
-        }
-        // If it's already a number or string, convert to number
-        return item !== null && item !== undefined ? Number(item) : null;
-      }).filter((id: any) => id !== null && id !== undefined && !Number.isNaN(id));
+      return value
+        .map((item: any) => {
+          if (typeof item === 'object' && item !== null) {
+            // Extract the ID property (can be string or number, convert to number)
+            const id = item.id ?? null;
+            return id !== null && id !== undefined ? Number(id) : null;
+          }
+          // If it's already a number or string, convert to number
+          return item !== null && item !== undefined ? Number(item) : null;
+        })
+        .filter((id: any) => id !== null && id !== undefined && !Number.isNaN(id));
     }
     // Single value: convert to number and return as array
     return value !== null && value !== undefined ? [Number(value)] : [];
@@ -179,8 +282,18 @@ export class RdGeneralInformationComponent implements OnInit {
     return value;
   }
 
+  /**
+   * P2-3292 Step 2 — the reason checklist is one phase generation, so the phase year travels with
+   * the request: the 2026 set from the 2026 phase on, the six original reasons before that.
+   *
+   * 🛑 The year comes from `FieldsManagerService.phaseYear` (the result signal), never from the
+   * general-information payload this method is called from — that endpoint answers `phase_year:
+   * 2025` for a result the screen shows in Reporting 2026. An unknown year sends nothing, which
+   * asks for the legacy catalogue: the same fail-to-legacy every other phase gate uses.
+   */
   GET_investmentDiscontinuedOptions(result_type_id) {
-    this.api.resultsSE.GET_investmentDiscontinuedOptions(result_type_id).subscribe(({ response }) => {
+    const phaseYear = this.fieldsManagerSE.phaseYear() ?? undefined;
+    this.api.resultsSE.GET_investmentDiscontinuedOptions(result_type_id, phaseYear).subscribe(({ response }) => {
       this.convertChecklistToDiscontinuedOptions(response);
     });
   }
@@ -207,7 +320,25 @@ export class RdGeneralInformationComponent implements OnInit {
   onSaveSection() {
     const isP25 = this.dataControlSE.currentResultSignal()?.portfolio === 'P25';
 
-    if (this.userSearchService.searchQuery.trim() && !this.userSearchService.selectedUser && !isP25) {
+    // The guard blocks a contact name the user TYPED and never picked from the directory list, and
+    // it must not look at the portfolio.
+    //
+    // The `!isP25` it replaces (c64baefb8, 23-Jan-2026, no reason recorded) was a workaround for the
+    // real problem: the guard could not tell a typed name from one hydrated with the result. A
+    // hydrated free-text name is legitimate data — every result created before the AD link existed
+    // (`lead_contact_person_id`, migration 1751462633282) stores the contact that way, as do results
+    // reported through the W3/Bilateral API — and blocking on it accused the user of someone else's
+    // input and left the section unsaveable. Excluding P25 hid that, and opened silent data loss:
+    // typing without picking sends `lead_contact_person: null`, which `createResultGeneralInformation`
+    // writes straight over the stored name and FK (`results.service.ts:901-902`).
+    //
+    // `queryCameFromHydration` is the same distinction the field already makes in `onContactBlur`, so
+    // both halves now agree: typed and unmatched is an error on every portfolio, loaded is not.
+    if (
+      this.userSearchService.searchQuery.trim() &&
+      !this.userSearchService.selectedUser &&
+      !this.leadContactPersonField?.queryCameFromHydration
+    ) {
       this.userSearchService.hasValidContact = false;
       this.userSearchService.showContactError = true;
       return;
@@ -244,7 +375,9 @@ export class RdGeneralInformationComponent implements OnInit {
       this.generalInfoBody.gender_impact_area_id = this.toSingleNumber(this.generalInfoBody.gender_impact_area_id);
       this.generalInfoBody.climate_impact_area_id = this.toSingleNumber(this.generalInfoBody.climate_impact_area_id);
       this.generalInfoBody.nutrition_impact_area_id = this.toSingleNumber(this.generalInfoBody.nutrition_impact_area_id);
-      this.generalInfoBody.environmental_biodiversity_impact_area_id = this.toSingleNumber(this.generalInfoBody.environmental_biodiversity_impact_area_id);
+      this.generalInfoBody.environmental_biodiversity_impact_area_id = this.toSingleNumber(
+        this.generalInfoBody.environmental_biodiversity_impact_area_id
+      );
       this.generalInfoBody.poverty_impact_area_id = this.toSingleNumber(this.generalInfoBody.poverty_impact_area_id);
     }
 
@@ -255,7 +388,13 @@ export class RdGeneralInformationComponent implements OnInit {
       },
       error: err => {
         console.error(err);
-        this.getSectionInformation();
+        // 🛑 DO NOT reload the section when the save was rejected.
+        //
+        // `getSectionInformation()` overwrites `generalInfoBody` with what the server still holds, so
+        // reloading here threw away everything the user had just typed — title, description and the
+        // Impact Area scores — leaving them staring at the old content with no idea their work was
+        // gone. The rejected values stay on screen so the person can fix what the error complains
+        // about and press Save again. The interceptor already surfaces the error message.
       }
     });
   }

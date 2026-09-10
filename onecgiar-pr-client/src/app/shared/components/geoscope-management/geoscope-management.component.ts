@@ -52,21 +52,33 @@ export class GeoscopeManagementComponent implements OnInit {
     public resultLevelSE: ResultLevelService
   ) {}
 
+  // P2-3621: changing the scope used to flip has_regions/has_countries only, leaving the previous
+  // regions/countries in the model. The template merely hid them, so going back to a scope that
+  // renders that same field made them reappear on their own and get saved again. Mirrors
+  // resetExtraScope() below and section-geography's onScopeChange (bilateral wizard, live since Jul 2026).
+  // 🛑 No default branch on purpose: clicking an already-selected radio emits null
+  // (pr-radio-button.component.ts onSelect), and a default would wipe both lists on that single click.
+  // 🛑 sub_national rows are left untouched — COUNTRY and SUB_NATIONAL share a branch, so clearing
+  // them here would drop the per-country detail the user just typed.
   resetHasScope() {
     switch (this.body.geo_scope_id) {
       case GeoScopeEnum.DETERMINED:
       case GeoScopeEnum.GLOBAL:
         this.body.has_countries = false;
         this.body.has_regions = false;
+        this.body.regions = [];
+        this.body.countries = [];
         break;
       case GeoScopeEnum.REGIONAL:
         this.body.has_regions = true;
         this.body.has_countries = false;
+        this.body.countries = [];
         break;
       case GeoScopeEnum.COUNTRY:
       case GeoScopeEnum.SUB_NATIONAL:
         this.body.has_countries = true;
         this.body.has_regions = false;
+        this.body.regions = [];
         break;
     }
   }

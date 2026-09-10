@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 
 import { ResultsOutletRoutingModule } from './results-outlet-routing.module';
 import { ResultsOutletComponent } from './results-outlet.component';
@@ -9,6 +10,6 @@ import { AlertGlobalInfoModule } from '../../../../shared/components/alert-globa
 
 @NgModule({
   declarations: [ResultsOutletComponent],
-  imports: [CommonModule, ResultsOutletRoutingModule, CustomFieldsModule, PageHeaderComponent, PageHeaderComponent, AlertGlobalInfoModule]
+  imports: [CommonModule, RouterModule, ResultsOutletRoutingModule, CustomFieldsModule, PageHeaderComponent, AlertGlobalInfoModule]
 })
 export class ResultsOutletModule {}

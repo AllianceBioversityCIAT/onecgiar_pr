@@ -38,14 +38,9 @@ export class TorKeyResultStoryComponent implements OnInit {
   onSaveSection() {
     this.api.resultsSE.PATCH_primaryImpactAreaKrs(this.typeOneReportSE.keyResultStoryData).subscribe({
       next: resp => {
+        // The success alert is emitted by SaveButtonService.isSavingPipe() (same 'save-button' id),
+        // which also drives the <app-save-button> spinner while the PATCH is in flight.
         this.GET_keyResultStoryInitiativeId();
-        this.api.alertsFe.show({
-          id: 'save-button',
-          title: 'Key result story informaion saved correctly',
-          description: '',
-          status: 'success',
-          closeIn: 500
-        });
       },
       error: err => {
         console.error(err);

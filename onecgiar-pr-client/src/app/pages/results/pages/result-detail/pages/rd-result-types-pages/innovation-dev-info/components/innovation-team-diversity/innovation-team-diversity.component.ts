@@ -15,4 +15,8 @@ export class InnovationTeamDiversityComponent {
   example11 = null;
 
   constructor(public innovationDevInfoUtilsSE: InnovationDevInfoUtilsService) {}
+
+  get isComplete(): boolean {
+    return !!this.options?.innovation_team_diversity?.['radioButtonValue'];
+  }
 }

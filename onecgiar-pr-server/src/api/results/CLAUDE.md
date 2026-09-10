@@ -1,5 +1,7 @@
 # CLAUDE.md — `api/results/` (Result lifecycle & domain mega-module)
 
+**Verified:** 2026-09-02 · branch performance-refactor · 8c2990200
+
 This is the **module-level guide** for `api/results`. It complements:
 
 - [`../../CLAUDE.md`](../../CLAUDE.md) — source-tree patterns (auth, response envelope, base classes, anti-patterns).
@@ -282,7 +284,46 @@ Push the SQL into [`result.repository.ts`](./result.repository.ts) (or the sub-m
 - **New top-level folders here that aren't a result association** — if it's cross-cutting, it belongs under `../../shared/` or a sibling `api/<feature>/`.
 - **Coupling `summary/` to a specific consumer** — summary builders are read by both `bilateral` and `platform-report`. Don't bake bilateral-only assumptions in.
 - **Refactoring `results.service.ts` monolithically** — it's large by design (4.6k lines) because it owns the whole lifecycle. Extract narrow helpers as needed; don't shotgun-split it.
+- **Interpolating a caller-supplied value into repository SQL** (`` `r.id = ${id}` ``) — bind it:
+  `r.id = ?` plus `this.query(sql, [id])`, which is what lines 206/219/435/1353 already do. And pipe
+  the path param at the controller (`@Param('id', ParseIntPipe)`), so a non-number never travels down.
+  ⚠️ P2-3498 found this live on `getResultById`; the pattern still exists elsewhere in the file.
 - **Changing a migration that's already in `master`** — write a new one (the standard project rule).
+
+---
+
+## 9b. P2-3420 / P2-3421 — link to a QA'd Innovation Development result
+
+**Verified:** 2026-08-31 · branch performance-refactor · b224c27e4
+
+Both W1/W2 Innovation Use creation surfaces (the ToC-linked form and the emergent-result modal) ask
+"Are you reporting the use of an innovation that has already been reported and quality assessed?".
+
+- **One catalogue, one filter.** `GET /v2/api/results/get/qa-innovation-development-results` →
+  `ResultsService.getQaInnovationDevelopmentResults` → `ResultRepository.getQaEdInnovationDevelopmentResults`.
+  🛑 Do NOT widen `getResultsForInnovUse()` instead: it still feeds the Contributors & Partners
+  multi-select and the bilateral section, and it hardcodes `phase_name = 'Reporting 2025'`.
+- **The state filter is `QA_LINKABLE_INNOVATION_STATUS_IDS`** (`result.repository.ts`), one exported
+  constant, on purpose: the exact set is still pending a business answer (the story asks for both
+  `Status = QA'd` and `Status != Discontinued`, which cannot both bite on a single column). Change
+  that constant and nothing else when the answer lands.
+- **"Past phases" is resolved from the ACTIVE version** (`$_findActivePhase(REPORTING).phase_year`),
+  never a literal year. Portfolio-wide: no Science Program / Accelerator restriction, by design.
+- **The answer is persisted INSIDE the create**, in `ResultsService.createOwnerResultV2` →
+  `_persistInnovationLinkOnCreate`, which both entry points reach (`POST /v2/create/header` and the
+  framework create, whose `CreateFrameworkResultEntityService` calls the same method). The two keys
+  ride on `CreateResultDto` (`has_innovation_link`, `linked_results`).
+  - ⚠️ **Never chain `PATCH /v2/api/innovation-use/create/result/:id` after a create.** It rejects a
+    body without a valid `innovation_use_level_id`, and a brand-new result has no use level yet
+    (`results-framework-reporting/innovation-use/innovation-use.service.ts`).
+  - 🛑 The write is delegated to `ContributorsPartnersService.updateContributorsAndPartners` — the
+    single writer of `results_innovations_use.has_innovation_link` and the `linked_result` table.
+    A second writer is what wiped stored links before P2-3199. It is already injected here via
+    `forwardRef`, so no new module wiring was needed.
+  - It is non-fatal: the result is already created, so a failure is logged and the user can still
+    set the link from Contributors and partners.
+- **No migration and no green check touched**: both columns exist and `createValidtionP25` already
+  handles `has_innovation_link`.
 
 ---
 

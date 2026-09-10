@@ -15,6 +15,7 @@ import { GlobalParameterRepository } from '../../global-parameter/repositories/g
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
+import { AdUserRepository } from '../../ad_users/repository/ad-users.repository';
 
 @Module({
   controllers: [SubmissionsController],
@@ -29,6 +30,7 @@ import { ResultsCenterRepository } from '../results-centers/results-centers.repo
     GlobalParameterRepository,
     TemplateRepository,
     ResultsCenterRepository,
+    AdUserRepository,
   ],
   exports: [submissionRepository],
   imports: [

@@ -1,10 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import { ResultsApiService } from './results-api.service';
+import { BilateralApiService } from './bilateral-api.service';
 import { CustomizedAlertsFsService } from '../customized-alerts-fs.service';
 import { AuthService } from './auth.service';
 import { CustomizedAlertsFeService } from '../customized-alerts-fe.service';
 import { DataControlService } from '../data-control.service';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ResultsListFilterService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { WordCounterService } from '../word-counter.service';
 import { RolesService } from '../global/roles.service';
@@ -22,6 +24,12 @@ import { FieldsManagerService } from '../fields-manager.service';
 export interface SearchParams {
   limit?: number;
   page?: number;
+  /**
+   * Free-text filter on the result title. The server turns it into
+   * `LOWER(title) LIKE LOWER('%<title>%')` (result.repository.ts) — a substring match, with no
+   * relevance ranking and no typo tolerance. Added for the global search palette.
+   */
+  title?: string;
   status_id?: string;
   portfolio_id?: string;
   result_type_id?: string;
@@ -29,6 +37,11 @@ export interface SearchParams {
   version_id?: string;
   filter_created_by_me?: boolean;
   filter_submitted_by_me?: boolean;
+  // @akili-spec changes/my-work-board (MWB-T-3, MWB-R-8)
+  /** Opt-in flag so the My work board's list request gets `completeness` per eligible row. Never
+   *  sent by the Results tab or any other existing caller (`MWB-R-8` "flag absent keeps the
+   *  contract"). */
+  include_completeness?: boolean;
 }
 
 @Injectable({
@@ -41,6 +54,7 @@ export class ApiService {
     public endpointsSE: EndpointsService,
     public resultsListSE: ResultsListService,
     public resultsSE: ResultsApiService,
+    public bilateralSE: BilateralApiService,
     public alertsFs: CustomizedAlertsFsService,
     private readonly qaSE: QualityAssuranceService,
     public authSE: AuthService,
@@ -59,16 +73,28 @@ export class ApiService {
 
   updateUserData(callback) {
     if (!this.authSE?.localStorageUser?.id) return;
-    forkJoin([this.authSE.GET_allRolesByUser(), this.authSE.GET_initiativesByUser(), this.authSE.GET_initiativesByUserByPortfolio()]).subscribe({
+    forkJoin([
+      this.authSE.GET_allRolesByUser().pipe(catchError(err => {
+        console.error(err);
+        return of(null);
+      })),
+      this.authSE.GET_initiativesByUser().pipe(catchError(err => {
+        console.error(err);
+        return of({ response: [] });
+      })),
+      this.authSE.GET_initiativesByUserByPortfolio().pipe(catchError(err => {
+        console.error(err);
+        return of({ response: { reporting: [], ipsr: [] } });
+      }))
+    ]).subscribe({
       next: resp => {
         const [GET_allRolesByUser, GET_initiativesByUser, GET_initiativesByUserByPortfolio] = resp;
+        this.rolesSE.applyRolesResponse(GET_allRolesByUser?.response);
         this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
-        this.dataControlSE.myInitiativesListReportingByPortfolio = GET_initiativesByUserByPortfolio?.response?.reporting?.sort(
-          (a, b) => a.initiative_id - b.initiative_id
-        );
-        this.dataControlSE.myInitiativesListIPSRByPortfolio = GET_initiativesByUserByPortfolio?.response?.ipsr?.sort(
-          (a, b) => a.initiative_id - b.initiative_id
-        );
+        this.dataControlSE.myInitiativesListReportingByPortfolio =
+          GET_initiativesByUserByPortfolio?.response?.reporting?.sort((a, b) => a.initiative_id - b.initiative_id) ?? [];
+        this.dataControlSE.myInitiativesListIPSRByPortfolio =
+          GET_initiativesByUserByPortfolio?.response?.ipsr?.sort((a, b) => a.initiative_id - b.initiative_id) ?? [];
         this.dataControlSE.myInitiativesLoaded = true;
         this.qaSE.$qaFirstInitObserver?.next();
         this.dataControlSE.myInitiativesList.forEach(myInit => {
@@ -76,13 +102,18 @@ export class ApiService {
           myInit.name = myInit.official_code;
           myInit.official_code_short_name = myInit.official_code + ' ' + myInit.short_name;
         });
+        this.dataControlSE.myInitiativesListIPSRByPortfolio.forEach(myInit => {
+          myInit.role = GET_allRolesByUser?.response?.initiative?.find(initRole => initRole?.initiative_id == myInit?.initiative_id)?.description;
+          myInit.name = myInit.official_code;
+          myInit.official_code_short_name = myInit.official_code + ' ' + myInit.short_name;
+        });
         this.resultsListFilterSE.updateMyInitiatives(this.dataControlSE.myInitiativesList);
-        this.ipsrListFilterService.updateMyInitiatives(this.dataControlSE.myInitiativesList);
+        this.ipsrListFilterService.updateMyInitiatives(this.dataControlSE.myInitiativesListIPSRByPortfolio);
         callback();
       },
       error: err => {
         this.resultsListFilterSE.updateMyInitiatives(this.dataControlSE.myInitiativesList);
-        this.ipsrListFilterService.updateMyInitiatives(this.dataControlSE.myInitiativesList);
+        this.ipsrListFilterService.updateMyInitiatives(this.dataControlSE.myInitiativesListIPSRByPortfolio);
         this.dataControlSE.myInitiativesLoaded = true;
         console.error(err);
       }
@@ -220,6 +251,36 @@ export class ApiService {
     }
 
     return this.isUserIncludedInAnyInitiative(result) && isPastPhase;
+  }
+
+  /**
+   * Whether to offer "Update result" on a W3/Bilateral row (P2-3229).
+   *
+   * Deliberately not `shouldShowUpdate`: that one measures membership through
+   * `initiative_entity_map`, and for bilaterals the story asks for the **centre** that owns the
+   * result — only the lead centre may carry one into a new phase. It also adds the status
+   * check, which the W1/W2 rule does not have.
+   *
+   * This is UX. The same rules are enforced server-side in `versionProcessV2`; a hidden menu
+   * item is not authorisation.
+   */
+  canUpdateBilateral(result: CurrentResult, currentPhase: { phaseYear: number }): boolean {
+    if (!this.isPastReportingPhase(result, currentPhase)) return false;
+    if (result?.status_name !== 'Approved') return false;
+
+    // ⚠️ `lead_center` in the results list is the ACRONYM (`ci2.acronym` in the list SQL), not
+    // the CLARISA code. `rolesSE.validateCenterAccess` compares against `center_id`, which is
+    // the code — passing an acronym there matches nothing and the action would simply never
+    // appear. The roles payload carries `center_acronym` alongside `center_id`, so the
+    // comparison is made on the acronym here.
+    const leadCenterAcronym = (result as any)?.lead_center;
+    if (!leadCenterAcronym) return false;
+
+    if (this.rolesSE.isAdmin) return true;
+
+    return (this.rolesSE.getMyCenters() ?? []).some(
+      (center: any) => center?.center_acronym === leadCenterAcronym
+    );
   }
 
   isPastReportingPhase(result: CurrentResult, currentPhase: { phaseYear: number }): boolean {

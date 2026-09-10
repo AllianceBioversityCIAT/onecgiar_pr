@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { ResultsApiService } from '../../../../services/api/results-api.service';
 import { SubNationalInterface } from '../../interfaces/subnational.interface';
 
@@ -15,6 +15,7 @@ export class SubGeoscopeComponent implements OnInit {
   @Input() obj_countrySelected: any[] = [];
   @Input() name: string = '01';
   @Input() readOnly: boolean = false;
+  @Output() changed = new EventEmitter<void>();
   public subNationList: any[] = [];
   public currentCountryId: number;
   public selectedSubNational: any[] = [];
@@ -34,10 +35,16 @@ export class SubGeoscopeComponent implements OnInit {
 
   deleteSubNational(index) {
     this.obj_country.sub_national.splice(index, 1);
+    this.changed.emit();
   }
 
   deleteCountry(index) {
     this.obj_countrySelected.splice(index, 1);
+    this.changed.emit();
+  }
+
+  onSubNationalChange(): void {
+    this.changed.emit();
   }
 
   ngOnInit(): void {

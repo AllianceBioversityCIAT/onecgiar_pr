@@ -24,14 +24,20 @@ export class AuthMicroserviceService {
    * @param provider Auth provider (e.g., 'AzureAD', 'Google', etc.)
    * @returns Authentication URL
    */
-  async getAuthenticationUrl(provider: string): Promise<{ authUrl: string }> {
+  async getAuthenticationUrl(
+    provider: string,
+    redirectUri?: string,
+  ): Promise<{ authUrl: string }> {
     try {
       this.logger.log(`Getting authentication URL for provider: ${provider}`);
+
+      const body: Record<string, string> = { provider };
+      if (redirectUri) body.redirectUri = redirectUri;
 
       const response = await firstValueFrom(
         this.httpService.post(
           `${this.authMicroserviceUrl}/auth/login/provider`,
-          { provider },
+          body,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -62,14 +68,20 @@ export class AuthMicroserviceService {
    * @param code Authorization code from OAuth provider
    * @returns Token information and user profile
    */
-  async validateAuthorizationCode(code: string): Promise<any> {
+  async validateAuthorizationCode(
+    code: string,
+    redirectUri?: string,
+  ): Promise<any> {
     try {
       this.logger.log('Validating authorization code');
+
+      const body: Record<string, string> = { code };
+      if (redirectUri) body.redirectUri = redirectUri;
 
       const response = await firstValueFrom(
         this.httpService.post(
           `${this.authMicroserviceUrl}/auth/validate/code`,
-          { code },
+          body,
           {
             headers: {
               'Content-Type': 'application/json',

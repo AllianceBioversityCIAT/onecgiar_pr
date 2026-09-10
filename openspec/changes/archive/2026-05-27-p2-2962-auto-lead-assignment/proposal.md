@@ -33,4 +33,4 @@ Jira **P2-2962** (Enhancement 2026 / epic P2-2338): when a P25 result has only o
   - Jest specs for service + component
 - **Backend (out of scope):** no migration, no new endpoint. Green-check still depends on saved `is_leading_result` (unchanged). P2-2960 follow-up for `lead_contact_person` in `validation_general_information_P25` remains separate.
 - **Related work:** P2-2960 mandatory validation — auto-assign helps users satisfy it faster; AC explicitly says validation rules stay the same.
-- **Baseline refs:** Jira **P2-2962**; UI patterns per `docs/system-design/design.md`.
+- **Baseline refs:** Jira **P2-2962**; UI patterns per `docs/ux-ui/design.md`.

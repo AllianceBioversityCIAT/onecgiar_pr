@@ -11,9 +11,6 @@ import { PrTextareaComponent } from '../../../../../../../custom-fields/pr-texta
 import { YesOrNotByBooleanPipe } from '../../../../../../../custom-fields/pipes/yes-or-not-by-boolean.pipe';
 import { PrFieldValidationsComponent } from '../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { TextareaModule } from 'primeng/textarea';
-import { RadioButtonModule } from 'primeng/radiobutton';
-import { CheckboxModule } from 'primeng/checkbox';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 
@@ -36,6 +33,9 @@ describe('EvidenceItemComponent', () => {
     mockApiService = {
       alertsFe: {
         show: jest.fn()
+      },
+      rolesSE: {
+        readOnly: false
       }
     };
 
@@ -54,7 +54,7 @@ describe('EvidenceItemComponent', () => {
         YesOrNotByBooleanPipe,
         PrFieldValidationsComponent
       ],
-      imports: [HttpClientTestingModule, TextareaModule, RadioButtonModule, CheckboxModule, ReactiveFormsModule, FormsModule],
+      imports: [HttpClientTestingModule, ReactiveFormsModule, FormsModule],
       providers: [
         {
           provide: ApiService,

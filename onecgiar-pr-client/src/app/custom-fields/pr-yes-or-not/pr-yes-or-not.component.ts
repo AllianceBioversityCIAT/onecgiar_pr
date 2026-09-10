@@ -20,6 +20,7 @@ import { FieldsManagerService } from '../../shared/services/fields-manager.servi
 export class PrYesOrNotComponent {
   @Input() label: string;
   @Input() description: string;
+  @Input() tooltip: string = '';
   @Input() readOnly: boolean;
   @Input() disabled: boolean = false;
   @Input() isStatic: boolean = false;

@@ -1,5 +1,16 @@
 @use '../../../../../../../styles/fonts.scss' as fonts;
 
+// app-pr-dialog wrapper: reproduce the old p-dialog [style] width + flush body.
+::ng-deep app-pr-dialog .result-ai-assistant-dialog {
+  &.pr-dialog {
+    width: 80vw;
+  }
+
+  .pr-dialog__body {
+    padding: 0;
+  }
+}
+
 h1,
 p {
   margin: 0;
@@ -13,7 +24,7 @@ p {
 }
 
 .modal_header {
-  background-color: var(--pr-color-secondary-400);
+  background-color: var(--pr-color-primary-800);
   width: 100%;
   padding: 10px 20px;
   border-bottom-right-radius: 10px;
@@ -116,4 +127,42 @@ p {
   justify-content: flex-end;
   width: 100%;
   padding-top: 10px;
+}
+
+.pr-mini-paginator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--pr-color-accents-2);
+    border-radius: 6px;
+    background: var(--pr-color-white);
+    cursor: pointer;
+    color: var(--pr-color-secondary-400);
+    transition: background-color 0.15s ease-in-out;
+
+    &:hover:not(:disabled) {
+      background: var(--pr-color-accents-1);
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    i {
+      font-size: 18px;
+    }
+  }
+
+  &__label {
+    font-size: 12px;
+    color: var(--pr-color-accents-6);
+  }
 }

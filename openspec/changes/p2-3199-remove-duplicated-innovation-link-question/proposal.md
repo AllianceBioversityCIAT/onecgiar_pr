@@ -47,7 +47,7 @@ None. No existing spec under `openspec/specs/` covers this behaviour.
 **SDD baseline**
 
 - `docs/prd.md` — result reporting completeness and data integrity.
-- `docs/system-design/design.md` — result-detail section layout and field placement.
-- `docs/detailed-design/detailed-design.md` — frontend/backend field ownership.
+- `docs/ux-ui/design.md` — result-detail section layout and field placement.
+- `docs/trd/trd.md` — frontend/backend field ownership.
 
 **Jira:** [P2-3199](https://cgiarmel.atlassian.net/browse/P2-3199) — requested by Santiago Sánchez Correa (27 Jul 2026). Related, not included: [P2-3191](https://cgiarmel.atlassian.net/browse/P2-3191).

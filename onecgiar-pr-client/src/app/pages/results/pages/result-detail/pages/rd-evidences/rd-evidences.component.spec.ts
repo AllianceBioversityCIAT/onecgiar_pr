@@ -1,24 +1,31 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RdEvidencesComponent } from './rd-evidences.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
 import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
-import { firstValueFrom, of } from 'rxjs';
+import { firstValueFrom, of, throwError } from 'rxjs';
 import { NoDataTextComponent } from '../../../../../../custom-fields/no-data-text/no-data-text.component';
 import { AlertStatusComponent } from '../../../../../../custom-fields/alert-status/alert-status.component';
 import { SaveButtonComponent } from '../../../../../../custom-fields/save-button/save-button.component';
 import { DetailSectionTitleComponent } from '../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { signal } from '@angular/core';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
+import { DataControlService } from '../../../../../../shared/services/data-control.service';
+import { SharePointUploadService } from '../../../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
 
 jest.useFakeTimers();
 
 describe('RdEvidencesComponent', () => {
+  const mockSharePointUploadService = { uploadPending: jest.fn().mockResolvedValue([]) };
   let component: RdEvidencesComponent;
   let fixture: ComponentFixture<RdEvidencesComponent>;
   let mockApiService: any;
   let mockInnovationControlListService: any;
   let mockSaveButtonService: any;
+  let mockFieldsManagerService: any;
   const mockGET_evidencesResponse = {
     evidences: [],
     innovation_readiness_level_id: 1
@@ -40,7 +47,8 @@ describe('RdEvidencesComponent', () => {
         POST_createUploadSession: async () => firstValueFrom(await Promise.resolve(of(mockGET_loadFileInUploadSessionResponse))),
         GET_loadFileInUploadSession: () => of({ nextExpectedRanges: ['sampleRange'] }),
         PUT_loadFileInUploadSession: () => of(mockPUT_loadFileInUploadSessionResponse),
-        POST_evidences: () => of({ response: [] })
+        POST_evidences: () => of({ response: [] }),
+        GET_policyChanges: () => of({ response: { policy_stage_id: null } })
       },
       alertsFe: {
         show: jest.fn()
@@ -51,6 +59,9 @@ describe('RdEvidencesComponent', () => {
           result_type_id: 5
         },
         currentResultSectionName: signal<string>('Evidences')
+      },
+      rolesSE: {
+        readOnly: false
       }
     };
 
@@ -68,10 +79,21 @@ describe('RdEvidencesComponent', () => {
       hideSaveSpinner: jest.fn()
     };
 
+    // P2-3262: the guidance gate is the PHASE-year threshold, never the portfolio.
+    mockFieldsManagerService = {
+      isReportingFormGuidance2026: jest.fn().mockReturnValue(false)
+    };
+
     await TestBed.configureTestingModule({
       declarations: [RdEvidencesComponent, NoDataTextComponent, AlertStatusComponent, SaveButtonComponent, DetailSectionTitleComponent],
       imports: [HttpClientTestingModule],
       providers: [
+        {
+          // P2-3220: the upload sequence moved to the shared service, which owns its own spec.
+          // Here we only care that this section delegates to it with the right options.
+          provide: SharePointUploadService,
+          useValue: mockSharePointUploadService
+        },
         {
           provide: ApiService,
           useValue: mockApiService
@@ -83,12 +105,38 @@ describe('RdEvidencesComponent', () => {
         {
           provide: SaveButtonService,
           useValue: mockSaveButtonService
+        },
+        {
+          provide: FieldsManagerService,
+          useValue: mockFieldsManagerService
         }
       ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(RdEvidencesComponent);
     component = fixture.componentInstance;
+  });
+
+  describe('sectionLoading (skeleton)', () => {
+    it('starts raised so the empty EvidencesBody never paints as a lost form', () => {
+      expect(component.sectionLoading()).toBe(true);
+    });
+
+    it('is released once the section GET responds', () => {
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the section GET fails, so the skeleton can never get stuck', () => {
+      component.sectionLoading.set(true);
+      jest.spyOn(mockApiService.resultsSE, 'GET_evidences').mockReturnValue(throwError(() => new Error('boom')));
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+      expect(component.isSaving).toBe(false);
+    });
   });
 
   describe('alertStatus', () => {
@@ -104,6 +152,170 @@ describe('RdEvidencesComponent', () => {
       const result = component.alertStatus();
       expect(result).toContain('Submit a maximum of 6 pieces of evidence per result.');
       expect(result).not.toContain('Please list evidence from most to least important.');
+    });
+  });
+
+  // P2-3262: the evidence guidance moves from the grey box into ONE ⓘ on the section heading,
+  // for Policy change results only, from the 2026 reporting phase on.
+  describe('P2-3262 — Policy change evidence guidance', () => {
+    const asPolicyChange2026 = () => {
+      mockApiService.dataControlSE.isKnowledgeProduct = false;
+      mockApiService.dataControlSE.currentResult = { result_type_id: 1 };
+      mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(true);
+    };
+
+    describe('policyChangeGuidanceAsTooltip (the gate)', () => {
+      it('is TRUE for a Policy change result in a 2026+ phase', () => {
+        asPolicyChange2026();
+
+        expect(component.policyChangeGuidanceAsTooltip()).toBe(true);
+      });
+
+      it('is FALSE for a Policy change result in a pre-2026 phase — the ticket is 2026-onwards only', () => {
+        asPolicyChange2026();
+        mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(false);
+
+        expect(component.policyChangeGuidanceAsTooltip()).toBe(false);
+      });
+
+      it('is FALSE for any other result type, even in 2026 — "no tooltip for result types other than Policy Change"', () => {
+        asPolicyChange2026();
+        mockApiService.dataControlSE.currentResult = { result_type_id: 5 };
+
+        expect(component.policyChangeGuidanceAsTooltip()).toBe(false);
+      });
+
+      it('reads the PHASE gate, never the portfolio', () => {
+        asPolicyChange2026();
+
+        component.policyChangeGuidanceAsTooltip();
+
+        expect(mockFieldsManagerService.isReportingFormGuidance2026).toHaveBeenCalled();
+      });
+    });
+
+    describe('policyChangeEvidenceGuidance (the tooltip text)', () => {
+      beforeEach(() => asPolicyChange2026());
+
+      it('opens with Part 1 — the same general rules the grey box shows everywhere else', () => {
+        const text = component.policyChangeEvidenceGuidance();
+
+        expect(text).toContain('Submit a maximum of 6 pieces of evidence per result.');
+        expect(text).toContain('Links to SharePoint, One Drive, Google Drive, DropBox and other file storage platforms are not allowed.');
+      });
+
+      it('follows with Part 2 — the Policy change rule and the examples grouped by evidence type', () => {
+        const text = component.policyChangeEvidenceGuidance();
+
+        expect(text).toContain('Evidence is required for all stages to validate the specific claims');
+        expect(text).toContain('CGIAR contribution to an outcome (Stages 1, 2 and 3)');
+        expect(text).toContain('Evidence that a policy outcome has taken place (Stage 2)');
+        expect(text).toContain('Evidence of impact of a policy (Stage 3)');
+      });
+
+      it('keeps the note paragraph verbatim, not the condensed rewrite', () => {
+        const text = component.policyChangeEvidenceGuidance();
+
+        expect(text).toContain('does not need to be made public, it may be submitted and kept out of the public domain');
+      });
+
+      it('keeps one verbatim bullet per evidence-type group, so a future condensation is caught', () => {
+        const text = component.policyChangeEvidenceGuidance();
+
+        expect(text).toContain('Third party evaluations of the policy outcome that describes the CGIAR contribution');
+        expect(text).toContain('If the above is not available, then a digital copy that can be stored in a folder for review.');
+        expect(text).toContain('Strong evidence, such as a peer-reviewed publication or external evaluation is required.');
+      });
+
+      it('shows ONLY the Stage 2 requirement when the result is at stage 2 (CLARISA id 7)', () => {
+        component.policyStageId = 7;
+
+        const text = component.policyChangeEvidenceGuidance();
+
+        expect(text).toContain('Stage 2 – Policy enacted:');
+        expect(text).not.toContain('Stage 3 – Evidence of impact of policy:');
+      });
+
+      it('shows ONLY the Stage 3 requirement when the result is at stage 3 (CLARISA id 8)', () => {
+        component.policyStageId = 8;
+
+        const text = component.policyChangeEvidenceGuidance();
+
+        expect(text).toContain('Stage 3 – Evidence of impact of policy:');
+        expect(text).not.toContain('Stage 2 – Policy enacted:');
+      });
+
+      it('shows no stage requirement at stage 1 (CLARISA id 6) — the ticket writes none for it', () => {
+        component.policyStageId = 6;
+
+        const text = component.policyChangeEvidenceGuidance();
+
+        expect(text).not.toContain('Stage-specific requirements');
+      });
+
+      it('lists both requirements while no stage has been chosen yet, so the guidance is never empty', () => {
+        component.policyStageId = null;
+
+        const text = component.policyChangeEvidenceGuidance();
+
+        expect(text).toContain('Stage 2 – Policy enacted:');
+        expect(text).toContain('Stage 3 – Evidence of impact of policy:');
+      });
+    });
+
+    describe('publishing into the section heading', () => {
+      let dataControlSE: DataControlService;
+
+      beforeEach(() => {
+        dataControlSE = TestBed.inject(DataControlService);
+      });
+
+      it('publishes the guidance and fetches the stage on init for a Policy change 2026 result', () => {
+        asPolicyChange2026();
+        const stageSpy = jest.spyOn(mockApiService.resultsSE, 'GET_policyChanges');
+
+        component.ngOnInit();
+
+        expect(stageSpy).toHaveBeenCalled();
+        expect(dataControlSE.currentResultSectionGuidance()).toContain('Evidence is required for all stages');
+      });
+
+      it('stores the stage from the policy-change GET so the text can adapt to it', () => {
+        asPolicyChange2026();
+        jest.spyOn(mockApiService.resultsSE, 'GET_policyChanges').mockReturnValue(of({ response: { policy_stage_id: 8 } }));
+
+        component.ngOnInit();
+
+        expect(component.policyStageId).toBe(8);
+        expect(dataControlSE.currentResultSectionGuidance()).toContain('Stage 3 – Evidence of impact of policy:');
+      });
+
+      it('keeps the guidance when the stage lookup fails, instead of blanking the ⓘ', () => {
+        asPolicyChange2026();
+        jest.spyOn(mockApiService.resultsSE, 'GET_policyChanges').mockReturnValue(throwError(() => new Error('boom')));
+
+        component.ngOnInit();
+
+        expect(dataControlSE.currentResultSectionGuidance()).toContain('Evidence is required for all stages');
+      });
+
+      it('publishes nothing — and asks for no stage — for any other result type', () => {
+        const stageSpy = jest.spyOn(mockApiService.resultsSE, 'GET_policyChanges');
+
+        component.ngOnInit();
+
+        expect(stageSpy).not.toHaveBeenCalled();
+        expect(dataControlSE.currentResultSectionGuidance()).toBe('');
+      });
+
+      it('clears the heading on destroy, so the guidance cannot leak into the next section', () => {
+        asPolicyChange2026();
+        component.ngOnInit();
+
+        component.ngOnDestroy();
+
+        expect(dataControlSE.currentResultSectionGuidance()).toBe('');
+      });
     });
   });
 
@@ -130,93 +342,58 @@ describe('RdEvidencesComponent', () => {
     });
   });
 
-  describe('getAndCalculateFilePercentage', () => {
-    it('should calculate file percentage and update evidenceIterator', () => {
-      const response = {
-        nextExpectedRanges: ['0-1024']
-      };
-      const evidenceIterator = {
-        percentage: 0
-      };
-      component.getAndCalculateFilePercentage(response, evidenceIterator);
-
-      expect(evidenceIterator.percentage).toBe('0');
+  describe('loadAllFiles — delegates to the shared SharePoint service (P2-3220)', () => {
+    beforeEach(() => {
+      mockSharePointUploadService.uploadPending.mockClear();
+      mockSharePointUploadService.uploadPending.mockResolvedValue([]);
     });
 
-    it('should not update percentage if totalBytes is zero', () => {
-      const response = {
-        nextExpectedRanges: ['0-0']
-      };
-      const evidenceIterator = {
-        percentage: 50
-      };
-
-      component.getAndCalculateFilePercentage(response, evidenceIterator);
-
-      expect(evidenceIterator.percentage).toBe(50);
-    });
-
-    it('should calculate file percentage and update evidenceIterator', () => {
-      const response = {
-        nextExpectedRanges: ['0-']
-      };
-      const evidenceIterator = {
-        percentage: 0
-      };
-
-      component.getAndCalculateFilePercentage(response, evidenceIterator);
-
-      expect(evidenceIterator.percentage).toBe(0);
-    });
-
-    it('should handle null or undefined nextRange', () => {
-      const response = { nextExpectedRanges: [null] };
-      const evidenceIterator = { percentage: 50 };
-      component.getAndCalculateFilePercentage(response, evidenceIterator);
-      expect(evidenceIterator.percentage).toBe(50);
-    });
-  });
-
-  describe('endLoadFile', () => {
-    it('should clear the interval and set the percentage to 100', () => {
-      const spy = jest.spyOn(global, 'clearInterval');
-      const intervalId = setInterval(() => {}, 100);
-      const evidenceIterator = { percentage: 50 };
-
-      component.endLoadFile(intervalId, evidenceIterator);
-
-      expect(spy).toHaveBeenCalledWith(intervalId);
-      expect(evidenceIterator.percentage).toBe(100);
-    });
-  });
-
-  describe('loadAllFiles', () => {
-    it('should load files and update evidence properties', async () => {
-      const mockEvidences = [{ file: new File([], 'file1.pdf') }, { file: new File([], 'file2.pdf') }, { file: undefined }];
-      component.evidencesBody.evidences = mockEvidences;
-      const spyEndLoadFile = jest.spyOn(component, 'endLoadFile');
-      const spyPOST_createUploadSession = jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSession');
-      const spyPUT_loadFileInUploadSession = jest.spyOn(mockApiService.resultsSE, 'PUT_loadFileInUploadSession');
+    /**
+     * The point of the refactor: this section must not know which upload session endpoint to use.
+     * Two of the three evidence surfaces used `POST_createUploadSession` and the third
+     * `POST_createUploadSessionP25`, which is why "every upload goes through the shared flow" was
+     * not something the code could enforce.
+     */
+    it('asks the service for the evidences flow and never touches the session endpoints', async () => {
+      const spySession = jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSession');
+      const spyPut = jest.spyOn(mockApiService.resultsSE, 'PUT_loadFileInUploadSession');
+      component.evidencesBody.evidences = [{ file: new File([], 'a.pdf') }] as any;
+      component.evidencesBody.result_id = 77 as any;
 
       await component.loadAllFiles();
 
-      jest.advanceTimersByTime(2000);
-      jest.runOnlyPendingTimers();
-
-      expect(spyPOST_createUploadSession).toHaveBeenCalled();
-      expect(spyPUT_loadFileInUploadSession).toHaveBeenCalled();
-      expect(spyEndLoadFile).toHaveBeenCalled();
+      expect(mockSharePointUploadService.uploadPending).toHaveBeenCalledWith(component.evidencesBody.evidences, {
+        resultId: 77,
+        flow: 'evidences',
+        skipAlreadyUploaded: false,
+        trackProgress: true,
+        logLabel: 'rd-evidences'
+      });
+      expect(spySession).not.toHaveBeenCalled();
+      expect(spyPut).not.toHaveBeenCalled();
     });
 
-    it('should handle errors in loadAllFiles', async () => {
-      const mockEvidences = [{ file: new File([], 'file1.pdf') }, { file: new File([], 'file2.pdf') }, { file: undefined }];
-      component.evidencesBody.evidences = mockEvidences;
-      jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSession').mockRejectedValue('Error from POST_createUploadSession');
-      const consoleSpy = jest.spyOn(console, 'error');
+    /**
+     * `skipAlreadyUploaded: false` is this section's own behaviour, not a default: it re-uploads an
+     * evidence that already carries a `link`. The other surfaces skip those, which is exactly why
+     * the option exists rather than being hardcoded in the service.
+     */
+    it('keeps re-uploading evidences that already have a link', async () => {
+      component.evidencesBody.evidences = [{ file: new File([], 'a.pdf'), link: 'http://sp/already' }] as any;
 
       await component.loadAllFiles();
 
-      expect(consoleSpy).toHaveBeenCalledWith('Error from POST_createUploadSession');
+      expect(mockSharePointUploadService.uploadPending.mock.calls[0][1].skipAlreadyUploaded).toBe(false);
+    });
+
+    it('passes the failed file names straight through, so the caller can warn the user', async () => {
+      mockSharePointUploadService.uploadPending.mockResolvedValue(['file1.pdf', 'file2.pdf']);
+
+      await expect(component.loadAllFiles()).resolves.toEqual(['file1.pdf', 'file2.pdf']);
+    });
+
+    it('returns an empty list when every upload succeeds', async () => {
+      await expect(component.loadAllFiles()).resolves.toEqual([]);
     });
   });
 
@@ -233,6 +410,30 @@ describe('RdEvidencesComponent', () => {
       expect(spy).toHaveBeenCalled();
       expect(spyHideSaveSpinner).toHaveBeenCalled();
       expect(spyPOST_evidences).toHaveBeenCalled();
+    });
+
+    // P2-3373: a failed save used to leave `isSaving` latched on. Because
+    // `isEvidenceUploading()` reads that flag, every file evidence whose link had not
+    // resolved kept the "uploading" skeleton instead of its link for the rest of the
+    // page's life, and the rethrow from `isSavingPipe` surfaced as an unhandled error.
+    it('should release the in-flight flag when POST_evidences fails', async () => {
+      mockApiService.resultsSE.POST_evidences = () => throwError(() => new Error('save failed'));
+      const reloadSpy = jest.spyOn(component, 'getSectionInformation');
+
+      await component.onSaveSection();
+
+      expect(component.isSaving).toBe(false);
+      expect(reloadSpy).not.toHaveBeenCalled();
+    });
+
+    it('should not keep a file evidence stuck on the uploading skeleton after a failed save', async () => {
+      mockApiService.resultsSE.POST_evidences = () => throwError(() => new Error('save failed'));
+      const stuck: any = { is_sharepoint: true, file: { name: 'report.pdf' }, link: undefined };
+      component.evidencesBody.evidences = [stuck];
+
+      await component.onSaveSection();
+
+      expect(component.isEvidenceUploading(stuck)).toBe(false);
     });
   });
 
@@ -370,6 +571,153 @@ describe('RdEvidencesComponent', () => {
     it('evidenceDisplayName prefers file name then link', () => {
       expect(component.evidenceDisplayName({ sp_file_name: 'doc.pdf', link: 'x' })).toBe('doc.pdf');
       expect(component.evidenceDisplayName({ link: 'https://x' })).toBe('https://x');
+    });
+  });
+
+  // KPE-T-1 (bugfix/knowledge-product-evidence-edit): the edit (pencil) and delete buttons on an
+  // evidence card used to share ONE `*ngIf` that excluded Knowledge Product results from both
+  // actions. Per KPE-DD-1, each button now has its own `*ngIf`: edit drops the KP exclusion
+  // (`!api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status` only), delete keeps it.
+  describe('evidence card edit/delete gating (KPE-T-1)', () => {
+    let dataControlSE: DataControlService;
+
+    beforeEach(() => {
+      dataControlSE = TestBed.inject(DataControlService);
+      mockApiService.rolesSE = { readOnly: false };
+      mockApiService.dataControlSE.currentResult = { result_type_id: 6, status: 0 };
+      // Run the component's initial data load directly (NOT via fixture.detectChanges()) so
+      // the very first render already reflects the evidence card set up below — calling
+      // detectChanges() before AND after mutating bound state in the same test trips Angular's
+      // ExpressionChangedAfterItHasBeenCheckedError dev-mode guard.
+      component.ngOnInit();
+      component.evidencesBody.evidences = [{}];
+    });
+
+    const setKnowledgeProduct = (isKP: boolean) => {
+      // `dataControlSE.isKnowledgeProduct` (the real service the template reads for these
+      // buttons) derives from `currentResult.result_type_id == 6` — set on the REAL injected
+      // service instance, distinct from the mocked `api.dataControlSE` used for readOnly/status.
+      dataControlSE.currentResult = { result_type_id: isKP ? 6 : 1 } as any;
+    };
+
+    it('renders the edit button for a Knowledge Product evidence card, gated only on readOnly/status (KPE-AC-1)', () => {
+      setKnowledgeProduct(true);
+
+      fixture.detectChanges();
+
+      const editButton = fixture.nativeElement.querySelector('.ev_edit');
+      expect(editButton).toBeTruthy();
+    });
+
+    it('does NOT render the delete button for a Knowledge Product evidence card (readOnly=false, no status)', () => {
+      setKnowledgeProduct(true);
+
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.ev_delete')).toBeFalsy();
+    });
+
+    it('does NOT render the delete button for a Knowledge Product evidence card even when readOnly=true', () => {
+      setKnowledgeProduct(true);
+      mockApiService.rolesSE.readOnly = true;
+
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.ev_delete')).toBeFalsy();
+    });
+
+    it('does NOT render the delete button for a Knowledge Product evidence card even with a current result status', () => {
+      setKnowledgeProduct(true);
+      mockApiService.dataControlSE.currentResult.status = 1;
+
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.ev_delete')).toBeFalsy();
+    });
+
+    it('still renders both edit and delete for a non-Knowledge-Product evidence card (no regression)', () => {
+      setKnowledgeProduct(false);
+
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.ev_edit')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('.ev_delete')).toBeTruthy();
+    });
+
+    it('hides the "Add evidence" button for a Knowledge Product result (unchanged, no regression)', () => {
+      setKnowledgeProduct(true);
+      mockApiService.dataControlSE.isKnowledgeProduct = true;
+
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-add-button')).toBeFalsy();
+    });
+  });
+
+  // KPE-T-2 (bugfix/knowledge-product-evidence-edit): regression test reproducing Hector Tobon's
+  // exact bug report. A Knowledge Product result with a Principal (`'3'`) Impact-Area score and an
+  // existing evidence row whose matching `*_related` flag is `false` used to have NO way to clear
+  // the warning, because the only entry point into the edit modal (the pencil icon) was hidden for
+  // Knowledge Products (fixed by KPE-T-1). This suite proves the end-to-end path: pencil reachable
+  // (DOM, ties back to the KPE-T-1 assertion) → checkbox toggle simulated on the draft →
+  // confirmCreateEvidence() → evidenceSectionComplete flips to true / validateCheckBoxes() clears.
+  describe('KP evidence tag-marker edit satisfies a Principal impact-area score (KPE-T-2)', () => {
+    let dataControlSE: DataControlService;
+
+    beforeEach(() => {
+      dataControlSE = TestBed.inject(DataControlService);
+      mockApiService.rolesSE = { readOnly: false };
+      mockApiService.dataControlSE.currentResult = { result_type_id: 6, status: 0 };
+      // `dataControlSE.isKnowledgeProduct` (what the edit button's *ngIf actually reads, per
+      // KPE-T-1) derives from the REAL injected service's currentResult, distinct from the
+      // mocked `api.dataControlSE` used above for the readOnly/status guards.
+      dataControlSE.currentResult = { result_type_id: 6 } as any;
+      // Same fixture-sequencing workaround as the KPE-T-1 block: call ngOnInit() directly, then
+      // mutate evidencesBody afterwards, so we don't call detectChanges() both before and after
+      // mutating bound state (which trips ExpressionChangedAfterItHasBeenCheckedError).
+      component.ngOnInit();
+      component.evidencesBody = {
+        result_id: 1,
+        gender_tag_level: '3', // Principal
+        climate_change_tag_level: null,
+        nutrition_tag_level: null,
+        environmental_biodiversity_tag_level: null,
+        poverty_tag_level: null,
+        evidences: [{ gender_related: false }]
+      };
+    });
+
+    it('reproduces the bug: a Principal Gender score with unmarked KP evidence leaves the section incomplete with a warning', () => {
+      // Falsifiability guard: this must be incomplete/non-empty BEFORE the fix is exercised,
+      // proving the test starts from the actual failing case rather than a vacuous pass.
+      expect(component.evidenceSectionComplete).toBe(false);
+      expect(component.validateCheckBoxes()).toContain(
+        'A principal contribution score (2) has been recorded for Gender equality, youth and social inclusion tag. Please provide evidence to support this claim.'
+      );
+    });
+
+    it('confirms the edit trigger is reachable on this exact KP fixture (reuses the KPE-T-1 DOM assertion, so the two tasks cannot pass independently)', () => {
+      fixture.detectChanges();
+
+      const editButton = fixture.nativeElement.querySelector('.ev_edit');
+      expect(editButton).toBeTruthy();
+    });
+
+    it('allows a Knowledge Product evidence tag to be edited to satisfy a Principal impact-area score', () => {
+      const saveSpy = jest.spyOn(component, 'onSaveSection').mockResolvedValue(undefined);
+
+      // Reach the modal exactly as clicking the now-visible (KPE-T-1) pencil icon would:
+      component.editEvidence(0);
+      // Simulate the checkbox toggle inside the modal (evidence-item.component.html:105-128,
+      // unchanged — already correctly bound, only newly reachable):
+      component.draftEvidence.gender_related = true;
+      // Simulate clicking "Save changes":
+      component.confirmCreateEvidence();
+
+      expect(component.evidencesBody.evidences[0].gender_related).toBe(true);
+      expect(component.evidenceSectionComplete).toBe(true);
+      expect(component.validateCheckBoxes()).toBe('');
+      expect(saveSpy).toHaveBeenCalled();
     });
   });
 
@@ -534,6 +882,49 @@ describe('RdEvidencesComponent', () => {
     });
   });
 
+  describe('draftValid', () => {
+    // EVL-AC-5: a denylisted file-storage link must never validate the modal draft.
+    it.each([
+      ['SharePoint', 'https://cgiar.sharepoint.com/sites/foo'],
+      ['OneDrive (onedrive.live.com)', 'https://onedrive.live.com/foo'],
+      ['OneDrive (1drv.ms)', 'https://1drv.ms/foo'],
+      ['Google Drive (drive.google.com)', 'https://drive.google.com/foo'],
+      ['Google Drive (docs.google.com)', 'https://docs.google.com/foo'],
+      ['Dropbox', 'https://www.dropbox.com/foo']
+    ])('should return false for a %s link', (_label, link) => {
+      component.draftEvidence = { is_sharepoint: false, link };
+
+      expect(component.draftValid).toBe(false);
+    });
+
+    // EVL-AC-6: a plain public link must remain valid (regression guard).
+    it('should return true for a plain public link', () => {
+      component.draftEvidence = { is_sharepoint: false, link: 'https://www.cgiar.org/evidence-1' };
+
+      expect(component.draftValid).toBe(true);
+    });
+
+    // Unaffected: the file-upload path never runs the link check.
+    it('should return true for a file-source draft with a file attached, regardless of link', () => {
+      component.draftEvidence = { is_sharepoint: true, file: new File([''], 'doc.pdf') } as any;
+
+      expect(component.draftValid).toBe(true);
+    });
+
+    // Regression guard: unchanged pre-existing behavior for a missing link.
+    it('should return false when the link field is empty and is_sharepoint is false', () => {
+      component.draftEvidence = { is_sharepoint: false, link: '' };
+
+      expect(component.draftValid).toBe(false);
+    });
+
+    it('should return false when there is no draft', () => {
+      component.draftEvidence = null as any;
+
+      expect(component.draftValid).toBe(false);
+    });
+  });
+
   describe('validateHasInnoReadinessLevelEvidence', () => {
     it('should return true if isOptionalReadinessLevel is true', () => {
       component.isOptionalReadinessLevel = true;
@@ -560,6 +951,178 @@ describe('RdEvidencesComponent', () => {
       component.evidencesBody.evidences = [];
       const result = component.validateHasInnoReadinessLevelEvidence();
       expect(result).toBe(false);
+    });
+  });
+
+  // EVM — bugfix/evidence-modal-sticky-actions, attempt 2 (DD-2 fallback). Attempt 1 used
+  // `position: sticky` anchored against `.evidence_modal`'s own `overflow-y: auto`; it passed
+  // review and a tiny-viewport check but broke at a real desktop width because the OUTER
+  // `.pr-dialog` (its own independent max-height:90vh + overflow:auto) turned out to be the
+  // scrolling ancestor that actually moved, not `.evidence_modal` — two independently-capped
+  // scroll containers stacked is inherently ambiguous (see rd-evidences/CLAUDE.md). DD-2 fixes
+  // this structurally: `.evidence_modal` is now a non-scrolling size cap only (`overflow-y:
+  // hidden`), `.modal_body` (new wrapper around `<app-evidence-item>`) is the ONE scrolling
+  // element in the popup subtree, and `.modal_header`/`.buttons` are plain flex children with
+  // no `position: sticky`. jsdom has no layout engine — it cannot compute a real
+  // `scrollHeight`/`clientHeight` from `max-height`/`overflow`, nor apply the component's SCSS
+  // via `getComputedStyle` (verified empirically: TestBed renders zero `<style>` tags for this
+  // component in this repo's Jest setup — styleUrls are not compiled for tests). So this suite
+  // proves the CSS/structure *contract* two ways instead of a live rendered outcome:
+  //   1. it parses the actual `.evidence_modal` block out of the real `.scss` source, so the
+  //      assertions read the file under test rather than a hardcoded expectation — this suite
+  //      fails against attempt 1's sticky-based source (which has `overflow-y: auto` on
+  //      `.evidence_modal` and `position: sticky` on `.modal_header`/`.buttons`, and no
+  //      `.modal_body` block at all) and passes once the DD-2 structure lands;
+  //   2. it simulates the GIVEN "constrained popup height forces the form to scroll" precondition
+  //      by defining `scrollHeight`/`clientHeight` on the rendered `.modal_body` node — the only
+  //      way to represent that precondition in a layout-less DOM, and now targeted at
+  //      `.modal_body` since that is the actual scroll container under DD-2.
+  describe('EVM — evidence modal DD-2 structural fix (bugfix/evidence-modal-sticky-actions, attempt 2)', () => {
+    const scssSource = fs.readFileSync(path.join(__dirname, 'rd-evidences.component.scss'), 'utf8');
+
+    /** Extracts the brace-balanced body of the first `<selector> {` block found in `source`. `selector` is a literal (e.g. `.modal_header`), not a regex. */
+    const extractBlock = (source: string, selector: string): string => {
+      const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const startMatch = source.match(new RegExp(`${escaped}\\s*\\{`));
+      if (!startMatch || startMatch.index === undefined) {
+        throw new Error(`Selector "${selector}" not found in stylesheet`);
+      }
+      let depth = 1;
+      let i = startMatch.index + startMatch[0].length;
+      const body: string[] = [];
+      while (depth > 0 && i < source.length) {
+        const ch = source[i];
+        if (ch === '{') depth++;
+        if (ch === '}') {
+          depth--;
+          if (depth === 0) break;
+        }
+        body.push(ch);
+        i++;
+      }
+      return body.join('');
+    };
+
+    /** Strips nested `<selector> { ... }` blocks out of a block's body, leaving only the
+     * declarations that belong directly to the block itself — needed so a check on
+     * `.evidence_modal`'s own `overflow-y` isn't fooled by `.modal_body`'s nested `overflow-y: auto`. */
+    const ownDeclarations = (blockBody: string): string => {
+      let depth = 0;
+      let out = '';
+      for (const ch of blockBody) {
+        if (ch === '{') {
+          depth++;
+          continue;
+        }
+        if (ch === '}') {
+          depth--;
+          continue;
+        }
+        if (depth === 0) out += ch;
+      }
+      return out;
+    };
+
+    const evidenceModalBlock = extractBlock(scssSource, '.evidence_modal');
+    const evidenceModalOwn = ownDeclarations(evidenceModalBlock);
+    const modalHeaderBlock = extractBlock(evidenceModalBlock, '.modal_header');
+    const modalBodyBlock = extractBlock(evidenceModalBlock, '.modal_body');
+    const buttonsBlock = extractBlock(evidenceModalBlock, '.buttons');
+
+    describe('EVM-R-3 — `.evidence_modal` is a size cap only, no longer a scrolling ancestor', () => {
+      it('does NOT have overflow-y: auto on its own declarations (the structural ambiguity attempt 1 hit)', () => {
+        expect(evidenceModalOwn).not.toMatch(/overflow-y:\s*auto/);
+      });
+
+      it('is overflow-y: hidden — a size cap, not a scroll container', () => {
+        expect(evidenceModalOwn).toMatch(/overflow-y:\s*hidden/);
+      });
+
+      it('keeps its max-height cap (still under the outer .pr-dialog 90vh cap, plus a fixed-px buffer for the app shell header — attempt 3)', () => {
+        // EVM-R-1 (attempt 3): a plain `85vh` cap let the dialog grow tall enough that its
+        // viewport-centered top edge could land behind the app shell's sticky header
+        // (search bar + test-environment banner, up to ~108px) — a real user-reported
+        // regression, confirmed live: raising `.pr-dialog-mask`'s z-index did NOT fix it
+        // (Chromium paints the sticky ancestor above a deeply-nested `position:fixed`
+        // descendant regardless of z-index), but capping the dialog's height so it can
+        // never reach that region does. `min(85vh, calc(100vh - 260px))` keeps ≥120px of
+        // clearance above the mask's centered top edge on any viewport.
+        expect(evidenceModalOwn).toMatch(/max-height:\s*min\(85vh,\s*calc\(100vh\s*-\s*260px\)\)/);
+      });
+    });
+
+    describe('EVM-R-3 — `.modal_body` is the single scrolling element in the popup', () => {
+      it('has overflow-y: auto', () => {
+        expect(modalBodyBlock).toMatch(/overflow-y:\s*auto/);
+      });
+
+      it('has flex: 1 so it fills the space between header and footer', () => {
+        expect(modalBodyBlock).toMatch(/flex:\s*1/);
+      });
+
+      it('has min-height: 0 so the flex item can actually shrink and scroll instead of overflowing its flex parent', () => {
+        expect(modalBodyBlock).toMatch(/min-height:\s*0/);
+      });
+    });
+
+    describe('EVM-R-1 — `.modal_header` (title + close ✕) is a plain, non-scrolling flex child', () => {
+      it('does NOT use position: sticky (no scrolling ancestor to anchor against anymore)', () => {
+        expect(modalHeaderBlock).not.toMatch(/position:\s*sticky/);
+      });
+    });
+
+    describe('EVM-R-2 — `.buttons` (Cancel / Add evidence / Save changes) is a plain, non-scrolling flex child', () => {
+      it('does NOT use position: sticky (no scrolling ancestor to anchor against anymore)', () => {
+        expect(buttonsBlock).not.toMatch(/position:\s*sticky/);
+      });
+    });
+
+    describe('EVM-AC-1 — constrained popup height precondition (GIVEN clause)', () => {
+      it('renders `.modal_body` as the element that would need to scroll once its content exceeds the available height', () => {
+        component.showCreateModal = true;
+        fixture.detectChanges();
+
+        const modalBody = fixture.nativeElement.querySelector('.modal_body') as HTMLElement;
+        expect(modalBody).toBeTruthy();
+
+        // jsdom has no layout engine, so `scrollHeight`/`clientHeight` are always 0 on a real
+        // render. Define them here to represent the scenario's GIVEN clause — a popup whose full
+        // content (header + form + footer) exceeds the space a constrained laptop viewport gives
+        // it — which is the only way to express that precondition without a real browser. Under
+        // DD-2 it is `.modal_body`, not `.evidence_modal`, that actually scrolls.
+        Object.defineProperty(modalBody, 'scrollHeight', { value: 1200, configurable: true });
+        Object.defineProperty(modalBody, 'clientHeight', { value: 480, configurable: true });
+
+        expect(modalBody.scrollHeight).toBeGreaterThan(modalBody.clientHeight);
+      });
+
+      it('keeps `.modal_header`, `.modal_body`, `.buttons` as direct children of `.evidence_modal`, in that order', () => {
+        component.showCreateModal = true;
+        fixture.detectChanges();
+
+        const evidenceModal = fixture.nativeElement.querySelector('.evidence_modal') as HTMLElement;
+        const directChildren = Array.from(evidenceModal.children).map(el => el.className);
+
+        expect(directChildren).toEqual(['modal_header', 'modal_body', 'buttons']);
+      });
+    });
+
+    describe('EVM-AC-2 — no regression at the pre-fix baseline (unconstrained) size', () => {
+      it('still renders the header title, close ✕ and both footer buttons unchanged when no scroll is needed', () => {
+        component.showCreateModal = true;
+        fixture.detectChanges();
+
+        const modalBody = fixture.nativeElement.querySelector('.modal_body') as HTMLElement;
+        const evidenceModal = fixture.nativeElement.querySelector('.evidence_modal') as HTMLElement;
+        // Baseline case: content fits, no scroll forced.
+        Object.defineProperty(modalBody, 'scrollHeight', { value: 400, configurable: true });
+        Object.defineProperty(modalBody, 'clientHeight', { value: 400, configurable: true });
+
+        expect(evidenceModal.querySelector('.modal_title')).toBeTruthy();
+        expect(evidenceModal.querySelector('.modal_close')).toBeTruthy();
+        expect(evidenceModal.querySelectorAll('.buttons app-pr-button').length).toBe(2);
+        expect(modalBody.scrollHeight).toBe(modalBody.clientHeight);
+      });
     });
   });
 

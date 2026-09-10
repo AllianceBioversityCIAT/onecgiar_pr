@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import { env } from 'node:process';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import type { ReportingTocContext } from '../../../results-framework-reporting/reporting-toc-context/reporting-toc-context.interface';
+import { ProgressRollup, rollUpIndicators } from './toc-progress-rollup';
 
 interface TocResultRow {
   toc_result_id: number;
@@ -20,6 +21,9 @@ interface TocResultRow {
   target_value_sum: number | null;
   actual_achieved_value_sum: number | null;
   progress_percentage: string | null;
+  /** P2-3296: Submitted + Approved, alongside the QA pair above. */
+  preliminary_achieved_value_sum?: number | null;
+  preliminary_progress_percentage?: string | null;
   number_target?: string | null;
   target_date?: number | null;
   target_value?: number | null;
@@ -29,6 +33,10 @@ interface TocResultRow {
   is_aow?: number | null;
   center_id?: number | null;
   center_acronym?: string | null;
+  /** P2-3255: `id::acronym` pairs joined by `||`, one target = one row. Null when unassociated. */
+  centers_concat?: string | null;
+  /** P2-3257: the target's own id — what tells a shared target from individual ones. */
+  toc_indicator_target_id?: number | null;
 }
 
 export interface TocResultResponse {
@@ -37,8 +45,15 @@ export interface TocResultResponse {
   result_title: string;
   related_node_id: string | null;
   result_level_id?: number | null;
+  /** P2-3114: Clarisa initiative ids from toc_result_synergy_programs (same contract as C&P toc v2). */
+  contributing_synergy_program_initiative_ids?: number[];
   /** True when the ToC node is explicitly linked to the queried AOW (wp_id IS NOT NULL and matched). False for program-level nodes that appear under all AOWs. */
   is_aow?: boolean;
+  /**
+   * P2-3296 AC2 — this HLO's own progress, averaged over its indicators. Indicators with no
+   * usable target are excluded, and `indicators_counted` / `indicators_total` say so.
+   */
+  progress?: ProgressRollup;
   indicators: Array<{
     indicator_id: number;
     indicator_description: string | null;
@@ -51,6 +66,9 @@ export interface TocResultResponse {
     target_value_sum: number | null;
     actual_achieved_value_sum?: number | null;
     progress_percentage?: string | null;
+    /** P2-3296: Submitted + Approved, alongside the QA pair above. */
+    preliminary_achieved_value_sum?: number | null;
+    preliminary_progress_percentage?: string | null;
     number_target?: string | null;
     target_date?: number | null;
     target_value?: number | null;
@@ -58,8 +76,20 @@ export interface TocResultResponse {
     result_type_name?: string | null;
     result_level_id?: number | null;
     /** Center for this disaggregated indicator row (toc_result_indicator_target_center → clarisa_institutions). */
+    /**
+     * P2-3255: every centre holding this target. The scalars below stay for consumers that
+     * already read them, but are only filled when exactly ONE centre holds it — naming one of
+     * several as "the" centre is the misreport this ticket is about.
+     */
+    centers: Array<{ center_id: number; center_acronym: string | null }>;
     center_id?: number | null;
     center_acronym?: string | null;
+    /**
+     * P2-3257: identity of the target this row represents. Two centres carrying the SAME id share
+     * one target; different ids mean each centre has its own. Without it the client cannot tell
+     * the two apart, which is the whole ask of that ticket.
+     */
+    toc_indicator_target_id?: number | null;
   }>;
 }
 
@@ -284,6 +314,13 @@ export class AoWBilateralRepository {
     program: string,
     context: ReportingTocContext,
     queryOptions: Omit<TocQueryOptions, 'context'>,
+    // 2030 Outcomes aggregates its contributions over the whole 2025-2030 window instead of the
+    // reporting year, so the caller has to be able to say so.
+    contributionOptions?: {
+      isCumulative?: boolean;
+      fromYear?: number;
+      toYear?: number;
+    },
   ): Promise<TocResultResponse[]> {
     const { query, params } = this.buildTocQuery(program, {
       ...queryOptions,
@@ -292,7 +329,7 @@ export class AoWBilateralRepository {
 
     const [rows, contributions] = await Promise.all([
       this.dataSource.query(query, params) as Promise<TocResultRow[]>,
-      this.getIndicatorContributions(program, context),
+      this.getIndicatorContributions(program, context, contributionOptions),
     ]);
 
     const enhancedRows = rows.map((row) => ({
@@ -301,6 +338,14 @@ export class AoWBilateralRepository {
         contributions.get(row.indicator_id)?.actual_achieved_value_sum ?? 0,
       progress_percentage:
         contributions.get(row.indicator_id)?.progress_percentage ?? '0%',
+      // P2-3296: the second bar. Defaults mirror the QA pair above — an indicator with no
+      // contributions at all reads 0 / '0%', not null, so the client never has to guard.
+      preliminary_achieved_value_sum:
+        contributions.get(row.indicator_id)?.preliminary_achieved_value_sum ??
+        0,
+      preliminary_progress_percentage:
+        contributions.get(row.indicator_id)?.preliminary_progress_percentage ??
+        '0%',
     }));
 
     return this.groupTocRows(enhancedRows);
@@ -333,9 +378,15 @@ export class AoWBilateralRepository {
   ) {
     const context = await this.resolveContext(contextOrYear);
     try {
-      return await this.fetchAndGroupTocResults(program, context, {
-        categories: ['EOI'],
-      });
+      // Keep this branch's cumulative window: 2030 Outcomes aggregates contributions across
+      // 2025-2030, not just the reporting year. staging's refactor extracted the fetch+group into
+      // `fetchAndGroupTocResults`, which now forwards these options.
+      return await this.fetchAndGroupTocResults(
+        program,
+        context,
+        { categories: ['EOI'] },
+        { isCumulative: true, fromYear: 2025, toYear: 2030 },
+      );
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
@@ -391,12 +442,27 @@ export class AoWBilateralRepository {
         tri.type_value,
         NULLIF(TRIM(tri.type_name), '') AS type_name,
         tri.location,
-        COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
+        -- P2-3255, second half. Rows are grouped by trit.toc_indicator_target_id, so every
+        -- group IS one target — but the centre joins remain below, so the group still holds one
+        -- row per associated centre and SUM went on counting the same target once per centre.
+        -- SP-13 KPI 1.3.3, a target of 1 document shared by 10 centres, read 10. MAX over a value
+        -- that is itself part of the grouping key returns the target's own value, immune to how
+        -- many centres hold it.
+        --
+        -- Do NOT overwrite this with getIndicatorContributions' figure instead: that one sums an
+        -- indicator's whole set of targets (KPI 1.3.1 = 2480 over 9 targets) while this row is ONE
+        -- target — it would stamp 2480 onto each of the nine rows.
+        --
+        -- Keep the words that the spec slices this query on out of this comment.
+        COALESCE(MAX(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
         trit.number_target,
         trit.target_date,
         trit.target_value,
-        tritc.center_id AS center_id,
-        ci.acronym AS center_acronym,
+        trit.toc_indicator_target_id,
+        GROUP_CONCAT(
+          DISTINCT CONCAT(tritc.center_id, '::', COALESCE(ci.acronym, ''))
+          ORDER BY ci.acronym SEPARATOR '||'
+        ) AS centers_concat,
         CASE
           WHEN tri.type_value LIKE '%Number of Policy%' THEN 1
           WHEN tri.type_value LIKE '%Innovation Use%' THEN 2
@@ -488,12 +554,46 @@ export class AoWBilateralRepository {
         trit.number_target,
         trit.target_date,
         trit.target_value,
-        tritc.center_id,
-        ci.acronym
-      ORDER BY tr.id ASC, tri.id ASC, ci.acronym ASC
+        trit.toc_indicator_target_id
+      ORDER BY tr.id ASC, tri.id ASC
     `;
 
     return { query, params };
+  }
+
+  /**
+   * P2-3255. Turns the aggregated `id::acronym||id::acronym` string into the centre list, and
+   * fills the legacy scalars only when a single centre holds the target.
+   *
+   * Both client consumers of the scalar already treat null as "no centre filter"
+   * (`resolveTargetDetailsCenterId` falls back to a year/target lookup, `hasTargets` skips the
+   * filter), so a shared target reads correctly rather than picking an arbitrary centre.
+   */
+  private centreFieldsOf(row: TocResultRow): {
+    centers: Array<{ center_id: number; center_acronym: string | null }>;
+    center_id: number | null;
+    center_acronym: string | null;
+  } {
+    const centers = (row.centers_concat ?? '')
+      .split('||')
+      .filter((pair) => pair !== '')
+      .map((pair) => {
+        const [id, acronym] = pair.split('::');
+        return {
+          center_id: Number(id),
+          center_acronym:
+            acronym === '' || acronym === undefined ? null : acronym,
+        };
+      })
+      .filter((centre) => Number.isFinite(centre.center_id));
+
+    const single = centers.length === 1 ? centers[0] : null;
+
+    return {
+      centers,
+      center_id: single?.center_id ?? null,
+      center_acronym: single?.center_acronym ?? null,
+    };
   }
 
   private groupTocRows(rows: TocResultRow[]): TocResultResponse[] {
@@ -524,6 +624,12 @@ export class AoWBilateralRepository {
           location: row.location,
           target_value_sum: row.target_value_sum,
           actual_achieved_value_sum: row.actual_achieved_value_sum,
+          // P2-3296: the second bar. This object lists its fields explicitly, so anything the
+          // enhanced row carries but is not named here is dropped before the payload leaves.
+          preliminary_achieved_value_sum:
+            row.preliminary_achieved_value_sum ?? 0,
+          preliminary_progress_percentage:
+            row.preliminary_progress_percentage ?? '0%',
           number_target: row.number_target,
           target_date: row.target_date,
           target_value: row.target_value,
@@ -531,8 +637,8 @@ export class AoWBilateralRepository {
           result_level_id: row.result_level_id ?? null,
           result_type_id: row.result_type_id ?? null,
           result_type_name: row.result_type_name ?? null,
-          center_id: row.center_id ?? null,
-          center_acronym: row.center_acronym ?? null,
+          toc_indicator_target_id: row.toc_indicator_target_id ?? null,
+          ...this.centreFieldsOf(row),
         };
 
         grouped.get(row.toc_result_id)?.indicators.push(indicator);
@@ -540,6 +646,11 @@ export class AoWBilateralRepository {
     }
 
     const results = Array.from(grouped.values());
+    // P2-3296 AC2: every node carries its own rolled-up number, so the AoW and Science
+    // Program levels above can average children that already know their own answer.
+    for (const node of results) {
+      node.progress = rollUpIndicators(node.indicators);
+    }
     if (results.some((r) => r.is_aow)) {
       results.sort((a, b) => Number(b.is_aow) - Number(a.is_aow));
     }
@@ -619,18 +730,29 @@ export class AoWBilateralRepository {
     return `${progressRounded.toFixed(1)}%`;
   }
 
+  /**
+   * P2-3296: the row now carries two achieved figures instead of one.
+   *
+   * `actual_achieved_value_sum` and `progress_percentage` keep the exact meaning they have
+   * had in production — QualityAssessed + Approved, the pair P2-2841 settled — so every
+   * existing consumer reads the same number it read before. The preliminary pair is added
+   * alongside rather than replacing anything.
+   */
   private mapIndicatorContributionRow(row: {
     indicator_id: number;
     target_value_sum: unknown;
     actual_achieved_value_sum: unknown;
+    preliminary_achieved_value_sum?: unknown;
     work_package_acronym: unknown;
   }) {
     const targetValue = Number(row.target_value_sum) || 0;
     const actualValue = Number(row.actual_achieved_value_sum) || 0;
+    const preliminaryValue = Number(row.preliminary_achieved_value_sum) || 0;
 
     return {
       target_value_sum: targetValue,
       actual_achieved_value_sum: actualValue,
+      preliminary_achieved_value_sum: preliminaryValue,
       work_package_acronym:
         typeof row.work_package_acronym === 'string'
           ? row.work_package_acronym
@@ -638,15 +760,41 @@ export class AoWBilateralRepository {
       progress_percentage: this.formatProgressPercentage(
         this.calculateProgressPercentage(targetValue, actualValue),
       ),
+      preliminary_progress_percentage: this.formatProgressPercentage(
+        this.calculateProgressPercentage(targetValue, preliminaryValue),
+      ),
     };
   }
 
   async getIndicatorContributions(
     program: string,
     contextOrYear?: ReportingTocContext | number,
+    options?: { isCumulative?: boolean; fromYear?: number; toYear?: number },
   ) {
     const context = await this.resolveContext(contextOrYear);
-    const params: (string | number)[] = [];
+    const isCumulative = !!options?.isCumulative;
+    const fromYear = options?.fromYear ?? 2025;
+    const toYear = options?.toYear ?? 2030;
+
+    const tgtParams = isCumulative
+      ? [fromYear, toYear, context.reportingYear, program, context.phaseUuid]
+      : [
+          context.reportingYear,
+          context.reportingYear,
+          program,
+          context.phaseUuid,
+        ];
+
+    const actParams = isCumulative
+      ? [fromYear, toYear, program]
+      : [
+          context.reportingYear,
+          context.reportingYear,
+          program,
+          context.phaseUuid,
+        ];
+
+    const params: (string | number)[] = [...tgtParams, ...actParams];
 
     const query = `
       SELECT
@@ -654,7 +802,8 @@ export class AoWBilateralRepository {
         tgt.toc_result_indicator_id,
         tgt.target_value_sum,
         tgt.work_package_acronym,
-        COALESCE(act.actual_achieved_value_sum, 0) AS actual_achieved_value_sum
+        COALESCE(act.actual_achieved_value_sum, 0) AS actual_achieved_value_sum,
+        COALESCE(act.preliminary_achieved_value_sum, 0) AS preliminary_achieved_value_sum
       FROM (
         SELECT
           tri.id AS indicator_id,
@@ -665,7 +814,7 @@ export class AoWBilateralRepository {
         JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
         JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
           AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
-          AND trit.target_date = ?
+          AND ${isCumulative ? 'trit.target_date BETWEEN ? AND ?' : 'trit.target_date = ?'}
         LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
           AND wp.year = ?
         WHERE
@@ -679,8 +828,12 @@ export class AoWBilateralRepository {
       ) AS tgt
       LEFT JOIN (
         SELECT
-          tri.id AS indicator_id,
-          COALESCE(SUM(CAST(rit.contributing_indicator AS DECIMAL(15,2))), 0) AS actual_achieved_value_sum
+          tri.toc_result_indicator_id,
+          -- P2-3296: both figures come out of one pass. Conditional aggregation rather than a
+          -- second subquery, so the join, the date window and the level/type filters can never
+          -- drift apart between the two bars — which is exactly how they would rot.
+          COALESCE(SUM(CASE WHEN r.status_id IN (2, 6) THEN CAST(rit.contributing_indicator AS DECIMAL(15,2)) ELSE 0 END), 0) AS actual_achieved_value_sum,
+          COALESCE(SUM(CASE WHEN r.status_id IN (3, 6) THEN CAST(rit.contributing_indicator AS DECIMAL(15,2)) ELSE 0 END), 0) AS preliminary_achieved_value_sum
         FROM ${env.DB_NAME}.result r
         LEFT JOIN ${env.DB_NAME}.results_toc_result rtr ON rtr.results_id = r.id
           AND rtr.is_active = 1
@@ -690,35 +843,33 @@ export class AoWBilateralRepository {
         LEFT JOIN ${env.DB_NAME}.result_indicators_targets rit ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
           AND rit.is_active = 1
           AND rit.contributing_indicator IS NOT NULL
-          AND rit.target_date = ?
+          AND ${isCumulative ? 'rit.target_date BETWEEN ? AND ?' : 'rit.target_date = ?'}
         JOIN ${env.DB_TOC}.toc_results tr ON tr.id = rtr.toc_result_id
         JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
           AND tri.is_active = 1
           AND CONVERT(rtri.toc_results_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
-        LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
-          AND wp.year = ?
+        ${isCumulative ? '' : `LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id AND wp.year = ?`}
         WHERE
           tr.official_code = ?
           AND r.is_active = 1
-          /* P2-2841: Quality Assessed (2) + Approved (6) only — aligns with View results */
-          AND r.status_id IN (2, 6)
+          /* P2-3296: the union of both bars — the split itself is done by the CASE
+             expressions above, this filter only has to let both sets through.
+               QA / Final  = (2, 6)  QualityAssessed + Approved. The pair P2-2841 fixed to
+                                     align with View results; unchanged, so no number that is
+                                     already on screen moves.
+               Preliminary = (3, 6)  Submitted + Approved, per Nicoleta Trifa (1-Sep-2026):
+                                     Editing is a draft and does not count until submitted, and
+                                     Approved counts in BOTH bars because W3/Bilateral results
+                                     are tagged to P/A AoW HLO targets.
+             PendingReview (5), Rejected (7) and Draft (8) count towards neither. */
+          AND r.status_id IN (2, 3, 6)
           AND r.result_level_id IN (3, 4)
           AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)
-          AND tr.phase = ?
+          ${isCumulative ? '' : 'AND tr.phase = ?'}
         GROUP BY
-          tri.id
-      ) AS act ON act.indicator_id = tgt.indicator_id
+          tri.toc_result_indicator_id
+      ) AS act ON act.toc_result_indicator_id = tgt.toc_result_indicator_id
     `;
-    params.push(
-      context.reportingYear,
-      context.reportingYear,
-      program,
-      context.phaseUuid,
-      context.reportingYear,
-      context.reportingYear,
-      program,
-      context.phaseUuid,
-    );
 
     try {
       const rows = await this.dataSource.query(query, params);
@@ -727,8 +878,10 @@ export class AoWBilateralRepository {
         {
           target_value_sum: number;
           actual_achieved_value_sum: number;
+          preliminary_achieved_value_sum: number;
           work_package_acronym: string | null;
           progress_percentage: string;
+          preliminary_progress_percentage: string;
         }
       >();
 
@@ -772,6 +925,45 @@ export class AoWBilateralRepository {
 
     try {
       return await this.dataSource.query(query, [tocResultId, phaseUuid]);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
+    }
+  }
+
+  async findBilateralProjectsByProgramOfficialCode(
+    programOfficialCode: string,
+    phaseUuid: string,
+  ) {
+    const query = `
+      SELECT
+        tr.id AS toc_result_id,
+        tr.official_code AS official_code,
+        trp.project_id AS project_id,
+        trp.name AS project_name,
+        trp.project_summary AS project_summary,
+        cp.organization_code AS organization_code,
+        ci.id AS organization_id,
+        ci.name AS organization_name,
+        ci.acronym AS organization_acronym,
+        ci.website_link AS organization_website_link
+      FROM ${env.DB_TOC}.toc_results tr
+      JOIN ${env.DB_TOC}.toc_result_projects trp ON trp.toc_result_id_toc = tr.related_node_id
+      LEFT JOIN ${env.DB_NAME}.clarisa_projects cp ON cp.id = trp.project_id
+      LEFT JOIN ${env.DB_NAME}.clarisa_institutions ci ON ci.id = cp.organization_code
+      WHERE UPPER(TRIM(tr.official_code)) = UPPER(TRIM(?))
+        AND tr.phase = ?
+      ORDER BY trp.name ASC, tr.id ASC
+    `;
+
+    try {
+      return await this.dataSource.query(query, [
+        programOfficialCode,
+        phaseUuid,
+      ]);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,

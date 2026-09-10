@@ -1,7 +1,13 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GlobalCompletenessStatusComponent } from './global-completeness-status.component';
-import { TableModule } from 'primeng/table';
+import {
+  PrTableComponent,
+  PrSortIconComponent,
+  PrSortableColumnDirective,
+  PrTableHeaderDirective,
+  PrTableBodyDirective
+} from 'src/app/shared/components/pr-table';
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../custom-fields/custom-fields.module';
 import { ResultHistoryOfChangesModalModule } from '../../../pages/admin-section/pages/completeness-status/components/result-history-of-changes-modal/result-history-of-changes-modal.module';
@@ -11,6 +17,18 @@ import { FilterInitWithRoleCoordAndLeadModule } from '../../../pages/init-admin-
 @NgModule({
   declarations: [GlobalCompletenessStatusComponent],
   exports: [GlobalCompletenessStatusComponent],
-  imports: [CommonModule, TableModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule, FilterByTextModule, FilterInitWithRoleCoordAndLeadModule]
+  imports: [
+    CommonModule,
+    PrTableComponent,
+    PrSortIconComponent,
+    PrSortableColumnDirective,
+    PrTableHeaderDirective,
+    PrTableBodyDirective,
+    FormsModule,
+    CustomFieldsModule,
+    ResultHistoryOfChangesModalModule,
+    FilterByTextModule,
+    FilterInitWithRoleCoordAndLeadModule
+  ]
 })
 export class GlobalCompletenessStatusModule {}

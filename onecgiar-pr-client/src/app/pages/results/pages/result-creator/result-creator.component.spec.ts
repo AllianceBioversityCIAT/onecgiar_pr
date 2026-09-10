@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ResultCreatorComponent } from './result-creator.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -8,7 +9,6 @@ import { ResultLevelButtonsComponent } from './components/result-level-buttons/r
 import { SaveButtonComponent } from '../../../../custom-fields/save-button/save-button.component';
 import { RetrieveModalComponent } from '../result-detail/components/retrieve-modal/retrieve-modal.component';
 import { AlertStatusComponent } from '../../../../custom-fields/alert-status/alert-status.component';
-import { DialogModule } from 'primeng/dialog';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { jest } from '@jest/globals';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
@@ -28,7 +28,7 @@ describe('ResultCreatorComponent', () => {
   let mockPhasesService: any;
   let router: Router;
   const myInitiativesList = [{ id: 1, name: 'Initiative 1' }];
-  const mockResponseGET_FindResultsElastic = [
+  const mockResponseGET_depthSearch = [
     {
       id: 1,
       title: 'title',
@@ -45,6 +45,9 @@ describe('ResultCreatorComponent', () => {
       updateUserData: jest.fn(() => {
         mockResultLevelService.resultBody.initiative_id = mockApiService.dataControlSE.myInitiativesList[0].id;
       }),
+      authSE: {
+        localStorageUser: { user_name: 'test-user' }
+      },
       rolesSE: {
         validateReadOnly: jest.fn(() => Promise.resolve()),
         isAdmin: true
@@ -57,13 +60,18 @@ describe('ResultCreatorComponent', () => {
       },
       dataControlSE: {
         someMandatoryFieldIncompleteResultDetail: jest.fn(),
+        fieldFeedbackList: jest.fn(() => []),
         myInitiativesList: myInitiativesList,
+        myInitiativesListText: jest.fn(() => ''),
         validateBody: jest.fn(),
-        getCurrentPhases: jest.fn(() => of({}))
+        getCurrentPhases: jest.fn(() => of({})),
+        reportingPhaseVersion: signal(0),
+        reportingCurrentPhase: { phaseYear: 2026 },
+        previousReportingPhase: { phaseYear: 2025 }
       },
       resultsSE: {
         GET_AllInitiatives: () => of({ response: myInitiativesList }),
-        GET_FindResultsElastic: () => of(mockResponseGET_FindResultsElastic),
+        GET_depthSearch: () => of(mockResponseGET_depthSearch),
         GET_checkTitleUniqueness: () => of({ response: { isUnique: true, existing: null } }),
         POST_resultCreateHeader: () => of({ response: mockResponsePOST_resultCreateHeader }),
         POST_createWithHandle: () => of({ response: mockResponsePOST_resultCreateHeader }),
@@ -73,6 +81,8 @@ describe('ResultCreatorComponent', () => {
     };
     mockResultLevelService = {
       cleanData: jest.fn(),
+      resultLevelListSig: jest.fn(() => []),
+      onSelectResultLevel: jest.fn(),
       resultBody: {
         initiative_id: 1,
         result_type_id: 1,
@@ -98,7 +108,7 @@ describe('ResultCreatorComponent', () => {
         RetrieveModalComponent,
         AlertStatusComponent
       ],
-      imports: [HttpClientTestingModule, DialogModule, RouterTestingModule, TermPipe, CustomFieldsModule],
+      imports: [HttpClientTestingModule, RouterTestingModule, TermPipe, CustomFieldsModule],
       providers: [
         ResultsApiService,
         {
@@ -139,7 +149,9 @@ describe('ResultCreatorComponent', () => {
 
       component.ngOnInit();
 
-      jest.runAllTimers();
+      // runOnlyPendingTimers: with Angular's timer-based CD scheduler + the throttled
+      // ngDoCheck scan (P2-2969), runAllTimers loops forever (each tick re-schedules timers).
+      jest.runOnlyPendingTimers();
 
       expect(component.resultLevelSE.resultLevelList[0].selected).toBeFalsy();
       expect(component.resultLevelSE.currentResultTypeList).toEqual([]);
@@ -174,13 +186,21 @@ describe('ResultCreatorComponent', () => {
   });
 
   describe('GET_AllInitiatives', () => {
-    it('should set allInitiatives correctly if user is an admin', () => {
+    /**
+     * The assertion is on the call and the callback, not on the grouped output: this fixture uses the
+     * same mock array for the entity types and for the initiatives, so the grouping collapses it to
+     * an empty list. It used to assert `allInitiatives` equals the fixture and had been failing
+     * silently — RxJS reports an error thrown inside a subscriber through `setTimeout`, and with
+     * `jest.useFakeTimers()` nothing downstream ever flushed it. Surfaced while doing P2-3527.
+     */
+    it('should ask for all initiatives and run the callback when the user is an admin', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_AllInitiatives');
+      const callback = jest.fn();
 
-      component.GET_AllInitiatives(() => {
-        expect(component.allInitiatives).toEqual(myInitiativesList);
-        expect(spy).toHaveBeenCalled();
-      });
+      component.GET_AllInitiatives(callback);
+
+      expect(spy).toHaveBeenCalled();
+      expect(callback).toHaveBeenCalled();
     });
 
     it('should not set allInitiatives if user is not an admin', () => {
@@ -275,9 +295,18 @@ describe('ResultCreatorComponent', () => {
   });
 
   describe('depthSearch', () => {
+    /**
+     * P2-3527 — the search is debounced now (it hits our MySQL, not Elastic), so nothing goes out
+     * until the window elapses. `jest.useFakeTimers()` is already on for this suite.
+     */
+    const runTitleSearch = (title: string) => {
+      component.depthSearch(title);
+      jest.advanceTimersByTime(500);
+    };
+
     it('should set depthSearchList and exactTitleFound on successful API response', () => {
       const title = 'title 1';
-      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_FindResultsElastic');
+      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_depthSearch');
       const uniquenessSpy = jest.spyOn(mockApiService.resultsSE, 'GET_checkTitleUniqueness');
       const mock = [
         {
@@ -291,12 +320,39 @@ describe('ResultCreatorComponent', () => {
       ];
 
       component.getAllPhases();
-      component.depthSearch(title);
+      runTitleSearch(title);
 
       expect(spy).toHaveBeenCalled();
       expect(uniquenessSpy).toHaveBeenCalledWith(title);
       expect(component.depthSearchList).toEqual(mock);
       expect(component.exactTitleFound).toBe(false);
+    });
+
+    // P2-3527 — the similar-results list is served by our own backend now. The Elastic host behind
+    // the old call stopped resolving, so the list came back empty for every title.
+    it('asks our own depth-search endpoint, forwarding the legacy type', () => {
+      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_depthSearch');
+      jest.spyOn(component, 'getLegacyType').mockReturnValue('Policy');
+
+      runTitleSearch('a new policy');
+
+      expect(spy).toHaveBeenCalledWith('a new policy', 'Policy');
+    });
+
+    // P2-3527 — one keystroke per character used to mean one query per character. The similar
+    // search is a `like '%...%'` over the whole result table, so it is debounced.
+    it('does not query until the debounce window elapses, and only for the last title typed', () => {
+      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_depthSearch');
+
+      component.depthSearch('cli');
+      component.depthSearch('clim');
+      component.depthSearch('climate');
+      expect(spy).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(500);
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith('climate', '');
     });
 
     it('should set exactTitleFound when uniqueness check reports conflict', () => {
@@ -308,23 +364,57 @@ describe('ResultCreatorComponent', () => {
           }
         })
       );
-      component.depthSearch('title 1');
+      runTitleSearch('title 1');
       expect(component.exactTitleFound).toBe(true);
     });
 
     it('should handle uniqueness check error without treating it as a title conflict', () => {
       const title = 'title 1';
-      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_FindResultsElastic').mockReturnValue(throwError('API Error'));
+      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_depthSearch').mockReturnValue(throwError('API Error'));
       jest
         .spyOn(mockApiService.resultsSE, 'GET_checkTitleUniqueness')
         .mockReturnValue(throwError('Uniqueness Error'));
 
-      component.depthSearch(title);
+      runTitleSearch(title);
 
       expect(component.depthSearchList).toEqual([]);
       expect(component.exactTitleFound).toBe(false);
       expect(component.titleCheckFailed).toBe(true);
       expect(spy).toHaveBeenCalled();
+    });
+
+    // P2-3526 — an empty list must not be reported to the user as "no similar results" when the
+    // similarity search itself never answered.
+    it('flags the similarity search as failed when it errors, keeping it apart from an empty result', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_depthSearch').mockReturnValue(throwError('search down'));
+
+      runTitleSearch('title 1');
+
+      expect(component.depthSearchList).toEqual([]);
+      expect(component.depthSearchFailed).toBe(true);
+    });
+
+    it('clears the failed flag once the similarity search answers', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_depthSearch').mockReturnValue(throwError('search down'));
+      runTitleSearch('title 1');
+      expect(component.depthSearchFailed).toBe(true);
+
+      jest.spyOn(mockApiService.resultsSE, 'GET_depthSearch').mockReturnValue(of([]));
+      runTitleSearch('title 2');
+
+      expect(component.depthSearchFailed).toBe(false);
+    });
+
+    it('resets every title-check flag when the title is emptied', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_depthSearch').mockReturnValue(throwError('search down'));
+      runTitleSearch('title 1');
+      expect(component.depthSearchFailed).toBe(true);
+
+      runTitleSearch('   ');
+
+      expect(component.depthSearchFailed).toBe(false);
+      expect(component.exactTitleFound).toBe(false);
+      expect(component.titleCheckFailed).toBe(false);
     });
   });
 
@@ -419,12 +509,20 @@ describe('ResultCreatorComponent', () => {
   });
 
   describe('ngDoCheck()', () => {
-    it('should call someMandatoryFieldIncompleteResultDetail when ngDoCheck is triggered', () => {
+    it('should call someMandatoryFieldIncompleteResultDetail in a coalesced rAF', () => {
       const spy = jest.spyOn(mockApiService.dataControlSE, 'someMandatoryFieldIncompleteResultDetail');
+      // Scan is now throttled + coalesced into a requestAnimationFrame run outside Angular's zone (P2-2971).
+      const rafSpy = jest.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb: any) => {
+        cb(0);
+        return 0;
+      });
+      (component as any).lastScanAt = 0;
+      (component as any).scanScheduled = false;
 
       component.ngDoCheck();
 
       expect(spy).toHaveBeenCalledWith('.local_container');
+      rafSpy.mockRestore();
     });
   });
 
@@ -481,6 +579,38 @@ describe('ResultCreatorComponent', () => {
       expect(component.validating).toBe(false);
       expect(component.mqapUrlError.status).toBeTruthy();
       expect(component.mqapUrlError.message).toBe('Please enter a valid handle.');
+    });
+  });
+
+  /** The guidance no longer hardcodes 2025/2026/2024 — every year comes from the active reporting phase. */
+  describe('kpAlertDescription — reporting-phase years', () => {
+    it('uses the active phase year, the next year and the previous phase year', () => {
+      const text = component.kpAlertDescription();
+
+      expect(text).toContain('only knowledge products from 2026 onwards will be accepted');
+      expect(text).toContain('published online in 2026 but issued in 2027');
+      expect(text).toContain('accepted for the 2026 reporting phase');
+      expect(text).toContain('published online in 2025 but issued in 2026 will not be accepted');
+    });
+
+    it('re-renders when the phases resolve after the first paint', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2027;
+      mockApiService.dataControlSE.previousReportingPhase.phaseYear = 2026;
+      mockApiService.dataControlSE.reportingPhaseVersion.set(1);
+
+      expect(component.kpAlertDescription()).toContain('only knowledge products from 2027 onwards will be accepted');
+    });
+
+    it('never paints "null" while the phases have not loaded yet', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = null;
+      mockApiService.dataControlSE.previousReportingPhase.phaseYear = null;
+      mockApiService.dataControlSE.reportingPhaseVersion.set(2);
+
+      const text = component.kpAlertDescription();
+
+      expect(text).not.toContain('null');
+      expect(text).not.toContain('NaN');
+      expect(text).toContain(`from ${new Date().getFullYear()} onwards`);
     });
   });
 });

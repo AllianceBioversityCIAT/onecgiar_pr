@@ -38,7 +38,7 @@ No breaking changes: every existing entry point keeps its current behaviour on a
 
 **Not affected:** backend, API contracts, database, `result-review-drawer` internals, and the notifications entry point (`notification-item.component`), which keeps its current behaviour.
 
-**Baseline docs consulted:** `docs/system-design/design.md` (navigation and interaction patterns for the client UI) and `docs/detailed-design/detailed-design.md` (frontend state / routing). No module spec under `docs/specs/` currently covers Results Center navigation.
+**Baseline docs consulted:** `docs/ux-ui/design.md` (navigation and interaction patterns for the client UI) and `docs/trd/trd.md` (frontend state / routing). No module spec under `docs/specs/` currently covers Results Center navigation.
 
 **Risk:** low for Case A (declarative equivalent of existing navigation), moderate for Case B — it touches the bilateral review screen, which already carries changes on the `staging-front-upload` branch. Mitigated by keeping the signal-based path working as a fallback.
 

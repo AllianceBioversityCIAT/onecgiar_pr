@@ -1,9 +1,13 @@
-<div class="detail_container">
+<div class="detail_container" [appSectionSkeleton]="rdPartnersSE.sectionLoading()">
   <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage"> </app-alert-status>
 
-  <!-- ! from toc section -->
+  <!-- ! Submitter: shown in ALL reporting phases. Removed in the 2026 redesign (P2-3036 Level 2) but restored by business decision (Nicoleta / Santi) — it must not be phase-gated. changePrimaryInit is still set in the service, so save is unaffected. -->
   @if (this.rdPartnersSE.getConsumed()) {
+    <!-- data-testid="cp-field-<payload path>": the E2E save-contract spec reads the path out of the
+         hook and asserts the field travels in the PATCH body. See
+         cypress/e2e/result-detail/save-contract.cy.ts. -->
     <app-pr-select
+      data-testid="cp-field-changePrimaryInit"
       class="segment_title_margin"
       [options]="this.rdPartnersSE.partnersBody.contributing_and_primary_initiative"
       label="Submitter"
@@ -32,20 +36,36 @@
   }
 
   <app-pr-yes-or-not
-    label="Does this result align with the Program's planned TOC indicators?"
-    [required]="!isAvisaInitiative()"
+    data-testid="cp-field-result_toc_result.planned_result"
+    [label]="tocQuestionLabel()"
+    [required]="!isAvisaInitiative() && !isCP2026()"
     [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
     (selectOptionEvent)="onPlannedResultChange(this.rdPartnersSE.partnersBody?.result_toc_result)"
     [readOnly]="isAvisaInitiative()">
   </app-pr-yes-or-not>
 
-  <app-alert-status
-    [description]="
-      'If your answer is <strong>Yes</strong>, please select the relevant <strong>HLO, indicator</strong>, and <strong>contribution to target</strong> below. If the result is not planned for in the 2025 ToC (planned indicators), please select <strong>No</strong> and, where applicable, choose the <strong>HLO</strong> under which it is most appropriate to report the result. Please also provide a short justification explaining why you are reporting it even though it is not reflected in a 2025 ToC indicator. These “No”-flagged results could be reviewed by the Program team as part of the adaptive management process and may inform updates or adjustments to the Program’s 2026 ToC and planned indicators.'
-    ">
-  </app-alert-status>
+  <app-alert-status [description]="tocQuestionInfoNote()"> </app-alert-status>
 
   @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== null) {
+    <!-- P2-3063 / P2-3036 AC6 (2026, unplanned): mandatory Yes/No "financial resources" radio + info note.
+         Placed right under the ToC info note (above "Why is the result being reported?") per QA (Santi, 2026-07-03). -->
+    @if (isCP2026() && !this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
+      <app-pr-yes-or-not
+        label="Did the Program invest financial resources in the achievement of this result?"
+        [required]="true"
+        [hideDescription]="true"
+        [(ngModel)]="programInvestedFinancialResources">
+      </app-pr-yes-or-not>
+
+      <app-alert-status [description]="financialResourcesInfoNote"></app-alert-status>
+
+      <!-- Hidden marker so the single radio counts in the section's mandatory-field validation. -->
+      <div
+        appFeedbackValidation
+        labelText="Did the Program invest financial resources in the achievement of this result?"
+        [isComplete]="programInvestedFinancialResources !== null"></div>
+    }
+
     @if (this.tocConsumed) {
       <div style="z-index: 1; position: relative">
         <app-cp-multiple-wps
@@ -64,38 +84,70 @@
     }
     @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result && !this.hideWhyReportedField()) {
       <app-pr-textarea
+        data-testid="cp-field-result_toc_result.toc_progressive_narrative"
         placeholder="Enter reason"
         label="Why is the result being reported?"
         type="text"
         [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.toc_progressive_narrative"
-        [maxWords]="30"
+        [maxWords]="isCP2026() ? 50 : 30"
         [rows]="2"
         [autogenerate]="true">
       </app-pr-textarea>
     }
   }
 
-  <app-pr-multi-select
-    [options]="this.centersSE.centersList"
-    label="Contributing CGIAR Centers"
-    selectedLabel="Center(s) selected"
-    optionLabel="full_name"
-    optionValue="code"
-    [required]="false"
-    [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
-    placeholder="Select center(s)"
-    [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
-    (selectOptionEvent)="this.rdPartnersSE.setPossibleLeadCenters(true)">
-  </app-pr-multi-select>
+  <!-- P2-2998 / P2-3036 (2026): Contributing CGIAR Centers split into "from ToC" + "Other(s)". SAVE NOT ADDRESSED YET. -->
+  @if (isCP2026() && this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== false) {
+    @if (hasReferenceCenters()) {
+      <app-alert-status [description]="contributingCentersInfoNote"></app-alert-status>
+
+      <app-pr-multi-select
+        data-testid="cp-field-contributing_center"
+        [options]="dropdown1Options()"
+        label="Contributing CGIAR Centers"
+        selectedLabel="Center(s) selected"
+        optionLabel="full_name"
+        optionValue="code"
+        [required]="true"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
+        placeholder="Select center(s)"
+        [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
+        (selectOptionEvent)="onContributingCenterSelect($event)">
+      </app-pr-multi-select>
+    } @else {
+      <!-- P2-2998 AC4: ToC returned no centers → show note; the Other(s) dropdown below auto-activates with ALL centers.
+           OTV-R-1: the field-header that used to duplicate the dropdown's own label was removed — the dropdown below
+           now carries "Contributing CGIAR Centers" itself via its conditional [label]. -->
+      <div class="pr-message">
+        <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
+        <p>{{ noCentersNote }}</p>
+      </div>
+    }
+  } @else {
+    <!-- P2-3190: signal-backed catalogue so this list repaints when CLARISA resolves after the view is built. -->
+    <app-pr-multi-select
+      data-testid="cp-field-contributing_center~flat"
+      [options]="this.centersSE.centers()"
+      label="Contributing CGIAR Centers"
+      selectedLabel="Center(s) selected"
+      optionLabel="full_name"
+      optionValue="code"
+      [required]="true"
+      [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
+      placeholder="Select center(s)"
+      [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
+      (selectOptionEvent)="this.rdPartnersSE.setPossibleLeadCenters(true)">
+    </app-pr-multi-select>
+  }
 
   <div class="medal_selector selected_container">
     <div class="centers chips_container">
       <div
         class="center pr_chip_selected"
-        [pTooltip]="this.disabledText"
-        [tooltipDisabled]="!center.from_cgspace"
+        [prTooltip]="this.disabledText"
+        [prTooltipDisabled]="!center.from_cgspace"
         *ngFor="let center of this.rdPartnersSE.partnersBody.contributing_center; let i = index">
-        <div class="name" [innerHtml]="center?.name"></div>
+        <div class="name" [innerHtml]="isCP2026() ? center?.acronym || center?.name : center?.name"></div>
         <i
           *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
           class="material-icons-round"
@@ -106,8 +158,107 @@
     </div>
   </div>
 
+  <!-- P2-2998 (2026): the "Other(s)" dropdown appears AFTER the selected-centers chips (chips stay pinned under dropdown 1).
+       AC4: it auto-activates when the ToC returned no reference centers, even without the user picking "Other".
+       TOC-T-1 (attempt 3): the AC4 auto-activation clause now ALSO requires planned_result !== false — in the unmapped
+       state, this block would otherwise duplicate the newly-reachable flat dropdown (~L128) since !hasReferenceCenters()
+       is unconditionally true there too. A third clause keeps this block visible in the unmapped state ONLY when
+       LC-DD-4's onLeadCenterSelected has auto-added a center into otherCentersSelected (service.ts) — so that auto-added
+       chip stays shown and removable instead of being silently hidden with no escape hatch. -->
+  @if (
+    isCP2026() &&
+    (showOtherCenters ||
+      (!hasReferenceCenters() && this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== false) ||
+      (this.rdPartnersSE.otherCentersSelected?.length ?? 0) > 0)
+  ) {
+    <app-pr-multi-select
+      data-testid="toc-other-centers"
+      [options]="otherCentersList()"
+      [label]="hasReferenceCenters() ? 'Other(s) Contributing CGIAR Centers' : 'Contributing CGIAR Centers'"
+      selectedLabel="Center(s) selected"
+      optionLabel="full_name"
+      optionValue="code"
+      [required]="!hasReferenceCenters()"
+      [(ngModel)]="this.rdPartnersSE.otherCentersSelected"
+      placeholder="Select other center(s)"
+      (selectOptionEvent)="onOtherCenterSelect($event)">
+    </app-pr-multi-select>
+
+    <div class="medal_selector selected_container">
+      <div class="centers chips_container">
+        <div class="center pr_chip_selected" *ngFor="let center of this.rdPartnersSE.otherCentersSelected; let i = index">
+          <div class="name" [innerHtml]="center?.acronym || center?.name"></div>
+          <i
+            *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+            class="material-icons-round"
+            (click)="deleteOtherCenter(i)"
+            >cancel</i
+          >
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- P2-3249: ONE mandatory marker for "Contributing CGIAR Centers", placed OUTSIDE both branches on purpose.
+       There are two code paths for this field (the 2026/ToC split above and the flat pre-2026 dropdown), and a
+       rule added to only one of them silently does not apply to the other — so both read the same getter.
+       ⚠️ pr-multi-select emits NO `.pr-field.mandatory`, so `[required]` on it only paints the asterisk; this
+       hidden marker is what actually reaches `someMandatoryFieldIncompleteResultDetail` (src/CLAUDE.md §21.5).
+       🛑 Keep it a SIBLING of the dropdowns, never nested inside an `app-pr-multi-select`: `mandatoryFieldLabel`
+       walks up to the nearest labelled field host first and would report the dropdown's label instead of this one.
+       ⚠️ TWO markers with STATIC labels, not one with `[labelText]`: the directive writes `labelText` into the DOM
+       ONCE, in `ngOnInit` (`feedback-validation.directive.ts:16-19`), and `ngDoCheck` only syncs `.complete`. A bound
+       label therefore freezes at whatever it evaluated to on the first render — here always the non-ToC wording,
+       because the ToC ids resolve after the view is built. `@if` gives each wording its own directive instance.
+       Only `[isComplete]` may be bound. -->
+  @if (!contributingCentersComplete) {
+    <div class="pr-message pr-message--error" data-testid="cp-centers-validation">
+      <i class="material-icons-round" aria-hidden="true">error_outline</i>
+      <p role="alert">{{ contributingCentersValidationMessage }}</p>
+    </div>
+  }
+  @if (requiresTocCenter) {
+    <div
+      appFeedbackValidation
+      data-testid="cp-centers-mandatory-marker"
+      labelText="Contributing CGIAR Centers (at least one from the ToC)"
+      [isComplete]="contributingCentersComplete"></div>
+  } @else {
+    <div
+      appFeedbackValidation
+      data-testid="cp-centers-mandatory-marker"
+      labelText="Contributing CGIAR Centers"
+      [isComplete]="contributingCentersComplete"></div>
+  }
+
+  <!-- LCD-DD-1 rework (2026-08-31): Lead center moved up, directly under the Contributing
+       CGIAR Centers dropdown(s) (and its P2-3249 mandatory markers above), above "Contributing
+       W3 and/or bilateral projects" — per QA (Santi). Wrapped in its own stacking context
+       (z-index higher than the sibling blocks below, which already use z-index: 1/2 locally) so
+       the open dropdown list isn't painted under later positioned siblings (bilateral-projects
+       loading overlay, Science Program note). -->
+  <div class="mt-16" style="position: relative; z-index: 3">
+    <app-alert-status [description]="getMessageLeadCenter()"></app-alert-status>
+    @if (!this.rdPartnersSE.updatingLeadData) {
+      <app-pr-select
+        data-testid="cp-field-contributing_center~lead"
+        label="Lead center"
+        [required]="true"
+        [options]="this.rdPartnersSE.possibleLeadCenters"
+        [(ngModel)]="this.rdPartnersSE.leadCenterCode"
+        (selectOptionEvent)="this.rdPartnersSE.onLeadCenterSelected($event?.code ?? null)"
+        optionLabel="full_name"
+        optionValue="code"
+        placeholder="Select a lead center..."
+        [showClear]="true"
+        [readOnly]="this.api.rolesSE.readOnly">
+      </app-pr-select>
+    }
+  </div>
+
   <div style="position: relative">
     <app-pr-multi-select
+      data-testid="cp-field-bilateral_projects"
       [options]="this.rdPartnersSE.clarisaProjectsList"
       [(ngModel)]="this.rdPartnersSE.partnersBody.bilateral_projects"
       [required]="false"
@@ -121,7 +272,21 @@
     </app-pr-multi-select>
 
     @if (!this.rdPartnersSE.hasTocResultMapped() || this.rdPartnersSE.loadingBilateralProjects()) {
-      <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.7); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: not-allowed; z-index: 2">
+      <div
+        style="
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(255, 255, 255, 0.7);
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: not-allowed;
+          z-index: 2;
+        ">
         @if (this.rdPartnersSE.loadingBilateralProjects()) {
           <i class="pi pi-spinner pi-spin" style="font-size: 1.2rem; color: var(--pr-color-primary-300)"></i>
         }
@@ -136,81 +301,156 @@
     </div>
   }
 
-  <app-pr-multi-select
-    [options]="this.contributingInitiativesList"
-    label="Contributing {{ 'term.entity.orPlatformsPlural' | term: this.api.dataControlSE.currentResult?.portfolio }}"
-    [disableOptions]="this.rdPartnersSE.disabledOptions"
-    optionLabel="full_name"
-    optionValue="id"
-    (selectOptionEvent)="this.rdPartnersSE.onSelectContributingInitiative()"
-    [required]="false"
-    selectedOptionLabel="full_name"
-    [(ngModel)]="this.rdPartnersSE.contributingInitiativeNew"
-    [confirmDeletion]="true"
-    [placeholder]="'Select ' + ('term.entity.orPlatformsWith()' | term: this.api.dataControlSE.currentResult?.portfolio)">
-  </app-pr-multi-select>
+  <!-- P2-2929 (2026): Contributing Science Program/Accelerator split from ToC + Other(s). Save wired in onSaveSection (pending/accepted classification + cancel_pending_requests — P2-3115/P2-3116). -->
+  @if (!isCP2026()) {
+    <app-pr-multi-select
+      [options]="this.contributingInitiativesList"
+      label="Contributing {{ 'term.entity.orPlatformsPlural' | term: this.api.dataControlSE.currentResult?.portfolio }}"
+      [disableOptions]="this.rdPartnersSE.disabledOptions"
+      optionLabel="full_name"
+      optionValue="id"
+      (selectOptionEvent)="this.rdPartnersSE.onSelectContributingInitiative()"
+      [required]="false"
+      selectedOptionLabel="full_name"
+      [(ngModel)]="this.rdPartnersSE.contributingInitiativeNew"
+      [confirmDeletion]="true"
+      [placeholder]="'Select ' + ('term.entity.orPlatformsWith()' | term: this.api.dataControlSE.currentResult?.portfolio)">
+    </app-pr-multi-select>
 
-  <div class="selected_container custom_scroll">
-    <app-pr-field-header [description]="('term.entity.singularWith()' | term: this.api.dataControlSE.currentResult?.portfolio) + ' selected:'">
-    </app-pr-field-header>
+    <div class="selected_container custom_scroll">
+      <app-pr-field-header [description]="('term.entity.singularWith()' | term: this.api.dataControlSE.currentResult?.portfolio) + ' selected:'">
+      </app-pr-field-header>
 
-    <div class="chips_container">
-      @for (
-        item of this.rdPartnersSE.partnersBody?.contributing_initiatives?.accepted_contributing_initiatives || [];
-        track item.id;
-        let i = $index
-      ) {
-        <div class="pr_chip_selected">
-          <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
-            <strong>{{ item.official_code }}</strong> {{ item.initiative_name }}
+      <div class="chips_container">
+        @for (
+          item of this.rdPartnersSE.partnersBody?.contributing_initiatives?.accepted_contributing_initiatives || [];
+          track item.id;
+          let i = $index
+        ) {
+          <div class="pr_chip_selected">
+            <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
+              <strong>{{ item.official_code }}</strong> {{ item.initiative_name }}
+            </div>
+
+            @if (!this.api.rolesSE.readOnly) {
+              <i
+                class="material-icons-round"
+                [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
+                (click)="onRemoveAcceptedContributing(i)">
+                {{ item.is_active ? 'backspace' : 'undo' }}
+              </i>
+            }
           </div>
+        }
 
-          @if (!this.api.rolesSE.readOnly) {
-            <i
-              class="material-icons-round"
-              [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
-              (click)="onRemoveAcceptedContributing(i)">
-              {{ item.is_active ? 'backspace' : 'undo' }}
-            </i>
-          }
-        </div>
-      }
+        @for (item of this.rdPartnersSE.contributingInitiativeNew; track item.id; let i = $index) {
+          <div class="pr_chip_selected pending">
+            <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
+              <strong>{{ item.official_code }}</strong> {{ item.name }} - <b style="font-style: italic"> Not saved yet </b>
+            </div>
 
-      @for (item of this.rdPartnersSE.contributingInitiativeNew; track item.id; let i = $index) {
-        <div class="pr_chip_selected pending">
-          <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
-            <strong>{{ item.official_code }}</strong> {{ item.name }} - <b style="font-style: italic"> Not saved yet </b>
+            @if (!this.api.rolesSE.readOnly) {
+              <i
+                class="material-icons-round"
+                [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
+                (click)="onRemoveNewContributing(i)">
+                {{ item.is_active ? 'backspace' : 'undo' }}
+              </i>
+            }
           </div>
+        }
 
-          @if (!this.api.rolesSE.readOnly) {
-            <i
-              class="material-icons-round"
-              [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
-              (click)="onRemoveNewContributing(i)">
-              {{ item.is_active ? 'backspace' : 'undo' }}
-            </i>
-          }
-        </div>
-      }
+        @for (item of this.rdPartnersSE.partnersBody?.contributing_initiatives?.pending_contributing_initiatives || []; track item.id) {
+          <div class="pr_chip_selected pending">
+            <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
+              <strong>{{ item.official_code }}</strong> {{ item.initiative_name }} - <b style="font-style: italic"> Pending confirmation </b>
+            </div>
 
-      @for (item of this.rdPartnersSE.partnersBody?.contributing_initiatives?.pending_contributing_initiatives || []; track item.id) {
-        <div class="pr_chip_selected pending">
-          <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
-            <strong>{{ item.official_code }}</strong> {{ item.initiative_name }} - <b style="font-style: italic"> Pending confirmation </b>
+            @if (!this.api.rolesSE.readOnly) {
+              <i
+                class="material-icons-round"
+                [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
+                (click)="toggleActiveContributor(item)">
+                {{ item.is_active ? 'backspace' : 'undo' }}
+              </i>
+            }
           </div>
-
-          @if (!this.api.rolesSE.readOnly) {
-            <i
-              class="material-icons-round"
-              [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
-              (click)="toggleActiveContributor(item)">
-              {{ item.is_active ? 'backspace' : 'undo' }}
-            </i>
-          }
-        </div>
-      }
+        }
+      </div>
     </div>
-  </div>
+  }
+
+  @if (isCP2026()) {
+    <!-- TOC-DD-1 / TOC-T-1 rework: the "reference" branch (dropdown pre-seeded from the ToC + its note) only
+         applies when the result is actually mapped (planned_result !== false). When unmapped, no ToC node was
+         ever selected, so hasReferenceScience() is already false and this falls into the @else below — which
+         must NOT show the "not found" note (see the nested @if there) but MUST still leave the Science section
+         reachable: the Other(s) full-catalog dropdown at the bottom of this block auto-activates whenever
+         hasReferenceScience() is false, mapped or not. -->
+    @if (hasReferenceScience() && this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== false) {
+      <app-alert-status [description]="contributingScienceInfoNote"></app-alert-status>
+
+      <!-- Node with Science Programs from the ToC: main dropdown with the pre-selected SP + the "Other(s)" option. -->
+      <app-pr-multi-select
+        [options]="dropdown1OptionsSP()"
+        label="Contributing Science Program/Accelerator"
+        selectedLabel="Science Program/Accelerator selected"
+        optionLabel="full_name"
+        optionValue="id"
+        [required]="false"
+        [(ngModel)]="this.rdPartnersSE.scienceSelected"
+        placeholder="Select Science Program/Accelerator"
+        (selectOptionEvent)="onScienceSelect($event)">
+      </app-pr-multi-select>
+    } @else {
+      <!-- P2-2929 empty state — ALIGNED WITH Centers AC4 (per Santi 2026-07-03): ToC returned no Science Programs →
+           show the orange note and auto-activate the "Other(s)" dropdown below (no need to pick "Other" first).
+           OTV-R-2: the field-header that used to duplicate the dropdown's own label was removed — the dropdown
+           below now carries "Contributing Science Program/Accelerator" itself via its conditional [label].
+           TOC-DD-1: the note itself is suppressed when the result was never mapped to a ToC node
+           (planned_result === false) — there is nothing "not found" to report when nothing was ever looked up. -->
+      @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== false) {
+        <div class="pr-message">
+          <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
+          <p>{{ noScienceProgramsNote }}</p>
+        </div>
+      }
+    }
+
+    <div class="medal_selector selected_container">
+      <div class="centers chips_container">
+        <div class="center pr_chip_selected" *ngFor="let sp of this.rdPartnersSE.scienceSelected; let i = index">
+          <div class="name" [innerHtml]="sp?.official_code || sp?.short_name"></div>
+          <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round" (click)="deleteScience(i)">cancel</i>
+        </div>
+      </div>
+    </div>
+
+    <!-- P2-2929 (aligned with Centers AC4, per Santi 2026-07-03): the "Other(s)" dropdown appears when the user picks
+         "Other" OR auto-activates when the ToC returned no Science Programs (empty state). -->
+    @if (showOtherScience || !hasReferenceScience()) {
+      <app-pr-multi-select
+        data-testid="toc-other-science"
+        [options]="otherScienceList()"
+        [label]="hasReferenceScience() ? 'Other(s) Science Program(s)' : 'Contributing Science Program/Accelerator'"
+        selectedLabel="Science Program(s) selected"
+        optionLabel="full_name"
+        optionValue="id"
+        [required]="false"
+        [(ngModel)]="this.rdPartnersSE.otherScienceSelected"
+        placeholder="Select other Science Program(s)">
+      </app-pr-multi-select>
+
+      <div class="medal_selector selected_container">
+        <div class="centers chips_container">
+          <div class="center pr_chip_selected" *ngFor="let sp of this.rdPartnersSE.otherScienceSelected; let i = index">
+            <div class="name" [innerHtml]="sp?.official_code || sp?.short_name"></div>
+            <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round" (click)="deleteOtherScience(i)">cancel</i>
+          </div>
+        </div>
+      </div>
+    }
+  }
 
   <div *ngIf="this.rdPartnersSE.partnersBody?.contributors_result_toc_result?.length">
     <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true"> </app-pr-field-header>
@@ -218,7 +458,7 @@
     @for (contributor of this.rdPartnersSE.partnersBody?.contributors_result_toc_result; track contributor.initiative_id) {
       <app-pr-yes-or-not
         [label]="getContributorDescription(contributor)"
-        [required]="!!contributor?.result_toc_results?.length"
+        [required]="!isCP2026() && !!contributor?.result_toc_results?.length"
         [(ngModel)]="contributor.planned_result"
         (selectOptionEvent)="onPlannedResultChange(contributor)"
         [readOnly]="true"
@@ -256,20 +496,26 @@
 
   <!-- Contributing Centers end -->
 
+  <!-- P2-3171 (AC5): External Partners are inherited from the HLO/Outcome level in the ToC. P25 (2026) only. -->
+  @if (isCP2026()) {
+    <app-alert-status [description]="externalPartnersInfoNote"></app-alert-status>
+  }
   <app-knowledge-product-selector *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-knowledge-product-selector>
   <app-normal-selector></app-normal-selector>
 
   <!-- Lead partner/center start -->
   <app-pr-yes-or-not
+    data-testid="cp-field-is_lead_by_partner"
     label="Is this result being led by an external partner?"
     [required]="true"
     [(ngModel)]="this.rdPartnersSE.partnersBody.is_lead_by_partner"
     (selectOptionEvent)="this.rdPartnersSE.onLeadByPartnerChange($event)"
     [readOnly]="!this.api.dataControlSE.isKnowledgeProduct && this.rdPartnersSE.partnersBody.no_applicable_partner">
   </app-pr-yes-or-not>
-  <app-alert-status [description]="getMessageLead()"></app-alert-status>
-  <div *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner; else selectLeadCenter">
+  <app-alert-status *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner" [description]="getMessageLeadPartner()"></app-alert-status>
+  <div *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner">
     <app-pr-select
+      data-testid="cp-field-institutions~lead"
       label="Lead partner"
       [options]="this.rdPartnersSE.possibleLeadPartners"
       optionLabel="full_name"
@@ -280,66 +526,95 @@
       *ngIf="!this.rdPartnersSE.updatingLeadData">
     </app-pr-select>
   </div>
-  <ng-template #selectLeadCenter>
-    @if (!this.rdPartnersSE.updatingLeadData) {
-      <app-pr-field-header label="Lead center" [required]="!this.rdPartnersSE.partnersBody.is_lead_by_partner"></app-pr-field-header>
-      <p-select
-        [options]="this.rdPartnersSE.possibleLeadCenters"
-        [(ngModel)]="this.rdPartnersSE.leadCenterCode"
-        optionLabel="full_name"
-        optionValue="code"
-        placeholder="Select a lead center..."
-        [showClear]="true"
-        [readonly]="this.api.rolesSE.readOnly"
-        [disabled]="this.api.rolesSE.readOnly"
-        [style]="{ width: '100%' }">
-        <ng-template pTemplate="item" let-item>
-          <div style="white-space: normal !important">
-            <div [innerHtml]="item.full_name"></div>
-          </div>
-        </ng-template>
 
-        <ng-template pTemplate="selectedItem" let-item>
-          <div style="white-space: normal !important">
-            <div [innerHtml]="item.full_name"></div>
-          </div>
-        </ng-template>
-      </p-select>
-      <div
-        appFeedbackValidation
-        labelText="Lead center"
-        [isComplete]="this.rdPartnersSE.partnersBody.is_lead_by_partner || !!this.rdPartnersSE.leadCenterCode"></div>
+  <!-- P2-3112: the linked/bundled question shows for Innovation Use/Dev (all phases) AND, in 2026+, for every other result type. -->
+  @if (
+    this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7 || isCP2026()
+  ) {
+    @if (showsQaInnovationLink()) {
+      <!-- P2-3420 / P2-3421: Innovation use, 2026 onwards — the story's own wording, not the generic one. -->
+      <app-pr-radio-button
+        data-testid="cp-field-has_innovation_link~qa-innovation"
+        [label]="innovationLinkQuestion"
+        [required]="true"
+        [options]="[
+          { value: true, label: 'Yes' },
+          { value: false, label: 'No' }
+        ]"
+        optionLabel="label"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.has_innovation_link"
+        (ngModelChange)="onQaInnovationLinkChange()"
+        optionValue="value">
+      </app-pr-radio-button>
+    } @else if (
+      this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7
+    ) {
+      <app-pr-radio-button
+        data-testid="cp-field-has_innovation_link"
+        fieldRef="[innovation-use-form]-has-innovation-link"
+        [options]="[
+          { value: true, label: 'Yes' },
+          { value: false, label: 'No' }
+        ]"
+        optionLabel="label"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.has_innovation_link"
+        optionValue="value">
+      </app-pr-radio-button>
+    } @else {
+      <!-- P2-3112 / P2-3358: non-innovation types (this branch only renders in 2026) get their label from the
+           component. No fieldRef, so the explicit label wins. Same sentence as the branch above. -->
+      <app-pr-radio-button
+        data-testid="cp-field-has_innovation_link~generic"
+        [label]="linkedResultQuestionLabel"
+        [required]="true"
+        [options]="[
+          { value: true, label: 'Yes' },
+          { value: false, label: 'No' }
+        ]"
+        optionLabel="label"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.has_innovation_link"
+        optionValue="value">
+      </app-pr-radio-button>
     }
-  </ng-template>
-
-  @if (this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7) {
-    <app-pr-radio-button
-      fieldRef="[innovation-use-form]-has-innovation-link"
-      [options]="[
-        { value: true, label: 'Yes' },
-        { value: false, label: 'No' }
-      ]"
-      optionLabel="label"
-      [(ngModel)]="this.rdPartnersSE.partnersBody.has_innovation_link"
-      optionValue="value">
-    </app-pr-radio-button>
 
     @if (this.rdPartnersSE.partnersBody.has_innovation_link && this.fieldsManagerSE.isP25()) {
-      <app-pr-multi-select
-        [options]="this.innovationUseResultsSE.resultsList"
-        [(ngModel)]="this.rdPartnersSE.partnersBody.linked_results"
-        optionLabel="title"
-        optionValue="id"
-        optionGroupLabel="name"
-        optionGroupChildren="options"
-        label="Please select a result"
-        placeholder="Please select a result"
-        selectedLabel="Results selected"
-        selectedOptionLabel="title"
-        [displayLabelFormatter]="formatResultLabel.bind(this)"
-        [required]="true">
-      </app-pr-multi-select>
-      <div appFeedbackValidation labelText="Please select a result" [isComplete]="!!this.rdPartnersSE.partnersBody.linked_results?.length"></div>
+      <!--
+        P2-3420 / P2-3421 — Innovation use, phase 2026 onwards: ONE Innovation Development result,
+        picked from the QA'd catalogue (QAed, Approved, Discontinued — portfolio-wide), searchable by
+        result id and by title, shown as "[Result ID] - [Result Title]". Every other type keeps the
+        legacy all-results multi-select in the @else branch.
+      -->
+      @if (showsQaInnovationLink()) {
+        <app-pr-select
+          data-testid="cp-field-linked_results~qa-innovation"
+          [options]="qaInnovationOptions"
+          [(ngModel)]="linkedInnovationId"
+          optionLabel="display"
+          optionValue="id"
+          label="Please select an Innovation Development result"
+          placeholder="Search by Innovation ID or title"
+          [showClear]="true"
+          [required]="true">
+        </app-pr-select>
+        <div appFeedbackValidation labelText="Please select an Innovation Development result" [isComplete]="linkedInnovationId !== null"></div>
+      } @else {
+        <app-pr-multi-select
+          data-testid="cp-field-linked_results"
+          [options]="this.innovationUseResultsSE.resultsList"
+          [(ngModel)]="this.rdPartnersSE.partnersBody.linked_results"
+          optionLabel="title"
+          optionValue="id"
+          optionGroupLabel="name"
+          optionGroupChildren="options"
+          label="Please select a result"
+          placeholder="Please select a result"
+          selectedLabel="Results selected"
+          selectedOptionLabel="title"
+          [displayLabelFormatter]="formatResultLabel.bind(this)"
+          [required]="true">
+        </app-pr-multi-select>
+        <div appFeedbackValidation labelText="Please select a result" [isComplete]="!!this.rdPartnersSE.partnersBody.linked_results?.length"></div>
+      }
     }
   }
   <app-alert-status
@@ -349,7 +624,7 @@
 
   <!-- Sync -->
 
-  <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+  <app-section-bottom-bar (clickSave)="onSaveSection()" />
   <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
   <div [style.height.px]="this.rdPartnersSE.partnersBody.linked_results.length ? 80 : 20" style="transition: height 0.3s ease-in-out"></div>
 </div>

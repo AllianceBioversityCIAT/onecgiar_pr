@@ -1,4 +1,4 @@
-import { Component, Input, DoCheck, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, Input, DoCheck, OnInit, Output, EventEmitter, signal } from '@angular/core';
 import { BilateralexpectedinvestmentStep4, IpsrStep4Body } from '../../../../model/Ipsr-step-4-body.model';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../../../../../../../shared/services/global/institutions.service';
@@ -16,7 +16,17 @@ export class StepN4AddProjectComponent implements DoCheck, OnInit {
   @Output() projectAdded = new EventEmitter<void>();
   visible = false;
   projectBody = new AddProjectBody();
-  showForm = true;
+  // P2-3322: `cleanObject()` toggles this flag `false -> setTimeout -> true` to remount the form. As a plain
+  // field the delayed write notified nothing, so under zoneless change detection (Angular 21, f33bffcee) the
+  // second render pass never ran and reopening the dialog showed an empty modal until a page reload.
+  // Signal-backed, the write schedules its own render. Public API unchanged: still a boolean `showForm`.
+  private readonly _showForm = signal<boolean>(true);
+  get showForm(): boolean {
+    return this._showForm();
+  }
+  set showForm(value: boolean) {
+    this._showForm.set(value);
+  }
   requesting = false;
   formIsInvalid = false;
 

@@ -9,4 +9,17 @@ export enum NotificationTypeEnum {
   RESULT_UNSUBMITTED = 'Result Unsubmitted',
   RESULT_QUALITY_ASSESED = 'Result QAed',
   ANNOUNCEMENT = 'Announcement',
+  BILATERAL_RESULT_APPROVED = 'Bilateral Result Approved',
+  BILATERAL_RESULT_REJECTED = 'Bilateral Result Rejected',
+  RESULT_CENTER_TAGGED = 'Result Center Tagged',
+  RESULT_BILATERAL_PROJECT_TAGGED = 'Result Bilateral Project Tagged',
+  // P2-3188. The value is the row's `type` string in `notifications_type`, which is how these are
+  // resolved — the numeric ids differ between environments because they were inserted by hand.
+  RESULT_CONTRIBUTION_ACCEPTED = 'Result Contribution Accepted',
+  RESULT_CONTRIBUTION_DECLINED = 'Result Contribution Declined',
+  // 2026-09-05. Tells the primary Science Program's members a bilateral result reached Pending
+  // Review — before this, the SP only found out through the review-queue counter. Emitted from
+  // BOTH entry paths (the centre form's Submit and the API ingest, which creates results already
+  // in Pending Review).
+  BILATERAL_RESULT_SUBMITTED = 'Bilateral Result Submitted',
 }

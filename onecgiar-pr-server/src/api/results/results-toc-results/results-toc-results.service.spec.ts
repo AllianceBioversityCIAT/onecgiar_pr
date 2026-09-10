@@ -72,8 +72,11 @@ describe('ResultsTocResultsService', () => {
       findOne: jest.fn().mockResolvedValue({ initiative_id: 50 } as any),
       updateIniciativeSubmitter: jest.fn(),
       updateResultByInitiative: jest.fn().mockResolvedValue([]),
+      upsertContributorInitiatives: jest.fn().mockResolvedValue(undefined),
+      updateInitiativeFromTocFlags: jest.fn().mockResolvedValue(undefined),
       getContributorInitiativeByResult: jest.fn().mockResolvedValue([]),
       getPendingInit: jest.fn().mockResolvedValue([]),
+      getDraftInit: jest.fn().mockResolvedValue([]),
       getContributorInitiativeAndPrimaryByResult: jest
         .fn()
         .mockResolvedValue([]),
@@ -110,7 +113,12 @@ describe('ResultsTocResultsService', () => {
         },
         {
           provide: ShareResultRequestRepository,
-          useValue: { cancelRequest: jest.fn().mockResolvedValue(undefined) },
+          useValue: {
+            cancelRequest: jest.fn().mockResolvedValue(undefined),
+            updateFromTocByResultAndInitiative: jest
+              .fn()
+              .mockResolvedValue(undefined),
+          },
         },
         { provide: ClarisaInitiativesRepository, useValue: {} },
         { provide: EmailNotificationManagementService, useValue: {} },
@@ -217,6 +225,299 @@ describe('ResultsTocResultsService', () => {
       resultByInitiativesRepository.updateResultByInitiative,
     ).toHaveBeenCalled();
     expect(shareResultRequestRepository.cancelRequest).not.toHaveBeenCalled();
+    expect(shareResultRequestService.resultRequest).not.toHaveBeenCalled();
+  });
+
+  it('persists contributing_indicator including zero for qualitative targets (P2-3089)', async () => {
+    const payload: any = {
+      result_id: 1,
+      changePrimaryInit: 50,
+      result_toc_result: {
+        planned_result: true,
+        initiative_id: 50,
+        result_toc_results: [
+          {
+            result_toc_result_id: 10350,
+            toc_result_id: 6286,
+            initiative_id: 50,
+            planned_result: true,
+            toc_level_id: 1,
+            indicators: [
+              {
+                toc_results_indicator_id: 'indicator-1',
+                targets: [
+                  {
+                    indicators_targets: 1048,
+                    number_target: 5,
+                    contributing_indicator: 0,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+      initiative_id: 50,
+    } as any);
+
+    await service.createTocMappingV2(payload, { id: 1 } as TokenDto);
+
+    expect(
+      resultsTocResultRepository.saveIndicatorsPrimarySubmitter,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        result_toc_result: expect.objectContaining({
+          result_toc_results: [
+            expect.objectContaining({
+              indicators: [
+                expect.objectContaining({
+                  targets: [
+                    expect.objectContaining({ contributing_indicator: 0 }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+      }),
+      1,
+      1,
+    );
+  });
+
+  it('persists program_invested_financial_resources on planned toc mapping update', async () => {
+    const payload: any = {
+      result_id: 1,
+      changePrimaryInit: 50,
+      result_toc_result: {
+        planned_result: true,
+        initiative_id: 50,
+        result_toc_results: [
+          {
+            result_toc_result_id: 10350,
+            toc_result_id: 6286,
+            initiative_id: 50,
+            planned_result: true,
+            toc_level_id: 1,
+            program_invested_financial_resources: true,
+          },
+        ],
+      },
+    };
+
+    resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+      initiative_id: 50,
+    } as any);
+
+    await service.createTocMappingV2(payload, { id: 1 } as TokenDto);
+
+    expect(resultsTocResultRepository.update).toHaveBeenCalledWith(
+      10350,
+      expect.objectContaining({
+        program_invested_financial_resources: true,
+      }),
+    );
+  });
+
+  it('persists program_invested_financial_resources on unplanned toc mapping update', async () => {
+    const payload: any = {
+      result_id: 1,
+      changePrimaryInit: 50,
+      result_toc_result: {
+        planned_result: false,
+        initiative_id: 50,
+        toc_progressive_narrative: 'Reported outside 2026 TOC indicators',
+        result_toc_results: [
+          {
+            result_toc_result_id: 10351,
+            program_invested_financial_resources: false,
+          },
+        ],
+      },
+    };
+
+    resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+      initiative_id: 50,
+    } as any);
+    resultsTocResultRepository.find.mockResolvedValueOnce([]);
+
+    await service.createTocMappingV2(payload, { id: 1 } as TokenDto);
+
+    expect(resultsTocResultRepository.update).toHaveBeenCalledWith(
+      10351,
+      expect.objectContaining({
+        planned_result: false,
+        program_invested_financial_resources: false,
+        toc_progressive_narrative: 'Reported outside 2026 TOC indicators',
+      }),
+    );
+  });
+
+  it('persists program_invested_financial_resources on unplanned special case insert', async () => {
+    const payload: any = {
+      result_id: 1,
+      changePrimaryInit: 50,
+      result_toc_result: {
+        planned_result: false,
+        initiative_id: 50,
+        toc_progressive_narrative: 'Justification text',
+        program_invested_financial_resources: true,
+      },
+    };
+
+    resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+      initiative_id: 50,
+    } as any);
+    resultsTocResultRepository.find.mockResolvedValueOnce([]);
+
+    await service.createTocMappingV2(payload, { id: 1 } as TokenDto);
+
+    expect(resultsTocResultRepository.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        planned_result: false,
+        program_invested_financial_resources: true,
+        toc_progressive_narrative: 'Justification text',
+      }),
+    );
+  });
+
+  it('persists program_invested_financial_resources on contributor toc mapping update', async () => {
+    const payload: any = {
+      result_id: 1,
+      changePrimaryInit: 50,
+      result_toc_result: {
+        planned_result: true,
+        initiative_id: 50,
+        result_toc_results: [],
+      },
+      contributors_result_toc_result: [
+        {
+          initiative_id: 51,
+          planned_result: true,
+          result_toc_results: [
+            {
+              result_toc_result_id: 2010,
+              toc_result_id: 9999,
+              initiative_id: 51,
+              program_invested_financial_resources: false,
+            },
+          ],
+        },
+      ],
+    };
+
+    resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+      initiative_id: 50,
+    } as any);
+    resultByInitiativesRepository.findBy.mockResolvedValueOnce([]);
+
+    await service.createTocMappingV2(payload, { id: 1 } as TokenDto);
+
+    expect(resultsTocResultRepository.update).toHaveBeenCalledWith(
+      2010,
+      expect.objectContaining({
+        program_invested_financial_resources: false,
+      }),
+    );
+  });
+
+  it('persists pending science programs with from_toc on save', async () => {
+    const payload: any = {
+      result_id: 1,
+      changePrimaryInit: 50,
+      contributing_initiatives: {
+        accepted_contributing_initiatives: [],
+        pending_contributing_initiatives: [{ id: 61, from_toc: false }],
+      },
+    };
+
+    resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+      initiative_id: 50,
+    } as any);
+
+    await service.createTocMappingV2(payload, { id: 1 } as TokenDto);
+
+    expect(shareResultRequestService.resultRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        initiativeShareId: [61],
+        initiativeFromToc: { 61: false },
+      }),
+      1,
+      { id: 1 },
+    );
+    expect(
+      shareResultRequestRepository.updateFromTocByResultAndInitiative,
+    ).toHaveBeenCalledWith(1, 61, false, 1);
+    expect(
+      resultByInitiativesRepository.updateInitiativeFromTocFlags,
+    ).toHaveBeenCalledWith(1, new Map([[61, false]]), 1);
+  });
+
+  it('auto-cancels pending share requests omitted from PATCH (P2-3115)', async () => {
+    resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+      initiative_id: 50,
+    } as any);
+    resultByInitiativesRepository.getDraftInit.mockResolvedValueOnce([
+      {
+        id: 61,
+        share_result_request_id: 9001,
+        from_toc: true,
+        is_active: 1,
+      },
+      {
+        id: 62,
+        share_result_request_id: 9002,
+        from_toc: true,
+        is_active: 1,
+      },
+    ] as any);
+
+    const payload: any = {
+      result_id: 1,
+      changePrimaryInit: 50,
+      contributing_initiatives: {
+        accepted_contributing_initiatives: [],
+        pending_contributing_initiatives: [{ id: 61, from_toc: true }],
+      },
+    };
+
+    await service.createTocMappingV2(payload, { id: 1 } as TokenDto);
+
+    expect(shareResultRequestRepository.cancelRequest).toHaveBeenCalledWith([
+      9002,
+    ]);
+  });
+
+  it('auto-cancels all pending share requests when pending array is empty', async () => {
+    resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+      initiative_id: 50,
+    } as any);
+    resultByInitiativesRepository.getDraftInit.mockResolvedValueOnce([
+      {
+        id: 61,
+        share_result_request_id: 9001,
+        from_toc: true,
+        is_active: 1,
+      },
+    ] as any);
+
+    const payload: any = {
+      result_id: 1,
+      changePrimaryInit: 50,
+      contributing_initiatives: {
+        accepted_contributing_initiatives: [],
+        pending_contributing_initiatives: [],
+      },
+    };
+
+    await service.createTocMappingV2(payload, { id: 1 } as TokenDto);
+
+    expect(shareResultRequestRepository.cancelRequest).toHaveBeenCalledWith([
+      9001,
+    ]);
     expect(shareResultRequestService.resultRequest).not.toHaveBeenCalled();
   });
 });

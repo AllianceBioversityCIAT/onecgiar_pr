@@ -1,6 +1,6 @@
-<p-dialog appendTo="body" header="Title" [(visible)]="this.visible"
-    [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
-    [style]="{padding: '0px'}">
+<app-pr-dialog [(visible)]="this.visible"
+    [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
+    styleClass="step-n4-edit-bilateral-dialog">
     <div class="modal_title" *ngIf="this.isonlyread == false">Edit bilateral</div>
     <div class="modal_title" *ngIf="this.isonlyread == true">Bilateral Info</div>
     <div class="modal_container partners-request-container" *ngIf="showForm">
@@ -12,7 +12,7 @@
             [(ngModel)]="biltarealBody.funder_institution_id" [readOnly]="this.isonlyread">
         </app-pr-select>
 
-        <div class="auto_fit_container">
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
             <app-pr-input label="Grant title" [required]="true" [(ngModel)]="biltarealBody.grant_title"
                 placeholder="Grant title goes here..." [readOnly]="this.isonlyread">
             </app-pr-input>
@@ -42,7 +42,7 @@
             [icon]="this.requesting?'loop':'send'" padding="medium" (click)="onAddBilateral()" ></app-pr-button>
     </div>
 
-</p-dialog>
+</app-pr-dialog>
 
 <div class="buttonOpen" (click)="visible=true" *ngIf="this.isonlyread == false">
     <i class="material-icons-round" style="font-size: 17px;">

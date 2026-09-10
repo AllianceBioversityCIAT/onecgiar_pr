@@ -15,9 +15,9 @@ export class TocApiService {
     return this.http.get<any>(`${dynamicApiBaseURl}level/get/all`);
   }
 
-  GET_tocLevelsByconfig(result_id, initiativeId, levelId, isP25: boolean = false, isPlanned?: boolean) {
+  GET_tocLevelsByconfig(result_id, initiativeId, levelId, isP25: boolean = false, isPlanned?: boolean, bilateral: boolean = false) {
     const dynamicApiBaseURl = isP25 ? this.apiBaseUrlV2 : this.apiBaseUrl;
-    const queryParam = `?planned=${!!isPlanned}`;
+    const queryParam = `?planned=${!!isPlanned}${bilateral ? '&bilateral=true' : ''}`;
 
     return this.http.get<any>(`${dynamicApiBaseURl}result/${result_id}/initiative/${initiativeId}/level/${levelId}${queryParam}`).pipe(
       map(resp => {

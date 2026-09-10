@@ -1,0 +1,676 @@
+<!-- Layout follows the PRMS Form UX Pattern (RFUX-R-2, RFUX-AC-2): 3 distinct semantic cards
+     (Result Identity, Target Contribution, Collaboration & Attribution) with 4/8px spacing rhythm,
+     WCAG AA contrast, and sticky footer with readiness indicator. -->
+<form class="relative flex flex-col gap-4 flex-1 min-h-0" (ngSubmit)="createResult()" [attr.aria-busy]="creatingResult()">
+  @if (creatingResult()) {
+    <div
+      class="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2.5 bg-[color-mix(in_srgb,white_80%,transparent)]"
+      role="status"
+      aria-live="polite">
+      <i class="pi pi-spin pi-spinner text-[1.75rem] text-[var(--pr-color-primary-300)]" aria-hidden="true"></i>
+      <span class="text-[13.5px] font-semibold text-[var(--pr-color-secondary-400)]">Creating result…</span>
+    </div>
+  }
+
+  <!-- ==================== CARD 1: RESULT IDENTITY ==================== -->
+  <section
+    data-testid="card-result-identity"
+    class="rounded-xl border border-[var(--pr-border)] bg-white p-4.5 shadow-2xs flex flex-col gap-4">
+    <div class="flex items-center gap-2 border-b border-[var(--pr-border)] pb-3">
+      <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">edit_note</span>
+      <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">1. Result Identity</h4>
+    </div>
+
+  @if (needsResultLevelChoice()) {
+    <div data-testid="emerging-result-level-chooser">
+      <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+        Result level <span class="text-[var(--pr-color-red-300)]">*</span>
+      </p>
+      <app-pr-select
+        [options]="outputOutcomeLevels()"
+        optionLabel="name"
+        optionValue="id"
+        placeholder="Select Output or Outcome"
+        [editable]="true"
+        [required]="true"
+        [overlayToBody]="true"
+        [ngModel]="chosenResultLevelId()"
+        [ngModelOptions]="{ standalone: true }"
+        (selectOptionEvent)="onResultLevelChange($event?.id ?? null)"
+        name="resultLevel" />
+    </div>
+  }
+
+  <!-- indicator category: a picker only when the ToC node does not fix it -->
+  @if (needsCategoryChoice()) {
+    <div>
+      <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+        Indicator category <span class="text-[var(--pr-color-red-300)]">*</span>
+      </p>
+      @if (categoryUnavailable()) {
+        <!-- No level → no option list will ever arrive. Say so instead of showing an empty control. -->
+        <p class="m-0 text-[13px] leading-relaxed text-[var(--pr-color-orange-500)]">
+          The indicator category cannot be determined for this indicator. Please report it from the Area of Work view or contact support.
+        </p>
+      } @else {
+        <div #categoryContainer>
+          <app-pr-select
+            [options]="resultTypes()"
+            optionLabel="name"
+            optionValue="id"
+            placeholder="Select a category"
+            [editable]="true"
+            [required]="true"
+            [ngModel]="createResultBody().result_type_id"
+            [ngModelOptions]="{ standalone: true }"
+            (selectOptionEvent)="onCategoryChange($event?.id ?? null)"
+            name="resultType" />
+        </div>
+      }
+    </div>
+  } @else if (!currentResultIsKnowledgeProduct()) {
+    <!-- Fixed by the indicator -->
+    <div>
+      <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">Indicator category</p>
+      <div
+        class="flex h-[46px] items-center rounded-[10px] border border-[rgba(30,32,47,0.14)] bg-[var(--pr-color-accents-1)] px-3.5 text-[14px] text-[var(--pr-color-secondary-400)]">
+        {{ indicatorCategoryLabel() || 'Not provided' }}
+      </div>
+    </div>
+  }
+
+  <!-- Knowledge products come from a repository. The design specifies two entry modes, but
+       browsing has no endpoint yet (P2-3231) and business asked to hide it rather than show it
+       disabled while P/As are testing (P2-3479) — so the whole switcher is gated behind
+       `kpBrowseEnabled`. Manual entry stays, it is simply no longer presented as a choice. -->
+  @if (currentResultIsKnowledgeProduct()) {
+    <div class="mb-2">
+      @if (kpBrowseEnabled) {
+        <div class="mb-4 flex w-full rounded-xl bg-gray-100 p-1" role="tablist" aria-label="How to add the knowledge product">
+          <button
+            type="button"
+            role="tab"
+            [attr.aria-selected]="kpEntryMode() === 'browse'"
+            (click)="kpEntryMode.set('browse')"
+            class="flex-1 rounded-lg border-0 py-2 text-[15px] font-semibold transition-all cursor-pointer focus:outline-none"
+            [ngClass]="kpEntryMode() === 'browse' ? 'bg-white text-[var(--pr-color-primary-300)] shadow-sm' : 'bg-transparent text-gray-500 hover:text-gray-900'">
+            Browse CGSpace
+          </button>
+          <button
+            type="button"
+            role="tab"
+            [attr.aria-selected]="kpEntryMode() === 'manual'"
+            (click)="kpEntryMode.set('manual')"
+            class="flex-1 rounded-lg border-0 py-2 text-[15px] font-semibold transition-all cursor-pointer focus:outline-none"
+            [ngClass]="kpEntryMode() === 'manual' ? 'bg-white text-[var(--pr-color-primary-300)] shadow-sm' : 'bg-transparent text-gray-500 hover:text-gray-900'">
+            Manual entry
+          </button>
+        </div>
+      }
+
+      <!-- Browse panel: mounted and kept with [hidden] per R-21 -->
+      <div [hidden]="kpEntryMode() !== 'browse'">
+        @if (createResultBody().handler) {
+          <!-- Selected KP item banner -->
+          <div class="mb-4 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/90 to-emerald-50/40 p-4 flex flex-col gap-3 shadow-xs">
+            <div class="flex items-center justify-between gap-3">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800 border border-emerald-200">
+                <i class="pi pi-check text-[10px]"></i>
+                Selected from CGSpace
+              </span>
+              <button
+                type="button"
+                (click)="clearSelectedKpItem()"
+                class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-900 transition-colors cursor-pointer bg-transparent border-0 p-0">
+                <span class="material-icons-round text-[15px]">swap_horiz</span>
+                Change item
+              </button>
+            </div>
+
+            <div>
+              @if (validatingHandler()) {
+                <div class="flex items-center gap-2 py-1 text-sm font-semibold text-emerald-800">
+                  <i class="pi pi-spin pi-spinner text-emerald-600"></i>
+                  <span>Retrieving metadata from CGSpace…</span>
+                </div>
+              } @else if (creatingResult()) {
+                <div class="flex items-center gap-2 py-1 text-sm font-semibold text-emerald-800">
+                  <i class="pi pi-spin pi-spinner text-emerald-600"></i>
+                  <span>Creating result…</span>
+                </div>
+              } @else {
+                <h4 class="m-0 text-sm font-bold text-gray-900 leading-snug">
+                  {{ createResultBody().result_name }}
+                </h4>
+              }
+              <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                <span class="font-mono text-xs text-gray-600 bg-white px-2 py-0.5 rounded border border-gray-200 shadow-2xs">
+                  {{ createResultBody().handler }}
+                </span>
+                @if (mqapJson()?.metadata?.[0]?.source) {
+                  <span class="text-gray-400">·</span>
+                  <span class="text-gray-500 text-[11.5px]">{{ mqapJson()?.metadata?.[0]?.source }}</span>
+                }
+              </div>
+            </div>
+          </div>
+        } @else {
+          <app-kp-cgspace-browse
+            [busy]="validatingHandler() || creatingResult()"
+            [phaseYear]="phaseYear()"
+            [isAdmin]="isAdmin()"
+            (itemSelected)="onCgspaceItemSelected($event)"
+            (switchToManual)="kpEntryMode.set('manual')">
+          </app-kp-cgspace-browse>
+        }
+      </div>
+
+      <!-- Manual entry panel -->
+      <div [hidden]="kpEntryMode() !== 'manual'">
+        <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+          Repository link/handle <span class="text-[var(--pr-color-red-300)]">*</span>
+        </p>
+        <div class="flex items-center gap-2">
+          <div class="min-w-0 flex-1">
+            <!-- `isStatic` is what keeps a field editable: `editable` is declared on pr-input but never
+                 read, and RolesService.readOnly defaults to true. -->
+            <app-pr-input
+              [ngModel]="createResultBody().handler"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="patch('handler', $event); handleSource.set('manual')"
+              placeholder="Paste the repository link…"
+              [isStatic]="true"
+              [disabled]="creatingResult()"
+              name="handler" />
+          </div>
+          <button
+            type="button"
+            (click)="validateHandle()"
+            [disabled]="validatingHandler() || creatingResult()"
+            class="inline-flex h-[40px] shrink-0 appearance-none items-center justify-center gap-1.5 rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-4 text-sm font-semibold text-white transition-all disabled:opacity-50 cursor-pointer focus:outline-none">
+            {{ validatingHandler() ? 'Syncing…' : 'Sync' }}
+            <span class="material-icons-round text-[16px]" [class.animate-spin]="validatingHandler()">sync</span>
+          </button>
+        </div>
+        @if (mqapUrlError().status) {
+          <!-- The server's own message can carry links; rendering it as text would swallow them. -->
+          <p class="error__link m-0 mt-1.5 text-[12.5px] text-[var(--pr-color-red-300)]" [innerHTML]="mqapUrlError().message"></p>
+        }
+      </div>
+    </div>
+  }
+
+  @if (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler) {
+    <!-- result title. For a knowledge product it is filled by the sync and stays locked: `disabled`
+         is the lever that does that — `readOnly` is inert while `isStatic` is on. -->
+    <div>
+      <div class="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+        <label for="result-title-input" class="m-0 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+          {{ titleLabel() }} <span class="text-[var(--pr-color-red-300)]">*</span>
+        </label>
+        @if (!currentResultIsKnowledgeProduct()) {
+          <span
+            data-testid="title-word-gauge"
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11.5px] font-semibold transition-colors"
+            [ngClass]="titleWordCountClass()">
+            {{ titleWordCountLabel() }}
+          </span>
+        }
+      </div>
+
+      <p id="title-helper" class="m-0 mb-2 text-[12px] leading-normal text-gray-500">
+        {{ titleHint() }}
+      </p>
+
+      @if (currentResultIsKnowledgeProduct()) {
+        <div
+          class="flex min-h-[46px] items-center rounded-[10px] border border-[rgba(30,32,47,0.14)] bg-[var(--pr-color-accents-1)] px-3.5 py-2 text-[13.5px] text-[var(--pr-color-secondary-400)]">
+          {{ createResultBody().result_name || 'Retrieved from the repository…' }}
+        </div>
+      } @else {
+        <textarea
+          #titleInput
+          id="result-title-input"
+          name="resultName"
+          rows="2"
+          [ngModel]="createResultBody().result_name"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="patch('result_name', $event)"
+          placeholder="Brief, descriptive title for this result…"
+          class="w-full rounded-[10px] border border-[var(--pr-border)] p-3 text-[13.5px] leading-relaxed resize-none transition-all focus:border-[var(--pr-color-primary-300)] focus:ring-2 focus:ring-[var(--pr-color-primary-100)] focus:outline-none"
+          [class.border-red-400]="titleWordCount() > 30"
+          aria-describedby="title-helper"
+          (input)="adjustTextareaHeight($event)"></textarea>
+      }
+    </div>
+
+  <!-- P2-3420 — link to a QA'd Innovation Development result. Innovation use only, 2026 phase
+       onwards only. Sits directly below the title, exactly where the story puts it. -->
+  @if (showsInnovationLink()) {
+    <div>
+      <p class="m-0 mb-2 flex items-center gap-1.5 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+        {{ innovationLinkQuestion }} <span class="text-[var(--pr-color-red-300)]">*</span>
+      </p>
+      <app-pr-radio-button
+        [options]="[
+          { value: true, label: 'Yes' },
+          { value: false, label: 'No' }
+        ]"
+        optionLabel="label"
+        optionValue="value"
+        [isStatic]="true"
+        [required]="true"
+        [ngModel]="hasInnovationLink()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="onInnovationLinkChange($event)"
+        [disabled]="creatingResult()"
+        name="hasInnovationLink">
+      </app-pr-radio-button>
+
+      @if (hasInnovationLink()) {
+        <app-pr-select
+          label="Please select an Innovation Development result"
+          placeholder="Search by Innovation ID or title"
+          [options]="qaInnovationsSE.options()"
+          optionLabel="display"
+          optionValue="id"
+          [isStatic]="true"
+          [required]="true"
+          [ngModel]="linkedResultId()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="linkedResultId.set($event)"
+          [disabled]="creatingResult()"
+          name="linkedResultId">
+        </app-pr-select>
+      }
+    </div>
+  }
+}
+  </section>
+
+  @if (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler) {
+    <!-- ==================== CARD 2: TARGET CONTRIBUTION ==================== -->
+    <section
+      data-testid="card-target-contribution"
+      class="rounded-xl border border-[var(--pr-border)] bg-white p-4.5 shadow-2xs flex flex-col gap-4">
+      <div class="flex items-center gap-2 border-b border-[var(--pr-border)] pb-3">
+        <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">track_changes</span>
+        <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">2. Target Contribution</h4>
+      </div>
+
+      <!-- contribution to the indicator target -->
+      <div>
+        <label for="contribution-input" class="m-0 mb-1.5 block text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+          Contribution to indicator target <span class="text-[var(--pr-color-red-300)]">*</span>
+        </label>
+        <p id="contribution-helper" class="m-0 mb-2.5 text-[12px] leading-normal text-gray-500">
+          Enter the numerical amount this specific result contributes toward the target.
+        </p>
+        <div class="flex max-w-full flex-wrap items-center gap-x-3 gap-y-1.5">
+          <input
+            #contributionInput
+            id="contribution-input"
+            type="number"
+            min="0"
+            placeholder="e.g. 5"
+            name="contribution"
+            [ngModel]="createResultBody().contribution_to_indicator_target"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="patch('contribution_to_indicator_target', $event)"
+            [disabled]="creatingResult() || currentResultIsKnowledgeProduct()"
+            [attr.aria-describedby]="unitMeasurement() ? 'contribution-helper contribution-target-reference contribution-unit-suffix' : 'contribution-helper contribution-target-reference'"
+            class="contribution-input w-[132px] shrink-0 rounded-[10px] border border-[var(--pr-border)] px-3 py-2.5 text-[14px] font-semibold text-gray-900 transition-all focus:border-[var(--pr-color-primary-300)] focus:ring-2 focus:ring-[var(--pr-color-primary-100)] focus:outline-none disabled:bg-gray-50 disabled:text-gray-400" />
+          @if (unitMeasurement()) {
+            <span
+              id="contribution-unit-suffix"
+              data-testid="contribution-unit-suffix"
+              class="min-w-0 flex-1 text-[12px] font-medium leading-snug text-gray-600">
+              {{ unitMeasurement() }}
+            </span>
+          }
+        </div>
+        <p
+          id="contribution-target-reference"
+          data-testid="contribution-target-reference"
+          class="m-0 mt-2 flex items-center gap-1.5 text-[12px] text-gray-500">
+          <span class="material-icons-round text-[14px] text-gray-400">flag</span>
+          <span>2026 Target: <strong class="font-semibold text-gray-700">{{ targetValueSum() }}</strong> · Achieved so far: <strong class="font-semibold text-gray-700">{{ achievedValueSum() }}</strong></span>
+        </p>
+      </div>
+    </section>
+
+    <!-- ==================== CARD 3: COLLABORATION & ATTRIBUTION ==================== -->
+    <section
+      data-testid="card-collaboration"
+      class="rounded-xl border border-[var(--pr-border)] bg-white p-4.5 shadow-2xs flex flex-col gap-4">
+      <div class="flex items-center gap-2 border-b border-[var(--pr-border)] pb-3">
+        <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">groups</span>
+        <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">3. Collaboration & Attribution</h4>
+      </div>
+
+      <div
+        data-testid="toc-attribution-note"
+        class="flex gap-2.5 rounded-lg border border-[var(--pr-color-primary-100,#e9e0ff)] bg-[color-mix(in_srgb,var(--pr-color-primary-50,#f5f3ff)_55%,white)] px-3.5 py-3">
+        <span class="material-icons-round shrink-0 text-[18px] text-[var(--pr-color-primary-300)]" aria-hidden="true">account_tree</span>
+        <div class="min-w-0 text-[12.5px] leading-relaxed text-[var(--pr-color-accents-6,#4b5563)]">
+          @if (hasReferenceCenters() || hasReferenceScience() || leadCenterAcronym()) {
+            <p class="m-0 font-semibold text-[var(--pr-color-secondary-400)]">Pre-filled from your Theory of Change</p>
+            <ul class="m-0 mt-1.5 list-none space-y-1 pl-0">
+              @if (hasReferenceCenters() || leadCenterAcronym()) {
+                <li class="flex gap-1.5">
+                  <span class="mt-[3px] text-[var(--pr-color-primary-300)]" aria-hidden="true">•</span>
+                  <span>
+                    <strong class="font-semibold text-[var(--pr-color-secondary-400)]">Contributing CGIAR Centers</strong>
+                    — partner institutions and KPI-owning centers mapped to this ToC node.
+                    @if (leadCenterAcronym()) {
+                      <strong class="font-semibold text-violet-800">{{ leadCenterAcronym() }}</strong> is the Lead center and cannot be removed.
+                    }
+                  </span>
+                </li>
+              }
+              @if (hasReferenceScience()) {
+                <li class="flex gap-1.5">
+                  <span class="mt-[3px] text-[var(--pr-color-primary-300)]" aria-hidden="true">•</span>
+                  <span>
+                    <strong class="font-semibold text-[var(--pr-color-secondary-400)]">Contributing Science Programs</strong>
+                    — programs linked to this ToC node.
+                  </span>
+                </li>
+              }
+              <li class="flex gap-1.5">
+                <span class="mt-[3px] text-[var(--pr-color-primary-300)]" aria-hidden="true">•</span>
+                <span>
+                  <strong class="font-semibold text-[var(--pr-color-secondary-400)]">W3 and bilateral projects</strong>
+                  — not pre-filled; select only when this result involves W3 or bilateral funding.
+                </span>
+              </li>
+            </ul>
+            <p class="m-0 mt-2 text-[12px] text-[var(--pr-text-muted,#6b7280)]">
+              Add more collaborators from the dropdowns below, or choose <em>Other(s)</em> to pick outside the ToC list.
+            </p>
+          } @else {
+            <p class="m-0 font-semibold text-[var(--pr-color-secondary-400)]">No ToC-mapped collaborators for this indicator</p>
+            <p class="m-0 mt-1.5">
+              Select Contributing CGIAR Centers and Science Programs manually. W3 and bilateral projects are optional and always chosen by you.
+            </p>
+          }
+        </div>
+      </div>
+
+      <!-- Contributing CGIAR Centers. `optionValue` is the identity key pr-multi-select compares on: without it
+           every option matches every value and each click deselects index 0 instead of adding. -->
+      <div>
+        <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">Contributing CGIAR Centers</p>
+    @if (hasReferenceCenters()) {
+      <app-pr-multi-select
+        [options]="dropdown1Options()"
+        optionLabel="name"
+        optionValue="code"
+        [ngModel]="contributingCenters()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="onContributingCentersChange($event)"
+        placeholder="Add another center…"
+        name="centers"
+        [isStatic]="true" />
+    } @else {
+      <app-pr-multi-select
+        [options]="otherCentersList()"
+        optionLabel="name"
+        optionValue="code"
+        [ngModel]="contributingCenters()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="onContributingCentersChange($event)"
+        placeholder="Add center(s)…"
+        name="centers"
+        [isStatic]="true" />
+    }
+
+    @if (contributingCenters().length) {
+      <div class="mt-2.5 flex flex-wrap gap-2 min-h-[32px] items-center" data-testid="contributing-centers-chips">
+        @for (center of contributingCenters(); track center.code) {
+          @if (isLeadCenter(center)) {
+            <span
+              data-testid="lead-center-chip"
+              class="inline-flex items-center gap-1.5 rounded-full bg-violet-50 border border-violet-200 py-1.5 pl-3.5 pr-3 text-[13px] font-semibold text-violet-800 shadow-2xs">
+              <span>{{ centerChipLabel(center) }}</span>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-violet-200/60 text-violet-900">
+                Lead
+              </span>
+            </span>
+          } @else {
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
+              {{ centerChipLabel(center) }}
+              @if (center.from_toc) {
+                <span class="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[var(--pr-color-primary-100,#e9e0ff)] text-[var(--pr-color-primary-400,#6b46e5)]">
+                  ToC
+                </span>
+              }
+              <button
+                type="button"
+                (click)="removeCenter(center)"
+                [attr.aria-label]="'Remove ' + centerChipLabel(center)"
+                class="inline-flex size-[22px] shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--pr-color-accents-5)] transition-colors hover:bg-[rgba(30,32,47,0.08)] hover:text-[var(--pr-color-secondary-400)] cursor-pointer">
+                <span class="material-icons-round text-[17px] leading-none">close</span>
+              </button>
+            </span>
+          }
+        }
+      </div>
+    }
+
+    @if (hasReferenceCenters() && showOtherCenters()) {
+      <div class="mt-3">
+        <app-pr-multi-select
+          [options]="otherCentersList()"
+          optionLabel="name"
+          optionValue="code"
+              [ngModel]="otherCentersSelected()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="onOtherCentersChange($event)"
+          placeholder="Other CGIAR Centers"
+          name="otherCenters"
+          [isStatic]="true" />
+
+        @if (otherCentersSelected().length) {
+          <div class="mt-2.5 flex flex-wrap gap-2 min-h-[32px] items-center">
+            @for (center of otherCentersSelected(); track center.code) {
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
+                {{ centerChipLabel(center) }}
+                <button
+                  type="button"
+                  (click)="removeOtherCenter(center)"
+                  [attr.aria-label]="'Remove ' + centerChipLabel(center)"
+                  class="inline-flex size-[22px] shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--pr-color-accents-5)] transition-colors hover:bg-[rgba(30,32,47,0.08)] hover:text-[var(--pr-color-secondary-400)]">
+                  <span class="material-icons-round text-[17px] leading-none">close</span>
+                </button>
+              </span>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Contributing Science Programs -->
+  <div>
+    <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">Contributing Science Programs</p>
+    @if (hasReferenceScience()) {
+      <app-pr-multi-select
+        [options]="dropdown1ScienceOptions()"
+        optionLabel="full_name"
+        optionValue="id"
+        placeholder="Add another program…"
+        [ngModel]="selectedScience()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="onScienceChange($event ?? [])"
+        name="science"
+        [isStatic]="true" />
+    } @else {
+      <app-pr-multi-select
+        [options]="otherScienceList()"
+        optionLabel="full_name"
+        optionValue="id"
+        placeholder="Add program(s)…"
+        [ngModel]="selectedScience()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="onScienceChange($event ?? [])"
+        name="science"
+        [isStatic]="true" />
+    }
+
+    @if (selectedScience().length) {
+      <div class="mt-2.5 flex flex-wrap gap-2 min-h-[32px] items-center">
+        @for (sp of selectedScience(); track sp.id) {
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
+            {{ scienceChipLabel(sp) }}
+            @if (sp.from_toc) {
+              <span class="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[var(--pr-color-primary-100,#e9e0ff)] text-[var(--pr-color-primary-400,#6b46e5)]">
+                ToC
+              </span>
+            }
+            <button
+              type="button"
+              (click)="removeScience(sp)"
+              [attr.aria-label]="'Remove ' + scienceChipLabel(sp)"
+              class="inline-flex size-[22px] shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--pr-color-accents-5)] transition-colors hover:bg-[rgba(30,32,47,0.08)] hover:text-[var(--pr-color-secondary-400)]">
+              <span class="material-icons-round text-[17px] leading-none">close</span>
+            </button>
+          </span>
+        }
+      </div>
+    }
+
+    @if (hasReferenceScience() && showOtherScience()) {
+      <div class="mt-3">
+        <app-pr-multi-select
+          [options]="otherScienceList()"
+          optionLabel="official_code"
+          optionValue="id"
+          placeholder="Other Science Programs"
+          [ngModel]="otherScienceSelected()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="onOtherScienceChange($event ?? [])"
+          name="otherScience"
+          [isStatic]="true" />
+
+        @if (otherScienceSelected().length) {
+          <div class="mt-2.5 flex flex-wrap gap-2 min-h-[32px] items-center">
+            @for (sp of otherScienceSelected(); track sp.id) {
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
+                {{ scienceChipLabel(sp) }}
+                <button
+                  type="button"
+                  (click)="removeOtherScience(sp)"
+                  [attr.aria-label]="'Remove ' + scienceChipLabel(sp)"
+                  class="inline-flex size-[22px] shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--pr-color-accents-5)] transition-colors hover:bg-[rgba(30,32,47,0.08)] hover:text-[var(--pr-color-secondary-400)]">
+                  <span class="material-icons-round text-[17px] leading-none">close</span>
+                </button>
+              </span>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Contributing W3 and bilateral projects -->
+  @if (bilateralProjects().length) {
+    <div class="bilateral-projects-field">
+      <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">Contributing W3 and bilateral projects</p>
+      <app-pr-multi-select
+        [options]="bilateralProjects()"
+        optionLabel="project_name"
+        optionValue="project_id"
+        placeholder="Select projects"
+        [ngModel]="selectedBilateral()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="selectedBilateral.set($event ?? [])"
+        name="bilateral"
+        [isStatic]="true" />
+
+      @if (selectedBilateral().length) {
+        <div class="mt-2.5 flex flex-wrap gap-2 min-h-[32px] items-center">
+          @for (project of selectedBilateral(); track $index) {
+            <span class="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
+              <span class="truncate">{{ project?.project_name }}</span>
+              <button
+                type="button"
+                (click)="removeBilateral(project)"
+                aria-label="Remove project"
+                class="inline-flex size-[22px] shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--pr-color-accents-5)] transition-colors hover:bg-[rgba(30,32,47,0.08)] hover:text-[var(--pr-color-secondary-400)]">
+                <span class="material-icons-round text-[17px] leading-none">close</span>
+              </button>
+            </span>
+          }
+        </div>
+      }
+    </div>
+  }
+  </section>
+
+  @if (autoCreateHint()) {
+    <p
+      class="m-0 flex items-start gap-2 rounded-xl border border-[var(--pr-color-orange-200,#fde3c3)] bg-[var(--pr-color-orange-50,#fff7ed)] px-3.5 py-2.5 text-[12.5px] text-[var(--pr-color-accents-6)]"
+      role="status"
+      data-testid="lrf-autocreate-hint">
+      <span class="material-icons-round mt-[1px] text-[16px] text-[var(--pr-color-orange-500)]" aria-hidden="true">info</span>
+      <span>{{ autoCreateHint() }}</span>
+    </p>
+  }
+
+  <!-- Spacer so the last field can scroll fully above the sticky footer -->
+  <div class="h-6 shrink-0"></div>
+
+  <!-- sticky footer: anchored to bottom: 0 with NO space below it -->
+  <div class="sticky bottom-0 -mx-6 mt-auto flex items-center justify-between gap-4 border-t border-[rgba(30,32,47,0.1)] bg-white px-6 py-3.5 z-30 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+    @if (missingFields().length) {
+      <button
+        type="button"
+        (click)="focusFirstMissingField()"
+        data-testid="missing-fields-button"
+        class="inline-flex items-center gap-2 text-[13px] text-[var(--pr-color-accents-6)] bg-transparent border-0 p-0 cursor-pointer hover:text-[var(--pr-color-primary-400)] transition-colors text-left"
+        [title]="'Click to focus missing field: ' + missingFields().join(' · ')">
+        <span class="size-[7px] shrink-0 rounded-full bg-[var(--pr-color-orange-500)]"></span>
+        <span class="underline decoration-dotted underline-offset-4">
+          {{ missingFields().length }} field{{ missingFields().length === 1 ? '' : 's' }} left before you can create
+        </span>
+      </button>
+    } @else {
+      <span data-testid="ready-to-create-indicator" class="flex items-center gap-2 text-[13px] text-[var(--pr-color-accents-6)] font-medium">
+        <span class="size-[7px] shrink-0 rounded-full bg-[var(--pr-color-green-500)]"></span> Ready to create
+      </span>
+    }
+
+    <div class="flex shrink-0 items-center gap-2.5">
+      <button
+        type="button"
+        (click)="cancelled.emit()"
+        class="appearance-none rounded-[10px] border border-[rgba(30,32,47,0.16)] bg-white px-5 py-2.5 text-[13.5px] font-semibold text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)] cursor-pointer">
+        Cancel
+      </button>
+      @if (canReport()) {
+        <button
+          type="submit"
+          data-testid="create-result-submit-btn"
+          [disabled]="!canSave() || creatingResult()"
+          class="inline-flex appearance-none items-center gap-2 rounded-[10px] border-0 bg-gradient-to-r from-[var(--pr-color-primary-300)] to-[var(--pr-color-primary-400)] px-5 py-2.5 text-[13.5px] font-semibold text-white shadow-xs hover:opacity-95 disabled:cursor-not-allowed disabled:bg-none disabled:bg-[#e7e1fb] disabled:text-[#b3a4e8] disabled:shadow-none cursor-pointer transition-all">
+          {{ creatingResult() ? 'Creating…' : 'Create and continue' }}
+          @if (creatingResult()) {
+            <i class="pi pi-spin pi-spinner text-[16px]" aria-hidden="true"></i>
+          }
+        </button>
+      }
+    </div>
+  </div>
+} @else {
+  <!-- In browse mode before selection: clean Cancel button pinned to bottom -->
+  <div class="sticky bottom-0 -mx-6 mt-auto flex items-center justify-end border-t border-[rgba(30,32,47,0.08)] bg-white px-6 py-3 z-30 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+    <button
+      type="button"
+      (click)="cancelled.emit()"
+      class="appearance-none rounded-[10px] border border-[rgba(30,32,47,0.16)] bg-white px-5 py-2 text-[13px] font-semibold text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)] cursor-pointer">
+      Cancel
+    </button>
+  </div>
+}
+</form>

@@ -84,6 +84,33 @@ export class VersionRepository extends Repository<Version> {
       });
   }
 
+  /**
+   * Versions (phases) in which a result CODE has an active row.
+   *
+   * `$_getVersionOfAResult` answers the same question but starts from an internal `result.id`,
+   * which the caller does not have when the code/phase pair it was given does not exist — the
+   * exact case the result-detail screen has to explain ("this result has no 2026 version").
+   * Same shape, one less hop.
+   */
+  $_getVersionsOfAResultCode(result_code: number): Promise<number[]> {
+    const queryData = `
+    select
+    r.version_id
+  from
+    \`result\` r
+  where
+    r.result_code = ?
+    and r.is_active > 0
+      `;
+    return this.query(queryData, [result_code])
+      .then((res: { version_id: number }[]) => {
+        return res.map((item) => item.version_id);
+      })
+      .catch((_err) => {
+        return [];
+      });
+  }
+
   $_getAllInovationDevToReplicate(
     phase: Version,
     result_type = 7,

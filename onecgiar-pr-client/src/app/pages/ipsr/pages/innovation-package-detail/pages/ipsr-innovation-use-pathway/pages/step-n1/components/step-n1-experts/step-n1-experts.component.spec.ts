@@ -5,7 +5,6 @@ import { NoDataTextComponent } from '../../../../../../../../../../custom-fields
 import { FormsModule } from '@angular/forms';
 import { PrFieldHeaderComponent } from '../../../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { PrRadioButtonComponent } from '../../../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
-import { RadioButtonModule } from 'primeng/radiobutton';
 
 describe('StepN1ExpertsComponent', () => {
   let component: StepN1ExpertsComponent;
@@ -14,7 +13,7 @@ describe('StepN1ExpertsComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [StepN1ExpertsComponent, NoDataTextComponent, PrFieldHeaderComponent, PrRadioButtonComponent],
-      imports: [HttpClientTestingModule, FormsModule, RadioButtonModule]
+      imports: [HttpClientTestingModule, FormsModule]
     }).compileComponents();
   });
 

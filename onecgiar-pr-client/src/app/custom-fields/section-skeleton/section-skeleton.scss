@@ -1,0 +1,71 @@
+// Visual mask for `[appSectionSkeleton]` (see section-skeleton.directive.ts for WHY it masks
+// the real DOM instead of replacing it). Global on purpose: it has to reach the projected and
+// legacy descendant DOM of every section, which a component stylesheet cannot do.
+//
+// Reuses the existing `.pr-skeleton` language (grey block + `pr-skeleton-shimmer` sweep, defined
+// in src/styles.scss) so the app keeps ONE skeleton look.
+
+.rd-loading {
+  // Replaces the interaction lock of the removed "Loading section..." veil: nothing under the
+  // skeleton can be clicked or typed into while its value is about to be overwritten.
+  pointer-events: none;
+
+  // ── The control bodies of every field type ───────────────────────────────────────────────
+  // pr-input → .pr-input · pr-textarea / pr-radio-button / pr-select → .pr-field
+  // pr-multi-select → .custom_select · pr-yes-or-not → .choices
+  // pr-checkbox → .checkbox_container · pr-range-level → .prl
+  // A nested match (pr-select renders .custom_select inside .pr-field) simply paints the same
+  // opaque grey twice — no artefact — so no :not() gymnastics are needed.
+  .pr-input,
+  .pr-field,
+  .custom_select,
+  .choices,
+  .checkbox_container,
+  .prl {
+    position: relative;
+    // An empty control (options not fetched yet) can collapse to a hairline; give the mask a
+    // body so the skeleton reads as a field instead of a stripe.
+    min-height: 34px;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      border-radius: 6px;
+      background-color: var(--pr-color-accents-2, #eaeaea);
+      // Same grey + highlight sweep as `.pr-skeleton`.
+      background-image: linear-gradient(90deg, rgba(255, 255, 255, 0) 0, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0) 100%);
+      background-repeat: no-repeat;
+      background-size: 200% 100%;
+      animation: pr-skeleton-sweep 1.2s infinite;
+    }
+  }
+
+  // The `appFeedbackValidation` directive injects a `.pr-field.mandatory` inside a
+  // `display: none` host — it must stay untouched (it is a scan entry, never a visual field).
+  [appFeedbackValidation] .pr-field {
+    min-height: 0;
+
+    &::after {
+      content: none;
+    }
+  }
+
+  // The state colours this used to neutralise are gone: a field no longer paints a verdict
+  // (orange "mandatory, empty" / green "filled") while the values are still unknown, so there is
+  // nothing left to withhold. See styles/field-card.scss.
+}
+
+// Own keyframes: `.pr-skeleton` animates `transform` on a child pseudo-element, but the mask
+// here IS the pseudo-element, so it sweeps `background-position` instead. With a 200%-wide
+// image the percentage resolves against a negative (container - image) width, hence the
+// mirrored from/to values.
+@keyframes pr-skeleton-sweep {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}

@@ -1,6 +1,6 @@
 /* eslint-disable arrow-parens */
 /* eslint-disable camelcase */
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
@@ -18,8 +18,27 @@ export class SubGeoscopeComponent {
   subNationalTwo: any = [];
   subNationalTwoSelected = null;
   @Output() selectOptionEvent = new EventEmitter();
-  showNationalLevelSelect: boolean = true;
-  showNationalLevelTwoSelect: boolean = true;
+  // P2-3322: signal-backed flags. Picking a country (`getSubNationalLevelOne`) or a sub-national level 1
+  // (`getSSubNationalLevelTwo`) hides the dependent <app-pr-select>s and re-shows them 300 ms later inside a
+  // `setTimeout`, so they remount empty against the newly fetched options. As plain fields that delayed
+  // write notified nothing, so under zoneless change detection no second render pass ran and the
+  // "Sub-national level 1" / "Sub-national level 2" dropdowns — and the row's delete button, which is gated
+  // by the same flag — disappeared for good after choosing a country. The public API stays a plain boolean,
+  // so the template and the existing specs are untouched.
+  private readonly _showNationalLevelSelect = signal<boolean>(true);
+  get showNationalLevelSelect(): boolean {
+    return this._showNationalLevelSelect();
+  }
+  set showNationalLevelSelect(value: boolean) {
+    this._showNationalLevelSelect.set(value);
+  }
+  private readonly _showNationalLevelTwoSelect = signal<boolean>(true);
+  get showNationalLevelTwoSelect(): boolean {
+    return this._showNationalLevelTwoSelect();
+  }
+  set showNationalLevelTwoSelect(value: boolean) {
+    this._showNationalLevelTwoSelect.set(value);
+  }
   exitsSubLevelOne: boolean = true;
   exitsSubLevelTwo: boolean = true;
   nameCountry: string;

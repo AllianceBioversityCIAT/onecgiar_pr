@@ -103,6 +103,9 @@ export class ResultsByProjectsService {
       let created = 0;
       let reactivated = 0;
       let unchanged = 0;
+      // P2-3214: the ids that were actually inserted, so the caller can notify the owning centre
+      // without re-notifying on every partners save.
+      const newlyLinked: number[] = [];
 
       for (const pid of incomingIds) {
         const res = await this.linkBilateralProjectToResult(
@@ -110,8 +113,10 @@ export class ResultsByProjectsService {
           pid,
           userId,
         );
-        if (res.status === HttpStatus.CREATED) created += 1;
-        else if (
+        if (res.status === HttpStatus.CREATED) {
+          created += 1;
+          newlyLinked.push(pid);
+        } else if (
           res.status === HttpStatus.OK &&
           res.message.includes('reactivated')
         )
@@ -130,6 +135,7 @@ export class ResultsByProjectsService {
         response: {
           result_id: resultId,
           set_active: incomingIds,
+          newly_linked: newlyLinked,
           deactivated: toDisable.map((r) => Number(r.project_id)),
           summary: {
             created,

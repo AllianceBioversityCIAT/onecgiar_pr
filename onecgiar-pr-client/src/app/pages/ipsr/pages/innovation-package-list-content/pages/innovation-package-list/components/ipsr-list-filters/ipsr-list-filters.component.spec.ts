@@ -1,7 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { FormsModule } from '@angular/forms';
-import { TooltipModule } from 'primeng/tooltip';
 
 import { IpsrListFiltersComponent } from './ipsr-list-filters.component';
 import { PrButtonComponent } from '../../../../../../../../custom-fields/pr-button/pr-button.component';
@@ -19,7 +18,7 @@ describe('IpsrListFiltersComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [IpsrListFiltersComponent, PrButtonComponent, InnovationPackageListFilterPipe],
-      imports: [HttpClientTestingModule, FormsModule, TooltipModule],
+      imports: [HttpClientTestingModule, FormsModule],
       providers: [IpsrListFilterService, IpsrListService, ExportTablesService, ApiService]
     }).compileComponents();
 

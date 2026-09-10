@@ -4,12 +4,11 @@ import { UpdatesComponent } from './updates.component';
 import { UpdatesRoutingModule } from './updates-routing.module';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { NotificationItemModule } from '../../components/notification-item/notification-item.module';
-import { ButtonModule } from 'primeng/button';
 import { UpdateNotificationComponent } from '../../components/update-notification/update-notification.component';
 import { SkeletonNotificationItemComponent } from '../../components/notification-item/skeleton-notification-item/skeleton-notification-item.component';
 
 @NgModule({
   declarations: [UpdatesComponent],
-  imports: [CommonModule, UpdatesRoutingModule, CustomFieldsModule, NotificationItemModule, ButtonModule, UpdateNotificationComponent, SkeletonNotificationItemComponent]
+  imports: [CommonModule, UpdatesRoutingModule, CustomFieldsModule, NotificationItemModule, UpdateNotificationComponent, SkeletonNotificationItemComponent]
 })
 export class UpdatesModule {}

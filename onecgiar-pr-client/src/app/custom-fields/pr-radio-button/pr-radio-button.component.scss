@@ -9,13 +9,27 @@
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+}
 
-    &__subLabel {
-      margin: 0;
-      margin-left: 25px;
-      @include fonts.pr-typography('body-2');
-      color: var(--text-color-secondary);
-    }
+// P2-3291. The conditional sub-options of an option are drawn as a contained group so they read as
+// derived from the answer that revealed them, which is the whole of Nicoleta Trifa's feedback.
+// 28px clears the radio label's optical start (16px control + 8px gap), so the checkboxes begin AFTER
+// the text they depend on rather than under the control. The rule uses --pr-border-strong, not the
+// lighter --pr-border-divider used for row separators: at #eeeef1 on a white card the line is
+// invisible in practice, which is worse than no rule at all — it claims a job it does not do.
+.radioButton__subGroup {
+  margin-top: 8px;
+  margin-left: 28px;
+  padding-left: 16px;
+  border-left: 1px solid var(--pr-border-strong);
+
+  // This rule used to live nested inside `.radioButton`, but the <p> is a SIBLING of that element, so
+  // the selector never matched and the note rendered with browser-default margins and no typography.
+  .radioButton__subLabel {
+    margin: 0 0 4px;
+    @include fonts.pr-typography('body-2');
+    color: var(--text-color-secondary);
   }
 }
 
@@ -23,8 +37,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: 20px;
-  padding: 5px;
+  padding: 5px 0;
 }
 
 .verticalAlignment {
@@ -44,4 +57,20 @@
     height: 100%;
     background-color: rgba(var(--pr-color-white-rgb), 0);
   }
+}
+
+// P2-3477 AC9. A disabled segmented track and the defect this ticket reported look IDENTICAL
+// otherwise: in both, three buttons sit there and clicking does nothing. `[disabled]` is invisible
+// on a transparent segment — the only tell was the cursor, which a screenshot never shows and a
+// touch user never sees. That ambiguity is how the original bug reached QA as "the buttons are
+// inactive", so read-only has to say so on its own.
+//
+// The whole track dims rather than the unselected segments: the chosen score MUST stay readable
+// (AC9 keeps the answer visible), and dimming only the others would read as "these are unavailable,
+// that one is clickable". `.disabled` in `pr-select` is the same convention (opacity + not-allowed);
+// 0.6 rather than its 0.5 because the selected segment is dark text that still has to be READ, not
+// just seen — this control's read-only state must keep reporting the answer.
+.segmented-track--readonly {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

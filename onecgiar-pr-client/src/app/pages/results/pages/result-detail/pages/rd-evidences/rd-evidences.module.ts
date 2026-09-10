@@ -6,22 +6,17 @@ import { RdEvidencesComponent } from './rd-evidences.component';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { EvidenceItemComponent } from './evidence-item/evidence-item.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
-import { TooltipModule } from 'primeng/tooltip';
-import { MessageModule } from 'primeng/message';
-import { DialogModule } from 'primeng/dialog';
-import { SkeletonModule } from 'primeng/skeleton';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
+import { SectionBottomBarComponent } from '../../components/section-bottom-bar/section-bottom-bar.component';
 
 @NgModule({
   declarations: [RdEvidencesComponent, EvidenceItemComponent],
-  imports: [
+  imports: [SectionBottomBarComponent,
     CommonModule,
     RdEvidencesRoutingModule,
     CustomFieldsModule,
     FeedbackValidationDirectiveModule,
-    TooltipModule,
-    MessageModule,
-    DialogModule,
-    SkeletonModule
+    PrDialogComponent,
   ]
 })
 export class RdEvidencesModule {}

@@ -35,4 +35,41 @@ export class ResultReviewHistoryRepository extends Repository<ResultReviewHistor
       });
     }
   }
+
+  /**
+   * P2-3157 — full review trail for a result, newest first.
+   *
+   * Backs the centre-facing "why was this rejected" view: the rejection justification lives in
+   * `comment`. UPDATE entries are included on purpose so the centre can also see what the Science
+   * Program edited during review (UX Finding 5.3.1 — "no review history visible to submitters").
+   */
+  async getReviewHistoryByResultId(
+    resultId: number,
+  ): Promise<ResultReviewHistory[]> {
+    const queryData = `
+    SELECT
+      rrh.id,
+      rrh.result_id,
+      rrh.action,
+      rrh.comment,
+      rrh.created_at,
+      rrh.created_by,
+      u.first_name,
+      u.last_name,
+      u.email
+    FROM result_review_history rrh
+      LEFT JOIN users u ON u.id = rrh.created_by
+    WHERE rrh.result_id = ?
+    ORDER BY rrh.created_at DESC, rrh.id DESC;
+    `;
+    try {
+      return await this.query(queryData, [resultId]);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultReviewHistoryRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
 }

@@ -1,0 +1,488 @@
+@use '../../../../../styles/fonts.scss' as fonts;
+@use '../../../../../styles/viewport-page' as vp;
+
+// Styling lives in the template via Tailwind utilities; SCSS only holds what
+// Tailwind can't express — the :host box and the flyout entrance keyframe.
+// Column geometry lives here, ONCE. Every fixed column and the content offset
+// derive from these — desyncing two of them is what put the content under the
+// sidebar and made the AOW cards unclickable, so don't inline the numbers again.
+:host {
+  display: block;
+
+  // Match the app sidebar gap: expanded uses --sidebar-width, icon-rail uses --sidebar-width-icon.
+  --rail-w: var(--sidebar-width, 280px);
+  --panel-w: 236px; // Areas of Work column (AOW mode)
+  --full-w: var(--sidebar-width, 280px);
+  --float-gap: 0px; // flush against the app sidebar
+}
+
+// SAV-T-3 (docs/specs/changes/sp-shell-app-viewport) — locks this host to the outlet slot at
+// ≥900px when the active route is Overview/Reporting (`isProgramShell()`, bound via the
+// component's `host` metadata). See `pr-viewport-page`'s own header for the mechanism and the
+// `result-detail` rationale (why `position: absolute`, not a height chain).
+:host(.pr-viewport-page) {
+  @include vp.pr-viewport-page;
+}
+
+// Browsers default <button> to `cursor: default` and Tailwind's preflight does not
+// override it, so every clickable in this page looked inert. Fix once, at the host,
+// instead of sprinkling `cursor-pointer` on 20 elements.
+:host button:not(:disabled),
+:host a[routerLink] {
+  cursor: pointer;
+}
+
+@keyframes flyout-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Master column morph: 300px floating card (dashboard) ↔ 76px flush rail (AOW).
+// The box itself transitions; its two content variants cross-fade via
+// animate.enter/animate.leave (Angular 20+ native — no BrowserAnimationsModule).
+// ---------------------------------------------------------------------------
+.pr-rail {
+  transition:
+    width 340ms cubic-bezier(0.33, 0, 0.2, 1),
+    inset 340ms cubic-bezier(0.33, 0, 0.2, 1),
+    padding 340ms cubic-bezier(0.33, 0, 0.2, 1),
+    border-radius 340ms cubic-bezier(0.33, 0, 0.2, 1);
+}
+
+// Content swap inside the rail. The leaving variant is taken out of flow so it
+// doesn't push the incoming one down while both are mounted.
+.pr-fade--enter {
+  animation: pr-fade-in 300ms 90ms cubic-bezier(0.33, 0, 0.2, 1) backwards;
+}
+
+.pr-fade--leave {
+  position: absolute;
+  inset: 0 14px auto;
+  animation: pr-fade-out 160ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
+}
+
+@keyframes pr-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pr-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+// Column 2 (Areas of Work): slides out from behind the rail and back in.
+.pr-panel--enter {
+  animation: pr-panel-in 320ms cubic-bezier(0.33, 0, 0.2, 1);
+}
+
+.pr-panel--leave {
+  animation: pr-panel-out 240ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
+}
+
+@keyframes pr-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pr-panel-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-rail {
+    transition-duration: 1ms;
+  }
+
+  .pr-fade--enter,
+  .pr-fade--leave,
+  .pr-panel--enter,
+  .pr-panel--leave {
+    animation-duration: 1ms;
+  }
+}
+
+// app-pr-select's inner .field is `width:100%` + padding + border; without a global
+// box-sizing:border-box it overflows a width-constrained wrapper and the chevron box
+// sticks out. Scope-fix box-sizing for the pr-selects rendered inside this component.
+:host ::ng-deep .custom_select .field {
+  box-sizing: border-box;
+}
+
+// Overview phase selector (changes/overview-phase-filter, OPF-T-4, design.md §8). `app-pr-select`'s
+// shared `.custom_select .field` chrome (custom-fields.scss) is a boxy 8px/10px legacy control;
+// this scopes it down to the compact chip the redesign band's toolbar filters already use
+// (`app-pr-filter-select` in `reporting-program-band`), without touching that shared stylesheet.
+// The options panel is NOT portaled to body (`overlayToBody` left false), so it stays a DOM
+// descendant of `.opf-phase-select` and these rules reach it.
+:host ::ng-deep .opf-phase-select {
+  position: relative;
+  z-index: 1;
+
+  .custom_select .field {
+    height: 34px;
+    padding: 0 10px;
+    border-color: var(--pr-border);
+    border-radius: 8px;
+    background-color: var(--pr-surface-card);
+    transition: border-color 120ms ease-out;
+
+    &:focus-within {
+      border-color: var(--pr-color-primary-300);
+    }
+  }
+
+  // Shared `.options` defaults to z-index 3 (custom-fields.scss) — below Overview KPI cards at z-10.
+  // Raise and paint opaque so W1/W2 content cannot bleed through the virtual-scroll viewport.
+  .custom_select:focus-within .options {
+    z-index: 50;
+    background-color: var(--pr-surface-card);
+  }
+
+  .search_input_container,
+  .virtual_scroll,
+  .cdk-virtual-scroll-viewport,
+  .options .option {
+    background-color: var(--pr-surface-card);
+  }
+
+  // The Open-phase row's chip — violet tint, matches the band's accent (hard rule §7: "Violet is
+  // navigation and actions"). Every other option carries an empty `phaseTagLabel`, so `app-pr-select`
+  // renders no badge for them at all (see `pr-select.component.html`'s `@if` guard).
+  .pr-select-option-badge--open {
+    background: var(--pr-color-primary-50);
+    color: var(--pr-color-primary-400);
+  }
+}
+
+// Planned ToC — keep typology multiselect panel wide + above scrolled list content.
+:host ::ng-deep .planned-type-filter {
+  .custom_select .field {
+    width: 100%;
+  }
+
+  .custom_select .field .options {
+    min-width: 100%;
+    width: max(100%, 420px);
+    z-index: 40;
+  }
+}
+
+// Yellow hit marks from `highlightSearch` pipe (innerHTML).
+:host ::ng-deep mark.planned-search-hit {
+  background: #fde047;
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+  box-decoration-break: clone;
+}
+
+// ---------------------------------------------------------------------------
+// My CGIAR Centers. The card cycles on its own; hovering swells it slightly and
+// floats the full list out below, each row rising in sequence. No click needed.
+// ---------------------------------------------------------------------------
+.pr-centers {
+  transition:
+    transform 320ms cubic-bezier(0.33, 0, 0.2, 1),
+    box-shadow 320ms cubic-bezier(0.33, 0, 0.2, 1);
+
+  &:hover {
+    transform: translateY(-2px) scale(1.012);
+    box-shadow: 0 18px 40px rgba(30, 32, 47, 0.14);
+  }
+}
+
+// Each rotation re-creates the slide, so the swap animates instead of jumping.
+.pr-centers__slide {
+  animation: pr-centers-slide 420ms cubic-bezier(0.33, 0, 0.2, 1);
+}
+
+@keyframes pr-centers-slide {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+// The list unfolds from the card's own edge — clip-path makes it read as the
+// surface stretching rather than a separate panel appearing.
+.pr-centers__pop {
+  transform-origin: top center;
+  animation: pr-centers-pop 380ms cubic-bezier(0.33, 0, 0.2, 1);
+}
+
+@keyframes pr-centers-pop {
+  from {
+    opacity: 0;
+    clip-path: inset(0 12% 100% 12% round 18px);
+    transform: translateY(-10px) scaleY(0.94);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0 round 18px);
+    transform: none;
+  }
+}
+
+.pr-centers__row {
+  animation: pr-centers-row 340ms cubic-bezier(0.33, 0, 0.2, 1) backwards;
+  animation-delay: calc(90ms + var(--i, 0) * 45ms);
+}
+
+@keyframes pr-centers-row {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-centers,
+  .pr-centers__slide,
+  .pr-centers__pop,
+  .pr-centers__row {
+    transition-duration: 1ms;
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+}
+
+/* ── By-AoW View Tabular Layout (BTC-R-2) ──
+   6-column grid: [Chevron 28px] [Title 1fr] [Target 76px] [Achieved 76px] [KPIs 64px] [Progress 130px] */
+$pr-by-aow-tracks: 28px minmax(240px, 1fr) 76px 76px 64px 130px;
+$pr-by-aow-gap: 12px;
+$pr-by-aow-pad: 8px 16px;
+
+.pr-by-aow-head {
+  display: grid;
+  grid-template-columns: $pr-by-aow-tracks;
+  align-items: center;
+  gap: $pr-by-aow-gap;
+  height: 32px;
+  padding: 0 16px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pr-text-muted);
+  user-select: none;
+  box-sizing: border-box;
+  min-width: 680px;
+}
+
+.pr-by-aow-row {
+  display: grid;
+  grid-template-columns: $pr-by-aow-tracks;
+  align-items: center;
+  gap: $pr-by-aow-gap;
+  min-height: 48px;
+  padding: $pr-by-aow-pad;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 680px;
+  text-align: left;
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: -2px;
+  }
+}
+
+/* ── Level 3 Indented Indicator Scaffolding (BHA-R-4, BHA-R-5, BHA-R-6) ──
+   7-column grid: [Mark 24px] [Title 1fr] [Target 72px] [Achieved 72px] [Status 110px] [Progress 110px] [Action 120px] */
+$pr-by-aow-indicator-tracks: 24px minmax(260px, 1fr) 72px 72px 110px 110px 120px;
+$pr-by-aow-indicator-gap: 12px;
+$pr-by-aow-indicator-pad: 8px 16px;
+
+.pr-by-aow-subhead {
+  display: grid;
+  grid-template-columns: $pr-by-aow-indicator-tracks;
+  align-items: center;
+  gap: $pr-by-aow-indicator-gap;
+  height: 28px;
+  padding: 0 16px;
+  background: rgba(248, 250, 252, 0.5);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  box-sizing: border-box;
+  user-select: none;
+  min-width: 760px;
+}
+
+.pr-by-aow-indicator-row {
+  display: grid;
+  grid-template-columns: $pr-by-aow-indicator-tracks;
+  align-items: center;
+  gap: $pr-by-aow-indicator-gap;
+  min-height: 48px;
+  padding: $pr-by-aow-indicator-pad;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--pr-border-divider);
+  background: var(--pr-surface-card);
+  cursor: pointer;
+  transition: background 150ms ease;
+  min-width: 760px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: rgba(248, 250, 252, 0.8);
+  }
+}
+
+.pr-status-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--pr-color-primary-300);
+
+  svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// ─── Legacy "Report emerging result" dialog ───────────────────────────────────
+// Moved AS-IS from entity-details.component.scss (the retired host of this same modal).
+// Deliberately NOT re-authored in Tailwind: `::ng-deep` is component-scoped, so without this
+// block the dialog falls back to the `.pr-dialog` defaults (320px min-width, padded body) and
+// the form renders in a narrow strip. The `!important` widths exist to beat those base styles.
+.report-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 20px;
+  @include fonts.pr-typography('h4');
+  font-weight: 600;
+  border-bottom: 1px solid var(--pr-color-accents-2);
+}
+
+// Class renamed from the source's `report-result-dialog` — the values below are byte-identical.
+// `::ng-deep` with no `:host` prefix emits an UNSCOPED, document-global rule that lives as long as
+// the app does, and the legacy create modal (`aow-hlo-create-modal`) styles a dialog of the SAME
+// name at `width: 80vw` with no max-width. This page is now the host of BOTH dialogs, so keeping
+// the name would cap the create modal at 1000px, round it to 26px and strip its body padding —
+// i.e. reusing the legacy modal verbatim would silently restyle it. The name is the only isolation
+// `::ng-deep` offers.
+::ng-deep {
+  .report-emerging-dialog {
+    width: 80vw !important;
+    max-width: 1120px !important;
+    min-height: 50vh !important;
+    max-height: 90vh !important;
+    border-radius: 26px !important;
+
+    @media screen and (max-width: 1100px) {
+      width: 85vw !important;
+      max-width: none !important;
+    }
+
+    @media screen and (max-width: 768px) {
+      width: 95vw !important;
+    }
+
+    // The form is taller than the dialog once a level is picked, and the dialog is capped at 90vh.
+    // `hidden` (inherited from the retired page) simply swallowed the overflow.
+    .pr-dialog__body {
+      padding: 0 !important;
+      overflow-y: auto;
+    }
+
+    // `app-save-button` ships `.fixed_button { position: fixed; right: 0; bottom: 0 }` — it is built
+    // for the Result Detail page, where the button floats over the whole viewport. Inside a dialog
+    // that anchors it to the WINDOW corner, so "Save and continue" rendered outside the modal (it
+    // only looked right on the retired page because that dialog nearly filled the screen). Anchor it
+    // to the dialog instead. Scoped to this dialog: the page-level behaviour is untouched.
+    position: relative;
+
+    .fixed_button {
+      position: absolute !important;
+      right: 24px !important;
+      bottom: 20px !important;
+      margin: 0 !important;
+    }
+  }
+
+  .where-to-report-dialog {
+    width: 85vw !important;
+    max-width: 1140px !important;
+    max-height: 90vh !important;
+    border-radius: 16px !important;
+
+    @media screen and (max-width: 1100px) {
+      width: 95vw !important;
+      max-width: none !important;
+    }
+
+    .pr-dialog__body {
+      padding: 0 !important;
+      overflow-y: hidden;
+    }
+  }
+}
+
+@keyframes focusFlash {
+  0% {
+    box-shadow: 0 0 0 4px rgba(107, 70, 229, 0.45);
+    background-color: var(--pr-color-primary-50);
+  }
+  70% {
+    box-shadow: 0 0 0 4px rgba(107, 70, 229, 0.25);
+    background-color: var(--pr-color-primary-50);
+  }
+  100% {
+    box-shadow: none;
+    background-color: transparent;
+  }
+}
+
+:host ::ng-deep .animate-focus-flash {
+  animation: focusFlash 1.5s ease-out forwards;
+}
+

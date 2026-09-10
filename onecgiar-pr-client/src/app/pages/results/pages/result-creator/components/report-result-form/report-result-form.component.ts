@@ -1,4 +1,4 @@
-import { Component, OnInit, DoCheck, Output, EventEmitter, Input, signal, OnDestroy } from '@angular/core';
+import { Component, OnInit, DoCheck, Output, EventEmitter, Input, signal, computed, OnDestroy, NgZone, inject } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../services/result-level.service';
 import { Router } from '@angular/router';
@@ -7,6 +7,20 @@ import { PhasesService } from '../../../../../../shared/services/global/phases.s
 import { TerminologyService } from '../../../../../../internationalization/terminology.service';
 import { EntityAowService } from '../../../../../result-framework-reporting/pages/entity-aow/services/entity-aow.service';
 import { Subject, catchError, debounceTime, distinctUntilChanged, filter, map, merge, of, switchMap, takeUntil } from 'rxjs';
+import {
+  filterOutAvisaFromGroupedInitiativeOptions,
+  filterOutAvisaInitiatives
+} from '../../../../../../shared/utils/avisa-initiative.util';
+import {
+  INNOVATION_LINK_QUESTION,
+  QaInnovationDevelopmentResultsService,
+  innovationLinkAnswerIsComplete,
+  showsInnovationLinkQuestion
+} from '../../../../../../shared/services/global/qa-innovation-development-results.service';
+import { validateKpHandle } from '../../../../../result-framework-reporting/shared/report-result/kp-handle.validator';
+import { CgspaceItemDto } from '../../../../../result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.component';
+
+export type KpEntryMode = 'browse' | 'manual';
 
 type TitleSearchEvent =
   | {
@@ -15,7 +29,7 @@ type TitleSearchEvent =
       blockingExactTitleFound: boolean;
       titleCheckFailed: boolean;
     }
-  | { kind: 'elastic'; depthSearchList: any[] };
+  | { kind: 'similar'; depthSearchList: any[] };
 
 @Component({
   selector: 'app-report-result-form',
@@ -34,11 +48,42 @@ export class ReportResultFormComponent implements OnInit, DoCheck, OnDestroy {
   private readonly titleSearchDebounceMs = 500;
   mqapJson: {};
   validating = false;
-  kpAlertDescription = `Please add the handle generated in <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong> to report your knowledge product. Only knowledge products entered into <strong>one of these repositories</strong> are accepted in the PRMS Reporting Tool.<br><br>
+  readonly kpEntryMode = signal<KpEntryMode>('browse');
+
+  readonly phaseYear = computed(() => {
+    this.api.dataControlSE.reportingPhaseVersion?.();
+    return Number(this.api.dataControlSE.reportingCurrentPhase?.phaseYear ?? new Date().getFullYear());
+  });
+
+  readonly isAdmin = computed(() => !!this.api.rolesSE?.isAdmin);
+
+  // ---- P2-3421: link to a QA'd Innovation Development result -------------------------------
+  /** Shared catalogue — one request, one filter, shared with the ToC-linked creation surfaces. */
+  readonly qaInnovationsSE = inject(QaInnovationDevelopmentResultsService);
+  readonly innovationLinkQuestion = INNOVATION_LINK_QUESTION;
+  /** Default is NO, per the story. `null` would leave the mandatory field unanswered. */
+  hasInnovationLink: boolean = false;
+  linkedResultId: number | null = null;
+  /**
+   * Years used by the knowledge-product guidance. `reportingCurrentPhase` / `previousReportingPhase` are PLAIN
+   * objects, so the computed depends on `reportingPhaseVersion()` — bumped by `getCurrentPhases()` — to re-render
+   * once the phases land. The calendar-year fallback keeps the sentence from ever painting "null" on first frame.
+   */
+  readonly kpGuidanceYears = computed(() => {
+    this.api.dataControlSE.reportingPhaseVersion?.();
+    const current = Number(this.api.dataControlSE.reportingCurrentPhase?.phaseYear ?? new Date().getFullYear());
+    const previous = Number(this.api.dataControlSE.previousReportingPhase?.phaseYear ?? current - 1);
+    return { current, previous, next: current + 1 };
+  });
+
+  readonly kpAlertDescription = computed(() => {
+    const { current, previous, next } = this.kpGuidanceYears();
+    return `Please add the handle generated in <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong> to report your knowledge product. Only knowledge products entered into <strong>one of these repositories</strong> are accepted in the PRMS Reporting Tool.<br><br>
 The PRMS Reporting Tool will automatically retrieve all metadata entered into <strong>one of these repositories</strong>. Partners and geographical scope metadata are editable, while the other metadata fields are not.<br><br>
-The handle will be verified, and only knowledge products from <strong>2025</strong> will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace ("Date Online"). If the online publication date is missing, the issued date ("Date Issued") will be considered. Articles published online in <strong>2025</strong> but issued in <strong>2026</strong> will be accepted for the <strong>2025</strong> reporting phase.<br><br>
-Articles published online in <strong>2024</strong> but issued in <strong>2025</strong> will not be accepted and will need to be reported in the correct reporting period. Handles already reported will also not be accepted.<br><br>
+The handle will be verified, and only knowledge products from <strong>${current}</strong> will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace ("Date Online"). If the online publication date is missing, the issued date ("Date Issued") will be considered. Articles published online in <strong>${current}</strong> but issued in <strong>${next}</strong> will be accepted for the <strong>${current}</strong> reporting phase.<br><br>
+Articles published online in <strong>${previous}</strong> but issued in <strong>${current}</strong> will not be accepted and will need to be reported in the correct reporting period. Handles already reported will also not be accepted.<br><br>
 If you need support to modify any of the harvested metadata from <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong>, contact your Center's knowledge manager.`;
+  });
   allInitiatives = [];
   availableInitiativesSig = signal<any[]>([]);
   allPhases = [];
@@ -51,6 +96,13 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
 
   @Output() resultCreated = new EventEmitter<any>();
   @Input() disableInitiativeSelect: boolean = false;
+  /**
+   * P2-3421 — SURFACE gate. The link-to-a-QA'd-innovation question belongs to the EMERGENT
+   * (non-ToC) reporting pathway only, so the host that opens this form as the emergent modal opts
+   * in. Defaults to false so the standalone legacy creator, which renders the very same component,
+   * cannot inherit it by accident.
+   */
+  @Input() showInnovationLinkQuestion: boolean = false;
   private _selectedInitiativeId: number | string | null = null;
   @Input() set selectedInitiativeId(value: number | string | null | undefined) {
     this._selectedInitiativeId = value ?? null;
@@ -68,6 +120,8 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
 
   ngOnInit(): void {
     this.setupTitleSearch();
+    // Idempotent: the shared service fetches once and every surface reuses the cached list.
+    if (this.showInnovationLinkQuestion) this.qaInnovationsSE.load();
     this.api.dataControlSE.getCurrentPhases().subscribe(() => {
       this.api.rolesSE.validateReadOnly().then(() => {
         this.GET_AllInitiatives();
@@ -80,23 +134,21 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     this.applyPendingResultTypeSelection();
     this.api.updateUserData(() => {
       if (!this.api.rolesSE.isAdmin) {
-        this.availableInitiativesSig.set(
-          Array.isArray(this.api.dataControlSE.myInitiativesListReportingByPortfolio)
-            ? [...this.api.dataControlSE.myInitiativesListReportingByPortfolio]
-            : []
-        );
-        if (this._selectedInitiativeId == null && this.api.dataControlSE.myInitiativesListReportingByPortfolio?.length === 1) {
-          this._selectedInitiativeId =
-            this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.initiative_id ||
-            this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.id;
+        const initiatives = this.selectableInitiatives;
+        this.availableInitiativesSig.set(initiatives);
+        if (this._selectedInitiativeId == null && initiatives.length === 1) {
+          this._selectedInitiativeId = initiatives[0]?.initiative_id || initiatives[0]?.id;
         }
         this.tryApplySelectedInitiative();
       }
       if (this._selectedInitiativeId != null) {
         this.resultLevelSE.resultBody.initiative_id = this._selectedInitiativeId as any;
         this.tryApplySelectedInitiative();
-      } else if (this.api.dataControlSE.myInitiativesListReportingByPortfolio.length == 1) {
-        this.resultLevelSE.resultBody.initiative_id = this.api.dataControlSE.myInitiativesListReportingByPortfolio[0].id;
+      } else {
+        const initiatives = this.selectableInitiatives;
+        if (initiatives.length == 1) {
+          this.resultLevelSE.resultBody.initiative_id = initiatives[0].id;
+        }
       }
     });
 
@@ -106,7 +158,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   }
 
   onSelectInit() {
-    const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio) || []).find(
+    const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.selectableInitiatives) || []).find(
       init => init.id == this.resultLevelSE.resultBody.initiative_id
     );
     if (!init) return;
@@ -154,10 +206,10 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
           const groupList = entityTypesResponse;
           const resultList = [];
           groupList?.forEach(groupItem => {
-            const initsGroup = this.allInitiatives.filter(item => item.typeCode == groupItem.code);
+            const initsGroup = filterOutAvisaInitiatives(this.allInitiatives.filter(item => item.typeCode == groupItem.code));
             if (initsGroup?.length) resultList.push(groupItem, ...initsGroup);
           });
-          this.allInitiatives = resultList;
+          this.allInitiatives = filterOutAvisaFromGroupedInitiativeOptions(resultList);
           this.availableInitiativesSig.set(this.allInitiatives);
           this.tryApplySelectedInitiative();
         });
@@ -175,6 +227,101 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     return this.resultLevelSE.resultBody.result_type_id == 6;
   }
 
+  /** Locked “Report for” label — official code + short name, without the duplicated full_name. */
+  get reportForDisplay(): string {
+    const id = this.resultLevelSE.resultBody.initiative_id;
+    const match = this.availableInitiativesSig().find(item => !item?.isLabel && (item?.id ?? item?.initiative_id) == id);
+    if (!match) return '';
+
+    const code = match.official_code || match.officialCode || match.initiative_official_code || '';
+    const name = match.short_name || match.shortName || match.name || '';
+    if (code && name) return `${code} · ${name}`;
+
+    const full = String(match.full_name || '').trim();
+    if (full) {
+      const parts = full.split(/\s+-\s+/).filter(Boolean);
+      if (parts.length >= 2 && parts[1] === parts[parts.length - 1]) {
+        return `${parts[0]} · ${parts[1]}`;
+      }
+      return full;
+    }
+    return String(code);
+  }
+
+  onCgspaceItemSelected(item: CgspaceItemDto): void {
+    const url = item.itemUrl || item.handleUrl || item.handle;
+    this.validating = true;
+    const error = validateKpHandle(url);
+    this.mqapUrlError = error;
+    if (error.status) {
+      this.validating = false;
+      this.api.alertsFe.show({
+        id: 'reportResultError',
+        title: 'Error!',
+        description: error.message || 'Invalid CGSpace URL',
+        status: 'error'
+      });
+      return;
+    }
+
+    this.resultLevelSE.resultBody.handler = url;
+    this.resultLevelSE.resultBody.result_name = item.title ?? '';
+    this.api.resultsSE.GET_mqapValidation(url).subscribe({
+      next: resp => {
+        this.mqapJson = resp.response;
+        this.resultLevelSE.resultBody.result_name = resp.response?.title ?? '';
+        this.validating = false;
+      },
+      error: err => {
+        this.validating = false;
+        this.resultLevelSE.resultBody.handler = '';
+        this.resultLevelSE.resultBody.result_name = '';
+        this.api.alertsFe.show({
+          id: 'reportResultError',
+          title: 'Error!',
+          description: err?.error?.message || 'Could not retrieve metadata for this item',
+          status: 'error'
+        });
+      }
+    });
+  }
+
+  clearSelectedKpItem(): void {
+    this.resultLevelSE.resultBody.handler = '';
+    this.resultLevelSE.resultBody.result_name = '';
+    this.mqapJson = {};
+    this.mqapUrlError = { status: false, message: '' };
+    this.validating = false;
+  }
+
+  /**
+   * P2-3421 — visible only on the emergent pathway, only for Innovation use, and only from the
+   * 2026 phase onwards. The year gate is a PHASE gate on purpose: `isP25()` would switch the
+   * question on for 2025-phase results, which the epic requires to render exactly as they do today.
+   */
+  get showsInnovationLink(): boolean {
+    if (!this.showInnovationLinkQuestion) return false;
+    return showsInnovationLinkQuestion(
+      this.resultLevelSE.resultBody.result_type_id,
+      this.api.dataControlSE?.reportingCurrentPhase?.phaseYear
+    );
+  }
+
+  /** "Yes" without a chosen innovation is an incomplete answer, so it blocks "Save and continue". */
+  get innovationLinkIncomplete(): boolean {
+    if (!this.showsInnovationLink) return false;
+    return !innovationLinkAnswerIsComplete(this.hasInnovationLink, this.linkedResultId);
+  }
+
+  /** Answering "No" drops the selection so the payload can never carry a stale link. */
+  onInnovationLinkChange(): void {
+    if (this.hasInnovationLink !== true) this.linkedResultId = null;
+  }
+
+  get selectableInitiatives() {
+    return filterOutAvisaInitiatives(this.api.dataControlSE.myInitiativesListReportingByPortfolio);
+  }
+
   get resultTypeNamePlaceholder(): string {
     const typeName = this.resultTypeName;
     return typeName ? typeName + ' title...' : 'Title...';
@@ -190,8 +337,19 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   }
 
   clean() {
-    if (this.resultLevelSE.resultBody.result_type_id == 6) this.resultLevelSE.resultBody.result_name = '';
-    else this.onTitleChange(this.resultLevelSE.resultBody.result_name);
+    // P2-3421: the question only exists for Innovation use, so changing category drops the answer
+    // instead of leaving a hidden "Yes" (and its link) travelling in the payload.
+    this.hasInnovationLink = false;
+    this.linkedResultId = null;
+    this.kpEntryMode.set('browse');
+    if (this.resultLevelSE.resultBody.result_type_id == 6) {
+      this.clearSelectedKpItem();
+    } else {
+      this.resultLevelSE.resultBody.handler = '';
+      this.mqapJson = {};
+      this.mqapUrlError = { status: false, message: '' };
+      this.onTitleChange(this.resultLevelSE.resultBody.result_name);
+    }
   }
 
   private applyPendingResultTypeSelection() {
@@ -261,7 +419,16 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     let request$;
     if (this.resultLevelSE.resultBody.result_type_id != 6) {
       this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
-      request$ = this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody, true);
+      // P2-3421 — the answer travels INSIDE the create. Chaining the innovation-use PATCH here does
+      // not work: it rejects a body without a valid `innovation_use_level_id`, which a result that
+      // does not exist yet cannot have. The server persists it where Contributors and partners
+      // already stores it, so the user finds the answer ticked there.
+      const createBody: any = { ...this.resultLevelSE.resultBody };
+      if (this.showsInnovationLink) {
+        createBody.has_innovation_link = this.hasInnovationLink === true;
+        createBody.linked_results = this.hasInnovationLink === true && this.linkedResultId != null ? [Number(this.linkedResultId)] : [];
+      }
+      request$ = this.api.resultsSE.POST_resultCreateHeader(createBody, true);
     } else {
       request$ = this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody });
     }
@@ -280,8 +447,47 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     });
   }
 
+  /** Throttle for the mandatory-field DOM scan (was running synchronously on every CD cycle). */
+  private static readonly SCAN_THROTTLE_MS = 150;
+  private lastScanAt = 0;
+  private scanScheduled = false;
+  private trailingScanId: any = null;
+  private readonly ngZone = inject(NgZone);
+
   ngDoCheck(): void {
-    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.report_container');
+    // Same fix as Result Detail (P2-2967/P2-2971): throttle (leading + trailing edge) the DOM scan,
+    // coalesce into one rAF run OUTSIDE Angular's zone, tick only when it changed.
+    if (this.scanScheduled) return;
+    const elapsed = Date.now() - this.lastScanAt;
+    if (elapsed >= ReportResultFormComponent.SCAN_THROTTLE_MS) {
+      this.runFeedbackScan();
+    } else if (this.trailingScanId === null) {
+      this.ngZone.runOutsideAngular(() => {
+        this.trailingScanId = setTimeout(() => {
+          this.trailingScanId = null;
+          this.runFeedbackScan();
+        }, ReportResultFormComponent.SCAN_THROTTLE_MS - elapsed);
+      });
+    }
+  }
+
+  private runFeedbackScan(): void {
+    if (this.trailingScanId !== null) {
+      clearTimeout(this.trailingScanId);
+      this.trailingScanId = null;
+    }
+    this.lastScanAt = Date.now();
+    this.scanScheduled = true;
+    this.ngZone.runOutsideAngular(() => {
+      requestAnimationFrame(() => {
+        this.scanScheduled = false;
+        const before = this.api.dataControlSE.fieldFeedbackList();
+        this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.report_container');
+        if (this.api.dataControlSE.fieldFeedbackList() !== before) {
+          this.ngZone.run(() => {});
+        }
+      });
+    });
   }
 
   GET_mqapValidation() {
@@ -361,7 +567,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   }
 
   private applyTitleSearchEvent(event: TitleSearchEvent): void {
-    if (event.kind === 'elastic') {
+    if (event.kind === 'similar') {
       this.depthSearchList = event.depthSearchList;
       return;
     }
@@ -373,9 +579,11 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   }
 
   /**
-   * Elastic powers similar-results suggestions; MySQL uniqueness gates create.
-   * Emits gate and elastic events independently so a slow Elastic response
-   * does not block the uniqueness gate or save button.
+   * Both halves are ours: `get/depth-search` returns the similar-results suggestions and
+   * `check-title-uniqueness` gates create. P2-3527 — the suggestions used to come from an Elastic
+   * host that stopped resolving, and the failure was swallowed into an empty list.
+   * Emits gate and similar-results events independently so a slow search does not block the
+   * uniqueness gate or the save button.
    */
   private searchResultsWithTitleUniqueness(title: string) {
     const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
@@ -400,20 +608,20 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
       )
     );
 
-    const elastic$ = this.api.resultsSE.GET_FindResultsElastic(title, legacyType).pipe(
+    const similar$ = this.api.resultsSE.GET_depthSearch(title, legacyType).pipe(
       map(response => ({
-        kind: 'elastic' as const,
+        kind: 'similar' as const,
         depthSearchList: this.mapDepthSearchResults(response)
       })),
       catchError(() =>
         of({
-          kind: 'elastic' as const,
+          kind: 'similar' as const,
           depthSearchList: []
         })
       )
     );
 
-    return merge(gate$, elastic$);
+    return merge(gate$, similar$);
   }
 
   private mapDepthSearchResults(response: any[]) {

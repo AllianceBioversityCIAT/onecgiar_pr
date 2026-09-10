@@ -1,31 +1,27 @@
-<app-pr-field-header
+<!-- P2-3201: from the 2026 cycle on, the guidance moves from the grey "Description" box into the
+     ⓘ tooltip next to the label. Opt-in per caller so IPSR and Bilateral, which reuse this field,
+     keep their current presentation. -->
+<app-field-card
   [label]="leadContactField.label"
-  [description]="leadContactField.description"
+  [description]="guidanceAsTooltip ? '' : leadContactField.description"
+  [tooltip]="guidanceAsTooltip ? leadContactField.description : ''"
   [required]="required"
-  [useColon]="leadContactField.useColon ?? true">
-</app-pr-field-header>
-
+  [hasValue]="hasSelectedContact">
 <div class="lead-contact-container">
-  <div class="contact-select-wrapper">
+  <div class="contact-select-wrapper" [hidden]="isContactLocked">
     <app-pr-input
       fieldRef="[general-info]-lead_contact_person"
       type="text"
       [showFieldHeader]="false"
       [lockRequiredFromFieldManager]="true"
       [required]="false"
-      [disabled]="isContactLocked"
+      [disabled]="readOnly"
       [(ngModel)]="userSearchService.searchQuery"
       (input)="onSearchInput($event)"
       (blur)="onContactBlur()"
       [class.invalid-contact]="!userSearchService.hasValidContact"
       autocomplete="off">
     </app-pr-input>
-
-    @if (isContactLocked && userSearchService?.selectedUser) {
-      <button class="clear-contact-btn" type="button" (click)="clearContact()" title="Clear selection">
-        <i class="clear-icon">✕</i>
-      </button>
-    }
   </div>
 
   @if (userSearchService.showContactError) {
@@ -41,6 +37,9 @@
         <div class="selected-user-name">{{ userSearchService?.selectedUser?.display_name }}</div>
         <div class="selected-user-info">{{ userSearchService?.selectedUser?.mail }} - {{ userSearchService?.selectedUser?.title }}</div>
       </div>
+      <button class="clear-contact-btn" type="button" (click)="clearContact()" title="Clear selection">
+        <i class="clear-icon">✕</i>
+      </button>
     </div>
   }
 </div>
@@ -65,3 +64,4 @@
     }
   </div>
 }
+</app-field-card>

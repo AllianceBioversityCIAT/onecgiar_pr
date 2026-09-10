@@ -1,0 +1,13 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "A · Two-lane hub on Overview", "x": 0, "y": 0, "w": 1180, "h": 1260 },
+    { "file": "VariantB.dc.html", "title": "B · Actionable KPI cards + right rail", "x": 1280, "y": 0, "w": 1180, "h": 1100 },
+    { "file": "VariantC.dc.html", "title": "C · Dedicated Report tab", "x": 2560, "y": 0, "w": 1180, "h": 1100 }
+  ],
+  "annotations": [
+    { "id": "note-a", "x": 0, "y": -170, "w": 560, "text": "A · Two-lane hub (recommended)\nFirst block on Overview. W1/W2 by AoW + program-level outcomes; W3 = my centers × projects funding SP02, search-first (Alliance alone has ~198 projects): per-center counts, a 3-row slice, Show all.\n+ Answers 'where do I report' where users already look; one screen shows both paths.\n− Adds ~500px above the dashboard; needs collapse memory." },
+    { "id": "note-b", "x": 1280, "y": -170, "w": 560, "text": "B · Actionable KPI cards + right rail\nCards 1–2 gain a CTA footer; a sticky rail lists the routes and the W3 projects. AoW rows get an inline Report action.\n+ Smallest footprint; Overview keeps its dashboard feel.\n− Affordance hidden in stat cards; rail competes with existing 12-col cards on narrower screens." },
+    { "id": "note-c", "x": 2560, "y": -170, "w": 560, "text": "C · Dedicated Report tab\nRenames Reporting → Report; a W1/W2 | W3 switch sits above today's grouped table, W3 pane lists center projects.\n+ Clear IA: status (Overview) vs action (Report) vs record (Results).\n− Touches routes, guide tutorials and copy; Overview still cannot act on W3." }
+  ],
+  "launch": { "view": "canvas" }
+}

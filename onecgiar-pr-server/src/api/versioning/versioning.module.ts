@@ -67,6 +67,7 @@ import { ResultAnswerRepository } from '../results/result-questions/repository/r
 import { MQAPModule } from '../m-qap/m-qap.module';
 import { MQAPService } from '../m-qap/m-qap.service';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { BilateralVersioningRulesModule } from '../bilateral/versioning-rules/bilateral-versioning-rules.module';
 
 @Module({
   controllers: [VersioningController],
@@ -175,6 +176,10 @@ import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/
   imports: [
     SharePointModule,
     MQAPModule,
+    // Leaf module holding the bilateral eligibility rules, shared with the API versioning path
+    // so both refuse the same things (P2-3229 AC9). It imports nothing, which is what keeps
+    // this from becoming a cycle with BilateralModule.
+    BilateralVersioningRulesModule,
     forwardRef(() => ResultInnovationPackageModule),
     forwardRef(() => InnovationPathwayModule),
   ],

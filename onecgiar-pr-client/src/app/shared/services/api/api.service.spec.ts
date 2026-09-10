@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
 import { ResultsApiService } from './results-api.service';
+import { BilateralApiService } from './bilateral-api.service';
 import { DataControlService } from '../data-control.service';
 import { RolesService } from '../global/roles.service';
 import { Title } from '@angular/platform-browser';
@@ -76,8 +77,18 @@ describe('ApiService', () => {
 
     rolesServiceSpy = {
       validateReadOnly: jest.fn(),
+      applyRolesResponse: jest.fn(function (this: { roles: unknown; isAdmin: boolean }, response: { application?: { role_id: number } }) {
+        if (!response) return;
+        this.roles = response;
+        this.isAdmin = response?.application?.role_id == 1;
+      }),
       readOnly: false,
-      isAdmin: false
+      isAdmin: false,
+      getMyCenters: jest.fn(() => [] as any[]),
+      roles: null,
+      getIsAdminValue: jest.fn(function (this: { roles: { application?: { role_id: number } } | null; isAdmin: boolean }) {
+        this.isAdmin = this.roles?.application?.role_id == 1;
+      })
     };
 
     titleServiceSpy = { setTitle: jest.fn() };
@@ -110,6 +121,7 @@ describe('ApiService', () => {
         ApiService,
         { provide: AuthService, useValue: authServiceSpy },
         { provide: ResultsApiService, useValue: resultsApiServiceSpy },
+        { provide: BilateralApiService, useValue: {} },
         { provide: DataControlService, useValue: dataControlServiceSpy },
         { provide: RolesService, useValue: rolesServiceSpy },
         { provide: Title, useValue: titleServiceSpy },
@@ -164,6 +176,7 @@ describe('ApiService', () => {
       ];
       const mockRoles = {
         response: {
+          application: { role_id: 1 },
           initiative: [
             { initiative_id: 10, description: 'Lead' },
             { initiative_id: 20, description: 'Member' }
@@ -187,6 +200,9 @@ describe('ApiService', () => {
 
       service.updateUserData(callback);
 
+      expect(rolesServiceSpy.applyRolesResponse).toHaveBeenCalledWith(mockRoles.response);
+      expect(rolesServiceSpy.roles).toEqual(mockRoles.response);
+      expect(rolesServiceSpy.isAdmin).toBe(true);
       expect(dataControlServiceSpy.myInitiativesList).toEqual(mockInitiatives);
       expect(dataControlServiceSpy.myInitiativesLoaded).toBe(true);
       expect(mockInitiatives[0].role).toBe('Lead');
@@ -194,7 +210,143 @@ describe('ApiService', () => {
       expect(mockInitiatives[0].official_code_short_name).toBe('INIT-10 Init Ten');
       expect(mockInitiatives[1].role).toBe('Member');
       expect(resultsListFilterServiceSpy.updateMyInitiatives).toHaveBeenCalledWith(mockInitiatives);
-      expect(ipsrListFilterServiceSpy.updateMyInitiatives).toHaveBeenCalledWith(mockInitiatives);
+      // IPF-T-1: the IPSR filter reads the Science-Program-scoped list
+      // (`myInitiativesListIPSRByPortfolio`, sorted by initiative_id ascending), not the flat
+      // `myInitiativesList` that `resultsListFilterSE` above still reads.
+      expect(ipsrListFilterServiceSpy.updateMyInitiatives).toHaveBeenCalledWith(
+        [...mockIpsr].sort((a, b) => a.initiative_id - b.initiative_id)
+      );
+      expect(callback).toHaveBeenCalled();
+    });
+
+    // IPF-T-1 (docs/specs/bugfix/ipsr-initiative-filter-removal): regression test for the
+    // Innovation Packages filter incorrectly showing legacy Initiatives instead of only
+    // Science Programs. `GET_initiativesByUser()` returns the flat, mixed INI-*/SP-* list
+    // (`myInitiativesList`); `GET_initiativesByUserByPortfolio().ipsr` returns the
+    // Science-Program-scoped split (`myInitiativesListIPSRByPortfolio`). The IPSR filter
+    // MUST be wired to the scoped list, never the flat one — the Results module filter
+    // (`resultsListFilterSE`) MUST stay wired to the flat list (IPF-R-10).
+    describe('IPF-T-1: IPSR filter repointed to Science-Program-scoped list', () => {
+      const mixedInitiatives: MockMyInitiativeRow[] = [
+        { initiative_id: 1, official_code: 'INI-1', short_name: 'Legacy Initiative One' },
+        { initiative_id: 2, official_code: 'SP-1', short_name: 'Science Program One' },
+        { initiative_id: 3, official_code: 'INI-2', short_name: 'Legacy Initiative Two' }
+      ];
+      const scopedIpsr = [
+        { initiative_id: 2, official_code: 'SP-1', short_name: 'Science Program One' }
+      ];
+
+      it('success branch: calls ipsrListFilterService.updateMyInitiatives with the SP-scoped array, not the flat list', () => {
+        const callback = jest.fn();
+
+        authServiceSpy.GET_allRolesByUser.mockReturnValue(of({ response: { initiative: [] } }));
+        authServiceSpy.GET_initiativesByUser.mockReturnValue(of({ response: mixedInitiatives }));
+        authServiceSpy.GET_initiativesByUserByPortfolio.mockReturnValue(
+          of({ response: { reporting: [], ipsr: scopedIpsr } })
+        );
+
+        service.updateUserData(callback);
+
+        // The flat, mixed list is still what Results reads from — untouched (IPF-R-10).
+        expect(resultsListFilterServiceSpy.updateMyInitiatives).toHaveBeenCalledWith(mixedInitiatives);
+        // The IPSR filter must receive only the SP-scoped array.
+        expect(ipsrListFilterServiceSpy.updateMyInitiatives).toHaveBeenCalledWith(scopedIpsr);
+        expect(ipsrListFilterServiceSpy.updateMyInitiatives).not.toHaveBeenCalledWith(mixedInitiatives);
+        expect(callback).toHaveBeenCalled();
+      });
+
+      // The `error:` callback of `forkJoin(...).subscribe({ next, error })` is, in the current
+      // implementation, unreachable dead code — verified empirically, not assumed:
+      //  1. Each of the three source observables (`GET_allRolesByUser`, `GET_initiativesByUser`,
+      //     `GET_initiativesByUserByPortfolio`) is individually wrapped in its own `catchError`
+      //     that swallows any error and resolves with a fallback value, so no combination of
+      //     mocked GET_* responses can make the outer `forkJoin` itself error — confirmed by the
+      //     pre-existing "should handle error path in forkJoin subscribe" test above, which
+      //     mocks ALL THREE to `throwError(...)` and still asserts `callback` WAS called, i.e.
+      //     it exercises `next`, not `error`, despite its name.
+      //  2. A synchronous throw inside the `next` handler itself does NOT route to `error` in
+      //     RxJS 7 (unlike RxJS <6) — it is re-thrown via `reportUnhandledError` instead. Verified
+      //     with a minimal standalone repro: `forkJoin([of(1), of(2)]).subscribe({ next: () => {
+      //     throw new Error('boom') }, error: (e) => console.log('called') })` never logs
+      //     'called'; the error surfaces as an uncaught exception instead.
+      // Given both paths are closed, this task applies the same one-line fix to the `error`
+      // branch for parity/defensive-correctness (per design.md §6.2). **Correction (`IPF-T-1`
+      // rework, Reviewer FAIL):** this comment previously claimed no behavioral test could ever
+      // exercise the `undefined`-spread hazard because the `error` branch is unreachable — that
+      // reasoning only covered the `error` branch. It missed that the `next` branch's own
+      // assignment (`GET_initiativesByUserByPortfolio?.response?.ipsr?.sort(...)`) is reachable
+      // and evaluates to `undefined` whenever a 200 response omits the `ipsr` key (or returns it
+      // `null`), which then flowed into `ipsrListFilterService.updateMyInitiatives(undefined)`
+      // and threw inside its unguarded `[...header, ...initiatives]` spread — a real, reachable
+      // `TypeError` that killed `callback()` and the whole session bootstrap. Fixed at the
+      // assignment site in `api.service.ts` (`?? []`) and covered by the test below, which is RED
+      // against the pre-fix code and GREEN after it.
+    });
+
+    it('success branch: normalizes a missing `ipsr` key to [] so updateMyInitiatives never receives undefined', () => {
+      const callback = jest.fn();
+
+      authServiceSpy.GET_allRolesByUser.mockReturnValue(of({ response: { initiative: [] } }));
+      authServiceSpy.GET_initiativesByUser.mockReturnValue(of({ response: [] }));
+      // 200 response missing the `ipsr` key entirely (IPF-OQ-1 case).
+      authServiceSpy.GET_initiativesByUserByPortfolio.mockReturnValue(of({ response: { reporting: [] } }));
+
+      expect(() => service.updateUserData(callback)).not.toThrow();
+
+      expect(ipsrListFilterServiceSpy.updateMyInitiatives).toHaveBeenCalledWith([]);
+      expect(callback).toHaveBeenCalled();
+    });
+
+    // Screenshot-confirmed defect (IPF-T-1 rework, attempt 3): on /ipsr/list/innovation-list the
+    // "Submitter(s)" filter chips rendered as blank pills because the enrichment loop below (which
+    // sets `.name`/`.official_code_short_name`/`.role`) ran only over `myInitiativesList`, never over
+    // `myInitiativesListIPSRByPortfolio` — the array IPF-T-1 repointed the IPSR filter to. The chip
+    // template reads `{{option.name}}`, so every IPSR chip rendered undefined. This asserts the
+    // array actually passed to `ipsrListFilterService.updateMyInitiatives(...)` carries a populated,
+    // non-empty `.name` (and `.official_code_short_name`) on every item — not just array identity —
+    // which is the evidence that closes the real rendering bug.
+    it('enriches the IPSR-scoped array with .name/.official_code_short_name/.role before handing it to ipsrListFilterService (real server shape: no .name/.official_code_short_name on the raw ipsr rows)', () => {
+      const callback = jest.fn();
+
+      const rawIpsrRows: MockMyInitiativeRow[] = [
+        { initiative_id: 2, official_code: 'SP-1', short_name: 'Science Program One' },
+        { initiative_id: 5, official_code: 'SP-2', short_name: 'Science Program Two' }
+      ];
+
+      authServiceSpy.GET_allRolesByUser.mockReturnValue(
+        of({
+          response: {
+            initiative: [
+              { initiative_id: 2, description: 'Lead' },
+              { initiative_id: 5, description: 'Member' }
+            ]
+          }
+        })
+      );
+      authServiceSpy.GET_initiativesByUser.mockReturnValue(of({ response: [] }));
+      authServiceSpy.GET_initiativesByUserByPortfolio.mockReturnValue(
+        of({ response: { reporting: [], ipsr: rawIpsrRows } })
+      );
+
+      service.updateUserData(callback);
+
+      const passedArray = ipsrListFilterServiceSpy.updateMyInitiatives.mock.calls[0][0] as MockMyInitiativeRow[];
+
+      expect(passedArray.length).toBe(2);
+      passedArray.forEach(item => {
+        expect(item.name).toBeTruthy();
+        expect(item.official_code_short_name).toBeTruthy();
+      });
+
+      const sp1 = passedArray.find(i => i.initiative_id === 2);
+      const sp2 = passedArray.find(i => i.initiative_id === 5);
+      expect(sp1?.name).toBe('SP-1');
+      expect(sp1?.official_code_short_name).toBe('SP-1 Science Program One');
+      expect(sp1?.role).toBe('Lead');
+      expect(sp2?.name).toBe('SP-2');
+      expect(sp2?.official_code_short_name).toBe('SP-2 Science Program Two');
+      expect(sp2?.role).toBe('Member');
+
       expect(callback).toHaveBeenCalled();
     });
 
@@ -214,18 +366,32 @@ describe('ApiService', () => {
       expect(callback).toHaveBeenCalled();
     });
 
+    it('should still call callback when roles API fails', () => {
+      const callback = jest.fn();
+      authServiceSpy.GET_allRolesByUser.mockReturnValue(throwError(() => new Error('roles API error')));
+      authServiceSpy.GET_initiativesByUser.mockReturnValue(of({ response: [] }));
+      authServiceSpy.GET_initiativesByUserByPortfolio.mockReturnValue(of({ response: { reporting: [], ipsr: [] } }));
+
+      service.updateUserData(callback);
+
+      expect(callback).toHaveBeenCalled();
+      expect(rolesServiceSpy.applyRolesResponse).toHaveBeenCalledWith(undefined);
+    });
+
     it('should handle error path in forkJoin subscribe', () => {
       const callback = jest.fn();
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
       authServiceSpy.GET_allRolesByUser.mockReturnValue(throwError(() => new Error('API error')));
+      authServiceSpy.GET_initiativesByUser.mockReturnValue(throwError(() => new Error('API error')));
+      authServiceSpy.GET_initiativesByUserByPortfolio.mockReturnValue(throwError(() => new Error('API error')));
 
       service.updateUserData(callback);
 
       expect(dataControlServiceSpy.myInitiativesLoaded).toBe(true);
       expect(resultsListFilterServiceSpy.updateMyInitiatives).toHaveBeenCalled();
       expect(ipsrListFilterServiceSpy.updateMyInitiatives).toHaveBeenCalled();
-      expect(callback).not.toHaveBeenCalled();
+      expect(callback).toHaveBeenCalled();
       expect(consoleSpy).toHaveBeenCalled();
 
       consoleSpy.mockRestore();
@@ -631,6 +797,58 @@ describe('ApiService', () => {
     it('should call titleService.setTitle with given title', () => {
       service.setTitle('Test Title');
       expect(titleServiceSpy.setTitle).toHaveBeenCalledWith('Test Title');
+    });
+  });
+
+  // P2-3229. Deliberately not `shouldShowUpdate`: bilaterals answer to the lead CENTRE, not to
+  // the initiative map, and they also require the result to be approved.
+  describe('canUpdateBilateral', () => {
+    const currentPhase = { phaseYear: 2024 };
+    const approvedBilateral = (overrides: any = {}): any => ({
+      phase_year: 2023,
+      status_name: 'Approved',
+      lead_center: 'CIAT (Alliance)',
+      ...overrides
+    });
+
+    beforeEach(() => {
+      rolesServiceSpy.isAdmin = false;
+      rolesServiceSpy.getMyCenters = jest.fn(() => [{ center_id: 'CENTER-03', center_acronym: 'CIAT (Alliance)' }]);
+    });
+
+    it('allows a user of the lead centre on an approved past-phase result', () => {
+      expect(service.canUpdateBilateral(approvedBilateral(), currentPhase)).toBe(true);
+    });
+
+    it('refuses a user who belongs to another centre', () => {
+      rolesServiceSpy.getMyCenters = jest.fn(() => [{ center_id: 'CENTER-11', center_acronym: 'IITA' }]);
+      expect(service.canUpdateBilateral(approvedBilateral(), currentPhase)).toBe(false);
+    });
+
+    it.each(['Editing', 'Submitted', 'Pending Review', 'Rejected'])('refuses a result that is %s', status => {
+      expect(service.canUpdateBilateral(approvedBilateral({ status_name: status }), currentPhase)).toBe(false);
+    });
+
+    it('refuses a result already in the current phase', () => {
+      expect(service.canUpdateBilateral(approvedBilateral({ phase_year: 2024 }), currentPhase)).toBe(false);
+    });
+
+    it('refuses when the result has no lead centre', () => {
+      expect(service.canUpdateBilateral(approvedBilateral({ lead_center: null }), currentPhase)).toBe(false);
+    });
+
+    it('allows an admin regardless of centre membership', () => {
+      rolesServiceSpy.isAdmin = true;
+      rolesServiceSpy.getMyCenters = jest.fn(() => []);
+      expect(service.canUpdateBilateral(approvedBilateral(), currentPhase)).toBe(true);
+    });
+
+    // The list reports `lead_center` as the CLARISA ACRONYM. Comparing it against `center_id`,
+    // which is the code, matches nothing — the action would never appear and nothing would say why.
+    it('matches on the centre acronym, not on the centre code', () => {
+      rolesServiceSpy.getMyCenters = jest.fn(() => [{ center_id: 'CENTER-03', center_acronym: 'CIAT (Alliance)' }]);
+      expect(service.canUpdateBilateral(approvedBilateral({ lead_center: 'CENTER-03' }), currentPhase)).toBe(false);
+      expect(service.canUpdateBilateral(approvedBilateral({ lead_center: 'CIAT (Alliance)' }), currentPhase)).toBe(true);
     });
   });
 

@@ -9,27 +9,25 @@ import { ResultLevelButtonsComponent } from './components/result-level-buttons/r
 import { ResultLevelCardsComponent } from './components/result-level-cards/result-level-cards.component';
 import { SimilarResultsComponent } from './components/similar-results/similar-results.component';
 import { SimilarResultsPipe } from './components/similar-results/pipes/similar-results.pipe';
-import { MenuModule } from 'primeng/menu';
 import { RetrieveModalModule } from '../result-detail/components/retrieve-modal/retrieve-modal.module';
 import { AlertGlobalInfoModule } from '../../../../shared/components/alert-global-info/alert-global-info.module';
-import { TooltipModule } from 'primeng/tooltip';
 import { ResultAiAssistantComponent } from './components/result-ai-assistant/result-ai-assistant.component';
 import { TermPipe } from '../../../../internationalization/term.pipe';
 import { ReportResultFormComponent } from './components/report-result-form/report-result-form.component';
+import { KpCgspaceBrowseComponent } from '../../../result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.component';
 
 @NgModule({
   declarations: [ResultCreatorComponent, ResultLevelButtonsComponent, ResultLevelCardsComponent, SimilarResultsComponent, SimilarResultsPipe, ReportResultFormComponent],
   imports: [
     CommonModule,
     ResultCreatorRoutingModule,
-    TooltipModule,
     CustomFieldsModule,
     FormsModule,
-    MenuModule,
     RetrieveModalModule,
     AlertGlobalInfoModule,
     ResultAiAssistantComponent,
-    TermPipe
+    TermPipe,
+    KpCgspaceBrowseComponent
   ],
   exports: [ResultCreatorComponent, ReportResultFormComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]

@@ -117,6 +117,13 @@ describe('SharePointService', () => {
     const removeSpy = jest
       .spyOn(service, 'removeFilePermission')
       .mockResolvedValue({} as any);
+    // The method now reads the permissions BACK to verify the revocation actually
+    // happened (a delete that resolves fine and changes nothing is the defect measured
+    // on prtest on 9 Sep 2026). That read is stubbed here so this test keeps asserting
+    // only what it was written for: one delete call per permission.
+    jest
+      .spyOn(service as any, '_listSharingPermissions')
+      .mockResolvedValue({ read: true, permissions: [] } as any);
 
     await service.removeAllFilePermissions('file');
     expect(removeSpy).toHaveBeenCalledTimes(2);

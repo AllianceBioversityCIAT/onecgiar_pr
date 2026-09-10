@@ -1,7 +1,7 @@
 <div class="entity-aow-aow_tabs">
   @for (tab of tabs(); track tab.id) {
     <button
-      pButton
+      hlmBtn
       type="button"
       class="entity-aow-aow_tabs_button"
       [ngClass]="{ 'tab-button_active': isActiveTab(tab.id), 'tab-button_inactive': !isActiveTab(tab.id) }"
@@ -12,15 +12,6 @@
       }
     </button>
   }
-</div>
-
-<div class="aow-repeated-note">
-  <span class="material-icons-round aow-repeated-note_icon">warning</span>
-  <p class="aow-repeated-note_text">
-    When the same indicator is repeated twice in a HLO/Outcome, this is because the P/A planned the indicator with two
-    separate targets to facilitate granular planning. <strong>Reporting reflects data originally recorded without
-    aggregating them.</strong>
-  </p>
 </div>
 
 <div class="entity-aow-aow_content">
@@ -44,6 +35,27 @@
           <h3>Intermediate Outcomes Indicators</h3>
           <div class="tab-content_header_dot"></div>
           <h3 class="tab-content_header_phase">Reporting Phase {{ entityAowService.reportingPhaseYear }}</h3>
+
+          <!--
+            P2-3296 AC3 — this Area of Work's number, averaged over its Intermediate Outcomes.
+            The coverage line stays visible rather than living in the tooltip: without it a
+            percentage over 2 of 10 indicators is indistinguishable from one over all 10.
+          -->
+          @if (entityAowService.aowProgress()) {
+            <div class="aow-progress" [prTooltip]="aowProgressTooltip()">
+              <span class="aow-progress_pair">
+                <span class="aow-progress_label">QA</span>
+                <span class="aow-progress_value">{{ aowProgressLabel() }}</span>
+              </span>
+              <span class="aow-progress_pair">
+                <span class="aow-progress_label">Prel.</span>
+                <span class="aow-progress_value">{{ aowPreliminaryLabel() }}</span>
+              </span>
+              @if (aowCoverage()) {
+                <span class="aow-progress_coverage">{{ aowCoverage() }}</span>
+              }
+            </div>
+          }
         </div>
 
         <div class="tab-content">
@@ -59,8 +71,9 @@
         <div class="aow-non-exclusive-note">
           <span class="material-icons-round aow-non-exclusive-note_icon">info</span>
           <p class="aow-non-exclusive-note_text">
-            The Intermediate Outcomes below are not assigned to a specific Area of Work. They belong to
-            the Science Program as a whole, so they also appear under every other Area of Work.
+            The Intermediate Outcomes and targets below are not assigned to a specific Area of Work. They belong to the Science Program as a whole, so
+            they also appear under every other Area of Work. Each AoW's results will be tracked as contributions to the relevant intermediate outcomes
+            and aggregated against the Program-level targets.
           </p>
         </div>
 

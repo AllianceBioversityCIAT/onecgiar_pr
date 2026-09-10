@@ -23,5 +23,5 @@ This change is **frontend-only**. No backend changes are required: the existing 
 - **Code (client only):** `onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.component.ts` — `deleteEvidenceWithConfirm()` confirmation callback.
 - **Tests:** `rd-evidences.component.spec.ts` — add coverage asserting the confirm callback triggers `onSaveSection()`; existing `deleteEvidence` test stays valid.
 - **Backend:** none (uses existing `POST_evidences`).
-- **SDD baseline:** UI behavior consistent with `docs/system-design/design.md` (modal/confirm-for-destroy pattern); evidence section under Result Detail per `docs/detailed-design/detailed-design.md`.
+- **SDD baseline:** UI behavior consistent with `docs/ux-ui/design.md` (modal/confirm-for-destroy pattern); evidence section under Result Detail per `docs/trd/trd.md`.
 - **Related:** P2-2935 (evidence redesign that introduced delete-with-confirm).

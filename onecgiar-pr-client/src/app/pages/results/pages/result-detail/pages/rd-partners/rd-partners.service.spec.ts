@@ -2,7 +2,7 @@ import { RdPartnersService } from './rd-partners.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
-import { Observable, of, Subject } from 'rxjs';
+import { Observable, of, Subject, throwError } from 'rxjs';
 
 describe('RdPartnersService', () => {
   let service: RdPartnersService;
@@ -42,14 +42,46 @@ describe('RdPartnersService', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should unsubscribe on destroy', () => {
-    const institutionsUnsubscribeSpy = jest.spyOn(institutionsServiceMock.loadedInstitutions, 'unsubscribe');
-    const centersUnsubscribeSpy = jest.spyOn(centersServiceMock.loadedCenters, 'unsubscribe');
-
+  /**
+   * P2-3554 — this test used to assert the DEFECT: that `ngOnDestroy` called `unsubscribe()` on
+   * `loadedInstitutions` and `loadedCenters` themselves. Those emitters belong to two root singletons, so
+   * closing them takes the catalogue notification away from every OTHER subscriber for the rest of the
+   * session. What has to be true is the opposite: our own subscription stops, the shared emitter survives.
+   */
+  it('stops its own subscriptions on destroy and leaves the shared emitters usable', () => {
     service.ngOnDestroy();
 
-    expect(institutionsUnsubscribeSpy).toHaveBeenCalled();
-    expect(centersUnsubscribeSpy).toHaveBeenCalled();
+    expect(centersServiceMock.loadedCenters.closed).toBe(false);
+    expect(institutionsServiceMock.loadedInstitutions.closed).toBe(false);
+
+    // And nothing of ours reacts any more: emitting after destroy must not rebuild the centers list.
+    service.nppCenters = undefined as any;
+    (centersServiceMock.centersList as any) = [{ code: 'CIP', name: 'International Potato Center', acronym: 'CIP' }];
+    (centersServiceMock.loadedCenters as any).next(true);
+
+    expect(service.nppCenters).toBeUndefined();
+  });
+
+  describe('sectionLoading (skeleton)', () => {
+    it('starts raised', () => {
+      expect(service.sectionLoading()).toBe(true);
+    });
+
+    it('is released once the section GET responds', () => {
+      apiServiceMock.resultsSE.GET_partnersSection = jest.fn().mockReturnValue(of({ response: {} }));
+
+      service.getSectionInformation();
+
+      expect(service.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the section GET fails, so the skeleton can never get stuck', () => {
+      apiServiceMock.resultsSE.GET_partnersSection = jest.fn().mockReturnValue(throwError(() => new Error('boom')));
+
+      service.getSectionInformation();
+
+      expect(service.sectionLoading()).toBe(false);
+    });
   });
 
   describe('validateDeliverySelection', () => {

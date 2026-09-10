@@ -1,0 +1,6 @@
+@use '../../../../../styles/viewport-page' as vp;
+
+:host {
+  display: block;
+  @include vp.pr-viewport-page;
+}

@@ -1,0 +1,160 @@
+<div class="st-fields" data-section="toc">
+  <!-- Same control W1/W2 uses for this question (rd-contributors-and-partners → app-pr-yes-or-not):
+       standard header + the Yes/No chips. UI only — the handler and the wording (P2-3142) are unchanged. -->
+  <div class="st-field" data-testid="toc-planned-question">
+    <app-pr-yes-or-not
+      label="Can this result be mapped to a ToC KPI?"
+      [required]="true"
+      [hideDescription]="true"
+      [ngModel]="isPlanned()"
+      (selectOptionEvent)="onPlannedChange($event)">
+    </app-pr-yes-or-not>
+  </div>
+
+  @if (showWhyReported()) {
+    <div class="st-field">
+      <app-pr-textarea
+        label="Why is this result being reported?"
+        placeholder="Enter reason"
+        [required]="true"
+        [rows]="2"
+        [maxWords]="30"
+        [ngModel]="whyReported()"
+        (ngModelChange)="onWhyReportedInput($event)">
+      </app-pr-textarea>
+    </div>
+  }
+
+  @if (isPlanned() === null) {
+    <div class="st-empty">
+      <i class="material-icons-round st-empty-icon">help_outline</i>
+      <span>Please select "Yes" or "No" above to continue.</span>
+    </div>
+  }
+
+  @if (isPlanned() === true) {
+    @if (isLoading()) {
+      <app-form-skeleton [rows]="3" [hasLabel]="true" [hasExtra]="true" [extraRows]="4" />
+    } @else if (!initiativeId()) {
+      <!-- The Level → node → indicator chain is scoped to the PRIMARY Science Program's ToC, and
+           `initiativeId` only exists once that program is persisted on the result (loadResult reads
+           the role-1 row). Without this note, answering "Yes" before the first save rendered nothing
+           at all — and the mapping form "appearing" after Save draft looked like a glitch. -->
+      <div class="st-empty" data-testid="toc-waiting-primary-sp">
+        <i class="material-icons-round st-empty-icon">info_outline</i>
+        <span>
+          The Level options come from the primary Science Program's Theory of Change
+          @if (programCode()) {
+            ({{ programCode() }}), which has not been stored on this result yet — use Save draft and they will load here.
+          } @else {
+            — select the primary Science Program and save the draft, then they will load here.
+          }
+        </span>
+      </div>
+    } @else {
+      @if (showLevelSelector()) {
+        <div class="st-field">
+          <label class="st-label">Level <span class="text-(--pr-color-red-300)">*</span></label>
+          <app-pr-select
+            [options]="filteredLevels()"
+            [ngModel]="selectedLevelId()"
+            (selectOptionEvent)="onLevelChange($event?.toc_level_id)"
+            optionLabel="name"
+            optionValue="toc_level_id"
+            placeholder="Select level"
+            [editable]="true"
+            [overlayToBody]="true">
+          </app-pr-select>
+        </div>
+      } @else if (resultLevelId() === 1 && isPlanned() === true) {
+        <div class="st-field">
+          <label class="st-label">Level</label>
+          <span class="st-level-fixed">High Level Output</span>
+        </div>
+      }
+
+      @if (selectedLevelName() && selectedLevelId()) {
+        <div class="st-field">
+          <label class="st-label">{{ selectedLevelName() }} <span class="text-(--pr-color-red-300)">*</span></label>
+          <app-pr-select
+            [options]="tocResultItems()"
+            [ngModel]="selectedTocResultId()"
+            (selectOptionEvent)="onTocResultSelect($event?.toc_result_id)"
+            optionLabel="select_label"
+            optionValue="toc_result_id"
+            optionBadgeLabel="select_badge"
+            optionBadgeTone="select_badge_tone"
+            placeholder="Select {{ selectedLevelName() }}"
+            [editable]="true"
+            [overlayToBody]="true">
+          </app-pr-select>
+        </div>
+      }
+
+      @if (selectedTocResultId()) {
+        @if (hasNoMatchingIndicator()) {
+          <div class="st-warning">
+            <i class="material-icons-round st-warning-icon">info</i>
+            <span>None of the indicators below directly match {{ resultTypeLabel() }}. You can still select any indicator.</span>
+          </div>
+        }
+
+        @if (indicatorsList().length) {
+          <div class="st-field">
+            <label class="st-label">Indicator <span class="text-(--pr-color-red-300)">*</span></label>
+            <app-pr-select
+              [options]="indicatorsList()"
+              [ngModel]="selectedIndicatorId()"
+              (selectOptionEvent)="onIndicatorSelect($event?.related_node_id)"
+              optionLabel="select_label"
+              optionValue="related_node_id"
+              optionBadgeLabel="select_badge"
+              optionBadgeTone="select_badge_tone"
+              placeholder="Select an indicator"
+              [editable]="true"
+              [overlayToBody]="true">
+            </app-pr-select>
+          </div>
+        } @else {
+          <div class="st-no-indicators">No indicators available for this {{ selectedLevelName() }}.</div>
+        }
+
+        @if (selectedIndicatorData(); as ind) {
+          <div class="st-target-display">
+            @if (ind.unit_messurament) {
+              <span class="st-target-unit">{{ ind.unit_messurament }}</span>
+            }
+            <span class="st-target-label">Target</span>
+            <span class="st-target-value">{{ ind.targets?.[0]?.target_value ?? 'N/A' }}</span>
+          </div>
+
+          <div class="st-field">
+            <label class="st-label st-label--sub">Contribution to indicator target</label>
+            <div class="st-info">
+              Indicate the numerical value that your result contributes toward the target of the indicator.
+            </div>
+            <input type="number" class="st-input" [ngModel]="contributionValue()"
+              placeholder="Enter your contribution…"
+              step="1"
+              min="0"
+              pattern="[0-9]*"
+              (keypress)="preventInvalidKeys($event)"
+              (ngModelChange)="setContributionValue($event)" />
+          </div>
+        }
+
+        <div class="st-field st-field--narrative">
+          <app-pr-textarea
+            label="Explanation of how the result aligns with the ToC pathway"
+            placeholder="Describe how this result contributes to the selected ToC element"
+            [required]="false"
+            [rows]="4"
+            [maxWords]="150"
+            [ngModel]="narrative()"
+            (ngModelChange)="onNarrativeInput($event)">
+          </app-pr-textarea>
+        </div>
+      }
+    }
+  }
+</div>

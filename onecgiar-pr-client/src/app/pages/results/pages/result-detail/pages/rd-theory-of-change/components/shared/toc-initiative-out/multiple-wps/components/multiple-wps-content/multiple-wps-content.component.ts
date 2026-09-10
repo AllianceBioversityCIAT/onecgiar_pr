@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { Component, Input, OnChanges, signal } from '@angular/core';
 import { TocInitiativeOutcomeListsService } from '../../../../../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../../../../rd-theory-of-changes-services.service';
@@ -26,7 +26,12 @@ export class MultipleWPsContentComponent implements OnChanges {
   @Input() selectedOptionsOutcome = [];
   @Input() selectedOptionsEOI = [];
 
-  indicatorView = false;
+  /**
+   * Zoneless CD: this flag is flipped inside a `setTimeout`, which no longer schedules a render
+   * pass on Angular 21. As a signal, writing it notifies the scheduler on its own, so the progress
+   * narrative textarea shows up without waiting for an unrelated event.
+   */
+  readonly indicatorView = signal(false);
 
   constructor(
     public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService,
@@ -50,7 +55,7 @@ export class MultipleWPsContentComponent implements OnChanges {
   }
 
   getIndicator() {
-    this.indicatorView = false;
+    this.indicatorView.set(false);
 
     this.api.resultsSE.Get_indicator(this.activeTab?.toc_result_id, this.activeTab?.initiative_id).subscribe({
       next: ({ response }) => {
@@ -80,7 +85,7 @@ export class MultipleWPsContentComponent implements OnChanges {
           : `<strong>${response.wpinformation?.extraInformation?.result_title}</strong>`;
 
         setTimeout(() => {
-          this.indicatorView = true;
+          this.indicatorView.set(true);
         }, 80);
       },
       error: err => {

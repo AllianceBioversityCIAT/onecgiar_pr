@@ -5,7 +5,6 @@ import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.modu
 import { RouterTestingModule } from '@angular/router/testing';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { OutcomeIndicatorService } from '../../services/outcome-indicator.service';
-import { MessageService } from 'primeng/api';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../shared/services/api/api.service';
 
@@ -19,7 +18,7 @@ describe('OutcomeIndicatorHomeComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [HttpClientTestingModule, CustomFieldsModule, OutcomeIndicatorHomeComponent, RouterTestingModule],
-      providers: [ExportTablesService, OutcomeIndicatorService, MessageService]
+      providers: [ExportTablesService, OutcomeIndicatorService]
     }).compileComponents();
 
     fixture = TestBed.createComponent(OutcomeIndicatorHomeComponent);

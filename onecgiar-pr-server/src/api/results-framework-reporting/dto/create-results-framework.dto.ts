@@ -3,6 +3,7 @@ import { CreateResultDto } from '../../results/dto/create-result.dto';
 import { ResultsKnowledgeProductDto } from '../../results/results-knowledge-products/dto/results-knowledge-product.dto';
 import { ContributorResultTocResult } from '../../results/results-toc-results/dto/create-results-toc-result.dto';
 import { ResultsCenterDto } from '../../results/results-centers/dto/results-center.dto';
+import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
 
 export class ResultsFrameworkTocIndicatorDto {
   @ApiProperty({
@@ -193,4 +194,11 @@ export class CreateResultsFrameworkResultDto {
       'Optional list of centers contributing to the result; mirrors the Contributors & Partners payload.',
   })
   contributing_center?: ResultsCenterDto[];
+
+  @ApiPropertyOptional({
+    type: () => [ResultsByInstitution],
+    description:
+      'Partner institutions for the result (includes from_toc when prefilled from ToC).',
+  })
+  institutions?: ResultsByInstitution[];
 }

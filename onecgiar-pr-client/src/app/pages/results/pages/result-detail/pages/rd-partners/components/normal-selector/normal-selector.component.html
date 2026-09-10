@@ -22,7 +22,7 @@
   description="In this section you can include additional partners. If you do not find the partner in the dropdown menu, you can <a class='open_route alert-event'>request</a> to have it added to the list. Once approved, it may take up to an hour for the partner to appear in the CLARISA institutions list.">
 </app-alert-status>
 
-<div class="auto_fit_container fadeIn" style="position: relative; z-index: 5" *ngIf="this.rdPartnersSE.partnersBody.no_applicable_partner !== true">
+<div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px] fadeIn" style="position: relative; z-index: 5" *ngIf="this.rdPartnersSE.partnersBody.no_applicable_partner !== true">
   <div (click)="getDisableOptions()">
     <app-pr-multi-select
       [options]="this.institutionsSE.institutionsWithoutCentersListPartners"
@@ -56,8 +56,8 @@
             *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 1) : true"
             [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 1) }"
             (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 1)"
-            pTooltip="Organizations or entities that CGIAR collaborates with to advance the uptake and use of innovations at scale."
-            tooltipPosition="top">
+            prTooltip="Organizations or entities that CGIAR collaborates with to advance the uptake and use of innovations at scale."
+            prTooltipPosition="top">
             Scaling
           </div>
           <div
@@ -65,8 +65,8 @@
             *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 2) : true"
             [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 2) }"
             (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 2)"
-            pTooltip="Organizations or entities that have (expressed) an explicit or implicit demand for an innovation, change or who aspire to a specific goal or impact to which CGIAR can contribute."
-            tooltipPosition="top">
+            prTooltip="Organizations or entities that have (expressed) an explicit or implicit demand for an innovation, change or who aspire to a specific goal or impact to which CGIAR can contribute."
+            prTooltipPosition="top">
             Demand
           </div>
           <div
@@ -74,8 +74,8 @@
             *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 3) : true"
             [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 3) }"
             (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 3)"
-            pTooltip="Organizations or entities that CGIAR collaborates and co-invests with to develop, improve the readiness of, or apply innovations to contribute to impact at scale."
-            tooltipPosition="top">
+            prTooltip="Organizations or entities that CGIAR collaborates and co-invests with to develop, improve the readiness of, or apply innovations to contribute to impact at scale."
+            prTooltipPosition="top">
             Innovation
           </div>
           <div

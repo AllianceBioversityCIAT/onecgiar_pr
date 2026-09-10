@@ -76,6 +76,7 @@ import { ResultAnswerRepository } from './result-questions/repository/result-ans
 import { InvestmentDiscontinuedOptionsModule } from './investment-discontinued-options/investment-discontinued-options.module';
 import { ResultsInvestmentDiscontinuedOptionsModule } from './results-investment-discontinued-options/results-investment-discontinued-options.module';
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
+import { ResultInnovationMergeSplitModule } from './result-innovation-merge-split/result-innovation-merge-split.module';
 import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
 import { NonPooledProjectBudgetRepository } from './result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultFoldersModule } from './result-folders/result-folders.module';
@@ -110,10 +111,14 @@ import { EmailNotificationManagementModule } from '../../shared/microservices/em
 import { ReportingFullMetadataExportService } from './services/reporting-full-metadata-export.service';
 import { ReportingMetadataExportQueueModule } from '../../shared/microservices/reporting-metadata-export-queue/reporting-metadata-export-queue.module';
 import { ReportingMetadataExportConsumer } from './reporting-metadata-export.consumer';
+import { WebhookOutboxModule } from './webhook/webhook-outbox.module';
 
 @Module({
   controllers: [ResultsController, ReportingMetadataExportConsumer],
   imports: [
+    // P2-3166: the outbox write side. Entities + repository only, no services — that is what
+    // keeps the graph acyclic given BilateralModule already imports this module.
+    WebhookOutboxModule,
     RouterModule.register(ResultsRoutes),
     ResultLevelsModule,
     ResultTypesModule,
@@ -163,6 +168,7 @@ import { ReportingMetadataExportConsumer } from './reporting-metadata-export.con
     ResultQuestionsModule,
     InvestmentDiscontinuedOptionsModule,
     ResultsInvestmentDiscontinuedOptionsModule,
+    ResultInnovationMergeSplitModule,
     ResultFoldersModule,
     AdUsersModule,
     NotificationModule,

@@ -1,12 +1,25 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { ResultFrameworkReportingHomeService } from './result-framework-reporting-home.service';
+import {
+  isAvisaScienceProgram,
+  partitionScienceProgramsForHome,
+  ResultFrameworkReportingHomeService
+} from './result-framework-reporting-home.service';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { RecentActivity } from '../../../../../shared/interfaces/recentActivity.interface';
+import { SPProgress } from '../../../../../shared/interfaces/SP-progress.interface';
 
 describe('ResultFrameworkReportingHomeService', () => {
   let service: ResultFrameworkReportingHomeService;
   let mockApiService: jest.Mocked<ApiService>;
+
+  const avisaProgram = {
+    initiativeId: 41,
+    initiativeCode: 'SGP-02',
+    initiativeName: 'Accelerated Varietal Improvement and Seed Delivery of Legumes and Cereals in Africa',
+    initiativeShortName: 'AVISA',
+    progress: 10
+  } as SPProgress;
 
   const mockRecentActivity: RecentActivity[] = [
     {
@@ -68,6 +81,45 @@ describe('ResultFrameworkReportingHomeService', () => {
     expect(service.recentActivityList()).toEqual([]);
   });
 
+  describe('isAvisaScienceProgram', () => {
+    it('should match SGP-02 by initiativeId', () => {
+      expect(isAvisaScienceProgram({ initiativeId: 41, initiativeCode: 'SP99' } as SPProgress)).toBe(true);
+    });
+
+    it('should match SGP-02 and SGP02 codes', () => {
+      expect(isAvisaScienceProgram({ initiativeId: 99, initiativeCode: 'SGP-02' } as SPProgress)).toBe(true);
+      expect(isAvisaScienceProgram({ initiativeId: 99, initiativeCode: 'SGP02' } as SPProgress)).toBe(true);
+    });
+
+    it('should return false for other programs', () => {
+      expect(isAvisaScienceProgram({ initiativeId: 2, initiativeCode: 'SP02' } as SPProgress)).toBe(false);
+    });
+  });
+
+  describe('partitionScienceProgramsForHome', () => {
+    it('should move AVISA from my and other lists into otherProjects', () => {
+      const result = partitionScienceProgramsForHome({
+        mySciencePrograms: [avisaProgram, { initiativeId: 1, initiativeCode: 'SP01' } as SPProgress],
+        otherSciencePrograms: [{ initiativeId: 2, initiativeCode: 'SP02' } as SPProgress]
+      });
+
+      expect(result.mySciencePrograms).toEqual([{ initiativeId: 1, initiativeCode: 'SP01' }]);
+      expect(result.otherSciencePrograms).toEqual([{ initiativeId: 2, initiativeCode: 'SP02' }]);
+      expect(result.otherProjects).toEqual([avisaProgram]);
+    });
+
+    it('should dedupe AVISA when present in both buckets', () => {
+      const result = partitionScienceProgramsForHome({
+        mySciencePrograms: [avisaProgram],
+        otherSciencePrograms: [avisaProgram]
+      });
+
+      expect(result.otherProjects).toEqual([avisaProgram]);
+      expect(result.mySciencePrograms).toEqual([]);
+      expect(result.otherSciencePrograms).toEqual([]);
+    });
+  });
+
   describe('getRecentActivity', () => {
     it('should fetch and set recent activity list', () => {
       const mockResponse = { response: mockRecentActivity };
@@ -119,11 +171,11 @@ describe('ResultFrameworkReportingHomeService', () => {
   });
 
   describe('getScienceProgramsProgress', () => {
-    it('should fetch and set SP progress lists', () => {
+    it('should partition AVISA into otherProjectsList', () => {
       const mockResponse = {
         response: {
-          mySciencePrograms: [{ id: 1, acronym: 'SP1', name: 'Science Program 1', progress: 50 }],
-          otherSciencePrograms: [{ id: 2, acronym: 'SP2', name: 'Science Program 2', progress: 25 }]
+          mySciencePrograms: [avisaProgram, { id: 1, initiativeCode: 'SP01' } as any],
+          otherSciencePrograms: [{ id: 2, initiativeCode: 'SP02' } as any]
         }
       } as any;
 
@@ -132,8 +184,9 @@ describe('ResultFrameworkReportingHomeService', () => {
       service.getScienceProgramsProgress();
 
       expect(mockApiService.resultsSE.GET_ScienceProgramsProgress).toHaveBeenCalledTimes(1);
-      expect(service.mySPsList()).toEqual(mockResponse.response.mySciencePrograms);
-      expect(service.otherSPsList()).toEqual(mockResponse.response.otherSciencePrograms);
+      expect(service.mySPsList()).toEqual([{ id: 1, initiativeCode: 'SP01' }]);
+      expect(service.otherSPsList()).toEqual([{ id: 2, initiativeCode: 'SP02' }]);
+      expect(service.otherProjectsList()).toEqual([avisaProgram]);
     });
 
     it('should handle missing response properties gracefully', () => {
@@ -142,17 +195,21 @@ describe('ResultFrameworkReportingHomeService', () => {
 
       service.getScienceProgramsProgress();
 
-      expect(service.mySPsList()).toBeUndefined();
-      expect(service.otherSPsList()).toBeUndefined();
+      expect(service.mySPsList()).toEqual([]);
+      expect(service.otherSPsList()).toEqual([]);
+      expect(service.otherProjectsList()).toEqual([]);
     });
 
     it('signals should be settable and readable', () => {
       const myList = [{ id: 3 } as any];
       const otherList = [{ id: 4 } as any];
+      const otherProjects = [{ id: 41 } as any];
       service.mySPsList.set(myList as any);
       service.otherSPsList.set(otherList as any);
+      service.otherProjectsList.set(otherProjects as any);
       expect(service.mySPsList()).toEqual(myList as any);
       expect(service.otherSPsList()).toEqual(otherList as any);
+      expect(service.otherProjectsList()).toEqual(otherProjects as any);
     });
   });
 

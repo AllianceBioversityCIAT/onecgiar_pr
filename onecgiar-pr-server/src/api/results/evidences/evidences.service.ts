@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import {
   CreateEvidenceDto,
   EvidencesCreateInterface,
@@ -36,6 +36,37 @@ export class EvidencesService {
     private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
     private readonly _mqapService: MQAPService,
   ) {}
+
+  private readonly _logger = new Logger(EvidencesService.name);
+
+  /**
+   * The section marks an evidence row can carry, as stored: `tinyint NULL`.
+   * P2-3568 made them survive a phase rollover, so every read path has to
+   * normalise them — including supplementary evidence, which used to get only
+   * the five impact-area ones and would have returned raw 1/0/null for the rest.
+   */
+  private static readonly EVIDENCE_MARKS = [
+    'gender_related',
+    'youth_related',
+    'nutrition_related',
+    'environmental_biodiversity_related',
+    'poverty_related',
+    'innovation_readiness_related',
+    'innovation_use_related',
+    'policy_change_related',
+    'capacity_sharing_related',
+    'other_output_related',
+    'other_outcome_related',
+    'knowledge_product_metadata_related',
+  ] as const;
+
+  private _normalizeEvidenceMarks(rows: any[]): void {
+    for (const row of rows ?? []) {
+      for (const mark of EvidencesService.EVIDENCE_MARKS) {
+        row[mark] = !!row[mark];
+      }
+    }
+  }
 
   kpUrlRegex =
     /https:\/\/(cgspace\.cgiar\.org\/(items\/[a-f0-9-]+|handle(\/\d+){1,2})|hdl\.handle\.net(\/\d+){1,2})/gm;
@@ -237,13 +268,41 @@ export class EvidencesService {
       evidenceTypeId,
     );
 
+    // 🛑 Guarded per evidence, and it is not defensive dressing: `updateEvidences` above
+    // has ALREADY deactivated every evidence of the section, there is no transaction, and
+    // the writes are sequential. Before this guard, one evidence failing left the
+    // deactivations committed and silently dropped the evidences after it — the reporter
+    // lost work they never saw fail. Same shape as the per-evidence guard `replicateSPFiles`
+    // carries for the same reason.
     const limit = Math.min(evidencesArray.length, 6);
+    const failures: string[] = [];
     for (let index = 0; index < limit; index++) {
-      await this._upsertEvidenceItemV1(
-        result,
-        evidencesArray[index],
-        user,
-        evidenceTypeId,
+      try {
+        await this._upsertEvidenceItemV1(
+          result,
+          evidencesArray[index],
+          user,
+          evidenceTypeId,
+        );
+      } catch (error) {
+        const label =
+          evidencesArray[index]?.sp_file_name ??
+          evidencesArray[index]?.link ??
+          `evidence ${index + 1}`;
+        this._logger.error(
+          `REPORTING: evidence "${label}" of result ${createEvidenceDto.result_id} could not be saved: ${error?.message}`,
+        );
+        failures.push(`"${label}": ${error?.message}`);
+      }
+    }
+
+    // Everything that could be saved IS saved by now. Only then report what could not,
+    // so the reporter is told precisely what to fix instead of losing the whole section.
+    if (failures.length) {
+      throwServiceError(
+        failures.length === 1
+          ? `The rest of the section was saved. This piece of evidence was not: ${failures[0]}`
+          : `The rest of the section was saved. ${failures.length} pieces of evidence were not: ${failures.join(' | ')}`,
       );
     }
   }
@@ -361,6 +420,43 @@ export class EvidencesService {
       existingEvidenceSharepoint?.file_name !== sp_file_name &&
       existingEvidenceSharepoint?.id;
 
+    // 🛑 A file in the repository with no answer to "can this be shared publicly?" is a
+    // state the platform must not store.
+    //
+    // The visibility radio IS mandatory (`pr-radio-button` defaults `required` to true, and
+    // its root reports `complete` only when the value is neither null nor undefined), so the
+    // form does warn — but the warning does not block the save. When it is ignored,
+    // `is_public_file` arrives as null and the gate below compares `undefined != null`,
+    // which is FALSE by loose equality: SharePoint is never called, no sharing link is ever
+    // created, and `evidence.link` stays empty. The row is then stored with the column
+    // default, so the platform shows an evidence whose file exists in the repository, has no
+    // link anyone can open, and whose visibility nobody ever chose.
+    // ⚠️ The repo's copy of the evidence validation also requires a non-empty link, which
+    // would mean the section never turns green either — but do NOT lean on that: the live
+    // `validation_*` functions are resolved by name at runtime and are NOT in this repo,
+    // and the committed copy is known to differ from what actually runs (it reads a column
+    // that was later renamed). Green check is Juan David's; this guard stands on its own
+    // reason — an uploaded file with no visibility answer never gets a link at all.
+    //
+    // Only refused when a document is actually there: a half-filled evidence whose file has
+    // not been uploaded yet must still be saveable.
+    const documentIdForVisibilityCheck =
+      sp_document_id ?? existingEvidenceSharepoint?.document_id;
+    const visibilityAnswer =
+      evidence?.is_public_file ?? existingEvidenceSharepoint?.is_public_file;
+    if (
+      evidence?.is_sharepoint &&
+      documentIdForVisibilityCheck &&
+      (visibilityAnswer === null || visibilityAnswer === undefined)
+    ) {
+      this._logger.error(
+        `REPORTING: refused to store evidence ${newEvidenceId} — its file (document ${documentIdForVisibilityCheck}) has no answer to the public/confidential question, so no sharing link would ever be created for it.`,
+      );
+      throwServiceError(
+        'Please answer whether this file can be shared publicly. Without that answer the file cannot be given a link, so the evidence would be saved without one and the section would never be complete.',
+      );
+    }
+
     if (
       existingEvidenceSharepoint &&
       (replaceFile || !evidence?.is_sharepoint)
@@ -385,15 +481,70 @@ export class EvidencesService {
         evidenceSharepoint.is_public_file != evidence.is_public_file ||
         replaceFile
       ) {
+        const documentId = sp_document_id ?? evidenceSharepoint.document_id;
         const data: any = await this._sharePointService.addFileAccess(
-          sp_document_id ?? evidenceSharepoint.document_id,
+          documentId,
           evidence.is_public_file ?? evidenceSharepoint.is_public_file,
         );
-        if (data.link.webUrl) {
-          await this._evidencesRepository.update(newEvidenceId, {
-            link: data.link.webUrl,
-          });
+        // SharePointService.addFileAccess swallows its own HTTP/permission
+        // errors and resolves with the raw Error instead of rejecting (see
+        // share-point.service.ts). Without this guard `data.link.webUrl`
+        // throws an opaque TypeError here, which still aborts the request
+        // (create()/createV2() catch it) but hides the real SharePoint
+        // failure behind "Cannot read properties of undefined" and skips
+        // persisting the evidence_sharepoint row below silently.
+        if (!data?.link?.webUrl) {
+          throw new Error(
+            `SharePoint addFileAccess failed for document ${documentId}: ${
+              data?.message || JSON.stringify(data) || 'unknown error'
+            }`,
+          );
         }
+        // 🛑 THE PLATFORM MUST NOT RECORD A CONFIDENTIALITY IT DID NOT ACHIEVE.
+        //
+        // Measured on prtest on 9 Sep 2026 (result 9075, evidence 13081): switching an
+        // evidence to confidential leaves the file's anonymous permission alive, so the
+        // link that already circulated keeps downloading it. The row said false, four
+        // places in the UI drew a padlock and the words "Not public", and the file was
+        // one click away for anybody holding the old url.
+        //
+        // So when the file did not actually become private we refuse THIS evidence and
+        // tell the reporter what to do instead. Refusing is only safe because
+        // `_processMainEvidencesOnCreate` now guards each evidence: the rest of the
+        // section is saved, and only this one comes back with a reason.
+        // `verifiedPrivate` fails closed — "could not check" never reads as "private".
+        const revocation = data?.revocation;
+        const wantsPrivate = !(
+          evidence.is_public_file ?? evidenceSharepoint.is_public_file
+        );
+        if (
+          wantsPrivate &&
+          revocation &&
+          revocation.verifiedPrivate === false
+        ) {
+          this._logger.error(
+            revocation.readBackFailed
+              ? `REPORTING: refused to store evidence ${newEvidenceId} as confidential — reading the permissions of document ${documentId} failed, so the file could not be confirmed private.`
+              : `REPORTING: refused to store evidence ${newEvidenceId} as confidential — ${
+                  revocation.publicSurvivors.length
+                } anonymous sharing permission(s) still on document ${documentId} after trying to remove ${
+                  revocation.attempted
+                } (delete outcomes: ${
+                  revocation.outcomes
+                    .map((r: any) => `${r.permissionId}:${r.status}`)
+                    .join(', ') || 'none attempted'
+                }).`,
+          );
+          throwServiceError(
+            revocation.readBackFailed
+              ? 'This file could not be made confidential because the repository did not answer. It is still shared as it was. Please try saving again in a moment; if it keeps failing, upload the file again to get a fresh, private copy.'
+              : 'This file cannot be made confidential: it was shared publicly before and the repository did not remove that access, so the previous link still works. Upload the file again — the new copy will be private from the start — and remove this entry.',
+          );
+        }
+
+        await this._evidencesRepository.update(newEvidenceId, {
+          link: data.link.webUrl,
+        });
       }
 
       evidenceSharepoint.folder_path =
@@ -413,6 +564,24 @@ export class EvidencesService {
     await createOrUpdateEvidenceSharepoint(existingEvidenceSharepoint);
   }
 
+  /**
+   * P2-3601 — copies each SharePoint evidence of a freshly rolled-over result into the
+   * NEW phase's folder and records the copy.
+   *
+   * 🛑 Must run AFTER the phase-change transaction commits (see `versioning.service.ts`).
+   * Both reads below go through the repository's own EntityManager, so inside the open
+   * transaction they query a pooled connection, find nothing, and this method copies
+   * nothing at all — which is exactly how the rollover silently shared one document
+   * between two phases from Feb 2024 on. It is also why the copy does not belong inside:
+   * `replicateFile` + `addFileAccess` are ~6 Microsoft Graph round-trips per evidence on
+   * an HttpModule with no timeout, and there is no compensating delete to undo them.
+   *
+   * Every write the copy produces has to land on the new phase's own rows: the
+   * `evidence_sharepoint.replicate` INSERT copies `document_id` / `folder_path` verbatim
+   * from the previous phase, and `saveSPData` later resolves which file to touch as
+   * `sp_document_id ?? evidenceSharepoint.document_id`. Persisting only `evidence.link`
+   * leaves that field pointing at the neighbour phase's file, so the defect survives.
+   */
   async replicateSPFiles(config: any) {
     const resultReplicatedId = config?.new_result_id;
     const { filePath } =
@@ -428,19 +597,53 @@ export class EvidencesService {
     for (const sharePointIterator of evidevenceList) {
       if (!sharePointIterator?.is_sharepoint) continue;
 
-      const document_id = await this._sharePointService.replicateFile(
-        sharePointIterator['sp_document_id'],
-        filePath,
-      );
+      // One evidence failing must not cost the remaining ones their copy: the phase
+      // change is already committed by the time this runs.
+      try {
+        const document_id = await this._sharePointService.replicateFile(
+          sharePointIterator['sp_document_id'],
+          filePath,
+        );
 
-      const accessData = await this._sharePointService.addFileAccess(
-        document_id,
-        sharePointIterator.is_public_file,
-      );
+        const accessData = await this._sharePointService.addFileAccess(
+          document_id,
+          sharePointIterator.is_public_file,
+        );
 
-      await this._evidencesRepository.update(sharePointIterator, {
-        link: accessData?.link?.webUrl,
-      });
+        // Same guard `saveSPData` carries: addFileAccess swallows its own HTTP errors
+        // and resolves with the raw Error, so without this an empty link would be
+        // persisted over a working one.
+        if (!accessData?.link?.webUrl) {
+          this._logger.error(
+            `REPORTING: SharePoint access call returned no link for document ${document_id} (evidence ${sharePointIterator.id}); the evidence keeps its previous link.`,
+          );
+          continue;
+        }
+
+        await this._evidencesRepository.update(sharePointIterator.id, {
+          link: accessData.link.webUrl,
+        });
+
+        // `sharePointIterator` is a raw aliased row, so the evidence_sharepoint id
+        // travels as `sp_evidence_id` (see `getEvidencesByResultId`).
+        // Written the way `saveSPData` writes it — assigned on the entity and saved —
+        // because `document_id` / `folder_path` carry no declared type on the entity,
+        // so a typed partial does not compile. `file_name` is deliberately left alone:
+        // the copy keeps the source name and that name is correct under the convention
+        // (`result-<result_code>-…`, and result_code is shared across phases on purpose).
+        const spEvidenceId = sharePointIterator['sp_evidence_id'];
+        if (spEvidenceId) {
+          const spRow = new EvidenceSharepoint();
+          spRow.id = spEvidenceId;
+          spRow.document_id = document_id;
+          spRow.folder_path = filePath;
+          await this._evidenceSharepointRepository.save(spRow);
+        }
+      } catch (error) {
+        this._logger.error(
+          `REPORTING: SharePoint replication failed for evidence ${sharePointIterator.id} of result ${resultReplicatedId}: ${error?.message}`,
+        );
+      }
     }
   }
 
@@ -473,33 +676,13 @@ export class EvidencesService {
           1,
         );
 
+      this._normalizeEvidenceMarks(evidences);
       evidences.forEach((e) => {
-        e.gender_related = !!e.gender_related;
-        e.youth_related = !!e.youth_related;
-        e.nutrition_related = !!e.nutrition_related;
-        e.environmental_biodiversity_related =
-          !!e.environmental_biodiversity_related;
-        e.poverty_related = !!e.poverty_related;
-        e.innovation_readiness_related = !!e.innovation_readiness_related;
-        e.innovation_use_related = !!e.innovation_use_related;
-        e.policy_change_related = !!e.policy_change_related;
-        e.capacity_sharing_related = !!e.capacity_sharing_related;
-        e.other_output_related = !!e.other_output_related;
-        e.other_outcome_related = !!e.other_outcome_related;
-        e.knowledge_product_metadata_related =
-          !!e.knowledge_product_metadata_related;
         e.is_sharepoint = Number(!!e?.is_sharepoint);
         e.is_public_file = Boolean(e.is_public_file);
       });
 
-      supplementary.forEach((e) => {
-        e.gender_related = !!e.gender_related;
-        e.youth_related = !!e.youth_related;
-        e.nutrition_related = !!e.nutrition_related;
-        e.environmental_biodiversity_related =
-          !!e.environmental_biodiversity_related;
-        e.poverty_related = !!e.poverty_related;
-      });
+      this._normalizeEvidenceMarks(supplementary);
 
       return {
         response: {
@@ -546,21 +729,8 @@ export class EvidencesService {
         6,
       );
 
+      this._normalizeEvidenceMarks(evidences);
       evidences.forEach((e) => {
-        e.gender_related = !!e.gender_related;
-        e.youth_related = !!e.youth_related;
-        e.nutrition_related = !!e.nutrition_related;
-        e.environmental_biodiversity_related =
-          !!e.environmental_biodiversity_related;
-        e.poverty_related = !!e.poverty_related;
-        e.innovation_readiness_related = !!e.innovation_readiness_related;
-        e.innovation_use_related = !!e.innovation_use_related;
-        e.policy_change_related = !!e.policy_change_related;
-        e.capacity_sharing_related = !!e.capacity_sharing_related;
-        e.other_output_related = !!e.other_output_related;
-        e.other_outcome_related = !!e.other_outcome_related;
-        e.knowledge_product_metadata_related =
-          !!e.knowledge_product_metadata_related;
         e.is_sharepoint = Number(!!e?.is_sharepoint);
         e.is_public_file = Boolean(e.is_public_file);
       });

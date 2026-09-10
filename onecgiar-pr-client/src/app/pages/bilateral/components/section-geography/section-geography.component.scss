@@ -1,0 +1,41 @@
+// Geographic location — bilateral. Same visual language as the W1/W2 section
+// (rd-geographic-location → app-geoscope-management): fields stacked in the section card with the
+// shared custom-field headers, no per-block cards, icons or uppercase banners.
+.sg-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+// One block per question group. Descending z-index with document order so an open multi-select
+// panel overlays the blocks beneath it.
+.sg-block {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 10;
+
+  &--main { z-index: 100; }
+  &--extra { z-index: 50; }
+}
+
+.sg-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sg-field-error {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--pr-color-red-300);
+}
+
+// `.geographic_focus_description` in W1/W2: the grey "Description:" strip under the focus radios.
+.sg-focus-description {
+  margin-top: -6px;
+}

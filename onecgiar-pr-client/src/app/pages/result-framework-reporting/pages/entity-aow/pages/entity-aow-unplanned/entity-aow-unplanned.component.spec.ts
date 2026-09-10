@@ -85,4 +85,31 @@ describe('EntityAowUnplannedComponent', () => {
       expect(mockEntityAowService.getIntermediateOutcomes).toHaveBeenCalledWith('');
     });
   });
+
+  // P2-3336 (rules 1-2): this note IS the deliverable of the agreed AoW scoping rules, so it is
+  // asserted here. These nodes carry no `wp_id`, which is why the server returns them under every
+  // AoW -- claiming a mapping to particular ones would be wrong.
+  describe('Shared Intermediate Outcomes note', () => {
+    it('should render the informational note with its info icon', () => {
+      const note = fixture.nativeElement.querySelector('.entity-aow-unplanned_note');
+
+      expect(note).toBeTruthy();
+      expect(note.querySelector('.entity-aow-unplanned_note_icon').textContent.trim()).toBe('info');
+    });
+
+    it('should say they are unassigned and appear under every Area of Work', () => {
+      const text = fixture.nativeElement
+        .querySelector('.entity-aow-unplanned_note_text')
+        .textContent.replace(/\s+/g, ' ');
+
+      expect(text).toContain('not assigned to a specific Area of Work');
+      expect(text).toContain('every');
+      expect(text).not.toContain('to which they are mapped');
+    });
+
+    it('should stay informational: the table is rendered alongside the note, not replaced by it', () => {
+      expect(fixture.nativeElement.querySelector('.entity-aow-unplanned_content_table')).toBeTruthy();
+    });
+  });
+
 });

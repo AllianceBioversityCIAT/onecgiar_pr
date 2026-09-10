@@ -1,28 +1,30 @@
 .panel_menu {
   display: flex;
   flex-direction: column;
-  gap: 50px;
+  gap: 32px;
   border-radius: 10px;
-  padding: 10px 25px;
+  padding: 10px 4px;
   height: 100%;
   box-sizing: border-box;
-  background-color: var(--pr-color-white);
-  // justify-content: space-between;
-  overflow-y: auto;
+  background-color: transparent; // sits on the dark sidebar
+  overflow: visible; // the dark sidebar owns the scroll (no inner scrollbar)
 
   .ai-review-button {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 10px;
-    color: #7a30a8;
-    border: 0.5px solid #7a30a885;
+    color: rgba(var(--pr-color-white-rgb), 0.85);
+    border: 1px solid rgba(var(--pr-color-white-rgb), 0.14);
     width: 100%;
-    padding: 7px 13px;
-    border-radius: 4px;
+    box-sizing: border-box;
+    padding: 11px 16px;
+    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.3s ease;
-    background-color: transparent;
+    transition: all 0.25s ease;
+    background-color: rgba(var(--pr-color-white-rgb), 0.04);
+    box-shadow: inset 0 1px 0 rgba(var(--pr-color-white-rgb), 0.06);
+    font-weight: 600;
 
     img {
       transition: transform 0.3s ease;
@@ -30,9 +32,10 @@
 
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(122, 48, 168, 0.25);
-      border-color: #7a30a8;
-      background-color: rgba(122, 48, 168, 0.05);
+      box-shadow: 0 8px 22px rgba(87, 51, 196, 0.42);
+      border-color: rgba(87, 51, 196, 0.65);
+      background-color: rgba(var(--pr-color-white-rgb), 0.09);
+      color: var(--pr-color-white);
 
       img {
         transform: scale(1.15);
@@ -41,7 +44,7 @@
 
     &:active {
       transform: translateY(0px);
-      box-shadow: 0 2px 6px rgba(122, 48, 168, 0.2);
+      box-shadow: 0 2px 6px rgba(87, 51, 196, 0.35);
     }
 
     &.loading {
@@ -55,13 +58,14 @@
 
     &.completed {
       animation: success-smooth 0.5s ease-out;
-      background: linear-gradient(135deg, rgba(122, 48, 168, 0.12) 0%, rgba(122, 48, 168, 0.18) 100%);
-      border-color: #7a30a8;
-      box-shadow: 0 0 15px rgba(122, 48, 168, 0.3);
+      background-image: linear-gradient(180deg, rgba(87, 51, 196, 0.32) 0%, rgba(87, 51, 196, 0.18) 100%);
+      border-color: rgba(87, 51, 196, 0.65);
+      color: var(--pr-color-white);
+      box-shadow: 0 0 20px rgba(87, 51, 196, 0.45);
 
       img {
         animation: icon-glow 0.5s ease-out;
-        filter: drop-shadow(0 0 6px rgba(122, 48, 168, 0.5));
+        filter: drop-shadow(0 0 6px rgba(87, 51, 196, 0.5));
       }
 
       span {
@@ -117,7 +121,10 @@
 
   .segment {
     .name {
-      color: var(--pr-color-secondary-100);
+      color: rgba(var(--pr-color-white-rgb), 0.42);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 700;
       margin-bottom: 10px;
       margin-top: 10px;
     }
@@ -125,26 +132,49 @@
     .sections {
       display: flex;
       flex-direction: column;
-      padding-left: 5px;
-      gap: 10px;
+      padding-left: 0;
+      gap: 4px;
 
       &.skeleton-loading {
         gap: 6px;
       }
 
+      // The signature moment: the active section lifts off the surface with an indigo
+      // gradient, a colored glow, and a top inner highlight (light hitting a raised
+      // material). Ring + glow are box-shadows so there is zero layout shift.
       .section_active {
-        background-color: var(--pr-color-primary-50);
-        color: var(--pr-color-primary-950);
+        background-image: linear-gradient(180deg, #6b46e5 0%, #5733c4 100%);
+        color: var(--pr-color-white);
         font-weight: 600;
+        box-shadow:
+          0 8px 20px rgba(87, 51, 196, 0.5),
+          inset 0 0 0 1px rgba(var(--pr-color-white-rgb), 0.14),
+          inset 0 1px 0 rgba(var(--pr-color-white-rgb), 0.28);
+
+        &:hover {
+          background-image: linear-gradient(180deg, #6b46e5 0%, #5733c4 100%);
+        }
+
+        .check .valid {
+          color: var(--pr-color-white) !important;
+        }
+
+        .check .invalid {
+          color: rgba(var(--pr-color-white-rgb), 0.65) !important;
+        }
       }
 
       a {
         text-decoration: none;
-        color: var(--pr-color-secondary-400);
+        color: rgba(var(--pr-color-white-rgb), 0.74);
         font-weight: 500;
-        padding: 5px 10px 5px 20px;
+        padding: 11px 16px;
         border-radius: 10px;
-        transition: background-color ease-in-out 0.3s;
+        // Every row is a subtle raised surface with a hairline edge, so the list
+        // reads as defined items even when none is selected.
+        background-color: rgba(var(--pr-color-white-rgb), 0.035);
+        box-shadow: inset 0 0 0 1px rgba(var(--pr-color-white-rgb), 0.05);
+        transition: background-color ease-in-out 0.2s, color ease-in-out 0.2s;
         position: relative;
         overflow: hidden;
 
@@ -160,11 +190,12 @@
           padding: 0px 15px;
 
           .valid {
-            color: var(--pr-color-green-100);
+            color: var(--pr-color-green-300);
+            filter: drop-shadow(0 0 5px rgba(var(--pr-color-green-rgb), 0.55));
           }
 
           .invalid {
-            color: var(--pr-color-accents-3);
+            color: rgba(var(--pr-color-white-rgb), 0.28);
           }
         }
 
@@ -176,7 +207,8 @@
         }
 
         &:hover {
-          background-color: var(--pr-color-accents-1);
+          background-color: rgba(var(--pr-color-white-rgb), 0.09);
+          color: var(--pr-color-white);
         }
       }
 
@@ -227,21 +259,21 @@
 
   .submit_button {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
     flex-direction: column;
-    scale: 1.2;
-    margin-bottom: 20px;
-    padding: 15px;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 4px;
 
     .button_access_information {
       text-align: center;
-      color: var(--pr-color-primary-300);
-      background-color: rgba(var(--pr-color-primary-rgb), 0.09);
-      box-shadow: 0px 0px 5px 1px var(--pr-color-primary-50);
+      color: rgba(var(--pr-color-white-rgb), 0.7);
+      background-color: rgba(var(--pr-color-white-rgb), 0.05);
+      border: 1px solid rgba(var(--pr-color-white-rgb), 0.08);
       padding: 10px;
-      border-radius: 3px;
-      margin-top: 10px;
+      border-radius: 8px;
+      margin-top: 4px;
     }
   }
 }

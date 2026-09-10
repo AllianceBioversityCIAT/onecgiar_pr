@@ -3,7 +3,6 @@ import { WpHomeComponent } from './wp-home.component';
 import { CommonModule } from '@angular/common';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
-import { MessageService } from 'primeng/api';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { OutcomeIndicatorService } from '../../services/outcome-indicator.service';
 jest.useFakeTimers();
@@ -18,7 +17,7 @@ describe('WpHomeComponent', () => {
     await TestBed.configureTestingModule({
       imports: [CommonModule, WpHomeComponent, HttpClientTestingModule, RouterTestingModule],
       declarations: [],
-      providers: [ExportTablesService, OutcomeIndicatorService, MessageService]
+      providers: [ExportTablesService, OutcomeIndicatorService]
     }).compileComponents();
 
     fixture = TestBed.createComponent(WpHomeComponent);
@@ -62,7 +61,7 @@ describe('WpHomeComponent', () => {
         { header: 'Supporting results', key: 'indicator_supporting_results', width: 60 }
       ];
 
-      outcomeIndicatorService.wpsData = [{ indicators: [{ indicator_name: 'test' }] }];
+      outcomeIndicatorService.wpsData = [{ toc_results: [], indicators: [{ indicator_name: 'test' }] }];
       outcomeIndicatorService.loadingWPs.set(false);
       outcomeIndicatorService.initiativeIdFilter = 'test';
 

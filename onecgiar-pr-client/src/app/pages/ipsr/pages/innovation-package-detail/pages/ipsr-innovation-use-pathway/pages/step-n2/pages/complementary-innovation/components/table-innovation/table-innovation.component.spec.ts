@@ -6,12 +6,9 @@ import { PrFieldHeaderComponent } from '../../../../../../../../../../../../cust
 import { PrInputComponent } from '../../../../../../../../../../../../custom-fields/pr-input/pr-input.component';
 import { PrTextareaComponent } from '../../../../../../../../../../../../custom-fields/pr-textarea/pr-textarea.component';
 import { PrRadioButtonComponent } from '../../../../../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
-import { DialogModule } from 'primeng/dialog';
 import { PrButtonComponent } from '../../../../../../../../../../../../custom-fields/pr-button/pr-button.component';
 import { PrFieldValidationsComponent } from '../../../../../../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
-import { TooltipModule } from 'primeng/tooltip';
 import { YesOrNotByBooleanPipe } from '../../../../../../../../../../../../custom-fields/pipes/yes-or-not-by-boolean.pipe';
-import { RadioButtonModule } from 'primeng/radiobutton';
 import { CustomizedAlertsFeService } from '../../../../../../../../../../../../shared/services/customized-alerts-fe.service';
 
 describe('TableInnovationComponent', () => {
@@ -35,7 +32,7 @@ describe('TableInnovationComponent', () => {
         PrFieldValidationsComponent,
         YesOrNotByBooleanPipe
       ],
-      imports: [HttpClientTestingModule, FormsModule, DialogModule, TooltipModule, RadioButtonModule],
+      imports: [HttpClientTestingModule, FormsModule],
       providers: [{ provide: CustomizedAlertsFeService, useValue: mockCustomizedAlertsFeService }]
     }).compileComponents();
 

@@ -7,8 +7,8 @@ import {
 } from '../../../shared/handlers/error.utils';
 import { RoleLevelsService } from '../role-levels/role-levels.service';
 import { RoleByUser } from './entities/role-by-user.entity';
-import { resultRolesDto } from './dto/resultRoles.dto';
-import { returnFormatRoleByUser } from './dto/returnFormatRoleByUser.dto';
+import { ResultRolesDto } from './dto/resultRoles.dto';
+import { ReturnFormatRoleByUser } from './dto/returnFormatRoleByUser.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserRepository } from '../user/repositories/user.repository';
 import { User } from '../user/entities/user.entity';
@@ -25,7 +25,7 @@ export class RoleByUserService {
   async create(
     createRoleByUserDto: CreateRoleByUserDto,
     userData: TokenDto,
-  ): Promise<returnFormatRoleByUser | returnErrorDto> {
+  ): Promise<ReturnFormatRoleByUser | returnErrorDto> {
     try {
       const targetsValues: any[] = Object.values(createRoleByUserDto.target);
       let validCount = false;
@@ -36,11 +36,7 @@ export class RoleByUserService {
         },
       });
       if (!user) {
-        throw {
-          response: {},
-          message: 'User Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        this.throwServiceError('User Not Found', HttpStatus.NOT_FOUND);
       }
 
       if (targetsValues.length) {
@@ -48,16 +44,14 @@ export class RoleByUserService {
           targetsValues.reduce(
             (_sum, data, initial = 0) => (data ? ++initial : initial),
             0,
-          ) > 1
-            ? true
-            : false;
+          ) > 1;
       }
       if (validCount) {
-        throw {
-          response: { error: createRoleByUserDto.target },
-          message: 'There are two or more targets to assign in the role',
-          status: HttpStatus.BAD_REQUEST,
-        };
+        this.throwServiceError(
+          'There are two or more targets to assign in the role',
+          HttpStatus.BAD_REQUEST,
+          { error: createRoleByUserDto.target },
+        );
       }
 
       const existRole: RoleByUser =
@@ -68,11 +62,10 @@ export class RoleByUserService {
         });
 
       if (existRole) {
-        throw {
-          response: {},
-          message: 'The user already has this role assignment',
-          status: HttpStatus.CONFLICT,
-        };
+        this.throwServiceError(
+          'The user already has this role assignment',
+          HttpStatus.CONFLICT,
+        );
       }
       createRoleByUserDto.last_updated_by = userData.id;
       createRoleByUserDto.created_by = userData.id;
@@ -92,41 +85,43 @@ export class RoleByUserService {
 
   async allRolesByUser(
     userId: number,
-  ): Promise<returnFormatRoleByUser | returnErrorDto> {
+  ): Promise<ReturnFormatRoleByUser | returnErrorDto> {
     try {
       const { response, message, status } =
         await this._roleLevelsService.findAll();
       if (!response) {
-        throw {
-          response,
-          message,
-          status,
-        };
+        this.throwServiceError(message, status, response);
       }
 
       const userRoles: any[] =
         await this._roleByUserRepository.getAllRolesByUser(userId);
       if (!userRoles.length) {
-        throw {
-          response: {},
-          message: `No roles found for this user`,
-          status: HttpStatus.NOT_FOUND,
-        };
+        this.throwServiceError(
+          'No roles found for this user',
+          HttpStatus.NOT_FOUND,
+        );
       }
 
-      let resultRoles: resultRolesDto = {
+      const applicationRole = this.resolveApplicationRole(userRoles);
+
+      let resultRoles: ResultRolesDto = {
         user_id: userId,
-        application: userRoles.filter(
-          (ap) => ap.role_level_name == 'Application',
-        ).length
-          ? userRoles.filter((ap) => ap.role_level_name == 'Application')[0]
-          : null,
+        application: applicationRole,
         initiative: userRoles.filter(
           (ap) => ap.role_level_name == 'Initiative',
         ),
         action_area: userRoles.filter(
           (ap) => ap.role_level_name == 'Action Area',
         ),
+        center: userRoles
+          .filter((ap) => ap.role_level_name == 'Center')
+          .map((row) => ({
+            center_id: row.center_id,
+            center_name: row.center_name,
+            center_acronym: row.center_acronym,
+            role_id: row.role_id,
+            role_name: row.description,
+          })),
       };
 
       resultRoles = this.cleanRoleData(resultRoles);
@@ -140,16 +135,50 @@ export class RoleByUserService {
     }
   }
 
-  private cleanRoleData(role: any) {
-    delete role.application.action_area_id;
-    delete role.application.initiative_id;
+  private resolveApplicationRole(userRoles: any[]) {
+    const byLevel = userRoles.find(
+      (row) => `${row.role_level_name}`.trim() === 'Application',
+    );
+    if (byLevel) return byLevel;
 
-    role.initiative.map((el) => {
+    return (
+      userRoles.find(
+        (row) =>
+          row.role_id == 1 &&
+          (row.initiative_id == null || row.initiative_id === undefined) &&
+          (row.action_area_id == null || row.action_area_id === undefined) &&
+          (row.center_id == null || row.center_id === undefined),
+      ) ?? null
+    );
+  }
+
+  private throwServiceError(
+    message: string,
+    status: HttpStatus,
+    response: unknown = {},
+  ): never {
+    throw Object.assign(new Error(message), { response, status });
+  }
+
+  private cleanRoleData(role: any) {
+    if (role.application) {
+      delete role.application.action_area_id;
+      delete role.application.initiative_id;
+      delete role.application.center_id;
+    }
+
+    role.initiative?.map((el) => {
       delete el.action_area_id;
+      delete el.center_id;
+      delete el.center_name;
+      delete el.center_acronym;
     });
 
-    role.action_area.map((el) => {
+    role.action_area?.map((el) => {
       delete el.initiative_id;
+      delete el.center_id;
+      delete el.center_name;
+      delete el.center_acronym;
     });
 
     return role;

@@ -198,4 +198,4 @@ CGIAR funding comes in windows: pooled W1/W2 funds the Programs; **W3/Bilateral*
 - IPSR: <https://www.cgiar.org/news-events/news/birds-eye-view-of-cgiars-innovation-packages-and-scaling-readiness-ipsr>
 - CLARISA: <https://clarisa.cgiar.org/>
 - Results Dashboard: <https://results.cgiar.org>
-- Internal: `docs/prd.md`, `docs/system-design/design.md`, `docs/detailed-design/detailed-design.md`, `onecgiar-pr-server/docs/bilateral-result-summaries.en.md`.
+- Internal: `docs/prd.md`, `docs/ux-ui/design.md`, `docs/trd/trd.md`, `onecgiar-pr-server/docs/bilateral-result-summaries.en.md`.

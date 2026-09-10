@@ -15,29 +15,11 @@ COPY nest-cli.json ./
 COPY eslint.config.mjs ./
 COPY scripts ./scripts
 
-RUN echo "{\"compilerOptions\": {\
-    \"module\": \"commonjs\",\
-    \"declaration\": true,\
-    \"removeComments\": true,\
-    \"emitDecoratorMetadata\": true,\
-    \"experimentalDecorators\": true,\
-    \"allowSyntheticDefaultImports\": true,\
-    \"target\": \"es2017\",\
-    \"sourceMap\": true,\
-    \"outDir\": \"./dist\",\
-    \"baseUrl\": \"./\",\
-    \"incremental\": true,\
-    \"skipLibCheck\": true,\
-    \"strictNullChecks\": false,\
-    \"noImplicitAny\": false,\
-    \"strictBindCallApply\": false,\
-    \"forceConsistentCasingInFileNames\": false,\
-    \"noFallthroughCasesInSwitch\": false,\
-    \"esModuleInterop\": true,\
-    \"types\": [\"node\", \"@nestjs/schedule\", \"jest\"]\
-    }}" > tsconfig.json
-
-
+# Migrations are NOT run from this image, on purpose: the Jenkins deployment pipeline runs
+# `npm run migration:run` as its own step and the migrations stay applied in the database
+# (confirmed by Cristian Gamboa, 2 Sep 2026). This line is kept commented as a pointer, NOT as a
+# pending task — uncommenting it would apply migrations at BUILD time, against whatever database
+# the build can reach, which is not where they belong.
 # RUN npm run migration:run
 
 RUN npm run build

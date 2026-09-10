@@ -1,13 +1,10 @@
-<p-dialog
-  appendTo="body"
-  header="Title"
+<app-pr-dialog
   [(visible)]="this.api.dataControlSE.changeResultTypeModal"
-  [draggable]="false"
   [modal]="true"
   [showHeader]="false"
   [dismissableMask]="false"
   [closeOnEscape]="false"
-  [style]="{ padding: '0px' }"
+  styleClass="change-result-type-dialog"
   (onHide)="onCloseModal()">
   <div class="modal_header">
     <h1 class="modal_title">Change result type</h1>
@@ -51,7 +48,7 @@
       </div>
 
       <div *ngIf="selectedResultType && selectedResultType?.id === 6">
-        <app-alert-status [description]="alertStatusDescKnowledgeProduct"></app-alert-status>
+        <app-alert-status [description]="alertStatusDescKnowledgeProduct()"></app-alert-status>
 
         <div [ngClass]="{ mqap_sync_title: selectedResultType?.id === 6 }">
           <app-pr-input [isStatic]="true" placeholder="Handle..." label="CGSpace link" type="text" [(ngModel)]="cgSpaceHandle"> </app-pr-input>
@@ -104,4 +101,4 @@
         [ngClass]="{ globalDisabled: isContinueButtonDisabled() }"></app-pr-button>
     </div>
   </div>
-</p-dialog>
+</app-pr-dialog>

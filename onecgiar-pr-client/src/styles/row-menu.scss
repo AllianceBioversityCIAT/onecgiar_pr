@@ -1,0 +1,79 @@
+/**
+ * Shared row overflow menu styles (`.pr-row-menu`).
+ *
+ * Used by CDK Connected Overlay panels in `reporting-aow-table` (Reporting tab)
+ * and `indicator-drawer` (Reported results drawer).
+ * Global on purpose: CDK Overlay panels render in `.cdk-overlay-container` on `<body>`,
+ * outside any component host's ViewEncapsulation scope.
+ */
+
+@keyframes prPop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pr-row-menu {
+  display: flex;
+  flex-direction: column;
+  width: 268px;
+  padding: 6px;
+  cursor: default;
+  background: var(--pr-surface-card);
+  border: 1px solid var(--pr-border);
+  border-radius: 12px;
+  box-shadow: var(--pr-shadow-2);
+  animation: prPop 120ms ease-out;
+  box-sizing: border-box;
+}
+
+.pr-row-menu_item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pr-text);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  box-sizing: border-box;
+
+  &:hover:not(:disabled) {
+    background: var(--pr-color-primary-50);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: -2px;
+  }
+
+  /* Visible but inert */
+  &--disabled {
+    color: var(--pr-text-subtle);
+    cursor: not-allowed;
+  }
+}
+
+.pr-row-menu_soon {
+  margin-left: auto;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--pr-surface-subtle);
+  border-radius: 6px;
+}

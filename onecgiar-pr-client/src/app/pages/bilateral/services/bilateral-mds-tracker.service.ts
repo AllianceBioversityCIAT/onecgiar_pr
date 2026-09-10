@@ -1,0 +1,176 @@
+import { Injectable, signal, computed } from '@angular/core';
+
+export type MdsStatus = 'empty' | 'partial' | 'complete';
+
+export interface MdsFieldItem {
+  key: string;
+  label: string;
+  filled: boolean;
+  /** Optional subgroup label in the aside (e.g. "Theory of Change"). */
+  group?: string;
+  /**
+   * P2-3340: the field holds a value but that value breaks a rule — today only the word ceilings,
+   * which `pr-input`/`pr-textarea` merely paint red without blocking anything. Kept separate from
+   * `filled` on purpose: an over-limit field IS answered, so it must keep counting toward the
+   * percentage. It blocks Submit through `invalidFields`, not by silently reopening a section.
+   */
+  invalid?: boolean;
+  /** Shown to the user when Submit is refused. Required whenever `invalid` is true. */
+  invalidReason?: string;
+  /**
+   * P2-3390-adjacent (9-sep-2026, PO decision): the field is listed for the reporter but does NOT
+   * count towards completeness, so it can never hold Submit for review back.
+   *
+   * 🥇 Why a flag instead of just not publishing the item: the fields stay on the checklist, which is
+   * what tells the reporter they exist and are worth filling. Only the ARITHMETIC changes — the
+   * counters, the percentage and therefore `overallStatus`, which is the single gate of the rail's
+   * Submit (`bilateral-result-creator.component.ts` → `canSubmitFromRail`).
+   *
+   * Today only the ToC mapping block uses it: the server's `submit-for-review` requires nothing but a
+   * lead centre the caller belongs to and an assigned Science Program
+   * (`bilateral-center.service.ts` → `submitForReview`), so demanding the whole ToC cascade was a
+   * client-only bar that blocked Pending Review with the primary program already chosen.
+   *
+   * ⚠️ There is deliberately NO visual affordance for it. The live progress UI is the editor's rail
+   * (`.bcr-rail` in `bilateral-result-creator`), which shows section counts only — never per-field
+   * ticks — so nothing on screen can read "100% with an empty circle". The per-field checklist lives
+   * in `bilateral-progress-aside`, and that component has no host anywhere in the app (verified on
+   * prtest, build 56): the rail replaced it. Tagging optional items there was dead UI and was
+   * reverted. If the aside is ever remounted, add the tag then.
+   */
+  optional?: boolean;
+}
+
+export interface MdsSectionStatus {
+  sectionName: string;
+  sectionLabel: string;
+  totalFields: number;
+  filledFields: number;
+  percentage: number;
+  status: MdsStatus;
+  fields: MdsFieldItem[];
+}
+
+const SECTION_ORDER = ['general-info', 'contributors', 'geography', 'evidence', 'type-specific'] as const;
+
+const EMPTY_SECTIONS: Record<string, MdsFieldItem[]> = {
+  'general-info': [],
+  contributors: [],
+  geography: [],
+  evidence: [],
+  'type-specific': [],
+};
+
+@Injectable()
+export class BilateralMdsTrackerService {
+  private readonly _fieldItems = signal<Record<string, MdsFieldItem[]>>({ ...EMPTY_SECTIONS });
+
+  readonly sectionStatus = computed<MdsSectionStatus[]>(() => {
+    const map = this._fieldItems();
+    const keys = new Set([...SECTION_ORDER, ...Object.keys(map)]);
+    return Array.from(keys).map(name => this.buildStatus(name, map[name] ?? []));
+  });
+
+  readonly overallPercentage = computed(() => {
+    const statuses = this.sectionStatus();
+    if (statuses.length === 0) return 0;
+    const total = statuses.reduce((sum, s) => sum + s.totalFields, 0);
+    const filled = statuses.reduce((sum, s) => sum + s.filledFields, 0);
+    return total > 0 ? Math.round((filled / total) * 100) : 0;
+  });
+
+  readonly overallStatus = computed<MdsStatus>(() => {
+    const pct = this.overallPercentage();
+    if (pct === 0) return 'empty';
+    if (pct >= 100) return 'complete';
+    return 'partial';
+  });
+
+  /**
+   * Every answered-but-invalid field, across all sections. Submit reads this to refuse and say WHY;
+   * deliberately not folded into `overallStatus`, which would disable the button with no explanation.
+   */
+  readonly invalidFields = computed<MdsFieldItem[]>(() =>
+    this.sectionStatus().flatMap(section => section.fields.filter(field => field.invalid))
+  );
+
+  /** Replace all checklist items for a section (or only a group when `group` is set). */
+  setSectionFields(sectionName: string, items: MdsFieldItem[], group?: string): void {
+    this._fieldItems.update(map => {
+      const normalized = items.map(item => (group ? { ...item, group } : item));
+      if (!group) {
+        return { ...map, [sectionName]: normalized };
+      }
+      const current = map[sectionName] ?? [];
+      const kept = current.filter(i => i.group !== group);
+      return { ...map, [sectionName]: [...kept, ...normalized] };
+    });
+  }
+
+  getSectionFields(sectionName: string): MdsFieldItem[] {
+    return this._fieldItems()[sectionName] ?? [];
+  }
+
+  /**
+   * Legacy numeric update — synthesizes anonymous field slots.
+   * Prefer `setSectionFields` for named checklist items.
+   */
+  setTotalFields(sectionName: string, total: number): void {
+    const current = this._fieldItems()[sectionName] ?? [];
+    const filled = current.filter(i => i.filled).length;
+    this.synthesizeSlots(sectionName, total, Math.min(filled, total));
+  }
+
+  /**
+   * Legacy numeric update — synthesizes anonymous field slots.
+   * Prefer `setSectionFields` for named checklist items.
+   */
+  updateSection(sectionName: string, filledFields: number): void {
+    const current = this._fieldItems()[sectionName] ?? [];
+    const total = current.length > 0 ? current.length : Math.max(filledFields, 1);
+    this.synthesizeSlots(sectionName, total, Math.min(filledFields, total));
+  }
+
+  reset(): void {
+    this._fieldItems.set({ ...EMPTY_SECTIONS });
+  }
+
+  private synthesizeSlots(sectionName: string, total: number, filled: number): void {
+    const items: MdsFieldItem[] = Array.from({ length: total }, (_, i) => ({
+      key: `${sectionName}-${i}`,
+      label: `Field ${i + 1}`,
+      filled: i < filled,
+    }));
+    this._fieldItems.update(map => ({ ...map, [sectionName]: items }));
+  }
+
+  private buildStatus(name: string, fields: MdsFieldItem[]): MdsSectionStatus {
+    // Optional items are listed in `fields` (the checklist renders them) but excluded from every
+    // counter, so they cannot move the percentage and cannot gate Submit. See `MdsFieldItem.optional`.
+    const counted = fields.filter(f => !f.optional);
+    const totalFields = counted.length;
+    const filledFields = counted.filter(f => f.filled).length;
+    const percentage = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
+    const status: MdsStatus = percentage === 0 ? 'empty' : percentage >= 100 ? 'complete' : 'partial';
+    return {
+      sectionName: name,
+      sectionLabel: this.sectionLabel(name),
+      totalFields,
+      filledFields,
+      percentage,
+      status,
+      fields,
+    };
+  }
+
+  private sectionLabel(name: string): string {
+    const labels: Record<string, string> = {
+      'general-info': 'General Information',
+      contributors: 'Contributors & Partners',
+      geography: 'Geographic Location',
+      evidence: 'Evidence',
+      'type-specific': 'Type-Specific',
+    };
+    return labels[name] ?? name;
+  }
+}

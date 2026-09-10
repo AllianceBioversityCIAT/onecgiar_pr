@@ -1,0 +1,35 @@
+<div class="cf-overlay">
+  <!-- top bar -->
+  <div class="cf-topbar">
+    <div class="cf-left">
+      <div class="cf-title">
+        <b>Framework Galaxy</b>
+        <span class="cf-crumbs">
+          @for (c of crumbs(); track $index; let last = $last) {
+            <span [class.cf-crumb-cur]="last">{{ c }}</span>@if (!last) {<span class="cf-crumb-sep">›</span>}
+          }
+        </span>
+        <span class="cf-sub">{{ subtitle() }}</span>
+      </div>
+    </div>
+    <div class="cf-actions">
+      @if (!canGoBack()) {
+        <button class="cf-btn cf-solid" (click)="close()">✕ Exit 3D</button>
+      }
+    </div>
+  </div>
+
+  <!-- level colour key -->
+  <div class="cf-levels">
+    @for (l of levels; track l.label) {
+      <span><span class="cf-ldot" [style.background]="l.color"></span>{{ l.label }}</span>
+    }
+  </div>
+
+  <p class="cf-hint">click a node to focus it · ‹ › move between them · open ▸ to go deeper · click it again to step back · ↑ Back (on the card) to go up a level</p>
+
+  <!-- 3D stage -->
+  <div #stage class="cf-stage">
+    <canvas #gl></canvas>
+  </div>
+</div>
