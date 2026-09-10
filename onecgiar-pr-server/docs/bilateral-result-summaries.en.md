@@ -455,3 +455,12 @@ Other bilateral-supported types (e.g. other output / other outcome) may **not** 
 ---
 
 *Generated from server implementation in `bilateral.service.ts` (`enrichBilateralResultResponse` and related builders). If the API diverges, treat this file as documentation debt and update it alongside code changes.*
+
+# Innovation Use minimum data standard
+
+For `POST /api/bilateral/create` Innovation Use results, the request must provide the bilateral MDS before
+the result is created in `Pending Review`: actors (or `innov_use_to_be_determined: true`), one quantitative
+measure with unit and quantity, an Innovation Use level, and every contributing W3/bilateral project with
+either a positive `usd_budget` or `is_determined: true`. CGIAR Program and partner investment are optional
+full metadata. Centre-authored bilateral drafts may remain incomplete, but `submit-for-review` enforces the
+same four rules server-side.

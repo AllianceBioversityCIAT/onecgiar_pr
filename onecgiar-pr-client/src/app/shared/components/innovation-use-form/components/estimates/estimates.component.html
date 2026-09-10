@@ -1,3 +1,4 @@
+@if (shows('programs')) {
 <div class="segment">
     <app-pr-field-header
         [label]="'Estimation of total USD-value of investment by CGIAR Programs during the reporting period'"
@@ -15,7 +16,7 @@
             <td> <strong>{{item.official_code}}</strong> - {{item.name}}</td>
             <td>
                 <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash" [disabled]="disabled"
-                    [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false"
+                    [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="isRequired('programs')"
                     (ngModelChange)="onInputChange(item)">
                 </app-pr-input>
             </td>
@@ -32,8 +33,10 @@
         <app-no-data-text title="There are no items available for this table."></app-no-data-text>
     </div>
 </div>
+}
 
 
+@if (shows('bilateral')) {
 <div class="segment">
     <app-pr-field-header
         label="Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period"
@@ -56,7 +59,7 @@
             </td>
             <td>
                 <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash" [disabled]="disabled"
-                    [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false"
+                    [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="isRequired('bilateral')"
                     (ngModelChange)="onInputChange(item)">
                 </app-pr-input>
             </td>
@@ -73,7 +76,9 @@
         <app-no-data-text title="There are no items available for this table."></app-no-data-text>
     </div>
 </div>
+}
 
+@if (shows('partners')) {
 <div class="segment">
     <app-pr-field-header label="Estimated total USD-value of (co-)investment by partners during the reporting period"
         [description]="headerDescriptions().n3" [useColon]="false"></app-pr-field-header>
@@ -93,7 +98,7 @@
             </td>
             <td>
                 <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash" [disabled]="disabled"
-                    [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false"
+                    [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="isRequired('partners')"
                     (ngModelChange)="onInputChange(item)">
                 </app-pr-input>
             </td>
@@ -111,3 +116,4 @@
         title="There are no items available for this table."></app-no-data-text>
 
 </div>
+}

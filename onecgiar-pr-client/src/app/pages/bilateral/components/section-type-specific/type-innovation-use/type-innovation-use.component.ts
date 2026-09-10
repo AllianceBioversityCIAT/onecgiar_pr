@@ -502,14 +502,7 @@ export class TypeInnovationUseComponent implements OnInit {
     );
   }
 
-  /**
-   * P2-3428 / P2-3331 AC1 — the MDS set is Actors, Other quantitative measures and Use level. Investment is
-   * NOT one of them: P2-3390 delivered it as the three real tables inside the full metadata, optional by PO
-   * decision (Juan David, 9-sep-2026), so it publishes nothing here. The old `use-determined` entry is gone on
-   * purpose: the story counts the "Innovation Use to be Determined" radio as part of the Actors rule, not as
-   * a separate MDS field, and every extra entry here silently raises the bar Submit is gated on
-   * (`overallStatus() === 'complete'`). Nothing revealed by the full-metadata toggle may appear below — AC16.
-   */
+  /** P2-3428 / P2-3331 — four bilateral Innovation Use MDS, including W3/bilateral investment. */
   updateMds(): void {
     const tbd = this.body.innov_use_to_be_determined;
     const tbdSet = tbd !== null && tbd !== undefined;
@@ -531,13 +524,18 @@ export class TypeInnovationUseComponent implements OnInit {
         label: 'How would you assess the current use level of the innovation?',
         filled: this.body.innovation_use_level_id != null,
       },
-      // P2-3390: `use-investment` sigue sin publicarse al tracker, ahora por decisión de producto y no
-      // por falta de almacenamiento. La inversión se reporta en las tres tablas del full metadata
-      // (`investment_programs` / `investment_bilateral` / `investment_partners`), es OPCIONAL y no entra
-      // ni al MDS ni al green check: agregar una entrada aquí subiría la barra que gatea el Submit
-      // (`overallStatus() === 'complete'`) y rompería AC16, que prohíbe que algo revelado por el toggle
-      // cuente. El monto ya no es uno solo: va POR ENTIDAD, así que el campo único que existía aquí no
-      // tenía a dónde guardarse.
+      {
+        key: 'use-investment',
+        label: 'Investment by CGIAR W3 or bilateral projects',
+        filled:
+          Array.isArray(this.body.investment_bilateral) &&
+          this.body.investment_bilateral.length > 0 &&
+          this.body.investment_bilateral.every(
+            (investment: any) =>
+              (Number(investment?.kind_cash) > 0) !==
+              (investment?.is_determined === true),
+          ),
+      },
     ]);
   }
 }

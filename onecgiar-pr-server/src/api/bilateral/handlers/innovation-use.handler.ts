@@ -2,11 +2,13 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import {
   BilateralResultTypeHandler,
   HandlerAfterCreateContext,
+  HandlerBeforeCreateContext,
 } from './bilateral-result-type-handler.interface';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-innovation-use-levels/clarisa-innovation-use-levels.repository';
 import { InnovationUseService } from '../../results-framework-reporting/innovation-use/innovation-use.service';
 import { ActorTypeRepository } from '../../results/result-actors/repositories/actors-type.repository';
+import { InnovationUseMdsValidator } from '../services/innovation-use-mds-validator.service';
 
 @Injectable()
 export class InnovationUseBilateralHandler
@@ -19,7 +21,14 @@ export class InnovationUseBilateralHandler
     private readonly _innovationUseService: InnovationUseService,
     private readonly _clarisaInnovationUseLevelRepository: ClarisaInnovationUseLevelRepository,
     private readonly _actorTypeRepository: ActorTypeRepository,
+    private readonly _innovationUseMdsValidator: InnovationUseMdsValidator,
   ) {}
+
+  async validateBeforeCreate({
+    bilateralDto,
+  }: HandlerBeforeCreateContext): Promise<void> {
+    await this._innovationUseMdsValidator.assertExternalCreateMds(bilateralDto);
+  }
 
   async afterCreate({
     bilateralDto,
