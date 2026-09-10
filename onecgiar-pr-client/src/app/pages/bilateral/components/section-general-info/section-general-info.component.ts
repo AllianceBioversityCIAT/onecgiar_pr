@@ -95,7 +95,8 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
   @Output() resultTypeChanged = new EventEmitter<void>();
   private readonly autoSaveService = inject(BilateralAutoSaveService);
   private readonly mdsTracker = inject(BilateralMdsTrackerService);
-  private readonly creationService = inject(BilateralCreationService);
+  /** `protected`, not `private`: the template binds `creationService.*` into the change-type dialog (P2-3233). */
+  protected readonly creationService = inject(BilateralCreationService);
   private readonly userSearchService = inject(UserSearchService);
   selectedSubScores = signal<Record<string, number[]>>({});
   private readonly http = inject(HttpClient);
