@@ -5,7 +5,7 @@
       <app-field-card
         [label]="customLabel() || effectiveLabel()"
         [description]="effectiveDescription()"
-        [tooltip]="tooltip()"
+        [tooltip]="effectiveTooltip()"
         [required]="effectiveRequired()"
         [hasValue]="hasValue"
         [hasError]="!!maxWords() && wordCount() > maxWords() && !autogenerate()"

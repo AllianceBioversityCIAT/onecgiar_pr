@@ -168,7 +168,7 @@
     to see the definition of all readiness levels
   </div>
 
-  <app-alert-status [description]="alertInfoText2()"> </app-alert-status>
+  <app-alert-status [collapsible]="false" [description]="alertInfoText2()"> </app-alert-status>
 
   <app-alert-status
     *ngIf="hasReadinessLevelDiminished()"

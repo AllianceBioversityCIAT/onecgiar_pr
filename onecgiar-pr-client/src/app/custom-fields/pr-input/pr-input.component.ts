@@ -69,6 +69,7 @@ export class PrInputComponent implements ControlValueAccessor {
   // Fall back to '' — never let an unset placeholder reach the DOM as the literal "undefined".
   readonly effectivePlaceholder = computed(() => this.fieldConfig()?.placeholder ?? this.placeholder() ?? '');
   readonly effectiveDescription = computed(() => this.fieldConfig()?.description ?? this.description());
+  readonly effectiveTooltip = computed(() => this.fieldConfig()?.tooltip ?? this.tooltip());
   readonly effectiveRequired = computed(() => {
     if (this.lockRequiredFromFieldManager()) return this.required();
     return this.fieldConfig()?.required ?? this.required();
