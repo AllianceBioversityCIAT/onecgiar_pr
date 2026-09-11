@@ -449,3 +449,5 @@ Final regression after the last worker (tree quiet): server `npx jest … result
 
 **User decision (2026-09-10):** *Pause; resume after QA deploy.* T-10 stays `[~]` with the owed QA checklist above. Next session: deploy this branch to QA with both env vars, then `/akili-resume` runs the QA smoke (three-`ok` `sources[]`, `unconfigured` case, `lab-report-form` banner, text artifacts) and closes T-10.
 
+**Post-run HITL addendum (Tester resumed by the user, 2026-09-10 evening):** `PRODUCT_BUG` recorded in `hitl/hitl-report.md` — the "Retrieving metadata from …" overlay covers only the results area (measured 638→897 px of a 1260 px drawer), leaving chips, search, filters and Cancel/Create interactive during the sync (`kp-cgspace-browse.component.html` ~L150-161, `absolute inset-0` on the results container). Leader adjudication: pre-existing `KPB` behaviour (T-7 changed only the overlay string), out of this spec's approved scope → filed as `design.md` §13 follow-up (i), no code change in this run. `.env` and `main.ts` confirmed intact by the Tester.
+

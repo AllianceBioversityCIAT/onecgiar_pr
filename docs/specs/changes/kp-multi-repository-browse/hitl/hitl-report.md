@@ -39,6 +39,38 @@ None of the KPM acceptance criteria were violated by the search/badge/notice/ret
 
 One operational finding, not a strict `KPM-AC` violation but worth the Leader's attention: **"Use this item" in the AoW-indicator Report drawer persists a draft Result immediately** (no pause at a "Selected from MELSpace" banner before create). The task's HITL script assumed such a pause exists (and offered the AoW-modal path as the fallback when `lab-report-form` auto-creates) — in this build, the AoW-modal path auto-creates too. Everything downstream of the click (handle passed to MQAP as `itemUrl`-with-uuid, correct metadata sync) is correct; only the "stop before persisting" assumption doesn't hold for this entry point. **Result #9146** ("Effect of Farming with Alternative Pollinators…") was left in the local, disposable DB in `EDITING`/unsubmitted status — not deleted, not submitted.
 
+### PRODUCT_BUG — "Retrieving metadata…" busy overlay does not cover the full drawer
+
+Found live in the browser while observing the sync state after "Use this item" (user-reported, then measured to confirm). The overlay is real but **undersized**: it only masks the results-list content area, leaving the drawer header (repository chips, search box, filters) and footer (Cancel/Create buttons) fully visible and apparently interactive while a sync/create request is in flight.
+
+**Measured (`getBoundingClientRect()` while `busy()` was true):**
+
+| Element | top | height | bottom |
+|---|---|---|---|
+| Drawer panel (`aside.pr-drawer`) | 0 | 1260 | 1260 |
+| Busy overlay (`[data-test="cgspace-retrieving"]`) | 638 | 259 | 897 |
+
+The overlay covers only pixels 638–897 of a 1260px-tall drawer — roughly half the middle, leaving ~638px above and ~363px below unmasked.
+
+**Root cause** — `onecgiar-pr-client/src/app/pages/result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.component.html:150-161`:
+
+```html
+<div class="relative mt-2 min-h-[160px]" [attr.aria-busy]="busy()">
+  @if (busy()) {
+    <div class="absolute inset-0 z-10 ..." data-test="cgspace-retrieving">
+      ...
+    </div>
+  }
+```
+
+The `relative` anchor for the `absolute inset-0` overlay is the **content-area div** (the same box that normally hosts the results list), not the drawer root. `inset-0` therefore only fills that inner box.
+
+**Impact:** during the ~100ms–1s window the MQAP sync / result-create request is in flight, a user can still click a repository chip, retype the search, or click Cancel/Create — none of which are blocked, since only the interior box is covered (and only visually — no pointer-events guard is applied outside it either).
+
+**Suggested fix (not applied — out of scope for this HITL task):** move the `busy()` overlay to a container that wraps the whole drawer body (or at minimum the whole "1. Result Identity" card including the source strip/search/filters), or add a page-level `aria-busy`/`pointer-events-none` guard on the drawer while `busy()` is true.
+
+Not screenshotted (the sync resolves too fast to reliably catch with a screenshot round-trip — two attempts landed just after the overlay closed), but the rect measurement above was captured synchronously via `getBoundingClientRect()` while `[data-test="cgspace-retrieving"]` was present in the DOM, which is the same or better evidence.
+
 ## Files written
 
 - `docs/specs/changes/kp-multi-repository-browse/hitl/runA-01-idle.png`
