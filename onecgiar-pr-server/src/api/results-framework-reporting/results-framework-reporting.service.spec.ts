@@ -26,6 +26,7 @@ import { LinkFrameworkResultTocService } from './application/commands/create-res
 import { FrameworkResultTocIndicatorsService } from './application/commands/create-result-from-framework/framework-result-toc-indicators.service';
 import { ApplyFrameworkResultAssociationsService } from './application/commands/create-result-from-framework/apply-framework-result-associations.service';
 import { ResultTaggedNotificationService } from '../notification/services/result-tagged-notification.service';
+import { ContributorsPartnersService } from './contributors-partners/contributors-partners.service';
 import { GetExistingResultContributorsToIndicatorsHandler } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.handler';
 import { ExistingResultContributorsLoaderService } from './application/queries/get-existing-result-contributors/existing-result-contributors-loader.service';
 import { ContributorsRoleResolverService } from './application/queries/get-existing-result-contributors/contributors-role-resolver.service';
@@ -152,6 +153,11 @@ const mockResultTaggedNotificationService = {
   notifyTaggedCenters: jest.fn().mockResolvedValue(undefined),
   notifyTaggedBilateralProjects: jest.fn().mockResolvedValue(undefined),
 };
+// P2-3604: ApplyFrameworkResultAssociationsService delegates the innovation link to the single
+// writer, so the DI graph of this spec needs it too.
+const mockContributorsPartnersService = {
+  updateContributorsAndPartners: jest.fn().mockResolvedValue(undefined),
+};
 const mockResultsByInstitutionsService = {
   handleContributingCenters: jest.fn(),
   savePartnersInstitutionsByResultV2: jest.fn(),
@@ -253,6 +259,10 @@ describe('ResultsFrameworkReportingService', () => {
         {
           provide: ContributionToIndicatorResultsRepository,
           useValue: mockContributionToIndicatorResultsRepository,
+        },
+        {
+          provide: ContributorsPartnersService,
+          useValue: mockContributorsPartnersService,
         },
         {
           provide: ResultTaggedNotificationService,

@@ -7,6 +7,7 @@ import { ResultsByProjectsService } from '../../../../results/results_by_project
 import { ResultsByInstitutionsService } from '../../../../results/results_by_institutions/results_by_institutions.service';
 import { objectHasOwn } from '../../../../../shared/utils/object.utils';
 import { ResultTaggedNotificationService } from '../../../../notification/services/result-tagged-notification.service';
+import { ContributorsPartnersService } from '../../../contributors-partners/contributors-partners.service';
 
 @Injectable()
 export class ApplyFrameworkResultAssociationsService {
@@ -19,6 +20,7 @@ export class ApplyFrameworkResultAssociationsService {
     private readonly _resultsByProjectsService: ResultsByProjectsService,
     private readonly _resultsByInstitutionsService: ResultsByInstitutionsService,
     private readonly _resultTaggedNotificationService: ResultTaggedNotificationService,
+    private readonly _contributorsPartnersService: ContributorsPartnersService,
   ) {}
 
   async execute(
@@ -29,6 +31,60 @@ export class ApplyFrameworkResultAssociationsService {
     await this._shareContributors(payload, user, createdResultId);
     await this._linkBilateralProjects(payload, user, createdResultId);
     await this._applyPartnersSection(payload, user, createdResultId);
+    await this._persistInnovationLink(payload, user, createdResultId);
+  }
+
+  /**
+   * P2-3604 — persists the "link to a QA'd Innovation Development result" answered on the emerging
+   * creation panel, which reaches this endpoint inside `payload.result`.
+   *
+   * The panel asks the question, refuses to create the result until it is answered, and posts the
+   * answer — and nothing here read it, so the record was created with the default and the reporter
+   * found "No" with nothing linked when they opened it. No error, no warning. QA reproduced it three
+   * times on result 9070.
+   *
+   * 🛑 Delegated to `ContributorsPartnersService`, never written here: that service is the single
+   * writer for `results_innovations_use.has_innovation_link` and the `linked_result` table (Yeck's
+   * decision, 31-Aug-2026), and duplicating the writer is what broke these links once before
+   * (P2-3199). `ResultsService._persistInnovationLinkOnCreate` does exactly the same for the other
+   * creation path, with the same guards, so the two entry points behave identically.
+   *
+   * "No" — the default — writes nothing, so a result created without the question ever being asked
+   * stays exactly as it is today. Non-fatal by design: the result is already created, and the link
+   * remains editable in Contributors and partners.
+   */
+  private async _persistInnovationLink(
+    payload: CreateResultsFrameworkResultDto,
+    user: TokenDto,
+    createdResultId: number,
+  ): Promise<void> {
+    const result = payload?.result;
+
+    if (!objectHasOwn(result ?? {}, 'has_innovation_link')) return;
+    if (result?.has_innovation_link !== true) return;
+
+    const linkedResults = Array.isArray(result?.linked_results)
+      ? result.linked_results
+      : [];
+    if (!linkedResults.length) return;
+
+    try {
+      await this._contributorsPartnersService.updateContributorsAndPartners(
+        createdResultId,
+        {
+          has_innovation_link: true,
+          linked_results: linkedResults,
+        } as any,
+        user,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to persist the innovation link for result ${createdResultId}: ${
+          error instanceof Error ? error.message : JSON.stringify(error)
+        }`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
   }
 
   private async _shareContributors(

@@ -5,6 +5,7 @@ import { ResultsByProjectsService } from '../../../../results/results_by_project
 import { ResultsByInstitutionsService } from '../../../../results/results_by_institutions/results_by_institutions.service';
 import { ApplyFrameworkResultAssociationsService } from './apply-framework-result-associations.service';
 import { ResultTaggedNotificationService } from '../../../../notification/services/result-tagged-notification.service';
+import { ContributorsPartnersService } from '../../../contributors-partners/contributors-partners.service';
 
 describe('ApplyFrameworkResultAssociationsService', () => {
   let service: ApplyFrameworkResultAssociationsService;
@@ -21,6 +22,9 @@ describe('ApplyFrameworkResultAssociationsService', () => {
   };
   const mockResultTaggedNotificationService = {
     notifyTaggedBilateralProjects: jest.fn().mockResolvedValue(undefined),
+  };
+  const mockContributorsPartnersService = {
+    updateContributorsAndPartners: jest.fn().mockResolvedValue(undefined),
   };
 
   const user = { id: 10 } as TokenDto;
@@ -46,6 +50,10 @@ describe('ApplyFrameworkResultAssociationsService', () => {
         {
           provide: ResultsByInstitutionsService,
           useValue: mockResultsByInstitutionsService,
+        },
+        {
+          provide: ContributorsPartnersService,
+          useValue: mockContributorsPartnersService,
         },
       ],
     }).compile();
@@ -237,5 +245,85 @@ describe('ApplyFrameworkResultAssociationsService', () => {
       expect.not.objectContaining({ bilateral_project: expect.anything() }),
       user,
     );
+  });
+
+  /**
+   * P2-3604 — the emerging creation panel asks "are you reporting the use of an innovation that has
+   * already been reported and quality assessed?", refuses to create the result until it is answered,
+   * and posts the answer inside `result`. Nothing here read it, so the record was created with the
+   * default and the reporter found "No" with nothing linked. QA reproduced it three times on result
+   * 9070.
+   */
+  describe('innovation link answered at creation (P2-3604)', () => {
+    it('persists the link through the single writer when the answer is Yes', async () => {
+      await service.execute(
+        {
+          result: { has_innovation_link: true, linked_results: [8375] },
+        } as any,
+        user,
+        9070,
+      );
+
+      expect(
+        mockContributorsPartnersService.updateContributorsAndPartners,
+      ).toHaveBeenCalledWith(
+        9070,
+        { has_innovation_link: true, linked_results: [8375] },
+        user,
+      );
+    });
+
+    it('writes nothing when the answer is No — an untouched result stays as it is', async () => {
+      await service.execute(
+        { result: { has_innovation_link: false, linked_results: [] } } as any,
+        user,
+        9070,
+      );
+
+      expect(
+        mockContributorsPartnersService.updateContributorsAndPartners,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('writes nothing when the question was never asked', async () => {
+      await service.execute({ result: { title: 'x' } } as any, user, 9070);
+
+      expect(
+        mockContributorsPartnersService.updateContributorsAndPartners,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('writes nothing when Yes arrives with no innovation selected', async () => {
+      await service.execute(
+        { result: { has_innovation_link: true, linked_results: [] } } as any,
+        user,
+        9070,
+      );
+
+      expect(
+        mockContributorsPartnersService.updateContributorsAndPartners,
+      ).not.toHaveBeenCalled();
+    });
+
+    /**
+     * The result is already created by the time this runs, so a failure here must not turn a
+     * successful creation into an error the reporter cannot recover from — the link stays editable
+     * in Contributors and partners.
+     */
+    it('does not fail the creation when the link could not be persisted', async () => {
+      mockContributorsPartnersService.updateContributorsAndPartners.mockRejectedValueOnce(
+        new Error('boom'),
+      );
+
+      await expect(
+        service.execute(
+          {
+            result: { has_innovation_link: true, linked_results: [8375] },
+          } as any,
+          user,
+          9070,
+        ),
+      ).resolves.toBeUndefined();
+    });
   });
 });
