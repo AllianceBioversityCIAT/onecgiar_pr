@@ -596,16 +596,29 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
 
     const current = this.rdPartnersSE.partnersBody?.contributing_center || [];
     const refIds = new Set(refs.map(c => c.institutionId));
-    // Keep everything except session-preloaded centers that no longer belong to the mapped node(s).
-    const kept = current.filter((c: any) => c.code === this.OTHER_CENTERS_CODE || !c.new || refIds.has(c.institutionId));
-    const keptIds = new Set(kept.map((c: any) => c.institutionId));
+    const sentinel = current.find((c: any) => c.code === this.OTHER_CENTERS_CODE);
+    const stillMatching = current.filter((c: any) => c.code !== this.OTHER_CENTERS_CODE && refIds.has(c.institutionId));
+    // bugfix: a real (non-sentinel) center that no longer matches the resolved ToC refs doesn't belong in this
+    // bucket any more. A session-added (`new`) one is simply dropped (never saved); a PERSISTED one is migrated
+    // into "Other(s)" instead of being left behind — leaving it here produced an orphaned chip once the ToC
+    // change also made `hasReferenceCenters()` false and the template stopped painting this bucket's dropdown
+    // (result 9139: AfricaRice/Bioversity stayed in `contributing_center`, with no visible control, after the
+    // linked ToC node changed to reference no centers).
+    const stale = current.filter((c: any) => c.code !== this.OTHER_CENTERS_CODE && !refIds.has(c.institutionId));
+    const staleToMigrate = stale.filter((c: any) => !c.new);
+    const keptIds = new Set(stillMatching.map((c: any) => c.institutionId));
     const added = refs.filter(c => !keptIds.has(c.institutionId)).map(c => ({ ...c, new: true, is_active: true }));
-    if (added.length === 0 && kept.length === current.length) return;
+    const nextReal = [...stillMatching, ...added];
+    // The sentinel only makes sense while the ToC bucket is non-empty (mirrors `applyTocMappingOnLoad`'s own rule).
+    const nextBucket = nextReal.length > 0 && sentinel ? [...nextReal, sentinel] : nextReal;
+    if (stale.length === 0 && added.length === 0 && nextBucket.length === current.length) return;
 
-    const removed = current.filter((c: any) => !kept.includes(c));
-    this.rdPartnersSE.partnersBody.contributing_center = [...kept, ...added] as any[];
+    this.rdPartnersSE.partnersBody.contributing_center = nextBucket as any[];
+    if (staleToMigrate.length > 0) {
+      this.rdPartnersSE.otherCentersSelected = [...(this.rdPartnersSE.otherCentersSelected || []), ...staleToMigrate] as any[];
+    }
     // If the reconciliation dropped the current lead center, clear it so we don't save an orphaned lead.
-    if (removed.some((c: any) => c.code === this.rdPartnersSE.leadCenterCode)) {
+    if (stale.some((c: any) => c.code === this.rdPartnersSE.leadCenterCode)) {
       this.rdPartnersSE.leadCenterCode = null;
     }
     this.rdPartnersSE.setPossibleLeadCenters(true);
@@ -749,13 +762,24 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
 
     const current = this.rdPartnersSE.scienceSelected || [];
     const refIds = new Set(refs.map(sp => sp.id));
-    // Keep everything except session-preloaded SP that no longer belong to the mapped node(s).
-    const kept = current.filter((sp: any) => sp.id === this.OTHER_SP_CODE || !sp.new || refIds.has(sp.id));
-    const keptIds = new Set(kept.map((sp: any) => sp.id));
+    const sentinel = current.find((sp: any) => sp.id === this.OTHER_SP_CODE);
+    const stillMatching = current.filter((sp: any) => sp.id !== this.OTHER_SP_CODE && refIds.has(sp.id));
+    // bugfix: same reconciliation as `preselectCentersEffect` above — a real (non-sentinel) SP that no longer
+    // matches the resolved ToC refs is migrated into "Other(s)" when persisted (never dropped silently), or
+    // just dropped when it was only session-added. Prevents an orphaned chip once the ToC change also makes
+    // `hasReferenceScience()` false and dropdown 1 stops being painted.
+    const stale = current.filter((sp: any) => sp.id !== this.OTHER_SP_CODE && !refIds.has(sp.id));
+    const staleToMigrate = stale.filter((sp: any) => !sp.new);
+    const keptIds = new Set(stillMatching.map((sp: any) => sp.id));
     const added = refs.filter(sp => !keptIds.has(sp.id)).map(sp => ({ ...sp, new: true, is_active: true }));
-    if (added.length === 0 && kept.length === current.length) return;
+    const nextReal = [...stillMatching, ...added];
+    const nextBucket = nextReal.length > 0 && sentinel ? [...nextReal, sentinel] : nextReal;
+    if (stale.length === 0 && added.length === 0 && nextBucket.length === current.length) return;
 
-    this.rdPartnersSE.scienceSelected = [...kept, ...added];
+    this.rdPartnersSE.scienceSelected = nextBucket;
+    if (staleToMigrate.length > 0) {
+      this.rdPartnersSE.otherScienceSelected = [...(this.rdPartnersSE.otherScienceSelected || []), ...staleToMigrate];
+    }
   });
 
   onScienceSelect(_event: any) {

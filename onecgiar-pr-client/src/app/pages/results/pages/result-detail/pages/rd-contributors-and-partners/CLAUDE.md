@@ -1,6 +1,35 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-09-11 · branch qa-development-2026-ss · `docs/specs/results/linked-results-filters`
+**Verified:** 2026-09-11 · branch qa-development-2026-ss · bugfix/lead-center-no-toc-refs (LC-DD-6,
+result 9139 follow-up: `onLeadCenterSelected` (`service.ts`) treated ANY mapped-2026 result as the
+genuine ToC/Other(s) split — adding the "Other(s)" sentinel to `contributing_center` — even when the ToC
+brought NO reference centers at all (`tocReferenceCenterInstitutionIds()` empty). In that shape dropdown 1
+and the sentinel are never even painted (`hasReferenceCenters()` false ⇒ the note branch); the ONLY
+visible control is the second dropdown, bound to `otherCentersSelected`. So picking a Lead Center added an
+invisible-yet-persisted sentinel chip that surfaced as a confusing floating "Other(s)" chip. Fix: new
+`hasNoTocReferenceCenters()` helper; `onLeadCenterSelected` now has a THIRD branch — mapped but no ToC
+reference centers → straight into `otherCentersSelected`, no sentinel — alongside the existing
+flat/unmapped (straight into `contributing_center`) and genuine-split (otherCentersSelected + sentinel)
+branches. Tests: `rd-contributors-and-partners.service.spec.ts`, new describe "CP2026 + mapped, but ToC
+brought NO reference centers — target is otherCentersSelected, no sentinel (LC-DD-6)"; the existing
+LC-TEST-12/13/14/14b/14c fixtures were updated to set `tocReferenceCenterInstitutionIds` explicitly, since
+they model the genuine-split case and previously relied on it defaulting non-empty by accident.); prior:
+2026-09-11 · branch qa-development-2026-ss · bugfix/orphaned-toc-chips (result 9139: after
+changing the linked ToC HLO/Outcome/Output mid-session, `hasReferenceCenters()`/`hasReferenceScience()`
+could flip to `false` while `contributing_center`/`scienceSelected` still held the OLD ToC-bucket
+entries — `preselectCentersEffect`/`preselectScienceEffect` only ever ADDED newly-referenced items and
+dropped session-added (`new: true`) stale ones, never re-bucketed a PERSISTED entry that stopped
+matching. Those persisted entries (e.g. AfricaRice/Bioversity(Alliance)) stayed in the ToC array forever,
+and since the chip-rendering blocks (`html:141-157` Centers, `html:418-425` Science, pre-fix line numbers)
+were NOT gated by the same `hasReferenceCenters()`/`hasReferenceScience()` condition as their owning
+dropdown, they kept rendering as floating chips with no visible control above them once the dropdown
+flipped to the "No CGIAR Centers/Science Programs..." note. Fixed both ends: the two effects now migrate
+a stale PERSISTED entry into `otherCentersSelected`/`otherScienceSelected` instead of leaving it behind
+(a stale session-added `new: true` entry is still just dropped), and both chip blocks are now wrapped in
+the same condition that gates their dropdown, so they can never render without it. See
+`preselectCentersEffect`/`preselectScienceEffect` in `component.ts` for the reconciliation, and the
+`@if` wrapping the two `.medal_selector.selected_container` chip blocks in the template.); prior:
+2026-09-11 · branch qa-development-2026-ss · `docs/specs/results/linked-results-filters`
 `RES-T-LRF-4` (linked-results dropdown was freezing the app on open — unmemoized getters re-scanning
 the full QA'd/Approved results list on every CD tick, an O(n) `.includes()` per row in the checkbox
 binding, no render cap, no `trackBy`; fixed with reference-equality memoization caches
