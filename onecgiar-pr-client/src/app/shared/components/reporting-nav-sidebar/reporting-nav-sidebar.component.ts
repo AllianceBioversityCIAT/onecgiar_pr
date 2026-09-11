@@ -45,6 +45,7 @@ import { RolesService } from '../../services/global/roles.service';
 import { DataControlService } from '../../services/data-control.service';
 import { environment } from '../../../../environments/environment';
 import { APP_VERSION } from '../../constants/app-version.constants';
+import { CLARISA_GLOSSARY_URL } from '../../constants/clarisa-links.constants';
 import { ResultFrameworkReportingHomeService } from '../../../pages/result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { SPProgress } from '../../interfaces/SP-progress.interface';
 import { ApiService } from '../../services/api/api.service';
@@ -132,6 +133,8 @@ export class ReportingNavSidebarComponent {
   readonly isProduction = environment.production;
   readonly appVersion = APP_VERSION;
   readonly fontScaleOptions = FONT_SCALE_OPTIONS;
+  /** P2-3145 — CLARISA public glossary (sidebar EXTRAS + footer). */
+  readonly clarisaGlossaryUrl = CLARISA_GLOSSARY_URL;
 
   /** Icon-rail mode (Spartan `collapsible="icon"` + service state). */
   readonly isCollapsed = computed(() => this.sidebarSE.state() === 'collapsed' && !this.sidebarSE.isMobile());

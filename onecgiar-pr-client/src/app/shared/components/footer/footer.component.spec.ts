@@ -3,6 +3,7 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 
+import { CLARISA_GLOSSARY_URL } from '../../constants/clarisa-links.constants';
 import { FooterComponent } from './footer.component';
 
 describe('FooterComponent', () => {
@@ -82,8 +83,7 @@ describe('FooterComponent', () => {
     expect(component.isFloating).toBe(true);
   });
 
-  // P2-3145: the glossary link is the only way the Reporting Tool points at the
-  // centralized CLARISA glossary, so both the label and the destination are asserted.
+  // P2-3145: footer glossary link uses the shared CLARISA constant.
   it('should render the glossary link in the footer', () => {
     component.routes = [{ path: '/' }];
     fixture.detectChanges();
@@ -92,7 +92,7 @@ describe('FooterComponent', () => {
     const glossary = anchors.find(anchor => anchor.textContent?.trim() === 'Glossary of Terms');
 
     expect(glossary).toBeTruthy();
-    expect(glossary?.getAttribute('href')).toBe('https://clarisa.cgiar.org/landing-page/glossary');
+    expect(glossary?.getAttribute('href')).toBe(CLARISA_GLOSSARY_URL);
     expect(glossary?.getAttribute('target')).toBe('_blank');
   });
 });

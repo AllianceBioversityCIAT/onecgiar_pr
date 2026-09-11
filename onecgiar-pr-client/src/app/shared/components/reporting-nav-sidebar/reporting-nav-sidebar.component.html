@@ -383,6 +383,17 @@
           <li hlmSidebarMenuItem>
             <a
               hlmSidebarMenuButton
+              [href]="clarisaGlossaryUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              tooltip="Glossary">
+              <ng-icon name="lucideBookOpen" />
+              <span>Glossary</span>
+            </a>
+          </li>
+          <li hlmSidebarMenuItem>
+            <a
+              hlmSidebarMenuButton
               routerLink="/whats-new"
               routerLinkActive
               #rlaWhatsNew="routerLinkActive"
