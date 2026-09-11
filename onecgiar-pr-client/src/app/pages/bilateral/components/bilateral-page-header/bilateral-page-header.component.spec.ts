@@ -14,6 +14,9 @@ describe('BilateralPageHeaderComponent', () => {
   let ctx: BilateralContextService;
   let aiService: BilateralAiService;
 
+  const BULK_UPLOADER_URL_UNDER_TEST = 'https://bulk-uploader.test.cgiar.org/';
+  let configuredBulkUploaderUrl: unknown;
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [BilateralPageHeaderComponent, RouterModule.forRoot([])],
@@ -24,6 +27,22 @@ describe('BilateralPageHeaderComponent', () => {
     component = fixture.componentInstance;
     ctx = TestBed.inject(BilateralContextService);
     aiService = TestBed.inject(BilateralAiService);
+
+    // `src/environments/*.ts` is gitignored and supplied per environment by CI, so the CTA's URL
+    // key is absent from most checkouts and from the build agents — reading it here made these
+    // specs assert against whichever config happened to be on disk. Stub it: what is under test is
+    // the component's behaviour when a URL *is* configured, not the config itself. The negative
+    // case (key absent) is pinned by its own test below.
+    configuredBulkUploaderUrl = (environment as Record<string, unknown>)['bulkUploaderUrl'];
+    (environment as Record<string, unknown>)['bulkUploaderUrl'] = BULK_UPLOADER_URL_UNDER_TEST;
+  });
+
+  afterEach(() => {
+    if (configuredBulkUploaderUrl === undefined) {
+      delete (environment as Record<string, unknown>)['bulkUploaderUrl'];
+    } else {
+      (environment as Record<string, unknown>)['bulkUploaderUrl'] = configuredBulkUploaderUrl;
+    }
   });
 
   it('should create', () => {
