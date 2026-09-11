@@ -1135,6 +1135,106 @@ describe('BilateralCenterService', () => {
     });
   });
 
+  describe('updatePrimaryAssignment', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'center@cgiar.org',
+      first_name: 'Center',
+      last_name: 'User',
+    };
+
+    const editingResult = {
+      id: 11513,
+      source: SourceEnum.Bilateral,
+      is_active: true,
+      status_id: ResultStatusData.Editing.value,
+    };
+
+    const primaryProgram = {
+      programId: 701,
+      programCode: 'SP04',
+      allocation: '100',
+      spName: 'Climate Action',
+      spShortName: 'Climate Action',
+    };
+
+    const configureTransaction = () => {
+      const projectRepository = {
+        find: jest.fn().mockResolvedValue([{ id: 1, project_id: 10, is_lead: true, is_active: true }]),
+        findOne: jest.fn().mockResolvedValue(null),
+        update: jest.fn().mockResolvedValue({}),
+        save: jest.fn().mockResolvedValue({}),
+      };
+      const initiativeRepository = {
+        find: jest.fn().mockResolvedValue([{ id: 2, initiative_id: 100, initiative_role_id: 1, is_active: true }]),
+        findOne: jest.fn().mockResolvedValue(null),
+        update: jest.fn().mockResolvedValue({}),
+        save: jest.fn().mockResolvedValue({}),
+      };
+      const tocRepository = { update: jest.fn().mockResolvedValue({}) };
+      const requestRepository = { update: jest.fn().mockResolvedValue({}) };
+      const historyRepository = { save: jest.fn().mockResolvedValue({}) };
+
+      (resultRepository.manager.transaction as jest.Mock).mockImplementationOnce(
+        async (callback: any) =>
+          callback({
+            getRepository: (entity: any) => {
+              if (entity.name === 'ResultsByProjects') return projectRepository;
+              if (entity.name === 'ResultsByInititiative') return initiativeRepository;
+              if (entity.name === 'ResultsTocResult') return tocRepository;
+              if (entity.name === 'ShareResultRequest') return requestRepository;
+              if (entity.name === 'ResultReviewHistory') return historyRepository;
+              throw new Error(`Unexpected repository: ${entity.name}`);
+            },
+          }),
+      );
+
+      return { initiativeRepository };
+    };
+
+    it('stores the internal CLARISA initiative id, not the W3 project-mapping id', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      (bilateralProjectsService.getProjectsByCenter as jest.Mock).mockResolvedValue({
+        projects: [{ id: 20, sciencePrograms: [primaryProgram] }],
+      });
+      const clarisaInitiatives = module.get<ClarisaInitiativesRepository>(ClarisaInitiativesRepository) as any;
+      clarisaInitiatives.findOne.mockResolvedValue({ id: 404, official_code: 'SP04', active: true });
+      const { initiativeRepository } = configureTransaction();
+
+      const response = await service.updatePrimaryAssignment(user, 11513, {
+        project_id: 20,
+        primary_science_program_id: 701,
+      });
+
+      expect(clarisaInitiatives.findOne).toHaveBeenCalledWith({
+        where: { official_code: 'SP04', active: true },
+      });
+      expect(initiativeRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ initiative_id: 404, initiative_role_id: 1 }),
+      );
+      expect(response.response).toEqual(
+        expect.objectContaining({ primaryScienceProgramId: 701 }),
+      );
+    });
+
+    it('fails before opening a transaction when the mapped program is absent from CLARISA', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      (bilateralProjectsService.getProjectsByCenter as jest.Mock).mockResolvedValue({
+        projects: [{ id: 20, sciencePrograms: [primaryProgram] }],
+      });
+      const clarisaInitiatives = module.get<ClarisaInitiativesRepository>(ClarisaInitiativesRepository) as any;
+      clarisaInitiatives.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        }),
+      ).rejects.toThrow('not available in the CLARISA catalogue');
+      expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
+    });
+  });
+
   // P2-3157 — the transition that makes the Science Program review loop reachable.
   describe('submitForReview', () => {
     const user: TokenDto = {

@@ -149,6 +149,23 @@ export class BilateralCenterService {
       );
     }
 
+    // `programId` identifies the W3 project-mapping record, whereas
+    // results_by_inititiative.inititiative_id is a foreign key to the local
+    // clarisa_initiatives primary key. Resolve the mapped program code before
+    // starting the transaction so an incomplete CLARISA catalogue cannot leave
+    // the result with its project or previous primary program changed.
+    const primaryInitiative = await this.clarisaInitiativesRepository.findOne({
+      where: {
+        official_code: primaryProgram.programCode.trim().toUpperCase(),
+        active: true,
+      },
+    });
+    if (!primaryInitiative) {
+      throw new BadRequestException(
+        'The selected primary Science Program is not available in the CLARISA catalogue.',
+      );
+    }
+
     const primaryChanged = await this.resultRepository.manager.transaction(
       async (manager) => {
         const projectRepository = manager.getRepository(ResultsByProjects);
@@ -203,7 +220,7 @@ export class BilateralCenterService {
           },
         });
         const currentPrimaryId = Number(activePrimaryRows[0]?.initiative_id ?? 0);
-        const nextPrimaryId = Number(primaryProgram.programId);
+        const nextPrimaryId = Number(primaryInitiative.id);
         const changed = currentPrimaryId !== nextPrimaryId;
 
         if (changed) {
