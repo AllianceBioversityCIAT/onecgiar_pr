@@ -21,6 +21,9 @@ import { YesOrNotByBooleanPipe } from './../../../../../../custom-fields/pipes/y
 import { ChangeResultTypeModalComponent } from './components/change-result-type-modal/change-result-type-modal.component';
 import { CustomizedAlertsFeService } from './../../../../../../shared/services/customized-alerts-fe.service';
 import { UserSearchService } from './services/user-search-service.service';
+// P2-3663: la directiva REAL, no un stub — sin ella el `<div appFeedbackValidation>` queda vacío y
+// la clase `complete` que el escaneo lee nunca existe, así que el caso no podría dar rojo.
+import { FeedbackValidationDirective } from './../../../../../../shared/directives/feedback-validation.directive';
 import { DataControlService } from './../../../../../../shared/services/data-control.service';
 import { RolesService } from './../../../../../../shared/services/global/roles.service';
 import { InstitutionsService } from './../../../../../../shared/services/global/institutions.service';
@@ -211,6 +214,7 @@ describe('RdGeneralInformationComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [
         RdGeneralInformationComponent,
+        FeedbackValidationDirective,
         AlertStatusComponent,
         PrRadioButtonComponent,
         PrYesOrNotComponent,
@@ -358,6 +362,46 @@ describe('RdGeneralInformationComponent', () => {
     it('stays closed for P22 even in a 2026 phase', () => {
       mockDataControlService.currentResultSignal.set({ portfolio: 'P22', phase_year: 2026 });
       expect(component.isLeadContactPersonRequired()).toBe(false);
+    });
+
+    /**
+     * P2-3663 — a result rolled over from a previous phase carries the contact as free text and no
+     * directory object, because the FK did not exist when it was first reported. Counting it as
+     * missing left the reporter staring at "1 field missing" over a field that is filled in on
+     * screen, with nothing left to fill and Submit blocked. The field's own rule
+     * (`hasSelectedContact`) already said a name is enough; this is the counter agreeing with it.
+     */
+    const contactScanField = (): HTMLElement =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[appFeedbackValidation]'))
+        .find(el => el.getAttribute('labelText') === 'Lead contact person')
+        ?.querySelector('.pr-field') as HTMLElement;
+
+    /** 🛑 El primer `detectChanges` dispara `ngOnInit` → `getSectionInformation()`, que REEMPLAZA
+     *  `generalInfoBody` con la respuesta mockeada. Asignar antes de eso se pierde. */
+    const renderWithContact = (name: string) => {
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+      fixture.detectChanges();
+      component.generalInfoBody.lead_contact_person = name;
+      (component.generalInfoBody as any).lead_contact_person_data = null;
+      fixture.componentRef.changeDetectorRef.markForCheck();
+      // `false` = sin `checkNoChanges`: el GET mockeado repuebla el cuerpo dentro del mismo ciclo,
+      // así que la comprobación de dev ve el binding cambiar y lanza NG0100 por el artefacto.
+      // Y DOS pases: la clase la pinta `ngDoCheck` de la directiva, que va un ciclo por detrás del
+      // input — con uno solo se lee el estado anterior y el caso pasa por la razón equivocada.
+      fixture.detectChanges(false);
+      fixture.detectChanges(false);
+    };
+
+    it('counts the contact as complete on a name alone, with no directory match', () => {
+      renderWithContact('Zuniga, Yecksin Mauricio (Alliance Bioversity-CIAT)');
+
+      expect(contactScanField().classList.contains('complete')).toBe(true);
+    });
+
+    it('still counts it as missing when there is no name at all', () => {
+      renderWithContact('   ');
+
+      expect(contactScanField().classList.contains('complete')).toBe(false);
     });
 
     it('adds the incomplete-fields entry only from 2026', () => {
