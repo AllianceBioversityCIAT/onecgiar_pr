@@ -247,6 +247,40 @@ describe('BilateralResultsListComponent', () => {
         }),
       );
     });
+
+    // P2-3653. The action was offered on a Knowledge Product and only refused by the server, after
+    // the user had confirmed. AC3 of P2-3229 says an ineligible result is not displayed at all.
+    it('withholds it on a Knowledge Product', () => {
+      expect(component.canUpdateResult(result({ status_name: 'Approved', version_id: 35, result_type_id: 6 }))).toBe(false);
+    });
+
+    // P2-3653. `From phase` and `Science Program` rendered blank in the confirmation modal when it
+    // was opened from this list and populated when opened from the Results Center — the row carries
+    // neither field. `phase_name` is derived here; `submitter` rides in from the payload.
+    it('fills the phase name the modal shows, matching how the Results Center reports it', () => {
+      component.phases.set([
+        { id: 35, phase_year: 2025, phase_name: 'Reporting 2025', obj_portfolio: { acronym: 'P25' } } as any,
+        { id: 36, phase_year: 2026, phase_name: 'Reporting 2026', obj_portfolio: { acronym: 'P25' } } as any,
+      ]);
+
+      component.updateResult(result({ status_name: 'Approved', version_id: 35, submitter: 'SP07' }), {
+        stopPropagation: jest.fn(),
+      } as unknown as Event);
+
+      expect(component.api.dataControlSE.currentResult).toEqual(
+        expect.objectContaining({ phase_name: 'Reporting 2025 - P25', submitter: 'SP07' }),
+      );
+    });
+
+    it('falls back to the bare phase name rather than inventing a portfolio acronym', () => {
+      component.phases.set([{ id: 35, phase_year: 2025, phase_name: 'Reporting 2025' } as any]);
+
+      component.updateResult(result({ status_name: 'Approved', version_id: 35 }), {
+        stopPropagation: jest.fn(),
+      } as unknown as Event);
+
+      expect((component.api.dataControlSE.currentResult as any).phase_name).toBe('Reporting 2025');
+    });
   });
 
   describe('BSA-T-3: Viewport-Locked Scroller & Docked Filters', () => {

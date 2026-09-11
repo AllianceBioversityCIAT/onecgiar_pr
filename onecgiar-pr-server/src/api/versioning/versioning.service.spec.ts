@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { VersioningService } from './versioning.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { Result } from '../results/entities/result.entity';
+import { Result, SourceEnum } from '../results/entities/result.entity';
 import { ResultsKnowledgeProductAltmetricRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-altmetrics.repository';
 import { VersionRepository } from './versioning.repository';
 import {
@@ -418,6 +418,275 @@ describe('VersioningService', () => {
         .catch(() => undefined);
 
       expect(rules.resolveVersionableResult).not.toHaveBeenCalled();
+    });
+  });
+
+  // P2-3652 (VER-T-1). `versionProcess` routes a bilateral carry-forward to the guard by testing
+  // `ownerInitiative?.inititiative_id` (:760) — a property `getOwnerInitiativeByResult`'s SQL
+  // (resultByInitiatives.repository.ts:187-203) never selects. These tests mock that call with
+  // the repository's REAL row shape, not the `{ inititiative_id: 100 }` fiction the module-level
+  // mock at the top of this file uses (D4, requirements.md §9). They are expected to be RED on
+  // current code: the branch never runs, so the request falls through to the legacy pool-funding
+  // path instead of being routed to `versionProcessV2` / `assertBilateralVersioningAllowed`.
+  describe('VER-T-1: reporting-tool carry-forward must reach the bilateral guard (P2-3652)', () => {
+    const leadCentreCode = 'CENTER-02';
+
+    const bilateralCarryForwardResult = (overrides: any = {}) => ({
+      id: 8375,
+      result_code: 8375,
+      result_type_id: 5, // not 6 (Knowledge Product) — module_id 1, matches the existing "type 5" fixtures
+      version_id: 6,
+      is_active: true,
+      source: SourceEnum.Bilateral, // 'API' — the W3/Bilateral marker (VER-R-4)
+      // versionProcessV2:932 reads this to find the role-1 (main) initiative once the guard
+      // passes. `initiative_id: 51` matches `resolveTargetEntityId`'s stub return below, which
+      // makes `isP25SelfEntity` true and skips the initiative_entity_map lookup — matching the
+      // sibling P2-3229 fixture at :314-316, which carries this for the same reason.
+      obj_result_by_initiatives: [
+        { initiative_id: 51, initiative_role_id: 1, is_active: true },
+      ],
+      ...overrides,
+    });
+
+    // The repository's REAL row shape (resultByInitiatives.repository.ts:187-203). It selects
+    // ci.id, ci.official_code, ci.name AS initiative_name, ci.short_name, rbi.initiative_role_id,
+    // rbi.from_toc, rbi.is_active — and NEVER `inititiative_id`, which lives only in the JOIN
+    // predicate. `official_code` here is deliberately NOT 'SGP-02' so this fixture is a genuine
+    // bilateral, not the AVISA carve-out (VER-R-4, out of scope for this task).
+    const realOwnerInitiativeRow = (overrides: any = {}) => ({
+      id: 51,
+      official_code: 'CIP',
+      initiative_name: 'CIP Bilateral Program',
+      short_name: 'CIP',
+      initiative_role_id: 1,
+      from_toc: 0,
+      is_active: 1,
+      ...overrides,
+    });
+
+    // `resultRepository.findOne` is read by three different callers along this path —
+    // `versionProcess:731`, `versionProcessV2:906`, and `$_genericValidation` (called from
+    // inside `$_versionManagement`, reached from either entry point) — and which one runs first
+    // depends on whether the routing fix (VER-T-2) exists yet. An ordered `mockResolvedValueOnce`
+    // queue is blind to that: it hands out values by call order, not by who's asking, so
+    // delegating earlier in the call chain silently shifts every queued value to the wrong
+    // caller (this is what broke attempt 1 — see the Reviewer report on VER-T-1). Discriminating
+    // on the query shape instead makes the mock correct regardless of which caller runs first:
+    // `versionProcess` and `versionProcessV2` both query `{ where: { id, is_active: true } }`,
+    // while `$_genericValidation` queries `{ where: { version_id, result_code, is_active } }` —
+    // no `id` key. Route on that.
+    const armResultLookup = (row: any) => {
+      resultRepository.findOne.mockImplementation(async (opts: any) =>
+        opts?.where?.id !== undefined ? row : null,
+      );
+    };
+
+    // Arms `ClarisaInitiativesRepository.findOne` with an eligible P25 entity. Needed only once
+    // the fix lands: `versionProcessV2` calls it twice (`:894` entity-eligibility check and
+    // `:945` primary-submitter check) — `mockResolvedValue`, not `…Once`, for both to see it.
+    // On current code this arm is inert: the dead branch never reaches `versionProcessV2`.
+    const armEligibleEntity = () => {
+      const clarisa = testingModule.get<ClarisaInitiativesRepository>(
+        ClarisaInitiativesRepository,
+      ) as any;
+      clarisa.findOne = jest
+        .fn()
+        .mockResolvedValue({ id: 51, portfolio_id: 3, active: true });
+      return clarisa;
+    };
+
+    // Arms the phase-lookup and replicate calls `$_versionManagement` needs to complete
+    // successfully, whichever entry point reaches it — the legacy pool-funding path on current
+    // code, or `versionProcessV2` once VER-T-2 lands. This is what lets the defect on current
+    // code surface cleanly as "a row is written instead of a 403" rather than as a setup failure.
+    const armCarryForwardSuccess = (
+      replicatedId: number,
+      resultCode: number,
+    ) => {
+      versionRepository.findOne.mockResolvedValueOnce({
+        id: 4,
+        phase_name: 'Reporting 2026',
+      });
+      resultRepository.replicate.mockResolvedValueOnce([
+        {
+          id: replicatedId,
+          result_code: resultCode,
+          result_type_id: 5,
+          version_id: 4,
+        },
+      ] as any);
+    };
+
+    const armGuardRoles = (roles: any[]) => {
+      const repo = testingModule.get<RoleByUserRepository>(
+        RoleByUserRepository,
+      ) as any;
+      repo.getAllRolesByUser = jest.fn(async () => roles);
+      return repo;
+    };
+
+    // Wires the shared bilateral rules the guard depends on once it actually runs — so these
+    // tests are also the ones that go green once the routing defect is fixed, not just red now.
+    const armBilateralRules = () => {
+      const rules = testingModule.get<BilateralVersioningRulesService>(
+        BilateralVersioningRulesService,
+      ) as any;
+      rules.getActiveReportingPhase = jest.fn(async () => ({ id: 7 }));
+      rules.resolveVersionableResult = jest.fn(async () =>
+        bilateralCarryForwardResult(),
+      );
+      rules.resolveLeadCenterCode = jest.fn(async () => leadCentreCode);
+      rules.resolveTargetEntityId = jest.fn(async () => 51);
+      return rules;
+    };
+
+    it('refuses a non-lead-Centre, non-admin user with a 403 naming the lead Centre, and never calls $_versionManagement (VER-AC-1, VER-AC-4)', async () => {
+      const rbi = testingModule.get<ResultByInitiativesRepository>(
+        ResultByInitiativesRepository,
+      );
+      (rbi.getOwnerInitiativeByResult as jest.Mock).mockResolvedValueOnce(
+        realOwnerInitiativeRow(),
+      );
+      armBilateralRules();
+      armGuardRoles([{ role_id: 9, center_id: 'CENTER-11' }]); // another Centre, not admin
+
+      const result = bilateralCarryForwardResult();
+      // Falsifying-input guard (requirements.md §9, "Falsifying input"): a fixture whose `source`
+      // silently became 'Result' would let this test pass for the wrong reason. Assert it here,
+      // not only in the mock, so that mutation is caught in the test body itself.
+      expect(result.source).toBe(SourceEnum.Bilateral);
+      armResultLookup(result);
+      armEligibleEntity();
+      armCarryForwardSuccess(9001, result.result_code);
+
+      const versionManagementSpy = jest.spyOn(service, '$_versionManagement');
+
+      // On current code this fails: the dead branch never routes to the guard, the legacy path
+      // runs to completion, and the promise RESOLVES (a row is written) instead of rejecting.
+      await expect(
+        service.versionProcess(result.id, { id: 42 } as any),
+      ).rejects.toEqual(
+        ReturnResponseUtil.format({
+          message: expect.stringContaining(leadCentreCode),
+          response: result.id,
+          statusCode: HttpStatus.FORBIDDEN,
+        }),
+      );
+
+      expect(versionManagementSpy).not.toHaveBeenCalled();
+    });
+
+    it('lets a lead-Centre user through — the guard runs and the carry-forward proceeds (VER-AC-2, VER-AC-4)', async () => {
+      const rbi = testingModule.get<ResultByInitiativesRepository>(
+        ResultByInitiativesRepository,
+      );
+      (rbi.getOwnerInitiativeByResult as jest.Mock).mockResolvedValueOnce(
+        realOwnerInitiativeRow(),
+      );
+      armBilateralRules();
+      armGuardRoles([{ role_id: 9, center_id: leadCentreCode }]);
+
+      const result = bilateralCarryForwardResult({
+        id: 8376,
+        result_code: 8376,
+      });
+      expect(result.source).toBe(SourceEnum.Bilateral);
+      armResultLookup(result);
+      armEligibleEntity();
+      armCarryForwardSuccess(9002, result.result_code);
+
+      const guardSpy = jest.spyOn(
+        service as any,
+        'assertBilateralVersioningAllowed',
+      );
+
+      const outcome = await service.versionProcess(result.id, {
+        id: 601,
+      } as any);
+
+      // On current code this fails: `assertBilateralVersioningAllowed` is never invoked, because
+      // `versionProcess` never routes this bilateral result to `versionProcessV2` in the first
+      // place — the dead branch swallows it into the pool-funding path instead.
+      expect(guardSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ id: result.id }),
+        expect.objectContaining({ id: 601 }),
+      );
+      expect(outcome).toBeDefined();
+    });
+
+    it('lets a platform admin (role_id = 1) through — the guard runs and the carry-forward proceeds (VER-AC-2, VER-AC-4)', async () => {
+      const rbi = testingModule.get<ResultByInitiativesRepository>(
+        ResultByInitiativesRepository,
+      );
+      (rbi.getOwnerInitiativeByResult as jest.Mock).mockResolvedValueOnce(
+        realOwnerInitiativeRow(),
+      );
+      armBilateralRules();
+      armGuardRoles([{ role_id: 1, center_id: 'CENTER-99' }]); // admin, unaffiliated Centre
+
+      const result = bilateralCarryForwardResult({
+        id: 8377,
+        result_code: 8377,
+      });
+      expect(result.source).toBe(SourceEnum.Bilateral);
+      armResultLookup(result);
+      armEligibleEntity();
+      armCarryForwardSuccess(9003, result.result_code);
+
+      const guardSpy = jest.spyOn(
+        service as any,
+        'assertBilateralVersioningAllowed',
+      );
+
+      const outcome = await service.versionProcess(result.id, {
+        id: 602,
+      } as any);
+
+      // Same failure mode as the lead-Centre case: on current code the guard is unreachable, so
+      // this assertion is what proves the admin exemption is being bypassed rather than honoured.
+      expect(guardSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ id: result.id }),
+        expect.objectContaining({ id: 602 }),
+      );
+      expect(outcome).toBeDefined();
+    });
+
+    // VER-T-2. AVISA carries `source = 'API'` too (`result.entity.ts:566-574`), but its primary
+    // submitter's `official_code` is `SGP-02` — the compound key `VER-DD-2` requires. The
+    // predicate must be false for it, so it keeps the legacy (pool-funding) outcome it has today
+    // and is never asked for a lead Centre it does not have (`VER-R-4`, `VER-AC-6`).
+    it('AVISA (source=API, submitter SGP-02) keeps the legacy path — the guard is never called (VER-R-4, VER-AC-6)', async () => {
+      const rbi = testingModule.get<ResultByInitiativesRepository>(
+        ResultByInitiativesRepository,
+      );
+      (rbi.getOwnerInitiativeByResult as jest.Mock).mockResolvedValueOnce(
+        realOwnerInitiativeRow({ official_code: 'SGP-02' }),
+      );
+
+      const result = bilateralCarryForwardResult({
+        id: 8378,
+        result_code: 8378,
+      });
+      // Falsifying-input guard, same reasoning as the sibling VER-T-1 tests: assert `source` in
+      // the test body so a mutated fixture cannot make this pass for the wrong reason.
+      expect(result.source).toBe(SourceEnum.Bilateral);
+      armResultLookup(result);
+      armCarryForwardSuccess(9004, result.result_code);
+
+      const guardSpy = jest.spyOn(
+        service as any,
+        'assertBilateralVersioningAllowed',
+      );
+
+      const outcome = await service.versionProcess(result.id, {
+        id: 700,
+      } as any);
+
+      // If the `SGP-02` condition were dropped from the predicate, this result would be treated
+      // as a genuine bilateral: the guard would run and (with no bilateral rules armed in this
+      // test) reject, so this assertion — and the one below it — would fail.
+      expect(guardSpy).not.toHaveBeenCalled();
+      expect(outcome).toBeDefined();
     });
   });
 
