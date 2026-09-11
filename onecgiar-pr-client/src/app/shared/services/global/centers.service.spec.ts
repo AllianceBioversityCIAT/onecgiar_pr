@@ -1,4 +1,5 @@
-import { of, throwError } from 'rxjs';
+import { computed } from '@angular/core';
+import { Subject, of, throwError } from 'rxjs';
 import { CentersService } from './centers.service';
 
 describe('CentersService', () => {
@@ -156,6 +157,48 @@ describe('CentersService', () => {
       (svc as any).inFlight = null;
 
       await expect(svc.getData()).rejects.toThrow('CLARISA centers request is unavailable');
+    });
+  });
+  describe('P2-3678: `centersList` is a getter/setter over the signal', () => {
+    it('rebuilds a computed() written over the LEGACY name when the catalogue lands', () => {
+      // This is the whole point of the ticket. Before the change `centersList` was a plain array, so a
+      // computed() reading it cached the empty catalogue of the first evaluation and never recomputed —
+      // the defect behind P2-3190, P2-3335 and P2-3554, fixed one screen at a time until now.
+      // The catalogue must resolve AFTER the consumer has already read the list once — that is the order
+      // that used to break it, and a plain `of(...)` cannot reproduce it because it answers synchronously
+      // inside the constructor.
+      const late = new Subject<any>();
+      const lateApi = { resultsSE: { GET_AllCLARISACenters: jest.fn(() => late.asObservable()) } };
+      const svc = new CentersService(lateApi as any);
+
+      const codes = computed(() => svc.centersList.map(center => center.code));
+      expect(codes()).toEqual([]);
+
+      late.next({ response: mockResponse });
+      late.complete();
+
+      expect(codes()).toEqual(['CA', 'CB']);
+    });
+
+    it('returns the signal value BY REFERENCE, never a copy', () => {
+      // 🛑 Do not "improve" this into `[...this.centers()]`. Five template bindings feed `pr-select`, which
+      // derives its options in a computed() over the `options` input with no content comparison and renders
+      // them through *cdkVirtualFor without trackBy: a fresh array per change-detection pass rebuilds the
+      // options every pass. That is the synchronize() loop that froze IPSR > Contributors, documented in
+      // pr-multi-select.component.ts.
+      service.centersList = mockResponse.slice() as any;
+
+      expect(service.centersList).toBe(service.centers());
+      expect(service.centersList).toBe(service.centersList);
+    });
+
+    it('keeps both public names in sync when the legacy one is written, and treats null as empty', () => {
+      service.centersList = mockResponse.slice() as any;
+      expect(service.centers()).toEqual(mockResponse);
+
+      service.centersList = null as any;
+      expect(service.centers()).toEqual([]);
+      expect(service.centersList).toEqual([]);
     });
   });
 });
