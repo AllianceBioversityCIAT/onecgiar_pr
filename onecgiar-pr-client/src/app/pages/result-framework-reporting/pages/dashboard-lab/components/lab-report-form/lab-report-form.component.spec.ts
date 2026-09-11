@@ -394,6 +394,19 @@ describe('LabReportFormComponent', () => {
 
       expect(component.canSave()).toBe(false);
     });
+
+    it('ECN-AC-1: an emerging result is never blocked by an empty contribution to indicator target', async () => {
+      await setup({ emergingMode: true, emergingCategory: null, indicator: null, tocNode: null });
+      resultLevelSig.set([{ id: OUTPUT_LEVEL, name: 'Output', result_type: [{ id: 7, name: 'Innovation development' }] }]);
+      component.onResultLevelChange(OUTPUT_LEVEL);
+      component.onCategoryChange(7);
+
+      component.patch('result_name', 'Emerging innovation title');
+      // contribution_to_indicator_target intentionally left unset
+
+      expect(component.missingFields()).not.toContain('Contribution to indicator target');
+      expect(component.canSave()).toBe(true);
+    });
   });
 
   // quick/category-picker-kp-reset (2026-09-04) — field bug: picking "Knowledge product" in the
@@ -970,6 +983,10 @@ describe('LabReportFormComponent — Form 3-Card Architecture DOM Rendering (RFU
   async function mount(inputs: Record<string, any> = {}) {
     const api = makeApiMock();
     const resultLevelSig = signal<any[]>([]);
+    const outputOutcomeLevelsSig = computed(() => {
+      const levels = resultLevelSig();
+      return levels.length < 4 ? [] : levels.slice(2, 4).reverse();
+    });
     const centersMock = { getData: () => Promise.resolve(), centersList: [], centers: signal<any[]>([]) };
 
     await TestBed.configureTestingModule({
@@ -977,7 +994,7 @@ describe('LabReportFormComponent — Form 3-Card Architecture DOM Rendering (RFU
       providers: [
         { provide: ApiService, useValue: api },
         { provide: CentersService, useValue: centersMock },
-        { provide: ResultLevelService, useValue: { resultLevelListSig: resultLevelSig } },
+        { provide: ResultLevelService, useValue: { resultLevelListSig: resultLevelSig, outputOutcomeLevelsSig } },
         { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
       ],
       schemas: [NO_ERRORS_SCHEMA]
@@ -1064,6 +1081,31 @@ describe('LabReportFormComponent — Form 3-Card Architecture DOM Rendering (RFU
     // Cards 2 and 3 must not render while in browse mode without a selected item
     expect(card2).toBeNull();
     expect(card3).toBeNull();
+  });
+
+  it('non-emerging: Card 2 and the ToC-attribution note both render (EHU-AC-3)', async () => {
+    const fix = await mount({
+      indicator: { indicator_id: 1, result_type_id: 7, result_level_id: OUTPUT_LEVEL, type_name: 'Number of innovations' },
+      tocNode: { result_level_id: OUTPUT_LEVEL }
+    });
+
+    expect(fix.nativeElement.querySelector('[data-testid="card-target-contribution"]')).toBeTruthy();
+    expect(fix.nativeElement.querySelector('[data-testid="toc-attribution-note"]')).toBeTruthy();
+
+    const card3: HTMLElement | null = fix.nativeElement.querySelector('[data-testid="card-collaboration"]');
+    expect(card3?.textContent).toContain('3. Collaboration & Attribution');
+  });
+
+  it('emerging mode: hides Card 2 and the ToC-attribution note, but keeps the Centers/Science Programs selects (EHU-AC-1, EHU-AC-2)', async () => {
+    const fix = await mount({ emergingMode: true, emergingCategory: null, indicator: null, tocNode: null });
+
+    expect(fix.nativeElement.querySelector('[data-testid="card-target-contribution"]')).toBeNull();
+    expect(fix.nativeElement.querySelector('[data-testid="toc-attribution-note"]')).toBeNull();
+    expect(fix.nativeElement.querySelector('app-pr-multi-select[name="centers"]')).toBeTruthy();
+    expect(fix.nativeElement.querySelector('app-pr-multi-select[name="science"]')).toBeTruthy();
+
+    const card3: HTMLElement | null = fix.nativeElement.querySelector('[data-testid="card-collaboration"]');
+    expect(card3?.textContent).toContain('2. Collaboration & Attribution');
   });
 
   it('renders Cards 2 and 3 once a Knowledge Product is selected', async () => {
