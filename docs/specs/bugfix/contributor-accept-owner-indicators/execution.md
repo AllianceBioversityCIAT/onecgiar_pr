@@ -152,3 +152,11 @@ Reviewer adjudication worth keeping: the guard is written as a positive conditio
 **Commit:** `467b84789` on `JuanGuzman-io/fix-contributor-accept-owner-indicators` — `[SPEC:bugfix/contributor-accept-owner-indicators] 🔧 fix(results-toc-results): scope the indicator-attach lookup to the tab's own initiative and node`.
 
 **Gate (Approval Mode: gated):** `RTR-T-3` is HITL and depends on a prtest deploy — the run pauses here for the owner.
+
+## 3. Integration
+
+| Step | Result |
+|---|---|
+| Branch pushed | `origin/JuanGuzman-io/fix-contributor-accept-owner-indicators` @ `71743233d` (user chose "solo push" at the T-2 gate) |
+| Merge into `performance-refactor` | Requested explicitly by the owner (2026-09-11). `git merge --ff-only` from `ea32ed9fb` → `71743233d`, exit 0, no merge commit; pushed, `origin/performance-refactor` confirmed at `71743233d`. Direct merge replaces the PR step in `tasks.md` §6 — owner decision |
+| Next | prtest deploy (Cristian) → `RTR-T-3` HITL; build must contain `467b84789` |
