@@ -126,12 +126,52 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
   isLinkedResultsPanelExpanded: boolean = false;
   searchLinkedResultText: string = '';
 
+  /**
+   * `linked-results-filters` perf refactor (2026-09-11): the dropdown became unusably slow because
+   * every getter below re-derived its result from scratch — flattening/filtering the FULL QA'd+
+   * Approved results list (thousands of rows once `RES-R-3` dropped the phase restriction) — on
+   * EVERY change-detection tick, not just when its inputs actually changed. Default (non-OnPush) CD
+   * calls template getters many times per interaction (mouse move, any sibling signal update), so a
+   * single hover could re-run an O(n) `reduce`/`filter`/`find` several times over. Two of these
+   * getters were also nested (`filteredLinkedResults` → `flatLinkedResultsOptions`, and
+   * `getResultById` called `flatLinkedResultsOptions` AGAIN per chip), multiplying the cost.
+   * Fix: reference-equality memoization caches below — cheap (`===` checks) and correct because
+   * `innovationUseResultsSE.resultsList` is reassigned wholesale exactly once (service constructor
+   * subscribe), never mutated in place, and `partnersBody.linked_results` is now also reassigned
+   * (not spliced/pushed) by `toggleResultSelection`/`clearLinkedResultsSelection` below so the
+   * selected-ids cache can detect changes the same way.
+   */
+  private _flatOptionsCacheSource: any[] | null = null;
+  private _flatOptionsCache: any[] = [];
+
+  private _resultsByIdCacheSource: any[] | null = null;
+  private _resultsById: Map<string, any> = new Map();
+
+  private _selectedIdsCacheSource: any[] | null = null;
+  private _selectedIdsCache: Set<any> = new Set();
+
+  private _filteredLinkedResultsCacheKey = '';
+  private _filteredLinkedResultsCache: any[] = [];
+
+  private _availableTypologiesCacheSource: any[] | null = null;
+  private _availableTypologiesCache: { name: string }[] = [];
+
+  /** Rows rendered in the DOM are capped — thousands of `.result-list-item` nodes created in one
+   * shot (unfiltered open, before `RES-R-3` this list was already 3900+) was the single biggest
+   * contributor to the "opening the dropdown freezes the app" report. The full match count still
+   * drives the "Showing N results" text; only the DOM render is bounded. */
+  readonly linkedResultsRenderCap = 150;
+
   get availableTypologies() {
     const list = this.innovationUseResultsSE.resultsList || [];
-    const types = list.map((r: any) => r.name)
-      .filter(Boolean)
-      .filter((name: string) => name !== 'Impact contribution');
-    return [...new Set(types)].map(t => ({ name: t }));
+    if (list !== this._availableTypologiesCacheSource) {
+      this._availableTypologiesCacheSource = list;
+      const types = list.map((r: any) => r.name)
+        .filter(Boolean)
+        .filter((name: string) => name !== 'Impact contribution');
+      this._availableTypologiesCache = [...new Set(types)].map(t => ({ name: t }));
+    }
+    return this._availableTypologiesCache;
   }
 
   get availableFundingSources() {
@@ -150,15 +190,51 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
 
   get flatLinkedResultsOptions() {
     const list = this.innovationUseResultsSE.resultsList || [];
-    if (list.length > 0 && list[0].options) {
-      return list.reduce((acc: any[], curr: any) => acc.concat(curr.options), []);
+    if (list !== this._flatOptionsCacheSource) {
+      this._flatOptionsCacheSource = list;
+      this._flatOptionsCache = list.length > 0 && list[0].options ? list.reduce((acc: any[], curr: any) => acc.concat(curr.options), []) : list;
     }
-    return list;
+    return this._flatOptionsCache;
+  }
+
+  /** O(1) id lookup, rebuilt only when the flattened source list actually changes. Replaces a
+   * per-call `Array.find` that used to also re-flatten the whole list first (`getResultById`
+   * previously read the un-memoized `flatLinkedResultsOptions` getter). */
+  private get resultsById(): Map<string, any> {
+    const list = this.flatLinkedResultsOptions;
+    if (list !== this._resultsByIdCacheSource) {
+      this._resultsByIdCacheSource = list;
+      this._resultsById = new Map(list.map((r: any) => [String(r.id), r]));
+    }
+    return this._resultsById;
+  }
+
+  /** O(1) membership check for the checkbox `[checked]` binding, which used to run
+   * `linked_results.includes(r.id)` — O(n) — for EVERY visible row on EVERY CD tick. */
+  get selectedLinkedResultIds(): Set<any> {
+    const list = this.rdPartnersSE.partnersBody.linked_results || [];
+    if (list !== this._selectedIdsCacheSource) {
+      this._selectedIdsCacheSource = list;
+      this._selectedIdsCache = new Set(list);
+    }
+    return this._selectedIdsCache;
   }
 
   get filteredLinkedResults() {
     const list = this.flatLinkedResultsOptions;
-    return list.filter((r: any) => {
+    const key = JSON.stringify([
+      list.length,
+      this.selectedTypologies,
+      this.selectedFundingSources,
+      this.selectedPortfolios,
+      this.searchLinkedResultText
+    ]);
+    if (key === this._filteredLinkedResultsCacheKey) {
+      return this._filteredLinkedResultsCache;
+    }
+    this._filteredLinkedResultsCacheKey = key;
+    const search = this.searchLinkedResultText?.toLowerCase() ?? '';
+    this._filteredLinkedResultsCache = list.filter((r: any) => {
       const matchTypology = this.selectedTypologies?.length ? this.selectedTypologies.includes(r.name) : true;
       const matchFunding = this.selectedFundingSources?.length ? this.selectedFundingSources.includes(r.source) : true;
       const matchPortfolio = this.selectedPortfolios?.length ?
@@ -167,15 +243,41 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
           if (p === 'P25') return r.phase_year >= 2025;
           return false;
         }) : true;
-      const matchSearch = this.searchLinkedResultText ?
-        r.title?.toLowerCase().includes(this.searchLinkedResultText.toLowerCase()) ||
-        String(r.result_code).includes(this.searchLinkedResultText) : true;
+      const matchSearch = search ? r.title?.toLowerCase().includes(search) || String(r.result_code).includes(search) : true;
       return matchTypology && matchFunding && matchPortfolio && matchSearch;
     });
+    return this._filteredLinkedResultsCache;
+  }
+
+  /** What the template actually renders — bounded to `linkedResultsRenderCap` rows regardless of
+   * how many results match the current filters (see the cache-block docstring above). */
+  get visibleLinkedResults() {
+    return this.filteredLinkedResults.slice(0, this.linkedResultsRenderCap);
+  }
+
+  get linkedResultsTruncated(): boolean {
+    return this.filteredLinkedResults.length > this.linkedResultsRenderCap;
   }
 
   getResultById(id: any) {
-    return this.flatLinkedResultsOptions.find((r: any) => String(r.id) === String(id)) || null;
+    return this.resultsById.get(String(id)) || null;
+  }
+
+  trackByResultId(_index: number, r: any) {
+    return r?.id;
+  }
+
+  /** For `*ngFor="let id of linked_results"`, where the item IS the id (not a result object). */
+  trackByLinkedId(_index: number, id: any) {
+    return id;
+  }
+
+  trackByName(_index: number, item: { name: string }) {
+    return item?.name;
+  }
+
+  trackByValue(_index: number, item: { value: string }) {
+    return item?.value;
   }
 
   toggleLinkedResultsPanel() {
@@ -183,15 +285,12 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
   }
 
   toggleResultSelection(id: number) {
-    if (!this.rdPartnersSE.partnersBody.linked_results) {
-      this.rdPartnersSE.partnersBody.linked_results = [];
-    }
-    const idx = this.rdPartnersSE.partnersBody.linked_results.indexOf(id);
-    if (idx > -1) {
-      this.rdPartnersSE.partnersBody.linked_results.splice(idx, 1);
-    } else {
-      this.rdPartnersSE.partnersBody.linked_results.push(id);
-    }
+    // Reassign a NEW array reference (not push/splice in place) — same convention already used by
+    // `deleteContributingCenter`/`deleteScience` in this file, and load-bearing here now: it's what
+    // lets `selectedLinkedResultIds` above detect the change via `!==` instead of re-scanning.
+    const current = this.rdPartnersSE.partnersBody.linked_results || [];
+    const idx = current.indexOf(id);
+    this.rdPartnersSE.partnersBody.linked_results = idx > -1 ? current.filter((_: any, i: number) => i !== idx) : [...current, id];
   }
 
   clearLinkedResultsSelection() {

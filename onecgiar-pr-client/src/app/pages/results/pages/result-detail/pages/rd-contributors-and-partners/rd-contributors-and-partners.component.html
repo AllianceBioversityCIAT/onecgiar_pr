@@ -594,8 +594,8 @@
 
               <div class="filter-group-title">FILTER BY RESULT TYPOLOGY</div>
               <div class="filters-row typology-row">
-                <div *ngFor="let t of availableTypologies" 
-                     class="filter-chip" 
+                <div *ngFor="let t of availableTypologies; trackBy: trackByName"
+                     class="filter-chip"
                      [class.active]="selectedTypologies?.includes(t.name)"
                      (click)="toggleTypology(t.name)">
                   {{ t.name }}
@@ -608,8 +608,8 @@
                     <span class="filter-label">PORTFOLIO:</span>
                     <div class="filter-chip-group segmented">
                        <div class="grouped-chip" [class.active]="selectedPortfolios.length === 0" (click)="selectedPortfolios = []">All</div>
-                       <div *ngFor="let p of availablePortfolios" 
-                            class="grouped-chip" 
+                       <div *ngFor="let p of availablePortfolios; trackBy: trackByValue"
+                            class="grouped-chip"
                             [class.active]="selectedPortfolios?.includes(p.value.toString())"
                             (click)="togglePortfolio(p.value.toString())">
                          {{ p.name }}
@@ -620,8 +620,8 @@
                   <div class="filter-group">
                     <span class="filter-label">FUNDING SOURCE:</span>
                     <div class="filter-chip-group spaced">
-                       <div *ngFor="let f of availableFundingSources" 
-                            class="filter-chip small-chip" 
+                       <div *ngFor="let f of availableFundingSources; trackBy: trackByValue"
+                            class="filter-chip small-chip"
                             [class.active]="selectedFundingSources?.includes(f.value)"
                             (click)="toggleFunding(f.value)">
                          {{ f.name }}
@@ -637,27 +637,31 @@
               </div>
 
               <div class="results-list compact-list">
-                <div class="result-list-item" 
-                     *ngFor="let r of filteredLinkedResults" 
+                <div class="result-list-item"
+                     *ngFor="let r of visibleLinkedResults; trackBy: trackByResultId"
                      (click)="toggleResultSelection(r.id)">
-                  
+
                   <div class="item-left">
-                    <input type="checkbox" 
-                           class="pr-native-check" 
-                           [checked]="this.rdPartnersSE.partnersBody.linked_results?.includes(r.id)" 
+                    <input type="checkbox"
+                           class="pr-native-check"
+                           [checked]="selectedLinkedResultIds.has(r.id)"
                            style="pointer-events: none;">
                   </div>
-                  
+
                   <div class="item-right">
                     <div class="item-header">
                       <span class="item-code">[P{{ r.phase_year?.toString().substring(2) }} - {{ r.phase_year }}] {{ r.result_code }}</span>
                       <span class="item-dot">·</span>
                       <span class="item-typology">{{ r.name }}</span>
                       <span class="item-funding-badge" *ngIf="r.source">{{ r.source }}</span>
-                      <span class="badge-linked" *ngIf="this.rdPartnersSE.partnersBody.linked_results?.includes(r.id)" style="margin-left: 8px;">Linked</span>
+                      <span class="badge-linked" *ngIf="selectedLinkedResultIds.has(r.id)" style="margin-left: 8px;">Linked</span>
                     </div>
                     <div class="item-title">{{ r.title }}</div>
                   </div>
+                </div>
+
+                <div class="truncation-note" *ngIf="linkedResultsTruncated">
+                  Showing the first {{ linkedResultsRenderCap }} of {{ filteredLinkedResults.length }} matches — refine your search or filters to narrow the list.
                 </div>
               </div>
 
@@ -677,7 +681,7 @@
               <app-pr-field-header description="Results selected ({{ this.rdPartnersSE.partnersBody.linked_results.length }})"> </app-pr-field-header>
 
               <div class="chips_container">
-                <div class="pr_chip_selected" *ngFor="let id of this.rdPartnersSE.partnersBody.linked_results">
+                <div class="pr_chip_selected" *ngFor="let id of this.rdPartnersSE.partnersBody.linked_results; trackBy: trackByLinkedId">
                   <div class="name" [innerHtml]="formatResultLabel(getResultById(id))"></div>
                   <i class="material-icons-round" style="cursor: pointer; color: #f44336;" (click)="toggleResultSelection(id)">remove_circle</i>
                 </div>

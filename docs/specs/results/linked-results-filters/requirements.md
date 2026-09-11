@@ -5,7 +5,7 @@
 - **Module:** `results`
 - **Sub-feature:** `linked-results-filters`
 - **Owner:** Platform Dev Team
-- **Status:** `draft`
+- **Status:** `shipped` (perf fix `RES-T-LRF-4` landed 2026-09-11 — see `task.md`)
 - **Ticket(s):** TBD
 
 ---
@@ -67,7 +67,7 @@ Reference: `docs/prd.md`
 
 | Dimension | Target |
 |---|---|
-| **Performance** | The expanded result list (all past QA'd/Approved results) MUST load within the existing SLO. If the list is too large, the frontend filtering SHOULD remain responsive or pivot to server-side search. |
+| **Performance** | The expanded result list (all past QA'd/Approved results) MUST load within the existing SLO. If the list is too large, the frontend filtering SHOULD remain responsive or pivot to server-side search. **Status (2026-09-11):** the initial client implementation violated this — opening the panel froze the app (unmemoized getters re-scanning thousands of rows per change-detection tick + unbounded DOM). Fixed via memoization + a 150-row render cap; see `design.md` §8.1 for the root cause and `RES-T-LRF-4` in `task.md`. |
 | **Backwards compatibility** | The save payload for linked results MUST NOT change. |
 
 ---

@@ -111,7 +111,11 @@ i {
   }
 }
 
-/* Custom Linked Results Panel */
+/* Custom Linked Results Panel — tokens aligned with app.component.scss/colors.scss (PRMS violet,
+   semantic text/border/surface layer). The old `var(--pr-color-primary, #hex)` / `var(--pr-color-
+   neutral-N, #hex)` pairs below always resolved to their hardcoded fallback: --pr-color-primary
+   (no numbered stop) doesn't exist, and --pr-color-neutral-* is a violet-tinted ramp, not gray —
+   both silently produced an off-brand palette that never matched the rest of the tool. */
 .custom-linked-results-container {
   position: relative;
   width: 100%;
@@ -119,35 +123,35 @@ i {
 }
 
 .custom-dropdown-header {
-  border: 1px solid var(--pr-color-neutral-300, #ccc);
-  border-radius: 4px;
+  border: 1px solid var(--pr-color-neutral-1000);
+  border-radius: 5px;
   padding: 10px 15px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  background-color: white;
+  background-color: var(--pr-color-white);
 
   .header-text {
-    font-size: 14px;
-    color: var(--pr-color-neutral-700, #333);
+    @include fonts.pr-typography('body-1');
+    color: var(--pr-text);
     display: flex;
     align-items: center;
     gap: 10px;
 
     .selected-badge {
-      background-color: var(--pr-color-primary-100, #e6e6fa);
-      color: var(--pr-color-primary-600, #5b28a8);
+      background-color: var(--pr-color-primary-100);
+      color: var(--pr-color-primary-400);
       padding: 2px 8px;
       border-radius: 4px;
-      font-size: 12px;
+      @include fonts.pr-typography('body-3');
       font-weight: 500;
     }
   }
 
   i {
     font-size: 14px;
-    color: var(--pr-color-neutral-500, #666);
+    color: var(--pr-text-muted);
   }
 }
 
@@ -156,10 +160,9 @@ i {
   top: 100%;
   left: 0;
   width: 100%;
-  background-color: white;
-  border: 1px solid var(--pr-color-primary-400, #8f5fd8);
+  background-color: var(--pr-color-white);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--pr-shadow-2);
   z-index: 1000;
   margin-top: 4px;
   display: flex;
@@ -173,16 +176,16 @@ i {
 
     input {
       flex: 1;
-      border: 1px solid var(--pr-color-neutral-300, #ced4da);
+      border: 1px solid var(--pr-color-neutral-1000);
       border-radius: 6px;
       padding: 8px 12px;
       padding-left: 35px;
-      font-size: 14px;
-      color: var(--pr-color-neutral-700, #495057);
+      @include fonts.pr-typography('body-1');
+      color: var(--pr-text);
       outline: none;
 
       &::placeholder {
-        color: var(--pr-color-neutral-400, #6c757d);
+        color: var(--pr-text-muted);
       }
     }
 
@@ -191,19 +194,20 @@ i {
       position: absolute;
       left: 32px;
       font-size: 14px;
-      color: var(--pr-color-neutral-500, #888);
+      color: var(--pr-text-muted);
     }
     .clear-search {
       position: absolute;
       right: 32px;
       cursor: pointer;
+      color: var(--pr-text-muted);
     }
   }
 
   .filter-group-title {
-    font-size: 11px;
+    @include fonts.pr-typography('body-3');
     font-weight: 700;
-    color: var(--pr-color-neutral-500, #888);
+    color: var(--pr-text-muted);
     margin: 10px 20px 8px 20px;
     text-transform: uppercase;
   }
@@ -217,17 +221,17 @@ i {
     .filter-chip {
       padding: 5px 14px;
       border-radius: 20px;
-      border: 1px solid var(--pr-color-neutral-300, #ccc);
-      font-size: 13px;
-      color: var(--pr-color-neutral-600, #555);
-      background-color: white;
+      border: 1px solid var(--pr-color-neutral-1000);
+      @include fonts.pr-typography('body-2');
+      color: var(--pr-text-secondary);
+      background-color: var(--pr-color-white);
       cursor: pointer;
       transition: all 0.2s;
 
       &.active {
-        background-color: var(--pr-color-primary, #5523a6);
-        color: white;
-        border-color: var(--pr-color-primary, #5523a6);
+        background-color: var(--pr-color-primary-300);
+        color: var(--pr-color-white);
+        border-color: var(--pr-color-primary-300);
         font-weight: 500;
       }
     }
@@ -238,7 +242,7 @@ i {
     align-items: center;
     justify-content: space-between;
     padding: 0 20px 15px 20px;
-    border-bottom: 1px solid var(--pr-color-neutral-200, #eee);
+    border-bottom: 1px solid var(--pr-border-divider);
 
     .left-filters {
       display: flex;
@@ -251,25 +255,25 @@ i {
         gap: 8px;
 
         .filter-label {
-          color: var(--pr-color-neutral-500, #888);
+          color: var(--pr-text-muted);
           font-weight: 700;
-          font-size: 11px;
+          @include fonts.pr-typography('body-3');
           text-transform: uppercase;
         }
 
         .filter-chip-group.segmented {
           display: flex;
-          border: 1px solid var(--pr-color-neutral-300, #ccc);
+          border: 1px solid var(--pr-color-neutral-1000);
           border-radius: 4px;
           overflow: hidden;
 
           .grouped-chip {
             padding: 4px 12px;
-            font-size: 13px;
-            color: var(--pr-color-neutral-600, #555);
-            background-color: white;
+            @include fonts.pr-typography('body-2');
+            color: var(--pr-text-secondary);
+            background-color: var(--pr-color-white);
             cursor: pointer;
-            border-right: 1px solid var(--pr-color-neutral-300, #ccc);
+            border-right: 1px solid var(--pr-color-neutral-1000);
             transition: all 0.2s;
 
             &:last-child {
@@ -277,8 +281,8 @@ i {
             }
 
             &.active {
-              background-color: var(--pr-color-primary, #5523a6);
-              color: white;
+              background-color: var(--pr-color-primary-300);
+              color: var(--pr-color-white);
               font-weight: 500;
             }
           }
@@ -291,16 +295,16 @@ i {
           .small-chip {
             padding: 4px 12px;
             border-radius: 20px;
-            border: 1px solid var(--pr-color-neutral-300, #ccc);
-            font-size: 13px;
-            color: var(--pr-color-neutral-600, #555);
-            background-color: white;
+            border: 1px solid var(--pr-color-neutral-1000);
+            @include fonts.pr-typography('body-2');
+            color: var(--pr-text-secondary);
+            background-color: var(--pr-color-white);
             cursor: pointer;
 
             &.active {
-              background-color: var(--pr-color-primary, #5523a6);
-              color: white;
-              border-color: var(--pr-color-primary, #5523a6);
+              background-color: var(--pr-color-primary-300);
+              color: var(--pr-color-white);
+              border-color: var(--pr-color-primary-300);
             }
           }
         }
@@ -311,18 +315,19 @@ i {
       display: flex;
       align-items: center;
       gap: 15px;
-      font-size: 13px;
+      @include fonts.pr-typography('body-2');
 
       .summary-text {
-        color: var(--pr-color-neutral-500, #888);
+        color: var(--pr-text-muted);
       }
 
       .reset-link {
-        color: var(--pr-color-primary, #5523a6);
+        color: var(--pr-color-primary-300);
         font-weight: 600;
         cursor: pointer;
 
         &:hover {
+          color: var(--pr-color-primary-400);
           text-decoration: underline;
         }
       }
@@ -339,32 +344,32 @@ i {
       align-items: flex-start;
       gap: 12px;
       padding: 16px 20px;
-      border-bottom: 1px solid var(--pr-color-neutral-100, #f5f5f5);
+      border-bottom: 1px solid var(--pr-border-divider);
       cursor: pointer;
-      background-color: white;
+      background-color: var(--pr-color-white);
 
       &:hover {
-        background-color: var(--pr-color-neutral-50, #fafafa);
+        background-color: var(--pr-surface-raised-soft);
       }
 
       .item-left {
         padding-top: 2px;
-        
+
         .pr-native-check {
           appearance: none;
           width: 18px;
           height: 18px;
-          border: 2px solid var(--pr-color-primary, #5523a6);
+          border: 2px solid var(--pr-color-primary-300);
           border-radius: 4px;
           background-color: transparent;
           position: relative;
           margin: 0;
           cursor: pointer;
-          
+
           &:checked {
-            background-color: var(--pr-color-primary, #5523a6);
-            border-color: var(--pr-color-primary, #5523a6);
-            
+            background-color: var(--pr-color-primary-300);
+            border-color: var(--pr-color-primary-300);
+
             &::after {
               content: '';
               position: absolute;
@@ -372,7 +377,7 @@ i {
               top: 1px;
               width: 5px;
               height: 10px;
-              border: solid white;
+              border: solid var(--pr-color-white);
               border-width: 0 2px 2px 0;
               transform: rotate(45deg);
             }
@@ -388,56 +393,64 @@ i {
           align-items: center;
           gap: 6px;
           margin-bottom: 6px;
-          font-size: 13px;
+          @include fonts.pr-typography('body-2');
 
           .item-code {
             font-weight: 700;
-            color: var(--pr-color-neutral-800, #222);
+            color: var(--pr-text-heading);
           }
 
           .item-dot {
-            color: var(--pr-color-neutral-400, #999);
+            color: var(--pr-text-subtle);
           }
 
           .item-typology {
-            color: var(--pr-color-primary, #5523a6);
+            color: var(--pr-color-primary-300);
             font-weight: 600;
           }
 
           .item-funding-badge {
-            background-color: var(--pr-color-neutral-100, #f0f0f0);
-            color: var(--pr-color-neutral-600, #666);
+            background-color: var(--pr-surface-subtle);
+            color: var(--pr-text-secondary);
             padding: 2px 6px;
             border-radius: 4px;
-            font-size: 11px;
+            @include fonts.pr-typography('body-3');
             font-weight: 600;
             margin-left: 4px;
           }
 
           .badge-linked {
-            background-color: var(--pr-color-green-100, #e8f5e9);
-            color: var(--pr-color-green-600, #43a047);
-            border: 1px solid var(--pr-color-green-600, #43a047);
+            background-color: var(--pr-color-green-50);
+            color: var(--pr-color-green-700);
+            border: 1px solid var(--pr-color-green-600);
             padding: 2px 8px;
             border-radius: 4px;
-            font-size: 11px;
+            @include fonts.pr-typography('body-3');
             font-weight: 500;
           }
         }
 
         .item-title {
-          font-size: 14px;
-          color: var(--pr-color-neutral-600, #555);
+          @include fonts.pr-typography('body-1');
+          color: var(--pr-text-secondary);
           line-height: 1.4;
         }
       }
+    }
+
+    .truncation-note {
+      @include fonts.pr-typography('body-3');
+      color: var(--pr-text-muted);
+      text-align: center;
+      padding: 12px 20px;
+      background-color: var(--pr-surface-subtle);
     }
   }
 
   .panel-footer {
     padding: 15px 20px;
-    background-color: white;
-    border-top: 1px solid var(--pr-color-neutral-200, #eee);
+    background-color: var(--pr-color-white);
+    border-top: 1px solid var(--pr-border-divider);
     border-bottom-left-radius: 8px;
     border-bottom-right-radius: 8px;
     display: flex;
@@ -450,18 +463,19 @@ i {
       gap: 15px;
 
       .selection-count {
-        font-size: 13px;
+        @include fonts.pr-typography('body-2');
         font-weight: 500;
-        color: var(--pr-color-primary, #5523a6);
+        color: var(--pr-color-primary-300);
       }
 
       .clear-btn {
-        font-size: 13px;
-        color: var(--pr-color-primary, #5523a6);
+        @include fonts.pr-typography('body-2');
+        color: var(--pr-color-primary-300);
         text-decoration: underline;
         cursor: pointer;
 
         &:hover {
+          color: var(--pr-color-primary-400);
           font-weight: 600;
         }
       }
@@ -469,18 +483,18 @@ i {
 
     .footer-right {
       .close-btn {
-        background-color: white;
-        border: 1px solid var(--pr-color-neutral-400, #999);
+        background-color: var(--pr-color-white);
+        border: 1px solid var(--pr-color-neutral-1000);
         border-radius: 20px;
         padding: 6px 20px;
-        font-size: 13px;
+        @include fonts.pr-typography('body-2');
         font-weight: 600;
-        color: var(--pr-color-neutral-700, #333);
+        color: var(--pr-text-secondary);
         cursor: pointer;
         transition: background-color 0.2s;
 
         &:hover {
-          background-color: var(--pr-color-neutral-100, #f5f5f5);
+          background-color: var(--pr-surface-subtle);
         }
       }
     }
