@@ -1,9 +1,10 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { ChangeDetectorRef, NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BehaviorSubject, of, throwError } from 'rxjs';
+import { delay } from 'rxjs/operators';
 import { RdContributorsAndPartnersComponent } from './rd-contributors-and-partners.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
@@ -732,7 +733,9 @@ describe('RdContributorsAndPartnersComponent', () => {
       // assertion here doesn't fail this test on a regression (Jest doesn't wait for it); worse, if it
       // ever throws, that throw surfaces as an uncaught exception attributed to whatever OTHER test
       // happens to be running when the timer fires.
-      expect(mockRdPartnersSE.getSectionInformation).toHaveBeenCalledWith(null, true);
+      // `UCA-T-9` added a third `onLoaded` callback arg (dirty-tracker re-snapshot on reload) — the
+      // first two positional args are still the ones this test cares about.
+      expect(mockRdPartnersSE.getSectionInformation).toHaveBeenCalledWith(null, true, expect.any(Function));
     });
   });
 
@@ -1746,4 +1749,466 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
     component.onSaveSection();
     expect((component as any).api.resultsSE.PATCH_ContributorsPartners).toHaveBeenCalled();
   });
+});
+
+/**
+ * `UCA-T-9` — `CanComponentDeactivate` wiring for `RdContributorsAndPartnersComponent` (P25).
+ * `SectionDirtyTrackerService` is component-scoped (`providers: [SectionDirtyTrackerService]`), so
+ * each spec gets a fresh instance via `TestBed.createComponent`.
+ *
+ * Renders through the REAL `RdContributorsAndPartnersService` (same rig as `LC-T-2` above) — the
+ * dirty-diff snapshot target, `partnersBody`, lives on the service, not the component, so a mocked
+ * service (as the top-level `describe` in this file uses) cannot exercise the real load/save
+ * timing. `GET_ContributorsPartners` / `PATCH_ContributorsPartners` are mocked with a genuine async
+ * boundary (`delay(0)`, driven with `fakeAsync`/`tick`) instead of a synchronous `of(...)` — a
+ * synchronous mock would collapse the real production race between `getSectionInformation()`'s
+ * `next` handler (which ends in `loadFilteredBilateralProjects()`, itself async but never mutating
+ * `partnersBody`) and the dirty-tracker snapshot into something that passes even when the
+ * implementation snapshots too early.
+ */
+describe('RdContributorsAndPartnersComponent — CanComponentDeactivate (UCA-T-9)', () => {
+  let fixture: ComponentFixture<RdContributorsAndPartnersComponent>;
+  let component: RdContributorsAndPartnersComponent;
+  let rdPartnersSE: RdContributorsAndPartnersService;
+  let apiMock: any;
+
+  /** Local, test-scoped literal — never shared with other describes, so no cross-test mutation risk. */
+  const loadResponse = () => ({
+    no_applicable_partner: false,
+    institutions: [],
+    mqap_institutions: [],
+    contributing_center: [],
+    contributing_np_projects: [],
+    contributing_and_primary_initiative: [],
+    contributing_initiatives: { accepted_contributing_initiatives: [], pending_contributing_initiatives: [] },
+    result_toc_result: { initiative_id: 1, result_toc_results: [] },
+    contributors_result_toc_result: null,
+    bilateral_projects: [],
+    linked_results: []
+  });
+
+  beforeEach(async () => {
+    const currentResult = {
+      id: 1,
+      result_code: 'R-1',
+      portfolio: 'P25',
+      initiative_id: 5,
+      initiative_official_code: 'INIT-05',
+      status: null
+    };
+
+    apiMock = {
+      dataControlSE: {
+        currentResult,
+        currentResultSignal: signal(currentResult),
+        currentResultSectionName: signal(''),
+        findClassTenSeconds: jest.fn().mockResolvedValue(true),
+        isKnowledgeProduct: false,
+        showPartnersRequest: false
+      },
+      resultsSE: {
+        GET_ContributorsPartners: jest.fn(() => of({ response: loadResponse() }).pipe(delay(0))),
+        PATCH_ContributorsPartners: jest.fn(() => of({ response: {} }).pipe(delay(0))),
+        GET_resultById: jest.fn().mockReturnValue(of({ response: currentResult })),
+        GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_W3BilateralProjects: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_W3BilateralProjectsByProgram: jest.fn().mockReturnValue(of({ response: [] }))
+      },
+      rolesSE: { readOnly: false }
+    };
+
+    await TestBed.configureTestingModule({
+      declarations: [RdContributorsAndPartnersComponent],
+      imports: [CommonModule, FormsModule, HttpClientTestingModule, TermPipe, CustomFieldsModule],
+      providers: [
+        RdContributorsAndPartnersService,
+        { provide: ApiService, useValue: apiMock },
+        { provide: RolesService, useValue: { readOnly: false } },
+        {
+          provide: InstitutionsService,
+          useValue: { loadedInstitutions: new BehaviorSubject<boolean>(false), institutionsList: [], institutionsWithoutCentersList: [] }
+        },
+        {
+          provide: CentersService,
+          useValue: { loadedCenters: new BehaviorSubject<boolean>(false), centersList: [], centers: signal([]), getData: jest.fn().mockResolvedValue([]) }
+        },
+        { provide: CustomizedAlertsFeService, useValue: { show: jest.fn() } },
+        { provide: ResultLevelService, useValue: { currentResultLevelId: 2 } },
+        { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
+        {
+          provide: FieldsManagerService,
+          useValue: { isContributorsPartners2026: () => false, isLeadContactPersonMandatory2026: () => false, fields: () => ({}), isP25: () => true }
+        }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    })
+      // Empty template: these cases exercise the load/save timing contract, not the DOM.
+      .overrideComponent(RdContributorsAndPartnersComponent, { set: { template: '' } })
+      .compileComponents();
+
+    rdPartnersSE = TestBed.inject(RdContributorsAndPartnersService);
+    fixture = TestBed.createComponent(RdContributorsAndPartnersComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('is false right after the load flow genuinely completes', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+
+    expect(component.hasUnsavedChanges()).toBe(false);
+
+    discardPeriodicTasks();
+  }));
+
+  /**
+   * Falsifying input: snapshotting `partnersBody` only once (at load) and never again after save
+   * would make this true right after load-then-edit, which is correct here — but combined with the
+   * next test would prove the save-branch snapshot never actually reset the baseline.
+   */
+  it('is true after editing a bound field', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+
+    rdPartnersSE.partnersBody.no_applicable_partner = true;
+
+    expect(component.hasUnsavedChanges()).toBe(true);
+
+    discardPeriodicTasks();
+  }));
+
+  /**
+   * Falsifying input: snapshotting `partnersBody` only once (at load) and never again after a
+   * successful save would report `true` here. The follow-up reload that `performSave()`'s `tap`
+   * triggers is forced to FAIL entirely, so this test can only pass because of the DIRECT
+   * `dirtyTracker.snapshot(...)` inside `performSave()`'s `tap` — not the (here failing) reload.
+   */
+  it('is false right when saveSection() emits true, even when the follow-up reload fails entirely', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+    rdPartnersSE.partnersBody.no_applicable_partner = true;
+    expect(component.hasUnsavedChanges()).toBe(true);
+
+    apiMock.resultsSE.GET_ContributorsPartners.mockReturnValue(throwError(() => new Error('reload failed')));
+
+    let sawTrue = false;
+    component.saveSection().subscribe(result => {
+      sawTrue = result === true;
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+    tick();
+
+    expect(sawTrue).toBe(true);
+
+    discardPeriodicTasks();
+  }));
+
+  /**
+   * Falsifying input: letting the underlying HTTP error propagate as an unhandled observable error
+   * (instead of resolving `false`) would break `UnsavedChangesGuard`'s `switchMap`/subscribe chain
+   * rather than cleanly blocking navigation.
+   */
+  it('saveSection() resolves false (not throws) on a failing PATCH_ContributorsPartners, without reloading the section', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+    const reloadSpy = jest.spyOn(rdPartnersSE, 'getSectionInformation');
+    apiMock.resultsSE.PATCH_ContributorsPartners.mockReturnValue(throwError(() => new Error('save failed')));
+
+    let result: boolean | undefined;
+    let errored = false;
+    component.saveSection().subscribe({
+      next: value => (result = value),
+      error: () => (errored = true)
+    });
+    tick();
+
+    expect(errored).toBe(false);
+    expect(result).toBe(false);
+    expect(reloadSpy).not.toHaveBeenCalled();
+
+    discardPeriodicTasks();
+  }));
+
+  /**
+   * `UCA-T-9` DoD: "A test explicitly asserts that clicking Next on a dirty `rd-contributors-and-partners`
+   * DOES call `PATCH_ContributorsPartners`" — confirms the uniform-behavior decision (`design.md` §13,
+   * no exception for the email side effect) is actually implemented, not silently carved out.
+   * Falsifying input: an implementation that skips the save on this component (e.g. a leftover
+   * copy-paste of an `autosaveDisabled`-style carve-out from a different spec) would leave
+   * `PATCH_ContributorsPartners` uncalled here.
+   */
+  it('clicking Next (saveSection()) on a dirty section DOES call PATCH_ContributorsPartners — no email carve-out', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+    rdPartnersSE.partnersBody.no_applicable_partner = true;
+    expect(component.hasUnsavedChanges()).toBe(true);
+
+    let result: boolean | undefined;
+    component.saveSection().subscribe(value => (result = value));
+    tick();
+
+    expect(apiMock.resultsSE.PATCH_ContributorsPartners).toHaveBeenCalled();
+    expect(result).toBe(true);
+
+    discardPeriodicTasks();
+  }));
+
+  /**
+   * `UCA-T-9` rework, Discovered Issue 1 regression test (Reviewer's HIGHEST-severity attempt-1
+   * FAIL). Simulates the EXACT post-snapshot writes `CPMultipleWPsComponent.ngOnChanges()` (the
+   * client-only `uniqueId` stamp, `multiple-wps.component.ts:82-84`) and
+   * `CPMultipleWPsContentComponent.getIndicatorsList()` (the `related_node_id` mirror of
+   * `toc_results_indicator_id`, and the `toc_progressive_narrative` `null` → `''` default,
+   * `multiple-wps-content.component.ts:360-361`) perform on a REAL `result_toc_result
+   * .result_toc_results` row — driven directly on the loaded object rather than mounting the full
+   * child subtree (whose own dependency tree — `TocApiService`, `TocInitiativeOutcomeListsService`,
+   * `RdTheoryOfChangesServicesService` — is out of proportion to this fix), per the reviewer's
+   * documented fallback for this exact case.
+   *
+   * Falsifying input: without `normalizeTocResultsForDiff()`, this test fails — a freshly loaded,
+   * untouched section would report `hasUnsavedChanges() === true`, which is the Reviewer's exact
+   * production bug (a spurious `PATCH_ContributorsPartners` carrying `email_template:
+   * 'email_template_contribution'` on the very next Back/Next). Self-verified: reverting
+   * `dirtySnapshotValue()`/`normalizeTocResultsForDiff()` to snapshot/diff raw `partnersBody` makes
+   * this test fail.
+   */
+  it('stays clean after the exact child-component post-snapshot writes (uniqueId stamp, related_node_id mirror, toc_progressive_narrative default)', fakeAsync(() => {
+    apiMock.resultsSE.GET_ContributorsPartners.mockReturnValue(
+      of({
+        response: {
+          ...loadResponse(),
+          result_toc_result: {
+            initiative_id: 1,
+            planned_result: true,
+            result_toc_results: [
+              {
+                toc_result_id: 10,
+                toc_level_id: 1,
+                indicators: [{ toc_results_indicator_id: 99, related_node_id: null }],
+                toc_progressive_narrative: null
+              }
+            ]
+          }
+        }
+      }).pipe(delay(0))
+    );
+
+    fixture.detectChanges();
+    tick();
+    expect(component.hasUnsavedChanges()).toBe(false);
+
+    // Verbatim `CPMultipleWPsComponent.ngOnChanges()` write.
+    rdPartnersSE.partnersBody.result_toc_result.result_toc_results.forEach((tab: any, index: number) => {
+      tab.uniqueId = index.toString();
+    });
+    // Verbatim `CPMultipleWPsContentComponent.getIndicatorsList()` writes.
+    const tab: any = rdPartnersSE.partnersBody.result_toc_result.result_toc_results[0];
+    tab.indicators[0].related_node_id = tab.indicators[0].toc_results_indicator_id;
+    if (!tab.toc_progressive_narrative) tab.toc_progressive_narrative = '';
+
+    expect(component.hasUnsavedChanges()).toBe(false);
+
+    discardPeriodicTasks();
+  }));
+
+  /**
+   * `UCA-T-9` rework, Discovered Issue 2 regression tests. Falsifying input: a `hasUnsavedChanges()`
+   * that only diffs `partnersBody` (attempt 1's bug) would report `false` for every one of these —
+   * Next would then silently navigate away without saving a genuine mandatory-field edit.
+   */
+  it('is true after editing ONLY leadCenterCode, with partnersBody left byte-identical', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+    expect(component.hasUnsavedChanges()).toBe(false);
+
+    rdPartnersSE.leadCenterCode = 'a-brand-new-lead-center-code';
+
+    expect(component.hasUnsavedChanges()).toBe(true);
+
+    discardPeriodicTasks();
+  }));
+
+  it('is true after editing ONLY leadPartnerId, with partnersBody left byte-identical', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+    expect(component.hasUnsavedChanges()).toBe(false);
+
+    rdPartnersSE.leadPartnerId = 4242;
+
+    expect(component.hasUnsavedChanges()).toBe(true);
+
+    discardPeriodicTasks();
+  }));
+
+  it('is true after editing ONLY otherCentersSelected, with partnersBody left byte-identical', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+    expect(component.hasUnsavedChanges()).toBe(false);
+
+    rdPartnersSE.otherCentersSelected = [{ code: 'other-center-1' } as any];
+
+    expect(component.hasUnsavedChanges()).toBe(true);
+
+    discardPeriodicTasks();
+  }));
+
+  it('is true after editing ONLY scienceSelected, with partnersBody left byte-identical', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+    expect(component.hasUnsavedChanges()).toBe(false);
+
+    rdPartnersSE.scienceSelected = [{ id: 321 } as any];
+
+    expect(component.hasUnsavedChanges()).toBe(true);
+
+    discardPeriodicTasks();
+  }));
+
+  /**
+   * `UCA-T-9` rework attempt 3, Issue 1 regression test (Reviewer's attempt-2 FAIL — the highest
+   * priority issue). Simulates the genuine cold-entry race: the CLARISA institutions/centers
+   * catalogues are STILL LOADING when `GET_ContributorsPartners` resolves (this rig's
+   * `InstitutionsService`/`CentersService` mocks start with empty lists and `loadedInstitutions`/
+   * `loadedCenters` at `false`, exactly like a hard reload straight onto this section), so the
+   * synchronous auto-assign inside the load flow cannot resolve `leadPartnerId`/`leadCenterCode` even
+   * though the loaded body carries a persisted leading partner/center (`is_leading_result: true`).
+   * The catalogues then emit `loaded: true` AFTER the section's own load-flow snapshot already ran —
+   * the exact race `RdContributorsAndPartnersService`'s constructor subscriptions create.
+   *
+   * Falsifying input: without `reconcileLeadFieldsAfterLateCatalogue()`, this test fails —
+   * `hasUnsavedChanges()` stays `true` after the late catalogue emission settles, because the
+   * dirty-diff baseline still holds the load-time (unresolved) `leadPartnerId`/`leadCenterCode`
+   * while the live value now reflects the late auto-assign. Self-verified: commenting out the
+   * `this.onCatalogueDrivenLeadUpdate?.()` calls in `rd-contributors-and-partners.service.ts` (or
+   * reverting `reconcileLeadFieldsAfterLateCatalogue()` to a no-op) makes this test fail with
+   * `hasUnsavedChanges()` returning `true`; reapplying makes it pass.
+   */
+  it('stays clean after a late CLARISA catalogue emission resolves a persisted leading partner/center AFTER load (cold-entry race)', fakeAsync(() => {
+    const institutionsMock: any = TestBed.inject(InstitutionsService);
+    const centersMock: any = TestBed.inject(CentersService);
+
+    apiMock.resultsSE.GET_ContributorsPartners.mockReturnValue(
+      of({
+        response: {
+          ...loadResponse(),
+          institutions: [{ institutions_id: 77, is_leading_result: true, obj_institutions: {} }],
+          // TWO contributing centers on purpose: `runAutoAssignLeads()`'s own single-center
+          // auto-assign (`tryAutoAssignLeadCenter`) resolves `leadCenterCode` from `partnersBody`
+          // alone whenever exactly one contributing center exists — that path is independent of the
+          // CLARISA catalogue and would resolve correctly even during the race, masking the exact
+          // bug this test targets. With two centers, that auto-assign is a no-op and
+          // `setLeadCenterOnLoad`'s catalogue-dependent lookup is the ONLY path that can resolve it.
+          contributing_center: [
+            { code: 'C-77', is_leading_result: true },
+            { code: 'C-88', is_leading_result: false }
+          ]
+        }
+      }).pipe(delay(0))
+    );
+
+    fixture.detectChanges();
+    tick();
+
+    // Load-time auto-assign found nothing (both catalogues were still empty), so the baseline holds
+    // unresolved lead fields — reading as `false` here is the same false-negative the ORIGINAL
+    // `UCA-T-9` attempt-1 bug produced, now correctly masked because nothing has diverged from the
+    // baseline yet.
+    expect(component.hasUnsavedChanges()).toBe(false);
+
+    // The catalogues resolve LATE, after the section's own load — simulates the genuine cold-entry
+    // race (`InstitutionsService` has no bootstrap prefetch at all).
+    institutionsMock.institutionsList = [{ institutions_id: 77 }];
+    institutionsMock.institutionsWithoutCentersList = [{ institutions_id: 77 }];
+    institutionsMock.loadedInstitutions.next(true);
+    centersMock.centersList = [{ code: 'C-77' }, { code: 'C-88' }];
+    centersMock.loadedCenters.next(true);
+    tick();
+
+    expect(rdPartnersSE.leadPartnerId).toBe(77);
+    expect(rdPartnersSE.leadCenterCode).toBe('C-77');
+    expect(component.hasUnsavedChanges()).toBe(false);
+
+    discardPeriodicTasks();
+  }));
+
+  /**
+   * Companion falsifying-input test: the reconciliation above must NOT mask a genuine concurrent
+   * user edit. If a real edit happens in the same window as the late catalogue emission, the section
+   * must still report dirty afterward.
+   */
+  it('a genuine edit made before the late catalogue settles is still reported dirty afterward', fakeAsync(() => {
+    const institutionsMock: any = TestBed.inject(InstitutionsService);
+
+    fixture.detectChanges();
+    tick();
+    expect(component.hasUnsavedChanges()).toBe(false);
+
+    rdPartnersSE.partnersBody.no_applicable_partner = true;
+    expect(component.hasUnsavedChanges()).toBe(true);
+
+    institutionsMock.institutionsList = [{ institutions_id: 77 }];
+    institutionsMock.institutionsWithoutCentersList = [{ institutions_id: 77 }];
+    institutionsMock.loadedInstitutions.next(true);
+    tick();
+
+    expect(component.hasUnsavedChanges()).toBe(true);
+
+    discardPeriodicTasks();
+  }));
+
+  /**
+   * `UCA-T-9` rework attempt 4 regression test (the missing companion test the Reviewer's HALT
+   * flagged). Attempt 3's `reconcileLeadFieldsAfterLateCatalogue()` substituted BOTH `leadCenterCode`
+   * AND `leadPartnerId` back to the stored baseline whenever EITHER catalogue emitted, regardless of
+   * which one actually could have changed. So editing ONLY `leadCenterCode` (a field the
+   * `institutions` catalogue never touches) and then letting `institutions` emit late would silently
+   * fold the edit away and report clean — real, silent data loss on a mandatory field, and the exact
+   * scenario that fired the contribution email on the very next Back/Next.
+   *
+   * Falsifying input: this test FAILS against attempt-3 code (`hasUnsavedChanges()` wrongly flips to
+   * `false` once `loadedInstitutions` emits) and PASSES once the substitution is scoped by `source` so
+   * only `leadPartnerId` is folded back for an `institutions` emission.
+   */
+  it('a genuine edit to leadCenterCode survives a late emission from the OTHER catalogue (institutions)', fakeAsync(() => {
+    const institutionsMock: any = TestBed.inject(InstitutionsService);
+
+    fixture.detectChanges();
+    tick();
+    expect(component.hasUnsavedChanges()).toBe(false);
+
+    rdPartnersSE.leadCenterCode = 'C-88';
+    expect(component.hasUnsavedChanges()).toBe(true);
+
+    // The OTHER catalogue — `institutions` only ever recomputes `leadPartnerId`, never `leadCenterCode`.
+    institutionsMock.institutionsList = [];
+    institutionsMock.institutionsWithoutCentersList = [];
+    institutionsMock.loadedInstitutions.next(true);
+    tick();
+
+    expect(component.hasUnsavedChanges()).toBe(true);
+
+    discardPeriodicTasks();
+  }));
+
+  /** Symmetric case: a genuine edit to `leadPartnerId` must survive a late `centers` emission. */
+  it('a genuine edit to leadPartnerId survives a late emission from the OTHER catalogue (centers)', fakeAsync(() => {
+    const centersMock: any = TestBed.inject(CentersService);
+
+    fixture.detectChanges();
+    tick();
+    expect(component.hasUnsavedChanges()).toBe(false);
+
+    rdPartnersSE.leadPartnerId = 4242;
+    expect(component.hasUnsavedChanges()).toBe(true);
+
+    // The OTHER catalogue — `centers` only ever recomputes `leadCenterCode`, never `leadPartnerId`.
+    centersMock.centersList = [];
+    centersMock.loadedCenters.next(true);
+    tick();
+
+    expect(component.hasUnsavedChanges()).toBe(true);
+
+    discardPeriodicTasks();
+  }));
 });

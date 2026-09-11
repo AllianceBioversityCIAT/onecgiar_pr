@@ -3,7 +3,7 @@
   [generalInfoBody]="this.generalInfoBody"
   [isPhaseOpen]="this.isPhaseOpen"></app-rd-annual-updating>
 
-<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()" [appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)">
   <!-- "Change result type" moved to the result header's ⋮ menu (app-result-header), where the
        mockup puts result-level actions. The modal it opens still lives at the bottom of THIS
        template, because it needs this section's `generalInfoBody` — which is also why the menu

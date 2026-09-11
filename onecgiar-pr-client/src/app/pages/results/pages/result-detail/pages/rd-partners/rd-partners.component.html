@@ -1,4 +1,4 @@
-<div class="detail_container" [appSectionSkeleton]="rdPartnersSE.sectionLoading()">
+<div class="detail_container" [appSectionSkeleton]="rdPartnersSE.sectionLoading()" [appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)">
   <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [collapsible]="false" [description]="alertStatusMessage"> </app-alert-status>
   <!-- Contributing Centers start -->
   <div appFeedbackValidation labelText="Contributing CG Centers" [isComplete]="!!this.rdPartnersSE.partnersBody.contributing_center?.length"></div>

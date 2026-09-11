@@ -1,4 +1,4 @@
-<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()" [appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)">
   @if (!!this.dataControlSE?.currentResult?.is_replicated) {
     <app-alert-status
       [collapsible]="false"

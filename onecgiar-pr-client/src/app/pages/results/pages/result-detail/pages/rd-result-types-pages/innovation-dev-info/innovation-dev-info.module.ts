@@ -25,6 +25,7 @@ import { PartnersPoliciesSafeguardsComponent } from './components/partners-polic
 import { SectionBottomBarComponent } from '../../../components/section-bottom-bar/section-bottom-bar.component';
 import { StageAssessmentComponent } from './components/stage-assessment/stage-assessment.component';
 import { IntellectualPropertyConsiderationsComponent } from './components/intellectual-property-considerations/intellectual-property-considerations.component';
+import { BeforeUnloadWarningDirective } from '../../../../../../../shared/directives/before-unload-warning.directive';
 
 @NgModule({
   declarations: [
@@ -45,7 +46,8 @@ import { IntellectualPropertyConsiderationsComponent } from './components/intell
     StageAssessmentComponent,
     IntellectualPropertyConsiderationsComponent
   ],
-  imports: [SectionBottomBarComponent,
+  imports: [
+    SectionBottomBarComponent,
     CommonModule,
     InnovationDevInfoRoutingModule,
     CustomFieldsModule,
@@ -53,7 +55,8 @@ import { IntellectualPropertyConsiderationsComponent } from './components/intell
     PrDialogComponent,
     FeedbackValidationDirectiveModule,
     TermPipe,
-    InnovationUseFormModule
+    InnovationUseFormModule,
+    BeforeUnloadWarningDirective
   ]
 })
 export class InnovationDevInfoModule {}

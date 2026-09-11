@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { InnovationUseInfoComponent } from './innovation-use-info.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { InnovationUseFormComponent } from '../../../../../../../shared/components/innovation-use-form/innovation-use-form.component';
@@ -7,11 +7,14 @@ import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/
 import { NoDataTextComponent } from '../../../../../../../custom-fields/no-data-text/no-data-text.component';
 import { PrFieldHeaderComponent } from '../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { of, throwError } from 'rxjs';
+import { delay } from 'rxjs/operators';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { AddButtonComponent } from '../../../../../../../custom-fields/add-button/add-button.component';
 import { signal } from '@angular/core';
 import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
+import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
+import { StudiesLinkComponent } from '../../../../../../../shared/components/innovation-use-form/components/studies-link/studies-link.component';
 
 describe('InnovationUseInfoComponent', () => {
   let component: InnovationUseInfoComponent;
@@ -99,7 +102,12 @@ describe('InnovationUseInfoComponent', () => {
         DetailSectionTitleComponent,
         NoDataTextComponent,
         PrFieldHeaderComponent,
-        AddButtonComponent
+        AddButtonComponent,
+        // `UCA-T-11`: declared for real (not left as an inert unknown element, tolerated only
+        // because `setup-jest.ts` sets `errorOnUnknownElements: false`) so its `ngOnInit()` — the
+        // source of the child-mutation race documented on `InnovationUseInfoComponent`'s
+        // `dirtyTracker` field — genuinely runs in the `CanComponentDeactivate` describe block below.
+        StudiesLinkComponent
       ],
       imports: [HttpClientTestingModule],
       providers: [
@@ -770,5 +778,191 @@ describe('InnovationUseInfoComponent', () => {
       expect(bodyArg.new_users_added).toBeNull();
       expect(bodyArg.use_expansion_narrative).toBeNull();
     });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────────────────────
+  // `UCA-T-11` — `CanComponentDeactivate` (unsaved-changes-alert spec)
+  //
+  // Lessons carried in from this spec's history (`UCA-T-6`/`UCA-T-7`/`UCA-T-9` rework): a naive
+  // snapshot at the end of the load flow's own `next` handler is not enough when a rendered CHILD
+  // component writes into the tracked object afterward. Here that child is `app-studies-link`
+  // (`*ngIf="body.has_scaling_studies && getUseLevelIndex() >= 6 && !isScalingStudiesQuestionHidden()"`
+  // in `innovation-use-form.component.html`), whose `ngOnInit()` seeds a placeholder empty-string row
+  // into `scaling_studies_urls` when the array loads empty. The tests below reproduce that child
+  // ACTUALLY MOUNTING AND RUNNING (via a real `StudiesLinkComponent` declaration, not the inert
+  // unknown-element stand-in `errorOnUnknownElements: false` would otherwise tolerate) with genuinely
+  // async observables (`delay(0)` + `fakeAsync`/`tick()`), per this spec's established rule that a
+  // synchronous `of(...)` mock can mask a real timing race.
+  // ─────────────────────────────────────────────────────────────────────────────────────────────
+  describe('CanComponentDeactivate (UCA-T-11)', () => {
+    let innovationControlListSE: InnovationControlListService;
+
+    beforeEach(() => {
+      innovationControlListSE = TestBed.inject(InnovationControlListService);
+    });
+
+    it('hasUnsavedChanges() is false immediately after a clean P22 load', fakeAsync(() => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUse').mockReturnValue(of({ response: mockGET_innovationUseResponse }).pipe(delay(0)));
+
+      component.getSectionInformation();
+      tick(10);
+
+      // Sanity check the load genuinely completed (not a vacuous pass from `isDirty()`'s own
+      // `if (!this.hasSnapshot) return false;` early-out, which would report "clean" even if the
+      // load never actually snapshotted anything).
+      expect(component.sectionLoading()).toBe(false);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    }));
+
+    it(
+      'hasUnsavedChanges() is false immediately after a clean P25 load, even though app-studies-link ' +
+        'auto-seeds a placeholder empty-string row into scaling_studies_urls (reproduces the exact ' +
+        'child-mutation race documented on the dirtyTracker field)',
+      fakeAsync(() => {
+        mockFieldsManagerService.isP25.mockReturnValue(true);
+        // A use level >= 6 is required for `app-studies-link` to mount at all (see the template's
+        // `*ngIf`). `getUseLevelIndex()` resolves it against this catalogue.
+        innovationControlListSE.useLevelsList = [{ id: 42, level: 7 }];
+        const serverResponse = {
+          ...mockGET_innovationUseP25Response,
+          level: 42,
+          // The reproduction case: the reporter already answered "yes" to "any studies?" but the
+          // server holds no links yet — a realistic in-progress state, not a contrived one.
+          has_scaling_studies: 1,
+          scaling_studies_urls: []
+        };
+        jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(of({ response: serverResponse }).pipe(delay(0)));
+
+        // Direct call (not via the `OnChangePortfolio` effect): `effect()` schedules its callback
+        // outside the zone `fakeAsync`/`tick()` tracks, so a genuinely-async observable subscribed
+        // from inside an effect never gets flushed by `tick()` — confirmed by instrumentation while
+        // building this test (the effect-driven variant left `sectionLoading()` stuck `true` even
+        // after `tick(50)`). Calling the load method directly keeps the subscription in-zone.
+        component.getSectionInformationp25();
+        tick(10);
+        expect(component.sectionLoading()).toBe(false); // the load genuinely completed
+        fixture.detectChanges(); // lets `*ngIf="body.has_scaling_studies && ..."` mount app-studies-link
+        tick(0);
+        fixture.detectChanges();
+
+        // Sanity check that the reproduction actually engaged the real bug path — if this fails, the
+        // assertion below would be proving nothing (the same "harness structurally cannot evaluate
+        // this" trap this spec's history warns about).
+        expect(component.innovationUseInfoBody.scaling_studies_urls).toEqual(['']);
+
+        expect(component.hasUnsavedChanges()).toBe(false);
+      })
+    );
+
+    it('hasUnsavedChanges() is true after a genuine edit to a tracked field', fakeAsync(() => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      component.getSectionInformationp25();
+      tick(10);
+      expect(component.hasUnsavedChanges()).toBe(false);
+
+      component.innovationUseInfoBody.readiness_level_explanation = 'a new explanation';
+
+      expect(component.hasUnsavedChanges()).toBe(true);
+    }));
+
+    it('hasUnsavedChanges() is true after typing a real study link, even though blank rows are normalized out', fakeAsync(() => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      innovationControlListSE.useLevelsList = [{ id: 42, level: 7 }];
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(
+        of({
+          response: { ...mockGET_innovationUseP25Response, level: 42, has_scaling_studies: 1, scaling_studies_urls: [] }
+        }).pipe(delay(0))
+      );
+
+      component.getSectionInformationp25();
+      tick(10);
+      fixture.detectChanges();
+      tick(0);
+      fixture.detectChanges();
+      expect(component.innovationUseInfoBody.scaling_studies_urls).toEqual(['']);
+      expect(component.hasUnsavedChanges()).toBe(false);
+
+      component.innovationUseInfoBody.scaling_studies_urls[0] = 'https://example.org/study';
+
+      expect(component.hasUnsavedChanges()).toBe(true);
+    }));
+
+    it('saveSection() resolves true and snapshots directly on success, independent of the delegated reload', fakeAsync(() => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      component.getSectionInformationp25();
+      tick(10);
+      expect(component.hasUnsavedChanges()).toBe(false);
+
+      component.innovationUseInfoBody.readiness_level_explanation = 'edited before save';
+
+      // Force the reload's own GET (and the innovation-link pre-read, which shares the same
+      // endpoint) to fail — the ONLY thing that can make the assertion below pass is the direct
+      // `tap` snapshot inside `saveSectionWith()`, not the reload's re-snapshot.
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(throwError(() => new Error('reload failed')));
+      jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25').mockReturnValue(of({ response: [] }).pipe(delay(0)));
+
+      let result: boolean | undefined;
+      component.saveSection().subscribe(r => (result = r));
+      tick(10);
+
+      expect(result).toBe(true);
+      expect(component.hasUnsavedChanges()).toBe(false);
+      consoleSpy.mockRestore();
+    }));
+
+    it('saveSection() resolves false when the PATCH itself fails', fakeAsync(() => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      mockFieldsManagerService.isP25.mockReturnValue(false);
+      component.getSectionInformation();
+      tick(10);
+
+      component.innovationUseInfoBody.readiness_level_explanation = 'edited before a failing save';
+      jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUse').mockReturnValue(throwError(() => new Error('save failed')).pipe(delay(0)));
+
+      let result: boolean | undefined;
+      component.saveSection().subscribe(r => (result = r));
+      tick(10);
+
+      expect(result).toBe(false);
+      // The failed save must not have silently cleared the dirty flag.
+      expect(component.hasUnsavedChanges()).toBe(true);
+      consoleSpy.mockRestore();
+    }));
+
+    it(
+      'UCA-OQ-2 — the tracked snapshot value round-trips through JSON.stringify/JSON.parse without loss, ' +
+        'verified against a REAL loaded body shape (not a same-test literal)',
+      fakeAsync(() => {
+        mockFieldsManagerService.isP25.mockReturnValue(true);
+        innovationControlListSE.useLevelsList = [{ id: 42, level: 7 }];
+        jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(
+          of({
+            response: {
+              ...mockGET_innovationUseP25Response,
+              level: 42,
+              has_scaling_studies: 1,
+              scaling_studies_urls: ['https://example.org/study'],
+              current_use_previous: { result_id: 10866, phase_year: 2025, total_actors: 8825 },
+              innovation_use_2030: { actors: [{ id: 1 }], measures: [{ id: 2 }], organization: [{ institution_types_id: 3 }] }
+            }
+          }).pipe(delay(0))
+        );
+
+        component.getSectionInformationp25();
+        tick(10);
+        fixture.detectChanges();
+        tick(0);
+        fixture.detectChanges();
+
+        const snapshotInput = (component as any).dirtySnapshotValue();
+        const roundTripped = JSON.parse(JSON.stringify(snapshotInput));
+
+        // Finding: the tracked object is plain nested objects/arrays only (actor/organization/measure
+        // rows, investment rows, `current_use_previous`, `innovation_use_2030`, string arrays) — no
+        // `File`/`Blob`/`Map`/`Set`/circular references at any depth, so the round trip is lossless.
+        expect(roundTripped).toEqual(snapshotInput);
+      })
+    );
   });
 });

@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { CapDevInfoComponent } from './cap-dev-info.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { PrRadioButtonComponent } from '../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
@@ -10,7 +10,7 @@ import { YesOrNotByBooleanPipe } from '../../../../../../../custom-fields/pipes/
 import { PrFieldValidationsComponent } from '../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { FormsModule } from '@angular/forms';
-import { of, throwError } from 'rxjs';
+import { of, throwError, delay } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { environment } from '../../../../../../../../environments/environment';
 import { signal } from '@angular/core';
@@ -665,5 +665,177 @@ describe('CapDevInfoComponent — mandatory fields mirror validation_capacity_de
       expect(missing).toEqual([]);
       expect(incomplete).toBe(false);
     });
+  });
+});
+
+/**
+ * `UCA-T-11` — `CanComponentDeactivate` on `cap-dev-info`, part of
+ * `docs/specs/changes/unsaved-changes-alert/`.
+ *
+ * Load-flow investigation recorded here (see also the docstring on `dirtyTracker` in the `.ts`
+ * file): this section's OWN load flow (`getSectionInformation()`) is entirely synchronous, and
+ * none of its rendered children (`pr-input`, `pr-radio-button`, `pr-multi-select`) write back into
+ * the bound body on load (verified by reading each CVA's `writeValue()` — none of them mutate the
+ * parent model). So, unlike `UCA-T-7`/`UCA-T-9`/`UCA-T-10`, there is no child-mutation false-dirty
+ * class here. What DOES need covering is the `UCA-T-9`-style "untracked mandatory field" bug:
+ * `capdev_term_id_1`/`capdev_term_id_2` are bound outside `capDevInfoRoutingBody` and only folded
+ * in at save time — see the dedicated describe block below.
+ */
+describe('CapDevInfoComponent — CanComponentDeactivate (UCA-T-11)', () => {
+  let fixture: ComponentFixture<CapDevInfoComponent>;
+  let component: CapDevInfoComponent;
+  let mockApiService: any;
+  let capDevResponse: any;
+
+  const buildMockApiService = () => ({
+    resultsSE: {
+      GET_capdevsTerms: () => of({ response: ['term1', 'term2', 'term3', 'term4'] }),
+      GET_capdevsDeliveryMethod: () => of({ response: ['method1', 'method2'] }),
+      GET_capacityDevelopent: () => of({ response: capDevResponse }).pipe(delay(0)),
+      PATCH_capacityDevelopent: () => of({}).pipe(delay(0)),
+      GET_allInstitutions: () => of({ response: [] }),
+      GET_allInstitutionTypes: () => of({ response: [] }),
+      GET_allChildlessInstitutionTypes: () => of({ response: [] }),
+      currentResultCode: 1,
+      currentResultPhase: 1
+    },
+    dataControlSE: {
+      currentResultSectionName: { set: jest.fn() },
+      findClassTenSeconds: jest.fn(() => Promise.resolve())
+    }
+  });
+
+  beforeEach(fakeAsync(() => {
+    capDevResponse = {
+      capdev_term_id: 1,
+      female_using: 4,
+      male_using: 6,
+      non_binary_using: 0,
+      has_unkown_using: 0,
+      institutions: [{ institutions_id: 42, institutions_name: 'Alpha', is_center: false }],
+      is_attending_for_organization: false
+    };
+    mockApiService = buildMockApiService();
+
+    TestBed.configureTestingModule({
+      declarations: [
+        CapDevInfoComponent,
+        PrRadioButtonComponent,
+        PrInputComponent,
+        PrFieldHeaderComponent,
+        SaveButtonComponent,
+        AlertStatusComponent,
+        YesOrNotByBooleanPipe,
+        PrFieldValidationsComponent,
+        DetailSectionTitleComponent
+      ],
+      imports: [HttpClientTestingModule, FormsModule],
+      providers: [{ provide: ApiService, useValue: mockApiService }]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(CapDevInfoComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    tick(0);
+  }));
+
+  it('is clean right after a genuinely async load (fakeAsync/delay(0), not a synchronous of(...) mock)', () => {
+    expect(component.hasUnsavedChanges()).toBe(false);
+  });
+
+  it('is dirty after editing a field on the bound body', () => {
+    component.capDevInfoRoutingBody.female_using = 999;
+
+    expect(component.hasUnsavedChanges()).toBe(true);
+  });
+
+  /**
+   * Regression test for the `UCA-T-9` Issue 2 bug class ("untracked mandatory field lets a real
+   * edit report clean"). `capdev_term_id_1` is NOT part of `capDevInfoRoutingBody` — it is only
+   * folded into `capDevInfoRoutingBody.capdev_term_id` inside `validate_capdev_term_id()`, called
+   * at the start of `performSave()`. A snapshot of `capDevInfoRoutingBody` alone would report this
+   * edit as clean, silently dropping it if the user clicked Next instead of Save.
+   *
+   * Self-verified: reverting `dirtySnapshotValue()` to return `capDevInfoRoutingBody` alone (the
+   * composite-tracking fix un-applied) makes this test fail — confirmed by the Implementer before
+   * reporting completion (see PR description / execution log).
+   */
+  it('is dirty after editing "Length of training" alone, even though capDevInfoRoutingBody is untouched', () => {
+    const bodyBefore = JSON.stringify(component.capDevInfoRoutingBody);
+
+    component.capdev_term_id_1 = 3;
+
+    expect(JSON.stringify(component.capDevInfoRoutingBody)).toBe(bodyBefore);
+    expect(component.hasUnsavedChanges()).toBe(true);
+  });
+
+  it('is dirty after editing "Degree" (capdev_term_id_2) alone', () => {
+    component.capdev_term_id_1 = 4;
+    // Re-baseline: setting capdev_term_id_1 above is itself a real edit; snapshot again so this
+    // assertion isolates capdev_term_id_2 specifically.
+    (component as any).dirtyTracker.snapshot((component as any).dirtySnapshotValue());
+
+    component.capdev_term_id_2 = 2;
+
+    expect(component.hasUnsavedChanges()).toBe(true);
+  });
+
+  it('saveSection() resolves false (not throws) on a failing PATCH_capacityDevelopent', fakeAsync(() => {
+    jest.spyOn(mockApiService.resultsSE, 'PATCH_capacityDevelopent').mockReturnValue(throwError(() => new Error('boom')).pipe(delay(0)));
+    component.capDevInfoRoutingBody.female_using = 999;
+
+    let resolved: boolean | undefined;
+    component.saveSection().subscribe(result => (resolved = result));
+    tick(0);
+
+    expect(resolved).toBe(false);
+  }));
+
+  it('saveSection() resolves true and calls PATCH_capacityDevelopent on success', fakeAsync(() => {
+    const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_capacityDevelopent');
+    component.capDevInfoRoutingBody.female_using = 999;
+
+    let resolved: boolean | undefined;
+    component.saveSection().subscribe(result => (resolved = result));
+    tick(0);
+
+    expect(resolved).toBe(true);
+    expect(patchSpy).toHaveBeenCalled();
+  }));
+
+  /**
+   * The save-path timing race `UCA-T-6` attempt 1 was FAILed for: the delegated reload
+   * (`getSectionInformation()`, itself async via `delay(0)`) is forced to FAIL here, so the only
+   * way `hasUnsavedChanges()` can read `false` right after `saveSection()` resolves is the DIRECT
+   * snapshot inside `performSave()`'s `tap` — a test that let the reload succeed could pass purely
+   * because of the reload's own re-snapshot, masking a missing direct-snapshot fix.
+   *
+   * Self-verified: commenting out the direct `this.dirtyTracker.snapshot(...)` call inside
+   * `performSave()`'s `tap` (leaving only the delegated reload, whose GET is forced to fail here)
+   * makes this test fail — confirmed by the Implementer before reporting completion.
+   */
+  it('is clean right after a successful save even when the delegated reload fails', fakeAsync(() => {
+    jest.spyOn(mockApiService.resultsSE, 'GET_capacityDevelopent').mockReturnValue(throwError(() => new Error('reload failed')).pipe(delay(0)));
+    component.capDevInfoRoutingBody.female_using = 999;
+
+    let resolved: boolean | undefined;
+    component.saveSection().subscribe(result => (resolved = result));
+    tick(0);
+
+    expect(resolved).toBe(true);
+    expect(component.hasUnsavedChanges()).toBe(false);
+  }));
+
+  /**
+   * `UCA-OQ-2` — confirmed against REAL loaded data (not a same-test literal round-trip): the
+   * fixture above carries a full institution object (`institutions_id`/`institutions_name`/
+   * `is_center`) exactly as `pr-multi-select`/`InstitutionsService` produce at runtime. Every field
+   * is a JSON primitive at every depth (no `File`/`Blob`/circular refs), so the dirty tracker's
+   * `JSON.stringify`-based snapshot/diff never loses information.
+   */
+  it('UCA-OQ-2: the loaded body (including the institutions object array) round-trips losslessly through JSON', () => {
+    const roundTripped = JSON.parse(JSON.stringify(component.capDevInfoRoutingBody));
+
+    expect(roundTripped).toEqual(component.capDevInfoRoutingBody);
   });
 });

@@ -1,4 +1,6 @@
 import { Component, OnInit, inject, effect, ViewChild, computed, signal } from '@angular/core';
+import { Observable, of, throwError } from 'rxjs';
+import { map, catchError, tap } from 'rxjs/operators';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeneralInfoBody } from './models/generalInfoBody';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
@@ -16,14 +18,17 @@ import { SaveConfirmationModalComponent } from './components/save-confirmation-m
 import { LeadContactPersonFieldComponent } from '../../../../../../custom-fields/lead-contact-person-field/lead-contact-person-field.component';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { toNullableBoolean } from '../../../../../../shared/utils/nullable-boolean.util';
+import { CanComponentDeactivate } from '../../../../../../shared/guards/unsaved-changes.types';
+import { SectionDirtyTrackerService } from '../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
 
 @Component({
   selector: 'app-rd-general-information',
   templateUrl: './rd-general-information.component.html',
   styleUrls: ['./rd-general-information.component.scss'],
-  standalone: false
+  standalone: false,
+  providers: [SectionDirtyTrackerService]
 })
-export class RdGeneralInformationComponent implements OnInit {
+export class RdGeneralInformationComponent implements OnInit, CanComponentDeactivate {
   @ViewChild('saveConfirmationModal') saveConfirmationModal!: SaveConfirmationModalComponent;
   /** Read only to tell a typed contact name from one loaded with the result — see `onSaveSection`. */
   @ViewChild(LeadContactPersonFieldComponent) leadContactPersonField?: LeadContactPersonFieldComponent;
@@ -58,6 +63,14 @@ export class RdGeneralInformationComponent implements OnInit {
   getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
   isP25 = computed(() => this.dataControlSE.currentResultSignal()?.portfolio === 'P25');
   fieldsManagerSE = inject(FieldsManagerService);
+
+  /**
+   * `UCA-T-6` — component-scoped dirty-diff tracker (`providers: [SectionDirtyTrackerService]`
+   * on this component). Snapshotted at the end of `getSectionInformation()`'s success branch and
+   * again after a successful `performSave()`. See `docs/specs/changes/unsaved-changes-alert/design.md`
+   * `UCA-DD-1`.
+   */
+  private readonly dirtyTracker = inject(SectionDirtyTrackerService);
 
   /**
    * P2-3201 (INC-158283) — reporting-form guidance redesign, scoped to the CURRENT portfolio.
@@ -221,9 +234,34 @@ export class RdGeneralInformationComponent implements OnInit {
 
         this.GET_investmentDiscontinuedOptions(response.result_type_id);
         this.isPhaseOpen = !!this.api?.dataControlSE?.currentResult?.is_phase_open;
+        // `UCA-T-6` (rework) — the dirty-diff snapshot does NOT happen here. This GET's callback,
+        // `GET_investmentDiscontinuedOptions()`, kicks off ANOTHER async HTTP call
+        // (`GET_investmentDiscontinuedOptions`) whose own callback, `convertChecklistToDiscontinuedOptions()`,
+        // mutates `generalInfoBody.discontinued_options` (and `option.value`/`description`) AFTER this
+        // line runs. Snapshotting here races that mutation: in a real browser the discontinued-options
+        // round-trip lands after this synchronous line, so a freshly loaded section would report
+        // `hasUnsavedChanges() === true` the instant it opens. The snapshot lives at the true end of
+        // the load flow instead — see the end of `convertChecklistToDiscontinuedOptions()`.
       },
       error: () => this.sectionLoading.set(false)
     });
+  }
+
+  /** `UCA-T-6` — `CanComponentDeactivate.hasUnsavedChanges()`. */
+  hasUnsavedChanges(): boolean {
+    return this.dirtyTracker.isDirty(this.generalInfoBody);
+  }
+
+  /**
+   * `UCA-T-6` — `CanComponentDeactivate.saveSection()`. Wraps `performSave()`'s exact PATCH call
+   * and error branch (`UCA-DD-3`, no duplicated save logic) to resolve `true`/`false` instead of
+   * void, for `UnsavedChangesGuard`.
+   */
+  saveSection(): Observable<boolean> {
+    return this.performSave().pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
   }
 
   private normalizeImpactAreaFields() {
@@ -310,6 +348,13 @@ export class RdGeneralInformationComponent implements OnInit {
       }
     });
     this.generalInfoBody.discontinued_options = options;
+
+    // `UCA-T-6` (rework) — this is the actual END of `getSectionInformation()`'s load flow: the
+    // discontinued-options GET fired from its `next` handler resolves here, asynchronously, and
+    // this is the last mutation `generalInfoBody` receives before the section is considered loaded.
+    // Snapshotting any earlier (e.g. back in `getSectionInformation()`'s `next`) races this
+    // assignment and reports a freshly loaded, unedited section as dirty.
+    this.dirtyTracker.snapshot(this.generalInfoBody);
   }
 
   discontinuedOptionsToIds() {
@@ -348,14 +393,20 @@ export class RdGeneralInformationComponent implements OnInit {
 
     if (isP25 && hasDiscontinuedOptions) {
       this.saveConfirmationModal.show(() => {
-        this.performSave();
+        this.performSave().subscribe({ error: () => {} });
       });
     } else {
-      this.performSave();
+      this.performSave().subscribe({ error: () => {} });
     }
   }
 
-  private performSave() {
+  /**
+   * `UCA-T-6`: returns the PATCH `Observable` instead of self-subscribing, so both this
+   * component's own Save action (`onSaveSection`, above) and `saveSection()` (the
+   * `CanComponentDeactivate` contract, below) drive the exact same call and error branch —
+   * no duplicated save logic (`UCA-DD-3`).
+   */
+  private performSave(): Observable<void> {
     this.discontinuedOptionsToIds();
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
 
@@ -381,12 +432,26 @@ export class RdGeneralInformationComponent implements OnInit {
       this.generalInfoBody.poverty_impact_area_id = this.toSingleNumber(this.generalInfoBody.poverty_impact_area_id);
     }
 
-    this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody, isP25).subscribe({
-      next: resp => {
+    return this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody, isP25).pipe(
+      tap(() => {
         this.currentResultSE.GET_resultById();
+        // `UCA-T-6` (rework) — snapshot HERE, synchronously, the instant the PATCH resolves. The
+        // local `generalInfoBody` at this exact instant is precisely what the server just
+        // persisted, so this is correct even before the reload below completes. This closes a
+        // real race: `saveSection()`'s `map(() => true)` can emit `true` to `UnsavedChangesGuard`
+        // BEFORE `getSectionInformation()`'s own GET (and its own async re-snapshot in
+        // `convertChecklistToDiscontinuedOptions()`) resolves, which would otherwise leave a
+        // just-saved section reporting `hasUnsavedChanges() === true` for that window — or, if the
+        // follow-up GET fails, reporting dirty PERMANENTLY despite a genuinely successful save.
+        this.dirtyTracker.snapshot(this.generalInfoBody);
+        // Re-fetches and re-snapshots `generalInfoBody` with the server-normalized body once it
+        // resolves (`getSectionInformation()`'s load flow ends in
+        // `convertChecklistToDiscontinuedOptions()`, see there). Harmless on top of the snapshot
+        // above — it does not undo it, it only refines it once the reload lands.
         this.getSectionInformation();
-      },
-      error: err => {
+      }),
+      map(() => undefined),
+      catchError(err => {
         console.error(err);
         // 🛑 DO NOT reload the section when the save was rejected.
         //
@@ -395,8 +460,9 @@ export class RdGeneralInformationComponent implements OnInit {
         // Impact Area scores — leaving them staring at the old content with no idea their work was
         // gone. The rejected values stay on screen so the person can fix what the error complains
         // about and press Save again. The interceptor already surfaces the error message.
-      }
-    });
+        return throwError(() => err);
+      })
+    );
   }
 
   descriptionTextInfo() {

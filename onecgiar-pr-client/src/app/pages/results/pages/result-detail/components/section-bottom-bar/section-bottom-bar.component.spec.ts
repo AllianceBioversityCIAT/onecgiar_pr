@@ -7,6 +7,7 @@ import { SaveButtonService } from '../../../../../../custom-fields/save-button/s
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { SectionBottomBarSlotService } from './section-bottom-bar-slot.service';
+import { UnsavedNavigationIntentService } from '../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
 
 describe('SectionBottomBarComponent', () => {
   let fixture: ComponentFixture<SectionBottomBarComponent>;
@@ -154,6 +155,68 @@ describe('SectionBottomBarComponent', () => {
       component.goNext();
 
       expect(router.navigate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('unsaved-changes silent-save intent', () => {
+    // UCA-T-5: the guard reads the intent flag synchronously as part of the SAME navigation's
+    // canDeactivate check, so `markSilent()` must happen strictly before `router.navigate` is
+    // invoked — not merely "both happened" — or the guard races the flag and shows the dialog
+    // anyway.
+    it('calls intentSE.markSilent() before router.navigate on Next', async () => {
+      await build();
+      const intentSE = TestBed.inject(UnsavedNavigationIntentService);
+      const calls: string[] = [];
+      jest.spyOn(intentSE, 'markSilent').mockImplementation(() => calls.push('markSilent'));
+      (router.navigate as jest.Mock).mockImplementation(() => {
+        calls.push('navigate');
+        return Promise.resolve(true);
+      });
+
+      q('[data-testid="section-bottom-bar-next"]').click();
+
+      expect(calls).toEqual(['markSilent', 'navigate']);
+    });
+
+    it('calls intentSE.markSilent() before router.navigate on Back', async () => {
+      await build();
+      const intentSE = TestBed.inject(UnsavedNavigationIntentService);
+      const calls: string[] = [];
+      jest.spyOn(intentSE, 'markSilent').mockImplementation(() => calls.push('markSilent'));
+      (router.navigate as jest.Mock).mockImplementation(() => {
+        calls.push('navigate');
+        return Promise.resolve(true);
+      });
+
+      q('[data-testid="section-bottom-bar-back"]').click();
+
+      expect(calls).toEqual(['markSilent', 'navigate']);
+    });
+
+    // A sidebar `routerLink` click navigates via the Router directly, never through this
+    // component's `goTo()` — it must NOT be treated as a silent-save navigation.
+    //
+    // `build()` mocks `router.navigate` (so the Next/Back tests above can assert call order
+    // without a real route table) — a mocked `navigate()` never emits a real `NavigationStart`
+    // through `router.events`, so a prior version of this test asserting against that mock proved
+    // nothing: a hypothetical implementation that called `markSilent()` from a global
+    // `router.events` subscription (instead of only inside `goTo()`) would ALSO pass, since no
+    // real router event would fire either way. Restoring the real `navigate()` here — the ONE
+    // thing this test changes versus the rest of the suite — makes the navigation genuinely walk
+    // through `router.events`, so that hypothetical implementation would actually trip the spy and
+    // this test would catch it.
+    it('does not call markSilent() for a navigation triggered from outside goTo() (e.g. a sidebar click)', async () => {
+      await build();
+      const intentSE = TestBed.inject(UnsavedNavigationIntentService);
+      const spy = jest.spyOn(intentSE, 'markSilent');
+      (router.navigate as jest.Mock).mockRestore();
+
+      // No route matches (`provideRouter([])`), so the promise settles to `false` (or rejects,
+      // depending on Router version) — either way `NavigationStart` has already gone through
+      // `router.events` by the time this resolves, which is all this test needs.
+      await router.navigate(['/result/result-detail/1234/evidences']).catch(() => undefined);
+
+      expect(spy).not.toHaveBeenCalled();
     });
   });
 

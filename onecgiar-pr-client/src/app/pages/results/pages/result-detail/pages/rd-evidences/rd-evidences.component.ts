@@ -1,4 +1,6 @@
 import { Component, OnDestroy, OnInit, effect, inject, signal } from '@angular/core';
+import { Observable, firstValueFrom, from, of } from 'rxjs';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { EvidencesBody, EvidencesCreateInterface } from './model/evidencesBody.model';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
@@ -6,13 +8,16 @@ import { SaveButtonService } from '../../../../../../custom-fields/save-button/s
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { SharePointUploadService } from '../../../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
+import { CanComponentDeactivate } from '../../../../../../shared/guards/unsaved-changes.types';
+import { SectionDirtyTrackerService } from '../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
 @Component({
   selector: 'app-rd-evidences',
   templateUrl: './rd-evidences.component.html',
   styleUrls: ['./rd-evidences.component.scss'],
-  standalone: false
+  standalone: false,
+  providers: [SectionDirtyTrackerService]
 })
-export class RdEvidencesComponent implements OnInit, OnDestroy {
+export class RdEvidencesComponent implements OnInit, OnDestroy, CanComponentDeactivate {
   /** CLARISA result type "Policy change" — the only type P2-3262 puts guidance behind an ⓘ. */
   private static readonly POLICY_CHANGE_RESULT_TYPE_ID = 1;
 
@@ -29,6 +34,14 @@ export class RdEvidencesComponent implements OnInit, OnDestroy {
   private readonly fieldsManagerSE = inject(FieldsManagerService);
   /** P2-3220: the single shared path to SharePoint. Never call the session endpoints directly. */
   private readonly sharePointUploadSE = inject(SharePointUploadService);
+
+  /**
+   * `UCA-T-8` — component-scoped dirty-diff tracker (`providers: [SectionDirtyTrackerService]` on
+   * this component). Snapshotted at the end of `getSectionInformation()`'s success branch and again
+   * directly inside `performSave()`'s success branch. See
+   * `docs/specs/changes/unsaved-changes-alert/design.md` `UCA-DD-1`.
+   */
+  private readonly dirtyTracker = inject(SectionDirtyTrackerService);
 
   /** `results_policy_changes.policy_stage_id` of the open result; null until the GET lands. */
   policyStageId: number | null = null;
@@ -243,12 +256,59 @@ export class RdEvidencesComponent implements OnInit, OnDestroy {
         this.isOptionalReadinessLevel = Boolean(this.readinessLevel === 0);
         this.isSaving = false;
         this.sectionLoading.set(false);
+        // `UCA-T-8` — the true end of THIS component's load flow. Unlike `rd-general-information`
+        // (whose `discontinued_options` catalogue lands via a SECOND async GET that mutates the
+        // bound body after this point), nothing else here mutates `evidencesBody` asynchronously:
+        // the only other async call fired around load, `getPolicyStage()` (via
+        // `maybeFetchPolicyStage()`), only ever writes `policyStageId`, never `evidencesBody`. So
+        // this line genuinely is the end of the load flow for the object the dirty-diff tracks.
+        this.dirtyTracker.snapshot(this.dirtySnapshotTarget());
       },
       error: () => {
         this.isSaving = false;
         this.sectionLoading.set(false);
       }
     });
+  }
+
+  /**
+   * `UCA-T-8` — `CanComponentDeactivate.hasUnsavedChanges()`.
+   */
+  hasUnsavedChanges(): boolean {
+    return this.dirtyTracker.isDirty(this.dirtySnapshotTarget());
+  }
+
+  /**
+   * `UCA-T-8` — `CanComponentDeactivate.saveSection()`. Wraps the exact same save pipeline
+   * `onSaveSection()` drives (`performSave()`, below) so there is no duplicated save logic
+   * (`UCA-DD-3`); resolves `true`/`false` per `performSave()`'s own contract.
+   */
+  saveSection(): Observable<boolean> {
+    return this.performSave();
+  }
+
+  /**
+   * `UCA-T-8` — File/Blob exclusion for the dirty-diff.
+   *
+   * `EvidencesCreateInterface.file` (`model/evidencesBody.model.ts`) is a raw `File` object. `File`
+   * (like `Blob`) exposes no OWN enumerable properties — `size`/`type`/`name` are prototype
+   * getters — so `JSON.stringify(file)` always serializes to the literal string `"{}"` no matter
+   * which file is attached or how large it is. Diffing the whole `evidencesBody` (including
+   * `evidences[].file`) as-is would not throw, but it also could never distinguish one attached
+   * file from another by content — the exact "always reads the same regardless of the real
+   * change" trap this task calls out. Rather than rely on that accidental (and fragile — it
+   * depends on `File` never gaining an enumerable own property) behaviour, `file` is explicitly
+   * excluded from the projection the dirty tracker sees. This is a deliberate, narrow gap: a
+   * change to ONLY the attached `File` (swap one file for another, same metadata) will NOT be
+   * reported as dirty — see the dedicated test for this exact case. Every other evidence field
+   * (`link`, `sp_*`, tag flags, `is_sharepoint`, …) is plain, serializable data and stays in the
+   * diff.
+   */
+  private dirtySnapshotTarget(): unknown {
+    return {
+      ...this.evidencesBody,
+      evidences: (this.evidencesBody.evidences ?? []).map(({ file, ...rest }) => rest)
+    };
   }
 
   // Newest-first. Stable: only called on load and after save, never while editing.
@@ -290,7 +350,56 @@ export class RdEvidencesComponent implements OnInit, OnDestroy {
     });
   }
 
-  async onSaveSection() {
+  /**
+   * `UCA-T-8`: awaits the FULL `performSave()` pipeline (upload → POST → reload/snapshot), not
+   * just the upload step as before this task. `performSave()` never throws (`catchError` resolves
+   * `false`), so this stays a safe fire-and-forget for every existing caller
+   * (`confirmCreateEvidence`, `deleteEvidenceWithConfirm`) that does not await it.
+   */
+  async onSaveSection(): Promise<void> {
+    // `defaultValue: false` is defensive-only: `performSave()` always emits via `map(() => true)` or
+    // `catchError(() => of(false))`, so it can never complete without emitting under real `HttpClient`.
+    // This just removes the theoretical `EmptyError` case outright at zero behavioural cost.
+    await firstValueFrom(this.performSave(), { defaultValue: false });
+  }
+
+  /**
+   * `UCA-T-8` — the single save pipeline behind both the section's own Save action
+   * (`onSaveSection`, above) and `saveSection()` (`CanComponentDeactivate`, `UCA-DD-3`: no
+   * duplicated save logic). Same upload-then-`POST_evidences` sequence and the same error handling
+   * as before this task: a failing upload does not stop the save (evidence upload failures are
+   * non-fatal — the file also travels in `POST_evidences`'s multipart body, and the existing alert
+   * already tells the user which files did not reach SharePoint); only a failing `POST_evidences`
+   * resolves `false`.
+   */
+  private performSave(): Observable<boolean> {
+    return from(this.uploadPendingFiles()).pipe(
+      switchMap(() => this.api.resultsSE.POST_evidences(this.evidencesBody)),
+      tap(() => {
+        this.getSectionInformation();
+        // `UCA-T-8` — snapshot HERE, synchronously, the instant the POST resolves: the local
+        // `evidencesBody` at this exact moment is what was just persisted, correct even before the
+        // reload above completes. Closes the same race the `rd-general-information` rework fixed:
+        // without this, `saveSection()`'s `map(() => true)` could reach `UnsavedChangesGuard`
+        // before the reload's own re-snapshot lands — or, if the reload fails, the section would
+        // stay dirty forever despite a genuinely successful save.
+        this.dirtyTracker.snapshot(this.dirtySnapshotTarget());
+      }),
+      map(() => true),
+      catchError(() => {
+        // P2-3373: `isSaving` is only cleared by `getSectionInformation()`, which never runs when
+        // the POST fails — the flag latched on and `isEvidenceUploading()` kept every file
+        // evidence showing the "uploading" skeleton instead of its link until the page was
+        // reloaded. The error toast is already raised by `isSavingPipe`; handling the error here
+        // also stops its rethrow surfacing as an unhandled "Uncaught [object Object]".
+        this.isSaving = false;
+        return of(false);
+      })
+    );
+  }
+
+  /** Upload step only, split out so `performSave()`'s pipe reads as upload → POST → outcome. */
+  private async uploadPendingFiles(): Promise<void> {
     this.isSaving = true;
     this.saveButtonSE.showSaveSpinner();
     const failedUploads = await this.loadAllFiles();
@@ -305,18 +414,6 @@ export class RdEvidencesComponent implements OnInit, OnDestroy {
         status: 'error'
       });
     }
-
-    this.api.resultsSE.POST_evidences(this.evidencesBody).subscribe({
-      next: () => this.getSectionInformation(),
-      // P2-3373: `isSaving` is only cleared by `getSectionInformation()`, which never runs when
-      // the POST fails — the flag latched on and `isEvidenceUploading()` kept every file evidence
-      // showing the "uploading" skeleton instead of its link until the page was reloaded.
-      // The error toast is already raised by `isSavingPipe`; handling the error here also stops
-      // its rethrow surfacing as an unhandled "Uncaught [object Object]".
-      error: () => {
-        this.isSaving = false;
-      }
-    });
   }
 
   // P2-2935: a file evidence is "uploading" while the section is saving and its link

@@ -1,6 +1,6 @@
 # cap-dev-info — Capacity Sharing for Development information
 
-**Verified:** 2026-08-27 · branch performance-refactor · 3ca36ff51
+**Verified:** 2026-09-10 · branch qa-development-2026-ss · UCA-T-11 (`docs/specs/changes/unsaved-changes-alert/`); prior: 2026-08-27 · branch performance-refactor · 3ca36ff51
 
 ## What it is
 The result-detail section for **Capacity Sharing** results (Pool Funding, W1/W2): how many people were
@@ -73,6 +73,34 @@ The green check is **not** decided by the client. A MySQL function decides it. T
   demands the other three NOT NULL → you must type `0`. That is a server rule, not a client one.
 - In Jest, `innerText` does not exist in jsdom and the missing-fields scan reads it: the spec installs
   an `innerText → textContent` shim on `HTMLElement.prototype` and restores it in `afterAll`.
+
+## `CanComponentDeactivate` (UCA-T-11)
+
+Implements `CanComponentDeactivate` for `docs/specs/changes/unsaved-changes-alert/`:
+
+- `SectionDirtyTrackerService` injected **component-scoped** (`providers: [SectionDirtyTrackerService]`).
+- Snapshot at the true end of `getSectionInformation()`'s `next` (after `get_capdev_term_id()` — the
+  load flow is fully synchronous, no secondary async call or child component writes into the body).
+- ⚠️ **Tracked value is a COMPOSITE, not just `capDevInfoRoutingBody`.** `capdev_term_id_1`/
+  `capdev_term_id_2` are separate `[(ngModel)]` fields, only folded into
+  `capDevInfoRoutingBody.capdev_term_id` inside `validate_capdev_term_id()` (now called at the start
+  of `performSave()`). Snapshotting the body alone would let an edit to "Length of training"/"Degree"
+  report clean and silently drop on Next — same bug class as `UCA-T-9`'s untracked lead fields. See
+  `dirtySnapshotValue()`.
+- `performSave()` (extracted from the former `onSaveSection()`, same PATCH body assembly, unchanged)
+  snapshots directly in its success `tap`, in addition to the delegated `getSectionInformation()`
+  reload — not solely via the reload (`UCA-T-6`'s rework lesson: the reload could fail or race the
+  guard's `map(() => true)` emission).
+- `[appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)"` on `.detail_container`.
+- `canDeactivate: [UnsavedChangesGuard]` on the INNER route
+  (`cap-dev-info-routing.module.ts`'s `{path: '', component: CapDevInfoComponent}`) — NOT on the
+  `cap-dev-info` entry in `rdResultTypesPages` (that one has `loadChildren`, no `component`; a
+  regression test for this already exists spec-wide in
+  `rd-general-information-routing.canDeactivate.spec.ts`).
+- `UCA-OQ-2`: `institutions` holds full institution objects at runtime (not the bare
+  `institutionsCapDevInterface[]` id-only shape declared in the model) — verified against
+  `InstitutionsService`'s real catalogue shape, all primitive fields, JSON-safe. No normalization
+  needed: unlike `UCA-T-7`/`UCA-T-9`, no child component decorates this array after load.
 
 ## Pending / Coming soon
 - Nothing visible-but-disabled in this section.

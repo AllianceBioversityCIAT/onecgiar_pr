@@ -1,8 +1,12 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { Observable, of } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { InnovationUseInfoBody, PolicyChangeQuestions } from './model/innovationUseInfoBody';
 import { PolicyControlListService } from '../../../../../../../shared/services/global/policy-control-list.service';
 import { InstitutionsService } from '../../../../../../../shared/services/global/institutions.service';
+import { CanComponentDeactivate } from '../../../../../../../shared/guards/unsaved-changes.types';
+import { SectionDirtyTrackerService } from '../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
 
 /**
  * First reporting phase that shows the P2-3261 policy type guidance (epic P2-3243).
@@ -29,9 +33,10 @@ const LEGACY_POLICY_TYPE_GUIDANCE = `<strong>Policy type guidance</strong> <ul>
   selector: 'app-policy-change-info',
   templateUrl: './policy-change-info.component.html',
   styleUrls: ['./policy-change-info.component.scss'],
-  standalone: false
+  standalone: false,
+  providers: [SectionDirtyTrackerService]
 })
-export class PolicyChangeInfoComponent implements OnInit {
+export class PolicyChangeInfoComponent implements OnInit, CanComponentDeactivate {
   /** CLARISA policy type "Program, budget or investment" — the only one that carries a USD amount. */
   private static readonly POLICY_TYPE_WITH_AMOUNT = 1;
 
@@ -39,6 +44,32 @@ export class PolicyChangeInfoComponent implements OnInit {
   policyChangeQuestions = new PolicyChangeQuestions();
   cantidad: string = '';
   relatedTo: string = '';
+
+  /**
+   * `UCA-T-11` — component-scoped dirty-diff tracker (`providers: [SectionDirtyTrackerService]`
+   * on this component), same pattern as `rd-general-information`/`rd-geographic-location`. See
+   * `docs/specs/changes/unsaved-changes-alert/design.md` `UCA-DD-1`.
+   */
+  private readonly dirtyTracker = inject(SectionDirtyTrackerService);
+
+  /**
+   * `UCA-T-11` — this section loads from TWO independent top-level GETs
+   * (`getSectionInformation()`/`GET_policyChanges`, `getPolicyChangesQuestions()`/
+   * `GET_policyChangesQuestions`), each writing a DIFFERENT half of `dirtySnapshotValue()`'s
+   * composite object, with no guaranteed resolution order. The skeleton (`sectionLoading`) is
+   * released by `GET_policyChanges` alone, so the form can become interactive — and editable —
+   * BEFORE `GET_policyChangesQuestions` has resolved if that second call is slower.
+   *
+   * These hold each GET's OWN response the instant it lands — not a re-read of the live component
+   * field — precisely so a user edit made in that gap survives. A naive "snapshot whatever is
+   * currently on the component once both have fired" would, on the SECOND GET's resolution,
+   * capture the live (possibly already user-edited) value of the FIRST field as if it were still
+   * clean — silently erasing that edit's dirty status. Same failure shape `tasks.md`/
+   * `execution.md` record for `UCA-T-9` ("untracked/late-arriving write erases a genuine
+   * concurrent edit"), just from a second top-level GET instead of a catalogue race.
+   */
+  private loadedInnovationUseInfoBodyBaseline: InnovationUseInfoBody | null = null;
+  private loadedPolicyChangeQuestionsBaseline: PolicyChangeQuestions | null = null;
 
   /**
    * P2-2932 AC4 — `result_question_id` of "The capacity development of key actors in a policy
@@ -115,7 +146,18 @@ export class PolicyChangeInfoComponent implements OnInit {
       next: ({ response }) => {
         this.innovationUseInfoBody = response;
         this.sectionLoading.set(false);
+        // Deep-CLONE into the baseline, never store `response` itself: `this.innovationUseInfoBody`
+        // IS `response` (same reference), so a live in-place edit made before the OTHER GET
+        // resolves (see `loadedInnovationUseInfoBodyBaseline`'s doc comment) would otherwise mutate
+        // this "frozen" baseline too, silently erasing the edit's dirty status the instant
+        // `snapshotWhenBothLoaded()` runs. Matches `SectionDirtyTrackerService`'s own
+        // JSON-round-trip cloning convention (`structuredClone` unavailable in this jsdom env).
+        this.loadedInnovationUseInfoBodyBaseline = JSON.parse(JSON.stringify(response));
+        this.snapshotWhenBothLoaded();
       },
+      // No baseline recorded on a failed GET: `hasUnsavedChanges()` stays `false` (no snapshot
+      // taken yet) rather than throwing or reporting a false dirty state — same documented
+      // fail-open gap as the sibling `rd-*` sections (`UCA-T-6`/`UCA-T-8`/`UCA-T-9`/`UCA-T-10`).
       error: () => this.sectionLoading.set(false)
     });
   }
@@ -124,7 +166,56 @@ export class PolicyChangeInfoComponent implements OnInit {
     this.api.resultsSE.GET_policyChangesQuestions().subscribe(({ response }) => {
       this.policyChangeQuestions = response;
       this.relatedTo = this.policyChangeQuestions?.optionsWithAnswers.filter(option => option.answer_boolean === true)[0]?.result_question_id;
+      // Deep clone — same reasoning as `getSectionInformation()` above.
+      this.loadedPolicyChangeQuestionsBaseline = JSON.parse(JSON.stringify(response));
+      this.snapshotWhenBothLoaded();
     });
+  }
+
+  /** `UCA-T-11` — `CanComponentDeactivate.hasUnsavedChanges()`. */
+  hasUnsavedChanges(): boolean {
+    return this.dirtyTracker.isDirty(this.dirtySnapshotValue());
+  }
+
+  /**
+   * `UCA-T-11` — `CanComponentDeactivate.saveSection()`. Wraps `performSave()`'s exact PATCH call
+   * (reused verbatim by `onSaveSection()` below, `UCA-DD-3`) to resolve `true`/`false` instead of
+   * void, for `UnsavedChangesGuard`.
+   */
+  saveSection(): Observable<boolean> {
+    return this.performSave();
+  }
+
+  /**
+   * `UCA-T-11` — snapshots the FROZEN load baselines (never the live component fields) once BOTH
+   * independent load GETs above have recorded theirs. Using the baselines rather than re-reading
+   * `this.innovationUseInfoBody`/`this.policyChangeQuestions` at snapshot time is the point: if a
+   * user edits the field that loaded FIRST while the second GET is still in flight, re-reading the
+   * live value on the second GET's resolution would snapshot the user's edit as if it were the
+   * clean baseline, silently erasing its dirty status. See the doc comment on
+   * `loadedInnovationUseInfoBodyBaseline` above.
+   */
+  private snapshotWhenBothLoaded() {
+    if (this.loadedInnovationUseInfoBodyBaseline && this.loadedPolicyChangeQuestionsBaseline) {
+      this.dirtyTracker.snapshot({
+        innovationUseInfoBody: this.loadedInnovationUseInfoBodyBaseline,
+        policyChangeQuestions: this.loadedPolicyChangeQuestionsBaseline
+      });
+    }
+  }
+
+  /**
+   * `UCA-T-11` — the value the dirty tracker snapshots/diffs. Both bound objects are tracked
+   * together: `policyChangeQuestions.optionsWithAnswers[].answer_boolean` changes via
+   * `changeAnswerBoolean()` (driven by the "Is this result related to" select) and is part of the
+   * PATCH payload assembled in `performSave()`, so an edit to it must count as unsaved just like
+   * an edit to `innovationUseInfoBody`.
+   */
+  private dirtySnapshotValue(): { innovationUseInfoBody: InnovationUseInfoBody; policyChangeQuestions: PolicyChangeQuestions } {
+    return {
+      innovationUseInfoBody: this.innovationUseInfoBody,
+      policyChangeQuestions: this.policyChangeQuestions
+    };
   }
 
   /**
@@ -218,14 +309,38 @@ export class PolicyChangeInfoComponent implements OnInit {
   }
 
   onSaveSection() {
+    this.performSave().subscribe();
+  }
+
+  /**
+   * `UCA-T-11` — returns the PATCH `Observable` instead of self-subscribing, so this component's
+   * own Save action (`onSaveSection` above) and `saveSection()` (`CanComponentDeactivate`) drive
+   * the exact same call — no duplicated save logic (`UCA-DD-3`). Snapshots directly on PATCH
+   * success (in addition to the delegated reload below) so `hasUnsavedChanges()` can't read dirty
+   * during the reload's own round-trip, and would never stay dirty forever if that reload failed.
+   */
+  private performSave(): Observable<boolean> {
     this.clearAmountWhenNotApplicable();
     const body = {
       ...this.innovationUseInfoBody,
       ...this.policyChangeQuestions
     };
 
-    this.api.resultsSE.PATCH_policyChanges(body).subscribe(resp => {
-      this.getSectionInformation();
-    });
+    return this.api.resultsSE.PATCH_policyChanges(body).pipe(
+      tap(() => {
+        // The live values ARE what the server just persisted, so they become the new baselines
+        // too — otherwise the delegated reload below would re-run `snapshotWhenBothLoaded()`
+        // against the STALE `loadedPolicyChangeQuestionsBaseline` (questions are never reloaded
+        // from the server) and could re-flag a just-saved edit as dirty again. Cloned, not
+        // assigned directly — same reasoning as `getSectionInformation()`'s baseline capture: a
+        // live reference here would let a POST-save edit mutate this "frozen" baseline in place.
+        this.loadedInnovationUseInfoBodyBaseline = JSON.parse(JSON.stringify(this.innovationUseInfoBody));
+        this.loadedPolicyChangeQuestionsBaseline = JSON.parse(JSON.stringify(this.policyChangeQuestions));
+        this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+        this.getSectionInformation();
+      }),
+      map(() => true),
+      catchError(() => of(false))
+    );
   }
 }

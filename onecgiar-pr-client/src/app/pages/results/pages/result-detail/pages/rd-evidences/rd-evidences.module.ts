@@ -8,15 +8,18 @@ import { EvidenceItemComponent } from './evidence-item/evidence-item.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { SectionBottomBarComponent } from '../../components/section-bottom-bar/section-bottom-bar.component';
+import { BeforeUnloadWarningDirective } from '../../../../../../shared/directives/before-unload-warning.directive';
 
 @NgModule({
   declarations: [RdEvidencesComponent, EvidenceItemComponent],
-  imports: [SectionBottomBarComponent,
+  imports: [
+    SectionBottomBarComponent,
     CommonModule,
     RdEvidencesRoutingModule,
     CustomFieldsModule,
     FeedbackValidationDirectiveModule,
     PrDialogComponent,
+    BeforeUnloadWarningDirective
   ]
 })
 export class RdEvidencesModule {}

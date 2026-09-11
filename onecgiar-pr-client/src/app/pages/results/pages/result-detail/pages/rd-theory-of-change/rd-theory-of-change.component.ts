@@ -1,4 +1,6 @@
-import { ChangeDetectorRef, Component, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { Observable, of } from 'rxjs';
+import { map, catchError, tap } from 'rxjs/operators';
 import { ResultTocResultsInterface, TheoryOfChangeBody } from './model/theoryOfChangeBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
@@ -7,14 +9,17 @@ import { GreenChecksService } from '../../../../../../shared/services/global/gre
 import { RdTheoryOfChangesServicesService } from './rd-theory-of-changes-services.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { filterOutAvisaInitiatives } from '../../../../../../shared/utils/avisa-initiative.util';
+import { CanComponentDeactivate } from '../../../../../../shared/guards/unsaved-changes.types';
+import { SectionDirtyTrackerService } from '../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
 
 @Component({
   selector: 'app-rd-theory-of-change',
   templateUrl: './rd-theory-of-change.component.html',
   styleUrls: ['./rd-theory-of-change.component.scss'],
-  standalone: false
+  standalone: false,
+  providers: [SectionDirtyTrackerService]
 })
-export class RdTheoryOfChangeComponent implements OnInit {
+export class RdTheoryOfChangeComponent implements OnInit, CanComponentDeactivate {
   theoryOfChangeBody = new TheoryOfChangeBody();
   contributingInitiativesList = [];
   getConsumed = false;
@@ -30,6 +35,14 @@ export class RdTheoryOfChangeComponent implements OnInit {
   submitter: string = '';
 
   disabledOptions = [];
+
+  /**
+   * `UCA-T-10` — component-scoped dirty-diff tracker (`providers: [SectionDirtyTrackerService]`
+   * on this component). Snapshotted at the true end of `getSectionInformation()`'s load flow and
+   * again directly in `performSave()`'s success branch. See
+   * `docs/specs/changes/unsaved-changes-alert/design.md` `UCA-DD-1`.
+   */
+  private readonly dirtyTracker = inject(SectionDirtyTrackerService);
 
   constructor(
     public api: ApiService,
@@ -112,6 +125,21 @@ export class RdTheoryOfChangeComponent implements OnInit {
           ...(this.theoryOfChangeBody?.contributing_initiatives.pending_contributing_initiatives || [])
         ];
 
+        // `UCA-T-10` — every mutation THIS GET's `next` handler makes to `theoryOfChangeBody`
+        // happens synchronously, right here in this same callback — verified by reading the full
+        // method body. `GET_AllWithoutResults()` (`ngOnInit()`'s other, independent call) only
+        // ever touches `contributingInitiativesList`, never `theoryOfChangeBody`.
+        //
+        // That is NOT the whole picture, though (rework, attempt 1 FAIL — an earlier revision of
+        // this comment wrongly claimed "safe to snapshot now" as if it were): the rendered child
+        // subtree (`MultipleWPsComponent`/`MultipleWPsContentComponent`, mounted for both
+        // `result_toc_result` and each `contributors_result_toc_result` entry) mutates the SAME
+        // tracked `result_toc_results` rows on every render, AFTER this snapshot already ran — see
+        // `dirtySnapshotValue()` below for the full account and the normalization that neutralizes
+        // it. What IS still true, and is what makes the fix possible instead of chasing a moving
+        // async target, is that this method's own mutations are synchronous and complete.
+        this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+
         this.getConsumed = true;
         this.changeDetectorRef.detectChanges();
       },
@@ -127,7 +155,14 @@ export class RdTheoryOfChangeComponent implements OnInit {
     });
   }
 
-  onSaveSection() {
+  /**
+   * `UCA-T-10`: builds the exact PATCH-equivalent payload `onSaveSection()` always built, factored
+   * out so both the manual Save action and `saveSection()` (`CanComponentDeactivate`) send the
+   * identical body — no duplicated save logic (`UCA-DD-3`). Note this mutates
+   * `theoryOfChangeBody.result_toc_result.result_toc_results` (filters out null `toc_result_id`
+   * rows) as a side effect, same as the original inline code.
+   */
+  private buildSendedData() {
     this.theoryOfChangeBody.bodyActionArea = this.theoryOfChangesServices.resultActionArea;
 
     this.theoryOfChangeBody.result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result;
@@ -138,7 +173,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
         ? this.theoryOfChangeBody.result_toc_result.result_toc_results
         : this.theoryOfChangeBody?.result_toc_result?.result_toc_results.filter(result => result.toc_result_id !== null);
 
-    const sendedData = {
+    return {
       ...this.theoryOfChangeBody,
       contributing_initiatives: {
         ...this.theoryOfChangeBody.contributing_initiatives,
@@ -149,15 +184,48 @@ export class RdTheoryOfChangeComponent implements OnInit {
       },
       email_template: 'email_template_contribution'
     };
+  }
 
-    const saveSection = () => {
-      this.api.resultsSE.POST_toc(sendedData).subscribe(resp => {
+  /**
+   * `UCA-T-10`: returns the `POST_toc` `Observable` instead of self-subscribing, so both this
+   * component's own Save action (`onSaveSection`, below) and `saveSection()` (the
+   * `CanComponentDeactivate` contract) drive the exact same call and success branch — no
+   * duplicated save logic (`UCA-DD-3`).
+   *
+   * `viaGuard` (Issue 4, rework attempt 2): when `saveSection()` calls this (Back/Next silent save,
+   * or the guard's dialog Save), the `location.reload()` branch below is suppressed and the
+   * `getSectionInformation()` branch is taken instead — even when the primary submitter changed.
+   * Reason: `location.reload()` reloads the CURRENT url mid-navigation, destroying the guard's
+   * pending navigation (`UCA-R-4`/`UCA-AC-4` require it to resume to the section the user actually
+   * clicked). `saveSection()` already deliberately bypasses the primary-submitter confirmation
+   * dialog (accepted precedent, see `saveSection()`'s own docstring below), so this reload branch
+   * would otherwise be reachable with no warning to the user at all. The manual Save path
+   * (`onSaveSection()`) is untouched — it still reloads on a changed primary submitter, which is
+   * the existing, intended behavior there (the user is warned via the confirmation dialog first).
+   */
+  private performSave(sendedData, viaGuard = false): Observable<void> {
+    return this.api.resultsSE.POST_toc(sendedData).pipe(
+      tap(() => {
         this.getConsumed = false;
-        this.theoryOfChangeBody?.result_toc_result?.initiative_id !== this.theoryOfChangeBody.changePrimaryInit
-          ? location.reload()
-          : this.getSectionInformation();
+        // `UCA-T-10` — snapshot HERE, synchronously, the instant the POST resolves. Closes the
+        // same class of race `UCA-T-6`'s rework fixed: `saveSection()`'s `map(() => true)` could
+        // otherwise emit to `UnsavedChangesGuard` BEFORE the branch below (a full page reload, or
+        // `getSectionInformation()`'s own async load-flow re-snapshot) resolves — or, on the
+        // reload branch, never resolve at all within this component's lifetime.
+        this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+        const primarySubmitterChanged = this.theoryOfChangeBody?.result_toc_result?.initiative_id !== this.theoryOfChangeBody.changePrimaryInit;
+        primarySubmitterChanged && !viaGuard ? location.reload() : this.getSectionInformation();
         this.contributingInitiativeNew = [];
-      });
+      }),
+      map(() => undefined)
+    );
+  }
+
+  onSaveSection() {
+    const sendedData = this.buildSendedData();
+
+    const doSave = () => {
+      this.performSave(sendedData).subscribe();
     };
 
     const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id === this.theoryOfChangeBody?.changePrimaryInit);
@@ -173,11 +241,79 @@ export class RdTheoryOfChangeComponent implements OnInit {
           confirmText: 'Proceed'
         },
         () => {
-          saveSection();
+          doSave();
         }
       );
 
-    return saveSection();
+    return doSave();
+  }
+
+  /** `UCA-T-10` — `CanComponentDeactivate.hasUnsavedChanges()`. */
+  hasUnsavedChanges(): boolean {
+    return this.dirtyTracker.isDirty(this.dirtySnapshotValue());
+  }
+
+  /**
+   * `UCA-T-10` — `CanComponentDeactivate.saveSection()`. Deliberately bypasses the
+   * primary-submitter-change confirmation dialog (`api.alertsFe.show(...)`, in `onSaveSection()`
+   * above) that gates a manual Save click: same precedent as `UCA-T-6`'s P25
+   * discontinued-options confirmation modal, also bypassed by its wrapped `saveSection()`. Per
+   * `UCA-DD-3`, the guard's silent auto-save (Back/Next) drives the exact same underlying persist
+   * call — not the manual-click UI affordances layered on top of it.
+   *
+   * Passes `viaGuard = true` to `performSave()` (Issue 4, rework attempt 2) so a changed primary
+   * submitter never triggers `location.reload()` on this path — see `performSave()`'s docstring.
+   */
+  saveSection(): Observable<boolean> {
+    const sendedData = this.buildSendedData();
+    return this.performSave(sendedData, true).pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
+
+  /**
+   * `UCA-T-10` (Issue 2, rework attempt 2) — the value the dirty tracker snapshots/diffs. Projects
+   * out every field the rendered ToC child subtree writes onto the tracked `result_toc_results`
+   * rows (or their owning initiative object) AFTER `getSectionInformation()`'s own snapshot, so the
+   * diff is insensitive to that decoration. Same shape as `UCA-T-7`'s `normalizeCountriesForDiff()`
+   * — this is this section's own `UCA-OQ-2` exception.
+   *
+   * Verified writers (read in full, not assumed):
+   * - `MultipleWPsComponent.ngOnChanges()` stamps a FRESH random `uniqueId` on EVERY row on EVERY
+   *   change-detection pass — worse than a stable/deterministic key, it can never converge across
+   *   renders, so re-snapshotting after some "settled" point cannot work here; normalization is the
+   *   only option (`toc-initiative-out/multiple-wps/multiple-wps.component.ts`).
+   * - `MultipleWPsContentComponent.getIndicator()` writes `indicators`, `impactAreasTargets`,
+   *   `sdgTargest`, `actionAreaOutcome`, `is_sdg_action_impact` and `wpinformation` onto `activeTab`
+   *   (`initiative.result_toc_results[0]`) once its `Get_indicator` call resolves
+   *   (`toc-initiative-out/multiple-wps/components/multiple-wps-content/multiple-wps-content.component.ts`).
+   * - `getSectionInformation()` itself (and `TocInitiativeOutComponent.clearTocResultId()`, on user
+   *   edit) sets `.showMultipleWPsContent`/`.index` on the initiative object (main
+   *   `result_toc_result` and each `contributors_result_toc_result` entry) — stable at load time,
+   *   projected out anyway for symmetry with the row-level fields above.
+   */
+  private dirtySnapshotValue(): Partial<TheoryOfChangeBody> {
+    return {
+      ...this.theoryOfChangeBody,
+      result_toc_result: this.normalizeInitiativeForDiff(this.theoryOfChangeBody?.result_toc_result),
+      contributors_result_toc_result: (this.theoryOfChangeBody?.contributors_result_toc_result ?? []).map(contributor =>
+        this.normalizeInitiativeForDiff(contributor)
+      )
+    } as Partial<TheoryOfChangeBody>;
+  }
+
+  private normalizeInitiativeForDiff(initiative: any): any {
+    if (!initiative) return initiative;
+    const { showMultipleWPsContent, index, result_toc_results, ...rest } = initiative;
+    return { ...rest, result_toc_results: this.normalizeTocResultsForDiff(result_toc_results) };
+  }
+
+  private normalizeTocResultsForDiff(rows: any[] | undefined | null): any[] {
+    return (rows ?? []).map(row => {
+      const { uniqueId, indicators, impactAreasTargets, sdgTargest, actionAreaOutcome, is_sdg_action_impact, wpinformation, ...rest } = row ?? {};
+      return rest;
+    });
   }
 
   someEditable() {

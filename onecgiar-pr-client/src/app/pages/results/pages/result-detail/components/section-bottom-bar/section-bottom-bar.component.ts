@@ -20,6 +20,7 @@ import { RolesService } from '../../../../../../shared/services/global/roles.ser
 import { ResultSectionsService } from '../result-sections-sidebar/result-sections.service';
 import { SectionBottomBarSlotService } from './section-bottom-bar-slot.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
+import { UnsavedNavigationIntentService } from '../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
 
 /**
  * Bottom bar of a result-detail section: section-to-section navigation, the position in the
@@ -63,6 +64,7 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   readonly fieldsManagerSE = inject(FieldsManagerService);
   private readonly router = inject(Router);
   private readonly slotSE = inject(SectionBottomBarSlotService);
+  private readonly intentSE = inject(UnsavedNavigationIntentService);
   private readonly hostRef = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** Open/closed state of the pending-fields popover. */
@@ -257,6 +259,7 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   }
 
   private navigateTo(link: string, queryParams: Record<string, unknown>): void {
+    this.intentSE.markSilent();
     this.router.navigate([link], { queryParams });
   }
 }

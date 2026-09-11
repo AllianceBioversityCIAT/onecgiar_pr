@@ -1,1 +1,11 @@
-<app-links-to-results-global></app-links-to-results-global>
+<!--
+  `UCA-T-10` Issue 3 (rework attempt 2) — the `beforeunload` binding lives HERE, on the
+  Result-Detail host, not inside the shared `app-links-to-results-global` template. That component
+  is also used by `ipsr-link-to-results` (explicitly Out of Scope, `requirements.md` §3), and
+  binding it there silently made IPSR's Link-to-results step show the native "leave site?" prompt
+  too. `hasUnsavedChanges` here is this component's own `CanComponentDeactivate` delegating method
+  (see `rd-links-to-results.component.ts`), which reads through to the child.
+-->
+<div [appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)">
+  <app-links-to-results-global></app-links-to-results-global>
+</div>

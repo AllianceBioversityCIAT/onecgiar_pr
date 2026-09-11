@@ -79,9 +79,24 @@ export class CPNormalSelectorComponent {
 
   // Preselect the ToC reference partners on load, only when the result has no partners selected yet and the
   // section is applicable. Mirrors the Centers preselect.
+  //
+  // `UCA-T-9` attempt 3, Issue 2 (docs/specs/changes/unsaved-changes-alert): this effect used to have
+  // no P2-3115 hydration guard, unlike its two siblings in the parent component
+  // (`preselectCentersEffect`/`preselectScienceEffect`, `rd-contributors-and-partners.component.ts`).
+  // `tocReferencePartnerInstitutionIds` is written asynchronously, after the parent's own load-flow
+  // snapshot, by `multiple-wps-content`'s ToC-resolution effect — without the guard below, ANY 2026
+  // result whose mapped ToC node has external partners, with no partners selected yet, loaded dirty
+  // and the next Back/Next silently saved with the contribution email. The fix is the SAME guard as
+  // the two siblings, not a normalization of the prefill out of the diff — a real ToC-driven prefill
+  // IS a legitimate change the user would want saved; the bug was that it fired on every settle
+  // instead of only once per hydration.
   private userTouchedPartners = false;
   preselectPartnersEffect = effect(() => {
     if (!this.isCP2026() || this.userTouchedPartners) return;
+    // P2-3115: don't resurrect a deliberately-emptied, saved Partners selection on reload — the
+    // persisted (possibly empty) state is authoritative once the section has been hydrated from the
+    // GET, unless the user drives a fresh ToC HLO/KPI selection (`tocSelectionTouched`).
+    if (this.rdPartnersSE.sectionHydratedFromToc() && !this.rdPartnersSE.tocSelectionTouched()) return;
     const refs = this.referenceExternalPartners();
     const body = this.rdPartnersSE.partnersBody;
     if (!body || body.no_applicable_partner) return;

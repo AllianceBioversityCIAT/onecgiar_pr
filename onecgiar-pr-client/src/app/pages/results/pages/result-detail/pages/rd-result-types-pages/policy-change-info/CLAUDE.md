@@ -1,6 +1,6 @@
 # policy-change-info
 
-**Verified:** 2026-09-02 · branch performance-refactor · d659a442c
+**Verified:** 2026-09-10 · branch qa-development-2026-ss · `docs/specs/changes/unsaved-changes-alert/` `UCA-T-11`; prior: 2026-09-02 · branch performance-refactor · d659a442c
 
 > Rewritten in English on 2026-09-01 (repo rule: every `CLAUDE.md` under `onecgiar_pr/` is English).
 
@@ -26,9 +26,34 @@ Route: `/result/result-detail/<code>/policy-change1-info?phase=<id>`.
   (section `policy-change1-info`). Verified OK for P25 on 2026-08-26.
 
 ## Where it is used
-- `shared/routing/routing-data.ts` — the `policy-change1-info` entry of `resultDetailRouting`.
+- `shared/routing/routing-data.ts` — the `policy-change1-info` entry of `rdResultTypesPages`.
 - `.../result-detail/components/result-sections-sidebar/result-sections.service.ts` — the section
   shows in the rail only for Policy change results.
+
+## `CanComponentDeactivate` (`UCA-T-11`)
+
+Implements `docs/specs/changes/unsaved-changes-alert/`'s unsaved-changes-warning contract:
+- Component-scoped `SectionDirtyTrackerService`. Tracked value is `{ innovationUseInfoBody,
+  policyChangeQuestions }` together — `changeAnswerBoolean()` edits the latter and feeds the PATCH.
+- Two INDEPENDENT top-level GETs load this section (`getSectionInformation()` /
+  `getPolicyChangesQuestions()`), no guaranteed order. Each records its own DEEP-CLONED baseline
+  (`loadedInnovationUseInfoBodyBaseline` / `loadedPolicyChangeQuestionsBaseline`) the instant it
+  resolves; the composite snapshot fires only once BOTH baselines exist. The clone is load-bearing:
+  `this.innovationUseInfoBody`/`this.policyChangeQuestions` ARE the same object reference as the
+  GET response, so storing the reference (not a clone) as the "baseline" would let a user edit made
+  before the OTHER GET resolves mutate the frozen baseline too, silently erasing its dirty status —
+  caught by this task's own TDD loop (see `policy-change-info.component.spec.ts`'s "does not erase a
+  user edit made while the SECOND load GET is still in flight").
+- `performSave()` snapshots directly on PATCH success (refreshing both baselines to the just-saved
+  live values, cloned) — not solely via the delegated `getSectionInformation()` reload.
+- `[appBeforeUnloadWarning]` on `.detail_container`; `canDeactivate: [UnsavedChangesGuard]` on the
+  INNER `{ path: '', component: PolicyChangeInfoComponent }` route in
+  `policy-change-info-routing.module.ts` — NOT the outer `rdResultTypesPages` entry above (that has
+  `loadChildren`, no `component`; cross-cutting bug already fixed for the other sections).
+- `UCA-OQ-2`: both `InnovationUseInfoBody` and `PolicyChangeQuestions` are plain JSON — no
+  `File`/`Blob`/circular refs — confirmed against the model file and the live GET/PATCH shapes.
+- No child component under this section's template mutates either tracked object after load —
+  `pr-multi-select` (institutions) keeps its own decorated clones separate from the bound array.
 
 ## Traps (⚠️ = already broke something)
 - ⚠️ **`policy_type_id == 1` is "Program, budget or investment"** (CLARISA). It is the ONLY type
