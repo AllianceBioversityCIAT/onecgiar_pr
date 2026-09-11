@@ -189,15 +189,23 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   }
 
   goNext(): void {
-    const index = this.currentIndex() + 1;
-    if (!this.sectionsSE.sections()[index]) return;
+    // 🛑 The destination is resolved BEFORE the save, and that is load-bearing, not style.
+    // Saving reloads the result (`GET_resultById`), and the reload resets `currentResultSignal`
+    // to `{}` — which leaves `sections()` EMPTY and `currentIndex()` at -1 until the result lands
+    // again (`result-sections.service.ts` returns `[]` while the portfolio is unknown). Reading the
+    // target after the save therefore found nothing and silently went nowhere: measured on prtest
+    // (result 9142), the save returned `saved` and the section list went 5 -> 0 in the same breath.
+    const target = this.sectionsSE.sections()[this.currentIndex() + 1];
+    if (!target) return;
+    const link = this.sectionsSE.sectionLink(target);
+    const queryParams = this.sectionsSE.sectionQueryParams();
 
     if (!this.autoSavesOnNext() || this.savingBeforeNext() || this.saveButtonSE.isSaving()) {
-      this.goTo(index);
+      this.navigateTo(link, queryParams);
       return;
     }
 
-    void this.saveThenGo(index);
+    void this.saveThenGo(link, queryParams);
   }
 
   /**
@@ -209,12 +217,12 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
    * blocked it, or it opened a confirmation modal), and treating that as a failure would leave
    * `Next` doing nothing at all on those sections.
    */
-  private async saveThenGo(index: number): Promise<void> {
+  private async saveThenGo(link: string, queryParams: Record<string, unknown>): Promise<void> {
     this.savingBeforeNext.set(true);
     try {
       const outcome = await this.saveButtonSE.saveAndSettle(() => this.clickSave.emit());
       if (outcome === 'failed') return;
-      this.goTo(index);
+      this.navigateTo(link, queryParams);
     } finally {
       this.savingBeforeNext.set(false);
     }
@@ -245,6 +253,10 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   private goTo(index: number): void {
     const target = this.sectionsSE.sections()[index];
     if (!target) return;
-    this.router.navigate([this.sectionsSE.sectionLink(target)], { queryParams: this.sectionsSE.sectionQueryParams() });
+    this.navigateTo(this.sectionsSE.sectionLink(target), this.sectionsSE.sectionQueryParams());
+  }
+
+  private navigateTo(link: string, queryParams: Record<string, unknown>): void {
+    this.router.navigate([link], { queryParams });
   }
 }

@@ -429,6 +429,27 @@ describe('SectionBottomBarComponent', () => {
       expect(router.navigate).toHaveBeenCalledTimes(1);
     });
 
+    /**
+     * Measured on prtest (result 9142, 11 Sep 2026): the save reloads the result, the reload resets
+     * `currentResultSignal` to `{}`, and `sections()` is EMPTY while the portfolio is unknown. The
+     * first version of this read the destination after the save and therefore went nowhere — with
+     * `saveAndSettle` reporting `saved` and no error anywhere.
+     */
+    it('still navigates when the save empties the section list while it runs', async () => {
+      phaseYear = 2026;
+      saveMock.saveAndSettle = jest.fn(async (trigger: () => void) => {
+        trigger();
+        sectionsMock.sections.set([]);
+        sectionsMock.currentIndex.set(-1);
+        return 'saved';
+      });
+      await build();
+
+      await clickNext();
+
+      expect(router.navigate).toHaveBeenCalledWith(['/result/result-detail/1234/evidences'], { queryParams: { phase: 7 } });
+    });
+
     it('leaves Back as plain navigation', async () => {
       phaseYear = 2026;
       await build();
