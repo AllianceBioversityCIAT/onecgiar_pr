@@ -74,7 +74,7 @@
 - **Verification:** `npm test -- auth.controller auth.service` green; DTO validation rejects `code: 'abc'` and missing `session`; verify-success body deep-equals the `authenticateWithCustomPassword` success shape for identical mocked tokens. Post-deploy: `curl -s -X POST https://authtest-ibd.prms.cgiar.org/auth/login/otp/start -d '{"username":"<test user>"}'` → `challengeName: "EMAIL_OTP"` (session redacted in the record). **Input that fails it:** return `AuthenticationResult` raw instead of `{ tokens }` → parity test fails. **Disqualifier:** a deploy smoke pasted without the response shape; a smoke that prints the session.
 - **Definition of done:** tests green; deployed to TEST with the smoke recorded (shape only); existing routes' tests unmodified and green (`OTP-R-10`).
 
-### `OTP-T-4` — PRMS server: allow-list parameter, `config` route, public paths
+### [x] `OTP-T-4` — PRMS server: allow-list parameter, `config` route, public paths
 
 - **Type:** `db` + `server`
 - **Description:** Data migration inserting into `global_parameters` the row `OTP_ALLOWED_EMAIL_DOMAINS` (empty value, description, `global_parameter_category_id` = id of `platform_global_variables`; pattern `1700836504238-insertGlobalParametersAndCategories.ts`; reversible `down`); import `GlobalParameterCacheModule` into `auth.module.ts`; `AuthService.getOtpAllowedDomains()` reading through `GlobalParameterCacheService.getParam()` (split/trim/lower/drop empties and `@`); `GET auth/login/otp/config` → `{ domains }`. **No `JwtMiddleware` edit** — `/auth/*` is outside its mounts (design §5.1); add one middleware spec case proving `/auth/login/otp/config` is reachable without a token as-is.

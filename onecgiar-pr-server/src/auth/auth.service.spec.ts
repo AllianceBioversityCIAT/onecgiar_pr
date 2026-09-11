@@ -5,6 +5,7 @@ import { UserService } from './modules/user/user.service';
 import { UserRepository } from './modules/user/repositories/user.repository';
 import { HandlersError } from '../shared/handlers/error.utils';
 import { AuthMicroserviceService } from '../shared/microservices/auth-microservice/auth-microservice.service';
+import { GlobalParameterCacheService } from '../shared/services/cache/global-parameter-cache.service';
 import { HttpStatus } from '@nestjs/common';
 import { UserLoginDto } from './dto/login-user.dto';
 import { PusherAuthDot } from './dto/pusher-auth.dto';
@@ -23,6 +24,7 @@ describe('AuthService', () => {
   let userRepository: UserRepository;
   let handlersError: HandlersError;
   let authMicroservice: AuthMicroserviceService;
+  let globalParameterCacheService: GlobalParameterCacheService;
 
   const mockUser = {
     id: 1,
@@ -93,6 +95,12 @@ describe('AuthService', () => {
             completeNewPasswordChallenge: jest.fn(),
           },
         },
+        {
+          provide: GlobalParameterCacheService,
+          useValue: {
+            getParam: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -102,6 +110,9 @@ describe('AuthService', () => {
     handlersError = module.get<HandlersError>(HandlersError);
     authMicroservice = module.get<AuthMicroserviceService>(
       AuthMicroserviceService,
+    );
+    globalParameterCacheService = module.get<GlobalParameterCacheService>(
+      GlobalParameterCacheService,
     );
   });
 
@@ -439,6 +450,82 @@ describe('AuthService', () => {
         .mockRejectedValue(error);
 
       await service.completePasswordChallenge(mockChallengeDto);
+
+      expect(handlersError.returnErrorRes).toHaveBeenCalledWith({ error });
+    });
+  });
+
+  describe('getOtpAllowedDomains', () => {
+    it('splits, trims, lower-cases, and drops empties and a leading @', async () => {
+      jest
+        .spyOn(globalParameterCacheService, 'getParam')
+        .mockResolvedValue(' ICRISAT.org, @cifor-icraf.org,,');
+
+      const domains = await service.getOtpAllowedDomains();
+
+      expect(globalParameterCacheService.getParam).toHaveBeenCalledWith(
+        'OTP_ALLOWED_EMAIL_DOMAINS',
+      );
+      expect(domains).toEqual(['icrisat.org', 'cifor-icraf.org']);
+    });
+
+    it('returns [] for an empty string', async () => {
+      jest.spyOn(globalParameterCacheService, 'getParam').mockResolvedValue('');
+
+      expect(await service.getOtpAllowedDomains()).toEqual([]);
+    });
+
+    it('returns [] for undefined', async () => {
+      jest
+        .spyOn(globalParameterCacheService, 'getParam')
+        .mockResolvedValue(undefined);
+
+      expect(await service.getOtpAllowedDomains()).toEqual([]);
+    });
+
+    it('returns [] for null', async () => {
+      jest
+        .spyOn(globalParameterCacheService, 'getParam')
+        .mockResolvedValue(null);
+
+      expect(await service.getOtpAllowedDomains()).toEqual([]);
+    });
+  });
+
+  describe('getOtpConfig', () => {
+    it('returns the project envelope with the parsed domains', async () => {
+      jest
+        .spyOn(globalParameterCacheService, 'getParam')
+        .mockResolvedValue('icrisat.org,cifor-icraf.org');
+
+      const result = await service.getOtpConfig();
+
+      expect(globalParameterCacheService.getParam).toHaveBeenCalledWith(
+        'OTP_ALLOWED_EMAIL_DOMAINS',
+      );
+      expect(result).toEqual({
+        message: 'OTP allow-list retrieved successfully',
+        response: { domains: ['icrisat.org', 'cifor-icraf.org'] },
+        status: HttpStatus.OK,
+      });
+    });
+
+    it('returns an empty domains list when the parameter is empty', async () => {
+      jest.spyOn(globalParameterCacheService, 'getParam').mockResolvedValue('');
+
+      const result = await service.getOtpConfig();
+
+      expect(result.response.domains).toEqual([]);
+      expect(result.status).toBe(HttpStatus.OK);
+    });
+
+    it('delegates to the shared error handler when the cache lookup throws', async () => {
+      const error = new Error('cache down');
+      jest
+        .spyOn(globalParameterCacheService, 'getParam')
+        .mockRejectedValue(error);
+
+      await service.getOtpConfig();
 
       expect(handlersError.returnErrorRes).toHaveBeenCalledWith({ error });
     });

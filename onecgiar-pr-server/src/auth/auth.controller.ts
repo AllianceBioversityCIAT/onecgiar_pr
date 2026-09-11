@@ -46,6 +46,20 @@ export class AuthController {
     return this.authService.getAuthURL(provider, redirectUri);
   }
 
+  @Get('/login/otp/config')
+  @ApiOperation({
+    summary: 'Get the Center-path (email one-time-code) allowed domains',
+    description:
+      'Public, read-only config for the Center login path. Empty domains list keeps the path hidden on the client.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Allowed domains retrieved successfully',
+  })
+  getOtpConfig() {
+    return this.authService.getOtpConfig();
+  }
+
   @Post('/login/custom')
   @ApiOperation({ summary: 'Authenticate user with email and password' })
   @ApiResponse({ status: 200, description: 'Successful login' })

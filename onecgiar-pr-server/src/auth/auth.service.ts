@@ -10,6 +10,10 @@ import Pusher from 'pusher';
 import { AuthMicroserviceService } from '../shared/microservices/auth-microservice/auth-microservice.service';
 import { AuthCodeValidationDto } from './dto/auth-code-validation.dto';
 import { CompletePasswordChallengeDto } from './dto/complete-password-challenge.dto';
+import { GlobalParameterCacheService } from '../shared/services/cache/global-parameter-cache.service';
+
+// @akili-spec changes/cognito-email-otp-login (OTP-T-4, OTP-R-9)
+export const OTP_ALLOWED_EMAIL_DOMAINS_PARAM = 'OTP_ALLOWED_EMAIL_DOMAINS';
 
 @Injectable()
 export class AuthService {
@@ -22,6 +26,7 @@ export class AuthService {
     private readonly _userRepository: UserRepository,
     private readonly _handlersError: HandlersError,
     private readonly _authMicroservice: AuthMicroserviceService,
+    private readonly _globalParameterCacheService: GlobalParameterCacheService,
   ) {
     this.pusher = new Pusher({
       appId: `${env.PUSHER_APP_ID}`,
@@ -284,6 +289,50 @@ export class AuthService {
     } catch (error) {
       this._logger.error(
         `Error getting authentication URL: ${error.message}`,
+        error.stack,
+      );
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  /**
+   * Center path (email OTP) allow-list
+   * @description Reads `OTP_ALLOWED_EMAIL_DOMAINS` through the existing
+   * `GlobalParameterCacheService.getParam()` — no bespoke cache. Splits on `,`,
+   * trims, lower-cases, and drops empty entries and any leading `@` (OTP-R-9, OTP-DD-5).
+   */
+  async getOtpAllowedDomains(): Promise<string[]> {
+    const rawValue = await this._globalParameterCacheService.getParam(
+      OTP_ALLOWED_EMAIL_DOMAINS_PARAM,
+    );
+
+    if (!rawValue) {
+      return [];
+    }
+
+    return String(rawValue)
+      .split(',')
+      .map((domain) => domain.trim().toLowerCase().replace(/^@/, ''))
+      .filter((domain) => domain.length > 0);
+  }
+
+  /**
+   * GET auth/login/otp/config
+   * @description Public, read-only config for the Center (email OTP) login path;
+   * the allow-list stays empty until an admin sets the global parameter (OTP-R-9).
+   */
+  async getOtpConfig(): Promise<any> {
+    try {
+      const domains = await this.getOtpAllowedDomains();
+
+      return {
+        message: 'OTP allow-list retrieved successfully',
+        response: { domains },
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._logger.error(
+        `Error getting OTP allow-list: ${error.message}`,
         error.stack,
       );
       return this._handlersError.returnErrorRes({ error });

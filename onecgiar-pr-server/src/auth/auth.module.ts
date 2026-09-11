@@ -26,6 +26,7 @@ import { AuthMicroserviceModule } from '../shared/microservices/auth-microservic
 import { ActiveDirectoryService } from './services/active-directory.service';
 import { SearchThrottleMiddleware } from './Middlewares/search-throttle.middleware';
 import { UserRepository } from './modules/user/repositories/user.repository';
+import { GlobalParameterCacheModule } from '../shared/services/cache/global-parameter-cache.module';
 
 @Module({
   controllers: [AuthController],
@@ -43,6 +44,7 @@ import { UserRepository } from './modules/user/repositories/user.repository';
     RestrictionsByRoleModule,
     RestrictionsModule,
     AuthMicroserviceModule,
+    GlobalParameterCacheModule,
   ],
   providers: [
     AuthService,

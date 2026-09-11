@@ -31,7 +31,7 @@ Done (phase 1) — `runbook/sibling-clients.md`. 5 of 10 clients already allow `
 5. Save.
 6. Screenshot the new state (`Password` + `Email message one-time password` both ticked) — attach to this runbook as evidence.
 
-Performed by a **named approver** (placeholder: `___________________`, date/time: `___________________`).
+Performed by a **named approver**: `Juan Carlos Cadavid`, date/time: `2026-09-11` (console click path). Screenshots for step 3/6 above are held by the approver, not attached to this runbook.
 
 **A bare `aws cognito-idp update-user-pool` call is FORBIDDEN.** It resets every parameter you omit (`AutoVerifiedAttributes`, `EmailConfiguration`, `AdminCreateUserConfig`, `LambdaConfig`, `MfaConfiguration`, `DeletionProtection`, …) to service defaults — on a ten-tenant pool that is an outage, not a scoped change. **Never run it without `--cli-input-json` built from the current export as described below.**
 
@@ -77,11 +77,25 @@ Performed by a **named approver** (placeholder: `___________________`, date/time
 Approver for the CLI path (placeholder): `___________________`.
 
 ### 4. Export after and diff
-**[phase 2 — not run this phase]** `describe-user-pool` + `describe-user-pool-client` x10 again → `runbook/test-after.json` (same jq recipe as step 1) → `runbook/test-after.normalized.json`. Verification:
+**Done (phase 2a).** `describe-user-pool` + `describe-user-pool-client` x10 again (read-only, same 10 `ClientId`s as phase 1) → `runbook/test-after.json` (same jq recipe as step 1, `ClientSecret` deleted from every client, sorted keys) → `runbook/test-after.normalized.json` (same volatile fields dropped: pool `EstimatedNumberOfUsers`/`CreationDate`/`LastModifiedDate`, each client `CreationDate`/`LastModifiedDate`). Verification:
 ```bash
-diff <(jq -S . runbook/test-before.normalized.json) <(jq -S . runbook/test-after.normalized.json)
+diff <(jq -S . runbook/test-before.normalized.json) <(jq -S . runbook/test-after.normalized.json) | tee runbook/test-diff.txt
 ```
-Expected: only `pool.Policies.SignInPolicy.AllowedFirstAuthFactors` differs (`OTP-AC-11`). **[placeholder — diff output goes here]**
+Expected: only `pool.Policies.SignInPolicy.AllowedFirstAuthFactors` differs (`OTP-AC-11`). **Actual output (`runbook/test-diff.txt`):**
+```
+680c680,681
+<           "PASSWORD"
+---
+>           "PASSWORD",
+>           "EMAIL_OTP"
+```
+Confirms `OTP-AC-11`: `AllowedFirstAuthFactors` gains `EMAIL_OTP`, `PASSWORD` is kept, and this is the **only** line that differs across the pool object and all 10 clients.
+
+Additional targeted diffs run to satisfy the phase-2a brief (all empty — zero differences):
+- Per-client `{ExplicitAuthFlows, SupportedIdentityProviders, CallbackURLs}` across all 10 clients: unchanged.
+- Pool-level `{LambdaConfig, MfaConfiguration, EmailConfiguration, AdminCreateUserConfig, DeletionProtection, AutoVerifiedAttributes}`: unchanged.
+
+Sanity: `grep -c ClientSecret runbook/*.json` → 0 in all four files; `grep -rn "eyJ" runbook` → no matches.
 
 ### 4b. Smoke one sibling tenant
 **[phase 2 — not run this phase]** Password login against another app's client (e.g. TOC or Alliance TEST) to prove nothing else moved. **[placeholder — result]**
