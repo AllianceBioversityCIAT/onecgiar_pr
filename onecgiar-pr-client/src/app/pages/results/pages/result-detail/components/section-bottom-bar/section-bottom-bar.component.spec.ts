@@ -26,6 +26,10 @@ describe('SectionBottomBarComponent', () => {
    * scan del DOM ahora prueban lo contrario — ver el describe `completion status`.
    */
   let sectionIsDone = true;
+  /** Reporting phase year of the open result — what gates the save-on-Next behaviour. */
+  let phaseYear: number | null = null;
+  /** What the mocked `saveAndSettle` reports back. */
+  let saveOutcome: 'saved' | 'failed' | 'not-started' = 'saved';
 
   const SECTIONS = [
     { path: 'general-information', prName: 'General information' },
@@ -39,6 +43,9 @@ describe('SectionBottomBarComponent', () => {
   const build = async (url = '/result/result-detail/1234/partners?phase=7') => {
     currentUrl = url;
     buildSectionsMock();
+    // El año se fija POR CASO, despues del beforeEach que construyo el mock: publicarlo aqui es lo
+    // unico que hace que cada caso mida su propia fase y no la del anterior.
+    dataControlMock.currentResultSignal.set({ phase_year: phaseYear });
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [SectionBottomBarComponent],
@@ -84,10 +91,19 @@ describe('SectionBottomBarComponent', () => {
   beforeEach(() => {
     currentUrl = '/result/result-detail/1234/partners?phase=7';
     buildSectionsMock();
-    saveMock = { isSaving: signal(false) };
-    dataControlMock = { fieldFeedbackList: signal<string[]>([]) };
+    saveOutcome = 'saved';
+    saveMock = {
+      isSaving: signal(false),
+      // Mirrors the real contract: it runs the trigger and reports how that save ended.
+      saveAndSettle: jest.fn(async (trigger: () => void) => {
+        trigger();
+        return saveOutcome;
+      })
+    };
+    dataControlMock = { fieldFeedbackList: signal<string[]>([]), currentResultSignal: signal({ phase_year: phaseYear }) };
     rolesMock = { readOnly: false };
     sectionIsDone = true;
+    phaseYear = null;
   });
 
   describe('position', () => {
@@ -285,6 +301,142 @@ describe('SectionBottomBarComponent', () => {
       const slotSE = TestBed.inject(SectionBottomBarSlotService);
       expect(slotSE.syncSlot()).toBeTruthy();
       expect(slotSE.syncSlot()?.classList.contains('sbb-sync-slot')).toBe(true);
+    });
+  });
+
+  /**
+   * P2-3659 / P2-3654 — `Next` used to be pure navigation, so everything typed in the open section
+   * was discarded unless the user had also pressed `Save draft`. QA reproduced the loss on four
+   * sections of result 9142 (10 Sep 2026), confirmed by a hard reload.
+   */
+  describe('save on Next (P2-3659)', () => {
+    const clickNext = async () => {
+      q('[data-testid="section-bottom-bar-next"]').click();
+      await Promise.resolve();
+      await Promise.resolve();
+      fixture.detectChanges();
+    };
+
+    it('saves the section before navigating, from the 2026 phase on', async () => {
+      phaseYear = 2026;
+      await build();
+      const saved = jest.fn();
+      component.clickSave.subscribe(saved);
+
+      await clickNext();
+
+      expect(saved).toHaveBeenCalledTimes(1);
+      expect(router.navigate).toHaveBeenCalledWith(['/result/result-detail/1234/evidences'], { queryParams: { phase: 7 } });
+    });
+
+    it('stays on the section when the save failed', async () => {
+      phaseYear = 2026;
+      saveOutcome = 'failed';
+      await build();
+
+      await clickNext();
+
+      expect(saveMock.saveAndSettle).toHaveBeenCalledTimes(1);
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    /**
+     * A section whose handler never reaches the network — its own guard blocked it, or it opened a
+     * confirmation modal — must keep `Next` working exactly as it did before this behaviour existed.
+     */
+    it('navigates anyway when nothing was actually sent', async () => {
+      phaseYear = 2026;
+      saveOutcome = 'not-started';
+      await build();
+
+      await clickNext();
+
+      expect(router.navigate).toHaveBeenCalledWith(['/result/result-detail/1234/evidences'], { queryParams: { phase: 7 } });
+    });
+
+    /**
+     * 🛑 The gate is the phase YEAR, not the portfolio: prtest holds 2025-phase results inside the
+     * P25 portfolio, and an automatic write on a closed phase is what the epic's governing rule
+     * forbids.
+     */
+    it('does not save on a 2025-phase result — it only navigates', async () => {
+      phaseYear = 2025;
+      await build();
+      const saved = jest.fn();
+      component.clickSave.subscribe(saved);
+
+      await clickNext();
+
+      expect(saved).not.toHaveBeenCalled();
+      expect(saveMock.saveAndSettle).not.toHaveBeenCalled();
+      expect(router.navigate).toHaveBeenCalledWith(['/result/result-detail/1234/evidences'], { queryParams: { phase: 7 } });
+    });
+
+    it('does not save while the phase year is still unknown', async () => {
+      phaseYear = null;
+      await build();
+
+      await clickNext();
+
+      expect(saveMock.saveAndSettle).not.toHaveBeenCalled();
+      expect(router.navigate).toHaveBeenCalled();
+    });
+
+    it('does not save for a read-only user — there is no Save to trigger', async () => {
+      phaseYear = 2026;
+      rolesMock.readOnly = true;
+      await build();
+
+      await clickNext();
+
+      expect(saveMock.saveAndSettle).not.toHaveBeenCalled();
+      expect(router.navigate).toHaveBeenCalled();
+    });
+
+    it('does not save when the consumer vetoed the save', async () => {
+      phaseYear = 2026;
+      await build();
+      fixture.componentRef.setInput('disabled', true);
+      fixture.detectChanges();
+
+      await clickNext();
+
+      expect(saveMock.saveAndSettle).not.toHaveBeenCalled();
+      expect(router.navigate).toHaveBeenCalled();
+    });
+
+    it('blocks a second click while the first save is still running', async () => {
+      phaseYear = 2026;
+      let release: (value: 'saved') => void = () => undefined;
+      saveMock.saveAndSettle = jest.fn(() => new Promise(resolve => (release = resolve)));
+      await build();
+
+      q('[data-testid="section-bottom-bar-next"]').click();
+      await Promise.resolve();
+      fixture.detectChanges();
+
+      const next = q('[data-testid="section-bottom-bar-next"]') as HTMLButtonElement;
+      expect(next.disabled).toBe(true);
+      expect(next.textContent).toContain('Saving…');
+
+      next.click();
+      expect(saveMock.saveAndSettle).toHaveBeenCalledTimes(1);
+
+      release('saved');
+      await Promise.resolve();
+      await Promise.resolve();
+      fixture.detectChanges();
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves Back as plain navigation', async () => {
+      phaseYear = 2026;
+      await build();
+
+      q('[data-testid="section-bottom-bar-back"]').click();
+
+      expect(saveMock.saveAndSettle).not.toHaveBeenCalled();
+      expect(router.navigate).toHaveBeenCalledWith(['/result/result-detail/1234/general-information'], { queryParams: { phase: 7 } });
     });
   });
 });

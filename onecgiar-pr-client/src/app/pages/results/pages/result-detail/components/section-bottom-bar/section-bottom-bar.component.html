@@ -25,10 +25,10 @@
       <button
         type="button"
         class="inline-flex h-[38px] items-center gap-[6px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[16px] text-[14px] font-semibold text-white transition-colors enabled:hover:bg-[var(--pr-color-primary-400)] disabled:cursor-not-allowed disabled:opacity-[0.35]"
-        [disabled]="!hasNext()"
+        [disabled]="!hasNext() || savingBeforeNext()"
         (click)="goNext()"
         data-testid="section-bottom-bar-next">
-        Next <span aria-hidden="true">&#8594;</span>
+        {{ savingBeforeNext() ? 'Saving…' : 'Next' }} <span aria-hidden="true">&#8594;</span>
       </button>
 
       @if (showPosition()) {

@@ -19,6 +19,7 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { ResultSectionsService } from '../result-sections-sidebar/result-sections.service';
 import { SectionBottomBarSlotService } from './section-bottom-bar-slot.service';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 
 /**
  * Bottom bar of a result-detail section: section-to-section navigation, the position in the
@@ -59,12 +60,19 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   readonly dataControlSE = inject(DataControlService);
   readonly rolesSE = inject(RolesService);
   readonly sectionsSE = inject(ResultSectionsService);
+  readonly fieldsManagerSE = inject(FieldsManagerService);
   private readonly router = inject(Router);
   private readonly slotSE = inject(SectionBottomBarSlotService);
   private readonly hostRef = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** Open/closed state of the pending-fields popover. */
   readonly pendingOpen = signal(false);
+
+  /**
+   * True while `Next` is saving the open section before it navigates (P2-3659 / P2-3654). Keeps the
+   * button out of reach for a second click, which would emit a second save over the first.
+   */
+  readonly savingBeforeNext = signal(false);
 
   // La posición vive en `ResultSectionsService`: el encabezado de la card muestra el MISMO
   // número, y dos contadores independientes se desincronizan en cuanto la lista de secciones
@@ -78,6 +86,30 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
 
   readonly hasPrevious = computed(() => this.currentIndex() > 0);
   readonly hasNext = computed(() => this.currentIndex() >= 0 && this.currentIndex() < this.total() - 1);
+
+  /**
+   * Whether `Next` saves the open section before navigating (P2-3659 / P2-3654).
+   *
+   * QA reproduced the loss on result 9142 (10 Sep 2026) across four sections: everything typed and
+   * shown as "Section complete" was gone on revisit, and after a hard reload, unless `Save draft`
+   * had been pressed — `goNext` only navigated, and each section's PATCH hangs off that button
+   * alone. A reporter filling the form through the natural `Next` flow lost every section but the
+   * last one saved.
+   *
+   * 🛑 Gated on the reporting phase YEAR, never on the portfolio: the P25 portfolio holds the 2025
+   * phase too, and writing to a closed phase because someone paged through it is exactly what the
+   * epic's governing rule forbids. An unknown year keeps the legacy behaviour — the detail renders
+   * before the result lands, so the safe side to fail towards is "navigate, do not write".
+   *
+   * `canSave` and `disabled` are part of the gate for the same reason: with no Save button on
+   * screen (read-only) or with the consumer vetoing it, there is nothing to trigger.
+   */
+  autoSavesOnNext(): boolean {
+    // Deliberately a method and not a `computed`: `disabled` is a plain `@Input` and `canSave` reads
+    // `RolesService.readOnly`, a plain boolean — a computed would cache the first answer and never
+    // see either of them change.
+    return this.fieldsManagerSE.isSectionAutoSaveOnNext2026() && this.canSave && !this.disabled;
+  }
 
   readonly missingFields = computed(() => this.dataControlSE.fieldFeedbackList());
 
@@ -157,7 +189,35 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   }
 
   goNext(): void {
-    this.goTo(this.currentIndex() + 1);
+    const index = this.currentIndex() + 1;
+    if (!this.sectionsSE.sections()[index]) return;
+
+    if (!this.autoSavesOnNext() || this.savingBeforeNext() || this.saveButtonSE.isSaving()) {
+      this.goTo(index);
+      return;
+    }
+
+    void this.saveThenGo(index);
+  }
+
+  /**
+   * Saves the open section and only then moves on.
+   *
+   * Stays on the section when the save FAILED — the error toast raised by `isSavingPipe` is on
+   * screen and the rejected values are still in the form, which is the whole point of waiting. Any
+   * other outcome navigates: `not-started` means the section never issued a request (its own guard
+   * blocked it, or it opened a confirmation modal), and treating that as a failure would leave
+   * `Next` doing nothing at all on those sections.
+   */
+  private async saveThenGo(index: number): Promise<void> {
+    this.savingBeforeNext.set(true);
+    try {
+      const outcome = await this.saveButtonSE.saveAndSettle(() => this.clickSave.emit());
+      if (outcome === 'failed') return;
+      this.goTo(index);
+    } finally {
+      this.savingBeforeNext.set(false);
+    }
   }
 
   togglePending(): void {
