@@ -1,6 +1,6 @@
 /// <reference types="cypress" />
 
-import { BOTTOM_BAR, SAVE_ENDPOINTS, describeWithToken, openGeneralInformation, visitResultsList } from '../../support/result-detail';
+import { BOTTOM_BAR, SAVE_ENDPOINTS, describeWithToken, openGeneralInformation } from '../../support/result-detail';
 
 /**
  * Regression spec for `docs/specs/bugfix/confirm-submission-title-and-disclaimer` (`SUB-T-2`).
@@ -29,10 +29,38 @@ import { BOTTOM_BAR, SAVE_ENDPOINTS, describeWithToken, openGeneralInformation, 
  *
  * Needs a Results Center row that is fully complete (Submit + AI review both enabled — see
  * `ResultSectionsService.submitDisabled` / `aiReviewDisabled`, gated on `GreenChecksService.submit`),
- * status "In progress" (`status_id === 1`) and not locked by an open QA round. The result is never
- * hardcoded: `findSubmittableResultUrl()` below scans the real Results Center for the first row that
- * qualifies, mirroring `findEditableResultUrl()` in `cypress/support/result-detail.ts`.
+ * status "In progress" (`status_id === 1`) and not locked by an open QA round.
+ *
+ * Pinned to a known-good result (SUB-T-2, 2026-09-11): scanning the Results Center for a
+ * submit-ready row found none on this environment, so the result is now targeted directly —
+ * internal id **11598** (P25, "Breeding for Tomorrow" / SP01, phase "Reporting 2026" /
+ * `version_id` 36, `result_code` **9130**). Confirmed via direct API calls with the token in
+ * `cypress.env.js` right before this fix:
+ *   - `GET /api/results/get/11598` → `result_code: "9130"`, `status_id: "1"`, `is_phase_open: 1`,
+ *     `inQA: 0`.
+ *   - `GET /v2/api/results/results-validation/get/green-checks/11598` (P25 endpoint — this result's
+ *     `portfolio` is `"P25"`) → all 5 sections `validation: true`, `submit: true`.
+ *   - `GET /auth/role-by-user/get/user/575` → `application.role_id: 1` ("Admin"), so
+ *     `RolesService.readOnly` is `false` and `RolesService.isAdmin` is `true` regardless of this
+ *     user's plain "Member" role on the result's own initiative (id 50).
+ * Together these satisfy every gate in `ResultSectionsService.submitDisabled` / `aiReviewDisabled`.
+ *
+ * ⚠️ The Result Detail route's `:id` param is the **`result_code`** (`9130`), NOT the internal
+ * numeric id (`11598`) used by most `GET /api/results/*` endpoints — confirmed against
+ * `results-list.component.ts` `getResultRoute()`: `commands: ['/result', 'result-detail',
+ * result?.result_code, 'general-information'], queryParams: { phase: result?.version_id }`.
+ * Using the internal id here 404s (`GET /api/results/get/transform/:code?phase=` "Result Not
+ * Found") and renders the "Result not found" empty state instead of the section.
+ *
+ * `TARGET_RESULT_URL` is re-verified live at the start of the suite (`before()` below) so a future
+ * drift in this result's state fails with a clear message instead of a confusing mid-test one.
  */
+
+/** Route `:id` param — the result's `result_code`, NOT its internal id (11598). See file header. */
+const TARGET_RESULT_CODE = '9130';
+/** `version_id` of result 11598's current ("Reporting 2026") phase — see file header. */
+const TARGET_RESULT_PHASE = '36';
+const TARGET_RESULT_URL = `/result/result-detail/${TARGET_RESULT_CODE}/general-information?phase=${TARGET_RESULT_PHASE}`;
 
 const E2E_MANUAL_SUFFIX = '(e2e manual)';
 
@@ -45,6 +73,27 @@ const AI_REVIEW_TOP_FIELD_CARDS = '.ai-review-container > .field-section';
 
 const EXPECTED_DISCLAIMER = 'Please note that further changes to this result can only be made during the QA process.';
 
+/**
+ * Dismisses the `SBAR-T-5` sidebar-toggle discoverability hint (`driver.js`, `.driver-popover`)
+ * when present. `ReportingGuideService.startResultSidebarHint()` fires it on every fresh Result
+ * Detail entry whose `pr.tour.result-sidebar.completed` localStorage flag is unset — which it
+ * always is here, since `cy.session` (inside `cy.loginByToken`, used by both `before()`'s live
+ * check and `beforeEach`'s `openGeneralInformation()`) restores localStorage to the pre-hint
+ * snapshot before this suite's own session. Left undismissed, its overlay sits on top of the
+ * General Information form with `pointer-events: none` on the whole `<app-root>`, which is
+ * unrelated to this spec's regression but blocks every subsequent `cy.type()` / `cy.click()`.
+ * See `cypress/e2e/result-detail/sidebar-collapse.cy.ts`'s `dismissSidebarHint()` for the same
+ * pattern, applied there unconditionally because that suite's flow guarantees the hint fires.
+ */
+function dismissSidebarHintIfPresent(): void {
+  cy.get('body').then($body => {
+    if ($body.find('.driver-popover-close-btn').length > 0) {
+      cy.get('.driver-popover-close-btn').click();
+      cy.get('.driver-popover').should('not.exist');
+    }
+  });
+}
+
 /** Adds the marker when missing, removes it when present — idempotent across runs (mirrors general-information.cy.ts). */
 function toggleManualSuffix(value: string): string {
   const trimmed = (value || '').trim();
@@ -52,60 +101,23 @@ function toggleManualSuffix(value: string): string {
   return `${trimmed} ${E2E_MANUAL_SUFFIX}`.trim();
 }
 
-/**
- * Opens the Results Center and returns the URL of the first row whose Result Detail has BOTH
- * "Submit result" and "AI review" enabled (all sections green, status In progress, not QA-locked,
- * member/admin) — the only rows this scenario can run against. Up to `maxCandidates` rows are
- * tried so an incomplete or read-only result at the top of the list does not break the suite.
- */
-function findSubmittableResultUrl(maxCandidates = 15): Cypress.Chainable<string> {
-  visitResultsList();
-
-  cy.get('#resultListTable tbody tr a.rc-code', { timeout: 60000 }).should('exist');
-
-  return cy.get('#resultListTable tbody tr a.rc-code').then($links => {
-    const candidates = $links
-      .toArray()
-      .map(link => link.getAttribute('href'))
-      .filter((href): href is string => !!href && href.includes('/result/result-detail/'))
-      .slice(0, maxCandidates);
-
-    expect(candidates, 'Result Detail rows in the Results Center').to.have.length.greaterThan(0);
-
-    return trySubmittableCandidate(candidates, 0);
-  });
-}
-
-function trySubmittableCandidate(candidates: string[], index: number): Cypress.Chainable<string> {
-  const href = candidates[index];
-  cy.visit(href);
-  cy.get('app-rd-general-information', { timeout: 60000 }).should('exist');
-
-  return cy.get('body').then($body => {
-    const submitReady = $body.find('[data-testid="result-sections-submit"]:not([disabled])').length > 0;
-    const aiReviewReady = $body.find('[data-testid="result-sections-ai-review"]:not([disabled])').length > 0;
-
-    if (submitReady && aiReviewReady) {
-      cy.log(`✅ Using submittable result: ${href}`);
-      return cy.wrap(href, { log: false });
-    }
-
-    if (index + 1 >= candidates.length) {
-      throw new Error(`No result among the first ${candidates.length} Results Center rows has both Submit and AI review enabled.`);
-    }
-
-    cy.log(`↷ ${href} is not submit-ready (missing sections, QA-locked, or not a member), trying the next row`);
-    return trySubmittableCandidate(candidates, index + 1);
-  });
-}
-
 describeWithToken('Confirm Submission — shows the AI-Review-saved title', () => {
   let generalInformationUrl: string;
 
   before(() => {
-    findSubmittableResultUrl().then(url => {
-      generalInformationUrl = url;
-    });
+    generalInformationUrl = TARGET_RESULT_URL;
+
+    // Live re-check (not just the API snapshot in the file header): fail here, with a clear
+    // message, if result 11598 has drifted out of "submit-ready" since this spec was pinned to it
+    // — instead of a confusing failure mid-test on an unrelated assertion.
+    cy.loginByToken(generalInformationUrl);
+    cy.get('app-rd-general-information', { timeout: 60000 }).should('exist');
+    // Retrying `.should` (not a one-shot `$body.find`): the green-checks fetch that ungates these
+    // buttons resolves asynchronously after the section itself renders, so a snapshot taken
+    // immediately after `app-rd-general-information` exists can catch both buttons still in their
+    // default-disabled state.
+    cy.get('[data-testid="result-sections-submit"]', { timeout: 30000 }).should('not.be.disabled');
+    cy.get('[data-testid="result-sections-ai-review"]', { timeout: 30000 }).should('not.be.disabled');
   });
 
   beforeEach(() => {
@@ -114,6 +126,7 @@ describeWithToken('Confirm Submission — shows the AI-Review-saved title', () =
     cy.intercept('POST', '**/ai/sessions/*/proposals').as('createAiProposal');
     cy.intercept('POST', '**/ai/sessions/*/save').as('saveAiSession');
     openGeneralInformation(generalInformationUrl);
+    dismissSidebarHintIfPresent();
   });
 
   it('renders the AI-suggested title (not the pre-AI-review one) and the exact disclaimer', () => {
@@ -202,7 +215,11 @@ describeWithToken('Confirm Submission — shows the AI-Review-saved title', () =
       });
 
     // Don't actually submit the result — cancel so the record stays "In progress" for the next run.
-    cy.contains(`${CONFIRM_SUBMISSION_DIALOG} .buttons app-pr-button`, 'Cancel').click({ force: true });
+    // `app-pr-button`'s (click) listener is bound on its inner `.pr_button` div (see
+    // `pr-button.component.html`), not on the host tag — clicking the host risks landing on the
+    // `prTooltip` wrapper instead of triggering `onClick()`. `.pr_button.contract.cy.ts` and
+    // `pr-button.cy.ts` both click `.pr_button` directly; do the same here.
+    cy.contains(`${CONFIRM_SUBMISSION_DIALOG} .buttons app-pr-button`, 'Cancel').find('.pr_button').click();
     cy.get(CONFIRM_SUBMISSION_DIALOG).should('not.exist');
   });
 });

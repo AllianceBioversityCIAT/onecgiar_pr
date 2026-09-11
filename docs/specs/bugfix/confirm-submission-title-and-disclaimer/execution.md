@@ -61,3 +61,45 @@
 - Verification: `npx ng lint --quiet` (clean), 3 Jest suites green (34 tests total across `ai-review.service.spec.ts`, `ai-review.component.spec.ts`, `submission-modal.component.spec.ts`), human-executed manual browser check (above).
 - ADVISORY (non-blocking, recorded for future follow-up, not a new task): (1) RELIABILITY — unconditional `GET_resultById()`'s 404 handler now reachable from every AI Review save, could eject a mid-edit user on a transient 404; (2) READABILITY — the `type-by-level/get/all` `httpMock.expectOne().flush()` in the spec fix is technically triggered by the outer `beforeEach`, cosmetically placed in the inner one.
 - Requirements covered: `SUB-R-1`, `SUB-R-2`, `SUB-R-3`, `SUB-AC-1`, `SUB-AC-2`.
+
+## 5. `SUB-T-2` — Regression test: Confirm Submission shows AI-Review-saved title
+
+**Status: `PASS`** (2 attempts; both Reviewer rounds, no HALT).
+
+**File added:** `onecgiar-pr-client/cypress/e2e/results/confirm-submission-title.cy.ts`.
+
+**Fixture:** result `#11598` (`result_code` `9130`, `version_id`/phase `36`, portfolio P25, "Breeding for Tomorrow"/SP01) — user-supplied after an auto-scan of the Results Center found no row satisfying "In progress + all 5 sections complete + Submit and AI Review both enabled" simultaneously. Confirmed via direct API calls (`GET /api/results/get/11598`, `GET /v2/api/results/results-validation/get/green-checks/11598`, `GET /auth/role-by-user/get/user/575`) that the fixture satisfies every gate. The spec's `before()` re-verifies this live so future drift fails with a clear message rather than mid-test.
+
+### Attempt 1
+
+- **Implementer changes:** authored the spec — opens the result, types+saves a manually-suffixed title, runs AI Review, captures the AI-suggested title, applies + saves the proposal, waits on a freshly-scoped `GET **/api/results/get/*` intercept (the actual regression guard), closes AI Review, opens Confirm Submission, asserts the dialog's `.description` contains the AI-suggested title, does NOT contain the stale manual title, and contains the exact disclaimer string. Cancels out (never actually submits) so the fixture stays reusable.
+- **Implementer verification:** GREEN — 3 consecutive runs, all passing (57.6s/46.5s/49.4s), no flakiness; confirmed via `GET /api/results/get/11598` after all 3 runs that `status_id` stayed `"1"` (never actually submitted). RED check: reverted the two `SUB-T-1` production files to their pre-fix versions, ran the same spec — failed with a timeout on the spec's own `cy.wait('@refreshCurrentResultAfterAiSave', ...)` (no GET ever issued pre-fix), not on the title-content assertions further down. Restored both files afterward (`git checkout --`), confirmed clean, final sanity GREEN run.
+- **Reviewer verdict: `FAIL`**
+  1. Discovered Issue: the RED confirmation is inconclusive — it proves the pre-fix code issues no refresh GET, but never actually executes (and therefore never observed failing) the behavioral assertions that encode the bug (`expect(text).to.contain(aiSuggestedTitle)` / `.not.to.contain(manualTitle)` against `.submission-modal-dialog .description`). A mechanism-absence timeout is not proof the assertion discriminates bug-present from bug-fixed. Violated `tasks.md` `SUB-T-2` RED requirement / `requirements.md` §6 Scenario.
+  - Everything else approved on this pass: correct dialog targeted (not the AI Review proposal card — satisfies the disqualifier), not a tautology, Cancel-not-Submit correct and consistent with DoD, 3-run GREEN with no flakiness.
+  - **ADVISORY (non-blocking):** (1) RELIABILITY — the LLM-generated proposal is nondeterministic; a future proposal that happens to echo/contain the manual title could false-positive the regression guard; consider asserting against a fresh `GET /api/results/get/<id>` read instead of the proposal card text. (2) RESILIENCE — pinned fixture `11598`/`9130` departs from `cypress/README.md`'s "never hardcode a result id" convention; accepted given the precondition (Submit + AI Review both ungated) isn't expressible with the existing scan helper, and the `before()` live-gate fails loudly on drift. Recommend `Cypress.env('submissionReadyResultCode')` with a documented default + `this.skip()` on drift, as a future hardening, not a blocker. (3) READABILITY/RISK — several CSS-class selectors (`.description`, `.buttons`, `.field-section`, etc.) depart from the repo's `data-testid`-only convention outside `custom-fields/`; out of this task's file boundary to fix (would require editing two templates not named in `tasks.md`), recorded as a follow-up. (4) RISK — the spec leaves the AI-generated title persisted on result 11598 after each run (only the manual-suffix toggle is reversible); low impact on a shared test backend, worth a one-line note in the spec header (not applied, deferred). (5) RELIABILITY (about `SUB-T-1`, not this diff) — the now-unconditional `GET_resultById()` transiently blanks `currentResultSignal`, which per `result-detail/CLAUDE.md` empties `ResultSectionsService.sections()` until the response lands, now reachable from the DAC-score save path too; recorded for the Leader, not gating.
+
+### Attempt 2
+
+- **Implementer changes:** none to the committed spec or production files — attempt 2 only re-executed the RED check correctly. In a scratch (uncommitted) copy of the spec, commented out the single `cy.wait('@refreshCurrentResultAfterAiSave', ...)` line so the pre-fix run would proceed past the missing-GET point and reach the actual behavioral assertions, settling instead on the already-present `cy.wait('@saveAiSession', ...)`.
+- **Implementer verification:**
+  - RED (modified-wait, pre-fix production code): failed with `AssertionError: Confirm Submission dialog title: expected '...Breeding for Tomorrow initiative (e2e manual)" is about to be submitted. Please note that further changes cannot be made once approved...' to include 'Farming communities cultivate improved rice varieties across one million hectares through AfricaRice breeding advances'` — fired on the title-content `expect()`, showing both bug symptoms at once (stale `(e2e manual)` title AND the old pre-fix disclaimer wording) in the same failure. This is a genuine behavioral discrimination, not a mechanism-absence proxy.
+  - Restored: both production files `git checkout --`'d clean; spec file confirmed `IDENTICAL` to its pre-edit (attempt-1, already-approved) content via diff against a backup — no scratch residue leaked into the committed version.
+  - Final GREEN re-run (restored, post-fix tree, full committed spec): 1 passing (106.3s).
+- **Reviewer verdict: `PASS`**
+  - Confirmed the red-run failure text is self-proving independent of line numbers: it could only be produced by a browser rendering pre-fix `submission-modal.component.html` fed by pre-fix `notifySectionChanged()`. Confirmed both production files read as post-fix (disclaimer copy correct; `GET_resultById()` unconditional and outside the route-gated branch) and the committed spec retains the `refreshCurrentResultAfterAiSave` wait unchanged (nothing to re-review there — already approved in attempt 1). The sole attempt-1 FAIL reason is closed.
+  - Noted as a non-blocking observation: the red run's stack trace cited line 213 vs. the committed file's line 210 for the same assertion (offset artifact of the scratch edit) — resolved unambiguously by the unique assertion message and self-proving failure content; no action needed.
+
+**Final verification commands (for the record):**
+```
+npx cypress run --e2e --spec "cypress/e2e/results/confirm-submission-title.cy.ts" --browser electron
+```
+4 total green runs across both attempts (3 in attempt 1 + 1 final sanity in attempt 2), 1 modified-wait red run in attempt 2 proving the regression guard is real. No flakiness observed.
+
+**Requirements covered:** `SUB-R-1`, `SUB-R-2`, `SUB-R-3`, `SUB-AC-1`, `SUB-AC-2` (regression coverage, per `tasks.md`).
+
+**Not committed yet** — pending user go-ahead.
+
+## 6. Spec-level summary
+
+Both tasks (`SUB-T-1`, `SUB-T-2`) are `PASS`. `SUB-T-1` is committed (`1395244e1`). Remaining before this spec can move to `shipped` (per `tasks.md` §7 Cleanup & follow-ups): commit `SUB-T-2`'s Cypress spec, then manual QA on staging/test env per `tasks.md` §6. `SUB-OQ-1` (IPSR modal's identical disclaimer sentence) remains explicitly out of scope, to be filed as a separate spec if desired.

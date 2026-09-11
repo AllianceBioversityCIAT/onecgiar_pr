@@ -5,7 +5,7 @@
 - **Module / feature:** `results` — Confirm Submission dialog (stale title after AI Review + disclaimer copy)
 - **Linked spec:** `docs/specs/bugfix/confirm-submission-title-and-disclaimer/requirements.md` + `design.md`
 - **Owner / driver:** santiago.sanchez@cgiar.org
-- **Status:** in-progress — `SUB-T-1` complete, `SUB-T-2` next
+- **Status:** both tasks complete, ready for staging QA / archive
 
 **`SUB-OQ-1` resolution:** kept **out of scope**, consistent with `requirements.md` §3 — the IPSR submission modal has a different title source (`ipsrDataControlSE.detailData.title`) and is not affected by this root cause. A copy-only parity fix for its identical disclaimer sentence can be proposed separately if desired.
 
@@ -37,7 +37,7 @@
   - [x] No secret/token leaked in logs (`.cursorrules`) — n/a to this change but checked per convention.
   - [x] Manual browser check: accept an AI-suggested title, open Confirm Submission, confirm the new title renders; confirm no jarring visual flash from the added `GET_resultById()` call (per `design.md` §8/§10). Performed by santiago.sanchez@cgiar.org on result `#9139` — see `execution.md` §3.
 
-### `SUB-T-2` — Regression test: Confirm Submission shows AI-Review-saved title
+### `SUB-T-2` — Regression test: Confirm Submission shows AI-Review-saved title `[x]`
 
 - **Type:** `tests`
 - **Description:** Add a Cypress E2E spec that reproduces the exact bug from `proposal.md`'s Bug Diagnosis reproduction steps: open a result, set an initial title, run AI Review, accept the suggested title, open Confirm Submission, and assert the dialog text contains the AI-suggested title (not the original). Also assert the disclaimer text matches the exact approved string. **Must be authored/run against pre-`SUB-T-1` code first to confirm it fails (red)**, then re-run after `SUB-T-1` lands to confirm it passes (green) — this is the evidence the bug is fixed, not merely that a change was made.
@@ -47,11 +47,11 @@
 - **Blocks:** `—`
 - **Estimate:** `S`
 - **Definition of done:**
-  - [ ] Test file added under `onecgiar-pr-client/cypress/e2e/`.
-  - [ ] Confirmed RED against pre-fix code (documented in the PR description or task notes — a screenshot or the failing Cypress run log is sufficient evidence).
-  - [ ] Confirmed GREEN against post-fix code: `npm run cypress:run` (or the scoped spec) exits 0.
-  - [ ] Disqualifier: a spec that only asserts the AI Review dialog itself shows the new title (the section-local `generalInfoBody`, which was never broken) does NOT satisfy this task — the assertion MUST be against the Confirm Submission dialog specifically, since that is the component that read stale shared state.
-  - [ ] Disqualifier: if the Cypress run is flaky (passes/fails inconsistently across 2-3 local runs) without a code reason, report the flake — do not report green on a single lucky run.
+  - [x] Test file added under `onecgiar-pr-client/cypress/e2e/`.
+  - [x] Confirmed RED against pre-fix code — see `execution.md` §5 for the AssertionError output (stale title + old disclaimer both present in the failure text).
+  - [x] Confirmed GREEN against post-fix code — 4 clean runs total (3 initial + 1 final sanity), no flakiness. See `execution.md` §5.
+  - [x] Disqualifier: a spec that only asserts the AI Review dialog itself shows the new title (the section-local `generalInfoBody`, which was never broken) does NOT satisfy this task — the assertion MUST be against the Confirm Submission dialog specifically, since that is the component that read stale shared state. Reviewer-confirmed: assertion targets `.submission-modal-dialog .description`, not the AI Review proposal card.
+  - [x] Disqualifier: if the Cypress run is flaky (passes/fails inconsistently across 2-3 local runs) without a code reason, report the flake — do not report green on a single lucky run. No flakiness observed across 4 runs.
 
 ## 4. Dependency graph
 
