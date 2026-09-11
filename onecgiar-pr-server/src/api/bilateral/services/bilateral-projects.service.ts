@@ -282,8 +282,8 @@ export class BilateralProjectsService {
             acronym: project.obj_organization.acronym,
           }
         : null,
-      // Only approved, addressable mappings are offered as Science Programs: the wizard's step 2
-      // picks the primary SP from this list, so an unapproved mapping must not be selectable.
+      // Only approved, addressable mappings with a positive allocation are offered as Science
+      // Programs: the wizard and Section 0 select the primary SP from this list.
       sciencePrograms: this.reportableMappings(project).map((mapping) => {
         const initiative = mapping.programCode
           ? spByCode.get(mapping.programCode)
@@ -313,7 +313,7 @@ export class BilateralProjectsService {
 
   /**
    * P2-3313 — a project is reportable when at least one of its W3 Registry mappings is both
-   * addressable and approved:
+   * addressable, approved and positively allocated:
    *
    * - AC1: the mapping carries a `programCode` — that code is what the wizard's Science Program
    *   step selects from, so a mapping without one is not reportable either.
@@ -323,6 +323,8 @@ export class BilateralProjectsService {
    *   verbatim into `clarisa_project_mappings.status`. `Confirmed` is also what CLARISA's
    *   pre-registry mappings carry. Anything else — `Pending`, `Proposed`, `Rejected`, NULL — is
    *   not approved and hides the project.
+   * - AC3: allocation is numeric and greater than zero. A zero or absent allocation cannot
+   *   establish a primary reporting program.
    *
    * ⚠️ Deploy order: this guard must reach an environment only AFTER CLARISA's fix is deployed
    * there and both syncs (registry → CLARISA, CLARISA → PRMS) have re-run; otherwise every
@@ -337,6 +339,7 @@ export class BilateralProjectsService {
     return (project.obj_project_mappings ?? []).filter(
       (mapping) =>
         !!mapping.programCode?.trim() &&
+        Number(mapping.allocation) > 0 &&
         BilateralProjectsService.APPROVED_MAPPING_STATUSES.has(
           mapping.status?.trim() ?? '',
         ),

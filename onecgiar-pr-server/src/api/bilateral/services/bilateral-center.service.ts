@@ -47,6 +47,11 @@ import { InstitutionRoleEnum } from '../../results/results_by_institutions/entit
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
 import { InnovationUseMdsValidator } from './innovation-use-mds-validator.service';
 import { ChangeCenterResultTypeDto } from '../dto/change-center-result-type.dto';
+import { UpdateBilateralPrimaryAssignmentDto } from '../dto/update-bilateral-primary-assignment.dto';
+import { ResultsByProjects } from '../../results/results_by_projects/entities/results_by_projects.entity';
+import { ResultsByInititiative } from '../../results/results_by_inititiatives/entities/results_by_inititiative.entity';
+import { ResultsTocResult } from '../../results/results-toc-results/entities/results-toc-result.entity';
+import { ShareResultRequest } from '../../results/share-result-request/entities/share-result-request.entity';
 
 @Injectable()
 export class BilateralCenterService {
@@ -80,6 +85,214 @@ export class BilateralCenterService {
     const projects =
       await this.bilateralProjectsService.getProjectsByCenter(centerId);
     return { response: projects };
+  }
+
+  /**
+   * P2-3283. Project and owner program form one identity: persisting them through
+   * the Contributors endpoint would sync-replace projects but leave role 1 intact.
+   * Keep the complete reassignment in one transaction instead.
+   */
+  async updatePrimaryAssignment(
+    user: TokenDto,
+    resultId: number,
+    dto: UpdateBilateralPrimaryAssignmentDto,
+  ) {
+    const parsedResultId = Number(resultId);
+    if (!Number.isInteger(parsedResultId) || parsedResultId <= 0) {
+      throw new BadRequestException('The resultId parameter must be a valid positive number.');
+    }
+
+    const result = await this.resultRepository.findOne({
+      where: {
+        id: parsedResultId,
+        source: SourceEnum.Bilateral,
+        is_active: true,
+      },
+    });
+    if (!result) throw new BadRequestException('Bilateral result not found.');
+
+    const editableStatuses = [
+      ResultStatusData.Editing.value,
+      ResultStatusData.Draft.value,
+    ];
+    if (!editableStatuses.includes(Number(result.status_id))) {
+      throw new BadRequestException(
+        'The lead project and primary Science Program can only be changed while the result is in Editing or Draft.',
+      );
+    }
+
+    const leadCenter = await this.getLeadCenter(parsedResultId);
+    await this.assertCenterPermission(user, parsedResultId);
+
+    // The catalogue is the server-side authority for ownership, active phase,
+    // confirmed status and positive allocation. The client list is convenience only.
+    const catalogue = await this.bilateralProjectsService.getProjectsByCenter(
+      leadCenter.code,
+    );
+    const project = catalogue.projects.find(
+      (candidate) => Number(candidate.id) === Number(dto.project_id),
+    );
+    if (!project) {
+      throw new BadRequestException(
+        'The selected project is not eligible for this result’s lead center.',
+      );
+    }
+
+    const primaryProgram = project.sciencePrograms.find(
+      (program) =>
+        Number(program.programId) ===
+        Number(dto.primary_science_program_id),
+    );
+    if (!primaryProgram) {
+      throw new BadRequestException(
+        'The selected primary Science Program is not allocated to the selected project.',
+      );
+    }
+
+    const primaryChanged = await this.resultRepository.manager.transaction(
+      async (manager) => {
+        const projectRepository = manager.getRepository(ResultsByProjects);
+        const initiativeRepository = manager.getRepository(ResultsByInititiative);
+        const tocRepository = manager.getRepository(ResultsTocResult);
+        const requestRepository = manager.getRepository(ShareResultRequest);
+
+        const activeProjects = await projectRepository.find({
+          where: { result_id: parsedResultId, is_active: true },
+        });
+        const existingTargetProject = await projectRepository.findOne({
+          where: { result_id: parsedResultId, project_id: Number(project.id) },
+        });
+
+        for (const association of activeProjects) {
+          if (Number(association.project_id) === Number(project.id)) {
+            await projectRepository.update(association.id, {
+              is_lead: true,
+              is_active: true,
+              last_updated_by: user.id,
+            });
+          } else if (association.is_lead) {
+            // The former lead is not implicitly converted into a contributor.
+            await projectRepository.update(association.id, {
+              is_lead: false,
+              is_active: false,
+              last_updated_by: user.id,
+            });
+          }
+        }
+        if (!existingTargetProject) {
+          await projectRepository.save({
+            result_id: parsedResultId,
+            project_id: Number(project.id),
+            is_lead: true,
+            is_active: true,
+            created_by: user.id,
+          });
+        } else if (!existingTargetProject.is_active) {
+          await projectRepository.update(existingTargetProject.id, {
+            is_lead: true,
+            is_active: true,
+            last_updated_by: user.id,
+          });
+        }
+
+        const activePrimaryRows = await initiativeRepository.find({
+          where: {
+            result_id: parsedResultId,
+            initiative_role_id: 1,
+            is_active: true,
+          },
+        });
+        const currentPrimaryId = Number(activePrimaryRows[0]?.initiative_id ?? 0);
+        const nextPrimaryId = Number(primaryProgram.programId);
+        const changed = currentPrimaryId !== nextPrimaryId;
+
+        if (changed) {
+          for (const row of activePrimaryRows) {
+            await initiativeRepository.update(row.id, {
+              is_active: false,
+              last_updated_by: user.id,
+            });
+          }
+
+          // An initiative cannot be both the owner and an accepted contributor.
+          await initiativeRepository.update(
+            {
+              result_id: parsedResultId,
+              initiative_id: nextPrimaryId,
+              initiative_role_id: 2,
+              is_active: true,
+            },
+            { is_active: false, last_updated_by: user.id },
+          );
+          await requestRepository.update(
+            {
+              result_id: parsedResultId,
+              shared_inititiative_id: nextPrimaryId,
+              is_active: true,
+              is_map_to_toc: false,
+              request_status_id: In(BilateralCenterService.CONTRIBUTION_REQUEST_STATUSES),
+            },
+            { is_active: false },
+          );
+
+          const formerPrimary = await initiativeRepository.findOne({
+            where: {
+              result_id: parsedResultId,
+              initiative_id: nextPrimaryId,
+              initiative_role_id: 1,
+            },
+          });
+          if (formerPrimary) {
+            await initiativeRepository.update(formerPrimary.id, {
+              is_active: true,
+              last_updated_by: user.id,
+            });
+          } else {
+            await initiativeRepository.save({
+              result_id: parsedResultId,
+              initiative_id: nextPrimaryId,
+              initiative_role_id: 1,
+              is_active: true,
+              from_toc: false,
+              created_by: user.id,
+            });
+          }
+
+          // ToC mappings belong to their primary initiative. Do not carry a node,
+          // indicator or narrative into a different Science Program.
+          if (currentPrimaryId > 0) {
+            await tocRepository.update(
+              {
+                result_id: parsedResultId,
+                initiative_ids: currentPrimaryId,
+                is_active: true,
+              },
+              { is_active: false, last_updated_by: user.id },
+            );
+          }
+        }
+
+        await manager.getRepository(ResultReviewHistory).save({
+          result_id: parsedResultId,
+          action: ReviewActionEnum.UPDATE,
+          comment: 'Updated lead project and primary Science Program',
+          created_by: user.id,
+        });
+
+        return changed;
+      },
+    );
+
+    return {
+      response: {
+        resultId: parsedResultId,
+        projectId: Number(project.id),
+        primaryScienceProgramId: Number(primaryProgram.programId),
+        tocCleared: primaryChanged,
+      },
+      message: 'Lead project and primary Science Program updated successfully.',
+      status: 200,
+    };
   }
 
   async createResultHeader(user: TokenDto, dto: CreateCenterResultDto) {
@@ -1338,20 +1551,7 @@ export class BilateralCenterService {
     user: TokenDto,
     resultId: number,
   ): Promise<void> {
-    const centers =
-      await this.resultsCenterRepository.getAllResultsCenterByResultId(
-        resultId,
-      );
-
-    const leadCenter = (centers ?? []).find(
-      (center) => Number(center?.is_leading_result) === 1,
-    );
-
-    if (!leadCenter?.code) {
-      throw new BadRequestException(
-        'The result has no lead center assigned. Select a lead center before submitting for review.',
-      );
-    }
+    const leadCenter = await this.getLeadCenter(resultId);
 
     const isAllowed =
       await this.roleByUserRepository.validationCenterPermissions(
@@ -1364,5 +1564,22 @@ export class BilateralCenterService {
         'You do not have permission to submit results for this center.',
       );
     }
+  }
+
+  /** Returns the immutable reporting centre that scopes project reassignment. */
+  private async getLeadCenter(resultId: number): Promise<{ code: string }> {
+    const centers =
+      await this.resultsCenterRepository.getAllResultsCenterByResultId(
+        resultId,
+      );
+    const leadCenter = (centers ?? []).find(
+      (center) => Number(center?.is_leading_result) === 1,
+    );
+    if (!leadCenter?.code) {
+      throw new BadRequestException(
+        'The result has no lead center assigned. Select a lead center before submitting for review.',
+      );
+    }
+    return { code: String(leadCenter.code) };
   }
 }

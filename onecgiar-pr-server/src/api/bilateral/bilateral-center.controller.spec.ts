@@ -28,6 +28,7 @@ describe('BilateralCenterController', () => {
               response: { id: 99, status_id: 1 },
             }),
             changeResultType: jest.fn().mockResolvedValue({ response: { resultId: 99 } }),
+            updatePrimaryAssignment: jest.fn().mockResolvedValue({ response: { resultId: 99 } }),
             getResultInitiativeId: jest.fn().mockResolvedValue({
               response: { initiativeId: 1 },
             }),
@@ -76,6 +77,12 @@ describe('BilateralCenterController', () => {
     const dto = { result_level_id: 4, result_type_id: 7, justification: 'Correction' } as any;
     await controller.changeResultType(user, 99, dto);
     expect(bilateralCenterService.changeResultType).toHaveBeenCalledWith(user, 99, dto);
+  });
+
+  it('updates the project and primary program through the dedicated atomic service', async () => {
+    const dto = { project_id: 20, primary_science_program_id: 9 };
+    await controller.updatePrimaryAssignment(user, 99, dto);
+    expect(bilateralCenterService.updatePrimaryAssignment).toHaveBeenCalledWith(user, 99, dto);
   });
 
   it('getResultInitiativeId should delegate to service', async () => {
