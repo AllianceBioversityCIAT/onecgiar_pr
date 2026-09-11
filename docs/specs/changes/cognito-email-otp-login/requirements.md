@@ -204,7 +204,7 @@ Cross-cutting project ACs that apply without restating: `AC-3`, `AC-8`, `AC-9`.
 ## 10. Dependencies & Assumptions
 
 ### Upstream
-- Cognito pool `us-east-1_o9y9Yq5pO` (TEST), PLUS tier, PRMS-Reporting client with `ALLOW_USER_AUTH`; PROD pool `OTP-OQ-1`.
+- Cognito pool `us-east-1_o9y9Yq5pO` (TEST), PLUS tier; the microservice's app client is **`general-client` (`6ph57q…`)**, which already allows `ALLOW_USER_AUTH`; PROD pool `OTP-OQ-1`.
 - AUTH microservice on `dev-auth`, deployed to `authtest-ibd.prms.cgiar.org`; env `COGNITO_CLIENT_ID`/`COGNITO_CLIENT_SECRET`/`COGNITO_USER_POOL_URL` unchanged (`OTP-OQ-6`).
 - Email delivery: Cognito default sender (50/day pool-wide) for TEST; PROD per `OTP-OQ-8`.
 
@@ -220,7 +220,7 @@ Cross-cutting project ACs that apply without restating: `AC-3`, `AC-8`, `AC-9`.
 
 - `OTP-OQ-1` **Which pool/account serves PROD?** Not in `IBD-DEV`. Blocks the PROD parity task only.
 - `OTP-OQ-3` Initial allow-list: `cifor-icraf.org`, `icrisat.org`. Sub-domains? **Working value: those two, exact match.**
-- `OTP-OQ-6` Is the TEST microservice's `COGNITO_CLIENT_ID` the `PRMS-Reporting` client (`u0fum2…`)? If another client, add `ALLOW_USER_AUTH` to it (client-level). **Verified in the spike task.**
+- `OTP-OQ-6` ~~Which app client does the TEST microservice use?~~ **Resolved 2026-09-11 (user):** the microservice serving Reporting and QA uses `COGNITO_CLIENT_ID=6ph57q…` = app client **`general-client`**, whose `ExplicitAuthFlows` already include `ALLOW_USER_AUTH` (plus `USER_PASSWORD_AUTH`, `CUSTOM_AUTH`, `SRP`, `ADMIN_USER_PASSWORD_AUTH`) and whose IdPs are `COGNITO` only. **No client-level change needed.** The spike only re-confirms this from the export.
 - `OTP-OQ-7` Code length, expiry and attempt limit as delivered by Cognito — **pinned by the spike** into design and copy.
 - `OTP-OQ-8` Is the Cognito default sender (50/day, pool-wide, also drawn on by sibling clients that allow `USER_AUTH`) enough for PROD with ≤ 50 center users, or is SES required? **Decided after the spike measures delivery and after `OTP-OQ-1`.**
 
