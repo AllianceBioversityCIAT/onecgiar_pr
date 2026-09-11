@@ -24,7 +24,17 @@
 <ng-template #rowTpl let-row>
   <!-- `group` enables hover-reveal (`group-hover:opacity-100`) on the row-scoped copy buttons
        below (BRH-T-3 remainder, BRH-R-5, BRH-US-4). -->
-  <tr class="group transition-colors duration-150 motion-reduce:transition-none hover:bg-[var(--pr-surface-app)]">
+  <tr
+    class="group transition-colors duration-150 motion-reduce:transition-none hover:bg-[var(--pr-surface-app)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+    [class.cursor-pointer]="!actionsDisabled()"
+    [attr.tabindex]="rowTabIndex(row)"
+    [attr.role]="actionsDisabled() ? null : 'button'"
+    [attr.aria-label]="actionsDisabled() ? null : rowAriaLabel(row)"
+    [attr.data-bilateral-review-row-id]="row.id"
+    data-testid="bilateral-review-row"
+    (click)="onRowClick(row, $event)"
+    (focus)="onRowFocus(row)"
+    (keydown)="onRowKeydown($event, row)">
     <!-- BRH-R-8/design.md §4.3: ROW-level 3px left border accent, matching THIS row's own status
          tone (distinct from the GROUP header's pending-vs-neutral accent on the toggle button). -->
     <td
@@ -154,7 +164,7 @@
     <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] text-right font-mono text-[12px] tabular-nums !text-[var(--pr-text-secondary)] min-w-[95px]">
       {{ row.submission_date | date: 'd MMM y' }}
     </td>
-    <td class="!border-b !border-l !border-[var(--pr-border-divider)] sticky right-0 z-10 bg-[var(--pr-surface-app)] !px-[10px] !py-[6px] text-center min-w-[110px]">
+    <td class="!border-b !border-l !border-[var(--pr-border-divider)] sticky right-0 z-10 bg-[var(--pr-surface-card)] group-hover:bg-[var(--pr-surface-app)] !px-[10px] !py-[6px] text-center min-w-[110px]">
       <button
         hlmBtn
         variant="ghost"
@@ -237,9 +247,17 @@
   <!-- BRH-R-8/design.md §4.3: ROW-level 3px left border accent on the card itself, matching this
        row's own status tone (R-11: the card container architecture stays intact below 900px). -->
   <li
-    class="flex flex-col gap-[6px] rounded-[10px] border !border-l-[3px] border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px]"
+    class="flex flex-col gap-[6px] rounded-[10px] border !border-l-[3px] border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
     [class]="rowAccentClass(row)"
-    data-testid="bilateral-review-card">
+    [class.cursor-pointer]="!actionsDisabled()"
+    [attr.tabindex]="rowTabIndex(row)"
+    [attr.role]="actionsDisabled() ? null : 'button'"
+    [attr.aria-label]="actionsDisabled() ? null : rowAriaLabel(row)"
+    [attr.data-bilateral-review-row-id]="row.id"
+    data-testid="bilateral-review-card"
+    (click)="onRowClick(row, $event)"
+    (focus)="onRowFocus(row)"
+    (keydown)="onRowKeydown($event, row)">
     <!-- Line 1: code + status pill. -->
     <div class="flex items-center justify-between gap-[8px]">
       <span class="inline-flex items-center gap-[2px] font-mono text-[12px] tabular-nums !text-[var(--pr-text-muted)]" data-testid="bilateral-review-row-code">

@@ -206,6 +206,61 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
    */
   canEditDataStandards = computed(() => this.canEditInDrawer() && !!this.api.rolesSE?.isAdmin);
 
+  /** Real-time validation and readiness indicator for the sticky footer. */
+  validationStatus = computed(() => {
+    const statusId = this.resultToReview()?.status_id ?? this.resultDetail()?.commonFields?.status_id;
+    if (statusId != null && statusId != 5) {
+      if (statusId == 6) {
+        return { type: 'approved', label: 'Result has been approved', isReady: true };
+      }
+      if (statusId == 7) {
+        return { type: 'rejected', label: 'Result was rejected', isReady: false };
+      }
+      return { type: 'decided', label: 'Decision recorded', isReady: true };
+    }
+
+    if (!this.canEditInDrawer()) {
+      return { type: 'readonly', label: 'Read-only review mode', isReady: false };
+    }
+
+    if (!this.isToCCompleted()) {
+      return {
+        type: 'missing-toc',
+        label: 'ToC alignment required before approval',
+        isReady: false
+      };
+    }
+
+    if (this.hasTocUnsavedChanges()) {
+      return {
+        type: 'unsaved-toc',
+        label: 'Unsaved ToC changes — save before approving',
+        isReady: false
+      };
+    }
+
+    if (this.hasDataStandardUnsavedChanges()) {
+      return {
+        type: 'unsaved-data',
+        label: 'Unsaved data standard changes — save before approving',
+        isReady: false
+      };
+    }
+
+    return {
+      type: 'ready',
+      label: 'Ready to approve',
+      isReady: true
+    };
+  });
+
+  scrollToToc(): void {
+    const el = document.getElementById('review-card-toc');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
   private savedReadOnly: boolean | null = null;
   private readonly drawerReadOnlyEffectRef = signal<EffectRef | undefined>(undefined);
 

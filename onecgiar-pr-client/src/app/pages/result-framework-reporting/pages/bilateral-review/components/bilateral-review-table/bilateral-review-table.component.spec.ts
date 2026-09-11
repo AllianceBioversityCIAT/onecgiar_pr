@@ -242,6 +242,105 @@ describe('BilateralReviewTableComponent', () => {
       expect(emitted.length).toBe(1);
       expect(emitted[0].id).toBe('a1');
     });
+
+    it('emits openResult when clicking a data cell on the row', () => {
+      render([GROUP_A], { canReview: true });
+      const emitted: ResultToReview[] = [];
+      component.openResult.subscribe(row => emitted.push(row));
+
+      (byTestId('bilateral-review-row-code-value')[0] as HTMLElement).click();
+
+      expect(emitted.length).toBe(1);
+      expect(emitted[0].id).toBe('a1');
+    });
+
+    it('shows pointer cursor on rows when actions are enabled', () => {
+      render([GROUP_A], { canReview: true, actionsDisabled: false });
+      expect(byTestId('bilateral-review-row')[0].classList.contains('cursor-pointer')).toBe(true);
+    });
+
+    it('does not show pointer cursor or emit when clicking a row while actionsDisabled', () => {
+      render([GROUP_A], { canReview: true, actionsDisabled: true });
+      const row = byTestId('bilateral-review-row')[0];
+      expect(row.classList.contains('cursor-pointer')).toBe(false);
+
+      const emitted: ResultToReview[] = [];
+      component.openResult.subscribe(r => emitted.push(r));
+      row.click();
+
+      expect(emitted.length).toBe(0);
+    });
+  });
+
+  describe('Keyboard navigation', () => {
+    function dispatchKey(el: HTMLElement, key: string): void {
+      el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    }
+
+    it('opens the drawer on Enter when a row is focused', () => {
+      render([GROUP_A], { canReview: true });
+      const emitted: ResultToReview[] = [];
+      component.openResult.subscribe(row => emitted.push(row));
+
+      const row = byTestId('bilateral-review-row')[0] as HTMLElement;
+      row.focus();
+      dispatchKey(row, 'Enter');
+
+      expect(emitted.length).toBe(1);
+      expect(emitted[0].id).toBe('a1');
+    });
+
+    it('opens the drawer on Space when a row is focused', () => {
+      render([GROUP_A], { canReview: true });
+      const emitted: ResultToReview[] = [];
+      component.openResult.subscribe(row => emitted.push(row));
+
+      const row = byTestId('bilateral-review-row')[0] as HTMLElement;
+      row.focus();
+      dispatchKey(row, ' ');
+
+      expect(emitted.length).toBe(1);
+      expect(emitted[0].id).toBe('a1');
+    });
+
+    it('moves focus to the next row on ArrowDown', async () => {
+      render([GROUP_A], { canReview: true });
+      const rows = byTestId('bilateral-review-row') as HTMLElement[];
+      rows[0].focus();
+      dispatchKey(rows[0], 'ArrowDown');
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(document.activeElement).toBe(rows[1]);
+      expect(component.focusedRowId()).toBe('a2');
+    });
+
+    it('moves focus to the previous row on ArrowUp', async () => {
+      render([GROUP_A], { canReview: true });
+      const rows = byTestId('bilateral-review-row') as HTMLElement[];
+      rows[1].focus();
+      component.focusedRowId.set('a2');
+      fixture.detectChanges();
+      dispatchKey(rows[1], 'ArrowUp');
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(document.activeElement).toBe(rows[0]);
+      expect(component.focusedRowId()).toBe('a1');
+    });
+
+    it('does not open or expose row tabindex when actionsDisabled', () => {
+      render([GROUP_A], { canReview: true, actionsDisabled: true });
+      const row = byTestId('bilateral-review-row')[0] as HTMLElement;
+      expect(row.getAttribute('tabindex')).toBe('-1');
+      expect(row.getAttribute('role')).toBeNull();
+
+      const emitted: ResultToReview[] = [];
+      component.openResult.subscribe(r => emitted.push(r));
+      row.focus();
+      dispatchKey(row, 'Enter');
+      expect(emitted.length).toBe(0);
+    });
   });
 
   describe('Decision in flight — aria-disabled guard, not native disabled (BRT-T-5, KZ-REH-2)', () => {

@@ -383,14 +383,14 @@ describe('ReportingGuideService', () => {
     });
 
     describe('startSpTour', () => {
-      it('initializes driver with 6 canonical steps and starts tour', () => {
+      it('initializes driver with 8 canonical steps and starts tour', () => {
         service.startSpTour({ programName: 'Breeding Resources', cycleYear: 2026 });
 
         expect(driverMock).toHaveBeenCalledTimes(1);
         expect(lastInstance().drive).toHaveBeenCalled();
 
         const steps = lastSteps();
-        expect(steps).toHaveLength(7);
+        expect(steps).toHaveLength(8);
 
         // Step 0: Identity
         expect(steps[0].element).toBe('[data-guide="sp-identity"]');
@@ -402,6 +402,7 @@ describe('ReportingGuideService', () => {
         // Step 1: Tabs
         expect(steps[1].element).toBe('[data-guide="sp-tabs"]');
         expect(steps[1].popover.title).toBe('Main Navigation Tabs');
+        expect(steps[1].popover.description).toContain('Bilateral review');
         expect(steps[1].popover.description).toContain('My results');
         expect(steps[1].popover.description).toContain('Current tab: <strong>Overview</strong>');
         expect(steps[1].popover.side).toBe('bottom');
@@ -428,32 +429,36 @@ describe('ReportingGuideService', () => {
         expect(steps[4].popover.side).toBe('top');
         expect(steps[4].popover.align).toBe('start');
 
-        // Step 5: My results
-        expect(steps[5].element).toBe('[data-guide="tab-my-results-view"]');
-        expect(steps[5].popover.title).toBe('My Results Board');
-        expect(steps[5].popover.description).toContain('Current tab: <strong>My results</strong>');
+        // Step 5: Bilateral review
+        expect(steps[5].element).toBe('[data-guide="tab-bilateral-review-view"]');
+        expect(steps[5].popover.title).toBe('Bilateral Results Review');
+        expect(steps[5].popover.description).toContain('Current tab: <strong>Bilateral review</strong>');
         expect(steps[5].popover.side).toBe('top');
         expect(steps[5].popover.align).toBe('start');
 
-        // Step 6: Actions
-        expect(steps[6].element).toBe('[data-guide="sp-actions-toolbar"]');
-        expect(steps[6].popover.title).toBe('Filters & Quick Actions');
-        expect(steps[6].popover.description).toContain('Current tab: <strong>Reporting</strong>');
-        expect(steps[6].popover.side).toBe('bottom');
-        expect(steps[6].popover.align).toBe('end');
+        // Step 6: My results
+        expect(steps[6].element).toBe('[data-guide="tab-my-results-view"]');
+        expect(steps[6].popover.title).toBe('My Results Board');
+        expect(steps[6].popover.description).toContain('Current tab: <strong>My results</strong>');
+        expect(steps[6].popover.side).toBe('top');
+        expect(steps[6].popover.align).toBe('start');
+
+        // Step 7: Actions
+        expect(steps[7].element).toBe('[data-guide="sp-actions-toolbar"]');
+        expect(steps[7].popover.title).toBe('Filters & Quick Actions');
+        expect(steps[7].popover.description).toContain('Current tab: <strong>Reporting</strong>');
+        expect(steps[7].popover.side).toBe('bottom');
+        expect(steps[7].popover.align).toBe('end');
       });
 
-      // @akili-spec changes/sp-bilateral-review-tab (BRT-T-1) — the new tab widens `SpTabId` /
-      // `SP_TAB_LABELS` but must NOT join the tour's step list.
-      it('BRT-T-1: does not add a step for the Bilateral review tab, even when it is the active tab', () => {
+      it('includes a step for the Bilateral review tab when it is the active tab', () => {
         service.startSpTour({ programName: 'Breeding Resources', cycleYear: 2026, activeTab: 'bilateral-review' as any });
 
         const steps = lastSteps();
-        expect(steps).toHaveLength(7);
-        expect(steps.some((s: any) => s.element === '[data-guide="tab-bilateral-review-view"]')).toBe(false);
-        // The tour still renders — it just describes the initial tab generically, as it does today
-        // for any activeTab value.
+        expect(steps).toHaveLength(8);
+        expect(steps.some((s: any) => s.element === '[data-guide="tab-bilateral-review-view"]')).toBe(true);
         expect(steps[0].popover.description).toContain('Current tab: <strong>Bilateral review</strong>');
+        expect(steps[5].element).toBe('[data-guide="tab-bilateral-review-view"]');
       });
 
       it('falls back gracefully for missing programName and cycleYear', () => {
@@ -536,7 +541,7 @@ describe('ReportingGuideService', () => {
           expect(inst.drive).toHaveBeenCalledWith(4);
         });
 
-        it('triggers onTabNavigate and waits 100ms when crossing from results (step 4) to my-work (step 5)', () => {
+        it('triggers onTabNavigate and waits 100ms when crossing from results (step 4) to bilateral-review (step 5)', () => {
           const onTabNavigate = jest.fn();
           service.startSpTour({ onTabNavigate });
 
@@ -544,12 +549,12 @@ describe('ReportingGuideService', () => {
           inst.drive(4);
           inst.config.onNextClick(undefined, inst.config.steps[4], { driver: inst as any, index: 4 });
 
-          expect(onTabNavigate).toHaveBeenCalledWith('my-work');
+          expect(onTabNavigate).toHaveBeenCalledWith('bilateral-review');
           jest.advanceTimersByTime(100);
           expect(inst.drive).toHaveBeenCalledWith(5);
         });
 
-        it('triggers onTabNavigate and waits 100ms when crossing from my-work (step 5) to reporting (step 6)', () => {
+        it('triggers onTabNavigate and waits 100ms when crossing from bilateral-review (step 5) to my-work (step 6)', () => {
           const onTabNavigate = jest.fn();
           service.startSpTour({ onTabNavigate });
 
@@ -557,9 +562,22 @@ describe('ReportingGuideService', () => {
           inst.drive(5);
           inst.config.onNextClick(undefined, inst.config.steps[5], { driver: inst as any, index: 5 });
 
-          expect(onTabNavigate).toHaveBeenCalledWith('reporting');
+          expect(onTabNavigate).toHaveBeenCalledWith('my-work');
           jest.advanceTimersByTime(100);
           expect(inst.drive).toHaveBeenCalledWith(6);
+        });
+
+        it('triggers onTabNavigate and waits 100ms when crossing from my-work (step 6) to reporting (step 7)', () => {
+          const onTabNavigate = jest.fn();
+          service.startSpTour({ onTabNavigate });
+
+          const inst = lastInstance();
+          inst.drive(6);
+          inst.config.onNextClick(undefined, inst.config.steps[6], { driver: inst as any, index: 6 });
+
+          expect(onTabNavigate).toHaveBeenCalledWith('reporting');
+          jest.advanceTimersByTime(100);
+          expect(inst.drive).toHaveBeenCalledWith(7);
         });
 
         it('triggers onTabNavigate to overview when starting from reporting tab (step 1 -> step 2)', () => {
@@ -591,13 +609,13 @@ describe('ReportingGuideService', () => {
           expect(inst.drive).toHaveBeenCalledWith(2);
         });
 
-        it('calls driver.destroy() when finishing the last step (step 6)', () => {
+        it('calls driver.destroy() when finishing the last step (step 7)', () => {
           const onTabNavigate = jest.fn();
           service.startSpTour({ onTabNavigate });
 
           const inst = lastInstance();
-          inst.drive(6);
-          inst.config.onNextClick(undefined, inst.config.steps[6], { driver: inst as any, index: 6 });
+          inst.drive(7);
+          inst.config.onNextClick(undefined, inst.config.steps[7], { driver: inst as any, index: 7 });
 
           expect(inst.destroy).toHaveBeenCalled();
           expect(onTabNavigate).not.toHaveBeenCalled();
@@ -631,7 +649,20 @@ describe('ReportingGuideService', () => {
           expect(inst.drive).toHaveBeenCalledWith(0);
         });
 
-        it('triggers onTabNavigate when stepping back across tabs (step 6 reporting -> step 5 my-work)', () => {
+        it('triggers onTabNavigate when stepping back across tabs (step 7 reporting -> step 6 my-work)', () => {
+          const onTabNavigate = jest.fn();
+          service.startSpTour({ onTabNavigate });
+
+          const inst = lastInstance();
+          inst.drive(7);
+          inst.config.onPrevClick(undefined, inst.config.steps[7], { driver: inst as any, index: 7 });
+
+          expect(onTabNavigate).toHaveBeenCalledWith('my-work');
+          jest.advanceTimersByTime(100);
+          expect(inst.drive).toHaveBeenCalledWith(6);
+        });
+
+        it('triggers onTabNavigate when stepping back across tabs (step 6 my-work -> step 5 bilateral-review)', () => {
           const onTabNavigate = jest.fn();
           service.startSpTour({ onTabNavigate });
 
@@ -639,12 +670,12 @@ describe('ReportingGuideService', () => {
           inst.drive(6);
           inst.config.onPrevClick(undefined, inst.config.steps[6], { driver: inst as any, index: 6 });
 
-          expect(onTabNavigate).toHaveBeenCalledWith('my-work');
+          expect(onTabNavigate).toHaveBeenCalledWith('bilateral-review');
           jest.advanceTimersByTime(100);
           expect(inst.drive).toHaveBeenCalledWith(5);
         });
 
-        it('triggers onTabNavigate when stepping back across tabs (step 5 my-work -> step 4 results)', () => {
+        it('triggers onTabNavigate when stepping back across tabs (step 5 bilateral-review -> step 4 results)', () => {
           const onTabNavigate = jest.fn();
           service.startSpTour({ onTabNavigate });
 
@@ -655,6 +686,19 @@ describe('ReportingGuideService', () => {
           expect(onTabNavigate).toHaveBeenCalledWith('results');
           jest.advanceTimersByTime(100);
           expect(inst.drive).toHaveBeenCalledWith(4);
+        });
+
+        it('triggers onTabNavigate when stepping back from step 4 results to step 3 reporting', () => {
+          const onTabNavigate = jest.fn();
+          service.startSpTour({ onTabNavigate });
+
+          const inst = lastInstance();
+          inst.drive(4);
+          inst.config.onPrevClick(undefined, inst.config.steps[4], { driver: inst as any, index: 4 });
+
+          expect(onTabNavigate).toHaveBeenCalledWith('reporting');
+          jest.advanceTimersByTime(100);
+          expect(inst.drive).toHaveBeenCalledWith(3);
         });
 
         it('triggers onTabNavigate when stepping back from step 3 reporting to step 2 overview', () => {
@@ -700,7 +744,7 @@ describe('ReportingGuideService', () => {
       it('calls destroy on onDoneClick', () => {
         service.startSpTour();
         const inst = lastInstance();
-        inst.config.onDoneClick(undefined, inst.config.steps[6], { driver: inst as any, index: 6 });
+        inst.config.onDoneClick(undefined, inst.config.steps[7], { driver: inst as any, index: 7 });
         expect(inst.destroy).toHaveBeenCalled();
       });
     });

@@ -27,53 +27,89 @@
 
 <div class="grid grid-cols-12 content-start gap-[12px] sm:gap-[16px] p-[16px] sm:p-[24px] lg:p-[32px]">
   <!-- KPI Summary Cards: Totals and key health metrics -->
-  <div class="col-span-12 grid grid-cols-12 gap-[16px]">
-    <!-- KPI 1: W1/W2 Results (Hero Highlight Card with diffused purple gradient) -->
+  <div class="col-span-12 grid grid-cols-1 gap-[16px] sm:grid-cols-2 xl:grid-cols-5">
+    <!-- KPI 1: Total General (W1/W2 + W3/Bilateral) -->
     <button
       type="button"
-      (click)="setActiveSection('w1w2')"
-      class="group relative overflow-hidden col-span-3 flex cursor-pointer flex-col justify-between gap-[12px] rounded-[12px] border border-purple-500/30 bg-gradient-to-br from-[#4a1d96] via-[#5c24b8] to-[#793ce8] p-[18px] text-left transition-all duration-200 shadow-md hover:border-purple-300 hover:shadow-xl hover:shadow-purple-950/30 hover:-translate-y-0.5 focus-visible:outline-none max-[1024px]:col-span-6 max-[640px]:col-span-12"
-      [class]="activeSection() === 'w1w2'
-        ? 'ring-2 ring-purple-300 shadow-lg'
-        : ''">
-      <!-- Diffused background glow effect -->
+      data-testid="overview-kpi-total"
+      (click)="setActiveSection('all')"
+      class="group relative flex min-h-[135px] cursor-pointer flex-col justify-between gap-[12px] overflow-hidden rounded-[12px] border border-purple-500/30 bg-gradient-to-br from-[#4a1d96] via-[#5c24b8] to-[#793ce8] p-[18px] text-left transition-all duration-200 shadow-md hover:border-purple-300 hover:shadow-xl hover:shadow-purple-950/30 hover:-translate-y-0.5 focus-visible:outline-none sm:col-span-2 xl:col-span-1"
+      [class]="activeSection() === 'all' ? 'ring-2 ring-purple-300 shadow-lg' : ''">
       <div class="pointer-events-none absolute -right-[24px] -top-[24px] h-[110px] w-[110px] rounded-full bg-white/15 blur-[20px]"></div>
       <div class="pointer-events-none absolute -left-[20px] -bottom-[20px] h-[90px] w-[90px] rounded-full bg-purple-900/40 blur-[18px]"></div>
 
-      <div class="relative z-10 flex items-center justify-between">
+      <div class="relative z-10 flex items-center justify-between gap-[8px]">
         <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-purple-200">
+          Total General
+        </span>
+        <span class="inline-flex h-[24px] shrink-0 items-center rounded-full border border-white/20 bg-white/15 px-[9px] text-[11px] font-semibold text-white backdrop-blur-xs">
+          Program
+        </span>
+      </div>
+      @if (programResultsLoading()) {
+        <div class="relative z-10 flex items-baseline gap-[8px]" aria-hidden="true">
+          <span class="h-[32px] w-[64px] animate-pulse rounded-[6px] bg-white/25"></span>
+        </div>
+        <div class="relative z-10 h-[14px] w-[160px] animate-pulse rounded-[4px] bg-white/15" aria-hidden="true"></div>
+      } @else {
+        <div class="relative z-10 flex items-baseline gap-[8px]">
+          <span class="pr-figure text-[32px] font-extrabold leading-none text-white tabular-nums drop-shadow-xs">
+            {{ programResultsTotal() }}
+          </span>
+          <span class="text-[13px] font-medium text-purple-200">results</span>
+        </div>
+        <div class="relative z-10 flex flex-wrap items-center gap-x-[6px] gap-y-[2px] text-[12px] font-medium text-purple-100">
+          <span>{{ statusTotal() }} W1/W2</span>
+          <span class="text-purple-300">·</span>
+          <span>{{ bilateralStatusTotal() }} W3/Bilateral</span>
+        </div>
+      }
+    </button>
+
+    <!-- KPI 2: W1/W2 Results -->
+    <button
+      type="button"
+      data-testid="overview-kpi-w1w2"
+      (click)="setActiveSection('w1w2')"
+      class="flex min-h-[135px] cursor-pointer flex-col justify-between gap-[12px] rounded-[12px] border bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:shadow-sm focus-visible:outline-none"
+      [class]="activeSection() === 'w1w2'
+        ? 'border-[var(--pr-color-primary-500)] ring-2 ring-[var(--pr-color-primary-500)]'
+        : 'border-[var(--pr-border)]'">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
           W1/W2 Results
         </span>
-        <span class="inline-flex h-[24px] items-center rounded-full bg-white/15 px-[9px] text-[11px] font-semibold text-white backdrop-blur-xs border border-white/20">
+        <span class="inline-flex h-[24px] items-center rounded-full bg-[var(--pr-color-primary-50)] px-[8px] text-[11px] font-semibold text-[var(--pr-color-primary-600)]">
           Core
         </span>
       </div>
       @if (meterLoading()) {
-        <div class="relative z-10 flex items-baseline gap-[8px]" aria-hidden="true">
-          <span class="h-[32px] w-[64px] animate-pulse rounded-[6px] bg-white/25"></span>
+        <div class="flex items-baseline gap-[8px]" aria-hidden="true">
+          <span class="h-[32px] w-[64px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
         </div>
-        <div class="relative z-10 h-[14px] w-[140px] animate-pulse rounded-[4px] bg-white/15" aria-hidden="true"></div>
+        <div class="h-[14px] w-[140px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
       } @else {
-      <div class="relative z-10 flex items-baseline gap-[8px]">
-        <span class="pr-figure text-[32px] font-extrabold leading-none text-white tabular-nums drop-shadow-xs">
+      <div class="flex items-baseline gap-[8px]">
+        <span class="pr-figure text-[32px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
           {{ statusTotal() }}
         </span>
-        <span class="text-[13px] font-medium text-purple-200">results</span>
+        <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">results</span>
       </div>
-      <div class="relative z-10 flex items-center gap-[6px] text-[12px] text-purple-100 font-medium">
+      <div class="flex items-center gap-[6px] text-[12px] text-[var(--pr-text-secondary)]">
         <span class="h-[7px] w-[7px] rounded-full bg-emerald-400"></span>
         <span>{{ w1w2SubmittedCount() }} submitted</span>
-        <span class="text-purple-300">·</span>
+        <span class="text-[var(--pr-text-muted)]">·</span>
         <span>{{ statusSegments().length }} statuses</span>
       </div>
       }
     </button>
 
-    <!-- KPI 2: W3 / Bilateral Results -->
+    <!-- KPI 3: W3 / Bilateral Results -->
     <button
       type="button"
+      data-testid="overview-kpi-bilateral"
       (click)="setActiveSection('bilateral')"
-      class="col-span-3 flex cursor-pointer flex-col justify-between gap-[12px] rounded-[12px] border bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:shadow-sm focus-visible:outline-none max-[1024px]:col-span-6 max-[640px]:col-span-12"
+      class="flex min-h-[135px] cursor-pointer flex-col justify-between gap-[12px] rounded-[12px] border bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:shadow-sm focus-visible:outline-none"
       [class]="activeSection() === 'bilateral'
         ? 'border-[var(--pr-color-primary-500)] ring-2 ring-[var(--pr-color-primary-500)]'
         : 'border-[var(--pr-border)]'">
@@ -106,11 +142,12 @@
       }
     </button>
 
-    <!-- KPI 3: Contributing Centers -->
+    <!-- KPI 4: Contributing Centers -->
     <button
       type="button"
+      data-testid="overview-kpi-centers"
       (click)="setActiveSection('bilateral')"
-      class="col-span-3 flex cursor-pointer flex-col justify-between gap-[12px] rounded-[12px] border bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:shadow-sm focus-visible:outline-none max-[1024px]:col-span-6 max-[640px]:col-span-12"
+      class="flex min-h-[135px] cursor-pointer flex-col justify-between gap-[12px] rounded-[12px] border bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:shadow-sm focus-visible:outline-none"
       [class]="activeSection() === 'bilateral'
         ? 'border-[var(--pr-color-primary-500)] ring-2 ring-[var(--pr-color-primary-500)]'
         : 'border-[var(--pr-border)]'">
@@ -140,11 +177,12 @@
       }
     </button>
 
-    <!-- KPI 4: Areas of Work Progress -->
+    <!-- KPI 5: Areas of Work Progress -->
     <button
       type="button"
+      data-testid="overview-kpi-aow"
       (click)="setActiveSection('aow')"
-      class="col-span-3 flex cursor-pointer flex-col justify-between gap-[12px] rounded-[12px] border bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:shadow-sm focus-visible:outline-none max-[1024px]:col-span-6 max-[640px]:col-span-12"
+      class="flex min-h-[135px] cursor-pointer flex-col justify-between gap-[12px] rounded-[12px] border bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:shadow-sm focus-visible:outline-none sm:col-span-2 xl:col-span-1"
       [class]="activeSection() === 'aow'
         ? 'border-[var(--pr-color-primary-500)] ring-2 ring-[var(--pr-color-primary-500)]'
         : 'border-[var(--pr-border)]'">

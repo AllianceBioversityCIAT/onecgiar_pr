@@ -132,6 +132,29 @@ export class BilateralReviewTableComponent {
   /** Rows sorted desc by `submission_date` — defensive; the page already sorts (design.md §6.2). */
   readonly sortedFlatRows = computed<ResultToReview[]>(() => [...this.flatRows()].sort((a, b) => this.toTime(b.submission_date) - this.toTime(a.submission_date)));
 
+  /** Visible result rows in DOM order — drives ↑/↓ roving focus across groups/cards/tables. */
+  readonly navigableRows = computed<ResultToReview[]>(() => {
+    const collectGrouped = (): ResultToReview[] => {
+      const rows: ResultToReview[] = [];
+      for (const group of this.filteredGroups()) {
+        if (!this.expandedRowKeys()[group.key]) continue;
+        rows.push(...this.filteredCardResults(group));
+      }
+      return rows;
+    };
+
+    if (this.narrow()) {
+      return this.view() === 'grouped' ? collectGrouped() : this.sortedFlatRows();
+    }
+    if (this.view() === 'grouped') {
+      return collectGrouped();
+    }
+    return this.sortedFlatRows();
+  });
+
+  /** Roving tabindex target — one row in the list carries `tabindex="0"`. */
+  readonly focusedRowId = signal<string | null>(null);
+
   private lastNonce = 0;
   /** `lastKeys`/`userCollapsedKeys`, one Map/Set PER `groupMode` — a mode switch alone (no nonce
    *  bump, BRP-T-2/judgment-day L-4) must re-seed from THAT mode's own memory, never the other
@@ -347,6 +370,14 @@ export class BilateralReviewTableComponent {
       }
       this.lastKeysByMode.set(mode, nextForMode);
       this.expandedKeys.set(nextExpanded);
+    });
+
+    effect(() => {
+      const rows = this.navigableRows();
+      const focused = this.focusedRowId();
+      if (focused && !rows.some(r => r.id === focused)) {
+        untracked(() => this.focusedRowId.set(rows[0]?.id ?? null));
+      }
     });
   }
 
@@ -580,5 +611,83 @@ export class BilateralReviewTableComponent {
   onActionClick(row: ResultToReview): void {
     if (this.actionsDisabled()) return;
     this.openResult.emit(row);
+  }
+
+  /** Open the review drawer when the user clicks a data cell — not only the Actions button.
+   *  Copy buttons stop propagation; native buttons are ignored so the action handler stays
+   *  the single path for button clicks. */
+  onRowClick(row: ResultToReview, event: Event): void {
+    if (this.actionsDisabled()) return;
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.closest('button')) return;
+    this.openResult.emit(row);
+  }
+
+  rowTabIndex(row: ResultToReview): number {
+    if (this.actionsDisabled()) return -1;
+    const rows = this.navigableRows();
+    if (!rows.length) return -1;
+    const activeId = this.focusedRowId() ?? rows[0]?.id;
+    return row.id === activeId ? 0 : -1;
+  }
+
+  rowAriaLabel(row: ResultToReview): string {
+    return `${this.actionLabel(row)} result ${row.result_code}, ${row.result_title}`;
+  }
+
+  onRowFocus(row: ResultToReview): void {
+    if (this.actionsDisabled()) return;
+    this.focusedRowId.set(row.id);
+  }
+
+  /** Enter/Space open the drawer; ↑/↓ (and Home/End) move roving focus between visible rows. */
+  onRowKeydown(event: KeyboardEvent, row: ResultToReview): void {
+    if (this.actionsDisabled()) return;
+    const rows = this.navigableRows();
+    const index = rows.findIndex(r => r.id === row.id);
+    if (index < 0) return;
+
+    switch (event.key) {
+      case 'Enter':
+      case ' ':
+        event.preventDefault();
+        this.openResult.emit(row);
+        break;
+      case 'ArrowDown':
+        event.preventDefault();
+        this.moveFocusToIndex(index + 1);
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.moveFocusToIndex(index - 1);
+        break;
+      case 'Home':
+        event.preventDefault();
+        this.moveFocusToIndex(0);
+        break;
+      case 'End':
+        event.preventDefault();
+        this.moveFocusToIndex(rows.length - 1);
+        break;
+      default:
+        break;
+    }
+  }
+
+  private moveFocusToIndex(index: number): void {
+    const rows = this.navigableRows();
+    if (!rows.length) return;
+    const clamped = Math.min(Math.max(index, 0), rows.length - 1);
+    const target = rows[clamped];
+    if (!target) return;
+    this.focusedRowId.set(target.id);
+    queueMicrotask(() => this.focusRowElement(target.id));
+  }
+
+  private focusRowElement(rowId: string): void {
+    if (typeof document === 'undefined') return;
+    const el = document.querySelector(`[data-bilateral-review-row-id="${rowId}"]`) as HTMLElement | null;
+    el?.focus();
   }
 }

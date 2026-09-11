@@ -11,9 +11,7 @@ export const SP_TOUR_STORAGE_KEY = 'pr.tour.sp.completed';
  */
 export const RESULT_SIDEBAR_HINT_STORAGE_KEY = 'pr.tour.result-sidebar.completed';
 
-// @akili-spec changes/sp-bilateral-review-tab (BRT-T-1) — 'bilateral-review' widens the union so
-// `startSpTour`'s `activeTab`/`onTabNavigate` typing stays sound with the band's new tab; the tab
-// is deliberately NOT added to the tour's step list (design.md §6.2).
+// Bilateral review tab joins the tour's step list between Results and My results.
 export type SpTabId = 'overview' | 'reporting' | 'results' | 'bilateral-review' | 'my-work';
 
 export const SP_TAB_LABELS: Record<SpTabId, string> = {
@@ -229,7 +227,7 @@ export class ReportingGuideService {
         element: '[data-guide="sp-tabs"]',
         popover: {
           title: 'Main Navigation Tabs',
-          description: `${tabBadgeHtml(initialTab)}<span class="pr-guide-step-copy">Switch between Overview (burndown analytics), Reporting (Theory of Change indicators), Results (reported deliverables registry), and My results (personal workflow Kanban) views.</span>`,
+          description: `${tabBadgeHtml(initialTab)}<span class="pr-guide-step-copy">Switch between Overview (burndown analytics), Reporting (Theory of Change indicators), Results (reported deliverables registry), Bilateral review (Center-submitted results validation), and My results (personal workflow Kanban) views.</span>`,
           side: 'bottom',
           align: 'center'
         }
@@ -262,6 +260,15 @@ export class ReportingGuideService {
         }
       },
       {
+        element: '[data-guide="tab-bilateral-review-view"]',
+        popover: {
+          title: 'Bilateral Results Review',
+          description: `${tabBadgeHtml('bilateral-review')}<span class="pr-guide-step-copy">Review and validate bilateral results submitted by CGIAR Centers, map Theory of Change alignment, and approve or reject contributions.</span>`,
+          side: 'top',
+          align: 'start'
+        }
+      },
+      {
         element: '[data-guide="tab-my-results-view"]',
         popover: {
           title: 'My Results Board',
@@ -287,6 +294,7 @@ export class ReportingGuideService {
       'overview',
       'reporting',
       'results',
+      'bilateral-review',
       'my-work',
       'reporting'
     ];
