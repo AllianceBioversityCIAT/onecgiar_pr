@@ -1,6 +1,6 @@
 # result-detail
 
-**Verified:** 2026-09-04 · branch qa-development-2026 · 2b7232fff (adds the one-line pointer to the shared `pr-viewport-page` mixin, spec `changes/sp-shell-app-viewport` SAV-T-6; no code change); prior: 2026-09-03 · 6963df5af
+**Verified:** 2026-09-11 · branch performance-refactor · 624d4a017 (P2-3659: `Next` guarda antes de navegar); prior: 2026-09-04 · qa-development-2026 · 2b7232fff (adds the one-line pointer to the shared `pr-viewport-page` mixin, spec `changes/sp-shell-app-viewport` SAV-T-6; no code change); prior: 2026-09-03 · 6963df5af
 
 ## Qué es
 
@@ -41,8 +41,29 @@ scrollea en esta ruta.
 | Componente | Qué hace | Trampa |
 |---|---|---|
 | `components/result-sections-sidebar/` | Riel de 240px: secciones, progreso, AI review, Submit | `h-full`, nunca `sticky`+`max-h-svh`: sticky lo deja del alto de su contenido y la regla derecha muere a media pantalla (se midió en 477px de 842) |
-| `components/section-bottom-bar/` | Back / Next / posición / campos faltantes / Save | Se **teletransporta**: ver abajo |
+| `components/section-bottom-bar/` | Back / Next / posición / campos faltantes / Save | Se **teletransporta**: ver abajo. `Next` **guarda** desde 2026: ver abajo |
 | `components/result-header/` | Título, back-link, PDF, menú, tira (nivel/funding/submitter/AoW; ⓘ metadata). Code, type y status viven en el riel de secciones. La tira usa `pr-skeleton` mientras `currentResult` o el mapping AoW siguen en vuelo | Vive dentro de `.rd_scroll` |
+
+## `Next` guarda la sección antes de navegar (P2-3659, fase 2026+)
+
+Hasta el 11-sep-2026 `Next` era navegación pura, y como el PATCH de cada sección cuelga solo de
+`Save draft`, quien llenaba el formulario por el camino natural **perdía todas las secciones menos
+la última que guardó a mano** — y el pie decía "Section complete" mientras tanto.
+
+Hoy `goNext()` dispara el `(clickSave)` de la sección y espera el resultado con
+`SaveButtonService.saveAndSettle`, que distingue tres finales: `saved` (navega), `failed` (se queda,
+con el error en pantalla y lo tecleado intacto) y `not-started` (navega igual — la sección no llegó
+a enviar nada: su propia guarda la frenó o abrió un modal de confirmación).
+
+- 🛑 **Gate por AÑO de fase** (`isSectionAutoSaveOnNext2026`), nunca por portafolio: el P25 contiene
+  la fase 2025 y escribir sobre una fase cerrada es justo lo que la épica prohíbe. Año desconocido =
+  comportamiento viejo.
+- 🛑 **El destino se resuelve ANTES de guardar, y eso es estructural.** Guardar recarga el resultado
+  (`GET_resultById`), la recarga resetea `currentResultSignal` a `{}` y mientras el portafolio es
+  desconocido `ResultSectionsService.sections()` devuelve `[]`. Medido en prtest sobre el 9142: la
+  lista pasó de 5 a 0 y `currentIndex` de 0 a -1 en el mismo clic, así que leer el destino después
+  del guardado no encontraba nada y `goTo` salía en silencio — guardaba y no avanzaba.
+- `Back` y el riel lateral siguen siendo navegación pura: el ticket pedía `Next`.
 
 ## La bottom bar se teletransporta (leer antes de tocarla)
 
