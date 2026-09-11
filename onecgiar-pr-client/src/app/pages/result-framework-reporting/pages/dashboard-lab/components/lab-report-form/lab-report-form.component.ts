@@ -771,7 +771,7 @@ export class LabReportFormComponent {
     if (!body.result_name?.trim()) missing.push('Result title');
     else if (this.titleWordCount() > 30) missing.push('Result title exceeds 30 words');
     if (this.currentResultIsKnowledgeProduct() && !this.mqapJson()) missing.push('Repository link/handle');
-    if (body.contribution_to_indicator_target == null || `${body.contribution_to_indicator_target}`.trim() === '')
+    if (!this.isEmerging() && (body.contribution_to_indicator_target == null || `${body.contribution_to_indicator_target}`.trim() === ''))
       missing.push('Contribution to indicator target');
     // P2-3420: "Yes" is only a complete answer once an innovation has been picked. "No" (the
     // default) always is, which is what makes the field mandatory yet never blocking on its own.
