@@ -6,7 +6,16 @@
      app's existing reduced-motion convention (see `styles/collapse.scss`, `pr-band-fade`): the
      hover STATE still applies, only the animated transition between states is removed. -->
 <article
-  class="flex flex-col gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px_12px_10px] shadow-[0_1px_2px_rgba(25,21,36,0.05)] transition-[transform,box-shadow,border-color,background-color] duration-150 ease-out hover:bg-[var(--pr-surface-subtle-hover)] hover:-translate-y-[1px] hover:border-[var(--pr-color-primary-200)] hover:shadow-[0_4px_12px_rgba(25,21,36,0.08)] motion-reduce:transition-none">
+  class="relative flex flex-col gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px_12px_10px] shadow-[0_1px_2px_rgba(25,21,36,0.05)] transition-[transform,box-shadow,border-color,background-color] duration-150 ease-out hover:bg-[var(--pr-surface-subtle-hover)] hover:-translate-y-[1px] hover:border-[var(--pr-color-primary-200)] hover:shadow-[0_4px_12px_rgba(25,21,36,0.08)] motion-reduce:transition-none"
+  [class.pointer-events-none]="isDeleting()"
+  [class.opacity-60]="isDeleting()">
+  @if (isDeleting()) {
+    <div
+      class="absolute inset-0 z-10 flex items-center justify-center gap-[8px] rounded-[10px] bg-[color-mix(in_srgb,var(--pr-surface-card)_85%,transparent)] backdrop-blur-[1px]">
+      <i class="pi pi-spin pi-spinner text-[16px] text-[var(--pr-color-primary-400)]" aria-hidden="true"></i>
+      <span class="text-[12px] font-semibold text-[var(--pr-text-secondary)]">Deleting…</span>
+    </div>
+  }
   <!-- Code · Category chip · Status chip · Origin — wraps instead of overflowing the column (user review 2026-09-05: cards were
        spilling past the 240/260px column and each list grew a horizontal scrollbar); the category chip truncates with an ellipsis
        when it alone is wider than the row. -->

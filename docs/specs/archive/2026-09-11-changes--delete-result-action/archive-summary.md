@@ -74,10 +74,11 @@ The implementation is encapsulated in a unified, reusable `ResultDeletionService
 
 - **QA Round 1 (Post-implementation):** Identified that native `addEventListener` in alert modal bypassed `NgZone` and that `deleteEligibility` needed reactive signal computeds.
 - **QA Fixes:** Integrated `NgZone.run()` into confirmation callback and converted `deleteEligibility` into `computed<DeleteEligibility>`.
+- **UX Refinement (Round 2):** Eliminated the delayed secondary success modal dialog. Replaced it with an immediate loading state (`app-pr-table` loading overlay / card spinner with interaction lock) and a non-intrusive auto-dismissing `PrToastService` notification upon completion.
 - **User Validation:** User tested live in `http://qa-development-2026.orca.localhost:63760` and confirmed functionality.
 
 ---
 
 ## 6. Accepted Warnings or Follow-ups
 
-- None. All planned tasks and defect gates are verified green.
+- None. All planned tasks, defect gates, and UX refinements are verified green.

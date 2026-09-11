@@ -1,14 +1,19 @@
-// @akili-spec changes/delete-result-action (DEL-T-1, DEL-R-3, DEL-R-5, DEL-AC-3, DEL-AC-4, DEL-AC-5, DEL-AC-8, Defect gates D1, D2, D3, D6)
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../shared/services/api/api.service';
+import { PrToastService } from '../../../shared/components/pr-toast';
 import { ResultDeletionService } from './result-deletion.service';
 
 describe('ResultDeletionService', () => {
   let service: ResultDeletionService;
   let mockApiService: any;
+  let mockToastService: any;
 
   beforeEach(() => {
+    mockToastService = {
+      add: jest.fn()
+    };
+
     mockApiService = {
       rolesSE: {
         isAdmin: false
@@ -23,7 +28,8 @@ describe('ResultDeletionService', () => {
       },
       alertsFe: {
         show: jest.fn()
-      }
+      },
+      updateResultsList: jest.fn()
     };
 
     TestBed.configureTestingModule({
@@ -32,6 +38,10 @@ describe('ResultDeletionService', () => {
         {
           provide: ApiService,
           useValue: mockApiService
+        },
+        {
+          provide: PrToastService,
+          useValue: mockToastService
         }
       ]
     });
@@ -226,21 +236,23 @@ describe('ResultDeletionService', () => {
       expect(mockApiService.resultsSE.PATCH_DeleteResult).not.toHaveBeenCalled();
     });
 
-    it('deletes result and displays success alert on confirmation (DEL-R-3, DEL-AC-2)', () => {
+    it('deletes result, triggers onStart and displays success toast on confirmation (DEL-R-3, DEL-AC-2)', () => {
       mockApiService.resultsSE.PATCH_DeleteResult.mockReturnValue(of({ success: true }));
+      const onStartSpy = jest.fn();
       const onSuccessSpy = jest.fn();
 
-      service.deleteWithConfirmation({ id: 200, title: 'Breeding Line A' }, { onSuccess: onSuccessSpy });
+      service.deleteWithConfirmation({ id: 200, title: 'Breeding Line A' }, { onStart: onStartSpy, onSuccess: onSuccessSpy });
 
       // Trigger the onConfirm callback passed to alertsFe.show
       const confirmCallback = mockApiService.alertsFe.show.mock.calls[0][1];
       confirmCallback();
 
+      expect(onStartSpy).toHaveBeenCalledTimes(1);
       expect(mockApiService.resultsSE.PATCH_DeleteResult).toHaveBeenCalledWith(200);
-      expect(mockApiService.alertsFe.show).toHaveBeenCalledWith({
-        id: 'confirm-delete-result-su',
-        title: 'The result "Breeding Line A" was deleted',
-        status: 'success'
+      expect(mockToastService.add).toHaveBeenCalledWith({
+        key: 'globalUserNotification',
+        severity: 'success',
+        summary: 'The result "Breeding Line A" was deleted'
       });
       expect(onSuccessSpy).toHaveBeenCalledTimes(1);
     });
@@ -252,8 +264,8 @@ describe('ResultDeletionService', () => {
 
       const confirmCallback = mockApiService.alertsFe.show.mock.calls[0][1];
       expect(() => confirmCallback()).not.toThrow();
-      expect(mockApiService.alertsFe.show).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'confirm-delete-result-su' })
+      expect(mockToastService.add).toHaveBeenCalledWith(
+        expect.objectContaining({ summary: 'The result "Breeding Line B" was deleted' })
       );
     });
 

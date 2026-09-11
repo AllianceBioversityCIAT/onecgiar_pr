@@ -1,6 +1,6 @@
-// @akili-spec changes/delete-result-action (DEL-T-1, DEL-R-3, DEL-R-5, DEL-DD-1)
 import { inject, Injectable, NgZone } from '@angular/core';
 import { ApiService } from '../../../shared/services/api/api.service';
+import { PrToastService } from '../../../shared/components/pr-toast';
 
 export interface DeleteEligibility {
   visible: boolean;
@@ -9,6 +9,7 @@ export interface DeleteEligibility {
 }
 
 export interface DeleteConfirmationOptions {
+  onStart?: () => void;
   onSuccess?: () => void;
   onError?: (err: any) => void;
 }
@@ -19,6 +20,7 @@ export interface DeleteConfirmationOptions {
 export class ResultDeletionService {
   private readonly api = inject(ApiService);
   private readonly zone = inject(NgZone);
+  private readonly toastSE = inject(PrToastService);
 
   /**
    * Evaluates visibility, disabled state, and tooltip for the "Delete" result action.
@@ -126,13 +128,15 @@ export class ResultDeletionService {
       },
       () => {
         this.zone.run(() => {
+          options?.onStart?.();
           this.api.resultsSE.PATCH_DeleteResult(id).subscribe({
             next: () => {
-              this.api.alertsFe.show({
-                id: 'confirm-delete-result-su',
-                title: `The result "${title}" was deleted`,
-                status: 'success'
+              this.toastSE.add({
+                key: 'globalUserNotification',
+                severity: 'success',
+                summary: `The result "${title}" was deleted`
               });
+              this.api.updateResultsList?.();
               options?.onSuccess?.();
             },
             error: (err: any) => {

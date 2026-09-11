@@ -141,11 +141,20 @@ export class MyWorkCardComponent {
     return this.deletionSE.getDeleteEligibility(this.row());
   });
 
+  readonly isDeleting = signal<boolean>(false);
+
   deleteResult(): void {
     this.closeMenu();
     this.deletionSE.deleteWithConfirmation(this.row(), {
+      onStart: () => {
+        this.isDeleting.set(true);
+      },
       onSuccess: () => {
+        this.isDeleting.set(false);
         this.deleted.emit(this.row());
+      },
+      onError: () => {
+        this.isDeleting.set(false);
       }
     });
   }

@@ -1434,8 +1434,16 @@ export class ProgrammeResultsComponent implements OnDestroy {
   deleteResult(row: ProgrammeResultRow): void {
     this.closeRowMenu();
     this.deletionSE.deleteWithConfirmation(row, {
+      onStart: () => {
+        this.data.loading.set(true);
+        this.cdr.markForCheck();
+      },
       onSuccess: () => {
         this.data.load(this.programmeCode());
+        this.cdr.markForCheck();
+      },
+      onError: () => {
+        this.data.loading.set(false);
         this.cdr.markForCheck();
       }
     });
