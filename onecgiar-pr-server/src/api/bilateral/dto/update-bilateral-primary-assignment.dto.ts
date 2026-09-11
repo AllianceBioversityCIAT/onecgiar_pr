@@ -14,7 +14,7 @@ export class UpdateBilateralPrimaryAssignmentDto {
 
   @ApiProperty({
     description:
-      'Primary Science Program / Accelerator ID allocated to the selected project',
+      'W3 project-mapping Science Program / Accelerator ID allocated to the selected project',
     example: 45,
   })
   @IsInt()
