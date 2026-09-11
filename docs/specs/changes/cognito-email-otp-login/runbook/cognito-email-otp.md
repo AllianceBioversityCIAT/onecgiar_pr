@@ -134,3 +134,19 @@ See `design.md` §9 for the "code not received" triage table (this runbook's spi
 - Steps 3 (actual toggle — HITL, user does this in the console), 4, 4b, 5 (spike calls), 6 are placeholders only. No AWS write call has been made under this runbook.
 - `fixtures/cognito/*.json` are not yet populated (phase 2, using `scripts/spike-email-otp.sh`).
 - `design.md` §4.2 and `requirements.md` `OTP-OQ-7` updates with pinned values are phase 2 (need real spike data first).
+
+## Spike observations (step 5, 2026-09-11 — client `general-client`, TEST pool)
+
+| Observation | Value | Fixture |
+|---|---|---|
+| `CONFIRMED` passwordless user, `InitiateAuth USER_AUTH PREFERRED_CHALLENGE=EMAIL_OTP` | `ChallengeName: EMAIL_OTP` directly, `AvailableChallenges: ["EMAIL_OTP"]`, `CODE_DELIVERY_DESTINATION: j***@g***`, Session 1,543 chars | `fixtures/cognito/initiate-auth.email-otp.confirmed-user.json` |
+| `FORCE_CHANGE_PASSWORD` user (temporary password) | `ChallengeName: SELECT_CHALLENGE`, `AvailableChallenges: ["PASSWORD_SRP","PASSWORD"]` — **no `EMAIL_OTP`** → `OTP-T-10` | `initiate-auth.email-otp.force-change-password.json` |
+| Unknown user (`PreventUserExistenceErrors=ENABLED`) | simulated `EMAIL_OTP` challenge, dummy Session 1,587 chars, masked destination from the input | `initiate-auth.unknown-user.json` |
+| Correct code (8 digits) 93 s after start | `AuthenticationResult { AccessToken, IdToken, RefreshToken, ExpiresIn: 3600, TokenType: Bearer }` | `respond-to-auth.success.json` |
+| Same session reused after success | `NotAuthorizedException: Invalid session for the user, session can only be used once.` | — |
+| Verify 3 min 54 s after start | `NotAuthorizedException: Invalid session for the user, session is expired.` → **session ≈ 3 min** | `respond-to-auth.session-expired.json` |
+| Wrong code ×6 on a live session | `CodeMismatchException: Invalid code or auth state for the user.` every time — no lockout observed | `respond-to-auth.code-mismatch.json`, `…attempt-6.json` |
+| Delivery | < 1 min, Cognito default sender, **Gmail spam folder** | — |
+| `AdminCreateUser` without `TemporaryPassword`, `SUPPRESS`, `email_verified=true` | user lands **`CONFIRMED`** | — |
+
+Test users left in the TEST pool for the HITL: `jucacar22@gmail.com` (`CONFIRMED`), `jucacar22+fcp@gmail.com` (`FORCE_CHANGE_PASSWORD`) — delete after `OTP-T-9` (`admin-delete-user`).

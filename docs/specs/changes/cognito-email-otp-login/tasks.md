@@ -9,7 +9,7 @@
 | Approval Mode | pre-approved (Phase 3 gate: `auto-approved (pre-approved mode)`). **Cognito changes, microservice deploys and PROD steps are HITL inside their tasks** |
 | Status | not-started |
 | Owner / driver | Juan Carlos Cadavid · AKILI Leader |
-| Budget (from `design.md` §14) | 9 tasks (+1 conditional) · ~1,250 LOC incl. tests · ≤ 1 Reviewer round per task; tripwire > 12 tasks or > 1,500 LOC → stop and escalate |
+| Budget (from `design.md` §14) | 10 tasks (`OTP-T-10` triggered) · ~1,250 LOC incl. tests · ≤ 1 Reviewer round per task; tripwire > 12 tasks or > 1,500 LOC → stop and escalate |
 | Repositories | PRMS (`onecgiar-pr-server`, `onecgiar-pr-client`, this checkout) · AUTH microservice (`/Users/jcadavid/Development/one-cgiar-microservices/auth-microservice`, branch `dev-auth`, TEST `authtest-ibd.prms.cgiar.org`) |
 
 ### Execution constraints (inherited — standing mandate 2026-09-02)
@@ -140,15 +140,15 @@
 - **Verification:** HITL checklist all ticked with evidence; PROD diff equals the TEST diff (same single field). **Input that fails it:** code never arrives in TEST → `PRODUCT_BUG` (delivery/quota), do not tick. **Disqualifier:** screenshots without the redacted `auth.otp.*` log lines; a PROD step without the before-export.
 - **Definition of done:** guides updated; TRD row pending; TEST evidence recorded; PROD parity done or explicitly parked with its blocker.
 
-### `OTP-T-10` — **Conditional:** provisioning adjustment so center users land `CONFIRMED` (only if the spike says `FORCE_CHANGE_PASSWORD` blocks `EMAIL_OTP`)
+### `OTP-T-10` — Provisioning adjustment so center users land `CONFIRMED` (**triggered by the spike 2026-09-11 — now mandatory**)
 
 - **Type:** `server` (microservice)
-- **Description:** Executed **only** when `OTP-T-1` records that a `FORCE_CHANGE_PASSWORD` user cannot complete `EMAIL_OTP` (`design.md` §13). In the microservice `createUser` (`/auth/register`): after `AdminCreateUser`, call `AdminSetUserPassword { Permanent: true }` with a random high-entropy password **when the email domain is in a `PASSWORDLESS_DOMAINS` env list** (so existing external users keep today's temporary-password flow), ensure `email_verified=true`, and skip the welcome-password email for those domains; document the env var. Existing behaviour for all other domains unchanged.
+- **Description:** The spike showed a `FORCE_CHANGE_PASSWORD` user is offered `SELECT_CHALLENGE [PASSWORD_SRP, PASSWORD]` and no `EMAIL_OTP`, while a user created **without a temporary password** (`MessageAction: SUPPRESS`, `email_verified=true`) lands `CONFIRMED` and gets `EMAIL_OTP` directly. In the microservice `createUser` (`/auth/register`): **when the email domain is in a `PASSWORDLESS_DOMAINS` env list**, call `AdminCreateUser` without `TemporaryPassword`, with `MessageAction: SUPPRESS` and `email_verified=true`, and skip the welcome-password email; all other domains keep today's temporary-password flow byte-identical. Document the env var (TEST value: `cifor-icraf.org,icrisat.org`).
 - **Implements:** `OTP-R-13` (provisioning adjustment clause), `OTP-AC-12`.
 - **Files (expected):** `auth-microservice/src/api/auth/services/cognito/cognito.service.ts` (`createUser`), `auth.service.ts`, specs, README env table.
-- **Depends on:** `OTP-T-1` (trigger) · **Blocks:** `OTP-T-9` (HITL must run against a `CONFIRMED` center user)
+- **Depends on:** `OTP-T-1` (trigger — fired), `OTP-T-2` (same file) · **Blocks:** `OTP-T-3` (deploy TEST with both changes), `OTP-T-9`
 - **Estimate:** S · ~60 LOC
-- **Verification:** `npm test -- cognito.service` — for a `PASSWORDLESS_DOMAINS` email: `AdminCreateUser` then `AdminSetUserPassword { Permanent: true }` called, welcome email suppressed; for another domain: existing behaviour byte-identical (existing tests unchanged). **Input that fails it:** call `AdminSetUserPassword` for every domain → the external-user regression test fails. **Disqualifier:** logging the generated password anywhere.
+- **Verification:** `npm test -- cognito.service` — for a `PASSWORDLESS_DOMAINS` email: `AdminCreateUserCommand` input has **no** `TemporaryPassword`, `MessageAction: 'SUPPRESS'`, `email_verified: 'true'`, welcome email suppressed; for another domain: existing input byte-identical (existing tests unchanged). TEST proof: a user provisioned through the deployed `/auth/register` shows `UserStatus: CONFIRMED` in `admin-get-user` and `InitiateAuth` returns `EMAIL_OTP` directly. **Input that fails it:** drop the domain gate → the external-user regression test fails. **Disqualifier:** any password or temporary password logged.
 - **Definition of done:** tests green; documented; a freshly provisioned TEST center user shows `CONFIRMED` in the pool export.
 
 ## 4. Dependency graph

@@ -1,0 +1,10 @@
+{
+  "ChallengeParameters": {},
+  "AuthenticationResult": {
+    "AccessToken": "<redacted>",
+    "ExpiresIn": 3600,
+    "TokenType": "Bearer",
+    "RefreshToken": "<redacted>",
+    "IdToken": "<redacted>"
+  }
+}
