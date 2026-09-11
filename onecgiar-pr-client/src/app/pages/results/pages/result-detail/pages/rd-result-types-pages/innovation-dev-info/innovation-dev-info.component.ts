@@ -107,6 +107,16 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
     this.fieldsManagerSE.isInnovationDeveloperAutoFilled2026() ? '' : LEGACY_INNOVATION_DEVELOPER_DESCRIPTION
   );
 
+  /**
+   * P2-3643 — explains the 2026+ auto-fill from Lead Contact Person (see applyInnovationDeveloperAutoFill()
+   * below) so users know why the field arrives pre-populated and how to override it.
+   */
+  innovationDeveloperTooltip = computed(() =>
+    this.fieldsManagerSE.isInnovationDeveloperAutoFilled2026()
+      ? "This field is prepopulated with the Lead Contact person's information. If you wish to change it, remove the existing entry and replace it with the Innovation Developer's email or full name."
+      : ''
+  );
+
   collaboratorsDescription = computed(() => {
     return `Provide the full name(s), email address and organizational affiliation(s)  of other CGIAR and/or partner colleagues that contribute to this innovation
         Names of key contributors will feature as co-authors on the Innovation Profile document in the same order as provided below. <br>
