@@ -727,6 +727,29 @@ export class VersioningService {
     return null;
   }
 
+  /**
+   * P2-3652. Is this a genuine W3/Bilateral carry-forward — as opposed to an AVISA (`SGP-02`)
+   * result, which is also stamped `source = 'API'` (`result.entity.ts:566-574`) but is not owned
+   * by a lead Centre and must keep the W1/W2 outcome it has today (`VER-R-4`, `design.md`
+   * `VER-DD-2`)?
+   *
+   * The owner-initiative lookup only runs once `source` is already `'API'`, so the W1/W2 path
+   * gains no extra query. `official_code` is a column `getOwnerInitiativeByResult` genuinely
+   * selects — pinned by the repository contract test — unlike the dead `inititiative_id` check
+   * a few lines below this, which the same query never returns (`VER-DD-1`).
+   */
+  private async $_isGenuineBilateralCarryForward(
+    result: Result,
+  ): Promise<boolean> {
+    if (result.source !== SourceEnum.Bilateral) return false;
+
+    const ownerInitiative =
+      await this._resultByInitiativesRepository.getOwnerInitiativeByResult(
+        result.id,
+      );
+    return ownerInitiative?.official_code !== 'SGP-02';
+  }
+
   async versionProcess(result_id: number, user: TokenDto) {
     const legacy_result = await this._resultRepository.findOne({
       where: {
@@ -741,6 +764,19 @@ export class VersioningService {
         response: result_id,
         statusCode: HttpStatus.NOT_FOUND,
       });
+    }
+
+    // P2-3652 / VER-DD-3. Delegate above the Knowledge Product check so a bilateral carry-forward
+    // answers entirely to BilateralVersioningRulesService (P2-3229 AC9), not to this legacy KP
+    // message. Must stay ABOVE the result_type_id == 6 check below and BELOW the `!legacy_result`
+    // check above it — the KP test at :288 has no `source` on its fixture, so the predicate is
+    // false for it and it must keep falling through to that check untouched.
+    if (await this.$_isGenuineBilateralCarryForward(legacy_result)) {
+      const entityId = await this._bilateralRules.resolveTargetEntityId(
+        legacy_result,
+        String(legacy_result.result_code ?? legacy_result.id),
+      );
+      return await this.versionProcessV2(legacy_result.id, entityId, user);
     }
 
     if (legacy_result.result_type_id == 6) {
