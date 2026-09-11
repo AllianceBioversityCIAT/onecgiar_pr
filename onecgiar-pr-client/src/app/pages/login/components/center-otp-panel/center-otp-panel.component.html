@@ -1,0 +1,123 @@
+<!-- @akili-spec changes/cognito-email-otp-login — OTP-T-6, design.md §5.3/§6.3, mockup/login-target.html -->
+<div
+  class="w-full max-w-[330px] mx-auto rounded-[10px] border border-[var(--pr-color-primary-300)] p-[14px] mt-[10px] box-border"
+  role="group"
+  aria-label="Center account sign-in">
+  @if (step() === 'email') {
+    <label for="otp-email-input" class="block text-[11px] text-[var(--pr-color-accents-4)] mb-[6px]">Work email</label>
+    <input
+      id="otp-email-input"
+      data-test="otp-email"
+      type="email"
+      class="w-full h-[40px] box-border rounded-[10px] border border-[var(--pr-color-neutral-1000)] px-[12px] text-[12px] bg-[var(--pr-color-white)] disabled:opacity-60"
+      placeholder="name@icrisat.org"
+      [ngModel]="email()"
+      (ngModelChange)="onEmailInput($event)"
+      (keydown.enter)="sendCode()"
+      [disabled]="busy()" />
+
+    <div class="flex gap-[10px] mt-[12px]">
+      <button
+        type="button"
+        data-test="otp-send"
+        class="flex-1 inline-flex items-center justify-center gap-[10px] h-[40px] rounded-[8px] bg-[var(--pr-color-primary-300)] text-white px-[10px] text-[12px] transition-colors hover:bg-[var(--pr-color-primary-300)]/80 disabled:bg-[var(--pr-color-primary-300)]/50 disabled:cursor-not-allowed"
+        [disabled]="busy()"
+        (click)="sendCode()">
+        <ng-icon name="lucideMail" size="16" />
+        @if (busy()) {
+          Sending…
+        } @else {
+          Send code
+        }
+      </button>
+    </div>
+
+    <p class="text-[10px] text-[var(--pr-color-accents-4)] mt-[10px]">We will email you a one-time code. No password needed.</p>
+
+    @if (statusText()) {
+      <div
+        class="mt-[10px] rounded-[8px] px-[12px] py-[8px] text-[11px] border"
+        [ngClass]="
+          statusIsError()
+            ? 'bg-[var(--pr-color-yellow-300)]/10 text-[var(--pr-color-secondary-400)] border-[var(--pr-color-yellow-300)]/50'
+            : 'bg-[var(--pr-color-green-500)]/10 text-[var(--pr-color-secondary-400)] border-[var(--pr-color-green-500)]/40'
+        "
+        [attr.role]="statusIsError() ? 'alert' : 'status'"
+        aria-live="polite"
+        data-test="otp-status">
+        {{ statusText() }}
+      </div>
+    }
+  }
+
+  @if (step() === 'code') {
+    @if (statusText()) {
+      <div
+        class="mb-[12px] rounded-[8px] px-[12px] py-[8px] text-[11px] border"
+        [ngClass]="
+          statusIsError()
+            ? 'bg-[var(--pr-color-yellow-300)]/10 text-[var(--pr-color-secondary-400)] border-[var(--pr-color-yellow-300)]/50'
+            : 'bg-[var(--pr-color-green-500)]/10 text-[var(--pr-color-secondary-400)] border-[var(--pr-color-green-500)]/40'
+        "
+        [attr.role]="statusIsError() ? 'alert' : 'status'"
+        aria-live="polite"
+        data-test="otp-status">
+        {{ statusText() }}
+      </div>
+    }
+
+    <label for="otp-code-input" class="block text-[11px] text-[var(--pr-color-accents-4)] mb-[6px]">One-time code</label>
+    <input
+      #codeInput
+      id="otp-code-input"
+      data-test="otp-code"
+      type="text"
+      inputmode="numeric"
+      autocomplete="one-time-code"
+      maxlength="10"
+      class="w-full h-[40px] box-border rounded-[10px] border border-[var(--pr-color-neutral-1000)] px-[12px] text-[20px] tracking-[0.35em] text-center font-mono bg-[var(--pr-color-white)] disabled:opacity-60"
+      placeholder="••••••••"
+      [ngModel]="code()"
+      (ngModelChange)="onCodeInput($event)"
+      (keydown.enter)="verify()"
+      [disabled]="busy()" />
+
+    <div class="flex gap-[10px] mt-[12px] flex-wrap">
+      <button
+        type="button"
+        data-test="otp-verify"
+        class="flex-1 inline-flex items-center justify-center gap-[10px] h-[40px] rounded-[8px] bg-[var(--pr-color-primary-300)] text-white px-[10px] text-[12px] transition-colors hover:bg-[var(--pr-color-primary-300)]/80 disabled:bg-[var(--pr-color-primary-300)]/50 disabled:cursor-not-allowed"
+        [disabled]="busy() || !code()"
+        (click)="verify()">
+        <ng-icon name="lucideKeyRound" size="16" />
+        @if (busy()) {
+          Verifying…
+        } @else {
+          Verify
+        }
+      </button>
+
+      <button
+        type="button"
+        data-test="otp-resend"
+        class="flex-1 inline-flex items-center justify-center gap-[10px] h-[40px] rounded-[8px] border border-[var(--pr-color-primary-300)] text-[var(--pr-color-primary-300)] bg-white px-[10px] text-[12px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        [disabled]="resendDisabled()"
+        (click)="resend()">
+        <ng-icon name="lucideRefreshCw" size="16" />
+        {{ resendLabel() }}
+      </button>
+    </div>
+
+    <p class="mt-[12px]">
+      <button
+        type="button"
+        data-test="otp-back"
+        class="inline-flex items-center gap-[4px] text-[11px] underline text-[var(--pr-color-primary-300)] bg-transparent border-0 p-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        [disabled]="busy()"
+        (click)="back()">
+        <ng-icon name="lucideArrowLeft" size="14" />
+        Use a different email
+      </button>
+    </p>
+  }
+</div>

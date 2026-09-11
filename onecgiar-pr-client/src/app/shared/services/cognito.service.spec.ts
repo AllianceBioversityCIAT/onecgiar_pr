@@ -324,4 +324,127 @@ describe('CognitoService', () => {
       jest.useRealTimers();
     });
   });
+
+  // @akili-spec changes/cognito-email-otp-login — OTP-T-6
+  describe('startOtp', () => {
+    it('calls POST_otpStart with the email and reports the session/destination on success', () => {
+      const mockResponse = { response: { sent: true, session: 'sess-123', destination: 'a***@icrisat.org' }, message: 'ok', status: 200 };
+      const spy = jest.spyOn(service.authService, 'POST_otpStart').mockReturnValue(of(mockResponse));
+      const onSuccess = jest.fn();
+      const onError = jest.fn();
+
+      service.startOtp('a.person@icrisat.org', onSuccess, onError);
+
+      expect(spy).toHaveBeenCalledWith({ email: 'a.person@icrisat.org' });
+      expect(onSuccess).toHaveBeenCalledWith({ session: 'sess-123', destination: 'a***@icrisat.org' });
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    it('maps OTP_DOMAIN_NOT_ALLOWED to the domain error key', () => {
+      jest
+        .spyOn(service.authService, 'POST_otpStart')
+        .mockReturnValue(throwError(() => ({ error: { response: { code: 'OTP_DOMAIN_NOT_ALLOWED' } } })));
+      const onError = jest.fn();
+
+      service.startOtp('someone@gmail.com', jest.fn(), onError);
+
+      expect(onError).toHaveBeenCalledWith('domain');
+    });
+
+    it('maps OTP_RATE_LIMITED and OTP_UPSTREAM_UNAVAILABLE to rate/upstream', () => {
+      jest
+        .spyOn(service.authService, 'POST_otpStart')
+        .mockReturnValueOnce(throwError(() => ({ error: { response: { code: 'OTP_RATE_LIMITED' } } })))
+        .mockReturnValueOnce(throwError(() => ({ error: { response: { code: 'OTP_UPSTREAM_UNAVAILABLE' } } })));
+      const onError = jest.fn();
+
+      service.startOtp('a.person@icrisat.org', jest.fn(), onError);
+      expect(onError).toHaveBeenLastCalledWith('rate');
+
+      service.startOtp('a.person@icrisat.org', jest.fn(), onError);
+      expect(onError).toHaveBeenLastCalledWith('upstream');
+    });
+
+    it('maps an unrecognised error to unknown', () => {
+      jest.spyOn(service.authService, 'POST_otpStart').mockReturnValue(throwError(() => ({ error: {} })));
+      const onError = jest.fn();
+
+      service.startOtp('a.person@icrisat.org', jest.fn(), onError);
+
+      expect(onError).toHaveBeenCalledWith('unknown');
+    });
+  });
+
+  describe('verifyOtp', () => {
+    it('updates the cache and redirects home on a correct code', () => {
+      const mockResponse = { response: { valid: true, token: 'jwt-token', user: { id: 1 }, auth_tokens: {} }, message: 'ok', status: 200 };
+      jest.spyOn(service.authService, 'POST_otpVerify').mockReturnValue(of(mockResponse));
+      const cacheSpy = jest.spyOn(service, 'updateCacheService');
+      const redirectSpy = jest.spyOn(service, 'redirectToHome');
+      const onError = jest.fn();
+
+      service.verifyOtp('a.person@icrisat.org', '48291345', 'sess-123', onError);
+
+      expect(service.authService.POST_otpVerify).toHaveBeenCalledWith({ email: 'a.person@icrisat.org', code: '48291345', session: 'sess-123' });
+      expect(cacheSpy).toHaveBeenCalledWith(mockResponse);
+      expect(redirectSpy).toHaveBeenCalled();
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    it('maps OTP_CODE_MISMATCH / OTP_CODE_EXPIRED / OTP_ATTEMPTS_EXCEEDED to their keys', () => {
+      const onError = jest.fn();
+      jest
+        .spyOn(service.authService, 'POST_otpVerify')
+        .mockReturnValueOnce(throwError(() => ({ error: { response: { code: 'OTP_CODE_MISMATCH' } } })))
+        .mockReturnValueOnce(throwError(() => ({ error: { response: { code: 'OTP_CODE_EXPIRED' } } })))
+        .mockReturnValueOnce(throwError(() => ({ error: { response: { code: 'OTP_ATTEMPTS_EXCEEDED' } } })));
+
+      service.verifyOtp('a@icrisat.org', '000000', 'sess', onError);
+      expect(onError).toHaveBeenLastCalledWith('mismatch');
+      service.verifyOtp('a@icrisat.org', '000000', 'sess', onError);
+      expect(onError).toHaveBeenLastCalledWith('expired');
+      service.verifyOtp('a@icrisat.org', '000000', 'sess', onError);
+      expect(onError).toHaveBeenLastCalledWith('attempts');
+    });
+
+    it('passes the server message alongside an unmapped code, and nothing when there is none', () => {
+      jest
+        .spyOn(service.authService, 'POST_otpVerify')
+        .mockReturnValueOnce(throwError(() => ({ status: 401, error: { response: { code: 'OTP_NOT_AUTHORIZED' }, message: 'Session is no longer valid.' } })))
+        .mockReturnValueOnce(throwError(() => ({ status: 401, error: { response: { code: 'OTP_NOT_AUTHORIZED' } } })));
+      const onError = jest.fn();
+
+      service.verifyOtp('a@icrisat.org', '000000', 'sess', onError);
+      expect(onError).toHaveBeenLastCalledWith('unknown', 'Session is no longer valid.');
+      service.verifyOtp('a@icrisat.org', '000000', 'sess', onError);
+      expect(onError).toHaveBeenLastCalledWith('unknown');
+    });
+
+    it('logs only the HTTP status on failure — never the body, which can carry the email', () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      const failure = { status: 403, error: { response: { valid: false, needsRoles: true }, message: 'The user a.person@icrisat.org does not have any roles assigned.' } };
+      jest.spyOn(service.authService, 'POST_otpVerify').mockReturnValue(throwError(() => failure));
+      jest.spyOn(service.authService, 'POST_otpStart').mockReturnValue(throwError(() => failure));
+
+      service.verifyOtp('a.person@icrisat.org', '48291345', 'sess-123', jest.fn());
+      service.startOtp('a.person@icrisat.org', jest.fn(), jest.fn());
+
+      expect(consoleSpy).toHaveBeenCalledTimes(2);
+      for (const call of consoleSpy.mock.calls) {
+        expect(call).toContain(403);
+        expect(JSON.stringify(call)).not.toContain('icrisat');
+        expect(call).not.toContain(failure);
+      }
+      consoleSpy.mockRestore();
+    });
+
+    it('maps a 403 needsRoles body to the needsRoles key', () => {
+      jest.spyOn(service.authService, 'POST_otpVerify').mockReturnValue(throwError(() => ({ error: { response: { valid: false, needsRoles: true } } })));
+      const onError = jest.fn();
+
+      service.verifyOtp('a.person@icrisat.org', '48291345', 'sess-123', onError);
+
+      expect(onError).toHaveBeenCalledWith('needsRoles');
+    });
+  });
 });

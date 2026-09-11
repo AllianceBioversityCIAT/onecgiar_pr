@@ -9,6 +9,18 @@ import { RolesService } from './global/roles.service';
 import { UserAuth } from '../interfaces/user.interface';
 import { internationalizationData } from '../data/internationalization-data';
 import { environment } from '../../../environments/environment';
+// @akili-spec changes/cognito-email-otp-login — OTP-T-6, design.md §5.3
+/** Mapped from the server's `OTP_*` error codes; the panel owns the copy per key. */
+export type OtpErrorKey = 'domain' | 'mismatch' | 'expired' | 'attempts' | 'rate' | 'upstream' | 'needsRoles' | 'unknown';
+
+/** `serverMessage` is only passed for `unknown` keys that carry a non-empty server message. */
+export type OtpErrorCallback = (key: OtpErrorKey, serverMessage?: string) => void;
+
+export interface OtpStartResult {
+  session: string;
+  destination: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -173,6 +185,78 @@ export class CognitoService {
         this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: err?.error?.message, status: 'warning' });
       }
     });
+  }
+
+  // @akili-spec changes/cognito-email-otp-login — OTP-T-6, design.md §5.3, OTP-R-2/OTP-R-20/OTP-R-21
+  /**
+   * Starts the Center email-OTP challenge. The panel owns busy/step state — this only
+   * calls the server and hands the `{ session, destination }` (or a mapped error key)
+   * back through the callbacks, never a global alert (copy stays inline in the panel).
+   */
+  startOtp(email: string, onSuccess: (result: OtpStartResult) => void, onError: OtpErrorCallback): void {
+    this.authService.POST_otpStart({ email }).subscribe({
+      next: resp => {
+        onSuccess({
+          session: resp?.response?.session,
+          destination: resp?.response?.destination
+        });
+      },
+      error: err => this.reportOtpError('start', err, onError)
+    });
+  }
+
+  // @akili-spec changes/cognito-email-otp-login — OTP-T-6, design.md §5.3/§5.1, OTP-R-4/OTP-R-5
+  /** Success reuses `updateCacheService` + `redirectToHome` exactly as `loginWithCredentials` does. */
+  verifyOtp(email: string, code: string, session: string, onError: OtpErrorCallback): void {
+    this.authService.POST_otpVerify({ email, code, session }).subscribe({
+      next: resp => {
+        this.updateCacheService(resp);
+        this.redirectToHome();
+      },
+      error: err => this.reportOtpError('verify', err, onError)
+    });
+  }
+
+  /**
+   * OTP-R-11 / `.cursorrules`: log the HTTP status only — the error body carries the server
+   * message, which can include the email address. Unmapped codes hand the server message to the
+   * panel (when there is one) so the user sees something more useful than the generic copy.
+   */
+  private reportOtpError(stage: 'start' | 'verify', err: any, onError: OtpErrorCallback): void {
+    console.error(`OTP ${stage} failed`, err?.status);
+
+    const key = this.mapOtpErrorKey(err);
+    const serverMessage = err?.error?.message;
+    if (key === 'unknown' && typeof serverMessage === 'string' && serverMessage.trim()) {
+      onError(key, serverMessage);
+      return;
+    }
+    onError(key);
+  }
+
+  /** `OTP_*` codes (design.md §4.1) → the panel's inline error key. `needsRoles` has no `code`. */
+  private mapOtpErrorKey(err: any): OtpErrorKey {
+    const body = err?.error?.response;
+
+    if (body?.needsRoles) return 'needsRoles';
+
+    switch (body?.code) {
+      case 'OTP_DOMAIN_NOT_ALLOWED':
+        return 'domain';
+      case 'OTP_CODE_MISMATCH':
+        return 'mismatch';
+      case 'OTP_CODE_EXPIRED':
+        return 'expired';
+      case 'OTP_ATTEMPTS_EXCEEDED':
+        return 'attempts';
+      case 'OTP_RATE_LIMITED':
+        return 'rate';
+      case 'OTP_UPSTREAM_UNAVAILABLE':
+        return 'upstream';
+      default:
+        // Covers OTP_NOT_AUTHORIZED (decoy/unsupported-challenge) and any unmapped failure.
+        return 'unknown';
+    }
   }
 
   updateCacheService(resp: any) {
