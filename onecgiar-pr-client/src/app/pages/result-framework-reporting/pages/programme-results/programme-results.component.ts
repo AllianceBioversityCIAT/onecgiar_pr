@@ -112,12 +112,12 @@ export const PGR_COLUMNS: readonly PgrColumnDef[] = [
   // precomputed rank string (`sectionSort`), never the raw key, so `INTERMEDIATE` /
   // `EOI_2030` / `UNTAGGED` land after the alphabetically-sorted AoW codes (RAC-R-2.2).
   { key: 'aow', label: 'Area of Work', sortField: 'sectionSort', track: '132px', minPx: 132, optional: false },
-  { key: 'status', label: 'Status', sortField: 'statusName', track: '120px', minPx: 120, optional: false },
+  { key: 'status', label: 'Status', sortField: 'statusName', track: '150px', minPx: 150, optional: false },
   { key: 'createdBy', label: 'Created by', sortField: 'createdBy', track: 'minmax(140px,1fr)', minPx: 140, optional: true },
   { key: 'created', label: 'Created', sortField: 'created', track: '100px', minPx: 100, optional: true },
   { key: 'origin', label: 'Funding source', sortField: 'origin', track: '140px', minPx: 140, optional: true },
   { key: 'center', label: 'Center', sortField: 'center', track: 'minmax(140px,1fr)', minPx: 140, optional: true },
-  { key: 'updated', label: 'Updated', sortField: 'updated', track: '100px', minPx: 100, optional: false }
+  { key: 'updated', label: 'Updated', sortField: 'updated', track: '110px', minPx: 110, optional: false }
 ];
 
 /** Sticky-right actions column — always last, never optional, never sortable. */

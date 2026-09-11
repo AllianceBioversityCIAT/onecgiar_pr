@@ -353,7 +353,7 @@
             <span class="h-[14px] w-px bg-[var(--pr-border)] hidden sm:block" aria-hidden="true"></span>
             <button
               type="button"
-              class="flex h-[26px] items-center gap-[7px] rounded-full border-0 px-[9px] text-[13px] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+              class="flex h-[26px] items-center gap-[7px] rounded-full border-0 px-[9px] text-[13px] transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
               [class]="
                 isStatusActive(count.statusName)
                   ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
@@ -504,7 +504,7 @@
                     <!-- 6 · STATUS — pill from the fixed --pr-status-* fg/bg PAIR (UI-RULES 9). -->
                     <td class="pgr-td">
                       <span
-                        class="inline-block whitespace-nowrap rounded-full px-[9px] py-[3px] text-[12px] font-medium"
+                        class="inline-flex items-center whitespace-nowrap rounded-full px-[9px] py-[3px] text-[12px] font-medium leading-[1.2]"
                         [style.color]="statusFg(row.statusId)"
                         [style.background]="statusBg(row.statusId)">
                         {{ row.statusName }}
