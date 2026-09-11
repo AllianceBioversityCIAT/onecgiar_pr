@@ -140,7 +140,7 @@
 - **Verification:** HITL checklist all ticked with evidence; PROD diff equals the TEST diff (same single field). **Input that fails it:** code never arrives in TEST → `PRODUCT_BUG` (delivery/quota), do not tick. **Disqualifier:** screenshots without the redacted `auth.otp.*` log lines; a PROD step without the before-export.
 - **Definition of done:** guides updated; TRD row pending; TEST evidence recorded; PROD parity done or explicitly parked with its blocker.
 
-### `OTP-T-10` — Provisioning adjustment so center users land `CONFIRMED` (**triggered by the spike 2026-09-11 — now mandatory**)
+### [~] `OTP-T-10` — Provisioning adjustment so center users land `CONFIRMED` (**triggered by the spike 2026-09-11 — now mandatory**)
 
 - **Type:** `server` (microservice)
 - **Description:** The spike showed a `FORCE_CHANGE_PASSWORD` user is offered `SELECT_CHALLENGE [PASSWORD_SRP, PASSWORD]` and no `EMAIL_OTP`, while a user created **without a temporary password** (`MessageAction: SUPPRESS`, `email_verified=true`) lands `CONFIRMED` and gets `EMAIL_OTP` directly. In the microservice `createUser` (`/auth/register`): **when the email domain is in a `PASSWORDLESS_DOMAINS` env list**, call `AdminCreateUser` without `TemporaryPassword`, with `MessageAction: SUPPRESS` and `email_verified=true`, and skip the welcome-password email; all other domains keep today's temporary-password flow byte-identical. Document the env var (TEST value: `cifor-icraf.org,icrisat.org`).

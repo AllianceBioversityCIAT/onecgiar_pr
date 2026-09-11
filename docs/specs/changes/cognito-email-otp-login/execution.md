@@ -144,3 +144,21 @@
 - ADVISORY (recorded; the first two applied by the Leader in this commit): the mailbox literal survived in `execution.md` → replaced with `<spike mailbox>`; runbook said the client secret came "from the local microservice `.env`" while it is read at run time via `describe-user-pool-client` → sentence corrected; the script still writes `initiate-auth.email-otp.json` while the committed fixture is `…confirmed-user.json` (rename step noted in the fixtures README by the next runner — left as is).
 - Budget: 2 Reviewer rounds (round 2 PASS — no escalation). AWS mutations in this task (all user-approved): two `admin-create-user` (test users, to be deleted in `OTP-T-9`), two `update-user-pool --cli-input-json` (rollback rehearsal), plus the user's console toggle. Gate: `auto-approved (pre-approved mode)`.
 
+### `OTP-T-10` — Microservice: passwordless provisioning for allow-listed domains
+
+| Field | Value |
+|---|---|
+| Status | **`[~]` — code PASS (attempt 1); DoD line "a freshly provisioned TEST center user shows `CONFIRMED`" owed to the `OTP-T-3` TEST smoke** |
+| Date | 2026-09-11 |
+| Implementer | `akili-implementer` (`sonnet`), effort `medium`, skills `nestjs-expert`, `tdd`; worktree `dev-auth-otp` |
+| Reviewer | `akili-reviewer` (`opus`), lens checklist mode |
+| Requirements covered | `OTP-R-13` (provisioning adjustment), `OTP-AC-12` (code half) |
+
+**Attempt 1**
+
+- Files: `cognito.service.ts` (`isPasswordlessDomain(email)`; `createUser` deletes `TemporaryPassword` from the command input for listed domains — `MessageAction: 'SUPPRESS'`, `email_verified: 'true'` already present), `auth.service.ts` (`registerUser` skips the welcome email on the domain gate, independent of caller flags), specs (+8 tests; DI mock only in `auth.service.spec.ts`), `README.md` (`## Environment Variables` → `PASSWORDLESS_DOMAINS`, TEST value `cifor-icraf.org,icrisat.org`).
+- Red → green: `TS2339 isPasswordlessDomain` / one failing `auth.service` assertion → `npx jest cognito.service auth.service` 7 suites / 227 passed; full suite 15 suites / 319; eslint clean on changed lines (one pre-existing prettier error at `auth.service.ts:36`, commit `bf29541f`, outside the diff).
+- Reviewer verdict: **PASS**. Summary: exact, case-insensitive domain gate (`evil-icrisat.org` cannot match); `TemporaryPassword` key genuinely absent; non-listed domains byte-identical (pre-existing exact-equality test untouched); welcome email gated on the domain; PRMS's `registerInCognitoIfNeeded` discards the response body, so the stale `temporaryPassword: true` payload cannot drive PRMS behaviour; no password logged; `OTP-R-10` held. DoD live proof deferred to `OTP-T-3`/`T-9`.
+- **ADVISORY (recorded; two carried to the runbook / §13):** (1) **dual allow-list** — PRMS `OTP_ALLOWED_EMAIL_DOMAINS` (parameter) and microservice `PASSWORDLESS_DOMAINS` (env) must be kept in sync; a domain only in PRMS provisions a `FORCE_CHANGE_PASSWORD` user whose Center login then fails → runbook line + `OTP-T-9` HITL check; (2) **passwordless users receive no email at all** at provisioning (microservice skips the welcome mail; PRMS skips its own confirmation because `registerInCognitoIfNeeded` returns `false` on success) → follow-up proposal: a PRMS account-created email without password for passwordless domains; noted in `design.md` §13; (3) `commandInput as any` drops `AdminCreateUserCommandInput` typing; (4) `split('@')[1]` vs `lastIndexOf('@')` (fail-closed today).
+- Commit: microservice worktree `dev-auth-otp` (`feat(auth-microservice) [OTP-T-10]`). Budget: 1 Reviewer round. Gate: `auto-approved (pre-approved mode)`.
+
