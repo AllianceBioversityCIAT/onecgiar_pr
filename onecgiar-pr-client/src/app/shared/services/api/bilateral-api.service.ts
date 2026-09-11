@@ -33,6 +33,16 @@ export class BilateralApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/bilateral/center/change-type/${resultId}`, body);
   }
 
+  PATCH_primaryAssignment(
+    resultId: number | string,
+    body: { project_id: number; primary_science_program_id: number },
+  ) {
+    return this.http.patch<any>(
+      `${environment.apiBaseUrl}api/bilateral/center/primary-assignment/${resultId}`,
+      body,
+    );
+  }
+
   PATCH_plannedResult(resultId: number | string, body: Record<string, unknown>) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/bilateral/center/planned-result/${resultId}`, body);
   }

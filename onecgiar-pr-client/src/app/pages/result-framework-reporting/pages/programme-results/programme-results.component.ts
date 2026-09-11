@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { Clipboard } from '@angular/cdk/clipboard';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
@@ -263,6 +264,7 @@ function formatDate(value: string): string {
     NgTemplateOutlet,
     FormsModule,
     NgIcon,
+    OverlayModule,
     ReportingProgramBandComponent,
     PrTableComponent,
     PrTableHeaderDirective,
@@ -298,10 +300,6 @@ function formatDate(value: string): string {
 
       .pgr-pop {
         animation: prmsPop 0.16s ease-out;
-      }
-
-      .pgr-pop--menu {
-        animation-duration: 0.12s;
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -665,14 +663,6 @@ function formatDate(value: string): string {
         justify-content: center;
         padding: 0 8px;
         background: inherit;
-      }
-
-      /* Every actions cell is sticky at the SAME z-index, so among equals the DOM order decides and
-         the rows BELOW paint their own opaque 'background: inherit' over an open row menu — the
-         menu's own 'z-30' cannot help, it only ranks inside its own cell's stacking context. The
-         open row has to out-rank its siblings at the CELL level. */
-      :host ::ng-deep .pgr-table .pr-table tbody td.pgr-actions.pgr-actions--open {
-        z-index: 10;
       }
     `
   ]
@@ -1337,6 +1327,18 @@ export class ProgrammeResultsComponent implements OnDestroy {
     return `${row?.code ?? ''}|${row?.versionId ?? ''}`;
   }
 
+  /**
+   * CDK Connected Overlay positions for the row menu: below the ⋯ button, right edges aligned;
+   * flips above when the trigger sits near the bottom of the viewport. The panel is an overlay
+   * rather than a child of the actions cell because the table wrap is `overflow-x: auto` and an
+   * overflow container clips its descendants in BOTH axes — the old absolutely positioned menu was
+   * cut at the table's bottom edge and only its first item was visible.
+   */
+  readonly rowMenuPositions: ConnectedPosition[] = [
+    { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 4 },
+    { originX: 'end', overlayX: 'end', originY: 'top', overlayY: 'bottom', offsetY: -4 }
+  ];
+
   isMenuOpen(row: ProgrammeResultRow): boolean {
     return this.openMenuKey() === this.rowKey(row);
   }
@@ -1350,6 +1352,15 @@ export class ProgrammeResultsComponent implements OnDestroy {
 
   closeRowMenu(): void {
     this.openMenuKey.set(null);
+  }
+
+  /**
+   * `(detach)` of the row's overlay. Row-scoped ON PURPOSE: opening a second row's menu while one is
+   * open detaches the first, and an unconditional `closeRowMenu()` there would clear the key that
+   * now belongs to the SECOND row — both menus end up closed and the click looks swallowed.
+   */
+  onRowMenuDetach(row: ProgrammeResultRow): void {
+    if (this.isMenuOpen(row)) this.closeRowMenu();
   }
 
   // ── Update result (P2-3508) ─────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 # section-zero-dashboard (bilateral)
 
-**Verified:** 2026-09-05 · branch performance-refactor (primary project no longer editable; Submit lives in the rail)
+**Verified:** 2026-09-11 · branch performance-refactor (P2-3283 primary assignment editing; Submit lives in the rail)
 
 ## What it is
 Section 0 of the bilateral form: the read-mostly card that identifies the result (code, type,
@@ -12,25 +12,20 @@ disabled Coming-soon buttons (Generate Narrative / Download PDF / AI Review) wer
 card; bring it back only when one of those actions actually ships.
 
 ## Contract
-- Input: `readOnly` (`isFormReadOnly()` of the editor) — kept for parity with the other sections;
-  nothing in this card writes anymore.
-- State: `BilateralCreationService` owns every value on screen. This card is **read-only, full stop**.
+- Input: `readOnly` (`isFormReadOnly()` of the editor). Editing/Draft results can update their
+  lead project and primary program together; reviewed results remain static.
+- State: `BilateralCreationService` owns display state. The assignment is persisted only through
+  `PATCH /api/bilateral/center/primary-assignment/:resultId`, never through Contributors.
 
 ## Where it is used
 - `pages/bilateral-result-creator/bilateral-result-creator.component.html:210` — the only host.
 
 ## Traps (⚠️ = already broke something)
-- 🛑 **The primary W3/Bilateral project is NOT editable — decision, not omission (2026-09-05,
-  Juan David).** This reverses the P2-3518 inline picker (`<app-bilateral-project-selector
-  variant="inline">` + `canChangeProject()` + `onProjectChanged()` saving
-  `leadProjectSyncPayload()`): the project is the result's identity, so a draft created against the
-  wrong project is discarded and recreated, never re-pointed. The field renders plain text in EVERY
-  state, editable results included, and a spec asserts it against the rendered DOM. If the decision
-  ever reverses, the removed wiring is in this file's git history — and re-read the P2-3518 traps
-  it carried before restoring it: `selectProject()` (the wizard's entry point) clears the Science
-  Program, `contributing_bilateral_projects` is a SYNC-REPLACE that must carry the whole list with
-  exactly one `is_lead: true`, and `section-contributors` re-derives its `readonlyLeadProjectId`
-  from `selectedProject()`.
+- 🛑 **P2-3283: project and primary program are editable only as one server-validated assignment.**
+  The client stages the project until a primary program is selected; it must not call
+  `saveContributors` because that sync-replaces project rows and cannot update role 1. The server
+  accepts only confirmed positive-allocation mappings from the result's immutable lead centre.
+  Changing primary program clears its ToC mapping and the replacement must be mapped again.
 - The Submit gate (`overallStatus() === 'complete'` + not submitting + not read-only, the last one
   being the P2-3520 lock) moved with the button: it is `canSubmitFromRail()` in
   `bilateral-result-creator`, and `submitResult()` re-checks its own guards regardless.
@@ -40,7 +35,3 @@ card; bring it back only when one of those actions actually ships.
 ## Pending / Coming soon
 - `Generate Narrative`, `Download PDF`, `AI Review` — **not rendered at all since 2026-09-04** (the
   Actions card was removed); when one ships, it needs a new home, not a resurrection of the card as-was.
-- **Out of scope of P2-3518, deliberately not built:**
-  - the consequence of a project change on the **Science Program** (the ticket's own requirements
-    contradict each other; pending business). Today the Science Program is left exactly as it was.
-  - **re-pointing the Theory of Change** after a project change — ToC is Juan David's domain.

@@ -13,14 +13,19 @@
 
     <!-- Right cluster: report bug + notifications + user (phase deferred) -->
     <div class="pr-topbar-right">
-      <button
-        type="button"
-        class="pr-topbar-icon-btn"
-        aria-label="Report a bug or adjustment"
-        title="Report a bug or adjustment"
-        (click)="openReportFeedback()">
-        <ng-icon name="lucideBug" class="text-[20px]" />
-      </button>
+      <!-- Test environments only: in production the in-app bug report would feed
+           straight into the team's SLA. Same `onlyTest` criterion the navigation
+           uses for test-only entries. -->
+      @if (!isProduction) {
+        <button
+          type="button"
+          class="pr-topbar-icon-btn"
+          aria-label="Report a bug or adjustment"
+          title="Report a bug or adjustment"
+          (click)="openReportFeedback()">
+          <ng-icon name="lucideBug" class="text-[20px]" />
+        </button>
+      }
 
       <button
         type="button"
@@ -190,8 +195,11 @@
        is what makes CDK's focus restore land back on the button above. -->
   <app-global-search-palette />
 
-  <!-- Global "Report a bug / adjustment" modal, opened by the bug button above. -->
-  <app-report-feedback-dialog
-    [visible]="reportFeedbackOpen()"
-    (visibleChange)="reportFeedbackOpen.set($event)" />
+  <!-- Global "Report a bug / adjustment" modal, opened by the bug button above.
+       Not instantiated in production, where the button itself is hidden. -->
+  @if (!isProduction) {
+    <app-report-feedback-dialog
+      [visible]="reportFeedbackOpen()"
+      (visibleChange)="reportFeedbackOpen.set($event)" />
+  }
 }

@@ -133,18 +133,6 @@ export class FrameworkResultTocIndicatorsService {
       numberTarget !== null &&
       `${numberTarget}`.trim() !== '';
 
-    if (!hasNumberTarget) {
-      return;
-    }
-
-    const parsedNumberTarget = Number(numberTarget);
-
-    if (!Number.isFinite(parsedNumberTarget)) {
-      throwServiceError(
-        'The provided number_target value for the indicator contribution is invalid.',
-      );
-    }
-
     const parsedContributingIndicator =
       contributingIndicator !== null && contributingIndicator !== undefined
         ? Number(contributingIndicator)
@@ -155,6 +143,42 @@ export class FrameworkResultTocIndicatorsService {
       parsedContributingIndicator >= 0
         ? parsedContributingIndicator
         : null;
+
+    /**
+     * P2-3668 — the gate used to be `if (!hasNumberTarget) return;`, which threw away the whole row
+     * whenever the ToC indicator carried no target of its own. The contribution the reporter typed
+     * in the creation modal went with it: saved with no error, and the field came back showing its
+     * placeholder in Contributors and partners.
+     *
+     * Measured on prtest before the change: of the 13 most recent 2026 results, 7 stored no
+     * contribution — and in every one of those 7 the indicator target was empty too, which is the
+     * same gate seen from the data side. On result 9166, created by QA through this very modal with
+     * a contribution of 1, `GET /v2/api/contributors-partners/9166` returned the target record
+     * entirely null: the row had never been written.
+     *
+     * The target and the contribution are two different facts. A ToC node with no numeric target
+     * does not make the reporter's contribution meaningless, so the row is now written whenever
+     * EITHER is present. Nothing changes for the callers that already carry a target.
+     */
+    if (!hasNumberTarget && normalizedContributing === null) {
+      return;
+    }
+
+    /**
+     * 0, not null: `number_target` is NOT NULL in the database (verified against the test schema on
+     * 11 Sep 2026), and 0 is already what the platform stores for an indicator with no target of
+     * its own — `results-toc-results.repository.ts:1813-1816` resolves it as
+     * `canonical ?? typed ?? 0` on the Contributors and partners save path. 234 rows carry it
+     * today, 79 of them alongside a contribution, so this writes the shape that already exists
+     * rather than inventing a second one.
+     */
+    const parsedNumberTarget = hasNumberTarget ? Number(numberTarget) : 0;
+
+    if (!Number.isFinite(parsedNumberTarget)) {
+      throwServiceError(
+        'The provided number_target value for the indicator contribution is invalid.',
+      );
+    }
 
     const normalizedTargetDate =
       targetDate && targetDate.trim() !== '' ? targetDate.trim() : null;
