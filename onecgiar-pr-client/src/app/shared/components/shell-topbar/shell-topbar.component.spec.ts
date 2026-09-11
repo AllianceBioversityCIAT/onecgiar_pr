@@ -9,6 +9,7 @@ import { ApiService } from '../../services/api/api.service';
 import { DataControlService } from '../../services/data-control.service';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { ResultsListFilterService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
+import { environment } from '../../../../environments/environment';
 
 /**
  * The topbar owns the ONLY user/account menu in the shell (PROGRAM-SHELL-SPEC.md §2). The
@@ -298,6 +299,63 @@ describe('ShellTopbarComponent', () => {
       const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
       expect(html).not.toContain('toggleSidebar()');
       expect(html).not.toContain('aria-label="Toggle sidebar"');
+    });
+  });
+
+  // ------------------------------------------------- bug report hidden in production
+  // An in-app bug report filed from production goes straight into the team's Jira board and
+  // counts against the SLA, so the entry point only exists in test environments. Two halves
+  // are asserted separately, because either one alone would put the button back in prod:
+  // the flag has to come off `environment.production`, and the template has to gate on it.
+  describe('report-a-bug entry point is test-only', () => {
+    const originalProduction = environment.production;
+
+    afterEach(() => {
+      environment.production = originalProduction;
+    });
+
+    it('isProduction mirrors environment.production — both ways round', async () => {
+      environment.production = true;
+      await build();
+      expect(component.isProduction).toBe(true);
+
+      TestBed.resetTestingModule();
+      environment.production = false;
+      await build();
+      expect(component.isProduction).toBe(false);
+    });
+
+    it('wraps the bug button and its dialog in @if (!isProduction) — and nothing else', () => {
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+
+      // Every `@if (!isProduction) {` block in the template, resolved to its own text by
+      // walking braces, so "inside the guard" is measured and not assumed.
+      const guarded: string[] = [];
+      const marker = '@if (!isProduction) {';
+      for (let at = html.indexOf(marker); at !== -1; at = html.indexOf(marker, at + 1)) {
+        let depth = 0;
+        let end = at + marker.length - 1;
+        for (let i = at + marker.length - 1; i < html.length; i++) {
+          if (html[i] === '{') depth++;
+          if (html[i] === '}' && --depth === 0) {
+            end = i;
+            break;
+          }
+        }
+        guarded.push(html.slice(at, end + 1));
+      }
+
+      expect(guarded.length).toBe(2);
+      const insideGuards = guarded.join('\n');
+
+      expect(insideGuards).toContain('aria-label="Report a bug or adjustment"');
+      expect(insideGuards).toContain('openReportFeedback()');
+      expect(insideGuards).toContain('<app-report-feedback-dialog');
+
+      // Control: the brace walk must NOT swallow the whole template. If it did, the three
+      // assertions above would pass no matter where the button actually sits.
+      expect(insideGuards).not.toContain('aria-label="Notifications"');
+      expect(insideGuards).not.toContain('<app-global-search-palette');
     });
   });
 });
