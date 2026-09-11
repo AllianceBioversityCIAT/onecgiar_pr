@@ -646,29 +646,23 @@
            Mutually exclusive computeds, unlike the mockup's three independent blocks. The toolbar,
            the chips and the counts stay OUTSIDE them, so they remain visible in both. -->
       @if (isFilteredEmpty()) {
-        <div
-          class="flex max-h-[160px] flex-col items-start gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[32px]">
-          <p class="m-0 text-[14px] font-normal text-[var(--pr-text-secondary)]">No results match these filters.</p>
-          <button
-            type="button"
-            class="h-[32px] rounded-[8px] border-0 bg-transparent px-[12px] text-[13px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
-            (click)="clearAll()">
-            Clear all filters
-          </button>
-        </div>
+        <app-sp-tab-empty-state
+          testId="programme-results-filtered-empty"
+          variant="filtered"
+          title="No results match these filters"
+          description="Try removing a filter or widening your search to see more program results."
+          secondaryLabel="Clear all filters"
+          (secondaryAction)="clearAll()" />
       }
 
       @if (isNothingYet()) {
-        <div
-          class="flex max-h-[160px] flex-col items-start gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[32px]">
-          <p class="m-0 text-[14px] font-normal text-[var(--pr-text-secondary)]">No results reported in this program yet.</p>
-          <button
-            type="button"
-            class="flex h-[32px] items-center rounded-[8px] border-0 bg-transparent px-[12px] text-[13px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
-            (click)="goToReporting()">
-            Go to Reporting
-          </button>
-        </div>
+        <app-sp-tab-empty-state
+          testId="programme-results-empty"
+          icon="table_chart"
+          title="No results reported yet"
+          [description]="'Results reported in ' + (programmeName() || 'this program') + ' will show up here.'"
+          primaryLabel="Go to Reporting"
+          [primaryRouterLink]="reportingPath()" />
       }
     </div>
     </div>

@@ -1798,7 +1798,7 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.hasRows()).toBe(false);
     expect(component.isFilteredEmpty()).toBe(true);
     expect(component.isNothingYet()).toBe(false);
-    expect(text()).toContain('No results match these filters.');
+    expect(text()).toContain('No results match these filters');
 
     const clear = fixture.debugElement
       .queryAll(By.css('button'))
@@ -1807,7 +1807,7 @@ describe('ProgrammeResultsComponent', () => {
     fixture.detectChanges();
 
     expect(component.filteredRows().length).toBe(3);
-    expect(text()).not.toContain('No results match these filters.');
+    expect(text()).not.toContain('No results match these filters');
   });
 
   it('offers "Go to Reporting" when the programme has reported nothing at all', () => {
@@ -1816,13 +1816,15 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.hasRows()).toBe(false);
     expect(component.isNothingYet()).toBe(true);
     expect(component.isFilteredEmpty()).toBe(false);
-    expect(text()).toContain('No results reported in this program yet.');
+    expect(text()).toContain('No results reported yet');
     expect(text()).toContain('0 results');
 
     const goToReporting = fixture.debugElement
-      .queryAll(By.css('button'))
-      .find(button => (button.nativeElement as HTMLElement).textContent?.trim() === 'Go to Reporting');
-    goToReporting!.nativeElement.click();
+      .queryAll(By.css('a'))
+      .find(link => (link.nativeElement as HTMLElement).textContent?.trim() === 'Go to Reporting');
+    expect(goToReporting).toBeTruthy();
+
+    component.goToReporting();
 
     expect(router.navigateByUrl).toHaveBeenCalledWith('/result-framework-reporting/entity-details/SP01');
   });

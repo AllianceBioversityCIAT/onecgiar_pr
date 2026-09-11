@@ -29,6 +29,7 @@ import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter
 import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
+import { SpTabEmptyStateComponent } from '../dashboard-lab/components/sp-tab-empty-state/sp-tab-empty-state.component';
 import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
 import { ProgrammeResultRow } from '../programme-results/services/programme-results.service';
 import {
@@ -261,6 +262,7 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
     // Results tab mounts for Areas of Work, not a second implementation of one.
     PrFilterMultiselectModule,
     MyWorkColumnComponent,
+    SpTabEmptyStateComponent,
     WhereToReportModalComponent
   ],
   // `MWB-T-9`: `ProgrammeResultsFilterService` is page-scoped exactly like on the Results tab —
