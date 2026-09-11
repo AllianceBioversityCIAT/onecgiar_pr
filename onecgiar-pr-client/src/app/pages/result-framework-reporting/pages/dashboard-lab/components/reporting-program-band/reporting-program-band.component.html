@@ -773,6 +773,24 @@
       </div>
 
       <div class="ml-auto flex items-center gap-[8px] sm:gap-[10px]">
+        @if (showInsightsToggle()) {
+          <button
+            type="button"
+            (click)="insightsToggle.emit()"
+            [attr.aria-pressed]="insightsOpen()"
+            aria-label="Reporting insights"
+            title="Reporting insights"
+            data-testid="reporting-insights-toggle"
+            class="inline-flex size-[34px] shrink-0 cursor-pointer items-center justify-center rounded-[8px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+            [class]="
+              insightsOpen()
+                ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]'
+                : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:border-slate-400 hover:bg-slate-50 hover:text-[var(--pr-text-heading)]'
+            ">
+            <span class="material-icons-round text-[18px]" aria-hidden="true">insights</span>
+          </button>
+        }
+
         @if (compactFilters()) {
           <button
             type="button"
@@ -827,31 +845,14 @@
     </div>
   </div>
 
-  @if (!compactFilters()) {
+  @if (showQuickTypologyInBand()) {
     <div
-      class="flex items-center gap-1.5 px-[16px] sm:px-[32px] py-[8px] bg-[var(--pr-surface-app)] border-b border-[var(--pr-border-divider)] overflow-x-auto custom_scroll"
-      role="group"
-      aria-label="Quick typology filters"
-      data-testid="quick-typology-filters">
-      @for (chip of quickChips(); track chip.id) {
-        <button
-          type="button"
-          (click)="onQuickChipClick(chip)"
-          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] transition-all border cursor-pointer shrink-0"
-          [class]="chip.active
-            ? 'bg-[var(--pr-color-primary-400)] border-[var(--pr-color-primary-400)] text-white shadow-xs font-semibold'
-            : 'bg-[var(--pr-surface-card)] border-[var(--pr-border)] text-[var(--pr-text-secondary)] hover:border-[var(--pr-color-primary-300)] font-medium'"
-          [attr.aria-pressed]="chip.active">
-          <span>{{ chip.label }}</span>
-          @if (chip.count !== undefined && chip.count !== null) {
-            <span
-              class="text-[10.5px] px-1.5 py-0.2 rounded-full tabular-nums"
-              [class]="chip.active ? 'bg-white/20 text-white font-bold' : 'bg-slate-100 text-slate-600 font-medium'">
-              {{ chip.count }}
-            </span>
-          }
-        </button>
-      }
+      class="border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-app)] px-[16px] py-[8px] sm:px-[32px]">
+      <app-reporting-quick-typology-filters
+        [typologyValue]="typologyValue()"
+        [typologyCounts]="typologyCounts()"
+        [plannedResultsCount]="plannedResultsCount()"
+        (typologyChange)="typologyChange.emit($event)" />
     </div>
   }
 }

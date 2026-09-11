@@ -1006,6 +1006,26 @@ describe('ReportingProgramBandComponent', () => {
     });
   });
 
+  describe('Reporting insights toggle', () => {
+    it('renders the insights icon button when enabled and emits insightsToggle on click', async () => {
+      await build({ showToolbar: true, showInsightsToggle: true, insightsOpen: false });
+      const spy = jest.fn();
+      component.insightsToggle.subscribe(spy);
+
+      const btn = root().querySelector('[data-testid="reporting-insights-toggle"]') as HTMLButtonElement;
+      expect(btn).toBeTruthy();
+      expect(btn.getAttribute('aria-pressed')).toBe('false');
+
+      btn.click();
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('hides the insights toggle unless showInsightsToggle is true', async () => {
+      await build({ showToolbar: true, showInsightsToggle: false });
+      expect(root().querySelector('[data-testid="reporting-insights-toggle"]')).toBeNull();
+    });
+  });
+
   describe('All Areas of Work button (compactFilters mode)', () => {
     it('renders All Areas of Work button when compactFilters is true and emits allAowsClick when clicked', async () => {
       await build({ showToolbar: true, compactFilters: true });
@@ -1144,6 +1164,17 @@ describe('ReportingProgramBandComponent', () => {
 
       const strip = root().querySelector('[data-testid="quick-typology-filters"]');
       expect(strip).toBeNull();
+    });
+
+    it('does not pin quick typology in the band when the page is viewport-locked', async () => {
+      await build({
+        showToolbar: true,
+        compactFilters: false,
+        frameLocked: true,
+        scrollHost: document.createElement('div')
+      });
+
+      expect(root().querySelector('[data-testid="quick-typology-filters"]')).toBeNull();
     });
 
     it('clicking a chip emits typologyChange with matchKey, and clicking active chip reverts to all', async () => {

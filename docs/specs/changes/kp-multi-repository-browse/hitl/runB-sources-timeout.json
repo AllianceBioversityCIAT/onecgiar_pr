@@ -1,0 +1,24 @@
+{
+  "dt": 8050,
+  "status": 200,
+  "sources": [
+    {
+      "repository": "cgspace",
+      "status": "ok",
+      "total": 485,
+      "hasMore": true
+    },
+    {
+      "repository": "melspace",
+      "status": "ok",
+      "total": 29,
+      "hasMore": true
+    },
+    {
+      "repository": "worldfish",
+      "status": "timeout",
+      "total": 0,
+      "hasMore": false
+    }
+  ]
+}

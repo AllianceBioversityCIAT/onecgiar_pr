@@ -40,18 +40,35 @@ p {
   right: 0;
   bottom: 0;
   z-index: 1;
-  min-width: 65vw;
-  max-width: 100%;
+  width: 100%;
+  max-width: 98vw;
   display: flex;
   flex-direction: column;
-  background-color: var(--pr-color-white);
-  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+  background-color: var(--pr-surface-card, #ffffff);
+  box-shadow: -12px 0 36px rgba(15, 23, 42, 0.14);
   animation: pr-drawer-slide-in 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 
+  @media (min-width: 768px) {
+    width: 82vw;
+  }
+  @media (min-width: 1024px) {
+    width: 72vw;
+    max-width: 1100px;
+  }
+  @media (min-width: 1440px) {
+    width: 62vw;
+    max-width: 1200px;
+  }
+  @media (min-width: 1920px) {
+    width: 52vw;
+    max-width: 1300px;
+  }
+
   &.full-screen {
-    min-width: 100%;
-    width: 100%;
-    left: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    left: 0 !important;
   }
 }
 
@@ -84,10 +101,14 @@ p {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 32px;
-  background-color: var(--pr-color-primary-25);
-  border-bottom: 1px solid var(--pr-color-accents-2);
+  padding: 14px 16px;
+  background-color: var(--pr-surface-card, #ffffff);
+  border-bottom: 1px solid var(--pr-border, rgba(30, 32, 47, 0.08));
   width: 100%;
+
+  @media (min-width: 640px) {
+    padding: 16px 32px;
+  }
 }
 
 .result-review-drawer-header_entity {
@@ -119,8 +140,23 @@ p {
 }
 
 // Content styles
+.drawer-panel-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background-color: var(--pr-surface-ground, #f8f9fb);
+}
+
 .result-review-drawer-content {
-  padding: 24px 32px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  @media (min-width: 640px) {
+    padding: 24px 32px;
+    gap: 20px;
+  }
 }
 
 .result-review-drawer-content_header {
@@ -283,11 +319,23 @@ p {
 // Footer styles
 .result-review-drawer-footer {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 12px;
-  padding: 16px 32px;
-  background-color: var(--pr-color-white);
-  border-top: 1px solid var(--pr-color-accents-2);
+  padding: 14px 16px;
+  background-color: var(--pr-surface-card, #ffffff);
+  border-top: 1px solid var(--pr-border, rgba(30, 32, 47, 0.1));
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+
+  @media (min-width: 640px) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 32px;
+  }
 }
 
 .pending-message {
@@ -408,6 +456,24 @@ p {
     textarea {
       width: 100%;
       resize: vertical;
+      border: 1px solid var(--pr-border, #cbd5e1);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13.5px;
+      font-family: inherit;
+      color: var(--pr-text-heading, #1e293b);
+      background-color: #ffffff;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+
+      &:focus {
+        border-color: var(--pr-color-primary-400, #6b46e5);
+        box-shadow: 0 0 0 2px var(--pr-color-primary-100, #e9e0ff);
+      }
+
+      &::placeholder {
+        color: #94a3b8;
+      }
     }
   }
 
@@ -436,26 +502,36 @@ p {
 
 // Approve / Reject buttons (hlm-button carries the class directly now)
 .approve-button {
-  background-color: rgba(var(--pr-color-green-rgb), 0.1);
-  color: var(--pr-color-green-600);
-  border-color: var(--pr-color-green-600);
+  background: linear-gradient(to right, #059669, #047857);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
 
-  &:hover:not(.not-hover) {
-    background-color: var(--pr-color-green-600);
-    color: var(--pr-color-white);
-    border-color: var(--pr-color-green-600);
+  &:hover:not(:disabled) {
+    background: linear-gradient(to right, #047857, #065f46);
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: #9ca3af;
+    box-shadow: none;
   }
 }
 
 .reject-button {
-  background-color: rgba(var(--pr-color-red-rgb), 0.1);
-  color: var(--pr-color-red-500);
-  border-color: var(--pr-color-red-500);
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  cursor: pointer;
+  transition: all 0.2s ease;
 
-  &:hover {
-    background-color: var(--pr-color-red-500);
-    color: var(--pr-color-white);
-    border-color: var(--pr-color-red-500);
+  &:hover:not(:disabled) {
+    background-color: #fee2e2;
+    border-color: #fca5a5;
+    color: #991b1b;
   }
 }
 

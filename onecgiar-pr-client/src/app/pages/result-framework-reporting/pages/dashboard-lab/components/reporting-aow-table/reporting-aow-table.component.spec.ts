@@ -170,12 +170,12 @@ describe('ReportingAowTableComponent', () => {
       expect(component.statusOf(row({ progress_percentage: 120 }))).toBe('overachieved');
     });
 
-    it('shows no action once the target is met — rule 17', async () => {
+    it('shows Report when not started, Continue when in progress, and Report when achieved or overachieved', async () => {
       await build([group([row()])]);
       expect(component.actionLabel(row({ progress_percentage: 0 }))).toBe('Report');
       expect(component.actionLabel(row({ progress_percentage: 40 }))).toBe('Continue');
-      expect(component.actionLabel(row({ progress_percentage: 100 }))).toBeNull();
-      expect(component.actionLabel(row({ progress_percentage: 150 }))).toBeNull();
+      expect(component.actionLabel(row({ progress_percentage: 100 }))).toBe('Report');
+      expect(component.actionLabel(row({ progress_percentage: 150 }))).toBe('Report');
     });
 
     it('renders the action button only when the user may report', async () => {

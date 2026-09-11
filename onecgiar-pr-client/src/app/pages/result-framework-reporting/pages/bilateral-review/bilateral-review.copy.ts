@@ -59,8 +59,9 @@ export const BILATERAL_REVIEW_COPY = {
     // @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-7)
     cycleFilterLabel: 'Cycle',
     // @akili-spec changes/bilateral-review-ux-polish (BRP-T-1, R-5)
-    /** Toolbar "Clear filters · N" ghost button — replaces the old unconditional clear button. */
-    clearAllLabel: (count: number): string => `Clear filters · ${count}`,
+    /** Toolbar "Clear filters" pill (label `clearFilters` + a count badge) — replaces the old
+     *  unconditional clear button; this builder is its accessible name, count included. */
+    clearAllAriaLabel: (count: number): string => `Clear filters (${count} active)`,
     // @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-11)
     /** Group-mode segmented control (`Group: Project | Center`), grouped view only. */
     groupByLabel: 'Group',

@@ -159,7 +159,7 @@ cd onecgiar-pr-client && npm ci && cd ..
 
 Both apps read from environment variables. Common keys:
 
-- **Backend** (`onecgiar-pr-server/.env`): `PORT`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER_NAME`, `DB_USER_PASS`, `JWT_SKEY`, `JWT_EXPIRES`, `CGSPACE_DISCOVERY_URL` (CGSpace DSpace 7 REST base — **required**, no in-code fallback; set to `https://cgspace.cgiar.org/server/api`; when unset the KP *Browse CGSpace* tab degrades to an error state and Manual entry still works), plus RabbitMQ, AWS, Cognito, AD, CLARISA, MQAP, SharePoint vars.
+- **Backend** (`onecgiar-pr-server/.env`): `PORT`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER_NAME`, `DB_USER_PASS`, `JWT_SKEY`, `JWT_EXPIRES`, `CGSPACE_DISCOVERY_URL`, `MELSPACE_DISCOVERY_URL`, `WORLDFISH_DISCOVERY_URL` (DSpace 7 Discovery REST bases for CGSpace, MELSpace and WorldFish — each **required** for its repository, no in-code fallback; set to `https://cgspace.cgiar.org/server/api`, `https://repo.mel.cgiar.org/server/api` and `https://digitalarchive.worldfishcenter.org/server/api`; when one is unset that repository is reported as `unconfigured` in the KP *Browse* tab while the other repositories and Manual entry keep working), plus RabbitMQ, AWS, Cognito, AD, CLARISA, MQAP, SharePoint vars.
 - **Frontend** (`onecgiar-pr-client/src/environments/environment.ts`): `apiBaseUrl`, Cognito + Pusher keys, etc.
 
 Secrets live in environment variables, AWS Secrets Manager, or GitHub Secrets. **Never commit `.env` files or paste tokens / webhook URLs into logs or commits** — see [Security](#security).

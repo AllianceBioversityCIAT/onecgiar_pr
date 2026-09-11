@@ -385,10 +385,17 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/cgspace/search`, { params });
   }
 
-  GET_cgspaceFacet(name: string, prefix?: string, size?: number): Observable<any> {
+  // @akili-spec changes/kp-multi-repository-browse — KPM-R-9 / design §6.2
+  /**
+   * Facet values for one logical name, unioned over the selected repositories.
+   * `repositories` is sent comma-joined as `repository` (the server also accepts the
+   * repeatable form); omitting it keeps the server default of all three repositories.
+   */
+  GET_cgspaceFacet(name: string, prefix?: string, size?: number, repositories?: readonly string[]): Observable<any> {
     const params: any = {};
     if (prefix) params.prefix = prefix;
     if (size) params.size = size;
+    if (repositories && repositories.length > 0) params.repository = repositories.join(',');
     return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/cgspace/facets/${name}`, { params });
   }
 

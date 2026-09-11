@@ -322,12 +322,12 @@ describe('ReportResultFormComponent', () => {
       uri: ''
     };
 
-    it('template offers Browse CGSpace and Manual entry for Knowledge products', () => {
+    it('template offers Browse repositories and Manual entry for Knowledge products', () => {
       const fs = require('fs');
       const path = require('path');
       const template = fs.readFileSync(path.join(__dirname, 'report-result-form.component.html'), 'utf8');
 
-      expect(template).toContain('Browse CGSpace');
+      expect(template).toContain('Browse repositories');
       expect(template).toContain('Manual entry');
       expect(template).toContain('app-kp-cgspace-browse');
       expect(template).toContain('emerging-kp-entry');
@@ -352,6 +352,61 @@ describe('ReportResultFormComponent', () => {
 
       expect(mockResultLevelService.resultBody.handler).toBe('');
       expect(mockResultLevelService.resultBody.result_name).toBe('');
+    });
+
+    // @akili-spec changes/kp-multi-repository-browse — KPM-T-8, KPM-R-12, KPM-AC-12.
+    // Rework (attempt 2 of 3): the Reviewer FAILed the first version because Flow B never left the
+    // Browse state (mqapJson/handler/result_name were already the target values) and because
+    // `result_data` in `POST_createWithHandle({ ...mqapJson, result_data: this.resultLevelSE.resultBody })`
+    // is the SAME object reference on both calls, so `toEqual` passed by identity regardless of what
+    // Browse actually persisted. Fix: Flow B now genuinely exits Browse via `clearSelectedKpItem()`
+    // (resets mqapJson/mqapUrlError/handler/result_name/selectedKpRepository), re-enters through the
+    // real Manual-entry sync button (`kp-manual-sync` → `GET_mqapValidation()`,
+    // report-result-form.component.html:130), and both captures are deep-cloned at capture time so
+    // aliasing cannot make the comparison trivially true.
+    it('KPM-T-8 — a MELSpace item passes the regex, names MELSpace in the banner label, and produces the same POST_createWithHandle body as Manual entry', () => {
+      const melItem = { ...cgspaceItem, itemUrl: 'https://repo.mel.cgiar.org/items/11111111-1111-1111-1111-111111111111', repository: 'melspace' };
+      mockApiService.resultsSE.GET_mqapValidation = jest.fn(() => of({ response: { title: 'MEL Retrieved Title' } }));
+
+      // Flow A: Browse selection of a MELSpace item
+      component.onCgspaceItemSelected(melItem as any);
+
+      expect(mockApiService.resultsSE.GET_mqapValidation).toHaveBeenCalledWith(melItem.itemUrl);
+      expect(component.mqapUrlError.status).toBe(false);
+      expect(component.selectedKpRepository()).toBe('melspace');
+      expect(component.repositoryLabel()).toBe('MELSpace'); // drives the "Selected from {{ repositoryLabel() }}" banner
+
+      mockResultLevelService.resultBody.initiative_id = 1;
+      mockResultLevelService.resultBody.result_type_id = 6;
+      component.onSaveSection();
+      // Snapshot immediately — `result_data` aliases `mockResultLevelService.resultBody`, which Flow B
+      // goes on to mutate, so capturing a live reference here would make the later comparison vacuous.
+      const browseBody = JSON.parse(JSON.stringify(mockApiService.resultsSE.POST_createWithHandle.mock.calls[0][0]));
+
+      // Flow B: leave the Browse state for real, then re-enter through Manual entry's own sync path
+      mockApiService.resultsSE.POST_createWithHandle.mockClear();
+      component.clearSelectedKpItem();
+      expect(component.selectedKpRepository()).toBe('cgspace'); // Browse state genuinely reset, not just re-assigned
+      expect(component.mqapUrlError.status).toBe(false);
+      expect(mockResultLevelService.resultBody.handler).toBe('');
+
+      mockResultLevelService.resultBody.handler = melItem.itemUrl;
+      component.GET_mqapValidation(); // the `kp-manual-sync` button's handler — the actual Manual-entry path
+      expect(mockResultLevelService.resultBody.result_name).toBe('MEL Retrieved Title');
+
+      component.onSaveSection();
+      const manualBody = JSON.parse(JSON.stringify(mockApiService.resultsSE.POST_createWithHandle.mock.calls[0][0]));
+
+      // Snapshots are distinct objects — `toEqual` below is a genuine value comparison, not identity.
+      expect(browseBody).not.toBe(manualBody);
+      expect(browseBody).toEqual(manualBody);
+
+      // KPM-R-12 "BUT it must NOT persist any Discovery field other than the handle": neither capture
+      // may carry a Discovery-only field such as `repository`, at top level or inside `result_data`.
+      expect(browseBody).not.toHaveProperty('repository');
+      expect(manualBody).not.toHaveProperty('repository');
+      expect(browseBody.result_data).not.toHaveProperty('repository');
+      expect(manualBody.result_data).not.toHaveProperty('repository');
     });
   });
 

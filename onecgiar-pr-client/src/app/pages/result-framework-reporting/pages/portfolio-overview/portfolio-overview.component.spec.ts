@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 
 import { PortfolioOverviewComponent } from './portfolio-overview.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -500,6 +500,35 @@ describe('PortfolioOverviewComponent', () => {
     expect(component.hasError()).toBe(true);
     expect(component.hasFigures()).toBe(false);
     expect(fixture.debugElement.query(By.css('[role="alert"]'))).toBeTruthy();
+  });
+
+  it('renders modern skeleton loading state using .pr-skeleton when loading', () => {
+    const pending$ = new Subject();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [PortfolioOverviewComponent],
+      providers: [
+        {
+          provide: ApiService,
+          useValue: {
+            authSE: { localStorageUser: { id: 2 } },
+            resultsSE: { GET_AllResultsWithUseRole: () => pending$ }
+          }
+        },
+        { provide: Router, useValue: { navigate: jest.fn() } },
+        { provide: DataControlService, useValue: { reportingCurrentPhase: {} } },
+        { provide: ExportTablesService, useValue: { exportExcel: jest.fn() } }
+      ]
+    });
+    fixture = TestBed.createComponent(PortfolioOverviewComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect(component.isLoading()).toBe(true);
+    const skeletonHost = fixture.debugElement.query(By.css('[data-testid="portfolio-overview-skeleton"]'));
+    expect(skeletonHost).toBeTruthy();
+    const skeletons = fixture.nativeElement.querySelectorAll('.pr-skeleton');
+    expect(skeletons.length).toBeGreaterThan(0);
   });
 
   it('toggles matrixViewMode between table and chart', () => {

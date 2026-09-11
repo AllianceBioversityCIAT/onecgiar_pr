@@ -1,0 +1,136 @@
+{
+  "items": [
+    {
+      "uuid": "432f290d-1bc1-4203-96a0-6b13d2846ebf",
+      "handle": "10568/182579",
+      "handleUrl": "https://hdl.handle.net/10568/182579",
+      "itemUrl": "https://cgspace.cgiar.org/items/432f290d-1bc1-4203-96a0-6b13d2846ebf",
+      "title": "Annual Technical Report 2025: Multifunctional Landscapes Science Program",
+      "type": "Report",
+      "year": 2026,
+      "authors": [
+        "CGIAR Science Program on Multifunctional Landscapes"
+      ],
+      "affiliations": [
+        "CGIAR Science Program on Multifunctional Landscapes"
+      ],
+      "countries": [],
+      "doi": null,
+      "uri": "https://hdl.handle.net/10568/182579",
+      "repository": "cgspace"
+    },
+    {
+      "uuid": "39293cf0-4acf-4f46-98a0-a47e9b60d2bc",
+      "handle": "20.500.12348/6844",
+      "handleUrl": "https://hdl.handle.net/20.500.12348/6844",
+      "itemUrl": "https://digitalarchive.worldfishcenter.org/items/39293cf0-4acf-4f46-98a0-a47e9b60d2bc",
+      "title": "Beyond the Grain: How Rice-Field Ponds are Forging Climate Resilient Livelihoods in Cambodia",
+      "type": "Blog",
+      "year": 2026,
+      "authors": [
+        "Sean, V.",
+        "Mam, K."
+      ],
+      "affiliations": [
+        "WorldFish"
+      ],
+      "countries": [
+        "Cambodia"
+      ],
+      "doi": null,
+      "uri": "https://hdl.handle.net/20.500.12348/6844",
+      "repository": "worldfish"
+    },
+    {
+      "uuid": "f97362f0-1b6c-4fdf-8f94-9830b1eb0b71",
+      "handle": "10568/182573",
+      "handleUrl": "https://hdl.handle.net/10568/182573",
+      "itemUrl": "https://cgspace.cgiar.org/items/f97362f0-1b6c-4fdf-8f94-9830b1eb0b71",
+      "title": "Annual Technical Report 2025: Sustainable Farming Science Program",
+      "type": "Report",
+      "year": 2026,
+      "authors": [
+        "CGIAR Science Program on Sustainable Farming"
+      ],
+      "affiliations": [],
+      "countries": [],
+      "doi": null,
+      "uri": "https://hdl.handle.net/10568/182573",
+      "repository": "cgspace"
+    },
+    {
+      "uuid": "5e05ef95-889d-4b55-bca5-3b177dfb902e",
+      "handle": "20.500.12348/7043",
+      "handleUrl": "https://hdl.handle.net/20.500.12348/7043",
+      "itemUrl": "https://digitalarchive.worldfishcenter.org/items/5e05ef95-889d-4b55-bca5-3b177dfb902e",
+      "title": "Report on the Value Chain of Integrated Rice\u2013Giant Freshwater Prawn (Macrobrachium rosenbergii) Culture in  Cambodia, (Rice \u2013 Prawn Co-Culture)",
+      "type": "Report",
+      "year": 2026,
+      "authors": [
+        "Ou, P.",
+        "Akester, M.J.",
+        "Allison, E.H.",
+        "Sun, V.",
+        "Tuy, S.",
+        "Ouk, H.",
+        "Chan, B."
+      ],
+      "affiliations": [
+        "WorldFish",
+        "Takeo Fisheries Administration Contentment"
+      ],
+      "countries": [
+        "Cambodia"
+      ],
+      "doi": null,
+      "uri": "https://hdl.handle.net/20.500.12348/7043",
+      "repository": "worldfish"
+    },
+    {
+      "uuid": "3fec619f-3825-43f5-8bab-fb1ed9e57dce",
+      "handle": "10568/181138",
+      "handleUrl": "https://hdl.handle.net/10568/181138",
+      "itemUrl": "https://cgspace.cgiar.org/items/3fec619f-3825-43f5-8bab-fb1ed9e57dce",
+      "title": "Plan of Results and Budget 2026 - Planning: CGIAR Science Program on Breeding for Tomorrow",
+      "type": "Report",
+      "year": 2026,
+      "authors": [
+        "CGIAR Science Program on Breeding for Tomorrow"
+      ],
+      "affiliations": [
+        "CGIAR Science Program on Breeding for Tomorrow"
+      ],
+      "countries": [],
+      "doi": null,
+      "uri": "https://hdl.handle.net/10568/181138",
+      "repository": "cgspace"
+    }
+  ],
+  "page": {
+    "number": 0,
+    "size": 10,
+    "totalElements": 5,
+    "totalPages": 1,
+    "hasMore": false
+  },
+  "sources": [
+    {
+      "repository": "cgspace",
+      "status": "ok",
+      "total": 3,
+      "hasMore": false
+    },
+    {
+      "repository": "melspace",
+      "status": "ok",
+      "total": 0,
+      "hasMore": false
+    },
+    {
+      "repository": "worldfish",
+      "status": "ok",
+      "total": 2,
+      "hasMore": false
+    }
+  ]
+}

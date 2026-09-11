@@ -639,6 +639,10 @@ export class ProgramOverviewComponent {
 
   readonly statusTotal = computed(() => this.statusSegments().reduce((sum, s) => sum + s.count, 0));
 
+  readonly programResultsTotal = computed(() => this.statusTotal() + this.bilateralStatusTotal());
+
+  readonly programResultsLoading = computed(() => this.meterLoading() || this.bilateralLoading());
+
   readonly reportingTrendModel = computed<ReportingTrendModel>(() =>
     computeReportingTrendModel(this.programResults(), this.cycleYear(), this.statusTotal())
   );

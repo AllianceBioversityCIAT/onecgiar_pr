@@ -158,6 +158,7 @@ Never print, log, echo, expose, commit, or partially reveal:
 | AWS / Cognito / AD | Identity and deployment | `auth/`, `serverless.yaml`, `Dockerfile` |
 | CLARISA | Master-data catalog cache | `clarisa/` |
 | MQAP | Integration lookup | `api/m-qap/` |
+| DSpace Discovery (CGSpace, MELSpace, WorldFish) | Read-only KP browse proxy (search + facets); MQAP stays the metadata source after selection. Env `CGSPACE_DISCOVERY_URL`, `MELSPACE_DISCOVERY_URL`, `WORLDFISH_DISCOVERY_URL` — a missing one degrades that repository to `unconfigured` | `api/results/results-knowledge-products/cgspace-discovery/` |
 | SharePoint | File/notification services | `shared/services/` |
 | Pusher / WebSocket | Real-time hints | `shared/microservices/socket-management/` |
 | Swagger | API docs at `/api` | `main.ts` |

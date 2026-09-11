@@ -135,6 +135,13 @@ export class ShellTopbarComponent {
     return (this.api.dataControlSE.myInitiativesList ?? []).filter((item: any) => item.portfolio_id == 3);
   }
 
+  /** Generic center roles add noise when repeated on every row — hide them in the menu. */
+  shouldShowAssignmentRole(role?: string | null): boolean {
+    const normalized = role?.trim();
+    if (!normalized) return false;
+    return normalized.toLowerCase() !== 'center user';
+  }
+
   isInitiativeClosed(officialCode: string): boolean {
     return false;
   }

@@ -1,7 +1,17 @@
-<!-- Lives inside #workArea so the cards scroll with reporting content (SAV-T-3), not with the band chrome. -->
-<div class="px-[32px] max-sm:px-[16px] pt-[14px] pb-[16px]" data-testid="reporting-summary-stats">
+<div
+  data-testid="reporting-summary-stats"
+  [class]="
+    variant() === 'panel'
+      ? 'p-0'
+      : 'px-[32px] max-sm:px-[16px] pt-[14px] pb-[16px]'
+  ">
   @if (stats(); as s) {
-    <div class="grid grid-cols-4 gap-[14px] max-[1366px]:grid-cols-2 max-sm:grid-cols-1">
+    <div
+      [class]="
+        variant() === 'panel'
+          ? 'grid grid-cols-1 gap-[12px]'
+          : 'grid grid-cols-4 gap-[14px] max-[1366px]:grid-cols-2 max-sm:grid-cols-1'
+      ">
       <div class="flex min-w-0 flex-col justify-between gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px] px-[16px] text-left transition-all duration-150 shadow-2xs hover:shadow-xs">
         <div class="flex items-center justify-between gap-[8px] min-w-0">
           <div class="flex items-center gap-[6px] min-w-0 flex-1">

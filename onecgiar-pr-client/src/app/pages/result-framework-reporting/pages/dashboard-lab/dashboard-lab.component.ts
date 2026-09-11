@@ -41,7 +41,8 @@ import { IndicatorDrawerComponent } from './components/indicator-drawer/indicato
 import { ReportingAowTableComponent, ReportingAowGroup, ReportingIndicator } from './components/reporting-aow-table/reporting-aow-table.component';
 import { buildReportModalNode } from './components/reporting-aow-table/report-modal-context.util';
 import { ReportingProgramBandComponent, BandFilterOption } from './components/reporting-program-band/reporting-program-band.component';
-import { ReportingSummaryStatsComponent } from './components/reporting-summary-stats/reporting-summary-stats.component';
+import { ReportingInsightsPanelComponent } from './components/reporting-insights-panel/reporting-insights-panel.component';
+import { ReportingQuickTypologyFiltersComponent } from './components/reporting-quick-typology-filters/reporting-quick-typology-filters.component';
 import { AowHloCreateModalComponent } from '../entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/aow-hlo-create-modal.component';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
@@ -417,7 +418,8 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
     HighlightSearchPipe,
     ReportingAowTableComponent,
     ReportingProgramBandComponent,
-    ReportingSummaryStatsComponent,
+    ReportingInsightsPanelComponent,
+    ReportingQuickTypologyFiltersComponent,
     ProgramOverviewComponent,
     ReportingEntryHubComponent,
     NarrativePanelComponent,
@@ -1095,6 +1097,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       const code = this.selected()?.initiativeCode || '';
       const phase = this.myWorkPhaseLabel();
       if (code && phase) this.myWorkCountSE.ensure(code, phase);
+    });
+
+    effect(() => {
+      if (this.plannedBrowseView() !== 'aows') {
+        untracked(() => this.reportingInsightsOpen.set(false));
+      }
     });
 
     // Load the selected program's Areas of Work on selection change.
@@ -4108,6 +4116,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * Default = Areas of Work list; By AOW = one AOW + typology filter; Indicators = flat list.
    */
   readonly plannedBrowseView = signal<PlannedBrowseView>('aows');
+  /** JIRA-style insights rail — summary cards moved off the main scroll surface. */
+  readonly reportingInsightsOpen = signal(false);
   readonly plannedBrowseViews = [
     { id: 'aows' as const, label: 'Areas of Work', icon: 'account_tree' },
     { id: 'byAow' as const, label: 'By AOW', icon: 'folder_open' },
@@ -4191,6 +4201,14 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     } else if (view === 'indicators') {
       this.loadAllTocs();
     }
+  }
+
+  toggleReportingInsights(): void {
+    this.reportingInsightsOpen.update(open => !open);
+  }
+
+  closeReportingInsights(): void {
+    this.reportingInsightsOpen.set(false);
   }
 
   setPlannedLayout(layout: 'cards' | 'table'): void {

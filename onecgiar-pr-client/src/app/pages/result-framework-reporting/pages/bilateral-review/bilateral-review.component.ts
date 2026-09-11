@@ -6,7 +6,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs/operators';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronDown, lucideChevronsDownUp, lucideChevronsUpDown, lucideChevronUp, lucideSearch, lucideX } from '@ng-icons/lucide';
+import { lucideChevronDown, lucideChevronsDownUp, lucideChevronsUpDown, lucideChevronUp, lucideFunnelX, lucideSearch, lucideX } from '@ng-icons/lucide';
 
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { CentersService } from '../../../../shared/services/global/centers.service';
@@ -105,7 +105,7 @@ const UNASSIGNED_CENTER_CODE = '__unassigned__';
     BilateralReviewTableComponent,
     ResultReviewDrawerComponent
   ],
-  viewProviders: [provideIcons({ lucideSearch, lucideChevronsUpDown, lucideChevronsDownUp, lucideChevronDown, lucideChevronUp, lucideX })]
+  viewProviders: [provideIcons({ lucideSearch, lucideChevronsUpDown, lucideChevronsDownUp, lucideChevronDown, lucideChevronUp, lucideX, lucideFunnelX })]
 })
 export class BilateralReviewComponent {
   private readonly route = inject(ActivatedRoute);

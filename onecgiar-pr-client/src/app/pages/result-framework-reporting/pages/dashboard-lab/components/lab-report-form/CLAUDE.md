@@ -1,6 +1,6 @@
 # lab-report-form
 
-**Verified:** 2026-09-09 · qa-development-2026-ss · b1ca9ef1f (ERC-T-2: adds `hasReferenceCenters`/`hasReferenceScience` + the full-catalogue-direct template branch below); prior: 2026-09-05 · qa-development-2026 · b2d5f1c31
+**Verified:** 2026-09-10 · qa-development-2026 · 2a4d965e9 (KPM-T-8, spec `changes/kp-multi-repository-browse`: Browse tab is now `Browse repositories`, live across CGSpace/MELSpace/WorldFish — the "Pendiente/oculto" note below was stale, rewritten); prior: 2026-09-09 · qa-development-2026-ss · b1ca9ef1f (ERC-T-2: adds `hasReferenceCenters`/`hasReferenceScience` + the full-catalogue-direct template branch below); prior: 2026-09-05 · qa-development-2026 · b2d5f1c31
 
 ## Qué es
 El formulario de creación de resultado que vive **dentro del aside** (`indicator-drawer`). Copia
@@ -88,15 +88,16 @@ muestra su selección como chips con `×` debajo del control**. Footer sticky co
   mentir sobre el estado.
 
 ## Pendiente / Coming soon
-- Pestaña **`Browse CGSpace`**: ⚠️ **OCULTA desde P2-3479**, no deshabilitada. Negocio (Nicoleta,
-  vía Cami) pidió retirarla mientras los P/A prueban, porque una pestaña muerta se lee como función
-  rota. Se oculta **el conmutador entero** (`@if (kpBrowseEnabled)`), no solo el botón: un tablist
-  con una sola pestaña es peor que ninguno. Manual entry se queda, deja de presentarse como opción.
-  Para devolverla: `kpBrowseEnabled = true` en el `.ts` y vuelven las dos pestañas.
-  🛑 **Es la excepción a la convención del repo** de dejar lo no construido visible-deshabilitado
-  con tag `Coming soon`. No la generalices a otros controles sin preguntar.
-  Sigue sin haber endpoint de búsqueda — el server solo expone `mqap?handle=` (valida UNO) y
-  `find/by-handle`. Ya especificado en **P2-3231** (épica **P2-3230**). **No abrir ticket nuevo.**
+- Pestaña **`Browse repositories`**: **VIVA** (`kpBrowseEnabled = true`, sin gate) — ya NO está oculta.
+  El P2-3479/P2-3231 "ocultar el conmutador entero mientras no hay endpoint de búsqueda" quedó resuelto
+  por el proxy de Discovery (`cgspace-discovery/`, spec `changes/kp-multi-repository-browse`): el tab
+  busca en **CGSpace, MELSpace y WorldFish** a la vez vía `app-kp-cgspace-browse`
+  (`GET /api/results/knowledge-products/cgspace/search`), no solo `mqap?handle=`/`find/by-handle`.
+  `onCgspaceItemSelected` guarda `selectedKpRepository` (default `cgspace`, `item.repository` si el
+  browse lo trae) y el banner "Selected from {{ repositoryLabel() }}" nombra el repo real
+  (`kpRepositoryLabel`, `kp-repositories.constants.ts`). Si esta nota vuelve a decir "oculto" o "sin
+  endpoint", léela con sospecha antes de creerla — comprueba `kpBrowseEnabled` y el folder
+  `cgspace-discovery/` primero.
 - `fundingSource` existe pero solo vale `'w1w2'`: es el hueco para las secciones bilaterales
   (P2-3352 / P2-3341 / P2-3353). No añadir `Contribution %` ni `Primary contributing SP` aquí.
 

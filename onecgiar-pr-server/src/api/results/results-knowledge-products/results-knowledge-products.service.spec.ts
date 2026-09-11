@@ -90,7 +90,7 @@ describe('ResultsKnowledgeProductsService — handle lookup (P2-3534)', () => {
 
       expect(result.status).toBe(HttpStatus.BAD_REQUEST);
       expect(result.message).toContain(
-        'No knowledge product was found in CGSpace',
+        'No knowledge product was found in the repository',
       );
       expect(result.message).toContain('10568/999999999');
     });
@@ -130,7 +130,7 @@ describe('ResultsKnowledgeProductsService — handle lookup (P2-3534)', () => {
       );
 
       expect(result.message).not.toContain(
-        'No knowledge product was found in CGSpace',
+        'No knowledge product was found in the repository',
       );
       expect(result.message).toBe('reached the lookup');
     });

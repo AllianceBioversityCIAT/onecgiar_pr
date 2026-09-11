@@ -1911,4 +1911,81 @@ describe('ResultReviewDrawerComponent', () => {
       expect((component.resultDetail() as any).contributingInitiatives).toEqual([1]);
     });
   });
+
+  // ------------------------------------------------------------- validationStatus & scrollToToc
+
+  describe('validationStatus', () => {
+    it('returns approved state when status is 6', () => {
+      component.resultToReview.set({ status_id: 6 } as any);
+      const status = component.validationStatus();
+      expect(status.type).toBe('approved');
+      expect(status.isReady).toBe(true);
+    });
+
+    it('returns rejected state when status is 7', () => {
+      component.resultToReview.set({ status_id: 7 } as any);
+      const status = component.validationStatus();
+      expect(status.type).toBe('rejected');
+      expect(status.isReady).toBe(false);
+    });
+
+    it('returns missing-toc when ToC is not completed for pending result', () => {
+      apiMock.rolesSE.isAdmin = true;
+      component.resultToReview.set({ status_id: 5 } as any);
+      component.isToCCompleted.set(false);
+      const status = component.validationStatus();
+      expect(status.type).toBe('missing-toc');
+      expect(status.isReady).toBe(false);
+    });
+
+    it('returns unsaved-toc when ToC has unsaved changes', () => {
+      apiMock.rolesSE.isAdmin = true;
+      component.resultToReview.set({ status_id: 5 } as any);
+      component.isToCCompleted.set(true);
+      component.isTocDirty.set(true);
+      const status = component.validationStatus();
+      expect(status.type).toBe('unsaved-toc');
+      expect(status.isReady).toBe(false);
+    });
+
+    it('returns unsaved-data when Data Standards has unsaved changes', () => {
+      apiMock.rolesSE.isAdmin = true;
+      component.resultToReview.set({ status_id: 5 } as any);
+      component.isToCCompleted.set(true);
+      component.isTocDirty.set(false);
+      jest.spyOn(component, 'hasDataStandardUnsavedChanges').mockReturnValue(true);
+      const status = component.validationStatus();
+      expect(status.type).toBe('unsaved-data');
+      expect(status.isReady).toBe(false);
+    });
+
+    it('returns ready when all requirements are met', () => {
+      apiMock.rolesSE.isAdmin = true;
+      component.resultToReview.set({ status_id: 5 } as any);
+      component.isToCCompleted.set(true);
+      component.isTocDirty.set(false);
+      jest.spyOn(component, 'hasDataStandardUnsavedChanges').mockReturnValue(false);
+      const status = component.validationStatus();
+      expect(status.type).toBe('ready');
+      expect(status.isReady).toBe(true);
+    });
+  });
+
+  describe('scrollToToc', () => {
+    it('scrolls into view when #review-card-toc exists', () => {
+      const el = document.createElement('div');
+      el.id = 'review-card-toc';
+      el.scrollIntoView = jest.fn();
+      document.body.appendChild(el);
+
+      component.scrollToToc();
+
+      expect(el.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+      document.body.removeChild(el);
+    });
+
+    it('does not throw when #review-card-toc does not exist', () => {
+      expect(() => component.scrollToToc()).not.toThrow();
+    });
+  });
 });

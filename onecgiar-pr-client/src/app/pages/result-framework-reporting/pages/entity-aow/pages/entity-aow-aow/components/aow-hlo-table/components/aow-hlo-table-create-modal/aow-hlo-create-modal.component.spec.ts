@@ -626,6 +626,74 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       expect(browseBody.result).not.toHaveProperty('affiliations');
       expect(browseBody.result).not.toHaveProperty('countries');
     });
+
+    // @akili-spec changes/kp-multi-repository-browse — KPM-T-8, KPM-R-12, KPM-AC-12.
+    it('KPM-T-8 — a MELSpace item passes the regex, names MELSpace in the banner label, and produces the same POST_createResult body as Manual entry', () => {
+      mockEntityAowService.currentResultToReport.set({
+        toc_result_id: 'TOC-100',
+        result_level_id: 3,
+        indicators: [
+          {
+            indicator_description: 'KP Indicator',
+            type_name: 'Number of knowledge products',
+            result_type_id: 6,
+            result_level_id: 3,
+            number_target: 5,
+            target_date: '2026-12-31'
+          }
+        ]
+      });
+
+      const melItem: CgspaceItemDto = {
+        ...sampleBrowseItem,
+        itemUrl: 'https://repo.mel.cgiar.org/items/11111111-1111-1111-1111-111111111111',
+        repository: 'melspace' as any
+      };
+      mockApiService.resultsSE.GET_mqapValidation.mockReturnValueOnce(
+        of({ response: { title: 'MQAP Retrieved Result Title', metadata: [{ source: 'MELSpace' }] } })
+      );
+
+      // Flow A: Browse selection of a MELSpace item
+      component.onCgspaceItemSelected(melItem);
+
+      expect(mockApiService.resultsSE.GET_mqapValidation).toHaveBeenCalledWith(melItem.itemUrl);
+      expect(component.mqapUrlError().status).toBe(false);
+      expect(component.selectedKpRepository()).toBe('melspace');
+      expect(component.repositoryLabel()).toBe('MELSpace'); // drives the "Selected from {{ repositoryLabel() }}" banner
+
+      component.createResultBody.update(b => ({
+        ...b,
+        toc_progressive_narrative: 'Progress narrative for KP',
+        contribution_to_indicator_target: 3
+      }));
+
+      component.createResult();
+      const browseBody = mockApiService.resultsSE.POST_createResult.mock.calls[0][0];
+
+      // Flow B: Manual entry with the identical MEL handle and form inputs
+      mockApiService.resultsSE.POST_createResult.mockClear();
+
+      const manualComponentFixture = TestBed.createComponent(AowHloCreateModalComponent);
+      const manualComp = manualComponentFixture.componentInstance;
+      manualComp.createResultBody.update(b => ({
+        ...b,
+        handler: melItem.itemUrl,
+        result_name: 'MQAP Retrieved Result Title',
+        toc_progressive_narrative: 'Progress narrative for KP',
+        contribution_to_indicator_target: 3,
+        result_type_id: null
+      }));
+      manualComp.handleSource.set('manual');
+      manualComp.mqapJson.set({
+        title: 'MQAP Retrieved Result Title',
+        metadata: [{ source: 'MELSpace' }]
+      });
+
+      manualComp.createResult();
+      const manualBody = mockApiService.resultsSE.POST_createResult.mock.calls[0][0];
+
+      expect(browseBody).toEqual(manualBody);
+    });
   });
 
   describe('Existing Result Handling (AC-13, KPB-R-13)', () => {

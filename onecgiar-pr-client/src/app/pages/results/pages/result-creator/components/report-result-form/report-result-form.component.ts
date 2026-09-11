@@ -19,6 +19,10 @@ import {
 } from '../../../../../../shared/services/global/qa-innovation-development-results.service';
 import { validateKpHandle } from '../../../../../result-framework-reporting/shared/report-result/kp-handle.validator';
 import { CgspaceItemDto } from '../../../../../result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.component';
+import {
+  KpRepository,
+  kpRepositoryLabel
+} from '../../../../../result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-repositories.constants';
 
 export type KpEntryMode = 'browse' | 'manual';
 
@@ -49,6 +53,9 @@ export class ReportResultFormComponent implements OnInit, DoCheck, OnDestroy {
   mqapJson: {};
   validating = false;
   readonly kpEntryMode = signal<KpEntryMode>('browse');
+  /** @akili-spec changes/kp-multi-repository-browse — KPM-DD-9. Default `cgspace` until Browse sets it. */
+  readonly selectedKpRepository = signal<KpRepository>('cgspace');
+  readonly repositoryLabel = computed(() => kpRepositoryLabel(this.selectedKpRepository()));
 
   readonly phaseYear = computed(() => {
     this.api.dataControlSE.reportingPhaseVersion?.();
@@ -80,7 +87,7 @@ export class ReportResultFormComponent implements OnInit, DoCheck, OnDestroy {
     const { current, previous, next } = this.kpGuidanceYears();
     return `Please add the handle generated in <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong> to report your knowledge product. Only knowledge products entered into <strong>one of these repositories</strong> are accepted in the PRMS Reporting Tool.<br><br>
 The PRMS Reporting Tool will automatically retrieve all metadata entered into <strong>one of these repositories</strong>. Partners and geographical scope metadata are editable, while the other metadata fields are not.<br><br>
-The handle will be verified, and only knowledge products from <strong>${current}</strong> will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace ("Date Online"). If the online publication date is missing, the issued date ("Date Issued") will be considered. Articles published online in <strong>${current}</strong> but issued in <strong>${next}</strong> will be accepted for the <strong>${current}</strong> reporting phase.<br><br>
+The handle will be verified, and only knowledge products from <strong>${current}</strong> will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in the repository ("Date Online"). If the online publication date is missing, the issued date ("Date Issued") will be considered. Articles published online in <strong>${current}</strong> but issued in <strong>${next}</strong> will be accepted for the <strong>${current}</strong> reporting phase.<br><br>
 Articles published online in <strong>${previous}</strong> but issued in <strong>${current}</strong> will not be accepted and will need to be reported in the correct reporting period. Handles already reported will also not be accepted.<br><br>
 If you need support to modify any of the harvested metadata from <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong>, contact your Center's knowledge manager.`;
   });
@@ -251,6 +258,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   onCgspaceItemSelected(item: CgspaceItemDto): void {
     const url = item.itemUrl || item.handleUrl || item.handle;
     this.validating = true;
+    this.selectedKpRepository.set(item.repository ?? 'cgspace');
     const error = validateKpHandle(url);
     this.mqapUrlError = error;
     if (error.status) {
@@ -258,7 +266,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
       this.api.alertsFe.show({
         id: 'reportResultError',
         title: 'Error!',
-        description: error.message || 'Invalid CGSpace URL',
+        description: error.message || 'Invalid repository item URL',
         status: 'error'
       });
       return;
@@ -292,6 +300,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     this.mqapJson = {};
     this.mqapUrlError = { status: false, message: '' };
     this.validating = false;
+    this.selectedKpRepository.set('cgspace');
   }
 
   /**

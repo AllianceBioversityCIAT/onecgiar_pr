@@ -113,51 +113,76 @@
     cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
     [cdkConnectedOverlayPositions]="userMenuPositions"
     (backdropClick)="userMenuOpen.set(false)">
-    <div class="pr-topbar-panel pr-topbar-panel--user" role="menu">
-      <div class="pr-topbar-user-card">
-        <span class="pr-topbar-avatar pr-topbar-avatar--lg">{{ getUserInitials() }}</span>
-        <div class="min-w-0">
-          <div class="flex min-w-0 items-center gap-1.5">
-            <p class="pr-topbar-user-card__name min-w-0 truncate">{{ getUserName() }}</p>
-            <span
-              class="shrink-0 truncate rounded bg-[var(--pr-color-primary-50)] px-1.5 py-px text-[9px] font-semibold uppercase leading-[1.4] tracking-[0.3px] text-[var(--pr-color-primary-400)]"
-              >{{ getPlatformRole() }}</span
-            >
+    <div class="pr-topbar-panel pr-topbar-panel--user" role="menu" aria-label="Account menu">
+      <div class="pr-topbar-panel__header">
+        <div class="pr-topbar-user-card">
+          <span class="pr-topbar-avatar pr-topbar-avatar--lg">{{ getUserInitials() }}</span>
+          <div class="min-w-0 flex-1">
+            <div class="flex min-w-0 items-center gap-1.5">
+              <p class="pr-topbar-user-card__name min-w-0 truncate">{{ getUserName() }}</p>
+              <span
+                class="shrink-0 truncate rounded bg-[var(--pr-color-primary-50)] px-1.5 py-px text-[9px] font-semibold uppercase leading-[1.4] tracking-[0.3px] text-[var(--pr-color-primary-400)]"
+                >{{ getPlatformRole() }}</span
+              >
+            </div>
+            <p class="pr-topbar-user-card__email">{{ api.authSE.localStorageUser?.email }}</p>
           </div>
-          <p class="pr-topbar-user-card__email">{{ api.authSE.localStorageUser?.email }}</p>
         </div>
       </div>
 
-      <div class="pr-topbar-panel__rule"></div>
+      @if (getInitiativeSeparatedByPortfolio().length > 0 || getMyCenters().length > 0) {
+        <div class="pr-topbar-panel__body">
+          @if (getInitiativeSeparatedByPortfolio().length > 0) {
+            <div class="pr-topbar-panel__section">
+              <div class="pr-topbar-panel__section-head">
+                <p class="pr-topbar-panel__eyebrow">My Science Programs/Accelerators</p>
+                <span class="pr-topbar-panel__count">{{ getInitiativeSeparatedByPortfolio().length }}</span>
+              </div>
+              <ul class="pr-topbar-assignment-list">
+                @for (item of getInitiativeSeparatedByPortfolio(); track $index) {
+                  <li class="pr-topbar-assignment pr-topbar-assignment--compact">
+                    <span class="pr-topbar-assignment__code">{{ item.official_code }}</span>
+                    <span class="pr-topbar-assignment__role">{{ item.role }}</span>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
 
-      @if (getInitiativeSeparatedByPortfolio().length > 0) {
-        <div class="pr-topbar-panel__section">
-          <p class="pr-topbar-panel__eyebrow">My Science Programs/Accelerators</p>
-          @for (item of getInitiativeSeparatedByPortfolio(); track $index) {
-            <p class="pr-topbar-panel__row">{{ item.official_code }} - {{ item.role }}</p>
+          @if (getMyCenters().length > 0) {
+            <div class="pr-topbar-panel__section">
+              <div class="pr-topbar-panel__section-head">
+                <p class="pr-topbar-panel__eyebrow">My Centers</p>
+                <span class="pr-topbar-panel__count">{{ getMyCenters().length }}</span>
+              </div>
+              <ul class="pr-topbar-assignment-list">
+                @for (item of getMyCenters(); track item.center_id) {
+                  <li class="pr-topbar-assignment">
+                    <span class="pr-topbar-assignment__code" [title]="item.center_id">{{ item.center_id }}</span>
+                    <div class="pr-topbar-assignment__body">
+                      <span class="pr-topbar-assignment__title" [title]="item.center_name">{{ item.center_name }}</span>
+                      @if (shouldShowAssignmentRole(item.role_name)) {
+                        <span class="pr-topbar-assignment__role">{{ item.role_name }}</span>
+                      }
+                    </div>
+                  </li>
+                }
+              </ul>
+            </div>
           }
         </div>
       }
 
-      @if (getMyCenters().length > 0) {
-        <div class="pr-topbar-panel__section">
-          <p class="pr-topbar-panel__eyebrow">My Centers</p>
-          @for (item of getMyCenters(); track item.center_id) {
-            <p class="pr-topbar-panel__row">{{ item.center_id }} - {{ item.center_name }} ({{ item.role_name }})</p>
-          }
-        </div>
-      }
-
-      <div class="pr-topbar-panel__rule"></div>
-
-      <button
-        type="button"
-        class="pr-topbar-logout"
-        (click)="userMenuOpen.set(false); api.authSE.logout()"
-        aria-label="Log out">
-        <i class="material-icons-round text-[15px]" aria-hidden="true">logout</i>
-        Log out
-      </button>
+      <div class="pr-topbar-panel__footer">
+        <button
+          type="button"
+          class="pr-topbar-logout"
+          (click)="userMenuOpen.set(false); api.authSE.logout()"
+          aria-label="Log out">
+          <i class="material-icons-round text-[15px]" aria-hidden="true">logout</i>
+          Log out
+        </button>
+      </div>
     </div>
   </ng-template>
 

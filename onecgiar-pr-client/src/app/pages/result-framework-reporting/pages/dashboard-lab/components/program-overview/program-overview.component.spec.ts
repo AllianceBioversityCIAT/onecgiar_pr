@@ -831,20 +831,23 @@ describe('ProgramOverviewComponent', () => {
   });
 
   describe('KPI summary cards and section filtering', () => {
-    it('computes correct totals for all 4 KPI cards', () => {
+    it('computes correct totals for all KPI cards including Total General', () => {
       expect(component.statusTotal()).toBe(7);
       expect(component.bilateralStatusTotal()).toBe(0);
+      expect(component.programResultsTotal()).toBe(7);
       expect(component.contributingCentersCount()).toBe(4);
       expect(component.aowStats().pct).toBe(30);
       expect(component.aowStats().count).toBe(2);
     });
 
-    it('renders 4 KPI card buttons with proper content', () => {
+    it('renders 5 KPI card buttons with proper content', () => {
       const text = fixture.nativeElement.textContent as string;
+      expect(text).toContain('Total General');
       expect(text).toContain('W1/W2 Results');
       expect(text).toContain('W3 / Bilateral');
       expect(text).toContain('Contributing Centers');
       expect(text).toContain('Areas of Work');
+      expect(fixture.nativeElement.querySelectorAll('[data-testid^="overview-kpi-"]').length).toBe(5);
     });
 
     it('filters visible sections when a section tab is clicked', () => {
@@ -904,24 +907,22 @@ describe('ProgramOverviewComponent', () => {
    */
   // @akili-spec changes/reporting-entry-hub
   describe('KPI cards section filtering (REH-R-7 / REH-R-8 / REH-AC-15)', () => {
-    it('(a) clicking KPI card 2 (W3/Bilateral) sets activeSection to "bilateral" without opening hub', () => {
+    it('(a) clicking KPI card 3 (W3/Bilateral) sets activeSection to "bilateral" without opening hub', () => {
       const emitted: string[] = [];
       component.focusHub.subscribe(code => emitted.push(code));
-      const kpiButtons = fixture.debugElement.queryAll(By.css('button.col-span-3'));
 
-      kpiButtons[1].nativeElement.click(); // KPI 2: W3 / Bilateral
+      fixture.nativeElement.querySelector('[data-testid="overview-kpi-bilateral"]')?.dispatchEvent(new Event('click'));
       fixture.detectChanges();
 
       expect(emitted).toEqual([]);
       expect(component.activeSection()).toBe('bilateral');
     });
 
-    it('(a-cont) clicking KPI card 3 (Contributing Centers) sets activeSection to "bilateral" without opening hub', () => {
+    it('(a-cont) clicking KPI card 4 (Contributing Centers) sets activeSection to "bilateral" without opening hub', () => {
       const emitted: string[] = [];
       component.focusHub.subscribe(code => emitted.push(code));
-      const kpiButtons = fixture.debugElement.queryAll(By.css('button.col-span-3'));
 
-      kpiButtons[2].nativeElement.click(); // KPI 3: Contributing Centers
+      fixture.nativeElement.querySelector('[data-testid="overview-kpi-centers"]')?.dispatchEvent(new Event('click'));
       fixture.detectChanges();
 
       expect(emitted).toEqual([]);
@@ -998,10 +999,13 @@ describe('ProgramOverviewComponent', () => {
       fixture.componentRef.setInput('bilateralLoading', true);
       fixture.detectChanges();
       const el = fixture.nativeElement as HTMLElement;
-      const cards = Array.from(el.querySelectorAll('button.col-span-3')).filter(b =>
-        /W1\/W2 Results|W3 \/ Bilateral|Contributing Centers/.test(b.textContent ?? '')
-      );
-      expect(cards.length).toBe(3);
+      const cards = [
+        el.querySelector('[data-testid="overview-kpi-total"]'),
+        el.querySelector('[data-testid="overview-kpi-w1w2"]'),
+        el.querySelector('[data-testid="overview-kpi-bilateral"]'),
+        el.querySelector('[data-testid="overview-kpi-centers"]')
+      ].filter(Boolean) as HTMLElement[];
+      expect(cards.length).toBe(4);
       for (const card of cards) {
         expect(card.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
         expect(card.querySelector('.pr-figure')).toBeNull();

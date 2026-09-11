@@ -16,6 +16,11 @@ export class HlmSidebarService {
   private readonly _isMobile = signal<boolean>(false);
   private readonly _isCompact = signal<boolean>(false);
   private readonly _variant = signal<SidebarVariant>('sidebar');
+  private readonly _widthPx = signal<number>(260);
+  private readonly _isResizing = signal<boolean>(false);
+  private _defaultWidthApplied = false;
+  private _restoredWidthFromStorage = false;
+  private _suppressRailToggle = false;
   private _mediaQuery: MediaQueryList | null = null;
   private _compactMediaQuery: MediaQueryList | null = null;
 
@@ -24,12 +29,16 @@ export class HlmSidebarService {
   public readonly isMobile: Signal<boolean> = this._isMobile.asReadonly();
   public readonly isCompact: Signal<boolean> = this._isCompact.asReadonly();
   public readonly variant: Signal<SidebarVariant> = this._variant.asReadonly();
+  public readonly widthPx: Signal<number> = this._widthPx.asReadonly();
+  public readonly isResizing: Signal<boolean> = this._isResizing.asReadonly();
+  public readonly sidebarWidthCss = computed(() => `${this._widthPx()}px`);
 
   public readonly state = computed<'expanded' | 'collapsed'>(() => (this._open() ? 'expanded' : 'collapsed'));
 
   constructor() {
     const destroyRef = inject(DestroyRef);
     this.restoreStateFromCookie();
+    this.restoreWidthFromStorage();
 
     afterNextRender(() => {
       if (!this._window || typeof this._window.matchMedia !== 'function') return;
@@ -121,6 +130,115 @@ export class HlmSidebarService {
       this._openMobile.update(value => !value);
     } else {
       this.setOpen(!this._open());
+    }
+  }
+
+  /** Seed width from the wrapper input when no stored preference exists yet. */
+  public applyDefaultWidthFromCss(cssWidth: string): void {
+    if (this._restoredWidthFromStorage || this._defaultWidthApplied) return;
+    const px = this.parseCssWidthToPx(cssWidth);
+    if (px) this._widthPx.set(this.clampWidth(px));
+    this._defaultWidthApplied = true;
+  }
+
+  public setWidthPx(px: number, persist = true): void {
+    const next = this.clampWidth(px);
+    this._widthPx.set(next);
+    if (persist) this.persistWidth(next);
+  }
+
+  public adjustWidthPx(delta: number): void {
+    this.setWidthPx(this._widthPx() + delta);
+  }
+
+  public consumeRailToggleSuppression(): boolean {
+    if (!this._suppressRailToggle) return false;
+    this._suppressRailToggle = false;
+    return true;
+  }
+
+  /** Drag the sidebar rail when expanded; persists width on release. */
+  public startWidthResize(event: PointerEvent): void {
+    if (this._isMobile() || this.state() !== 'expanded' || !this._window) return;
+
+    this._isResizing.set(true);
+    this._document.body.classList.add('sidebar-width-resizing');
+    this._document.body.style.cursor = 'col-resize';
+    this._document.body.style.userSelect = 'none';
+
+    const startX = event.clientX;
+    const startWidth = this._widthPx();
+    let moved = false;
+
+    const move = (e: PointerEvent) => {
+      const delta = e.clientX - startX;
+      if (Math.abs(delta) > 2) moved = true;
+      this.setWidthPx(startWidth + delta, false);
+    };
+
+    const finish = () => {
+      this._isResizing.set(false);
+      this._document.body.classList.remove('sidebar-width-resizing');
+      this._document.body.style.cursor = '';
+      this._document.body.style.userSelect = '';
+      if (moved) {
+        this._suppressRailToggle = true;
+        this.persistWidth(this._widthPx());
+      }
+      this._window?.removeEventListener('pointermove', move);
+      this._window?.removeEventListener('pointerup', finish);
+      this._window?.removeEventListener('pointercancel', finish);
+    };
+
+    this._window.addEventListener('pointermove', move);
+    this._window.addEventListener('pointerup', finish);
+    this._window.addEventListener('pointercancel', finish);
+  }
+
+  private clampWidth(px: number): number {
+    const viewportCap = Math.floor((this._window?.innerWidth ?? 1920) * 0.42);
+    const max = Math.min(this._config.sidebarWidthMaxPx, viewportCap);
+    return Math.min(Math.max(Math.round(px), this._config.sidebarWidthMinPx), max);
+  }
+
+  private parseCssWidthToPx(value: string): number | null {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (trimmed.endsWith('px')) {
+      const px = Number.parseFloat(trimmed);
+      return Number.isFinite(px) ? px : null;
+    }
+    if (trimmed.endsWith('rem')) {
+      const rem = Number.parseFloat(trimmed);
+      if (!Number.isFinite(rem)) return null;
+      const root = this._document.documentElement;
+      const rootPx = Number.parseFloat(this._window?.getComputedStyle(root).fontSize ?? '16');
+      return rem * (Number.isFinite(rootPx) ? rootPx : 16);
+    }
+    return null;
+  }
+
+  private persistWidth(px: number): void {
+    if (isPlatformServer(this._platformId)) return;
+    try {
+      localStorage.setItem(this._config.sidebarWidthStorageKey, String(px));
+    } catch {
+      // Private browsing or storage disabled — width still applies for the session.
+    }
+  }
+
+  private restoreWidthFromStorage(): void {
+    if (isPlatformServer(this._platformId)) return;
+    try {
+      const raw = localStorage.getItem(this._config.sidebarWidthStorageKey);
+      if (!raw) return;
+      const px = Number.parseInt(raw, 10);
+      if (!Number.isFinite(px)) return;
+      this._widthPx.set(this.clampWidth(px));
+      this._restoredWidthFromStorage = true;
+      this._defaultWidthApplied = true;
+    } catch {
+      // Ignore storage read failures.
     }
   }
 

@@ -425,7 +425,12 @@
        fields twice. The account chip lives in the TOPBAR, not in the sidebar, so nothing else is
        left for a footer slot. -->
 
-  <button type="button" hlmSidebarRail aria-label="Toggle sidebar"></button>
+  <button
+    type="button"
+    hlmSidebarRail
+    tabindex="0"
+    [attr.aria-label]="isCollapsed() ? 'Expand sidebar' : 'Resize sidebar. Click to collapse.'"
+    [attr.title]="isCollapsed() ? 'Expand sidebar' : 'Drag to resize. Click to collapse.'"></button>
 </hlm-sidebar>
 
 <!-- Collapsed-rail flyout: section title + children (portaled outside overflow:hidden content) -->

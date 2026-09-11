@@ -1,0 +1,40 @@
+@if (open()) {
+  <div
+    class="pr-insights-scrim fixed inset-0 z-[129] bg-[rgba(15,23,42,0.25)] backdrop-blur-[1px] min-[900px]:hidden"
+    (click)="closed.emit()"
+    aria-hidden="true"></div>
+
+  <aside
+    class="pr-insights-panel fixed inset-y-0 right-0 z-[130] flex max-w-[100vw] w-[min(100vw,400px)] flex-col border-l border-[rgba(30,32,47,0.1)] bg-[var(--pr-surface-card)] shadow-[-18px_0_44px_rgba(30,32,47,0.12)]"
+    role="complementary"
+    aria-label="Reporting insights"
+    data-testid="reporting-insights-panel">
+    <header class="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--pr-border-divider)] px-4 py-3.5 min-[640px]:px-5">
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]" aria-hidden="true">insights</span>
+          <h3 class="m-0 text-[15px] font-bold text-[var(--pr-text-heading)]">Reporting insights</h3>
+        </div>
+        <p class="m-0 mt-1 text-[12.5px] leading-snug text-[var(--pr-text-secondary)]">
+          @if (programCode()) {
+            Scope, targets and evidence for <strong class="font-semibold text-[var(--pr-text-heading)]">{{ programCode() }}</strong>.
+          } @else {
+            Scope, targets and evidence for this programme.
+          }
+        </p>
+      </div>
+      <button
+        type="button"
+        (click)="closed.emit()"
+        aria-label="Close reporting insights"
+        data-testid="reporting-insights-close"
+        class="inline-flex size-8 shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent text-[var(--pr-text-subtle)] transition-colors hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)] cursor-pointer">
+        <span class="material-icons-round text-[20px]">close</span>
+      </button>
+    </header>
+
+    <div class="custom_scroll flex-1 overflow-y-auto px-4 py-4 min-[640px]:px-5">
+      <app-reporting-summary-stats variant="panel" [stats]="stats()" [loading]="loading()" />
+    </div>
+  </aside>
+}

@@ -25,6 +25,8 @@ import { normalizeBilateralReviewPhaseId } from '../../../bilateral-review/bilat
 // @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-6, BRC-DD-1) — the
 // badge now follows the CURRENT reporting phase, not just the program code (judgment-day L-2).
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
+import { ReportingQuickTypologyFiltersComponent } from '../reporting-quick-typology-filters/reporting-quick-typology-filters.component';
+export type { ResultTypeQuickChip } from '../reporting-quick-typology-filters/reporting-quick-typology.util';
 
 export interface BandFilterOption {
   value: string;
@@ -35,14 +37,6 @@ export interface BandFilterOption {
 export interface BandFilterGroup {
   label: string;
   items: BandFilterOption[];
-}
-
-export interface ResultTypeQuickChip {
-  id: string;
-  label: string;
-  matchKey: string;
-  count?: number;
-  active: boolean;
 }
 
 export type { ReportingSummaryStats } from '../reporting-summary-stats/reporting-summary-stats.component';
@@ -111,7 +105,7 @@ export const SCIENCE_PROGRAM_DESCRIPTIONS: Record<string, string> = {
 @Component({
   selector: 'app-reporting-program-band',
   standalone: true,
-  imports: [RouterLink, NgIcon, FormsModule, PrFilterMultiselectModule, PrFilterSelectComponent],
+  imports: [RouterLink, NgIcon, FormsModule, PrFilterMultiselectModule, PrFilterSelectComponent, ReportingQuickTypologyFiltersComponent],
   templateUrl: './reporting-program-band.component.html',
   styleUrls: ['./reporting-program-band.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -251,6 +245,10 @@ export class ReportingProgramBandComponent {
   readonly canExpandAll = input<boolean>(true);
   /** Overview has no filters, so the band renders on its own there. */
   readonly showToolbar = input<boolean>(true);
+  /** JIRA-style insights rail toggle — only on the Areas of Work reporting view. */
+  readonly showInsightsToggle = input(false);
+  readonly insightsOpen = input(false);
+  readonly insightsToggle = output<void>();
   /**
    * Whether the emerging-result CTA is offered at all. False hides BOTH copies (expanded and
    * condensed) — the host uses it for AVISA/SGP-02, a deactivated project whose results are view
@@ -648,50 +646,10 @@ export class ReportingProgramBandComponent {
   readonly cleanTypologyOptions = computed(() => this.typologyOptions().filter(o => o.value !== 'all'));
   readonly cleanStatusOptions = computed(() => this.statusOptions.filter(o => o.value !== 'all'));
 
-  readonly QUICK_TYPOLOGIES = [
-    { id: 'all', label: 'All', matchKey: 'all' },
-    { id: 'kp', label: 'Knowledge Product', matchKey: 'Knowledge product' },
-    { id: 'id', label: 'Innovation Development', matchKey: 'Innovation development' },
-    { id: 'pc', label: 'Policy Change', matchKey: 'Policy change' },
-    { id: 'iu', label: 'Innovation Use', matchKey: 'Innovation use' },
-    { id: 'cs', label: 'Capacity Sharing', matchKey: 'Capacity sharing for development' }
-  ] as const;
-
-  readonly quickChips = computed<ResultTypeQuickChip[]>(() => {
-    const currentTypologies = this.typologyValue() || [];
-    const counts = this.typologyCounts() ?? {};
-    const isAll = currentTypologies.length === 0;
-
-    return this.QUICK_TYPOLOGIES.map(item => {
-      const active =
-        item.matchKey === 'all'
-          ? isAll
-          : currentTypologies.some(
-              t => t === item.matchKey || t.toLowerCase() === item.label.toLowerCase()
-            );
-
-      const count =
-        item.matchKey === 'all'
-          ? (counts['all'] ?? this.plannedResultsCount())
-          : (counts[item.matchKey] ?? counts[item.label] ?? 0);
-
-      return {
-        id: item.id,
-        label: item.label,
-        matchKey: item.matchKey,
-        count,
-        active
-      };
-    });
-  });
-
-  onQuickChipClick(chip: ResultTypeQuickChip): void {
-    if (chip.matchKey === 'all' || chip.active) {
-      this.typologyChange.emit([]);
-    } else {
-      this.typologyChange.emit([chip.matchKey]);
-    }
-  }
+  /** Pinned above the table on unlocked pages; scrolls with `#workArea` when viewport-locked. */
+  readonly showQuickTypologyInBand = computed(
+    () => this.showToolbar() && !this.compactFilters() && !(this.frameLocked() && this.scrollHost())
+  );
 
   // ── Reporting JIRA-style Top-Bar Filter State ──
   readonly filterPopoverOpen = signal(false);
