@@ -84,6 +84,28 @@ describe('PolicyChangeInfoComponent', () => {
     jest.restoreAllMocks();
   });
 
+  /**
+   * P2-3667 — "Policy type" showed a grey line reading "Select policy type" right under its label,
+   * above the control, and it never changed. It was not a broken binding: it was the field's
+   * DESCRIPTION repeating the placeholder word for word, so it read as an unanswered required field
+   * sitting next to the answer. QA reported it on result 9154.
+   */
+  describe('no description repeats its own placeholder (P2-3667)', () => {
+    it('leaves Policy type, Status and Stage with no placeholder-shaped description', () => {
+      fixture.detectChanges();
+
+      const selects = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('app-pr-select'));
+      const offenders = selects
+        .map(el => ({
+          label: (el.querySelector('.pr_label')?.textContent || '').trim().replace(/[:*]/g, '').trim(),
+          description: (el.querySelector('.pr_description')?.textContent || '').trim()
+        }))
+        .filter(f => /^select\s/i.test(f.description));
+
+      expect(offenders).toEqual([]);
+    });
+  });
+
   describe('sectionLoading (skeleton)', () => {
     it('is released once the section GET responds', () => {
       component.sectionLoading.set(true);
