@@ -22,7 +22,9 @@ import {
   RadarChart,
   RadarSeriesOption,
   TreeChart,
-  TreeSeriesOption
+  TreeSeriesOption,
+  GraphChart,
+  GraphSeriesOption
 } from 'echarts/charts';
 import {
   TitleComponent,
@@ -41,7 +43,7 @@ import {
   RadarComponentOption
 } from 'echarts/components';
 import { SVGRenderer } from 'echarts/renderers';
-import { UniversalTransition } from 'echarts/features';
+import { UniversalTransition, LabelLayout } from 'echarts/features';
 import type { ECElementEvent } from 'echarts/core';
 
 export const REGISTERED_ECHARTS_MODULES = [
@@ -52,6 +54,7 @@ export const REGISTERED_ECHARTS_MODULES = [
   LineChart,
   RadarChart,
   TreeChart,
+  GraphChart,
   TitleComponent,
   TooltipComponent,
   GridComponent,
@@ -59,7 +62,8 @@ export const REGISTERED_ECHARTS_MODULES = [
   LegendComponent,
   VisualMapComponent,
   RadarComponent,
-  UniversalTransition
+  UniversalTransition,
+  LabelLayout
 ];
 
 echarts.use(REGISTERED_ECHARTS_MODULES);
