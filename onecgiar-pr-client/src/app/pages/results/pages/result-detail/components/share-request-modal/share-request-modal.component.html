@@ -1,14 +1,11 @@
-<p-dialog
-  appendTo="body"
-  header="Title"
+<app-pr-dialog
   [(visible)]="this.api.dataControlSE.showShareRequest"
   (onHide)="cleanObject()"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [style]="{ padding: '0px' }">
+  styleClass="share-request-dialog">
   <div class="modal_title">
     Request to be added as contributor of a result
     <i class="pi pi-times" style="cursor: pointer; font-size: 16px" (click)="this.api.dataControlSE.showShareRequest = false"></i>
@@ -25,25 +22,17 @@
       been recorded for <strong> {{ this.api?.dataControlSE?.currentResult?.submitter }}. </strong>
     </div>
 
-    <app-pr-field-header label="Select entity"></app-pr-field-header>
-    <p-select
+    <app-pr-select
+      label="Select entity"
       [options]="entitiesList"
       optionLabel="full_name"
       optionValue="initiative_id"
       placeholder="Select entity"
       [(ngModel)]="this.shareRequestModalSE.shareRequestBody.initiative_id"
       (ngModelChange)="modelChange()"
-      [style]="{ width: '100%' }"
-      [filter]="true"
       [disabled]="this.api.dataControlSE.inNotifications"
-      [optionDisabled]="">
-      <ng-template #selectedItem let-selectedOption>
-        <div [innerHtml]="selectedOption.full_name"></div>
-      </ng-template>
-      <ng-template let-item #item>
-        <div [innerHtml]="item.full_name"></div>
-      </ng-template>
-    </p-select>
+      [required]="true">
+    </app-pr-select>
 
     @if (shouldShowTocInitiativeOut && !fieldsManagerSE.isP25()) {
       <app-toc-initiative-out
@@ -106,4 +95,4 @@
       (click)="this.api.dataControlSE.inNotifications ? acceptOrReject() : onRequest()">
     </app-pr-button>
   </div>
-</p-dialog>
+</app-pr-dialog>

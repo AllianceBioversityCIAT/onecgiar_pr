@@ -1,10 +1,42 @@
 @use 'sass:map';
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+// Manrope: variable weight 200-800 + italics. Serious, modern grotesque for the
+// PRMS rebrand (replaces Poppins). 'Poppins' stays as fallback alias below so any
+// stray font-family: 'Manrope', 'Poppins', sans-serif declaration still resolves to the same stack.
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap');
+// JetBrains Mono: codes and figures ONLY (result codes, SP/AOW/HLO identifiers, Target/Achieved
+// values). Manrope keeps display and UI text. Instrument Sans and Inter are deliberately NOT
+// adopted — docs/reporting-redesign/UI-RULES.md §1.2 / §2.4. Consumed as Tailwind `font-mono`.
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 html,
 body {
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Manrope', 'Poppins', sans-serif;
   font-size: 12px;
+}
+
+// ⚠️ Numeric/code helpers. `tabular-nums` is what keeps figure columns aligned — losing it
+// defeats the table layout (UI-RULES rule 13).
+.pr-code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.pr-figure {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 18px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+// The 13px figure — counts, ratios and legend numbers, everywhere the 18px `.pr-figure` would
+// shout. Global on purpose: it started scoped inside the Reporting table and the Overview needs
+// the exact same recipe, and two copies of a type token is how they drift.
+.pr-figure-sm {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .segment_title_margin {
@@ -87,7 +119,7 @@ $pr-typography: (
 @mixin pr-typography($type) {
   $style: map.get($pr-typography, $type);
   @if $style {
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Manrope', 'Poppins', sans-serif;
     font-weight: map.get($style, weight);
     font-size: map.get($style, size);
     line-height: map.get($style, line);

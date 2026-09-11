@@ -59,8 +59,8 @@ context: |
   - Branches: master (production), staging (integration). PRs target staging/master.
 
   ## SDD baseline (consult before specs)
-  docs/prd.md (product), docs/system-design/design.md (UI/UX),
-  docs/detailed-design/detailed-design.md (technical), docs/specs/general-setup/
+  docs/prd.md (product), docs/ux-ui/design.md (UI/UX),
+  docs/trd/trd.md (technical), docs/specs/general-setup/
   (spec templates). Module specs live under docs/specs/<module>/ and must cite
   these. Authoritative bilateral payload contract:
   onecgiar-pr-server/docs/bilateral-result-summaries.en.md.
@@ -76,7 +76,7 @@ rules:
     - State whether the change is frontend-only, backend-only, or full-stack up front.
     - If any backend change is required, flag it explicitly — the AI cannot
       implement server changes; the proposal must hand those to the user.
-    - Reference the relevant SDD baseline docs (prd / system-design / detailed-design)
+    - Reference the relevant SDD baseline docs (prd / ux-ui / trd)
       and any affected module spec under docs/specs/.
     - Cite the Jira ticket (P2-XXXX) the change belongs to.
   tasks:

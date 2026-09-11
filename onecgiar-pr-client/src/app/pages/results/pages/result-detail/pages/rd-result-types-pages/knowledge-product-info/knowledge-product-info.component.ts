@@ -1,35 +1,45 @@
-import chroma from 'chroma-js';
-
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
-import { FairSpecificData, FullFairData, KnowledgeProductBody } from './model/knowledgeProductBody';
+import { FullFairData, KnowledgeProductBody } from './model/knowledgeProductBody';
+import {
+  FairDimension,
+  fairBorderColor,
+  fairInnerColor,
+  mapKnowledgeProductBody,
+  splitFairDimensions
+} from './model/knowledge-product-metadata.mapper';
 import { KnowledgeProductBodyMapped } from './model/KnowledgeProductBodyMapped';
 import { KnowledgeProductSaveDto } from './model/knowledge-product-save.dto';
 import { TocMeliaStudyItem } from './model/toc-melia-study.interface';
 import { RolesService } from '../../../../../../../shared/services/global/roles.service';
 import { CustomizedAlertsFeService } from '../../../../../../../shared/services/customized-alerts-fe.service';
 import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
+import { CanComponentDeactivate } from '../../../../../../../shared/guards/unsaved-changes.types';
+import { SectionDirtyTrackerService } from '../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
 
 @Component({
   selector: 'app-knowledge-product-info',
   templateUrl: './knowledge-product-info.component.html',
   styleUrls: ['./knowledge-product-info.component.scss'],
-  standalone: false
+  standalone: false,
+  providers: [SectionDirtyTrackerService]
 })
-export class KnowledgeProductInfoComponent implements OnInit {
+export class KnowledgeProductInfoComponent implements OnInit, CanComponentDeactivate {
   knowledgeProductBody = new KnowledgeProductBodyMapped();
   sectionData: KnowledgeProductSaveDto = new KnowledgeProductSaveDto();
   meliaTypes = [];
   ostMeliaStudies = [];
   tocMeliaStudiesList: TocMeliaStudyItem[] = [];
-  private readonly kpGradientScale = chroma.scale(['#f44444', '#dcdf38', '#38df7b']).mode('hcl');
-  fair_data: Array<{ key: string; value: FairSpecificData }>;
+  fair_data: FairDimension[];
 
   constructor(
     public api: ApiService,
     public fieldsManagerSE: FieldsManagerService,
     public rolesSE: RolesService,
-    private customizedAlertsFeSE: CustomizedAlertsFeService
+    private customizedAlertsFeSE: CustomizedAlertsFeService,
+    private dirtyTracker: SectionDirtyTrackerService
   ) {
     this.api.dataControlSE.currentResultSectionName.set('Knowledge product information');
   }
@@ -39,35 +49,87 @@ export class KnowledgeProductInfoComponent implements OnInit {
     return `FAIR (findability, accessibility, interoperability, and reusability) scores are used to support reporting that aligns with the <a href="https://cgspace.cgiar.org/handle/10568/113623" target="_blank">CGIAR Open and FAIR Data Assets Policy</a>. FAIR scores are calculated based on the presence or absence of metadata in ${repositoryName}. If you wish to enhance the FAIR score for a knowledge product, review the metadata flagged with a red icon below and liaise with your Center's knowledge management team to implement improvements.`;
   }
 
+  /**
+   * Drives `[appSectionSkeleton]`. TRUE from construction: the body object is empty until the
+   * section GET lands, so without it every mandatory field paints orange ("empty") first.
+   * Released on `next` AND `error` — a failed GET must not leave the section shimmering.
+   */
+  readonly sectionLoading = signal(true);
+
   ngOnInit(): void {
     this.getSectionInformation();
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_resultknowledgeProducts().subscribe(({ response }) => {
-      this.knowledgeProductBody = this._mapFields(response as KnowledgeProductBody);
-      this.sectionData.clarisaMeliaTypeId = response.melia_type_id;
-      this.sectionData.isMeliaProduct = response.is_melia;
-      this.sectionData.ostMeliaId = response.ost_melia_study_id;
-      this.sectionData.ostSubmitted = response.melia_previous_submitted;
-      if (this.api.fieldsManagerSE.isP25()) {
-        this.sectionData.tocMeliaStudyId = response.toc_melia_study_id ?? null;
-        const currentResult = this.api.dataControlSE.currentResultSignal() ?? this.api.dataControlSE.currentResult;
-        const programId = currentResult?.initiative_id;
-        if (programId != null) {
-          this.api.resultsSE.GET_meliaStudiesByToc(programId).subscribe(({ response: tocResponse }) => {
-            this.tocMeliaStudiesList = tocResponse ?? [];
+    this.api.resultsSE.GET_resultknowledgeProducts().subscribe({
+      next: ({ response }) => {
+        this.knowledgeProductBody = this._mapFields(response as KnowledgeProductBody);
+        this.sectionData.clarisaMeliaTypeId = response.melia_type_id;
+        this.sectionData.isMeliaProduct = response.is_melia;
+        this.sectionData.ostMeliaId = response.ost_melia_study_id;
+        this.sectionData.ostSubmitted = response.melia_previous_submitted;
+        if (this.api.fieldsManagerSE.isP25()) {
+          this.sectionData.tocMeliaStudyId = response.toc_melia_study_id ?? null;
+          const currentResult = this.api.dataControlSE.currentResultSignal() ?? this.api.dataControlSE.currentResult;
+          const programId = currentResult?.initiative_id;
+          if (programId != null) {
+            // `UCA-T-11`: this async call only ever writes to `tocMeliaStudiesList` (a dropdown
+            // catalog), never to `sectionData` (the tracked/save-payload object) — so it does not
+            // need to settle before the snapshot below, unlike the child-mutation bugs found in
+            // `UCA-T-7`/`UCA-T-9` (which wrote INTO the tracked object after the parent snapshotted).
+            this.api.resultsSE.GET_meliaStudiesByToc(programId).subscribe(({ response: tocResponse }) => {
+              this.tocMeliaStudiesList = tocResponse ?? [];
+            });
+          }
+        } else {
+          // Same as above: `ostMeliaStudies` is a catalog list, not part of `sectionData`.
+          this.api.resultsSE.GET_ostMeliaStudiesByResultId().subscribe(({ response: ostResponse }) => {
+            this.ostMeliaStudies = ostResponse ?? [];
           });
         }
-      } else {
-        this.api.resultsSE.GET_ostMeliaStudiesByResultId().subscribe(({ response: ostResponse }) => {
-          this.ostMeliaStudies = ostResponse ?? [];
-        });
-      }
+        // `UCA-T-11` — true end of this load flow for the TRACKED object: every `sectionData` field
+        // above is assigned synchronously inside this `next` handler, and no child component in this
+        // section's template mutates `sectionData` (verified against `knowledge-product-info.component.html`
+        // — every bound control is a plain `custom-fields` CVA control with no auto-assign side effect).
+        this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+        this.sectionLoading.set(false);
+      },
+      error: () => this.sectionLoading.set(false)
     });
     this.api.resultsSE.GET_allClarisaMeliaStudyTypes().subscribe(({ response }) => {
       this.meliaTypes = response;
     });
+  }
+
+  /** `UCA-T-11` — `CanComponentDeactivate.hasUnsavedChanges()`. */
+  hasUnsavedChanges(): boolean {
+    return this.dirtyTracker.isDirty(this.dirtySnapshotValue());
+  }
+
+  /**
+   * `UCA-T-11` — `CanComponentDeactivate.saveSection()`. Wraps `performSave()`'s exact PATCH call
+   * (reused verbatim by `onSaveSection()` below, `UCA-DD-3`) to resolve `true`/`false` instead of
+   * void, for `UnsavedChangesGuard`.
+   */
+  saveSection(): Observable<boolean> {
+    return this.performSave().pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
+
+  /**
+   * `UCA-T-11` — the value the dirty tracker snapshots/diffs. `sectionData` (the
+   * `KnowledgeProductSaveDto`) IS the save-payload object PATCHed by `performSave()` below —
+   * `knowledgeProductBody` is display-only metadata pulled from CGSpace/WoS/Altmetric and is never
+   * sent back to the server, so it is deliberately excluded from the diff. `UCA-OQ-2`: every field
+   * on `KnowledgeProductSaveDto` (`isMeliaProduct: boolean`, `ostSubmitted: boolean`,
+   * `ostMeliaId: number`, `tocMeliaStudyId: string | null`, `clarisaMeliaTypeId: number`) is a
+   * primitive — no `File`/`Blob`/circular refs, so no normalization/exclusion is needed (unlike
+   * `UCA-T-8`'s evidences File exclusion).
+   */
+  private dirtySnapshotValue(): KnowledgeProductSaveDto {
+    return { ...this.sectionData };
   }
 
   onSyncSection() {
@@ -89,104 +151,47 @@ export class KnowledgeProductInfoComponent implements OnInit {
     );
   }
 
+  /** Delegates to the shared mapper — see `model/knowledge-product-metadata.mapper.ts`. */
   private _mapFields(response: KnowledgeProductBody): KnowledgeProductBodyMapped {
-    const mapped = new KnowledgeProductBodyMapped();
-    mapped.warnings = response.warnings;
-
-    mapped.authors = response.authors?.map(m => m.name);
-    mapped.type = response.type;
-    mapped.doi = response.metadataCG?.doi;
-    mapped.licence = response.licence;
-    mapped.keywords = (response.keywords ?? []).join('; ');
-    mapped.agrovoc_keywords = (response.agrovoc_keywords ?? []).join('; ');
-    mapped.commodity = response.commodity;
-    mapped.investors = response.sponsor;
-    mapped.altmetric_details_url = response.altmetric_detail_url;
-    mapped.altmetric_img_url = response.altmetric_image_url;
-    mapped.references = response.references_other_knowledge_products;
-    mapped.onlineYearCG = response.metadataCG?.online_year;
-    const sourceFromMetadata = response.metadata?.find(m => m?.source)?.source;
-    mapped.source = response.metadataCG?.source ?? sourceFromMetadata ?? response.repo ?? 'Unknown';
-
-    if (mapped.source === 'CGSpace') {
-      mapped.handle = `https://cgspace.cgiar.org/handle/${response.handle}`;
-    } else if (mapped.source === 'MELSpace') {
-      mapped.handle = `https://repo.mel.cgiar.org/handle/${response.handle}`;
-    } else if (mapped.source === 'WorldFish DSpace') {
-      mapped.handle = `https://hdl.handle.net/${response.handle}`;
-    }
-
-    this.fair_data = this.filterOutObject(response.fair_data);
-
-    const journalArticle: boolean = (response.type ?? '').toLocaleLowerCase().includes('journal article');
-    mapped.isJournalArticle = journalArticle;
-    if (journalArticle) {
-      if (response.metadataCG?.doi) {
-        if (response.metadataWOS) {
-          this.getMetadataFromWoS(mapped, response);
-          this.getMetadataFromCGSpace(mapped, response, journalArticle);
-        } else {
-          this.getMetadataFromCGSpace(mapped, response, journalArticle);
-        }
-      } else {
-        this.getMetadataFromCGSpace(mapped, response, journalArticle);
-      }
-    } else if (response.metadataCG?.issue_year == response.cgspace_phase_year) {
-      this.getMetadataFromCGSpace(mapped, response, journalArticle);
-    }
-
+    const { mapped, fairData } = mapKnowledgeProductBody(response);
+    this.fair_data = fairData;
     return mapped;
   }
 
   public calculateInnerColor(value: number) {
-    return this.kpGradientScale(value).brighten().hex();
+    return fairInnerColor(value);
   }
 
   public calculateBorderColor(value: number) {
-    return this.kpGradientScale(value).hex();
+    return fairBorderColor(value);
   }
 
-  private getMetadataFromCGSpace(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody, isJA: boolean) {
-    mapped.is_peer_reviewed_CG = this.transformBoolean(response.metadataCG?.is_peer_reviewed);
-    mapped.is_isi_CG = this.transformBoolean(response.metadataCG?.is_isi, isJA);
-    let accessibilityCG: string;
-
-    if (response.metadataCG?.open_access) {
-      accessibilityCG = response.metadataCG.open_access;
-    } else if (response.metadataCG?.accessibility == null) {
-      accessibilityCG = isJA ? 'Not provided' : 'Not available';
-    } else {
-      accessibilityCG = response.metadataCG.accessibility ? 'Open Access' : 'Limited Access';
-    }
-
-    mapped.accessibility_CG = accessibilityCG;
-    mapped.yearCG = response.metadataCG?.issue_year;
-  }
-
-  private getMetadataFromWoS(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody) {
-    mapped.is_peer_reviewed_WOS = this.transformBoolean(response.metadataWOS?.is_peer_reviewed);
-    mapped.is_isi_WOS = this.transformBoolean(response.metadataWOS?.is_isi);
-    mapped.accessibility_WOS = response.metadataWOS?.accessibility ? 'Open Access' : 'Limited Access';
-    mapped.year_WOS = response.metadataWOS?.issue_year;
-  }
-
-  private transformBoolean(value: boolean, isJA?: boolean): string {
-    if (value == null) {
-      return isJA ? 'Not provided' : 'Not available';
-    }
-
-    return value ? 'Yes' : 'No';
-  }
-
-  filterOutObject(fairObject: FullFairData): Array<{ key: string; value: FairSpecificData }> {
-    return Object.keys(fairObject)
-      .filter(key => key != 'total_score')
-      .map(key => ({ key, value: fairObject[key] }));
+  filterOutObject(fairObject: FullFairData): FairDimension[] {
+    return splitFairDimensions(fairObject);
   }
 
   onSaveSection() {
-    this.api.resultsSE.PATCH_knowledgeProductSection(this.sectionData).subscribe(({ response }) => {
-      this.getSectionInformation();
-    });
+    this.performSave().subscribe();
+  }
+
+  /**
+   * `UCA-T-11`: returns the PATCH `Observable` instead of self-subscribing, so both this
+   * component's own Save action (`onSaveSection`, above) and `saveSection()` (the
+   * `CanComponentDeactivate` contract, above) drive the exact same call — no duplicated save
+   * logic (`UCA-DD-3`).
+   */
+  private performSave(): Observable<void> {
+    return this.api.resultsSE.PATCH_knowledgeProductSection(this.sectionData).pipe(
+      tap(() => {
+        // `UCA-T-11` (per `UCA-T-6`'s rework lesson) — snapshot HERE, synchronously, the instant
+        // the PATCH resolves, in addition to (not instead of) the reload below. If the reload
+        // below fails, the section must not stay "dirty" forever despite a genuinely successful
+        // save; and `saveSection()`'s `map(() => true)` must not race the reload's own re-snapshot.
+        this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+        this.getSectionInformation();
+      }),
+      map(() => undefined),
+      catchError(err => throwError(() => err))
+    );
   }
 }

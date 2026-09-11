@@ -9,6 +9,7 @@ import { Request } from 'express';
 import { BILATERAL_UNAUTHORIZED_MESSAGE } from '../constants/bilateral-auth.constants';
 import { BILATERAL_CLARISA_ENDPOINT_KEY } from '../decorators/bilateral-clarisa-endpoint.decorator';
 import { ClarisaApiKeyValidationService } from '../services/clarisa-api-key-validation.service';
+import { EXTERNAL_PLATFORM_REQUEST_KEY } from '../constants/external-platform.constants';
 
 @Injectable()
 export class ClarisaApiKeyGuard implements CanActivate {
@@ -34,15 +35,20 @@ export class ClarisaApiKeyGuard implements CanActivate {
       throw new UnauthorizedException(BILATERAL_UNAUTHORIZED_MESSAGE);
     }
 
-    const isValid = await this.clarisaApiKeyValidationService.validate(
+    const validation = await this.clarisaApiKeyValidationService.validate(
       apiKey,
       endpointAccessed,
       this.extractClientIp(request),
     );
 
-    if (!isValid) {
+    if (!validation) {
       throw new UnauthorizedException(BILATERAL_UNAUTHORIZED_MESSAGE);
     }
+
+    // P2-3166: hand the authenticated calling system down to the handlers, the same way
+    // JwtMiddleware exposes `req.user`. Without this the identity dies here and a result
+    // created through the API records *how* it arrived (`source = 'API'`) but never *from whom*.
+    request[EXTERNAL_PLATFORM_REQUEST_KEY] = validation.mis;
 
     return true;
   }

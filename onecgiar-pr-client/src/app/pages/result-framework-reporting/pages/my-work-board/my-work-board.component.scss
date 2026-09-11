@@ -1,0 +1,244 @@
+// Viewport lock (`sp-shell-app-viewport`, `SAV-T-4`) — unconditional, like `ProgrammeResultsComponent`:
+// this surface only ever serves the My work tab. `:host` lives HERE, not in the inline `styles`
+// array — Angular 21 emits `styleUrls` content BEFORE inline `styles` at equal specificity, so an
+// inline `display: block` there would silently beat the mixin's flex layout instead of losing to it
+// (`programme-results.component.scss` carries the same note, verified against @angular/compiler-cli).
+@use '../../../../../styles/viewport-page' as vp;
+
+:host {
+  display: block;
+  @include vp.pr-viewport-page;
+}
+
+/* ── Filter pills (`MWB-T-8` (3); reused by every popover dimension since `MWB-T-9`) ─────────
+   `app-pr-filter-select` renders the shared `.custom_select` shell (`custom-fields.scss`), whose
+   defaults are wrong for a filter row: `.icon_container` is a 43px violet block (the "violet
+   chevron block" in the user's screenshot) and `.options` is pinned to `bottom: -255px`, which
+   is what dropped the open panel far below the trigger, under the Closed rails.
+
+   Same reshape the Results tab applies through `.pgr-filter`
+   (`programme-results.component.ts` styles) — copied rather than shared because Angular view
+   encapsulation scopes `::ng-deep` per component, so there is no global `.pgr-filter` to reuse.
+   Deltas vs. that copy: a 34px trigger (this board's control height) instead of the Results
+   popover's 40px. Since `MWB-T-9` the five dimensions all live inside the Filter popover and each
+   one carries `.mwb-filter`, so this single reshape covers Phase, Category, Funding source, Center
+   and Created by. Targeting a child component's projected `.custom_select` DOM is the documented
+   exception to Tailwind-first (`MWB-R-*` Styling / client CLAUDE.md §5). */
+.mwb-filter ::ng-deep .custom_select {
+  width: 100%;
+}
+
+.mwb-filter ::ng-deep .custom_select .field {
+  min-height: 34px;
+  height: 34px;
+  padding: 0 32px 0 12px;
+  border: 1px solid var(--pr-border);
+  border-radius: 8px;
+  background: var(--pr-surface-card);
+  box-shadow: none;
+  gap: 8px;
+  transition: border-color 150ms ease;
+}
+
+.mwb-filter ::ng-deep .custom_select .field:hover {
+  border-color: var(--pr-border-strong);
+}
+
+.mwb-filter ::ng-deep .custom_select .field:focus-within {
+  border-color: var(--pr-color-primary-200);
+  box-shadow: 0 0 0 3px rgba(107, 70, 229, 0.12);
+}
+
+.mwb-filter ::ng-deep .custom_select .field .text {
+  padding-right: 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--pr-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mwb-filter ::ng-deep .custom_select .field .text.select_placeholder {
+  color: var(--pr-text-subtle);
+}
+
+/* The violet block the user saw — it belongs to the legacy form shell, not to a filter pill. */
+.mwb-filter ::ng-deep .custom_select .field .icon_container {
+  display: none !important;
+}
+
+.mwb-filter ::ng-deep .custom_select .field .icon_dropdown {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  font-size: 12px;
+  color: var(--pr-text-muted) !important;
+  pointer-events: none;
+}
+
+/* The placement fix: the panel is inline-absolute (no CDK overlay) and `.field` is its positioned
+   ancestor, so pinning `top` to the trigger's own bottom is what keeps the two together. */
+.mwb-filter ::ng-deep .custom_select .field .options {
+  top: calc(100% + 4px);
+  bottom: auto;
+  left: 0;
+  min-width: 100%;
+  width: max-content;
+  max-width: 320px;
+  max-height: 280px;
+  border: 1px solid var(--pr-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(25, 21, 36, 0.1);
+  overflow: hidden;
+  transform-origin: top center;
+}
+
+/* ── Active-filter chips (`MWB-T-9`) ─────────────────────────────────────────────────────────
+   The global `.pr-chip` / `.pr-chip-remove` (`styles.scss`) carry the app's chip contract; the
+   filter-row chip is the 26px / 999px / brand-100 variant the Results tab uses. `.pr-chip` is
+   declared OUTSIDE every `@layer`, so a Tailwind utility (which lives in `@layer utilities`)
+   can never win against it — the reshape has to be a real rule. Copied rather than shared:
+   Angular view encapsulation scopes `.pgr-chip` to `programme-results`, so there is no global
+   class to reuse (same reasoning as `.mwb-filter` above). */
+.pr-chip.mwb-chip {
+  height: 26px;
+  gap: 6px;
+  padding: 0 6px 0 10px;
+  border-radius: 999px;
+  background: var(--pr-color-primary-100);
+  color: var(--pr-color-primary-400);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.pr-chip .mwb-chip-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--pr-color-primary-400);
+  cursor: pointer;
+}
+
+.pr-chip .mwb-chip-remove:hover {
+  background: var(--pr-color-primary-200);
+}
+
+/* `MWB-T-14` — the summary chip's label is a real `<button>` (it reopens the popover on that
+   dimension), so it has to shed the preflight button chrome and read as the chip's own text.
+   `nowrap` keeps `Center: 8 centers` on one line: a chip that broke after the colon would put the
+   row back over two lines, which is the whole point of aggregating. */
+.pr-chip .mwb-chip-label {
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  line-height: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pr-chip .mwb-chip-label:hover {
+  text-decoration: underline;
+}
+
+.pr-chip .mwb-chip-label:focus-visible,
+.pr-chip .mwb-chip-remove:focus-visible {
+  outline: 2px solid var(--pr-color-primary-300);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+/* `MWB-T-14` (1) — the two-line cap. A chip past the measured limit (and the `+N more` button
+   while nothing is hidden) leaves the row through THIS class and no other.
+
+   `!important` is load-bearing, not defensive: the global `.pr-chip` sets `display: inline-flex`
+   from OUTSIDE every `@layer` (`styles.scss`), which beats both the UA's `[hidden]` rule and any
+   Tailwind `hidden` utility (`@layer utilities`). One `!important` here is the whole reason the
+   chips can be taken out of layout at all — and `display: none` (rather than `visibility`) is what
+   also takes them out of the accessibility tree, so the collapsed row never announces a chip it is
+   not showing. `measureChipOverflow()` toggles this same class directly during its measurement
+   pass; see that method for why that is safe. */
+.mwb-chip-hidden {
+  display: none !important;
+}
+
+/**
+ * `MWB-T-7` (4) — one short fade on the board container itself (never on individual cards) for a
+ * scope/phase re-group or the skeleton→content swap. Angular view encapsulation scopes SCSS per
+ * component, so this cannot reuse `my-work-column`'s `pr-my-work-fade` — same ~160ms shape, a
+ * component-local keyframe per the task brief ("SCSS only for keyframes not already global").
+ */
+@keyframes pr-board-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.pr-board-fade {
+  animation: pr-board-fade 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-board-fade {
+    animation: none;
+  }
+}
+
+/* ── `MWB-T-11` — below the viewport-lock breakpoint ─────────────────────────────────────────
+   Everything expressible as a utility lives in the template (`max-[899px]:` / `min-[900px]:`).
+   What is left here is the handful of declarations Tailwind has no utility for. */
+
+/* Momentum scrolling for the snap strip. `-webkit-overflow-scrolling` is a vendor property with
+   no Tailwind utility; without it an older iOS WebKit scrolls the strip without inertia, which
+   makes a five-column swipe feel broken. Harmless everywhere else. */
+.mwb-board-strip {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* The jumper is itself horizontally scrollable (six chips do not fit 390px), but a scrollbar under
+   a 44px control strip eats the touch target it is meant to protect. Same rule the program band
+   uses on its own tab strip — copied, not shared, because Angular view encapsulation scopes that
+   one to `reporting-program-band`. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hit targets (`MWB-T-11` (4), NFR Accessibility). Below 900px every primary card action must be
+   at least 44px tall. `my-work-card.component.html` is owned by a concurrent session, so the floor
+   is applied from HERE, over the card's projected DOM, instead of editing that file — the same
+   documented exception to Tailwind-first the `.mwb-filter` reshape above uses. `:host ::ng-deep`
+   keeps it scoped to this page's subtree; it is a stand-in for the permanent fix (the card's own
+   `max-[899px]:h-[44px]`), recorded in `execution.md`. */
+@media (max-width: 899px) {
+  :host ::ng-deep app-my-work-card button {
+    min-height: 44px;
+  }
+
+  /* `Open` is an inline `<a>`, so `min-height` alone would do nothing — it needs a box first. */
+  :host ::ng-deep app-my-work-card a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 8px;
+  }
+}

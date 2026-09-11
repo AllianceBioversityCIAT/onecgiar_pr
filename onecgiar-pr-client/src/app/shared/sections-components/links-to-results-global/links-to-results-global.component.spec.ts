@@ -1,5 +1,6 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError, NEVER } from 'rxjs';
+import { delay } from 'rxjs/operators';
 import { LinksToResultsGlobalComponent } from './links-to-results-global.component';
 import { ApiService } from '../../services/api/api.service';
 import { ResultsListService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list.service';
@@ -7,6 +8,7 @@ import { RolesService } from '../../services/global/roles.service';
 import { GreenChecksService } from '../../services/global/green-checks.service';
 import { LinksToResultsBody } from '../../../pages/results/pages/result-detail/pages/rd-links-to-results/models/linksToResultsBody';
 import { signal } from '@angular/core';
+import { SectionDirtyTrackerService } from '../../services/unsaved-changes/section-dirty-tracker.service';
 
 describe('LinksToResultsGlobalComponent', () => {
   let component: LinksToResultsGlobalComponent;
@@ -14,6 +16,7 @@ describe('LinksToResultsGlobalComponent', () => {
   let mockResultsListService: any;
   let mockRolesService: any;
   let mockGreenChecksService: any;
+  let dirtyTracker: SectionDirtyTrackerService;
 
   const mockLinksToResultsResponse = {
     links: [
@@ -87,7 +90,8 @@ describe('LinksToResultsGlobalComponent', () => {
     });
 
     // Create component instance directly without fixture to avoid template rendering
-    component = new LinksToResultsGlobalComponent(mockApiService, mockResultsListService, mockRolesService, mockGreenChecksService);
+    dirtyTracker = new SectionDirtyTrackerService();
+    component = new LinksToResultsGlobalComponent(mockApiService, mockResultsListService, mockRolesService, mockGreenChecksService, dirtyTracker);
   });
 
   it('should create', () => {
@@ -440,6 +444,99 @@ describe('LinksToResultsGlobalComponent', () => {
       expect(mockApiService.resultsSE.POST_resultsLinked).toHaveBeenCalledWith(component.linksToResultsBody, component.isIpsr);
       expect(component.getSectionInformation).toHaveBeenCalled();
     });
+  });
+
+  /**
+   * `UCA-T-10` — `CanComponentDeactivate` wiring, delegated to by `RdLinksToResultsComponent`
+   * (see `rd-links-to-results.component.ts`). `SectionDirtyTrackerService` is component-scoped
+   * (`providers: [SectionDirtyTrackerService]`), so each test constructs its own fresh instance
+   * (`dirtyTracker`, see `beforeEach` above) — no cross-test snapshot leakage.
+   *
+   * Deliberately NOT reusing the file-level `mockLinksToResultsResponse` — several tests above
+   * mutate it (or objects derived from it) in place across the file's run order. Local literals
+   * here stay reliably distinct regardless of suite order, same precedent as `UCA-T-6`'s rework.
+   *
+   * Load/save timing assertions use a genuine async boundary (`delay(0)` + `fakeAsync`/`tick()`),
+   * never a synchronous mock, per `UCA-T-6`'s attempt-1 FAIL lesson — even though this component's
+   * `getSectionInformation()` load flow has no secondary async mutation (unlike `UCA-T-6`'s
+   * discontinued-options race), so a synchronous mock would not currently mask anything; using the
+   * async boundary anyway guards against a future regression reintroducing a similar race.
+   */
+  describe('CanComponentDeactivate (UCA-T-10)', () => {
+    const freshLinksResponse = () => ({
+      links: [{ result_code: 'R100', result_type_id: 3, title: 'Local fixture result' }],
+      linkedInnovation: { linked_innovation_dev: false, linked_innovation_use: false },
+      legacy_link: []
+    });
+
+    beforeEach(() => {
+      mockApiService.dataControlSE.currentResult.result_type_id = 3;
+      mockApiService.resultsSE.GET_resultsLinked = jest.fn(() => of({ response: freshLinksResponse() }).pipe(delay(0)));
+    });
+
+    it('is false right after the load flow genuinely completes', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+
+      expect(component.hasUnsavedChanges()).toBe(false);
+    }));
+
+    it('is true after editing the bound body', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+
+      component.linksToResultsBody.legacy_link.push({ legacy_link: 'https://example.com' });
+
+      expect(component.hasUnsavedChanges()).toBe(true);
+    }));
+
+    /**
+     * Falsifying input: snapshotting only once (at load) and never again after a successful save
+     * would report `true` here. The follow-up reload triggered inside `performSave()`'s `tap`
+     * (`getSectionInformation()`) is forced to NEVER resolve (`NEVER`, not `throwError`) — this
+     * component's `getSectionInformation()` subscribe has no `error:` handler at all (unlike
+     * `UCA-T-6`'s `rd-general-information`), so an actually-erroring reload would escape as an
+     * unhandled exception instead of exercising the code path this test targets; making it hang
+     * proves the same point (the reload's own re-snapshot never runs) without depending on that
+     * pre-existing, out-of-scope gap. This can only pass because of the DIRECT
+     * `dirtyTracker.snapshot(...)` call in `performSave()`'s `tap`, not the reload's own re-snapshot.
+     */
+    it('is false right when saveSection() emits true, even when the follow-up reload never resolves', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+      component.linksToResultsBody.legacy_link.push({ legacy_link: 'https://example.com' });
+      expect(component.hasUnsavedChanges()).toBe(true);
+
+      mockApiService.resultsSE.GET_resultsLinked.mockReturnValue(NEVER);
+
+      let sawTrue = false;
+      component.saveSection().subscribe(result => {
+        sawTrue = result === true;
+        expect(component.hasUnsavedChanges()).toBe(false);
+      });
+      tick();
+
+      expect(sawTrue).toBe(true);
+    }));
+
+    it('saveSection() resolves false (not throws) on a failing POST_resultsLinked, without reloading the section', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+      const reloadSpy = jest.spyOn(component, 'getSectionInformation');
+      mockApiService.resultsSE.POST_resultsLinked = jest.fn(() => throwError(() => new Error('save failed')));
+
+      let result: boolean | undefined;
+      let errored = false;
+      component.saveSection().subscribe({
+        next: value => (result = value),
+        error: () => (errored = true)
+      });
+      tick();
+
+      expect(errored).toBe(false);
+      expect(result).toBe(false);
+      expect(reloadSpy).not.toHaveBeenCalled();
+    }));
   });
 
   describe('openInNewPage', () => {

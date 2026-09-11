@@ -1,26 +1,27 @@
-import { Component, OnInit, OnDestroy, ViewChild, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject, signal, computed, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Table, TableModule } from 'primeng/table';
-import { ButtonModule } from 'primeng/button';
-import { TooltipModule } from 'primeng/tooltip';
-import { InputTextModule } from 'primeng/inputtext';
-import { DialogModule } from 'primeng/dialog';
+import {
+  PrTableComponent,
+  PrSortableColumnDirective,
+  PrSortIconComponent,
+  PrTableHeaderDirective,
+  PrTableBodyDirective,
+  PrTableEmptyDirective
+} from '../../../../shared/components/pr-table';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { PrSelectComponent } from '../../../../custom-fields/pr-select/pr-select.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
 
 import { ManageUserModalComponent } from './components/manage-user-modal/manage-user-modal.component';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
 import { DynamicPanelServiceService } from '../../../../shared/components/dynamic-panel-menu/dynamic-panel-service.service';
-import { MultiSelectModule } from 'primeng/multiselect';
-import { Popover } from 'primeng/popover';
+import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { UserRolesInfoModalComponent } from '../../../../shared/components/user-roles-info-modal/user-roles-info-modal.component';
+import { GetRolesService } from '../../../../shared/services/global/get-roles.service';
 
 interface UserColumn {
   label: string;
@@ -38,24 +39,33 @@ interface CgiarOption {
   value: string;
 }
 
+/** P2-2043: which filter a chip belongs to, so removing it clears the right one. */
+type FilterType = 'status' | 'cgiar' | 'entity' | 'platformRole' | 'reportingRole';
+
+interface FilterChip {
+  category: string;
+  label: string;
+  filterType: FilterType;
+  /** Present for the multi-value filters; the single-value ones clear wholesale. */
+  value?: number;
+}
+
 @Component({
   selector: 'app-user-management',
   standalone: true,
   imports: [
     CommonModule,
     FormsModule,
-    TableModule,
-    ButtonModule,
-    TooltipModule,
-    InputTextModule,
-    DialogModule,
-    Popover,
     CustomFieldsModule,
-    IconFieldModule,
-    InputIconModule,
     ManageUserModalComponent,
-    MultiSelectModule,
-    UserRolesInfoModalComponent
+    PrFilterMultiselectModule,
+    UserRolesInfoModalComponent,
+    PrTableComponent,
+    PrSortableColumnDirective,
+    PrSortIconComponent,
+    PrTableHeaderDirective,
+    PrTableBodyDirective,
+    PrTableEmptyDirective
   ],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
@@ -64,6 +74,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   resultsApiService = inject(ResultsApiService);
   api = inject(ApiService);
   initiativesService = inject(InitiativesService);
+  getRolesService = inject(GetRolesService);
   dynamicPanelService = inject(DynamicPanelServiceService);
   exportTablesSE = inject(ExportTablesService);
 
@@ -73,7 +84,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   @ViewChild('entitiesSelect') entitiesSelect!: any; // PrMultiSelectComponent
   @ViewChild('userSearchSelect') userSearchSelect!: PrSelectComponent;
   @ViewChild('manageUserModal') manageUserModal!: ManageUserModalComponent;
-  @ViewChild('userTable') userTable!: Table;
+  @ViewChild('userTable') userTable!: PrTableComponent;
 
   // Signals for data and filters
   users = signal<AddUser[]>([]);
@@ -82,10 +93,18 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   selectedStatus = signal<string>('');
   selectedCgiar = signal<string>('');
   selectedEntities = signal<number[]>([]);
+
+  // P2-2043 - the two filters this story adds, plus the panel that now holds all five.
+  selectedPlatformRoles = signal<number[]>([]);
+  selectedReportingRoles = signal<number[]>([]);
+  showFiltersPanel = signal<boolean>(false);
   loading = signal<boolean>(false);
   isActivatingUser = signal<boolean>(false);
   isEditingUser = signal<boolean>(false);
   loadingUserRole = signal<boolean>(false);
+  assignmentOverlayTitle = signal('');
+  assignmentOverlayItems = signal<string[]>([]);
+  assignmentOverlayIsCenter = signal(false);
 
   // Modal variables
   showAddUserModal: boolean = false;
@@ -95,6 +114,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.getUsers();
+    // P2-2043: the Platform role catalogue is not loaded at app start, only where it is used.
+    this.getRolesService.getPlatformRoles();
   }
 
   ngOnDestroy() {
@@ -107,7 +128,14 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   getUsers() {
     this.loading.set(true);
     this.resultsApiService
-      .GET_searchUser(this.searchQuery(), this.selectedCgiar() as any, this.selectedStatus() as any, this.selectedEntities())
+      .GET_searchUser(
+        this.searchQuery(),
+        this.selectedCgiar() as any,
+        this.selectedStatus() as any,
+        this.selectedEntities(),
+        this.selectedPlatformRoles(),
+        this.selectedReportingRoles()
+      )
       .subscribe({
         next: res => {
           this.users.set(res.response);
@@ -164,6 +192,161 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.userTable?.reset();
   }
 
+  // Method to handle entity filter changes
+  onEntitiesChange(value: number[]) {
+    this.selectedEntities.set(value ?? []);
+    this.getUsers();
+    this.userTable?.reset();
+  }
+
+  /**
+   * P2-2043 - Platform role filter.
+   *
+   * Filters apply as they are picked, which is how the three existing ones already behave; the panel
+   * is only a container. That is also what makes the chips below it update while the panel is open,
+   * which is the feedback the story asks for.
+   */
+  onPlatformRolesChange(value: number[]) {
+    this.selectedPlatformRoles.set(this.toIds(value));
+    this.getUsers();
+    this.userTable?.reset();
+  }
+
+  /** P2-2043 - Reporting role filter. */
+  onReportingRolesChange(value: number[]) {
+    this.selectedReportingRoles.set(this.toIds(value));
+    this.getUsers();
+    this.userTable?.reset();
+  }
+
+  /**
+   * The multiselects hand back either plain ids or whole option objects depending on how the control
+   * was bound. Both shapes are flattened here so everything downstream - the request, the chips and
+   * the remove buttons - only ever deals with ids.
+   */
+  private toIds(value: any[]): number[] {
+    return (value ?? []).map(item => (item && typeof item === 'object' ? item.id : item)).filter((id: any) => id != null);
+  }
+
+  /**
+   * P2-2043 - the Entity filter must list P25 entities BEFORE P22 ones.
+   *
+   * The catalogue endpoint returns them the other way round (measured on the testing environment:
+   * P22 with 43 entities first, then P25 with 14), so anyone looking for a P25 entity had to scroll
+   * past all 43. Ordered here rather than server-side: that endpoint is CLARISA's and is consumed by
+   * other screens that do not ask for this order.
+   *
+   * Sorted by the portfolio number descending, so a future P28 lands on top on its own instead of
+   * needing this list edited again. Groups whose name does not carry a number keep their relative
+   * order at the end.
+   */
+  orderedEntityGroups = computed(() => {
+    const portfolioNumber = (group: any): number => {
+      const match = /(\d+)/.exec(group?.name ?? '');
+      return match ? Number(match[1]) : -1;
+    };
+
+    return [...this.initiativesService.allInitiatives()].sort((a, b) => portfolioNumber(b) - portfolioNumber(a));
+  });
+
+  /**
+   * P2-2043 - the chips under the filter bar: one per selected value, each removable on its own.
+   *
+   * Built from the filter signals rather than kept as separate state, so a chip can never disagree
+   * with what is actually being filtered.
+   */
+  activeFilterChips = computed<FilterChip[]>(() => {
+    const chips: FilterChip[] = [];
+
+    if (this.selectedStatus()) {
+      chips.push({ category: 'Status', label: this.selectedStatus(), filterType: 'status' });
+    }
+
+    if (this.selectedCgiar()) {
+      chips.push({ category: 'Is CGIAR', label: this.selectedCgiar(), filterType: 'cgiar' });
+    }
+
+    const entityNames = new Map<number, string>();
+    this.initiativesService.allInitiatives().forEach((group: any) =>
+      (group?.entities ?? []).forEach((entity: any) => entityNames.set(entity.id, entity.official_code ?? entity.name))
+    );
+    this.selectedEntities().forEach(id =>
+      chips.push({ category: 'Entity', label: entityNames.get(id) ?? String(id), filterType: 'entity', value: id })
+    );
+
+    const roleName = (roles: any[], id: number): string =>
+      roles.find(role => (role.role_id ?? role.id) === id)?.role_description ?? roles.find(role => (role.role_id ?? role.id) === id)?.description ?? String(id);
+
+    this.selectedPlatformRoles().forEach(id =>
+      chips.push({
+        category: 'Platform role',
+        label: roleName(this.getRolesService.platformRoles(), id),
+        filterType: 'platformRole',
+        value: id
+      })
+    );
+
+    this.selectedReportingRoles().forEach(id =>
+      chips.push({
+        category: 'Reporting role',
+        label: roleName(this.getRolesService.roles(), id),
+        filterType: 'reportingRole',
+        value: id
+      })
+    );
+
+    return chips;
+  });
+
+  /** P2-2043 - removes exactly one chip's filter and reloads. */
+  removeFilter(chip: FilterChip) {
+    switch (chip.filterType) {
+      case 'status':
+        this.selectedStatus.set('');
+        this.resetSelectControl(this.statusSelect, '');
+        break;
+      case 'cgiar':
+        this.selectedCgiar.set('');
+        this.resetSelectControl(this.cgiarSelect, '');
+        break;
+      case 'entity': {
+        const remaining = this.selectedEntities().filter(id => id !== chip.value);
+        this.selectedEntities.set(remaining);
+        this.resetSelectControl(this.entitiesSelect, remaining);
+        break;
+      }
+      case 'platformRole':
+        this.selectedPlatformRoles.set(this.selectedPlatformRoles().filter(id => id !== chip.value));
+        break;
+      case 'reportingRole':
+        this.selectedReportingRoles.set(this.selectedReportingRoles().filter(id => id !== chip.value));
+        break;
+    }
+
+    this.getUsers();
+    this.userTable?.reset();
+  }
+
+  /**
+   * The pr-select controls keep their own copy of the value, so clearing the signal is not enough to
+   * clear what the user sees. This mirrors what onClearFilters already did for each control.
+   */
+  private resetSelectControl(control: any, value: any) {
+    if (!control) return;
+    control.writeValue(value);
+    control._value = value;
+    if (!Array.isArray(value)) control.fullValue = {};
+  }
+
+  /** P2-2043 - opens and closes the "Table filters" panel. */
+  toggleFiltersPanel() {
+    this.showFiltersPanel.update(open => !open);
+  }
+
+  closeFiltersPanel() {
+    this.showFiltersPanel.set(false);
+  }
+
   // Method to clear all filters
   onClearFilters() {
     // Clear search timeout if exists
@@ -177,6 +360,9 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.selectedStatus.set('');
     this.selectedCgiar.set('');
     this.selectedEntities.set([]);
+    // P2-2043: the two filters this story adds clear with the rest.
+    this.selectedPlatformRoles.set([]);
+    this.selectedReportingRoles.set([]);
 
     // Clear the visual state of select components using writeValue
     if (this.statusSelect) {
@@ -203,14 +389,15 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   // Column configuration
   columns: UserColumn[] = [
-    { label: 'User name', key: 'firstName', width: '200px' },
-    { label: 'Email', key: 'emailAddress', width: '300px' },
-    { label: 'Platform role', key: 'appRole', width: '200px' },
-    { label: 'Reporting roles', key: 'entities', width: '120px' },
-    { label: 'Is CGIAR', key: 'isCGIAR', width: '120px' },
-    { label: 'User creation date', key: 'userCreationDate', width: '180px' },
-    { label: 'Status', key: 'status', width: '120px' },
-    { label: 'Actions', key: 'actions', width: '100px' }
+    { label: 'User name', key: 'firstName', width: '180px' },
+    { label: 'Email', key: 'emailAddress', width: '240px' },
+    { label: 'Platform role', key: 'appRole', width: '120px' },
+    { label: 'Science Programs', key: 'entities', width: '160px' },
+    { label: 'Centers', key: 'centers', width: '140px' },
+    { label: 'Is CGIAR', key: 'isCGIAR', width: '100px' },
+    { label: 'Created', key: 'userCreationDate', width: '120px' },
+    { label: 'Status', key: 'status', width: '100px' },
+    { label: 'Actions', key: 'actions', width: '90px' }
   ];
 
   // Status filter options
@@ -244,8 +431,13 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       next: res => {
         this.manageUserModal.addUserForm.update(form => ({
           ...form,
-          role_assignments: res.response.filter((item: any) => item.role_id !== 1 && item.role_id !== 2),
-          role_platform: res.response.find((item: any) => item.role_id === 1) ? 1 : 2
+          role_assignments: res.response.filter(
+            (item: any) => item.entity_id && item.role_id !== 1 && item.role_id !== 2
+          ),
+          center_assignments: res.response
+            .filter((item: any) => item.center_id)
+            .map((item: any) => ({ center_id: item.center_id })),
+          role_platform: res.response.some((item: any) => item.role_id === 1) ? 1 : 2
         }));
         this.loadingUserRole.set(false);
       },
@@ -267,6 +459,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
           email: emailAddress,
           role_platform: 2, // Marked as guest by default (2)
           role_assignments: [],
+          center_assignments: [],
           activate: true,
           created_by: `${createdByFirstName} ${createdByLastName} (${createdByEmail})`
         });
@@ -318,32 +511,141 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     return {};
   }
 
-  // Entity display methods
-  getDisplayEntities(entities: string[]): string[] {
-    if (!entities || entities.length === 0) return [];
-    return entities.slice(0, 2); // Always show only first 2
+  // Assignment display helpers
+  readonly inlineAssignmentLimit = 1;
+
+  getDisplayAssignments(items: string[] | undefined): string[] {
+    if (!items?.length) return [];
+    return items.slice(0, this.inlineAssignmentLimit);
   }
 
-  hasMoreEntities(entities: string[]): boolean {
-    return entities && entities.length > 2;
+  hasMoreAssignments(items: string[] | undefined): boolean {
+    return (items?.length ?? 0) > this.inlineAssignmentLimit;
   }
 
-  getRemainingEntities(entities: string[]): string[] {
-    if (!entities || entities.length <= 2) return [];
-    return entities.slice(2); // Return entities from index 2 onwards
+  getAssignmentCountLabel(items: string[] | undefined, singular: string, plural: string): string {
+    const count = items?.length ?? 0;
+    if (count === 0) return '';
+    return count === 1 ? `1 ${singular}` : `${count} ${plural}`;
   }
 
-  showEntityOverlay(event: any, overlay: any, entities: string[]): void {
-    if (this.hasMoreEntities(entities)) {
-      overlay.toggle(event);
+  // "View all" assignments overlay state (replaces PrimeNG p-popover)
+  assignmentOverlayOpen = signal<boolean>(false);
+  overlayTop = 0;
+  overlayLeft = 0;
+  overlayBottom = 0;
+  overlayFlippedAbove = false;
+
+  /** Panel is right-anchored via translateX(-100%) and capped at 320px wide in SCSS. */
+  private readonly overlayPanelWidth = 320;
+  private readonly overlayViewportMargin = 8;
+
+  openAssignmentOverlay(
+    event: Event,
+    title: string,
+    items: string[] | undefined,
+    isCenter: boolean
+  ): void {
+    if ((items?.length ?? 0) <= this.inlineAssignmentLimit) return;
+    event.stopPropagation();
+
+    if (this.assignmentOverlayOpen() && this.assignmentOverlayItems() === items) {
+      this.assignmentOverlayOpen.set(false);
+      return;
     }
+
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const margin = this.overlayViewportMargin;
+
+    // Clamp horizontally: overlayLeft is the panel's RIGHT edge (translateX(-100%)),
+    // so keep [left - panelWidth, left] inside the viewport with an 8px margin.
+    this.overlayLeft = Math.min(Math.max(rect.right, margin + this.overlayPanelWidth), window.innerWidth - margin);
+
+    // Estimate panel height (title block + ~46px per item, list capped at 280px by SCSS)
+    // to decide whether it fits below the trigger; flip above it otherwise.
+    const estimatedHeight = Math.min(60 + (items?.length ?? 0) * 46, 340);
+    const topBelow = rect.bottom + 6;
+    const fitsBelow = topBelow + estimatedHeight <= window.innerHeight - margin;
+
+    this.overlayFlippedAbove = !fitsBelow;
+    if (fitsBelow) {
+      this.overlayTop = Math.max(margin, topBelow);
+    } else {
+      // Bottom-anchored so the panel grows upwards from just above the trigger,
+      // regardless of its real rendered height.
+      this.overlayBottom = Math.max(margin, window.innerHeight - rect.top + 6);
+    }
+
+    this.assignmentOverlayTitle.set(title);
+    this.assignmentOverlayItems.set(items ?? []);
+    this.assignmentOverlayIsCenter.set(isCenter);
+    this.assignmentOverlayOpen.set(true);
+  }
+
+  /**
+   * `event` is optional so the existing callers that invoke this with no argument keep working; with
+   * no event there is nothing to test against, so only the overlay closes, as before.
+   */
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event?: MouseEvent) {
+    if (this.assignmentOverlayOpen()) this.assignmentOverlayOpen.set(false);
+
+    /**
+     * P2-2043: close the Table filters panel when the click lands outside it.
+     *
+     * Found in the browser, not in a test: the panel is absolutely positioned and sits ON TOP of the
+     * "Results filtered by" chips underneath, so with the panel open the chip X buttons are visible
+     * but unclickable — the panel swallows the pointer event. Without a click-outside the only way
+     * out was the Done button, which is not where anyone looks first.
+     *
+     * The whole `.apply-filters-wrap` is treated as inside on purpose: it holds the trigger button,
+     * the panel, and the dropdown option lists the multiselects render within it. Testing against
+     * the panel alone would close it the moment someone picked an option.
+     */
+    if (!this.showFiltersPanel() || !event) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest?.('.apply-filters-wrap')) return;
+    this.showFiltersPanel.set(false);
+  }
+
+  /** P2-2043: Escape closes the panel, the way every other dismissible layer behaves. */
+  @HostListener('document:keydown.escape')
+  onEscapeKey() {
+    if (this.showFiltersPanel()) this.showFiltersPanel.set(false);
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll() {
+    if (this.assignmentOverlayOpen()) this.assignmentOverlayOpen.set(false);
+  }
+
+  /** Splits "{entity} - {role}" labels returned by user search API. */
+  parseAssignmentLabel(item: string): { entity: string; role: string } {
+    if (!item) return { entity: '', role: '' };
+    const separatorIndex = item.lastIndexOf(' - ');
+    if (separatorIndex === -1) return { entity: item, role: '' };
+    return {
+      entity: item.slice(0, separatorIndex).trim(),
+      role: item.slice(separatorIndex + 3).trim()
+    };
   }
 
   exportExcel(usersList) {
     const usersListMapped = [];
 
     usersList.map(result => {
-      const { firstName, lastName, emailAddress, appRole, userStatus, userCreationDate, entities, isActive, isCGIAR } = result;
+      const {
+        firstName,
+        lastName,
+        emailAddress,
+        appRole,
+        userStatus,
+        userCreationDate,
+        entities,
+        centers,
+        isActive,
+        isCGIAR
+      } = result;
       usersListMapped.push({
         firstName: firstName ?? 'Not applicable',
         lastName: lastName ?? 'Not applicable',
@@ -353,7 +655,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
         userCreationDate: userCreationDate
           ? new Date(userCreationDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
           : 'Not applicable',
-        entities: entities?.join(', ') ?? 'Not applicable',
+        sciencePrograms: entities?.join(', ') ?? 'Not applicable',
+        centers: centers?.join(', ') ?? 'Not applicable',
         isCGIAR: isCGIAR ? 'Yes' : 'No',
         isActive: isActive ? 'Active' : 'Inactive'
       });
@@ -366,7 +669,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       { header: 'Is CGIAR', key: 'isCGIAR', width: 16 },
       { header: 'Application role', key: 'appRole', width: 18 },
       { header: 'User creation date', key: 'userCreationDate', width: 20 },
-      { header: 'Entities', key: 'entities', width: 50 },
+      { header: 'Science Programs', key: 'sciencePrograms', width: 40 },
+      { header: 'Centers', key: 'centers', width: 40 },
       { header: 'Status', key: 'isActive', width: 18 }
     ];
 

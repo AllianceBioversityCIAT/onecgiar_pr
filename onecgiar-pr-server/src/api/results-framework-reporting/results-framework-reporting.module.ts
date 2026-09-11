@@ -1,5 +1,11 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
+import { ReportingEntryHubService } from './services/reporting-entry-hub.service';
+import { BilateralProjectsService } from '../bilateral/services/bilateral-projects.service';
+import { ClarisaProject } from '../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
+import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
+import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { ResultsFrameworkReportingController } from './results-framework-reporting.controller';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
@@ -31,11 +37,21 @@ import { ApplyFrameworkResultAssociationsService } from './application/commands/
 import { GetExistingResultContributorsToIndicatorsHandler } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.handler';
 import { ExistingResultContributorsLoaderService } from './application/queries/get-existing-result-contributors/existing-result-contributors-loader.service';
 import { ContributorsRoleResolverService } from './application/queries/get-existing-result-contributors/contributors-role-resolver.service';
+import { TocResultsModule } from '../../toc/toc-results/toc-results.module';
+import { NotificationModule } from '../notification/notification.module';
+import { VersioningModule } from '../versioning/versioning.module';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([
+      ClarisaProject,
+      ClarisaCenter,
+      ClarisaInitiative,
+    ]),
     ResultsModule,
+    VersioningModule,
     ResultsKnowledgeProductsModule,
+    TocResultsModule,
     ResultsTocResultsModule,
     ShareResultRequestModule,
     ResultsByProjectsModule,
@@ -45,12 +61,15 @@ import { ContributorsRoleResolverService } from './application/queries/get-exist
     ResultScalingStudyUrlsModule,
     ResultInnovSectionModule,
     ResultsByInstitutionsModule,
+    NotificationModule,
     GeographicLocationModule,
     GeoScopeRoleModule,
   ],
   controllers: [ResultsFrameworkReportingController],
   providers: [
     ResultsFrameworkReportingService,
+    ReportingEntryHubService,
+    BilateralProjectsService,
     ClarisaInitiativesRepository,
     RoleByUserRepository,
     ClarisaGlobalUnitRepository,

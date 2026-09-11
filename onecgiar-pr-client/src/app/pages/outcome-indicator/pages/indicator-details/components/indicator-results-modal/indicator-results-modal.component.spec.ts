@@ -2,8 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { IndicatorResultsModalComponent } from './indicator-results-modal.component';
 import { IndicatorDetailsService } from '../../services/indicator-details.service';
 import { CommonModule } from '@angular/common';
-import { TableModule } from 'primeng/table';
-import { DialogModule } from 'primeng/dialog';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { RouterModule } from '@angular/router';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
@@ -14,7 +12,7 @@ describe('IndicatorResultsModalComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CommonModule, TableModule, DialogModule, CustomFieldsModule, RouterModule, HttpClientTestingModule],
+      imports: [CommonModule, CustomFieldsModule, RouterModule, HttpClientTestingModule],
       providers: [IndicatorDetailsService]
     }).compileComponents();
 

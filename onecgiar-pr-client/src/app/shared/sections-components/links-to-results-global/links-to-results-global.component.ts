@@ -1,22 +1,59 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, signal } from '@angular/core';
+import { Observable, of } from 'rxjs';
+import { map, catchError, tap } from 'rxjs/operators';
 import { ApiService } from '../../services/api/api.service';
 import { ResultsListService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list.service';
 import { LinksToResultsBody } from '../../../pages/results/pages/result-detail/pages/rd-links-to-results/models/linksToResultsBody';
 import { RolesService } from '../../services/global/roles.service';
 import { GreenChecksService } from '../../services/global/green-checks.service';
+import { SectionDirtyTrackerService } from '../../services/unsaved-changes/section-dirty-tracker.service';
 
+/**
+ * `UCA-T-10` — this component is `rd-links-to-results`'s actual body/save owner (the routed
+ * `RdLinksToResultsComponent` is a thin host — see `rd-links-to-results.component.html`), and is
+ * ALSO reused, unmodified in behaviour, by `ipsr-link-to-results` (`@Input() isIpsr`).
+ *
+ * The dirty tracker (`hasUnsavedChanges()`/`saveSection()` below) lives here because this is the
+ * component that owns `linksToResultsBody`, per `UCA-DD-1` — that part IS unavoidably shared with
+ * IPSR, since the state lives here.
+ *
+ * `[appBeforeUnloadWarning]`, however, is NOT bound anywhere in this component's own template
+ * (rework, attempt 2 — Issue 3): an earlier revision bound it on this component's template root,
+ * which silently made `ipsr-link-to-results` — explicitly Out of Scope, `requirements.md` §3 — show
+ * the native "leave site?" prompt too, an untested, unplanned scope-creep side effect. The binding
+ * now lives on the Result-Detail HOST instead (`rd-links-to-results.component.html`, wrapping
+ * `<app-links-to-results-global>`), which IPSR's own routed component does not render.
+ *
+ * `providers: [SectionDirtyTrackerService]` here (rather than on `RdLinksToResultsComponent`)
+ * because this is the component that owns `linksToResultsBody`, per `UCA-DD-1`.
+ */
 @Component({
   selector: 'app-links-to-results-global',
   templateUrl: './links-to-results-global.component.html',
   styleUrls: ['./links-to-results-global.component.scss'],
-  standalone: false
+  standalone: false,
+  providers: [SectionDirtyTrackerService]
 })
 export class LinksToResultsGlobalComponent implements OnInit {
   @Input() isIpsr: boolean = false;
   linksToResultsBody = new LinksToResultsBody();
   text_to_search: string = '';
   counterPipe = 0;
-  combine = true;
+  // P2-3322: signal-backed flag, same shape as the fix already applied to ResultsListComponent.
+  // `validateOrder()` runs from the column headers' `(click)` but writes the flag 100 ms later inside a
+  // `setTimeout`, once <app-pr-table> has applied `aria-sort`. The template feeds it to the
+  // `filterResultNotLinked` pipe in five places (the table value, the paginator, the total and the empty
+  // state), where it decides whether phases of the same result are merged into one row. As a plain field
+  // the delayed write notified nothing, so under zoneless change detection sorting by any column other than
+  // the result code left the rows merged. The public API stays a plain boolean, so the template, the pipe
+  // and the existing specs are untouched.
+  private readonly _combine = signal<boolean>(true);
+  get combine(): boolean {
+    return this._combine();
+  }
+  set combine(value: boolean) {
+    this._combine.set(value);
+  }
   columnOrder = [
     // { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
@@ -37,7 +74,8 @@ export class LinksToResultsGlobalComponent implements OnInit {
     public api: ApiService,
     public resultsListService: ResultsListService,
     public rolesSE: RolesService,
-    public greenChecksSE: GreenChecksService
+    public greenChecksSE: GreenChecksService,
+    private readonly dirtyTracker: SectionDirtyTrackerService
   ) {
     this.api.dataControlSE.currentResultSectionName.set('Links to results');
   }
@@ -66,7 +104,51 @@ export class LinksToResultsGlobalComponent implements OnInit {
       } else {
         this.filteredResults = this.linksToResultsBody.links;
       }
+
+      // `UCA-T-10` — true end of the load flow: this single GET's `next` callback performs every
+      // mutation to `linksToResultsBody` synchronously, right here (no secondary async call
+      // mutates it afterward — verified by reading the full method body, unlike `UCA-T-6`'s
+      // discontinued-options race). Safe to snapshot at this point.
+      this.dirtyTracker.snapshot(this.linksToResultsBody);
     });
+  }
+
+  /** `UCA-T-10` — `CanComponentDeactivate.hasUnsavedChanges()`, delegated to by `RdLinksToResultsComponent`. */
+  hasUnsavedChanges(): boolean {
+    return this.dirtyTracker.isDirty(this.linksToResultsBody);
+  }
+
+  /**
+   * `UCA-T-10` — `CanComponentDeactivate.saveSection()`, delegated to by `RdLinksToResultsComponent`.
+   * Wraps `performSave()`'s exact `POST_resultsLinked` call (`UCA-DD-3`, no duplicated save logic)
+   * to resolve `true`/`false` instead of void, for `UnsavedChangesGuard`.
+   */
+  saveSection(): Observable<boolean> {
+    return this.performSave().pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
+
+  /**
+   * `UCA-T-10`: returns the `POST_resultsLinked` `Observable` instead of self-subscribing, so both
+   * this component's own Save action (`onSaveSection`, below) and `saveSection()` (the
+   * `CanComponentDeactivate` contract, above) drive the exact same call and success branch — no
+   * duplicated save logic (`UCA-DD-3`).
+   */
+  private performSave(): Observable<void> {
+    return this.api.resultsSE.POST_resultsLinked(this.linksToResultsBody, this.isIpsr).pipe(
+      tap(() => {
+        // `UCA-T-10` — snapshot HERE, synchronously, the instant the POST resolves. Closes the
+        // same class of race `UCA-T-6`'s rework fixed: `saveSection()`'s `map(() => true)` could
+        // otherwise emit to `UnsavedChangesGuard` before the follow-up `getSectionInformation()`
+        // below (its own async load-flow re-snapshot) resolves — or never resolve at all if that
+        // reload fails.
+        this.dirtyTracker.snapshot(this.linksToResultsBody);
+        this.getSectionInformation();
+      }),
+      map(() => undefined)
+    );
   }
 
   validateOrder(columnAttr) {
@@ -167,9 +249,7 @@ export class LinksToResultsGlobalComponent implements OnInit {
   }
 
   onSaveSection() {
-    this.api.resultsSE.POST_resultsLinked(this.linksToResultsBody, this.isIpsr).subscribe((resp: any) => {
-      this.getSectionInformation();
-    });
+    this.performSave().subscribe();
   }
 
   openInNewPage(link) {

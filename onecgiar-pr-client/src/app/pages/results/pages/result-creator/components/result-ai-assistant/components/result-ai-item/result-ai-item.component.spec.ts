@@ -152,4 +152,36 @@ describe('ResultAiItemComponent', () => {
     expect(component.getOrganizations(withValues)).toEqual(['Org1']);
     expect(component.getInnovationActorsDetailed(withValues)).toEqual([{ name: 'A', type: 'T', gender_age: ['F'] }]);
   });
+
+  // P2-3433 — la creación desde el asistente de IA está apagada a propósito: `createResult()`
+  // nunca se conectó a un endpoint. Estos tests fijan el estado declarado para que nadie quite el
+  // disable sin conectar antes la persistencia, y para que el tag no se pierda en un refactor.
+  describe('creación por IA deshabilitada (Coming soon)', () => {
+    it('marca los dos botones de acción como deshabilitados', () => {
+      fixture.detectChanges();
+
+      const buttons = fixture.nativeElement.querySelectorAll('app-pr-button');
+
+      expect(buttons.length).toBe(2);
+      buttons.forEach((button: HTMLElement) => {
+        expect(button.classList.contains('globalDisabled')).toBe(true);
+      });
+    });
+
+    it('muestra el tag "Coming soon" junto a los botones', () => {
+      fixture.detectChanges();
+
+      const tag = fixture.nativeElement.querySelector('[data-testid="result-ai-item-coming-soon"]');
+
+      expect(tag).toBeTruthy();
+      expect(tag.textContent.trim()).toBe('Coming soon');
+    });
+
+    it('no muestra el tag una vez el item pasa a creado', () => {
+      component.isCreated.set(true);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="result-ai-item-coming-soon"]')).toBeNull();
+    });
+  });
 });

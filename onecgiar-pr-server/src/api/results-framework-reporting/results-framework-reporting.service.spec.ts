@@ -1,3 +1,4 @@
+import { HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
@@ -24,9 +25,14 @@ import { CreateFrameworkResultEntityService } from './application/commands/creat
 import { LinkFrameworkResultTocService } from './application/commands/create-result-from-framework/link-framework-result-toc.service';
 import { FrameworkResultTocIndicatorsService } from './application/commands/create-result-from-framework/framework-result-toc-indicators.service';
 import { ApplyFrameworkResultAssociationsService } from './application/commands/create-result-from-framework/apply-framework-result-associations.service';
+import { ResultTaggedNotificationService } from '../notification/services/result-tagged-notification.service';
+import { ContributorsPartnersService } from './contributors-partners/contributors-partners.service';
 import { GetExistingResultContributorsToIndicatorsHandler } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.handler';
 import { ExistingResultContributorsLoaderService } from './application/queries/get-existing-result-contributors/existing-result-contributors-loader.service';
 import { ContributorsRoleResolverService } from './application/queries/get-existing-result-contributors/contributors-role-resolver.service';
+import { TocResultsRepository } from '../../toc/toc-results/toc-results.repository';
+import { VersioningService } from '../versioning/versioning.service';
+import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
@@ -65,7 +71,13 @@ const mockTocResultsRepository = {
   findIndicatorById: jest.fn(),
   findUnitAcronymsByProgram: jest.fn(),
   getIndicatorContributions: jest.fn(),
+  findBilateralProjectById: jest.fn(),
+  findBilateralProjectsByProgramOfficialCode: jest.fn(),
   findTargetsWithCentersByIndicatorId: jest.fn(),
+};
+
+const mockTocCatalogRepository = {
+  getTocSynergyProgramsByResultIds: jest.fn(),
 };
 
 const defaultTocContext = {
@@ -75,6 +87,7 @@ const defaultTocContext = {
 
 const mockReportingTocContextService = {
   resolve: jest.fn(),
+  resolveByVersionId: jest.fn(),
 };
 
 const buildTocContextError = (message: string, status: number) => {
@@ -136,12 +149,28 @@ const mockContributionToIndicatorResultsRepository = {
   find: jest.fn(),
 };
 
+const mockResultTaggedNotificationService = {
+  notifyTaggedCenters: jest.fn().mockResolvedValue(undefined),
+  notifyTaggedBilateralProjects: jest.fn().mockResolvedValue(undefined),
+};
+// P2-3604: ApplyFrameworkResultAssociationsService delegates the innovation link to the single
+// writer, so the DI graph of this spec needs it too.
+const mockContributorsPartnersService = {
+  updateContributorsAndPartners: jest.fn().mockResolvedValue(undefined),
+};
 const mockResultsByInstitutionsService = {
   handleContributingCenters: jest.fn(),
+  savePartnersInstitutionsByResultV2: jest.fn(),
 };
 
 const mockDataSource = {
   query: jest.fn(),
+};
+
+// W12-R-2: default versionId resolution goes through VersioningService.$_findActivePhase
+// (AppModuleIdEnum.REPORTING), never YearRepository/`year.active` — see resolveIndicatorSummaryVersionId.
+const mockVersioningService = {
+  $_findActivePhase: jest.fn(),
 };
 
 describe('ResultsFrameworkReportingService', () => {
@@ -152,6 +181,9 @@ describe('ResultsFrameworkReportingService', () => {
 
     mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
       new Map(),
+    );
+    mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValue(
+      [],
     );
     mockReportingTocContextService.resolve.mockImplementation(
       (yearOverride?: number) =>
@@ -188,8 +220,16 @@ describe('ResultsFrameworkReportingService', () => {
           useValue: mockTocResultsRepository,
         },
         {
+          provide: TocResultsRepository,
+          useValue: mockTocCatalogRepository,
+        },
+        {
           provide: ResultRepository,
           useValue: mockResultRepository,
+        },
+        {
+          provide: VersioningService,
+          useValue: mockVersioningService,
         },
         { provide: ResultsService, useValue: mockResultsService },
         {
@@ -219,6 +259,14 @@ describe('ResultsFrameworkReportingService', () => {
         {
           provide: ContributionToIndicatorResultsRepository,
           useValue: mockContributionToIndicatorResultsRepository,
+        },
+        {
+          provide: ContributorsPartnersService,
+          useValue: mockContributorsPartnersService,
+        },
+        {
+          provide: ResultTaggedNotificationService,
+          useValue: mockResultTaggedNotificationService,
         },
         {
           provide: ResultsByInstitutionsService,
@@ -421,6 +469,423 @@ describe('ResultsFrameworkReportingService', () => {
         debug: true,
       });
     });
+
+    // OSF-T-3: scope bucket query and additive `scopeBuckets` payload
+    // (OSF-DD-1/2/2b/2c/2d/3). These fixtures prove the JS assembly logic —
+    // grouping, the deterministic multi-AoW tie-break, the residual
+    // arithmetic, the clamp/log — never that the SQL itself selects the
+    // right rows from a real database. A wrong JOIN would still pass every
+    // one of these; the SQL is reported as unverified pending a real-DB run.
+    describe('OSF-T-3: scope buckets (OSF-DD-2/2b/2c/2d/3)', () => {
+      const scopeTocContext = {
+        reportingYear: 2025,
+        phaseUuid: 'PHASE-SCOPE',
+        versionId: 36,
+      };
+
+      const setupProgram = (workPackages: any[]) => {
+        mockClarisaInitiativesRepository.findOne.mockResolvedValue({
+          id: 42,
+          official_code: 'SP01',
+          name: 'Science Program One',
+          short_name: 'SP01',
+          portfolio_id: 3,
+        });
+        mockReportingTocContextService.resolve.mockResolvedValueOnce(
+          scopeTocContext,
+        );
+        mockTocResultsRepository.findWorkPackagesByProgram.mockResolvedValue(
+          workPackages,
+        );
+        mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
+          new Map(),
+        );
+        mockTocResultsRepository.countProgramLevelOutcomes.mockResolvedValue({
+          intermediateCount: 0,
+          eoi2030Count: 0,
+        });
+      };
+
+      /** Routes `dataSource.query` calls to a fixture by their distinctive SQL text. */
+      const mockQueriesByKind = (fixtures: {
+        resultsCount?: any[];
+        scope?: any[];
+        total?: any[];
+      }) => {
+        mockDataSource.query.mockImplementation(
+          (query: string, _params: unknown[]) => {
+            if (query.includes('results_by_inititiative')) {
+              return Promise.resolve(fixtures.total ?? []);
+            }
+            if (query.includes('result_scope')) {
+              return Promise.resolve(fixtures.scope ?? []);
+            }
+            if (query.includes('result_indicators_targets')) {
+              return Promise.resolve(fixtures.resultsCount ?? []);
+            }
+            return Promise.resolve([]);
+          },
+        );
+      };
+
+      it('OSF-AC-3 keystone: bucket totals sum exactly to the program total, per status and overall', async () => {
+        setupProgram([
+          {
+            id: 1,
+            code: 'AOW01',
+            name: 'Area One',
+            composeCode: 'AOW01',
+            year: 2025,
+          },
+        ]);
+
+        // Program total (independent of any ToC link): 3 results at status 1.
+        // Named buckets only account for 2 of them (one AoW, one
+        // Intermediate) — the third has no ToC link at all and must land in
+        // UNTAGGED via the residual, never a direct count (OSF-DD-3).
+        // RAC-DD-2 — reshaped from grouped `{ bucket_key, status_id,
+        // result_count }` rows to per-result rows (`queryResultScopeRows`
+        // now returns one row per result); totals below are unchanged.
+        mockQueriesByKind({
+          total: [{ status_id: 1, result_count: 3 }],
+          scope: [
+            {
+              result_id: 101,
+              status_id: 1,
+              aow_acronym: 'AOW01',
+              has_intermediate: 0,
+              has_eoi: 0,
+              aow_codes: 'AOW01',
+            },
+            {
+              result_id: 102,
+              status_id: 1,
+              aow_acronym: null,
+              has_intermediate: 1,
+              has_eoi: 0,
+              aow_codes: null,
+            },
+          ],
+        });
+
+        const result = await service.getGlobalUnitsByProgram(user, 'SP01');
+        expect(result.status).toBe(200);
+        const buckets = (result.response as any).scopeBuckets as Array<{
+          key: string;
+          kind: string;
+          byStatus: Record<number, number>;
+          total: number;
+        }>;
+
+        const byKey = new Map(buckets.map((b) => [b.key, b]));
+        expect(byKey.get('AOW01')).toMatchObject({ kind: 'aow', total: 1 });
+        expect(byKey.get('INTERMEDIATE')).toMatchObject({
+          kind: 'outcome',
+          total: 1,
+        });
+        expect(byKey.get('EOI_2030')).toMatchObject({
+          kind: 'outcome',
+          total: 0,
+        });
+        expect(byKey.get('UNTAGGED')).toMatchObject({
+          kind: 'untagged',
+          total: 1,
+        });
+
+        // Per-status reconciliation (OSF-AC-3).
+        const sumAtStatus1 = buckets.reduce(
+          (sum, b) => sum + (b.byStatus[1] ?? 0),
+          0,
+        );
+        expect(sumAtStatus1).toBe(3);
+
+        // Overall reconciliation.
+        const grandTotal = buckets.reduce((sum, b) => sum + b.total, 0);
+        expect(grandTotal).toBe(3);
+      });
+
+      it('single-homes the r.source population predicate across the scope-bucket and program-total queries (FIND-01)', async () => {
+        setupProgram([
+          {
+            id: 1,
+            code: 'AOW01',
+            name: 'Area One',
+            composeCode: 'AOW01',
+            year: 2025,
+          },
+        ]);
+        mockQueriesByKind({});
+
+        await service.getGlobalUnitsByProgram(user, 'SP01');
+
+        const scopeCall = mockDataSource.query.mock.calls.find(([q]) =>
+          q.includes('result_scope'),
+        );
+        const totalCall = mockDataSource.query.mock.calls.find(([q]) =>
+          q.includes('results_by_inititiative'),
+        );
+
+        expect(scopeCall).toBeDefined();
+        expect(totalCall).toBeDefined();
+        // Both queries filter on the same exported constant — the exact
+        // regression a bilateral ('API') result not entering the buckets
+        // protects against. `r.source IN (...)` is present in both texts and
+        // both parameter lists carry only the constant's own values.
+        expect(scopeCall![0]).toContain('r.source IN');
+        expect(totalCall![0]).toContain('r.source IN');
+        expect(scopeCall![1]).toEqual(expect.arrayContaining(['Result']));
+        expect(totalCall![1]).toEqual(expect.arrayContaining(['Result']));
+      });
+
+      it('OSF-AC-12: resultsCount.editing/submitted keep their names and values while gaining byStatus', async () => {
+        setupProgram([
+          {
+            id: 1,
+            code: 'AOW01',
+            name: 'Area One',
+            composeCode: 'AOW01',
+            year: 2025,
+          },
+        ]);
+        mockQueriesByKind({
+          resultsCount: [
+            { work_package_acronym: 'AOW01', status_id: 1, result_count: 4 },
+            { work_package_acronym: 'AOW01', status_id: 2, result_count: 2 },
+            { work_package_acronym: 'AOW01', status_id: 3, result_count: 7 },
+          ],
+        });
+
+        const result = await service.getGlobalUnitsByProgram(user, 'SP01');
+        const unit = (result.response as any).units[0];
+
+        expect(unit.resultsCount.editing).toBe(4);
+        expect(unit.resultsCount.submitted).toBe(7);
+        expect(unit.resultsCount.byStatus).toMatchObject({
+          1: 4,
+          2: 2,
+          3: 7,
+        });
+      });
+
+      it('clamps a negative UNTAGGED residual to 0 and logs a warning naming the bucket and status', async () => {
+        setupProgram([
+          {
+            id: 1,
+            code: 'AOW01',
+            name: 'Area One',
+            composeCode: 'AOW01',
+            year: 2025,
+          },
+        ]);
+        const warnSpy = jest
+          .spyOn((service as any)._logger, 'warn')
+          .mockImplementation(() => undefined);
+
+        // Program total under-counts relative to the named buckets — the
+        // two populations have drifted apart (a defect signal per OSF-DD-3).
+        // RAC-DD-2 — five per-result rows (one row = one result) reproduce
+        // the old grouped fixture's `result_count: 5`.
+        mockQueriesByKind({
+          total: [{ status_id: 1, result_count: 1 }],
+          scope: [201, 202, 203, 204, 205].map((resultId) => ({
+            result_id: resultId,
+            status_id: 1,
+            aow_acronym: 'AOW01',
+            has_intermediate: 0,
+            has_eoi: 0,
+            aow_codes: 'AOW01',
+          })),
+        });
+
+        const result = await service.getGlobalUnitsByProgram(user, 'SP01');
+        const buckets = (result.response as any).scopeBuckets as Array<{
+          key: string;
+          byStatus: Record<number, number>;
+        }>;
+        const untagged = buckets.find((b) => b.key === 'UNTAGGED')!;
+
+        expect(untagged.byStatus[1]).toBe(0);
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('bucket=UNTAGGED status=1'),
+        );
+
+        warnSpy.mockRestore();
+      });
+    });
+  });
+
+  // @akili-spec changes/results-aow-column-filter (RAC-T-1)
+  describe('getResultsScope', () => {
+    const resultsScopeTocContext = {
+      reportingYear: 2025,
+      phaseUuid: 'PHASE-SCOPE',
+      versionId: 36,
+    };
+
+    beforeEach(() => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValue({
+        id: 42,
+        official_code: 'SP01',
+        name: 'Science Program One',
+      });
+      mockReportingTocContextService.resolveByVersionId.mockResolvedValue(
+        resultsScopeTocContext,
+      );
+    });
+
+    /** Routes `dataSource.query` calls to a fixture by their distinctive SQL text. */
+    const mockQueriesByKind = (fixtures: {
+      scope?: any[];
+      population?: any[];
+    }) => {
+      mockDataSource.query.mockImplementation((query: string) => {
+        if (query.includes('results_by_inititiative')) {
+          return Promise.resolve(fixtures.population ?? []);
+        }
+        if (query.includes('result_scope')) {
+          return Promise.resolve(fixtures.scope ?? []);
+        }
+        return Promise.resolve([]);
+      });
+    };
+
+    it('RAC-R-1 scenario: #9006 (AOW02+AOW01 links) → AOW01 tie-break with both codes, #8871 (Intermediate node) → INTERMEDIATE, #8702 (no ToC link) → UNTAGGED', async () => {
+      mockQueriesByKind({
+        scope: [
+          {
+            result_id: 9006,
+            status_id: 1,
+            aow_acronym: 'AOW01',
+            has_intermediate: 0,
+            has_eoi: 0,
+            aow_codes: 'AOW01,AOW02',
+          },
+          {
+            result_id: 8871,
+            status_id: 1,
+            aow_acronym: null,
+            has_intermediate: 1,
+            has_eoi: 0,
+            aow_codes: null,
+          },
+        ],
+        // #8702 is a member of the program (in the population query) but
+        // never produced a `result_scope` row — no ToC link at all
+        // (RAC-R-1.1).
+        population: [
+          { result_id: 9006, status_id: 1 },
+          { result_id: 8871, status_id: 1 },
+          { result_id: 8702, status_id: 1 },
+        ],
+      });
+
+      const result = await service.getResultsScope('SP01', 36);
+
+      expect(result.status).toBe(200);
+      expect((result.response as any).programId).toBe('SP01');
+      expect((result.response as any).versionId).toBe(36);
+
+      const buckets = (result.response as any).buckets as Array<{
+        result_id: number;
+        key: string;
+        kind: string;
+        codes: string[];
+      }>;
+      const byId = new Map(buckets.map((b) => [b.result_id, b]));
+
+      expect(byId.get(9006)).toEqual({
+        result_id: 9006,
+        key: 'AOW01',
+        kind: 'aow',
+        codes: ['AOW01', 'AOW02'],
+      });
+      expect(byId.get(8871)).toEqual({
+        result_id: 8871,
+        key: 'INTERMEDIATE',
+        kind: 'outcome',
+        codes: [],
+      });
+      expect(byId.get(8702)).toEqual({
+        result_id: 8702,
+        key: 'UNTAGGED',
+        kind: 'untagged',
+        codes: [],
+      });
+    });
+
+    it('collapses a result with two active memberships (owner + contributor) into exactly one bucket, and the population query selects DISTINCT', async () => {
+      mockQueriesByKind({
+        // Two `results_by_inititiative` rows for the same result (e.g. one
+        // owner row and one contributor row) — the join must not surface it
+        // twice (RAC-R-1: one bucket per result, RAC-DD-6).
+        population: [
+          { result_id: 9006, status_id: 1 },
+          { result_id: 9006, status_id: 1 },
+        ],
+      });
+
+      const result = await service.getResultsScope('SP01', 36);
+
+      const populationCall = mockDataSource.query.mock.calls.find(([q]) =>
+        q.includes('results_by_inititiative'),
+      );
+      expect(populationCall![0]).toContain('DISTINCT');
+
+      const buckets = (result.response as any).buckets as Array<{
+        result_id: number;
+      }>;
+      expect(buckets.filter((b) => b.result_id === 9006)).toHaveLength(1);
+    });
+
+    it('passes no source filter for the scope-row query (Results tab lists every source, RAC A-3) while getGlobalUnitsByProgram still passes W1/W2', async () => {
+      mockTocResultsRepository.findWorkPackagesByProgram.mockResolvedValue([
+        {
+          id: 1,
+          code: 'AOW01',
+          name: 'Area One',
+          composeCode: 'AOW01',
+          year: 2025,
+        },
+      ]);
+      mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
+        new Map(),
+      );
+      mockTocResultsRepository.countProgramLevelOutcomes.mockResolvedValue({
+        intermediateCount: 0,
+        eoi2030Count: 0,
+      });
+      mockReportingTocContextService.resolve.mockResolvedValue(
+        resultsScopeTocContext,
+      );
+      mockQueriesByKind({});
+
+      await service.getResultsScope('SP01', 36);
+      const resultsScopeCall = mockDataSource.query.mock.calls.find(([q]) =>
+        q.includes('result_scope'),
+      );
+
+      mockDataSource.query.mockClear();
+      await service.getGlobalUnitsByProgram(user, 'SP01');
+      const bucketsCall = mockDataSource.query.mock.calls.find(([q]) =>
+        q.includes('result_scope'),
+      );
+
+      expect(resultsScopeCall![0]).not.toContain('r.source IN');
+      expect(resultsScopeCall![1]).not.toContain('Result');
+      expect(bucketsCall![0]).toContain('r.source IN');
+      expect(bucketsCall![1]).toEqual(expect.arrayContaining(['Result']));
+    });
+
+    it('returns 400 when versionId is non-numeric (versionId=abc)', async () => {
+      const result = await service.getResultsScope('SP01', NaN);
+      expect(result.status).toBe(400);
+    });
+
+    it('returns 404 when the program is unknown', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce(null);
+      const result = await service.getResultsScope('NOPE', 36);
+      expect(result.status).toBe(404);
+    });
   });
 
   describe('getDashboardStats', () => {
@@ -575,6 +1040,230 @@ describe('ResultsFrameworkReportingService', () => {
   describe('getWorkPackagesByProgramAndArea', () => {
     beforeEach(() => {
       mockTocResultsRepository.findByCompositeCode.mockReset();
+      mockTocResultsRepository.findTargetsWithCentersByIndicatorId.mockReset();
+      mockTocResultsRepository.findTargetsWithCentersByIndicatorId.mockResolvedValue(
+        [],
+      );
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockReset();
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValue(
+        [],
+      );
+    });
+
+    /**
+     * P2-3336 rule 1. A ToC node with no work package is returned under EVERY Area of Work on
+     * purpose, and it keeps travelling in the payload — the legacy `entity-aow` screen renders it
+     * in its own labelled section, and its own endpoint serves the Intermediate Outcomes card.
+     * What it must NOT do is weigh on the Area of Work's percentage: the same node was averaged
+     * once inside every AoW of the programme, dragging them all toward a common figure.
+     *
+     * Rule 2 ("IOs inside an AoW but not unique to it") was withdrawn by the PO on 2026-09-09.
+     */
+    describe('a programme-level Intermediate Outcome does not weigh on the AoW (P2-3336)', () => {
+      const nodeWith = (over: Record<string, unknown> = {}) => ({
+        toc_result_id: 1,
+        category: 'OUTCOME',
+        result_title: 'Node',
+        related_node_id: 'N1',
+        indicators: [],
+        ...over,
+      });
+
+      const ownOutcome = nodeWith({
+        toc_result_id: 11,
+        is_aow: true,
+        result_title: 'Outcome of this AoW',
+        progress: {
+          progress_value: 100,
+          indicators_counted: 1,
+          indicators_total: 1,
+        },
+      });
+
+      const crossCutOutcome = nodeWith({
+        toc_result_id: 7483,
+        is_aow: false,
+        result_title: 'International and national organizations adopt...',
+        progress: {
+          progress_value: 0,
+          indicators_counted: 1,
+          indicators_total: 1,
+        },
+      });
+
+      const runFor = async (nodes: unknown[]) => {
+        mockReportingTocContextService.resolve.mockResolvedValueOnce({
+          reportingYear: 2026,
+          phaseUuid: 'PHASE-1',
+        });
+        mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce(
+          nodes,
+        );
+        return (await service.getWorkPackagesByProgramAndArea(
+          'SP13',
+          'AOW05',
+        )) as any;
+      };
+
+      it('leaves the cross-cutting node OUT of the roll-up', async () => {
+        const withCrossCut = await runFor([ownOutcome, crossCutOutcome]);
+        const withoutIt = await runFor([ownOutcome]);
+
+        // Averaging the shared 0% alongside the AoW's own 100% halved the figure.
+        expect(withCrossCut.response.progress).toEqual(
+          withoutIt.response.progress,
+        );
+        expect(withCrossCut.response.progress.progress_value).toBe(100);
+      });
+
+      it('still RETURNS it in the payload - the legacy AoW screen renders it', async () => {
+        const result = await runFor([ownOutcome, crossCutOutcome]);
+
+        expect(
+          result.response.tocResultsOutcomes.map((n: any) => n.toc_result_id),
+        ).toEqual([11, 7483]);
+        // `metadata` describes the payload, not the Area of Work.
+        expect(result.response.metadata.outcomes).toBe(2);
+      });
+
+      it('does NOT filter outputs - the rule speaks about Intermediate Outcomes only', async () => {
+        const crossCutOutput = nodeWith({
+          toc_result_id: 20,
+          category: 'OUTPUT',
+          is_aow: false,
+          progress: {
+            progress_value: 0,
+            indicators_counted: 1,
+            indicators_total: 1,
+          },
+        });
+        const withOutput = await runFor([ownOutcome, crossCutOutput]);
+        const outcomeOnly = await runFor([ownOutcome]);
+
+        expect(withOutput.response.progress.progress_value).not.toBe(
+          outcomeOnly.response.progress.progress_value,
+        );
+      });
+
+      it('treats a MISSING is_aow as belonging to the AoW (unchanged convention)', async () => {
+        const unflagged = nodeWith({
+          toc_result_id: 30,
+          progress: {
+            progress_value: 0,
+            indicators_counted: 1,
+            indicators_total: 1,
+          },
+        });
+        const result = await runFor([ownOutcome, unflagged]);
+
+        // 100 and 0 averaged - the node counted, exactly as before the flag existed.
+        expect(result.response.progress.progress_value).toBe(50);
+      });
+    });
+
+    it('should attach contributing_synergy_program_initiative_ids (P2-3114)', async () => {
+      const tocContext = { reportingYear: 2024, phaseUuid: 'PHASE-1' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
+      mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
+        {
+          toc_result_id: 42,
+          category: 'OUTPUT',
+          result_title: 'Result with SP',
+          related_node_id: 'NODE-SP',
+          indicators: [],
+        },
+      ]);
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValueOnce(
+        [
+          { toc_result_id: 42, initiative_id: 101 },
+          { toc_result_id: 42, initiative_id: 102 },
+        ],
+      );
+
+      const result: any = await service.getWorkPackagesByProgramAndArea(
+        'SP01',
+        'AOW01',
+        '2024',
+      );
+
+      expect(
+        mockTocCatalogRepository.getTocSynergyProgramsByResultIds,
+      ).toHaveBeenCalledWith([42], 'PHASE-1');
+      expect(
+        result.response.tocResultsOutputs[0]
+          .contributing_synergy_program_initiative_ids,
+      ).toEqual([101, 102]);
+    });
+
+    it('should keep center_acronym from disaggregated indicator rows', async () => {
+      const tocContext = { reportingYear: 2024, phaseUuid: 'PHASE-1' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
+      mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
+        {
+          toc_result_id: 10,
+          category: 'OUTPUT',
+          result_title: 'Result with centers',
+          related_node_id: 'NODE-1',
+          indicators: [
+            {
+              indicator_id: 100,
+              indicator_description: 'Number of farmers trained',
+              center_id: 1,
+              center_acronym: 'CIP',
+            },
+            {
+              indicator_id: 100,
+              indicator_description: 'Number of farmers trained',
+              center_id: 2,
+              center_acronym: 'IRRI',
+            },
+          ],
+        },
+      ]);
+      mockTocResultsRepository.findTargetsWithCentersByIndicatorId.mockResolvedValue(
+        [
+          {
+            toc_indicator_target_id: 1,
+            year: 2025,
+            target_value: 10,
+            number_target: '10',
+            centers: [
+              {
+                center_id: 1,
+                center_acronym: 'CIP',
+                center_name: 'International Potato Center',
+              },
+              {
+                center_id: 2,
+                center_acronym: 'IRRI',
+                center_name: 'International Rice Research Institute',
+              },
+            ],
+          },
+        ],
+      );
+
+      const result: any = await service.getWorkPackagesByProgramAndArea(
+        'SP01',
+        'AOW01',
+        '2024',
+      );
+
+      expect(result.response.tocResultsOutputs[0].indicators).toEqual([
+        expect.objectContaining({
+          indicator_id: 100,
+          center_id: 1,
+          center_acronym: 'CIP',
+        }),
+        expect.objectContaining({
+          indicator_id: 100,
+          center_id: 2,
+          center_acronym: 'IRRI',
+        }),
+      ]);
+      expect(
+        result.response.tocResultsOutputs[0].indicators[0].center_acronyms,
+      ).toBeUndefined();
     });
 
     it('should return work packages when repository returns data', async () => {
@@ -912,9 +1601,133 @@ describe('ResultsFrameworkReportingService', () => {
     });
   });
 
+  /**
+   * P2-3296 AC4's endpoint had NO spec at all, which is how the double-count survived: a ToC node
+   * with no work package is returned under EVERY Area of Work, so the Science Program average was
+   * counting the same node once per AoW. That is also what pulled every AoW toward one figure.
+   */
+  describe('getScienceProgramTocProgress (P2-3336)', () => {
+    beforeEach(() => {
+      mockTocResultsRepository.findWorkPackagesByProgram.mockReset();
+      mockTocResultsRepository.findByCompositeCode.mockReset();
+    });
+
+    const outcome = (
+      id: number,
+      isAow: boolean | undefined,
+      progressValue: number,
+    ) => ({
+      toc_result_id: id,
+      category: 'OUTCOME',
+      result_title: `Node ${id}`,
+      related_node_id: `N${id}`,
+      indicators: [],
+      ...(isAow === undefined ? {} : { is_aow: isAow }),
+      progress: {
+        progress_value: progressValue,
+        indicators_counted: 1,
+        indicators_total: 1,
+      },
+    });
+
+    /** The same programme-level node the SQL repeats under every Area of Work. */
+    const CROSS_CUT = () => outcome(7483, false, 0);
+
+    const runWithAreas = async (perArea: unknown[][]) => {
+      mockReportingTocContextService.resolve.mockResolvedValueOnce({
+        reportingYear: 2026,
+        phaseUuid: 'PHASE-1',
+      });
+      mockTocResultsRepository.findWorkPackagesByProgram.mockResolvedValueOnce(
+        perArea.map((_, i) => ({
+          code: `AOW0${i + 1}`,
+          name: `Area ${i + 1}`,
+          composeCode: `SP13-AOW0${i + 1}`,
+        })),
+      );
+      for (const nodes of perArea) {
+        mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce(
+          nodes,
+        );
+      }
+      return (await service.getScienceProgramTocProgress('SP13')) as any;
+    };
+
+    it('does not let one programme-level node weigh once per Area of Work', async () => {
+      const withCrossCut = await runWithAreas([
+        [outcome(11, true, 100), CROSS_CUT()],
+        [outcome(21, true, 50), CROSS_CUT()],
+      ]);
+      const withoutIt = await runWithAreas([
+        [outcome(11, true, 100)],
+        [outcome(21, true, 50)],
+      ]);
+
+      expect(withCrossCut.response.progress).toEqual(
+        withoutIt.response.progress,
+      );
+      // 100 and 50 -> 75. With the shared 0 counted twice it read 37.5.
+      expect(withCrossCut.response.progress.progress_value).toBe(75);
+    });
+
+    it('keeps each Area of Work on its own figure instead of a common one', async () => {
+      const result = await runWithAreas([
+        [outcome(11, true, 100), CROSS_CUT()],
+        [outcome(21, true, 0), CROSS_CUT()],
+      ]);
+
+      const byCode = Object.fromEntries(
+        result.response.areas.map((a: any) => [
+          a.code,
+          a.progress.progress_value,
+        ]),
+      );
+      expect(byCode).toEqual({ AOW01: 100, AOW02: 0 });
+    });
+
+    it('still counts an Area of Work own outcome with a missing is_aow', async () => {
+      const result = await runWithAreas([
+        [outcome(11, true, 100), outcome(12, undefined, 0)],
+      ]);
+
+      expect(result.response.areas[0].progress.progress_value).toBe(50);
+    });
+  });
+
   describe('getToc2030Outcomes', () => {
     beforeEach(() => {
       mockTocResultsRepository.find2030Outcomes.mockReset();
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockReset();
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValue(
+        [],
+      );
+    });
+
+    it('should attach contributing_synergy_program_initiative_ids (P2-3114)', async () => {
+      const tocContext = { reportingYear: 2030, phaseUuid: 'PHASE-1' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
+      mockTocResultsRepository.find2030Outcomes.mockResolvedValueOnce([
+        {
+          toc_result_id: 7,
+          category: 'EOI',
+          result_title: 'EOI with SP',
+          related_node_id: 'NODE-EOI-7',
+          indicators: [],
+        },
+      ]);
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValueOnce(
+        [{ toc_result_id: 7, initiative_id: 55 }],
+      );
+
+      const result: any = await service.getToc2030Outcomes('sp01');
+
+      expect(
+        mockTocCatalogRepository.getTocSynergyProgramsByResultIds,
+      ).toHaveBeenCalledWith([7], 'PHASE-1');
+      expect(
+        result.response.tocResults[0]
+          .contributing_synergy_program_initiative_ids,
+      ).toEqual([55]);
     });
 
     it('should return ToC 2030 outcomes when repository returns data', async () => {
@@ -1008,19 +1821,246 @@ describe('ResultsFrameworkReportingService', () => {
     });
   });
 
+  describe('OPF-R-6: versionId override on the ToC family (toc-results, 2030-outcomes, intermediate-outcomes)', () => {
+    beforeEach(() => {
+      mockReportingTocContextService.resolveByVersionId.mockReset();
+      mockTocResultsRepository.findByCompositeCode.mockReset();
+      mockTocResultsRepository.find2030Outcomes.mockReset();
+      mockTocResultsRepository.findIntermediateOutcomes.mockReset();
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockReset();
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValue(
+        [],
+      );
+    });
+
+    describe('getWorkPackagesByProgramAndArea', () => {
+      it('resolves the ToC context from the version row when versionId is given, ignoring the legacy year param', async () => {
+        mockReportingTocContextService.resolveByVersionId.mockResolvedValueOnce(
+          {
+            reportingYear: 2025,
+            phaseUuid: 'PHASE-34-UUID',
+            versionId: 34,
+            phaseName: 'Reporting 2025',
+          },
+        );
+        mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
+          {
+            toc_result_id: 1,
+            category: 'OUTPUT',
+            result_title: 'Result 1',
+            related_node_id: 'NODE-1',
+            indicators: [],
+          },
+        ]);
+
+        const result: any = await service.getWorkPackagesByProgramAndArea(
+          'SP01',
+          'AOW01',
+          '2099', // legacy year — must be ignored once versionId wins
+          34,
+        );
+
+        expect(
+          mockReportingTocContextService.resolveByVersionId,
+        ).toHaveBeenCalledWith(34);
+        expect(mockReportingTocContextService.resolve).not.toHaveBeenCalled();
+        expect(result.response.year).toBe(2025);
+        expect(result.response.metadata.phaseUuid).toBe('PHASE-34-UUID');
+      });
+
+      it('falls back to resolve(year) when versionId is absent (OPF-R-3 regression guard)', async () => {
+        mockReportingTocContextService.resolve.mockResolvedValueOnce({
+          reportingYear: 2024,
+          phaseUuid: 'PHASE-1',
+        });
+        mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
+          {
+            toc_result_id: 1,
+            category: 'OUTPUT',
+            result_title: 'Result 1',
+            related_node_id: 'NODE-1',
+            indicators: [],
+          },
+        ]);
+
+        await service.getWorkPackagesByProgramAndArea('SP01', 'AOW01', '2024');
+
+        expect(mockReportingTocContextService.resolve).toHaveBeenCalledWith(
+          2024,
+        );
+        expect(
+          mockReportingTocContextService.resolveByVersionId,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('rejects a non-numeric versionId with a 4xx instead of silently falling back', async () => {
+        const result: any = await service.getWorkPackagesByProgramAndArea(
+          'SP01',
+          'AOW01',
+          undefined,
+          NaN,
+        );
+
+        expect(result.status).toBe(HttpStatus.BAD_REQUEST);
+        expect(
+          mockReportingTocContextService.resolveByVersionId,
+        ).not.toHaveBeenCalled();
+        expect(mockReportingTocContextService.resolve).not.toHaveBeenCalled();
+      });
+
+      it('surfaces an unknown versionId as a 4xx (not an empty 200)', async () => {
+        mockReportingTocContextService.resolveByVersionId.mockRejectedValueOnce(
+          buildTocContextError('No version was found for versionId 9999.', 404),
+        );
+
+        const result: any = await service.getWorkPackagesByProgramAndArea(
+          'SP01',
+          'AOW01',
+          undefined,
+          9999,
+        );
+
+        expect(result.status).toBe(404);
+        expect(
+          mockTocResultsRepository.findByCompositeCode,
+        ).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('getToc2030Outcomes', () => {
+      it('resolves the ToC context from the version row when versionId is given', async () => {
+        mockReportingTocContextService.resolveByVersionId.mockResolvedValueOnce(
+          {
+            reportingYear: 2025,
+            phaseUuid: 'PHASE-34-UUID',
+            versionId: 34,
+            phaseName: 'Reporting 2025',
+          },
+        );
+        mockTocResultsRepository.find2030Outcomes.mockResolvedValueOnce([
+          { toc_result_id: 1, category: 'EOI', indicators: [] },
+        ]);
+
+        const result: any = await service.getToc2030Outcomes('sp01', 34);
+
+        expect(
+          mockReportingTocContextService.resolveByVersionId,
+        ).toHaveBeenCalledWith(34);
+        expect(mockReportingTocContextService.resolve).not.toHaveBeenCalled();
+        expect(result.response.year).toBe(2025);
+      });
+
+      it('falls back to resolve() when versionId is absent (OPF-R-3 regression guard)', async () => {
+        mockReportingTocContextService.resolve.mockResolvedValueOnce({
+          reportingYear: 2030,
+          phaseUuid: 'PHASE-1',
+        });
+        mockTocResultsRepository.find2030Outcomes.mockResolvedValueOnce([
+          { toc_result_id: 1, category: 'EOI', indicators: [] },
+        ]);
+
+        await service.getToc2030Outcomes('sp01');
+
+        expect(mockReportingTocContextService.resolve).toHaveBeenCalled();
+        expect(
+          mockReportingTocContextService.resolveByVersionId,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('rejects a non-numeric versionId with a 4xx', async () => {
+        const result: any = await service.getToc2030Outcomes('sp01', NaN);
+
+        expect(result.status).toBe(HttpStatus.BAD_REQUEST);
+        expect(
+          mockTocResultsRepository.find2030Outcomes,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('surfaces an unknown versionId as a 4xx (not an empty 200)', async () => {
+        mockReportingTocContextService.resolveByVersionId.mockRejectedValueOnce(
+          buildTocContextError('No version was found for versionId 9999.', 404),
+        );
+
+        const result: any = await service.getToc2030Outcomes('sp01', 9999);
+
+        expect(result.status).toBe(404);
+        expect(
+          mockTocResultsRepository.find2030Outcomes,
+        ).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('getIntermediateOutcomes', () => {
+      it('resolves the ToC context from the version row when versionId is given', async () => {
+        mockReportingTocContextService.resolveByVersionId.mockResolvedValueOnce(
+          {
+            reportingYear: 2025,
+            phaseUuid: 'PHASE-34-UUID',
+            versionId: 34,
+            phaseName: 'Reporting 2025',
+          },
+        );
+        mockTocResultsRepository.findIntermediateOutcomes.mockResolvedValueOnce(
+          [],
+        );
+
+        const result: any = await service.getIntermediateOutcomes('sp01', 34);
+
+        expect(
+          mockReportingTocContextService.resolveByVersionId,
+        ).toHaveBeenCalledWith(34);
+        expect(mockReportingTocContextService.resolve).not.toHaveBeenCalled();
+        expect(result.response.year).toBe(2025);
+      });
+
+      it('falls back to resolve() when versionId is absent (OPF-R-3 regression guard)', async () => {
+        mockReportingTocContextService.resolve.mockResolvedValueOnce({
+          reportingYear: 2026,
+          phaseUuid: 'PHASE-1',
+        });
+        mockTocResultsRepository.findIntermediateOutcomes.mockResolvedValueOnce(
+          [],
+        );
+
+        await service.getIntermediateOutcomes('sp01');
+
+        expect(mockReportingTocContextService.resolve).toHaveBeenCalled();
+        expect(
+          mockReportingTocContextService.resolveByVersionId,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('rejects a non-numeric versionId with a 4xx', async () => {
+        const result: any = await service.getIntermediateOutcomes('sp01', NaN);
+
+        expect(result.status).toBe(HttpStatus.BAD_REQUEST);
+        expect(
+          mockTocResultsRepository.findIntermediateOutcomes,
+        ).not.toHaveBeenCalled();
+      });
+    });
+  });
+
   describe('getProgramIndicatorContributionSummary', () => {
     beforeEach(() => {
-      mockYearRepository.findOne.mockResolvedValue({ year: 2025 });
+      // W12-R-2: default resolution goes through VersioningService.$_findActivePhase, not
+      // YearRepository — no default stub here on purpose, so a spec that forgets to mock
+      // $_findActivePhase fails loudly instead of silently reusing a stale year fixture.
+      mockVersioningService.$_findActivePhase.mockReset();
       mockResultRepository.getIndicatorContributionSummaryByProgram.mockReset();
       mockResultRepository.getActiveResultTypes.mockReset();
     });
 
-    it('should aggregate indicator contribution summaries for the program', async () => {
+    it('should aggregate indicator contribution summaries for the program, scoped by the active reporting phase', async () => {
       mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
         id: 15,
         official_code: 'SP05',
         name: 'Sample Program',
       });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce({
+        id: 2025,
+      } as any);
 
       mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([
         { id: 1, name: 'Outcome' },
@@ -1054,10 +2094,10 @@ describe('ResultsFrameworkReportingService', () => {
       const result: any =
         await service.getProgramIndicatorContributionSummary('sp05');
 
-      expect(mockYearRepository.findOne).toHaveBeenCalledWith({
-        where: { active: true },
-        select: ['year'],
-      });
+      expect(mockVersioningService.$_findActivePhase).toHaveBeenCalledWith(
+        AppModuleIdEnum.REPORTING,
+      );
+      expect(mockYearRepository.findOne).not.toHaveBeenCalled();
       expect(
         mockResultRepository.getIndicatorContributionSummaryByProgram,
       ).toHaveBeenCalledWith(15, 2025);
@@ -1106,12 +2146,88 @@ describe('ResultsFrameworkReportingService', () => {
       });
     });
 
+    // Reviewer remediation (W12-T-2 rework attempt 2): the repo predicate widened from
+    // `status_id IN (1,2,3)` to `!= 4` (proven at the repo layer, red-before/green-after —
+    // see result.repository.spec.ts), which means rows with status_id outside {1,2,3} (e.g.
+    // 5 Pending Review, 7 Rejected) can now legitimately reach this mapper for the first time.
+    // This case observes the CONSEQUENCE of that widening: the mapper's pre-existing `default:`
+    // branch (results-framework-reporting.service.ts:~658-661), previously structurally dead
+    // for this endpoint, now routes such rows into `others` (design §12 reversion challenge (a)).
+    // Green-only by construction: the mapper's switch/default was already there and is UNCHANGED
+    // by this fix, so there is no pre-fix/post-fix behavior difference to redden here — the
+    // red-before evidence for the underlying predicate change lives in result.repository.spec.ts.
+    it('routes a status_id outside {1,2,3} (5, 7) into the others bucket (W12-DD-2 reversion challenge (a))', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP05',
+        name: 'Sample Program',
+      });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce({
+        id: 2025,
+      } as any);
+
+      mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([
+        { id: 1, name: 'Outcome' },
+      ]);
+
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockResolvedValueOnce(
+        [
+          {
+            result_type_id: 1,
+            result_type_name: 'Outcome',
+            status_id: 1,
+            total_results: '1',
+          },
+          {
+            result_type_id: 1,
+            result_type_name: 'Outcome',
+            status_id: 5,
+            total_results: '2',
+          },
+          {
+            result_type_id: 1,
+            result_type_name: 'Outcome',
+            status_id: 7,
+            total_results: '3',
+          },
+        ],
+      );
+
+      const result: any =
+        await service.getProgramIndicatorContributionSummary('sp05');
+
+      expect(result.status).toBe(200);
+      expect(result.response.totalsByType).toEqual([
+        {
+          resultTypeId: 1,
+          resultTypeName: 'Outcome',
+          totalResults: 6,
+          editing: 1,
+          qualityAssessed: 0,
+          submitted: 0,
+          others: 5,
+        },
+      ]);
+      expect(result.response.statusTotals).toEqual({
+        editing: 1,
+        qualityAssessed: 0,
+        submitted: 0,
+        others: 5,
+        total: 6,
+      });
+    });
+
     it('should return zeroed totals when no indicator-linked results are found', async () => {
       mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
         id: 99,
         official_code: 'SP99',
         name: 'Program 99',
       });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce({
+        id: 2025,
+      } as any);
 
       mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([
         { id: 1, name: 'Outcome' },
@@ -1210,6 +2326,371 @@ describe('ResultsFrameworkReportingService', () => {
       ).not.toHaveBeenCalled();
       expect(mockResultRepository.getActiveResultTypes).not.toHaveBeenCalled();
     });
+
+    // W12-R-2 / W12-DD-3: default resolution must go through $_findActivePhase, never
+    // resolveInitiativeAndYear's `year.active` fallback.
+    it('should honor an explicit, finite versionId without consulting the active phase', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP05',
+        name: 'Sample Program',
+      });
+
+      mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([]);
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockResolvedValueOnce(
+        [],
+      );
+
+      const result: any = await service.getProgramIndicatorContributionSummary(
+        'sp05',
+        12,
+      );
+
+      expect(mockVersioningService.$_findActivePhase).not.toHaveBeenCalled();
+      expect(mockYearRepository.findOne).not.toHaveBeenCalled();
+      expect(
+        mockResultRepository.getIndicatorContributionSummaryByProgram,
+      ).toHaveBeenCalledWith(15, 12);
+      expect(result.status).toBe(200);
+    });
+
+    it('should default to the active REPORTING phase when versionId is absent (FAIL input for a year.active fallback)', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP05',
+        name: 'Sample Program',
+      });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce({
+        id: 77,
+      } as any);
+      mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([]);
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockResolvedValueOnce(
+        [],
+      );
+
+      const result: any =
+        await service.getProgramIndicatorContributionSummary('sp05');
+
+      expect(mockVersioningService.$_findActivePhase).toHaveBeenCalledWith(
+        AppModuleIdEnum.REPORTING,
+      );
+      expect(mockYearRepository.findOne).not.toHaveBeenCalled();
+      expect(
+        mockResultRepository.getIndicatorContributionSummaryByProgram,
+      ).toHaveBeenCalledWith(15, 77);
+      expect(result.status).toBe(200);
+    });
+
+    it('should default to the active REPORTING phase when versionId is non-numeric', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP05',
+        name: 'Sample Program',
+      });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce({
+        id: 77,
+      } as any);
+      mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([]);
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockResolvedValueOnce(
+        [],
+      );
+
+      const result: any = await service.getProgramIndicatorContributionSummary(
+        'sp05',
+        Number('not-a-number'),
+      );
+
+      expect(mockVersioningService.$_findActivePhase).toHaveBeenCalledWith(
+        AppModuleIdEnum.REPORTING,
+      );
+      expect(
+        mockResultRepository.getIndicatorContributionSummaryByProgram,
+      ).toHaveBeenCalledWith(15, 77);
+      expect(result.status).toBe(200);
+    });
+
+    it('should return a handler error when no active reporting phase is found and versionId is absent', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP05',
+        name: 'Sample Program',
+      });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce(null);
+
+      const result: any =
+        await service.getProgramIndicatorContributionSummary('sp05');
+
+      expect(result.status).toBe(404);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
+      expect(
+        mockResultRepository.getIndicatorContributionSummaryByProgram,
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * W12-R-3 parity: meter total === Σ matrix `totalResults` over ONE shared mixed fixture.
+   * `RAW_UNIVERSE` below mixes every excluded class (source='API', role=2, other-version,
+   * status 4, type 10/11) plus the classes that must now be INCLUDED (status 5/7, a
+   * null/orphan `result_level_id` row). `SHARED_UNIVERSE_PREDICATE` is the ONE filter both
+   * sides apply — it stands in for the two repo SQL predicates, which are independently
+   * pinned per-class in `result.repository.spec.ts` (this spec does not re-verify SQL; it
+   * asserts the two MAPPERS agree given an identical, already-filtered row set).
+   *
+   * `result_level_id`: this is NOT a proof of agreement — it is a second documented residual
+   * gap, in the same honest register as the Discontinued one below, and in the OPPOSITE
+   * direction. The meter's base query DOES constrain this column: it `INNER JOIN`s
+   * `result_level` on `r.result_level_id` (`result.repository.ts:692`), which silently drops
+   * any row whose `result_level_id` is null or an orphan id — an inner join with no match
+   * removes the row entirely. The matrix query (`getIndicatorContributionSummaryByProgram`)
+   * has no such join and no `result_level_id` predicate at all (W12-DD-2 dropped the old
+   * `IN (3,4)` filter without adding a join). So a null/orphan-level row is counted by the
+   * MATRIX and NOT by the METER — meter < matrix on that row, the mirror image of the
+   * Discontinued case below (meter possibly > matrix). Both mappers in THIS spec trivially
+   * "agree" on the null-level survivor only because neither mapper function reads
+   * `result_level_id` at all — that is a fact about the mapper layer, not evidence that the
+   * underlying SQL populations match. This spec assumes such rows do not occur in practice;
+   * if that assumption is wrong, this spec would not catch the divergence.
+   *
+   * `status_id = 4` (Discontinued): the matrix explicitly excludes it (`status_id != 4`).
+   * The meter's own base WHERE has NO status predicate at all — nothing stops a real,
+   * `is_active` Discontinued row from reaching it. This spec assumes (does not prove) that
+   * such rows don't occur in the "current phase, active, primary-submitter" population in
+   * practice; if that assumption is ever wrong, meter/matrix totals would diverge on a
+   * Discontinued row and this spec would not catch it (accepted residual gap, parallel to
+   * the `result_level_id` note above — flagged, not silently assumed away).
+   */
+  describe('W12-R-3: meter total === Σ matrix totalResults (parity)', () => {
+    const TARGET_VERSION = 42;
+    const OTHER_VERSION = 99;
+
+    // One raw candidate universe; `count` rows of that shape. Mixes every excluded class
+    // with the classes that must now be included.
+    const RAW_UNIVERSE = [
+      {
+        source: 'Result',
+        roleId: 1,
+        versionId: TARGET_VERSION,
+        statusId: 1,
+        resultTypeId: 1,
+        resultLevelId: 3,
+        count: 10,
+      }, // included: Editing
+      {
+        source: 'Result',
+        roleId: 1,
+        versionId: TARGET_VERSION,
+        statusId: 3,
+        resultTypeId: 1,
+        resultLevelId: 3,
+        count: 1,
+      }, // included: Submitted
+      {
+        source: 'Result',
+        roleId: 1,
+        versionId: TARGET_VERSION,
+        statusId: 5,
+        resultTypeId: 1,
+        resultLevelId: 4,
+        count: 2,
+      }, // included: Pending Review (was structurally dead pre-fix)
+      {
+        source: 'Result',
+        roleId: 1,
+        versionId: TARGET_VERSION,
+        statusId: 7,
+        resultTypeId: 2,
+        resultLevelId: null,
+        count: 1,
+      }, // included: Rejected + orphan result_level_id
+      {
+        source: 'API',
+        roleId: 1,
+        versionId: TARGET_VERSION,
+        statusId: 1,
+        resultTypeId: 1,
+        resultLevelId: 3,
+        count: 13,
+      }, // excluded: bilateral origin
+      {
+        source: 'Result',
+        roleId: 2,
+        versionId: TARGET_VERSION,
+        statusId: 1,
+        resultTypeId: 1,
+        resultLevelId: 3,
+        count: 3,
+      }, // excluded: contributor role
+      {
+        source: 'Result',
+        roleId: 1,
+        versionId: OTHER_VERSION,
+        statusId: 1,
+        resultTypeId: 1,
+        resultLevelId: 3,
+        count: 4,
+      }, // excluded: other phase
+      {
+        source: 'Result',
+        roleId: 1,
+        versionId: TARGET_VERSION,
+        statusId: 4,
+        resultTypeId: 1,
+        resultLevelId: 3,
+        count: 6,
+      }, // excluded: Discontinued
+      {
+        source: 'Result',
+        roleId: 1,
+        versionId: TARGET_VERSION,
+        statusId: 1,
+        resultTypeId: 10,
+        resultLevelId: 3,
+        count: 2,
+      }, // excluded: type 10
+      {
+        source: 'Result',
+        roleId: 1,
+        versionId: TARGET_VERSION,
+        statusId: 2,
+        resultTypeId: 11,
+        resultLevelId: 3,
+        count: 1,
+      }, // excluded: type 11
+    ];
+
+    const SHARED_UNIVERSE_PREDICATE = (row: (typeof RAW_UNIVERSE)[number]) =>
+      row.source === 'Result' &&
+      row.roleId === 1 &&
+      row.versionId === TARGET_VERSION &&
+      row.statusId !== 4 &&
+      ![10, 11].includes(row.resultTypeId);
+
+    const survivors = RAW_UNIVERSE.filter(SHARED_UNIVERSE_PREDICATE);
+    const EXPECTED_TOTAL = survivors.reduce((sum, r) => sum + r.count, 0); // 14
+
+    function computeMeterTotal(rows: typeof survivors): number {
+      const meterRows = rows.flatMap((group) =>
+        Array.from({ length: group.count }, () => ({
+          submitter_id: 15,
+          submitter: 'SP04',
+          submitter_name: 'Science Program 04',
+          // NOTE: in the real query this `role_id` is `r2.id as role_id` from `role_by_user`
+          // (the CALLING USER's role on the initiative, used only for `container.editable` /
+          // my-vs-other bucketing) — NOT `rbi.initiative_role_id` (the origin/ownership axis
+          // the SHARED_UNIVERSE_PREDICATE's `roleId` field represents, already applied above
+          // to build `survivors`). Reused here as a stand-in value only because
+          // `buildScienceProgramBuckets` needs some non-GUEST role_id per row; it plays no
+          // part in the SP04/type/status counts this spec asserts on.
+          role_id: group.roleId,
+          version_id: group.versionId,
+          phase_name: 'Reporting 2026',
+          phase_year: 2026,
+          status_id: group.statusId,
+          status_name: `Status ${group.statusId}`,
+        })),
+      );
+
+      const { mySciencePrograms, otherSciencePrograms } = (
+        ResultsService.prototype as any
+      ).buildScienceProgramBuckets(
+        meterRows,
+        [{ id: 15, official_code: 'SP04', name: 'Science Program 04' }] as any,
+        new Map(),
+        new Map(),
+      );
+
+      const program = [...mySciencePrograms, ...otherSciencePrograms].find(
+        (p: any) => p.initiativeId === 15,
+      );
+      return (
+        program?.versions?.find((v: any) => v.versionId === TARGET_VERSION)
+          ?.totalResults ?? 0
+      );
+    }
+
+    async function computeMatrixTotal(rows: typeof survivors): Promise<number> {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP04',
+        name: 'Science Program 04',
+      });
+      mockVersioningService.$_findActivePhase.mockReset();
+
+      const grouped = new Map<
+        string,
+        {
+          result_type_id: number;
+          result_type_name: string;
+          status_id: number;
+          total_results: number;
+        }
+      >();
+      for (const group of rows) {
+        const key = `${group.resultTypeId}:${group.statusId}`;
+        const existing = grouped.get(key);
+        if (existing) {
+          existing.total_results += group.count;
+        } else {
+          grouped.set(key, {
+            result_type_id: group.resultTypeId,
+            result_type_name: group.resultTypeId === 1 ? 'Outcome' : 'Output',
+            status_id: group.statusId,
+            total_results: group.count,
+          });
+        }
+      }
+
+      mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([
+        { id: 1, name: 'Outcome' },
+        { id: 2, name: 'Output' },
+      ]);
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockResolvedValueOnce(
+        Array.from(grouped.values()),
+      );
+
+      const result: any = await service.getProgramIndicatorContributionSummary(
+        'SP04',
+        TARGET_VERSION,
+      );
+
+      return result.response.totalsByType.reduce(
+        (sum: number, t: any) => sum + t.totalResults,
+        0,
+      );
+    }
+
+    it('meter total equals Σ matrix totalResults over the shared, correctly-filtered universe', async () => {
+      const meterTotal = computeMeterTotal(survivors);
+      const matrixTotal = await computeMatrixTotal(survivors);
+
+      expect(meterTotal).toBe(EXPECTED_TOTAL);
+      expect(matrixTotal).toBe(EXPECTED_TOTAL);
+      expect(meterTotal).toBe(matrixTotal);
+    });
+
+    // FAIL input (named per DoD): re-widening either universe breaks parity. Simulated here
+    // by narrowing the MATRIX side back to the pre-fix `status_id IN (1,2,3)` universe (drops
+    // the status 5/7 survivors) while the meter keeps the full, correct survivor set —
+    // reproducing exactly what re-adding that predicate (or dropping `fundingSource` from the
+    // meter's filters, the other named FAIL input) would do to this assertion: red.
+    it('is sensitive to a re-widened universe (FAIL input: matrix status_id IN (1,2,3) again)', async () => {
+      const meterTotal = computeMeterTotal(survivors);
+      const preFixMatrixSurvivors = survivors.filter((r) => r.statusId <= 3);
+
+      const matrixTotal = await computeMatrixTotal(preFixMatrixSurvivors);
+
+      // Concrete values, not just inequality: meter keeps the full, correct survivor set
+      // (10 Editing + 1 Submitted + 2 status-5 + 1 status-7 = 14); the narrowed matrix drops
+      // the status 5/7 survivors (10 + 1 = 11) — the exact numbers a re-widened-status
+      // regression would produce, not an arbitrary mismatch.
+      expect(meterTotal).toBe(14);
+      expect(matrixTotal).toBe(11);
+      expect(meterTotal).not.toBe(matrixTotal);
+    });
   });
 
   describe('createResultFromFramework', () => {
@@ -1239,7 +2720,7 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultsIndicatorsTargetsRepository.update.mockReset();
       mockShareResultRequestService.resultRequest.mockReset();
       mockResultsByProjectsService.linkBilateralProjectToResult.mockReset();
-      mockResultsByInstitutionsService.handleContributingCenters.mockReset();
+      mockResultsByInstitutionsService.savePartnersInstitutionsByResultV2.mockReset();
     });
 
     it('should create a non-knowledge product result and link ToC data', async () => {
@@ -1551,8 +3032,16 @@ describe('ResultsFrameworkReportingService', () => {
       );
 
       expect(
-        mockResultsByInstitutionsService.handleContributingCenters,
-      ).toHaveBeenCalledWith(centers, { result_id: 606 }, user);
+        mockResultsByInstitutionsService.savePartnersInstitutionsByResultV2,
+      ).toHaveBeenCalledWith(
+        {
+          result_id: 606,
+          contributing_center: centers,
+          institutions: undefined,
+          mqap_institutions: [],
+        },
+        user,
+      );
     });
   });
 
@@ -1668,6 +3157,8 @@ describe('ResultsFrameworkReportingService', () => {
           status_id: 2,
           role_id: 4,
           contributing_indicator: 3.5,
+          result_type_id: 2,
+          result_type_name: null,
         },
       ]);
       expect(mockHandlersError.returnErrorRes).not.toHaveBeenCalled();
@@ -1804,6 +3295,222 @@ describe('ResultsFrameworkReportingService', () => {
         }),
         debug: true,
       });
+    });
+
+    // @akili-spec changes/indicator-reported-results (IRR-R-3, IRR-R-3.1, IRR-AC-3)
+    it('should request the explicit all-scope status set (excluding Discontinued/Rejected/Draft) when scope="all"', async () => {
+      mockResultsTocResultRepository.find.mockResolvedValueOnce([
+        {
+          result_toc_result_id: 11,
+          result_id: 101,
+          toc_result_id: 5,
+          obj_results: {
+            title: 'Result Alpha',
+            result_code: 'RES-101',
+            result_type_id: 6,
+            version_id: 30,
+            status_id: 3,
+            obj_status: { status_name: 'Submitted' },
+            obj_result_type: { id: 6, name: 'Knowledge product' },
+          },
+        },
+      ]);
+      mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([
+        { results_toc_results_id: 11 },
+      ]);
+      mockRoleByUserRepository.find.mockResolvedValueOnce([]);
+      mockResultRepository.getUserRolesForResults.mockResolvedValueOnce([]);
+
+      const result: any =
+        await service.getExistingResultContributorsToIndicators(
+          user,
+          5,
+          'IND-55',
+          'all',
+        );
+
+      const statusWhere =
+        mockResultsTocResultRepository.find.mock.calls[0][0].where.obj_results
+          .status_id;
+      expect(statusWhere._type).toBe('in');
+      const statusIds = [...statusWhere._value].sort((a, b) => a - b);
+      expect(statusIds).toEqual([1, 2, 3, 5, 6]);
+      expect(statusIds).not.toContain(4);
+      expect(statusIds).not.toContain(7);
+      expect(statusIds).not.toContain(8);
+      expect(result.status).toBe(200);
+      expect(result.response.contributors[0]).toEqual(
+        expect.objectContaining({
+          result_type_id: 6,
+          result_type_name: 'Knowledge product',
+        }),
+      );
+    });
+
+    // @akili-spec changes/indicator-reported-results (IRR-R-3.1, IRR-AC-3) — default endpoint behaviour unchanged
+    it('should normalise an unknown scope value ("foo") to the reviewed-scope status set', async () => {
+      mockResultsTocResultRepository.find.mockResolvedValueOnce([
+        {
+          result_toc_result_id: 11,
+          result_id: 101,
+          toc_result_id: 5,
+          obj_results: {
+            title: 'Result Alpha',
+            result_code: 'RES-101',
+            result_type_id: 6,
+            version_id: 30,
+            status_id: 2,
+            obj_status: { status_name: 'Quality assessed' },
+          },
+        },
+      ]);
+      mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([
+        { results_toc_results_id: 11 },
+      ]);
+      mockRoleByUserRepository.find.mockResolvedValueOnce([]);
+      mockResultRepository.getUserRolesForResults.mockResolvedValueOnce([]);
+
+      const result: any =
+        await service.getExistingResultContributorsToIndicators(
+          user,
+          5,
+          'IND-55',
+          'foo',
+        );
+
+      const statusWhere =
+        mockResultsTocResultRepository.find.mock.calls[0][0].where.obj_results
+          .status_id;
+      expect(statusWhere._type).toBe('in');
+      expect([...statusWhere._value].sort((a, b) => a - b)).toEqual([2, 6]);
+      expect(result.status).toBe(200);
+      // never the numeric id when obj_result_type is absent
+      expect(result.response.contributors[0]).toEqual(
+        expect.objectContaining({
+          result_type_id: 6,
+          result_type_name: null,
+        }),
+      );
+    });
+  });
+
+  describe('getBilateralProjectsByScienceProgram (P2-3001)', () => {
+    it('should return deduplicated bilateral projects for a science program', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 10,
+        official_code: 'SP01',
+      });
+      mockTocResultsRepository.findBilateralProjectsByProgramOfficialCode.mockResolvedValueOnce(
+        [
+          {
+            toc_result_id: 1,
+            official_code: 'SP01',
+            project_id: 100,
+            project_name: 'Project A',
+          },
+          {
+            toc_result_id: 2,
+            official_code: 'SP01',
+            project_id: 100,
+            project_name: 'Project A',
+          },
+          {
+            toc_result_id: 3,
+            official_code: 'SP01',
+            project_id: 200,
+            project_name: 'Project B',
+          },
+        ],
+      );
+
+      const result = await service.getBilateralProjectsByScienceProgram('sp01');
+
+      expect(
+        mockTocResultsRepository.findBilateralProjectsByProgramOfficialCode,
+      ).toHaveBeenCalledWith('SP01', 'PHASE-1');
+      expect(result.response).toHaveLength(2);
+      expect(result.response.map((row) => row.project_id)).toEqual([100, 200]);
+      expect(result.status).toBe(200);
+    });
+
+    it('should return empty array when program has no bilateral projects', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 10,
+        official_code: 'SP02',
+      });
+      mockTocResultsRepository.findBilateralProjectsByProgramOfficialCode.mockResolvedValueOnce(
+        [],
+      );
+
+      const result = await service.getBilateralProjectsByScienceProgram('SP02');
+
+      expect(result.response).toEqual([]);
+      expect(result.status).toBe(200);
+    });
+
+    it('should return bad request when programId is missing', async () => {
+      const result = await service.getBilateralProjectsByScienceProgram('  ');
+
+      expect(result.status).toBe(400);
+    });
+  });
+
+  /**
+   * P2-3255. `assignIndicatorCenterContext` exists to fill the scalar centre when SQL left it
+   * unset, by matching a centre's target on year + value. That was safe while SQL emitted one row
+   * per target×centre. It is not safe now: a target shared by N centres arrives as one row with
+   * the scalars deliberately null, and the year+value match cannot tell those N apart — it would
+   * pick whichever comes first and put back exactly the misreport the ticket removed.
+   */
+  describe('assignIndicatorCenterContext with shared targets (P2-3255)', () => {
+    const sharedIndicator = () => ({
+      center_id: null,
+      center_acronym: null,
+      target_date: '2026',
+      target_value: '1',
+      centers: [
+        { center_id: 2, center_acronym: 'BIOVERSITY' },
+        { center_id: 3, center_acronym: 'CIAT' },
+      ],
+      targets_by_center: {
+        centers: [
+          {
+            center_id: 2,
+            center_acronym: 'BIOVERSITY',
+            targets: [{ year: '2026', target_value: '1' }],
+          },
+          {
+            center_id: 3,
+            center_acronym: 'CIAT',
+            targets: [{ year: '2026', target_value: '1' }],
+          },
+        ],
+      },
+    });
+
+    it('leaves the scalar centre unset when several centres hold the target', () => {
+      const indicator = sharedIndicator();
+
+      (service as any).assignIndicatorCenterContext(indicator, 2026);
+
+      expect(indicator.center_id).toBeNull();
+      expect(indicator.center_acronym).toBeNull();
+    });
+
+    it('still resolves the centre when only one holds the target', () => {
+      const indicator = sharedIndicator();
+      indicator.centers = [{ center_id: 3, center_acronym: 'CIAT' }];
+      indicator.targets_by_center.centers = [
+        {
+          center_id: 3,
+          center_acronym: 'CIAT',
+          targets: [{ year: '2026', target_value: '1' }],
+        },
+      ];
+
+      (service as any).assignIndicatorCenterContext(indicator, 2026);
+
+      expect(indicator.center_id).toBe(3);
     });
   });
 });

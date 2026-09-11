@@ -1,0 +1,36 @@
+<div class="local_container section_container">
+  <header class="flex items-center gap-[8px]">
+    <i class="material-icons-round" style="font-size: 30px">auto_awesome</i>
+    <h1 class="pr-h2">AI Narrative Management</h1>
+  </header>
+
+  <p class="pr-body-1 text-secondary-400 mt-[8px]">
+    Control whether the AI-generated narrative panel is available on the By-AOW banner and customize the prompt used to generate it.
+  </p>
+
+  <div class="flex flex-col gap-[24px] mt-[24px] max-w-[720px]">
+    <app-pr-yes-or-not
+      label="Enable AI narrative"
+      description="When enabled, reporting focal points see the AI narrative panel on the By-AOW banner."
+      [required]="false"
+      [editable]="true"
+      [(ngModel)]="aiNarrativeEnabled"></app-pr-yes-or-not>
+
+    <app-pr-textarea
+      label="Narrative prompt template"
+      [description]="promptDescription"
+      [required]="false"
+      [isStatic]="true"
+      [rows]="8"
+      [(ngModel)]="aiNarrativePrompt"></app-pr-textarea>
+
+    <app-pr-button
+      text="Save"
+      (click)="onSave()"
+      [rotating]="this.isLoading"
+      [verticalMargin]="0"
+      [ngClass]="{ globalDisabled: this.isLoading || !this.hasChanges }"
+      [icon]="this.isLoading ? 'loop' : ''"></app-pr-button>
+  </div>
+</div>
+<app-pr-toast></app-pr-toast>

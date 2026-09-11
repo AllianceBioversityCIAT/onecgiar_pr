@@ -26,5 +26,5 @@ This is a **frontend-only, one-line copy change**: swap the SharePoint URL. No b
 - **Frontend only** — `onecgiar-pr-client`.
 - File: `src/app/pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.component.ts` — the `information` getter (help-tip `<li>` template string).
 - No backend, API, entity, DTO, or migration changes.
-- SDD baseline: UI copy governed by `docs/system-design/design.md`; no requirement-level change to `docs/prd.md` or `docs/detailed-design/detailed-design.md`.
+- SDD baseline: UI copy governed by `docs/ux-ui/design.md`; no requirement-level change to `docs/prd.md` or `docs/trd/trd.md`.
 - Jira: **P2-3045** (Enhancement under epic P2-2338 "Enhancements 2026").

@@ -1,0 +1,30 @@
+---
+description: Never run full server/client test suites — only specs for modified modules
+alwaysApply: true
+---
+
+# Scoped unit tests only
+
+**Never** run the full Jest suite for `onecgiar-pr-server` or `onecgiar-pr-client` (e.g. bare `npm run test` with no path filter, or broad patterns that cover the whole package).
+
+**Always** scope tests to the module(s) / file(s) you changed:
+
+```bash
+# ✅ Server — only the touched module
+cd onecgiar-pr-server && npm run test -- --testPathPattern="bilateral-center.service.spec"
+
+# ✅ Client — only the touched module
+cd onecgiar-pr-client && npm run test -- --testPathPattern="bilateral-auto-save.service.spec"
+
+# ❌ Forbidden
+cd onecgiar-pr-server && npm run test
+cd onecgiar-pr-client && npm run test
+cd onecgiar-pr-server && npm run test -- --testPathPattern="bilateral"   # too broad if many specs match
+```
+
+Rules of thumb:
+
+- Prefer the co-located `*.spec.ts` for the exact file you edited.
+- If multiple files in one feature changed, pass a narrow pattern that matches only those specs (pipe with `|` if needed).
+- Do not use package-wide patterns like `.*` or empty `--testPathPattern`.
+- Full-suite runs are only allowed when the user **explicitly** asks for them.

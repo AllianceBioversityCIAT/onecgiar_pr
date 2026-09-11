@@ -10,158 +10,277 @@
       : this.resultsListFilterSE.selectedFundingSource()
       : this.resultsListFilterSE.selectedLeadCenters();
 @let activeButtons = this.api.dataControlSE?.myInitiativesListReportingByPortfolio?.length > 0 || this.api.rolesSE?.isAdmin;
+@let totalLoaded = this.api.dataControlSE.resultsListSignal().length;
+@let shown = filteredResults?.length ?? 0;
+@let cols = visibleColumns();
 
-<div class="page_section_header">
-  <div class="title_section_header">Results table</div>
-
-  <div>
-    <app-results-list-filters [isAdmin]="this.api.rolesSE.isAdmin" [hasFilteredResults]="(filteredResults?.length ?? 0) > 0"></app-results-list-filters>
-  </div>
-
-  <div class="action_buttons">
-    <div>
-      <app-report-new-result-button [ngClass]="{ disabledButtons: !activeButtons }"> </app-report-new-result-button>
+<div class="rc-page">
+  <!-- CURRENT chrome: title + Columns + Export CSV (PRMS-Shell.dc.html :408–421) -->
+  <header class="rc-page-header">
+    <div class="rc-page-header__text">
+      <h1 class="rc-page-title">Results Center</h1>
+      <p class="rc-page-sub">Search and export results across all Science Programs.</p>
     </div>
-  </div>
-</div>
+    <div class="rc-page-header__actions">
+      <div class="rc-cols-wrap">
+        <button
+          type="button"
+          class="rc-btn rc-btn--soft"
+          [class.rc-btn--active]="columnsOpen()"
+          [attr.aria-expanded]="columnsOpen()"
+          aria-haspopup="dialog"
+          (click)="toggleColumnsPanel($event)">
+          Columns
+          <i class="pi pi-sliders-h" aria-hidden="true"></i>
+        </button>
+        @if (columnsOpen()) {
+          <div
+            class="rc-cols-panel"
+            role="dialog"
+            aria-label="Visible columns"
+            (click)="$event.stopPropagation()">
+            <div class="rc-cols-panel__title">Visible columns</div>
+            <div class="rc-cols-panel__list">
+              @for (col of allColumns; track col.key) {
+                <button
+                  type="button"
+                  class="rc-cols-item"
+                  (click)="toggleColumn(col.key, $event)">
+                  <span
+                    class="rc-cols-check"
+                    [class.rc-cols-check--on]="isColumnVisible(col.key)"
+                    aria-hidden="true">
+                    @if (isColumnVisible(col.key)) {
+                      <i class="pi pi-check"></i>
+                    }
+                  </span>
+                  <span class="rc-cols-item__label">{{ col.title }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+      <button
+        type="button"
+        class="rc-btn rc-btn--primary"
+        [disabled]="exportDisabled(shown)"
+        [attr.title]="exportTitle()"
+        (click)="onExportCsv()">
+        @if (exportBusy()) {
+          <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+        } @else {
+          <i class="pi pi-download" aria-hidden="true"></i>
+        }
+        Export CSV
+      </button>
+    </div>
+  </header>
 
-<div class="section_content">
+  <app-results-list-filters
+    #filters
+    [isAdmin]="this.api.rolesSE.isAdmin"
+    [hasFilteredResults]="shown > 0"></app-results-list-filters>
+
   @if (this.api.dataControlSE.resultsListNoDataMessage(); as noResultsMsg) {
     <app-alert-status
       status="warning"
       [description]="noResultsMsg"
       inlineStyles="margin: 0 0 16px 0 !important;"></app-alert-status>
   }
-  <div class="table">
-    <p-table
+
+  <p class="rc-showing">
+    @if (shown > 0) {
+      Showing {{ shown }} of {{ totalLoaded }} results.
+    } @else {
+      No results to show.
+    }
+  </p>
+
+  <div class="table rc-table">
+    <app-pr-table
       id="resultListTable"
       #table
       sortField="result_code"
       [sortOrder]="-1"
       [value]="filteredResults"
+      dataKey="result_code"
       [loading]="this.resultsListService.showDeletingResultSpinner || (this.resultsListService.showLoadingResultSpinner && !filteredResults?.length)"
-      [showLoader]="false"
       [paginator]="filteredResults?.length"
-      responsiveLayout="scroll"
       [rows]="10"
-      styleClass="p-datatable-gridlines p-datatable-sm"
+      styleClass="rc-pr-table"
       selectionMode="single"
       [first]="this.resultsListFilterSE.text_to_search() && 0"
       [rowsPerPageOptions]="[10, 50, 100]">
-      <ng-template pTemplate="header">
+      <ng-template prTableHeader>
         <tr>
-          @for (column of columnOrder; track column.attr) {
+          @for (column of cols; track column.key) {
             <th
               (click)="validateOrder(column.attr)"
               (keydown.enter)="validateOrder(column.attr)"
               tabindex="0"
-              [pSortableColumn]="column.attr"
+              [prSortableColumn]="column.attr"
               [id]="column.attr"
               [style.width]="column.width">
               <div class="align-center">
-                <p-sortIcon [field]="column.attr"></p-sortIcon>
+                <pr-sort-icon [field]="column.attr"></pr-sort-icon>
                 {{ column.title }}
               </div>
             </th>
           }
 
-          <th id="pdf" style="width: 50px">PDF</th>
-
           @if (!this.api.rolesSE.platformIsClosed) {
-            <th id="action" style="width: 60px">Action</th>
+            <th id="action" class="rc-th-action" style="width: 44px"></th>
           }
         </tr>
       </ng-template>
 
-      <ng-template pTemplate="body" let-result>
-        <tr>
-          @for (column of columnOrder; track column.attr; let i = $index) {
+      <ng-template prTableBody let-result>
+        <tr class="rc-row">
+          @for (column of cols; track column.key) {
             <td
-              [class]="column.attr"
+              [class]="'rc-td rc-td--' + column.attr"
               [style.width]="column.width"
               [style.max-width]="column.width"
-              [style.min-width]="column.width"
-              style="cursor: pointer">
-              @for (subResult of result['results']; track subResult) {
-                <a
-                  [class]="column.class"
-                  [routerLink]="getResultLink(subResult)"
-                  [queryParams]="getResultQueryParams(subResult)"
-                  (click)="onResultLinkClick($event, subResult)">
-                  @if (i == 1) {
-                    @if (subResult.is_new && !subResult.legacy_id) {
-                      <div class="new_tag">New</div>
-                    } @else if (subResult.legacy_id) {
-                      <div class="new_tag pre">Pre 2022</div>
+              [style.min-width]="column.width">
+              @for (subResult of result['results']; track subResult.id) {
+                @if (column.attr === 'result_code') {
+                  <a
+                    class="rc-cell-link rc-code"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)">
+                    @if (isRecentResult(subResult)) {
+                      <span class="rc-new-dot" title="Created in the last 7 days"></span>
                     }
-                  }
-
-                  @if (
-                    column.attr === 'title' &&
-                    subResult?.status_id === '4' &&
-                    (!subResult?.has_discontinued_options ||
-                      subResult?.has_discontinued_options === '0' ||
-                      subResult?.has_discontinued_options === 0) &&
-                    (!subResult?.discontinued_options || !subResult?.discontinued_options?.length || subResult?.discontinued_options?.length === 0)
-                  ) {
-                    <div
-                      class="discontinued-icon"
-                      pTooltip="This innovation is tagged as discontinued, but no justification has been provided."
-                      tooltipPosition="right">
-                      <i class="pi pi-exclamation-triangle"></i>
-                    </div>
-                  }
-
-                  @if (column.attr === 'full_status_name_html') {
-                    <div>
-                      <div [class]="`status_tag status_${subResult.status_id}`" [pTooltip]="subResult.inQA ? 'This result is being QAed' : ''">
-                        {{ subResult.status_name }}
-                      </div>
-                      @if (subResult.inQA) {
-                        <div class="in-qa-tag">In QA</div>
-                      }
-                    </div>
-                  } @else {
-                    <!-- NOTE (P2-3049): empty cell is intentional when a result has no lead center (led by an external partner).
-                         Future change: fall back to showing the lead partner here instead of leaving it blank. -->
-                    <div
-                      [pTooltip]="subResult.inQA ? 'This result is being QAed' : ''"
-                      [ngClass]="{ center_flex_100: column.center, 'text-center': column.center, 'truncate-multiline': column.attr === 'full_name' }"
-                      [innerHTML]="column.attr === 'lead_center' ? (subResult.lead_center || '') : (column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd'))"></div>
-                  }
-                </a>
+                    <span class="rc-code__num" [innerHTML]="subResult.result_code"></span>
+                  </a>
+                } @else if (column.attr === 'title') {
+                  <a
+                    class="rc-cell-link rc-title"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)"
+                    [attr.title]="subResult.title">
+                    @if (
+                      subResult?.status_id === '4' &&
+                      (!subResult?.has_discontinued_options ||
+                        subResult?.has_discontinued_options === '0' ||
+                        subResult?.has_discontinued_options === 0) &&
+                      (!subResult?.discontinued_options ||
+                        !subResult?.discontinued_options?.length ||
+                        subResult?.discontinued_options?.length === 0)
+                    ) {
+                      <span
+                        class="discontinued-icon"
+                        prTooltip="This innovation is tagged as discontinued, but no justification has been provided."
+                        prTooltipPosition="right">
+                        <i class="pi pi-exclamation-triangle"></i>
+                      </span>
+                    }
+                    <span class="rc-title__text">{{ subResult.title }}</span>
+                  </a>
+                } @else if (column.attr === 'submitter') {
+                  <a
+                    class="rc-cell-link rc-program"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)">
+                    <span class="rc-program__dot" [style.background]="programDotColor(programCode(subResult))"></span>
+                    <span class="rc-program__code">{{ programCode(subResult) || '—' }}</span>
+                  </a>
+                } @else if (column.attr === 'lead_center') {
+                  <a
+                    class="rc-cell-link rc-plain"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)"
+                    [attr.title]="subResult.lead_center || ''">
+                    {{ subResult.lead_center || '—' }}
+                  </a>
+                } @else if (column.attr === 'phase_name') {
+                  <a
+                    class="rc-cell-link rc-phase"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)"
+                    [attr.title]="subResult.phase_name || ''">
+                    {{ phaseShort(subResult) }}
+                  </a>
+                } @else if (column.attr === 'result_type') {
+                  <a
+                    class="rc-cell-link rc-plain"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)"
+                    [attr.title]="subResult.result_type || ''">
+                    {{ subResult.result_type || '—' }}
+                  </a>
+                } @else if (column.attr === 'source_name') {
+                  <a
+                    class="rc-cell-link rc-funding"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)">
+                    {{ fundingLabel(subResult) }}
+                  </a>
+                } @else if (column.attr === 'full_status_name_html') {
+                  <a
+                    class="rc-cell-link rc-status-wrap"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)">
+                    <span
+                      [class]="statusClass(subResult)"
+                      [prTooltip]="subResult.inQA ? 'This result is being QAed' : ''">
+                      {{ subResult.status_name }}
+                    </span>
+                    @if (subResult.inQA) {
+                      <span class="in-qa-tag">In QA</span>
+                    }
+                  </a>
+                } @else if (column.attr === 'created_date') {
+                  <a
+                    class="rc-cell-link rc-date"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)">
+                    {{ subResult.created_date | date: 'dd MMM yyyy' }}
+                  </a>
+                } @else if (column.attr === 'last_updated_date') {
+                  <a
+                    class="rc-cell-link rc-date"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)">
+                    {{ subResult.last_updated_date ? (subResult.last_updated_date | date: 'dd MMM yyyy') : '—' }}
+                  </a>
+                } @else if (column.attr === 'full_name') {
+                  <a
+                    class="rc-cell-link rc-plain"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)"
+                    [attr.title]="subResult['full_name'] || ''">
+                    {{ subResult['full_name'] || '—' }}
+                  </a>
+                }
               }
             </td>
           }
 
-          <td>
-            <div class="subResults">
-              @for (subResult of result['results']; track subResult) {
-                <a
-                  pTooltip="Click to view the pdf"
-                  tooltipPosition="bottom"
-                  [href]="'/reports/result-details/' + subResult?.result_code + '?phase=' + subResult?.version_id"
-                  target="_blank"
-                  rel="noopener noreferrer">
-                  <app-pdf-icon></app-pdf-icon>
-                </a>
-              }
-            </div>
-          </td>
-
           @if (!this.api.rolesSE.platformIsClosed) {
-            <td>
+            <td class="rc-td rc-td--action">
               <div class="subResults">
-                @for (subResult of result['results']; track subResult) {
-                  <div class="icon_container text-center" aria-hidden="false">
-                    <button
-                      type="button"
-                      class="pi pi-ellipsis-v"
-                      (click)="menu.toggle($event); onPressAction(subResult)"
-                      (keydown.enter)="menu.toggle($event)"
-                      aria-label="Open actions menu"
-                      style="background: none; border: none; cursor: pointer; padding: 0"></button>
-                  </div>
+                @for (subResult of result['results']; track subResult.id) {
+                  <button
+                    type="button"
+                    class="rc-row-menu"
+                    (click)="toggleMenu($event, subResult)"
+                    (keydown.enter)="toggleMenu($event, subResult)"
+                    aria-label="More actions">
+                    <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
+                  </button>
                 }
               </div>
             </td>
@@ -169,7 +288,7 @@
         </tr>
       </ng-template>
 
-      <ng-template pTemplate="loadingbody">
+      <ng-template prTableLoading>
         <div
           [style]="{
             height: filteredResults?.length ? '100%' : '400px'
@@ -178,40 +297,46 @@
         </div>
       </ng-template>
 
-      <ng-template pTemplate="emptymessage">
+      <ng-template prTableEmpty>
         <tr style="height: 200px">
-          <td [attr.colspan]="columnOrder.length + 2" class="noDataText">There are no results for the selected filters.</td>
+          <td [attr.colspan]="cols.length + 1" class="noDataText">There are no results for the selected filters.</td>
         </tr>
       </ng-template>
-    </p-table>
-
-    @if (filteredResults?.length) {
-      <div class="total" style="margin-top: 10px">
-        Total:
-        {{ filteredResults?.length }}/{{ this.api.dataControlSE.resultsListSignal().length }}
-      </div>
-    }
+    </app-pr-table>
   </div>
 </div>
 
-<p-popover #menu>
-  @for (item of this.api.dataControlSE?.currentResult?.role_id || this.api.rolesSE.isAdmin ? itemsWithDelete : items; track item) {
-    @if (item.visible) {
-      <div
-        class="table_menu_item"
-        [pTooltip]="item.disabled ? item.tooltipText : null"
-        tooltipPosition="bottom"
-        [ngClass]="{ itemDisabled: item.disabled }"
-        (click)="item.disabled ? null : item.command(); menu.toggle($event)"
-        (keydown.enter)="item.disabled ? null : item.command(); menu.toggle($event)"
-        tabindex="0"
-        role="menuitem">
-        <i [class]="item.icon" [style]="item.inlineStyle"></i>
-        <span [style]="item.inlineStyle">{{ item.label }}</span>
-      </div>
+@if (menuOpen()) {
+  <div class="pr-menu-panel" [style.top.px]="menuTop" [style.left.px]="menuLeft" (click)="$event.stopPropagation()">
+    @for (item of this.api.dataControlSE?.currentResult?.role_id || this.api.rolesSE.isAdmin ? itemsWithDelete : items; track item) {
+      @if (item.visible) {
+        <div
+          class="table_menu_item"
+          [prTooltip]="item.disabled ? item.tooltipText : null"
+          prTooltipPosition="bottom"
+          [ngClass]="{ itemDisabled: item.disabled }"
+          (click)="item.disabled ? null : item.command(); closeMenu()"
+          (keydown.enter)="item.disabled ? null : item.command(); closeMenu()"
+          tabindex="0"
+          role="menuitem">
+          <i [class]="item.icon" [style]="item.inlineStyle"></i>
+          <span [style]="item.inlineStyle">{{ item.label }}</span>
+        </div>
+      }
     }
-  }
-</p-popover>
+    @if (this.api.dataControlSE.currentResult; as cur) {
+      <a
+        class="table_menu_item"
+        [href]="pdfHref(cur)"
+        target="_blank"
+        rel="noopener noreferrer"
+        (click)="closeMenu()">
+        <i class="pi pi-file-pdf" style="color: var(--pr-color-primary-300)"></i>
+        <span>Download PDF</span>
+      </a>
+    }
+  </div>
+}
 
 <app-results-to-update-modal></app-results-to-update-modal>
 @if (this.api.dataControlSE.chagePhaseModal) {

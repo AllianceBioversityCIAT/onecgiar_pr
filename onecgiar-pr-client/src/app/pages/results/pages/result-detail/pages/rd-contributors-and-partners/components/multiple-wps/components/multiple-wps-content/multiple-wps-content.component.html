@@ -1,11 +1,15 @@
 <div class="container" *ngIf="activeTab">
-  <div class="flex-no-wrap" *ngIf="(activeTab?.planned_result !== null || activeTab?.planned_result === null) && showMultipleWPsContent">
-    <div style="max-width: 250px" *ngIf="resultLevelId === 1 ? !activeTab?.planned_result : true">
+  <!-- P2-3235: Level + node reflect the alignment the Results Framework module wrote at creation. In 2026
+       they render read-only (see tocAlignmentReadOnly) so Section 2 shows the link instead of becoming a
+       second writer for it. Level-generic: locking Level locks every @switch branch under it. -->
+  <div class="flex flex-nowrap w-full gap-[20px] [&>*]:flex-1 [&>*]:max-w-none" *ngIf="(activeTab?.planned_result !== null || activeTab?.planned_result === null) && showMultipleWPsContent">
+    <div style="max-width: 250px" *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && (isCP2026() ? !isUnplanned : true)">
       <app-pr-select
         [options]="this.tocResultListFiltered()"
         label="Level"
-        [editable]="editable"
-        [disabled]="!editable"
+        [editable]="editable && !tocAlignmentReadOnly()"
+        [readOnly]="tocAlignmentReadOnly()"
+        [disabled]="!editable || tocAlignmentReadOnly()"
         [required]="!isUnplanned"
         optionLabel="name"
         optionValue="toc_level_id"
@@ -15,35 +19,37 @@
       </app-pr-select>
     </div>
 
-    @if (this.secondFieldLabel() && activeTab.toc_level_id) {
+    @if (this.secondFieldLabel() && activeTab.toc_level_id && (isCP2026() ? !isUnplanned : true)) {
       @switch (activeTab.toc_level_id) {
         @case (3) {
           <app-pr-select
             [options]="eoiList()"
             [label]="this.secondFieldLabel()"
-            [editable]="editable"
+            [editable]="editable && !tocAlignmentReadOnly()"
+            [readOnly]="tocAlignmentReadOnly()"
             [required]="!isUnplanned"
-            [disabled]="(resultLevelId === 1 && false) || !editable"
+            [disabled]="(resultLevelId === 1 && false) || !editable || tocAlignmentReadOnly()"
             optionLabel="title"
             optionValue="toc_result_id"
             placeholder="Select outcome"
             [(ngModel)]="activeTab.toc_result_id"
-            (ngModelChange)="getIndicatorsList(); tocResultChanged.emit()">
+            (ngModelChange)="markUserTocSelection(); getIndicatorsList(); tocResultChanged.emit()">
           </app-pr-select>
         }
         @case (2) {
           <app-pr-select
             [options]="outcomeList()"
             [label]="this.secondFieldLabel()"
-            [editable]="editable"
+            [editable]="editable && !tocAlignmentReadOnly()"
+            [readOnly]="tocAlignmentReadOnly()"
             [required]="!isUnplanned"
-            [disabled]="(resultLevelId === 1 && false) || !editable"
+            [disabled]="(resultLevelId === 1 && false) || !editable || tocAlignmentReadOnly()"
             optionLabel="extraInformation"
             [extraInformation]="true"
             optionValue="toc_result_id"
             placeholder="Select outcome"
             [(ngModel)]="activeTab.toc_result_id"
-            (ngModelChange)="getIndicatorsList(); tocResultChanged.emit()">
+            (ngModelChange)="markUserTocSelection(); getIndicatorsList(); tocResultChanged.emit()">
           </app-pr-select>
         }
         @case (1) {
@@ -53,57 +59,119 @@
             optionLabel="extraInformation"
             optionValue="toc_result_id"
             [required]="!isUnplanned"
-            [disabled]="!editable"
-            [editable]="editable"
+            [disabled]="!editable || tocAlignmentReadOnly()"
+            [editable]="editable && !tocAlignmentReadOnly()"
+            [readOnly]="tocAlignmentReadOnly()"
             placeholder="Select output"
             [(ngModel)]="activeTab.toc_result_id"
             [extraInformation]="true"
-            (ngModelChange)="getIndicatorsList(); tocResultChanged.emit()">
+            (ngModelChange)="markUserTocSelection(); getIndicatorsList(); tocResultChanged.emit()">
           </app-pr-select>
         }
       }
     }
   </div>
+
+  <!-- P2-3063 (L3): read-only HLO/Intermediate Outcome/2030 Outcome Statement of the selected node (from TOC `outcome_statement`).
+       2026 only (isCP2026), Yes scenario, once a node is selected. Label is dynamic per level. -->
+  @if (isCP2026() && !isUnplanned && activeTab?.toc_result_id && hloStatementValue()) {
+    <app-pr-field-header
+      [label]="hloStatementLabel()"
+      [description]="hloStatementValue()"
+      [tooltip]="hloStatementTooltip()"
+      [showDescriptionLabel]="false"
+      [required]="false"></app-pr-field-header>
+  }
+
   @if (this.secondFieldLabel() && !isUnplanned) {
     @if (showIndicators() && activeTab.toc_result_id) {
       @if (this.indicatorsList().length) {
         <app-pr-select
           [options]="this.indicatorsList()"
-          label="Indicator"
+          [label]="indicatorLabel()"
+          [tooltip]="indicatorHelp()"
           [editable]="editable"
           [disabled]="!editable"
           optionLabel="indicator_description"
           optionValue="related_node_id"
           placeholder="Select outcome level"
           [(ngModel)]="activeTab.indicators[0].related_node_id"
-          (ngModelChange)="mapTocResultsIndicatorId()">
+          (ngModelChange)="markUserTocSelection(); mapTocResultsIndicatorId()">
         </app-pr-select>
+
+        <!-- P2-3063 (L3): read-only Indicator Typology = the "Type" of the selected KPI in TOC (`type_name`). Excel rows 13-14. 2026 only. -->
+        <!-- P2-3204: visibility no longer depends on the resolved value. Tying it to the TOC sentinel hid the whole
+             field whenever `type_value` came back empty, even when the TOC did have a type name loaded. -->
+        @if (isCP2026()) {
+          <app-pr-field-header
+            label="Indicator Typology"
+            [description]="indicatorTypologyDisplay()"
+            [tooltip]="indicatorTypologyTooltip()"
+            [showDescriptionLabel]="false"
+            [required]="false"></app-pr-field-header>
+        }
+
+        <!-- P2-3036 (AC7): in 2026 group the read-only TOC "Unit of measurement" + "Target" directly below "Indicator Tipology". In 2025 they stay in their original position inside the contribution block below. -->
+        @if (isCP2026() && selectedIndicatorData()) {
+          <div style="margin: 8px 0">
+            <p><strong>Unit of measurement:</strong> {{ selectedIndicatorData()?.unit_messurament || 'Not specified' }}</p>
+            <p><strong>Target:</strong> {{ selectedIndicatorData()?.targets?.[0]?.target_value || 'Not specified' }}</p>
+          </div>
+        }
+
         @if (activeTab.indicators[0].related_node_id) {
           <div>
-            <app-pr-field-header label="Contribution to indicator target" [required]="false"></app-pr-field-header>
-            <app-alert-status
-              status="info"
-              description="Indicate in this box the numerical value that your result contributes toward the 2025 target of the indicator.<br>
-              <br><strong>Example:</strong> If the 2025 indicator target is 200 (people trained) and your result (e.g., a capacity-sharing activity) provides evidence of 90 people trained, enter <strong>90</strong> in this box.<br>
-              <br>The values entered here will be aggregated at the end of the reporting cycle to assess progress toward the planned 2025 target for the indicator."
-              inlineStyles="margin: 0; margin-bottom: 10px !important;"></app-alert-status>
-            <div style="margin: 8px 0" *ngIf="selectedIndicatorData()">
-              <p><strong>Unit of measurement:</strong> {{ selectedIndicatorData()?.unit_messurament || 'Not specified' }}</p>
-              <p><strong>Target:</strong> {{ selectedIndicatorData()?.targets?.[0]?.target_value || 'Not specified' }}</p>
-            </div>
+            <!-- P2-3036 (AC7): contribution-to-target is mandatory in 2026 (red asterisk). -->
+            <app-pr-field-header label="Contribution to indicator target" [required]="isCP2026()" [tooltip]="contributionTargetNote()"></app-pr-field-header>
+            <!-- P2-3036 (AC7): 2025 keeps Unit/Target here; 2026 renders them grouped under Indicator Tipology above. -->
+            @if (!isCP2026()) {
+              <div style="margin: 8px 0" *ngIf="selectedIndicatorData()">
+                <p><strong>Unit of measurement:</strong> {{ selectedIndicatorData()?.unit_messurament || 'Not specified' }}</p>
+                <p><strong>Target:</strong> {{ selectedIndicatorData()?.targets?.[0]?.target_value || 'Not specified' }}</p>
+              </div>
+            }
+            <!-- P2-3036 (AC7): feed the section mandatory scan in 2026 (bare input, so use appFeedbackValidation as in P2-2960). -->
+            @if (isCP2026()) {
+              <div
+                appFeedbackValidation
+                labelText="Contribution to indicator target"
+                [isComplete]="
+                  activeTab.indicators[0].targets[0].contributing_indicator !== null &&
+                  activeTab.indicators[0].targets[0].contributing_indicator !== undefined &&
+                  activeTab.indicators[0].targets[0].contributing_indicator !== ''
+                "></div>
+            }
+            <!-- P2-3608: `min` stops the spinner arrows; the handler is what stops a typed or
+                 pasted negative, which is the case QA reported. Both are needed. -->
             <input
               type="number"
-              placeholder="Enter target"
+              min="0"
+              [placeholder]="isCP2026() ? 'Add here contribution to target' : 'Enter target'"
               [readonly]="!editable"
               [disabled]="!editable"
               [(ngModel)]="activeTab.indicators[0].targets[0].contributing_indicator"
+              (ngModelChange)="onContributionToTargetChange()"
               class="p-inputtext p-component"
               style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem" />
+
+            <!--
+              P2-2932: what the user typed here against what they reported in the type-specific
+              section. Advisory only — the value stays theirs and saving is never blocked. The one
+              exception the PO carved out is a Knowledge Product outside 0/1 (AC1), which reads as
+              an error; AC6 governs everything else and says the system must not block.
+            -->
+            @if (showContributionCheck()) {
+              <app-alert-status
+                [status]="contributionIsRejected() ? 'error' : 'warning'"
+                [description]="contributionCheckMessage()"
+                inlineStyles="margin: 10px 0 0 0;"></app-alert-status>
+            }
           </div>
         }
       }
     }
-    @if (!hidden) {
+    <!-- P2-3036 (AC8): hide the TOC-pathway explanation in the 2026 Yes scenario. 2025 keeps it. -->
+    @if (!hidden && !isCP2026()) {
       <hr class="divider-20" />
 
       <app-alert-status

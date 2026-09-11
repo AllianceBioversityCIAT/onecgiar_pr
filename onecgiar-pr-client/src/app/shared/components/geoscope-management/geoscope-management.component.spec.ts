@@ -43,6 +43,72 @@ describe('GeoscopeManagementComponent', () => {
       expect(component.body.has_countries).toBeTruthy();
       expect(component.body.has_regions).toBeFalsy();
     });
+
+    // P2-3621: the flags alone were not enough — the stale regions/countries stayed in the model,
+    // were only hidden by the template, and reappeared on their own when the user came back to a
+    // scope that renders that same field.
+    it('should clear both lists when the scope becomes Global or yet-to-be-determined', () => {
+      [GeoScopeEnum.GLOBAL, GeoScopeEnum.DETERMINED].forEach(scope => {
+        component.body.regions = [{ id: 2 }];
+        component.body.countries = [{ code: 4, name: 'Afghanistan' }];
+        component.body.geo_scope_id = scope;
+
+        component.resetHasScope();
+
+        expect(component.body.regions).toEqual([]);
+        expect(component.body.countries).toEqual([]);
+      });
+    });
+
+    it('should clear only the countries when the scope becomes Regional', () => {
+      component.body.regions = [{ id: 2 }];
+      component.body.countries = [{ code: 4, name: 'Afghanistan' }];
+      component.body.geo_scope_id = GeoScopeEnum.REGIONAL;
+
+      component.resetHasScope();
+
+      expect(component.body.countries).toEqual([]);
+      expect(component.body.regions).toEqual([{ id: 2 }]);
+    });
+
+    it('should clear only the regions when the scope becomes Country or Sub-national', () => {
+      [GeoScopeEnum.COUNTRY, GeoScopeEnum.SUB_NATIONAL].forEach(scope => {
+        component.body.regions = [{ id: 2 }];
+        component.body.countries = [{ code: 4, name: 'Afghanistan' }];
+        component.body.geo_scope_id = scope;
+
+        component.resetHasScope();
+
+        expect(component.body.regions).toEqual([]);
+        expect(component.body.countries).toEqual([{ code: 4, name: 'Afghanistan' }]);
+      });
+    });
+
+    // Guard 1: clicking an already-selected radio emits null (see pr-radio-button onSelect).
+    // A default branch here would wipe both lists on that single accidental click.
+    it('should leave both lists untouched when the scope is cleared to null', () => {
+      component.body.regions = [{ id: 2 }];
+      component.body.countries = [{ code: 4, name: 'Afghanistan' }];
+      component.body.has_regions = true;
+      component.body.geo_scope_id = null;
+
+      component.resetHasScope();
+
+      expect(component.body.regions).toEqual([{ id: 2 }]);
+      expect(component.body.countries).toEqual([{ code: 4, name: 'Afghanistan' }]);
+      expect(component.body.has_regions).toBe(true);
+    });
+
+    // Guard 2: Country and Sub-national share a branch, so clearing sub_national here would drop
+    // the per-country detail the user just typed while switching between those two scopes.
+    it('should keep the sub_national rows when moving from Country to Sub-national', () => {
+      component.body.countries = [{ code: 4, name: 'Afghanistan', sub_national: [{ id: 77 }] }];
+      component.body.geo_scope_id = GeoScopeEnum.SUB_NATIONAL;
+
+      component.resetHasScope();
+
+      expect(component.body.countries[0].sub_national).toEqual([{ id: 77 }]);
+    });
   });
 
   describe('geographic_focus_description', () => {

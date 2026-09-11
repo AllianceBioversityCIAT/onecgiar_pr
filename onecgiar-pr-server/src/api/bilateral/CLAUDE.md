@@ -10,6 +10,8 @@ This is the **module-level guide** for `api/bilateral`. It complements:
 >
 > `AGENTS.md` covers **what the module does** (ingestion flow, handlers, review workflow). This `CLAUDE.md` covers **how the code is laid out**, the security/contract rules that apply, and what to touch (or not) when extending it.
 
+**Verified:** 2026-09-10 · P2-3233 bilateral-safe promoted-draft type conversion
+
 ---
 
 ## 1. What this module is
@@ -40,8 +42,17 @@ api/bilateral/
 ├── bilateral.controller.ts                      # 4 endpoints, heavy Swagger
 ├── bilateral.service.ts                         # ~4 600 lines — orchestration + enrichment
 ├── bilateral.service.spec.ts
+├── bilateral-center.controller.ts               # /api/bilateral/center/* — the centre-authored form
+├── services/
+│   ├── bilateral-center.service.ts              # Section-by-section autosave for that form
+│   ├── bilateral-projects.service.ts
+│   ├── bilateral-webhook.service.ts
+│   └── clarisa-api-key-validation.service.ts
 ├── dto/
 │   ├── create-bilateral.dto.ts                  # ~1 350 lines — full ingestion contract
+│   ├── create-center-result.dto.ts              # POST /center/create-header
+│   ├── save-bilateral-contributors.dto.ts       # PATCH /center/contributors/:id
+│   ├── save-bilateral-toc-mapping.dto.ts        # PATCH /center/toc-mapping/:id
 │   └── list-results-query.dto.ts                # Filters for GET /list
 └── handlers/                                    # Strategy pattern, one per ingestion-capable result type
     ├── bilateral-result-type-handler.interface.ts
@@ -93,9 +104,14 @@ See `AGENTS.md` §Ingestion Flow for the **flow**. Rules that apply here:
   - Interface: [`handlers/bilateral-result-type-handler.interface.ts`](./handlers/bilateral-result-type-handler.interface.ts):
     - `readonly resultType: number` — the `ResultTypeEnum` value the handler claims.
     - `initializeResultHeader?(context)` — first call; can return `{ resultHeader, isDuplicate? }` or `null` (defaults to standard creation).
+    - `validateBeforeCreate?(context)` — preflight MDS gate before the transaction; use it when an
+      external payload must not create an incomplete Pending Review result.
     - `afterCreate?(context)` — second call; persist type-specific blocks after the result row is in place.
   - `NoopBilateralHandler` is registered for `OTHER_OUTPUT` — accept but do nothing extra. Mirror this pattern when adding a new "no extra processing" result type.
 - **`KnowledgeProductBilateralHandler`** is the only handler that **does NOT** take title/description from the payload — it uses the `handle` to call `ResultsKnowledgeProductsService` and fetches authoritative metadata from CGSpace. Don't generalise this pattern unless the new type genuinely has a third-party master.
+- **Innovation Use bilateral MDS (P2-3428):** validate Actors, quantitative measures, use level and
+  W3/bilateral-project investment before external create; centre drafts remain editable but
+  `submit-for-review` repeats the persisted-data gate. Program and partner investment are optional.
 
 ---
 
@@ -150,6 +166,36 @@ When ingestion shape (`RootResultsDto`) changes, document it in the same change 
 2. Plumb it through `BilateralService.applyListResultsFilters` (or the equivalent helper).
 3. Document it with `@ApiQuery({ name, required, type, description, example })` on `BilateralController.listAll` — Swagger here is the consumer-facing docs.
 4. Confirm pagination / `limit` caps still apply.
+
+### 7.3.1 The centre form (`/center/*`) writes into the SHARED result tables
+
+`BilateralCenterService` is not a parallel data model: every section of the centre-authored form
+lands in the same tables the pool-funding forms use, and MUST mirror how those forms write them.
+
+- Contributing centres → `results_center` (`syncContributingCenters`).
+- Contributing projects → `results_by_projects` (`ResultsByProjectsService.syncBilateralProjects`).
+- **Contributing Science Programs → `share_result_request` DRAFTS (`request_status_id = 4`), the
+  exact rows `POST /create` writes — NEVER `results_by_inititiative` role-2 rows**
+  (`syncContributingPrograms`, 2026-09-04). Role 2 means "already accepted": writing it from the
+  form skipped the contributor's consent and the SP's approval wiped it
+  (`updateResultByInitiative` deactivates role-2 rows with no backing request). The approval
+  converts the draft into a pending request (email + in-app card, P2-3187); acceptance creates the
+  role-2 row.
+- **External partners → `results_by_institution` + `result.no_applicable_partner` /
+  `result.is_lead_by_partner`** (`syncExternalPartners`, P2-3443). The role id is resolved exactly
+  as `ResultsByInstitutionsService` resolves it: `KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS` (8)
+  when the result has a `results_knowledge_product` row, `PARTNER` (2) otherwise.
+
+⚠️ Getting the role wrong does not throw — it makes the rows invisible to the partners GET and to
+the shared `validation_<section>_<portfolio>` MySQL functions, which count
+`institution_roles_id IN (2,8)`. Read the pool-funding writer before adding a new block here.
+
+⚠️ `results_by_institution.is_leading_result` is **not cosmetic**: the same validation functions
+short-circuit on `WHEN institutions_count_leading <> 1 AND lead_by_partner = 1 THEN FALSE`
+(`src/migrations/1762866499786-updatepartnersContributors.ts:157`). Writing every partner as `false`
+leaves a result with `is_lead_by_partner = true` permanently unable to go green, so
+`syncExternalPartners` passes `PartnerInstitutionDto.is_leading_result` through exactly as
+`ResultsByInstitutionsService.handleInstitutions` does.
 
 ### 7.4 Validating against CLARISA
 

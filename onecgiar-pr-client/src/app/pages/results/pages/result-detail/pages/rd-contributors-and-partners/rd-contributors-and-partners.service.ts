@@ -1,12 +1,14 @@
-import { Injectable, OnDestroy, inject, signal } from '@angular/core';
+import { Injectable, OnDestroy, computed, inject, signal } from '@angular/core';
 import { InstitutionsInterface, UnmappedMQAPInstitutionDto } from '../rd-partners/models/partnersBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionMapped } from '../../../../../../shared/interfaces/institutions.interface';
 import { CenterDto } from '../../../../../../shared/interfaces/center.dto';
+import { Subscription } from 'rxjs';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBody';
 import { ResultTocResultsInterface } from '../rd-theory-of-change/model/theoryOfChangeBody';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { forkJoin } from 'rxjs';
 
 @Injectable({
@@ -16,6 +18,13 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   partnersBody = new ContributorsAndPartnersBody();
   toggle = 0;
   getConsumed = signal<boolean>(false);
+  /**
+   * Drives `[appSectionSkeleton]`. No new state: `getConsumed` already is "the section GET came
+   * back" — false out of `resetState()` (which the component calls on `ngOnInit`, so it is
+   * correctly re-raised per result despite the root singleton) and true on both `next` and
+   * `error`. Exposed as its own name so the template reads as intent, not as a double negative.
+   */
+  readonly sectionLoading = computed(() => !this.getConsumed());
   cgspaceDisabledList: any = [];
   savedActiveTabIndex: number | null = null;
 
@@ -27,40 +36,147 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   clarisaProjectsList: any[] = [];
   hasTocResultMapped = signal<boolean>(false);
   loadingBilateralProjects = signal<boolean>(false);
+  // P2-3001 (2026): SP official code whose bilateral list is currently loaded — avoids refetch/clears on ToC changes.
+  private loadedBilateralProgramId: string | null = null;
   contributingInitiativeNew = [];
   result_toc_result = null;
   contributors_result_toc_result = null;
   leadPartnerId: number = null;
   leadCenterCode: string = null;
   initiativeIdSignal = signal<any>(null);
-  updatingLeadData: boolean = false;
+  // P2-3322 (2026): signal-backed flag. Every `setPossibleLead*` / `setLead*OnLoad` raises it and clears it
+  // again inside a `setTimeout(..., 25)`; that second write happens outside any Angular notification, so under
+  // zoneless change detection the Lead partner / Lead center selects stayed hidden behind
+  // `*ngIf="!rdPartnersSE.updatingLeadData"` until a reload. Reading the signal from the template makes the
+  // write schedule its own render pass. Same shape as the signal-backed input in CPMultipleWPsComponent
+  // (P2-3245 / P2-3275); it also covers the writes the components do (rd-contributors-and-partners,
+  // ipsr-contributors) because they go through this setter. Public API stays a plain boolean.
+  private readonly _updatingLeadData = signal<boolean>(false);
+  get updatingLeadData(): boolean {
+    return this._updatingLeadData();
+  }
+  set updatingLeadData(value: boolean) {
+    this._updatingLeadData.set(value);
+  }
   disableLeadPartner: boolean = false;
+
+  // LC-DD-4 (docs/specs/bugfix/lead-center-full-catalog): tracks the Contributing-Centers entry that
+  // `onLeadCenterSelected` auto-added on behalf of the user (see below). Session-only UX bookkeeping —
+  // never persisted, reset per result in `resetState()`. Public via the getter/setter pair below so
+  // `rd-contributors-and-partners.component.ts#deleteOtherCenter` can clear it on a manual delete.
+  private _autoAddedLeadCenterCode: string | null = null;
+  get autoAddedLeadCenterCode(): string | null {
+    return this._autoAddedLeadCenterCode;
+  }
+  set autoAddedLeadCenterCode(value: string | null) {
+    this._autoAddedLeadCenterCode = value;
+  }
+
+  // LC-DD-5 (docs/specs/bugfix/lead-center-full-catalog): tracks whether the CURRENT "Other(s) CGIAR
+  // Centers" sentinel in `contributing_center` was added by `onLeadCenterSelected` itself (vs. the user
+  // manually checking "Other(s)"). Only a sentinel this flag tracks may be auto-removed later — a
+  // manually-checked one must survive even if the auto-added entry it happens to share the dropdown with
+  // gets swapped/removed. Session-only, reset in `resetState()`.
+  private _autoAddedSentinel = false;
+
+  // P2-2998 / P2-3036 (2026): Contributing CGIAR Centers split in two dropdowns.
+  // `tocReferenceCenterInstitutionIds` = institutionIds derived from the selected TOC node
+  // (toc_partners ∪ toc_target_center_ids), fed by multiple-wps-content. The first dropdown shows
+  // only the matching CLARISA centers; "Other(s)" shows the rest. Save wired in onSaveSection (from_toc tagging + ToC/Other merge).
+  tocReferenceCenterInstitutionIds = signal<number[]>([]);
+  otherCentersSelected: CenterDto[] = [];
+  showOtherCenters = false;
+  // P2-2929: Science Programs from ToC — union of contributing_synergy_program_initiative_ids across selected nodes.
+  // Save wired in onSaveSection: pending/accepted classification + cancel_pending_requests (P2-3115/P2-3116).
+  tocReferenceSynergyInitiativeIds = signal<number[]>([]);
+  scienceSelected: any[] = [];
+  otherScienceSelected: any[] = [];
+  // P2-2929 (2026): snapshot of the pending SP requests loaded from the back (each with share_result_request_id).
+  // On Save we diff this against the current selection to cancel the requests the user deselected.
+  loadedPendingScience: any[] = [];
+  // Ids of the SP that were already accepted on load → on Save they go to accepted (not re-requested as pending),
+  // even if a deselect+reselect dropped the per-object _was_accepted tag.
+  loadedAcceptedScienceIds = new Set<number>();
+  // P2-3066 (2026): External Partners from ToC — institutionIds derived from toc_partners (the non-center partners),
+  // fed by multiple-wps-content. First dropdown shows the matching ToC partners; "Other(s)" shows the rest.
+  tocReferencePartnerInstitutionIds = signal<number[]>([]);
+  otherPartnersSelected: any[] = [];
+
+  // P2-3115 (2026): guards so the ToC prefill never resurrects a deliberately-emptied, saved selection.
+  // `sectionHydratedFromToc` = the section has been hydrated from a persisted GET (that persisted state — even
+  // empty — is authoritative). `tocSelectionTouched` = the user changed an HLO/KPI selection in-session, so the
+  // reactive preload is a deliberate action and IS allowed to prefill. Set by multiple-wps-content.
+  sectionHydratedFromToc = signal<boolean>(false);
+  tocSelectionTouched = signal<boolean>(false);
+
+  // P2-2998 / P2-2929 / P2-3066 (2026): sentinels for the "Other(s)" item that toggles the second dropdown.
+  // Mirror the component definitions — kept here so the load re-bucketing can detect/strip them.
+  readonly OTHER_CENTERS_CODE = '__OTHER_CENTERS__';
+  readonly OTHER_SP_CODE = '__OTHER_SCIENCE__';
+  readonly OTHER_PARTNERS_CODE = -999999;
+  private readonly fieldsManagerSE = inject(FieldsManagerService);
+
+  /** Our own subscriptions to the shared catalogue emitters. See `ngOnDestroy`. */
+  private readonly catalogueSubs = new Subscription();
+
+  /**
+   * `UCA-T-9` rework attempt 3, Issue 1 — set by the component (in `ngOnInit`, cleared in
+   * `ngOnDestroy`) so it can re-establish its dirty-diff baseline whenever a LATE-arriving CLARISA
+   * catalogue re-runs the lead-field auto-assignment below, AFTER the component's own load-flow
+   * snapshot already ran. See the component's `reconcileLeadFieldsAfterLateCatalogue()` docstring
+   * for why this can't just be "re-snapshot unconditionally" (would swallow a genuine concurrent
+   * user edit) — this hook only tells the component WHEN to check, the component decides whether
+   * it's actually safe to fold in.
+   *
+   * `UCA-T-9` rework attempt 4 — the callback now takes a `source` discriminator naming WHICH
+   * catalogue just emitted. Attempt 3's callback took no argument, so the component's reconciliation
+   * substituted BOTH `leadCenterCode` AND `leadPartnerId` back to baseline regardless of which
+   * catalogue fired — silently erasing a genuine concurrent edit to the field the emitting catalogue
+   * never touched. `source` lets the component substitute back only the one field the emitting
+   * catalogue could actually have changed.
+   */
+  onCatalogueDrivenLeadUpdate?: (source: 'centers' | 'institutions') => void;
 
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,
     public centersSE: CentersService
   ) {
-    this.institutionsSE?.loadedInstitutions?.subscribe(loaded => {
-      if (loaded) {
-        this.setPossibleLeadPartners(true);
-        this.setLeadPartnerOnLoad(true);
-      }
-    });
-    this.centersSE.loadedCenters.subscribe(loaded => {
-      if (loaded) {
-        this.nppCenters = this.centersSE.centersList?.map(center => {
-          return { ...center, selected: false, disabled: false };
-        });
-        this.setPossibleLeadCenters(true);
-        this.setLeadCenterOnLoad(true);
-      }
-    });
+    this.catalogueSubs.add(
+      this.institutionsSE?.loadedInstitutions?.subscribe(loaded => {
+        if (loaded) {
+          this.setPossibleLeadPartners(true);
+          this.setLeadPartnerOnLoad(true);
+          this.onCatalogueDrivenLeadUpdate?.('institutions');
+        }
+      })
+    );
+    this.catalogueSubs.add(
+      this.centersSE.loadedCenters.subscribe(loaded => {
+        if (loaded) {
+          this.nppCenters = this.centersSE.centersList?.map(center => {
+            return { ...center, selected: false, disabled: false };
+          });
+          this.setPossibleLeadCenters(true);
+          this.setLeadCenterOnLoad(true);
+          this.onCatalogueDrivenLeadUpdate?.('centers');
+        }
+      })
+    );
   }
 
+  /**
+   * P2-3554: unsubscribe OUR subscriptions, never the emitters themselves.
+   *
+   * This used to call `unsubscribe()` on `loadedInstitutions` and `loadedCenters` directly. Those are
+   * `EventEmitter`s owned by two root singletons (`institutions.service.ts:32`, `centers.service.ts:28`), so
+   * that closed the SHARED emitter for every other subscriber for the rest of the session instead of
+   * detaching this service. It is not reachable today — this service is `providedIn: 'root'`, so `ngOnDestroy`
+   * only runs when the root injector goes down — but it becomes a live bug the moment anyone provides it at
+   * component level, and the correct form costs nothing.
+   */
   ngOnDestroy(): void {
-    this.institutionsSE?.loadedInstitutions?.unsubscribe();
-    this.centersSE.loadedCenters.unsubscribe();
+    this.catalogueSubs.unsubscribe();
   }
 
   resetState() {
@@ -80,9 +196,32 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     this.leadPartnerId = null;
     this.leadCenterCode = null;
     this.initiativeIdSignal.set(null);
+    // P2-2998 / P2-2929 (2026): clear the split selections (root singleton would otherwise leak across results).
+    this.otherCentersSelected = [];
+    this.scienceSelected = [];
+    this.otherScienceSelected = [];
+    this.loadedPendingScience = [];
+    this.loadedAcceptedScienceIds = new Set<number>();
+    this.showOtherCenters = false;
+    this.tocReferenceCenterInstitutionIds.set([]);
+    this.tocReferenceSynergyInitiativeIds.set([]);
+    // P2-3066 (2026): clear External Partners split selections.
+    this.otherPartnersSelected = [];
+    this.tocReferencePartnerInstitutionIds.set([]);
+    // P2-3115 (2026): reset the prefill guards so state doesn't leak across results (root singleton).
+    this.sectionHydratedFromToc.set(false);
+    this.tocSelectionTouched.set(false);
+    // P2-3001 (2026): reset the by-program cache marker so another result refetches its SP list.
+    this.loadedBilateralProgramId = null;
+    // LC-DD-4/LC-DD-5: no auto-added Lead center (or a sentinel it may have added) should survive into
+    // the next result.
+    this._autoAddedLeadCenterCode = null;
+    this._autoAddedSentinel = false;
   }
 
   loadClarisaProjects() {
+    // P2-3001: the all-CLARISA list (IPSR surfaces) overwrites clarisaProjectsList → invalidate the by-program cache marker.
+    this.loadedBilateralProgramId = null;
     this.api.resultsSE.GET_ClarisaProjects().subscribe({
       next: ({ response }) => {
         this.clarisaProjectsList = response;
@@ -97,6 +236,12 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   }
 
   loadFilteredBilateralProjects(clearSelection: boolean = false) {
+    // P2-3001 (2026): options come from the full SP list (by-program), decoupled from ToC node/indicator selection.
+    if (this.fieldsManagerSE.isContributorsPartners2026()) {
+      this.loadBilateralProjectsByProgram();
+      return;
+    }
+
     const tocResults = this.partnersBody?.result_toc_result?.result_toc_results || [];
     const tocResultIds = tocResults.map(r => r.toc_result_id).filter(id => id != null);
 
@@ -138,6 +283,51 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     });
   }
 
+  // P2-3001 (2026): load the complete W3/Bilateral list of the submitter's Science Program.
+  // Decoupled from ToC selection — changing the HLO/Outcome must NOT clear the selection nor refetch (same SP → same list).
+  private loadBilateralProjectsByProgram() {
+    const primaryInit = this.partnersBody?.contributing_and_primary_initiative?.find(
+      (i: { id?: number }) => i?.id === this.partnersBody?.result_toc_result?.initiative_id
+    );
+    const programId =
+      primaryInit?.official_code ??
+      this.api.dataControlSE.currentResult?.initiative_official_code ??
+      this.api.dataControlSE.currentResultSignal?.()?.initiative_official_code;
+
+    if (!programId) {
+      console.error('P2-3001: could not resolve the Science Program official code for the bilateral projects dropdown');
+      this.clarisaProjectsList = [];
+      this.loadingBilateralProjects.set(false);
+      return;
+    }
+
+    // The dropdown no longer depends on a mapped ToC result (AC1) — never show the "select a TOC result" overlay.
+    this.hasTocResultMapped.set(true);
+
+    // Same program already loaded → keep options and the user's selection untouched.
+    if (this.loadedBilateralProgramId === programId && this.clarisaProjectsList.length > 0) {
+      this.loadingBilateralProjects.set(false);
+      return;
+    }
+
+    this.loadingBilateralProjects.set(true);
+    this.api.resultsSE.GET_W3BilateralProjectsByProgram(programId).subscribe({
+      next: ({ response }) => {
+        (response ?? []).forEach(project => {
+          project.fullName = project.project_name;
+        });
+        this.clarisaProjectsList = response ?? [];
+        this.loadedBilateralProgramId = programId;
+        this.loadingBilateralProjects.set(false);
+      },
+      error: err => {
+        console.error('Error loading bilateral projects by program:', err);
+        this.clarisaProjectsList = [];
+        this.loadingBilateralProjects.set(false);
+      }
+    });
+  }
+
   validateDeliverySelection(deliveries, deliveryId: number) {
     if (!Array.isArray(deliveries)) return false;
     const index = deliveries.indexOf(deliveryId);
@@ -162,6 +352,13 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     return deliveries.find(delivery => delivery.partner_delivery_type_id == deliveryId);
   }
 
+  // PRL-R-1/PRL-R-2 (docs/specs/changes/partner-role-exclusive-selection): true when `Other` (id 4) is
+  // the active Partner role on this row AND the id being checked is NOT `Other` itself — `Other`'s own
+  // button is never blocked. Pure/read-only, safe to call from the template every change-detection pass.
+  isRoleBlockedByOther(deliveries, deliveryId: number) {
+    return deliveryId !== 4 && !!this.validateDeliverySelectionPartners(deliveries, 4);
+  }
+
   onSelectContributingInitiative() {
     this.partnersBody?.contributing_initiatives.accepted_contributing_initiatives.forEach((resp: any) => {
       const contributorFinded = this.partnersBody.contributors_result_toc_result?.find((result: any) => result?.initiative_id === resp.id);
@@ -175,6 +372,12 @@ export class RdContributorsAndPartnersService implements OnDestroy {
 
   onSelectDeliveryPartners(option, deliveryId: number) {
     if (this.api.rolesSE.readOnly) return;
+    // PRL-R-2 (docs/specs/changes/partner-role-exclusive-selection): while `Other` is active, clicking
+    // Scaling/Demand/Innovation is a no-op. PRL-DD-2: the "remove Other" branch below never runs for
+    // this blocked case anymore (this guard returns first) but stays in place — it is still correct and
+    // needed for the legitimate "Other not active" path (e.g. stripping a stray Other entry after a
+    // data-load edge case).
+    if (this.isRoleBlockedByOther(option.delivery, deliveryId)) return;
 
     const index = option.delivery.findIndex(delivery => delivery.partner_delivery_type_id === deliveryId);
 
@@ -210,7 +413,19 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     }
   }
 
-  getSectionInformation(no_applicable_partner?: boolean, onSave: boolean = false) {
+  /**
+   * `UCA-T-9` — `onLoaded` is invoked as the LAST step of a successful load, after every
+   * synchronous mutation this method makes to `partnersBody` (through `applyTocMappingOnLoad()`
+   * and the `bilateral_projects` `fullName` pass). `RdContributorsAndPartnersComponent` uses it to
+   * snapshot the component-scoped `SectionDirtyTrackerService` at the true end of the load flow.
+   * `loadFilteredBilateralProjects()` (called right before `onLoaded`) kicks off ITS OWN async GET,
+   * but that call only mutates `clarisaProjectsList` / `loadingBilateralProjects` /
+   * `loadedBilateralProgramId` — never `partnersBody` — so, unlike `rd-general-information`'s
+   * discontinued-options round-trip, there is no later async mutation of the snapshot target to
+   * race. Not invoked on the error branch: a failed load never establishes a baseline (fail-open,
+   * matching `rd-general-information`'s equivalent case).
+   */
+  getSectionInformation(no_applicable_partner?: boolean, onSave: boolean = false, onLoaded?: () => void) {
     this.contributingInitiativeNew = [];
     this.api.resultsSE.GET_ContributorsPartners().subscribe({
       next: ({ response }) => {
@@ -266,18 +481,109 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         ];
 
         this.initiativeIdSignal.set(this.partnersBody?.result_toc_result?.initiative_id);
+        this.applyTocMappingOnLoad();
         this.getConsumed.set(true);
         this.partnersBody.bilateral_projects.forEach(project => {
           project.fullName = project.obj_clarisa_project.fullName;
         });
 
         this.loadFilteredBilateralProjects();
+        onLoaded?.();
       },
       error: _err => {
         this.getConsumed.set(true);
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
       }
     });
+  }
+
+  // P2-2998 / P2-2929 (2026): on load, re-bucket persisted data into dropdown 1 (ToC) vs dropdown 2 (Other)
+  // by the persisted `from_toc` flag (NOT by the live ToC), so a saved ToC mapping keeps showing as ToC.
+  // Centers come flat in contributing_center; Science Programs come as accepted + pending initiatives.
+  applyTocMappingOnLoad() {
+    if (!this.fieldsManagerSE.isContributorsPartners2026()) return;
+
+    // Centers: split contributing_center by from_toc. Other(s) move to the second dropdown + re-add the sentinel.
+    // A CGSpace-locked center always stays in dropdown 1 (it carries a delete-lock the Other dropdown lacks).
+    // When from_toc is null/undefined (legacy/migrated rows), fall back to live ToC membership so genuine ToC centers aren't misfiled.
+    const centers: any[] = (this.partnersBody?.contributing_center || []).filter((c: any) => c?.code !== this.OTHER_CENTERS_CODE);
+    const isCenterFromToc = (c: any): boolean =>
+      !!c?.from_cgspace || (c?.from_toc == null ? this.tocReferenceCenterInstitutionIds().includes(c?.institutionId) : !!c?.from_toc);
+    const tocCenters = centers.filter((c: any) => isCenterFromToc(c));
+    const otherCenters = centers.filter((c: any) => !isCenterFromToc(c));
+    this.otherCentersSelected = otherCenters;
+    // LC-DD-5 (fixes a pre-existing bug, not introduced by this spec): the sentinel only needs to exist to
+    // force dropdown 1 to reveal dropdown 2 when there ARE real ToC-derived centers AND the user also
+    // picked some non-ToC ones. When there are no ToC centers, dropdown 2 already auto-activates on its
+    // own via `!hasReferenceCenters()` (component template) — re-adding the sentinel there only produced a
+    // stray "Other(s)" chip with no dropdown 1 to meaningfully attach it to.
+    if (tocCenters.length > 0 && otherCenters.length > 0) {
+      this.partnersBody.contributing_center = [...tocCenters, this.buildOtherCentersSentinel()];
+    } else {
+      this.partnersBody.contributing_center = tocCenters;
+    }
+
+    // Science Programs: combine accepted + pending, tag origin (_was_accepted), split by from_toc.
+    const ci: any = this.partnersBody?.contributing_initiatives || {};
+    const accepted = (ci.accepted_contributing_initiatives || []).map((x: any) => ({ ...x, _was_accepted: true }));
+    const pending = (ci.pending_contributing_initiatives || []).map((x: any) => ({ ...x, _was_accepted: false }));
+    // Snapshot the ACTIVE pending requests (with share_result_request_id) to cancel the ones deselected on Save.
+    this.loadedPendingScience = pending.filter((p: any) => p?.share_result_request_id != null && p?.is_active !== false);
+    // Snapshot the accepted ids so the Save classifies accepted vs pending by identity (a deselect+reselect loses _was_accepted).
+    this.loadedAcceptedScienceIds = new Set<number>(accepted.map((x: any) => x?.id));
+    const allSP = [...accepted, ...pending].filter((sp: any) => sp?.id !== this.OTHER_SP_CODE);
+    // from_toc null/undefined (legacy rows) → fall back to live ToC synergy membership instead of defaulting to Other.
+    const isSpFromToc = (sp: any): boolean =>
+      sp?.from_toc == null ? this.tocReferenceSynergyInitiativeIds().includes(sp?.id) : !!sp?.from_toc;
+    const tocSP = allSP.filter((sp: any) => isSpFromToc(sp));
+    const otherSP = allSP.filter((sp: any) => !isSpFromToc(sp));
+    if (otherSP.length) {
+      this.otherScienceSelected = otherSP;
+      this.scienceSelected = [...tocSP, this.buildOtherScienceSentinel()];
+    } else {
+      this.otherScienceSelected = [];
+      this.scienceSelected = tocSP;
+    }
+
+    // P2-3066 (2026): External Partners — split partnersBody.institutions by from_toc. ToC partners stay in
+    // institutions (+ sentinel option when there are Other partners); Other move to otherPartnersSelected.
+    // from_toc null/undefined (legacy rows) → fall back to live ToC partner membership.
+    const allPartners: any[] = (this.partnersBody?.institutions || []).filter((p: any) => p?.institutions_id !== this.OTHER_PARTNERS_CODE);
+    const isPartnerFromToc = (p: any): boolean =>
+      p?.from_toc == null ? this.tocReferencePartnerInstitutionIds().includes(p?.institutions_id) : !!p?.from_toc;
+    const tocPartners = allPartners.filter((p: any) => isPartnerFromToc(p));
+    const otherPartners = allPartners.filter((p: any) => !isPartnerFromToc(p));
+    if (otherPartners.length) {
+      this.otherPartnersSelected = otherPartners;
+      this.partnersBody.institutions = [...tocPartners, this.buildOtherPartnersSentinel()];
+    } else {
+      this.otherPartnersSelected = [];
+      this.partnersBody.institutions = tocPartners;
+    }
+
+    // P2-3115 (2026): the section is now hydrated from the persisted GET. After this point the persisted selection
+    // (even empty) is authoritative — the on-empty ToC prefill must NOT resurrect it unless the user drives a new
+    // HLO/KPI selection (tocSelectionTouched). Set last so it reflects a completed hydration.
+    this.sectionHydratedFromToc.set(true);
+  }
+
+  // P2-3066 (2026): non-renderable sentinel for the "Other(s)" option inside the External Partners dropdown.
+  // Lives in partnersBody.institutions only to keep the dropdown's "Other" option selected; it is guarded out of
+  // every chip/count/validation/lead path and stripped on save.
+  buildOtherPartnersSentinel() {
+    return {
+      institutions_id: this.OTHER_PARTNERS_CODE,
+      full_name: '<strong>Other(s) External Partners</strong>',
+      obj_institutions: { name: 'Other(s) External Partners', obj_institution_type_code: { name: '' } }
+    };
+  }
+
+  private buildOtherCentersSentinel() {
+    return { code: this.OTHER_CENTERS_CODE, name: 'Other(s) CGIAR Centers', acronym: 'Other(s)', full_name: '<strong>Other(s) CGIAR Centers</strong>', institutionId: -1 };
+  }
+
+  private buildOtherScienceSentinel() {
+    return { id: this.OTHER_SP_CODE, official_code: 'Other(s)', short_name: 'Science Program(s)', full_name: '<strong>Other(s) Science Program(s)</strong>' };
   }
 
   getDisabledCentersForKP() {
@@ -298,7 +604,9 @@ export class RdContributorsAndPartnersService implements OnDestroy {
           }) ||
           this.partnersBody.institutions.some(inst => {
             return inst?.institutions_id === i.institutions_id;
-          })
+          }) ||
+          // P2-3066 (2026): an "Other(s)" external partner is also lead-eligible.
+          this.otherPartnersSelected?.some((p: any) => p?.institutions_id === i.institutions_id)
         );
       });
 
@@ -321,18 +629,13 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       this.updatingLeadData = true;
     }
 
-    if (this.partnersBody.contributing_center?.length > -1) {
-      //('center has changes');
-      this.possibleLeadCenters = this.centersSE.centersList.filter(center => {
-        return this.partnersBody.contributing_center.some(c => c?.code === center.code);
-      });
-
-      this.possibleLeadCenters = this.possibleLeadCenters.map(center => {
-        return { ...center, selected: false, disabled: false };
-      });
-
-      //('possibleLeadCenters', this.possibleLeadCenters);
-    }
+    // LC-DD-1 (docs/specs/bugfix/lead-center-full-catalog): possibleLeadCenters is always the full
+    // CLARISA centers catalog, independent of Contributing CGIAR Centers (contributing_center /
+    // otherCentersSelected) state. Filtering it down to that subset left the required Lead center
+    // dropdown empty whenever Contributing Centers was empty (fresh/ToC-less result), blocking save.
+    this.possibleLeadCenters = this.centersSE.centersList.map(center => {
+      return { ...center, selected: false, disabled: false };
+    });
 
     if (autoAssign) {
       this.tryAutoAssignLeadCenter();
@@ -345,11 +648,91 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     }
   }
 
+  // LC-DD-2 (docs/specs/bugfix/lead-center-full-catalog): once possibleLeadCenters is always the full
+  // catalog, its length can no longer signal "exactly one Contributing Center selected". The
+  // de-duplicated union (by `code`) of contributing_center and otherCentersSelected is the source
+  // of truth for that check instead.
+  private getContributingCentersUnion(): CenterDto[] {
+    const contributing = this.partnersBody.contributing_center || [];
+    const other = this.otherCentersSelected || [];
+    const byCode = new Map<string, CenterDto>();
+    [...contributing, ...other].forEach((center: CenterDto) => {
+      if (center?.code) {
+        byCode.set(center.code, center);
+      }
+    });
+    return Array.from(byCode.values());
+  }
+
+  // LC-DD-5 (docs/specs/bugfix/lead-center-full-catalog, supersedes LC-DD-4's targeting rule): a
+  // flat/unmapped result has no ToC/Other(s) split at all — the single Contributing Centers dropdown is
+  // bound directly to `contributing_center`. Routing an auto-add through `otherCentersSelected` there
+  // produced a confusing second, identically-labeled field. This decides which array the auto-add targets.
+  private isUnmappedOrFlat(): boolean {
+    return !this.fieldsManagerSE.isContributorsPartners2026() || this.partnersBody.result_toc_result?.planned_result === false;
+  }
+
+  // LC-DD-5 (docs/specs/bugfix/lead-center-full-catalog, resolves LC-GAP-1, supersedes LC-DD-4): a Lead
+  // Center chosen while it is not already a Contributing Center never persists — `onSaveSection` only
+  // stamps `is_leading_result` on entries already inside `contributing_center` / `otherCentersSelected`.
+  // Reconcile the UI selection to that fact instead of leaving an inconsistent state:
+  //   1. No-op (LC-R-17) if `code` is already a member of the Contributing Centers union.
+  //   2. Otherwise, remove the previously auto-added entry (if any is still present) from wherever it
+  //      lives — `contributing_center` or `otherCentersSelected` — and, if that removal empties
+  //      `otherCentersSelected` and the "Other(s)" sentinel was itself auto-added, strip the sentinel too.
+  //   3. Auto-add the new `code` (LC-R-15): straight into `contributing_center` when the flat/unmapped UI
+  //      is active, otherwise into `otherCentersSelected` (+ the "Other(s)" sentinel, if not already
+  //      present, tracked via `_autoAddedSentinel` so a later removal only strips a sentinel THIS
+  //      mechanism added, never one the user checked manually).
+  onLeadCenterSelected(code: string | null): void {
+    const union = this.getContributingCentersUnion();
+
+    if (code && union.some(c => c.code === code)) {
+      return;
+    }
+
+    let changed = false;
+
+    if (this._autoAddedLeadCenterCode && union.some(c => c.code === this._autoAddedLeadCenterCode)) {
+      const staleCode = this._autoAddedLeadCenterCode;
+      this.partnersBody.contributing_center = (this.partnersBody.contributing_center || []).filter((c: any) => c?.code !== staleCode);
+      this.otherCentersSelected = (this.otherCentersSelected || []).filter(c => c?.code !== staleCode);
+      if (this.otherCentersSelected.length === 0 && this._autoAddedSentinel) {
+        this.partnersBody.contributing_center = (this.partnersBody.contributing_center || []).filter(
+          (c: any) => c?.code !== this.OTHER_CENTERS_CODE
+        );
+        this._autoAddedSentinel = false;
+      }
+      this._autoAddedLeadCenterCode = null;
+      changed = true;
+    }
+
+    if (code) {
+      const center = this.centersSE.centersList?.find(c => c.code === code);
+      if (center) {
+        if (this.isUnmappedOrFlat()) {
+          this.partnersBody.contributing_center = [...(this.partnersBody.contributing_center || []), { ...center }] as any[];
+        } else {
+          this.otherCentersSelected = [...(this.otherCentersSelected || []), { ...center }];
+          const hasSentinel = (this.partnersBody.contributing_center || []).some((c: any) => c?.code === this.OTHER_CENTERS_CODE);
+          if (!hasSentinel) {
+            this.partnersBody.contributing_center = [...(this.partnersBody.contributing_center || []), this.buildOtherCentersSentinel()] as any[];
+            this._autoAddedSentinel = true;
+          }
+        }
+        this._autoAddedLeadCenterCode = code;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      this.setPossibleLeadCenters(true);
+    }
+  }
+
   onLeadByPartnerChange(isPartnerLed: boolean) {
     this.partnersBody.is_lead_by_partner = isPartnerLed;
-    if (isPartnerLed) {
-      this.leadCenterCode = null;
-    } else {
+    if (!isPartnerLed) {
       this.leadPartnerId = null;
     }
     this.setPossibleLeadCenters(true, false);
@@ -363,13 +746,11 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   }
 
   tryAutoAssignLeadCenter() {
-    if (this.partnersBody.is_lead_by_partner) {
+    const contributingCentersUnion = this.getContributingCentersUnion();
+    if (contributingCentersUnion.length !== 1) {
       return;
     }
-    if (this.possibleLeadCenters.length !== 1) {
-      return;
-    }
-    const onlyCenter = this.possibleLeadCenters[0];
+    const onlyCenter = contributingCentersUnion[0];
     const leadIsValid = this.leadCenterCode && this.possibleLeadCenters.some(c => c.code === this.leadCenterCode);
     if (!leadIsValid) {
       this.leadCenterCode = onlyCenter.code;
@@ -399,6 +780,10 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     if (!foundPartner) {
       foundPartner = this.partnersBody.institutions?.find(inst => inst.is_leading_result);
     }
+    // P2-3066 (2026): the persisted lead may be an "Other(s)" partner (after re-bucketing it lives in otherPartnersSelected).
+    if (!foundPartner) {
+      foundPartner = this.otherPartnersSelected?.find((p: any) => p.is_leading_result);
+    }
 
     this.leadPartnerId = this.institutionsSE.institutionsWithoutCentersList.find(
       i => i.institutions_id === foundPartner?.institutions_id
@@ -417,7 +802,11 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     }
 
     this.leadCenterCode = this.centersSE.centersList.find(center => {
-      return this.partnersBody.contributing_center?.some(c => c.code === center.code && c.is_leading_result);
+      // P2-2998 (2026): the persisted lead may be an "Other(s)" center (after re-bucketing it lives in otherCentersSelected).
+      return (
+        this.partnersBody.contributing_center?.some(c => c.code === center.code && c.is_leading_result) ||
+        this.otherCentersSelected?.some((c: any) => c.code === center.code && c.is_leading_result)
+      );
     })?.code;
 
     if (updateComponent) {

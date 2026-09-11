@@ -1,5 +1,4 @@
 import { Component, EventEmitter, Output, Input } from '@angular/core';
-import { MessageService } from 'primeng/api';
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
 import { environment } from '../../../../../../../environments/environment';
 import { IpsrDataControlService } from '../../../../../ipsr/services/ipsr-data-control.service';
@@ -8,7 +7,6 @@ import { IpsrDataControlService } from '../../../../../ipsr/services/ipsr-data-c
     selector: 'app-pdf-actions',
     templateUrl: './pdf-actions.component.html',
     styleUrls: ['./pdf-actions.component.scss'],
-    providers: [MessageService],
     standalone: false
 })
 export class PdfActionsComponent {

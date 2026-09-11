@@ -390,7 +390,7 @@ Source: [`innovation-development.handler.ts`](../src/api/bilateral/handlers/inno
   - `code` ∈ {12, 13, 14, 15} OR `name` from a dictionary including a curly-quote variant (`’` vs `'` for `Other/I'm not sure/...`).
 - Resolves `innovation_readiness_level` against CLARISA `clarisa_innovation_readiness_levels` (by `level` number or normalized `name`).
 - Requires non-empty `innovation_developers` (free-form string, often `'A; B; C'`).
-- Writes `result_innovations_dev { result_object, innovation_nature_id, innovation_developers, innovation_readiness_level_id, short_title = payload.title }`.
+- Writes `result_innovations_dev { result_object, innovation_nature_id, innovation_developers, innovation_readiness_level_id }`. `short_title` is left null (since 2026-09-03; it used to be seeded with `payload.title` — Short title is full metadata, not MDS, and the copy produced over-limit values).
 
 ### 6.4 Innovation Use handler
 

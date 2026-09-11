@@ -52,6 +52,38 @@ describe('StudiesLinkComponent', () => {
   it('trackByIndex should return the index', () => {
     expect(component.trackByIndex(3, {})).toBe(3);
   });
+
+  // P2-3426: in read-only mode the list must never seed the phantom empty row. That '' is not just
+  // a blank input the user cannot fill — the body is round-tripped into the Step 4 PATCH, so it
+  // would be persisted as a stored study URL of the package.
+  describe('read-only mode (P2-3426)', () => {
+    it('does not inject an empty string when disabled and the list is empty', () => {
+      component.body = {} as any;
+      component.disabled = true;
+
+      component.ngOnInit();
+
+      expect(component.body.scaling_studies_urls).toEqual([]);
+    });
+
+    it('leaves stored links untouched when disabled', () => {
+      component.body = { scaling_studies_urls: ['https://a.org/study'] } as any;
+      component.disabled = true;
+
+      component.ngOnInit();
+
+      expect(component.body.scaling_studies_urls).toEqual(['https://a.org/study']);
+    });
+
+    it('still seeds the empty row in the editable case (unchanged behaviour)', () => {
+      component.body = {} as any;
+      component.disabled = false;
+
+      component.ngOnInit();
+
+      expect(component.body.scaling_studies_urls).toEqual(['']);
+    });
+  });
 });
 
 

@@ -1,5 +1,4 @@
 import { Component, OnInit, ViewChild, Input, Output, EventEmitter } from '@angular/core';
-import { Table } from 'primeng/table';
 import { ResultsApiService } from '../../services/api/results-api.service';
 import { CustomizedAlertsFeService } from '../../services/customized-alerts-fe.service';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../enum/api.enum';
@@ -30,7 +29,7 @@ export class PhaseManagementTableComponent implements OnInit {
   reportingPhasesList: any[] = [];
   textToFind = '';
   disabledActionsText = 'Finish editing the phase to be able to edit or delete this phase.';
-  @ViewChild('dt') table: Table;
+  @ViewChild('dt') table: any;
   status = [
     {
       status: true,

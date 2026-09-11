@@ -1,0 +1,818 @@
+<div class="drawer-overlay-root" (keydown.escape)="closeDrawer()">
+  <button type="button" class="drawer-backdrop" aria-label="Close review drawer" tabindex="-1" (click)="closeDrawer()"></button>
+
+  <div
+    class="custom-drawer-panel"
+    [class.full-screen]="drawerFullScreen()"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="'Review bilateral result ' + (resultDetail()?.commonFields?.result_code || '')">
+    <!-- ═══════════ TOP BAR ═══════════ -->
+    <div class="result-review-drawer-header">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--pr-color-primary-50,#f5f3ff)] border border-[var(--pr-color-primary-100,#e9e0ff)] text-[var(--pr-color-primary-400,#6b46e5)]">
+          <span class="material-icons-round text-[18px]">rate_review</span>
+        </div>
+        <div class="min-w-0">
+          <h3 class="m-0 text-[14px] sm:text-[15px] font-bold text-gray-900 leading-tight truncate">Review External Result</h3>
+          <p class="m-0 text-[11.5px] text-gray-500 truncate">Bilateral result review & ToC validation</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <button
+          type="button"
+          (click)="navigateToResultCenter()"
+          class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
+          title="Open Result Center in a new view">
+          <span class="material-icons-round text-[14px]">open_in_new</span>
+          <span class="hidden sm:inline">Go to result center</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="toggleFullScreen()"
+          [attr.aria-label]="drawerFullScreen() ? 'Exit full screen' : 'Expand to full screen'"
+          [title]="drawerFullScreen() ? 'Exit full screen' : 'Expand to full screen'"
+          class="inline-flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-colors cursor-pointer">
+          <i class="pi {{ drawerFullScreen() ? 'pi-arrow-down-left-and-arrow-up-right-to-center' : 'pi-arrow-up-right-and-arrow-down-left-from-center' }} text-[12px]"></i>
+        </button>
+
+        <button
+          type="button"
+          (click)="closeDrawer()"
+          aria-label="Close review drawer"
+          title="Close (Esc)"
+          class="inline-flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-colors cursor-pointer">
+          <i class="pi pi-times text-[13px]"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══════════ CONTEXT BANNER / RESULT HEADER INFO ═══════════ -->
+    @let fields = this.resultDetail();
+    <header class="shrink-0 border-b border-[rgba(30,32,47,0.08)] bg-[var(--pr-surface-app,#fafbfc)] px-4 py-3.5 sm:px-8 sm:py-4">
+      @if (isLoadingInformation()) {
+        <div class="flex flex-col gap-2.5 animate-pulse" aria-hidden="true">
+          <div class="flex gap-2">
+            <div class="h-6 w-20 rounded-md bg-slate-200"></div>
+            <div class="h-6 w-36 rounded-md bg-slate-200"></div>
+            <div class="h-6 w-24 rounded-md bg-slate-200"></div>
+          </div>
+          <div class="h-6 w-3/4 rounded-md bg-slate-200"></div>
+        </div>
+      } @else {
+        <div class="flex flex-col gap-2">
+          <!-- Tags Row -->
+          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            @if (bilateralResultsService.entityId()) {
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11.5px] font-bold bg-[#6461bc]/10 text-[var(--pr-color-primary-400,#6b46e5)] border border-[#6461bc]/20">
+                <span class="material-icons-round text-[13px]">folder</span>
+                {{ bilateralResultsService.entityId() }}
+              </span>
+            }
+            @if (fields?.commonFields?.center_name) {
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11.5px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                <span class="material-icons-round text-[13px] text-slate-400">account_balance</span>
+                {{ fields?.commonFields?.center_name }}
+              </span>
+            }
+            @if (fields?.commonFields?.result_code) {
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11.5px] font-mono font-bold bg-violet-50 text-violet-800 border border-violet-200">
+                <span class="material-icons-round text-[13px] text-violet-500">tag</span>
+                Code {{ fields?.commonFields?.result_code }}
+              </span>
+            }
+            @if (fields?.commonFields?.result_category) {
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11.5px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                <span class="material-icons-round text-[13px] text-slate-400">category</span>
+                {{ fields?.commonFields?.result_category }}
+              </span>
+            }
+
+            <!-- Review Status Badge -->
+            @let statusId = resultToReview()?.status_id ?? fields?.commonFields?.status_id;
+            @if (statusId == 5) {
+              <span class="ml-auto inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200">
+                <span class="size-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                Pending review
+              </span>
+            } @else if (statusId == 6) {
+              <span class="ml-auto inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span class="material-icons-round text-[12px] text-emerald-600">check</span>
+                Approved
+              </span>
+            } @else if (statusId == 7) {
+              <span class="ml-auto inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 border border-rose-200">
+                <span class="material-icons-round text-[12px] text-rose-600">close</span>
+                Rejected
+              </span>
+            }
+          </div>
+
+          <!-- Title Row (with inline edit for Admin) -->
+          @if (isEditingTitle()) {
+            <div class="flex items-center gap-2 mt-1">
+              <input
+                type="text"
+                class="flex-1 rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-3 py-1.5 text-[15px] font-semibold text-gray-900 shadow-2xs outline-none focus:ring-2 focus:ring-[var(--pr-color-primary-100)]"
+                [(ngModel)]="editingTitleValue"
+                autofocus />
+              <button
+                type="button"
+                (click)="confirmEditingTitle()"
+                [disabled]="editingTitleValue().trim() === ''"
+                title="Save title"
+                class="inline-flex size-8 items-center justify-center rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 cursor-pointer transition-colors border-0">
+                <i class="pi pi-check text-[13px]"></i>
+              </button>
+              <button
+                type="button"
+                (click)="cancelEditingTitle()"
+                title="Cancel"
+                class="inline-flex size-8 items-center justify-center rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer transition-colors border-0">
+                <i class="pi pi-times text-[13px]"></i>
+              </button>
+            </div>
+          } @else {
+            <div class="flex items-start gap-2 group mt-0.5">
+              <h2 class="m-0 text-[15px] sm:text-[16px] font-bold text-gray-900 leading-snug tracking-tight">
+                {{ fields?.commonFields?.result_title }}
+              </h2>
+              @if (canEditDataStandards()) {
+                <button
+                  type="button"
+                  (click)="startEditingTitle()"
+                  title="Edit title (Admin only)"
+                  class="inline-flex size-6 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-slate-400 hover:bg-slate-200/60 hover:text-[var(--pr-color-primary-400)] transition-colors cursor-pointer">
+                  <i class="pi pi-pencil text-[12px]"></i>
+                </button>
+              }
+            </div>
+          }
+
+          <!-- Project & Submitter Metadata -->
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 pt-0.5">
+            @if (fields?.commonFields?.project_name) {
+              <span class="flex items-center gap-1 text-slate-600">
+                <span class="material-icons-round text-[14px] text-slate-400">snippet_folder</span>
+                <span class="font-medium text-slate-700">Project:</span> {{ fields?.commonFields?.project_name }}
+              </span>
+            }
+            @if (fields?.commonFields?.submitter_name) {
+              @if (fields?.commonFields?.project_name) {
+                <span class="text-slate-300">•</span>
+              }
+              <span class="flex items-center gap-1 text-slate-600">
+                <span class="material-icons-round text-[14px] text-slate-400">person</span>
+                <span class="font-medium text-slate-700">Submitted by:</span> {{ fields?.commonFields?.submitter_name }}
+              </span>
+            }
+          </div>
+        </div>
+      }
+    </header>
+
+    <!-- ═══════════ MAIN CONTENT AREA (CARDS) ═══════════ -->
+    <div class="drawer-panel-content custom_scroll">
+      <div class="result-review-drawer-content">
+        @if (isLoadingInformation()) {
+          <!-- Skeleton Loading Placeholders -->
+          <div class="flex flex-col gap-4 animate-pulse" aria-hidden="true">
+            <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs">
+              <div class="h-5 w-48 rounded bg-slate-200 mb-4"></div>
+              <div class="h-10 w-full rounded bg-slate-100 mb-3"></div>
+              <div class="h-10 w-full rounded bg-slate-100"></div>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs">
+              <div class="h-5 w-56 rounded bg-slate-200 mb-4"></div>
+              <div class="h-20 w-full rounded bg-slate-100 mb-3"></div>
+              <div class="h-12 w-full rounded bg-slate-100"></div>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs">
+              <div class="h-5 w-44 rounded bg-slate-200 mb-4"></div>
+              <div class="h-12 w-full rounded bg-slate-100 mb-3"></div>
+              <div class="h-12 w-full rounded bg-slate-100"></div>
+            </div>
+          </div>
+        } @else {
+          <!-- ──────────── CARD 1: THEORY OF CHANGE ALIGNMENT ──────────── -->
+          <section
+            id="review-card-toc"
+            data-testid="card-toc-alignment"
+            class="rounded-xl border border-[var(--pr-border)] bg-white p-4 shadow-2xs flex flex-col gap-4 min-[640px]:p-5"
+            [class.border-amber-300]="!isToCCompleted()"
+            [class.ring-1]="!isToCCompleted()"
+            [class.ring-amber-100]="!isToCCompleted()">
+            <div class="flex items-center justify-between border-b border-[var(--pr-border)] pb-3 flex-wrap gap-2">
+              <div class="flex items-center gap-2">
+                <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">account_tree</span>
+                <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">1. Theory of Change Alignment</h4>
+              </div>
+              @if (isToCCompleted()) {
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <i class="pi pi-check text-[9px]"></i> Aligned
+                </span>
+              } @else {
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                  <i class="pi pi-exclamation-circle text-[10px]"></i> Alignment required
+                </span>
+              }
+            </div>
+
+            <div class="flex gap-2.5 rounded-lg border border-[var(--pr-color-primary-100,#e9e0ff)] bg-[color-mix(in_srgb,var(--pr-color-primary-50,#f5f3ff)_55%,white)] px-3.5 py-3 text-[12.5px] leading-relaxed text-[var(--pr-color-accents-6,#4b5563)]">
+              <span class="material-icons-round shrink-0 text-[18px] text-[var(--pr-color-primary-300)]" aria-hidden="true">info</span>
+              <div class="min-w-0">
+                <p class="m-0 font-semibold text-[var(--pr-color-secondary-400)]">Science Program Responsibility</p>
+                <p class="m-0 mt-0.5 text-[12px] text-gray-600 leading-normal">
+                  Select whether this result contributes to the Program's planned Theory of Change indicators. If Yes, select the relevant HLO, indicator, and contribution. If No, choose the HLO under which to report it.
+                </p>
+              </div>
+            </div>
+
+            <app-pr-yes-or-not
+              label="Does this result align with the Program's planned TOC indicators?"
+              [required]="true"
+              [ngModel]="tocInitiative?.planned_result"
+              (ngModelChange)="onPlannedResultChangeValue($event)"
+              [editable]="canEditInDrawer()"
+              [readOnly]="!canEditInDrawer()"
+              (selectOptionEvent)="onPlannedResultChange(); markTocAsDirty(); validateIsToCCompleted()"
+              [disabled]="!canEditInDrawer()">
+            </app-pr-yes-or-not>
+
+            @if (tocInitiative?.planned_result !== null) {
+              @if (tocConsumed()) {
+                <div class="toc-multiple-wps-in-drawer" style="z-index: 1; position: relative" (change)="markTocAsDirty()">
+                  <app-cp-multiple-wps
+                    [editable]="canEditInDrawer()"
+                    [initiative]="tocInitiative"
+                    [initiativeId]="initiativeIdSignal()"
+                    [resultLevelId]="fields?.commonFields?.result_level_id"
+                    [isIpsr]="false"
+                    [isContributor]="false"
+                    [isNotifications]="false"
+                    [isUnplanned]="!tocInitiative.planned_result"
+                    [showMultipleWPsContent]="tocConsumed()"
+                    [hidden]="true"
+                    [forceP25]="true">
+                  </app-cp-multiple-wps>
+                </div>
+              }
+            }
+
+            @if (canEditInDrawer()) {
+              <div class="mt-2 flex items-center justify-between pt-3 border-t border-slate-100 flex-wrap gap-2">
+                @if (isTocDirty()) {
+                  <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
+                    <span class="size-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                    Unsaved ToC changes
+                  </span>
+                } @else if (isToCCompleted()) {
+                  <span class="inline-flex items-center gap-1 text-xs text-emerald-700 font-medium">
+                    <i class="pi pi-check text-[11px]"></i> ToC alignment saved
+                  </span>
+                } @else {
+                  <span></span>
+                }
+
+                <button
+                  type="button"
+                  (click)="onSaveTocChanges()"
+                  [disabled]="tocInitiative?.planned_result === undefined || !canEditInDrawer() || !isTocDirty() || isSaving()"
+                  class="inline-flex items-center gap-1.5 rounded-[8px] border-0 bg-[var(--pr-color-primary-400,#6b46e5)] px-4 py-2 text-xs font-semibold text-white shadow-2xs hover:opacity-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all">
+                  <i class="pi pi-save text-xs"></i>
+                  Save ToC changes
+                </button>
+              </div>
+            }
+          </section>
+
+          <!-- ──────────── CARD 2: DATA STANDARDS & GEOGRAPHIC SCOPE ──────────── -->
+          @if (fields?.commonFields) {
+            <section
+              data-testid="card-data-standards"
+              class="rounded-xl border border-[var(--pr-border)] bg-white p-4 shadow-2xs flex flex-col gap-4 min-[640px]:p-5">
+              <div class="flex items-center justify-between border-b border-[var(--pr-border)] pb-3 flex-wrap gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">public</span>
+                  <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">2. Data Standards & Geographic Scope</h4>
+                </div>
+                @if (!canEditDataStandards()) {
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                    <i class="pi pi-lock text-[9px]"></i> Center-reported (Read-only)
+                  </span>
+                }
+              </div>
+
+              <app-pr-textarea
+                label="Result Description"
+                placeholder="Enter text"
+                [required]="false"
+                [(ngModel)]="fields.commonFields.result_description"
+                [disabled]="!canEditDataStandards()">
+              </app-pr-textarea>
+
+              <div class="pt-2 border-t border-slate-100">
+                <h5 class="m-0 mb-3 text-[13px] font-bold text-gray-800 flex items-center gap-1.5">
+                  <span class="material-icons-round text-[16px] text-slate-500">map</span>
+                  Geographic Location
+                </h5>
+
+                @if (fields?.geographicScope) {
+                  <app-geoscope-management
+                    label="What is the geographic focus of the result?"
+                    [body]="fields.geographicScope"
+                    [readOnly]="!canEditDataStandards()"
+                    module="reporting">
+                  </app-geoscope-management>
+
+                  @if (fields.geographicScope.geo_scope_id && fields.geographicScope.geo_scope_id !== 1 && fields.geographicScope.geo_scope_id !== 50) {
+                    <div class="mt-3">
+                      <app-pr-radio-button
+                        [options]="[
+                          { value: true, label: 'Yes' },
+                          { value: false, label: 'No' }
+                        ]"
+                        optionLabel="label"
+                        optionValue="value"
+                        label="Are there any regions that you wish to specify for this Output?"
+                        [(ngModel)]="fields.geographicScope.has_extra_geo_scope"
+                        [disabled]="!canEditDataStandards()">
+                      </app-pr-radio-button>
+
+                      @if (fields.geographicScope.has_extra_geo_scope) {
+                        <div class="mt-2">
+                          <app-geoscope-management
+                            label="What is the geographic scope where there may be potential impact in other geographic areas?"
+                            [body]="{
+                              geo_scope_id: fields.geographicScope.extra_geo_scope_id,
+                              regions: fields.geographicScope.extra_regions || [],
+                              countries: fields.geographicScope.extra_countries || [],
+                              has_regions: fields.geographicScope.has_extra_regions,
+                              has_countries: fields.geographicScope.has_extra_countries
+                            }"
+                            [readOnly]="!canEditDataStandards()"
+                            [hideTobeDetermined]="true"
+                            module="reporting">
+                          </app-geoscope-management>
+                        </div>
+                      }
+                    </div>
+                  }
+                }
+              </div>
+            </section>
+
+            <!-- ──────────── CARD 3: COLLABORATION, ATTRIBUTION & EVIDENCE ──────────── -->
+            <section
+              data-testid="card-collaboration-evidence"
+              class="rounded-xl border border-[var(--pr-border)] bg-white p-4 shadow-2xs flex flex-col gap-4 min-[640px]:p-5">
+              <div class="flex items-center justify-between border-b border-[var(--pr-border)] pb-3 flex-wrap gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">groups</span>
+                  <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">3. Collaboration & Evidence</h4>
+                </div>
+                @if (!canEditDataStandards()) {
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                    <i class="pi pi-lock text-[9px]"></i> Center-reported (Read-only)
+                  </span>
+                }
+              </div>
+
+              <app-pr-multi-select
+                [options]="centersSE.centersList"
+                label="Contributing CGIAR Centers"
+                selectedLabel="Center(s) selected"
+                selectedOptionLabel="full_name"
+                optionLabel="full_name"
+                optionValue="code"
+                [required]="false"
+                [(ngModel)]="fields.contributingCenters"
+                placeholder="Select center(s)"
+                [readOnly]="!canEditDataStandards()">
+              </app-pr-multi-select>
+
+              <app-pr-multi-select
+                [options]="clarisaProjectsList()"
+                [(ngModel)]="fields.contributingProjects"
+                [required]="false"
+                optionLabel="fullName"
+                optionValue="project_id"
+                label="Contributing Bilateral Projects"
+                selectedLabel="Projects selected"
+                selectedOptionLabel="fullName"
+                placeholder="Select project"
+                [readOnly]="!canEditDataStandards()"
+                [disableOptions]="disabledContributingProjectOptions()"
+                [cannotRemoveOptionValues]="leadProjectIds()"
+                (ngModelChange)="onContributingProjectsChange($event)">
+              </app-pr-multi-select>
+
+              <!-- Contributing Science Programs -->
+              <div>
+                <app-pr-field-header [label]="'Primary Contributing Science Program'" [required]="false" [showDescriptionLabel]="true">
+                </app-pr-field-header>
+                @if (disabledContributingInitiatives() && disabledContributingInitiatives().length > 0) {
+                  <div class="flex flex-wrap gap-2 mt-1.5 mb-3">
+                    @for (initiative of disabledContributingInitiatives(); track initiative.id || initiative.official_code) {
+                      <span class="inline-flex items-center gap-1.5 rounded-full bg-violet-50 border border-violet-200 py-1 pl-3 pr-3 text-xs font-semibold text-violet-800">
+                        <span class="material-icons-round text-[13px] text-violet-600">star</span>
+                        {{ initiative.official_code }} - {{ initiative.initiative_name || initiative.short_name || initiative.name }}
+                      </span>
+                    }
+                  </div>
+                } @else {
+                  <div class="mt-1 mb-3">
+                    <span class="text-xs text-gray-500 italic">No primary initiatives available</span>
+                  </div>
+                }
+              </div>
+
+              <app-pr-multi-select
+                [options]="contributingInitiativesList()"
+                label="Contributing Science Programs"
+                optionLabel="full_name"
+                optionValue="id"
+                [required]="false"
+                selectedLabel="Science Programs selected"
+                selectedOptionLabel="full_name"
+                [disableOptions]="disabledContributingInitiatives()"
+                [displayLabelFormatter]="contributingInitiativesFormatter"
+                [(ngModel)]="fields.contributingInitiatives"
+                placeholder="Select Science Programs"
+                [readOnly]="!canEditDataStandards()">
+              </app-pr-multi-select>
+
+              <div *ngIf="fields?.contributors_result_toc_result?.length">
+                <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true"> </app-pr-field-header>
+
+                @for (contributor of fields?.contributors_result_toc_result; track contributor.initiative_id) {
+                  <app-pr-yes-or-not
+                    [label]="`${contributor?.official_code} - ${contributor?.short_name}`"
+                    [required]="!!contributor?.result_toc_results?.length"
+                    [(ngModel)]="contributor.planned_result"
+                    (selectOptionEvent)="onPlannedResultChange()"
+                    [readOnly]="true"
+                    [hideOptions]="!contributor?.result_toc_results?.length">
+                  </app-pr-yes-or-not>
+
+                  @if (!contributor?.result_toc_results?.length) {
+                    <div class="pending-message">
+                      <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
+                      <p>
+                        <b> {{ contributor?.official_code }} {{ contributor.short_name }} </b>
+                        has not confirmed its contribution to this result, so its ToC mapping is currently unavailable.
+                      </p>
+                    </div>
+                  }
+
+                  @if (fields?.contributors_result_toc_result?.length && contributor.planned_result !== null) {
+                    @if (this.tocConsumed()) {
+                      <div style="z-index: 1; position: relative">
+                        <app-cp-multiple-wps
+                          [editable]="false"
+                          [initiative]="contributor"
+                          [initiativeId]="contributor?.initiative_id"
+                          [resultLevelId]="fields?.commonFields?.result_level_id"
+                          [isIpsr]="false"
+                          [isContributor]="true"
+                          [isNotifications]="false"
+                          [isUnplanned]="!contributor.planned_result"
+                          [hidden]="true"
+                          [forceP25]="true"
+                          [showMultipleWPsContent]="tocConsumed()"></app-cp-multiple-wps>
+                      </div>
+                    }
+                  }
+                }
+              </div>
+
+              <app-pr-multi-select
+                [options]="institutionsSE.institutionsWithoutCentersListPartners"
+                label="Partners"
+                selectedLabel="Partner(s) selected"
+                selectedOptionLabel="institutions_name"
+                optionLabel="full_name"
+                optionValue="institutions_id"
+                [required]="false"
+                [(ngModel)]="fields.contributingInstitutions"
+                placeholder="Select partner"
+                [readOnly]="!canEditDataStandards()">
+              </app-pr-multi-select>
+
+              <!-- Evidence Section -->
+              <div class="pt-2 border-t border-slate-100">
+                <div class="flex items-center justify-between mb-2">
+                  <label class="m-0 text-[13.5px] font-semibold text-gray-800 flex items-center gap-1.5">
+                    <span class="material-icons-round text-[16px] text-slate-500">link</span>
+                    Evidence Links
+                  </label>
+                  @if (fields?.evidence?.length) {
+                    <span class="text-xs text-gray-500">{{ fields.evidence.length }} link{{ fields.evidence.length === 1 ? '' : 's' }}</span>
+                  }
+                </div>
+
+                @if (canEditDataStandards()) {
+                  <div class="mb-3">
+                    <app-pr-input
+                      label="Add Evidence Link"
+                      placeholder="Paste the link and press Enter"
+                      type="link"
+                      [required]="false"
+                      [(ngModel)]="evidenceLinkInput"
+                      (keyup.enter)="addEvidenceLink()"
+                      [disabled]="!canEditDataStandards()">
+                    </app-pr-input>
+                  </div>
+                }
+
+                @if (fields?.evidence?.length) {
+                  <div class="flex flex-col gap-2">
+                    @for (evidence of fields.evidence; track $index) {
+                      <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50/70 px-3.5 py-2 hover:bg-slate-100 transition-colors">
+                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                          <span class="material-icons-round text-[16px] text-indigo-500 shrink-0">link</span>
+                          <a
+                            [href]="evidence.link"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="truncate text-xs font-semibold text-[var(--pr-color-primary-400,#6b46e5)] hover:underline"
+                            [title]="evidence.link">
+                            {{ evidence.link }}
+                          </a>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                          <a
+                            [href]="evidence.link"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex size-6 items-center justify-center rounded text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+                            aria-label="Open link in new tab">
+                            <i class="pi pi-external-link text-[11px]"></i>
+                          </a>
+                          @if (canEditDataStandards()) {
+                            <button
+                              type="button"
+                              (click)="removeEvidenceLink($index)"
+                              class="inline-flex size-6 items-center justify-center rounded border-0 bg-transparent text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                              aria-label="Remove link">
+                              <i class="pi pi-trash text-[11px]"></i>
+                            </button>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="m-0 text-xs italic text-gray-400">No evidence links attached to this result.</p>
+                }
+              </div>
+            </section>
+
+            <!-- ──────────── CARD 4: CATEGORY SPECIFIC DETAILS ──────────── -->
+            @if (
+              fields?.commonFields?.result_type_id === 1 ||
+              fields?.commonFields?.result_type_id === 2 ||
+              fields?.commonFields?.result_type_id === 5 ||
+              fields?.commonFields?.result_type_id === 6 ||
+              fields?.commonFields?.result_type_id === 7
+            ) {
+              <section
+                data-testid="card-category-details"
+                class="rounded-xl border border-[var(--pr-border)] bg-white p-4 shadow-2xs flex flex-col gap-4 min-[640px]:p-5">
+                <div class="flex items-center justify-between border-b border-[var(--pr-border)] pb-3 flex-wrap gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">verified</span>
+                    <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">
+                      4. {{ fields?.commonFields?.result_category }} Details
+                    </h4>
+                  </div>
+                  @if (!canEditDataStandards()) {
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                      <i class="pi pi-lock text-[9px]"></i> Center-reported (Read-only)
+                    </span>
+                  }
+                </div>
+
+                @switch (fields?.commonFields?.result_type_id) {
+                  @case (1) {
+                    <app-policy-change-content [resultDetail]="resultDetail()" [disabled]="!canEditDataStandards()"></app-policy-change-content>
+                  }
+                  @case (2) {
+                    <app-innovation-use-content [resultDetail]="resultDetail()" [disabled]="!canEditDataStandards()"></app-innovation-use-content>
+                  }
+                  @case (5) {
+                    <app-cap-sharing-content [resultDetail]="resultDetail()" [disabled]="!canEditDataStandards()"></app-cap-sharing-content>
+                  }
+                  @case (6) {
+                    <app-kp-content [resultDetail]="resultDetail()"></app-kp-content>
+                  }
+                  @case (7) {
+                    <app-inno-dev-content [resultDetail]="resultDetail()" [disabled]="!canEditDataStandards()"></app-inno-dev-content>
+                  }
+                }
+              </section>
+            }
+
+            <!-- Admin Save Changes for Data Standards -->
+            @if (canEditDataStandards()) {
+              <div class="flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-white shadow-2xs">
+                @if (hasDataStandardUnsavedChanges()) {
+                  <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
+                    <span class="size-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                    Unsaved data standards changes
+                  </span>
+                } @else {
+                  <span class="text-xs text-gray-500">Data standards saved</span>
+                }
+                <button
+                  type="button"
+                  [disabled]="!hasDataStandardUnsavedChanges() || isSaving()"
+                  (click)="onSaveDataStandardChanges()"
+                  class="inline-flex items-center gap-1.5 rounded-[8px] bg-[var(--pr-color-primary-400,#6b46e5)] px-4 py-2 text-xs font-semibold text-white shadow-2xs hover:opacity-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all">
+                  <i class="pi pi-save text-xs"></i>
+                  Save data standards
+                </button>
+              </div>
+            }
+          }
+        }
+        <!-- Clearance spacer so content scrolls completely above sticky footer -->
+        <div class="h-6 shrink-0"></div>
+      </div>
+    </div>
+
+    <!-- ═══════════ STICKY FOOTER WITH REAL-TIME VALIDATION ═══════════ -->
+    <div class="result-review-drawer-footer">
+      <!-- Left: Real-time validation & review readiness status -->
+      <div class="flex items-center min-w-0 flex-1">
+        @let status = validationStatus();
+        @if (isLoadingInformation()) {
+          <div class="h-5 w-48 rounded bg-slate-200 animate-pulse" aria-hidden="true"></div>
+        } @else if (status.type === 'missing-toc') {
+          <button
+            type="button"
+            (click)="scrollToToc()"
+            data-testid="missing-toc-button"
+            class="inline-flex items-center gap-2 text-left bg-transparent border-0 p-0 cursor-pointer text-amber-700 hover:text-amber-900 transition-colors"
+            title="Click to jump to ToC alignment">
+            <span class="size-2 shrink-0 rounded-full bg-amber-500 animate-pulse"></span>
+            <span class="text-[13px] font-semibold underline decoration-dotted underline-offset-4">
+              {{ status.label }}
+            </span>
+          </button>
+        } @else if (status.type === 'unsaved-toc') {
+          <button
+            type="button"
+            (click)="onSaveTocChanges()"
+            data-testid="unsaved-toc-button"
+            class="inline-flex items-center gap-2 text-left bg-transparent border-0 p-0 cursor-pointer text-violet-700 hover:text-violet-900 transition-colors"
+            title="Click to save ToC changes">
+            <span class="size-2 shrink-0 rounded-full bg-violet-500 animate-pulse"></span>
+            <span class="text-[13px] font-semibold underline decoration-dotted underline-offset-4">
+              {{ status.label }}
+            </span>
+          </button>
+        } @else if (status.type === 'unsaved-data') {
+          <button
+            type="button"
+            (click)="onSaveDataStandardChanges()"
+            data-testid="unsaved-data-button"
+            class="inline-flex items-center gap-2 text-left bg-transparent border-0 p-0 cursor-pointer text-violet-700 hover:text-violet-900 transition-colors"
+            title="Click to save data standard changes">
+            <span class="size-2 shrink-0 rounded-full bg-violet-500 animate-pulse"></span>
+            <span class="text-[13px] font-semibold underline decoration-dotted underline-offset-4">
+              {{ status.label }}
+            </span>
+          </button>
+        } @else if (status.type === 'ready') {
+          <div class="inline-flex items-center gap-2 text-emerald-700 font-semibold text-[13px]" data-testid="ready-indicator">
+            <span class="size-2 shrink-0 rounded-full bg-emerald-500"></span>
+            <span>{{ status.label }}</span>
+          </div>
+        } @else if (status.type === 'approved') {
+          <div class="inline-flex items-center gap-1.5 text-emerald-700 font-medium text-[13px]">
+            <span class="material-icons-round text-[16px] text-emerald-600">check_circle</span>
+            <span>{{ status.label }}</span>
+          </div>
+        } @else if (status.type === 'rejected') {
+          <div class="inline-flex items-center gap-1.5 text-rose-700 font-medium text-[13px]">
+            <span class="material-icons-round text-[16px] text-rose-600">cancel</span>
+            <span>{{ status.label }}</span>
+          </div>
+        } @else {
+          <div class="inline-flex items-center gap-2 text-slate-600 font-medium text-[13px]">
+            <span class="size-2 shrink-0 rounded-full bg-slate-400"></span>
+            <span>{{ status.label }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Right: Action Buttons -->
+      <div class="flex items-center gap-2.5 shrink-0 justify-end w-full sm:w-auto">
+        <button
+          type="button"
+          (click)="closeDrawer()"
+          class="rounded-[10px] border border-[rgba(30,32,47,0.16)] bg-white px-4 py-2 text-[13px] font-semibold text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)] cursor-pointer transition-colors">
+          Close
+        </button>
+
+        @if (canEditInDrawer() && resultToReview()?.status_id == 5 && !isLoadingInformation()) {
+          <button
+            type="button"
+            (click)="onReject()"
+            data-testid="drawer-reject-button"
+            class="reject-button inline-flex items-center gap-1.5 rounded-[10px] border border-red-200 bg-red-50/70 px-4 py-2 text-[13px] font-semibold text-red-700 hover:bg-red-100 hover:border-red-300 cursor-pointer transition-all">
+            <i class="pi pi-times-circle text-[13px]"></i>
+            Reject
+          </button>
+
+          <button
+            type="button"
+            data-testid="drawer-approve-button"
+            [disabled]="!canApprove()"
+            (click)="canApprove() ? onApprove() : null"
+            [prTooltip]="getApproveButtonTooltip()"
+            prTooltipPosition="top"
+            class="approve-button inline-flex items-center gap-1.5 rounded-[10px] border-0 bg-gradient-to-r from-emerald-600 to-emerald-700 px-5 py-2 text-[13px] font-semibold text-white shadow-xs hover:from-emerald-700 hover:to-emerald-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all">
+            <i class="pi pi-check-circle text-[13px]"></i>
+            Approve
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Approve Dialog -->
+<app-pr-dialog
+  [(visible)]="showConfirmApproveDialog"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  styleClass="confirmation-modal approve">
+  <i class="pi pi-times modal-close-icon" (click)="cancelApprove()"></i>
+  <div class="modal-body">
+    <div class="modal-icon approve">
+      <i class="pi pi-check"></i>
+    </div>
+
+    <h2 class="modal-title approve">APPROVE RESULT – {{ resultToReview()?.result_code }}</h2>
+    <p class="modal-message">Status will be changed to "Approved", and result will be submitted.</p>
+    <div class="modal-field">
+      <label class="modal-label" for="approveComment">Comment (optional)</label>
+      <textarea
+        [(ngModel)]="approveComment"
+        id="approveComment"
+        [rows]="3"
+        placeholder="Add any note the reporting center should see..."></textarea>
+    </div>
+  </div>
+
+  <div class="modal-actions">
+    <button hlmBtn variant="outline" size="lg" (click)="cancelApprove()" [disabled]="isSaving()">Cancel</button>
+    <button hlmBtn size="lg" (click)="confirmApprove()" [disabled]="isSaving()">Confirm @if (isSaving()) { <i class="pi pi-spinner pi-spin"></i> }</button>
+  </div>
+</app-pr-dialog>
+
+<!-- Reject Justification Dialog -->
+<app-pr-dialog
+  [(visible)]="showConfirmRejectDialog"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  styleClass="confirmation-modal reject">
+  <i class="pi pi-times modal-close-icon" (click)="cancelReject()"></i>
+  <div class="modal-body">
+    <div class="modal-icon reject">
+      <i class="pi pi-times"></i>
+    </div>
+    <h2 class="modal-title reject">REJECT RESULT – {{ resultToReview()?.result_code }}</h2>
+    <p class="modal-message">Please provide a detailed justification for rejecting this result.</p>
+    <div class="modal-field">
+      <label class="modal-label required" for="rejectJustification">Justification</label>
+      <textarea
+        [(ngModel)]="rejectJustification"
+        id="rejectJustification"
+        [rows]="4"
+        placeholder="Please explain why this result is being rejected..."></textarea>
+    </div>
+  </div>
+  <div class="modal-actions">
+    <button hlmBtn variant="outline" size="lg" (click)="cancelReject()" [disabled]="isSaving()">Cancel</button>
+    <button hlmBtn size="lg" (click)="confirmReject()" [disabled]="!rejectJustification.trim() || isSaving()">Confirm @if (isSaving()) { <i class="pi pi-spinner pi-spin"></i> }</button>
+  </div>
+</app-pr-dialog>
+
+<!-- Save Changes Justification Dialog -->
+<app-save-changes-justification-dialog
+  [(visible)]="showConfirmSaveChangesDialog"
+  [resultCode]="resultToReview()?.result_code || ''"
+  [isSaving]="isSaving()"
+  [(justification)]="saveChangesJustification"
+  (cancelEvent)="cancelSaveChanges()"
+  (confirm)="confirmSaveChanges($event)">
+</app-save-changes-justification-dialog>

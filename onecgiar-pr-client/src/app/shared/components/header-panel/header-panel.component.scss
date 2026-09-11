@@ -1,295 +1,99 @@
-@use '../../../../styles/fonts.scss' as fonts;
+// Visual styling lives in Tailwind utilities on the template.
+// Only resets, the bell keyframes, the notifications scrollbar and the
+// unread badge (shared hook with pop-up items) remain here.
 
-button {
+// :where() keeps this reset at zero specificity so Tailwind background
+// utilities on buttons (bg-white on the user pill, bg-white/15 active states)
+// still win — a plain `button {}` selector carries Angular's encapsulation
+// attribute and outranks single-class utilities, blanking their backgrounds.
+:where(button) {
   background: none;
   border: none;
   padding: 0;
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Manrope', 'Poppins', sans-serif;
 }
 
-.header_panel_container {
-  width: 100%;
-  height: 80px;
-  overflow: hidden;
-  background-color: var(--pr-color-secondary-300);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 15px 30px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
+// --- Non-production "Testing environment" ribbon ---
+// The fixed slot anchors at bottom-left; the bottom corners are expressed as a
+// horizontal translate so switching between them (e.g. opening the search while
+// inside a Result Detail) glides across the screen instead of jumping.
+// (top-right gets its own anchor via testFixedPosClass and no translate.)
+.test-label-anchor {
+  transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
 
-.logo_container {
-  display: flex;
-  gap: 20px;
-  cursor: pointer;
-
-  .cgiar_logo {
-    width: 50px;
+  &[data-pos='bottom-left'] {
+    transform: translateX(0);
+  }
+  &[data-pos='bottom-right'] {
+    // 100% = the tag's own width; 2rem = the 1rem left inset + a matching 1rem right gap.
+    transform: translateX(calc(100vw - 100% - 2rem));
   }
 }
 
-.logo_content {
-  @include fonts.pr-typography('h4');
+// The pill slides up + fades in the first time it mounts, so it never just
+// pops into existence. Runs on the inner element to keep its transform
+// independent of the anchor's horizontal slide.
+.test-label-pill {
+  animation: test-label-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes test-label-enter {
+  from {
+    opacity: 0;
+    transform: translateY(60%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .test-label-anchor {
+    transition: none;
+  }
+  .test-label-pill {
+    animation: none;
+  }
+}
+
+.notifications_list {
+  scrollbar-width: thin;
+  scrollbar-color: var(--pr-color-primary-300) var(--pr-color-primary-25);
+
+  &::-webkit-scrollbar {
+    width: 2px;
+    height: 2px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--pr-color-primary-300);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: var(--pr-color-primary-25);
+  }
+
+  @media (max-height: 800px) {
+    max-height: 400px;
+  }
+}
+
+.pr-overlay-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--pr-color-red-300);
   color: var(--pr-color-white);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-
-  p {
-    margin: 0;
-  }
-
-  .logo_platform_name {
-    @include fonts.pr-typography('h4');
-    font-weight: 600;
-    margin: 0;
-  }
-
-  .logo_platform_name_secondary {
-    @include fonts.pr-typography('body-3');
-    font-weight: 300;
-  }
-}
-
-.information {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.overlay_panel {
-  border-radius: 15px;
-  background-color: var(--pr-color-white);
-  box-shadow: 4px 4px 10px 4px rgba(var(--pr-color-black-rgb), 0.251);
-  margin-top: 10px;
-
-  .overlay_panel_header {
-    display: flex;
-    align-items: center;
-    padding: 14px 14px 0;
-
-    .overlay_panel_header_title {
-      margin: 0;
-      @include fonts.pr-typography('h3');
-    }
-
-    .overlay_panel_header_userInfo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .overlay_panel_header_userInfo_content {
-      display: flex;
-      flex-direction: column;
-
-      .overlay_panel_header_userInfo_content_name {
-        margin: 0;
-        @include fonts.pr-typography('h4');
-        font-weight: 600;
-      }
-
-      .overlay_panel_header_userInfo_content_email {
-        margin: 0;
-        @include fonts.pr-typography('body-3');
-        font-weight: 300;
-        color: var(--pr-color-accents-5);
-      }
-    }
-  }
-
-  .overlay_panel_userInfo_content {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    padding: 14px 14px 11px;
-
-    .overlay_panel_userInfo_content_item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      color: var(--pr-color-secondary-300);
-
-      h1,
-      p {
-        margin: 0;
-      }
-
-      .overlay_panel_userInfo_content_item_title {
-        @include fonts.pr-typography('body-2');
-        font-weight: 500;
-        color: var(--pr-color-primary-200);
-      }
-
-      .overlay_panel_userInfo_content_item_desc {
-        @include fonts.pr-typography('body-2');
-        font-weight: 500;
-      }
-    }
-
-    .overlay_panel_admin_module {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      cursor: pointer;
-
-      &:hover {
-        .admin_module_icon {
-          color: var(--pr-color-primary-300);
-        }
-        .overlay_panel_admin_module_title {
-          color: var(--pr-color-primary-300);
-        }
-      }
-
-      p {
-        margin: 0;
-      }
-
-      .admin_module_icon {
-        font-size: 15px;
-        color: var(--pr-color-primary-200);
-        transition: all 0.3s ease;
-      }
-
-      .overlay_panel_admin_module_title {
-        @include fonts.pr-typography('body-2');
-        font-weight: 500;
-        color: var(--pr-color-primary-200);
-        transition: all 0.3s ease;
-      }
-    }
-  }
-
-  .no_notifications {
-    font-weight: 500;
-    text-wrap: pretty;
-    padding: 10px 14px;
-  }
-
-  .notifications_list {
-    display: flex;
-    flex-direction: column;
-    overflow: auto;
-    max-height: 500px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--pr-color-primary-300) var(--pr-color-primary-25);
-
-    &::-webkit-scrollbar {
-      width: 2px;
-      height: 2px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background-color: var(--pr-color-primary-300);
-      border-radius: 10px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background-color: var(--pr-color-primary-25);
-    }
-
-    @media (max-height: 800px) {
-      max-height: 400px;
-    }
-
-    .notification {
-      padding: 15px 14px 10px;
-      background-color: var(--pr-color-primary-25);
-      border-bottom: 1px solid var(--pr-color-primary-300);
-    }
-  }
-
-  .overlay_panel_footer {
-    padding-top: 5px;
-    padding-bottom: 15px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    .see_all_notifications {
-      @include fonts.pr-typography('body-2');
-      cursor: pointer;
-      font-weight: 400;
-      color: var(--pr-color-primary-300);
-      margin: 0;
-      width: fit-content;
-    }
-  }
-
-  .footer_userInfo {
-    padding: 5px 14px 15px;
-    justify-content: flex-start;
-    gap: 5px;
-    width: 100%;
-    cursor: pointer;
-
-    &:hover {
-      .logout_icon {
-        color: var(--pr-color-red-500);
-      }
-      .logout_button {
-        color: var(--pr-color-red-500);
-      }
-    }
-
-    .logout_icon {
-      font-size: 15px;
-      color: var(--pr-color-red-300);
-      transition: all 0.3s ease;
-    }
-
-    .logout_button {
-      @include fonts.pr-typography('body-2');
-      font-weight: 400;
-      color: var(--pr-color-red-300);
-      margin: 0;
-      transition: all 0.3s ease;
-    }
-  }
-
-  .overlay_panel_separator {
-    width: 100%;
-    height: 1px;
-    background-color: var(--pr-color-neutral-1000);
-    margin: 10px 0;
-  }
-}
-
-.info_icon {
-  color: var(--pr-color-white);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  font-size: 28px;
-}
-
-.info_icon_active {
-  color: var(--pr-color-primary-100) !important;
-}
-
-.section_active {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 80px;
-  color: var(--pr-color-primary-100) !important;
-  border-bottom: 4px solid var(--pr-color-primary-100) !important;
-}
-
-::ng-deep {
-  .p-overlaybadge {
-    height: 24px !important;
-  }
-
-  .p-avatar-text {
-    font-size: 14px !important;
-  }
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
 }
 
 .animate_bell {
@@ -307,122 +111,73 @@ button {
   0% {
     transform: rotate(0);
   }
-
   1% {
     transform: rotate(30deg);
   }
-
   3% {
     transform: rotate(-28deg);
   }
-
   5% {
     transform: rotate(34deg);
   }
-
   7% {
     transform: rotate(-32deg);
   }
-
   9% {
     transform: rotate(30deg);
   }
-
   11% {
     transform: rotate(-28deg);
   }
-
   13% {
     transform: rotate(26deg);
   }
-
   15% {
     transform: rotate(-24deg);
   }
-
   17% {
     transform: rotate(22deg);
   }
-
   19% {
     transform: rotate(-20deg);
   }
-
   21% {
     transform: rotate(18deg);
   }
-
   23% {
     transform: rotate(-16deg);
   }
-
   25% {
     transform: rotate(14deg);
   }
-
   27% {
     transform: rotate(-12deg);
   }
-
   29% {
     transform: rotate(10deg);
   }
-
   31% {
     transform: rotate(-8deg);
   }
-
   33% {
     transform: rotate(6deg);
   }
-
   35% {
     transform: rotate(-4deg);
   }
-
   37% {
     transform: rotate(2deg);
   }
-
   39% {
     transform: rotate(-1deg);
   }
-
   41% {
     transform: rotate(1deg);
   }
-
   43% {
     transform: rotate(0);
   }
-
   100% {
     transform: rotate(0);
-  }
-}
-
-.info_icon:focus-visible,
-.overlay_panel_footer .see_all_notifications:focus-visible,
-.overlay_panel .footer_userInfo:focus-visible {
-  outline: 2px solid var(--pr-color-primary-300);
-  outline-offset: 2px;
-  border-radius: 6px;
-}
-
-@media (max-width: 768px) {
-  .header_panel_container {
-    padding: 10px 16px;
-  }
-
-  .logo_container {
-    gap: 12px;
-
-    .cgiar_logo {
-      width: 40px;
-    }
-  }
-
-  .information {
-    gap: 12px;
   }
 }

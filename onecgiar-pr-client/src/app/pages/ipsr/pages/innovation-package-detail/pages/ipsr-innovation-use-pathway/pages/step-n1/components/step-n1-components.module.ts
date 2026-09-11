@@ -12,7 +12,7 @@ import { StepN1ConsensusAndConsultationComponent } from './step-n1-consensus-and
 import { StepN1ActionAreaOutcomesComponent } from './step-n1-action-area-outcomes/step-n1-action-area-outcomes.component';
 import { StepN1ScalingAmbitionBlurbComponent } from './step-n1-scaling-ambition-blurb/step-n1-scaling-ambition-blurb.component';
 import { ClipboardModule } from '@angular/cdk/clipboard';
-import { ToastModule } from 'primeng/toast';
+import { PrToastComponent } from 'src/app/shared/components/pr-toast';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../../../shared/directives/feedback-validation-directive.module';
 import { YmzListStructureItemModule } from '../../../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 
@@ -31,6 +31,6 @@ const components = [
 @NgModule({
   declarations: [...components],
   exports: [...components],
-  imports: [CommonModule, CustomFieldsModule, YmzListStructureItemModule, ClipboardModule, ToastModule, FeedbackValidationDirectiveModule]
+  imports: [CommonModule, CustomFieldsModule, YmzListStructureItemModule, ClipboardModule, PrToastComponent, FeedbackValidationDirectiveModule]
 })
 export class StepN1ComponentsModule {}

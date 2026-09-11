@@ -17,4 +17,7 @@ export interface GlobalVariables {
   kp_mqap_institutions_confidence?: string;
   p_pdf_url?: string;
   alert_global_info?: string;
+  // @akili-spec changes/mass-reporting-flow
+  ai_narrative_enabled?: boolean;
+  ai_narrative_prompt?: string;
 }

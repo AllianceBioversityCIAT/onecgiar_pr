@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { By } from '@angular/platform-browser';
 
 import UserManagementComponent from './user-management.component';
+import { PrFilterMultiselectComponent } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
@@ -25,6 +27,7 @@ const mockApiService = {
   },
   resultsSE: {
     GET_AllInitiatives: () => of({ response: [] }),
+    GET_AllCLARISACenters: () => of({ response: [] }),
     GET_roles: () => of({ response: [] }),
     GET_platformGlobalVariablesByCategoryId: () => of({ response: [] })
   },
@@ -42,6 +45,11 @@ const mockResultsApiService = {
 };
 
 // Mock para InitiativesService
+// P2-2043: the catalogue arrives P22 FIRST from the endpoint — measured on the testing environment.
+// The tests below depend on that order being the WRONG one, so the sort has something to prove.
+const P22_GROUP = { name: 'P22', entities: [{ id: 91, official_code: 'INIT-22' }] };
+const P25_GROUP = { name: 'P25', entities: [{ id: 5, official_code: 'SP05' }] };
+
 const mockInitiativesService = {
   allInitiatives: jest.fn().mockReturnValue([]),
   allInitiativesList: [],
@@ -89,9 +97,11 @@ describe('UserManagementComponent', () => {
 
   it('should have proper column configuration', () => {
     expect(component.columns).toBeDefined();
-    expect(component.columns.length).toBe(8);
+    expect(component.columns.length).toBe(9);
     expect(component.columns[0].label).toBe('User name');
     expect(component.columns[1].label).toBe('Email');
+    expect(component.columns[3].label).toBe('Science Programs');
+    expect(component.columns[4].label).toBe('Centers');
   });
 
   it('should filter users by status', () => {
@@ -195,16 +205,17 @@ describe('UserManagementComponent', () => {
     expect(getUsersSpy).toHaveBeenCalled();
   });
 
-  it('should handle entity display methods', () => {
-    const entities = ['Entity1', 'Entity2', 'Entity3', 'Entity4'];
+  it('should handle assignment display methods', () => {
+    const items = ['Entity1', 'Entity2', 'Entity3', 'Entity4'];
 
-    expect(component.getDisplayEntities(entities)).toEqual(['Entity1', 'Entity2']);
-    expect(component.hasMoreEntities(entities)).toBe(true);
-    expect(component.getRemainingEntities(entities)).toEqual(['Entity3', 'Entity4']);
+    expect(component.getDisplayAssignments(items)).toEqual(['Entity1']);
+    expect(component.hasMoreAssignments(items)).toBe(true);
+    expect(component.getAssignmentCountLabel(items, 'program', 'programs')).toBe('4 programs');
 
-    const shortEntities = ['Entity1', 'Entity2'];
-    expect(component.hasMoreEntities(shortEntities)).toBe(false);
-    expect(component.getRemainingEntities(shortEntities)).toEqual([]);
+    const shortItems = ['Entity1'];
+    expect(component.hasMoreAssignments(shortItems)).toBe(false);
+    expect(component.getAssignmentCountLabel(shortItems, 'center', 'centers')).toBe('1 center');
+    expect(component.getAssignmentCountLabel([], 'center', 'centers')).toBe('');
   });
 
   it('should handle user editing', async () => {
@@ -323,6 +334,42 @@ describe('UserManagementComponent', () => {
       expect(component.selectedStatus()).toBe('Inactive');
       expect(getUsersSpy).toHaveBeenCalled();
       expect(component.userTable.reset).toHaveBeenCalled();
+    });
+  });
+
+  describe('onEntitiesChange', () => {
+    it('should set selectedEntities and call getUsers', () => {
+      const getUsersSpy = jest.spyOn(component, 'getUsers').mockImplementation(() => {});
+      component.userTable = { reset: jest.fn() } as any;
+      component.onEntitiesChange([1, 2]);
+      expect(component.selectedEntities()).toEqual([1, 2]);
+      expect(getUsersSpy).toHaveBeenCalled();
+      expect(component.userTable.reset).toHaveBeenCalled();
+    });
+
+    it('should default to an empty array when value is null', () => {
+      jest.spyOn(component, 'getUsers').mockImplementation(() => {});
+      component.onEntitiesChange(null as any);
+      expect(component.selectedEntities()).toEqual([]);
+    });
+
+    it('should write the entity selection back and send it to GET_searchUser', () => {
+      const searchSpy = jest.spyOn(mockResultsApiService, 'GET_searchUser');
+      // P2-2043: the filters now live inside the "Table filters" panel, so it has to be open before
+      // the control exists in the DOM at all.
+      component.showFiltersPanel.set(true);
+      fixture.detectChanges();
+
+      const multiselects = fixture.debugElement.queryAll(By.directive(PrFilterMultiselectComponent));
+      // Platform role, Reporting role, Entity - in the order the panel renders them.
+      expect(multiselects.length).toBe(3);
+      const entitiesMultiselect = multiselects[2].componentInstance as PrFilterMultiselectComponent;
+      const entity = { id: 5, official_code: 'SP05' };
+
+      entitiesMultiselect.toggle(entity);
+
+      expect(component.selectedEntities()).toEqual([entity]);
+      expect(searchSpy).toHaveBeenCalledWith('', '', '', [entity], [], []);
     });
   });
 
@@ -545,43 +592,110 @@ describe('UserManagementComponent', () => {
     });
   });
 
-  describe('showEntityOverlay', () => {
-    it('should toggle overlay when entities has more than 2', () => {
-      const overlay = { toggle: jest.fn() };
-      const event = {};
-      const entities = ['E1', 'E2', 'E3'];
-      component.showEntityOverlay(event, overlay, entities);
-      expect(overlay.toggle).toHaveBeenCalledWith(event);
+  describe('parseAssignmentLabel', () => {
+    it('should split entity and role from API label', () => {
+      expect(component.parseAssignmentLabel('SP01 - Member')).toEqual({
+        entity: 'SP01',
+        role: 'Member'
+      });
     });
 
-    it('should not toggle overlay when entities has 2 or less', () => {
-      const overlay = { toggle: jest.fn() };
-      const event = {};
-      const entities = ['E1', 'E2'];
-      component.showEntityOverlay(event, overlay, entities);
-      expect(overlay.toggle).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('getDisplayEntities edge cases', () => {
-    it('should return empty array for null entities', () => {
-      expect(component.getDisplayEntities(null as any)).toEqual([]);
+    it('should handle labels without role separator', () => {
+      expect(component.parseAssignmentLabel('CIMMYT')).toEqual({
+        entity: 'CIMMYT',
+        role: ''
+      });
     });
 
-    it('should return empty array for empty entities', () => {
-      expect(component.getDisplayEntities([])).toEqual([]);
+    it('should handle empty string', () => {
+      expect(component.parseAssignmentLabel('')).toEqual({ entity: '', role: '' });
     });
   });
 
-  describe('hasMoreEntities edge cases', () => {
-    it('should return false for null entities', () => {
-      expect(component.hasMoreEntities(null as any)).toBeFalsy();
+  describe('openAssignmentOverlay', () => {
+    // jsdom viewport: 1024x768
+    const makeEvent = (rect: Partial<DOMRect> = { top: 0, bottom: 10, right: 400 }) =>
+      ({
+        stopPropagation: jest.fn(),
+        currentTarget: { getBoundingClientRect: () => rect }
+      }) as unknown as Event;
+
+    it('should open overlay with assignment data anchored to the trigger button', () => {
+      const event = makeEvent();
+      const items = ['E1', 'E2', 'E3'];
+
+      component.openAssignmentOverlay(event, 'CGIAR Centers', items, true);
+
+      expect((event as any).stopPropagation).toHaveBeenCalled();
+      expect(component.assignmentOverlayOpen()).toBe(true);
+      expect(component.assignmentOverlayTitle()).toBe('CGIAR Centers');
+      expect(component.assignmentOverlayItems()).toEqual(items);
+      expect(component.assignmentOverlayIsCenter()).toBe(true);
+      expect(component.overlayTop).toBe(16);
+      expect(component.overlayFlippedAbove).toBe(false);
+      expect(component.overlayLeft).toBe(400);
+    });
+
+    it('should clamp the panel inside the viewport when the trigger is near the left edge', () => {
+      // right: 20 would place the 320px-wide, right-anchored panel off-screen to the left
+      component.openAssignmentOverlay(makeEvent({ top: 0, bottom: 10, right: 20 }), 'CGIAR Centers', ['E1', 'E2', 'E3'], true);
+
+      expect(component.overlayLeft).toBe(328); // 8px margin + 320px panel width
+    });
+
+    it('should flip above the trigger when there is not enough space below', () => {
+      // bottom: 750 leaves less room than the estimated panel height in a 768px viewport
+      component.openAssignmentOverlay(makeEvent({ top: 728, bottom: 750, right: 400 }), 'CGIAR Centers', ['E1', 'E2', 'E3'], true);
+
+      expect(component.assignmentOverlayOpen()).toBe(true);
+      expect(component.overlayFlippedAbove).toBe(true);
+      expect(component.overlayBottom).toBe(46); // 768 - 728 + 6 → panel bottom sits 6px above the trigger
+    });
+
+    it('should not open overlay when items are within inline limit', () => {
+      const event = makeEvent();
+
+      component.openAssignmentOverlay(event, 'CGIAR Centers', ['E1'], true);
+
+      expect(component.assignmentOverlayOpen()).toBe(false);
+    });
+
+    it('should close overlay when triggered again with the same items', () => {
+      const items = ['E1', 'E2', 'E3'];
+
+      component.openAssignmentOverlay(makeEvent(), 'CGIAR Centers', items, true);
+      expect(component.assignmentOverlayOpen()).toBe(true);
+
+      component.openAssignmentOverlay(makeEvent(), 'CGIAR Centers', items, true);
+      expect(component.assignmentOverlayOpen()).toBe(false);
+    });
+
+    it('should close overlay on document click and window scroll', () => {
+      component.openAssignmentOverlay(makeEvent(), 'CGIAR Centers', ['E1', 'E2'], true);
+      expect(component.assignmentOverlayOpen()).toBe(true);
+
+      component.onDocumentClick();
+      expect(component.assignmentOverlayOpen()).toBe(false);
+
+      component.openAssignmentOverlay(makeEvent(), 'CGIAR Centers', ['E1', 'E2'], true);
+      component.onWindowScroll();
+      expect(component.assignmentOverlayOpen()).toBe(false);
     });
   });
 
-  describe('getRemainingEntities edge cases', () => {
-    it('should return empty array for null entities', () => {
-      expect(component.getRemainingEntities(null as any)).toEqual([]);
+  describe('getDisplayAssignments edge cases', () => {
+    it('should return empty array for null items', () => {
+      expect(component.getDisplayAssignments(null as any)).toEqual([]);
+    });
+
+    it('should return empty array for empty items', () => {
+      expect(component.getDisplayAssignments([])).toEqual([]);
+    });
+  });
+
+  describe('hasMoreAssignments edge cases', () => {
+    it('should return false for null items', () => {
+      expect(component.hasMoreAssignments(null as any)).toBeFalsy();
     });
   });
 
@@ -620,13 +734,15 @@ describe('UserManagementComponent', () => {
             firstName: 'John',
             isCGIAR: 'Yes',
             isActive: 'Active',
-            entities: 'Entity1, Entity2'
+            sciencePrograms: 'Entity1, Entity2',
+            centers: 'Not applicable'
           }),
           expect.objectContaining({
             firstName: 'Not applicable',
             isCGIAR: 'No',
             isActive: 'Inactive',
-            entities: 'Not applicable'
+            sciencePrograms: 'Not applicable',
+            centers: 'Not applicable'
           })
         ]),
         'user_report',
@@ -675,4 +791,219 @@ describe('UserManagementComponent', () => {
       jest.useRealTimers();
     });
   });
+
+  // ── P2-2043 ──────────────────────────────────────────────────────────────────────
+  describe('P2-2043 - Table filters panel', () => {
+    it('starts closed, so the filters are behind the Apply filters button', () => {
+      expect(component.showFiltersPanel()).toBe(false);
+      expect(fixture.debugElement.query(By.css('[data-testid="apply-filters-button"]'))).toBeTruthy();
+      expect(fixture.debugElement.query(By.css('#table-filters-panel'))).toBeNull();
+    });
+
+    it('opens and closes on the button', () => {
+      const button = fixture.debugElement.query(By.css('[data-testid="apply-filters-button"]'));
+
+      button.nativeElement.click();
+      fixture.detectChanges();
+      expect(component.showFiltersPanel()).toBe(true);
+      expect(fixture.debugElement.query(By.css('#table-filters-panel'))).toBeTruthy();
+
+      button.nativeElement.click();
+      fixture.detectChanges();
+      expect(component.showFiltersPanel()).toBe(false);
+    });
+
+    it('names the mechanism and caption the story asks for', () => {
+      component.showFiltersPanel.set(true);
+      fixture.detectChanges();
+
+      expect(fixture.debugElement.query(By.css('.table-filters-title')).nativeElement.textContent.trim()).toBe('Table filters');
+      expect(fixture.debugElement.query(By.css('.table-filters-caption')).nativeElement.textContent.trim()).toBe(
+        'filter your data by applying custom criteria'
+      );
+    });
+
+    it('starts with every filter unselected', () => {
+      expect(component.selectedStatus()).toBe('');
+      expect(component.selectedCgiar()).toBe('');
+      expect(component.selectedEntities()).toEqual([]);
+      expect(component.selectedPlatformRoles()).toEqual([]);
+      expect(component.selectedReportingRoles()).toEqual([]);
+    });
+  });
+
+  describe('P2-2043 - Entity order: P25 before P22', () => {
+    it('puts the P25 group first even though the catalogue arrives P22 first', () => {
+      mockInitiativesService.allInitiatives.mockReturnValue([P22_GROUP, P25_GROUP]);
+
+      expect(component.orderedEntityGroups().map(group => group.name)).toEqual(['P25', 'P22']);
+    });
+
+    it('is a real sort and not a fixed two-item swap: a higher portfolio leads', () => {
+      mockInitiativesService.allInitiatives.mockReturnValue([P22_GROUP, P25_GROUP, { name: 'P28', entities: [] }]);
+
+      expect(component.orderedEntityGroups().map(group => group.name)).toEqual(['P28', 'P25', 'P22']);
+    });
+
+    it('does not drop groups whose name carries no number', () => {
+      mockInitiativesService.allInitiatives.mockReturnValue([P22_GROUP, { name: 'Other', entities: [] }, P25_GROUP]);
+
+      expect(component.orderedEntityGroups().map(group => group.name)).toEqual(['P25', 'P22', 'Other']);
+    });
+  });
+
+  describe('P2-2043 - role filters reach the request', () => {
+    beforeEach(() => {
+      component.userTable = { reset: jest.fn() } as any;
+    });
+
+    it('sends the selected Platform roles', () => {
+      const searchSpy = jest.spyOn(mockResultsApiService, 'GET_searchUser');
+
+      component.onPlatformRolesChange([1, 2]);
+
+      expect(component.selectedPlatformRoles()).toEqual([1, 2]);
+      expect(searchSpy).toHaveBeenCalledWith('', '', '', [], [1, 2], []);
+    });
+
+    it('sends the selected Reporting roles', () => {
+      const searchSpy = jest.spyOn(mockResultsApiService, 'GET_searchUser');
+
+      component.onReportingRolesChange([3]);
+
+      expect(component.selectedReportingRoles()).toEqual([3]);
+      expect(searchSpy).toHaveBeenCalledWith('', '', '', [], [], [3]);
+    });
+
+    it('flattens whole option objects down to ids', () => {
+      component.onPlatformRolesChange([{ id: 7, description: 'Admin' }] as any);
+
+      expect(component.selectedPlatformRoles()).toEqual([7]);
+    });
+  });
+
+  describe('P2-2043 - "Results filtered by" chips', () => {
+    beforeEach(() => {
+      component.userTable = { reset: jest.fn() } as any;
+      mockInitiativesService.allInitiatives.mockReturnValue([P22_GROUP, P25_GROUP]);
+    });
+
+    it('shows no chip row while nothing is filtered', () => {
+      expect(component.activeFilterChips()).toEqual([]);
+      expect(fixture.debugElement.query(By.css('[data-testid="active-filters-row"]'))).toBeNull();
+    });
+
+    it('names the entity by its code, not by its id', () => {
+      component.selectedEntities.set([5]);
+
+      expect(component.activeFilterChips()).toEqual([{ category: 'Entity', label: 'SP05', filterType: 'entity', value: 5 }]);
+    });
+
+    it('renders one chip per selected value and labels it category: value', () => {
+      component.selectedStatus.set('Active');
+      component.selectedCgiar.set('Yes');
+      fixture.detectChanges();
+
+      const chipTexts = fixture.debugElement
+        .queryAll(By.css('.active-filter-chip__text'))
+        .map(chip => chip.nativeElement.textContent.trim());
+      expect(chipTexts).toEqual(['Status: Active', 'Is CGIAR: Yes']);
+    });
+
+    it('removes only the chip that was clicked, leaving the others filtering', () => {
+      component.selectedEntities.set([5, 91]);
+
+      component.removeFilter({ category: 'Entity', label: 'SP05', filterType: 'entity', value: 5 });
+
+      expect(component.selectedEntities()).toEqual([91]);
+      expect(component.activeFilterChips().map(chip => chip.label)).toEqual(['INIT-22']);
+    });
+
+    it('clears a single-value filter through its chip', () => {
+      component.selectedStatus.set('Active');
+
+      component.removeFilter({ category: 'Status', label: 'Active', filterType: 'status' });
+
+      expect(component.selectedStatus()).toBe('');
+      expect(component.activeFilterChips()).toEqual([]);
+    });
+
+    it('Clear filters wipes the two new filters as well', () => {
+      component.selectedPlatformRoles.set([1]);
+      component.selectedReportingRoles.set([3]);
+      component.selectedStatus.set('Active');
+
+      component.onClearFilters();
+
+      expect(component.selectedPlatformRoles()).toEqual([]);
+      expect(component.selectedReportingRoles()).toEqual([]);
+      expect(component.activeFilterChips()).toEqual([]);
+    });
+  });
+
+
+  describe('P2-2043 - closing the Table filters panel', () => {
+    /**
+     * Found in the browser: the panel is absolutely positioned over the chips row, so with the panel
+     * open the chip X buttons are visible but the panel swallows the click. Playwright reported
+     * "subtree intercepts pointer events" on a button it had just confirmed visible and enabled.
+     */
+    const clickOn = (selector: string) => {
+      const element = fixture.debugElement.query(By.css(selector));
+      // Jest, not Jasmine: no withContext here. If the selector stops matching, this is the line
+      // that says so instead of a confusing null dereference below.
+      if (!element) throw new Error(`no element matched ${selector}`);
+      component.onDocumentClick({ target: element.nativeElement } as unknown as MouseEvent);
+      fixture.detectChanges();
+    };
+
+    beforeEach(() => {
+      component.showFiltersPanel.set(true);
+      fixture.detectChanges();
+    });
+
+    it('closes when the click lands outside', () => {
+      component.onDocumentClick({ target: document.body } as unknown as MouseEvent);
+
+      expect(component.showFiltersPanel()).toBe(false);
+    });
+
+    it('stays open when the click lands inside the panel', () => {
+      // The case that matters: if this closed, picking any filter option would dismiss the panel.
+      clickOn('#table-filters-panel');
+
+      expect(component.showFiltersPanel()).toBe(true);
+    });
+
+    it('stays open when the click lands on a filter control inside it', () => {
+      clickOn('#platformRolesSelect');
+
+      expect(component.showFiltersPanel()).toBe(true);
+    });
+
+    it('closes on Escape', () => {
+      component.onEscapeKey();
+
+      expect(component.showFiltersPanel()).toBe(false);
+    });
+
+    it('still closes the assignment overlay, and does so with no event at all', () => {
+      // The existing callers invoke this with no argument; that path must keep working.
+      component.assignmentOverlayOpen.set(true);
+
+      component.onDocumentClick();
+
+      expect(component.assignmentOverlayOpen()).toBe(false);
+    });
+
+    it('leaves the chips reachable once the panel is closed', () => {
+      component.selectedStatus.set('Active');
+      component.onEscapeKey();
+      fixture.detectChanges();
+
+      expect(fixture.debugElement.query(By.css('#table-filters-panel'))).toBeNull();
+      expect(fixture.debugElement.query(By.css('.active-filter-chip__x'))).toBeTruthy();
+    });
+  });
+
 });

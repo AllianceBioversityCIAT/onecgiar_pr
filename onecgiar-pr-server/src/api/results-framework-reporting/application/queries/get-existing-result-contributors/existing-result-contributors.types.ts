@@ -1,5 +1,9 @@
 export type IndicatorNumberTargetValue = string | number | null;
 
+// @akili-spec changes/indicator-reported-results
+export type ExistingResultContributorsScope = 'reviewed' | 'all';
+
+// @akili-spec changes/indicator-reported-results
 export type ExistingResultContributorRecord = {
   result_toc_result_id: number;
   result_id: number;
@@ -12,6 +16,11 @@ export type ExistingResultContributorRecord = {
     status_id?: number;
     obj_status?: {
       status_name?: string;
+    };
+    // @akili-spec changes/indicator-reported-results
+    obj_result_type?: {
+      id?: number;
+      name?: string;
     };
   };
   obj_results_toc_result_indicators?: Array<{

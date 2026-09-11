@@ -1,0 +1,84 @@
+<!-- Mobile trigger -->
+<button type="button" class="bpa-fab" (click)="toggleDrawer()" aria-label="Open progress checklist">
+  <i class="material-icons-round">checklist</i>
+  <span>{{ overallPct() }}%</span>
+</button>
+
+@if (drawerOpen()) {
+  <div class="bpa-drawer-overlay" (click)="closeDrawer()"></div>
+}
+
+<aside
+  class="bpa-aside"
+  [class.bpa-aside--drawer-open]="drawerOpen()"
+  [style.top.px]="asideTopPx()"
+  [style.max-height]="asideMaxHeight()"
+  aria-label="Result progress checklist">
+  <header class="bpa-header">
+    <div class="bpa-header-top">
+      <span class="bpa-eyebrow">Mission checklist</span>
+      <button type="button" class="bpa-drawer-close" (click)="closeDrawer()" aria-label="Close">
+        <i class="material-icons-round">close</i>
+      </button>
+    </div>
+    <div class="bpa-ring-wrap">
+      <app-mds-progress-ring [percentage]="overallPct()" [size]="72"></app-mds-progress-ring>
+      <div class="bpa-ring-meta">
+        <span class="bpa-ring-pct">{{ overallPct() }}%</span>
+        <span class="bpa-ring-status" [attr.data-status]="overallStatus()">{{ overallStatus() }}</span>
+      </div>
+    </div>
+  </header>
+
+  @if (activeSection(); as current) {
+    <section class="bpa-current" aria-labelledby="bpa-current-title">
+      <h2 id="bpa-current-title" class="bpa-section-title">
+        <span class="bpa-pulse" [attr.data-status]="current.status"></span>
+        {{ current.sectionLabel }}
+      </h2>
+      <p class="bpa-section-count">{{ current.filledFields }}/{{ current.totalFields }} fields</p>
+
+      @if (activeFieldGroups().length === 0) {
+        <p class="bpa-empty">No checklist items yet for this section.</p>
+      } @else {
+        @for (group of activeFieldGroups(); track group.group ?? 'root') {
+          @if (group.label) {
+            <h3 class="bpa-group-label">{{ group.label }}</h3>
+          }
+          <ul class="bpa-field-list">
+            @for (field of group.items; track field.key) {
+              <li class="bpa-field" [class.bpa-field--done]="field.filled">
+                <i class="material-icons-round bpa-field-icon">
+                  {{ field.filled ? 'check_circle' : 'radio_button_unchecked' }}
+                </i>
+                <span>{{ field.label }}</span>
+              </li>
+            }
+          </ul>
+        }
+      }
+    </section>
+  }
+
+  <section class="bpa-global" aria-label="All sections">
+    <h2 class="bpa-section-title bpa-section-title--muted">All sections</h2>
+    <ul class="bpa-global-list">
+      @for (s of sectionStatuses(); track trackSection($index, s)) {
+        <li>
+          <button
+            type="button"
+            class="bpa-global-row"
+            [class.bpa-global-row--active]="activeSection()?.sectionName === s.sectionName"
+            (click)="selectSection(s.sectionName)"
+          >
+            <span class="bpa-global-name">{{ s.sectionLabel }}</span>
+            <span class="bpa-global-count">{{ s.filledFields }}/{{ s.totalFields }}</span>
+            <div class="bpa-global-bar" aria-hidden="true">
+              <div class="bpa-global-fill" [style.width.%]="s.percentage"></div>
+            </div>
+          </button>
+        </li>
+      }
+    </ul>
+  </section>
+</aside>

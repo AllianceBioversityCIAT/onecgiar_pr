@@ -4,6 +4,9 @@ import { environment } from '../../../../environments/environment';
 import { Router } from '@angular/router';
 import { LocalStorageUser, UserAuth, UserChangePassword } from '../../interfaces/user.interface';
 import { map } from 'rxjs';
+
+const PENDING_REDIRECT_KEY = 'pr-pending-redirect-url';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -32,9 +35,34 @@ export class AuthService {
     return JSON.parse(localStorage.getItem('user'));
   }
 
+  /**
+   * Deep link the user was denied before authenticating. Kept in sessionStorage rather
+   * than a `?returnUrl=` query param because the Azure AD / Cognito flow leaves the app
+   * entirely and comes back on `/auth`, which would drop any query string we set.
+   */
+  set pendingRedirectUrl(url: string | null) {
+    if (url && url !== '/' && !url.startsWith('/login') && !url.startsWith('/auth')) {
+      sessionStorage.setItem(PENDING_REDIRECT_KEY, url);
+    } else {
+      sessionStorage.removeItem(PENDING_REDIRECT_KEY);
+    }
+  }
+
+  get pendingRedirectUrl(): string | null {
+    return sessionStorage.getItem(PENDING_REDIRECT_KEY);
+  }
+
+  /** Reads and clears the pending deep link — call once, at the post-login redirect. */
+  consumePendingRedirectUrl(): string | null {
+    const url = this.pendingRedirectUrl;
+    sessionStorage.removeItem(PENDING_REDIRECT_KEY);
+    return url;
+  }
+
   logout() {
     this.logOutTawtkTo();
     localStorage.clear();
+    sessionStorage.removeItem(PENDING_REDIRECT_KEY);
     window.location.replace('/login');
   }
 

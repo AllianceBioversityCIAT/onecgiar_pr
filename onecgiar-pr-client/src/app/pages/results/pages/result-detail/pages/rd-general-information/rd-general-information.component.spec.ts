@@ -1,8 +1,9 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RdGeneralInformationComponent } from './rd-general-information.component';
 import { of, throwError } from 'rxjs';
+import { delay } from 'rxjs/operators';
 import { ApiService } from './../../../../../../shared/services/api/api.service';
 import { CustomizedAlertsFsService } from './../../../../../../shared/services/customized-alerts-fs.service';
 import { ScoreService } from './../../../../../../shared/services/global/score.service';
@@ -19,14 +20,21 @@ import { PrFieldValidationsComponent } from './../../../../../../custom-fields/p
 import { DetailSectionTitleComponent } from './../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { YesOrNotByBooleanPipe } from './../../../../../../custom-fields/pipes/yes-or-not-by-boolean.pipe';
 import { ChangeResultTypeModalComponent } from './components/change-result-type-modal/change-result-type-modal.component';
-import { DialogModule } from 'primeng/dialog';
 import { CustomizedAlertsFeService } from './../../../../../../shared/services/customized-alerts-fe.service';
 import { UserSearchService } from './services/user-search-service.service';
+// P2-3663: la directiva REAL, no un stub — sin ella el `<div appFeedbackValidation>` queda vacío y
+// la clase `complete` que el escaneo lee nunca existe, así que el caso no podría dar rojo.
+import { FeedbackValidationDirective } from './../../../../../../shared/directives/feedback-validation.directive';
 import { DataControlService } from './../../../../../../shared/services/data-control.service';
 import { RolesService } from './../../../../../../shared/services/global/roles.service';
 import { InstitutionsService } from './../../../../../../shared/services/global/institutions.service';
 import { PusherService } from './../../../../../../shared/services/pusher.service';
 import { signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
+import { FieldCardComponent } from './../../../../../../custom-fields/field-card/field-card.component';
+import { SectionSkeletonDirective } from './../../../../../../custom-fields/section-skeleton/section-skeleton.directive';
+import { GetImpactAreasScoresService } from './../../../../../../shared/services/global/get-impact-areas-scores.service';
+import { FieldsManagerService } from './../../../../../../shared/services/fields-manager.service';
 
 describe('RdGeneralInformationComponent', () => {
   let component: RdGeneralInformationComponent;
@@ -109,7 +117,7 @@ describe('RdGeneralInformationComponent', () => {
     mockApiService = {
       resultsSE: {
         GET_impactAreasScoresComponentsAll: jest.fn(() => {
-          return of({ response: {} });
+          return of({ response: [] });
         }),
         GET_generalInformationByResultId: jest.fn(() => {
           return of({ response: mockGET_generalInformationByResultIdResponse });
@@ -182,8 +190,10 @@ describe('RdGeneralInformationComponent', () => {
 
     mockDataControlService = {
       isKnowledgeProduct: false,
+      isKnowledgeProductSignal: () => false,
       currentResultSignal: signal<any>({}),
       currentResultSectionName: signal<string>('General information'),
+      fieldFeedbackList: () => [],
       currentResult: {
         result_type_id: 1,
         status: false,
@@ -205,6 +215,7 @@ describe('RdGeneralInformationComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [
         RdGeneralInformationComponent,
+        FeedbackValidationDirective,
         AlertStatusComponent,
         PrRadioButtonComponent,
         PrYesOrNotComponent,
@@ -216,7 +227,9 @@ describe('RdGeneralInformationComponent', () => {
         PrFieldValidationsComponent,
         DetailSectionTitleComponent,
         YesOrNotByBooleanPipe,
-        ChangeResultTypeModalComponent
+        ChangeResultTypeModalComponent,
+        FieldCardComponent,
+        SectionSkeletonDirective
       ],
       providers: [
         {
@@ -259,7 +272,7 @@ describe('RdGeneralInformationComponent', () => {
           useValue: mockPusherService
         }
       ],
-      imports: [HttpClientTestingModule, FormsModule, DialogModule]
+      imports: [HttpClientTestingModule, FormsModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(RdGeneralInformationComponent);
@@ -273,6 +286,375 @@ describe('RdGeneralInformationComponent', () => {
       result_description: ''
     };
     component.isPhaseOpen = true;
+  });
+
+  /**
+   * P2 screenshot bug: the "Which component of the Impact Area…" question rendered as a bare label
+   * + red asterisk with unstyled checkboxes, while its sibling tag question sat in a field card.
+   * These lock the fix AND the rule that must NOT move with it.
+   */
+  describe('Impact Area component checkboxes (P25)', () => {
+    const renderP25GenderComponents = () => {
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25' });
+      // The section GET runs on ngOnInit and REPLACES generalInfoBody, so the tag must come from
+      // the response, not from a field set beforehand.
+      mockApiService.resultsSE.GET_generalInformationByResultId.mockReturnValue(
+        of({ response: { ...mockGET_generalInformationByResultIdResponse, gender_tag_id: 3, gender_impact_area_id: [] } })
+      );
+      (component.getImpactAreasScoresComponents as any).genderTagScoreList = signal([{ id: 1, name: 'Component A' }]);
+      jest
+        .spyOn(component.fieldsManagerSE, 'fields')
+        .mockReturnValue({ '[general-info]-gender_impact_area_id': { label: 'Which component of the Impact Area?', required: true } } as any);
+      fixture.detectChanges();
+    };
+
+    /** The Impact-Area card is the only one projecting the native checkbox group. */
+    const impactAreaCard = (): HTMLElement =>
+      fixture.debugElement
+        .queryAll(By.css('app-field-card'))
+        .map(de => de.nativeElement as HTMLElement)
+        .find(el => !!el.querySelector('input.pr-native-check'));
+
+    it('renders the question inside a field card, like its sibling tag question', () => {
+      renderP25GenderComponents();
+
+      const card = impactAreaCard();
+      expect(card).toBeTruthy();
+      expect(card.querySelector('.fch_title').textContent).toContain('Which component of the Impact Area?');
+      // Requiredness reads as the red asterisk next to the label — the Mandatory/Optional pill
+      // was dropped when the field card lost its status chrome.
+      expect(card.querySelector('.fch_required').textContent.trim()).toBe('*');
+    });
+
+    /**
+     * The card must NOT introduce a scan entry. This field is counted through the hidden
+     * `appFeedbackValidation` div, whose `isComplete` also encodes the conditional rule
+     * (`tag != 3 || !isP25`). A `mandatory` class here would double-count it and make it required
+     * even when the tag is not 3 — a change to the mandatory rules, which are frozen.
+     */
+    it('does not add a mandatory scan class to the checkbox group', () => {
+      renderP25GenderComponents();
+
+      const groupField = impactAreaCard().querySelector('.pr-field');
+      expect(groupField).toBeTruthy();
+      expect(groupField.classList.contains('mandatory')).toBe(false);
+    });
+  });
+
+  /**
+   * P2-3225 — Lead Contact Person as a mandatory MDS field, scoped to P25 from the 2026 phase on.
+   * The gate deliberately pairs portfolio AND year: P22 never requires it, and the closed 2025
+   * cycle keeps it optional so already-reported results stay valid.
+   */
+  describe('Lead Contact Person mandatory gate (P2-3225)', () => {
+    const feedbackBlocks = (): number =>
+      (fixture.nativeElement as HTMLElement).querySelectorAll('[appFeedbackValidation]').length;
+
+    it('is open for a 2026 P25 result', () => {
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+      expect(component.isLeadContactPersonRequired()).toBe(true);
+    });
+
+    it('stays closed for a 2025 P25 result', () => {
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
+      expect(component.isLeadContactPersonRequired()).toBe(false);
+    });
+
+    it('stays closed for P22 even in a 2026 phase', () => {
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P22', phase_year: 2026 });
+      expect(component.isLeadContactPersonRequired()).toBe(false);
+    });
+
+    /**
+     * P2-3663 — the counter must ask for the DIRECTORY MATCH, because that is what the platform
+     * enforces: the live `validation_general_information_P25` carries
+     * `IF(v.phase_year >= 2026, r.lead_contact_person_id IS NOT NULL, TRUE)` (read from the test
+     * database on 11 Sep 2026).
+     * ⚠️ These two cases were briefly written the other way round, accepting a bare name. Measured
+     * consequence: 19 results in phase 2026+ hold a name with no directory id, and the looser rule
+     * called them complete while the platform kept rejecting them — a blocked Submit with nothing
+     * on screen to act on. Asking for the match is what surfaces it.
+     */
+    const contactScanField = (): HTMLElement =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[appFeedbackValidation]'))
+        .find(el => el.getAttribute('labelText') === 'Lead contact person')
+        ?.querySelector('.pr-field') as HTMLElement;
+
+    /** 🛑 El primer `detectChanges` dispara `ngOnInit` → `getSectionInformation()`, que REEMPLAZA
+     *  `generalInfoBody` con la respuesta mockeada. Asignar antes de eso se pierde. */
+    const renderWithContact = (name: string, directoryMatch: unknown = null) => {
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+      fixture.detectChanges();
+      component.generalInfoBody.lead_contact_person = name;
+      (component.generalInfoBody as any).lead_contact_person_data = directoryMatch;
+      fixture.componentRef.changeDetectorRef.markForCheck();
+      // `false` = sin `checkNoChanges`: el GET mockeado repuebla el cuerpo dentro del mismo ciclo,
+      // así que la comprobación de dev ve el binding cambiar y lanza NG0100 por el artefacto.
+      // Y DOS pases: la clase la pinta `ngDoCheck` de la directiva, que va un ciclo por detrás del
+      // input — con uno solo se lee el estado anterior y el caso pasa por la razón equivocada.
+      fixture.detectChanges(false);
+      fixture.detectChanges(false);
+    };
+
+    it('counts a name with no directory match as still missing — the platform rejects it', () => {
+      renderWithContact('Zuniga, Yecksin Mauricio (Alliance Bioversity-CIAT)');
+
+      expect(contactScanField().classList.contains('complete')).toBe(false);
+    });
+
+    it('counts it as complete once the contact is matched in the directory', () => {
+      renderWithContact('Zuniga, Yecksin Mauricio (Alliance Bioversity-CIAT)', { id: 2, display_name: 'Zuniga' } as any);
+
+      expect(contactScanField().classList.contains('complete')).toBe(true);
+    });
+
+    it('counts it as missing when there is no name at all', () => {
+      renderWithContact('   ');
+
+      expect(contactScanField().classList.contains('complete')).toBe(false);
+    });
+
+    it('adds the incomplete-fields entry only from 2026', () => {
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
+      fixture.detectChanges();
+      const before = feedbackBlocks();
+
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+      fixture.detectChanges();
+      expect(feedbackBlocks()).toBe(before + 1);
+    });
+  });
+
+  /**
+   * P2-3201 (INC-158283) — points 1 and 2. The PO scoped the whole ticket to the CURRENT portfolio
+   * on 18 Aug 2026, so every assertion below is paired with its pre-2026 counterpart: results from
+   * earlier phases must keep the inline grey guidance boxes and never see the AI notes.
+   */
+  describe('reporting-form guidance redesign (2026)', () => {
+    const renderForPhase = (phaseYear: number) => {
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: phaseYear });
+      mockApiService.resultsSE.GET_generalInformationByResultId.mockReturnValue(
+        of({ response: { ...mockGET_generalInformationByResultIdResponse, phase_year: phaseYear } })
+      );
+      fixture.detectChanges();
+    };
+
+    const alertTexts = (): string[] =>
+      fixture.debugElement.queryAll(By.css('app-alert-status')).map(de => (de.nativeElement as HTMLElement).textContent ?? '');
+
+    const countAlertsContaining = (needle: string): number => alertTexts().filter(text => text.includes(needle)).length;
+
+    describe('gate', () => {
+      it('is open for a 2026 result', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+        expect(component.guidanceAsTooltip()).toBe(true);
+      });
+
+      it('stays closed for a 2025 result', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
+        expect(component.guidanceAsTooltip()).toBe(false);
+      });
+    });
+
+    describe('point 1 — titles and description', () => {
+      it('renders the AI assistant note exactly once', () => {
+        renderForPhase(2026);
+        expect(countAlertsContaining('AI Assistant for result Titles and Descriptions')).toBe(1);
+      });
+
+      it('places the AI assistant note between "Change result type" and "Title of Result"', () => {
+        renderForPhase(2026);
+        const host = fixture.nativeElement as HTMLElement;
+        const nodes = Array.from(host.querySelectorAll('app-pr-button, app-alert-status, app-pr-input'));
+        const noteIndex = nodes.findIndex(n => (n.textContent ?? '').includes('AI Assistant for result Titles'));
+        const titleIndex = nodes.findIndex(n => n.tagName.toLowerCase() === 'app-pr-input');
+        const buttonIndex = nodes.findIndex(n => n.tagName.toLowerCase() === 'app-pr-button');
+        expect(noteIndex).toBeGreaterThan(buttonIndex);
+        expect(noteIndex).toBeLessThan(titleIndex);
+      });
+
+      it('keeps the AI assistant note off a 2025 result', () => {
+        renderForPhase(2025);
+        expect(countAlertsContaining('AI Assistant for result Titles and Descriptions')).toBe(0);
+      });
+
+      it('quotes the approved copy, including the AI Review call to action', () => {
+        expect(component.aiAssistantTitlesNote).toContain('from 28% to 16%');
+        expect(component.aiAssistantTitlesNote).toContain('<strong>AI Review</strong>');
+        expect(component.aiAssistantTitlesNote).toContain('carefully reviewed, validated, and, where necessary, refined before submission');
+      });
+
+      it('renames the field label to "Description of Result" from 2026', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+        expect(component.fieldsManagerSE.fields()['[general-info]-description'].label).toBe('Description of Result');
+      });
+
+      it('keeps the 2025 label untouched', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
+        expect(component.fieldsManagerSE.fields()['[general-info]-description'].label).toBe('Description');
+      });
+
+      it('moves the field guidance into the tooltip without losing text', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+        const guidance = component.fieldsManagerSE.fields()['[general-info]-title'].description;
+        expect(component.guidanceTooltip('[general-info]-title')).toBe(guidance);
+        expect(component.guidanceTooltip('[general-info]-title')).toContain('non-specialist reader');
+      });
+
+      it('leaves the guidance inline before 2026 (no tooltip trigger)', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
+        expect(component.guidanceTooltip('[general-info]-title')).toBe('');
+        expect(component.guidanceTooltip('[general-info]-description')).toBe('');
+      });
+
+      it('hands the tooltip to the title and description fields and hides their description box', () => {
+        renderForPhase(2026);
+        const title = fixture.debugElement.query(By.css('app-pr-input[fieldRef="[general-info]-title"]'));
+        const description = fixture.debugElement.query(By.css('app-pr-textarea'));
+        expect(title.componentInstance.tooltip()).toContain('non-specialist reader');
+        expect(title.componentInstance.showDescription()).toBe(false);
+        expect(description.componentInstance.tooltip()).toContain('Avoid repetition of the title');
+        expect(description.componentInstance.showDescriptionLabel()).toBe(false);
+      });
+
+      it('keeps the description box on a 2025 result', () => {
+        renderForPhase(2025);
+        const title = fixture.debugElement.query(By.css('app-pr-input[fieldRef="[general-info]-title"]'));
+        expect(title.componentInstance.tooltip()).toBe('');
+        expect(title.componentInstance.showDescription()).toBe(true);
+      });
+    });
+
+    describe('point 2 — Impact Area scores', () => {
+      it('renders the AI-assisted notification exactly once', () => {
+        renderForPhase(2026);
+        expect(countAlertsContaining('AI-assisted Notification for Impact Area Scores')).toBe(1);
+      });
+
+      it('places it above the section heading', () => {
+        renderForPhase(2026);
+        const host = fixture.nativeElement as HTMLElement;
+        const nodes = Array.from(host.querySelectorAll('app-alert-status, h1.pr_label'));
+        const noteIndex = nodes.findIndex(n => (n.textContent ?? '').includes('AI-assisted Notification'));
+        const headingIndex = nodes.findIndex(n => n.tagName.toLowerCase() === 'h1');
+        expect(noteIndex).toBeGreaterThan(-1);
+        expect(noteIndex).toBeLessThan(headingIndex);
+      });
+
+      it('renders it as a static block — no collapse control and no "How it works" link', () => {
+        renderForPhase(2026);
+        const note = fixture.debugElement
+          .queryAll(By.css('app-alert-status'))
+          .find(de => ((de.nativeElement as HTMLElement).textContent ?? '').includes('AI-assisted Notification'));
+        const el = note.nativeElement as HTMLElement;
+        expect(el.querySelector('button')).toBeNull();
+        expect(el.textContent).not.toContain('How it works');
+      });
+
+      it('keeps the AI-assisted notification off a 2025 result', () => {
+        renderForPhase(2025);
+        expect(countAlertsContaining('AI-assisted Notification for Impact Area Scores')).toBe(0);
+      });
+
+      it('quotes the approved copy', () => {
+        expect(component.aiImpactAreaScoresNote).toContain('does not select or recommend a score');
+        expect(component.aiImpactAreaScoresNote).toContain('<strong>AI Review</strong>');
+      });
+
+      it('moves the 0/1/2 scoring guidance into a pinnable tooltip on the heading', () => {
+        renderForPhase(2026);
+        const trigger = fixture.nativeElement.querySelector('h1.impact_scores_heading .sgi-dac-info');
+        expect(trigger).toBeTruthy();
+        expect(fixture.nativeElement.textContent).not.toContain('0 = Not targeted');
+      });
+
+      it('keeps the scoring guidance inline on a 2025 result', () => {
+        renderForPhase(2025);
+        expect(fixture.nativeElement.querySelector('h1.impact_scores_heading')).toBeNull();
+        expect(countAlertsContaining('0 = Not targeted')).toBe(1);
+      });
+
+      it('moves each of the five Impact Areas guidance onto its tag label', () => {
+        renderForPhase(2026);
+        const tooltips = fixture.debugElement
+          .queryAll(By.css('app-pr-radio-button'))
+          .map(de => de.componentInstance.tooltip)
+          .filter((tooltip: string) => !!tooltip);
+        expect(tooltips).toHaveLength(5);
+        expect(countAlertsContaining('Example topics')).toBe(0);
+      });
+
+      it('keeps the five guidance boxes inline on a 2025 result', () => {
+        renderForPhase(2025);
+        const tooltips = fixture.debugElement
+          .queryAll(By.css('app-pr-radio-button'))
+          .map(de => de.componentInstance.tooltip)
+          .filter((tooltip: string) => !!tooltip);
+        expect(tooltips).toHaveLength(0);
+        // Portfolio is still P25 here, so the guidance is the P25 wording ("Example topics"),
+        // one inline box per Impact Area — exactly what the 2026 gate must not disturb.
+        expect(countAlertsContaining('Example topics')).toBe(5);
+      });
+
+      it('returns the guidance verbatim through sectionGuidanceTooltip', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+        expect(component.sectionGuidanceTooltip(component.genderInformation())).toBe(component.genderInformation());
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
+        expect(component.sectionGuidanceTooltip(component.genderInformation())).toBe('');
+      });
+
+      /** The ticket freezes score-2 behaviour: this is presentation only. */
+      it('leaves the score-2 branch untouched', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+        mockApiService.resultsSE.GET_generalInformationByResultId.mockReturnValue(
+          of({ response: { ...mockGET_generalInformationByResultIdResponse, phase_year: 2026, gender_tag_id: 3, gender_impact_area_id: [] } })
+        );
+        (component.getImpactAreasScoresComponents as any).genderTagScoreList = signal([{ id: 1, name: 'Component A' }]);
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('input.pr-native-check')).toBeTruthy();
+        expect(component.generalInfoBody.gender_tag_id).toBe(3);
+      });
+    });
+  });
+
+  describe('sectionLoading (skeleton)', () => {
+    it('starts raised so the empty GeneralInfoBody never paints every field as "mandatory, empty"', () => {
+      expect(component.sectionLoading()).toBe(true);
+    });
+
+    it('is released once the section GET responds', () => {
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    /**
+     * The mask carries `inert`. If the release sat AFTER the response mapping, any exception in
+     * that mapping (`[...institutions_type]` spreads a key the response may not carry) would leave
+     * the section masked and permanently uneditable — worse than the half-filled but usable form
+     * the same exception produced before the skeleton existed.
+     */
+    it('is released BEFORE the response mapping runs, so a mapping error cannot leave the section inert', () => {
+      component.sectionLoading.set(true);
+      let loadingWhileMapping: boolean | null = null;
+      jest.spyOn(component as any, 'normalizeImpactAreaFields').mockImplementation(() => {
+        loadingWhileMapping = component.sectionLoading();
+      });
+
+      component.getSectionInformation();
+
+      expect(loadingWhileMapping).toBe(false);
+    });
+
+    it('is released when the section GET fails, so the skeleton can never get stuck', () => {
+      component.sectionLoading.set(true);
+      mockApiService.resultsSE.GET_generalInformationByResultId = jest.fn(() => throwError(() => new Error('boom')));
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
   });
 
   describe('ngOnInit', () => {
@@ -381,8 +763,25 @@ describe('RdGeneralInformationComponent', () => {
       expect(spyDiscontinuedOptionsToIds).toHaveBeenCalled();
       expect(spyPATCH_generalInformation).toHaveBeenCalled();
       expect(consoleErrorSpy).toHaveBeenCalledWith(errorResponse);
-      expect(spyGetSectionInformation).toHaveBeenCalled();
+      // 🛑 The section must NOT reload when the save was rejected: reloading overwrites
+      // `generalInfoBody` with the server copy and throws away everything the user just typed.
+      expect(spyGetSectionInformation).not.toHaveBeenCalled();
     });
+
+    it('keeps what the user typed on screen when the save is rejected', () => {
+      mockUserSearchService.selectedUser = mockUserSearchResponse.response[0];
+      mockUserSearchService.searchQuery = mockUserSearchResponse.response[0].displayName;
+      component.generalInfoBody.result_title = 'A title the user just typed';
+      component.generalInfoBody.result_description = 'And a description';
+      spyPATCH_generalInformation.mockReturnValue(throwError(() => 'rejected'));
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      component.onSaveSection();
+
+      expect(component.generalInfoBody.result_title).toBe('A title the user just typed');
+      expect(component.generalInfoBody.result_description).toBe('And a description');
+    });
+
   });
 
   describe('descriptionTextInfo', () => {
@@ -885,17 +1284,58 @@ describe('RdGeneralInformationComponent', () => {
       expect(mockApiService.resultsSE.PATCH_generalInformation).not.toHaveBeenCalled();
     });
 
-    it('should skip contact validation when P25 even if searchQuery has text and no selectedUser', () => {
+    // Was pinned the other way round by a coverage sweep: P25 skipped the guard entirely, so the
+    // PATCH went out with `lead_contact_person: null` and the server wrote that over the stored
+    // name and FK. The portfolio is not what decides — whether the user typed the name is.
+    it('should block the save on P25 too when the name was typed and no one was picked', () => {
       mockDataControlService.currentResultSignal.set({ portfolio: 'P25' });
-      mockUserSearchService.searchQuery = 'some text';
+      mockUserSearchService.searchQuery = 'Maria Perez';
       mockUserSearchService.selectedUser = null;
+      mockUserSearchService.hasValidContact = true;
+      mockUserSearchService.showContactError = false;
       component.generalInfoBody.institutions_type = [];
       component.generalInfoBody.discontinued_options = [];
       component.generalInfoBody.is_discontinued = false;
 
       component.onSaveSection();
 
+      expect(mockUserSearchService.hasValidContact).toBe(false);
+      expect(mockUserSearchService.showContactError).toBe(true);
+      expect(mockApiService.resultsSE.PATCH_generalInformation).not.toHaveBeenCalled();
+    });
+
+    // A free-text contact loaded with the result (every result older than the AD link, and anything
+    // reported through the W3/Bilateral API) has no directory match and the user cannot produce one.
+    // Blocking on it made the whole section unsaveable while accusing them of someone else's input.
+    it.each(['P22', 'P25'])('should save a hydrated free-text contact on %s', portfolio => {
+      mockDataControlService.currentResultSignal.set({ portfolio });
+      mockUserSearchService.searchQuery = 'Consultant Without AD Account';
+      mockUserSearchService.selectedUser = null;
+      component.leadContactPersonField = { queryCameFromHydration: true } as any;
+      component.generalInfoBody.institutions_type = [];
+      component.generalInfoBody.discontinued_options = [];
+      component.generalInfoBody.is_discontinued = false;
+
+      component.onSaveSection();
+
+      expect(mockUserSearchService.showContactError).toBeFalsy();
       expect(mockApiService.resultsSE.PATCH_generalInformation).toHaveBeenCalled();
+    });
+
+    it('should block again once the user types over a hydrated name', () => {
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25' });
+      mockUserSearchService.searchQuery = 'Maria';
+      mockUserSearchService.selectedUser = null;
+      // What `onSearchInput` does on the first keystroke: the name is no longer hydrated.
+      component.leadContactPersonField = { queryCameFromHydration: false } as any;
+      component.generalInfoBody.institutions_type = [];
+      component.generalInfoBody.discontinued_options = [];
+      component.generalInfoBody.is_discontinued = false;
+
+      component.onSaveSection();
+
+      expect(mockUserSearchService.showContactError).toBe(true);
+      expect(mockApiService.resultsSE.PATCH_generalInformation).not.toHaveBeenCalled();
     });
   });
 
@@ -1088,12 +1528,189 @@ describe('RdGeneralInformationComponent', () => {
       component.generalInfoBody.result_code = '123';
       const spy = jest.spyOn(component, 'getSectionInformation');
 
-      // Trigger the effect by creating a new component - the effect runs during construction
-      // We test the existing component instead
+      // In Angular 21 the constructor effect runs on flush; with result_code set the guard passes
+      // and getSectionInformation is invoked. Flush also triggers change detection: the
+      // change-result-type modal is bound to generalInfoBody and, on ngOnChanges, syncs
+      // result_code from resultsSE.currentResultCode — provide it so the value is preserved.
+      mockApiService.resultsSE.currentResultCode = '123';
+
       TestBed.flushEffects();
-      // The effect ran during component creation with no result_code, so it won't call getSectionInformation
-      // We verify the method exists and the result_code guard works
+
+      expect(spy).toHaveBeenCalled();
       expect(component.generalInfoBody.result_code).toBe('123');
     });
+  });
+  /**
+   * P2-3292 (QA 7-Sep-2026) — "Is this innovation active and receiving investment?" rendered BLANK
+   * after every reload of a discontinued result, while the ticked reason, the merge/split targets
+   * and the DISCONTINUED badge all came back correctly.
+   *
+   * The asymmetry IS the diagnosis: `is_discontinued` is a MySQL `tinyint(1)`, so it arrives as the
+   * NUMBER 1 (measured on prtest the same day: result 6432 answers `is_discontinued: 1` on this
+   * very endpoint). Everything downstream reads it with truthiness, which `1` satisfies. Only
+   * `app-pr-radio-button`, which matches its `optionValue` (`false` / `true`) by identity, cannot.
+   */
+  describe('P2-3292 — is_discontinued must reach the radio as a real boolean', () => {
+    const loadWith = (isDiscontinued: any) => {
+      mockApiService.resultsSE.GET_generalInformationByResultId.mockReturnValue(
+        of({ response: { ...mockGET_generalInformationByResultIdResponse, is_discontinued: isDiscontinued } })
+      );
+      component.getSectionInformation();
+      return component.generalInfoBody.is_discontinued as any;
+    };
+
+    it('turns the tinyint 1 the server sends into true, so "No" comes back selected', () => {
+      expect(loadWith(1)).toBe(true);
+    });
+
+    it('turns 0 into false, so "Yes" comes back selected', () => {
+      expect(loadWith(0)).toBe(false);
+    });
+
+    it('leaves an actual boolean untouched', () => {
+      expect(loadWith(true)).toBe(true);
+      expect(loadWith(false)).toBe(false);
+    });
+
+    // 🥇 The block is mandatory and `[isComplete]="is_discontinued != null"` is what reports it as
+    // answered. Collapsing "never answered" to false would tick a question nobody has answered.
+    it('keeps an unanswered question null, never false', () => {
+      expect(loadWith(null)).toBeNull();
+      expect(loadWith(undefined)).toBeNull();
+    });
+  });
+
+  /**
+   * `UCA-T-6` — `CanComponentDeactivate` wiring. `SectionDirtyTrackerService` is component-scoped
+   * (`providers: [SectionDirtyTrackerService]`), so each spec gets a fresh instance via
+   * `TestBed.createComponent` in `beforeEach` — no cross-test snapshot leakage.
+   *
+   * REWORK (attempt 2): `GET_investmentDiscontinuedOptions` is mocked with a genuine async
+   * boundary (`delay(0)`, driven with `fakeAsync`/`tick`) instead of a synchronous `of(...)`.
+   * A synchronous mock collapses the real production race — `getSectionInformation()`'s
+   * `next` handler calling `GET_investmentDiscontinuedOptions()`, whose OWN callback
+   * (`convertChecklistToDiscontinuedOptions()`) asynchronously mutates
+   * `generalInfoBody.discontinued_options` — into something that happens to pass even when the
+   * implementation snapshots too early.
+   */
+  describe('CanComponentDeactivate (UCA-T-6)', () => {
+    /**
+     * 🛑 Deliberately NOT reusing the file-level `mockGET_generalInformationByResultIdResponse` /
+     * `mockGET_investmentDiscontinuedOptionsResponse` consts here.
+     *
+     * `getSectionInformation()` assigns `this.generalInfoBody = response` — BY REFERENCE, not a
+     * clone — and `convertChecklistToDiscontinuedOptions()` then reassigns `discontinued_options`
+     * directly onto that same object. Dozens of OTHER tests earlier in this file call
+     * `getSectionInformation()` against those exact shared consts, which permanently mutates them
+     * in place (their `discontinued_options` converges to the catalogue shape). A `JSON.parse(
+     * JSON.stringify(mockGET_...))` "fresh copy" still deep-copies FROM that already-polluted
+     * source — confirmed by running this describe block both in isolation (fails, as it must,
+     * against the pre-fix code) and as part of the full suite (spuriously passed even against the
+     * pre-fix code, because the shared const's `discontinued_options` had already converged to
+     * `id: 1` by the time this describe ran). These two literals are local to this describe block
+     * and never touched by `getSectionInformation()` elsewhere, so they stay reliably distinct
+     * (`id: 3` loaded vs. `id: 1` catalogue) regardless of suite execution order.
+     */
+    const loadedDiscontinuedOptions = () => [{ investment_discontinued_option_id: 3, value: true, is_active: true }];
+    const catalogueDiscontinuedOptions = () => [
+      { investment_discontinued_option_id: 1, value: true, is_active: false, description: 'desc1' }
+    ];
+
+    beforeEach(() => {
+      mockApiService.resultsSE.GET_generalInformationByResultId = jest.fn(() =>
+        of({
+          response: {
+            phase_year: '2023',
+            is_krs: false,
+            institutions_type: [],
+            institutions: [],
+            discontinued_options: loadedDiscontinuedOptions()
+          }
+        })
+      );
+      mockApiService.resultsSE.GET_investmentDiscontinuedOptions = jest.fn(() =>
+        of({ response: catalogueDiscontinuedOptions() }).pipe(delay(0))
+      );
+    });
+
+    it('is false right after the load flow genuinely completes (including the async discontinued-options catalogue)', fakeAsync(() => {
+      component.getSectionInformation();
+      // Nothing has resolved yet: the discontinued-options GET is still in flight.
+      tick();
+
+      expect(component.hasUnsavedChanges()).toBe(false);
+    }));
+
+    /**
+     * Falsifying input: snapshotting `generalInfoBody` only once (at load) and never again after
+     * save would make this true right after load-then-edit, which is correct here — but combined
+     * with the next test would prove the save-branch snapshot never actually reset the baseline.
+     */
+    it('is true after editing a bound field', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+
+      // `getSectionInformation()` assigns `generalInfoBody = response`, and every test in this
+      // file shares the SAME `mockGET_generalInformationByResultIdResponse` object reference — so
+      // a fixed literal here could match a value a PRIOR test already left mutated onto that same
+      // object, producing a false pass. Appending guarantees an actual change regardless of order.
+      component.generalInfoBody.result_name = `${component.generalInfoBody.result_name ?? ''}-edited`;
+
+      expect(component.hasUnsavedChanges()).toBe(true);
+    }));
+
+    /**
+     * Falsifying input: snapshotting `generalInfoBody` only once (at load) and never again after a
+     * successful save would report `true` here.
+     *
+     * REWORK (attempt 2): the follow-up reload that `performSave()`'s `tap` triggers
+     * (`getSectionInformation()`) is forced to FAIL entirely — its underlying
+     * `GET_generalInformationByResultId` throws — so this test cannot pass because of the
+     * reload's own re-snapshot. The assertion runs at the exact instant `saveSection()` emits
+     * `true`, proving the DIRECT `dirtyTracker.snapshot(...)` inside `performSave()`'s `tap` is
+     * what makes it correct, not the (here failing) delegated reload.
+     */
+    it('is false right when saveSection() emits true, even when the follow-up reload fails entirely', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+      component.generalInfoBody.result_name = `${component.generalInfoBody.result_name ?? ''}-edited`;
+      expect(component.hasUnsavedChanges()).toBe(true);
+
+      mockApiService.resultsSE.GET_generalInformationByResultId.mockReturnValue(throwError(() => new Error('reload failed')));
+
+      let sawTrue = false;
+      component.saveSection().subscribe(result => {
+        sawTrue = result === true;
+        expect(component.hasUnsavedChanges()).toBe(false);
+      });
+      tick();
+
+      expect(sawTrue).toBe(true);
+    }));
+
+    /**
+     * Falsifying input: letting the underlying HTTP error propagate as an unhandled observable
+     * error (instead of resolving `false`) would break `UnsavedChangesGuard`'s `switchMap`/subscribe
+     * chain rather than cleanly blocking navigation. Also confirms the existing "don't reload a
+     * rejected save" behaviour survives the `Observable<boolean>` wrapper unchanged.
+     */
+    it('saveSection() resolves false (not throws) on a failing PATCH_generalInformation, without reloading the section', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+      const reloadSpy = jest.spyOn(component, 'getSectionInformation');
+      mockApiService.resultsSE.PATCH_generalInformation.mockReturnValue(throwError(() => new Error('save failed')));
+
+      let result: boolean | undefined;
+      let errored = false;
+      component.saveSection().subscribe({
+        next: value => (result = value),
+        error: () => (errored = true)
+      });
+      tick();
+
+      expect(errored).toBe(false);
+      expect(result).toBe(false);
+      expect(reloadSpy).not.toHaveBeenCalled();
+    }));
   });
 });

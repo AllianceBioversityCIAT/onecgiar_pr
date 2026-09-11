@@ -10,6 +10,7 @@ import {
   Version,
   HttpCode,
   HttpStatus,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ResultsService } from './results.service';
 import { CreateResultDto } from './dto/create-result.dto';
@@ -23,6 +24,7 @@ import { ReviewDecisionDto } from './dto/review-decision.dto';
 import { ReviewUpdateDto } from './dto/review-update.dto';
 import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
 import { UpdateResultTitleDto } from './dto/update-result-title.dto';
+import { UpdateBilateralGeneralInfoDto } from './dto/update-bilateral-general-info.dto';
 import { BasicReportFiltersDto } from './dto/basic-report-filters.dto';
 import { ReportingFullMetadataExportService } from './services/reporting-full-metadata-export.service';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
@@ -84,7 +86,7 @@ export class ResultsController {
   })
   @ApiParam({ name: 'id', type: Number, required: true })
   @ApiOkResponse({ description: 'Result found.' })
-  findResultById(@Param('id') id: number) {
+  findResultById(@Param('id', ParseIntPipe) id: number) {
     return this.resultsService.findResultById(id);
   }
 
@@ -267,6 +269,14 @@ export class ResultsController {
     description:
       'When true, restrict to results with an active submission row for the authenticated user.',
   })
+  // @akili-spec changes/my-work-board
+  @ApiQuery({
+    name: 'include_completeness',
+    type: Boolean,
+    required: false,
+    description:
+      'When true, every item carries a `completeness: { complete, total, missing } | null` field computed for eligible items only (status_id 1 Editing or 8 Draft, non-IPSR-package result types), capped per request. Absent or false leaves the response byte-identical to the default payload (MWB-R-8).',
+  })
   findAllResultRolesFiltered(
     @Param('userId') userId: number,
     @Query() query: Record<string, any>,
@@ -347,12 +357,42 @@ export class ResultsController {
   @ApiOperation({
     summary: 'Perform deep result search',
     description:
-      'Runs the legacy deep search pipeline using the provided title.',
+      'Similar-results search by title across current results and non-migrated legacy results. ' +
+      'Serves the "similar results" list of the result creator (P2-3527, replacing Elastic). ' +
+      'Exact title matches come first, then prefix matches; the page is capped (20 by default, 50 max). ' +
+      'Responds 404 with "Results Not Found" when nothing matches.',
   })
   @ApiParam({ name: 'title', type: String, required: true })
+  @ApiQuery({
+    name: 'type',
+    type: String,
+    required: false,
+    description:
+      'Legacy indicator type (Innovation, Policy, OICR). Narrows the legacy rows only.',
+  })
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    required: false,
+    description: 'Maximum rows to return. Defaults to 20, capped at 50.',
+  })
   @ApiOkResponse({ description: 'Deep search results retrieved.' })
-  depthSearch(@Param('title') title: string) {
-    return this.resultsService.findAllResultsLegacyNew(title);
+  depthSearch(
+    @Param('title') title: string,
+    @Query('type') type?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const parsedLimit =
+      limit !== undefined && limit !== null ? Number(limit) : undefined;
+    const normalizedLimit =
+      typeof parsedLimit === 'number' && Number.isFinite(parsedLimit)
+        ? parsedLimit
+        : undefined;
+
+    return this.resultsService.findAllResultsLegacyNew(title, {
+      type,
+      limit: normalizedLimit,
+    });
   }
 
   @Get('get/institutions/all')
@@ -709,6 +749,55 @@ export class ResultsController {
   }
 
   @Version('2')
+  @Get('get/qa-innovation-development-results')
+  @ApiOperation({
+    summary: "Get QA'd Innovation Development results from past phases",
+    description:
+      "P2-3420 / P2-3421 — single catalogue backing the 'link to a QA'd Innovation Development result' dropdown on both W1/W2 creation surfaces. Portfolio-wide: no Science Program / Accelerator restriction.",
+  })
+  @ApiOkResponse({ description: 'Linkable Innovation Development results.' })
+  getQaInnovationDevelopmentResults() {
+    return this.resultsService.getQaInnovationDevelopmentResults();
+  }
+
+  @Version('2')
+  @Get('get/merge-split-target-innovations/:resultId')
+  @ApiOperation({
+    summary:
+      'Get the innovations a discontinued innovation may have merged into or split into',
+    description:
+      "P2-3292 Steps 3A / 3B — backs the searchable multi-select shown when a reporter closes an innovation and declares where it continued. QA'd or Approved, never discontinued, one row per innovation, portfolio-wide. The result being discontinued is excluded by code so it cannot point at itself.",
+  })
+  @ApiParam({
+    name: 'resultId',
+    description: 'The innovation being discontinued.',
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Type-ahead over innovation id and title.',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum rows returned. Defaults to 50.',
+    type: Number,
+  })
+  @ApiOkResponse({ description: 'Eligible merge / split target innovations.' })
+  getMergeSplitTargetInnovations(
+    @Param('resultId', ParseIntPipe) resultId: number,
+    @Query('search') search?: string,
+    @Query('limit') limit?: number,
+  ) {
+    return this.resultsService.getMergeSplitTargetInnovations(
+      resultId,
+      search,
+      limit === undefined ? undefined : Number(limit),
+    );
+  }
+
+  @Version('2')
   @Get('ai/context')
   @ApiOperation({
     summary: 'Get AI context',
@@ -739,6 +828,34 @@ export class ResultsController {
     return this.resultsService.getPendingReviewCount(programId);
   }
 
+  @Get('bilateral-center-results')
+  @ApiOperation({
+    summary: 'Get bilateral results by center and phase',
+    description:
+      'Returns all results (source API and Result) where the given center participates as lead or contributing center in the specified reporting phase. The response includes `source` and `is_leading_result` so the client can apply frontend filters.',
+  })
+  @ApiQuery({
+    name: 'centerId',
+    type: String,
+    required: true,
+    description: 'Numeric CLARISA center ID',
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: String,
+    required: true,
+    description: 'Reporting phase (version) ID',
+  })
+  @ApiOkResponse({
+    description: 'Bilateral center results retrieved successfully.',
+  })
+  async getBilateralCenterResults(
+    @Query('centerId') centerId: string,
+    @Query('versionId') versionId: string,
+  ) {
+    return this.resultsService.getBilateralCenterResults(centerId, versionId);
+  }
+
   @Get('by-program-and-centers')
   @ApiOperation({
     summary: 'Get results by program and centers',
@@ -760,16 +877,36 @@ export class ResultsController {
       'Center IDs to filter by. Can be a single ID or comma-separated values.',
     example: 'CT01,CT02,CT03',
   })
+  @ApiQuery({
+    name: 'versionId',
+    type: String,
+    required: false,
+    description:
+      'Phase/version ID to filter results by (e.g., active reporting cycle).',
+    example: '36',
+  })
+  @ApiQuery({
+    name: 'statusIds',
+    type: String,
+    required: false,
+    description:
+      'Comma-separated status IDs or "all" to filter by specific statuses (defaults to all active statuses except discontinued).',
+    example: '1,5,6,7',
+  })
   @ApiOkResponse({
     description: 'Results retrieved and grouped by project successfully.',
   })
   async getResultsByProgramAndCenters(
     @Query('programId') programId: string,
     @Query('centerIds') centerIds?: string | string[],
+    @Query('versionId') versionId?: string,
+    @Query('statusIds') statusIds?: string,
   ) {
     return this.resultsService.getResultsByProgramAndCenters(
       programId,
       centerIds,
+      versionId,
+      statusIds,
     );
   }
 
@@ -789,8 +926,11 @@ export class ResultsController {
   @ApiOkResponse({
     description: 'Bilateral result retrieved successfully.',
   })
-  async getBilateralResultById(@Param('resultId') resultId: number) {
-    return this.resultsService.getBilateralResultById(resultId);
+  async getBilateralResultById(
+    @Param('resultId') resultId: number,
+    @Query('versionId') versionId?: number,
+  ) {
+    return this.resultsService.getBilateralResultById(resultId, versionId);
   }
 
   @Patch('bilateral/review-update/data-standard/:resultId')
@@ -880,6 +1020,24 @@ export class ResultsController {
     );
   }
 
+  @Get('bilateral/:resultId/review-history')
+  @ApiOperation({
+    summary: 'Get the review history of a bilateral result',
+    description:
+      'Returns the review trail (APPROVE / REJECT / UPDATE entries) for a bilateral result, newest first. The rejection justification is carried in each entry comment.',
+  })
+  @ApiParam({
+    name: 'resultId',
+    type: Number,
+    required: true,
+    description: 'Result identifier',
+    example: 123,
+  })
+  @ApiOkResponse({ description: 'Review history retrieved.' })
+  async getBilateralReviewHistory(@Param('resultId') resultId: number) {
+    return this.resultsService.getBilateralReviewHistory(resultId);
+  }
+
   @Patch('bilateral/:resultId/title')
   @ApiOperation({
     summary: 'Update bilateral result title',
@@ -907,5 +1065,21 @@ export class ResultsController {
       updateResultTitleDto.title,
       user,
     );
+  }
+
+  @Patch('bilateral/general-info/:resultId')
+  @ApiOperation({
+    summary: 'Update bilateral result general info',
+    description:
+      'Updates the title and/or description of a W3/bilateral result. Each field is optional.',
+  })
+  @ApiParam({ name: 'resultId', type: Number, required: true })
+  @ApiBody({ type: UpdateBilateralGeneralInfoDto })
+  async updateBilateralGeneralInfo(
+    @Param('resultId') resultId: number,
+    @Body() dto: UpdateBilateralGeneralInfoDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.resultsService.updateBilateralGeneralInfo(resultId, dto, user);
   }
 }

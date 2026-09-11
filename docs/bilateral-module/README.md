@@ -19,7 +19,7 @@ This document set explains how the PRMS bilateral module works and how to rebuil
 | Backend lifecycle/review | `onecgiar-pr-server/src/api/results/` |
 | Payload contract | `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` |
 | Project product baseline | `docs/prd.md` |
-| Project technical baseline | `docs/detailed-design/detailed-design.md` |
+| Project technical baseline | `docs/trd/trd.md` |
 
 Read the local `AGENTS.md` or `CLAUDE.md` files in those source folders before changing implementation. The frontend folder also contains a detailed replication guide in `CLAUDE.md`; this document set extracts the cross-stack essentials into `docs/`.
 

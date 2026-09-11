@@ -1,82 +1,84 @@
-@use '../../../../../../../styles/fonts.scss' as fonts;
+// Visual styling lives in Tailwind utilities on the template.
 
-h1,
-h2,
+// The Angular host is display:inline by default, so it collapsed shorter than
+// its own content and the card overflowed onto the next grid row. Make it a
+// block that fills its grid cell so the inner h-full card sizes correctly and
+// same-row cards share height.
+:host {
+  display: flex;
+  flex-direction: column;
+}
+
 h3,
-h4,
-h5,
-h6,
 p {
   margin: 0;
 }
 
-.framework-reporting-card-item {
-  background-color: var(--pr-color-white);
-  height: 100%;
-  min-height: 126px;
-  padding: 20px 16px;
-  box-shadow: 0px 1.76px 7.03px 0px rgba(var(--pr-color-secondary-rgb), 0.2);
-  border-radius: 10px;
-  border: 1px solid var(--pr-color-accents-2);
-  border-width: 1.17px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  align-items: flex-start;
-  gap: 14px;
-  width: 100%;
-  cursor: pointer;
+// Status bar + chips block: animates open/closed with the page-wide Compact
+// toggle. The reveal is a LEFT-TO-RIGHT wipe (clip-path) that runs across the
+// whole animation, while the row height (grid-template-rows 0fr→1fr) + top
+// spacing grow/collapse in parallel so the card actually shrinks.
+.pr-card-meta {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin-top: 0.5rem;
 
-  &:hover {
-    background-color: var(--pr-color-accents-1);
+  &__inner {
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  // animate.enter — block appears (Expanded view): wipe left → right
+  &--enter {
+    animation: pr-card-meta-in 360ms cubic-bezier(0.33, 0, 0.2, 1);
+  }
+
+  // animate.leave — block hides (Compact view): wipe erases left → right.
+  // `forwards` holds the end state until Angular removes the node on animationend.
+  &--leave {
+    animation: pr-card-meta-out 320ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
   }
 }
 
-.framework-reporting-card-item_header {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
-  height: 100%;
+// inset(top right bottom left): right:100% keeps only the left edge visible;
+// animating right 100% → 0 reveals the content left-to-right.
+@keyframes pr-card-meta-in {
+  from {
+    grid-template-rows: 0fr;
+    margin-top: 0;
+    clip-path: inset(0 100% 0 0);
+    opacity: 0.5;
+  }
+  to {
+    grid-template-rows: 1fr;
+    margin-top: 0.5rem;
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
 }
 
-.framework-reporting-card-item_icon-placeholder {
-  width: 24px;
-  height: 24px;
-  min-width: 24px;
-  min-height: 24px;
-  background-color: var(--pr-color-neutral-1000);
-  border-radius: 4px;
+// left:100% eats the content from the left edge, so the wipe erases left-to-right.
+@keyframes pr-card-meta-out {
+  from {
+    grid-template-rows: 1fr;
+    margin-top: 0.5rem;
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+  to {
+    grid-template-rows: 0fr;
+    margin-top: 0;
+    clip-path: inset(0 0 0 100%);
+    opacity: 0.5;
+  }
 }
 
-.framework-reporting-card-item_header_desc {
-  @include fonts.pr-typography('body-2');
-  font-weight: 400;
-  color: var(--pr-color-accents-6);
-}
-
-.framework-reporting-card-item_header_title {
-  @include fonts.pr-typography('h3');
-  font-weight: 600;
-  color: var(--pr-color-secondary-400);
-}
-
-.framework-reporting-card-item_progress {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-
-.framework-reporting-card-item_progress_title {
-  @include fonts.pr-typography('body-2');
-  font-weight: 500;
-  color: var(--pr-color-accents-6);
-  margin-bottom: 10px;
-}
-
-.framework-reporting-card-item_progress_value {
-  @include fonts.pr-typography('body-2');
-  font-weight: 600;
-  color: var(--pr-color-primary-300);
+@media (prefers-reduced-motion: reduce) {
+  .pr-card-meta--enter,
+  .pr-card-meta--leave {
+    animation-duration: 1ms;
+  }
 }

@@ -10,6 +10,22 @@ export class ContributorsAndPartnersBody extends TheoryOfChangeBody {
   owner_initiative: OwnerInitiative;
   has_innovation_link: boolean = false;
   linked_results: any[] = [];
+  /**
+   * P2-2932 — the Section 2 vs Section 4 consistency check, computed server-side.
+   *
+   * Null until the payload arrives, and null on an older server. Advisory only: the UI warns, it
+   * never rewrites the field and never blocks saving. `REJECTED` is the single exception the PO
+   * carved out (AC1: a Knowledge Product outside 0/1).
+   */
+  contribution_consistency: {
+    status: 'MATCH' | 'DIFFERS' | 'ALLOWED_EXCEPTION' | 'NOTHING_TO_COMPARE' | 'REJECTED';
+    expected: number | null;
+    reported: number | null;
+    boxesCounted: number;
+    boxesTotal: number;
+    boxesOfAnotherType: number;
+    defaultValue: number | null;
+  } | null = null;
   bilateral_projects: any[] = [];
   contributingInitiativeNew: any[] = [];
 }

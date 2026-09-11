@@ -1,0 +1,83 @@
+{
+  "items": [
+    {
+      "uuid": "f96aaf9c-d9f4-49e8-8280-02b5bace1635",
+      "handle": "10568/185069",
+      "handleUrl": "https://hdl.handle.net/10568/185069",
+      "itemUrl": "https://cgspace.cgiar.org/items/f96aaf9c-d9f4-49e8-8280-02b5bace1635",
+      "title": "Using biorational pesticides to control aphids: Lessons for fine-tuning banana aphid management",
+      "type": "Journal Article",
+      "year": 2026,
+      "authors": [
+        "Ogwal, Geofrey",
+        "Ocimati, Walter",
+        "Omondi, Bonaventure A.",
+        "Adjalla, Christian",
+        "Wasswa, Peter",
+        "Blomme, Guy"
+      ],
+      "affiliations": [
+        "International Center for Tropical Agriculture",
+        "Bioversity International",
+        "Makerere University"
+      ],
+      "countries": [
+        "Uganda"
+      ],
+      "doi": "https://doi.org/10.1016/j.cropro.2026.107795",
+      "uri": "https://hdl.handle.net/10568/185069",
+      "repository": "cgspace"
+    },
+    {
+      "uuid": "53d67b9b-bd42-4337-b8ee-3ac465bbe47b",
+      "handle": "20.500.11766/70590",
+      "handleUrl": "https://hdl.handle.net/20.500.11766/70590",
+      "itemUrl": "https://repo.mel.cgiar.org/items/53d67b9b-bd42-4337-b8ee-3ac465bbe47b",
+      "title": "Effect of Farming with Alternative Pollinators \u201cFAP\u201d on faba bean crop in two different regions",
+      "type": "Internal Report",
+      "year": 2026,
+      "authors": [
+        "Bencharki, Youssef",
+        "Tsivelikas, Athanasios",
+        "Kemal, Seid Ahmed",
+        "Kehel, Zakaria"
+      ],
+      "affiliations": [
+        "International Center for Agricultural Research in the Dry Areas - ICARDA"
+      ],
+      "countries": [
+        "MA"
+      ],
+      "doi": null,
+      "uri": "https://hdl.handle.net/20.500.11766/70590",
+      "repository": "melspace"
+    }
+  ],
+  "page": {
+    "number": 0,
+    "size": 10,
+    "totalElements": 2,
+    "totalPages": 1,
+    "hasMore": false
+  },
+  "sources": [
+    {
+      "repository": "cgspace",
+      "status": "ok",
+      "total": 1,
+      "hasMore": false
+    },
+    {
+      "repository": "melspace",
+      "status": "ok",
+      "total": 1,
+      "hasMore": false
+    },
+    {
+      "repository": "worldfish",
+      "status": "ok",
+      "total": 0,
+      "hasMore": false
+    }
+  ]
+}

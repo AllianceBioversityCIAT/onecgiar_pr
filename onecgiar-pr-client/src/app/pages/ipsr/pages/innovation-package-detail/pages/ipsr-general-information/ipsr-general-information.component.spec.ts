@@ -19,6 +19,7 @@ import { UserSearchService } from '../../../../../results/pages/result-detail/pa
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { IpsrCompletenessStatusService } from '../../../../services/ipsr-completeness-status.service';
 import { GetImpactAreasScoresService } from '../../../../../../shared/services/global/get-impact-areas-scores.service';
+import { environment } from '../../../../../../../environments/environment';
 
 describe('IpsrGeneralInformationComponent', () => {
   let component: IpsrGeneralInformationComponent;
@@ -115,6 +116,8 @@ describe('IpsrGeneralInformationComponent', () => {
     mockFieldsManagerService = {
       isP25: jest.fn().mockReturnValue(false),
       isP22: jest.fn().mockReturnValue(true),
+      // P2-3225: gates the Lead Contact Person asterisk and its incomplete-fields entry.
+      isLeadContactPersonMandatory2026: jest.fn().mockReturnValue(false),
       fields: jest.fn().mockReturnValue({})
     };
 
@@ -592,6 +595,219 @@ describe('IpsrGeneralInformationComponent', () => {
       component.showAlerts();
 
       expect(consoleSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('evidenceSectionUrl', () => {
+    it('should point to step 3 of the innovation use pathway, not to general information', () => {
+      mockIpsrDataControlService.resultInnovationCode = 'IP-123';
+      mockIpsrDataControlService.resultInnovationPhase = '5';
+
+      expect(component.evidenceSectionUrl).toBe(`${environment.frontBaseUrl}ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3?phase=5`);
+    });
+
+    it('should omit the phase query param when the phase is not available (no "undefined" in the URL)', () => {
+      mockIpsrDataControlService.resultInnovationCode = 'IP-123';
+      mockIpsrDataControlService.resultInnovationPhase = undefined;
+
+      expect(component.evidenceSectionUrl).toBe(`${environment.frontBaseUrl}ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3`);
+      expect(component.evidenceSectionUrl).not.toContain('undefined');
+    });
+
+    it('should read the code and phase at call time (not frozen at construction)', () => {
+      mockIpsrDataControlService.resultInnovationCode = 'FIRST';
+      mockIpsrDataControlService.resultInnovationPhase = '1';
+      expect(component.evidenceSectionUrl).toContain('/ipsr/detail/FIRST/');
+
+      mockIpsrDataControlService.resultInnovationCode = 'SECOND';
+      mockIpsrDataControlService.resultInnovationPhase = '2';
+      expect(component.evidenceSectionUrl).toBe(`${environment.frontBaseUrl}ipsr/detail/SECOND/ipsr-innovation-use-pathway/step-3?phase=2`);
+    });
+  });
+
+  describe('showAlerts() evidence links (P2-3210 AC3)', () => {
+    const alertSelectors = ['#gender_tag_alert', '#climate_change_tag_alert', '#nutrition_tag_alert', '#environment_tag_alert', '#poverty_tag_alert'];
+
+    it('should point every score-2 alert to the innovation use pathway step 3', () => {
+      mockIpsrDataControlService.resultInnovationCode = 'IP-123';
+      mockIpsrDataControlService.resultInnovationPhase = '5';
+
+      component.showAlerts();
+
+      const calls = mockApiService.alertsFs.show.mock.calls.map(call => call[0]);
+      expect(calls).toHaveLength(5);
+      expect(calls.map(alert => alert.querySelector)).toEqual(alertSelectors);
+      calls.forEach(alert => {
+        expect(alert.description).toContain(`href="${environment.frontBaseUrl}ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3?phase=5"`);
+        expect(alert.description).not.toContain('/general-information');
+      });
+    });
+
+    it('should never render "undefined" in the evidence link when the phase is missing', () => {
+      mockIpsrDataControlService.resultInnovationCode = 'IP-123';
+      mockIpsrDataControlService.resultInnovationPhase = undefined;
+
+      component.showAlerts();
+
+      const calls = mockApiService.alertsFs.show.mock.calls.map(call => call[0]);
+      expect(calls).toHaveLength(5);
+      calls.forEach(alert => {
+        expect(alert.description).toContain(`href="${environment.frontBaseUrl}ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3"`);
+        expect(alert.description).not.toContain('undefined');
+      });
+    });
+  });
+
+  /**
+   * P2-3210 — the Impact Area evidence field existed only for the older portfolios, so a score of 2
+   * in the current one asked for evidence with nowhere on the form to enter it. Angel (PO) settled
+   * it on 10-Sep-2026: add the older-portfolio behaviour, the field under each score in General
+   * information.
+   */
+  describe('Impact Area evidence field (P2-3210)', () => {
+    describe('current portfolio', () => {
+      beforeEach(() => {
+        mockFieldsManagerService.isP25.mockReturnValue(true);
+      });
+
+      it('shows the field when the score is 2 (principal)', () => {
+        expect(component.showImpactAreaEvidenceField(3)).toBe(true);
+      });
+
+      it('accepts the score as a string, which is how the form hands it back', () => {
+        expect(component.showImpactAreaEvidenceField('3')).toBe(true);
+      });
+
+      it('does not ask for evidence at score 0 or 1', () => {
+        expect(component.showImpactAreaEvidenceField(1)).toBe(false);
+        expect(component.showImpactAreaEvidenceField(2)).toBe(false);
+      });
+
+      it('does not show the field before a score is picked', () => {
+        expect(component.showImpactAreaEvidenceField(null)).toBe(false);
+        expect(component.showImpactAreaEvidenceField(undefined)).toBe(false);
+      });
+    });
+
+    describe('older portfolios (unchanged)', () => {
+      beforeEach(() => {
+        mockFieldsManagerService.isP25.mockReturnValue(false);
+      });
+
+      it('keeps showing the field as soon as any score is picked', () => {
+        expect(component.showImpactAreaEvidenceField(1)).toBe(true);
+        expect(component.showImpactAreaEvidenceField(3)).toBe(true);
+      });
+
+      it('keeps hiding it while no score is picked', () => {
+        expect(component.showImpactAreaEvidenceField(null)).toBe(false);
+        expect(component.showImpactAreaEvidenceField(undefined)).toBe(false);
+      });
+    });
+
+    /**
+     * The predicate is only worth anything if the five blocks of the template actually ask it, so
+     * these render the real template and count the "Evidence" fields on screen. The body is fed
+     * through the GET mock because `ngOnInit` reassigns it on the first change detection.
+     */
+    describe('on screen', () => {
+      const renderWith = (isP25: boolean, body: any): any[] => {
+        mockFieldsManagerService.isP25.mockReturnValue(isP25);
+        mockFieldsManagerService.isP22.mockReturnValue(!isP25);
+        const impactAreaLists = component.getImpactAreasScoresComponents as any;
+        ['genderTagScoreList', 'climateTagScoreList', 'nutritionTagScoreList', 'environmentalBiodiversityTagScoreList', 'povertyTagScoreList'].forEach(
+          list => (impactAreaLists[list] = () => [])
+        );
+        mockApiService.resultsSE.GETInnovationByResultId.mockReturnValue(
+          of({ response: { ...mockGETInnovationByResultIdResponse, discontinued_options: [], ...body } })
+        );
+
+        fixture.detectChanges();
+
+        // `label="Evidence"` is a static attribute, so it survives into the DOM and identifies the
+        // five Impact Area fields without depending on how `app-pr-input` paints its label.
+        return Array.from(fixture.nativeElement.querySelectorAll('app-pr-input[label="Evidence"]'));
+      };
+
+      it('gives the current portfolio one evidence field per score of 2, and none for the other scores', () => {
+        const evidenceFields = renderWith(true, {
+          gender_tag_level_id: 3,
+          poverty_tag_level_id: 3,
+          climate_change_tag_level_id: 2,
+          nutrition_tag_level_id: 1
+        });
+
+        expect(evidenceFields).toHaveLength(2);
+      });
+
+      it('asks the current portfolio for nothing while no score is 2', () => {
+        const evidenceFields = renderWith(true, {
+          gender_tag_level_id: 1,
+          climate_change_tag_level_id: 2,
+          nutrition_tag_level_id: 2,
+          environmental_biodiversity_tag_level_id: 1,
+          poverty_tag_level_id: 2
+        });
+
+        expect(evidenceFields).toHaveLength(0);
+      });
+
+      it('leaves the older portfolios as they were: a field per picked score', () => {
+        const evidenceFields = renderWith(false, {
+          gender_tag_level_id: 1,
+          climate_change_tag_level_id: 3,
+          nutrition_tag_level_id: null,
+          environmental_biodiversity_tag_level_id: null,
+          poverty_tag_level_id: null
+        });
+
+        expect(evidenceFields).toHaveLength(2);
+      });
+    });
+  });
+
+  /**
+   * P2-3225 — Lead Contact Person is a mandatory MDS field for P25 from the 2026 phase on.
+   * Innovation Packages share the very same green check as pooled results
+   * (`validation_general_information_P25`), so the form asks for it under the same gate.
+   */
+  describe('Lead Contact Person mandatory gate (P2-3225)', () => {
+    it('marks the field required when the gate is open', () => {
+      mockFieldsManagerService.isLeadContactPersonMandatory2026.mockReturnValue(true);
+      expect(component.isLeadContactPersonRequired).toBe(true);
+    });
+
+    it('leaves the field optional when the gate is closed', () => {
+      mockFieldsManagerService.isLeadContactPersonMandatory2026.mockReturnValue(false);
+      expect(component.isLeadContactPersonRequired).toBe(false);
+    });
+
+    it('never flags the field as incomplete while the gate is closed', () => {
+      mockFieldsManagerService.isLeadContactPersonMandatory2026.mockReturnValue(false);
+      component.ipsrGeneralInformationBody.lead_contact_person = null;
+      component.ipsrGeneralInformationBody.lead_contact_person_data = null;
+      expect(component.isLeadContactPersonComplete).toBe(true);
+    });
+
+    it('flags an empty contact as incomplete once the gate is open', () => {
+      mockFieldsManagerService.isLeadContactPersonMandatory2026.mockReturnValue(true);
+      component.ipsrGeneralInformationBody.lead_contact_person = null;
+      component.ipsrGeneralInformationBody.lead_contact_person_data = null;
+      expect(component.isLeadContactPersonComplete).toBe(false);
+    });
+
+    it('requires the Active Directory match, not just the typed name', () => {
+      mockFieldsManagerService.isLeadContactPersonMandatory2026.mockReturnValue(true);
+      component.ipsrGeneralInformationBody.lead_contact_person = 'John Doe';
+      component.ipsrGeneralInformationBody.lead_contact_person_data = null;
+      expect(component.isLeadContactPersonComplete).toBe(false);
+    });
+
+    it('is complete when both the name and the directory match are present', () => {
+      mockFieldsManagerService.isLeadContactPersonMandatory2026.mockReturnValue(true);
+      component.ipsrGeneralInformationBody.lead_contact_person = 'John Doe';
+      component.ipsrGeneralInformationBody.lead_contact_person_data = { mail: 'john.doe@cgiar.org' } as any;
+      expect(component.isLeadContactPersonComplete).toBe(true);
     });
   });
 });

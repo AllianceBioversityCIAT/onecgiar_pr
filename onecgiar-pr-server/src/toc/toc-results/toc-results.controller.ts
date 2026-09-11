@@ -58,12 +58,14 @@ export class TocResultsController {
     @Param('initiativeId') initiativeId: string,
     @Param('levelId') levelId: string,
     @Query('planned') planned: boolean,
+    @Query('bilateral') bilateral?: boolean,
   ) {
     return this.tocResultsService.findTocResultByConfigV2(
       +resultId,
       +initiativeId,
       +levelId,
       planned,
+      bilateral,
     );
   }
 

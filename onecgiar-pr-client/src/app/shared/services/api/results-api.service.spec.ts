@@ -142,67 +142,6 @@ describe('ResultsApiService', () => {
     });
   });
 
-  describe('GET_FindResultsElastic', () => {
-    it('should call GET_FindResultsElastic, send a POST request and map response correctly when search and type exists', done => {
-      const search = 'search';
-      const type = 'type';
-      mockResponse = {
-        hits: {
-          hits: [
-            {
-              _score: 0.8,
-              _id: 'id',
-              _index: 'index',
-              _source: {
-                id: 'id',
-                title: 'title',
-                description: 'description',
-                crp: 'crp',
-                countries: 'countries',
-                regions: 'regions',
-                year: 2023,
-                type: 'type',
-                is_legacy: 'is_legacy'
-              }
-            }
-          ],
-          total: undefined,
-          max_score: 0
-        },
-        took: 0,
-        timed_out: false,
-        _shards: undefined
-      };
-
-      service.GET_FindResultsElastic(search, type).subscribe(results => {
-        expect(results.length).toBeGreaterThanOrEqual(0);
-        if (results.length > 0) {
-          expect(results[0].probability).toEqual(mockResponse.hits.hits[0]._score);
-          expect(results[0]).toEqual({ probability: mockResponse.hits.hits[0]._score, ...mockResponse.hits.hits[0]._source });
-        }
-        done();
-      });
-
-      const req = httpMock.expectOne(`${environment.elastic.baseUrl}`);
-      expect(req.request.method).toBe('POST');
-
-      req.flush(mockResponse);
-    });
-
-    it('should call GET_FindResultsElastic, send a POST request, search and types are not received as parameters, and response hits.hits should not be in the response', done => {
-      service.GET_FindResultsElastic().subscribe(results => {
-        expect(results).toBeTruthy();
-        expect(results).toEqual([]);
-        done();
-      });
-
-      const req = httpMock.expectOne(`${environment.elastic.baseUrl}`);
-      expect(req.request.method).toBe('POST');
-
-      req.flush(mockResponse);
-    });
-  });
-
   describe('POST_resultCreateHeader', () => {
     it('should call POST_resultCreateHeader, send a POST request and should call isCreatingPipe', done => {
       const mockBody = {
@@ -467,17 +406,64 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_depthSearch', () => {
-    it('should call GET_depthSearch and return expected data', done => {
+    it('should call GET_depthSearch and unwrap the response array', done => {
       const title = 'title';
       service.GET_depthSearch(title).subscribe(response => {
-        expect(response).toEqual(mockResponse);
+        expect(response).toEqual([{ id: '1', title: 'title', legacy: '0', version_id: 5, is_legacy: false }]);
         done();
       });
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}get/depth-search/${title}`);
       expect(req.request.method).toBe('GET');
 
-      req.flush(mockResponse);
+      req.flush({ response: [{ id: '1', title: 'title', legacy: '0', version_id: '5' }] });
+    });
+
+    // P2-3527 — the backend takes the title as a path segment, so a title with a slash or a percent
+    // sign has to be encoded or the request never reaches the route.
+    it('encodes the title and forwards type and limit', done => {
+      service.GET_depthSearch('a/b 100%', 'Innovation', 10).subscribe(() => done());
+
+      const req = httpMock.expectOne(r => r.url === `${service.apiBaseUrl}get/depth-search/${encodeURIComponent('a/b 100%')}`);
+      expect(req.request.params.get('type')).toBe('Innovation');
+      expect(req.request.params.get('limit')).toBe('10');
+
+      req.flush({ response: [] });
+    });
+
+    // P2-3527 — the backend answers 404 when nothing matches. That is an empty list, not a failed
+    // search: turning it into an error would light up the "we could not check" warning (P2-3526).
+    it('treats the backend 404 as an empty list instead of an error', done => {
+      service.GET_depthSearch('nothing matches this').subscribe({
+        next: response => {
+          expect(response).toEqual([]);
+          done();
+        },
+        error: () => done.fail('404 must not surface as an error')
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}get/depth-search/nothing%20matches%20this`);
+      req.flush({ response: {}, message: 'Results Not Found' }, { status: 404, statusText: 'Not Found' });
+    });
+
+    // P2-3527 — MySQL bigints arrive as strings; the phase lookup compares with ===, so without the
+    // coercion every suggestion renders as "does not exist in this reporting phase".
+    it('coerces version_id to a number and derives is_legacy', done => {
+      service.GET_depthSearch('title').subscribe(response => {
+        expect(response[0].version_id).toBe(12);
+        expect(response[0].is_legacy).toBe(false);
+        expect(response[1].version_id).toBeNull();
+        expect(response[1].is_legacy).toBe(true);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}get/depth-search/title`);
+      req.flush({
+        response: [
+          { id: '1', legacy: '0', version_id: '12' },
+          { id: 'IN-2239', legacy: '1', version_id: null }
+        ]
+      });
     });
   });
 
@@ -964,6 +950,26 @@ describe('ResultsApiService', () => {
         eampleee: 'asasas'
       });
       expect(req.request.headers.keys()).toEqual(expectedHeaders.keys());
+    });
+  });
+
+  /**
+   * P2-3318 — the header IS the contract here: Graph validates `Content-Range` against the session
+   * and rejects the fragment on any mismatch, so the exact bytes-start-end/total string is pinned.
+   */
+  describe('PUT_loadFileFragmentInUploadSession', () => {
+    it('should PUT the fragment with its own Content-Range and no leftover header', () => {
+      const fragment = new Blob(['abc']);
+      const mockLink = 'http://example.com';
+
+      service.PUT_loadFileFragmentInUploadSession(fragment, mockLink, 10485760, 20971519, 65011712);
+
+      const req = httpMock.expectOne(mockLink);
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toBe(fragment);
+      expect(req.request.headers.get('Content-Range')).toBe('bytes 10485760-20971519/65011712');
+      expect(req.request.headers.get('Content-Type')).toBe('application/octet-stream');
+      expect(req.request.headers.keys().sort()).toEqual(['Content-Range', 'Content-Type']);
     });
   });
 
@@ -3712,6 +3718,29 @@ describe('ResultsApiService', () => {
 
       req.flush(mockResponse);
     });
+
+    it('should append versionId to the URL when provided as a finite number', done => {
+      service.GET_ScienceProgramsProgress(34).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/get/science-programs/progress?versionId=34`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should omit versionId when given a non-finite value (FAIL input)', done => {
+      service.GET_ScienceProgramsProgress(Number('not-a-number')).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/get/science-programs/progress`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.urlWithParams).not.toContain('versionId');
+      req.flush(mockResponse);
+    });
   });
 
   describe('GET_RecentActivity', () => {
@@ -3738,6 +3767,20 @@ describe('ResultsApiService', () => {
       const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/clarisa-global-units?programId=SP01`);
       expect(req.request.method).toBe('GET');
 
+      req.flush(mockResponse);
+    });
+  });
+
+  // @akili-spec changes/results-aow-column-filter (RAC-T-2)
+  describe('GET_ResultsScope', () => {
+    it('calls results-scope with programId and versionId and returns the buckets envelope', done => {
+      service.GET_ResultsScope('SP01', 36).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/results-scope?programId=SP01&versionId=36`);
+      expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
   });
@@ -3806,6 +3849,31 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}get/all/roles/filter/${userId}`);
       expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    // @akili-spec changes/my-work-board (MWB-T-3, MWB-R-8)
+    it('should send include_completeness=true only when the flag is truthy', done => {
+      const userId = 'userId';
+
+      mockResponse = { response: { items: [] } };
+
+      service.GET_AllResultsWithUseRole(userId, { submitter_id: 'sub1', include_completeness: true } as any).subscribe(() => done());
+
+      const req = httpMock.expectOne(r => r.url.includes(`get/all/roles/filter/${userId}`) && r.url.includes('submitter_id=sub1') && r.url.includes('include_completeness=true'));
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should not send include_completeness when the flag is falsy', done => {
+      const userId = 'userId';
+
+      mockResponse = { response: { items: [] } };
+
+      service.GET_AllResultsWithUseRole(userId, { submitter_id: 'sub1', include_completeness: false } as any).subscribe(() => done());
+
+      const req = httpMock.expectOne(r => r.url.includes(`get/all/roles/filter/${userId}`) && r.url.includes('submitter_id=sub1'));
+      expect(req.request.url.includes('include_completeness')).toBe(false);
       req.flush(mockResponse);
     });
   });
@@ -4774,6 +4842,31 @@ describe('ResultsApiService', () => {
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
+
+    it('should append versionId to the URL when provided as a finite number', done => {
+      service.GET_TocResultsByAowId('entity1', 'aow1', '2024', 34).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/results-framework-reporting/toc-results?program=entity1&areaOfWork=aow1&year=2024&versionId=34`
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should omit versionId when given a non-finite value (FAIL input)', done => {
+      service.GET_TocResultsByAowId('entity1', 'aow1', undefined, Number('not-a-number')).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results?program=entity1&areaOfWork=aow1`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.urlWithParams).not.toContain('versionId');
+      req.flush(mockResponse);
+    });
   });
 
   describe('GET_IndicatorContributionSummary', () => {
@@ -4800,6 +4893,67 @@ describe('ResultsApiService', () => {
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
+
+    it('should append versionId to the URL when provided as a finite number', done => {
+      service.GET_2030Outcomes('entity1', 34).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/2030-outcomes?programId=entity1&versionId=34`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should omit versionId when given a non-finite value (FAIL input)', done => {
+      service.GET_2030Outcomes('entity1', Number('not-a-number')).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/2030-outcomes?programId=entity1`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.urlWithParams).not.toContain('versionId');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_IntermediateOutcomes', () => {
+    it('should call GET_IntermediateOutcomes and return expected data', done => {
+      service.GET_IntermediateOutcomes('entity1').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/intermediate-outcomes?programId=entity1`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should append versionId to the URL when provided as a finite number', done => {
+      service.GET_IntermediateOutcomes('entity1', 34).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/intermediate-outcomes?programId=entity1&versionId=34`
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should omit versionId when given a non-finite value (FAIL input)', done => {
+      service.GET_IntermediateOutcomes('entity1', Number('not-a-number')).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/intermediate-outcomes?programId=entity1`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.urlWithParams).not.toContain('versionId');
+      req.flush(mockResponse);
+    });
   });
 
   describe('GET_W3BilateralProjects', () => {
@@ -4810,6 +4964,19 @@ describe('ResultsApiService', () => {
       });
 
       const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects?tocResultId=toc123`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_W3BilateralProjectsByProgram', () => {
+    it('should call GET_W3BilateralProjectsByProgram and return expected data', done => {
+      service.GET_W3BilateralProjectsByProgram('SP01').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects/by-program?programId=SP01`);
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
@@ -4839,6 +5006,23 @@ describe('ResultsApiService', () => {
       const req = httpMock.expectOne(
         `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=rtr1&tocResultIndicatorId=tri1`
       );
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    // @akili-spec changes/indicator-reported-results
+    // IRR-R-3 / IRR-AC-1 — the drawer opts into the wider population with `scope=all`. The param is
+    // appended ONLY when given, so every existing caller keeps the byte-identical URL asserted above.
+    it('appends &scope=all only when a scope is given (IRR-R-3)', done => {
+      service.GET_ExistingResultsContributors('rtr1', 'tri1', 'all').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=rtr1&tocResultIndicatorId=tri1&scope=all`
+      );
+      expect(req.request.url.endsWith('&scope=all')).toBe(true);
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
@@ -5020,6 +5204,17 @@ describe('ResultsApiService', () => {
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
+
+    it('should call GET_ResultToReview with versionId when provided', done => {
+      service.GET_ResultToReview('prog1', undefined, 36).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/by-program-and-centers?programId=prog1&versionId=36`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
   });
 
   describe('GET_PendingReviewCount', () => {
@@ -5156,6 +5351,50 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${environment.apiBaseUrl}api/versioning/execute/annual/replicate/innovation-package`);
       expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
+
+  // W12-R-2 / W12-R-4: the Overview matrix must be scoped to the same phase as the
+  // Results tab (`GET_ResultToReview`'s versionId pattern, results-api.service.ts:1505).
+  describe('GET_IndicatorContributionSummary — versionId query param (W12-R-2 / W12-R-4)', () => {
+    it('should omit versionId from the URL when not provided', done => {
+      service.GET_IndicatorContributionSummary('SP04').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/results-framework-reporting/programs/indicator-contribution-summary?program=SP04`
+      );
+      expect(req.request.method).toBe('GET');
+      expect(req.request.urlWithParams).not.toContain('versionId');
+      req.flush(mockResponse);
+    });
+
+    it('should append versionId to the URL when provided as a finite number', done => {
+      service.GET_IndicatorContributionSummary('SP04', 12).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/results-framework-reporting/programs/indicator-contribution-summary?program=SP04&versionId=12`
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should omit versionId when given a non-finite value (FAIL input)', done => {
+      service.GET_IndicatorContributionSummary('SP04', Number('not-a-number')).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/results-framework-reporting/programs/indicator-contribution-summary?program=SP04`
+      );
+      expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
   });

@@ -42,33 +42,6 @@ p {
   }
 }
 
-.aow-repeated-note {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 12px 15px;
-  border-radius: 9px;
-  background-color: var(--pr-color-yellow-50);
-  border: 1px solid rgba(var(--pr-color-yellow-rgb), 0.4);
-}
-
-.aow-repeated-note_icon {
-  flex: 0 0 auto;
-  font-size: 20px;
-  color: var(--pr-color-yellow-300);
-}
-
-.aow-repeated-note_text {
-  @include fonts.pr-typography('body-2');
-  color: var(--pr-color-yellow-700);
-  line-height: 1.5;
-
-  strong {
-    font-weight: 600;
-    color: var(--pr-color-yellow-800);
-  }
-}
-
 .entity-aow-aow_content {
   margin-top: 20px;
   border: 1px solid var(--pr-color-accents-2);
@@ -133,4 +106,38 @@ p {
 
 .aow-non-exclusive-header + .aow-non-exclusive-note + .tab-content {
   padding-top: 15px;
+}
+
+// P2-3296 AC3 — the Area of Work's rolled-up number, in the section header beside the phase.
+.aow-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.aow-progress_pair {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.aow-progress_label {
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-5);
+}
+
+.aow-progress_value {
+  @include fonts.pr-typography('body-1');
+  color: var(--pr-color-accents-7);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+// Deliberately not tucked into the tooltip: the denominator is what keeps a percentage
+// averaged over 2 of 10 indicators from being read as if it covered all 10.
+.aow-progress_coverage {
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-5);
 }

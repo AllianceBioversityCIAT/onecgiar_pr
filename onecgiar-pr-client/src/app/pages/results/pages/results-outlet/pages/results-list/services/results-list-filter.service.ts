@@ -1,9 +1,50 @@
-import { Injectable, signal } from '@angular/core';
+import { computed, Injectable, signal } from '@angular/core';
+
+/**
+ * Why the full-metadata export is unavailable, or null when it is allowed.
+ * Exported as a pure function so the service, the filters component and their specs all
+ * derive the reason from one place.
+ */
+export function getFullMetadataExportBlockedReason(
+  phases: { portfolio_id?: string | number }[],
+  portfolios: { id?: string | number }[]
+): string | null {
+  if ((phases ?? []).length === 0) {
+    return 'Select at least one phase to export.';
+  }
+
+  const phasePortfolioIds = Array.from(new Set((phases ?? []).map(phase => String(phase?.portfolio_id ?? '')).filter(Boolean)));
+  const portfolioIds = Array.from(new Set((portfolios ?? []).map(portfolio => String(portfolio?.id ?? '')).filter(Boolean)));
+
+  if (phasePortfolioIds.length > 1) {
+    return 'Full metadata export only supports one portfolio at a time. Please select phases from a single portfolio.';
+  }
+  if (portfolioIds.length > 1) {
+    return 'Full metadata export only supports one portfolio at a time. Please keep only one portfolio selected.';
+  }
+  if (phasePortfolioIds.length === 1 && portfolioIds.length === 1 && phasePortfolioIds[0] !== portfolioIds[0]) {
+    return 'Selected phases and selected portfolio must belong to the same portfolio.';
+  }
+
+  return null;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class ResultsListFilterService {
+  /**
+   * Full-metadata export state lives here, not on the filters COMPONENT, because the
+   * Results Center toolbar (the parent) renders the export button. Reading it off a
+   * `@ViewChild` meant the parent's template was checked before the child settled, which
+   * raised NG0100 on the button's `disabled` / `title` on every load.
+   */
+  requestingFullExport = signal(false);
+
+  readonly fullMetadataExportBlockedReason = computed<string | null>(() =>
+    getFullMetadataExportBlockedReason(this.selectedPhases(), this.selectedClarisaPortfolios())
+  );
+
   filters: any = {
     general: [
       {

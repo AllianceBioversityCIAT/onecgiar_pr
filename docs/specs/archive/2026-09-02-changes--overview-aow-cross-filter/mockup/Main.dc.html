@@ -1,0 +1,723 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+  <style>
+    /* PRMS root is 12px — every size below is an explicit px value, like the app. */
+    html, body { font-size: 12px; }
+    body {
+      margin: 0;
+      font-family: 'Manrope', 'Poppins', sans-serif;
+      background: #efeef3;
+      color: #2b2838;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: #4a2bb8; }
+    a:hover { color: #3f2499; }
+    .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+    .num { font-variant-numeric: tabular-nums; }
+    button { font-family: inherit; }
+  </style>
+</helmet>
+
+<div style="display: flex; flex-direction: column; gap: 16px; padding: 32px; background: #efeef3;">
+
+  <!-- 1 · About this program -->
+  <section style="border: 1px solid #e3e3e8; border-radius: 12px; background: #ffffff; padding: 20px;">
+    <h2 style="margin: 0 0 20px; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: #191524;">About this program</h2>
+    <p style="margin: 0; font-size: 14px; font-weight: 400; line-height: 1.6; color: #2b2838; text-wrap: pretty;">
+      Breeding for Tomorrow accelerates the delivery of climate-resilient, nutritious crop varieties by
+      modernising breeding pipelines and connecting them to the seed systems that reach smallholder farmers.
+    </p>
+  </section>
+
+  <!-- 2 · KPI summary cards (program scope — they sit above the filter control) -->
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;">
+
+    <div style="position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; border: 1px solid rgba(168,85,247,.30); border-radius: 12px; background: linear-gradient(to bottom right, #4a1d96, #5c24b8, #793ce8); padding: 18px; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1);">
+      <div style="position: absolute; right: -24px; top: -24px; height: 110px; width: 110px; border-radius: 999px; background: rgba(255,255,255,.15); filter: blur(20px); pointer-events: none;"></div>
+      <div style="position: absolute; left: -20px; bottom: -20px; height: 90px; width: 90px; border-radius: 999px; background: rgba(88,28,135,.40); filter: blur(18px); pointer-events: none;"></div>
+      <div style="position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #e9d5ff;">W1/W2 Results</span>
+        <span style="display: inline-flex; height: 24px; align-items: center; border-radius: 999px; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.20); padding: 0 9px; font-size: 11px; font-weight: 600; color: #ffffff;">Core</span>
+      </div>
+      <div style="position: relative; z-index: 10; display: flex; align-items: baseline; gap: 8px;">
+        <span class="mono" style="font-size: 32px; font-weight: 800; line-height: 1; color: #ffffff;">89</span>
+        <span style="font-size: 13px; font-weight: 500; color: #e9d5ff;">results</span>
+      </div>
+      <div style="position: relative; z-index: 10; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: #f3e8ff;">
+        <span style="height: 7px; width: 7px; border-radius: 999px; background: #34d399;"></span>
+        <span>6 submitted</span><span style="color: #d8b4fe;">·</span><span>5 statuses</span>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; justify-content: space-between; gap: 12px; border: 1px solid #e3e3e8; border-radius: 12px; background: #ffffff; padding: 18px;">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b6580;">W3 / Bilateral</span>
+        <span style="display: inline-flex; height: 24px; align-items: center; border-radius: 999px; background: #faf5ff; padding: 0 8px; font-size: 11px; font-weight: 600; color: #7e22ce;">Projects</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <span class="mono" style="font-size: 32px; font-weight: 800; line-height: 1; color: #191524;">45</span>
+        <span style="font-size: 13px; font-weight: 500; color: #6b6580;">results</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5d5872;">
+        <span style="height: 7px; width: 7px; border-radius: 999px; background: #047857;"></span>
+        <span>2% approved</span><span style="color: #6b6580;">·</span><span>7 categories</span>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; justify-content: space-between; gap: 12px; border: 1px solid #e3e3e8; border-radius: 12px; background: #ffffff; padding: 18px;">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b6580;">Contributing Centers</span>
+        <span style="display: inline-flex; height: 24px; align-items: center; border-radius: 999px; background: #ecfdf5; padding: 0 8px; font-size: 11px; font-weight: 600; color: #047857;">Centers</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <span class="mono" style="font-size: 32px; font-weight: 800; line-height: 1; color: #191524;">7</span>
+        <span style="font-size: 13px; font-weight: 500; color: #6b6580;">institutes</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5d5872;">
+        <span>Reporting bilateral results</span>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; justify-content: space-between; gap: 12px; border: 1px solid #e3e3e8; border-radius: 12px; background: #ffffff; padding: 18px;">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b6580;">Areas of Work</span>
+        <span style="display: inline-flex; height: 24px; align-items: center; border-radius: 999px; background: #eff6ff; padding: 0 8px; font-size: 11px; font-weight: 600; color: #1d4ed8;">Plan</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <span class="mono" style="font-size: 32px; font-weight: 800; line-height: 1; color: #191524;">1%</span>
+        <span style="font-size: 13px; font-weight: 500; color: #6b6580;">completed</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5d5872;">
+        <span>2/392 KPIs</span><span style="color: #6b6580;">·</span><span>5 AoWs</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 · Section tabs + the NEW Area of Work selector (two independent axes) -->
+  <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 4px;">
+
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <div style="display: inline-flex; border-radius: 10px; border: 1px solid #e3e3e8; background: #efeef3; padding: 3px;">
+        <button type="button" style="cursor: pointer; border: 0; border-radius: 7px; padding: 6px 14px; font-size: 13px; font-weight: 700; background: #ffffff; color: #191524; box-shadow: 0 1px 2px rgba(0,0,0,.06);">All Sections</button>
+        <button type="button" style="display: flex; align-items: center; gap: 6px; cursor: pointer; border: 0; border-radius: 7px; padding: 6px 14px; font-size: 13px; font-weight: 600; background: transparent; color: #5d5872;">
+          <span>W1/W2</span>
+          <span class="num" style="border-radius: 999px; background: #e3e3e8; padding: 1px 7px; font-size: 11px; font-weight: 700;">89</span>
+        </button>
+        <button type="button" style="display: flex; align-items: center; gap: 6px; cursor: pointer; border: 0; border-radius: 7px; padding: 6px 14px; font-size: 13px; font-weight: 600; background: transparent; color: #5d5872;">
+          <span>W3 / Bilateral</span>
+          <span class="num" style="border-radius: 999px; background: #e3e3e8; padding: 1px 7px; font-size: 11px; font-weight: 700;">45</span>
+        </button>
+        <button type="button" style="display: flex; align-items: center; gap: 6px; cursor: pointer; border: 0; border-radius: 7px; padding: 6px 14px; font-size: 13px; font-weight: 600; background: transparent; color: #5d5872;">
+          <span>Areas of Work</span>
+          <span class="num" style="border-radius: 999px; background: #e3e3e8; padding: 1px 7px; font-size: 11px; font-weight: 700;">5</span>
+        </button>
+      </div>
+
+      <!-- The new axis — ToC scope, not just Areas of Work -->
+      <div style="position: relative; display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 12.5px; font-weight: 600; color: #5d5872;">Scope:</span>
+        <button type="button" onClick="{{ toggleMenu }}" style="{{ selectStyle }}">
+          <sc-if value="{{ showChipInSelect }}" hint-placeholder-val="{{ true }}">
+            <span class="mono" style="{{ selectedChipStyle }}">{{ selectedCode }}</span>
+          </sc-if>
+          <span>{{ selectedLabel }}</span>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+
+        <sc-if value="{{ isFiltered }}" hint-placeholder-val="{{ true }}">
+          <button type="button" onClick="{{ clearFilter }}" style="border: 0; background: transparent; cursor: pointer; font-size: 12.5px; font-weight: 500; color: #4a2bb8; text-decoration: underline; padding: 0;">Clear</button>
+        </sc-if>
+
+        <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position: absolute; top: 38px; left: 56px; z-index: 40; width: 344px; border: 1px solid #d5d5dc; border-radius: 10px; background: #ffffff; box-shadow: 0 12px 28px rgba(25,21,36,.16); padding: 5px; display: flex; flex-direction: column; gap: 1px;">
+            <sc-for list="{{ options }}" as="opt" hint-placeholder-count="10">
+
+              <sc-if value="{{ opt.isHeader }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; align-items: center; gap: 8px; padding: 9px 10px 5px;">
+                  <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9691a8; white-space: nowrap;">{{ opt.name }}</span>
+                  <span style="height: 1px; flex: 1; background: #eeeef1;"></span>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ opt.isOption }}" hint-placeholder-val="{{ true }}">
+                <button type="button" onClick="{{ opt.pick }}" style="{{ opt.rowStyle }}">
+                  <span class="mono" style="{{ opt.codeStyle }}">{{ opt.code }}</span>
+                  <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ opt.name }}</span>
+                  <span class="num" style="margin-left: auto; font-size: 11.5px; font-weight: 500; color: #6b6580; white-space: nowrap;">{{ opt.meta }}</span>
+                </button>
+              </sc-if>
+
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <button type="button" style="cursor: pointer; border: 0; background: transparent; font-size: 12.5px; font-weight: 500; color: #4a2bb8; text-decoration: underline;">Show all sections</button>
+  </div>
+
+  <!-- Scope line — only while a filter is on -->
+  <sc-if value="{{ isFiltered }}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border: 1px solid #e4e0ef; border-radius: 10px; background: #f7f4fd; padding: 10px 14px; font-size: 13px;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4a2bb8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+      <span style="font-weight: 700; color: #3f2499;">Showing {{ selectedCode }} · {{ selectedName }}</span>
+      <span style="color: #6b6580;">{{ scopeNote }}</span>
+    </div>
+  </sc-if>
+
+  <!-- 4 · Progress by area of work (hero) -->
+  <section style="display: flex; overflow: hidden; border: 1px solid #e3e3e8; border-radius: 12px; background: #ffffff;">
+
+    <div style="display: flex; width: 300px; flex: none; flex-direction: column; gap: 18px; border-right: 1px solid #e3e3e8; background: #f7f4fd; padding: 20px;">
+      <div>
+        <h2 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: #191524;">Progress by area of work</h2>
+        <p style="margin: 2px 0 0; font-size: 13px; font-weight: 400; color: #6b6580;">{{ railSubtitle }}</p>
+      </div>
+
+      <sc-if value="{{ railHasPlan }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <svg width="92" height="92" viewBox="0 0 92 92" aria-hidden="true">
+            <circle cx="46" cy="46" r="40" fill="none" stroke="#e3e3e8" stroke-width="9"></circle>
+            <circle cx="46" cy="46" r="40" fill="none" stroke="#6b46e5" stroke-width="9" stroke-linecap="round"
+                    stroke-dasharray="251.33" stroke-dashoffset="{{ ringOffset }}" transform="rotate(-90 46 46)"></circle>
+          </svg>
+          <div style="display: flex; flex-direction: column; gap: 1px;">
+            <span class="mono" style="font-size: 32px; font-weight: 700; line-height: 1; color: #191524;">{{ ring.pct }}%</span>
+            <span class="mono" style="font-size: 13px; font-weight: 600; color: #5d5872;">{{ ring.reported }} of {{ ring.total }}</span>
+            <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #6b6580;">KPIs reported</span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #e3e3e8; padding-top: 14px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between;">
+            <span style="font-size: 12.5px; color: #5d5872;">Complete</span>
+            <span class="mono" style="font-size: 13px; font-weight: 700; color: #191524;">{{ ring.complete }}</span>
+          </div>
+          <div style="display: flex; align-items: baseline; justify-content: space-between;">
+            <span style="font-size: 12.5px; color: #5d5872;">In progress</span>
+            <span class="mono" style="font-size: 13px; font-weight: 700; color: #191524;">{{ ring.inProgress }}</span>
+          </div>
+          <div style="display: flex; align-items: baseline; justify-content: space-between;">
+            <span style="font-size: 12.5px; color: #5d5872;">Not started</span>
+            <span class="mono" style="font-size: 13px; font-weight: 700; color: #191524;">{{ ring.notStarted }}</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ railNoPlan }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #e3e3e8; padding-top: 14px;">
+          <span class="mono" style="font-size: 32px; font-weight: 700; line-height: 1; color: #9691a8;">—</span>
+          <span style="font-size: 12.5px; line-height: 1.5; color: #5d5872;">
+            No planned KPIs for this scope. There is nothing to measure progress against — only
+            a reporting status.
+          </span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hasAchieved }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 6px; border: 1px solid #a7f3d0; border-radius: 8px; background: #ecfdf5; padding: 10px 12px;">
+        <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #047857;">Achieved</span>
+        <div style="display: flex; align-items: baseline; justify-content: space-between;">
+          <span style="font-size: 11px; font-weight: 500; color: rgba(4,120,87,.8);">QA</span>
+          <span class="mono" style="font-size: 13px; font-weight: 700; color: #047857;">{{ achieved.qa }}</span>
+        </div>
+        <div style="display: flex; align-items: baseline; justify-content: space-between;">
+          <span style="font-size: 11px; font-weight: 500; color: rgba(4,120,87,.8);">Prel.</span>
+          <span class="mono" style="font-size: 13px; font-weight: 600; color: rgba(5,150,105,.8);">{{ achieved.prel }}</span>
+        </div>
+        <span style="font-size: 10.5px; font-weight: 500; color: rgba(4,120,87,.7);">{{ achieved.coverage }}</span>
+      </div>
+      </sc-if>
+
+      <button type="button" style="margin-top: auto; display: flex; height: 36px; cursor: pointer; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 8px; background: #6b46e5; font-size: 13px; font-weight: 600; color: #ffffff;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5z"></path></svg>
+        Continue reporting
+      </button>
+      <span style="text-align: center; font-size: 11px; color: #6b6580;">Opens Reporting with Only-pending on</span>
+    </div>
+
+    <div style="display: flex; min-width: 0; flex: 1; flex-direction: column;">
+
+      <sc-if value="{{ heroHasNoPlan }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 28px 20px;">
+          <p style="margin: 0; font-size: 14px; color: #5d5872; max-width: 560px; line-height: 1.55;">
+            <b style="color: #191524;">Not tagged to a ToC area</b> has no planned KPIs — this section measures
+            progress against the plan, and these results sit outside it. Their reporting status is below.
+          </p>
+          <button type="button" onClick="{{ clearFilter }}" style="border: 1px solid #d5d5dc; background: transparent; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 600; color: #191524; cursor: pointer;">Show all areas and outcomes</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ heroHasRows }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 20px;">
+          <sc-for list="{{ rows }}" as="row" hint-placeholder-count="5">
+            <div style="display: grid; grid-template-columns: minmax(0,1fr) minmax(120px,240px) max-content max-content max-content; align-items: center; gap: 16px; border: 1px solid #e3e3e8; border-radius: 10px; background: #efeef3; padding: 12px 16px; cursor: pointer;">
+
+              <div style="display: flex; min-width: 0; align-items: center; gap: 10px;">
+                <span class="mono" style="{{ row.chipStyle }}">{{ row.code }}</span>
+                <div style="display: flex; min-width: 0; flex-direction: column;">
+                  <span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; font-weight: 700; color: #191524;">{{ row.name }}</span>
+                  <span style="font-size: 11.5px; color: #6b6580;">{{ row.subline }}</span>
+                </div>
+              </div>
+
+              <span style="display: flex; height: 12px; overflow: hidden; border-radius: 6px; background: #e3e3e8;">
+                <span style="{{ row.completeStyle }}"></span>
+                <span style="{{ row.progressStyle }}"></span>
+              </span>
+
+              <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                <span class="mono" style="font-size: 16px; font-weight: 700; color: #191524;">{{ row.reported }}<span style="font-weight: 600; color: #6b6580;">/{{ row.total }}</span></span>
+                <span class="mono" style="font-size: 13px; font-weight: 600; color: #5d5872;">{{ row.pct }}%</span>
+              </div>
+
+              <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25;">
+                <sc-if value="{{ row.hasAchievement }}" hint-placeholder-val="{{ true }}">
+                  <span style="display: flex; align-items: baseline; gap: 8px; white-space: nowrap;">
+                    <span style="display: flex; align-items: baseline; gap: 4px;">
+                      <span style="font-size: 10px; font-weight: 500; text-transform: uppercase; color: #9691a8;">QA</span>
+                      <span class="num" style="font-size: 13px; font-weight: 700; color: #047857;">{{ row.qa }}</span>
+                    </span>
+                    <span style="display: flex; align-items: baseline; gap: 4px;">
+                      <span style="font-size: 10px; font-weight: 500; text-transform: uppercase; color: #9691a8;">Prel.</span>
+                      <span class="num" style="font-size: 12.5px; font-weight: 600; color: rgba(5,150,105,.8);">{{ row.prel }}</span>
+                    </span>
+                  </span>
+                  <span style="font-size: 10px; font-weight: 500; color: #6b6580;">{{ row.coverage }}</span>
+                </sc-if>
+              </div>
+
+              <div style="display: flex; justify-content: flex-end; gap: 6px;">
+                <button type="button" style="display: inline-flex; height: 32px; flex: none; cursor: pointer; align-items: center; justify-content: center; border: 1px solid #6b46e5; border-radius: 8px; background: #ffffff; padding: 0 14px; font-size: 14px; font-weight: 500; color: #4a2bb8;">Report</button>
+                <button type="button" style="display: inline-flex; height: 32px; width: 32px; flex: none; cursor: pointer; align-items: center; justify-content: center; border: 1px solid #e3e3e8; border-radius: 8px; background: #ffffff; color: #5d5872;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <div style="margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; border-top: 1px solid #e3e3e8; background: #f7f7f9; padding: 14px 20px;">
+        <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #5d5872;">Strategic outcomes</span>
+        <button type="button" style="display: inline-flex; cursor: pointer; align-items: center; gap: 8px; border: 1px solid #e3e3e8; border-radius: 999px; background: #ffffff; padding: 5px 12px; font-size: 12.5px; color: #2b2838;">
+          Intermediate outcomes <span class="mono" style="font-size: 13px; font-weight: 700;">0/7</span>
+        </button>
+        <button type="button" style="display: inline-flex; cursor: pointer; align-items: center; gap: 8px; border: 1px solid #e3e3e8; border-radius: 999px; background: #ffffff; padding: 5px 12px; font-size: 12.5px; color: #2b2838;">
+          2030 outcomes <span class="mono" style="font-size: 13px; font-weight: 700;">0/5</span>
+        </button>
+        <span style="margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: #5d5872;">
+          <span style="height: 9px; width: 9px; border-radius: 2px; background: #19ae58;"></span> Complete
+          <span style="margin-left: 8px; height: 9px; width: 9px; border-radius: 2px; background: #6b46e5;"></span> In progress
+          <span style="margin-left: 8px; height: 9px; width: 9px; border-radius: 2px; background: #e3e3e8;"></span> Not started
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- W1/W2 separator -->
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <span style="flex: none; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #5d5872;">W1/W2</span>
+    <span style="height: 1px; flex: 1; background: #e3e3e8;"></span>
+  </div>
+
+  <!-- 5 · Reporting status -->
+  <section style="border: 1px solid #e3e3e8; border-radius: 12px; background: #ffffff; padding: 20px;">
+    <div style="margin-bottom: 20px; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px;">
+      <div style="min-width: 200px;">
+        <h2 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: #191524;">Reporting status</h2>
+        <p style="margin: 2px 0 0; font-size: 13px; font-weight: 400; color: #6b6580;">{{ statusSubtitle }}</p>
+      </div>
+      <sc-if value="{{ isFiltered }}" hint-placeholder-val="{{ true }}">
+        <span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #ddd6fe; border-radius: 999px; background: #f5f3ff; padding: 4px 11px; font-size: 11.5px; font-weight: 700; color: #3f2499;">
+          <span style="height: 7px; width: 7px; border-radius: 999px; background: #6b46e5;"></span>{{ selectedCode }}
+        </span>
+      </sc-if>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 300px minmax(0, 1fr); align-items: center; gap: 24px;">
+      <div style="display: flex; align-items: center; justify-content: center;">
+        <svg width="220" height="220" viewBox="0 0 220 220">
+          <circle cx="110" cy="110" r="70" fill="none" stroke="#efeef3" stroke-width="26"></circle>
+          <sc-for list="{{ donut }}" as="arc" hint-placeholder-count="4">
+            <circle cx="110" cy="110" r="70" fill="none" stroke="{{ arc.color }}" stroke-width="26"
+                    stroke-dasharray="{{ arc.dash }}" stroke-dashoffset="{{ arc.offset }}" transform="rotate(-90 110 110)"></circle>
+          </sc-for>
+          <text x="110" y="104" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="30" font-weight="700" fill="#191524">{{ statusTotal }}</text>
+          <text x="110" y="126" text-anchor="middle" font-family="Manrope, sans-serif" font-size="12" font-weight="600" fill="#6b6580">results</text>
+        </svg>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
+          <sc-for list="{{ statuses }}" as="s" hint-placeholder-count="5">
+            <div style="{{ s.tileStyle }}">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; margin-bottom: 6px;">
+                <div style="display: flex; min-width: 0; align-items: center; gap: 8px;">
+                  <span style="{{ s.dotStyle }}"></span>
+                  <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 600; color: #191524;">{{ s.label }}</span>
+                </div>
+                <div style="display: flex; flex: none; align-items: baseline; gap: 3px;">
+                  <span class="num" style="font-size: 14px; font-weight: 700; color: #191524;">{{ s.count }}</span>
+                  <span class="num" style="font-size: 11px; font-weight: 500; color: #6b6580;">({{ s.pct }}%)</span>
+                </div>
+              </div>
+              <div style="height: 3px; width: 100%; overflow: hidden; border-radius: 999px; background: rgba(227,227,232,.5);">
+                <div style="{{ s.barStyle }}"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(221,214,254,.5); border-radius: 8px; background: rgba(245,243,255,.6); padding: 8px 14px; font-size: 12.5px;">
+          <div style="display: flex; align-items: center; gap: 8px; color: #5d5872;">
+            <span style="font-weight: 500;">Total reporting:</span>
+            <strong style="font-weight: 700; color: #191524;">{{ statusTotal }} results</strong>
+          </div>
+          <button type="button" style="display: flex; align-items: center; gap: 4px; border: 0; background: transparent; padding: 0; cursor: pointer; font-size: 12px; font-weight: 700; color: #3f2499;">
+            <span>View results</span><span>&rarr;</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Per-scope breakdown — the partition is total, so the parts add up to the whole -->
+    <sc-if value="{{ showBreakdown }}" hint-placeholder-val="{{ true }}">
+      <div style="margin-top: 20px; border-top: 1px solid #e3e3e8; padding-top: 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+          <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #5d5872;">By scope</span>
+          <span style="font-size: 11.5px; color: #6b6580;">Pick a scope above to focus the page on it</span>
+        </div>
+
+        <sc-for list="{{ breakdown }}" as="b" hint-placeholder-count="10">
+
+          <sc-if value="{{ b.isHeader }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; align-items: center; gap: 8px; padding: 12px 4px 5px;">
+              <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9691a8; white-space: nowrap;">{{ b.name }}</span>
+              <span style="height: 1px; flex: 1; background: #eeeef1;"></span>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ b.isRow }}" hint-placeholder-val="{{ true }}">
+            <button type="button" onClick="{{ b.pick }}" style="display: grid; grid-template-columns: 62px minmax(0,1fr) 150px 46px; align-items: center; gap: 14px; width: 100%; border: 0; border-bottom: 1px solid #eeeef1; background: transparent; padding: 9px 4px; cursor: pointer; text-align: left;">
+              <span class="mono" style="{{ b.codeStyle }}">{{ b.code }}</span>
+              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: #2b2838;">{{ b.name }}</span>
+              <span style="display: flex; height: 8px; overflow: hidden; border-radius: 999px; background: #eeeef1;">
+                <span style="{{ b.editingStyle }}"></span>
+                <span style="{{ b.submittedStyle }}"></span>
+                <span style="{{ b.qaStyle }}"></span>
+              </span>
+              <span class="num" style="font-size: 13px; font-weight: 700; color: #191524; text-align: right;">{{ b.total }}</span>
+            </button>
+          </sc-if>
+
+          <sc-if value="{{ b.isSubtotal }}" hint-placeholder-val="{{ false }}">
+            <div style="display: grid; grid-template-columns: 62px minmax(0,1fr) 150px 46px; align-items: center; gap: 14px; width: 100%; padding: 7px 4px;">
+              <span></span>
+              <span style="font-size: 11.5px; font-style: italic; color: #6b6580;">{{ b.name }}</span>
+              <span></span>
+              <span class="num" style="font-size: 12.5px; font-weight: 700; color: #6b6580; text-align: right;">{{ b.total }}</span>
+            </div>
+          </sc-if>
+
+        </sc-for>
+
+        <div style="display: grid; grid-template-columns: 62px minmax(0,1fr) 150px 46px; align-items: center; gap: 14px; width: 100%; border-top: 2px solid #d5d5dc; margin-top: 6px; padding: 10px 4px 2px;">
+          <span></span>
+          <span style="font-size: 13px; font-weight: 700; color: #191524;">All scopes</span>
+          <span></span>
+          <span class="num" style="font-size: 14px; font-weight: 700; color: #191524; text-align: right;">{{ statusTotal }}</span>
+        </div>
+        <p style="margin: 8px 0 0; font-size: 11.5px; line-height: 1.5; color: #6b6580;">
+          Areas of work alone come to <b style="color:#2b2838;">{{ aowSubtotal }}</b> of
+          <b style="color:#2b2838;">{{ statusTotal }}</b>. The rest sit on strategic outcomes or on no ToC
+          area at all — which is why the axis is <i>scope</i>, not <i>area of work</i>.
+        </p>
+      </div>
+    </sc-if>
+  </section>
+
+  <!-- 6 · W1/W2 results by category and status — the card with no AoW axis -->
+  <section style="border: 1px solid #e3e3e8; border-radius: 12px; background: #ffffff; padding: 20px;">
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px;">
+      <div>
+        <h2 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: #191524;">W1/W2 results by category and status</h2>
+        <p style="margin: 2px 0 0; font-size: 13px; font-weight: 400; color: #6b6580;">Reported results across every indicator category</p>
+      </div>
+      <sc-if value="{{ isFiltered }}" hint-placeholder-val="{{ true }}">
+        <span style="display: inline-flex; flex: none; align-items: center; gap: 6px; border: 1px solid #d5d5dc; border-radius: 999px; background: #efeef3; padding: 4px 11px; font-size: 11.5px; font-weight: 600; color: #5d5872;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          Program-wide
+        </span>
+      </sc-if>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <sc-for list="{{ categories }}" as="c" hint-placeholder-count="4">
+        <div style="display: grid; grid-template-columns: minmax(0,1fr) 44px; gap: 12px; align-items: center; padding: 7px 0;">
+          <div>
+            <div style="font-size: 13px; color: #2b2838; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ c.name }}</div>
+            <div style="height: 8px; border-radius: 999px; background: #eeeef1; margin-top: 5px; overflow: hidden;">
+              <span style="{{ c.barStyle }}"></span>
+            </div>
+          </div>
+          <div class="num" style="font-size: 13px; font-weight: 700; text-align: right;">{{ c.count }}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ isFiltered }}" hint-placeholder-val="{{ true }}">
+      <p style="margin: 14px 0 0; border-radius: 9px; background: #efeef3; padding: 12px 14px; font-size: 12.5px; line-height: 1.5; color: #5d5872;">
+        These figures cover the whole Science Program, not {{ selectedCode }}. This card has no area-of-work
+        dimension in its data, so filtering it would show a number that is not what it claims to be.
+      </p>
+    </sc-if>
+  </section>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"density":{"editor":"enum","options":["comfortable","compact"],"default":"comfortable","section":"Layout"}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    // Nothing selected = today&#39;s page. Pick an area to see the filtered page.
+    this.state = { aow: null, menuOpen: false };
+  }
+
+  // The partition is TOTAL: every result belongs to exactly one bucket — an Area of Work,
+  // a strategic outcome, or "not tagged". That is what makes the parts sum to 89.
+  data() {
+    return [
+      { kind: 'aow', code: 'AOW02', name: 'Accelerated Breeding', reported: 1, total: 110, qa: '93.8%', prel: '0.2%', coverage: '115 of 144 indicators',
+        editing: 5, submitted: 2, inQa: 1, approved: 0, discontinued: 0 },
+      { kind: 'aow', code: 'AOW03', name: 'Inclusive Delivery',   reported: 0, total: 93,  qa: '0%',    prel: '0.2%', coverage: '99 of 108 indicators',
+        editing: 6, submitted: 1, inQa: 3, approved: 0, discontinued: 0 },
+      { kind: 'aow', code: 'AOW05', name: 'Enable',               reported: 0, total: 70,  qa: '0%',    prel: '0.2%', coverage: '78 of 82 indicators',
+        editing: 4, submitted: 1, inQa: 2, approved: 0, discontinued: 0 },
+      { kind: 'aow', code: 'AOW04', name: 'Breeding Resources',   reported: 0, total: 61,  qa: '0%',    prel: '0.3%', coverage: '66 of 73 indicators',
+        editing: 5, submitted: 1, inQa: 3, approved: 0, discontinued: 1 },
+      { kind: 'aow', code: 'AOW01', name: 'Market Intelligence',  reported: 1, total: 18,  qa: '3.3%',  prel: '2.1%', coverage: '24 of 30 indicators',
+        editing: 22, submitted: 1, inQa: 9, approved: 0, discontinued: 1 },
+
+      // wp_id IS NULL — invisible to every AoW join today
+      { kind: 'outcome', code: 'INT',  name: 'Intermediate outcomes', reported: 0, total: 7, qa: '', prel: '', coverage: '',
+        editing: 8, submitted: 0, inQa: 3, approved: 0, discontinued: 0 },
+      { kind: 'outcome', code: '2030', name: '2030 outcomes',         reported: 0, total: 5, qa: '', prel: '', coverage: '',
+        editing: 3, submitted: 0, inQa: 1, approved: 0, discontinued: 0 },
+
+      // No ToC link at all — the bucket that keeps the partition total
+      { kind: 'untagged', code: '—', name: 'Not tagged to a ToC area', reported: 0, total: 0, qa: '', prel: '', coverage: '',
+        editing: 5, submitted: 1, inQa: 0, approved: 0, discontinued: 0 }
+    ];
+  }
+
+  select(code) { this.setState({ aow: code, menuOpen: false }); }
+
+  renderVals() {
+    const compact = this.props.density === 'compact';
+    const rowsAll = this.data();
+    const sel = this.state.aow;
+    const current = rowsAll.find(r => r.code === sel) || null;
+    const isFiltered = !!current;
+
+    // ── Hero rows — only buckets that HAVE a plan can appear here ─
+    const aowChip = 'display:inline-flex;flex:none;align-items:center;justify-content:center;border:1px solid rgba(233,213,255,.7);'
+      + 'border-radius:6px;background:rgba(243,232,255,.8);padding:2px 8px;font-size:11px;font-weight:700;color:#6b21a8;';
+    const outcomeChip = 'display:inline-flex;flex:none;align-items:center;justify-content:center;border:1px solid #d5d5dc;'
+      + 'border-radius:6px;background:#efeef3;padding:2px 8px;font-size:11px;font-weight:700;color:#5d5872;';
+
+    const shown = (isFiltered ? [current] : rowsAll).filter(r => r.total > 0);
+    const rows = shown.map(r => {
+      const pct = r.total ? Math.round((r.reported / r.total) * 100) : 0;
+      const completeW = r.total ? (r.reported / r.total) * 100 : 0;
+      return {
+        code: r.code, name: r.name, reported: r.reported, total: r.total,
+        pct: pct, qa: r.qa, prel: r.prel, coverage: r.coverage,
+        hasAchievement: !!r.qa,
+        chipStyle: r.kind === 'aow' ? aowChip : outcomeChip,
+        subline: (r.total - r.reported) + ' KPIs remaining',
+        completeStyle: 'display:block;height:100%;background:#19ae58;width:' + completeW + '%;',
+        progressStyle: 'display:block;height:100%;background:#6b46e5;width:0%;'
+      };
+    });
+
+    // ── Rail ring ────────────────────────────────────────────────
+    const totalKpi = shown.reduce((a, r) => a + r.total, 0);
+    const reportedKpi = shown.reduce((a, r) => a + r.reported, 0);
+    const ringPct = totalKpi ? Math.round((reportedKpi / totalKpi) * 100) : 0;
+    const ring = {
+      pct: ringPct, reported: reportedKpi, total: totalKpi,
+      complete: reportedKpi, inProgress: 0, notStarted: totalKpi - reportedKpi
+    };
+    const C = 251.33;
+    const ringOffset = C - (C * (totalKpi ? reportedKpi / totalKpi : 0));
+
+    const achieved = isFiltered
+      ? { qa: current.qa, prel: current.prel, coverage: current.coverage }
+      : { qa: '19.4%', prel: '0.6%', coverage: '382 of 437 indicators' };
+
+    // ── Status donut + tiles ─────────────────────────────────────
+    const src = isFiltered ? [current] : rowsAll;
+    const sum = k => src.reduce((a, r) => a + r[k], 0);
+    const defs = [
+      { key: 'editing',      label: 'Editing',      color: '#b45309' },
+      { key: 'submitted',    label: 'Submitted',    color: '#1d4ed8' },
+      { key: 'inQa',         label: 'In QA',        color: '#0e7490' },
+      { key: 'approved',     label: 'Approved',     color: '#047857' },
+      { key: 'discontinued', label: 'Discontinued', color: '#6b6580' }
+    ];
+    const statusTotal = defs.reduce((a, d) => a + sum(d.key), 0);
+    const tilePad = compact ? '7px 10px' : '9px 12px';
+
+    const statuses = defs.map(d => {
+      const count = sum(d.key);
+      const pct = statusTotal ? Math.round((count / statusTotal) * 100) : 0;
+      const dim = count === 0;
+      return {
+        label: d.label, count: count, pct: pct,
+        tileStyle: 'display:flex;flex-direction:column;justify-content:space-between;border:1px solid #e3e3e8;'
+          + 'border-radius:10px;background:#efeef3;padding:' + tilePad + ';text-align:left;'
+          + (dim ? 'opacity:.6;' : ''),
+        dotStyle: 'height:9px;width:9px;flex:none;border-radius:999px;background:' + d.color + ';',
+        barStyle: 'height:100%;border-radius:999px;width:' + pct + '%;background:' + d.color + ';'
+      };
+    });
+
+    const R = 70, CIRC = 2 * Math.PI * R;
+    let acc = 0;
+    const donut = defs.filter(d => sum(d.key) > 0).map(d => {
+      const frac = statusTotal ? sum(d.key) / statusTotal : 0;
+      const len = Math.max(frac * CIRC - 3, 1);
+      const arc = { color: d.color, dash: len.toFixed(2) + ' ' + (CIRC - len).toFixed(2), offset: (-acc * CIRC).toFixed(2) };
+      acc += frac;
+      return arc;
+    });
+
+    // ── Per-scope breakdown (unfiltered only) — grouped, and it reconciles ─
+    const bucketTotal = r => r.editing + r.submitted + r.inQa + r.approved + r.discontinued;
+    const aowSubtotal = rowsAll.filter(r => r.kind === 'aow').reduce((a, r) => a + bucketTotal(r), 0);
+
+    const bRow = (r) => {
+      const t = bucketTotal(r);
+      const w = k => (t ? (r[k] / t) * 100 : 0);
+      return {
+        isRow: true, isHeader: false, isSubtotal: false,
+        code: r.code, name: r.name, total: t,
+        pick: () => this.select(r.code),
+        codeStyle: 'font-size:11px;font-weight:700;color:' + (r.kind === 'aow' ? '#4a2bb8' : '#6b6580') + ';',
+        editingStyle:   'display:block;height:100%;background:#b45309;width:' + w('editing') + '%;',
+        submittedStyle: 'display:block;height:100%;background:#1d4ed8;width:' + w('submitted') + '%;',
+        qaStyle:        'display:block;height:100%;background:#0e7490;width:' + w('inQa') + '%;'
+      };
+    };
+    const bHeader = (name) => ({ isRow: false, isHeader: true, isSubtotal: false, name: name });
+    const bSubtotal = (name, total) => ({ isRow: false, isHeader: false, isSubtotal: true, name: name, total: total });
+
+    const breakdown = []
+      .concat([bHeader('Areas of work')])
+      .concat(rowsAll.filter(r => r.kind === 'aow').map(bRow))
+      .concat([bSubtotal('Areas of work subtotal', aowSubtotal)])
+      .concat([bHeader('Strategic outcomes')])
+      .concat(rowsAll.filter(r => r.kind === 'outcome').map(bRow))
+      .concat([bHeader('Outside the Theory of Change')])
+      .concat(rowsAll.filter(r => r.kind === 'untagged').map(bRow));
+
+    // ── Category card (never filtered — no AoW axis in its data) ─
+    const cats = [
+      { name: 'Capacity sharing for development', count: 31 },
+      { name: 'Innovation development',           count: 23 },
+      { name: 'Knowledge product',                count: 19 },
+      { name: 'Policy change',                    count: 16 }
+    ];
+    const catMax = 31;
+    const categories = cats.map(c => ({
+      name: c.name, count: c.count,
+      barStyle: 'display:block;height:100%;border-radius:999px;background:#6b46e5;width:' + ((c.count / catMax) * 100) + '%;'
+    }));
+
+    // ── Selector ─────────────────────────────────────────────────
+    const optRow = (on) => 'display:flex;align-items:center;gap:9px;width:100%;border:0;border-radius:7px;'
+      + 'padding:8px 10px;cursor:pointer;text-align:left;font-size:13px;font-weight:' + (on ? '700' : '500') + ';'
+      + 'color:' + (on ? '#3f2499' : '#2b2838') + ';background:' + (on ? '#f5f3ff' : 'transparent') + ';';
+    const optCode = (on) => 'flex:none;width:52px;font-size:10.5px;font-weight:700;color:' + (on ? '#4a2bb8' : '#9691a8') + ';';
+
+    const oRow = (r) => ({
+      isOption: true, isHeader: false,
+      code: r.code, name: r.name,
+      meta: r.total > 0 ? r.total + ' KPIs' : bucketTotal(r) + ' results · no plan',
+      pick: () => this.select(r.code),
+      rowStyle: optRow(sel === r.code), codeStyle: optCode(sel === r.code)
+    });
+    const oHeader = (name) => ({ isOption: false, isHeader: true, name: name });
+    const planTotal = rowsAll.reduce((a, r) => a + r.total, 0);
+
+    const options = []
+      .concat([{
+        isOption: true, isHeader: false,
+        code: 'ALL', name: 'All areas and outcomes', meta: planTotal + ' KPIs',
+        pick: () => this.select(null),
+        rowStyle: optRow(!isFiltered), codeStyle: optCode(!isFiltered)
+      }])
+      .concat([oHeader('Areas of work')])
+      .concat(rowsAll.filter(r => r.kind === 'aow').map(oRow))
+      .concat([oHeader('Strategic outcomes')])
+      .concat(rowsAll.filter(r => r.kind === 'outcome').map(oRow))
+      .concat([oHeader('Outside the Theory of Change')])
+      .concat(rowsAll.filter(r => r.kind === 'untagged').map(oRow));
+
+    const selectStyle = 'display:inline-flex;align-items:center;gap:9px;cursor:pointer;border-radius:9px;'
+      + 'padding:7px 12px;font-size:13px;font-weight:600;'
+      + (isFiltered
+          ? 'border:1px solid #6b46e5;background:#f5f3ff;color:#3f2499;'
+          : 'border:1px solid #d5d5dc;background:#ffffff;color:#191524;');
+
+    const isUntagged = isFiltered && current.kind === 'untagged';
+    const kindWord = !isFiltered ? '' : (current.kind === 'aow' ? 'Area of Work' : 'scope');
+
+    return {
+      isFiltered: isFiltered,
+      showBreakdown: !isFiltered,
+      heroHasRows: rows.length > 0,
+      heroHasNoPlan: isUntagged,
+      railHasPlan: !isUntagged,
+      railNoPlan: isUntagged,
+      hasAchieved: !isFiltered || !!current.qa,
+      showChipInSelect: isFiltered && !isUntagged,
+      menuOpen: this.state.menuOpen,
+      options: options,
+      aowSubtotal: aowSubtotal,
+      selectedCode: isFiltered ? current.code : '',
+      selectedName: isFiltered ? current.name : '',
+      selectedLabel: isFiltered ? current.name : 'All areas and outcomes',
+      selectedChipStyle: 'border:1px solid #ddd6fe;border-radius:5px;background:#ffffff;padding:1px 5px;'
+        + 'font-size:11px;font-weight:700;color:#4a2bb8;',
+      toggleMenu: () => this.setState({ menuOpen: !this.state.menuOpen }),
+      clearFilter: () => this.select(null),
+      scopeNote: !isFiltered ? ''
+        : (isUntagged
+            ? 'These results carry no ToC link, so they have no plan to measure against — only a reporting status.'
+            : '2 sections filtered · 1 card stays program-wide. Planned KPIs and reported results count different things.'),
+      railSubtitle: isFiltered
+        ? 'Completion progress against planned KPIs for this ' + kindWord
+        : 'Completion progress against planned Key Performance Indicators (KPIs) per Area of Work',
+      statusSubtitle: isFiltered
+        ? 'W1/W2 reporting progress for this ' + kindWord
+        : 'W1/W2 reporting progress and breakdown for this Science Program',
+      rows: rows, ring: ring, ringOffset: ringOffset.toFixed(2), achieved: achieved,
+      statuses: statuses, statusTotal: statusTotal, donut: donut,
+      breakdown: breakdown, categories: categories
+    };
+  }
+}
+</script>
+</body>
+</html>

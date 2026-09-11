@@ -3,6 +3,7 @@ import { ContributorsBody } from '../../model/contributorsBody';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
+import { filterOutAvisaInitiatives } from '../../../../../../../../shared/utils/avisa-initiative.util';
 
 @Component({
   selector: 'app-ipsr-contributors-toc',
@@ -28,7 +29,7 @@ export class IpsrContributorsTocComponent implements OnInit {
   GET_AllWithoutResults() {
     this.api.resultsSE.GETInnovationPackageDetail().subscribe(({ response }) => {
       this.api.resultsSE.GET_AllWithoutResults(response.portfolio).subscribe(({ response }) => {
-        this.contributingInitiativesList = response;
+        this.contributingInitiativesList = filterOutAvisaInitiatives(response);
       });
     });
   }

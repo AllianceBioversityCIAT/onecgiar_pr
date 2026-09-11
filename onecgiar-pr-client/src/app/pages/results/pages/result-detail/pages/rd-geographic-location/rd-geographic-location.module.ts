@@ -7,9 +7,19 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 import { GeoscopeManagementModule } from '../../../../../../shared/components/geoscope-management/geoscope-management.module';
 
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
+import { SectionBottomBarComponent } from '../../components/section-bottom-bar/section-bottom-bar.component';
+import { BeforeUnloadWarningDirective } from '../../../../../../shared/directives/before-unload-warning.directive';
 
 @NgModule({
   declarations: [RdGeographicLocationComponent],
-  imports: [CommonModule, RdGeographicLocationRoutingModule, CustomFieldsModule, GeoscopeManagementModule, FeedbackValidationDirectiveModule]
+  imports: [
+    SectionBottomBarComponent,
+    CommonModule,
+    RdGeographicLocationRoutingModule,
+    CustomFieldsModule,
+    GeoscopeManagementModule,
+    FeedbackValidationDirectiveModule,
+    BeforeUnloadWarningDirective
+  ]
 })
 export class RdGeographicLocationModule {}

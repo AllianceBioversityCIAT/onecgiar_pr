@@ -1,6 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { PrFieldHeaderComponent } from './pr-field-header.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { PrTooltipDirective } from '../../shared/directives/pr-tooltip.directive';
+import { PrInfoIconComponent } from '../pr-info-icon/pr-info-icon.component';
 
 describe('PrFieldHeaderComponent', () => {
   let component: PrFieldHeaderComponent;
@@ -8,8 +11,8 @@ describe('PrFieldHeaderComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [PrFieldHeaderComponent],
-      imports: [HttpClientTestingModule]
+      declarations: [PrFieldHeaderComponent, PrTooltipDirective],
+      imports: [HttpClientTestingModule, PrInfoIconComponent]
     }).compileComponents();
   });
 
@@ -48,5 +51,39 @@ describe('PrFieldHeaderComponent', () => {
     component.showDescriptionLabel = true;
     component.rolesSE.readOnly = true;
     expect(component.descriptionLabel).toBe('');
+  });
+
+  // P2-3323 — REGRESSION LOCK. The five .sgi-dac-info triggers must behave identically: a click
+  // PINS the guidance open. Before this, pr-field-header was the only one that hid it on click,
+  // which made the links inside unreachable and, on a phone, opened and closed it in one tap.
+  // P2-3323 Part 2 (docs/specs/changes/tooltip-keyboard-accessibility/, TIP-DD-5): pinning is now
+  // unconditional directive-wide — `prTooltipPinnable` was removed entirely, so this component's
+  // own test scope is just "the directive is attached and a click actually pins it here", not a
+  // re-test of the directive's full behavior (that's pr-tooltip.directive.spec.ts's job).
+  describe('info tooltip (P2-3323)', () => {
+    afterEach(() => {
+      document.body.querySelectorAll('.pr-tooltip').forEach(el => el.remove());
+    });
+
+    it('pins the guidance open on click, like every other .sgi-dac-info trigger', () => {
+      component.label = 'Innovation reference materials';
+      component.tooltip = 'Guidance text with a link';
+      fixture.detectChanges();
+
+      const trigger = fixture.debugElement.query(By.css('button.sgi-dac-info'));
+      expect(trigger).toBeTruthy();
+      expect(trigger.injector.get(PrTooltipDirective)).toBeInstanceOf(PrTooltipDirective);
+
+      trigger.nativeElement.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(document.body.querySelector('.pr-tooltip.pr-tooltip--pinned')).toBeTruthy();
+    });
+
+    it('renders no trigger at all when there is no guidance to show', () => {
+      component.label = 'Plain label';
+      component.tooltip = '';
+      fixture.detectChanges();
+
+      expect(fixture.debugElement.query(By.css('button.sgi-dac-info'))).toBeNull();
+    });
   });
 });

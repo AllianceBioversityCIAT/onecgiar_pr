@@ -6,14 +6,16 @@ import { FilterNotificationByPhasePipe } from '../../pipes/filter-notification-b
 import { FilterNotificationByInitiativePipe } from '../../pipes/filter-notification-by-initiative.pipe';
 import { FilterNotificationBySearchPipe } from '../../pipes/filter-notification-by-search.pipe';
 import { FormatTimeAgoPipe } from '../../../../../../../../shared/pipes/format-time-ago/format-time-ago.pipe';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
+// P2-3187 AC4: exports CPMultipleWPsComponent, the proven P25 ToC mapping widget the optional
+// post-accept step reuses (the same composition the bilateral review drawer ships).
+import { RdContributorsAndPartnersModule } from '../../../../../result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
 
 const modules = [NotificationItemComponent, FilterNotificationByPhasePipe, FilterNotificationByInitiativePipe, FilterNotificationBySearchPipe];
 
 @NgModule({
   declarations: [...modules],
-  imports: [CommonModule, CustomFieldsModule, FormatTimeAgoPipe, DialogModule, ButtonModule],
+  imports: [CommonModule, CustomFieldsModule, FormatTimeAgoPipe, PrDialogComponent, RdContributorsAndPartnersModule],
   exports: [...modules]
 })
 export class NotificationItemModule {}

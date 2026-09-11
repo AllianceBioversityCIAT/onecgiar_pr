@@ -14,6 +14,7 @@ import { UpdateIpsrGeneralInformationDto } from './dto/update-ipsr_general_infor
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { ResultImpactAreaScoresService } from '../../result-impact-area-scores/result-impact-area-scores.service';
+import { EvidencesRepository } from '../../results/evidences/evidences.repository';
 
 describe('IpsrGeneralInformationService', () => {
   let service: IpsrGeneralInformationService;
@@ -71,6 +72,13 @@ describe('IpsrGeneralInformationService', () => {
     findOne: jest.fn(),
   };
 
+  // P2-3210 — the Impact Area evidence of the innovation package is one row of `evidence` per tag.
+  const mockEvidencesRepo = {
+    findOne: jest.fn(),
+    update: jest.fn(),
+    save: jest.fn(),
+  };
+
   const mockResultImpactAreaScoresService = {
     validateImpactAreaScores: jest.fn().mockResolvedValue(undefined),
     create: jest.fn().mockResolvedValue([]),
@@ -117,6 +125,7 @@ describe('IpsrGeneralInformationService', () => {
         },
         { provide: AdUserService, useValue: mockAdUserService },
         { provide: AdUserRepository, useValue: mockAdUserRepo },
+        { provide: EvidencesRepository, useValue: mockEvidencesRepo },
       ],
     }).compile();
 
@@ -374,6 +383,150 @@ describe('IpsrGeneralInformationService', () => {
           debug: true,
         }),
       );
+    });
+
+    /**
+     * P2-3210 — this endpoint used to drop the Impact Area evidence on the floor: the client sent
+     * the five keys, the DTO did not declare them and nothing wrote them, so the field the form now
+     * renders under a score of 2 would have lost whatever was typed on the next GET.
+     */
+    describe('Impact Area evidence (P2-3210)', () => {
+      it('stores a link the form had nowhere to save before', async () => {
+        mockEvidencesRepo.findOne.mockResolvedValue(null);
+
+        await service.generalInformation(
+          1,
+          {
+            ...mockDto,
+            evidence_gender_tag: 'https://cgspace.cgiar.org/handle/10568/111',
+          },
+          mockUser,
+        );
+
+        expect(mockEvidencesRepo.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            result_id: 1,
+            link: 'https://cgspace.cgiar.org/handle/10568/111',
+            gender_related: true,
+            created_by: mockUser.id,
+          }),
+        );
+      });
+
+      it('marks the row it creates as non-supplementary, which is what the green check counts', async () => {
+        mockEvidencesRepo.findOne.mockResolvedValue(null);
+
+        await service.generalInformation(
+          1,
+          { ...mockDto, evidence_poverty_tag: 'https://example.org/poverty' },
+          mockUser,
+        );
+
+        expect(mockEvidencesRepo.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            poverty_related: true,
+            is_supplementary: false,
+          }),
+        );
+      });
+
+      it('flags the climate evidence as youth_related, the column the reader expects', async () => {
+        mockEvidencesRepo.findOne.mockResolvedValue(null);
+
+        await service.generalInformation(
+          1,
+          { ...mockDto, evidence_climate_tag: 'https://example.org/climate' },
+          mockUser,
+        );
+
+        expect(mockEvidencesRepo.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            link: 'https://example.org/climate',
+            youth_related: true,
+          }),
+        );
+        expect(mockEvidencesRepo.save).not.toHaveBeenCalledWith(
+          expect.objectContaining({ climate_related: true }),
+        );
+      });
+
+      it('updates the row already there instead of piling up a second one', async () => {
+        mockEvidencesRepo.findOne.mockResolvedValue({ id: 77 });
+
+        await service.generalInformation(
+          1,
+          { ...mockDto, evidence_nutrition_tag: 'https://example.org/new' },
+          mockUser,
+        );
+
+        expect(mockEvidencesRepo.update).toHaveBeenCalledWith(
+          77,
+          expect.objectContaining({
+            link: 'https://example.org/new',
+            nutrition_related: true,
+            last_updated_by: mockUser.id,
+          }),
+        );
+        expect(mockEvidencesRepo.save).not.toHaveBeenCalled();
+      });
+
+      it('deactivates the row when the person clears the field', async () => {
+        mockEvidencesRepo.findOne.mockResolvedValue({ id: 88 });
+
+        await service.generalInformation(
+          1,
+          { ...mockDto, evidence_environment_tag: '' },
+          mockUser,
+        );
+
+        expect(mockEvidencesRepo.update).toHaveBeenCalledWith(
+          88,
+          expect.objectContaining({ is_active: 0 }),
+        );
+      });
+
+      it('writes the five tags of one save, each with its own column', async () => {
+        mockEvidencesRepo.findOne.mockResolvedValue(null);
+
+        await service.generalInformation(
+          1,
+          {
+            ...mockDto,
+            evidence_gender_tag: 'https://example.org/g',
+            evidence_climate_tag: 'https://example.org/c',
+            evidence_nutrition_tag: 'https://example.org/n',
+            evidence_environment_tag: 'https://example.org/e',
+            evidence_poverty_tag: 'https://example.org/p',
+          },
+          mockUser,
+        );
+
+        expect(mockEvidencesRepo.save).toHaveBeenCalledTimes(5);
+        const flags = mockEvidencesRepo.save.mock.calls.map(([row]) =>
+          Object.keys(row).find((key) => key.endsWith('_related')),
+        );
+        expect(flags).toEqual([
+          'gender_related',
+          'youth_related',
+          'nutrition_related',
+          'environmental_biodiversity_related',
+          'poverty_related',
+        ]);
+      });
+
+      /**
+       * The one deliberate difference from the P22 twin, which deactivates on `undefined` too: a
+       * payload that never mentions a tag must not delete its evidence.
+       */
+      it('leaves a tag alone when the payload does not mention it', async () => {
+        mockEvidencesRepo.findOne.mockResolvedValue({ id: 99 });
+
+        await service.generalInformation(1, mockDto, mockUser);
+
+        expect(mockEvidencesRepo.findOne).not.toHaveBeenCalled();
+        expect(mockEvidencesRepo.update).not.toHaveBeenCalled();
+        expect(mockEvidencesRepo.save).not.toHaveBeenCalled();
+      });
     });
   });
 

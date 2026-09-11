@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ResultIpMeasure } from '../../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
 import { ResultActor } from '../../../results/result-actors/entities/result-actor.entity';
 import { ResultsByInstitutionType } from '../../../results/results_by_institution_types/entities/results_by_institution_type.entity';
@@ -109,6 +109,29 @@ export class CreateInnovationUseDto {
     example: true,
   })
   innov_use_2030_to_be_determined: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'P2-3295 §3 — why a 2030 projection inherited from the previous phase was changed. Only sent when the reporter revised an inherited value; capped at 100 words on screen.',
+    example:
+      'Revised down after the 2026 adoption survey came in below the 2025 estimate.',
+  })
+  innov_use_2030_justification?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'P2-3537 §4 — users added during this reporting period. Integer, minimum 0. Absent means the question was not answered, which is not the same as zero.',
+    example: 120,
+  })
+  new_users_added?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'P2-3537 §4 — how the use expanded during this reporting period. Capped at 100 words on screen.',
+    example:
+      'A distribution agreement with two cooperatives put the variety in front of 120 new farmers.',
+  })
+  use_expansion_narrative?: string;
 
   @ApiProperty({
     description: 'Indicates whether there are associated scaling studies',

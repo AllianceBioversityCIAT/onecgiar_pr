@@ -109,4 +109,118 @@ describe('ReportingTocContextService', () => {
       status: HttpStatus.BAD_REQUEST,
     });
   });
+
+  describe('resolveByVersionId (OPF-R-6)', () => {
+    it('should resolve context directly from the version row for an explicit versionId', async () => {
+      dataSourceQueryMock.mockResolvedValue([
+        {
+          id: 34,
+          toc_pahse_id: '99134294-d7a1-4966-a63e-227c9e29b9fb',
+          phase_year: 2025,
+          phase_name: 'Reporting 2025',
+        },
+      ]);
+
+      const context = await service.resolveByVersionId(34);
+
+      expect(context).toEqual({
+        reportingYear: 2025,
+        phaseUuid: '99134294-d7a1-4966-a63e-227c9e29b9fb',
+        versionId: 34,
+        phaseName: 'Reporting 2025',
+      });
+      expect(findOneMock).not.toHaveBeenCalled();
+    });
+
+    it('should bind exactly one placeholder per parameter (KZ-W12-1)', async () => {
+      dataSourceQueryMock.mockResolvedValue([
+        {
+          id: 34,
+          toc_pahse_id: '99134294-d7a1-4966-a63e-227c9e29b9fb',
+          phase_year: 2025,
+          phase_name: 'Reporting 2025',
+        },
+      ]);
+
+      await service.resolveByVersionId(34);
+
+      const [sql, params] = dataSourceQueryMock.mock.calls[0];
+      const placeholderCount = (sql.match(/\?/g) ?? []).length;
+      expect(placeholderCount).toBe(params.length);
+      expect(sql).toContain('FROM `prdb_test`.`version` v');
+      expect(sql).toContain('v.id = ?');
+      expect(params).toEqual([1, 34]);
+    });
+
+    it('should resolve the row matching versionId even when another row shares its phase_year but not its toc_pahse_id (KZ-TCM-1)', async () => {
+      // Two version rows for the SAME phase_year, DIFFERENT toc_pahse_id — a
+      // year-equality implementation (`WHERE phase_year = ?`) cannot tell these
+      // apart; only reading by `id` (this fixture's `WHERE v.id = ?`) can.
+      const rowsById: Record<number, unknown> = {
+        34: {
+          id: 34,
+          toc_pahse_id: 'PHASE-34-UUID',
+          phase_year: 2025,
+          phase_name: 'Reporting 2025 (row 34)',
+        },
+        40: {
+          id: 40,
+          toc_pahse_id: 'PHASE-40-UUID',
+          phase_year: 2025,
+          phase_name: 'Reporting 2025 (row 40)',
+        },
+      };
+
+      dataSourceQueryMock.mockImplementation(
+        (_sql: string, params: unknown[]) => {
+          const requestedId = params[1] as number;
+          const row = rowsById[requestedId];
+          return Promise.resolve(row ? [row] : []);
+        },
+      );
+
+      const context = await service.resolveByVersionId(34);
+
+      expect(context).toEqual({
+        reportingYear: 2025,
+        phaseUuid: 'PHASE-34-UUID',
+        versionId: 34,
+        phaseName: 'Reporting 2025 (row 34)',
+      });
+      expect(context.phaseUuid).not.toBe('PHASE-40-UUID');
+    });
+
+    it('should reject a non-numeric versionId with a 4xx', async () => {
+      await expect(service.resolveByVersionId(NaN)).rejects.toMatchObject({
+        message: 'The versionId must be a valid positive integer.',
+        status: HttpStatus.BAD_REQUEST,
+      });
+      expect(dataSourceQueryMock).not.toHaveBeenCalled();
+    });
+
+    it('should reject an unknown versionId with a 4xx (not an empty 200)', async () => {
+      dataSourceQueryMock.mockResolvedValue([]);
+
+      await expect(service.resolveByVersionId(9999)).rejects.toMatchObject({
+        message: 'No version was found for versionId 9999.',
+        status: HttpStatus.NOT_FOUND,
+      });
+    });
+
+    it('should reject a version row with no configured ToC phase', async () => {
+      dataSourceQueryMock.mockResolvedValue([
+        {
+          id: 50,
+          toc_pahse_id: null,
+          phase_year: 2024,
+          phase_name: 'Reporting 2024',
+        },
+      ]);
+
+      await expect(service.resolveByVersionId(50)).rejects.toMatchObject({
+        message: 'No TOC phase is configured for version 50.',
+        status: HttpStatus.NOT_FOUND,
+      });
+    });
+  });
 });

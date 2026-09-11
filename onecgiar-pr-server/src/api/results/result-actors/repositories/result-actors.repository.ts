@@ -41,7 +41,11 @@ export class ResultActorRepository
           has_women,
           has_women_youth,
           has_men,
-          has_men_youth
+          has_men_youth,
+          section_id,
+          age_disaggregation_not_available,
+          youth_split_applied_by_system,
+          addressing_demands
       FROM
           result_actors
       WHERE
@@ -68,7 +72,11 @@ export class ResultActorRepository
               has_women,
               has_women_youth,
               has_men,
-              has_men_youth
+              has_men_youth,
+              section_id,
+              age_disaggregation_not_available,
+              youth_split_applied_by_system,
+              addressing_demands
           )
       SELECT
           is_active,
@@ -90,7 +98,11 @@ export class ResultActorRepository
           has_women,
           has_women_youth,
           has_men,
-          has_men_youth
+          has_men_youth,
+          section_id,
+          age_disaggregation_not_available,
+          youth_split_applied_by_system,
+          addressing_demands
       FROM
           result_actors
       WHERE

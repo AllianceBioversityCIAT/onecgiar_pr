@@ -9,6 +9,7 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 import { ResultLevelService } from '../../../../../results/pages/result-creator/services/result-level.service';
 import { InnovationUseResultsService } from '../../../../../../shared/services/global/innovation-use-results.service';
 import { IpsrCompletenessStatusService } from '../../../../services/ipsr-completeness-status.service';
+import { filterOutAvisaInitiatives } from '../../../../../../shared/utils/avisa-initiative.util';
 
 @Component({
   selector: 'app-ipsr-contributors',
@@ -55,7 +56,7 @@ export class IpsrContributorsComponent implements OnInit {
   GET_AllWithoutResults() {
     const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
     this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
-      this.contributingInitiativesList = response;
+      this.contributingInitiativesList = filterOutAvisaInitiatives(response);
     });
   }
 

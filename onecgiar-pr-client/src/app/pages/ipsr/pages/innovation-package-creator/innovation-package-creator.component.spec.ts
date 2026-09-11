@@ -7,19 +7,15 @@ import { ListFilterByTextAndAttrPipe } from '../../../../custom-fields/pr-multi-
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { FormsModule } from '@angular/forms';
 import { PrFieldHeaderComponent } from '../../../../custom-fields/pr-field-header/pr-field-header.component';
-import { DialogModule } from 'primeng/dialog';
 import { SaveButtonComponent } from '../../../../custom-fields/save-button/save-button.component';
 import { PrButtonComponent } from '../../../../custom-fields/pr-button/pr-button.component';
 import { SectionHeaderComponent } from '../../components/section-header/section-header.component';
-import { TooltipModule } from 'primeng/tooltip';
 import { FeedbackValidationDirective } from '../../../../shared/directives/feedback-validation.directive';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { jest } from '@jest/globals';
 import { Router } from '@angular/router';
 import { TermPipe } from '../../../../internationalization/term.pipe';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
 
 describe('InnovationPackageCreatorComponent', () => {
   let component: InnovationPackageCreatorComponent;
@@ -55,6 +51,7 @@ describe('InnovationPackageCreatorComponent', () => {
         myInitiativesList: myInitiativesList,
         myInitiativesListIPSRByPortfolio: myInitiativesList,
         someMandatoryFieldIncompleteResultDetail: jest.fn(),
+        fieldFeedbackList: jest.fn(() => []),
         getCurrentIPSRPhase: () => of({}),
         reportingCurrentPhase: { phaseId: 34 },
         getCurrentPhases: () => of({}),
@@ -87,7 +84,7 @@ describe('InnovationPackageCreatorComponent', () => {
         SectionHeaderComponent,
         FeedbackValidationDirective
       ],
-      imports: [HttpClientTestingModule, ScrollingModule, FormsModule, DialogModule, TooltipModule, TermPipe, IconFieldModule, InputIconModule],
+      imports: [HttpClientTestingModule, ScrollingModule, FormsModule, TermPipe],
       providers: [
         {
           provide: ApiService,
@@ -278,12 +275,20 @@ describe('InnovationPackageCreatorComponent', () => {
   });
 
   describe('ngDoCheck', () => {
-    it('should call checkMandatoryFields in ngDoCheck', () => {
+    it('should call checkMandatoryFields in a coalesced rAF', () => {
       const spy = jest.spyOn(mockApiService.dataControlSE, 'someMandatoryFieldIncompleteResultDetail');
+      // Scan is now throttled + coalesced into a requestAnimationFrame run outside Angular's zone (P2-2972).
+      const rafSpy = jest.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb: any) => {
+        cb(0);
+        return 0;
+      });
+      (component as any).lastScanAt = 0;
+      (component as any).scanScheduled = false;
 
       component.ngDoCheck();
 
       expect(spy).toHaveBeenCalledWith('.section_container');
+      rafSpy.mockRestore();
     });
   });
 });

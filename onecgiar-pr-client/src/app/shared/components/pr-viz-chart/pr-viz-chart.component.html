@@ -1,0 +1,46 @@
+<div class="pr-viz-chart-wrapper relative w-full h-full" [style.height]="height()">
+  <div #chartContainer [style.height]="height()" class="w-full h-full relative" [attr.aria-hidden]="loading() ? 'true' : null"></div>
+
+  @if (loading()) {
+    <div class="pr-viz-chart-loading-overlay absolute inset-0 flex items-center justify-center bg-white/80 z-10" role="status" aria-live="polite" aria-label="Loading chart">
+      <div class="pr-skeleton w-full" [style.height]="height()" style="border-radius: 8px;"></div>
+    </div>
+  }
+
+  @if (tableModel(); as model) {
+    <!-- OSF-DD-14: `sr-only` lives on this wrapping div, not on the `<table>`. Under
+         `table-layout: auto` a specified width is a minimum, not a cap (CSS 2.1 §17.5.2), so
+         `sr-only`'s `width:1px` cannot constrain a table — it lays out at full content size and,
+         being `position:absolute` with nothing clipping it, inflates the document's scroll area.
+         A `div` honours `width:1px`; the table inside keeps its semantics for assistive tech. -->
+    <div class="sr-only">
+      <table [attr.aria-label]="chartTitle() || model.caption">
+        <caption>{{ model.caption }}</caption>
+        @if (model.headers && model.headers.length > 0) {
+          <thead>
+            <tr>
+              @for (header of model.headers; track $index) {
+                <th scope="col">{{ header }}</th>
+              }
+            </tr>
+          </thead>
+        }
+        <tbody>
+          @for (row of model.rows; track $index) {
+            <tr>
+              @for (cell of row; track $index) {
+                @if ($index === 0) {
+                  <th scope="row">{{ cell }}</th>
+                } @else {
+                  <td>{{ cell }}</td>
+                }
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (options() && requireTable()) {
+    <div class="sr-only" role="alert">Warning: Chart rendered without required accessibility tableModel</div>
+  }
+</div>

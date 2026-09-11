@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
@@ -14,7 +14,19 @@ export class StepTwoBasicInfoComponent implements OnInit {
   selectOne: any[] = [];
   selectTow: any[] = [];
   cols: any = [];
-  update: boolean = false;
+  // P2-3322: signal-backed flag. `selectedOneLevel()` / `selectedTwo()` run from `(ngModelChange)` on the
+  // enabler checkboxes and toggle this `false -> setTimeout -> true` so the checkbox list remounts with the
+  // cascaded selection applied. As a plain field the delayed write notified nothing, so under zoneless
+  // change detection the checkboxes (`*ngIf="update == true"` at html:23 and html:35) vanished after
+  // ticking a parent enabler type and only came back on reload. The public API stays a plain boolean, so
+  // the template and the existing specs are untouched.
+  private readonly _update = signal<boolean>(false);
+  get update(): boolean {
+    return this._update();
+  }
+  set update(value: boolean) {
+    this._update.set(value);
+  }
   allInformation = true;
   innovationCompletary: any = [];
   bodyStep2: InnovationComplementary[] = [];

@@ -239,6 +239,54 @@ describe('EvidencesService', () => {
       expect((res.response as any).evidences[0].is_public_file).toBe(true);
       expect((res.response as any).supplementary[0].gender_related).toBe(false);
     });
+
+    // P2-3568: the section marks now survive a phase rollover, so supplementary
+    // evidence can carry them too. It used to normalise only the five
+    // impact-area marks and returned the other seven as raw tinyint (1/0/null).
+    it('normalizes every section mark on supplementary evidence, not just the impact-area ones', async () => {
+      const MARKS = [
+        'gender_related',
+        'youth_related',
+        'nutrition_related',
+        'environmental_biodiversity_related',
+        'poverty_related',
+        'innovation_readiness_related',
+        'innovation_use_related',
+        'policy_change_related',
+        'capacity_sharing_related',
+        'other_output_related',
+        'other_outcome_related',
+        'knowledge_product_metadata_related',
+      ];
+
+      mockResultRepository.getResultById.mockResolvedValue({ id: 1 });
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValue(
+        null,
+      );
+      // Raw MySQL shape: tinyint 1 / 0 / NULL, exactly what the driver returns.
+      const rawRow: Record<string, any> = { id: 2 };
+      MARKS.forEach((mark, i) => {
+        rawRow[mark] = [1, 0, null][i % 3];
+      });
+      mockEvidencesRepository.getEvidencesByResultId
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ ...rawRow }]);
+
+      const res = await service.findAll(1);
+      const supplementary = (res.response as any).supplementary[0];
+
+      const notBoolean = MARKS.filter(
+        (mark) => typeof supplementary[mark] !== 'boolean',
+      );
+      expect(notBoolean).toEqual([]);
+      // And the value is preserved, not just coerced to something.
+      MARKS.forEach((mark) => {
+        expect(supplementary[mark]).toBe(!!rawRow[mark]);
+      });
+      // Control: at least one of each, so this cannot pass on an all-false row.
+      expect(MARKS.some((mark) => supplementary[mark] === true)).toBe(true);
+      expect(MARKS.some((mark) => supplementary[mark] === false)).toBe(true);
+    });
   });
 
   describe('findAllV2', () => {
@@ -325,6 +373,66 @@ describe('EvidencesService', () => {
     it('should not create a sharepoint row when the evidence is not a sharepoint file', async () => {
       await service.saveSPData({ id: '1', link: 'x', is_sharepoint: 0 }, 1);
 
+      expect(mockEvidenceSharepointRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('should save the evidence_sharepoint row and update the evidence link on success', async () => {
+      mockEvidenceSharepointRepository.findOne.mockResolvedValue(undefined);
+      mockSharePointService.addFileAccess.mockResolvedValue({
+        link: { webUrl: 'https://sharepoint.example/doc' },
+      });
+      mockEvidenceSharepointRepository.save.mockResolvedValue(undefined);
+
+      await service.saveSPData(
+        {
+          id: '1',
+          link: '',
+          is_sharepoint: 1,
+          sp_document_id: 'doc-1',
+          sp_file_name: 'file.pdf',
+          sp_folder_path: '/Phase/Result 1',
+          is_public_file: true,
+        } as any,
+        1,
+      );
+
+      expect(mockEvidencesRepository.update).toHaveBeenCalledWith(1, {
+        link: 'https://sharepoint.example/doc',
+      });
+      expect(mockEvidenceSharepointRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document_id: 'doc-1',
+          file_name: 'file.pdf',
+          folder_path: '/Phase/Result 1',
+        }),
+      );
+    });
+
+    it('should throw a clear error and skip persisting the sharepoint row when addFileAccess fails silently', async () => {
+      mockEvidenceSharepointRepository.findOne.mockResolvedValue(undefined);
+      // SharePointService.addFileAccess swallows HTTP errors and resolves
+      // with the raw Error object instead of rejecting (see
+      // share-point.service.ts). This reproduces that shape.
+      mockSharePointService.addFileAccess.mockResolvedValue(
+        new Error('Graph API permission denied'),
+      );
+
+      await expect(
+        service.saveSPData(
+          {
+            id: '1',
+            link: '',
+            is_sharepoint: 1,
+            sp_document_id: 'doc-1',
+            sp_file_name: 'file.pdf',
+            sp_folder_path: '/Phase/Result 1',
+            is_public_file: true,
+          } as any,
+          1,
+        ),
+      ).rejects.toThrow(/addFileAccess failed for document doc-1/);
+
+      expect(mockEvidencesRepository.update).not.toHaveBeenCalled();
       expect(mockEvidenceSharepointRepository.save).not.toHaveBeenCalled();
     });
   });

@@ -1,4 +1,14 @@
-<div class="validation-text pr-body-2" *ngIf="!options?.length">The title of your result has no similarities in the PRMS Reporting Tool.</div>
+<!--
+  P2-3526: only claim "no similarities" when the search actually ran and came back empty. When it
+  failed, or when the parent already knows the exact title is taken, saying the title is free is the
+  contradiction the user hit at Save time.
+-->
+<div class="validation-text pr-body-2" *ngIf="!options?.length && !searchFailed && !hideNoSimilaritiesMessage">
+  The title of your result has no similarities in the PRMS Reporting Tool.
+</div>
+<div class="validation-text pr-body-2" *ngIf="searchFailed && !hideNoSimilaritiesMessage">
+  We could not check for similar results right now. Your title may still match one that was already reported.
+</div>
 <div class="validation-text pr-body-2" *ngIf="options?.length">
   Similar results have already been reported. If the result you would like to report is in the list below, please select it using the three dots on
   the right and map it to your ToC.

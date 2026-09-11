@@ -1,17 +1,17 @@
-<div class="detail_container">
-  <app-alert-status description="Please fill in the following required fields for this indicator category."> </app-alert-status>
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()" [appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)">
+  <app-alert-status [collapsible]="false" description="Please fill in the following required fields for this indicator category."> </app-alert-status>
 
-  <app-alert-status [description]="policyTypeDescriptions()"> </app-alert-status>
+  <app-alert-status [collapsible]="false" [description]="policyTypeDescriptions()"> </app-alert-status>
 
-  <div class="auto_fit_container">
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
     <app-pr-select
       [options]="this.policyControlListSE.policyTypesList"
       label="Policy type"
-      description="Select policy type"
       optionLabel="name"
       optionValue="id"
       placeholder="Select policy type"
-      [(ngModel)]="innovationUseInfoBody.policy_type_id">
+      [(ngModel)]="innovationUseInfoBody.policy_type_id"
+      (ngModelChange)="clearAmountWhenNotApplicable()">
     </app-pr-select>
 
     <app-pr-input
@@ -32,10 +32,9 @@
       ]"
       *ngIf="innovationUseInfoBody.policy_type_id == 1"
       label="Status"
-      description="Select Status"
       optionLabel="name"
       optionValue="id"
-      placeholder="Select stage"
+      placeholder="Select status"
       [required]="false"
       [(ngModel)]="innovationUseInfoBody.status_amount">
     </app-pr-select>
@@ -48,8 +47,25 @@
     optionValue="result_question_id"
     placeholder="Select an answer"
     [(ngModel)]="this.relatedTo"
-    (ngModelChange)="changeAnswerBoolean(this.relatedTo)">
+    (ngModelChange)="changeAnswerBoolean(this.relatedTo); clearActorsWhenNotApplicable()">
   </app-pr-select>
+
+  <!--
+    P2-2932 AC4: the count this sub-category is measured by. Shown only for "The capacity
+    development of key actors in a policy process" — the same pattern "USD amount" already follows
+    for policy type 1. Cleared when the answer changes, so a stale figure is never compared against
+    the ToC contribution behind the user's back.
+  -->
+  @if (showActorsInfluenced()) {
+    <app-pr-input
+      label="Number of key actors influenced"
+      type="number"
+      description="How many key actors were influenced in this policy process. This should match the contribution you report against the TOC indicator target."
+      placeholder="0"
+      [required]="false"
+      [(ngModel)]="innovationUseInfoBody.actors_influenced">
+    </app-pr-input>
+  }
 
   <!-- Don't delete this code, it's for future use
         <app-pr-radio-button [options]="this.relatedToEngagementOptions" optionLabel="label" optionValue="value"
@@ -60,7 +76,6 @@
   <app-pr-select
     [options]="this.policyControlListSE.policyStages"
     label="Stage"
-    description="Select stage"
     optionLabel="full_name"
     optionValue="id"
     placeholder="Select stage"
@@ -84,4 +99,4 @@
     [isComplete]="this.innovationUseInfoBody.institutions?.length > 0"></div>
 </div>
 
-<app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+<app-section-bottom-bar (clickSave)="onSaveSection()" />

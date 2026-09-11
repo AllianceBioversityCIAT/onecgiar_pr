@@ -39,6 +39,7 @@ import { VersioningModule } from './api/versioning/versioning.module';
 import { GlobalNarrativesModule } from './api/global-narratives/global-narratives.module';
 import { DeleteRecoverDataModule } from './api/delete-recover-data/delete-recover-data.module';
 import { GlobalParameterModule } from './api/global-parameter/global-parameter.module';
+import { FeedbackModule } from './api/feedback/feedback.module';
 import { SharePointModule } from './shared/services/share-point/share-point.module';
 import { NotificationModule } from './api/notification/notification.module';
 import { UserNotificationSettingsModule } from './api/user-notification-settings/user-notification-settings.module';
@@ -56,9 +57,13 @@ import { AiModule } from './api/ai/ai.module';
 import { IpsrFrameworkModule } from './api/ipsr-framework/ipsr-framework.module';
 import { ResultImpactAreaScoresModule } from './api/result-impact-area-scores/result-impact-area-scores.module';
 import { GlobalUtilsModule } from './shared/utils/global-utils.module';
+import { WebhookDispatchModule } from './api/results/webhook/webhook-dispatch.module';
 
 @Module({
   imports: [
+    // P2-3166: the webhook dispatcher. Registered here and imported by nobody — it depends on
+    // BilateralModule, which already imports ResultsModule, so any inbound import would cycle.
+    WebhookDispatchModule,
     JwtModule,
     ThrottlerModule.forRoot([
       {
@@ -95,6 +100,7 @@ import { GlobalUtilsModule } from './shared/utils/global-utils.module';
     GlobalNarrativesModule,
     DeleteRecoverDataModule,
     GlobalParameterModule,
+    FeedbackModule,
     SharePointModule,
     UserNotificationSettingsModule,
     EmailNotificationManagementModule,
@@ -133,14 +139,18 @@ export class AppModule implements NestModule {
     consumer
       .apply(JwtMiddleware, apiVersionMiddleware)
       .exclude(
-        { path: 'api/platform-report/(.*)', method: RequestMethod.ALL },
-        { path: 'api/bilateral/(.*)', method: RequestMethod.ALL },
+        { path: 'api/platform-report/*path', method: RequestMethod.ALL },
+        { path: 'api/bilateral', method: RequestMethod.ALL },
+        { path: 'api/bilateral/create', method: RequestMethod.ALL },
+        { path: 'api/bilateral/list', method: RequestMethod.ALL },
+        { path: 'api/bilateral/results', method: RequestMethod.ALL },
+        { path: 'api/bilateral/:id', method: RequestMethod.ALL },
       )
       .forRoutes(
-        { path: 'api/(.*)', method: RequestMethod.ALL },
-        { path: 'v2/(.*)', method: RequestMethod.ALL },
-        { path: 'clarisa/(.*)', method: RequestMethod.ALL },
-        { path: 'toc/(.*)', method: RequestMethod.ALL },
+        { path: 'api/*path', method: RequestMethod.ALL },
+        { path: 'v2/*path', method: RequestMethod.ALL },
+        { path: 'clarisa/*path', method: RequestMethod.ALL },
+        { path: 'toc/*path', method: RequestMethod.ALL },
       );
 
     consumer

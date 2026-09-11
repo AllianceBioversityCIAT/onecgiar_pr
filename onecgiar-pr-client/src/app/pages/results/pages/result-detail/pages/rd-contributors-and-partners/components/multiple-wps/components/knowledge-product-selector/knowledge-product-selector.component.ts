@@ -14,10 +14,16 @@ import { UnmappedMQAPInstitutionDto } from '../../../../models/contributorsAndPa
 export class CPKnowledgeProductSelectorComponent {
   authorAffiliationsList: any[] = [{ part: { code: 5 } }];
 
-  resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
-  versionId = this?.api?.dataControlSE?.currentResult?.version_id;
-
-  alertStatusMessage: string = `Partner organizations you collaborated with or are currently collaborating with to generate this result. <li>Please note that CGIAR Centers are not listed here. They are directly linked to <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li>`;
+  /**
+   * P2-3301 follow-up: P25 has no navigable "Theory of Change" section (not in this portfolio's
+   * result-detail sidebar — `routing-data.ts` only exposes `theory-of-change` for P22), and P25's own
+   * section order makes "Contributors & partners" section 2, not Theory of Change. The P22-derived
+   * copy this note used to carry ("...are directly linked to Section 2, Theory of Change") was
+   * therefore both mislabeled and pointed at a dead end for this portfolio, so the CGIAR Centers /
+   * Theory of Change sentence was dropped rather than re-fixed. `resultCode`/`versionId` getters and
+   * the deep link they built are gone with it — nothing else in this component read them.
+   */
+  alertStatusMessage = 'Partner organizations you collaborated with or are currently collaborating with to generate this result.';
 
   deliveryOptions = [
     { id: 1, name: 'Scaling' },

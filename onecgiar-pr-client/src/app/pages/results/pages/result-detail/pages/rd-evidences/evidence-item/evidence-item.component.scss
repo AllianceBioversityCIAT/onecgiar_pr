@@ -15,6 +15,18 @@
       margin-top: 6px;
     }
 
+    // `.field_card` (src/styles/field-card.scss, global — shared by pr-input/pr-textarea/
+    // pr-radio-button app-wide) carries its own `margin: 20px 0`. That STACKS with
+    // `.evidence_fields`'s own `gap` instead of replacing it — two adjacent fields end up
+    // 20px (margin-bottom) + gap + 20px (margin-top) apart, the single biggest contributor to
+    // this popup needing so much scroll (bugfix/evidence-modal-sticky-actions follow-up,
+    // 2026-09-03). Overriding it here (via `::ng-deep`, since `.field_card` renders inside child
+    // components) is scoped to the embedded/modal usage only — the global file is untouched, so
+    // every other `.field_card` consumer in the app keeps its normal 20px margin.
+    ::ng-deep .field_card {
+      margin: 4px 0;
+    }
+
     // Dropzone — keep the PRMS indigo dashed border (brand), add the mockup rounding/padding/soft bg
     .drag-and-drop-field {
       border-radius: 10px;
@@ -32,7 +44,10 @@
     margin-top: 26px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    // Tightened from 24px (bugfix/evidence-modal-sticky-actions follow-up, 2026-09-03) — less
+    // vertical distance between questions means less scrolling inside the embedded create/edit
+    // popup's `.modal_body` for a form that commonly has 4-5 stacked questions.
+    gap: 16px;
 
     .inputfieldHidden {
       display: none;

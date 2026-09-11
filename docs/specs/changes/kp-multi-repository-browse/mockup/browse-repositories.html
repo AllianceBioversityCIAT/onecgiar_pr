@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Mockup — Browse repositories (KP Result Identity)</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Material+Icons+Round&display=swap" rel="stylesheet">
+<style>
+:root{--p300:#6b6dc4;--p400:#6461bc;--p50:#f1f1fb;--p100:#e2e3f6;--p700:#3f3d8a;--ink:#1f2235;--muted:#6b7280;--border:#e5e7eb;--card:#fff;--ground:#f8f8fb}
+*{box-sizing:border-box}body{margin:0;background:#ecedf3;font-family:Poppins,system-ui,sans-serif;color:var(--ink);font-size:13px}
+.drawer{width:1180px;margin:24px auto;background:#fff;border-radius:14px;box-shadow:0 12px 40px rgba(25,21,36,.14);overflow:hidden}
+.hdr{display:flex;align-items:center;gap:10px;padding:14px 22px;border-bottom:1px solid var(--border);font-size:18px;font-weight:700}
+.mi{font-family:'Material Icons Round';font-size:18px;line-height:1;vertical-align:middle}
+.section{margin:18px 22px;border:1px solid var(--border);border-radius:12px;padding:18px}
+.h4{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;margin:0 0 14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.tabs{display:flex;background:#f3f4f6;border-radius:12px;padding:4px;margin-bottom:14px}
+.tab{flex:1;text-align:center;padding:9px;border-radius:9px;font-weight:600;font-size:15px;color:#6b7280}
+.tab.on{background:#fff;color:var(--p300);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.strip{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:10px 12px;border:1px solid var(--p100);background:var(--p50);border-radius:10px;margin-bottom:12px}
+.strip .lead{display:flex;align-items:center;gap:6px;font-weight:600;color:var(--p700);margin-right:4px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px 0 8px;border-radius:999px;border:1px solid var(--p300);background:#fff;color:var(--p700);font-weight:600;font-size:12.5px;cursor:pointer}
+.chip .mi{font-size:16px}.chip .n{background:var(--p100);color:var(--p700);border-radius:999px;padding:1px 7px;font-size:11px;font-weight:700}
+.chip.off{border-color:var(--border);color:#6b7280;background:#fff}.chip.off .n{background:#f3f4f6;color:#6b7280}
+.chip.bad{border-style:dashed;border-color:#f59e0b;color:#92400e;background:#fffbeb}.chip.bad .n{background:#fef3c7;color:#92400e;font-weight:600}
+.links{margin-left:auto;display:flex;gap:12px;font-size:12px}.links a{color:var(--p300);font-weight:600;text-decoration:none}
+.search{position:relative;margin-bottom:10px}.search input{width:100%;height:38px;border:1px solid var(--border);border-radius:10px;padding:0 36px;font:inherit;color:#374151}
+.search .mi{position:absolute;top:10px;color:#9ca3af}.search .l{left:11px}.search .r{right:11px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.sel{display:flex;align-items:center;justify-content:space-between;height:36px;border:1px solid var(--border);border-radius:9px;padding:0 12px;color:#6b7280;background:#fff}
+.lock{display:flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:9px;background:#f3f4f6;border:1px solid var(--border);color:#374151;font-size:12px;font-weight:500}
+.notice{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #fcd34d;background:#fffbeb;border-radius:10px;color:#78350f;margin-bottom:12px}
+.notice .btn{margin-left:auto;border:1px solid #f59e0b;background:#fff;color:#92400e;border-radius:8px;padding:6px 10px;font-weight:600;font-size:12px;display:inline-flex;gap:6px;align-items:center}
+.count{font-size:12px;color:#6b7280;font-weight:500;margin-bottom:10px}.count b{color:#374151}
+.card{display:flex;gap:16px;border:1px solid var(--border);border-radius:12px;padding:14px 16px;background:#fff;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.card .body{flex:1;min-width:0}.card .acts{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex:none}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.rb{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.02em;border:1px solid}
+.rb .dot{width:7px;height:7px;border-radius:50%}
+.rb.cg{background:var(--p50);border-color:var(--p100);color:var(--p700)}.rb.cg .dot{background:var(--p300)}
+.rb.mel{background:#ecfeff;border-color:#a5f3fc;color:#155e75}.rb.mel .dot{background:#0891b2}
+.rb.wf{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}.rb.wf .dot{background:#3b82f6}
+.rb.also{background:#fff;border-color:var(--border);color:#6b7280;font-weight:600}
+.t{font-size:14px;font-weight:600;margin:0 0 4px;line-height:1.35}.meta{font-size:12px;color:#6b7280}
+.hand{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#6b7280;margin-top:6px;display:flex;gap:10px;flex-wrap:wrap}
+.hand .sec{color:#9ca3af}
+.use{background:linear-gradient(90deg,var(--p300),var(--p400));color:#fff;border:0;border-radius:9px;padding:9px 14px;font-weight:600;font-size:12px;min-width:110px;text-align:center}
+.view{color:var(--p300);font-size:12px;font-weight:600}
+.pill{display:inline-flex;gap:4px;align-items:center;font-size:11px;background:#f3f4f6;border:1px solid var(--border);border-radius:999px;padding:1px 8px;color:#374151;margin-top:6px;margin-right:4px}
+.more{display:flex;justify-content:center;margin:8px 0}.more span{border:1px solid #d1d5db;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:500;background:#fff}
+.cap{margin:0 auto 24px;width:1180px;font-size:12px;color:#6b7280}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;width:1180px;margin:0 auto 32px;font-size:12px;color:#374151}
+.legend div b{color:var(--p700)}
+</style></head><body>
+<div class="drawer">
+  <div class="hdr"><span class="mi" style="color:var(--p300)">edit_note</span>Report result</div>
+  <div class="section">
+    <div class="h4"><span class="mi" style="color:var(--p300)">edit_note</span>1. Result Identity</div>
+    <div class="tabs"><div class="tab on">Browse repositories</div><div class="tab">Manual entry</div></div>
+
+    <!-- ① source strip -->
+    <div class="strip" role="group" aria-label="Repositories to search">
+      <span class="lead"><span class="mi" style="font-size:17px">travel_explore</span>Searching 3 CGIAR knowledge repositories</span>
+      <span class="chip" aria-pressed="true"><span class="mi">check_circle</span>CGSpace <span class="n">18</span></span>
+      <span class="chip" aria-pressed="true"><span class="mi">check_circle</span>MELSpace <span class="n">6</span></span>
+      <span class="chip bad" aria-pressed="true" title="WorldFish did not respond (timeout). Results below exclude it."><span class="mi">error_outline</span>WorldFish <span class="n">unavailable</span></span>
+      <span class="links"><a>Select all</a></span>
+    </div>
+
+    <div class="search"><span class="mi l">search</span><input value="climate-smart agricultural practices" aria-label="Search"><span class="mi r">refresh</span></div>
+    <div class="filters">
+      <div class="sel" style="width:176px">Filter by type <span class="mi" style="font-size:16px">expand_more</span></div>
+      <div class="sel" style="width:256px">Filter by center <span class="mi" style="font-size:16px">expand_more</span></div>
+      <div class="lock">Year: 2026 <span style="color:#6b7280;font-size:11px">(reporting cycle)</span></div>
+    </div>
+
+    <!-- ④ partial-results notice -->
+    <div class="notice" role="status"><span class="mi" style="color:#d97706">warning_amber</span><span><b>WorldFish did not respond.</b> Showing results from CGSpace and MELSpace.</span><span class="btn"><span class="mi" style="font-size:14px">refresh</span>Retry WorldFish</span></div>
+
+    <div class="count" aria-live="polite">Showing <b>10</b> of <b>24</b> items · CGSpace 18 · MELSpace 6</div>
+
+    <!-- ③ deduplicated card -->
+    <div class="card">
+      <div class="body">
+        <div class="badges"><span class="rb cg"><span class="dot"></span>CGSpace</span><span class="rb also"><span class="mi" style="font-size:13px">call_split</span>Also in MELSpace</span></div>
+        <p class="t">Climate-smart agricultural practices tested with farming households through CGIAR's Multifunctional Landscapes initiative</p>
+        <div class="meta">Journal Article · 2026 · Pérez, M. et al. · Alliance of Bioversity International and CIAT</div>
+        <span class="pill">Kenya</span><span class="pill">Ethiopia</span>
+        <div class="hand"><span>10568/175322</span><span class="sec">also 20.500.11766/9021 (MELSpace)</span></div>
+      </div>
+      <div class="acts"><span class="use">Use this item</span><span class="view">View details <span class="mi" style="font-size:12px">open_in_new</span></span></div>
+    </div>
+
+    <div class="card">
+      <div class="body">
+        <div class="badges"><span class="rb mel"><span class="dot"></span>MELSpace</span></div>
+        <p class="t">Memorias del taller de intercambio regional sobre las Mesas Técnicas Agroclimáticas (MTA) en la región del SICA</p>
+        <div class="meta">Report · 2026 · Giraldo, D. et al. · ICARDA</div>
+        <span class="pill">Guatemala</span><span class="pill">Honduras</span><span class="pill">El Salvador</span>
+        <div class="hand"><span>20.500.11766/9104</span></div>
+      </div>
+      <div class="acts"><span class="use">Use this item</span><span class="view">View details <span class="mi" style="font-size:12px">open_in_new</span></span></div>
+    </div>
+
+    <div class="card">
+      <div class="body">
+        <div class="badges"><span class="rb cg"><span class="dot"></span>CGSpace</span></div>
+        <p class="t">Scaling climate-smart practices in East African smallholder systems: evidence brief</p>
+        <div class="meta">Brief · 2026 · Okoth, J. · International Livestock Research Institute</div>
+        <div class="hand"><span>10568/175401</span></div>
+      </div>
+      <div class="acts"><span class="use">Use this item</span><span class="view">View details <span class="mi" style="font-size:12px">open_in_new</span></span></div>
+    </div>
+    <div class="more"><span>Load more</span></div>
+  </div>
+</div>
+<div class="legend">
+  <div><b>①</b> Source strip: lead-in + one toggle chip per repository (all on by default; last one cannot be turned off). Counts appear after a search. "Select all" shows only while fewer than three are selected.</div>
+  <div><b>②</b> Same search, filters and reporting-year lock as today; they apply to every selected repository.</div>
+  <div><b>③</b> Repository badge on every card; a DOI/title match across repositories collapses into one card with "Also in …" and the secondary handle.</div>
+  <div><b>④</b> Partial results: a failed/unconfigured repository shows as unavailable on its chip and in an inline notice with a per-repository retry; the other sources still render.</div>
+</div>
+<p class="cap">Mockup for docs/specs/changes/kp-multi-repository-browse — static HTML, not production markup (real implementation is Tailwind-first per design.md §7).</p>
+</body></html>

@@ -1,6 +1,6 @@
-<p-dialog appendTo="body" header="Title" [(visible)]="this.ipsrDataControlSE.modals.unsubmit"
-    (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
-    [dismissableMask]="true" [style]="{padding: '0px'}">
+<app-pr-dialog [(visible)]="this.ipsrDataControlSE.modals.unsubmit"
+    (onHide)="cleanObject()" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
+    [dismissableMask]="true" styleClass="ipsr-unsubmit-modal-dialog">
     <div class="modal_title">Un-submission
     </div>
     <div class="modal_container partners-request-container">
@@ -20,4 +20,4 @@
             [icon]="this.requesting?'loop':'send'" padding="medium" (clickEvent)="onSubmit()">
         </app-pr-button>
     </div>
-</p-dialog>
+</app-pr-dialog>

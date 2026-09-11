@@ -1,6 +1,7 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { KnowledgeProductInfoComponent } from './knowledge-product-info.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { delay } from 'rxjs/operators';
 import { SyncButtonComponent } from '../../../../../../../custom-fields/sync-button/sync-button.component';
 import { PrYesOrNotComponent } from '../../../../../../../custom-fields/pr-yes-or-not/pr-yes-or-not.component';
 import { PrFieldHeaderComponent } from '../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
@@ -10,7 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { PrFieldValidationsComponent } from '../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { AlertStatusComponent } from '../../../../../../../custom-fields/alert-status/alert-status.component';
 import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { SaveButtonComponent } from '../../../../../../../custom-fields/save-button/save-button.component';
 import { CustomizedAlertsFeService } from '../../../../../../../shared/services/customized-alerts-fe.service';
@@ -135,6 +136,27 @@ describe('KnowledgeProductInfoComponent', () => {
 
     fixture = TestBed.createComponent(KnowledgeProductInfoComponent);
     component = fixture.componentInstance;
+  });
+
+  describe('sectionLoading (skeleton)', () => {
+    it('starts raised', () => {
+      expect(component.sectionLoading()).toBe(true);
+    });
+
+    it('is released once the section GET responds', () => {
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the section GET fails, so the skeleton can never get stuck', () => {
+      component.sectionLoading.set(true);
+      jest.spyOn(mockApiService.resultsSE, 'GET_resultknowledgeProducts').mockReturnValue(throwError(() => new Error('boom')));
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
   });
 
   describe('ngOnInit()', () => {
@@ -611,6 +633,114 @@ describe('KnowledgeProductInfoComponent', () => {
       expect(component.knowledgeProductBody.is_peer_reviewed_CG).toBe('Not available');
       // accessibility is null and isJA=true so => 'Not provided'
       expect(component.knowledgeProductBody.accessibility_CG).toBe('Not provided');
+    });
+  });
+
+  /**
+   * `UCA-T-11` — `CanComponentDeactivate` wiring. `SectionDirtyTrackerService` is component-scoped
+   * (`providers: [SectionDirtyTrackerService]` on the component), so each spec gets a fresh
+   * instance via `TestBed.createComponent` in the top-level `beforeEach` — no cross-test snapshot
+   * leakage.
+   *
+   * Load-flow timing investigation (per `UCA-T-6`'s attempt-1 FAIL lesson, and `UCA-T-7`/`UCA-T-9`'s
+   * child-mutation FAILs): the TRACKED/save-payload object is `sectionData` (`KnowledgeProductSaveDto`),
+   * not `knowledgeProductBody` (display-only metadata, never PATCHed back). Every `sectionData` field
+   * is assigned synchronously inside `getSectionInformation()`'s own `next` handler. The two
+   * secondary async calls this component fires (`GET_meliaStudiesByToc`, `GET_ostMeliaStudiesByResultId`)
+   * only ever write to `tocMeliaStudiesList`/`ostMeliaStudies` — plain dropdown catalogs, never
+   * `sectionData` — so unlike `rd-geographic-location`'s `app-sub-geoscope` or
+   * `rd-contributors-and-partners`'s child ToC writers, there is no post-snapshot mutation of the
+   * tracked object here. Every control this template renders (`app-pr-yes-or-not`, `app-pr-select`,
+   * `app-pr-input`, `app-pr-field-header`) is a plain `custom-fields` CVA control with no
+   * auto-assign `ngOnInit`/`ngOnChanges` write (verified: none of them touch anything besides
+   * `writeValue()`/their own internal state) — confirmed no child-mutation bug class applies here.
+   */
+  describe('CanComponentDeactivate (UCA-T-11)', () => {
+    it('is false right after getSectionInformation() completes', () => {
+      component.getSectionInformation();
+
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    /**
+     * Falsifying input: snapshotting only once at load (never again after save) would report
+     * `true` here too — this test alone doesn't distinguish "no snapshot" from "correct snapshot",
+     * but combined with the save-path tests below it does.
+     */
+    it('is true after editing sectionData', () => {
+      component.getSectionInformation();
+
+      component.sectionData.isMeliaProduct = !component.sectionData.isMeliaProduct;
+
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    /**
+     * Falsifying input: relying SOLELY on the delegated `getSectionInformation()` reload inside
+     * `performSave()`'s `tap` (the exact `UCA-T-6` attempt-1 bug) would leave this section dirty
+     * forever once that reload fails, even though the PATCH itself genuinely succeeded. Forcing the
+     * reload's own GET to throw isolates the direct `dirtyTracker.snapshot(...)` call as the only
+     * thing that can make this assertion pass. Genuinely async (`fakeAsync`/`tick()`/`delay(0)`) per
+     * the DoD's non-masking-mock rule — not a synchronous `of(...)`.
+     */
+    it('is false right when saveSection() emits true, even when the follow-up reload fails entirely', fakeAsync(() => {
+      mockApiService.resultsSE.GET_resultknowledgeProducts = () => of({ response: mockGET_resultknowledgeProductsResponse }).pipe(delay(0));
+      component.getSectionInformation();
+      tick();
+      component.sectionData.isMeliaProduct = !component.sectionData.isMeliaProduct;
+      expect(component.hasUnsavedChanges()).toBe(true);
+
+      mockApiService.resultsSE.PATCH_knowledgeProductSection = () => of({}).pipe(delay(0));
+      mockApiService.resultsSE.GET_resultknowledgeProducts = () => throwError(() => new Error('reload failed')).pipe(delay(0));
+
+      let sawTrue = false;
+      component.saveSection().subscribe(result => {
+        sawTrue = result === true;
+        expect(component.hasUnsavedChanges()).toBe(false);
+      });
+      tick();
+
+      expect(sawTrue).toBe(true);
+    }));
+
+    it('saveSection() resolves false (not throws) on a failing PATCH_knowledgeProductSection, without reloading the section', fakeAsync(() => {
+      mockApiService.resultsSE.GET_resultknowledgeProducts = () => of({ response: mockGET_resultknowledgeProductsResponse }).pipe(delay(0));
+      component.getSectionInformation();
+      tick();
+      const reloadSpy = jest.spyOn(component, 'getSectionInformation');
+      mockApiService.resultsSE.PATCH_knowledgeProductSection = () => throwError(() => new Error('save failed')).pipe(delay(0));
+
+      let result: boolean | undefined;
+      let errored = false;
+      component.saveSection().subscribe({
+        next: value => (result = value),
+        error: () => (errored = true)
+      });
+      tick();
+
+      expect(errored).toBe(false);
+      expect(result).toBe(false);
+      expect(reloadSpy).not.toHaveBeenCalled();
+    }));
+  });
+
+  /**
+   * `UCA-OQ-2` — serializability of the tracked object. `sectionData` (`KnowledgeProductSaveDto`)
+   * is loaded from a REAL `getSectionInformation()` call (not a hand-built literal), then
+   * round-tripped through `JSON.stringify`/`JSON.parse` — the exact mechanism
+   * `SectionDirtyTrackerService` relies on. Finding: every field is a primitive
+   * (`boolean | number | string | null`) — no `File`/`Blob`/circular refs, so no exclusion/
+   * normalization is required for this section (context note: this section deals with knowledge
+   * products/CGSpace handles, but the handle itself lives on `knowledgeProductBody` — display-only,
+   * excluded from the diff entirely — not on the tracked `sectionData`).
+   */
+  describe('UCA-OQ-2 — serializability of the tracked object', () => {
+    it('round-trips a REALLY LOADED sectionData without loss', () => {
+      component.getSectionInformation();
+
+      const roundTripped = JSON.parse(JSON.stringify(component.sectionData));
+
+      expect(roundTripped).toEqual(component.sectionData);
     });
   });
 });

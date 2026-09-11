@@ -159,7 +159,7 @@
     @if (text) {
       <div class="whats-new-page-details_to_do_container">
         <div class="whats-new-page-details_to_do mb-10">
-          <p-checkbox [(ngModel)]="block.to_do.checked" [binary]="true" readonly="true" />
+          <input type="checkbox" class="pr-native-check" [(ngModel)]="block.to_do.checked" style="pointer-events: none" />
           <p class="whats-new-page-details_default_text" [innerHTML]="text"></p>
         </div>
 

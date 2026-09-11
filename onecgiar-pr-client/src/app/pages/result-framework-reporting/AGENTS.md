@@ -39,13 +39,13 @@ This root file is the **index + cross-cutting reference**. Each sub-page has its
 | **Home** | [`pages/result-framework-reporting-home/AGENTS.md`](./pages/result-framework-reporting-home/AGENTS.md) | Landing page, `HomeService` signals, SP card behavior, recent activity feed, responsive grid, prefetch pattern. |
 | **Entity Details** | [`pages/entity-details/AGENTS.md`](./pages/entity-details/AGENTS.md) | Dashboard with charts (`dataOutputs`, `dataOutcomes`), `summaryInsightsData`, `groupedIndicatorSummaries`, SGP-02 multi-fallback name resolution, unplanned result modal, the `showBilateralResultsReview` bug. |
 | **Entity AOW** | [`pages/entity-aow/AGENTS.md`](./pages/entity-aow/AGENTS.md) | `EntityAowService` (the big one — 287 LOC), sidebar tree, HLO/Outcomes tabs, AOW HLO table, Report Result modal with CGSpace regex, View Results drawer, Target Details drawer, 2030 Outcomes. |
-| **Bilateral Results** | [`pages/bilateral-results/AGENTS.md`](./pages/bilateral-results/AGENTS.md) | The bilateral review page (sidebar + filters + grouped table), `BilateralResultsService`, `pendingCountByAcronym`, the `onChangeCenterSelected` effect, the URL hydration contract, stale-counts-on-deep-link gotcha. |
-| **Review Drawer** | [`pages/bilateral-results/components/results-review-table/components/result-review-drawer/AGENTS.md`](./pages/bilateral-results/components/results-review-table/components/result-review-drawer/AGENTS.md) | The 1,666-LOC drawer. Lifecycle state machine, data-load sequence step-by-step, `RolesService.readOnly` global flip mechanics, save flow trace, Approve/Reject decision matrix, dirty tracking, type-specific sub-content interaction, the 3 effects + 10 `setTimeout`s catalog, security review, anti-patterns with before/after samples. **Required reading before touching the drawer.** |
+| **Bilateral Review** | [`pages/bilateral-review/CLAUDE.md`](./pages/bilateral-review/CLAUDE.md) | The Bilateral review tab (toolbar/KPI strip/grouped table), `BilateralResultsService`, `BilateralReviewCountService` (badge count derived from the same list, no separate fetch), the URL query-param contract, the drawer deep-link one-shot clear. |
+| **Review Drawer** | [`pages/bilateral-review/components/result-review-drawer/AGENTS.md`](./pages/bilateral-review/components/result-review-drawer/AGENTS.md) | The 1,666-LOC drawer. Lifecycle state machine, data-load sequence step-by-step, `RolesService.readOnly` global flip mechanics, save flow trace, Approve/Reject decision matrix, dirty tracking, type-specific sub-content interaction, the 3 effects + 10 `setTimeout`s catalog, security review, anti-patterns with before/after samples. **Required reading before touching the drawer.** |
 
 **Recommended reading order for a new replicator:**
 
 1. This root file end-to-end (you are here).
-2. The sub-AGENTS.md for the page they're starting with — for a typical 2-week MVR, start with **bilateral-results** + **review-drawer**.
+2. The sub-AGENTS.md for the page they're starting with — for a typical 2-week MVR, start with **bilateral-review** + **review-drawer**.
 3. Drill into source code only after the relevant sub-AGENTS.md has been read.
 
 ### 0.2 Environment, auth, build & test (bootstrap checklist)
@@ -62,7 +62,7 @@ Things the replicator must have working before any module code runs:
 | **Build commands** (Angular today) | `npm start` (dev `localhost:4200`), `npm run build` (prod), `npm run watch` (dev build watch). | Whatever your framework offers — keep one dev, one prod, one watch. |
 | **Test commands** | `npm run test` (Jest), `npm run test:coverage`, `npm run cypress:open` / `cypress:run` (E2E). | Replicate at least unit-test coverage for the bilateral service + drawer normalizers (see §12). |
 | **i18n** | All user-facing copy *should* use `TerminologyService`, but a large fraction of the module still hardcodes English in templates (drawer headers, button labels, chip labels, breadcrumb text). | If your target product is multilingual or portfolio-aware, treat string extraction as a Phase-1 task. The checklist (§15) now flags this. |
-| **Real-time** | The module does NOT use Pusher or sockets for live updates; it relies on `refreshAllResultsForCounts()` after each decision. | Same model is fine; no need to wire WebSockets for the bilateral review flow. |
+| **Real-time** | The module does NOT use Pusher or sockets for live updates; the badge/KPI counts are derived client-side from the same list fetched by the table, so a decision that mutates the list also updates the counts on the next render. | Same model is fine; no need to wire WebSockets for the bilateral review flow. |
 
 ---
 
@@ -108,7 +108,7 @@ The **Bilateral Results Review** is the most complex artifact. The replicating t
                               │                                       │
                               ▼                                       ├── /all (placeholder)
                   /entity-details/:entityId/                          ├── /unplanned (placeholder)
-                  results-review                                      ├── /2030-outcomes
+                  bilateral-review                                    ├── /2030-outcomes
                   (standalone, "Bilateral")                           └── /:aowId (tabs HLO|Outcomes)
 
 Wildcard ** → redirect to /home
@@ -200,10 +200,9 @@ ResultFrameworkReportingComponent  (NgModule router-outlet shell; declares stand
 │           ├── AowViewResultsDrawerComponent
 │           └── AowTargetDetailsDrawerComponent (Center × Year pivot)
 │
-└── BilateralResultsComponent  (/entity-details/:id/results-review)
-    ├── IndicatorsSidebarComponent (left pane — centers with pending counts)
-    ├── ResultsReviewFiltersComponent (top — search + filter drawer + chip bar)
-    └── ResultsReviewTableComponent (grouped table)
+└── BilateralReviewComponent  (/entity-details/:id/bilateral-review)
+    ├── BilateralReviewKpisComponent (KPI strip — projects, centers, pending, approved/rejected)
+    └── BilateralReviewTableComponent (grouped table)
         └── ResultReviewDrawerComponent (1,666-LOC review editor)
             ├── <app-geoscope-management> (shared)
             ├── KpContentComponent (type 6)
@@ -233,7 +232,7 @@ ResultFrameworkReportingComponent  (NgModule router-outlet shell; declares stand
 ┌─────────┴─────────┐   ┌─────────┴─────────┐    │
 │ EntityDetailsComp │   │ BilateralResults  │    │
 │ EntityAowComp     │   │ Component         │    │
-│ AowHloTableComp   │   │ ResultsReviewTable│    │
+│ AowHloTableComp   │   │ BilateralReviewTable│  │
 └───────────────────┘   │ ResultReviewDrawer│────┘ (Drawer also directly injects
                         └───────────────────┘       ApiService, RolesService,
                                                     CentersService, InstitutionsService)
@@ -259,7 +258,7 @@ No cycles among the 3 feature services. They all flow up into the same `ApiServi
        │  [Entity AOW chunk]  (EntityAowComponent, AowHloTableComponent, modal + 2 drawers)
        │
        └─▼ (code-split via loadComponent)
-          [Bilateral Review chunk]  (BilateralResultsComponent, ReviewDrawerComponent)
+          [Bilateral Review chunk]  (BilateralReviewComponent, ReviewDrawerComponent)
              │
              ▼ (heavy shared modules pulled in by the chunk)
           [ResultCreatorModule]  (unplanned result form)
@@ -271,7 +270,7 @@ The Bilateral Review chunk is the largest because of `RdContributorsAndPartnersM
 ### 2.5 Cross-cutting concerns trace
 
 - **Auth header injection** — `src/app/shared/interceptors/general-interceptor.service.ts` intercepts every HTTP call, reads `localStorage.token`, appends `auth: <token>` (unless URL matches Elasticsearch). Case-sensitive lowercase `auth`.
-- **Side-effect refresh** — on successful `PATCH`/`POST` to `/api/results/*`, the interceptor triggers `GreenChecksService.updateGreenChecks()`. Note: the bilateral module does NOT rely on this for data freshness; it manually fires `refreshAllResultsForCounts()` after Approve/Reject.
+- **Side-effect refresh** — on successful `PATCH`/`POST` to `/api/results/*`, the interceptor triggers `GreenChecksService.updateGreenChecks()`. Note: the bilateral module does NOT rely on this for data freshness; after Approve/Reject the table re-fetches `GET_ResultToReview(code)` and re-derives the badge/KPI counts from that same response via `BilateralReviewCountService.setFromRows()`.
 - **Error handling** — `manageError()` in the interceptor. 400/500 trigger `api.alertsFe.show()` global red banner. Feature services silently catch errors in `.subscribe({ error: () => ... })` solely to clear local loading spinners. The Drawer does NOT show toasts on save failure — the dialog stays open and `isSaving` flips back to false (see drawer AGENTS.md §3).
 - **Loading states** — explicit boolean signals (`isLoadingSPLists`, `isLoadingDetails`, `isLoading`, `isLoadingInformation`, `isSaving`). Templates bind to `p-skeleton`, `p-progressSpinner`, or `globalDisabled` CSS classes.
 - **i18n & terminology** — `src/app/internationalization/terminology.service.ts` and the `term` pipe. **However**, a significant portion of this module hardcodes English in templates. Replicators with multilingual targets should treat string extraction as a Phase-1 task.
@@ -317,25 +316,30 @@ result-framework-reporting/
     │                   ├── aow-hlo-table-create-modal/             "Report result" dialog. CGSpace handle regex.
     │                   ├── aow-view-results-drawer/                Existing results table.
     │                   └── aow-target-details-drawer/              Center × Year pivot.
-    └── bilateral-results/
-        ├── bilateral-results.component.{ts,html,scss,spec.ts}
-        ├── bilateral-results.service.{ts,spec.ts}
+    └── bilateral-review/
+        ├── bilateral-review.component.{ts,html,spec.ts}
+        ├── bilateral-review.copy.ts                            Centralized i18n string map (BRT-R-19).
+        ├── bilateral-review.query-params.ts                    URL ↔ state codec, six keys (design.md §6.2).
+        ├── bilateral-review.cy.ts                              Cypress CT layout gate (BRT-T-7).
+        ├── CLAUDE.md                                           Page guide — routes, URL contract, data flow, gotchas.
+        ├── services/
+        │   ├── bilateral-results.service.{ts,spec.ts}          Entity + list state (trimmed, BRT-T-8).
+        │   ├── bilateral-review-access.service.{ts,spec.ts}    isProgramMember(code) (BRT-R-14).
+        │   └── bilateral-review-count.service.{ts,spec.ts}     Shared badge count, root-provided (BRT-DD-2).
         └── components/
-            ├── indicators-sidebar/                                 Centers list with pending-count badges.
-            ├── results-review-container/                           <ng-content/> wrapper.
-            ├── results-review-filters/                             Search + custom right-side filters drawer + chip bar.
-            └── results-review-table/
-                ├── results-review-table.component.{ts,html,scss,spec.ts}
-                └── components/result-review-drawer/
-                    ├── result-review-drawer.component.{ts,html,scss,spec.ts}  ~1,666 LOC.
-                    ├── result-review-drawer.interfaces.ts                     ResultToReview, GroupedResult, BilateralResultDetail, ~15 sub-interfaces.
-                    └── components/
-                        ├── kp-content/                              Knowledge Product readonly view.
-                        ├── inno-dev-content/                        Innovation Development editor.
-                        ├── cap-sharing-content/                     Capacity Sharing editor.
-                        ├── policy-change-content/                  Policy Change editor.
-                        ├── innovation-use-content/                  Innovation Use editor.
-                        └── save-changes-justification-dialog/       Reusable justification dialog.
+            ├── bilateral-review-kpis/                              KPI strip — projects, centers, pending, approved/rejected.
+            ├── bilateral-review-table/                             Grouped/flat review table (search + filters applied by the parent).
+            └── result-review-drawer/
+                ├── result-review-drawer.component.{ts,html,scss,spec.ts}  ~1,666 LOC.
+                ├── result-review-drawer.interfaces.ts                     ResultToReview, GroupedResult, BilateralResultDetail, ~15 sub-interfaces.
+                ├── AGENTS.md                                              Replication deep-dive for this drawer.
+                └── components/
+                    ├── kp-content/                              Knowledge Product readonly view.
+                    ├── inno-dev-content/                        Innovation Development editor.
+                    ├── cap-sharing-content/                     Capacity Sharing editor.
+                    ├── policy-change-content/                  Policy Change editor.
+                    ├── innovation-use-content/                  Innovation Use editor.
+                    └── save-changes-justification-dialog/       Reusable justification dialog.
 ```
 
 Naming rules to preserve:
@@ -361,9 +365,9 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
     path: 'entity-details/:entityId',
     loadComponent: () => import('.../entity-details.component').then(m => m.EntityDetailsComponent) },
 
-  { prName: 'Bilateral results review',
-    path: 'entity-details/:entityId/results-review',
-    loadComponent: () => import('.../bilateral-results.component').then(m => m.BilateralResultsComponent) },
+  { prName: 'Bilateral review',
+    path: 'entity-details/:entityId/bilateral-review',
+    loadComponent: () => import('.../bilateral-review.component').then(m => m.BilateralReviewComponent) },
 
   { prName: 'Entity AOW',
     path: 'entity-details/:entityId/aow',
@@ -383,7 +387,7 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
 The `entity-details/:entityId/aow/:aowId` route co-exists with `2030-outcomes` and `unplanned`. Order matters: literal paths are matched first by Angular's router, then `:aowId` catches the rest. Preserve the order on replication.
 
 **Query parameters used in the URL** (deep-linkable):
-- `/entity-details/:entityId/results-review?center=<centerCode>&search=<text>` — sidebar selection + search persisted (search via `Location.replaceState`, no history pollution).
+- `/entity-details/:entityId/bilateral-review?center=<centerCode>&search=<text>` — sidebar selection + search persisted (search via `Location.replaceState`, no history pollution).
 - `/result/result-detail/<resultCode>?phase=<versionId>` — recent activity items + navigations from drawer use this external route.
 
 ---
@@ -454,26 +458,24 @@ canReportResults = computed(() => {
 ### 5.3 `BilateralResultsService`
 
 ```ts
-entityId, entityDetails, centers, currentCenterSelected,
-searchText, selectedCenterCode,
-selectedIndicatorCategories, selectedStatus, selectedLeadCenters,  // table filters
-tableData, tableResults, allResultsForCounts,                       // server data
+entityId, entityDetails,                                            // entity state
+searchText,                                                         // search
+selectedIndicatorCategories, selectedStatus, selectedLeadCenters,   // table filters
+tableData, tableResults,                                            // server data
 indicatorCategoryOptions, statusOptions, leadCenterOptions,         // computed dropdown options (derived from data)
-pendingCountByAcronym, totalPendingCount,                           // computed counts (status_id == 5)
-centerAcronymsWithResults, centersToShowInSidebar,                  // computed center filtering
 showReviewDrawer, currentResultToReview                             // drawer state
 ```
 
 Methods:
 
 ```ts
-selectCenter(centerCode | null)        // null = all centers
 getEntityDetails()                     // GET clarisa-global-units → entityDetails
 clearBilateralTableFilters()
-refreshAllResultsForCounts()           // re-fetches all centers' results to update sidebar counts after a decision
 ```
 
-**Computed dependency**: `pendingCountByAcronym` and the sidebar use `allResultsForCounts`, NOT `tableResults`. This is intentional — when the user filters the table by a single center, `tableResults` only contains that center's data, but the sidebar pending badges must keep showing all centers' counts.
+Also exports `REVIEW_RESULT_QUERY_PARAM` / `REVIEW_RESULT_ID_QUERY_PARAM` — the one-shot deep-link pair consumed by the drawer.
+
+Full state contract: [`pages/bilateral-review/CLAUDE.md`](./pages/bilateral-review/CLAUDE.md).
 
 ### 5.4 Signal-to-consumer cross-reference
 
@@ -495,11 +497,8 @@ Complete mapping of state origins (signals) to UI consumers — this is the cano
 | `EntityAowService` | `showViewResultDrawer`, `viewResultDrawerFullScreen`, `currentResultToView` | `AowViewResultsDrawerComponent`. |
 | `EntityAowService` | `showTargetDetailsDrawer`, `targetDetailsDrawerFullScreen`, `currentTargetToView` | `AowTargetDetailsDrawerComponent`. |
 | `EntityAowService` | `reportingEnabled`, `canReportResults` (computed) | Read directly by `EntityResultsByIndicatorCategoryCardComponent` (Report button visibility); `AowHloTableComponent` (per-row Report button); `AowHloCreateModalComponent` (Submit button). |
-| `BilateralResultsService` | `entityId`, `entityDetails` | `BilateralResultsComponent` (breadcrumb); `ResultsReviewTableComponent` (API param). |
-| `BilateralResultsService` | `centers`, `currentCenterSelected`, `selectedCenterCode` | `IndicatorsSidebarComponent` (active styling, click handler, table fetch trigger). |
-| `BilateralResultsService` | `searchText`, `selectedIndicatorCategories`, `selectedStatus`, `selectedLeadCenters` | `ResultsReviewFiltersComponent` (two-way bound); `ResultsReviewTableComponent` (`filteredTableData` computed). |
-| `BilateralResultsService` | `tableData`, `tableResults`, `allResultsForCounts` | `ResultsReviewTableComponent` (rendering); `IndicatorsSidebarComponent` (`pendingCountByAcronym` derived). |
-| `BilateralResultsService` | `showReviewDrawer`, `currentResultToReview` | `ResultsReviewTableComponent` (click mutation); `ResultReviewDrawerComponent` (lifecycle mount trigger). |
+| `BilateralResultsService` | `entityId`, `entityDetails`, `tableData`, `tableResults` | `BilateralReviewComponent` (page state, own computed pipeline — see `pages/bilateral-review/CLAUDE.md`). |
+| `BilateralResultsService` | `showReviewDrawer`, `currentResultToReview` | `BilateralReviewComponent` (click mutation); `ResultReviewDrawerComponent` (lifecycle mount trigger). |
 
 ### 5.5 Computed dependency catalog
 
@@ -512,13 +511,7 @@ Every `computed()` in the module and its tracked signals:
 | `BilateralResultsService.indicatorCategoryOptions` | `tableResults()` | Sorted unique values for indicator multiselect. |
 | `BilateralResultsService.statusOptions` | `tableResults()` | Sorted unique values for status multiselect. |
 | `BilateralResultsService.leadCenterOptions` | `tableResults()` | Sorted unique values for lead-center multiselect. |
-| `BilateralResultsService.pendingCountByAcronym` | `allResultsForCounts()` | `Record<acronym, count>` of pending rows (`status_id == 5`). |
-| `BilateralResultsService.totalPendingCount` | `allResultsForCounts()` | "All Centers" sidebar badge. |
-| `BilateralResultsService.centerAcronymsWithResults` | `allResultsForCounts()` | `Set<string>` of acronyms with at least one result. |
-| `BilateralResultsService.centersToShowInSidebar` | `centers()`, `centerAcronymsWithResults()` | Filter centers list to those with results. |
-| `ResultsReviewTableComponent.canReviewResults` | `api.rolesSE.isAdmin`, `api.dataControlSE.myInitiativesList`, `entityId()` | Flips "Review result" → "See result" per-row button. |
-| `ResultsReviewTableComponent.filteredTableData` | `searchText()`, `selectedIndicatorCategories()`, `selectedStatus()`, `selectedLeadCenters()`, `tableData()` | Client-side filtering projection. |
-| `ResultsReviewTableComponent.expandedRowKeys` | `filteredTableData()` | Pre-expand all groups by `project_name`. |
+| `BilateralReviewComponent`'s own pipeline (`canReview`, `searchFiltered`, `chipCounts`, `kpis`, `visibleRows`, `groups`, `flatRows`) | `programmeCode()`, `search()`, `status()`, `centers()`/`projects()`/`categories()`, `results.tableResults()` | The sidebar/filters/table trio below was deleted (BRT-T-2/T-3/T-6) — see `pages/bilateral-review/CLAUDE.md` for the current computed pipeline order. |
 | `ResultReviewDrawerComponent.canEditInDrawer` | `api.rolesSE.isAdmin`, `resultToReview()`, `resultDetail()`, `api.dataControlSE.myInitiativesList`, `bilateralResultsService.entityId()` | **Cross-service gate** — primary truth source for "drawer can mutate". |
 | `ResultReviewDrawerComponent.isTocFormValid` | `tocInitiative` object | Form-level validation gate for TOC save. |
 | `ResultReviewDrawerComponent.disabledContributingProjectOptions` | `leadProjectIds()`, `clarisaProjectsList()` | Disable lead projects in multiselect. |
@@ -533,26 +526,21 @@ Every `computed()` in the module and its tracked signals:
 | `AowTargetDetailsDrawerComponent.years` | `entityAowService.currentTargetToView()` | Sorted unique year columns. |
 | `AowTargetDetailsDrawerComponent.tableData` | `entityAowService.currentTargetToView()`, `years()` | Center × Year pivot rows. |
 
-### 5.6 Effect catalog (4 total in the module)
+### 5.6 Effect catalog (drawer effects below; `BilateralReviewComponent`'s own load/URL/deep-link effects are documented in `pages/bilateral-review/CLAUDE.md`)
 
-All `effect()` declarations:
+All drawer `effect()` declarations:
 
-1. **`ResultsReviewTableComponent.onChangeCenterSelected`**
-   - **Trigger**: `bilateralResultsService.currentCenterSelected()`.
-   - **Body**: if non-empty, call `getResultsToReview(centers)`; always clear `tableData`, `tableResults`, and filters first (produces a flash of empty table).
-   - **Cleanup**: none — runs for the lifetime of the table component.
-
-2. **`ResultReviewDrawerComponent` — Load Trigger** (line 877)
+1. **`ResultReviewDrawerComponent` — Load Trigger** (line 877)
    - **Trigger**: `resultToReview()`, `visible()`.
    - **Body**: if both truthy → `loadResultDetail(result.id)`.
    - **Cleanup**: none (component-lifetime).
 
-3. **`ResultReviewDrawerComponent` — Global ReadOnly Override** (line 885, stored in `drawerReadOnlyEffectRef` signal)
+2. **`ResultReviewDrawerComponent` — Global ReadOnly Override** (line 885, stored in `drawerReadOnlyEffectRef` signal)
    - **Trigger**: `visible()`, `canEditInDrawer()`.
    - **Body**: mutates global `rolesSE.readOnly`. Captures original to `savedReadOnly` (with `??=` guard) when opening editable; restores on close.
    - **Cleanup**: **explicitly destroyed in `ngOnDestroy`** via `drawerReadOnlyEffectRef()?.destroy()`. The drawer also has a defensive fallback restore in `ngOnDestroy` for abnormal unmount.
 
-4. **`ResultReviewDrawerComponent` — Contributing Initiatives Re-mapper** (line 899)
+3. **`ResultReviewDrawerComponent` — Contributing Initiatives Re-mapper** (line 899)
    - **Trigger**: `resultDetail()`, `contributingInitiativesList()`.
    - **Body**: re-maps polymorphic shapes (number / string / object) to consistent numeric-ID array. Uses `_lastContributingInitiativesReapplyKey` to deduplicate. Writes happen inside `untracked(() => setTimeout(0, ...))` to break the signal-write loop.
    - **Cleanup**: none (component-lifetime).
@@ -560,7 +548,7 @@ All `effect()` declarations:
 ### 5.7 State mutation rules (who can write what)
 
 - **Services own network-derived data.** `BilateralResultsService.tableData`, `EntityAowService.entityDetails`, etc., are written exclusively from inside their own HTTP callbacks.
-- **Components mutate UI inputs directly on the service.** `ResultsReviewFiltersComponent` writes to `selectedStatus`, `searchText`, etc. The temp signals (`tempSelectedX`) are local; only the commit path writes service signals.
+- **`BilateralReviewComponent` owns its own toolbar/filter state directly** (`search`, `status`, `centers`, `projects`, `categories`, `view` — no separate filters component); see `pages/bilateral-review/CLAUDE.md`.
 - **Drawer isolates its `resultDetail` locally.** The 5 sub-content components (`policy-change-content`, etc.) mutate `resultTypeResponse[0]` in place via `[(ngModel)]`. The drawer reads the same reference when building the PATCH body. On successful save, the drawer re-fetches and overwrites `resultDetail`, losing local mutations — this is intentional.
 - **The only cross-component leak**: `updateTableResultTitle()` in the drawer reaches into `bilateralResultsService.tableData` to patch a row's title after inline title edit, so the table reflects the change without a re-fetch.
 
@@ -586,8 +574,8 @@ All `effect()` declarations:
         body: { decision: 'APPROVE', justification: 'Approved' }
 13. On 200: decisionMade.emit(), drawer closes (visible=false).
 14. Table listens to (decisionMade), calls:
-    - getResultsToReview(currentCenters)  → table refreshes
-    - refreshAllResultsForCounts()        → sidebar pending counts update
+    - GET_ResultToReview(code)                       → table refreshes
+    - BilateralReviewCountService.setFromRows(code, rows)  → badge/KPI counts update from the same rows
 15. Drawer ngOnDestroy:
     - drawerReadOnlyEffectRef().destroy()
     - rolesSE.readOnly restored to captured value
@@ -617,31 +605,10 @@ All `effect()` declarations:
 14. Approve button unlocks.
 ```
 
-#### 5.8.3 Deep-link landing — `?center=AfricaRice&search=cassava`
+#### 5.8.3 Deep-link landing — `?center=...&search=...`
 
-```
-1. Browser hits /entity-details/SP01/results-review?center=AfricaRice&search=cassava
-2. BilateralResultsComponent mounts → getEntityDetails() (GET clarisa-global-units).
-3. IndicatorsSidebarComponent mounts:
-   - centersService.getData() fetches centers catalog.
-   - Reads ?center=AfricaRice from snapshot.queryParams.
-   - selectCenter('AfricaRice', updateUrl=false).
-4. selectCenter writes currentCenterSelected=['AfricaRice'] AND selectedCenterCode='AfricaRice'.
-5. ResultsReviewTableComponent.onChangeCenterSelected effect fires:
-   - clearBilateralTableFilters(), tableData=[], tableResults=[].
-   - getResultsToReview(['AfricaRice']) → GET .../by-program-and-centers?programId=SP01&centerIds=AfricaRice
-   - Updates tableData (grouped) and tableResults (flat).
-   - DOES NOT update allResultsForCounts (because only 1 center, not all).
-6. ResultsReviewFiltersComponent mounts:
-   - Reads ?search=cassava from queryParamMap.
-   - searchText.set('cassava').
-7. ResultsReviewTableComponent.filteredTableData (computed) re-runs, applies search.
-8. KNOWN GOTCHA: sidebar pending badges:
-   - totalPendingCount() reads allResultsForCounts() → still empty.
-   - pendingCountByAcronym() also empty.
-   - Result: every center shows 0 in sidebar except AfricaRice (which renders because we have data).
-9. To fix counts: user must click "All Centers" once to trigger full hydration.
-```
+The sidebar/filters/table trio this trace used to describe is deleted (BRT-T-2/T-3/T-6). See
+`pages/bilateral-review/CLAUDE.md` for the current URL contract (six keys) and computed pipeline.
 
 ---
 
@@ -791,7 +758,7 @@ The table groups by `project_name` (PrimeNG `rowGroupMode="subheader"`).
   - Outputs: `'Innovation development'`, `'Knowledge product'`, `'Capacity sharing for development'`, `'Other output'`.
   - Outcomes: `'Innovation use'`, `'Policy change'`, `'Other outcome'`.
 - `showBilateralResultsReview` (computed) — `entityAowService.entityId() !== 'SGP-02'`. SGP-02 has no bilateral review.
-- `showReportModal` + `reportMenuItems` → a hidden `p-splitbutton` ("Report") with three menu items: AI Assistant (disabled), separator, "Unplanned result" (opens `<p-dialog>` with `app-report-result-form` from `ResultCreatorModule`).
+- `showReportModal` → opened by `onReportRequested(item)` (fired from the indicator category card's `reportRequested` output), which also calls `resultLevelSE.setPendingResultType(...)`. Drives the report `<p-dialog>` with `app-report-result-form` from `ResultCreatorModule`.
 - `ngOnInit`:
   1. `initChart()` (Chart.js plugin).
   2. Subscribes to `route.params`:
@@ -810,7 +777,7 @@ The table groups by `project_name` (PrimeNG `rowGroupMode="subheader"`).
 
 - Standalone, NOT OnPush (this is one of the few non-OnPush components in the module).
 - On init: reads `entityId` from `activatedRoute.snapshot.params` and calls `GET_PendingReviewCount(entityId)` → `pendingCount` signal.
-- Renders a banner with `material-icons-round` schedule icon, title "Bilateral Results Review", separator "•", count "{n} Pending review", description, and a CTA "Review results" linking to `['results-review']` (relative).
+- Renders a banner with `material-icons-round` schedule icon, title "Bilateral Results Review", separator "•", count "{n} Pending review", description, and a CTA "Review results" linking to `['bilateral-review']` (relative).
 
 ### 7.8 `EntityResultsByIndicatorCategoryCardComponent`
 
@@ -894,71 +861,17 @@ The table groups by `project_name` (PrimeNG `rowGroupMode="subheader"`).
 - `tableData` (computed) — one row per center, with a `Map<year, target_value>`. All centers share the same year/target mapping (this is by design for the current backend; if the backend changes to per-center targets, refactor this computed).
 - Also locks body scroll on init.
 
-### 7.15 `BilateralResultsComponent` (page)
+### 7.15 `BilateralReviewComponent` (page)
 
-- Standalone via Angular 19 defaults (no `standalone:` key set in `@Component`; the default is `true` since Angular 17). Imports `IndicatorsSidebarComponent, ResultsReviewContainerComponent, ResultsReviewFiltersComponent, ResultsReviewTableComponent, RouterModule`.
-- Page layout:
-  ```
-  ┌─────────────────────────────────────────────────────┐
-  │  Breadcrumb                                         │
-  ├──────────────┬──────────────────────────────────────┤
-  │  Sidebar     │  Filters                             │
-  │  (Centers)   │  ──────────────────────────────────  │
-  │              │  Table (grouped by project_name)     │
-  └──────────────┴──────────────────────────────────────┘
-  ```
-- Breadcrumb supports two states based on `?center=<code>`:
-  - Without `center`: 3 crumbs ("Science programs > <entity> > Bilateral Results Review").
-  - With `center`: 4 crumbs, the third becomes a back-link to the un-filtered view.
-- `navigateToResultsReview()` clears the center selection in state and URL.
-- `ngOnInit` reads `entityId` from `activatedRoute.params` and calls `getEntityDetails()`.
+Replaced the legacy centers-sidebar + filters-drawer + table page shell described above (the whole
+trio was deleted, spec `changes/sp-bilateral-review-tab`, BRT-T-2/T-3/T-4/T-6). One standalone,
+`OnPush` component now owns the toolbar (search, Filter popover, status chips, Expand all,
+Grouped/All results), the KPI strip, and the grouped/flat table via its own signals and computed
+pipeline — no sidebar, no separate filters or table components. Full contract (route, six-key URL
+param map, data flow, computed order, permission, table facts, gotchas): see
+`pages/bilateral-review/CLAUDE.md`.
 
-### 7.16 `IndicatorsSidebarComponent`
-
-- Standalone (no module). Imports `CommonModule` only.
-- `ngOnInit`:
-  1. `centersService.getData()` (CLARISA centers).
-  2. Sets `bilateralResultsService.centers`.
-  3. Reads `?center=<code>` from `activatedRoute.snapshot.queryParams`. If valid → `selectCenter(centerFromUrl, updateUrl=false)`; else `selectCenter(null, false)`.
-- "All Centers" item is a fixed leading entry with the `list` material icon and `totalPendingCount()` badge.
-- Per-center items: `apartment` icon + acronym + pending-count badge (only when `pendingCountByAcronym()[acronym] > 0`).
-- Only renders centers in `centersToShowInSidebar()` — i.e., centers that have at least one result in `allResultsForCounts()` (deduplicated via a `Set`).
-- `selectCenter(centerCode, updateUrl=true)`:
-  - Updates `selectedCenterCode` + `currentCenterSelected` (which triggers the table effect).
-  - If `updateUrl`: pushes `?center=<code>` (or removes it) and clears `searchText`.
-- Keyboard-accessible: each item has `tabindex="0"`, `role="button"`, and handles `keydown.enter` + `keydown.space`.
-
-### 7.17 `ResultsReviewFiltersComponent`
-
-- Standalone. Imports `CommonModule, IconFieldModule, InputIconModule, InputTextModule, FormsModule, MultiSelectModule, ButtonModule, OverlayBadgeModule, ChipModule, CustomFieldsModule`.
-- Left: search input (350px) + filter button + clear button.
-- Below: chip bar — for each active filter group, label + arrow + chips with `(onRemove)`.
-- Custom right-side drawer (NOT PrimeNG `p-drawer`):
-  - Pure CSS + a `[class.visible]/[class.open]` pattern.
-  - Top offset matches the live navbar height via `ResizeObserver` watching the first match among `app-header-panel`, `header`, `nav`, `.navbar`, `.header`. Default 60px.
-  - 3 multi-selects (indicator category, status, lead center) populated from `bilateralResultsService.indicatorCategoryOptions() / statusOptions() / leadCenterOptions()`.
-  - Apply / Cancel buttons. Cancel restores `tempSelectedX` from service state and closes.
-- `?search=` query param is hydrated on init and updated on change via `Location.replaceState` (no history pollution).
-
-### 7.18 `ResultsReviewTableComponent`
-
-- Standalone, OnPush.
-- `filteredTableData` (computed) — applies search + 3 multi-select filters client-side over `bilateralResultsService.tableData()`. Drops empty groups.
-- `onChangeCenterSelected` (effect) — listens to `currentCenterSelected()`. If non-empty: calls `getResultsToReview(centers)`. Always clears `tableData`, `tableResults`, and table filters before re-fetch. The effect uses `clearBilateralTableFilters()` proactively to avoid stale chips.
-- `getResultsToReview(centers)`:
-  - Calls `api.resultsSE.GET_ResultToReview(entityId, centers)`.
-  - Updates `tableData` (grouped) and `tableResults` (flat).
-  - **If all centers selected** (`centers.length === allCenters.length`): also writes to `allResultsForCounts` so pending counts stay in sync.
-- `expandedRowKeys` (computed) — all groups expanded by default, keyed by `project_name`.
-- Status chips on rows (CSS classes): `approved | rejected | pending`. The "pending" class is the catch-all.
-- Contributor badge: `result.initiative_role_name === 'Contributor'` → renders a "Contributor" chip next to the title.
-- Action button label/icon flips based on `status_id == 5 && canReviewResults()`:
-  - True → "Review result" + `edit` icon.
-  - False → "See result" + `visibility` icon.
-- `onDecisionMade()` (output from drawer) → re-fetches both `getResultsToReview` and `refreshAllResultsForCounts`.
-- `ngOnDestroy` resets `searchText` (so re-entering the page does not show a stale search box).
-
-### 7.19 `ResultReviewDrawerComponent` (the 1,666-line drawer)
+### 7.16 `ResultReviewDrawerComponent` (the 1,666-line drawer)
 
 The crown jewel. Most of the replication effort lives here. Read §8 for the deep dive on its behaviors.
 
@@ -1225,7 +1138,7 @@ The drawer's UX feedback model is **terse by design** — the project relies on 
 
 ### 9.1 Color tokens used heavily
 
-- `--pr-color-primary-300` (`#5569dd`, indigo) — primary buttons, breadcrumb active link, focus rings.
+- `--pr-color-primary-300` (`#6b46e5`, indigo) — primary buttons, breadcrumb active link, focus rings.
 - `--pr-color-primary-25` — group-header background in tables.
 - `--pr-color-secondary-50` — group-header border-bottom.
 - `--pr-color-accents-1..6` — neutral greys (1 = lightest bg, 6 = body text muted).
@@ -1256,7 +1169,7 @@ All headings use the `pr-typography(...)` SCSS mixin from `styles/fonts.scss`. B
 
 - Home and entity-details: `1115px` (md). Below: collapse two-column to one-column.
 - Other SPs: `1500px` (xl) → fixed `repeat(3, 1fr)`.
-- Bilateral results: page height = `calc(100vh - 80px)` (assumes shell header = 80px).
+- Bilateral results: page height = `calc(100vh - 56px)` (shell topbar = 56px).
 
 ### 9.4 Assets used
 
@@ -1402,9 +1315,9 @@ A condensed catalog of behaviors a replicator must NOT lose:
 
 3. **`status_id` is sometimes a string.** Always compare with `==`, not `===`, when checking `status_id == 5`. Or coerce on ingress.
 
-4. **Effect-based table refresh.** `ResultsReviewTableComponent.onChangeCenterSelected` is an `effect()` that fires on every change to `currentCenterSelected()`. It clears `tableData/tableResults/filters` BEFORE re-fetching — so users see an empty table for a moment. On replication, consider keeping the previous data visible until the new fetch lands.
+4. **Effect-based list refresh.** `BilateralReviewComponent`'s load effect (triggered by `programmeCode()`) clears `tableData`/`tableResults` BEFORE re-fetching — so users see an empty table for a moment on a programme switch. On replication, consider keeping the previous data visible until the new fetch lands.
 
-5. **Pending counts vs filtered table.** `pendingCountByAcronym` derives from `allResultsForCounts` (which is filled only when "All Centers" is selected, or after `refreshAllResultsForCounts()`). When a single center is selected, the counts can become stale unless the user re-selects "All Centers" or commits a decision (which triggers a refresh).
+5. **Chips/KPIs vs filtered table.** The status chip counts and the KPI strip are computed over `searchFiltered` (search applied, popover filters not yet applied), while the visible rows go through the additional Center/Project/Category popover filters. This is intentional — narrowing the table with the popover never moves the chip/KPI numbers, because they describe the searched list, not the currently-filtered one. See `pages/bilateral-review/CLAUDE.md`.
 
 6. **Fail-open reporting access.** If `GET_phaseInitiativeStatus` errors, `reportingEnabled` is set to `true`. This is intentional in the current implementation. **However**, DeepSeek and Kimi both flagged this as a security concern (see §17.2): a transient 401/500 silently unlocks reporting. Replicators on a stricter deployment should default to `false` and surface a "phase status unavailable" message. Pick a policy and stick to it — the doc currently describes both stances in different sections.
 
@@ -1427,7 +1340,7 @@ A condensed catalog of behaviors a replicator must NOT lose:
     - `has_unkown_using` — typo from the backend (`unkown`, missing `n`). Do NOT rename.
     - `readinness_level_id` — typo from the backend. Do NOT rename.
 
-13. **Stale sidebar counts on deep-link arrival.** If the user lands on `/results-review?center=AfricaRice` directly (e.g. a bookmark or shared URL), `allResultsForCounts` is never hydrated — the table fetches only that center's rows, and `pendingCountByAcronym` reports zero for every other center. The user must click "All Centers" (or commit a decision via `refreshAllResultsForCounts()`) to populate the counts. **Replicators should consider hydrating `allResultsForCounts` on initial mount regardless of the URL filter** — the trade-off is one extra "all centers" fetch on every entry.
+13. **Superseded — no per-center fetch any more.** The tab now issues one `GET_ResultToReview(code)` per programme (all centers) regardless of the `?center=` query param, and derives the badge/chips/KPI counts from that same response. A deep link that arrives with `?center=<code>` narrows only the client-side popover filter; it can no longer produce stale counts the way the old per-center-fetch sidebar could. See `pages/bilateral-review/CLAUDE.md`.
 
 14. **No concurrency control on bilateral review.** Two admins reviewing the same result simultaneously will both load the same `BilateralResultDetail`; whoever PATCHes second wins. There is no `version` field, no `If-Match` header, no optimistic-lock retry. The backend currently accepts the last write. Replicators on a higher-stakes deployment should add optimistic locking server-side and surface a 409 conflict UI in the drawer.
 
@@ -1475,8 +1388,8 @@ If a team must rebuild the module in 2 weeks (1 dev), this is the order of busin
 
 **Week 2 — write paths + bilateral**
 
-6. Day 6: `BilateralResultsService` + `BilateralResultsComponent` page shell + sidebar + table (READ ONLY).
-7. Day 7: `ResultsReviewFiltersComponent` (search + multi-select drawer + chips).
+6. Day 6: `BilateralResultsService` + `BilateralReviewComponent` page shell + toolbar + table (READ ONLY).
+7. Day 7: `BilateralReviewComponent`'s own toolbar (search, Filter popover, status chips, Expand all) — see `pages/bilateral-review/CLAUDE.md`.
 8. Day 8: `ResultReviewDrawerComponent` — load + display only (no edit, no save, no approve).
 9. Day 9: Add the 5 type-specific sub-content components (read-only first).
 10. Day 10: Add Approve/Reject mutations. Add inline title edit.
@@ -1626,7 +1539,7 @@ Specific additions:
 - **`app-cp-multiple-wps` contract** (corrected against the source after Gemini + Kimi flagged the original draft):
   - The real public surface is documented authoritatively in §10.1. Inputs are `[initiative]`, `[initiativeId]`, `[resultLevelId]`, `[isIpsr]`, `[isContributor]`, `[isNotifications]`, `[isUnplanned]`, `[showMultipleWPsContent]`, `[hidden]`, `[forceP25]`, `[isAvisa]`, `[editable]`. Output is `(tocResultChanged)` — a `void` event.
   - Internal: recursive tree component that reads from `dataControlSE.currentResult` to gate which work packages are selectable for the current portfolio.
-- **`refreshAllResultsForCounts()` post-decision cascade**: Kimi emphasized this is non-obvious. After Approve/Reject, the drawer emits `decisionMade`; the table component listens and ALSO triggers a full refresh of `allResultsForCounts`. Without this cascade, the sidebar pending badges and the table go out of sync.
+- **Post-decision refresh cascade**: Kimi emphasized this is non-obvious. After Approve/Reject, the drawer emits `decisionMade`; the table component listens and re-fetches `GET_ResultToReview(code)`, then feeds the response into `BilateralReviewCountService.setFromRows()`. Without this cascade, the tab badge and the table go out of sync.
 - **Theme dependency = invisible UI risk**: missing `--pr-color-*` tokens cause silent white-on-white rendering. Suggest a "token verification" boot check that warns in dev.
 - **SGP-02 magic string**: `'SGP-02'` is scattered across `EntityAowService`, `EntityDetailsComponent`, and the SP card item. Replicators should centralize this in a config constant (`SPECIAL_INITIATIVES.NO_AOW = ['SGP-02', 'SGP02']`) and check membership, not equality.
 - **Hardcoded `resultTypeResponse[0]`**: same concern as Gemini's "single-item array" — replicators MUST normalize on ingress.

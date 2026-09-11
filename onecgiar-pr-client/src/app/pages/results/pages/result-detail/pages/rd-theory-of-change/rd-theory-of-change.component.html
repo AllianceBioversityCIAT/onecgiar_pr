@@ -1,6 +1,7 @@
-<div class="detail_container">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()" [appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)">
   @if (!!this.dataControlSE?.currentResult?.is_replicated) {
     <app-alert-status
+      [collapsible]="false"
       [description]="
         'Dear user, note that data from the previous year data has been replicated, however the information related to collaboration with other ' +
         ('term.entity.plural' | term: this.api.dataControlSE.currentResult?.portfolio) +
@@ -10,6 +11,7 @@
   }
 
   <app-alert-status
+    [collapsible]="false"
     [description]="
       ('term.entity.plural' | term: this.api.dataControlSE.currentResult?.portfolio) +
       ' and non-pooled projects that you collaborated with to generate this result/contributed to this result.'
@@ -146,4 +148,4 @@
   }
 </div>
 
-<app-save-button class="position_sticky" [editable]="someEditable()" (clickSave)="onSaveSection()"> </app-save-button>
+<app-section-bottom-bar [editable]="someEditable()" (clickSave)="onSaveSection()" />

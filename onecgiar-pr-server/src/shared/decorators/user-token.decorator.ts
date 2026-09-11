@@ -4,8 +4,10 @@ import { TokenDto } from '../globalInterfaces/token.dto';
 export const UserToken = createParamDecorator(
   (authParameter = 'auth', ctx: ExecutionContext): TokenDto => {
     const request = ctx.switchToHttp().getRequest();
+    if (request.user) {
+      return request.user as TokenDto;
+    }
     const headerValue = request.headers[authParameter];
-    // process the header value and return a usable object
     const user = processUserToken(headerValue);
     return user;
   },
@@ -19,8 +21,15 @@ export const DecodedUser = createParamDecorator(
 );
 
 function processUserToken(headerValue: string): TokenDto {
-  const token: TokenDto = <TokenDto>(
-    JSON.parse(Buffer.from(headerValue.split('.')[1], 'base64').toString())
-  );
-  return token;
+  if (!headerValue) {
+    return { id: 0, email: 'public-route@system' } as TokenDto;
+  }
+  try {
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(headerValue.split('.')[1], 'base64').toString())
+    );
+    return token;
+  } catch {
+    return { id: 0, email: 'invalid-token@system' } as TokenDto;
+  }
 }

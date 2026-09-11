@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ShareRequestBody } from './model/shareRequestBody.model';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
@@ -18,10 +18,39 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 export class ShareRequestModalComponent implements OnInit {
   requesting = false;
   allInitiatives = [];
-  showForm = true;
-  showTocOut = true;
+  // P2-3322 (2026): signal-backed flags. Both are toggled `false -> setTimeout -> true` to force a remount
+  // (`cleanObject()` for the form, `onPlannedResultChange()` for the ToC block). As plain fields the second
+  // write happened outside any Angular notification, so under zoneless change detection the dialog stayed
+  // frozen on `false`: reopening the modal showed an empty dialog and switching the "planned result" answer
+  // dropped the Level/HLO/KPI block for good. Reading the signal from the template makes the write schedule
+  // its own render pass. Same shape as CPMultipleWPsComponent (P2-3245 / P2-3275); the public API stays a
+  // plain boolean, so the template and the existing specs are untouched.
+  private readonly _showForm = signal<boolean>(true);
+  get showForm(): boolean {
+    return this._showForm();
+  }
+  set showForm(value: boolean) {
+    this._showForm.set(value);
+  }
+  // P2-3322: `modelChange()` toggles this `false -> setTimeout(50) -> true` so <app-toc-initiative-out>
+  // remounts against the newly selected entity (it is read through `shouldShowTocInitiativeOut`). As a plain
+  // field the delayed write notified nothing, so under zoneless change detection the ToC block disappeared
+  // for good after switching entity. Signal-backed, the write schedules its own render.
+  private readonly _showTocOut = signal<boolean>(true);
+  get showTocOut(): boolean {
+    return this._showTocOut();
+  }
+  set showTocOut(value: boolean) {
+    this._showTocOut.set(value);
+  }
   disabledOptions = [{ initiative_id: 10 }];
-  tocConsumed = true;
+  private readonly _tocConsumed = signal<boolean>(true);
+  get tocConsumed(): boolean {
+    return this._tocConsumed();
+  }
+  set tocConsumed(value: boolean) {
+    this._tocConsumed.set(value);
+  }
 
   constructor(
     public retrieveModalSE: RetrieveModalService,
@@ -41,8 +70,11 @@ export class ShareRequestModalComponent implements OnInit {
 
   validateAcceptOrReject() {
     const plannedResult = this.shareRequestModalSE.shareRequestBody.planned_result;
+    // P2-3106: in the notifications accept flow, the ToC ids are only required when the user answered "Yes"
+    // (so "No" / default enables Accept without ToC mapping). The result-detail share flow keeps its original strictness.
+    const tocRequired = this.api.dataControlSE.inNotifications ? !!plannedResult : true;
     const resultWithoutTRI = this.shareRequestModalSE.shareRequestBody.result_toc_results.some(result => {
-      const missingTocIds = !result.toc_result_id || !result?.toc_level_id;
+      const missingTocIds = tocRequired && (!result.toc_result_id || !result?.toc_level_id);
       const missingIndicator = plannedResult && this.fieldsManagerSE.activeIndicatorsLength() > 0 && !this.fieldsManagerSE.hasSelectedIndicator();
 
       return missingTocIds || missingIndicator;

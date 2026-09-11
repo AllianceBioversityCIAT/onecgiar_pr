@@ -28,12 +28,22 @@ export class AuthController {
 
   @Get('/login/provider')
   @ApiOperation({ summary: 'Get authentication URL for OAuth provider' })
+  @ApiQuery({
+    name: 'redirectUri',
+    required: false,
+    description:
+      'Redirect URI to use after OAuth authentication. Must be listed in ALLOWED_REDIRECT_URIS.',
+    example: 'https://prtest.ciat.cgiar.org/auth',
+  })
   @ApiResponse({
     status: 200,
     description: 'Authentication URL generated successfully',
   })
-  getAuthURL(@Query('provider') provider: string) {
-    return this.authService.getAuthURL(provider);
+  getAuthURL(
+    @Query('provider') provider: string,
+    @Query('redirectUri') redirectUri?: string,
+  ) {
+    return this.authService.getAuthURL(provider, redirectUri);
   }
 
   @Post('/login/custom')

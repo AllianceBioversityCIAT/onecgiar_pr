@@ -1,6 +1,7 @@
 @if (globalVariablesSE.get.alert_global_info) {
   <div class="alert-global-info {{ className }}" [style]="inlineStyles">
     <app-alert-status
+      [collapsible]="false"
       [description]="globalVariablesSE.get.alert_global_info"
       inlineStyles="background-color: var(--pr-color-white); margin: 0;"></app-alert-status>
   </div>

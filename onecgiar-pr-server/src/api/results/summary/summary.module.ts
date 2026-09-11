@@ -25,8 +25,14 @@ import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/
 import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { InnoDevService } from './innovation_dev.service';
+import { ResultsByProjectsRepository } from '../results_by_projects/results_by_projects.repository';
+import { ResultBudgetModule } from '../result_budget/result_budget.module';
 
 @Module({
+  // P2-3390: ResultInvestmentService lives in ResultBudgetModule (a leaf) so the legacy
+  // summary endpoints the bilateral form uses can write the three investment tables without
+  // depending on InnovationUseModule, which imports this module.
+  imports: [ResultBudgetModule],
   controllers: [SummaryController],
   providers: [
     SummaryService,
@@ -53,6 +59,7 @@ import { InnoDevService } from './innovation_dev.service';
     NonPooledProjectBudgetRepository,
     NonPooledProjectRepository,
     ResultInstitutionsBudgetRepository,
+    ResultsByProjectsRepository,
   ],
   exports: [ResultsInnovationsUseRepository, SummaryService],
 })

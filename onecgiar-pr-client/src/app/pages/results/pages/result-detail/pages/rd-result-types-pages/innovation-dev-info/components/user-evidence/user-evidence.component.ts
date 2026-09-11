@@ -1,4 +1,4 @@
-import { Component, Input, EventEmitter, Output } from '@angular/core';
+import { Component, Input, EventEmitter, Output, signal } from '@angular/core';
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { EvidencesCreateInterface } from '../../../../../../result-detail/pages/rd-evidences/model/evidencesBody.model';
 import { DataControlService } from '../../../../../../../../../shared/services/data-control.service';
@@ -25,7 +25,19 @@ export class UserEvidenceComponent {
   @Input() isSuppInfo: boolean;
   @Input() isOptional: boolean = false;
   @Output() deleteEvent = new EventEmitter();
-  incorrectFile = false;
+  // P2-3322 (2026): signal-backed flag, same regression and same fix as EvidenceItemComponent (this
+  // component is a copy of it). `onFileDropped()` clears the flag from a `setTimeout`, and the
+  // template reads it at `[ngClass]` (drag-and-drop border) and at the `*ngIf` of the "Incorrect
+  // format..." message. As a plain field the delayed write notified nothing, so under zoneless
+  // change detection the message never disappeared. The public API stays a plain boolean, so the
+  // template and the existing specs are untouched.
+  private readonly _incorrectFile = signal<boolean>(false);
+  get incorrectFile(): boolean {
+    return this._incorrectFile();
+  }
+  set incorrectFile(value: boolean) {
+    this._incorrectFile.set(value);
+  }
 
   evidencesType = [
     { id: 0, name: 'Link' },

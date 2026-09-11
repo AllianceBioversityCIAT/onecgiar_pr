@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, signal } from '@angular/core';
 import { InstitutionsexpectedinvestmentStep4, IpsrStep4Body } from '../../../../model/Ipsr-step-4-body.model';
 import { RolesService } from '../../../../../../../../../../../../shared/services/global/roles.service';
 import { InstitutionsService } from '../../../../../../../../../../../../shared/services/global/institutions.service';
@@ -15,7 +15,17 @@ export class StepN4AddPartnerComponent {
   @Input() disabledOptionsPartners = [];
   visible = false;
   partnerBody = new AddPartnerBody();
-  showForm = true;
+  // P2-3322: `cleanObject()` toggles this flag `false -> setTimeout -> true` to remount the form. As a plain
+  // field the delayed write notified nothing, so under zoneless change detection (Angular 21, f33bffcee) the
+  // second render pass never ran and reopening the dialog showed an empty modal until a page reload.
+  // Signal-backed, the write schedules its own render. Public API unchanged: still a boolean `showForm`.
+  private readonly _showForm = signal<boolean>(true);
+  get showForm(): boolean {
+    return this._showForm();
+  }
+  set showForm(value: boolean) {
+    this._showForm.set(value);
+  }
   requesting = false;
   formIsInvalid = false;
 

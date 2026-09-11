@@ -1,26 +1,23 @@
 <div class="setting_title">Phases</div>
 
 <div class="local_container phase_table">
-  <p-table
+  <app-pr-table
     sortField="result_code"
     [sortOrder]="-1"
     [value]="this.phaseList"
-    scrollHeight="calc(100vh - 303px)"
-    responsiveLayout="scroll"
     [paginator]="!!this.phaseList?.length"
     [rows]="10"
-    styleClass="p-datatable-gridlines p-datatable-sm"
     selectionMode="single"
     [rowsPerPageOptions]="[10, 50, 100]">
-    <ng-template pTemplate="header">
+    <ng-template prTableHeader>
       <tr>
-        <th *ngFor="let column of columnOrder" pSortableColumn="{{ column.attr }}" id="{{ column.attr }}">
-          <p-sortIcon field="{{ column.attr }}"></p-sortIcon>{{ column.title }}
+        <th *ngFor="let column of columnOrder" prSortableColumn="{{ column.attr }}" id="{{ column.attr }}">
+          <pr-sort-icon field="{{ column.attr }}"></pr-sort-icon>{{ column.title }}
         </th>
         <th id="actions">Actions</th>
       </tr>
     </ng-template>
-    <ng-template pTemplate="body" let-phase let-rowIndex="rowIndex">
+    <ng-template prTableBody let-phase let-rowIndex="rowIndex">
       <tr>
         <td [style.width.px]="30">
           {{ phase?.id }}
@@ -101,12 +98,12 @@
           </app-pr-select>
         </td>
         <td [style.width.px]="120">
-          <div class="text" *ngIf="!phase.isNew">{{ phase?.start_date | date: 'YYYY-MM-dd' }}</div>
-          <p-datepicker *ngIf="phase.isNew" [(ngModel)]="phase.start_date_ts" dateFormat="yy-mm-dd" placeholder="Start date" />
+          <div class="text" *ngIf="!phase.isNew">{{ phase?.start_date | date: 'yyyy-MM-dd' }}</div>
+          <input type="date" *ngIf="phase.isNew" [(ngModel)]="phase.start_date_ts" placeholder="Start date" />
         </td>
         <td [style.width.px]="120">
-          <div class="text" *ngIf="!phase.isNew">{{ phase?.end_date | date: 'YYYY-MM-dd' }}</div>
-          <p-datepicker *ngIf="phase.isNew" [(ngModel)]="phase.end_date_ts" dateFormat="yy-mm-dd" placeholder="End date" />
+          <div class="text" *ngIf="!phase.isNew">{{ phase?.end_date | date: 'yyyy-MM-dd' }}</div>
+          <input type="date" *ngIf="phase.isNew" [(ngModel)]="phase.end_date_ts" placeholder="End date" />
         </td>
         <td [style.width.px]="90">
           <div class="text" *ngIf="!phase.editing" style="display: flex; justify-content: center">
@@ -150,26 +147,25 @@
         <td [style.width.px]="85">
           <div class="actions" *ngIf="!phase.editing">
             <div class="action_button edit" (click)="getFeedback() ? null : (phase.editing = true)" [ngClass]="{ disabled: getFeedback() }">
-              <i class="material-icons-round" [pTooltip]="getFeedback() ? this.disabledActionsText : null" tooltipPosition="top">edit</i>
+              <i class="material-icons-round" [prTooltip]="getFeedback() ? this.disabledActionsText : null" prTooltipPosition="top">edit</i>
             </div>
             <div
               class="action_button delete"
               [ngClass]="{ disabled: getFeedback() || !phase?.can_be_deleted }"
               (click)="getFeedback() ? null : phase?.can_be_deleted ? this.deletePhase(phase) : null"
-              [pTooltip]="
+              [prTooltip]="
                 getFeedback() ? this.disabledActionsText : !phase?.can_be_deleted ? 'The phase has active results therefore cannot be eliminated' : ''
               "
-              tooltipPosition="top">
+              prTooltipPosition="top">
               <i class="material-icons-round">delete</i>
             </div>
           </div>
           <div class="actions" *ngIf="phase.editing">
             <div
               class="action_button save"
-              tooltipPosition="top"
+              prTooltipPosition="top"
               [ngClass]="{ disabled: phase?.isNew && getMandatoryIncompleteFields(phase) }"
-              [pTooltip]="phase?.isNew ? getMandatoryIncompleteFields(phase) : null"
-              [escape]="false"
+              [prTooltip]="phase?.isNew ? getMandatoryIncompleteFields(phase) : null"
               (click)="phase?.isNew && getMandatoryIncompleteFields(phase) ? null : phase?.isNew ? createPhase(phase) : savePhase(phase)">
               <i class="material-icons-round">{{ phase?.isNew ? 'add_circle' : 'save' }}</i>
             </div>
@@ -180,10 +176,10 @@
         </td>
       </tr>
     </ng-template>
-  </p-table>
+  </app-pr-table>
 </div>
 
-<div class="center_flex_100">
+<div class="center_flex_100 items-center w-full">
   <div class="add_new_phase_button" [ngClass]="{ disabled: getFeedback() }">
     <div class="feedback" *ngIf="getFeedback()">{{ getFeedback() }}</div>
     <app-pr-button

@@ -3,25 +3,15 @@ import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { EstimatesCgiarComponent } from './estimates.component';
 
-// Minimal stubs for injected services via ApiService usage
-class ApiServiceStub {
-  dataControlSE = { currentResult: { result_code: '123', version_id: 1 } };
-}
-
-class TerminologyServiceStub {}
-
 describe('EstimatesCgiarComponent', () => {
   let component: EstimatesCgiarComponent;
   let fixture: ComponentFixture<EstimatesCgiarComponent>;
 
   beforeEach(async () => {
+    // P2-3390 — standalone now, and it no longer injects anything: the component reads only its
+    // `body` input, so the ApiService / TerminologyService stubs it used to need are gone.
     await TestBed.configureTestingModule({
-      declarations: [EstimatesCgiarComponent],
-      imports: [HttpClientTestingModule],
-      providers: [
-        { provide: (await import('../../../../services/api/api.service')).ApiService, useClass: ApiServiceStub },
-        { provide: (await import('../../../../../internationalization/terminology.service')).TerminologyService, useClass: TerminologyServiceStub }
-      ],
+      imports: [HttpClientTestingModule, EstimatesCgiarComponent],
       schemas: [CUSTOM_ELEMENTS_SCHEMA]
     }).compileComponents();
 
@@ -43,15 +33,27 @@ describe('EstimatesCgiarComponent', () => {
   });
 
   it('onRadioChange should clear kind_cash when is_determined is true', () => {
+    const changed = jest.spyOn(component.changed, 'emit');
     const item: any = { is_determined: true, kind_cash: 100 };
     component.onRadioChange(item);
     expect(item.kind_cash).toBeNull();
+    expect(changed).toHaveBeenCalled();
   });
 
   it('onInputChange should clear is_determined when kind_cash has value', () => {
+    const changed = jest.spyOn(component.changed, 'emit');
     const item: any = { is_determined: true, kind_cash: 250 };
     component.onInputChange(item);
     expect(item.is_determined).toBeNull();
+    expect(changed).toHaveBeenCalled();
+  });
+
+  it('keeps W1/W2 defaults and exposes bilateral as an optional selectable section', () => {
+    expect(component.shows('programs')).toBe(true);
+    expect(component.shows('bilateral')).toBe(true);
+    expect(component.isRequired('bilateral')).toBe(false);
+    component.requiredSections = ['bilateral'];
+    expect(component.isRequired('bilateral')).toBe(true);
   });
 
   describe('checkValueAlert', () => {
@@ -68,5 +70,4 @@ describe('EstimatesCgiarComponent', () => {
     });
   });
 });
-
 

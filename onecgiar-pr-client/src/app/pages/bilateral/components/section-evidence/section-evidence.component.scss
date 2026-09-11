@@ -1,0 +1,338 @@
+// Evidence — bilateral. Same visual language as the W1/W2 section: the flat `.evidence_card`
+// list of rd-evidences and the modal fields of evidence-item, ported class for class so the two
+// forms read as one. No tag chips (bilateral asks no per-evidence checkboxes).
+.sev-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+
+  &--busy {
+    pointer-events: none;
+    opacity: 0.7;
+  }
+}
+
+.sev-limit {
+  font-size: 12px;
+  color: var(--pr-text-secondary);
+}
+
+.sev-field-error {
+  margin: -8px 0 0;
+  font-size: 12px;
+  color: var(--pr-color-red-300);
+}
+
+// ─── Evidence cards (rd-evidences.component.scss) ────────────────────────────────────────────
+.evidences {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+
+  .evidence_card {
+    border: 1px solid var(--pr-color-accents-2);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--pr-color-white);
+    transition: box-shadow 0.2s ease;
+
+    &:hover {
+      box-shadow: 0 2px 12px rgba(var(--pr-color-black-rgb), 0.08);
+    }
+
+    .ev_card_top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px 6px;
+
+      .ev_index {
+        flex: 0 0 auto;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        color: var(--pr-color-primary-300);
+        background: rgba(var(--pr-color-primary-rgb), 0.12);
+      }
+
+      .ev_type_row {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+
+        .ev_type { font-weight: 600; }
+
+        .ev_lock {
+          font-size: 18px;
+          &.public { color: var(--pr-color-green-500); }
+          &.private { color: var(--pr-color-accents-5); }
+        }
+
+        .ev_date {
+          font-size: 11px;
+          color: var(--pr-color-accents-5);
+        }
+      }
+
+      .ev_actions {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        .ev_edit,
+        .ev_delete {
+          border: none;
+          background: transparent;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          transition: background 0.15s ease;
+
+          &:hover { background: rgba(var(--pr-color-black-rgb), 0.06); }
+          i { font-size: 20px; }
+        }
+
+        .ev_edit { color: var(--pr-color-primary-300); }
+        .ev_delete { color: var(--pr-color-red-300); }
+      }
+    }
+
+    .ev_card_body {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 4px 16px 14px 54px;
+
+      .ev_ro_item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        font-size: 12px;
+        color: var(--pr-color-secondary-400);
+        word-break: break-word;
+
+        > i {
+          flex: 0 0 auto;
+          font-size: 18px;
+          color: var(--pr-color-accents-5);
+        }
+      }
+
+      .ev_ro_main {
+        > i { color: var(--pr-color-primary-300); }
+
+        .ev_ro_link,
+        .ev_ro_name {
+          font-weight: 500;
+          word-break: break-word;
+        }
+
+        .ev_ro_link {
+          color: var(--pr-color-primary-300);
+          text-decoration: underline;
+        }
+
+        .ev_ro_uploading {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+          min-width: 0;
+
+          .ev_ro_name { color: var(--pr-color-accents-5); }
+        }
+      }
+
+      .ev_ro_details {
+        align-self: stretch;
+        align-items: flex-start;
+        > i { margin-top: 1px; }
+      }
+    }
+  }
+}
+
+// ─── Add / edit modal (rd-evidences `.evidence_modal` + evidence-item fields) ────────────────
+// Compacted 2026-09-04 (feedback): the 720px/32-40px/24px-gap geometry read oversized and
+// overflowed small screens. 640px with tighter rhythm holds the same fields comfortably.
+::ng-deep app-pr-dialog .evidence-create-dialog {
+  &.pr-dialog {
+    width: 640px;
+    max-width: 92vw;
+  }
+
+  .pr-dialog__body {
+    padding: 0;
+  }
+}
+
+.evidence_modal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 24px;
+  max-height: 85vh;
+  overflow-y: auto;
+
+  .modal_header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal_title {
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--pr-color-primary-300);
+    font-family: 'Manrope', 'Poppins', sans-serif;
+  }
+
+  .modal_close {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    color: var(--pr-color-accents-5);
+    transition: color 0.2s ease;
+
+    i { font-size: 24px; }
+    &:hover { color: var(--pr-color-primary-300); }
+  }
+
+  .evidence_fields {
+    margin-top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+
+    .inputfieldHidden { display: none; }
+
+    .link {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .file-link-view {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 2px solid var(--pr-color-accents-3);
+      border-radius: 10px;
+      padding: 10px;
+      justify-content: space-between;
+
+      .file-name {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        i { color: var(--pr-color-secondary-100); }
+        a { color: var(--pr-color-primary-300); padding-top: 2px; }
+      }
+
+      .file-actions {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        color: var(--pr-color-primary-300);
+
+        .size { color: var(--pr-color-secondary-400); font-weight: 500; }
+
+        .line {
+          width: 1px;
+          height: 20px;
+          background-color: var(--pr-color-secondary-100);
+          margin: 0 10px;
+        }
+      }
+    }
+
+    .incorrect-file {
+      color: var(--pr-color-red-300);
+      font-weight: 500;
+      // Pulls the message toward the dropzone; keyed to the fields' 14px gap.
+      margin-top: -8px;
+    }
+
+    .drag-and-drop-field {
+      border: 2px dashed var(--pr-color-primary-300);
+      border-radius: 10px;
+      background: var(--pr-color-accents-1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      padding: 22px 0;
+      transition: all 0.3s ease-in-out;
+
+      .content {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+
+        .title { font-weight: 500; }
+        .description {
+          color: rgba(var(--pr-color-black-rgb), 0.5);
+          transition: all 0.3s ease-in-out;
+        }
+      }
+    }
+
+    .incorrect-drag-and-drop-field {
+      border: 2px dashed var(--pr-color-red-200) !important;
+      .description { color: var(--pr-color-red-200) !important; }
+    }
+  }
+
+  .buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 8px;
+
+    app-pr-button:first-child ::ng-deep {
+      .pr_button {
+        background-color: var(--pr-color-white) !important;
+        border: 1px solid var(--pr-color-accents-3) !important;
+
+        .text, i {
+          color: var(--pr-color-secondary-400) !important;
+          font-weight: 500 !important;
+        }
+
+        .filter { display: none !important; }
+
+        &:hover {
+          background-color: var(--pr-color-primary-50) !important;
+          border-color: var(--pr-color-primary-300) !important;
+        }
+      }
+    }
+
+    app-pr-button.globalDisabled ::ng-deep {
+      opacity: 0.35 !important;
+      pointer-events: none;
+    }
+  }
+}

@@ -83,19 +83,49 @@ describe('InnovationDevelopmentBilateralHandler', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('throws when innovation_developers is missing', async () => {
-    await expect(
-      handler.afterCreate({
-        ...baseContext,
-        bilateralDto: {
-          ...baseDto,
-          innovation_development: {
-            innovation_typology: { code: 12 },
-            innovation_readiness_level: { level: 3 },
-          },
-        },
-      }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+  const withoutDevelopers = (innovation: Record<string, unknown>) =>
+    Object.fromEntries(
+      Object.entries(innovation).filter(
+        ([key]) => key !== 'innovation_developers',
+      ),
+    );
+
+  // Since 2026-09-03 the Innovation Developer is the Lead contact person: the field is optional and
+  // the handler falls back to the contact's name instead of rejecting the payload.
+  it('stores the lead contact person as the innovation developer when the field is omitted', async () => {
+    const rest = withoutDevelopers(
+      baseContext.bilateralDto.innovation_development,
+    );
+    await handler.afterCreate({
+      ...baseContext,
+      bilateralDto: {
+        ...baseContext.bilateralDto,
+        lead_contact_person: { email: 'j.smith@cgiar.org', name: 'Jane Smith' },
+        innovation_development: rest,
+      } as any,
+    });
+
+    expect(repoStub.create).toHaveBeenCalledWith(
+      expect.objectContaining({ innovation_developers: 'Jane Smith' }),
+    );
+  });
+
+  it('leaves the innovation developer null when neither the field nor a lead contact is given', async () => {
+    const rest = withoutDevelopers(
+      baseContext.bilateralDto.innovation_development,
+    );
+    await handler.afterCreate({
+      ...baseContext,
+      bilateralDto: {
+        ...baseContext.bilateralDto,
+        lead_contact_person: undefined,
+        innovation_development: rest,
+      } as any,
+    });
+
+    expect(repoStub.create).toHaveBeenCalledWith(
+      expect.objectContaining({ innovation_developers: null }),
+    );
   });
 
   it('throws when readiness level by level number is invalid', async () => {
@@ -145,12 +175,22 @@ describe('InnovationDevelopmentBilateralHandler', () => {
     });
     expect(repoStub.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        results_id: baseContext.resultId,
         result_object: { id: baseContext.resultId },
-        innovation_nature_id: 12,
-        innovation_readiness_level_id: 14,
+        innovation_nature: { code: 12 },
+        innovation_readiness_level: { id: 14 },
       }),
     );
     expect(repoStub.save).toHaveBeenCalled();
+  });
+
+  // NOST-456 QA finding 01: the record used to be seeded with `short_title = title`, so a 14-word
+  // result title became a Short title over its 10-word ceiling. Short title is full metadata, not MDS.
+  it('leaves short_title empty instead of copying the result title into it', async () => {
+    await handler.afterCreate(baseContext);
+
+    const payload = repoStub.create.mock.calls[0][0];
+    expect(payload).not.toHaveProperty('short_title');
   });
 
   it('creates repository entry using readiness level by name', async () => {
@@ -171,8 +211,9 @@ describe('InnovationDevelopmentBilateralHandler', () => {
     );
     expect(repoStub.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        results_id: baseContext.resultId,
         result_object: { id: baseContext.resultId },
-        innovation_readiness_level_id: 14,
+        innovation_readiness_level: { id: 14 },
       }),
     );
     expect(repoStub.save).toHaveBeenCalled();
@@ -191,8 +232,8 @@ describe('InnovationDevelopmentBilateralHandler', () => {
     expect(repoStub.save).toHaveBeenCalledWith(
       expect.objectContaining({
         result_innovation_dev_id: 123,
-        innovation_nature_id: 12,
-        innovation_readiness_level_id: 14,
+        innovation_nature: { code: 12 },
+        innovation_readiness_level: { id: 14 },
         last_updated_by: baseContext.userId,
       }),
     );

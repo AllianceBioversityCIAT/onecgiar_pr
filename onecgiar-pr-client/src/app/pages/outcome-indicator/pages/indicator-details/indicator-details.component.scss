@@ -4,6 +4,13 @@ p {
   margin: 0;
 }
 
+.achieved-number-input {
+  width: 103px;
+  padding: 8px;
+  border: 1px solid var(--pr-color-neutral-1000);
+  border-radius: 6px;
+}
+
 #linkedResultsTableList th {
   text-align: center;
 }

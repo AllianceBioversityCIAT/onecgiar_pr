@@ -7,7 +7,9 @@ import {
   Param,
   Query,
   UseInterceptors,
+  ValidationPipe,
 } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { ResultsKnowledgeProductsService } from './results-knowledge-products.service';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto';
@@ -15,13 +17,65 @@ import { ResultsKnowledgeProductSaveDto } from './dto/results-knowledge-product-
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { FilterDto } from './dto/filter.dto';
+import { CgspaceDiscoveryService } from './cgspace-discovery/cgspace-discovery.service';
+import { CgspaceSearchQueryDto } from './cgspace-discovery/dto/cgspace-search-query.dto';
+import { CgspaceFacetQueryDto } from './cgspace-discovery/dto/cgspace-facet-query.dto';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
 export class ResultsKnowledgeProductsController {
   constructor(
     private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
+    private readonly _cgspaceDiscoveryService: CgspaceDiscoveryService,
   ) {}
+
+  @ApiTags('Knowledge Products - CGSpace')
+  @ApiOperation({
+    summary:
+      'Search CGSpace, MELSpace and WorldFish (DSpace 7 discovery) for knowledge products',
+    description:
+      'Proxies the discovery search across the `repository` list (repeatable or comma-separated; default all three; any other value is rejected with 400). `query` (3-200 chars) is required unless at least one of `type`, `year`, `center` is set. `size` is capped at 25 and applies PER SOURCE (merged page holds at most size × selected repositories). Response adds `sources[]` (one entry per selected repository with its status) next to `items`/`page`. Unknown query params are rejected with 400.',
+  })
+  @Get('cgspace/search')
+  cgspaceSearch(
+    @Query(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      }),
+    )
+    query: CgspaceSearchQueryDto,
+  ) {
+    return this._cgspaceDiscoveryService.search(query);
+  }
+
+  @ApiTags('Knowledge Products - CGSpace')
+  @ApiOperation({
+    summary:
+      'List facet values (item type or affiliation), unioned across repositories',
+    description:
+      'Proxies a discovery facet across the `repository` list (repeatable or comma-separated; default all three; any other value is rejected with 400). `size` is capped at 100, PER SOURCE. Response adds `sources[]`. Unknown query params are rejected with 400.',
+  })
+  @ApiParam({
+    name: 'name',
+    enum: ['itemtype', 'affiliation'],
+    description: 'CGSpace facet name',
+  })
+  @Get('cgspace/facets/:name')
+  cgspaceFacets(
+    @Param('name') name: string,
+    @Query(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      }),
+    )
+    query: CgspaceFacetQueryDto,
+  ) {
+    return this._cgspaceDiscoveryService.facets(name, query);
+  }
 
   @Post('create')
   create(

@@ -1,39 +1,58 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { RouterModule } from '@angular/router';
-import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultFrameworkReportingHomeComponent } from './result-framework-reporting-home.component';
+import { ApiService } from '../../../../shared/services/api/api.service';
+import { RolesService } from '../../../../shared/services/global/roles.service';
+import { ResultFrameworkReportingHomeService } from './services/result-framework-reporting-home.service';
 import { of } from 'rxjs';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 
 describe('ResultFrameworkReportingHomeComponent', () => {
   let component: ResultFrameworkReportingHomeComponent;
   let fixture: ComponentFixture<ResultFrameworkReportingHomeComponent>;
-  let mockApiService: any;
 
   beforeEach(async () => {
-    mockApiService = {
-      resultsSE: {
-        GET_ScienceProgramsProgress: jest.fn().mockReturnValue(of({ response: { mySciencePrograms: [], otherSciencePrograms: [] } })),
-        GET_RecentActivity: jest.fn().mockReturnValue(of({ response: [] }))
-      }
-    };
     await TestBed.configureTestingModule({
-      declarations: [],
+      imports: [ResultFrameworkReportingHomeComponent],
       providers: [
         {
           provide: ApiService,
-          useValue: mockApiService
+          useValue: {
+            authSE: { localStorageUser: { user_name: 'Test User' } },
+            resultsSE: {
+              GET_RecentActivity: () => of({ response: [] }),
+              GET_ScienceProgramsProgress: () =>
+                of({ response: { mySciencePrograms: [], otherSciencePrograms: [] } })
+            }
+          }
+        },
+        {
+          provide: RolesService,
+          useValue: {
+            getMyCenters: () => [
+              { center_id: 'CIMMYT', center_name: 'CIMMYT', center_acronym: 'CIMMYT', role_id: 9, role_name: 'Center User' }
+            ]
+          }
+        },
+        {
+          provide: ResultFrameworkReportingHomeService,
+          useValue: {
+            mySPsList: () => [],
+            otherSPsList: () => [],
+            recentActivityList: () => [],
+            isLoadingSPLists: () => false,
+            isLoadingRecentActivity: () => false,
+            getRecentActivity: jest.fn(),
+            getScienceProgramsProgress: jest.fn()
+          }
         }
-      ],
-      imports: [RouterModule, ResultFrameworkReportingHomeComponent, HttpClientTestingModule, CustomFieldsModule]
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ResultFrameworkReportingHomeComponent);
     component = fixture.componentInstance;
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('should expose assigned centers from roles service', () => {
+    expect(component.myCentersList()).toHaveLength(1);
+    expect(component.myCentersList()[0].center_id).toBe('CIMMYT');
   });
 });

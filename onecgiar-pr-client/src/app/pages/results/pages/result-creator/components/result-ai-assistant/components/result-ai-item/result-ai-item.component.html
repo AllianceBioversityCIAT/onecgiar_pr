@@ -34,14 +34,14 @@
           <div style="display: flex">
             <i
               class="pi pi-check save-icon"
-              pTooltip="Save title"
-              tooltipPosition="top"
+              prTooltip="Save title"
+              prTooltipPosition="top"
               style="font-size: 14px; cursor: pointer"
               (click)="finishEditingTitle()"></i>
             <i
               class="pi pi-times cancel-icon"
-              pTooltip="Cancel"
-              tooltipPosition="top"
+              prTooltip="Cancel"
+              prTooltipPosition="top"
               style="font-size: 14px; cursor: pointer; margin-left: 5px"
               (click)="cancelEditingTitle()"></i>
           </div>
@@ -64,6 +64,14 @@
   @if (!hideButtons && isAIAssistantResult(item)) {
     <div class="result-item-actions">
       @if (!isCreated()) {
+        <!--
+          ── Crear desde el asistente de IA — visible pero deshabilitado, `Coming soon` (P2-3433) ──
+          El disable es un `true` literal, no una condición: `createResult()` nunca se conectó a un
+          endpoint y hoy solo levanta un toast de éxito falso tras un `setTimeout`. Los botones se
+          dejan A LA VISTA en vez de esconderlos, porque negocio los considera parte del flujo; el
+          tag es lo que evita que se lean como rotos durante las pruebas. Conectarlos es scope
+          nuevo y espera a que se defina qué endpoint persiste un resultado sugerido por la IA.
+        -->
         <app-pr-button [text]="'Discard'" colorType="danger" (click)="discardResult(item)" [ngClass]="{ globalDisabled: true }"></app-pr-button>
 
         <app-pr-button
@@ -73,6 +81,12 @@
           [rotating]="isCreating()"
           [icon]="isCreating() ? 'loop' : 'add'"
           [ngClass]="{ globalDisabled: true }"></app-pr-button>
+
+        <span
+          class="rounded-full bg-[var(--pr-surface-app)] px-[8px] py-[2px] text-[11px] font-medium text-[var(--pr-text-muted)]"
+          data-testid="result-ai-item-coming-soon"
+          >Coming soon</span
+        >
       } @else {
         <app-pr-button [text]="'Open Result'" colorType="primary" (click)="openResult(item)" icon="arrow_right"></app-pr-button>
       }

@@ -46,6 +46,7 @@ import { ResultInnovationPackageService } from '../result-innovation-package/res
 import { InnovationPathwayStepThreeService } from './innovation-pathway-step-three.service';
 import { ResultIpExpertWorkshopOrganizedRepostory } from './repository/result-ip-expert-workshop-organized.repository';
 import { EvidencesRepository } from '../../results/evidences/evidences.repository';
+import { buildInnovationPackageTitle } from '../utils/innovation-package-title.util';
 
 @Injectable()
 export class InnovationPathwayStepOneService {
@@ -628,7 +629,13 @@ export class InnovationPathwayStepOneService {
         });
       }
 
-      let innovationTitle = '';
+      const innovationTitle = buildInnovationPackageTitle({
+        coreInnovationTitle: coreTitle.title,
+        geoScopeId,
+        regionNames: regions?.map((r) => r.name),
+        countryNames: countries?.map((c) => c.name),
+      });
+
       if (geoScopeId === 2) {
         if (regions) {
           for (const r of regions) {
@@ -639,26 +646,8 @@ export class InnovationPathwayStepOneService {
             resultRegions.push(newRegions);
           }
         }
-        const regionsList = regions.map((r) => r.name);
-        if (coreTitle.title.endsWith('.')) {
-          coreTitle.title = coreTitle.title.replace(/\.$/, '');
-        }
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
-          coreTitle.title
-        } in ${regionsList.slice(0, -1).join(', ')}${
-          regionsList.length > 1 ? ' and ' : ''
-        }${regionsList[regionsList.length - 1]}`;
       } else if ([3, 4, 5].includes(geoScopeId)) {
         if (countries) {
-          const countriesList = countries.map((c) => c.name);
-          if (result.title.endsWith('.')) {
-            result.title = result.title.replace(/\.$/, '');
-          }
-          innovationTitle = `Innovation Package and Scaling Readiness assessment for ${coreTitle.title.toLocaleLowerCase()} in ${countriesList
-            .slice(0, -1)
-            .join(', ')}${countriesList.length > 1 ? ' and ' : ''}${
-            countriesList[countriesList.length - 1]
-          }`;
           for (const ct of countries) {
             const newRc = await this._resultCountryRepository.save({
               result_id: resultId,
@@ -677,13 +666,6 @@ export class InnovationPathwayStepOneService {
             }
           }
         }
-      } else {
-        if (coreTitle.title.endsWith('.')) {
-          coreTitle.title = coreTitle.title.replace(/\.$/, '');
-        }
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${coreTitle.title
-          .toLocaleLowerCase()
-          .trim()}.`;
       }
 
       await this._resultRepository.update(resultId, {

@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, Input, signal } from '@angular/core';
-import { DialogModule } from 'primeng/dialog';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { CreateResultManagementService } from '../../services/create-result-management.service';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
@@ -10,7 +10,6 @@ import { FormsModule } from '@angular/forms';
 import { AiNotDataFoundComponent } from './components/ai-not-data-found/ai-not-data-found.component';
 import { ResultAiItemComponent } from './components/result-ai-item/result-ai-item.component';
 import { AiFeedbackComponent } from './components/ai-feedback/ai-feedback.component';
-import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { AiLoadingStateComponent } from './components/ai-loading-state/ai-loading-state.component';
 import { AiLoadingStateService } from './components/ai-loading-state/services/ai-loading-state.service';
 import { environment } from '../../../../../../../environments/environment';
@@ -45,13 +44,12 @@ interface MiningTextItem {
   imports: [
     CommonModule,
     FormsModule,
-    DialogModule,
+    PrDialogComponent,
     CustomFieldsModule,
     AiUploadFileComponent,
     ResultAiItemComponent,
     AiNotDataFoundComponent,
     AiFeedbackComponent,
-    PaginatorModule,
     AiLoadingStateComponent
   ],
   standalone: true,
@@ -212,9 +210,33 @@ export class ResultAiAssistantComponent {
     this.aiLoadingStateService.stopLoadingProgress();
   }
 
-  onPageChange(event: PaginatorState) {
+  onPageChange(event: { first?: number; rows?: number }) {
     this.first.set(event.first ?? 0);
     this.rows.set(event.rows ?? 5);
+  }
+
+  get pageFirstRecord(): number {
+    return this.createResultManagementService.items().length ? this.first() + 1 : 0;
+  }
+
+  get pageLastRecord(): number {
+    return Math.min(this.first() + this.rows(), this.createResultManagementService.items().length);
+  }
+
+  get canPrevPage(): boolean {
+    return this.first() > 0;
+  }
+
+  get canNextPage(): boolean {
+    return this.first() + this.rows() < this.createResultManagementService.items().length;
+  }
+
+  prevPage(): void {
+    this.onPageChange({ first: Math.max(0, this.first() - this.rows()), rows: this.rows() });
+  }
+
+  nextPage(): void {
+    this.onPageChange({ first: this.first() + this.rows(), rows: this.rows() });
   }
 
   private mapResultRawAiToAIAssistantResult(results: AIAssistantResult[]): AIAssistantResult[] {

@@ -1,0 +1,1201 @@
+<!--
+  Reporting tab — AoW → HLO → indicator (+ program-level Intermediate / 2030 siblings).
+  Intermediate Outcomes and 2030 Outcomes are top-level cards (siblings of AoWs), not HLO children —
+  which is what the LIVE design shows too (`a.hasTag`). See docs/DESIGN-DEVIATIONS.md §10.
+
+  ⚠️ html is 12px — only arbitrary px values, never rem-based Tailwind utilities.
+  ⚠️ Read components/reporting-aow-table/CLAUDE.md before editing: the pr-table dark skin, the
+     absent card `overflow`, and the grid gutter are all load-bearing and all regressed once.
+-->
+
+@if (viewMode() === 'flat') {
+  <!-- ═══ ALL INDICATORS — the design's sortable table (:1841). One horizontal scroller; the
+       status mark + indicator stay pinned left, the action + ··· stay pinned right.
+
+       Sorting is `app-pr-table`'s, not a second implementation: the header <th>s carry
+       `prSortableColumn` and it owns the order. Because it compares raw values with `<`/`>`, the
+       fields named here are the PRE-NORMALISED keys from `flatTableRows()` — sorting
+       `target_value_sum` directly would compare the API's strings ("9" > "100").
+
+       There is no `Parent` column: the payload has no parent field, and a column of placeholders is
+       worse than an absent column. Tracked on P2-3405. With `Parent` out and `Center` always shown,
+       the design's `Optional columns` popover has nothing left to toggle — and its trigger button is
+       missing from the mockup anyway (blank line at PRMS-Reporting.dc.html:1624). ═══ -->
+  <!-- No `overflow-x-auto` here: `app-pr-table` already renders its own `.pr-table-wrap` scroller,
+       and nesting a second one gives the user two scrollbars for one axis. This div only draws the
+       card (border + radius); the horizontal scrolling belongs to `.pr-flat-table` below. -->
+  <div class="pr-flat-scroll rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] overflow-hidden">
+    <app-pr-table [value]="flatTableRows()" styleClass="pr-flat-table">
+      <ng-template prTableHeader>
+        <tr class="pr-flat-row pr-flat-head">
+          <th class="pr-flat-cell" scope="col" prSortableColumn="indicator_description">
+            <span class="inline-flex items-center gap-[4px] cursor-pointer">
+              Indicator <pr-sort-icon field="indicator_description" />
+            </span>
+          </th>
+          <th class="pr-flat-cell text-center" scope="col" prSortableColumn="__aowCode">
+            <span class="inline-flex items-center justify-center gap-[4px] w-full cursor-pointer">
+              AoW <pr-sort-icon field="__aowCode" />
+            </span>
+          </th>
+          <th class="pr-flat-cell text-center" scope="col" prSortableColumn="__sortTarget">
+            <span class="inline-flex items-center justify-center gap-[4px] w-full cursor-pointer">
+              Target <pr-sort-icon field="__sortTarget" />
+            </span>
+          </th>
+          <th class="pr-flat-cell text-center" scope="col" prSortableColumn="__sortAchieved">
+            <span class="inline-flex items-center justify-center gap-[4px] w-full cursor-pointer">
+              Achieved <pr-sort-icon field="__sortAchieved" />
+            </span>
+          </th>
+          <th class="pr-flat-cell text-center" scope="col" prSortableColumn="__sortProgress">
+            <span class="inline-flex items-center justify-center gap-[4px] w-full cursor-pointer">
+              Progress <pr-sort-icon field="__sortProgress" />
+            </span>
+          </th>
+          <th class="pr-flat-cell text-center" scope="col" aria-hidden="true">
+            <span class="inline-flex items-center justify-center w-full">Actions</span>
+          </th>
+        </tr>
+      </ng-template>
+
+      <ng-template prTableBody let-row>
+        <tr
+          class="pr-flat-row pr-flat-body"
+          role="button"
+          tabindex="0"
+          [id]="'indicator-row-' + row.indicator_id"
+          [attr.data-row-key]="rowKey(row)"
+          [class]="highlightedRowKey() === rowKey(row) ? 'ring-2 ring-inset ring-[var(--pr-color-primary-300)]' : ''"
+          [attr.aria-label]="row.indicator_description"
+          (click)="onRowClick(row, $event)"
+          (keydown.enter)="openRow.emit(row)">
+          <!-- 1 — indicator + its name -->
+          <td class="pr-flat-cell">
+            <div class="flex min-w-0 flex-col group/title">
+              <p
+                class="m-0 text-[13.5px] font-semibold leading-[1.45] text-[var(--pr-text-heading)] [text-wrap:pretty] cursor-text select-text"
+                [class.pr-clamp-2]="!isTitleExpanded(row.indicator_id)"
+                (click)="$event.stopPropagation()">
+                <span [innerHTML]="row.indicator_description | highlightSearch: search()"></span>
+                <button
+                  type="button"
+                  class="inline-flex h-[18px] w-[18px] ml-[6px] -mt-[2px] align-middle shrink-0 appearance-none items-center justify-center rounded-[3px] border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] opacity-0 group-hover/title:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text-heading)] cursor-pointer"
+                  [class.opacity-100]="isJustCopied(rowKey(row))"
+                  aria-label="Copy indicator title"
+                  [prTooltip]="isJustCopied(rowKey(row)) ? 'Copied!' : 'Copy title'"
+                  prTooltipPosition="top"
+                  (click)="copyIndicatorText(row, $event)">
+                  <span class="material-icons-round text-[13px]" [class.text-emerald-600]="isJustCopied(rowKey(row))">
+                    {{ isJustCopied(rowKey(row)) ? 'check' : 'content_copy' }}
+                  </span>
+                </button>
+              </p>
+              @if (needsShowMore(row)) {
+                <button
+                  type="button"
+                  class="mt-[2px] self-start border-0 bg-transparent p-0 text-left text-[11.5px] font-medium text-[var(--pr-color-primary-500)] hover:text-[var(--pr-color-primary-600)] hover:underline cursor-pointer"
+                  [attr.aria-expanded]="isTitleExpanded(row.indicator_id)"
+                  (click)="toggleTitle(row.indicator_id, $event)">
+                  {{ isTitleExpanded(row.indicator_id) ? 'Show less' : 'Show more' }}
+                </button>
+              }
+              <div class="mt-[4px] flex flex-wrap items-center gap-[6px]">
+                @if (row.__typeLabel) {
+                  <span
+                    class="inline-block max-w-[160px] truncate rounded-full bg-[#6b46e51f] px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-400)]"
+                    [title]="row.__typeLabel"
+                    [innerHTML]="row.__typeLabel | highlightSearch: search()">
+                  </span>
+                }
+                @if (row.__centerLabel && row.__centerLabel !== '—') {
+                  <span
+                    class="inline-flex items-center justify-center rounded-[5px] bg-slate-100 px-[6px] py-[2px] text-[11px] font-medium text-slate-700 border border-slate-200"
+                    [title]="row.__centerLabel"
+                    [innerHTML]="row.__centerLabel | highlightSearch: search()">
+                  </span>
+                }
+              </div>
+            </div>
+          </td>
+
+          <!-- 2 — AoW code chip -->
+          <td class="pr-flat-cell flex items-center justify-center">
+            @if (row.__aowCode) {
+              <span
+                class="pr-code inline-flex items-center justify-center rounded-[5px] bg-[var(--pr-color-primary-100)] px-[7px] py-[2px] text-[11.5px] font-bold text-[var(--pr-color-primary-700)]">
+                {{ row.__aowCode }}
+              </span>
+            } @else {
+              <span class="pr-figure-sm text-[13px] font-medium text-[var(--pr-text-subtle)]">—</span>
+            }
+          </td>
+
+          <!-- 3 — Target -->
+          <td class="pr-flat-cell flex items-center justify-center">
+            <button
+              type="button"
+              class="block border-0 bg-transparent p-0 text-center cursor-pointer group/tgt"
+              (click)="emitAndStop(openTarget, row, $event)">
+              <span
+                class="pr-figure-sm block text-[13px] font-semibold tabular-nums text-[var(--pr-text-heading)] group-hover/tgt:text-[var(--pr-color-primary-600)] transition-colors">
+                {{ targetText(row) }}
+              </span>
+              <span class="block text-[8.5px] font-medium uppercase tracking-[0.05em] text-[var(--pr-text-muted)] mt-[1px]">Target</span>
+            </button>
+          </td>
+
+          <!-- 4 — Achieved -->
+          <td class="pr-flat-cell flex items-center justify-center">
+            <button
+              type="button"
+              class="block border-0 bg-transparent p-0 text-center cursor-pointer group/ach"
+              [prTooltip]="achievedTooltip(row)"
+              (click)="emitAndStop(openAchieved, row, $event)">
+              <span
+                class="pr-figure-sm block text-[13px] font-semibold tabular-nums group-hover/ach:text-[var(--pr-color-primary-600)] transition-colors"
+                [class]="achievedIsEmpty(row) ? 'text-[var(--pr-text-muted)]' : 'text-[var(--pr-text-heading)]'">
+                {{ achievedText(row) }}
+              </span>
+              <span class="block text-[8.5px] font-medium uppercase tracking-[0.05em] text-[var(--pr-text-muted)] mt-[1px]">Achieved</span>
+            </button>
+          </td>
+
+          <!-- 5 — Progress -->
+          <td class="pr-flat-cell flex items-center justify-center min-w-0">
+            @if (!hasUsableTarget(row)) {
+              <span
+                class="block text-[11.5px] font-medium italic text-[var(--pr-text-subtle)] text-center"
+                [prTooltip]="isOverachievedWithoutTarget(row) ? 'No target was set for this indicator, so a percentage cannot be calculated. Results were still reported against it. It is excluded from the averages above.' : 'No target was set for this indicator, so a percentage cannot be calculated. It is excluded from the averages above.'">
+                {{ isOverachievedWithoutTarget(row) ? 'Overachieved' : 'No target set' }}
+              </span>
+            } @else {
+              <div
+                class="flex flex-col items-center justify-center text-center leading-tight"
+                [prTooltip]="progressTracksTooltip(row)"
+                prTooltipPosition="top">
+                <span class="text-[12.5px] font-bold tabular-nums text-[var(--pr-text-heading)] whitespace-nowrap">
+                  <span class="text-[10px] font-medium uppercase text-[var(--pr-text-subtle)] mr-[2px]">QA</span>{{ row.progress_percentage || '0%' }}
+                </span>
+                <span class="text-[11px] font-semibold tabular-nums text-[var(--pr-text-secondary)] whitespace-nowrap">
+                  <span class="text-[9.5px] font-medium uppercase text-[var(--pr-text-subtle)] mr-[2px]">Prel.</span>{{ row.preliminary_progress_percentage || '0%' }}
+                </span>
+              </div>
+            }
+          </td>
+
+          <!-- 6 — Actions -->
+          <td class="pr-flat-cell flex items-center justify-end gap-[6px]">
+            <button type="button"
+              class="inline-flex h-[28px] w-[28px] shrink-0 cursor-pointer appearance-none items-center justify-center rounded-[8px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+              [class]="isFavorite(row)
+                ? 'border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-100)]'
+                : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-subtle)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-color-primary-500)]'"
+              [attr.aria-pressed]="isFavorite(row)"
+              [attr.aria-label]="favoriteLabel(row)"
+              [title]="favoriteLabel(row)"
+              data-testid="favorite-toggle"
+              (click)="emitAndStop(toggleFavorite, row, $event)">
+              <span class="material-icons-round text-[15px]" aria-hidden="true">{{ isFavorite(row) ? 'star' : 'star_outline' }}</span>
+            </button>
+            @if (canCopyLink(row)) {
+              <button
+                type="button"
+                class="inline-flex h-[28px] w-[28px] shrink-0 cursor-pointer appearance-none items-center justify-center rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+                aria-label="Copy link to this KPI"
+                title="Copy link"
+                (click)="emitAndStop(copyLink, row, $event)">
+                <span class="material-icons-round text-[13px]" aria-hidden="true">link</span>
+              </button>
+            }
+            @if (canReport() && actionLabel(row)) {
+              <button
+                type="button"
+                class="pr-row-action inline-flex h-[28px] items-center justify-center rounded-[6px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] px-[11px] text-[11.5px] font-semibold text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-100)] hover:border-[var(--pr-color-primary-300)] cursor-pointer transition-colors"
+                (click)="emitAndStop(reportRow, row, $event)">
+                {{ actionLabel(row) }}
+              </button>
+            }
+            <div class="relative">
+              <button
+                #flatMenuTrigger="cdkOverlayOrigin"
+                cdkOverlayOrigin
+                type="button"
+                class="flex h-[28px] w-[28px] items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-text-subtle)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text)] cursor-pointer"
+                aria-label="More actions"
+                [attr.aria-expanded]="isRowMenuOpen(row)"
+                (click)="toggleRowMenu(row, $event)">
+                <ng-icon name="lucideEllipsis" class="text-[15px]" />
+              </button>
+              <ng-template
+                cdkConnectedOverlay
+                [cdkConnectedOverlayOrigin]="flatMenuTrigger"
+                [cdkConnectedOverlayOpen]="isRowMenuOpen(row)"
+                [cdkConnectedOverlayPositions]="rowMenuPositions"
+                [cdkConnectedOverlayHasBackdrop]="true"
+                cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+                (backdropClick)="closeRowMenu()"
+                (detach)="closeRowMenu()">
+                <div class="pr-row-menu" role="menu" (click)="$event.stopPropagation()">
+                  <button type="button" role="menuitem" class="pr-row-menu_item" (click)="runFromMenu(openAchieved, row, $event)">
+                    View reported results
+                  </button>
+                  <button type="button" role="menuitem" class="pr-row-menu_item" (click)="runFromMenu(openTarget, row, $event)">
+                    Target details
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    class="pr-row-menu_item"
+                    (click)="runFromMenu(copyIndicatorAction, row, $event)">
+                    <span class="material-icons-round text-[15px] text-[var(--pr-text-subtle)] mr-[6px]">content_copy</span>
+                    <span>Copy indicator title</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    class="pr-row-menu_item"
+                    [class.pr-row-menu_item--disabled]="!canCopyLink(row)"
+                    [disabled]="!canCopyLink(row)"
+                    [attr.aria-disabled]="!canCopyLink(row) ? 'true' : null"
+                    [attr.title]="!canCopyLink(row) ? 'Link is not available for program-level buckets' : null"
+                    (click)="runFromMenu(copyLink, row, $event)">
+                    Copy link
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    class="pr-row-menu_item pr-row-menu_item--disabled"
+                    disabled
+                    aria-disabled="true"
+                    title="Indicators do not have a code yet">
+                    <span>Copy indicator code</span>
+                    <span class="pr-row-menu_soon">Coming soon</span>
+                  </button>
+                </div>
+              </ng-template>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template prTableEmpty>
+        <tr>
+          <td colspan="10">
+            <div class="flex flex-col items-center justify-center gap-[12px] px-[24px] py-[40px] text-center text-[13px] text-[var(--pr-text-secondary)]">
+              @if (favoritesOnly() && favoriteKeys().size === 0) {
+                <p class="m-0 text-[14px]">No favorite indicators yet. Use the ★ on any indicator row to build your focus list.</p>
+                <button type="button" class="pr-clear-filters" (click)="exitFavoritesOnly.emit()">Show all indicators</button>
+              } @else if (filtersActive()) {
+                <p class="m-0">No indicators match your filters.</p>
+                <button type="button" class="pr-clear-filters" (click)="clearFilters.emit()">Clear filters</button>
+              } @else {
+                <p class="m-0">No planned indicators yet.</p>
+              }
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </app-pr-table>
+  </div>
+} @else {
+  <!-- ═══ GROUPED — 10px between top-level cards ═══ -->
+  <div class="flex flex-col gap-[10px]">
+    @for (group of visibleGroups(); track group.aow.code) {
+      @let ratio = ratioOf(group);
+      @let aowKey = 'aow::' + group.aow.code;
+      <!-- Every card starts collapsed (reference seed `expandedAows: {}`), unless the toolbar's
+           Expand all switch moved the default — resolved once per card. -->
+      @let aowOpen = isOpen(aowKey, isDefaultOpenAow(group.aow.code));
+
+      <!-- No `overflow-hidden` here: it clipped the ⓘ popover to a 6px sliver, and the design's own
+           card carries no overflow either (PRMS-Reporting.dc.html:1682). The collapse animation is
+           clipped by `.pr-collapse-inner`, and the bottom corners are rounded by
+           `.pr-collapse--card > .pr-collapse-inner` — so nothing needed the card to clip. -->
+      <section class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] transition-shadow hover:shadow-xs">
+        <!-- Top-level header: 52px compact, balanced 3-zone layout. Same chrome for AoW and for Intermediate / 2030 buckets. -->
+        <button
+          type="button"
+          class="flex h-[52px] min-h-[52px] w-full items-center gap-[10px] bg-[var(--pr-surface-card)] px-[12px] sm:px-[20px] text-left cursor-pointer hover:bg-[var(--pr-surface-subtle)] transition-colors rounded-t-[12px]"
+          [class.rounded-b-[12px]]="!aowOpen"
+          [class.border-b]="aowOpen"
+          [class.border-[var(--pr-border-divider)]]="aowOpen"
+          [attr.aria-expanded]="aowOpen"
+          (click)="toggle(aowKey, isDefaultOpenAow(group.aow.code), $event)">
+          <ng-icon
+            name="lucideChevronDown"
+            class="shrink-0 text-[16px] text-[var(--pr-text-secondary)] transition-transform duration-200"
+            [class.rotate-180]="aowOpen" />
+
+          <!-- Left zone: Identity (code, name, info, count) -->
+          <div class="flex items-center gap-[8px] min-w-0 flex-1 max-w-[420px]">
+            <span
+              class="pr-code shrink-0 rounded-[6px] px-[8px] py-[2px] text-[11.5px] font-semibold uppercase tracking-[0.02em]"
+              [class]="headerChipClass(group)"
+              [innerHTML]="headerChip(group) | highlightSearch: search()">
+            </span>
+
+            <span
+              class="min-w-0 truncate text-[15px] font-bold text-[var(--pr-text-heading)] cursor-text select-text"
+              [title]="group.aow.name"
+              (click)="$event.stopPropagation()"
+              [innerHTML]="group.aow.name | highlightSearch: search()">
+            </span>
+
+            <button
+              type="button"
+              class="flex h-[20px] w-[20px] shrink-0 appearance-none items-center justify-center rounded-[4px] border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] transition-colors hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text-heading)] cursor-pointer"
+              aria-label="Copy Area of Work name"
+              [prTooltip]="isJustCopied(aowKey) ? 'Copied!' : 'Copy name'"
+              prTooltipPosition="top"
+              (click)="copyAow(group, $event)">
+              <span class="material-icons-round text-[14px]" [class.text-emerald-600]="isJustCopied(aowKey)">
+                {{ isJustCopied(aowKey) ? 'check' : 'content_copy' }}
+              </span>
+            </button>
+
+            <!-- ⓘ — a real disclosure, not a hover that repeats the name printed to its left. -->
+            <span class="relative flex shrink-0 items-center">
+              <button
+                type="button"
+                class="flex h-[20px] w-[20px] shrink-0 appearance-none items-center justify-center border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] transition-colors hover:text-[var(--pr-color-primary-300)]"
+                aria-label="About this group"
+                [attr.aria-expanded]="isInfoOpen(group)"
+                (click)="toggleInfo(group, $event)">
+                <ng-icon name="lucideInfo" class="text-[14px]" />
+              </button>
+              @if (isInfoOpen(group)) {
+                <div
+                  class="pr-info-pop"
+                  role="dialog"
+                  aria-label="About this group"
+                  (click)="$event.stopPropagation()">
+                  <div class="mb-[8px] flex items-center gap-[8px]">
+                    <span class="flex-1 text-[14px] font-semibold text-[var(--pr-text-heading)] cursor-text select-text">
+                      {{ headerChip(group) }} · {{ group.aow.name }}
+                    </span>
+                    <button
+                      type="button"
+                      class="flex h-[22px] w-[22px] appearance-none items-center justify-center rounded-[4px] border-0 bg-transparent p-0 text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle)] cursor-pointer"
+                      aria-label="Copy Area of Work name"
+                      [prTooltip]="isJustCopied(aowKey) ? 'Copied!' : 'Copy name'"
+                      prTooltipPosition="top"
+                      (click)="copyAow(group, $event)">
+                      <span class="material-icons-round text-[14px]" [class.text-emerald-600]="isJustCopied(aowKey)">
+                        {{ isJustCopied(aowKey) ? 'check' : 'content_copy' }}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      class="flex h-[24px] w-[24px] appearance-none items-center justify-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle)]"
+                      aria-label="Close"
+                      (click)="toggleInfo(group, $event)">
+                      <ng-icon name="lucideX" class="text-[14px]" />
+                    </button>
+                  </div>
+                  <!-- The ONE field the payload does not carry. Marked, not invented: an AoW has no
+                       description in `toc-results`, and pasting another programme's blurb here would
+                       be worse than saying so. Tracked on P2-3405. -->
+                  <p class="pr-info-pop_blurb mb-[10px] mt-0 text-[12.5px] leading-[1.5] text-[var(--pr-text-secondary)]">
+                    {{ infoBlurb(group) }}
+                  </p>
+                  <div class="flex items-center gap-[8px] text-[11px] font-medium text-[var(--pr-text-subtle)]">
+                    {{ infoMeta(group) }}
+                  </div>
+                </div>
+              }
+            </span>
+
+            <span class="shrink-0 whitespace-nowrap text-[12px] text-[var(--pr-text-subtle)] hidden sm:inline">
+              {{ countLabel(group.count) }}
+            </span>
+          </div>
+
+          @if (group.loading) {
+            <span class="flex-1"></span>
+            <span class="flex shrink-0 items-center gap-[12px]" aria-hidden="true">
+              <span class="h-[8px] w-[120px] shrink-0 animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+              <span class="h-[16px] w-[76px] shrink-0 animate-pulse rounded-full bg-[var(--pr-surface-ground)]"></span>
+              <span class="h-[16px] w-[44px] shrink-0 animate-pulse rounded-full bg-[var(--pr-surface-ground)]"></span>
+            </span>
+          } @else {
+            <!-- Center zone: Progress bar and coverage ratio -->
+            <div class="flex items-center gap-[8px] sm:gap-[12px] shrink-0 mx-auto" [attr.title]="rowTitle(group) || null">
+              <span class="h-[7px] w-[60px] sm:w-[130px] shrink-0 overflow-hidden rounded-[4px] bg-[var(--pr-border)]">
+                <span
+                  class="block h-[7px] rounded-[4px] bg-[var(--pr-color-primary-400)]"
+                  [style.width.%]="ratio.percent"></span>
+              </span>
+              <span
+                class="pr-figure-sm min-w-[50px] sm:min-w-[70px] shrink-0 whitespace-nowrap text-right text-[12px] sm:text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-heading)]">
+                {{ ratio.done }} of {{ ratio.total }}
+              </span>
+              <span
+                class="min-w-[34px] sm:min-w-[40px] shrink-0 whitespace-nowrap text-right text-[12px] sm:text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-secondary)]"
+                prTooltip="KPIs with something reported against them. This is coverage of the plan, not achievement against the targets."
+                prTooltipPosition="top">
+                {{ ratio.percent }}%
+              </span>
+            </div>
+
+            <!-- Right zone: QA / Prel achievement & By-AOW action -->
+            <div class="ml-auto flex items-center gap-[12px] shrink-0">
+              @if (group.achievement) {
+                <span
+                  class="flex w-[168px] shrink-0 flex-col items-end border-l border-[var(--pr-border)] pl-[12px] leading-tight max-[1100px]:sr-only"
+                  [prTooltip]="achievementTooltip(group.achievement)"
+                  prTooltipPosition="top">
+                  <span class="flex items-baseline gap-[10px] whitespace-nowrap">
+                    <span class="flex items-baseline gap-[4px]">
+                      <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
+                      <span class="text-[13.5px] font-bold tabular-nums text-[var(--pr-text-heading)]">
+                        {{ achievementLabel(group.achievement) }}
+                      </span>
+                    </span>
+                    <span class="flex items-baseline gap-[4px]">
+                      <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
+                      <span class="text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+                        {{ preliminaryAchievementLabel(group.achievement) }}
+                      </span>
+                    </span>
+                  </span>
+                  @if (achievementCoverage(group.achievement)) {
+                    <span class="whitespace-nowrap text-[10px] font-medium text-[var(--pr-text-muted)]">
+                      {{ achievementCoverage(group.achievement) }}
+                    </span>
+                  }
+                </span>
+              }
+
+          <!-- Jump to the focused By-AOW view — the inverse of that view's "All Areas of Work"
+               button (same recipe). Real AoWs only: buckets have no By-AOW view. Nested-control
+               pattern, like the ⓘ above: emitAndStop keeps the click from toggling the card. -->
+          @if (!isBucket(group)) {
+            <!-- <900px: the header row has no more width to give (name is already min-w-0/truncate
+                 and fully squeezed to 0 there; every sibling is shrink-0). Collapse to icon-only
+                 rather than overflow the card — aria-label keeps the accessible name, so nothing is
+                 lost, only the visible label (measured: closes the 768px 798→750 overflow exactly). -->
+            <span
+              role="button"
+              tabindex="0"
+              class="inline-flex h-[30px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] max-[900px]:w-[30px] max-[900px]:justify-center max-[900px]:px-0"
+              aria-label="Open this Area of Work in the By-AOW view"
+              title="By AOW"
+              (click)="emitAndStop(openAow, group.aow.code, $event)"
+              (keydown.enter)="emitAndStop(openAow, group.aow.code, $event)">
+              <span class="material-icons-round text-[16px]" aria-hidden="true">folder_open</span>
+              <span class="max-[900px]:hidden">By AOW</span>
+            </span>
+          }
+            </div>
+          }
+        </button>
+
+        <!-- Always in DOM so height can animate (no @if pop). -->
+        <div class="pr-collapse pr-collapse--card" [class.is-open]="aowOpen" [attr.aria-hidden]="!aowOpen">
+          <div class="pr-collapse-inner">
+            @if (group.loading) {
+              <div class="px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">Loading indicators…</div>
+            } @else {
+              <!--
+                P2-3336 rule 1. This card is now the only place a work-package-less Intermediate
+                Outcome appears — it used to be repeated inside every AoW card too. The note says
+                why it sits apart. Same icon+paragraph shape as the sibling legacy screens
+                (entity-aow-unplanned / entity-aow-aow), rebuilt in Tailwind with arbitrary px
+                because this template takes no rem-based utilities (html is 12px).
+              -->
+              @if (isIntermediateBucket(group)) {
+                <div
+                  class="mx-[24px] mt-[16px] flex items-start gap-[8px] rounded-[8px] border border-[var(--pr-color-primary-100)] bg-[var(--pr-color-primary-50)] px-[12px] py-[9px]">
+                  <span
+                    class="material-icons-round text-[16px] leading-[18px] text-[var(--pr-color-primary-400)]"
+                    aria-hidden="true">
+                    info
+                  </span>
+                  <p class="m-0 text-[12.5px] leading-[18px] text-[var(--pr-text-secondary)]">
+                    {{ intermediateBucketNote }}
+                  </p>
+                </div>
+              }
+              <!-- ── In-Card Quick Breakdown & Jump-to Toolbar ── -->
+              @let centers = centerCountsOf(group);
+              @let visibleCenters = visibleCentersOf(group);
+              @let overflowCenters = overflowCentersOf(group);
+              @let types = typeCountsOf(group);
+              @let visibleTypes = visibleTypesOf(group);
+              @let overflowTypes = overflowTypesOf(group);
+              @let selCenter = selectedCenterOf(group);
+              @let selType = selectedTypeOf(group);
+              @let hasOverflow = hasOverflowFilters(group);
+              @let isOverActive = hasActiveOverflowFilter(group);
+              @let overCount = activeOverflowCount(group);
+
+              @if (centers.length > 1 || types.length > 1) {
+                <div
+                  class="relative flex h-[32px] min-h-[32px] items-center justify-between border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] px-[20px] sm:px-[28px]">
+                  <div class="flex items-center gap-[12px] overflow-hidden min-w-0">
+                    <!-- Centers Section -->
+                    @if (centers.length > 1) {
+                      <div class="flex shrink-0 items-center gap-[5px]">
+                        <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[2px]">
+                          Centers:
+                        </span>
+                        <button
+                          type="button"
+                          class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                          [class]="!selCenter ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                          (click)="setCenterFilter(group, null)">
+                          All <span class="opacity-75 tabular-nums">({{ group.indicators.length }})</span>
+                        </button>
+                        @for (c of visibleCenters; track c.center) {
+                          <button
+                            type="button"
+                            class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                            [class]="selCenter === c.center ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                            (click)="setCenterFilter(group, c.center)">
+                            {{ c.center }} <span class="opacity-75 tabular-nums">({{ c.count }})</span>
+                          </button>
+                        }
+                      </div>
+                    }
+
+                    @if (centers.length > 1 && types.length > 1) {
+                      <div class="h-[14px] w-px shrink-0 bg-[var(--pr-border-divider)]" aria-hidden="true"></div>
+                    }
+
+                    <!-- Types Section -->
+                    @if (types.length > 1) {
+                      <div class="flex shrink-0 items-center gap-[5px]">
+                        <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[2px]">
+                          Types:
+                        </span>
+                        <button
+                          type="button"
+                          class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                          [class]="!selType ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                          (click)="setTypeFilter(group, null)">
+                          All Types
+                        </button>
+                        @for (t of visibleTypes; track t.type) {
+                          <button
+                            type="button"
+                            class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                            [class]="selType === t.type ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                            (click)="setTypeFilter(group, t.type)">
+                            {{ t.type }} <span class="opacity-75 tabular-nums">({{ t.count }})</span>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Overflow [ ⠚ Filter ] button -->
+                  @if (hasOverflow) {
+                    <div class="relative shrink-0 ml-[8px]">
+                      <button
+                        type="button"
+                        (click)="toggleCardFilterPopover(group, $event)"
+                        class="inline-flex h-[22px] cursor-pointer items-center gap-[4px] rounded-[5px] border px-[8px] text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+                        [class]="isOverActive
+                          ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] font-semibold'
+                          : 'border-[var(--pr-border)] bg-white text-slate-700 font-medium hover:bg-slate-50'"
+                        aria-label="More filters"
+                        aria-haspopup="true"
+                        [attr.aria-expanded]="isCardFilterOpen(group)">
+                        <span class="material-icons-round text-[14px]" [class.text-[var(--pr-color-primary-600)]]="isOverActive" [class.text-slate-500]="!isOverActive">filter_list</span>
+                        <span>Filter</span>
+                        @if (overCount > 0) {
+                          <span class="flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[3px] text-[9.5px] font-bold text-white tabular-nums">
+                            {{ overCount }}
+                          </span>
+                        }
+                      </button>
+
+                      @if (isCardFilterOpen(group)) {
+                        <div
+                          class="absolute right-0 top-[26px] z-30 w-[300px] max-h-[360px] overflow-y-auto rounded-[10px] border border-[var(--pr-border)] bg-white p-[12px] shadow-xl text-left"
+                          (click)="$event.stopPropagation()">
+                          <div class="mb-[8px] flex items-center justify-between border-b border-[var(--pr-border-divider)] pb-[6px]">
+                            <span class="text-[12px] font-bold text-[var(--pr-text-heading)]">Additional Filters</span>
+                            @if (isOverActive) {
+                              <button
+                                type="button"
+                                class="text-[11px] font-medium text-[var(--pr-color-primary-600)] hover:underline cursor-pointer"
+                                (click)="isOverflowCenterActive(group) ? setCenterFilter(group, null) : null; isOverflowTypeActive(group) ? setTypeFilter(group, null) : null">
+                                Reset
+                              </button>
+                            }
+                          </div>
+
+                          <!-- Overflow Centers (Compact Chip Cloud) -->
+                          @if (overflowCenters.length > 0) {
+                            <div class="mb-[12px]">
+                              <p class="m-0 mb-[6px] text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)]">
+                                More Centers ({{ overflowCenters.length }}):
+                              </p>
+                              <div class="flex flex-wrap gap-[4px]">
+                                @for (c of overflowCenters; track c.center) {
+                                  <button
+                                    type="button"
+                                    class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                                    [class]="selCenter === c.center ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-slate-50 text-slate-700 border-[var(--pr-border)] hover:bg-slate-100'"
+                                    (click)="setCenterFilter(group, c.center)">
+                                    {{ c.center }} <span class="opacity-75 tabular-nums">({{ c.count }})</span>
+                                  </button>
+                                }
+                              </div>
+                            </div>
+                          }
+
+                          <!-- Overflow Types (Vertical List for Long Names) -->
+                          @if (overflowTypes.length > 0) {
+                            <div>
+                              <p class="m-0 mb-[6px] text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)]">
+                                More Types ({{ overflowTypes.length }}):
+                              </p>
+                              <div class="flex flex-col gap-[3px]">
+                                @for (t of overflowTypes; track t.type) {
+                                  <button
+                                    type="button"
+                                    class="flex w-full items-center justify-between rounded-[6px] px-[8px] py-[4px] text-[11.5px] transition-colors cursor-pointer border text-left"
+                                    [class]="selType === t.type ? 'bg-[var(--pr-color-primary-50)] border-[var(--pr-color-primary-300)] text-[var(--pr-color-primary-700)] font-semibold' : 'border-transparent text-slate-700 hover:bg-slate-50'"
+                                    (click)="setTypeFilter(group, t.type)">
+                                    <span class="truncate pr-[8px]" [title]="t.type">{{ t.type }}</span>
+                                    <span class="shrink-0 rounded-full bg-slate-100 px-[6px] py-px text-[10px] font-semibold text-slate-600 tabular-nums">
+                                      {{ t.count }}
+                                    </span>
+                                  </button>
+                                }
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+
+              @let bands = bandsOf(group);
+
+              @if (!bands.length && !group.loading) {
+                <div class="flex flex-col items-start gap-[10px] px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">
+                  @if (filtersActive() || selCenter || selType) {
+                    <p class="m-0">No indicators match the current filters.</p>
+                    <button type="button" class="pr-clear-filters" (click)="setCenterFilter(group, null); setTypeFilter(group, null); clearFilters.emit()">Clear filters</button>
+                  } @else if (isBucket(group)) {
+                    <p class="m-0">No indicators in this bucket yet.</p>
+                  } @else {
+                    <p class="m-0">This area of work has no planned indicators yet.</p>
+                  }
+                </div>
+              }
+
+              <!-- Structure: AoW → band (HIGH LEVEL OUTPUTS / OUTCOMES) → group (name only) → rows -->
+              @for (band of bands; track band.key; let bandIndex = $index) {
+                @if (band.hasEyebrow) {
+                  <!-- 36px band label -->
+                  <div
+                    class="flex h-[36px] items-center justify-between px-[24px]"
+                    [class.mt-[20px]]="bandIndex > 0">
+                    <div class="flex items-center gap-[10px]">
+                      <span
+                        class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
+                        {{ band.eyebrow }}
+                      </span>
+                      <span class="pr-figure-sm text-[12px] font-medium text-[var(--pr-text-subtle)]">
+                        {{ countLabel(bandKpiCount(band)) }}
+                      </span>
+                    </div>
+                    @if (band.groups.length > 0) {
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-[4px] text-[11px] font-semibold text-[var(--pr-color-primary-600)] hover:text-[var(--pr-color-primary-700)] cursor-pointer bg-transparent border-0 p-0 transition-colors"
+                        [attr.aria-expanded]="isBandAllOpen(band.groups)"
+                        (click)="toggleBand(band.groups)">
+                        <span class="material-icons-round text-[15px]" aria-hidden="true">
+                          {{ isBandAllOpen(band.groups) ? 'unfold_less' : 'unfold_more' }}
+                        </span>
+                        <span>{{ isBandAllOpen(band.groups) ? 'Collapse all' : 'Expand all' }}</span>
+                      </button>
+                    }
+                  </div>
+                }
+
+                <div class="p-4 sm:p-6 pt-2 space-y-4">
+                  @for (hlo of band.groups; track hlo.key) {
+                    <!-- Sub-groups are seeded OPEN in the reference, so an expanded card shows rows. -->
+                    @let defaultOpen = isDefaultOpenHlo(hlo);
+                    @let tax = hloTaxonomy(hlo, band);
+                    <div class="rounded-xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden">
+                      <button
+                        [id]="'hlo-group-' + hlo.key"
+                        type="button"
+                        class="flex w-full items-center justify-between px-4 py-3 bg-gradient-to-r from-slate-50 via-indigo-50/30 to-slate-50 cursor-pointer hover:bg-slate-100/80 transition-colors text-left border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset"
+                        [class.border-b]="isOpen(hlo.key, defaultOpen)"
+                        [class.border-slate-200/80]="isOpen(hlo.key, defaultOpen)"
+                        [class.border-b-0]="!isOpen(hlo.key, defaultOpen)"
+                        [attr.aria-expanded]="isOpen(hlo.key, defaultOpen)"
+                        (click)="toggle(hlo.key, defaultOpen, $event)">
+                        <!-- Left identity zone -->
+                        <div class="flex items-center gap-3 min-w-0 flex-1">
+                          <!-- Rotating chevron in white button box -->
+                          <span
+                            class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white border border-slate-200/80 text-indigo-700 shadow-2xs">
+                            <ng-icon
+                              name="lucideChevronDown"
+                              class="text-[14px] transition-transform duration-200"
+                              [class.rotate-180]="isOpen(hlo.key, defaultOpen)" />
+                          </span>
+
+                          <!-- Semantic taxonomy chip -->
+                          @if (tax.code) {
+                            <span
+                              class="pr-hlo-code inline-flex shrink-0 items-center gap-1 px-2.5 py-0.5 rounded-md bg-indigo-100/80 text-indigo-800 border border-indigo-200/70 font-mono text-[11px] font-bold tracking-tight">
+                              <span class="text-[9px] uppercase tracking-wider text-indigo-700">{{ tax.type }}</span> {{ tax.code }}
+                            </span>
+                          }
+
+                          <!-- HLO title -->
+                          <h3
+                            class="m-0 min-w-0 truncate text-[13.5px] font-bold text-slate-900 tracking-tight cursor-text select-text"
+                            [title]="hlo.name"
+                            (click)="$event.stopPropagation()"
+                            [innerHTML]="hlo.name | highlightSearch: search()">
+                          </h3>
+
+                          <button
+                            type="button"
+                            class="flex h-[20px] w-[20px] shrink-0 appearance-none items-center justify-center rounded-[4px] border-0 bg-transparent p-0 text-slate-400 transition-colors hover:bg-slate-200/60 hover:text-slate-700 cursor-pointer"
+                            aria-label="Copy HLO title"
+                            [prTooltip]="isJustCopied(hlo.key) ? 'Copied!' : 'Copy title'"
+                            prTooltipPosition="top"
+                            (click)="copyHlo(hlo, tax, $event)">
+                            <span class="material-icons-round text-[14px]" [class.text-emerald-600]="isJustCopied(hlo.key)">
+                              {{ isJustCopied(hlo.key) ? 'check' : 'content_copy' }}
+                            </span>
+                          </button>
+                        </div>
+
+                        <!-- Right zone mini-KPI metrics -->
+                        <div class="flex items-center gap-4 sm:gap-6 shrink-0 pl-4">
+                          <div class="flex items-baseline gap-1.5">
+                            <span class="text-sm font-extrabold text-slate-900 tabular-nums">{{ hloTargetSum(hlo) }}</span>
+                            <span class="text-[9.5px] font-bold uppercase tracking-wider text-slate-600">TARGET</span>
+                          </div>
+
+                          <div class="flex items-baseline gap-1.5">
+                            <span class="text-sm font-extrabold text-emerald-600 text-[var(--pr-color-green-500)] tabular-nums">{{ hloAchievedSum(hlo) }}</span>
+                            <span class="text-[9.5px] font-bold uppercase tracking-wider text-slate-600">ACHIEVED</span>
+                          </div>
+
+                          <div class="px-2.5 py-0.5 rounded-full bg-white border border-slate-200/80 text-slate-700 font-bold text-xs shadow-2xs tabular-nums whitespace-nowrap">
+                            {{ hlo.rows.length }} <span class="hidden sm:inline">{{ hlo.rows.length === 1 ? 'indicator' : 'indicators' }}</span>
+                          </div>
+
+                          @if (hlo.achievement) {
+                            <div
+                              class="text-right text-xs max-[899px]:sr-only"
+                              [prTooltip]="achievementTooltip(hlo.achievement, 'indicators')"
+                              prTooltipPosition="top">
+                              <span class="font-bold text-slate-900 whitespace-nowrap">
+                                <span class="text-[9px] font-medium uppercase text-slate-600 mr-0.5">QA</span>{{ achievementLabel(hlo.achievement) }}
+                              </span>
+                              <span class="text-slate-400 mx-1">·</span>
+                              <span class="font-medium text-slate-600 whitespace-nowrap">
+                                <span class="text-[9px] font-medium uppercase text-slate-600 mr-0.5">Prel.</span>{{ preliminaryAchievementLabel(hlo.achievement) }}
+                              </span>
+                            </div>
+                          } @else {
+                            <div class="text-right text-xs font-medium text-slate-400 max-[899px]:sr-only">—</div>
+                          }
+                        </div>
+                      </button>
+
+                      <div
+                        class="pr-collapse"
+                        [class.is-open]="isOpen(hlo.key, defaultOpen)"
+                        [attr.aria-hidden]="!isOpen(hlo.key, defaultOpen)">
+                        <div class="pr-collapse-inner overflow-x-auto custom_scroll">
+                          <div class="pl-4 sm:pl-6 border-l-4 border-indigo-500/40 bg-indigo-50/10">
+                            @if (hlo.rows.length) {
+                              <div class="pr-hlo-head h-7 h-[28px] text-[10px] text-slate-400 font-bold uppercase tracking-wider" aria-hidden="true">
+                                <span></span>
+                                <span>INDICATOR TITLE & TAXONOMY</span>
+                                <span class="text-center">Target</span>
+                                <span class="text-center">Achieved</span>
+                                <span class="text-center">Status</span>
+                                <span class="text-center">Progress</span>
+                                <span class="text-center">Action</span>
+                                <span></span>
+                              </div>
+                            }
+                            @for (row of hlo.rows; track row.indicator_id + '::' + (row.center_id ?? '')) {
+                              <ng-container
+                                *ngTemplateOutlet="
+                                  indicatorRow;
+                                  context: { $implicit: row, showAow: false, bucketKind: group.kind, activeCenter: selCenter }
+                                " />
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            }
+          </div>
+        </div>
+      </section>
+    }
+
+    @if (!visibleGroups().length) {
+      <div
+        class="flex min-h-[160px] flex-col items-center justify-center gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[24px] py-[40px] text-center text-[13px] text-[var(--pr-text-secondary)]">
+        @if (favoritesOnly() && favoriteKeys().size === 0) {
+          <p class="m-0 text-[14px]">No favorite indicators yet. Use the ★ on any indicator row to build your focus list.</p>
+          <button type="button" class="pr-clear-filters" (click)="exitFavoritesOnly.emit()">Show all indicators</button>
+        } @else if (filtersActive()) {
+          <!-- The design's string is "No results match these filters", but on this tab the list is
+               of INDICATORS and "result" is a reported entity in PRMS — the design's wording names
+               the wrong noun here. Deliberate copy deviation; see docs/DESIGN-DEVIATIONS.md. -->
+          <p class="m-0 text-[14px]">No indicators match your filters.</p>
+          <button type="button" class="pr-clear-filters" (click)="clearFilters.emit()">Clear filters</button>
+        } @else {
+          <p class="m-0">No areas of work with planned indicators yet.</p>
+        }
+      </div>
+    }
+  </div>
+}
+
+<!-- Shared indicator row. Status mark = the concentric bullseye (18px violet target). -->
+<ng-template #indicatorRow let-row let-showAow="showAow" let-bucketKind="bucketKind" let-activeCenter="activeCenter">
+  <div
+    class="pr-reporting-row group border-l-[3px] bg-white hover:bg-slate-50/80 transition-colors"
+    [class.border-l-[var(--pr-color-green-500)]]="statusOf(row) === 'achieved'"
+    [class.border-l-purple-500]="statusOf(row) === 'overachieved'"
+    [class.border-l-[var(--pr-color-primary-500)]]="statusOf(row) === 'in-progress'"
+    [class.border-l-[var(--pr-border-strong)]]="statusOf(row) === 'not-started'"
+    role="button"
+    tabindex="0"
+    [id]="'indicator-row-' + row.indicator_id"
+    [attr.data-row-key]="rowKey(row)"
+    [class.ring-2]="highlightedRowKey() === rowKey(row)"
+    [class.ring-inset]="highlightedRowKey() === rowKey(row)"
+    [class.ring-[var(--pr-color-primary-300)]]="highlightedRowKey() === rowKey(row)"
+    [class.bg-[var(--pr-color-primary-50)]]="highlightedRowKey() === rowKey(row)"
+    [attr.aria-label]="row.indicator_description"
+    (click)="onRowClick(row, $event)"
+    (keydown.enter)="openRow.emit(row)"
+    (keydown.space)="openRow.emit(row)">
+    <!-- 1 — concentric bullseye -->
+    <span
+      class="pr-status-mark"
+      [class]="'pr-status-mark--' + statusOf(row)"
+      [prTooltip]="statusLabel(row)"
+      [attr.aria-label]="statusLabel(row)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.75" />
+        <circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.75" />
+        <circle cx="12" cy="12" r="1.1" fill="currentColor" />
+      </svg>
+    </span>
+
+    <!-- 2 — title + optional Show more + indicator-name meta -->
+    <div class="flex min-w-0 flex-col group/title">
+      <p
+        class="m-0 text-[12.5px] font-medium leading-[1.35] text-[var(--pr-text-heading)] [text-wrap:pretty] group-hover:text-[var(--pr-color-primary-600)] transition-colors cursor-text select-text"
+        [class.pr-clamp-2]="!isTitleExpanded(row.indicator_id)"
+        (click)="$event.stopPropagation()">
+        <span [innerHTML]="row.indicator_description | highlightSearch: search()"></span>
+        <button
+          type="button"
+          class="inline-flex h-[18px] w-[18px] ml-[6px] -mt-[2px] align-middle shrink-0 appearance-none items-center justify-center rounded-[3px] border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] opacity-0 group-hover/title:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text-heading)] cursor-pointer"
+          [class.opacity-100]="isJustCopied(rowKey(row))"
+          aria-label="Copy indicator title"
+          [prTooltip]="isJustCopied(rowKey(row)) ? 'Copied!' : 'Copy title'"
+          prTooltipPosition="top"
+          (click)="copyIndicatorText(row, $event)">
+          <span class="material-icons-round text-[13px]" [class.text-emerald-600]="isJustCopied(rowKey(row))">
+            {{ isJustCopied(rowKey(row)) ? 'check' : 'content_copy' }}
+          </span>
+        </button>
+      </p>
+      @if (needsShowMore(row)) {
+        <button
+          type="button"
+          class="mt-[2px] self-start border-0 bg-transparent p-0 text-left text-[11.5px] font-medium text-[var(--pr-color-primary-500)] hover:text-[var(--pr-color-primary-700)] hover:underline cursor-pointer"
+          [attr.aria-expanded]="isTitleExpanded(row.indicator_id)"
+          (click)="toggleTitle(row.indicator_id, $event)">
+          {{ isTitleExpanded(row.indicator_id) ? 'Show less' : 'Show more' }}
+        </button>
+      }
+      <div class="mt-[6px] flex flex-wrap items-center gap-[6px]">
+        @if (aowCodeOf(row) && showAow) {
+          <span
+            class="inline-flex h-[20px] items-center rounded-[5px] bg-[var(--pr-color-primary-50)] px-[6px] font-mono text-[11px] font-bold text-[var(--pr-color-primary-700)] border border-[var(--pr-color-primary-100)]"
+            [innerHTML]="aowCodeOf(row) | highlightSearch: search()">
+          </span>
+        }
+        @if (indicatorNameOf(row)) {
+          <!-- Violet, like the By-AOW card's category chip — same entity, same colour in both views. -->
+          <span
+            class="inline-flex max-w-[280px] items-center truncate rounded-full bg-[#6b46e51f] px-[8px] py-px text-[11px] font-semibold text-[var(--pr-color-primary-400)]"
+            [title]="indicatorNameOf(row)"
+            [innerHTML]="indicatorNameOf(row) | highlightSearch: search()">
+          </span>
+        }
+        <!--
+          One chip per centre that holds this row's target. A target shared by N centres is ONE row
+          (P2-3255) and its scalar `center_acronym` is null by design, so the chips read the
+          `centers` list — that is what puts the ten centres of SP-13 KPI 1.3.3 on screen at all.
+          Capped at three plus a counter so a ten-centre row keeps the height of every other row;
+          the centre the card is filtered by is pinned into the visible three (`rowCentersShown`).
+        -->
+        @let shownCenters = rowCentersShown(row, activeCenter);
+        @let hiddenCenters = rowCentersHidden(row, activeCenter);
+        @for (centerAcronym of shownCenters; track centerAcronym) {
+          <span
+            class="inline-flex items-center rounded-[5px] px-[6px] py-[1px] text-[11px] font-medium border"
+            [class]="
+              centerAcronym === activeCenter
+                ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent font-semibold'
+                : 'bg-slate-100 text-slate-700 border-slate-200'
+            "
+            [innerHTML]="centerAcronym | highlightSearch: search()">
+          </span>
+        }
+        @if (hiddenCenters > 0) {
+          <button
+            type="button"
+            class="inline-flex items-center rounded-[5px] border border-dashed border-slate-300 bg-white px-[6px] py-[1px] text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 cursor-pointer"
+            [attr.aria-expanded]="false"
+            [attr.aria-label]="'View the other ' + hiddenCenters + ' centers of this target'"
+            [title]="centerAcronymsOf(row).join(', ')"
+            (click)="toggleRowCenters(row, $event)">
+            +{{ hiddenCenters }} more
+          </button>
+        } @else if (areRowCentersExpanded(row)) {
+          <button
+            type="button"
+            class="inline-flex items-center rounded-[5px] border border-dashed border-slate-300 bg-white px-[6px] py-[1px] text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 cursor-pointer"
+            [attr.aria-expanded]="true"
+            aria-label="Show fewer centers"
+            (click)="toggleRowCenters(row, $event)">
+            Show less
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- 3 — Target -->
+    <div class="relative text-center flex justify-center">
+      <button
+        type="button"
+        class="block w-full border-0 bg-transparent p-0 text-center cursor-pointer group/target"
+        [prTooltip]="isIntermediateRow(bucketKind) ? intermediateTargetTooltip : ''"
+        (click)="emitAndStop(openTarget, row, $event)">
+        <span
+          class="pr-figure-sm block text-[13px] font-semibold tabular-nums text-[var(--pr-text-heading)] group-hover/target:text-[var(--pr-color-primary-600)] transition-colors">
+          {{ targetText(row) }}
+        </span>
+      </button>
+    </div>
+
+    <!-- 4 — Achieved -->
+    <div class="relative text-center flex justify-center">
+      <button
+        type="button"
+        class="block w-full border-0 bg-transparent p-0 text-center cursor-pointer group/achieved"
+        [prTooltip]="achievedTooltip(row)"
+        (click)="emitAndStop(openAchieved, row, $event)">
+        <span
+          class="pr-figure-sm block text-[13px] font-semibold tabular-nums group-hover/achieved:text-[var(--pr-color-primary-600)] transition-colors"
+          [class]="achievedIsEmpty(row) ? 'text-[var(--pr-text-muted)]' : 'text-[var(--pr-text-heading)]'">
+          {{ achievedText(row) }}
+        </span>
+      </button>
+    </div>
+
+    <!-- 5 — Status Badge -->
+    <div class="flex items-center justify-center">
+      @switch (statusOf(row)) {
+        @case ('overachieved') {
+          <span class="inline-flex items-center gap-[3px] rounded-full border border-purple-200 bg-purple-50 px-[7px] py-[1.5px] text-[10.5px] font-semibold text-purple-700">
+            <span class="h-[5px] w-[5px] rounded-full bg-purple-500" aria-hidden="true"></span>
+            Overachieved
+            <ng-icon name="lucideChevronDown" class="text-[9.5px] opacity-70" />
+          </span>
+        }
+        @case ('achieved') {
+          <span class="inline-flex items-center gap-[3px] rounded-full border border-emerald-200 bg-emerald-50 px-[7px] py-[1.5px] text-[10.5px] font-semibold text-emerald-700">
+            <span class="h-[5px] w-[5px] rounded-full bg-emerald-500" aria-hidden="true"></span>
+            Achieved
+            <ng-icon name="lucideChevronDown" class="text-[9.5px] opacity-70" />
+          </span>
+        }
+        @case ('in-progress') {
+          <span class="inline-flex items-center gap-[3px] rounded-full border border-[var(--pr-color-primary-100)] bg-[var(--pr-color-primary-50)] px-[7px] py-[1.5px] text-[10.5px] font-semibold text-[var(--pr-color-primary-600)]">
+            <span class="h-[5px] w-[5px] rounded-full bg-[var(--pr-color-primary-500)]" aria-hidden="true"></span>
+            In progress
+            <ng-icon name="lucideChevronDown" class="text-[9.5px] opacity-70" />
+          </span>
+        }
+        @default {
+          <span class="inline-flex items-center gap-[3px] rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[7px] py-[1.5px] text-[10.5px] font-semibold text-[var(--pr-text-muted)]">
+            <span class="h-[5px] w-[5px] rounded-full bg-[var(--pr-text-subtle)]" aria-hidden="true"></span>
+            Not started
+            <ng-icon name="lucideChevronDown" class="text-[9.5px] opacity-70" />
+          </span>
+        }
+      }
+    </div>
+
+    <!--
+      6 — P2-3296 AC1 · Progress. Two separate tracks, never a stacked bar: Preliminary
+      (Submitted + Approved) and QA (QAed + Approved) OVERLAP on Approved, so adding them would
+      double-count every approved W3/Bilateral result and show a total that reconciles with
+      neither figure beside it. This is achievement against the ToC targets — a different question
+      from the Status Badge to its left (workflow state) and from Target/Achieved (coverage of the
+      plan): "one says how much of the plan has been touched, the other how far it got."
+    -->
+    <div class="min-w-0">
+      @if (!hasUsableTarget(row)) {
+        <!--
+          No target, so no ratio. The ToC branch that returns `value * 100` here is how a row
+          reached 50,000,000%. Nicoleta's word for this case is "overachieved" — a verdict, not a
+          quantity — and the row stays out of every average above it.
+        -->
+        <span
+          class="block text-[12.5px] font-medium italic text-[var(--pr-text-subtle)]"
+          [prTooltip]="
+            isOverachievedWithoutTarget(row)
+              ? 'No target was set for this indicator, so a percentage cannot be calculated. Results were still reported against it. It is excluded from the averages above.'
+              : 'No target was set for this indicator, so a percentage cannot be calculated. It is excluded from the averages above.'
+          ">
+          {{ isOverachievedWithoutTarget(row) ? 'Overachieved' : 'No target set' }}
+        </span>
+      } @else {
+        <div class="flex flex-col gap-[5px]" [prTooltip]="progressTracksTooltip(row)">
+          <span class="flex items-center gap-[6px]">
+            <span class="w-[26px] shrink-0 text-[10.5px] font-medium text-[var(--pr-text-subtle)]">QA</span>
+            <span class="h-[6px] min-w-0 flex-1 overflow-hidden rounded-[3px] bg-[var(--pr-border)]">
+              <span class="block h-full rounded-[3px] bg-emerald-500" [style.width.%]="barWidth(progressOf(row))"></span>
+            </span>
+            <span class="shrink-0 text-[11px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+              {{ row.progress_percentage || '0%' }}
+            </span>
+          </span>
+          <span class="flex items-center gap-[6px]">
+            <span class="w-[26px] shrink-0 text-[10.5px] font-medium text-[var(--pr-text-subtle)]">Prel.</span>
+            <span class="h-[6px] min-w-0 flex-1 overflow-hidden rounded-[3px] bg-[var(--pr-border)]">
+              <span
+                class="block h-full rounded-[3px] bg-[var(--pr-color-primary-300)] opacity-60"
+                [style.width.%]="barWidth(preliminaryProgressOf(row))"></span>
+            </span>
+            <span class="shrink-0 text-[11px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+              {{ row.preliminary_progress_percentage || '0%' }}
+            </span>
+          </span>
+        </div>
+      }
+    </div>
+
+    <!-- 7 — Report / Continue (+ Copy link icon) -->
+    <div class="flex items-center justify-end gap-[6px]">
+      <button type="button"
+        class="inline-flex h-[26px] w-[26px] shrink-0 cursor-pointer appearance-none items-center justify-center rounded-[6px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+        [class]="isFavorite(row)
+          ? 'border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-100)]'
+          : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-subtle)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-color-primary-500)]'"
+        [attr.aria-pressed]="isFavorite(row)"
+        [attr.aria-label]="favoriteLabel(row)"
+        [title]="favoriteLabel(row)"
+        data-testid="favorite-toggle"
+        (click)="emitAndStop(toggleFavorite, row, $event)">
+        <span class="material-icons-round text-[15px]" aria-hidden="true">{{ isFavorite(row) ? 'star' : 'star_outline' }}</span>
+      </button>
+      @if (canCopyLink(row)) {
+        <button
+          type="button"
+          class="inline-flex h-[26px] w-[26px] shrink-0 cursor-pointer appearance-none items-center justify-center rounded-[6px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+          aria-label="Copy link to this KPI"
+          title="Copy link"
+          (click)="emitAndStop(copyLink, row, $event)">
+          <span class="material-icons-round text-[13px]" aria-hidden="true">link</span>
+        </button>
+      }
+      @if (canReport() && actionLabel(row)) {
+        <button
+          type="button"
+          class="pr-row-action inline-flex h-[26px] items-center justify-center rounded-[6px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] px-[10px] text-[11px] font-medium text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-100)] hover:border-[var(--pr-color-primary-300)] cursor-pointer transition-colors shadow-2xs"
+          (click)="emitAndStop(reportRow, row, $event)">
+          {{ actionLabel(row) }}
+        </button>
+      }
+    </div>
+
+    <!-- 8 — overflow ··· -->
+    <div class="relative flex items-center justify-center">
+      <button
+        #groupedMenuTrigger="cdkOverlayOrigin"
+        cdkOverlayOrigin
+        type="button"
+        class="flex h-[26px] w-[26px] items-center justify-center rounded-[6px] border border-transparent text-[var(--pr-text-muted)] hover:border-[var(--pr-border)] hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)] cursor-pointer transition-colors"
+        aria-label="More actions"
+        [attr.aria-expanded]="isRowMenuOpen(row)"
+        (click)="toggleRowMenu(row, $event)">
+        <ng-icon name="lucideEllipsis" class="text-[14px]" />
+      </button>
+      <ng-template
+        cdkConnectedOverlay
+        [cdkConnectedOverlayOrigin]="groupedMenuTrigger"
+        [cdkConnectedOverlayOpen]="isRowMenuOpen(row)"
+        [cdkConnectedOverlayPositions]="rowMenuPositions"
+        [cdkConnectedOverlayHasBackdrop]="true"
+        cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+        (backdropClick)="closeRowMenu()"
+        (detach)="closeRowMenu()">
+        <div class="pr-row-menu" role="menu" (click)="$event.stopPropagation()">
+          <button type="button" role="menuitem" class="pr-row-menu_item" (click)="runFromMenu(openAchieved, row, $event)">
+            View reported results
+          </button>
+          <button type="button" role="menuitem" class="pr-row-menu_item" (click)="runFromMenu(openTarget, row, $event)">
+            Target details
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            class="pr-row-menu_item"
+            (click)="runFromMenu(copyIndicatorAction, row, $event)">
+            <span class="material-icons-round text-[15px] text-[var(--pr-text-subtle)] mr-[6px]">content_copy</span>
+            <span>Copy indicator title</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            class="pr-row-menu_item"
+            [class.pr-row-menu_item--disabled]="!canCopyLink(row)"
+            [disabled]="!canCopyLink(row)"
+            [attr.aria-disabled]="!canCopyLink(row) ? 'true' : null"
+            [attr.title]="!canCopyLink(row) ? 'Link is not available for program-level buckets' : null"
+            (click)="runFromMenu(copyLink, row, $event)">
+            Copy link
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            class="pr-row-menu_item pr-row-menu_item--disabled"
+            disabled
+            aria-disabled="true"
+            title="Indicators do not have a code yet">
+            <span>Copy indicator code</span>
+            <span class="pr-row-menu_soon">Coming soon</span>
+          </button>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</ng-template>

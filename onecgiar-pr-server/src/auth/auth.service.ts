@@ -225,17 +225,56 @@ export class AuthService {
   }
 
   /**
+   * Returns the set of allowed redirect URIs read from ALLOWED_REDIRECT_URIS
+   * (comma-separated). An empty set means the feature is unconfigured — the
+   * external auth microservice will use its own default redirect URI.
+   */
+  private getAllowedRedirectUris(): Set<string> {
+    const raw = process.env.ALLOWED_REDIRECT_URIS ?? '';
+    return new Set(
+      raw
+        .split(',')
+        .map((u) => u.trim())
+        .filter(Boolean),
+    );
+  }
+
+  /**
+   * Validates redirectUri against the configured allowlist.
+   * Throws 400 when the URI is present but not in the list.
+   * No-ops when redirectUri is absent or the allowlist is empty.
+   */
+  private validateRedirectUri(redirectUri?: string): void {
+    if (!redirectUri) return;
+
+    const allowed = this.getAllowedRedirectUris();
+    if (allowed.size === 0) return;
+
+    if (!allowed.has(redirectUri)) {
+      throw {
+        message: `Redirect URI not allowed: ${redirectUri}`,
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+  }
+
+  /**
    * Get Auth URL
    * @param provider
+   * @param redirectUri Optional redirect URI (must be in the ALLOWED_REDIRECT_URIS allowlist)
    * @returns Authentication URL for the specified provider
    * @description This method generates an authentication URL for the specified OAuth provider.
    */
-  async getAuthURL(provider: string): Promise<any> {
+  async getAuthURL(provider: string, redirectUri?: string): Promise<any> {
     try {
       this._logger.log(`Getting authentication URL for provider: ${provider}`);
 
-      const response =
-        await this._authMicroservice.getAuthenticationUrl(provider);
+      this.validateRedirectUri(redirectUri);
+
+      const response = await this._authMicroservice.getAuthenticationUrl(
+        provider,
+        redirectUri,
+      );
 
       return {
         message: 'Authentication URL generated successfully',
@@ -261,9 +300,12 @@ export class AuthService {
     try {
       this._logger.log('Validando código de autorización');
 
+      this.validateRedirectUri(authCodeDto.redirectUri);
+
       const authResponse =
         await this._authMicroservice.validateAuthorizationCode(
           authCodeDto.code,
+          authCodeDto.redirectUri,
         );
 
       const userInfo = authResponse.userInfo;

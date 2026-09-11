@@ -61,6 +61,21 @@ export class ResultsPolicyChanges {
   })
   status_amount!: string;
 
+  /**
+   * P2-2932 AC4 — the count a Policy Change result reports when it is about the capacity
+   * development of key actors in a policy process.
+   *
+   * Nullable with no default on purpose: the column only carries meaning when the answer to
+   * "Is this result related to" is question 51. For every other Policy Change result it stays
+   * empty, and a default of 0 would be indistinguishable from "nobody was influenced".
+   */
+  @Column({
+    name: 'actors_influenced',
+    type: 'bigint',
+    nullable: true,
+  })
+  actors_influenced!: number;
+
   @Column({
     name: 'linked_innovation_dev',
     type: 'boolean',

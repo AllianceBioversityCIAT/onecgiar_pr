@@ -1,6 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WhatsNewPageDetailsLoadingComponent } from './whats-new-page-details-loading.component';
-import { SkeletonModule } from 'primeng/skeleton';
 
 describe('WhatsNewPageDetailsLoadingComponent', () => {
   let component: WhatsNewPageDetailsLoadingComponent;
@@ -8,7 +7,7 @@ describe('WhatsNewPageDetailsLoadingComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [WhatsNewPageDetailsLoadingComponent, SkeletonModule]
+      imports: [WhatsNewPageDetailsLoadingComponent]
     }).compileComponents();
 
     fixture = TestBed.createComponent(WhatsNewPageDetailsLoadingComponent);

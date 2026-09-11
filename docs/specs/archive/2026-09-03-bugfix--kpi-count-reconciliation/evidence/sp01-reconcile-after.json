@@ -1,0 +1,139 @@
+{
+ "program": "SP01",
+ "aows": [
+  {
+   "code": "AOW01",
+   "outputs": { "all": 22, "zt": 4, "counted": 18, "reported": 1 },
+   "outcomes": {
+    "all": 8, "zt": 2, "counted": 6, "reported": 0, "crosscut": 7, "ownedIsAow": 1,
+    "groups": [
+     { "toc": 7557, "is_aow": true, "n": 1 },
+     { "toc": 7024, "is_aow": false, "n": 2 },
+     { "toc": 7036, "is_aow": false, "n": 1 },
+     { "toc": 7038, "is_aow": false, "n": 3 },
+     { "toc": 7046, "is_aow": false, "n": 1 }
+    ]
+   },
+   "ownedOutcome": { "all": 1, "zt": 0, "counted": 1, "reported": 0 },
+   "kcrAowTotal": { "planned": 23, "zeroTarget": 4, "counted": 19, "reported": 1 }
+  },
+  {
+   "code": "AOW02",
+   "outputs": { "all": 137, "zt": 27, "counted": 110, "reported": 1 },
+   "outcomes": {
+    "all": 7, "zt": 2, "counted": 5, "reported": 0, "crosscut": 7, "ownedIsAow": 0,
+    "groups": [
+     { "toc": 7024, "is_aow": false, "n": 2 },
+     { "toc": 7036, "is_aow": false, "n": 1 },
+     { "toc": 7038, "is_aow": false, "n": 3 },
+     { "toc": 7046, "is_aow": false, "n": 1 }
+    ]
+   },
+   "ownedOutcome": { "all": 0, "zt": 0, "counted": 0, "reported": 0 },
+   "kcrAowTotal": { "planned": 137, "zeroTarget": 27, "counted": 110, "reported": 1 }
+  },
+  {
+   "code": "AOW03",
+   "outputs": { "all": 95, "zt": 2, "counted": 93, "reported": 0 },
+   "outcomes": {
+    "all": 13, "zt": 7, "counted": 6, "reported": 0, "crosscut": 7, "ownedIsAow": 6,
+    "groups": [
+     { "toc": 7031, "is_aow": true, "n": 2 },
+     { "toc": 7562, "is_aow": true, "n": 1 },
+     { "toc": 7563, "is_aow": true, "n": 1 },
+     { "toc": 7564, "is_aow": true, "n": 1 },
+     { "toc": 7565, "is_aow": true, "n": 1 },
+     { "toc": 7024, "is_aow": false, "n": 2 },
+     { "toc": 7036, "is_aow": false, "n": 1 },
+     { "toc": 7038, "is_aow": false, "n": 3 },
+     { "toc": 7046, "is_aow": false, "n": 1 }
+    ]
+   },
+   "ownedOutcome": { "all": 6, "zt": 5, "counted": 1, "reported": 0 },
+   "kcrAowTotal": { "planned": 101, "zeroTarget": 7, "counted": 94, "reported": 0 }
+  },
+  {
+   "code": "AOW04",
+   "outputs": { "all": 66, "zt": 5, "counted": 61, "reported": 0 },
+   "outcomes": {
+    "all": 7, "zt": 2, "counted": 5, "reported": 0, "crosscut": 7, "ownedIsAow": 0,
+    "groups": [
+     { "toc": 7024, "is_aow": false, "n": 2 },
+     { "toc": 7036, "is_aow": false, "n": 1 },
+     { "toc": 7038, "is_aow": false, "n": 3 },
+     { "toc": 7046, "is_aow": false, "n": 1 }
+    ]
+   },
+   "ownedOutcome": { "all": 0, "zt": 0, "counted": 0, "reported": 0 },
+   "kcrAowTotal": { "planned": 66, "zeroTarget": 5, "counted": 61, "reported": 0 }
+  },
+  {
+   "code": "AOW05",
+   "outputs": { "all": 72, "zt": 2, "counted": 70, "reported": 0 },
+   "outcomes": {
+    "all": 10, "zt": 2, "counted": 8, "reported": 0, "crosscut": 7, "ownedIsAow": 3,
+    "groups": [
+     { "toc": 7559, "is_aow": true, "n": 1 },
+     { "toc": 7560, "is_aow": true, "n": 1 },
+     { "toc": 7561, "is_aow": true, "n": 1 },
+     { "toc": 7024, "is_aow": false, "n": 2 },
+     { "toc": 7036, "is_aow": false, "n": 1 },
+     { "toc": 7038, "is_aow": false, "n": 3 },
+     { "toc": 7046, "is_aow": false, "n": 1 }
+    ]
+   },
+   "ownedOutcome": { "all": 3, "zt": 0, "counted": 3, "reported": 0 },
+   "kcrAowTotal": { "planned": 75, "zeroTarget": 2, "counted": 73, "reported": 0 }
+  }
+ ],
+ "intermediate": { "all": 7, "zt": 2, "counted": 5, "reported": 0 },
+ "o2030": { "all": 5, "zt": 4, "counted": 1, "reported": 0 },
+ "overlap": [
+  { "code": "AOW01", "outcomeIds": 8, "inIO": 7, "in2030": 0 },
+  { "code": "AOW02", "outcomeIds": 7, "inIO": 7, "in2030": 0 },
+  { "code": "AOW03", "outcomeIds": 13, "inIO": 7, "in2030": 0 },
+  { "code": "AOW04", "outcomeIds": 7, "inIO": 7, "in2030": 0 },
+  { "code": "AOW05", "outcomeIds": 10, "inIO": 7, "in2030": 0 }
+ ],
+ "totals": {
+  "band_449": 449,
+  "hero_352": 352,
+  "table_382": 382,
+  "aowAll_437": 437
+ },
+ "kcrNewBasis": {
+  "planned": 414,
+  "zeroTarget": 51,
+  "counted": 363,
+  "reported": 2,
+  "aowOnlyCounted": 357,
+  "aowOnlyReported": 2,
+  "perAow": [
+   { "code": "AOW01", "counted": 19, "reported": 1 },
+   { "code": "AOW02", "counted": 110, "reported": 1 },
+   { "code": "AOW03", "counted": 94, "reported": 0 },
+   { "code": "AOW04", "counted": 61, "reported": 0 },
+   { "code": "AOW05", "counted": 73, "reported": 0 }
+  ]
+ },
+ "_meta": {
+  "capturedBy": "KCR-T-5 (impl-kcr-t5b)",
+  "capturedAt": "2026-09-03",
+  "note": "Extended in-browser copy of evidence/reconcile.browser.js (committed script untouched). Added per-group `ownedOutcome` stats and `kcrAowTotal` (= outputs + owned-is_aow-outcome, the KCR-R-1/R-1.1 count-once basis) plus `kcrNewBasis` (= Σ kcrAowTotal + intermediate + o2030, the new shell denominator). `totals.*` (band_449/hero_352/table_382/aowAll_437) are the OLD pre-fix formulas, reproduced unchanged from evidence/sp01-reconcile.json to prove the backend/phase basis has not moved.",
+  "onScreenCrossCheck": {
+   "bandTotalKpis": { "value": 363, "title": "414 planned · excludes 51 zero-target KPIs" },
+   "bandKpisWithEvidence": "2 of 363",
+   "heroRailAndKpiCard4": "2 of 357",
+   "aow02Hero": "1/110",
+   "aow02Hub": "1/110",
+   "aow02Table": "1 of 110",
+   "intermediateChip": { "value": "0/5", "title": "excludes 2 zero-target KPIs" },
+   "intermediateBucketCard": "0 of 5",
+   "o2030Chip": { "value": "0/1", "title": "excludes 4 zero-target KPIs" },
+   "o2030BucketCard": "0 of 1",
+   "tocMapProgramLevelBranch": "absent (verified via full-page text search: 'Program-level' not found)",
+   "hubProgramLevelRows": { "intermediateOutcomes": "0/5", "outcomes2030": "0/1" },
+   "hubAowRows": { "AOW01": "1/19", "AOW02": "1/110", "AOW03": "0/94", "AOW04": "0/61", "AOW05": "0/73" }
+  }
+ }
+}

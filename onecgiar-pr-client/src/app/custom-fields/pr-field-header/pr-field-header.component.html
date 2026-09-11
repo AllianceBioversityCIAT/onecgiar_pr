@@ -1,7 +1,33 @@
-<div
-  class="pr_label {{ labelDescStyleClass }}"
-  [ngClass]="{ required: this.required, simpleStyle: simpleStyle }"
-  *ngIf="this.label"
-  [innerHTML]="this.label + (this.useColon ? ':' : '')"
-  [style]="labelDescInlineStyles"></div>
+<!-- P2-3061: when a tooltip is provided, render the label with an info icon + prTooltip (project line of design).
+     When there is no tooltip, the label markup stays identical to before (no impact on the rest of the app). -->
+<ng-container *ngIf="this.label">
+  <div
+    *ngIf="!this.tooltip"
+    class="pr_label {{ labelDescStyleClass }}"
+    [ngClass]="{ required: this.required, simpleStyle: simpleStyle }"
+    [innerHTML]="this.label + (this.useColon ? ':' : '')"
+    [style]="labelDescInlineStyles"></div>
+
+  <div *ngIf="this.tooltip" class="pr_label_row" [style]="labelDescInlineStyles">
+    <div
+      class="pr_label {{ labelDescStyleClass }}"
+      [ngClass]="{ required: this.required, simpleStyle: simpleStyle }"
+      [innerHTML]="this.label + (this.useColon ? ':' : '')"></div>
+    <!-- P2-3339: inline SVG, not an icon-font ligature — see PrInfoIconComponent. -->
+    <!-- P2-3323: pinnable, exactly like field-card. Guidance texts carry links and several
+         paragraphs, so a click must pin the bubble open instead of hiding it — otherwise the
+         links are unreachable and a tap on a phone opens and closes it in the same gesture.
+         Only this template opts in: the directive's default (click hides) still guards the
+         ~40 action tooltips that rely on it. -->
+    <button
+      type="button"
+      class="sgi-dac-info"
+      [prTooltip]="this.tooltip"
+      prTooltipPosition="right"
+      prTooltipStyleClass="sgi-dac-tooltip"
+      aria-label="More information">
+      <app-pr-info-icon />
+    </button>
+  </div>
+</ng-container>
 <div class="pr_description readOnly" *ngIf="this.description" [innerHTML]="this.descriptionLabel + this.description" [style]="descInlineStyles"></div>

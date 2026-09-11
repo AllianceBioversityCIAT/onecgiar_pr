@@ -1,11 +1,11 @@
 import { returnFormatService } from 'src/shared/extendsGlobalDTO/returnServices.dto';
 import { RoleByUser } from '../entities/role-by-user.entity';
-import { resultRolesDto } from './resultRoles.dto';
+import { ResultRolesDto } from './resultRoles.dto';
 
-export class returnFormatRoleByUser extends returnFormatService {
+export class ReturnFormatRoleByUser extends returnFormatService {
   public response!:
     | RoleByUser
-    | resultRolesDto
+    | ResultRolesDto
     | RoleByUser[]
-    | resultRolesDto[];
+    | ResultRolesDto[];
 }

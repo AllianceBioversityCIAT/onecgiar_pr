@@ -1,37 +1,35 @@
 <div class="table">
-  <p-table
+  <app-pr-table
     sortField="result_code"
     [sortOrder]="-1"
     [value]="this.tableData"
-    responsiveLayout="scroll"
+    dataKey="result_code"
     [paginator]="this.tableData?.length"
     [rows]="10"
-    styleClass="p-datatable-gridlines p-datatable-sm"
     selectionMode="single"
-    [rowsPerPageOptions]="[10, 50, 100]"
-    [first]="this.ipsrListService.text_to_search && 0">
-    <ng-template pTemplate="header">
+    [rowsPerPageOptions]="[10, 50, 100]">
+    <ng-template prTableHeader>
       <tr>
-        <th id="result_code" pSortableColumn="result_code" style="text-align: center">
-          <p-sortIcon field="result_code"></p-sortIcon>
+        <th id="result_code" prSortableColumn="result_code" style="text-align: center">
+          <pr-sort-icon field="result_code"></pr-sort-icon>
           Result code
         </th>
-        <th id="{{ column.attr }}" pSortableColumn="{{ column.attr }}" *ngFor="let column of columnOrder">
-          <p-sortIcon field="{{ column.attr }}"></p-sortIcon>{{ column.title }}
+        <th id="{{ column.attr }}" prSortableColumn="{{ column.attr }}" *ngFor="let column of columnOrder">
+          <pr-sort-icon field="{{ column.attr }}"></pr-sort-icon>{{ column.title }}
         </th>
         <th id="pdf">PDF</th>
         <th id="action" *ngIf="!this.api.rolesSE.platformIsClosed">Action</th>
       </tr>
     </ng-template>
 
-    <ng-template pTemplate="body" let-result>
+    <ng-template prTableBody let-result>
       <tr>
         <td style="text-align: center">
           {{ result?.result_code }}
         </td>
 
         <td *ngFor="let column of columnOrder; let i = index" class="{{ column.attr }}">
-          <ng-container *ngFor="let subResult of result['results']">
+          <ng-container *ngFor="let subResult of result['results']; trackBy: trackBySubResult">
             <a class="{{ column.class }}" [routerLink]="'/ipsr/detail/' + subResult?.result_code" [queryParams]="{ phase: subResult?.version_id }">
               <div class="new_tag" *ngIf="i == 1 && subResult.is_new && !subResult.legacy_id">New</div>
 
@@ -41,7 +39,7 @@
                 <i class="pi pi-exclamation-triangle"></i>
               </div>
 
-              {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd') }}
+              {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'yyyy-MM-dd') }}
             </a>
           </ng-container>
         </td>
@@ -49,9 +47,9 @@
         <td>
           <a
             class="subResults"
-            pTooltip="Click to view the pdf"
-            tooltipPosition="bottom"
-            *ngFor="let subResult of result['results']"
+            prTooltip="Click to view the pdf"
+            prTooltipPosition="bottom"
+            *ngFor="let subResult of result['results']; trackBy: trackBySubResult"
             [href]="'/reports/ipsr-details/' + subResult?.result_code + '?phase=' + subResult?.version_id"
             target="_blank"
             rel="noopener noreferrer">
@@ -60,33 +58,35 @@
         </td>
 
         <td *ngIf="!this.api.rolesSE.platformIsClosed">
-          <div class="subResults" *ngFor="let subResult of result['results']">
+          <div class="subResults" *ngFor="let subResult of result['results']; trackBy: trackBySubResult">
             <div class="icon_container">
-              <i class="pi pi-ellipsis-v" (click)="menu.toggle($event); onPressAction(subResult)"></i>
+              <i class="pi pi-ellipsis-v" (click)="toggleMenu($event, subResult)"></i>
             </div>
           </div>
         </td>
       </tr>
     </ng-template>
-  </p-table>
+  </app-pr-table>
 
   <div class="total" *ngIf="this.tableData?.length && this.total">Total: {{ this.tableData?.length }} / {{ this.total }}</div>
 
   <div class="noDataText" *ngIf="!this.tableData?.length">There are no results for the selected filters.</div>
 </div>
 
-<p-popover #menu>
-  @for (item of this.api.dataControlSE?.currentResult?.role_id || this.api.rolesSE.isAdmin ? itemsWithDelete : items; track item) {
-    @if (item.visible) {
-      <div
-        class="table_menu_item"
-        [pTooltip]="item.disabled ? item.tooltipText : null"
-        tooltipPosition="bottom"
-        [ngClass]="{ itemDisabled: item.disabled }"
-        (click)="item.disabled ? null : item.command(); menu.toggle($event)">
-        <i [class]="item.icon"></i>
-        <span>{{ item.label }}</span>
-      </div>
+@if (menuOpen()) {
+  <div class="pr-menu-panel" [style.top.px]="menuTop" [style.left.px]="menuLeft" (click)="$event.stopPropagation()">
+    @for (item of this.api.dataControlSE?.currentResult?.role_id || this.api.rolesSE.isAdmin ? itemsWithDelete : items; track item) {
+      @if (item.visible) {
+        <div
+          class="table_menu_item"
+          [prTooltip]="item.disabled ? item.tooltipText : null"
+          prTooltipPosition="bottom"
+          [ngClass]="{ itemDisabled: item.disabled }"
+          (click)="item.disabled ? null : item.command(); closeMenu()">
+          <i [class]="item.icon"></i>
+          <span>{{ item.label }}</span>
+        </div>
+      }
     }
-  }
-</p-popover>
+  </div>
+}

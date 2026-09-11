@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WhatsNewListItemComponent } from './whats-new-list-item.component';
 import { WhatsNewService } from '../../../../services/whats-new.service';
 import { CommonModule } from '@angular/common';
-import { TooltipModule } from 'primeng/tooltip';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('WhatsNewListItemComponent', () => {
@@ -51,7 +50,7 @@ describe('WhatsNewListItemComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CommonModule, TooltipModule, HttpClientTestingModule]
+      imports: [CommonModule, HttpClientTestingModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(WhatsNewListItemComponent);

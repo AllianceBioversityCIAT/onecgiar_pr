@@ -1,136 +1,241 @@
-# Cypress E2E Testing
+# Cypress Testing (local-only)
 
-Este proyecto utiliza Cypress para pruebas end-to-end automatizadas.
+Este proyecto utiliza Cypress para pruebas **end-to-end** y de **componentes** (component testing).
+
+> ⚠️ **Solo local.** Cypress **NO** se ejecuta en GitHub Actions (el workflow `cypress.yml` fue
+> eliminado a propósito). Estas pruebas existen para correrse en local y para que un **agente de
+> IA pueda guiarse** con ellas al validar cambios (sobre todo en `custom-fields/`, que está
+> excluido del coverage de Jest). No hay ejecución automática en CI.
 
 ## 🔧 Configuración
 
-### Credenciales por Roles
+### 1. Copiar el archivo de ejemplo
 
-El sistema ahora maneja diferentes roles de usuario:
+```bash
+cp cypress.env.js.example cypress.env.js
+```
 
-- **Guest**: Usuario básico para pruebas generales
-- **Admin**: Usuario administrativo (para uso futuro)
+`cypress.env.js` está en `.gitignore`. **Nunca** se commitea.
 
-### Configuración Local
+### 2. Rellenar las credenciales
 
-1. **Copia el archivo de ejemplo**:
-   ```bash
-   cp cypress.env.js.example cypress.env.js
-   ```
+`cypress.config.js` lee el archivo con `require()`, así que debe ser **CommonJS**
+(`module.exports`, no `export const`). Las claves que el config realmente lee son
+**`guestEmail`**, **`guestPassword`** y **`userToken`**:
 
-2. **Configura tus credenciales**:
-   ```javascript
-   // cypress.env.js
-   export const environment = {
-     cypress: {
-       testEmail: 'tu-email@domain.com',
-       testPassword: 'tu-contraseña'
-     }
-   };
-   ```
+```javascript
+// cypress.env.js
+const environment = {
+  cypress: {
+    // Ruta lenta: login por formulario (cy.login('guest'))
+    guestEmail: 'tu-email@domain.com',
+    guestPassword: 'tu-contraseña',
 
-3. **O usa variables de entorno**:
-   ```bash
-   export CYPRESS_GUEST_EMAIL=tu-email@domain.com
-   export CYPRESS_GUEST_PASSWORD=tu-contraseña
-   ```
+    // Ruta rápida: sesión por token (cy.loginByToken()) — la preferida
+    userToken: 'eyJhbGciOi...'
+  }
+};
 
-### Configuración en Producción (GitHub Actions)
+module.exports = { environment };
+```
 
-Las credenciales se configuran como GitHub Secrets:
-- `CYPRESS_GUEST_EMAIL`: Email del usuario Guest
-- `CYPRESS_GUEST_PASSWORD`: Contraseña del usuario Guest
+#### ¿De dónde sale `userToken`?
+
+Es el JWT crudo que la app guarda en `localStorage['token']`:
+
+1. Iniciar sesión en el navegador (`http://localhost:4200`).
+2. DevTools → Application → Local Storage → copiar el valor de la clave `token`.
+
+`AuthService` (`src/app/shared/services/api/auth.service.ts`) sólo necesita
+`localStorage['token']` y `localStorage['user']`; `cy.loginByToken()` siembra las dos (el objeto
+`user` se reconstruye del payload del JWT) dentro de un `cy.session` cacheado entre specs.
+
+### 3. Levantar el dev server
+
+Los E2E corren contra `http://localhost:4200`, que apunta al backend de **testing**
+(`prtest-back.ciat.cgiar.org`). Basta con `npm start` en otra terminal — **no** hace falta el
+server local.
 
 ## 🚀 Uso
-
-### Comandos disponibles
 
 ```bash
 # Abrir Cypress en modo interactivo
 npm run cypress:open
 
-# Ejecutar todas las pruebas
+# Ejecutar todas las pruebas E2E
 npm run cypress:run
 
-# Ejecutar pruebas específicas
-npm run cypress:run -- --spec "cypress/e2e/login-simplified.cy.ts"
+# Ejecutar un spec concreto
+npm run cypress:run -- --spec "cypress/e2e/result-detail/general-information.cy.ts"
 ```
+
+### Component testing (custom-fields)
+
+```bash
+# Abrir Cypress en modo componentes (GUI)
+npm run cypress:component
+
+# Ejecutar todos los component tests (headless) — src/**/*.cy.ts
+npm run test:ct
+```
+
+Los component specs viven junto a cada componente (ej.
+`src/app/custom-fields/pr-multi-select/pr-multi-select.cy.ts`) y NO requieren credenciales ni
+levantar `ng serve` (montan el componente aislado con el dev-server webpack de Cypress).
+
+> Agentes en el sandbox de Cursor: el shell integrado setea `ELECTRON_RUN_AS_NODE=1` (rompe el
+> binario de Cypress) y cambia `CYPRESS_CACHE_FOLDER`. Correr con:
+> `env -u ELECTRON_RUN_AS_NODE CYPRESS_CACHE_FOLDER="$HOME/Library/Caches/Cypress" npm run test:ct`
 
 ### Comandos personalizados
 
 ```javascript
-// Login con role por defecto (Guest)
-cy.login();
+// Login rápido por token (preferido). Siembra localStorage y visita la URL indicada.
+cy.loginByToken();                       // → '/'
+cy.loginByToken('/result/results-outlet/results-list');
 
-// Login con role específico
+// Login por formulario (ejercita la pantalla de login real)
+cy.login();               // rol Guest por defecto
 cy.login('guest');
-
-// Login con credenciales específicas
 cy.login('guest', 'email@domain.com', 'password');
 
-// Verificar si hay credenciales disponibles
+// Verificar si hay credenciales de formulario disponibles
 cy.hasCredentials('guest');
 ```
 
+> `cy.login()` **ya no** asume `/result-framework-reporting/home` como destino. La app redirige al
+> primer science program asignado (`/result-framework-reporting/planned-toc?sp=<id>`) o, si el
+> usuario no tiene ninguno, a `/result/results-outlet/results-list`. La aserción usa
+> `LANDING_URL_PATTERN` (exportado desde `cypress/support/commands.ts`).
+
 ## 🛡️ Seguridad
 
-### Archivos ignorados por Git
+Archivos ignorados por Git (nunca subirlos):
 
-Los siguientes archivos NO se suben al repositorio:
-- `cypress.env.js` - Credenciales locales
-- `cypress.env.local.js` - Credenciales locales (legacy)
-- `cypress.env.json` - Credenciales locales (legacy)
+- `cypress.env.js` — credenciales y token locales
+- `cypress.env.local.js`, `cypress.env.json` — legacy
 
 ### Manejo de credenciales vacías
 
-Si no hay credenciales disponibles:
-- Las pruebas que requieren login se saltarán automáticamente
-- Se mostrarán mensajes informativos en los logs
-- La aplicación no fallará por falta de credenciales
+- Los suites que necesitan sesión usan `describeWithToken` (`cypress/support/result-detail.ts`),
+  que se convierte en `describe.skip` cuando no hay `userToken`. La suite sigue en verde en una
+  máquina sin secretos.
+- El spec de login marca como `it.skip` la prueba de sign-in real si faltan `guestEmail` /
+  `guestPassword`; las aserciones del formulario corren siempre.
 
 ## 📁 Estructura
 
 ```
 cypress/
-├── e2e/                    # Pruebas end-to-end
-│   ├── app.cy.ts          # Pruebas básicas de la aplicación
-│   ├── login-simplified.cy.ts  # Pruebas de login
-│   └── results-list.cy.ts # Pruebas de lista de resultados
-├── fixtures/              # Datos de prueba
-├── support/               # Comandos y configuración
-│   ├── commands.ts        # Comandos personalizados
-│   └── e2e.ts            # Configuración global
+├── e2e/
+│   ├── app.cy.ts                  # Smoke sin credenciales (pantalla de login)
+│   ├── login-simplified.cy.ts     # Formulario de login + sign-in real
+│   ├── results-list.cy.ts         # Results Center: columnas RC_COLUMNS y filas
+│   └── result-detail/
+│       ├── general-information.cy.ts        # input + textarea + score segmentado, guardar, recargar
+│       ├── contributors-and-partners.cy.ts  # selects y multiselects (chips, contador, búsqueda)
+│       ├── save-validation.cy.ts            # campos obligatorios faltantes en la barra inferior
+│       ├── save-contract.cy.ts              # el PAYLOAD del PATCH lleva lo que la pantalla muestra
+│       └── save-failures.cy.ts              # 500 / 409 / caída de red / doble click (PATCH stubbeado)
+├── fixtures/
+├── support/
+│   ├── commands.ts        # cy.loginByToken, cy.login, cy.hasCredentials, cy.testid
+│   ├── e2e.ts             # Configuración global E2E (uncaught:exception ACOTADO)
+│   ├── result-detail.ts   # Helpers de Result Detail + contrato DOM de custom-fields
+│   ├── component.ts       # Runner de component testing (mount)
+│   ├── ct-utils.ts
+│   └── component-index.html
 ├── screenshots/           # Capturas de errores
-├── videos/               # Videos de las pruebas
-└── cypress.env.js        # Credenciales locales (no en Git)
+└── videos/
+
+# Component specs colocados junto a cada componente:
+src/app/custom-fields/**/*.cy.ts
 ```
 
-## 🕐 Ejecución Automática
+## 🧭 Contrato DOM de los `custom-fields` (leer antes de escribir un spec nuevo)
 
-El sistema ejecuta pruebas automáticamente:
-- **Cada 4 horas** mediante GitHub Actions
-- **Al hacer push** a las ramas `master` o `dev`
-- **Al crear Pull Requests**
+Estos componentes NO se comportan como widgets estándar. `cypress/support/result-detail.ts`
+documenta y encapsula lo esencial:
 
-Los resultados se notifican por Slack con:
-- ✅ Estado de éxito
-- ❌ Detalles de fallos
-- 📊 Resumen de pruebas ejecutadas
+- **Abrir un dropdown**: `app-pr-select` y `app-pr-multi-select` se abren sólo por CSS
+  `:focus-within`. No hay handler de click en el trigger y un overlay `.remove_focus` lo **cierra**.
+  → `cy.get('<scope> .custom_select a.field').focus()` (helper `openDropdown`).
+- **Elegir opción**: click en `.options .option .label`.
+- **Buscar**: `.options .search_input_container input` (helper `searchInDropdown`, re-enfoca antes
+  de escribir porque Angular puede robar el foco entre comandos).
+- **`app-pr-select`**: raíz `.pr-field` con `mandatory` / `complete`; etiqueta seleccionada en
+  `a.field .text`; limpiar con `i.pr-select-clear`.
+- **`app-pr-multi-select`**: no tiene `.pr-field`; `a.field .text` siempre muestra el placeholder.
+  La selección son chips `.selected_container .chips_container .pr_chip_selected` más el contador
+  `.selected_container .pr_description` (`<selectedLabel> (n)`). Los chips sólo se renderizan si el
+  consumidor pasó `selectedLabel` **y** `selectedOptionLabel`.
+- **`app-pr-input`**: raíz `.pr-input` (+`mandatory`), espejo de valor `.input-validation`, control
+  `.pr-input .input_container input`. Nunca recibe `.complete`.
+- **`app-pr-textarea`**: raíz `.pr-field` (+`mandatory`/`complete`), control
+  `.pr-field .input_container textarea`.
+- **`app-pr-radio-button`**: desde P2-3350 los ids son únicos por instancia
+  (`pr-radio-group-{{n}}_{{i}}`), así que el `<label for>` ya activa siempre su propio input. Aun así
+  el id no es estable entre corridas (depende del orden de instanciación) → seguir anclando por texto:
+  `cy.contains('.radioButton', 'Yes').find('input.pr-native-radio')`.
+- **`app-pr-yes-or-not`**: `cy.contains('.field_container .choice', 'Yes').click()`; el estado
+  seleccionado es `.choice.yes` / `.choice.no`. `FieldsManagerService` puede ocultarlo por portfolio.
+- **`app-section-bottom-bar`** (reemplazó a `app-save-button` en Result Detail, P2-3435): botón
+  **nativo** con `[disabled]`, así que `should('be.disabled')` funciona y un click sin `force` es
+  inerte. Mientras guarda muestra `Saving…` (con el carácter `…`, no tres puntos). Se direcciona
+  por sus `data-testid` — exportados como `BOTTOM_BAR` en `cypress/support/result-detail.ts`:
+  `section-bottom-bar-save`, `-back`, `-next`, `-position`, `-pending`, `-complete` y la lista
+  `#sbb-pending-list li`.
+  - Los faltantes se **nombran**, no se cuentan: `-pending` dice `N fields missing` y abre
+    `#sbb-pending-list`, cuyos `li` son **etiquetas peladas** (ya no `<strong>Campo</strong> is missing`).
+    Con todo completo el botón desaparece y en su lugar está `-complete` ("Section complete").
+  - La barra se **teletransporta** al slot del layout (`SectionBottomBarSlotService`): NO cuelga de
+    la sección, así que hay que consultarla desde la raíz del documento, nunca con `.within()`.
+
+Los specs de Result Detail **nunca** hardcodean un id de resultado: `findEditableResultUrl()` abre
+el Results Center, toma la primera fila que apunta a `/result/result-detail/` y verifica que sea
+editable (hasta 5 candidatas) antes de usarla.
+
+## 🕐 Ejecución
+
+- **Solo local.** No hay ejecución automática en GitHub Actions.
+- Correr E2E con `npm run cypress:run` y component tests con `npm run test:ct` antes de
+  commitear cambios en los componentes cubiertos.
 
 ## 🎯 Mejores Prácticas
 
-1. **Usa roles específicos**: Siempre especifica el role al hacer login
-2. **Verifica credenciales**: Usa `cy.hasCredentials()` antes de pruebas que requieran login
-3. **Maneja errores**: Las pruebas deben funcionar con o sin credenciales
-4. **Mantén seguridad**: Nunca subas credenciales al repositorio
+1. **Preferir `cy.loginByToken()`** — es una sesión cacheada, mucho más rápida que el formulario.
+2. **Anclar por texto, no por id** — los ids de los `custom-fields` colisionan entre grupos.
+3. **Usar selectores como string, no elementos capturados** — Result Detail re-renderiza en cada
+   callback de catálogo y un nodo guardado se desprende del DOM a mitad del test.
+4. **Esperar el payload de la sección** (`openGeneralInformation` / `openContributorsPartners`)
+   antes de aseverar: los catálogos llegan en peticiones separadas.
+5. **Dejar el dato como estaba** — los specs corren contra el backend compartido de testing; las
+   ediciones se escriben como toggles reversibles y las selecciones se restauran.
+6. **Manejar la ausencia de secretos** — usar `describeWithToken` para que el suite siga en verde.
+7. **`data-testid` es el ÚNICO selector fuera de `custom-fields/`** — usar `cy.testid('...')`. Los
+   nombres de componente son detalle de implementación: la suite estuvo rota dos días sin que nadie
+   lo notara porque todo colgaba de `app-save-button`, y P2-3435 lo renombró. Si al escribir un spec
+   falta el hook, se **añade a la plantilla en el mismo cambio**.
+8. **Nada de falsos verdes** — si falta la precondición (el control no se renderiza en ese
+   portafolio, la plataforma está cerrada), `this.skip()` para que salga **pendiente**. Un
+   `cy.log()` + `return` reporta un test en verde que no aseveró nada.
+9. **Aseverar el payload, no sólo el código HTTP** — un `200` sólo dice que el backend aceptó algo.
+   Que el campo viaje se comprueba sobre `interception.request.body` (ver `save-contract.cy.ts`).
+
+### Qué se traga (y qué NO) `cypress/support/e2e.ts`
+
+El `uncaught:exception` ya **no** devuelve `false` para todo. Sólo silencia (a) el ruido conocido
+(Pusher/sockets/`ResizeObserver`/`NG0100`) y (b) cualquier error dentro de la **ventana de arranque**
+(10 s desde cada carga de página, ajustable con `Cypress.env('bootGraceMs')`). Un error lanzado
+después — por ejemplo dentro de un guardado — **rompe el test**, que es justamente para lo que está
+la suite.
 
 ## 🔍 Debugging
 
-Para debug local:
 ```bash
 # Ejecutar con debug
 DEBUG=cypress:* npm run cypress:run
 
 # Ejecutar con UI para ver en tiempo real
 npm run cypress:open
-``` 
+```

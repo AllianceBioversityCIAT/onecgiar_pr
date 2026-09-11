@@ -1,0 +1,3606 @@
+{
+  "id" : null,
+  "scope" : null,
+  "query" : "wheat",
+  "appliedFilters" : [ {
+    "filter" : "itemtype",
+    "operator" : "equals",
+    "value" : "Journal Article",
+    "label" : "Journal Article"
+  } ],
+  "sort" : null,
+  "configuration" : null,
+  "type" : "discover",
+  "_links" : {
+    "self" : {
+      "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals"
+    }
+  },
+  "_embedded" : {
+    "searchResult" : {
+      "_embedded" : {
+        "objects" : [ {
+          "hitHighlights" : {
+            "dc.description.abstract" : [ "<em>Wheat</em> is the world‟s most widely cultivated cereal. By 2050, global demand for <em>wheat</em> is projected to\nincrease by 60%. In the CWANA region which ICARDA is tasked to serve, <em>wheat</em> is the basic staple\nand food security crop, contributing over 60", "% of people‟s daily calorific and protein needs. Due to the\nlarge proportion of subsistence farmers, <em>wheat</em> production also has a major impact on household food\nsecurity. Despite this, the productivity of <em>wheat</em> in the region is very low (less than 2.5 t/ha) due" ],
+            "dc.title" : [ "Role of Sustainable <em>Wheat</em> Production to Ensure Food Security in the CWANA region" ]
+          },
+          "type" : "discover",
+          "_links" : {
+            "indexableObject" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/core/items/ff1dcfdf-1045-42e6-b552-347dd45f7f1f"
+            }
+          },
+          "_embedded" : {
+            "indexableObject" : {
+              "id" : "ff1dcfdf-1045-42e6-b552-347dd45f7f1f",
+              "uuid" : "ff1dcfdf-1045-42e6-b552-347dd45f7f1f",
+              "name" : "Role of Sustainable Wheat Production to Ensure Food Security in the CWANA region",
+              "handle" : "20.500.11766/8067",
+              "metadata" : {
+                "cg.contact" : [ {
+                  "value" : "W.Tadesse@cgiar.org",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.center" : [ {
+                  "value" : "International Center for Agricultural Research in the Dry Areas - ICARDA",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.crp" : [ {
+                  "value" : "CGIAR Research Program on Wheat - WHEAT",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.funder" : [ {
+                  "value" : "International Maize and Wheat Improvement Center - CIMMYT",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.project" : [ {
+                  "value" : "CRP WHEAT Phase II",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.project-lead-institute" : [ {
+                  "value" : "International Center for Agricultural Research in the Dry Areas - ICARDA",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.creator.id" : [ {
+                  "value" : "Tadesse, Wuletaw: 0000-0003-1175-3502",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Jamal, Majd: 0000-0001-5564-6771",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "Gizaw Assefa, Solomon: 0000-0002-7489-062X",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "Oweis, Theib: 0000-0002-2003-4852",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                }, {
+                  "value" : "Baum, Michael: 0000-0002-8248-6088",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 4
+                } ],
+                "cg.identifier.doi" : [ {
+                  "value" : "https://doi.org/10.18006/2017.5(spl-1-safsaw).s15.s32",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.issn" : [ {
+                  "value" : "2320-8694",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.journal" : [ {
+                  "value" : "Journal of Experimental Biology and Agricultural Sciences",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.subject.agrovoc" : [ {
+                  "value" : "intensification",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "technology",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "wheat",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "wheat",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                } ],
+                "cg.volume" : [ {
+                  "value" : "5",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.contributor" : [ {
+                  "value" : "Halila, Habib",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Jamal, Majd",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "El-Hanafi, Samira",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "Gizaw Assefa, Solomon",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                }, {
+                  "value" : "Oweis, Theib",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 4
+                }, {
+                  "value" : "Baum, Michael",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 5
+                } ],
+                "dc.creator" : [ {
+                  "value" : "Tadesse, Wuletaw",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.accessioned" : [ {
+                  "value" : "2018-03-12T01:31:52Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.available" : [ {
+                  "value" : "2018-03-12T01:31:52Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.description.abstract" : [ {
+                  "value" : "Wheat is the world‟s most widely cultivated cereal. By 2050, global demand for wheat is projected to\nincrease by 60%. In the CWANA region which ICARDA is tasked to serve, wheat is the basic staple\nand food security crop, contributing over 60% of people‟s daily calorific and protein needs. Due to the\nlarge proportion of subsistence farmers, wheat production also has a major impact on household food\nsecurity. Despite this, the productivity of wheat in the region is very low (less than 2.5 t/ha) due largely\nto the major abiotic (drought, cold, heat, salinity) and biotic (stripe rust, leaf rust, stem rust and Hessian\nfly) stresses encountered. Most countries in the region are net importers of wheat for human\nconsumption, with regional demand predicted to continue rising. Egypt alone currently imports 9\nmillion tons annually. The situation is further complicated by food production shortfalls associated with\nclimate change which can cause food crises, civil unrest and even migration. The wheat breeding\nprogram at ICARDA has developed high yielding and heat tolerant wheat genotypes which have been\ntested and released as cultivars by many countries in the CWANA region. Out-scaling and\nintensification of wheat cultivars combined with other improved crop management practices have been\ncarried out by ICARDA in partnership with the national programs in Algeria, Egypt, Iraq, Jordan,\nMorocco, Sudan, Syria, Tunisia and Yemen resulting with an average increase of wheat production by\n28%. The result clearly indicates that development and utilization of climate smart wheat technologies\nincluding high yielding and stress tolerant cultivars; integrated crop management systems; establishment\nof conducive policies and infrastructures are crucial to increase productivity and ensure food and\nnutrition security.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.format" : [ {
+                  "value" : "PDF",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier" : [ {
+                  "value" : "http://www.jebas.org/oldjebas/?page_id=1752",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "https://www.researchgate.net/publication/319616190_Role_of_Sustainable_Wheat_Production_to_Ensure_Food_Security_in_the_CWANA_region",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "https://mel.cgiar.org/reporting/downloadmelspace/hash/FrGPFbV1",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ],
+                "dc.identifier.citation" : [ {
+                  "value" : "Wuletaw Tadesse, Habib Halila, Majd Jamal, Samira El-Hanafi, Solomon Gizaw Assefa, Theib Oweis, Michael Baum. (31/8/2017). Role of Sustainable Wheat Production to Ensure Food Security in the CWANA region. Journal of Experimental Biology and Agricultural Sciences, 5, pp. 515-532.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.status" : [ {
+                  "value" : "Open access",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.uri" : [ {
+                  "value" : "https://hdl.handle.net/20.500.11766/8067",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.language" : [ {
+                  "value" : "en",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.publisher" : [ {
+                  "value" : "Horizon Publisher India (HPI)",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.rights" : [ {
+                  "value" : "CC-BY-4.0",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.source" : [ {
+                  "value" : "Journal of Experimental Biology and Agricultural Sciences;5,(2017) Pagination 515-532",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.title" : [ {
+                  "value" : "Role of Sustainable Wheat Production to Ensure Food Security in the CWANA region",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.type" : [ {
+                  "value" : "Journal Article",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.available" : [ {
+                  "value" : "2017-08-31",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.extent" : [ {
+                  "value" : "515-532",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.hasVersion" : [ {
+                  "value" : "V4 - 2018-05-22",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.issued" : [ {
+                  "value" : "2017-08-31",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.date.year" : [ {
+                  "value" : "2017",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.file.hash" : [ {
+                  "value" : "FrGPFbV1/v/b03aff2dd76386d4a7479b346ab02086",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.file.thumbnail" : [ {
+                  "value" : "https://mel.cgiar.org/graph/getthumbhash/hash/FrGPFbV1/fetchthumbs/1",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.licence.image" : [ {
+                  "value" : "https://licensebuttons.net/l/by/4.0/88x31.png",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.partner.id" : [ {
+                  "value" : "5",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "728",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "11",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ],
+                "mel.subject.agrovoc" : [ {
+                  "value" : "intensification | http://aims.fao.org/aos/agrovoc/c_33485",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "technology | http://aims.fao.org/aos/agrovoc/c_7644",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "wheat | http://aims.fao.org/aos/agrovoc/c_8373",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "wheat | http://aims.fao.org/aos/agrovoc/c_8373",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                } ]
+              },
+              "inArchive" : true,
+              "discoverable" : true,
+              "withdrawn" : false,
+              "lastModified" : "2026-05-28T08:08:19.395+00:00",
+              "entityType" : null,
+              "type" : "item",
+              "_links" : {
+                "accessStatus" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ff1dcfdf-1045-42e6-b552-347dd45f7f1f/accessStatus"
+                },
+                "bundles" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ff1dcfdf-1045-42e6-b552-347dd45f7f1f/bundles"
+                },
+                "identifiers" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ff1dcfdf-1045-42e6-b552-347dd45f7f1f/identifiers"
+                },
+                "mappedCollections" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ff1dcfdf-1045-42e6-b552-347dd45f7f1f/mappedCollections"
+                },
+                "owningCollection" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ff1dcfdf-1045-42e6-b552-347dd45f7f1f/owningCollection"
+                },
+                "relationships" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ff1dcfdf-1045-42e6-b552-347dd45f7f1f/relationships"
+                },
+                "version" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ff1dcfdf-1045-42e6-b552-347dd45f7f1f/version"
+                },
+                "templateItemOf" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ff1dcfdf-1045-42e6-b552-347dd45f7f1f/templateItemOf"
+                },
+                "thumbnail" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ff1dcfdf-1045-42e6-b552-347dd45f7f1f/thumbnail"
+                },
+                "self" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ff1dcfdf-1045-42e6-b552-347dd45f7f1f"
+                }
+              }
+            }
+          }
+        }, {
+          "hitHighlights" : {
+            "dc.description.abstract" : [ "Russian <em>wheat</em> aphid (RWA), Diuraphis noxia (Kurdjumov), is a serious pest of cereals in\nmany parts of the world, particularly in dry areas. As limited resistance sources to this pest\nwere previously identified in durum <em>wheat</em>, 144 accessions", " of Aegilops spp. and 72\nadvanced durum <em>wheat</em> lines were evaluated for resistance to RWA in the field and in the\nplastic house at Tel Hadya, Syria. Ten Aegilops accessions and 14 advanced durum <em>wheat</em>\nlines showed good level of resistance to RWA. The best five" ],
+            "dc.title" : [ "Sources of resistance in durum <em>wheat</em> and its wild relatives to Russian <em>wheat</em> aphid (Hemiptea: Aphididae)" ]
+          },
+          "type" : "discover",
+          "_links" : {
+            "indexableObject" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/core/items/ca2fb4e8-0afd-459d-8b20-44de4cf99f7e"
+            }
+          },
+          "_embedded" : {
+            "indexableObject" : {
+              "id" : "ca2fb4e8-0afd-459d-8b20-44de4cf99f7e",
+              "uuid" : "ca2fb4e8-0afd-459d-8b20-44de4cf99f7e",
+              "name" : "Sources of resistance in durum wheat and its wild relatives to Russian wheat aphid (Hemiptea: Aphididae)",
+              "handle" : "20.500.11766/6138",
+              "metadata" : {
+                "cg.contact" : [ {
+                  "value" : "M.BOHSSINI@CGIAR.ORG",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.center" : [ {
+                  "value" : "International Center for Agricultural Research in the Dry Areas - ICARDA",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "University of Duhok - UoD",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "Cukurova University - CU Turkey",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ],
+                "cg.contributor.crp" : [ {
+                  "value" : "CGIAR Research Program on Wheat - WHEAT",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.funder" : [ {
+                  "value" : "International Maize and Wheat Improvement Center - CIMMYT",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.project" : [ {
+                  "value" : "CGIAR Research Program on WHEAT - Global Alliance for Improving Food Security and the Livelihoods of the Resource-Poor in the Developing World (CRP 3.1)",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.project-lead-institute" : [ {
+                  "value" : "International Center for Agricultural Research in the Dry Areas - ICARDA",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.creator.id" : [ {
+                  "value" : "El Bouhssini, Mustapha: 0000-0001-8945-3126",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.journal" : [ {
+                  "value" : "Revue Marocaine de Protection des Plantes",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.subject.agrovoc" : [ {
+                  "value" : "agriculture",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "aegilops",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "durum (triticum durum)",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "wheat",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                } ],
+                "cg.volume" : [ {
+                  "value" : "9",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.contributor" : [ {
+                  "value" : "El Bouhssini, Mustapha",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Miloudi, Nachit",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "Kornoşor, Serpil",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ],
+                "dc.creator" : [ {
+                  "value" : "Al - Ghannoum, M. I.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.accessioned" : [ {
+                  "value" : "2017-03-04T22:01:21Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.available" : [ {
+                  "value" : "2017-03-04T22:01:21Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.description.abstract" : [ {
+                  "value" : "Russian wheat aphid (RWA), Diuraphis noxia (Kurdjumov), is a serious pest of cereals in\nmany parts of the world, particularly in dry areas. As limited resistance sources to this pest\nwere previously identified in durum wheat, 144 accessions of Aegilops spp. and 72\nadvanced durum wheat lines were evaluated for resistance to RWA in the field and in the\nplastic house at Tel Hadya, Syria. Ten Aegilops accessions and 14 advanced durum wheat\nlines showed good level of resistance to RWA. The best five lines were studied for\ncategories of resistance, and the results showed that antibiosis, antixenosis and tolerance are\ninvolved in various combinations",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.format" : [ {
+                  "value" : "PDF",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier" : [ {
+                  "value" : "https://mel.cgiar.org/reporting/downloadmelspace/hash/NStlzHFK",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.citation" : [ {
+                  "value" : "M. I. Al - Ghannoum, Mustapha El Bouhssini, Nachit Miloudi, Serpil Kornoşor. (30/6/2016). Sources of resistance in durum wheat and its wild relatives to Russian wheat aphid (Hemiptea: Aphididae). Revue Marocaine de Protection des Plantes, 9, pp. 61-67.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.status" : [ {
+                  "value" : "Open access",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.uri" : [ {
+                  "value" : "https://hdl.handle.net/20.500.11766/6138",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.language" : [ {
+                  "value" : "en",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "fr",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                } ],
+                "dc.publisher" : [ {
+                  "value" : "Association Marocaine de Protection des Plantes (AMPP)",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.rights" : [ {
+                  "value" : "CC-BY-NC-4.0",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.source" : [ {
+                  "value" : "Revue Marocaine de Protection des Plantes;9,(2016) Pagination 61-67",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.subject" : [ {
+                  "value" : "russian wheat aphid",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "resistance",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                } ],
+                "dc.title" : [ {
+                  "value" : "Sources of resistance in durum wheat and its wild relatives to Russian wheat aphid (Hemiptea: Aphididae)",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.type" : [ {
+                  "value" : "Journal Article",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.available" : [ {
+                  "value" : "2016-06-30",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.extent" : [ {
+                  "value" : "61-67",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.hasVersion" : [ {
+                  "value" : "V1 - 2017-08-21",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.date.year" : [ {
+                  "value" : "2016",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.file.hash" : [ {
+                  "value" : "NStlzHFK/v/e5b8ee169d0836341e69fdf0274860ae",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.file.thumbnail" : [ {
+                  "value" : "https://mel.cgiar.org/graph/getthumbhash/hash/NStlzHFK/fetchthumbs/1",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.licence.image" : [ {
+                  "value" : "https://licensebuttons.net/l/by-nc/4.0/88x31.png",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.partner.id" : [ {
+                  "value" : "5",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "1692",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "3008",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "728",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                }, {
+                  "value" : "11",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 4
+                } ],
+                "mel.project.open" : [ {
+                  "value" : "https://mel.cgiar.org/projects/215",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.subject.agrovoc" : [ {
+                  "value" : "agriculture | http://aims.fao.org/aos/agrovoc/c_203",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "aegilops | http://aims.fao.org/aos/agrovoc/c_148",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "durum (triticum durum) | http://aims.fao.org/aos/agrovoc/c_11456",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "wheat | http://aims.fao.org/aos/agrovoc/c_8373",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                } ]
+              },
+              "inArchive" : true,
+              "discoverable" : true,
+              "withdrawn" : false,
+              "lastModified" : "2026-04-09T07:39:11.278+00:00",
+              "entityType" : null,
+              "type" : "item",
+              "_links" : {
+                "accessStatus" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ca2fb4e8-0afd-459d-8b20-44de4cf99f7e/accessStatus"
+                },
+                "bundles" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ca2fb4e8-0afd-459d-8b20-44de4cf99f7e/bundles"
+                },
+                "identifiers" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ca2fb4e8-0afd-459d-8b20-44de4cf99f7e/identifiers"
+                },
+                "mappedCollections" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ca2fb4e8-0afd-459d-8b20-44de4cf99f7e/mappedCollections"
+                },
+                "owningCollection" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ca2fb4e8-0afd-459d-8b20-44de4cf99f7e/owningCollection"
+                },
+                "relationships" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ca2fb4e8-0afd-459d-8b20-44de4cf99f7e/relationships"
+                },
+                "version" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ca2fb4e8-0afd-459d-8b20-44de4cf99f7e/version"
+                },
+                "templateItemOf" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ca2fb4e8-0afd-459d-8b20-44de4cf99f7e/templateItemOf"
+                },
+                "thumbnail" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ca2fb4e8-0afd-459d-8b20-44de4cf99f7e/thumbnail"
+                },
+                "self" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/ca2fb4e8-0afd-459d-8b20-44de4cf99f7e"
+                }
+              }
+            }
+          }
+        }, {
+          "hitHighlights" : {
+            "dc.description.abstract" : [ " tritici-repentis) severity and grain yield of <em>wheat</em>. <em>Wheat</em> seed cv. RR\n21 was treated with fungicides, carbendazim (Areestin), triadimenol (Baytan), tebuconazole (Raxil), and\ncarboxin þ thiram (Vitavax 200B). Single foliar application of propiconazole", "% and 14% in 2004 and 2005, respectively. Therefore, seed treatment either\nwith triadimenol or carboxin þ thiram in combination with single post-flowering foliar spray of fungicides\nshould minimize grain yield loss due to <em>wheat</em> foliar blight in South Asia" ],
+            "dc.title" : [ "Control of Helminthosporium leaf blight of spring <em>wheat</em> using seed treatments and single foliar spray in Indo-Gangetic Plains of Nepal" ]
+          },
+          "type" : "discover",
+          "_links" : {
+            "indexableObject" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/core/items/64df3afd-a8fc-4473-9c11-0ec80d00b3f7"
+            }
+          },
+          "_embedded" : {
+            "indexableObject" : {
+              "id" : "64df3afd-a8fc-4473-9c11-0ec80d00b3f7",
+              "uuid" : "64df3afd-a8fc-4473-9c11-0ec80d00b3f7",
+              "name" : "Control of Helminthosporium leaf blight of spring wheat using seed treatments and single foliar spray in Indo-Gangetic Plains of Nepal",
+              "handle" : "20.500.11766/6387",
+              "metadata" : {
+                "cg.contact" : [ {
+                  "value" : "ds.poudyal@gmail.com",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.center" : [ {
+                  "value" : "International Center for Agricultural Research in the Dry Areas - ICARDA",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "International Maize and Wheat Improvement Center - CIMMYT",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "United States Department of Agriculture - USDA",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ],
+                "cg.contributor.crp" : [ {
+                  "value" : "CGIAR Research Program on Wheat - WHEAT",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.funder" : [ {
+                  "value" : "International Maize and Wheat Improvement Center - CIMMYT",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.project" : [ {
+                  "value" : "CGIAR Research Program on WHEAT - Global Alliance for Improving Food Security and the Livelihoods of the Resource-Poor in the Developing World (CRP 3.1)",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.project-lead-institute" : [ {
+                  "value" : "International Center for Agricultural Research in the Dry Areas - ICARDA",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.coverage.country" : [ {
+                  "value" : "NP",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.coverage.region" : [ {
+                  "value" : "Southern Asia",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.creator.id" : [ {
+                  "value" : "Sharma, Ram: 0000-0002-7785-363X",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.date.embargo-end-date" : [ {
+                  "value" : "2116-06-18",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.identifier.doi" : [ {
+                  "value" : "https://doi.org/10.1016/j.cropro.2016.06.017",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.isijournal" : [ {
+                  "value" : "ISI Journal",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.issn" : [ {
+                  "value" : "0261-2194",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.journal" : [ {
+                  "value" : "Crop Protection",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.subject.agrovoc" : [ {
+                  "value" : "crop production",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "sustainability",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "wheat",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "tools",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                }, {
+                  "value" : "wheat",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 4
+                } ],
+                "cg.volume" : [ {
+                  "value" : "88",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.contributor" : [ {
+                  "value" : "Sharma, Ram",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Duveiller, Etienne",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                } ],
+                "dc.creator" : [ {
+                  "value" : "Sharma-Poudyal, Dipak",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.accessioned" : [ {
+                  "value" : "2017-03-11T23:24:41Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.available" : [ {
+                  "value" : "2017-03-11T23:24:41Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.description.abstract" : [ {
+                  "value" : "Four fungicides for seed treatments and one as foliar spray were tested in replicated field experiments in\na strip plot design to determine the effect of fungicides on Helminthosporium leaf blight (caused by\nCochliobolus sativus and Pyrenophora tritici-repentis) severity and grain yield of wheat. Wheat seed cv. RR\n21 was treated with fungicides, carbendazim (Areestin), triadimenol (Baytan), tebuconazole (Raxil), and\ncarboxin þ thiram (Vitavax 200B). Single foliar application of propiconazole (Tilt) was sprayed at\nflowering stage. Controls were included for both factors and treatments were replicated four times.\nTriadimenol and carboxin þ thiram increased seed germination in both years. Triadimenol, tebuconazole,\nand carboxin þ thiram reduced the number of infected seedlings and seedling root rot severity in both\nyears. Number of tillers was higher in carboxin þ thiram treated plots compared to other seed treatments.\nCompared to the control, carboxin þ thiram increased grain yield by 9% and 8% in 2004 and 2005,\nrespectively, and triadimenol by 6% in both years. The foliar spray of propiconazole significantly reduced\nHelminthosporium leaf blight severity and increased thousand-kernel weights. Propiconazole spray\nincreased grain yield by 15% and 14% in 2004 and 2005, respectively. Therefore, seed treatment either\nwith triadimenol or carboxin þ thiram in combination with single post-flowering foliar spray of fungicides\nshould minimize grain yield loss due to wheat foliar blight in South Asia. The findings of this study\ncould be useful in developing strategies to manage Helminthosporium leaf blight in South Asia and other\nwarm wheat growing regions of the world.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.format" : [ {
+                  "value" : "PDF",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier" : [ {
+                  "value" : "https://mel.cgiar.org/dspace/limited",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.citation" : [ {
+                  "value" : "Dipak Sharma-Poudyal, Ram Sharma, Etienne Duveiller. (18/6/2016). Control of Helminthosporium leaf blight of spring wheat using seed treatments and single foliar spray in Indo-Gangetic Plains of Nepal. Crop Protection, 88, pp. 161-166.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.status" : [ {
+                  "value" : "Limited access",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.uri" : [ {
+                  "value" : "https://hdl.handle.net/20.500.11766/6387",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.language" : [ {
+                  "value" : "en",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.publisher" : [ {
+                  "value" : "Elsevier",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.source" : [ {
+                  "value" : "Crop Protection;88,(2016) Pagination 161-166",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.title" : [ {
+                  "value" : "Control of Helminthosporium leaf blight of spring wheat using seed treatments and single foliar spray in Indo-Gangetic Plains of Nepal",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.type" : [ {
+                  "value" : "Journal Article",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.available" : [ {
+                  "value" : "2016-06-18",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.extent" : [ {
+                  "value" : "161-166",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.hasVersion" : [ {
+                  "value" : "V1 - 2017-05-28",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.ISO3166-1/ALFA3" : [ {
+                  "value" : "NPL",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.ISO3166/MA" : [ {
+                  "value" : "Nepal",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.contact.domain" : [ {
+                  "value" : "gmail.com",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.contact.email" : [ {
+                  "value" : "ds.poudyal",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.date.year" : [ {
+                  "value" : "2016",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.file.hash" : [ {
+                  "value" : "zEdFzDvA/v/12c0e1ed4a927b27dc382acf5c4e8a09",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.file.thumbnail" : [ {
+                  "value" : "https://mel.cgiar.org/graph/getthumbhash/hash/zEdFzDvA/fetchthumbs/1",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.impact-factor" : [ {
+                  "value" : "1.652",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.iso3166-1/Numeric" : [ {
+                  "value" : "524",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.partner.id" : [ {
+                  "value" : "5",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "11",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "177",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "728",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                } ],
+                "mel.project.open" : [ {
+                  "value" : "https://mel.cgiar.org/projects/215",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.subject.agrovoc" : [ {
+                  "value" : "crop production | http://aims.fao.org/aos/agrovoc/c_5976",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "sustainability | http://aims.fao.org/aos/agrovoc/c_33560",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "wheat | http://aims.fao.org/aos/agrovoc/c_8373",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                }, {
+                  "value" : "tools | http://aims.fao.org/aos/agrovoc/c_2631",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 3
+                }, {
+                  "value" : "wheat | http://aims.fao.org/aos/agrovoc/c_8373",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 4
+                } ]
+              },
+              "inArchive" : true,
+              "discoverable" : true,
+              "withdrawn" : false,
+              "lastModified" : "2026-04-09T07:30:59.073+00:00",
+              "entityType" : null,
+              "type" : "item",
+              "_links" : {
+                "accessStatus" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/64df3afd-a8fc-4473-9c11-0ec80d00b3f7/accessStatus"
+                },
+                "bundles" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/64df3afd-a8fc-4473-9c11-0ec80d00b3f7/bundles"
+                },
+                "identifiers" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/64df3afd-a8fc-4473-9c11-0ec80d00b3f7/identifiers"
+                },
+                "mappedCollections" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/64df3afd-a8fc-4473-9c11-0ec80d00b3f7/mappedCollections"
+                },
+                "owningCollection" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/64df3afd-a8fc-4473-9c11-0ec80d00b3f7/owningCollection"
+                },
+                "relationships" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/64df3afd-a8fc-4473-9c11-0ec80d00b3f7/relationships"
+                },
+                "version" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/64df3afd-a8fc-4473-9c11-0ec80d00b3f7/version"
+                },
+                "templateItemOf" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/64df3afd-a8fc-4473-9c11-0ec80d00b3f7/templateItemOf"
+                },
+                "thumbnail" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/64df3afd-a8fc-4473-9c11-0ec80d00b3f7/thumbnail"
+                },
+                "self" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/64df3afd-a8fc-4473-9c11-0ec80d00b3f7"
+                }
+              }
+            }
+          }
+        }, {
+          "hitHighlights" : {
+            "dc.description.abstract" : [ "The main aims of this study were to compile the historical <em>wheat</em> variety list released in <em>wheat</em> breeding in Turkey, to compare the <em>wheat</em> variety release with some selected countries and evaluate the impact of regulations on <em>wheat</em> research", " and variety development. <em>Wheat</em> breeding started in 1925 soon after the foundation of Republic of Turkey. First variety was released in 1928, and 617 <em>wheat</em> varieties were released since then. National Variety List (NVL) was published every year, however only" ],
+            "dc.title" : [ "Variety Development of <em>Wheat</em> in Turkey and the Impact of Regulations" ]
+          },
+          "type" : "discover",
+          "_links" : {
+            "indexableObject" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/core/items/df43b83f-5999-482e-a849-336511877d24"
+            }
+          },
+          "_embedded" : {
+            "indexableObject" : {
+              "id" : "df43b83f-5999-482e-a849-336511877d24",
+              "uuid" : "df43b83f-5999-482e-a849-336511877d24",
+              "name" : "Variety Development of Wheat in Turkey and the Impact of Regulations",
+              "handle" : "20.500.11766/67084",
+              "metadata" : {
+                "cg.contact" : [ {
+                  "value" : "M.Keser@cgiar.org",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.center" : [ {
+                  "value" : "International Center for Agricultural Research in the Dry Areas - ICARDA",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.crp" : [ {
+                  "value" : "CGIAR Research Program on Wheat - WHEAT",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.funder" : [ {
+                  "value" : "Government of Turkey",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.project" : [ {
+                  "value" : "International Winter Wheat Improvement Program",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.project-lead-institute" : [ {
+                  "value" : "International Center for Agricultural Research in the Dry Areas - ICARDA",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.coverage.country" : [ {
+                  "value" : "TR",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.coverage.region" : [ {
+                  "value" : "Western Asia",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.creator.id" : [ {
+                  "value" : "Keser, Mesut: 0000-0001-6316-7981",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.issn" : [ {
+                  "value" : "2149-1275",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.issue" : [ {
+                  "value" : "1",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.journal" : [ {
+                  "value" : "Ekin Journal of Crop Breeding and Genetics",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.reviewStatus" : [ {
+                  "value" : "Peer Review",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.subject.agrovoc" : [ {
+                  "value" : "breeding",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "wheat",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "wheat",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ],
+                "cg.volume" : [ {
+                  "value" : "8",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.creator" : [ {
+                  "value" : "Keser, Mesut",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.accessioned" : [ {
+                  "value" : "2022-02-17T22:51:12Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.available" : [ {
+                  "value" : "2022-02-17T22:51:12Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.description.abstract" : [ {
+                  "value" : "The main aims of this study were to compile the historical wheat variety list released in wheat breeding in Turkey, to compare the wheat variety release with some selected countries and evaluate the impact of regulations on wheat research and variety development. Wheat breeding started in 1925 soon after the foundation of Republic of Turkey. First variety was released in 1928, and 617 wheat varieties were released since then. National Variety List (NVL) was published every year, however only 484 of total released varieties are currently in the NVL. 485 varieties are of bread wheat and 128 of them are durum wheat, 2 two are of Tr. monococcum, 1 is of Tr. turgidum and 1 is of Tr. spelta. As Turkey has diverse growing conditions, spring, winter and facultative bread and durum wheat varieties are grown, and varieties are released for these conditions. 316, 191 and 110 varieties of winter, spring and facultative wheat have been released, respectively. The comparisons were made for variety release among Turkey, Iran, Hungary and the UK. The highest number of varieties released per ha was in UK followed by Hungary, Turkey, Iran in 5-year-period. New regulations stimulated releasing greater number of varieties and involvement of private sector in breeding. Surveys are made to find out the varieties planted in the farmers’ field and their adoption rates. New molecular technologies, such as fingerprinting can be used to increase accuracy of the variety identification and adoption rate of any variety in such surveys",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.format" : [ {
+                  "value" : "PDF",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier" : [ {
+                  "value" : "https://dergipark.org.tr/tr/pub/ekinjournal/issue/68320/1065405",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "https://mel.cgiar.org/reporting/downloadmelspace/hash/8f93381efab3549686373ad4a9966a89",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                } ],
+                "dc.identifier.citation" : [ {
+                  "value" : "Mesut Keser. (30/1/2022). Variety Development of Wheat in Turkey and the Impact of Regulations. Ekin Journal of Crop Breeding and Genetics, 8 (1), pp. 1-16.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.status" : [ {
+                  "value" : "Open access",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.uri" : [ {
+                  "value" : "https://hdl.handle.net/20.500.11766/67084",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.language" : [ {
+                  "value" : "en",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.publisher" : [ {
+                  "value" : "Plant Breeders Sub-Union of Turkey (BISAB)",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.relation" : [ {
+                  "value" : "Mesut Keser. (30/1/2022). List of historical wheat varieties released by wheat breeding program in Turkey form 1925 to 2021 [Breeding program releases].",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.relation.uri" : [ {
+                  "value" : "https://hdl.handle.net/20.500.11766.1/FK2/FXW9AP",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.rights" : [ {
+                  "value" : "CC-BY-SA-4.0",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.source" : [ {
+                  "value" : "Ekin Journal of Crop Breeding and Genetics;8,(2022) Pagination 1-16",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.subject" : [ {
+                  "value" : "variety",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "national variety list",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                } ],
+                "dc.title" : [ {
+                  "value" : "Variety Development of Wheat in Turkey and the Impact of Regulations",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.type" : [ {
+                  "value" : "Journal Article",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.available" : [ {
+                  "value" : "2022-01-30",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.extent" : [ {
+                  "value" : "1-16",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.hasVersion" : [ {
+                  "value" : "V4 - 2023-04-20",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.ISO3166-1/ALFA3" : [ {
+                  "value" : "TUR",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.ISO3166/MA" : [ {
+                  "value" : "Türkiye",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.date.year" : [ {
+                  "value" : "2022",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.file.hash" : [ {
+                  "value" : "8f93381efab3549686373ad4a9966a89/v/9c516d1e68a3120200d79ca3809c04e5",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.file.thumbnail" : [ {
+                  "value" : "https://mel.cgiar.org/graph/getthumbhash/hash/8f93381efab3549686373ad4a9966a89/fetchthumbs/1",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.funder.grant#" : [ {
+                  "value" : "Government of Turkey :MTO No. 069033",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.iso3166-1/Numeric" : [ {
+                  "value" : "792",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.licence.image" : [ {
+                  "value" : "https://licensebuttons.net/l/by-sa/4.0/88x31.png",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.partner.id" : [ {
+                  "value" : "5",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "728",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "1377",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ],
+                "mel.project.open" : [ {
+                  "value" : "https://mel.cgiar.org/projects/iwwip",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.subject.agrovoc" : [ {
+                  "value" : "breeding | http://aims.fao.org/aos/agrovoc/c_49902",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "wheat | http://aims.fao.org/aos/agrovoc/c_8373",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "wheat | http://aims.fao.org/aos/agrovoc/c_8373",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ]
+              },
+              "inArchive" : true,
+              "discoverable" : true,
+              "withdrawn" : false,
+              "lastModified" : "2026-04-09T09:35:55.522+00:00",
+              "entityType" : null,
+              "type" : "item",
+              "_links" : {
+                "accessStatus" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/df43b83f-5999-482e-a849-336511877d24/accessStatus"
+                },
+                "bundles" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/df43b83f-5999-482e-a849-336511877d24/bundles"
+                },
+                "identifiers" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/df43b83f-5999-482e-a849-336511877d24/identifiers"
+                },
+                "mappedCollections" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/df43b83f-5999-482e-a849-336511877d24/mappedCollections"
+                },
+                "owningCollection" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/df43b83f-5999-482e-a849-336511877d24/owningCollection"
+                },
+                "relationships" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/df43b83f-5999-482e-a849-336511877d24/relationships"
+                },
+                "version" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/df43b83f-5999-482e-a849-336511877d24/version"
+                },
+                "templateItemOf" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/df43b83f-5999-482e-a849-336511877d24/templateItemOf"
+                },
+                "thumbnail" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/df43b83f-5999-482e-a849-336511877d24/thumbnail"
+                },
+                "self" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/df43b83f-5999-482e-a849-336511877d24"
+                }
+              }
+            }
+          }
+        }, {
+          "hitHighlights" : {
+            "dc.description.abstract" : [ "Various insect pests attack <em>wheat</em> (Triticum aestivum L.) that can cause significant grain yield losses to the crop. Farmers usually depend on pesticides, however, smallholder farmers often have limited and ill-timed access to control methods", ", including insecticides. Host plant resistance is an alternative to protect grain yield and reduce costs to farmers. Three of the most serious pests of <em>wheat</em> are Diuraphis noxia (Kurdjumov), Mayetiola destructor (Say), and Cephus pygmeaus L. These pests occur" ],
+            "dc.title" : [ "Resistance to insect pests in <em>wheat</em>—rye and Aegilops speltoides Tausch translocation and substitution lines" ]
+          },
+          "type" : "discover",
+          "_links" : {
+            "indexableObject" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/core/items/a7eeb9f9-8a1e-4d67-a3c0-ee712ca29616"
+            }
+          },
+          "_embedded" : {
+            "indexableObject" : {
+              "id" : "a7eeb9f9-8a1e-4d67-a3c0-ee712ca29616",
+              "uuid" : "a7eeb9f9-8a1e-4d67-a3c0-ee712ca29616",
+              "name" : "Resistance to insect pests in wheat—rye and Aegilops speltoides Tausch translocation and substitution lines",
+              "handle" : "20.500.11766/10090",
+              "metadata" : {
+                "cg.contact" : [ {
+                  "value" : "l.crespo@cgiar.org",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.center" : [ {
+                  "value" : "International Center for Agricultural Research in the Dry Areas - ICARDA",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "International Maize and Wheat Improvement Center - CIMMYT",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                } ],
+                "cg.contributor.crp" : [ {
+                  "value" : "CGIAR Research Program on Wheat - WHEAT",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.funder" : [ {
+                  "value" : "International Maize and Wheat Improvement Center - CIMMYT",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.project" : [ {
+                  "value" : "CRP WHEAT Phase II",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.contributor.project-lead-institute" : [ {
+                  "value" : "International Center for Agricultural Research in the Dry Areas - ICARDA",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.coverage.country" : [ {
+                  "value" : "MA",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.coverage.region" : [ {
+                  "value" : "Northern Africa",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.creator.id" : [ {
+                  "value" : "El Bouhssini, Mustapha: 0000-0001-8945-3126",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.identifier.doi" : [ {
+                  "value" : "https://doi.org/10.1007/s10681-019-2449-7",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.isijournal" : [ {
+                  "value" : "ISI Journal",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.issn" : [ {
+                  "value" : "0014-2336",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.journal" : [ {
+                  "value" : "Euphytica",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "cg.subject.agrovoc" : [ {
+                  "value" : "wheat",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "hessian flies",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                } ],
+                "cg.volume" : [ {
+                  "value" : "215:123",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.contributor" : [ {
+                  "value" : "Singh, R. P",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "Sabraoui, Abdelhadi",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "El Bouhssini, Mustapha",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ],
+                "dc.creator" : [ {
+                  "value" : "Crespo-Herrera, Leonardo",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.accessioned" : [ {
+                  "value" : "2019-06-23T17:39:40Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.date.available" : [ {
+                  "value" : "2019-06-23T17:39:40Z",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.description.abstract" : [ {
+                  "value" : "Various insect pests attack wheat (Triticum aestivum L.) that can cause significant grain yield losses to the crop. Farmers usually depend on pesticides, however, smallholder farmers often have limited and ill-timed access to control methods, including insecticides. Host plant resistance is an alternative to protect grain yield and reduce costs to farmers. Three of the most serious pests of wheat are Diuraphis noxia (Kurdjumov), Mayetiola destructor (Say), and Cephus pygmeaus L. These pests occur in most of the wheat growing areas. However, they are of high importance in North Africa and West Asia. The aim of this study was to evaluate a set of wheat—alien translocations for resistance against D. noxia, M. destructor and C. pygmeaus. Genotypes of this germplasm set have already been reported to carry resistance against certain wheat aphid species. Genotypes 1RSam.1AL and MA1S.1RLe(1B), displayed high levels of resistance against D. noxia and C. pygmeaus, respectively. While three genotypes showed resistance reaction against M. destructor: 1Re(1D), 7A.7S-L5, and 7A.7S-Gb5. Except for the resistant genotype to C. pygmeaus, the other four genotypes were previously reported to carry resistance against Sitobion avenae Fabricius, Rhopalosiphum padi L. and Schizaphis graminum (Rondani). These five wheat—alien translocations are currently being used in the bread-wheat breeding programs at CIMMYT and ICARDA to transfer the multiple pest resistance in elite germplasm.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.format" : [ {
+                  "value" : "PDF",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier" : [ {
+                  "value" : "https://mel.cgiar.org/reporting/downloadmelspace/hash/e12d9365a4be5b6f3a191dc4cb72e21f",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.citation" : [ {
+                  "value" : "Leonardo Crespo-Herrera, R. P Singh, Abdelhadi Sabraoui, Mustapha El Bouhssini. (23/6/2019). Resistance to insect pests in wheat—rye and Aegilops speltoides Tausch translocation and substitution lines. Euphytica, 215: 123.",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.status" : [ {
+                  "value" : "Open access",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.identifier.uri" : [ {
+                  "value" : "https://hdl.handle.net/20.500.11766/10090",
+                  "language" : null,
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.language" : [ {
+                  "value" : "en",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.publisher" : [ {
+                  "value" : "Springer Verlag (Germany)",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.rights" : [ {
+                  "value" : "CC-BY-4.0",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.source" : [ {
+                  "value" : "Euphytica;215:123 ,(2019)",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.subject" : [ {
+                  "value" : "russian wheat aphid",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "resistance",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "stem sawﬂy",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ],
+                "dc.title" : [ {
+                  "value" : "Resistance to insect pests in wheat—rye and Aegilops speltoides Tausch translocation and substitution lines",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dc.type" : [ {
+                  "value" : "Journal Article",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.available" : [ {
+                  "value" : "2019-06-23",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "dcterms.hasVersion" : [ {
+                  "value" : "V3 - 2019-06-23",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.ISO3166-1/ALFA3" : [ {
+                  "value" : "MAR",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.ISO3166/MA" : [ {
+                  "value" : "Morocco",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.date.year" : [ {
+                  "value" : "2019",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.file.hash" : [ {
+                  "value" : "e12d9365a4be5b6f3a191dc4cb72e21f/v/bd1094300202b749d2402c1105905d2b",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.file.thumbnail" : [ {
+                  "value" : "https://mel.cgiar.org/graph/getthumbhash/hash/e12d9365a4be5b6f3a191dc4cb72e21f/fetchthumbs/1",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.impact-factor" : [ {
+                  "value" : "1.546",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.iso3166-1/Numeric" : [ {
+                  "value" : "504",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.licence.image" : [ {
+                  "value" : "https://licensebuttons.net/l/by/4.0/88x31.png",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                } ],
+                "mel.partner.id" : [ {
+                  "value" : "5",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "11",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                }, {
+                  "value" : "728",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 2
+                } ],
+                "mel.subject.agrovoc" : [ {
+                  "value" : "wheat | http://aims.fao.org/aos/agrovoc/c_8373",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 0
+                }, {
+                  "value" : "hessian flies | http://aims.fao.org/aos/agrovoc/c_30462",
+                  "language" : "en_US",
+                  "authority" : null,
+                  "confidence" : -1,
+                  "place" : 1
+                } ]
+              },
+              "inArchive" : true,
+              "discoverable" : true,
+              "withdrawn" : false,
+              "lastModified" : "2026-04-09T08:10:51.018+00:00",
+              "entityType" : null,
+              "type" : "item",
+              "_links" : {
+                "accessStatus" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/a7eeb9f9-8a1e-4d67-a3c0-ee712ca29616/accessStatus"
+                },
+                "bundles" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/a7eeb9f9-8a1e-4d67-a3c0-ee712ca29616/bundles"
+                },
+                "identifiers" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/a7eeb9f9-8a1e-4d67-a3c0-ee712ca29616/identifiers"
+                },
+                "mappedCollections" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/a7eeb9f9-8a1e-4d67-a3c0-ee712ca29616/mappedCollections"
+                },
+                "owningCollection" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/a7eeb9f9-8a1e-4d67-a3c0-ee712ca29616/owningCollection"
+                },
+                "relationships" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/a7eeb9f9-8a1e-4d67-a3c0-ee712ca29616/relationships"
+                },
+                "version" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/a7eeb9f9-8a1e-4d67-a3c0-ee712ca29616/version"
+                },
+                "templateItemOf" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/a7eeb9f9-8a1e-4d67-a3c0-ee712ca29616/templateItemOf"
+                },
+                "thumbnail" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/a7eeb9f9-8a1e-4d67-a3c0-ee712ca29616/thumbnail"
+                },
+                "self" : {
+                  "href" : "https://repo.mel.cgiar.org/server/api/core/items/a7eeb9f9-8a1e-4d67-a3c0-ee712ca29616"
+                }
+              }
+            }
+          }
+        } ]
+      },
+      "page" : {
+        "number" : 0,
+        "size" : 5,
+        "totalPages" : 232,
+        "totalElements" : 1157
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=5"
+        },
+        "last" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&page=231&size=5"
+        },
+        "self" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&size=5"
+        }
+      }
+    },
+    "facets" : [ {
+      "name" : "author",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "minValue" : "(CIMMYT), International Maize and Wheat Improvement Center",
+      "maxValue" : "Zyadeh, Ghassan",
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/author?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/author?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Amri, Ahmed",
+          "count" : 73,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Amri,%20Ahmed,equals"
+            }
+          }
+        }, {
+          "label" : "Miloudi, Nachit",
+          "count" : 73,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Miloudi,%20Nachit,equals"
+            }
+          }
+        }, {
+          "label" : "Tadesse, Wuletaw",
+          "count" : 67,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Tadesse,%20Wuletaw,equals"
+            }
+          }
+        }, {
+          "label" : "El Bouhssini, Mustapha",
+          "count" : 58,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=El%20Bouhssini,%20Mustapha,equals"
+            }
+          }
+        }, {
+          "label" : "Kehel, Zakaria",
+          "count" : 43,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Kehel,%20Zakaria,equals"
+            }
+          }
+        }, {
+          "label" : "Bassi, Filippo",
+          "count" : 42,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Bassi,%20Filippo,equals"
+            }
+          }
+        }, {
+          "label" : "Baum, Michael",
+          "count" : 41,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Baum,%20Michael,equals"
+            }
+          }
+        }, {
+          "label" : "Ryan, John",
+          "count" : 39,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Ryan,%20John,equals"
+            }
+          }
+        }, {
+          "label" : "Nangia, Vinay",
+          "count" : 36,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Nangia,%20Vinay,equals"
+            }
+          }
+        }, {
+          "label" : "Oweis, Theib",
+          "count" : 36,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.author=Oweis,%20Theib,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "subject",
+      "facetType" : "hierarchical",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/subject?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/subject?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "wheat",
+          "count" : 453,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=wheat,equals"
+            }
+          }
+        }, {
+          "label" : "barley",
+          "count" : 123,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=barley,equals"
+            }
+          }
+        }, {
+          "label" : "durum wheat",
+          "count" : 116,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=durum%20wheat,equals"
+            }
+          }
+        }, {
+          "label" : "durum (triticum durum)",
+          "count" : 77,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=durum%20(triticum%20durum),equals"
+            }
+          }
+        }, {
+          "label" : "agriculture",
+          "count" : 48,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=agriculture,equals"
+            }
+          }
+        }, {
+          "label" : "chickpea",
+          "count" : 44,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=chickpea,equals"
+            }
+          }
+        }, {
+          "label" : "drought",
+          "count" : 43,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=drought,equals"
+            }
+          }
+        }, {
+          "label" : "resistance",
+          "count" : 42,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=resistance,equals"
+            }
+          }
+        }, {
+          "label" : "bread wheat",
+          "count" : 37,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=bread%20wheat,equals"
+            }
+          }
+        }, {
+          "label" : "triticum aestivum",
+          "count" : 37,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.subject=triticum%20aestivum,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "dateIssued",
+      "facetType" : "date",
+      "facetLimit" : 10,
+      "minValue" : "1963-05-01",
+      "maxValue" : "2026-09-03",
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "self" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/dateIssued?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "1980 - 1989",
+          "count" : 5,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.dateIssued=%5B1980%20TO%201989%5D,equals"
+            }
+          }
+        }, {
+          "label" : "1990 - 1999",
+          "count" : 92,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.dateIssued=%5B1990%20TO%201999%5D,equals"
+            }
+          }
+        }, {
+          "label" : "2000 - 2009",
+          "count" : 177,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.dateIssued=%5B2000%20TO%202009%5D,equals"
+            }
+          }
+        }, {
+          "label" : "2010 - 2019",
+          "count" : 577,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.dateIssued=%5B2010%20TO%202019%5D,equals"
+            }
+          }
+        }, {
+          "label" : "2020 - 2026",
+          "count" : 306,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.dateIssued=%5B2020%20TO%202026%5D,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "entityType",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "_links" : {
+        "self" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/entityType?query=wheat&dsoType=item&f.itemtype=Journal Article,equals"
+        }
+      },
+      "_embedded" : {
+        "values" : [ ]
+      }
+    }, {
+      "name" : "itemtype",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "self" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/itemtype?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Journal Article",
+          "count" : 1157,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.itemtype=Journal%20Article,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "institute",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/institute?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/institute?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "International Center for Agricultural Research in the Dry Areas - ICARDA",
+          "count" : 1039,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=International%20Center%20for%20Agricultural%20Research%20in%20the%20Dry%20Areas%20-%20ICARDA,equals"
+            }
+          }
+        }, {
+          "label" : "International Maize and Wheat Improvement Center - CIMMYT",
+          "count" : 253,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=International%20Maize%20and%20Wheat%20Improvement%20Center%20-%20CIMMYT,equals"
+            }
+          }
+        }, {
+          "label" : "National Institute of Agronomic Research Morocco - INRA Morocco",
+          "count" : 81,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=National%20Institute%20of%20Agronomic%20Research%20Morocco%20-%20INRA%20Morocco,equals"
+            }
+          }
+        }, {
+          "label" : "International Crops Research Institute for the Semi-Arid Tropics - ICRISAT",
+          "count" : 64,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=International%20Crops%20Research%20Institute%20for%20the%20Semi-Arid%20Tropics%20-%20ICRISAT,equals"
+            }
+          }
+        }, {
+          "label" : "National Agricultural Research Institute of Tunisia - INRAT",
+          "count" : 42,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=National%20Agricultural%20Research%20Institute%20of%20Tunisia%20-%20INRAT,equals"
+            }
+          }
+        }, {
+          "label" : "Indian Council of Agricultural Research, Indian Institute of Wheat and Barley Research - ICAR-IIWBR",
+          "count" : 37,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=Indian%20Council%20of%20Agricultural%20Research,%20Indian%20Institute%20of%20Wheat%20and%20Barley%20Research%20-%20ICAR-IIWBR,equals"
+            }
+          }
+        }, {
+          "label" : "United States Department of Agriculture, Agricultural Research Service - USDA-ARS",
+          "count" : 35,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=United%20States%20Department%20of%20Agriculture,%20Agricultural%20Research%20Service%20-%20USDA-ARS,equals"
+            }
+          }
+        }, {
+          "label" : "Grains Research and Development Corporation - GRDC",
+          "count" : 27,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=Grains%20Research%20and%20Development%20Corporation%20-%20GRDC,equals"
+            }
+          }
+        }, {
+          "label" : "Mohammed V University - UM5",
+          "count" : 27,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=Mohammed%20V%20University%20-%20UM5,equals"
+            }
+          }
+        }, {
+          "label" : "Agricultural Research, Education and Extension Organization, Dryland Agricultural Research Institute - AREEO-DARI",
+          "count" : 26,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.institute=Agricultural%20Research,%20Education%20and%20Extension%20Organization,%20Dryland%20Agricultural%20Research%20Institute%20-%20AREEO-DARI,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "region",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/region?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/region?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Northern Africa",
+          "count" : 241,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Northern%20Africa,equals"
+            }
+          }
+        }, {
+          "label" : "Western Asia",
+          "count" : 196,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Western%20Asia,equals"
+            }
+          }
+        }, {
+          "label" : "Southern Asia",
+          "count" : 168,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Southern%20Asia,equals"
+            }
+          }
+        }, {
+          "label" : "Eastern Africa",
+          "count" : 74,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Eastern%20Africa,equals"
+            }
+          }
+        }, {
+          "label" : "Central Asia",
+          "count" : 42,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Central%20Asia,equals"
+            }
+          }
+        }, {
+          "label" : "Northern America",
+          "count" : 22,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Northern%20America,equals"
+            }
+          }
+        }, {
+          "label" : "Western Africa",
+          "count" : 18,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Western%20Africa,equals"
+            }
+          }
+        }, {
+          "label" : "Australia and New Zealand",
+          "count" : 15,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Australia%20and%20New%20Zealand,equals"
+            }
+          }
+        }, {
+          "label" : "Eastern Asia",
+          "count" : 15,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Eastern%20Asia,equals"
+            }
+          }
+        }, {
+          "label" : "Central America",
+          "count" : 11,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.region=Central%20America,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "country",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/country?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/country?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Morocco",
+          "count" : 134,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Morocco,equals"
+            }
+          }
+        }, {
+          "label" : "Syrian Arab Republic",
+          "count" : 131,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Syrian%20Arab%20Republic,equals"
+            }
+          }
+        }, {
+          "label" : "India",
+          "count" : 75,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=India,equals"
+            }
+          }
+        }, {
+          "label" : "Tunisia",
+          "count" : 65,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Tunisia,equals"
+            }
+          }
+        }, {
+          "label" : "Ethiopia",
+          "count" : 57,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Ethiopia,equals"
+            }
+          }
+        }, {
+          "label" : "Egypt",
+          "count" : 49,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Egypt,equals"
+            }
+          }
+        }, {
+          "label" : "Pakistan",
+          "count" : 38,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Pakistan,equals"
+            }
+          }
+        }, {
+          "label" : "Türkiye",
+          "count" : 37,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=T%C3%BCrkiye,equals"
+            }
+          }
+        }, {
+          "label" : "Iran (Islamic Republic of)",
+          "count" : 32,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Iran%20(Islamic%20Republic%20of),equals"
+            }
+          }
+        }, {
+          "label" : "Uzbekistan",
+          "count" : 32,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.country=Uzbekistan,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "crp",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/crp?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/crp?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "CGIAR Research Program on Wheat - WHEAT",
+          "count" : 252,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=CGIAR%20Research%20Program%20on%20Wheat%20-%20WHEAT,equals"
+            }
+          }
+        }, {
+          "label" : "CGIAR Research Program on Dryland Systems - DS",
+          "count" : 100,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=CGIAR%20Research%20Program%20on%20Dryland%20Systems%20-%20DS,equals"
+            }
+          }
+        }, {
+          "label" : "CGIAR Research Program on Grain Legumes - GL",
+          "count" : 43,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=CGIAR%20Research%20Program%20on%20Grain%20Legumes%20-%20GL,equals"
+            }
+          }
+        }, {
+          "label" : "CRP on Dryland Cereals - DC",
+          "count" : 33,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=CRP%20on%20Dryland%20Cereals%20-%20DC,equals"
+            }
+          }
+        }, {
+          "label" : "CGIAR Research Program on Water, Land and Ecosystems - WLE",
+          "count" : 21,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=CGIAR%20Research%20Program%20on%20Water,%20Land%20and%20Ecosystems%20-%20WLE,equals"
+            }
+          }
+        }, {
+          "label" : "CGIAR Research Program on Grain Legumes and Dryland Cereals - GLDC",
+          "count" : 17,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=CGIAR%20Research%20Program%20on%20Grain%20Legumes%20and%20Dryland%20Cereals%20-%20GLDC,equals"
+            }
+          }
+        }, {
+          "label" : "CGIAR Research Program on Livestock Agri-Food Systems - Livestock",
+          "count" : 15,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=CGIAR%20Research%20Program%20on%20Livestock%20Agri-Food%20Systems%20-%20Livestock,equals"
+            }
+          }
+        }, {
+          "label" : "CRP on Dryland Systems  - DS",
+          "count" : 15,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=CRP%20on%20Dryland%20Systems%20%20-%20DS,equals"
+            }
+          }
+        }, {
+          "label" : "CGIAR Research Program for Managing and Sustaining Crop Collections - Genebanks",
+          "count" : 14,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=CGIAR%20Research%20Program%20for%20Managing%20and%20Sustaining%20Crop%20Collections%20-%20Genebanks,equals"
+            }
+          }
+        }, {
+          "label" : "CGIAR Research Program on Climate Change, Agriculture and Food Security - CCAFS",
+          "count" : 12,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.crp=CGIAR%20Research%20Program%20on%20Climate%20Change,%20Agriculture%20and%20Food%20Security%20-%20CCAFS,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "sdg",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/sdg?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/sdg?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "SDG 2 - Zero hunger",
+          "count" : 67,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%202%20-%20Zero%20hunger,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 1 - No poverty",
+          "count" : 40,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%201%20-%20No%20poverty,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 13 - Climate action",
+          "count" : 32,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%2013%20-%20Climate%20action,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 15 - Life on land",
+          "count" : 14,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%2015%20-%20Life%20on%20land,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 17 - Partnerships for the goals",
+          "count" : 10,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%2017%20-%20Partnerships%20for%20the%20goals,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 12 - Responsible consumption and production",
+          "count" : 8,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%2012%20-%20Responsible%20consumption%20and%20production,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 5 - Gender equality",
+          "count" : 7,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%205%20-%20Gender%20equality,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 10 - Reduced inequalities",
+          "count" : 5,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%2010%20-%20Reduced%20inequalities,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 8 - Decent work and economic growth",
+          "count" : 5,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%208%20-%20Decent%20work%20and%20economic%20growth,equals"
+            }
+          }
+        }, {
+          "label" : "SDG 11 - Sustainable cities and communities",
+          "count" : 4,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.sdg=SDG%2011%20-%20Sustainable%20cities%20and%20communities,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "initiative",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/initiative?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/initiative?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Accelerated Breeding",
+          "count" : 44,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Accelerated%20Breeding,equals"
+            }
+          }
+        }, {
+          "label" : "Fragility to Resilience in Central and West Asia and North Africa",
+          "count" : 30,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Fragility%20to%20Resilience%20in%20Central%20and%20West%20Asia%20and%20North%20Africa,equals"
+            }
+          }
+        }, {
+          "label" : "Excellence in Agronomy",
+          "count" : 11,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Excellence%20in%20Agronomy,equals"
+            }
+          }
+        }, {
+          "label" : "Agroecology",
+          "count" : 7,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Agroecology,equals"
+            }
+          }
+        }, {
+          "label" : "Genebanks",
+          "count" : 5,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Genebanks,equals"
+            }
+          }
+        }, {
+          "label" : "Mixed Farming Systems",
+          "count" : 5,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Mixed%20Farming%20Systems,equals"
+            }
+          }
+        }, {
+          "label" : "Sustainable Animal Productivity",
+          "count" : 3,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Sustainable%20Animal%20Productivity,equals"
+            }
+          }
+        }, {
+          "label" : "Climate Resilience",
+          "count" : 2,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Climate%20Resilience,equals"
+            }
+          }
+        }, {
+          "label" : "Plant Health",
+          "count" : 2,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Plant%20Health,equals"
+            }
+          }
+        }, {
+          "label" : "Foresight",
+          "count" : 1,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.initiative=Foresight,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "action_area",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "self" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/action_area?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Genetic Innovation",
+          "count" : 50,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.action_area=Genetic%20Innovation,equals"
+            }
+          }
+        }, {
+          "label" : "Resilient Agrifood Systems",
+          "count" : 47,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.action_area=Resilient%20Agrifood%20Systems,equals"
+            }
+          }
+        }, {
+          "label" : "Systems Transformation",
+          "count" : 11,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.action_area=Systems%20Transformation,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "impact_area",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "self" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/impact_area?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Nutrition, health and food security",
+          "count" : 51,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.impact_area=Nutrition,%20health%20and%20food%20security,equals"
+            }
+          }
+        }, {
+          "label" : "Climate adaptation and mitigation",
+          "count" : 48,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.impact_area=Climate%20adaptation%20and%20mitigation,equals"
+            }
+          }
+        }, {
+          "label" : "Environmental health and biodiversity",
+          "count" : 28,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.impact_area=Environmental%20health%20and%20biodiversity,equals"
+            }
+          }
+        }, {
+          "label" : "Poverty reduction, livelihoods and jobs",
+          "count" : 19,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.impact_area=Poverty%20reduction,%20livelihoods%20and%20jobs,equals"
+            }
+          }
+        }, {
+          "label" : "Gender equality, youth and social inclusion",
+          "count" : 13,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.impact_area=Gender%20equality,%20youth%20and%20social%20inclusion,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "scienceprogram",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "self" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/scienceprogram?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "Breeding for Tomorrow",
+          "count" : 19,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=Breeding%20for%20Tomorrow,equals"
+            }
+          }
+        }, {
+          "label" : "Multifunctional Landscapes",
+          "count" : 8,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=Multifunctional%20Landscapes,equals"
+            }
+          }
+        }, {
+          "label" : "Scaling for Impact",
+          "count" : 6,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=Scaling%20for%20Impact,equals"
+            }
+          }
+        }, {
+          "label" : "Climate Action",
+          "count" : 3,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=Climate%20Action,equals"
+            }
+          }
+        }, {
+          "label" : "Sustainable Farming",
+          "count" : 3,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=Sustainable%20Farming,equals"
+            }
+          }
+        }, {
+          "label" : "Digital Transformation",
+          "count" : 2,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=Digital%20Transformation,equals"
+            }
+          }
+        }, {
+          "label" : "Gender Equality and Inclusion",
+          "count" : 1,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=Gender%20Equality%20and%20Inclusion,equals"
+            }
+          }
+        }, {
+          "label" : "Genebank",
+          "count" : 1,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.scienceprogram=Genebank,equals"
+            }
+          }
+        } ]
+      }
+    }, {
+      "name" : "project",
+      "facetType" : "text",
+      "facetLimit" : 10,
+      "page" : {
+        "number" : 0,
+        "size" : 10
+      },
+      "_links" : {
+        "next" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/project?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&page=1&size=10"
+        },
+        "self" : {
+          "href" : "https://repo.mel.cgiar.org/server/api/discover/facets/project?query=wheat&dsoType=item&f.itemtype=Journal Article,equals&size=10"
+        }
+      },
+      "_embedded" : {
+        "values" : [ {
+          "label" : "CODIS - Corporate-Communication and Documentation Information Services",
+          "count" : 588,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=CODIS%20-%20Corporate-Communication%20and%20Documentation%20Information%20Services,equals"
+            }
+          }
+        }, {
+          "label" : "CRP WHEAT Phase II",
+          "count" : 108,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=CRP%20WHEAT%20Phase%20II,equals"
+            }
+          }
+        }, {
+          "label" : "Enhanced small-holder wheat-legume cropping systems to improve food security under changing climate in the drylands of West Asia and North Africa",
+          "count" : 47,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=Enhanced%20small-holder%20wheat-legume%20cropping%20systems%20to%20improve%20food%20security%20under%20changing%20climate%20in%20the%20drylands%20of%20West%20Asia%20and%20North%20Africa,equals"
+            }
+          }
+        }, {
+          "label" : "Improving Resistance to Cotton Leaf Curl Virus (CLCuV) and Supporting Cotton Best Management Practices for Small Farmers",
+          "count" : 17,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=Improving%20Resistance%20to%20Cotton%20Leaf%20Curl%20Virus%20(CLCuV)%20and%20Supporting%20Cotton%20Best%20Management%20Practices%20for%20Small%20Farmers,equals"
+            }
+          }
+        }, {
+          "label" : "China Bilateral Program 2020 -2021-2022-2023-2024-2025 Implementation Funding",
+          "count" : 16,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=China%20Bilateral%20Program%202020%20-2021-2022-2023-2024-2025%20Implementation%20Funding,equals"
+            }
+          }
+        }, {
+          "label" : "Sustainability and Operation of the Regional Research Centers in a Number of Arab Countries (Phase II)",
+          "count" : 16,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=Sustainability%20and%20Operation%20of%20the%20Regional%20Research%20Centers%20in%20a%20Number%20of%20Arab%20Countries%20(Phase%20II),equals"
+            }
+          }
+        }, {
+          "label" : "CGIAR Research Program on WHEAT - Global Alliance for Improving Food Security and the Livelihoods of the Resource-Poor in the Developing World (CRP 3.1)",
+          "count" : 12,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=CGIAR%20Research%20Program%20on%20WHEAT%20-%20Global%20Alliance%20for%20Improving%20Food%20Security%20and%20the%20Livelihoods%20of%20the%20Resource-Poor%20in%20the%20Developing%20World%20(CRP%203.1),equals"
+            }
+          }
+        }, {
+          "label" : "Use of Conservation Agriculture in Crop-Livestock Systems (CLCA) in the Drylands for Enhanced Water Use and Soil Fertility in NEN and LAC Countries",
+          "count" : 9,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=Use%20of%20Conservation%20Agriculture%20in%20Crop-Livestock%20Systems%20(CLCA)%20in%20the%20Drylands%20for%20Enhanced%20Water%20Use%20and%20Soil%20Fertility%20in%20NEN%20and%20LAC%20Countries,equals"
+            }
+          }
+        }, {
+          "label" : "CGIAR Research Program on Livestock Agri-Food Systems",
+          "count" : 8,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=CGIAR%20Research%20Program%20on%20Livestock%20Agri-Food%20Systems,equals"
+            }
+          }
+        }, {
+          "label" : "International Winter Wheat Improvement Program",
+          "count" : 8,
+          "authorityKey" : null,
+          "type" : "discover",
+          "_links" : {
+            "search" : {
+              "href" : "https://repo.mel.cgiar.org/server/api/discover/search/objects?query=wheat&dsoType=item&f.itemtype=Journal%20Article,equals&f.project=International%20Winter%20Wheat%20Improvement%20Program,equals"
+            }
+          }
+        } ]
+      }
+    } ]
+  }
+}

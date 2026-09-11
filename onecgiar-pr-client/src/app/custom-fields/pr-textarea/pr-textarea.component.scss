@@ -14,8 +14,21 @@
   box-shadow: 0px 0px 0px 1px var(--pr-color-yellow-100) !important;
 }
 
+// Geometría del mockup: padding 10/12, regla de 1px, radio 8, texto 14/1.5 sobre blanco.
+// El marcado le pone `pr-body-2` (12px), que a este ancho de campo se lee como nota al pie en
+// vez de como el cuerpo del texto que el usuario está redactando.
 ::ng-deep textarea {
   resize: vertical;
   max-height: 250px;
   min-height: 105px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--pr-border);
+  border-radius: 8px;
+  background: var(--pr-surface-card);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--pr-text);
+  outline: none;
 }

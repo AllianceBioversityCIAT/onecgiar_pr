@@ -1,6 +1,9 @@
 import { HttpStatus } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { ResultRepository } from './result.repository';
+import {
+  QA_LINKABLE_INNOVATION_STATUS_IDS,
+  ResultRepository,
+} from './result.repository';
 
 describe('ResultRepository (unit)', () => {
   let repo: ResultRepository;
@@ -122,5 +125,547 @@ describe('ResultRepository (unit)', () => {
         initiativeCode: ['X'],
       }),
     ).rejects.toMatchObject({ status: HttpStatus.INTERNAL_SERVER_ERROR });
+  });
+
+  it('includes source, result type, and reporting year in the bilateral common-fields query', async () => {
+    queryMock.mockResolvedValueOnce([{ id: 8731 }]);
+
+    await repo.getCommonFieldsBilateralResultById(8731);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.source');
+    expect(sql).toContain('v.phase_year AS reporting_year');
+    expect(sql).toContain('LEFT JOIN version v');
+    expect(sql).toContain('rt.name AS result_category');
+    expect(params).toEqual([8731]);
+  });
+
+  it('includes AI provenance fields in bilateral center results ordered newest first', async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await repo.getResultsByBilateralCenter('BIO', 36);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.creation_method');
+    expect(sql).toContain(
+      "CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated",
+    );
+    expect(sql).toContain('ORDER BY r.created_date DESC, r.id DESC');
+    expect(params).toEqual(['BIO', 'BIO', 36]);
+  });
+
+  // P2-3152 AC6 — the centre dashboard must list Project name and Description. Neither was
+  // selected, so the client had nothing to render. The project is resolved with a correlated
+  // subquery on purpose: a LEFT JOIN on results_by_projects would duplicate the result row
+  // once per project link and silently inflate the dashboard list.
+  it('returns the result description and the project name for the bilateral centre dashboard, without multiplying rows', async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await repo.getResultsByBilateralCenter('BIO', 36);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.description');
+    expect(sql).toContain(
+      "COALESCE(NULLIF(TRIM(cp.full_name), ''), cp.short_name)",
+    );
+    expect(sql).toContain(') AS project_name');
+    expect(sql).not.toContain('LEFT JOIN results_by_projects');
+    // The subquery adds no bound parameter — a stray ? here would shift mysql2's placeholders.
+    expect(params).toEqual(['BIO', 'BIO', 36]);
+  });
+
+  // W12-R-2: matrix must count only W1/W2-origin (source='Result'), primary-submitter
+  // (initiative_role_id=1) results in the requested version, with the meter's status/type
+  // universe (status != 4, type NOT IN (10, 11)) — not the pre-fix bilateral/contributor/
+  // year-scoped/narrower-universe query.
+  describe('getIndicatorContributionSummaryByProgram (W12-R-2)', () => {
+    it('binds exactly as many parameters as the SQL has ? placeholders (hotfix: a ? inside a SQL comment was consumed by mysql2 as a 3rd placeholder → QueryFailedError 500)', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getIndicatorContributionSummaryByProgram(15, 42);
+
+      const [sql, params] = queryMock.mock.calls[0];
+      // mysql2 substitutes positionally and does NOT skip SQL comments — every `?` counts.
+      expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
+      expect(params).toEqual([15, 42]);
+    });
+
+    it('scopes by origin (r.source = Result) to exclude bilateral (source=API) rows', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getIndicatorContributionSummaryByProgram(15, 42);
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).toContain("r.source = 'Result'");
+    });
+
+    it('scopes by ownership (rbi.initiative_role_id = 1) to exclude contributor-role rows', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getIndicatorContributionSummaryByProgram(15, 42);
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).toContain('rbi.initiative_role_id = 1');
+    });
+
+    it('scopes by r.version_id (not the year-COALESCE) to exclude other-version rows', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getIndicatorContributionSummaryByProgram(15, 42);
+
+      const [sql, params] = queryMock.mock.calls[0];
+      expect(sql).toContain('AND r.version_id = ?');
+      expect(sql).not.toContain('reported_year_id');
+      expect(sql).not.toContain('COALESCE');
+      expect(params).toEqual([15, 42]);
+    });
+
+    it('reconciles the status universe to the meter (status != 4, not IN (1,2,3))', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getIndicatorContributionSummaryByProgram(15, 42);
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).toContain('r.status_id != 4');
+      expect(sql).not.toContain('r.status_id IN (1, 2, 3)');
+    });
+
+    it('reconciles the result-type universe to the meter (NOT IN (10, 11))', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getIndicatorContributionSummaryByProgram(15, 42);
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).toContain('r.result_type_id NOT IN (10, 11)');
+      expect(sql).not.toContain(
+        'r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)',
+      );
+    });
+
+    it('drops the result_level_id filter absent from the meter base query (W12-DD-2)', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getIndicatorContributionSummaryByProgram(15, 42);
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).not.toContain('result_level_id');
+    });
+  });
+  /**
+   * P2-3420 / P2-3421 — the catalogue behind the "link to a QA'd Innovation Development result"
+   * dropdown. These pin the three things the story is explicit about and the one that is still
+   * pending business confirmation.
+   */
+  describe('getQaEdInnovationDevelopmentResults (P2-3420 / P2-3421)', () => {
+    it('asks only for Innovation Development results (result_type_id = 7)', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getQaEdInnovationDevelopmentResults(2026);
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).toContain('r.result_type_id = 7');
+    });
+
+    /**
+     * 🛑 THE PHASE RULE, and it is singular. Ángel Jarrín closed the scope on 31-Aug-2026 after
+     * Nicoleta confirmed it: "QA-ed in the previous reporting phase". He had written "previous
+     * phases" (plural) that same morning and retracted it 39 minutes later, so a `<` here is the
+     * WRONG rule, not a looser one — it would offer innovations from 2022-2024 that the business
+     * excluded.
+     */
+    it('asks for the PREVIOUS phase only, exactly the year the caller resolved', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getQaEdInnovationDevelopmentResults(2025);
+
+      const [sql, params] = queryMock.mock.calls[0];
+      expect(sql).toContain('v.phase_year = ?');
+      expect(sql).not.toContain('v.phase_year < ?');
+      expect(params[0]).toBe(2025);
+      // 🛑 never a hardcoded year: "the rule should remain generic" (Ángel, 31-Aug-2026).
+      expect(sql).not.toContain('Reporting 2025');
+      expect(sql).not.toMatch(/phase_year\s*=\s*20\d\d/);
+    });
+
+    it('filters by the states listed in QA_LINKABLE_INNOVATION_STATUS_IDS and nothing else', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getQaEdInnovationDevelopmentResults(2026);
+
+      const [sql, params] = queryMock.mock.calls[0];
+      expect(sql).toContain('r.status_id IN (');
+      // The status list is bound twice: once for the catalogue, once for the de-duplication
+      // sub-query that picks the most recent QA'd phase of the same innovation.
+      expect(params).toEqual([
+        2026,
+        ...QA_LINKABLE_INNOVATION_STATUS_IDS,
+        2026,
+        ...QA_LINKABLE_INNOVATION_STATUS_IDS,
+      ]);
+      // Both bindings carry the SAME year: the catalogue and its de-duplication look at one phase.
+      expect(params[0]).toBe(
+        params[1 + QA_LINKABLE_INNOVATION_STATUS_IDS.length],
+      );
+    });
+
+    it('is portfolio-wide: no Science Program / Accelerator restriction, by design', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getQaEdInnovationDevelopmentResults(2026);
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).not.toContain('initiative');
+      // The only portfolio reference is the join that reads its acronym for display; nothing filters on it.
+      expect(sql).not.toMatch(/WHERE[\s\S]*cp\.id\s*=/);
+    });
+
+    /**
+     * ⚠️ THE DUPLICATE-INNOVATION GUARD, still needed after narrowing to one phase. A phase year
+     * holds ONE VERSION PER PORTFOLIO, so the same `result_code` can appear more than once inside
+     * the same year. Without this clause the reporter sees the same innovation twice with an
+     * identical, indistinguishable label and cannot tell which to pick.
+     */
+    it('collapses rows sharing a result_code inside the previous phase to a single one', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getQaEdInnovationDevelopmentResults(2025);
+
+      const [sql] = queryMock.mock.calls[0];
+      const normalized = sql.replace(/\s+/g, ' ');
+
+      // Correlated on the innovation identity, not on the row id.
+      expect(normalized).toContain('NOT EXISTS');
+      expect(normalized).toContain('newer.result_code = r.result_code');
+      // Scoped to the SAME phase now — a cross-phase comparison would resurrect the old rule.
+      expect(normalized).toContain('newer_v.phase_year = ?');
+      expect(normalized).not.toContain('newer_v.phase_year > v.phase_year');
+      expect(normalized).not.toContain('newer_v.phase_year < ?');
+      // The surviving candidate must itself be an eligible catalogue row.
+      expect(normalized).toContain('newer.is_active = TRUE');
+      expect(normalized).toContain('newer_v.is_active = TRUE');
+      expect(normalized).toContain('newer.result_type_id = 7');
+      expect(normalized).toContain('newer.status_id IN (');
+    });
+
+    it('breaks a tie deterministically, so one code can never yield two rows', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getQaEdInnovationDevelopmentResults(2025);
+
+      const [sql] = queryMock.mock.calls[0];
+      const normalized = sql.replace(/\s+/g, ' ');
+      // Inside a single phase the row id is the only tie-breaker left, and it is total.
+      expect(normalized).toContain('newer.id > r.id');
+    });
+
+    it('returns the id, code, title and status the dropdown needs', async () => {
+      const rows = [
+        {
+          id: 501,
+          result_code: 5501,
+          title: 'Bean variety',
+          status_id: 2,
+          phase_year: 2025,
+        },
+      ];
+      queryMock.mockResolvedValueOnce(rows);
+
+      await expect(
+        repo.getQaEdInnovationDevelopmentResults(2026),
+      ).resolves.toEqual(rows);
+    });
+  });
+
+  /**
+   * Form-defect sweep of 31-Aug-2026, LOTE 5 #3: a reviewer opening a bilateral Capacity Sharing
+   * result saw "Length of training" — and in fact every field of the section — as unanswered, even
+   * when the reporter had answered. Both catalogue FKs are nullable, and the query INNER JOINed
+   * them, so one missing answer dropped the whole row and the drawer received `[]`.
+   *
+   * The SQL text is the behaviour here, so that is what is asserted: there is no query builder to
+   * inspect and no database in a unit test.
+   */
+  describe('getCapacitySharingBilateralResultById — nullable catalogues must LEFT JOIN', () => {
+    const sqlOf = () =>
+      (queryMock.mock.calls[0][0] as string).replace(/\s+/g, ' ');
+
+    beforeEach(() => {
+      queryMock.mockResolvedValue([]);
+    });
+
+    it('LEFT JOINs both nullable catalogues, so a half-answered row still comes back', async () => {
+      await repo.getCapacitySharingBilateralResultById(123);
+
+      const sql = sqlOf();
+      expect(sql).toContain('LEFT JOIN capdevs_delivery_methods');
+      expect(sql).toContain('LEFT JOIN capdevs_term');
+      // The INNER form is what dropped the row. Catch it however it is spelled.
+      expect(sql).not.toMatch(/(?<!LEFT )(?<!OUTER )JOIN capdevs_term/);
+      expect(sql).not.toMatch(
+        /(?<!LEFT )(?<!OUTER )JOIN capdevs_delivery_methods/,
+      );
+    });
+
+    it('still INNER JOINs the capacity-development row itself, which is not optional', async () => {
+      await repo.getCapacitySharingBilateralResultById(123);
+
+      const sql = sqlOf();
+      // No capdev record means there is genuinely nothing to show; that join must NOT be relaxed.
+      expect(sql).toMatch(/JOIN results_capacity_developments/);
+      expect(sql).not.toContain('LEFT JOIN results_capacity_developments');
+      expect(queryMock).toHaveBeenCalledWith(expect.any(String), [123]);
+    });
+  });
+
+  /**
+   * The identical defect one function below the Capacity Sharing one, authorised as its own fix after
+   * being raised: same INNER JOIN on nullable catalogue FKs, same blank block in the review drawer.
+   * Here it also takes the implementing organizations down with it, because they hang off the same
+   * result set through a LEFT JOIN.
+   */
+  describe('getPolicyChangeBilateralResultById — nullable catalogues must LEFT JOIN', () => {
+    const sqlOf = () =>
+      (queryMock.mock.calls[0][0] as string).replace(/\s+/g, ' ');
+
+    beforeEach(() => {
+      queryMock.mockResolvedValue([]);
+    });
+
+    it('LEFT JOINs both nullable catalogues, so a half-answered row still comes back', async () => {
+      await repo.getPolicyChangeBilateralResultById(456);
+
+      const sql = sqlOf();
+      expect(sql).toContain('LEFT JOIN clarisa_policy_stage');
+      expect(sql).toContain('LEFT JOIN clarisa_policy_type');
+      expect(sql).not.toMatch(/(?<!LEFT )(?<!OUTER )JOIN clarisa_policy_stage/);
+      expect(sql).not.toMatch(/(?<!LEFT )(?<!OUTER )JOIN clarisa_policy_type/);
+    });
+
+    it('keeps the implementing organizations reachable and the policy-change row itself required', async () => {
+      await repo.getPolicyChangeBilateralResultById(456);
+
+      const sql = sqlOf();
+      // These were collateral damage: the INNER catalogue joins emptied the whole result set.
+      expect(sql).toContain('LEFT JOIN results_by_institution');
+      expect(sql).toContain('LEFT JOIN clarisa_institutions');
+      // No policy-change record means there is genuinely nothing to show; do not relax this one.
+      expect(sql).toMatch(/JOIN results_policy_changes/);
+      expect(sql).not.toContain('LEFT JOIN results_policy_changes');
+      expect(queryMock).toHaveBeenCalledWith(expect.any(String), [456]);
+    });
+  });
+});
+
+/**
+ * P2-3498 — `getResultById` concatenated the path segment straight into the SQL
+ * (`r.id = ${id}`) and ran it through `this.query(queryData)` with no parameter list, so whatever
+ * arrived in the URL became part of the statement. The rest of this repository already binds
+ * (lines 206, 219, 435, 1353 …); this one method did not.
+ *
+ * Reached from `results.controller.ts` — `GET results/get/:id` → `results.service.ts`
+ * `findResultById` → here. Only this proved path is fixed; the ticket is explicit about not
+ * turning it into a sweep.
+ */
+describe('ResultRepository — getResultById binds the id (P2-3498)', () => {
+  let repo: ResultRepository;
+  let queryMock: jest.Mock;
+
+  const mockDataSource = {
+    createEntityManager: jest.fn(() => ({}) as any),
+  } as unknown as DataSource;
+
+  const mockHandlersError = {
+    returnErrorRepository: jest.fn(({ error }: any) => ({
+      response: { error: true },
+      message: `${error}`,
+      status: HttpStatus.INTERNAL_SERVER_ERROR,
+    })),
+  } as any;
+
+  /** What a path segment can carry when nothing parses it. */
+  const INJECTED = '1 OR 1=1 UNION SELECT 1 -- ' as unknown as number;
+
+  beforeEach(() => {
+    repo = new ResultRepository(mockDataSource, mockHandlersError);
+    queryMock = jest.fn().mockResolvedValue([]);
+    (repo as any).query = queryMock;
+  });
+
+  it('keeps the id out of the SQL text and hands it over as a bound parameter', async () => {
+    await repo.getResultById(INJECTED);
+
+    const [sql, params] = queryMock.mock.calls[0];
+
+    // The placeholder replaces the interpolation.
+    expect(sql).toContain('r.id = ?');
+    expect(sql).not.toContain('r.id = 1 OR');
+    // Nothing the caller sent may appear in the statement itself.
+    expect(sql).not.toContain('UNION SELECT');
+    expect(sql).not.toContain('1 OR 1=1');
+    // …it travels in the parameter list instead, where the driver escapes it.
+    expect(params).toEqual([INJECTED]);
+  });
+
+  it('always passes a parameter list, never a lone statement', async () => {
+    await repo.getResultById(1234);
+
+    expect(queryMock).toHaveBeenCalledTimes(1);
+    expect(queryMock).toHaveBeenCalledWith(expect.any(String), [1234]);
+    // The unbound call took a single argument; that is what regressing would look like.
+    expect(queryMock.mock.calls[0]).toHaveLength(2);
+  });
+
+  it('still returns the first row, and undefined when there is none', async () => {
+    queryMock.mockResolvedValueOnce([{ result_id: 7 }, { result_id: 8 }]);
+    await expect(repo.getResultById(7)).resolves.toEqual({ result_id: 7 });
+
+    queryMock.mockResolvedValueOnce([]);
+    await expect(repo.getResultById(9)).resolves.toBeUndefined();
+  });
+
+  /**
+   * P2-3458 — the metadata popover beside the result code asked for a `Center` and a `Created by`
+   * line; this payload carried neither, so both rows sat on a `Coming soon` tag. The PO ruled the
+   * tag out, so the two values have to arrive from here: a creator *name* (the numeric
+   * `created_by` this query already returned is unusable on screen) and the lead center.
+   *
+   * The SQL comments are stripped before asserting on purpose: otherwise these expectations could
+   * be satisfied by the prose that documents them instead of by the statement itself.
+   */
+  describe('P2-3458 — created_by_name and lead_center', () => {
+    /** The statement without its `/* … *\/` comment blocks. */
+    const sqlWithoutComments = () =>
+      String(queryMock.mock.calls[0][0]).replace(/\/\*[\s\S]*?\*\//g, '');
+
+    it('resolves the creator display name from the users table', async () => {
+      await repo.getResultById(1234);
+      const sql = sqlWithoutComments();
+
+      expect(sql).toContain('AS created_by_name');
+      expect(sql).toMatch(
+        /CONCAT\(COALESCE\(u\.first_name, ''\), ' ', COALESCE\(u\.last_name, ''\)\)/,
+      );
+      expect(sql).toMatch(/FROM\s+users u\s+WHERE\s+u\.id = r\.created_by/);
+    });
+
+    it('resolves the lead center through clarisa_center, with the definition the rest of the server uses', async () => {
+      await repo.getResultById(1234);
+      const sql = sqlWithoutComments();
+
+      expect(sql).toContain('AS lead_center');
+      // The name lives in clarisa_institutions, two hops away from results_center.
+      expect(sql).toContain(
+        'INNER JOIN clarisa_center cc ON cc.code = rc.center_id',
+      );
+      expect(sql).toContain(
+        'INNER JOIN clarisa_institutions ci2 ON ci2.id = cc.institutionId',
+      );
+      // Same lead definition as the `lead_centers` CTE of getResultsByProgramAndCenters.
+      expect(sql).toContain('rc.is_leading_result = 1 OR rc.is_primary = 1');
+      expect(sql).toContain('rc.is_active = 1');
+    });
+
+    it('keeps the center a scalar subquery, so several contributing centers cannot multiply the row', async () => {
+      await repo.getResultById(1234);
+      const sql = sqlWithoutComments();
+
+      // A `join results_center` in the FROM block would return one row per center.
+      expect(sql).toMatch(/AS lead_center\s*\nFROM/);
+      expect(sql).toContain('LIMIT 1');
+      expect(sql.slice(sql.indexOf('\nFROM'))).not.toContain('results_center');
+    });
+  });
+});
+
+/**
+ * P2-3527 — the similar-results list of the result creator is served from MySQL again (the Elastic
+ * host stopped resolving). Uncapped, `title like '%a%'` answered with ~10 360 rows / 8 MB and the
+ * UI fires the search while the user types, so the cap and the relevance order are the contract.
+ */
+describe('ResultRepository — AllResultsLegacyNewByTitle (P2-3527)', () => {
+  let repo: ResultRepository;
+  let queryMock: jest.Mock;
+
+  const mockDataSource = {
+    createEntityManager: jest.fn(() => ({}) as any),
+  } as unknown as DataSource;
+
+  const mockHandlersError = {
+    returnErrorRepository: jest.fn(() => ({})),
+  } as any;
+
+  beforeEach(() => {
+    repo = new ResultRepository(mockDataSource, mockHandlersError);
+    queryMock = jest.fn().mockResolvedValue([]);
+    (repo as any).query = queryMock;
+  });
+
+  const sqlOf = () => queryMock.mock.calls[0][0] as string;
+  const paramsOf = () => queryMock.mock.calls[0][1] as any[];
+
+  it('caps the page at 20 rows by default', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate');
+
+    expect(sqlOf()).toContain('limit 20');
+  });
+
+  it('honours a caller limit but never above 50', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate', { limit: 5 });
+    expect(sqlOf()).toContain('limit 5');
+
+    queryMock.mockClear();
+    await repo.AllResultsLegacyNewByTitle('climate', { limit: 500 });
+    expect(sqlOf()).toContain('limit 50');
+  });
+
+  it('ignores a non-numeric limit instead of interpolating it', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate', {
+      limit: 'DROP' as unknown as number,
+    });
+
+    expect(sqlOf()).toContain('limit 20');
+    expect(sqlOf()).not.toContain('DROP');
+  });
+
+  it('orders exact titles first, then prefix matches', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate');
+
+    const sql = sqlOf();
+    expect(sql).toContain('when lower(q.title) = lower(?) then 0');
+    expect(sql).toContain('when lower(q.title) like lower(?) then 1');
+    expect(paramsOf()).toEqual([
+      '%climate%',
+      '',
+      '',
+      '%climate%',
+      'climate',
+      'climate%',
+    ]);
+  });
+
+  it('returns the columns the similar-results list renders', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate');
+
+    const sql = sqlOf();
+    // Without version_id the client cannot resolve the phase of a suggestion, and every row renders
+    // as "This result does not exist in this reporting phase" with Map-to-ToC disabled.
+    expect(sql).toContain('r.version_id');
+    expect(sql).toContain('null as version_id');
+    expect(sql).toContain('rt.name as type');
+    expect(sql).toContain('lr.indicator_type as type');
+  });
+
+  it('narrows only the legacy rows by indicator type', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate', { type: 'Innovation' });
+
+    expect(sqlOf()).toContain("(? = '' or lr.indicator_type = ?)");
+    expect(paramsOf()).toEqual([
+      '%climate%',
+      'Innovation',
+      'Innovation',
+      '%climate%',
+      'climate',
+      'climate%',
+    ]);
   });
 });

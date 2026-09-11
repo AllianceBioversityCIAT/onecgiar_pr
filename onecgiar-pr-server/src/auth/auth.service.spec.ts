@@ -280,6 +280,7 @@ describe('AuthService', () => {
       expect(result.response).toBe(mockAuthUrl);
       expect(authMicroservice.getAuthenticationUrl).toHaveBeenCalledWith(
         provider,
+        undefined,
       );
     });
 
@@ -324,6 +325,7 @@ describe('AuthService', () => {
       expect(result.response.token).toBe(mockJwtToken);
       expect(authMicroservice.validateAuthorizationCode).toHaveBeenCalledWith(
         'mock-auth-code',
+        undefined,
       );
       expect(
         userService.createOrUpdateUserFromAuthProvider,

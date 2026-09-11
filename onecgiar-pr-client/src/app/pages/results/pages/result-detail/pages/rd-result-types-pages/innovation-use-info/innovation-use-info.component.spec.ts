@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { InnovationUseInfoComponent } from './innovation-use-info.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { InnovationUseFormComponent } from '../../../../../../../shared/components/innovation-use-form/innovation-use-form.component';
@@ -7,11 +7,14 @@ import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/
 import { NoDataTextComponent } from '../../../../../../../custom-fields/no-data-text/no-data-text.component';
 import { PrFieldHeaderComponent } from '../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { of, throwError } from 'rxjs';
+import { delay } from 'rxjs/operators';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { AddButtonComponent } from '../../../../../../../custom-fields/add-button/add-button.component';
 import { signal } from '@angular/core';
 import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
+import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
+import { StudiesLinkComponent } from '../../../../../../../shared/components/innovation-use-form/components/studies-link/studies-link.component';
 
 describe('InnovationUseInfoComponent', () => {
   let component: InnovationUseInfoComponent;
@@ -72,7 +75,19 @@ describe('InnovationUseInfoComponent', () => {
     };
 
     mockFieldsManagerService = {
-      isP25: jest.fn().mockReturnValue(false)
+      isP25: jest.fn().mockReturnValue(false),
+      // Computed signals read by the innovation-use-form template (P2-3295). No tooltip and no
+      // projection question = the phase-2025 behaviour this suite exercises.
+      isInnovationUse2030Projection2026: signal(false),
+      // P2-3537: the shared form calls this gate on every render, so a mock without it throws
+      // before any assertion runs — even in specs that have nothing to do with the block.
+      isInnovationUseAgeFallback2026: signal(false),
+      innovationUse2030ProjectionTooltip: signal(''),
+      // quick/innovation-use-descriptions-boxed: template reads these two descriptions for the boxed alert-status note.
+      fields: () => ({
+        '[innovation-use-form]-core-innovation': { description: 'Depending on the innovation, users may be groups of actors or be organizations.' },
+        '[innovation-use-form]-2030-to-be-determined': { description: 'Depending on the innovation, users may be groups of actors or be organizations.' }
+      })
     };
 
     mockDataControlService = {
@@ -87,7 +102,12 @@ describe('InnovationUseInfoComponent', () => {
         DetailSectionTitleComponent,
         NoDataTextComponent,
         PrFieldHeaderComponent,
-        AddButtonComponent
+        AddButtonComponent,
+        // `UCA-T-11`: declared for real (not left as an inert unknown element, tolerated only
+        // because `setup-jest.ts` sets `errorOnUnknownElements: false`) so its `ngOnInit()` — the
+        // source of the child-mutation race documented on `InnovationUseInfoComponent`'s
+        // `dirtyTracker` field — genuinely runs in the `CanComponentDeactivate` describe block below.
+        StudiesLinkComponent
       ],
       imports: [HttpClientTestingModule],
       providers: [
@@ -110,6 +130,27 @@ describe('InnovationUseInfoComponent', () => {
     component = fixture.componentInstance;
   });
 
+
+  describe('sectionLoading (skeleton)', () => {
+    it('starts raised — this section loads from an effect, so at first paint no request exists yet', () => {
+      expect(component.sectionLoading()).toBe(true);
+    });
+
+    it('is released once the P22 section GET responds', () => {
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the P22 section GET fails, so the skeleton can never get stuck', () => {
+      component.sectionLoading.set(true);
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUse').mockReturnValue(throwError(() => new Error('boom')));
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+  });
 
   describe('getSectionInformation()', () => {
     it('should get section information', () => {
@@ -612,5 +653,316 @@ describe('InnovationUseInfoComponent', () => {
       expect(spyP25).not.toHaveBeenCalled();
       expect(spyNonP25).not.toHaveBeenCalled();
     });
+  });
+  // ───────────────────────────────────────────────────────────────────────────────────────────────
+  // P2-3613 — the Current Use Update block never rendered on a real 2025 -> 2026 rollover
+  //
+  // Reported by QA on 7 Sep 2026 against result 8398. The server was never at fault: measured the
+  // same day on prtest, `GET v2/api/innovation-use/get/result/11551` answered
+  // `current_use_previous: {result_id: 10866, phase_year: 2025, total_actors: 8825}`. The loss was
+  // here — `getSectionInformationp25()` hydrates key by key and named none of these five, so they
+  // never reached `app-innovation-use-form`, whose `@Input() body` is this very object.
+  //
+  // The payloads below are the shape the server actually returns, not an invented one.
+  // ───────────────────────────────────────────────────────────────────────────────────────────────
+  describe('P2-3613 — fields the shared form reads off `body` must survive the P25 hydration', () => {
+    const rolledOverResponse = {
+      ...mockGET_innovationUseP25Response,
+      current_use_previous: { result_id: 10866, phase_year: 2025, total_actors: 8825, actors: [{ result_actors_id: '1009' }] },
+      innovation_use_2030_previous: { result_id: 10866, innov_use_2030_to_be_determined: 1, actors: [], organization: [], measures: [] },
+      innov_use_2030_justification: 'Revised against this year evidence',
+      new_users_added: 175,
+      use_expansion_narrative: 'Spread through the community sharing mechanism'
+    };
+
+    beforeEach(() => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(of({ response: rolledOverResponse }));
+    });
+
+    // This is the reported defect itself: `showCurrentUseUpdate()` is `!!body.current_use_previous`,
+    // so an undefined here is the difference between the block rendering and not existing at all.
+    it('carries current_use_previous, which is what gates the Current Use Update block', () => {
+      component.getSectionInformationp25();
+
+      expect(component.innovationUseInfoBody.current_use_previous).toEqual(rolledOverResponse.current_use_previous);
+      expect(component.innovationUseInfoBody.current_use_previous.total_actors).toBe(8825);
+      expect(component.innovationUseInfoBody.current_use_previous.phase_year).toBe(2025);
+    });
+
+    // Same shape of defect, one story earlier (P2-3295): the 2030 block gates on this key.
+    it('carries innovation_use_2030_previous, which gates the 2030 projection block the same way', () => {
+      component.getSectionInformationp25();
+
+      expect(component.innovationUseInfoBody.innovation_use_2030_previous).toEqual(rolledOverResponse.innovation_use_2030_previous);
+    });
+
+    // These three are `[(ngModel)]`-bound: without hydration the reporter types them, the save
+    // sends them, and the reload paints them empty with no error anywhere.
+    it('carries the three answers the reporter types, so a reload shows what was stored', () => {
+      component.getSectionInformationp25();
+
+      expect(component.innovationUseInfoBody.innov_use_2030_justification).toBe('Revised against this year evidence');
+      expect(component.innovationUseInfoBody.new_users_added).toBe(175);
+      expect(component.innovationUseInfoBody.use_expansion_narrative).toBe('Spread through the community sharing mechanism');
+    });
+
+    // §5 allows "the use was verified and did not grow" — a reported 0. `|| null` would erase it
+    // and the reporter would be told the mandatory field is unanswered.
+    it('keeps a reported 0 as 0, never as null', () => {
+      jest
+        .spyOn(mockApiService.resultsSE, 'GET_innovationUseP25')
+        .mockReturnValue(of({ response: { ...rolledOverResponse, new_users_added: 0, use_expansion_narrative: '' } }));
+
+      component.getSectionInformationp25();
+
+      expect(component.innovationUseInfoBody.new_users_added).toBe(0);
+      expect(component.innovationUseInfoBody.new_users_added).not.toBeNull();
+      expect(component.innovationUseInfoBody.use_expansion_narrative).toBe('');
+    });
+
+    // Scenario A: first-time reporting. `null` is the answer that keeps the block ABSENT.
+    it('leaves the two gates null when the server reports no previous phase', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(of({ response: mockGET_innovationUseP25Response }));
+
+      component.getSectionInformationp25();
+
+      expect(component.innovationUseInfoBody.current_use_previous).toBeNull();
+      expect(component.innovationUseInfoBody.innovation_use_2030_previous).toBeNull();
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────────────────────────
+  // P2-3613 — the save side of the same defect
+  //
+  // `saveInnovationUse` assigns both as `?? null` (innovation-use.service.ts:192-193), so a payload
+  // that omits them does not leave them alone: it blanks them. Without this, the first save after
+  // the block finally renders would erase what the reporter had just been shown.
+  // ───────────────────────────────────────────────────────────────────────────────────────────────
+  describe('P2-3613 — the Current Use Update answers must travel in the save payload', () => {
+    beforeEach(() => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+    });
+
+    it('sends new_users_added and use_expansion_narrative', () => {
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+      component.innovationUseInfoBody.new_users_added = 175;
+      component.innovationUseInfoBody.use_expansion_narrative = 'Spread through the community sharing mechanism';
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
+      expect(bodyArg.new_users_added).toBe(175);
+      expect(bodyArg.use_expansion_narrative).toBe('Spread through the community sharing mechanism');
+    });
+
+    it('sends a reported 0 as 0, so a verified no-growth report survives the round trip', () => {
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+      component.innovationUseInfoBody.new_users_added = 0;
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
+      expect(bodyArg.new_users_added).toBe(0);
+      expect(bodyArg.new_users_added).not.toBeNull();
+    });
+
+    it('sends null, not undefined, when the block was never answered', () => {
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
+      expect(bodyArg).toHaveProperty('new_users_added');
+      expect(bodyArg).toHaveProperty('use_expansion_narrative');
+      expect(bodyArg.new_users_added).toBeNull();
+      expect(bodyArg.use_expansion_narrative).toBeNull();
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────────────────────
+  // `UCA-T-11` — `CanComponentDeactivate` (unsaved-changes-alert spec)
+  //
+  // Lessons carried in from this spec's history (`UCA-T-6`/`UCA-T-7`/`UCA-T-9` rework): a naive
+  // snapshot at the end of the load flow's own `next` handler is not enough when a rendered CHILD
+  // component writes into the tracked object afterward. Here that child is `app-studies-link`
+  // (`*ngIf="body.has_scaling_studies && getUseLevelIndex() >= 6 && !isScalingStudiesQuestionHidden()"`
+  // in `innovation-use-form.component.html`), whose `ngOnInit()` seeds a placeholder empty-string row
+  // into `scaling_studies_urls` when the array loads empty. The tests below reproduce that child
+  // ACTUALLY MOUNTING AND RUNNING (via a real `StudiesLinkComponent` declaration, not the inert
+  // unknown-element stand-in `errorOnUnknownElements: false` would otherwise tolerate) with genuinely
+  // async observables (`delay(0)` + `fakeAsync`/`tick()`), per this spec's established rule that a
+  // synchronous `of(...)` mock can mask a real timing race.
+  // ─────────────────────────────────────────────────────────────────────────────────────────────
+  describe('CanComponentDeactivate (UCA-T-11)', () => {
+    let innovationControlListSE: InnovationControlListService;
+
+    beforeEach(() => {
+      innovationControlListSE = TestBed.inject(InnovationControlListService);
+    });
+
+    it('hasUnsavedChanges() is false immediately after a clean P22 load', fakeAsync(() => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUse').mockReturnValue(of({ response: mockGET_innovationUseResponse }).pipe(delay(0)));
+
+      component.getSectionInformation();
+      tick(10);
+
+      // Sanity check the load genuinely completed (not a vacuous pass from `isDirty()`'s own
+      // `if (!this.hasSnapshot) return false;` early-out, which would report "clean" even if the
+      // load never actually snapshotted anything).
+      expect(component.sectionLoading()).toBe(false);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    }));
+
+    it(
+      'hasUnsavedChanges() is false immediately after a clean P25 load, even though app-studies-link ' +
+        'auto-seeds a placeholder empty-string row into scaling_studies_urls (reproduces the exact ' +
+        'child-mutation race documented on the dirtyTracker field)',
+      fakeAsync(() => {
+        mockFieldsManagerService.isP25.mockReturnValue(true);
+        // A use level >= 6 is required for `app-studies-link` to mount at all (see the template's
+        // `*ngIf`). `getUseLevelIndex()` resolves it against this catalogue.
+        innovationControlListSE.useLevelsList = [{ id: 42, level: 7 }];
+        const serverResponse = {
+          ...mockGET_innovationUseP25Response,
+          level: 42,
+          // The reproduction case: the reporter already answered "yes" to "any studies?" but the
+          // server holds no links yet — a realistic in-progress state, not a contrived one.
+          has_scaling_studies: 1,
+          scaling_studies_urls: []
+        };
+        jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(of({ response: serverResponse }).pipe(delay(0)));
+
+        // Direct call (not via the `OnChangePortfolio` effect): `effect()` schedules its callback
+        // outside the zone `fakeAsync`/`tick()` tracks, so a genuinely-async observable subscribed
+        // from inside an effect never gets flushed by `tick()` — confirmed by instrumentation while
+        // building this test (the effect-driven variant left `sectionLoading()` stuck `true` even
+        // after `tick(50)`). Calling the load method directly keeps the subscription in-zone.
+        component.getSectionInformationp25();
+        tick(10);
+        expect(component.sectionLoading()).toBe(false); // the load genuinely completed
+        fixture.detectChanges(); // lets `*ngIf="body.has_scaling_studies && ..."` mount app-studies-link
+        tick(0);
+        fixture.detectChanges();
+
+        // Sanity check that the reproduction actually engaged the real bug path — if this fails, the
+        // assertion below would be proving nothing (the same "harness structurally cannot evaluate
+        // this" trap this spec's history warns about).
+        expect(component.innovationUseInfoBody.scaling_studies_urls).toEqual(['']);
+
+        expect(component.hasUnsavedChanges()).toBe(false);
+      })
+    );
+
+    it('hasUnsavedChanges() is true after a genuine edit to a tracked field', fakeAsync(() => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      component.getSectionInformationp25();
+      tick(10);
+      expect(component.hasUnsavedChanges()).toBe(false);
+
+      component.innovationUseInfoBody.readiness_level_explanation = 'a new explanation';
+
+      expect(component.hasUnsavedChanges()).toBe(true);
+    }));
+
+    it('hasUnsavedChanges() is true after typing a real study link, even though blank rows are normalized out', fakeAsync(() => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      innovationControlListSE.useLevelsList = [{ id: 42, level: 7 }];
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(
+        of({
+          response: { ...mockGET_innovationUseP25Response, level: 42, has_scaling_studies: 1, scaling_studies_urls: [] }
+        }).pipe(delay(0))
+      );
+
+      component.getSectionInformationp25();
+      tick(10);
+      fixture.detectChanges();
+      tick(0);
+      fixture.detectChanges();
+      expect(component.innovationUseInfoBody.scaling_studies_urls).toEqual(['']);
+      expect(component.hasUnsavedChanges()).toBe(false);
+
+      component.innovationUseInfoBody.scaling_studies_urls[0] = 'https://example.org/study';
+
+      expect(component.hasUnsavedChanges()).toBe(true);
+    }));
+
+    it('saveSection() resolves true and snapshots directly on success, independent of the delegated reload', fakeAsync(() => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      component.getSectionInformationp25();
+      tick(10);
+      expect(component.hasUnsavedChanges()).toBe(false);
+
+      component.innovationUseInfoBody.readiness_level_explanation = 'edited before save';
+
+      // Force the reload's own GET (and the innovation-link pre-read, which shares the same
+      // endpoint) to fail — the ONLY thing that can make the assertion below pass is the direct
+      // `tap` snapshot inside `saveSectionWith()`, not the reload's re-snapshot.
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(throwError(() => new Error('reload failed')));
+      jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25').mockReturnValue(of({ response: [] }).pipe(delay(0)));
+
+      let result: boolean | undefined;
+      component.saveSection().subscribe(r => (result = r));
+      tick(10);
+
+      expect(result).toBe(true);
+      expect(component.hasUnsavedChanges()).toBe(false);
+      consoleSpy.mockRestore();
+    }));
+
+    it('saveSection() resolves false when the PATCH itself fails', fakeAsync(() => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      mockFieldsManagerService.isP25.mockReturnValue(false);
+      component.getSectionInformation();
+      tick(10);
+
+      component.innovationUseInfoBody.readiness_level_explanation = 'edited before a failing save';
+      jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUse').mockReturnValue(throwError(() => new Error('save failed')).pipe(delay(0)));
+
+      let result: boolean | undefined;
+      component.saveSection().subscribe(r => (result = r));
+      tick(10);
+
+      expect(result).toBe(false);
+      // The failed save must not have silently cleared the dirty flag.
+      expect(component.hasUnsavedChanges()).toBe(true);
+      consoleSpy.mockRestore();
+    }));
+
+    it(
+      'UCA-OQ-2 — the tracked snapshot value round-trips through JSON.stringify/JSON.parse without loss, ' +
+        'verified against a REAL loaded body shape (not a same-test literal)',
+      fakeAsync(() => {
+        mockFieldsManagerService.isP25.mockReturnValue(true);
+        innovationControlListSE.useLevelsList = [{ id: 42, level: 7 }];
+        jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(
+          of({
+            response: {
+              ...mockGET_innovationUseP25Response,
+              level: 42,
+              has_scaling_studies: 1,
+              scaling_studies_urls: ['https://example.org/study'],
+              current_use_previous: { result_id: 10866, phase_year: 2025, total_actors: 8825 },
+              innovation_use_2030: { actors: [{ id: 1 }], measures: [{ id: 2 }], organization: [{ institution_types_id: 3 }] }
+            }
+          }).pipe(delay(0))
+        );
+
+        component.getSectionInformationp25();
+        tick(10);
+        fixture.detectChanges();
+        tick(0);
+        fixture.detectChanges();
+
+        const snapshotInput = (component as any).dirtySnapshotValue();
+        const roundTripped = JSON.parse(JSON.stringify(snapshotInput));
+
+        // Finding: the tracked object is plain nested objects/arrays only (actor/organization/measure
+        // rows, investment rows, `current_use_previous`, `innovation_use_2030`, string arrays) — no
+        // `File`/`Blob`/`Map`/`Set`/circular references at any depth, so the round trip is lossless.
+        expect(roundTripped).toEqual(snapshotInput);
+      })
+    );
   });
 });

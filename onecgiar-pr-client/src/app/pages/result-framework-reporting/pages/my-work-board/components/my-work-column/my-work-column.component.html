@@ -1,0 +1,62 @@
+<!-- One board column (`MWB-R-2`). `html`/`body` is 12px — every measurement is an explicit px
+     value (client CLAUDE.md §5). -->
+@if (rail()) {
+  <button
+    type="button"
+    class="group flex flex-1 min-h-0 w-[44px] flex-col items-center gap-[10px] rounded-[12px] border py-[12px] transition-colors ease-out hover:bg-[var(--pr-surface-subtle-hover)] motion-reduce:transition-none"
+    [class]="meta().surfaceClass"
+    [attr.aria-expanded]="!collapsed()"
+    [attr.aria-label]="'Expand ' + column().label + ' (' + column().rows.length + ')'"
+    (click)="expandToggle.emit()">
+    <span class="inline-flex h-[20px] min-w-[20px] flex-none items-center justify-center rounded-full px-[6px] text-[11px] font-bold tabular-nums" [class]="meta().badgeClass">
+      {{ column().rows.length }}
+    </span>
+    <span class="pr-my-work-rail-label flex-1 whitespace-nowrap text-[11px] font-semibold text-[var(--pr-text-secondary)]">
+      {{ column().label }}
+    </span>
+    <span
+      class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)] transition-transform duration-200 ease-out group-hover:rotate-[15deg] motion-reduce:transition-none"
+      aria-hidden="true"
+      >chevron_right</span
+    >
+  </button>
+} @else {
+  <section
+    class="pr-my-work-fade flex flex-col rounded-[12px] border shadow-[0_1px_2px_rgba(25,21,36,0.04)] min-[900px]:flex-1 min-[900px]:min-h-0"
+    [class]="meta().surfaceClass"
+    role="region"
+    [id]="regionId()"
+    [attr.aria-labelledby]="headingId()">
+    <div class="flex items-center gap-[8px] border-b px-[14px] py-[10px]" [class]="meta().headerBorderClass">
+      <span class="h-[8px] w-[8px] flex-none rounded-full" [class]="meta().dotClass"></span>
+      <span [id]="headingId()" class="text-[12px] font-bold text-[var(--pr-text-heading)]">{{ column().label }}</span>
+      <span
+        class="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-[6px] text-[11px] font-bold tabular-nums"
+        [class]="meta().badgeClass">
+        {{ column().rows.length }}
+      </span>
+      <span class="flex-1"></span>
+      @if (isEditing() && readyCount() > 0) {
+        <span class="text-[11px] text-[var(--pr-text-subtle)]">{{ readyCount() }} ready to submit</span>
+      }
+      @if (collapsible()) {
+        <button
+          type="button"
+          class="flex h-[22px] w-[22px] flex-none cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] transition-colors hover:bg-[var(--pr-surface-subtle-hover)] hover:text-[var(--pr-text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] motion-reduce:transition-none"
+          aria-expanded="true"
+          [attr.aria-label]="'Collapse ' + column().label"
+          (click)="expandToggle.emit()">
+          <span class="material-icons-round text-[16px]" aria-hidden="true">chevron_left</span>
+        </button>
+      }
+    </div>
+
+    <div class="flex flex-col gap-[10px] p-[12px] min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-x-hidden min-[900px]:overflow-y-auto custom_scroll" data-testid="my-work-column-list">
+      @for (row of column().rows; track row.code) {
+        <app-my-work-card [row]="row" [inEditingColumn]="isEditing()" />
+      } @empty {
+        <p class="m-0 text-[12px] text-[var(--pr-text-subtle)]">{{ emptyMessage() }}</p>
+      }
+    </div>
+  </section>
+}

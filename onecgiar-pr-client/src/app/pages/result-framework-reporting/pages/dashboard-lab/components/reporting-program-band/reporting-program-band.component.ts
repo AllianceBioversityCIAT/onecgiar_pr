@@ -1,0 +1,832 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  HostListener,
+  inject,
+  input,
+  NgZone,
+  output,
+  signal
+} from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { ReportingGuideService } from '../../services/reporting-guide.service';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap } from '@ng-icons/lucide';
+import { PrFilterMultiselectModule } from '../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
+import { PrFilterSelectComponent } from '../../../../../../shared/components/pr-filter-select/pr-filter-select.component';
+// @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-DD-2)
+import { BilateralReviewCountService } from '../../../bilateral-review/services/bilateral-review-count.service';
+import { BILATERAL_REVIEW_COPY } from '../../../bilateral-review/bilateral-review.copy';
+import { normalizeBilateralReviewPhaseId } from '../../../bilateral-review/bilateral-review.query-params';
+// @akili-spec changes/bilateral-review-center-strip-and-phase (BRC-T-1, BRC-R-6, BRC-DD-1) — the
+// badge now follows the CURRENT reporting phase, not just the program code (judgment-day L-2).
+import { DataControlService } from '../../../../../../shared/services/data-control.service';
+import { ReportingQuickTypologyFiltersComponent } from '../reporting-quick-typology-filters/reporting-quick-typology-filters.component';
+export type { ResultTypeQuickChip } from '../reporting-quick-typology-filters/reporting-quick-typology.util';
+
+export interface BandFilterOption {
+  value: string;
+  label: string;
+}
+
+/** Section options are grouped ("Areas of work" / "Programme-level") like the reference panel. */
+export interface BandFilterGroup {
+  label: string;
+  items: BandFilterOption[];
+}
+
+export type { ReportingSummaryStats } from '../reporting-summary-stats/reporting-summary-stats.component';
+
+/**
+ * Program band + tabs + Reporting toolbar.
+ *
+ * Reference: `docs/design-references/prms-shell-CURRENT/PRMS-Shell.dc.html` and its rendered PNG
+ * `uploads/pasted-1785766366426-0.png`. Spec: `docs/reporting-redesign/PROGRAM-SHELL-SPEC.md` §3.
+ *
+ * ⚠️ `html` is 12px — rem Tailwind utilities are 25% short of the mock (px-8 → 24px, not 32px;
+ * h-12 → 36px, not 48px). Template uses only arbitrary px values (UI-RULES §1.3).
+ *
+ * Info popover (`ⓘ` next to the title): reference :345-358 — click (not hover), "About this
+ * program", body = program description, footer = "N areas of work · M planned results".
+ */
+export const SCIENCE_PROGRAM_DESCRIPTIONS: Record<string, string> = {
+  SP01:
+    'Breeding for Tomorrow modernizes CGIAR and national breeding programs so that farmers get ' +
+    'climate-resilient, market-preferred varieties faster. The program connects market intelligence, ' +
+    'breeding pipelines, trait discovery, genetic innovation and seed systems into one delivery chain, ' +
+    'and works with national agricultural research systems and private seed partners across South Asia, ' +
+    'sub-Saharan Africa and Latin America. Reporting covers products delivered to partners, the outcomes ' +
+    'those products enable, and progress toward the 2030 outcomes agreed with donors.',
+  SP02:
+    'Sustainable Farming accelerates the transition to resilient, productive, and sustainable agricultural systems. ' +
+    'The program integrates agronomic best practices, digital advisory services, and soil and water management solutions ' +
+    'to improve yields, optimize input use, and enhance ecosystem services for farming communities.',
+  SP03:
+    'Climate Action provides science-based innovations, policy analyses, and investment roadmaps to foster climate ' +
+    'resilience and low-emission development. The program focuses on climate-smart agricultural technologies, early warning ' +
+    'and disaster risk management systems, and climate finance alignment across vulnerable agri-food regions.',
+  SP04:
+    'Multifunctional Landscapes advances systemic, landscape-scale solutions to reconcile agricultural production ' +
+    'with biodiversity conservation, land restoration, and climate resilience. The program works with communities, ' +
+    'national authorities, and private partners across living landscapes to co-design and implement sustainable resource ' +
+    'management plans, agroecological innovations, and inclusive governance models that deliver shared ecological and ' +
+    'livelihood benefits.',
+  SP05:
+    'Sustainable Animal & Aquatic Foods advances innovations across livestock and aquaculture value chains. ' +
+    'The program develops improved feeds, animal health diagnostics, and sustainable production technologies that ' +
+    'enhance productivity, support livelihoods, and reduce environmental footprints.',
+  SP06:
+    'Better Diets and Nutrition focuses on transforming food environments and consumption patterns to improve nutrition ' +
+    'and public health. The program leverages biofortified crops, dietary diversity interventions, and supply chain ' +
+    'improvements to make safe, healthy, and affordable diets accessible to vulnerable populations.',
+  SP07:
+    'Policy Innovations delivers data-driven economic research, policy analysis, and foresight modeling to support national ' +
+    'and regional policymakers. The program helps design and evaluate policy incentives, social protection schemes, and ' +
+    'agricultural trade strategies for equitable rural growth.',
+  SP08:
+    'Food Frontiers and Security anticipates and navigates emerging systemic disruptions in global and regional food systems. ' +
+    'The program investigates next-generation agricultural technologies, frontier food solutions, and resilience mechanisms ' +
+    'to protect long-term food security.',
+  SP09:
+    'Scaling for Impact bridges research and practice by accelerating the adoption of proven CGIAR innovations through ' +
+    'robust partnerships with public, private, and development sector actors.',
+  'SGP-02':
+    'Accelerating Varietal Improvement in Seed Systems in Africa works with regional and national partners to modernize ' +
+    'seed systems and expand access to high-performing, climate-adapted seed varieties.',
+  SGP02:
+    'Accelerating Varietal Improvement in Seed Systems in Africa works with regional and national partners to modernize ' +
+    'seed systems and expand access to high-performing, climate-adapted seed varieties.'
+};
+
+@Component({
+  selector: 'app-reporting-program-band',
+  standalone: true,
+  imports: [RouterLink, NgIcon, FormsModule, PrFilterMultiselectModule, PrFilterSelectComponent, ReportingQuickTypologyFiltersComponent],
+  templateUrl: './reporting-program-band.component.html',
+  styleUrls: ['./reporting-program-band.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [provideIcons({ lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap })]
+})
+export class ReportingProgramBandComponent {
+  private readonly zone = inject(NgZone);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
+  private readonly guideSE = inject(ReportingGuideService);
+  /** `BRT-DD-2` — injected directly (not a host input) so the badge reaches every tab without
+   *  touching any host template. */
+  private readonly bilateralReviewCountSE = inject(BilateralReviewCountService);
+  /** `BRC-T-1`, `BRC-DD-1`/`DD-2` — new: resolves the current reporting phase the same way the
+   *  page does, so the badge (unlike the tab's own Cycle selector) always follows the CURRENT
+   *  phase, never the reviewer's selection. */
+  private readonly dataControlSE = inject(DataControlService);
+  /** `BRT-T-1` rework — the band template reads label/badge copy from here instead of hardcoding
+   *  strings, so `bilateral-review.copy.ts` stays the single source of truth (design.md §6.2/§6.3). */
+  readonly copy = BILATERAL_REVIEW_COPY;
+
+  readonly programCode = input<string>('');
+  readonly programName = input<string>('');
+  /**
+   * Long copy for the ⓘ popover body. Empty → fall back to a short placeholder built from the
+   * name (the SP list payload still has no description field — NEEDS-BACKEND).
+   */
+  readonly programDescription = input<string>('');
+  /** Count for the popover meta line — `N areas of work`. */
+  readonly aowCount = input<number>(0);
+  /** Count for the popover meta line — `M planned results`. */
+  readonly plannedResultsCount = input<number>(0);
+
+  readonly cycleYear = input<string | number | null>(null);
+  readonly cyclePhase = input<string>('');
+  /**
+   * `changes/overview-phase-filter` OPF-T-4 (Leader remediation): when provided, REPLACES the
+   * `cycleYear`/`cyclePhase`-derived tail in `eyebrowCycle` below — the Overview host wires this
+   * to its own `effectiveVersionId()`-derived `phaseLabel()` so the eyebrow follows an explicit
+   * phase selection instead of always reading the global `reportingCurrentPhase`. Absent (default
+   * `''`) keeps `eyebrowCycle`'s original `cycleYear`/`cyclePhase` behavior byte-identical for
+   * every other consumer of this band.
+   */
+  readonly phaseLabelOverride = input<string>('');
+  /**
+   * Which tab is active. Overview, Reporting, Results, Bilateral review and My work are separate
+   * routes, not local state. `'my-work'` added `@akili-spec changes/my-work-board` (MWB-T-4,
+   * MWB-R-1). `'bilateral-review'` added `@akili-spec changes/sp-bilateral-review-tab` (BRT-T-1,
+   * BRT-R-1) — fifth tab, rendered between Results and My results.
+   */
+  readonly activeTab = input<'overview' | 'reporting' | 'results' | 'bilateral-review' | 'my-work'>('reporting');
+  /**
+   * `@akili-spec changes/my-work-board` (MWB-T-4, MWB-R-1) — the My work tab's badge: the Mine
+   * Editing count for this programme + phase, computed by one scoped list request and cached per
+   * (programme, phase) in `MyWorkCountService`. `null` hides the badge (no count yet, or the host
+   * has no phase label handy) — a host MUST pass `null` rather than guess a number.
+   */
+  readonly myWorkCount = input<number | null>(null);
+  readonly programDotColor = input<string>('var(--pr-color-primary-300)');
+
+  readonly search = input<string>('');
+  readonly matchCount = input<number | null>(null);
+  readonly statusValue = input<string[], string[] | string | null | undefined>([], {
+    transform: (v: string[] | string | null | undefined): string[] => {
+      if (Array.isArray(v)) return v.filter(x => x && x !== 'all');
+      if (!v || v === 'all') return [];
+      return [v];
+    }
+  });
+  readonly typologyValue = input<string[], string[] | string | null | undefined>([], {
+    transform: (v: string[] | string | null | undefined): string[] => {
+      if (Array.isArray(v)) return v.filter(x => x && x !== 'all');
+      if (!v || v === 'all') return [];
+      return [v];
+    }
+  });
+  readonly typologyCounts = input<Record<string, number>>({});
+  readonly typologyOptions = input<BandFilterOption[]>([]);
+  /** Type filter: hlo | outcome | intermediate_outcome | outcome_2030 | all. */
+  readonly typeValue = input<string[], string[] | string | null | undefined>([], {
+    transform: (v: string[] | string | null | undefined): string[] => {
+      if (Array.isArray(v)) return v.filter(x => x && x !== 'all');
+      if (!v || v === 'all') return [];
+      return [v];
+    }
+  });
+  /** Section is multi-select (reference `selSection`): the picked section codes, empty = no filter. */
+  readonly aowValue = input<string[]>([]);
+  readonly aowOptions = input<BandFilterGroup[]>([]);
+  readonly viewMode = input<'grouped' | 'flat'>('grouped');
+  /** By-AOW mode: only Search + Section apply there — Type/Category/Status and the grouping toggle are grouped-view filters. @akili-spec changes/reporting-entry-hub */
+  readonly compactFilters = input<boolean>(false);
+  /** Any reporting filter active — shows the Clear-filters button. @akili-spec changes/reporting-entry-hub */
+  readonly filtersActive = input<boolean>(false);
+  /** By-AoW mode: center filter options and selected center */
+  readonly centerOptions = input<BandFilterOption[]>([]);
+  readonly centerValue = input<string | null>(null);
+  readonly centerChange = output<string | null>();
+  /** By-AoW mode: result type filter options and selected type */
+  readonly byAowTypeOptions = input<BandFilterOption[]>([]);
+  readonly byAowTypeValue = input<string | null>(null);
+  readonly byAowTypeChange = output<string | null>();
+  /**
+   * Only-pending toggle (MRF-R-1): hides `complete` and zero-target KPIs. Visible in BOTH
+   * reporting modes (grouped table + By-AOW), unlike Type/Category/Status — rendered outside the
+   * `compactFilters` gate. @akili-spec changes/mass-reporting-flow
+   */
+  readonly onlyPending = input<boolean>(false);
+  /**
+   * Remaining-work | Catalogue sort (MRF-R-2). Default `catalogue` — no silent default change.
+   * Same visibility as `onlyPending`. @akili-spec changes/mass-reporting-flow
+   */
+  readonly burndownSort = input<'catalogue' | 'remaining'>('catalogue');
+  /**
+   * Favorites-only switch (RFI-R-2.1): filters the Reporting table down to the programme's pinned
+   * indicators. Hidden in the By-AOW compact view (`compactFilters`), where no stars render
+   * (RFI-R-2.2). @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly favoritesOnly = input<boolean>(false);
+  /** Live count of the programme's favorites, rendered as `Favorites (N)`. @akili-spec changes/reporting-favorite-indicators */
+  readonly favoritesCount = input<number>(0);
+  /** By-AOW mode: the active AoW + flat options for the single-select switcher (a multiselect is meaningless when exactly one AoW renders). @akili-spec changes/reporting-entry-hub */
+  readonly activeAowCode = input<string | null>(null);
+  readonly aowSingleOptions = input<{ label: string; value: string }[]>([]);
+  /**
+   * State of the global disclosure switch (P2-3252): `true` once every AoW / HLO is open, which is
+   * what turns `Expand all` into `Collapse all`. The band only renders and announces it — the
+   * grouped table owns the actual disclosure state.
+   */
+  readonly allExpanded = input<boolean>(false);
+  /**
+   * Whether the surface below the toolbar actually answers to that switch. The Reporting tab has
+   * other browse surfaces reachable by URL (`?tocView=byAow` / `?tocView=indicators`) that keep
+   * their own inline disclosure state, and the band renders OUTSIDE that switch — so without this
+   * the control painted itself over a list it could not move (a button that does nothing).
+   */
+  readonly canExpandAll = input<boolean>(true);
+  /** Overview has no filters, so the band renders on its own there. */
+  readonly showToolbar = input<boolean>(true);
+  /** JIRA-style insights rail toggle — only on the Areas of Work reporting view. */
+  readonly showInsightsToggle = input(false);
+  readonly insightsOpen = input(false);
+  readonly insightsToggle = output<void>();
+  /**
+   * Whether the emerging-result CTA is offered at all. False hides BOTH copies (expanded and
+   * condensed) — the host uses it for AVISA/SGP-02, a deactivated project whose results are view
+   * only (P2-3139): the retired entity-details page hid the whole pathway rather than showing a
+   * button that refuses to act.
+   */
+  readonly canReport = input<boolean>(true);
+  /**
+   * `@akili-spec changes/emerging-result-cta-placement` (`ERC-T-1`, `ERC-DD-3`, `ERC-R-5`) — gates
+   * the standalone **Report emerging result** control, distinct from `canReport` / *Where to
+   * report*. Defaults `false` (fail-closed, same class as `canReport`): a host that forgets to
+   * bind this cannot leak create chrome on AVISA / no-programme. Unset or explicitly `false` hides
+   * BOTH the expanded and collapsed copies — it does NOT use native `[disabled]` (KZ-REH-2).
+   */
+  readonly canReportEmerging = input<boolean>(false);
+
+  readonly searchChange = output<string>();
+  readonly statusChange = output<string[]>();
+  readonly typologyChange = output<string[]>();
+  readonly typeChange = output<string[]>();
+  readonly aowChange = output<string[]>();
+  /** @akili-spec changes/mass-reporting-flow */
+  readonly onlyPendingChange = output<boolean>();
+  /** @akili-spec changes/mass-reporting-flow */
+  readonly burndownSortChange = output<'catalogue' | 'remaining'>();
+  /** @akili-spec changes/reporting-favorite-indicators */
+  readonly favoritesOnlyChange = output<boolean>();
+  readonly viewModeChange = output<'grouped' | 'flat'>();
+  readonly clearAllFilters = output<void>();
+  readonly aowSwitch = output<string>();
+  /** Expand all / Collapse all was pressed. The host flips the switch; the band stays stateless. */
+  readonly toggleExpandAll = output<void>();
+  readonly allAowsClick = output<void>();
+  readonly whereToReport = output<void>();
+  readonly reportEmerging = output<void>();
+
+  onWhereToReportClick(): void {
+    this.whereToReport.emit();
+  }
+
+  /**
+   * `@akili-spec changes/emerging-result-cta-placement` (`ERC-T-1`, `ERC-R-2`, `ERC-DD-3`) — emits
+   * ONLY `reportEmerging`. Distinct from `onWhereToReportClick`: the two controls MUST NOT share a
+   * click, so neither handler triggers the other's output.
+   */
+  onReportEmergingClick(): void {
+    this.reportEmerging.emit();
+  }
+
+  startSpTour(): void {
+    const activeTab = this.activeTab();
+    this.guideSE.startSpTour({
+      programName: this.programName(),
+      cycleYear: this.cycleYear() ?? undefined,
+      activeTab,
+      onTabNavigate: (tab: 'overview' | 'reporting' | 'results' | 'bilateral-review' | 'my-work') => {
+        const targetPath =
+          tab === 'overview'
+            ? this.overviewPath()
+            : tab === 'results'
+              ? this.resultsPath()
+              : tab === 'bilateral-review'
+                ? this.bilateralReviewPath()
+                : tab === 'my-work'
+                  ? this.myWorkPath()
+                  : this.reportingPath();
+        return this.router.navigate([targetPath], { queryParamsHandling: 'preserve' }).then(() => {});
+      }
+    });
+  }
+
+  /**
+   * Overview is its OWN surface now (`/overview`), not the retired bento at `/home` — sending the
+   * tab back there was the bug this route fixes.
+   */
+  /**
+   * Both tabs live UNDER the programme now (`…/entity-details/SP01`), so the trail is
+   * path-addressed and shareable. The `?sp=<id>` shape they used before is gone.
+   */
+  readonly reportingPath = computed(() => `/result-framework-reporting/entity-details/${this.programCode()}`);
+  readonly overviewPath = computed(() => `${this.reportingPath()}/overview`);
+  /**
+   * Third tab (design `tabResults`, PRMS-Reporting.dc.html:418 / :441) — the programme's reported
+   * results. Same shape as the other two: a real route under the programme, not local state.
+   *
+   * ⚠️ The design draws a FOURTH tab, `Drafts` (`tabResults`'s neighbour at :420 / :443), inside
+   * `<sc-if value="{{ centerMode }}">`. It belongs to the CENTER view, not the programme view, so
+   * it is deliberately NOT rendered here — this is not a missing tab, do not "fix" it.
+   *
+   * `@akili-spec changes/my-work-board` (`MWB-DD-12`): **My work** (`myWorkPath` below) is a
+   * DIFFERENT, additional programme-view tab — not the design's reserved `Drafts` slot. Reading
+   * this comment as license to wire My work into that slot is the wrong move; My work is its own
+   * fifth-in-design-order / fourth-in-programme-view tab, rendered after Results.
+   */
+  readonly resultsPath = computed(() => `${this.reportingPath()}/results`);
+  /**
+   * Fifth-in-design-order / fourth-in-programme-view tab (`@akili-spec
+   * changes/sp-bilateral-review-tab`, `BRT-T-1`, `BRT-R-1`) — rendered between Results and My
+   * results (`myWorkPath` below).
+   */
+  readonly bilateralReviewPath = computed(() => `${this.reportingPath()}/bilateral-review`);
+  /** Fourth programme-view tab (`MWB-T-4`, `MWB-R-1`) — the submitter's own board. */
+  readonly myWorkPath = computed(() => `${this.reportingPath()}/my-work`);
+  /**
+   * Kept, unreferenced: the `/emerging` route still exists (nothing is deleted here) but the CTA no
+   * longer navigates to it — it opens the legacy modal in place, which is where reporting an
+   * emerging result has always happened.
+   */
+  readonly emergingPath = '/result-framework-reporting/emerging';
+
+  /** ⓘ popover open state — click toggles, Escape / outside click close (reference :348). */
+  readonly infoOpen = signal(false);
+  /** Guards the document click that fires in the same tick as the open toggle. */
+  private skipNextDocumentClick = false;
+
+  /** Allows callers/tests to opt into collapsing behavior. Default is false (band stays fixed/expanded). */
+  readonly collapsible = input<boolean>(false);
+  /** Indicates whether document is scrolled down from top (for subtle elevation shadow). */
+  readonly isScrolled = signal(false);
+
+  /**
+   * `changes/sp-shell-app-viewport` `SAV-DD-2`: true once the host page is viewport-locked (≥ `md`).
+   * Drops `sticky` on the band's own box (`SAV-DD-5`) — inside an `overflow: hidden` locked host the
+   * host itself is the sticky scrollport, so a `sticky` band would be shoved down by its own `top`
+   * offset and open a gap. Below `md`, and on any page that never passes this input, nothing changes.
+   */
+  readonly frameLocked = input(false);
+  /**
+   * `SAV-R-6` / `SAV-DD-4`: the work area element the locked page hands the band, so the band's
+   * scroll-driven state (`isScrolled`, `bandCollapsed`) tracks the ACTUAL scroller at ≥ `md` instead
+   * of the document (which never moves once locked). `null` (default, and every < `md` / unlocked
+   * consumer) keeps the window listener as the sole source — byte-identical to before this input
+   * existed.
+   */
+  readonly scrollHost = input<HTMLElement | null>(null);
+
+  /**
+   * Scroll offset at which the band condenses. 64px is the height of the compact identity block.
+   */
+  private static readonly COLLAPSE_THRESHOLD_PX = 64;
+
+  /** True while the page is scrolled past the identity block. Drives the compact band. */
+  readonly bandCollapsed = signal(false);
+
+  /**
+   * `BRC-T-1`, `BRC-DD-1` — the same phase resolution the page uses (`bilateral-review.component.ts`
+   * `currentPhaseId`): a tracked read of `reportingPhaseVersion()` (otherwise unused) because
+   * `reportingCurrentPhase` is a plain, non-signal object — without it a late-arriving phase would
+   * never re-trigger this computed. `version.id` is a bigint column serialized as a STRING on the
+   * wire ("36"); `normalizeBilateralReviewPhaseId` normalizes it at this one origin — Leader-found
+   * live-page defect: `reportingCurrentPhase.phaseId` initializes `null`, and `Number(null) === 0`
+   * (not `NaN`), so a naive `Number()` guard read the cold-boot state as a "resolved" phase 0 and
+   * warmed the badge/`ensure()` before the shell's own phases request landed.
+   */
+  readonly currentPhaseId = computed<number | null>(() => {
+    this.dataControlSE.reportingPhaseVersion();
+    return normalizeBilateralReviewPhaseId(this.dataControlSE.reportingCurrentPhase?.phaseId);
+  });
+
+  /**
+   * `BRT-R-3`, `BRT-DD-2`, `BRC-DD-2` — the Bilateral review tab's pending-review badge, read from
+   * the injected count service and shown on every tab (not just Bilateral review itself). Now
+   * phase-scoped to the CURRENT phase (never the tab's own selected phase) — `null` while the
+   * current phase has not resolved, which the count service already reads as "no badge".
+   */
+  readonly bilateralReviewCount = computed(() => this.bilateralReviewCountSE.count(this.programCode(), this.currentPhaseId())());
+
+  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  onSearchInput(value: string): void {
+    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+    this.searchDebounceTimer = setTimeout(() => {
+      this.searchChange.emit(value);
+    }, 150);
+  }
+
+  onClearSearch(): void {
+    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+    this.searchChange.emit('');
+  }
+
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+    });
+
+    // < `md` fallback (`SAV-DD-4`): with no work area handed to the band, the DOCUMENT is the
+    // scroller, so the offset comes from `window`. Kept unconditionally — this is the ONE documented
+    // window listener the band owns (`SAV-AC-11`). Registered OUTSIDE Angular and only re-enters the
+    // zone on the single frame where the threshold is crossed: a zone-bound
+    // `@HostListener('window:scroll')` would tick change detection on EVERY scroll frame to
+    // maintain a boolean that flips twice per page. Passive: we never preventDefault.
+    this.zone.runOutsideAngular(() => {
+      const onWindowScroll = () => this.syncBandCollapsed();
+      window.addEventListener('scroll', onWindowScroll, { passive: true });
+      this.destroyRef.onDestroy(() => window.removeEventListener('scroll', onWindowScroll));
+    });
+
+    // ≥ `md` (locked frame, `SAV-R-6`): the work area itself is the real scroller. Re-attaches
+    // whenever `scrollHost` changes (a tab switch can hand the band a brand-new element) and detaches
+    // the previous element's listener via the effect's own cleanup — covers both re-attachment and
+    // destroy, no separate `destroyRef.onDestroy` needed here.
+    effect(onCleanup => {
+      const host = this.scrollHost();
+      if (!host) return;
+      const onHostScroll = () => this.syncBandCollapsed();
+      this.zone.runOutsideAngular(() => host.addEventListener('scroll', onHostScroll, { passive: true }));
+      onCleanup(() => host.removeEventListener('scroll', onHostScroll));
+      // First read on (re)attach — a page mounting the band against an already-scrolled work area
+      // (or a tab switch re-creating it) must not wait for the next scroll frame to reflect reality
+      // (`SAV-R-6`, `SAV-AC-6`).
+      this.syncBandCollapsed();
+    });
+
+    // A tab switch (Overview ⇄ Reporting) re-creates the band on an already-scrolled document —
+    // without this first read the band would render expanded until the next scroll event. Covers the
+    // < `md` / no-`scrollHost` case; the effect above covers the ≥ `md` case.
+    this.syncBandCollapsed();
+
+    // `BRT-DD-2`, `BRC-DD-1`/`DD-2` — warms the Bilateral review badge for this programme + the
+    // CURRENT phase on every band host (Overview, Reporting, Results, Bilateral review, My results),
+    // not just its own tab. A no-op once the count service already has (or is fetching) this
+    // (code, phase) pair, or while the current phase has not resolved yet (`ensure` itself no-ops
+    // on a null/NaN versionId).
+    effect(() => {
+      const code = this.programCode();
+      const versionId = this.currentPhaseId();
+      if (code && versionId !== null) this.bilateralReviewCountSE.ensure(code, versionId);
+    });
+  }
+
+  /**
+   * Cheap: one `scrollTop`/`scrollY` read + a compare. Nothing happens unless the threshold is
+   * crossed. `scrollHost` (the work area, ≥ `md`) and `window` (the document, < `md`) are SUMMED
+   * rather than switched on with `matchMedia` in TS (`SAV-DD-4`) — the CSS breakpoint decides which
+   * one is actually scrolling at any given width, and the other always contributes 0.
+   */
+  private syncBandCollapsed(): void {
+    const offset = (this.scrollHost()?.scrollTop ?? 0) + (window.scrollY || document.documentElement?.scrollTop || 0);
+    const isScrolled = offset > 10;
+    if (isScrolled !== this.isScrolled()) {
+      this.zone.run(() => this.isScrolled.set(isScrolled));
+    }
+
+    if (!this.collapsible()) {
+      if (this.bandCollapsed()) {
+        this.zone.run(() => this.bandCollapsed.set(false));
+      }
+      return;
+    }
+
+    const collapsed = offset > ReportingProgramBandComponent.COLLAPSE_THRESHOLD_PX;
+    if (collapsed === this.bandCollapsed()) return;
+    this.zone.run(() => {
+      this.bandCollapsed.set(collapsed);
+      // The reference drops the popover whenever the band changes shape (:5160) — it is anchored to
+      // the identity block, which is exactly what collapses.
+      this.infoOpen.set(false);
+    });
+  }
+
+  /**
+   * `· REPORTING CYCLE 2026 · P25` — the code is rendered separately because the reference sets it
+   * in JetBrains Mono while the rest of the eyebrow is Manrope (PRMS-Shell.dc.html:338-339).
+   */
+  readonly eyebrowCycle = computed(() => {
+    const tail = this.phaseLabelOverride()?.trim() || this.defaultCycleTail();
+    return this.programCode() && tail ? `· ${tail}` : tail;
+  });
+
+  /** Original `cycleYear`/`cyclePhase`-derived tail — the fallback when no override is provided. */
+  private readonly defaultCycleTail = computed(() => {
+    const parts: string[] = [];
+    if (this.cycleYear()) parts.push(`Reporting cycle ${this.cycleYear()}`);
+    if (this.cyclePhase()) parts.push(this.cyclePhase());
+    return parts.join(' · ');
+  });
+
+  /**
+   * Heading above the Reporting toolbar — reference :1102, `Report results linked to the
+   * programme's 2026 ToC`. The year is the CURRENT cycle, never a literal: this surface is reused
+   * every cycle and a hardcoded 2026 would silently lie in 2027. With no cycle loaded yet the year
+   * is dropped rather than rendering an empty gap.
+   */
+  readonly reportingHeading = computed(() => {
+    const year = this.cycleYear();
+    return year ? `Report results linked to the program's ${year} ToC` : "Report results linked to the program's ToC";
+  });
+
+  /**
+   * Body copy for the popover. Prefer explicit description; otherwise look up from the
+   * Science Program catalogue by program code/name, falling back to a contextual statement.
+   */
+  readonly resolvedDescription = computed(() => {
+    const explicit = this.programDescription()?.trim();
+    if (explicit) return explicit;
+
+    const code = this.programCode()?.trim().toUpperCase();
+    if (code && SCIENCE_PROGRAM_DESCRIPTIONS[code]) {
+      return SCIENCE_PROGRAM_DESCRIPTIONS[code];
+    }
+
+    const name = this.programName()?.trim();
+    if (name) {
+      const normalizedName = name.toLowerCase();
+      for (const [spCode, desc] of Object.entries(SCIENCE_PROGRAM_DESCRIPTIONS)) {
+        if (desc.toLowerCase().startsWith(normalizedName)) {
+          return desc;
+        }
+      }
+      return `${name} is a CGIAR research program delivering science, innovations, and partnerships to advance food, land, and water systems transformation and contribute to CGIAR 2030 targets.`;
+    }
+
+    return (
+      'This program works with partners across the CGIAR portfolio to deliver research, innovations, ' +
+      'and outcomes contributing to the 2030 targets.'
+    );
+  });
+
+  /** Footer: `6 areas of work · 28 planned results` (reference :3235). */
+  readonly programMeta = computed(() => {
+    const aows = this.aowCount();
+    const results = this.plannedResultsCount();
+    const aowLabel = aows === 1 ? '1 area of work' : `${aows} areas of work`;
+    const resultLabel = results === 1 ? '1 planned result' : `${results} planned results`;
+    return `${aowLabel} · ${resultLabel}`;
+  });
+
+  readonly activeTabInfo = computed(() => {
+    switch (this.activeTab()) {
+      case 'overview':
+        return {
+          title: 'Overview',
+          description:
+            'Displays the overall progress of results reporting for this Science Program or Accelerator across funding types (W1/W2 and W3/Bilateral), reporting status, and geographic areas of work.'
+        };
+      case 'results':
+        return {
+          title: 'Results',
+          description:
+            'View and manage all reported results linked to this Science Program or Accelerator. Use the filters to explore results by status, type, or contributing centers.'
+        };
+      case 'bilateral-review':
+        // @akili-spec changes/sp-bilateral-review-tab (BRT-T-1, BRT-R-19)
+        return {
+          title: BILATERAL_REVIEW_COPY.explainer.title,
+          description: BILATERAL_REVIEW_COPY.explainer.description
+        };
+      case 'my-work':
+        // @akili-spec changes/my-work-board (MWB-R-10)
+        return {
+          title: 'My results',
+          description:
+            'Your results in this Science Program, grouped by status. The board is read-only: open a result to complete it or submit it; quality assessment happens in QA.'
+        };
+      case 'reporting':
+      default:
+        return {
+          title: 'Theory of Change Reporting',
+          description:
+            'The Theory of Change reporting framework for your Science Program. Browse planned Indicators and High-Level Outputs by Area of Work, track progress against targets, and submit new or continuing result reports for the current cycle.'
+        };
+    }
+  });
+
+  /**
+   * ⚠️ The reference shows a `48 DAYS LEFT` chip here. It is NOT rendered, and deliberately not
+   * faked: `DataControlService.reportingCurrentPhase` carries only `{phaseName, phaseYear, phaseId,
+   * portfolioAcronym, portfolioId}` — there is no cycle end date anywhere in the client, so the
+   * number cannot be derived. Recorded as NEEDS-BACKEND. The moment a close date exists, feed it
+   * here and the chip's four states are already specified in PROGRAM-SHELL-SPEC.md §3.
+   */
+  /**
+   * The `all` row is the panel's way back to "no filter"; the trigger shows the placeholder
+   * ("Status") instead of this label whenever the value is `all`.
+   */
+  readonly statusOptions: BandFilterOption[] = [
+    { value: 'all', label: 'All statuses' },
+    { value: 'not-started', label: 'Not started' },
+    { value: 'in-progress', label: 'In progress' },
+    { value: 'achieved', label: 'Achieved' },
+    { value: 'overachieved', label: 'Overachieved' }
+  ];
+
+  /** CURRENT selType: High level output / Outcome / Intermediate / 2030, plus the reset row. */
+  readonly typeOptions: BandFilterOption[] = [
+    { value: 'all', label: 'All types' },
+    { value: 'hlo', label: 'High level output' },
+    { value: 'outcome', label: 'Outcome' },
+    { value: 'intermediate_outcome', label: 'Intermediate outcome' },
+    { value: 'outcome_2030', label: '2030 outcome' }
+  ];
+
+  readonly cleanTypeOptions = computed(() => this.typeOptions.filter(o => o.value !== 'all'));
+  readonly cleanTypologyOptions = computed(() => this.typologyOptions().filter(o => o.value !== 'all'));
+  readonly cleanStatusOptions = computed(() => this.statusOptions.filter(o => o.value !== 'all'));
+
+  /** Pinned above the table on unlocked pages; scrolls with `#workArea` when viewport-locked. */
+  readonly showQuickTypologyInBand = computed(
+    () => this.showToolbar() && !this.compactFilters() && !(this.frameLocked() && this.scrollHost())
+  );
+
+  // ── Reporting JIRA-style Top-Bar Filter State ──
+  readonly filterPopoverOpen = signal(false);
+
+  toggleFilterPopover(event: Event): void {
+    event.stopPropagation();
+    this.filterPopoverOpen.update(v => !v);
+  }
+
+  closeFilterPopover(): void {
+    this.filterPopoverOpen.set(false);
+  }
+
+  readonly activeFilterCount = computed(() => {
+    let count = 0;
+    if (this.compactFilters()) {
+      if (this.centerValue() && this.centerValue() !== 'all') count++;
+      if (this.byAowTypeValue() && this.byAowTypeValue() !== 'all') count++;
+      if (this.statusValue()?.length) count += this.statusValue().length;
+      if (this.onlyPending()) count++;
+    } else {
+      if (this.aowValue()?.length) count += this.aowValue().length;
+      if (this.typeValue()?.length) count += this.typeValue().length;
+      if (this.typologyValue()?.length) count += this.typologyValue().length;
+      if (this.statusValue()?.length) count += this.statusValue().length;
+      if (this.onlyPending()) count++;
+    }
+    return count;
+  });
+
+  readonly hasActiveFilters = computed(() => this.activeFilterCount() > 0 || !!this.search());
+
+  readonly activeCenterLabel = computed(() => {
+    const val = this.centerValue();
+    if (!val || val === 'all') return '';
+    const match = this.centerOptions().find(o => o.value === val);
+    return match ? match.label.replace(/\s*\(\d+\)$/, '') : val;
+  });
+
+  readonly activeByAowTypeLabel = computed(() => {
+    const val = this.byAowTypeValue();
+    if (!val || val === 'all') return '';
+    const match = this.byAowTypeOptions().find(o => o.value === val);
+    return match ? match.label.replace(/\s*\(\d+\)$/, '') : val;
+  });
+
+  readonly activeAowChips = computed(() => {
+    const vals = this.aowValue() || [];
+    if (!vals.length) return [];
+    const groups = this.aowOptions() || [];
+    const map = new Map<string, string>();
+    for (const g of groups) {
+      for (const item of g.items || []) {
+        map.set(item.value, item.label);
+      }
+    }
+    return vals.map(v => ({ value: v, label: map.get(v) || v }));
+  });
+
+  readonly activeTypeChips = computed(() => {
+    const vals = this.typeValue() || [];
+    if (!vals.length) return [];
+    return vals.map(v => ({
+      value: v,
+      label: this.typeOptions.find(o => o.value === v)?.label || v
+    }));
+  });
+
+  readonly activeTypologyChips = computed(() => {
+    const vals = this.typologyValue() || [];
+    if (!vals.length) return [];
+    const opts = this.typologyOptions();
+    return vals.map(v => ({
+      value: v,
+      label: opts.find(o => o.value === v)?.label || v
+    }));
+  });
+
+  readonly activeStatusChips = computed(() => {
+    const vals = this.statusValue() || [];
+    if (!vals.length) return [];
+    return vals.map(v => ({
+      value: v,
+      label: this.statusOptions.find(o => o.value === v)?.label || v
+    }));
+  });
+
+  readonly activeTypeLabel = computed(() => {
+    return this.activeTypeChips().map(c => c.label).join(', ');
+  });
+
+  readonly activeTypologyLabel = computed(() => {
+    return this.activeTypologyChips().map(c => c.label).join(', ');
+  });
+
+  readonly activeStatusLabel = computed(() => {
+    return this.activeStatusChips().map(c => c.label).join(', ');
+  });
+
+  removeCenterChip(): void {
+    this.centerChange.emit(null);
+  }
+
+  removeByAowTypeChip(): void {
+    this.byAowTypeChange.emit(null);
+  }
+
+  removeAowChip(code: string): void {
+    const next = (this.aowValue() || []).filter(v => v !== code);
+    this.aowChange.emit(next);
+  }
+
+  removeTypeChip(val?: string): void {
+    if (!val) {
+      this.typeChange.emit([]);
+      return;
+    }
+    const next = (this.typeValue() || []).filter(v => v !== val);
+    this.typeChange.emit(next);
+  }
+
+  removeTypologyChip(val?: string): void {
+    if (!val) {
+      this.typologyChange.emit([]);
+      return;
+    }
+    const next = (this.typologyValue() || []).filter(v => v !== val);
+    this.typologyChange.emit(next);
+  }
+
+  removeStatusChip(val?: string): void {
+    if (!val) {
+      this.statusChange.emit([]);
+      return;
+    }
+    const next = (this.statusValue() || []).filter(v => v !== val);
+    this.statusChange.emit(next);
+  }
+
+  removeOnlyPendingChip(): void {
+    this.onlyPendingChange.emit(false);
+  }
+
+  toggleInfo(event: Event): void {
+    event.stopPropagation();
+    this.skipNextDocumentClick = true;
+    this.infoOpen.update(open => !open);
+  }
+
+  closeInfo(): void {
+    this.infoOpen.set(false);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event?: MouseEvent): void {
+    if (this.skipNextDocumentClick) {
+      this.skipNextDocumentClick = false;
+      return;
+    }
+    if (this.infoOpen()) this.infoOpen.set(false);
+
+    const target = event?.target as HTMLElement | null;
+    if (
+      target?.closest('.pr-reporting-filter-container') ||
+      target?.closest('.p-multiselect-panel') ||
+      target?.closest('.p-dropdown-panel')
+    ) {
+      return;
+    }
+    if (this.filterPopoverOpen()) {
+      this.filterPopoverOpen.set(false);
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.infoOpen()) this.infoOpen.set(false);
+    if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
+  }
+}

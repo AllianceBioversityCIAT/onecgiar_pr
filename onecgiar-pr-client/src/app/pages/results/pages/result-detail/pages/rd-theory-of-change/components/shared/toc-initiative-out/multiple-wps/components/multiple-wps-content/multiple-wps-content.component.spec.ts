@@ -2,8 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MultipleWPsContentComponent } from './multiple-wps-content.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { MappedResultsModalComponent } from '../mapped-results-modal/mapped-results-modal.component';
-import { TableModule } from 'primeng/table';
-import { DialogModule } from 'primeng/dialog';
+import { FilterOutcomeLevelByBooleanPipe } from './pipes/filter-outcome-level-by-boolean.pipe';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 
@@ -68,12 +67,11 @@ describe('MultipleWPsContentComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [
         MultipleWPsContentComponent,
-        MappedResultsModalComponent
+        MappedResultsModalComponent,
+        FilterOutcomeLevelByBooleanPipe
       ],
       imports: [
         HttpClientTestingModule,
-        TableModule,
-        DialogModule
       ],
       providers: [
         {
@@ -121,6 +119,7 @@ describe('MultipleWPsContentComponent', () => {
   describe('getIndicator()', () => {
     it('should set indicatorView to true after successful Get_indicator call', () => {
       component.activeTab = {};
+      component.initiative = {};
       const spy = jest.spyOn(mockApiService.resultsSE, 'Get_indicator');
 
       component.getIndicator();
@@ -150,10 +149,11 @@ describe('MultipleWPsContentComponent', () => {
       expect(component.activeTab.is_sdg_action_impact).toEqual(mockResponse.is_sdg_action_impact);
       expect(component.activeTab.wpinformation).toEqual(mockResponse.wpinformation);
       expect(component.activeTab.wpinformation.wpTitle).toEqual("<strong>acronym</strong> <br> <div class=\"select_item_description\">title</div>");
-      expect(component.indicatorView).toBeTruthy();
+      expect(component.indicatorView()).toBeTruthy();
     });
     it('should set indicatorView to true after successful Get_indicator call when wpinformation?.extraInformation?.wp_acronym is undefined', () => {
       component.activeTab = {};
+      component.initiative = {};
       mockResponse.wpinformation.extraInformation.wp_acronym = undefined
       const spy = jest.spyOn(mockApiService.resultsSE, 'Get_indicator');
 
@@ -166,7 +166,7 @@ describe('MultipleWPsContentComponent', () => {
       );
       expect(component.activeTab.indicators).toEqual(mockResponse.informationIndicator);
       expect(component.activeTab.wpinformation.wpTitle).toEqual("<strong>title</strong>");
-      expect(component.indicatorView).toBeTruthy();
+      expect(component.indicatorView()).toBeTruthy();
     });
     it('should handle error when Get_indicator call fails', () => {
       const errorMessage = 'Your error message';
@@ -461,11 +461,11 @@ describe('MultipleWPsContentComponent', () => {
 
   describe('getIndicator', () => {
     it('should set indicatorView to false', () => {
-      component.indicatorView = true;
+      component.indicatorView.set(true);
 
       component.getIndicator();
 
-      expect(component.indicatorView).toBe(false);
+      expect(component.indicatorView()).toBe(false);
     });
 
     it('should set indicatorView to true after calling getIndicator', () => {
@@ -474,7 +474,7 @@ describe('MultipleWPsContentComponent', () => {
       component.getIndicator();
 
       setTimeout(() => {
-        expect(component.indicatorView).toBe(true);
+        expect(component.indicatorView()).toBe(true);
       }, 80);
     });
   });

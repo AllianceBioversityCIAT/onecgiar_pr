@@ -139,3 +139,62 @@ p {
 .reject {
   color: var(--pr-color-red-500);
 }
+
+/* P2-3085: read-only ToC metadata block in the Contribution Request review */
+.toc_review {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 4px;
+
+  &_card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 1px solid var(--pr-color-neutral-300);
+    border-radius: 8px;
+    background: var(--pr-color-accents-1);
+  }
+
+  &_row {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  &_label {
+    color: var(--pr-color-neutral-600);
+    font-weight: 500;
+    flex: 0 0 auto;
+    max-width: 60%;
+  }
+
+  &_value {
+    color: var(--pr-color-black);
+    text-align: right;
+  }
+}
+
+/* P2-3187 AC4 — optional ToC mapping step for bilateral contribution requests.
+   The dialog panel class must pierce the view boundary (same pattern as .share-request-dialog). */
+::ng-deep app-pr-dialog .toc-mapping-dialog {
+  width: min(760px, 92vw);
+}
+
+.toc-mapping-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 32px 32px 8px;
+  background-color: var(--pr-color-white);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.toc-mapping-title {
+  margin: 0 !important;
+  @include fonts.pr-typography('h2');
+  font-weight: 700 !important;
+}

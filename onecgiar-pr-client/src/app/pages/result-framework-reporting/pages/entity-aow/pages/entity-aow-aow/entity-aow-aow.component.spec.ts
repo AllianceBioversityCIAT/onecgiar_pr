@@ -60,6 +60,22 @@ describe('EntityAowAowComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  // P2-3254: the note explaining why an indicator can appear twice under an HLO/Outcome was reported
+  // as confusing (Asma Jeitani) and Nicoleta Trifa asked for it to be removed outright. The AC is one
+  // line: "The current note is removed." It rendered unconditionally, so its absence is assertable
+  // without setting up a duplicate-indicator scenario.
+  describe('repeated-indicator note (P2-3254)', () => {
+    it('no longer renders the note', () => {
+      const text = fixture.nativeElement.textContent ?? '';
+      expect(text).not.toContain('When the same indicator is repeated twice');
+      expect(text).not.toContain('Reporting reflects data originally recorded');
+    });
+
+    it('no longer renders its container', () => {
+      expect(fixture.nativeElement.querySelector('.aow-repeated-note')).toBeNull();
+    });
+  });
+
   describe('Component Initialization', () => {
     it('should initialize with default values', () => {
       expect(component.tabs()).toEqual([

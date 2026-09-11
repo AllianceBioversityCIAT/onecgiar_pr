@@ -46,6 +46,7 @@ describe('FeedbackValidationDirective', () => {
     component.complete = false;
     fixture.detectChanges();
     component.complete = true;
+    fixture.changeDetectorRef.markForCheck();
     fixture.detectChanges();
     const element = fixture.nativeElement.querySelector('.pr-field');
     expect(element.classList.contains('complete')).toBe(true);
@@ -55,6 +56,7 @@ describe('FeedbackValidationDirective', () => {
     component.complete = true;
     fixture.detectChanges();
     component.complete = false;
+    fixture.changeDetectorRef.markForCheck();
     fixture.detectChanges();
     const element = fixture.nativeElement.querySelector('.pr-field');
     expect(element.classList.contains('complete')).toBe(false);

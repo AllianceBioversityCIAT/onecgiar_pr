@@ -68,7 +68,7 @@ Goals describe **why we invest in PRMS**. Each goal has at least one measurable 
 ### G3. Bilateral / external consumer reliability
 
 - **M3.1** — Backwards-compatible response stability of `bilateral` and `platform-report` payload shapes (no breaking change without a documented change log entry — see `onecgiar-pr-server/docs/bilateral-result-summaries.en.md`).
-- **M3.2** — Bilateral list/detail p95 latency under defined SLA (target captured in `docs/detailed-design/detailed-design.md`).
+- **M3.2** — Bilateral list/detail p95 latency under defined SLA (target captured in `docs/trd/trd.md`).
 - **M3.3** — Bilateral throttling exceptions and 5xx rate (`ThrottlerExcludeBilateralGuard` path) trending to zero.
 
 ### G4. Platform reliability and performance
@@ -243,8 +243,8 @@ Acceptance criteria here are **product-level invariants** every module spec must
 
 ## Related documents
 
-- `docs/system-design/design.md` — UI/UX system blueprint.
-- `docs/detailed-design/detailed-design.md` — Technical implementation blueprint.
+- `docs/ux-ui/design.md` — UI/UX system blueprint.
+- `docs/trd/trd.md` — Technical implementation blueprint.
 - `docs/specs/general-setup/` — Templates `/sdd-specify` MUST follow.
 - `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` — Authoritative spec for bilateral result payloads.
 - `onecgiar-pr-client/CLAUDE.md` — Frontend conventions (auth header, API base URLs, commit format).

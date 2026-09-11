@@ -16,6 +16,7 @@ import { Result } from '../entities/result.entity';
 import { ResultRepository } from '../result.repository';
 import { Version } from '../../versioning/entities/version.entity';
 import { ResultsKnowledgeProduct } from './entities/results-knowledge-product.entity';
+import { ResultsKnowledgeProductInstitution } from './entities/results-knowledge-product-institution.entity';
 import { ResultsKnowledgeProductMapper } from './results-knowledge-products.mapper';
 import { ResultsKnowledgeProductsRepository } from './repositories/results-knowledge-products.repository';
 import { ResultsKnowledgeProductAltmetricRepository } from './repositories/results-knowledge-product-altmetrics.repository';
@@ -206,6 +207,10 @@ export class ResultsKnowledgeProductsService {
         newMetadata,
         confidenceThreshold,
         true,
+      );
+      await this.validateAndSanitizePredictedInstitutions(
+        updatedKnowledgeProduct.result_knowledge_product_institution_array ??
+          [],
       );
 
       //keywords
@@ -579,9 +584,14 @@ export class ResultsKnowledgeProductsService {
   }
 
   extractHandleIdentifier(rawUrl: string): string {
-    const hasQuery = (rawUrl ?? '').indexOf('?');
-    const linkSplit = (rawUrl ?? '')
-      .slice(0, hasQuery != -1 ? hasQuery : rawUrl.length)
+    // P2-3534: `rawUrl` was guarded twice and read raw once — `rawUrl.length` threw
+    // "Cannot read properties of null (reading 'length')" straight at the user whenever CGSpace had
+    // no record for the handle, because MQAP still answers with an object but `Handle: null`.
+    // Normalised once instead of guarding each use, which is how the third one got missed.
+    const url = rawUrl ?? '';
+    const hasQuery = url.indexOf('?');
+    const linkSplit = url
+      .slice(0, hasQuery != -1 ? hasQuery : url.length)
       .split('/');
     return linkSplit.slice(linkSplit.length - 2).join('/');
   }
@@ -622,12 +632,29 @@ export class ResultsKnowledgeProductsService {
       if (!mqapResponse) {
         throw {
           response: {},
-          message: `Please add a valid handle (received: ${handle}). Only handles from CGSpace can be reported.`,
+          message: `Please add a valid handle (received: ${handle}). Only handles from a supported repository can be reported.`,
           status: HttpStatus.BAD_REQUEST,
         };
       }
 
       if (validateExisting) {
+        // P2-3534: a handle with the right shape but no document behind it comes back from MQAP as an
+        // object with `Handle: null`, and the next line used to throw a raw JavaScript error at the
+        // user instead of saying the document was not found — a plain typo in the number produced a
+        // 500 reading "Cannot read properties of null".
+        //
+        // Deliberately inside this branch: the three callers that pass `validateExisting = false`
+        // (service.ts:160, service.ts:1172, bilateral.service.ts:3804) never reached the throwing
+        // line, so they never had this bug. Guarding them too would change behaviour nobody asked
+        // about, on paths this ticket did not cover.
+        if (!mqapResponse?.Handle) {
+          throw {
+            response: {},
+            message: `No knowledge product was found in the repository for handle ${handle}. Please check the number and try again.`,
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+
         const handleId = this.extractHandleIdentifier(mqapResponse?.Handle);
 
         const existingResultKnowledgeProduct =
@@ -654,9 +681,9 @@ export class ResultsKnowledgeProductsService {
               response: { title: mqapResponse?.Title },
               message: `Only journal articles published in ${versionCgspaceYear} are eligible for this reporting cycle.<br>
                 Kindly review the rules provided at the beginning of the submission.<br><br>
-                If you believe this is an error, please contact your Center’s knowledge management team to review this information in CGSpace.<br><br>
+                If you believe this is an error, please contact your Center’s knowledge management team to review this information in the repository.<br><br>
                 <b>About this error:</b><br>
-                Please be aware that for journal articles, the reporting system automatically verifies the “Date Issued” field in CGSpace when the "Date Online" is not present. For details on the rules applied with dates, refer to the knowledge product guidance document.`,
+                Please be aware that for journal articles, the reporting system automatically verifies the “Date Issued” field in the repository when the "Date Online" is not present. For details on the rules applied with dates, refer to the knowledge product guidance document.`,
               status: HttpStatus.UNPROCESSABLE_ENTITY,
             };
           }
@@ -666,7 +693,7 @@ export class ResultsKnowledgeProductsService {
             message:
               `Reporting knowledge products from years outside the current reporting cycle (${versionCgspaceYear}) is not possible. ` +
               'Should you require assistance in modifying the publication year for this knowledge product, ' +
-              'please contact your Center’s knowledge management team to review this information in CGSpace.',
+              'please contact your Center’s knowledge management team to review this information in the repository.',
             status: HttpStatus.UNPROCESSABLE_ENTITY,
           };
         }
@@ -814,6 +841,43 @@ export class ResultsKnowledgeProductsService {
     return { error, details };
   }
 
+  /**
+   * P2-3558: the rejection used to answer `A phase with a cgspace year of 2008 was not found`, which
+   * says nothing to the person reporting: it names an internal record instead of telling them that
+   * their publication is from 2008 and which years the system can take. Reads like the two sibling
+   * year rejections in `findOnCGSpace` (same zone, same remedy: check the link, then the Center's
+   * knowledge management team).
+   *
+   * `reportableYears` comes from the phase walk in `create`, never from a literal — a hardcoded year
+   * would be wrong from the first January after it was written.
+   */
+  private _yearOutsideReportingPhasesMessage(
+    publicationYear: number,
+    reportableYears: number[],
+  ): string {
+    const openYears = [...new Set(reportableYears)].sort((a, b) => b - a);
+
+    const publicationSentence = publicationYear
+      ? `This publication is from ${publicationYear} according to CGSpace.`
+      : 'CGSpace does not report a publication year for this knowledge product.';
+
+    const cycleSentence = openYears.length
+      ? `Only knowledge products published in ${StringUtils.join(
+          openYears.map(String),
+          ', ',
+          ' or ',
+        )} can be reported, because those are the reporting phases available.`
+      : 'It falls outside the reporting phases available.';
+
+    return (
+      `${publicationSentence} ${cycleSentence}<br><br>` +
+      'Kindly check that the CGSpace link you entered is the right one. ' +
+      'If the publication year in CGSpace is not correct, please contact your Center’s knowledge ' +
+      'management team to review this information in CGSpace; if the year is correct, this ' +
+      'publication cannot be reported as a knowledge product in this reporting cycle.'
+    );
+  }
+
   async create(
     resultsKnowledgeProductDto: ResultsKnowledgeProductDto,
     user: TokenDto,
@@ -872,12 +936,30 @@ export class ResultsKnowledgeProductsService {
       if (!resultsKnowledgeProductDto.id) {
         let versionId: number = null;
         const is_admin = await this._roleByUseRepository.isUserAdmin(user.id);
-        if (is_admin != undefined && Boolean(is_admin)) {
+        // Admins get the knowledge product filed in the phase whose cgspace year matches the
+        // publication year. That alignment needs CGSpace metadata: `metadataCG` is null whenever
+        // the knowledge product carries no metadata rows (`results-knowledge-products.mapper.ts`
+        // — `metadata.length ? {...} : null`), and it is simply absent when the payload never
+        // went through an MQAP lookup. With no publication year there is nothing to align to, so
+        // the alignment is skipped and `versionId` stays null — the same phase resolution a
+        // non-admin gets — instead of dereferencing null and answering 500.
+        if (
+          is_admin != undefined &&
+          Boolean(is_admin) &&
+          resultsKnowledgeProductDto.metadataCG
+        ) {
           let kpVersion = currentVersion;
 
           const cgspaceKPYear =
             resultsKnowledgeProductDto.metadataCG.online_year ??
             resultsKnowledgeProductDto.metadataCG.issue_year;
+
+          // P2-3558: the years walked here are exactly the years this rejection can accept, so the
+          // message quotes them instead of a hardcoded year that would go stale every January.
+          const reportableYears: number[] = [];
+          if (kpVersion?.cgspace_year != null) {
+            reportableYears.push(kpVersion.cgspace_year);
+          }
 
           while (
             kpVersion.previous_phase &&
@@ -886,13 +968,19 @@ export class ResultsKnowledgeProductsService {
             kpVersion = await this._versioningService.$_findPhase(
               kpVersion.previous_phase,
             );
+            if (kpVersion?.cgspace_year != null) {
+              reportableYears.push(kpVersion.cgspace_year);
+            }
           }
 
           if (kpVersion.cgspace_year != cgspaceKPYear) {
             throw this._handlersError.returnErrorRes({
               error: {
                 response: {},
-                message: `A phase with a cgspace year of ${cgspaceKPYear} was not found`,
+                message: this._yearOutsideReportingPhasesMessage(
+                  cgspaceKPYear,
+                  reportableYears,
+                ),
                 status: HttpStatus.UNPROCESSABLE_ENTITY,
               },
             });
@@ -961,6 +1049,10 @@ export class ResultsKnowledgeProductsService {
           resultsKnowledgeProductDto,
           confidenceThreshold,
         );
+
+      await this.validateAndSanitizePredictedInstitutions(
+        newKnowledgeProduct.result_knowledge_product_institution_array ?? [],
+      );
 
       // * Updating relations
       await this._resultsKnowledgeProductAltmetricRepository.save(
@@ -1184,6 +1276,10 @@ export class ResultsKnowledgeProductsService {
           confidenceThreshold,
         );
 
+      await this.validateAndSanitizePredictedInstitutions(
+        newKnowledgeProduct.result_knowledge_product_institution_array ?? [],
+      );
+
       // Save all relations
       await this._resultsKnowledgeProductAltmetricRepository.save(
         newKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
@@ -1312,6 +1408,154 @@ export class ResultsKnowledgeProductsService {
     }
   }
 
+  /**
+   * P2-3233 — preflight used by the W3 centre form before it changes a promoted
+   * AI draft into a Knowledge Product. This intentionally retains W1/W2's MQAP
+   * validation: a real handle, no duplicate and the reporting-cycle rules.
+   */
+  async validateBilateralKPHandle(
+    handle: string,
+    user: TokenDto,
+  ): Promise<ResultsKnowledgeProductDto> {
+    const activeVersion = await this._versioningService.$_findActivePhase(
+      AppModuleIdEnum.REPORTING,
+    );
+    const response = await this.findOnCGSpace(
+      this.extractHandleIdentifier(handle),
+      user,
+      activeVersion?.phase_year ?? null,
+      true,
+    );
+    if (response.status !== HttpStatus.OK) {
+      throw this._handlersError.returnErrorRes({ error: response });
+    }
+    return response.response as ResultsKnowledgeProductDto;
+  }
+
+  /**
+   * Hydrates a converted bilateral result without calling delete/recover or the
+   * normal bilateral creator. Those paths respectively delete, or rewrite,
+   * shared W3 associations (centres, projects, programs and geography).
+   */
+  async populateBilateralKPFromMetadata(
+    resultId: number,
+    metadata: ResultsKnowledgeProductDto,
+    handle: string,
+    user: TokenDto,
+  ): Promise<ResultsKnowledgeProduct> {
+    const existingResult = await this._resultRepository.findOne({
+      where: { id: resultId },
+    });
+    if (!existingResult) {
+      throw new NotFoundException(`Result with id ${resultId} not found`);
+    }
+
+    const globalParameter = await this._globalParameterRepository.findOne({
+      where: { name: 'kp_mqap_institutions_confidence' },
+      select: ['value'],
+    });
+    if (!globalParameter) {
+      throw new Error(
+        "Global parameter 'kp_mqap_institutions_confidence' not found",
+      );
+    }
+
+    let knowledgeProduct = this._resultsKnowledgeProductMapper.updateEntity(
+      new ResultsKnowledgeProduct(),
+      metadata,
+      user.id,
+      resultId,
+    );
+    knowledgeProduct.is_melia = false;
+    knowledgeProduct.result_object = existingResult;
+    knowledgeProduct =
+      await this._resultsKnowledgeProductRepository.save(knowledgeProduct);
+    knowledgeProduct = this._resultsKnowledgeProductMapper.populateKPRelations(
+      knowledgeProduct,
+      metadata,
+      Number(globalParameter.value),
+    );
+
+    await this._resultsKnowledgeProductAltmetricRepository.save(
+      knowledgeProduct.result_knowledge_product_altmetric_array ?? [],
+    );
+    await this._resultsKnowledgeProductAuthorRepository.save(
+      knowledgeProduct.result_knowledge_product_author_array ?? [],
+    );
+    await this._resultsKnowledgeProductKeywordRepository.save(
+      knowledgeProduct.result_knowledge_product_keyword_array ?? [],
+    );
+    await this._resultsKnowledgeProductMetadataRepository.save(
+      knowledgeProduct.result_knowledge_product_metadata_array ?? [],
+    );
+
+    await this._resultRepository.update(
+      { id: resultId },
+      { title: metadata.title, description: metadata.description },
+    );
+
+    const handleId = this.extractHandleIdentifier(handle);
+    const evidenceLink = `https://hdl.handle.net/${handleId}`;
+    const existingEvidence = await this._evidenceRepository.findOne({
+      where: { link: evidenceLink, result_id: resultId },
+    });
+    if (!existingEvidence) {
+      await this._evidenceRepository.save({
+        link: evidenceLink,
+        result_id: resultId,
+        knowledge_product_related: resultId,
+        created_by: user.id,
+        is_supplementary: false,
+        evidence_type_id: 1,
+      });
+    }
+
+    return knowledgeProduct;
+  }
+
+  private async validateAndSanitizePredictedInstitutions(
+    institutions: ResultsKnowledgeProductInstitution[],
+  ): Promise<void> {
+    if (!institutions?.length) {
+      return;
+    }
+
+    const predictedIds = institutions
+      .map((inst) => inst.predicted_institution_id)
+      .filter(
+        (id): id is number =>
+          id !== null && id !== undefined && !Number.isNaN(Number(id)),
+      );
+
+    if (!predictedIds.length) {
+      return;
+    }
+
+    const validClarisaInstitutions =
+      await this._clarisaInstitutionRepository.find({
+        where: { id: In(predictedIds) },
+        select: ['id'],
+      });
+
+    const validIdSet = new Set(validClarisaInstitutions.map((c) => c.id));
+
+    for (const inst of institutions) {
+      if (
+        inst.predicted_institution_id &&
+        !validIdSet.has(Number(inst.predicted_institution_id))
+      ) {
+        this._logger.warn(
+          `Predicted institution ID ${inst.predicted_institution_id} for "${inst.intitution_name}" does not exist in clarisa_institutions. Setting to null to avoid FK constraint violation.`,
+        );
+        inst.predicted_institution_id = null;
+        if (inst.result_by_institution_object) {
+          inst.result_by_institution_object.institutions_id = null;
+          inst.result_by_institution_object.is_predicted = false;
+        }
+      }
+    }
+  }
+
   async separateCentersFromCgspacePartners(
     knowledgeProduct: ResultsKnowledgeProduct,
     upsert = false,
@@ -1338,13 +1582,14 @@ export class ResultsKnowledgeProductsService {
           cgi.predicted_institution_id && !cgi.predicted_institution_object,
       )
       .map((cgi) => cgi.predicted_institution_id);
-    const possibleCgInstitutions =
-      await this._clarisaInstitutionRepository.find({
-        where: {
-          id: In(possibleCgInstitutionIds),
-        },
-        relations: { clarisa_center: true },
-      });
+    const possibleCgInstitutions = possibleCgInstitutionIds.length
+      ? await this._clarisaInstitutionRepository.find({
+          where: {
+            id: In(possibleCgInstitutionIds),
+          },
+          relations: { clarisa_center: true },
+        })
+      : [];
 
     knowledgeProduct.result_knowledge_product_institution_array = (
       knowledgeProduct.result_knowledge_product_institution_array ?? []
@@ -1367,7 +1612,7 @@ export class ResultsKnowledgeProductsService {
       if (
         cgi.is_active &&
         cgi.confidant > 97 &&
-        cgi.predicted_institution_object.clarisa_center
+        cgi.predicted_institution_object?.clarisa_center
       ) {
         cgi.is_active = false;
         cgi.last_updated_by = knowledgeProduct.last_updated_by;
@@ -1382,10 +1627,10 @@ export class ResultsKnowledgeProductsService {
         if (
           !sectionTwoCenters.find(
             (stc) =>
-              stc.clarisa_center_object.institutionId ==
+              stc.clarisa_center_object?.institutionId ==
               cgi.predicted_institution_id,
           ) &&
-          cgi.predicted_institution_object.clarisa_center
+          cgi.predicted_institution_object?.clarisa_center
         ) {
           const newSectionTwoCenter: ResultsCenter = new ResultsCenter();
           newSectionTwoCenter.center_id =
@@ -1409,8 +1654,10 @@ export class ResultsKnowledgeProductsService {
       sectionTwoCenters.forEach((stc) => {
         const updatedCenter = updatedCgInstitutions.find(
           (cgi) =>
+            cgi.predicted_institution_id &&
+            stc.clarisa_center_object &&
             cgi.predicted_institution_id ==
-            stc.clarisa_center_object.institutionId,
+              stc.clarisa_center_object.institutionId,
         );
 
         stc.from_cgspace = !!updatedCenter;
@@ -1856,7 +2103,11 @@ export class ResultsKnowledgeProductsService {
       if (!sectionSevenData.isMeliaProduct) {
         sectionSevenData.ostSubmitted = null;
         sectionSevenData.ostMeliaId = null;
-        sectionSevenData.tocMeliaStudyId = undefined;
+        // `null`, not `undefined`. TypeORM's `update()` omits undefined properties from the SQL, so
+        // this used to leave the chosen MELIA study in the row for ever: the reporter answered "No"
+        // to "Is this knowledge product a MELIA Product?", the field vanished from the form, and the
+        // study stayed stored with nothing on screen to show it or remove it.
+        sectionSevenData.tocMeliaStudyId = null;
         sectionSevenData.clarisaMeliaTypeId = null;
       }
 
@@ -1864,6 +2115,18 @@ export class ResultsKnowledgeProductsService {
         sectionSevenData.clarisaMeliaTypeId = null;
       } else {
         sectionSevenData.ostMeliaId = null;
+        // The P25 twin of `ostMeliaId`. Both study pickers are gated on this same answer
+        // ("Do you have a MELIA study planned in your TOC?" / "Was it planned in your Initiative
+        // proposal?"): `*ngIf="ostSubmitted === true && isP25()"` for this one,
+        // `&& !isP25()` for `ostMeliaId` (`knowledge-product-info.component.html:35,46`). Clearing
+        // only one of the two left a third way into the same defect — answer No here while the
+        // result stays a MELIA product, and the picker disappeared while the study stayed stored.
+        //
+        // Guarded on `!== undefined` so the three-state contract survives: a caller that never
+        // mentions the field still does not have its column written.
+        if (sectionSevenData.tocMeliaStudyId !== undefined) {
+          sectionSevenData.tocMeliaStudyId = null;
+        }
       }
 
       await this._resultsKnowledgeProductRepository.update(
@@ -1877,7 +2140,12 @@ export class ResultsKnowledgeProductsService {
           melia_previous_submitted: sectionSevenData.ostSubmitted,
           melia_type_id: sectionSevenData.clarisaMeliaTypeId,
           ost_melia_study_id: sectionSevenData.ostMeliaId,
-          toc_melia_study_id: sectionSevenData.tocMeliaStudyId ?? undefined,
+          // Passed straight through so the three states stay distinguishable: `undefined` means the
+          // caller did not mention the field and TypeORM leaves the column alone (the P22 form has
+          // no ToC MELIA study picker at all), `null` clears it, a value sets it. The previous
+          // `?? undefined` collapsed null into undefined, which is why clearing the dropdown did not
+          // persist either.
+          toc_melia_study_id: sectionSevenData.tocMeliaStudyId,
         },
       );
 

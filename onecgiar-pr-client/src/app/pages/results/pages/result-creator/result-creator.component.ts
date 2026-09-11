@@ -1,4 +1,5 @@
-import { Component, DoCheck, OnInit } from '@angular/core';
+import { Component, DoCheck, OnDestroy, OnInit, NgZone, signal, computed } from '@angular/core';
+import { Subject, Subscription, catchError, debounceTime, distinctUntilChanged, filter, map, merge, of, switchMap, takeUntil } from 'rxjs';
 import { internationalizationData } from '../../../../shared/data/internationalization-data';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from './services/result-level.service';
@@ -7,6 +8,15 @@ import { ResultBody } from '../../../../shared/interfaces/result.interface';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { CreateResultManagementService } from './services/create-result-management.service';
 import { TerminologyService } from '../../../../internationalization/terminology.service';
+import { filterOutAvisaFromGroupedInitiativeOptions, filterOutAvisaInitiatives } from '../../../../shared/utils/avisa-initiative.util';
+
+/**
+ * P2-3527 — the similar-results search and the uniqueness gate answer independently, so a slow
+ * similarity search never holds back the gate that enables Save.
+ */
+type TitleSearchEvent =
+  | { kind: 'gate'; exactTitleFound: boolean; titleCheckFailed: boolean }
+  | { kind: 'similar'; depthSearchList: any[]; depthSearchFailed: boolean };
 
 @Component({
   selector: 'app-result-creator',
@@ -14,18 +24,49 @@ import { TerminologyService } from '../../../../internationalization/terminology
   styleUrls: ['./result-creator.component.scss'],
   standalone: false
 })
-export class ResultCreatorComponent implements OnInit, DoCheck {
+export class ResultCreatorComponent implements OnInit, DoCheck, OnDestroy {
   naratives = internationalizationData.reportNewResult;
   depthSearchList: any[] = [];
   exactTitleFound = false;
   titleCheckFailed = false;
+  /**
+   * P2-3526 — an empty similar-results list is not the same claim as "there are no similar results".
+   * The ElasticSearch host behind the similarity search stopped resolving, and its error handler
+   * emptied the list, which rendered as "no similarities" — the screen told the user the title was
+   * free right before Save refused it. This flag keeps the two states apart.
+   */
+  depthSearchFailed = false;
+  /** Title depth-search / uniqueness check in flight (mirrors ReportResultFormComponent). */
+  loadingDepthSearch = signal(false);
+  /** Initial 4-deep serial chain (phases → roles → initiatives) still running. */
+  loadingInitialData = signal(true);
+  private phasesSub: Subscription | null = null;
+  private readonly titleSearch$ = new Subject<string>();
+  private readonly destroy$ = new Subject<void>();
+  /** Same window as ReportResultFormComponent: the search now hits our MySQL, not Elastic. */
+  private static readonly TITLE_SEARCH_DEBOUNCE_MS = 500;
   mqapJson: {};
   validating = false;
-  kpAlertDescription = `Please add the handle generated in your Center's institutional repository (e.g., CGSpace, MELSpace, WorldFish Repository) to report your knowledge product. Only knowledge products entered into these repositories are accepted in the PRMS Reporting Tool.<br><br>
+  /**
+   * Years used by the knowledge-product guidance. `reportingCurrentPhase` / `previousReportingPhase` are PLAIN
+   * objects, so the computed depends on `reportingPhaseVersion()` — bumped by `getCurrentPhases()` — to re-render
+   * once the phases land. The calendar-year fallback keeps the sentence from ever painting "null" on first frame.
+   */
+  readonly kpGuidanceYears = computed(() => {
+    this.api.dataControlSE.reportingPhaseVersion?.();
+    const current = Number(this.api.dataControlSE.reportingCurrentPhase?.phaseYear ?? new Date().getFullYear());
+    const previous = Number(this.api.dataControlSE.previousReportingPhase?.phaseYear ?? current - 1);
+    return { current, previous, next: current + 1 };
+  });
+
+  readonly kpAlertDescription = computed(() => {
+    const { current, previous, next } = this.kpGuidanceYears();
+    return `Please add the handle generated in your Center's institutional repository (e.g., CGSpace, MELSpace, WorldFish Repository) to report your knowledge product. Only knowledge products entered into these repositories are accepted in the PRMS Reporting Tool.<br><br>
   The PRMS Reporting Tool will automatically retrieve all metadata entered into the institutional repositories. Partners and geographical scope metadata are editable, while the other metadata fields are not.<br><br>
-  The handle will be verified, and only knowledge products from 2025 onwards will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in the repository ("Date Online"). If the online publication date is missing, the issued date ("Date Issued") will be considered. Articles published online in 2025 but issued in 2026 will be accepted for the 2025 reporting phase.<br><br>
-  AArticles published online in 2024 but issued in 2025 will not be accepted and will need to be reported in the correct reporting period. A new functionality will be implemented in the PRMS Reporting Tool to periodically allow the reporting of results from previous years. Handles already reported will also not be accepted.<br><br>
+  The handle will be verified, and only knowledge products from ${current} onwards will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in the repository ("Date Online"). If the online publication date is missing, the issued date ("Date Issued") will be considered. Articles published online in ${current} but issued in ${next} will be accepted for the ${current} reporting phase.<br><br>
+  Articles published online in ${previous} but issued in ${current} will not be accepted and will need to be reported in the correct reporting period. A new functionality will be implemented in the PRMS Reporting Tool to periodically allow the reporting of results from previous years. Handles already reported will also not be accepted.<br><br>
   If you need support to modify any of the harvested metadata from the institutional repositories, please contact your Center's knowledge manager.<br>`;
+  });
   allInitiatives = [];
   allPhases = [];
   cgiarEntityTypes = [];
@@ -41,41 +82,75 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     public createResultManagementService: CreateResultManagementService,
     public terminologyService: TerminologyService,
     private router: Router,
-    private phasesService: PhasesService
-  ) {}
+    private phasesService: PhasesService,
+    private readonly ngZone: NgZone
+  ) {
+    // Wired here, not in ngOnInit: the title stream is pure RxJS plumbing and has to be listening
+    // before the first keystroke reaches depthSearch().
+    this.setupTitleSearch();
+  }
 
   ngOnInit(): void {
-    this.api.dataControlSE.getCurrentPhases().subscribe(() => {
-      this.api.rolesSE.validateReadOnly().then(() => {
-        this.GET_AllInitiatives();
-      });
-      this.api.alertsFs.show({
-        id: 'indoasd',
-        status: 'success',
-        title: '',
-        description: this.naratives.alerts(
-          this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym)
-        ),
-        querySelector: '.report_container',
-        position: 'beforebegin'
-      });
+    this.loadingInitialData.set(true);
+    this.api.dataControlSE.getCurrentPhases().subscribe({
+      next: () => {
+        this.api.rolesSE.validateReadOnly().then(() => {
+          this.GET_AllInitiatives(() => this.loadingInitialData.set(false));
+          // Non-admins never hit GET_AllInitiatives (it early-returns): release the guard here.
+          if (!this.api.rolesSE.isAdmin) this.loadingInitialData.set(false);
+        });
+        this.api.alertsFs.show({
+          id: 'indoasd',
+          status: 'success',
+          title: '',
+          description: this.naratives.alerts(
+            this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym)
+          ),
+          querySelector: '.report_container',
+          position: 'beforebegin'
+        });
+      },
+      error: () => this.loadingInitialData.set(false)
     });
     this.resultLevelSE.resultBody = new ResultBody();
     this.resultLevelSE.currentResultTypeList = [];
     this.resultLevelSE.resultLevelList?.forEach(reLevel => (reLevel.selected = false));
     this.resultLevelSE.cleanData();
     this.api.updateUserData(() => {
-      if (this.api.dataControlSE.myInitiativesListReportingByPortfolio.length == 1)
-        this.resultLevelSE.resultBody.initiative_id = this.api.dataControlSE.myInitiativesListReportingByPortfolio[0].id;
+      const initiatives = this.selectableInitiatives;
+      if (initiatives.length == 1) this.resultLevelSE.resultBody.initiative_id = initiatives[0].id;
     });
 
-    setTimeout(() => {
+    this.loadAllPhases();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.phasesSub?.unsubscribe();
+    this.phasesSub = null;
+    if (this.trailingScanId !== null) {
+      clearTimeout(this.trailingScanId);
+      this.trailingScanId = null;
+    }
+  }
+
+  /**
+   * Chained off PhasesService instead of the old `setTimeout(..., 600)` guess: read the phases
+   * straight away when they are already cached, otherwise wait for the fetch to emit.
+   */
+  private loadAllPhases(): void {
+    const alreadyLoaded = !!this.phasesService?.phases?.reporting?.length || !!this.phasesService?.phases?.ipsr?.length;
+    if (alreadyLoaded) {
       this.getAllPhases();
-    }, 600);
+      return;
+    }
+
+    this.phasesSub = this.phasesService.getPhasesObservable().subscribe(() => this.getAllPhases());
   }
 
   onSelectInit() {
-    const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio) || []).find(
+    const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.selectableInitiatives) || []).find(
       init => init.id == this.resultLevelSE.resultBody.initiative_id
     );
     const resultType = this.cgiarEntityTypes.find(type => type.code == init.typeCode);
@@ -122,10 +197,10 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
           const groupList = entityTypesResponse;
           const resultList = [];
           groupList?.forEach(groupItem => {
-            const initsGroup = this.allInitiatives.filter(item => item.typeCode == groupItem.code);
+            const initsGroup = filterOutAvisaInitiatives(this.allInitiatives.filter(item => item.typeCode == groupItem.code));
             if (initsGroup?.length) resultList.push(groupItem, ...initsGroup);
           });
-          this.allInitiatives = resultList;
+          this.allInitiatives = filterOutAvisaFromGroupedInitiativeOptions(resultList);
         });
       },
       error: err => {
@@ -139,6 +214,10 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
 
   get isKnowledgeProduct() {
     return this.resultLevelSE.resultBody.result_type_id == 6;
+  }
+
+  get selectableInitiatives() {
+    return filterOutAvisaInitiatives(this.api.dataControlSE.myInitiativesListReportingByPortfolio);
   }
 
   get resultTypeNamePlaceholder(): string {
@@ -165,33 +244,87 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
       this.depthSearchList = [];
       this.exactTitleFound = false;
       this.titleCheckFailed = false;
+      this.depthSearchFailed = false;
+      this.loadingDepthSearch.set(false);
       return;
     }
 
+    // Both calls fire while the user types; surface that they are running (mirrors
+    // ReportResultFormComponent.loadingDepthSearch) instead of leaving the user with a silent UI.
+    this.loadingDepthSearch.set(true);
+    this.titleSearch$.next(title);
+  }
+
+  private setupTitleSearch(): void {
+    this.titleSearch$
+      .pipe(
+        filter(title => !!title?.trim()),
+        debounceTime(ResultCreatorComponent.TITLE_SEARCH_DEBOUNCE_MS),
+        distinctUntilChanged(),
+        switchMap(title => this.searchSimilarResultsWithTitleUniqueness(title)),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(event => this.applyTitleSearchEvent(event));
+  }
+
+  /**
+   * P2-3527 — both halves are ours now: `get/depth-search` returns the similar-results list (it used
+   * to come from an Elastic host that no longer resolves) and `check-title-uniqueness` gates the
+   * exact title. They are merged, not chained, so neither waits for the other.
+   */
+  private searchSimilarResultsWithTitleUniqueness(title: string) {
     const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
 
-    this.api.resultsSE.GET_FindResultsElastic(title, legacyType).subscribe({
-      next: (response: any[]) => {
-        this.depthSearchList = response.map(result => ({
-          ...result,
-          phase: this.allPhases.find(phase => phase.id === result?.version_id)
-        }));
-      },
-      error: () => {
-        this.depthSearchList = [];
-      }
-    });
+    const similar$ = this.api.resultsSE.GET_depthSearch(title, legacyType).pipe(
+      map(response => ({
+        kind: 'similar' as const,
+        depthSearchList: this.mapDepthSearchResults(response),
+        depthSearchFailed: false
+      })),
+      catchError(() =>
+        of({
+          kind: 'similar' as const,
+          depthSearchList: [] as any[],
+          depthSearchFailed: true
+        })
+      )
+    );
 
-    this.api.resultsSE.GET_checkTitleUniqueness(title).subscribe({
-      next: resp => {
-        this.titleCheckFailed = false;
-        this.exactTitleFound = resp?.response?.isUnique === false;
-      },
-      error: () => {
-        this.titleCheckFailed = true;
-        this.exactTitleFound = false;
-      }
-    });
+    const gate$ = this.api.resultsSE.GET_checkTitleUniqueness(title).pipe(
+      map(resp => ({
+        kind: 'gate' as const,
+        exactTitleFound: resp?.response?.isUnique === false,
+        titleCheckFailed: false
+      })),
+      catchError(() =>
+        of({
+          kind: 'gate' as const,
+          exactTitleFound: false,
+          titleCheckFailed: true
+        })
+      )
+    );
+
+    return merge(similar$, gate$);
+  }
+
+  private applyTitleSearchEvent(event: TitleSearchEvent): void {
+    if (event.kind === 'similar') {
+      this.depthSearchList = event.depthSearchList;
+      this.depthSearchFailed = event.depthSearchFailed;
+      return;
+    }
+
+    this.exactTitleFound = event.exactTitleFound;
+    this.titleCheckFailed = event.titleCheckFailed;
+    this.loadingDepthSearch.set(false);
+  }
+
+  private mapDepthSearchResults(response: any[]) {
+    return (response ?? []).map(result => ({
+      ...result,
+      phase: this.allPhases.find(phase => phase.id === result?.version_id)
+    }));
   }
 
   getLegacyType(type: string, level: string): string {
@@ -249,8 +382,46 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     }
   }
 
+  /** Throttle for the mandatory-field DOM scan (was running synchronously on every CD cycle). */
+  private static readonly SCAN_THROTTLE_MS = 150;
+  private lastScanAt = 0;
+  private scanScheduled = false;
+  private trailingScanId: any = null;
+
   ngDoCheck(): void {
-    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.local_container');
+    // Same fix as Result Detail (P2-2967/P2-2971): throttle (leading + trailing edge) the DOM-scanning
+    // mandatory-field check, coalesce into one rAF run OUTSIDE Angular's zone, tick only when it changed.
+    if (this.scanScheduled) return;
+    const elapsed = Date.now() - this.lastScanAt;
+    if (elapsed >= ResultCreatorComponent.SCAN_THROTTLE_MS) {
+      this.runFeedbackScan();
+    } else if (this.trailingScanId === null) {
+      this.ngZone.runOutsideAngular(() => {
+        this.trailingScanId = setTimeout(() => {
+          this.trailingScanId = null;
+          this.runFeedbackScan();
+        }, ResultCreatorComponent.SCAN_THROTTLE_MS - elapsed);
+      });
+    }
+  }
+
+  private runFeedbackScan(): void {
+    if (this.trailingScanId !== null) {
+      clearTimeout(this.trailingScanId);
+      this.trailingScanId = null;
+    }
+    this.lastScanAt = Date.now();
+    this.scanScheduled = true;
+    this.ngZone.runOutsideAngular(() => {
+      requestAnimationFrame(() => {
+        this.scanScheduled = false;
+        const before = this.api.dataControlSE.fieldFeedbackList();
+        this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.local_container');
+        if (this.api.dataControlSE.fieldFeedbackList() !== before) {
+          this.ngZone.run(() => {});
+        }
+      });
+    });
   }
 
   GET_mqapValidation() {

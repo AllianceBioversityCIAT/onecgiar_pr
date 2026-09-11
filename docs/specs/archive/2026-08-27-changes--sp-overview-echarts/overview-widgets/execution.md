@@ -1,0 +1,108 @@
+# Execution Log: `changes/sp-overview-echarts/overview-widgets`
+
+## Document Control
+- **Spec Path:** `docs/specs/changes/sp-overview-echarts/overview-widgets/`
+- **Owner:** j.cadavid@cgiar.org
+- **Started:** 2026-08-27
+- **Branch:** `qa-development-2026` (spec branch — shared-file write discipline applies)
+- **Triad:** Leader (Claude Fable 5, T1) · Implementer `akili-implementer` wrapper (sonnet, T2) · Reviewer `akili-reviewer` wrapper (opus, T3)
+- **Approval Mode:** gated for OVW-T-1; **pre-approved (j.cadavid@cgiar.org, 2026-08-27)** for OVW-T-2 → OVW-T-4 ("continue T-2→T-4 sin pausas") — routine continue gates auto-pass and are logged; HALT / Pivot / budget tripwire / FATAL_FAIL still stop.
+- **Budget (design.md §1):** 4 tasks / ~600 LOC / 1–2 review rounds
+- **Leader decisions at start:**
+  - Order strictly serial T-1 → T-2 → T-3 → T-4 (all touch `program-overview.component.*`).
+  - Skills: `angular-developer` all tasks; `tdd` on T-1 and T-3 (vocabulary/matrix logic); `ui-ux-pro-max` on T-3/T-4 (chart cards).
+  - Effort: `medium` for all (well-specified Standard tasks); bump per rework rule.
+
+---
+
+## Task Execution History
+
+## Task `OVW-T-1` — Link payloads and navigation in the parent (`dashboard-lab`)
+
+- **Status:** PASS · **Date:** 2026-08-27 · **Attempts:** 2
+- **Implementer:** `akili-implementer` (sonnet) · skills `angular-developer` + `tdd`
+- **Reviewer:** `akili-reviewer` (opus) · lens checklist
+
+### Attempt 1 — effort `medium` → Reviewer `STATUS: FAIL`
+- **Files:** `dashboard-lab.component.{ts,html,spec.ts}`, `program-overview.component.{ts,spec.ts}` (+280/−35). Leader mid-task adjustment: added the `openResults` output **declaration** in `program-overview` so the parent's `(openResults)` binding compiles under `strictTemplates` (jest could not see it — the parent spec overrides the template to `''`); `ng build` added to the verification set.
+- **Verification (Implementer):** jest 480/480 suites, 6763 tests; lint clean; `ng build` clean (pre-existing warnings only); singular-origin grep 0 hits.
+- **Reviewer FAIL (verbatim issue):**
+  1. **Discovered Issue:** The slot→`status_name` mapping is asserted for only three of the six slots (`in-progress`, `in-qa` link-null only, `not-started` fallback). `submitted`, `approved`, `discontinued` have no assertion; the `discontinued` appended-segment branch is newly modified code with its own `statusNameOf`/`linkOf` call site and is invisible to the suite. **Violated Rule:** `tasks.md` §OVW-T-1 → OVW-R-1 *Status segment / legend* "AND IT MUST map every slot → spec over all 6 slots" (requirements.md:76). **Remediation:** one test with non-zero counts on ids 1–6 asserting per slot key both `statusName` and `link.status` in a single `toEqual`.
+- **ADVISORY (recorded, not gating):** `linkOf` could yield `{status:''}` for an id outside the catalogue with a blank wire name (unreachable today); `onOverviewLink` navigates on an empty intent — consider early return.
+
+### Attempt 2 — effort `high` → Reviewer `STATUS: PASS`
+- **Change:** one test added, no implementation change — `'maps every one of the six status slots (incl. the appended discontinued slot) to its own statusName + link'` (ids 1–6 at non-zero counts, single ordered `toEqual` over `[key, statusName, link.status]` triples, discontinued last).
+- **Verification (Implementer):** jest 480/480 suites, **6764 tests**; lint clean; diff-stat same 5 files (+304/−35).
+- **Reviewer verdict:** `STATUS: PASS` — "The six-slot mapping is now asserted end to end, including the separately-coded discontinued branch, and the rework touched only the spec file — every other file is bit-identical to the version I already audited." Reviewer verified non-regression structurally via unchanged blob hashes on the other four files.
+- **ADVISORY (carried, not gating, not tasked):** guard `linkOf` against an empty resolved name; early-return in `onOverviewLink` when no key maps.
+
+- **Requirements covered:** OVW-R-1 (Category W1/W2 BUT NOT origin / AND IT MUST NOT other params; Category W3 + center AND IT MUST plural / BUT Not specified; Status segment THEN status_name / AND IT MUST all 6 slots / BUT zero-count) · OVW-R-5 (parent side: URL from sibling #1 constants, one `navigate`).
+- **Decisions:** Leader added the `openResults` output declaration to T-1 scope (compile safety under `strictTemplates`; T-2 wires it). `ng build` added to the gate for this task.
+- **Issues:** 1 rework round (test coverage of the MUST clause), within the 1–2 round budget.
+
+## Task `OVW-T-2` — Navigable rows/segments in `program-overview` + deliberate spec rewrite
+
+- **Status:** PASS · **Date:** 2026-08-27 · **Attempts:** 1
+- **Implementer:** `akili-implementer` (sonnet) · effort `medium` · skills `angular-developer`
+- **Reviewer:** `akili-reviewer` (opus) · lens checklist
+
+### Attempt 1
+- **Files (3):** `program-overview.component.{ts,html,spec.ts}` (+156/−53 incl. Leader's `execution.md` Approval-Mode edit, which is Leader bookkeeping — confirmed mine; the user authorisation quoted there is verbatim: "continue T-2→T-4 sin pausas").
+- **Changes:** `emitLink(link)` → `openResults.emit` only (no `inject()`, no Router); rows `[disabled]="!bar.link"` + `(click)`; Tailwind `disabled:` variants; `#comingSoon` template + outlets removed (`NgTemplateOutlet` import dropped); meter slices get a transparent full-slice overlay `<button>` when linked (keeps `div.h-[44px] > span.pr-figure-sm` assertion T-4 requires unchanged); legend items button/span by link.
+- **Five pinned assertions rewritten by name:** h2 order (unchanged, 6 — T-3 extends), `svg===0` (unchanged — T-3 replaces), `button[aria-label]` count → linked rows + linked segments, "rows disabled" → inverted (only `Not specified` disabled), "Coming soon" → 0. **New:** emission payload via `openResults.subscribe`; disabled row emits nothing (DOM + `emitLink(null)`); zero-count legend not a button; boundary asserted by source grep (Angular 21 `Router` is `providedIn: 'root'`, so a DI-absence test would be inert — Reviewer accepted as the correct replacement).
+- **Deviations adjudicated (Reviewer):** (a) overlay button per slice — accepted, better reading of the spec; (b) `aria-label` → `null` on the disabled `Not specified` row — accepted, inside the sanctioned "non-button row" option, accessible name still "Not specified N"; (c) grep boundary test — accepted.
+- **Verification (Implementer, full suite):** jest 480/480 suites, **6769 tests** (+5); lint clean; `ng build` OK; `grep -c "Coming soon"` template → 0; diff limited to the three files.
+- **Reviewer verdict:** `STATUS: PASS` — "the five pinned assertions are rewritten by name with new expected values, the 'Coming soon' chips and the unconditional `disabled` are gone, every linked row/segment/legend item is a real keyboard-native button emitting one typed `OverviewLink`, and the presentational boundary holds."
+- **Presence caveat (DoD 3, recorded):** `button` presence + `aria-label` prove markup only — that a click actually lands on the Results tab with the right chips is **not** proven here; it is OVW-AC-3 (manual/T6 after T-4).
+- **ADVISORY (recorded, not tasked):** `hover:brightness-95` on the transparent overlay is inert (tint the overlay or use `group-hover`); slice `aria-label` uses wire vocabulary ("Editing") while tooltip/legend use the slot label ("In progress") — consider `segment.label`; boundary grep could be `not.toMatch(/@angular\/router/)`; no explicit `focus-visible` ring on rows/overlays (`--pr-focus-ring` exists); add a comment on the conditional `aria-label` pointing at OVW-DD-3.
+- **Requirements covered:** OVW-R-1 (*No "Coming soon" left*; *Status segment / legend* BUT zero-count; *Category row* real button) · OVW-R-5 (child side: BUT NOT navigate from inside).
+- **Gate:** continue → **auto-approved (pre-approved mode)**.
+
+## Task `OVW-T-3` — Two heatmap cards (matrices in parent, charts in child)
+
+- **Status:** PASS · **Date:** 2026-08-27 · **Attempts:** 1 (plus 2 runtime-failed spawns, no attempt consumed)
+- **Runtime note:** first Implementer spawn died on an environment failure ("Login expired") before writing anything (tree verified clean at `93ecd530a`); user re-authenticated; respawned once per the runtime-failure rule — not a work FAIL, no attempt consumed.
+- **Implementer:** `akili-implementer` (sonnet) · effort `medium` · skills `angular-developer` + `tdd` + `ui-ux-pro-max`
+- **Reviewer:** `akili-reviewer` (opus) · lens checklist
+
+### Attempt 1
+- **Files (7 + 2 new):** `dashboard-lab.component.{ts,html,spec.ts}`, `program-overview.component.{ts,html,spec.ts}`, NEW `program-overview.charts.{ts,spec.ts}` — +594/−18 plus the two new files.
+- **Changes:** `IndicatorCategory` widened (`qualityAssessed`/`others`/`totalResults` were on the wire, discarded by the type); `overviewW12Heatmap` + `overviewBilateralHeatmap` computeds (all-zero rows dropped, `Other`/`Not specified` → null link, top-8 + `shownOf`, sort desc/name, plural origin); pure builders `heatmapOption`/`heatmapTable`/`cellLinkFromClick` (yAxis `inverse:true`, visualMap continuous non-calculable with ramp reversed light→dark, labels ≤6 cols, tooltip "(not navigable)"); two new cards at positions 4–5; spec rewrites: h2 order → 8 titles, `svg===0` → "2 `app-pr-viz-chart` hosts each with non-null tableModel" (+T-4 comment).
+- **Verification (Implementer, full suite):** jest **481/481 suites, 6790 tests**; lint clean; `ng build` OK (warnings identical before/after; the 4.72 kB initial-budget overage is pre-existing — echarts loads in the lazy dashboard-lab chunk); hex grep: 3 hits, all pre-existing T-1/T-2 StatusSegment fixture literals, none from this diff.
+- **Reviewer verdict:** `STATUS: PASS` — matrices, builders, card order, a11y table pairing and the deliberate spec rewrites conform to OVW-R-2/R-3, design §2.2/§6.2/§6.3/§6.4 and the DoD; child stays presentational; no hex or singular-origin string enters the diff.
+- **Adjudications:** (a) hex fixture hits accepted (meter colours, out of this spec's chart-token scope; re-examine at T-4 if ever); (b) blank-`indicator_category` rows excluded from the bilateral matrix accepted (matches `overviewBilateralCategories`); (c) **OVW-R-6 gap recorded — NOT satisfied for either card:** the W1/W2 `[loading]` binding is unreachable (host sits inside `@if (rows.length)`, and while loading rows are `[]` → empty state renders); bilateral has no loading signal (design §13 escape hatch). OVW-R-6 is a SHOULD; Implements clause literally satisfied; not gated.
+- **➡ Forward pointer to OVW-T-4 (carried in its brief):** make the W1/W2 loading state reachable — render the empty-state paragraph only when not loading (`@else if (!w12HeatmapLoading())`) or hoist the chart host out of the `@if`. One line; requirements §12 maps OVW-R-6 to T-3 and T-4.
+- **ADVISORY (recorded, not tasked):** `HeatmapModel.subtitle` is written but unread (template hardcodes the sentence — two copies will diverge); `heatmapRamp` comment claims a refresh cadence the memoised computed does not have; bilateral docstring's "reconciles with center bars" holds only when every row has a category; echarts tooltip formatter renders HTML — injection point if user-authored strings ever reach the axes.
+- **Requirements covered:** OVW-R-2 (Cell click BUT Other · AND IT MUST omit all-zero + empty state · A11y pairing AND visual map) · OVW-R-3 (Cell click BUT Not specified · AND subtitle · Many centers top-8 AND sort) · OVW-R-6 partial (recorded gap, forward pointer).
+- **Runtime note:** two spawns died on expired auth before writing anything (tree verified clean both times); third spawn completed. No attempt consumed.
+- **Gate:** continue → **auto-approved (pre-approved mode)**.
+
+## Task `OVW-T-4` — Status donut in the Reporting status card
+
+- **Status:** PASS · **Date:** 2026-08-27 · **Attempts:** 1
+- **Implementer:** `akili-implementer` (sonnet) · effort `medium` · skills `angular-developer` + `ui-ux-pro-max`
+- **Reviewer:** `akili-reviewer` (opus) · lens checklist
+
+### Attempt 1
+- **Files (5, all `program-overview/`):** `charts.ts` (+102: `donutOption`/`donutTable`/`sectorLinkFromClick` + `DONUT_SLOT_TOKEN`, fence exception documented in the header), `charts.spec.ts` (+95), `component.{ts,html,spec.ts}` — +323/−62.
+- **Changes:** donut (`radius ['62%','88%']`, labels/legend off, center title = total) in a `w-[160px]` column beside the meter; meter/legend markup line-for-line identical; sectors colored from `resolveStatusTokens()` keyed by slot (`discontinued`→`notStarted`); click resolves by sector name to `segment.link` → `emitLink`. **Forward pointer from T-3 delivered:** W1/W2 card condition now `@if (rows.length || w12HeatmapLoading())` — the loading skeleton is reachable, with a spec case (loading + empty model → empty-state absent, host `loading()===true`). Hosts assertion 2→3.
+- **Verification (Implementer, full suite):** jest **481/481 suites, 6802 tests** (+12); lint clean; `ng build` OK (pre-existing warnings only); hex grep 0 new hits; `dashboard-lab.*`/package diffs empty.
+- **Reviewer verdict:** `STATUS: PASS` — "Every DoD line of OVW-T-4 and every clause of OVW-R-4 is met: sectors colored from `resolveStatusTokens()` pairs keyed by slot (never the chart ramp), pie config matches design §6.3 exactly, meter/legend assertions untouched, hosts 2→3, and the W1/W2 loading forward pointer owed from T-3 is delivered with a new spec case." Reviewer cross-checked the slot-key set against the parent (all six match; the `?? 'notStarted'` fallback cannot silently fire).
+- **ADVISORY (recorded, not tasked):** the `discontinued`-mapping assertion is tautological under jsdom (`''`==='' ) — strengthen with sentinel token fixtures; the loading case asserts the binding, not the rendered overlay; `statusTokens` computed comment overstates its refresh cadence (same wording as T-3's `heatmapRamp` — correct both together); **pending item at archive:** `chart-tokens.util.ts` fence comments ("NEVER"/"must NOT") now have one approved exception — append "one documented exception: the Overview status donut (OVW-DD-5)".
+- **Requirements covered:** OVW-R-4 (all clauses: THEN via link · AND IT MUST status token pairs/fence exception · BUT NOT replace/reflow) · OVW-R-6 (loading reachability delivered for W1/W2; bilateral skip recorded per design §13; reduced motion wrapper-owned).
+- **Gate:** spec complete → summary below.
+
+---
+
+## Summary
+
+- **All 4 tasks PASS:** T-1 (2 attempts — test-coverage rework), T-2 (1), T-3 (1, + 2 runtime-failed spawns on expired auth, no attempt consumed), T-4 (1). **Budget:** 4 tasks / ~600 LOC / 1–2 review rounds → actual 4 tasks / ~1,320 changed lines (≈500 src + ≈820 spec/test) / 1 rework round total. Tasks and review rounds within budget; LOC above the estimate, driven by test code (the five deliberate assertion rewrites plus ~30 new cases) — production code landed near the ~300 estimate. Recorded, not a tripwire stop: the overage is test evidence the spec itself demanded at clause granularity.
+- **Requirements:** OVW-R-1..R-5 fully covered with behavioral tests; OVW-R-6 delivered for W1/W2 loading + reduced motion (wrapper), bilateral loading skipped per design §13 escape hatch (recorded).
+- **Verification final:** jest 481/481 suites, 6802 tests; lint clean; `ng build` clean; grep singular-origin 0; hex 0 new.
+- **Pending (not automatable):** **OVW-AC-3 manual HITL/T6 on SP02** — visual (heatmaps/donut tokens, tooltips, visual map legibility at 240px, layout 1280/1024px) + 6 click paths (category row, status segment, donut sector, one cell per heatmap, center row) landing on the Results tab with matching chips.
+- **Pending at archive (spec branch):** `../family.md` row #3 → done + family complete (done in this run — spec-scoped exemption); `program-overview/CLAUDE.md` invariant rewrite; `chart-tokens.util.ts` fence-comment exception note; `docs/ux-ui/design.md §8` registration (from sibling #2).
+
+## Constitution Impact: OVW-T-3 / OVW-T-4
+- **Module reshaped:** `program-overview` gained a chart-builder module (`program-overview.charts.ts`) and now hosts `app-pr-viz-chart`; its `CLAUDE.md` invariants ("do not upgrade to a chart", disabled rows, "Coming soon" chips, stale `bilateralRoles` row) are now false — child guide rewrite needed at archive.
+- **Shared surface:** `chart-tokens.util.ts` doc fence needs the OVW-DD-5 exception note (pending item — shared file, default branch).
+- **CodeGraph re-index pending** (new file + reshaped component surfaces).

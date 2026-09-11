@@ -62,8 +62,13 @@ export class PanelMenuComponent {
     return Boolean(hideInKP.find(option => option == navOption.path));
   }
 
+  /**
+   * Memoized JSON snapshot of green_checks (delegates to the DataControlService computed).
+   * The template binds `greenChecksString()` directly; this getter is kept for compatibility.
+   * Was a per-change-detection `JSON.stringify`. (P2-2967/P2-2970)
+   */
   get green_checks_string() {
-    return JSON.stringify(this.api.dataControlSE.green_checks);
+    return this.api.dataControlSE.greenChecksString();
   }
 
   validateMember(myInitiativesList) {

@@ -85,20 +85,20 @@ export class InnovationPackageListComponent implements OnInit, OnDestroy {
   }
 
   get initsSelectedJoinText() {
-    const myInitiativesList = this.api.dataControlSE?.myInitiativesList;
+    const myInitiativesList = this.api.dataControlSE?.myInitiativesListIPSRByPortfolio;
     const options = this.ipsrListFilterSE.filters.general[1]?.options;
     return JSON.stringify([...myInitiativesList, ...options]);
   }
 
   get everyDeselected() {
-    return this.api.dataControlSE.myInitiativesList.every(item => !item.selected);
+    return this.api.dataControlSE.myInitiativesListIPSRByPortfolio.every(item => !item.selected);
   }
 
   deselectInits() {
-    this.api.dataControlSE.myInitiativesList.forEach(item => (item.selected = false));
+    this.api.dataControlSE.myInitiativesListIPSRByPortfolio.forEach(item => (item.selected = false));
   }
 
   ngOnDestroy(): void {
-    this.api.dataControlSE?.myInitiativesList.forEach(item => (item.selected = true));
+    this.api.dataControlSE?.myInitiativesListIPSRByPortfolio.forEach(item => (item.selected = true));
   }
 }

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { Brackets, DataSource } from 'typeorm';
 import { Result } from './entities/result.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { DepthSearch } from './dto/depth-search.dto';
@@ -18,15 +18,101 @@ import {
 import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../shared/extendsGlobalDTO/base-repository';
+import {
+  CONSOLIDATED_IPR_QUESTION_TEXT,
+  CONSOLIDATED_IPR_TRIGGER_OPTION_TEXTS,
+  INNOVATION_DEV_FORM_REDUCTION_YEAR,
+  LEGACY_IP_EXPERT_SUPPORT_OPTION_ID,
+} from './result-questions/innovation-dev-questions.const';
 import { ReportParametersDto } from './dto/report-parameters.dto';
 import { BasicReportFiltersNormalized } from './dto/basic-report-filters.dto';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
+import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { ResultStatusData } from '../../shared/constants/result-status.enum';
+
+/**
+ * P2-3420 / P2-3421 — THE ONE PLACE that decides which Innovation Development results may be
+ * linked from an Innovation Use result. Both W1/W2 creation surfaces (the ToC-linked form and the
+ * emergent-result modal) read this list through the same endpoint, so the two can never drift.
+ *
+ * ANSWERED 2-Sep-2026. Ángel Jarrín did not reply in a comment: he EDITED both story descriptions
+ * at 09:13, so the two twins now carry the same wording, and quoted Nicoleta the same minute:
+ *   "Los estados válidos para considerar una innovación como activa son únicamente QAed y Approved
+ *    (aplica tanto para W1/W2 como para W3/bilat). Los estados Submitted y Editing quedan
+ *    excluidos: Submitted = la innovación aún no ha pasado por QA. Editing = la innovación sigue en
+ *    borrador. Las innovaciones con estado Discontinued siguen incluyéndose, sin importar la fuente
+ *    de financiamiento."
+ *
+ * ⚠️ That Spanish settles the ambiguity this constant was parked on. The English AC reads
+ * "Discontinued innovations (any funding source): included regardless of status", which sounds like
+ * a second axis; the original says *"las innovaciones con ESTADO Discontinued … sin importar la
+ * FUENTE DE FINANCIAMIENTO"*. Discontinued is a STATUS here, and what is disregarded is the funding
+ * source — not the status. So this stays a plain `status_id` allow-list: no `is_discontinued`
+ * clause, and no W1/W2-vs-W3/bilateral branch, because the same three states apply to both.
+ *
+ * ⚠️ Submitted (3) was IN the rule until that edit — P2-3420 asked for "Active W1/W2 innovations:
+ * status = Submitted or QAed" from 1-Sep 16:07. It is now explicitly out. Do not restore it from an
+ * older reading of the story.
+ *
+ * Change THIS constant — and nothing else — if the set moves again.
+ */
+/**
+ * P2-3292 Step 3 — statuses an innovation may have to be offered as a MERGE or SPLIT target.
+ *
+ * 🛑 Deliberately NOT `QA_LINKABLE_INNOVATION_STATUS_IDS`: that set includes Discontinued(4) on
+ * purpose, and Step 3 says "Not discontinued" in writing. An innovation that is itself closed
+ * cannot be where another one continued.
+ *
+ * Includes Approved(6) alongside QualityAssessed(2) for the same reason its sibling does: a
+ * W3/bilateral innovation completes the same quality process and lands on 6, so leaving it out
+ * would make every bilateral innovation invisible as a target. **Confirmed live on 4 Sep 2026**:
+ * result 8970 "test bilateral JD" comes back in status 6, so with status 2 alone a reporter who
+ * merged into it would have no way to say so. If business means status 2 alone, this constant is
+ * the only thing to change.
+ *
+ * 🛑 DO NOT "UNIFY" THIS WITH THE ENABLERS FILTER OF P2-3572. `getResultByTypes` (used by
+ * Innovation Packages Step 2) filters to statuses 2 and 3 and deliberately leaves Approved OUT —
+ * and that is also correct, because ITS story says "Quality Assessed and Submitted" verbatim while
+ * this one says "QA'd" without qualification. Two stories, two filters; the difference lives in
+ * each story's text, not in a technical preference. Measured on 4 Sep: 6 Policy change, 16
+ * Innovation use, 15 Capacity sharing and 14 Innovation development sit in status 6 and are
+ * excluded there — the last figure since before P2-3572 existed, so it is a pre-existing rule
+ * awaiting a business decision, not a gap. Making the two constants agree breaks one of them.
+ */
+export const MERGE_SPLIT_TARGET_STATUS_IDS: number[] = [
+  ResultStatusData.QualityAssessed.value, // 2 — QAed
+  ResultStatusData.Approved.value, // 6 — Approved (W3/bilateral)
+];
+
+export const QA_LINKABLE_INNOVATION_STATUS_IDS: number[] = [
+  ResultStatusData.QualityAssessed.value, // 2 — QAed
+  ResultStatusData.Approved.value, // 6 — Approved (W3/bilateral and W1/W2 alike)
+  ResultStatusData.Discontinued.value, // 4 — retired innovations stay linkable on purpose
+];
 
 @Injectable()
 export class ResultRepository
   extends BaseRepository<Result>
   implements LogicalDelete<Result>
 {
+  /**
+   * SQL for `replicate()` — carries one result forward into a new phase.
+   *
+   * `source`, `creation_method`, `external_submitter`, `external_platform_id`,
+   * `external_platform_code` and `external_reference` are part of the copy on purpose: a
+   * phase change continues the *same* result, so it keeps where it came from.
+   *
+   * They were missing until 2026-08-26, and the consequences were silent. Webhook dispatch
+   * decides by `external_platform_id` (`results.service.ts`, `enqueueBilateralWebhook`), so
+   * a copy without it logs "no webhook queued" and returns — the Science Program's decision
+   * on the new version never reaches the platform that reported it. And without `source` the
+   * copy stops reading as W3/bilateral in the reporting tool and in the `/list` sync, while
+   * `external_reference` is the id the reporting platform correlates by.
+   *
+   * `status_id` is deliberately NOT one of them: the copy always starts at 1 (Editing) and
+   * any flow that needs another status sets it afterwards on the new row. This query is
+   * shared with the W1/W2 phase change, so changing it here would move everyone.
+   */
   createQueries(
     config: ReplicableConfigInterface<Result>,
   ): ConfigCustomQueryInterface {
@@ -62,6 +148,12 @@ export class ResultRepository
         r2.geographic_scope_id,
         r2.lead_contact_person,
         r2.result_code,
+        r2.source,
+        r2.creation_method,
+        r2.external_submitter,
+        r2.external_platform_id,
+        r2.external_platform_code,
+        r2.external_reference,
         true as is_replicated
         from \`result\` r2 WHERE r2.id = ${
           config.old_result_id
@@ -95,6 +187,12 @@ export class ResultRepository
         nutrition_tag_level_id,
         environmental_biodiversity_tag_level_id,
         poverty_tag_level_id,
+        source,
+        creation_method,
+        external_submitter,
+        external_platform_id,
+        external_platform_code,
+        external_reference,
         is_replicated
         ) select
         r2.description,
@@ -128,6 +226,12 @@ export class ResultRepository
         r2.nutrition_tag_level_id,
         r2.environmental_biodiversity_tag_level_id,
         r2.poverty_tag_level_id,
+        r2.source,
+        r2.creation_method,
+        r2.external_submitter,
+        r2.external_platform_id,
+        r2.external_platform_code,
+        r2.external_reference,
         true as is_replicated
         from \`result\` r2 WHERE r2.id = ${
           config.old_result_id
@@ -617,6 +721,7 @@ WHERE
         rl.name AS result_level_name,
         rt.id AS result_type_id,
         r.created_date,
+        r.last_updated_date,
         ci.official_code AS submitter,
         ci.name AS submitter_name,
         ci.short_name AS submitter_short_name,
@@ -1256,47 +1361,92 @@ WHERE
     }
   }
 
-  async AllResultsLegacyNewByTitle(title: string) {
+  /**
+   * Similar-results search behind the result creator.
+   *
+   * Elastic used to serve that list; its host stopped resolving (P2-3527), so the search runs on
+   * MySQL again — which is where it lived before Elastic. Two guards make the MySQL version usable
+   * from a keystroke-driven UI:
+   *  - `limit` caps the page. Unbounded, `title like '%a%'` answers with ~10k rows / 8 MB.
+   *  - the ordering puts the exact title first, then prefix matches, then the rest, so the capped
+   *    page is the useful one instead of an arbitrary slice.
+   *
+   * `type` narrows only the legacy (pre-PRMS) rows, exactly as the Elastic query did: legacy rows
+   * carry an indicator type, current results are always eligible.
+   */
+  async AllResultsLegacyNewByTitle(
+    title: string,
+    options?: { type?: string; limit?: number },
+  ) {
+    const legacyType = (options?.type ?? '').trim();
+    const requestedLimit = Number(options?.limit);
+    // Interpolated below, so it is clamped to an integer here and never taken from the caller raw.
+    const limit =
+      Number.isFinite(requestedLimit) && requestedLimit > 0
+        ? Math.min(Math.trunc(requestedLimit), 50)
+        : 20;
     const queryData = `
-    (select 
-      lr.legacy_id as id,
-      lr.legacy_id as result_code,
-      lr.title,
-      lr.description,
-      lr.crp,
-      lr.\`year\`,
-      1 as legacy,
-      null as result_level_id,
-      null as result_type_name
-    from legacy_result lr
-    where lr.title like ?
-      and lr.is_migrated = 0)
-    union
-    (select 
-      r.id,
-      r.result_code,
-      r.title,
-      r.description,
-      ci.official_code as crp,
-      r.reported_year_id as \`year\`,
-      0 as legacy,
-      r.result_level_id,
-      rt.name as result_type_name
-    from \`result\` r 
-      inner join results_by_inititiative rbi on rbi.result_id = r.id
-                          and rbi.initiative_role_id = 1
-                          and rbi.is_active > 0
-      inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
-                          and ci.active > 0
-      inner join result_type rt on rt.id = r.result_type_id 
-    where r.is_active > 0
-      and r.title like ?)
+    select q.*
+    from (
+      (select
+        lr.legacy_id as id,
+        lr.legacy_id as result_code,
+        null as version_id,
+        lr.title,
+        lr.description,
+        lr.crp,
+        lr.\`year\`,
+        1 as legacy,
+        null as result_level_id,
+        lr.indicator_type as type,
+        null as result_type_name
+      from legacy_result lr
+      where lr.title like ?
+        and lr.is_migrated = 0
+        and (? = '' or lr.indicator_type = ?))
+      union
+      (select
+        r.id,
+        r.result_code,
+        r.version_id,
+        r.title,
+        r.description,
+        ci.official_code as crp,
+        r.reported_year_id as \`year\`,
+        0 as legacy,
+        r.result_level_id,
+        rt.name as type,
+        rt.name as result_type_name
+      from \`result\` r 
+        inner join results_by_inititiative rbi on rbi.result_id = r.id
+                            and rbi.initiative_role_id = 1
+                            and rbi.is_active > 0
+        inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
+                            and ci.active > 0
+        inner join result_type rt on rt.id = r.result_type_id 
+      where r.is_active > 0
+        and r.title like ?)
+    ) q
+    order by
+      case
+        when lower(q.title) = lower(?) then 0
+        when lower(q.title) like lower(?) then 1
+        else 2
+      end,
+      q.legacy asc,
+      q.\`year\` desc,
+      q.title asc
+    limit ${limit}
     `;
 
     try {
       const results: DepthSearch[] = await this.query(queryData, [
         `%${title}%`,
+        legacyType,
+        legacyType,
         `%${title}%`,
+        title,
+        `${title}%`,
       ]);
       return results;
     } catch (error) {
@@ -1388,6 +1538,7 @@ WHERE
     r.environmental_biodiversity_tag_level_id,
     r.poverty_tag_level_id,
     r.version_id,
+    v.phase_year,
     r.result_type_id,
     IF(r.source = 'Result', 'W1/W2', 'W3/Bilaterals') as source_name,
     r.status,
@@ -1432,7 +1583,48 @@ WHERE
         clarisa_portfolios cp
       WHERE
         cp.id = v.portfolio_id
-    ) AS portfolio
+    ) AS portfolio,
+    /*
+     * Display name of the user who created the result. \`r.created_by\` alone is a numeric id the
+     * client cannot resolve. Same \`users\` lookup the results list already does
+     * (\`AllResultsByRoleUserAndInitiativeFiltered\`, \`create_first_name\` / \`create_last_name\`),
+     * collapsed into one string here because the metadata popover shows one line. Empty when the
+     * user row is gone: never a bare id, never a fabricated name. (P2-3458)
+     */
+    (
+      SELECT
+        NULLIF(
+          TRIM(
+            CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))
+          ),
+          ''
+        )
+      FROM
+        users u
+      WHERE
+        u.id = r.created_by
+    ) AS created_by_name,
+    /*
+     * Lead center, when one is recorded. Same definition the rest of the server uses
+     * (\`is_leading_result = 1 OR is_primary = 1\`, see the \`lead_centers\` CTE in
+     * \`getResultsByProgramAndCenters\`) and the same two hops the name needs:
+     * \`results_center\` -> \`clarisa_center\` -> \`clarisa_institutions\`. A scalar subquery, not a
+     * join, so a result with several contributing centers still returns exactly one row.
+     * NULL when no center is flagged as the lead — the popover hides the line. (P2-3458)
+     */
+    (
+      SELECT
+        COALESCE(NULLIF(TRIM(ci2.acronym), ''), ci2.name)
+      FROM
+        results_center rc
+        INNER JOIN clarisa_center cc ON cc.code = rc.center_id
+        INNER JOIN clarisa_institutions ci2 ON ci2.id = cc.institutionId
+      WHERE
+        rc.result_id = r.id
+        AND rc.is_active = 1
+        AND (rc.is_leading_result = 1 OR rc.is_primary = 1)
+      LIMIT 1
+    ) AS lead_center
 FROM
     \`result\` r
     inner join result_level rl on rl.id = r.result_level_id 
@@ -1445,12 +1637,12 @@ FROM
     inner join \`version\` v on v.id = r.version_id 
     inner join clarisa_cgiar_entity_types ccet on ccet.code = ci.cgiar_entity_type_id
 WHERE
-    r.id = ${id}
+    r.id = ?
     and r.is_active > 0;
     `;
 
     try {
-      const results: Result[] = await this.query(queryData);
+      const results: Result[] = await this.query(queryData, [id]);
       return results.length ? results[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -2577,8 +2769,13 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
 
   async getIndicatorContributionSummaryByProgram(
     initiativeId: number,
-    reportingYear: number,
+    versionId: number,
   ) {
+    // W12-R-2: origin (source='Result'), ownership (initiative_role_id=1), phase
+    // (r.version_id, not the year-COALESCE) and universe (status != 4, type NOT IN
+    // (10, 11)) are reconciled with the meter's AllResultsByRoleUserAndInitiativeFiltered
+    // base query (result.repository.ts:~627-712), which applies no result_level_id
+    // predicate — so that filter is dropped here too (W12-DD-2, parity with W12-R-3).
     const query = `
       SELECT
         r.result_type_id,
@@ -2590,16 +2787,20 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         ON rbi.result_id = r.id
         AND rbi.inititiative_id = ?
         AND rbi.is_active = 1
+        AND rbi.initiative_role_id = 1
+      -- Kept deliberately though \`v\` is otherwise unreferenced (the r.version_id placeholder
+      -- predicate below already does the scoping): it enforces that r.version_id points
+      -- at a real \`version\` row, mirroring the meter's own join (result.repository.ts:~692).
       INNER JOIN \`version\` v
         ON v.id = r.version_id
       INNER JOIN result_type rt
         ON rt.id = r.result_type_id
       WHERE
         r.is_active = 1
-        AND r.status_id IN (1, 2, 3)
-        AND r.result_level_id IN (3, 4)
-        AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)
-        AND COALESCE(r.reported_year_id, v.phase_year) = ?
+        AND r.source = 'Result'
+        AND r.status_id != 4
+        AND r.result_type_id NOT IN (10, 11)
+        AND r.version_id = ?
       GROUP BY
         r.result_type_id,
         rt.name,
@@ -2610,7 +2811,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     `;
 
     try {
-      return await this.query(query, [initiativeId, reportingYear]);
+      return await this.query(query, [initiativeId, versionId]);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,
@@ -2642,6 +2843,219 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
+  /**
+   * P2-3420 / P2-3421 — Innovation Development results a W1/W2 Innovation Use result may be linked
+   * to: QA'd (see `QA_LINKABLE_INNOVATION_STATUS_IDS`), from a PAST reporting phase, and from any
+   * Science Program / Accelerator (portfolio-wide, no P/A restriction on purpose).
+   *
+   * 🛑 A NEW method on purpose. `getResultsForInnovUse()` above still feeds the wider Contributors
+   * & Partners multi-select and the bilateral section, and it hardcodes `phase_name = 'Reporting
+   * 2025'`; widening it in place would silently change those two screens.
+   *
+   * ⚠️ ONE ROW PER INNOVATION. PRMS replicates a result into every phase keeping the same
+   * `result_code` and title, so a plain phase filter returns the same innovation once per phase
+   * with a label the user cannot tell apart (verified in prtest: `result_code` 41 has QA'd rows in
+   * 2022, 2023 and 2024; 79 of 868 codes are duplicated). The `NOT EXISTS` collapses each
+   * `result_code` to its MOST RECENT QA'd past phase, so the link always points at the latest
+   * traceable row instead of an arbitrary one.
+   *
+   * @param currentPhaseYear year of the OPEN reporting phase — everything strictly older than it
+   * counts as a past phase. Resolved by the caller from the active version, never hardcoded.
+   */
+  /**
+   * P2-3420 / P2-3421 — Innovation Development results the W1/W2 dropdown may offer.
+   *
+   * Scope closed by Ángel Jarrín on 31-Aug-2026 (Nicoleta confirmed): **the previous reporting phase,
+   * singular**, across all portfolios / Science Programs. His earlier "previous phases" (plural) was
+   * retracted the same morning, so this filter is `= previousPhaseYear`, never `< currentPhaseYear`.
+   *
+   * The de-duplication stays: a phase year holds one version per portfolio, so the same
+   * `result_code` can still appear more than once inside a single year. Without it the reporter sees
+   * the same innovation twice with an identical label and cannot tell which to pick.
+   */
+  async getQaEdInnovationDevelopmentResults(previousPhaseYear: number) {
+    const statusPlaceholders = QA_LINKABLE_INNOVATION_STATUS_IDS.map(
+      () => '?',
+    ).join(', ');
+
+    const query = `
+    SELECT
+      r.id,
+      r.result_code,
+      r.title,
+      r.status_id,
+      v.phase_year,
+      cp.acronym
+    FROM result r
+    INNER JOIN version v ON v.id = r.version_id
+      AND v.is_active = TRUE
+    LEFT JOIN clarisa_portfolios cp ON cp.id = v.portfolio_id
+    WHERE r.is_active = TRUE
+      AND r.result_type_id = ${ResultTypeEnum.INNOVATION_DEVELOPMENT}
+      AND v.phase_year = ?
+      AND r.status_id IN (${statusPlaceholders})
+      AND NOT EXISTS (
+        SELECT 1
+        FROM result newer
+        INNER JOIN version newer_v ON newer_v.id = newer.version_id
+          AND newer_v.is_active = TRUE
+        WHERE newer.result_code = r.result_code
+          AND newer.is_active = TRUE
+          AND newer.result_type_id = ${ResultTypeEnum.INNOVATION_DEVELOPMENT}
+          AND newer_v.phase_year = ?
+          AND newer.status_id IN (${statusPlaceholders})
+          AND newer.id > r.id
+      )
+    ORDER BY r.result_code DESC;
+    `;
+
+    try {
+      return await this.query(query, [
+        previousPhaseYear,
+        ...QA_LINKABLE_INNOVATION_STATUS_IDS,
+        previousPhaseYear,
+        ...QA_LINKABLE_INNOVATION_STATUS_IDS,
+      ]);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * P2-3292 Step 3A/3B — the innovations a discontinued innovation may declare as its continuation,
+   * when the reporter says it MERGED into another one or was SPLIT into several.
+   *
+   * 🛑 A NEW method, and it has to be. `getQaEdInnovationDevelopmentResults` above looks like the
+   * same query and is the opposite in two ways that matter here:
+   *   - it is pinned to ONE phase (`= previousPhaseYear`), closed by Ángel on 31-Aug for P2-3421;
+   *   - it deliberately offers DISCONTINUED innovations (`QA_LINKABLE_INNOVATION_STATUS_IDS`
+   *     includes status 4), because a retired innovation stays linkable there.
+   * Step 3 asks for the exact reverse: every phase, and **never a discontinued one** — you cannot
+   * declare that your innovation continued inside one that is itself closed. Widening that method
+   * in place would silently change the Innovation Use link dropdown.
+   *
+   * ## What the story fixes, verbatim (P2-3292, Steps 3A and 3B)
+   *   - "one or more innovations from the full PRMS portfolio"  → no phase filter, multi-select
+   *   - "Status = QA'd (completed QA process)"                  → see the status note below
+   *   - "Not discontinued"                                      → status 4 excluded, explicitly
+   *   - "Innovation ID + Innovation title"                      → `result_code` and `title`
+   *
+   * ⚠️ **What "QA'd" means here is a business nuance, not a code detail.** In PRMS it is result
+   * status 2 (`quality-assessed`), but W3/bilateral innovations complete the same process and land
+   * on status 6 (`approved`) — which is why `QA_LINKABLE_INNOVATION_STATUS_IDS` treats 2 and 6 as
+   * equivalent. This method follows that precedent and offers both, so a bilateral innovation is
+   * not invisible as a merge target. If business means status 2 alone, this is the one constant to
+   * change. Ángel also quoted Nicoleta with "reported/QA'ed/updated", which is wider still.
+   *
+   * ⚠️ ONE ROW PER INNOVATION. A result is replicated into every phase keeping its `result_code`
+   * and title, so without the `NOT EXISTS` the reporter sees the same innovation once per phase
+   * with an identical label and cannot tell which to pick (measured on the sibling method: 79 of
+   * 868 codes duplicated). This collapses each code to its most recent eligible row.
+   *
+   * @param search    optional type-ahead over id and title. The story asks for a *searchable*
+   *                  dropdown and the list is portfolio-wide, so filtering server-side keeps the
+   *                  payload sane instead of shipping every innovation to the browser.
+   * @param excludeResultCode the innovation being discontinued: it must never offer itself as its
+   *                  own continuation. Passed as CODE, not id, so every phase of it is excluded.
+   * @param ownerInitiativeId when given, narrows the list to innovations whose PRIMARY submitter
+   *                  (role 1) is that Science Program / Accelerator. Left undefined the list is
+   *                  portfolio-wide, which is what Step 3 asks for; the parameter exists because
+   *                  narrowing it to the reporter's own programme is one call-site decision away.
+   */
+  async getMergeSplitTargetInnovations(options: {
+    search?: string;
+    excludeResultCode?: number;
+    ownerInitiativeId?: number;
+    limit?: number;
+  }) {
+    const statusPlaceholders = MERGE_SPLIT_TARGET_STATUS_IDS.map(
+      () => '?',
+    ).join(', ');
+
+    const params: any[] = [...MERGE_SPLIT_TARGET_STATUS_IDS];
+    const conditions: string[] = [];
+
+    if (options?.excludeResultCode) {
+      conditions.push('AND r.result_code <> ?');
+      params.push(options.excludeResultCode);
+    }
+
+    if (options?.ownerInitiativeId) {
+      // Role 1 is the owner/primary submitter; a contributor must not make the innovation count
+      // as belonging to that programme.
+      conditions.push(`AND EXISTS (
+        SELECT 1 FROM results_by_inititiative rbi
+        WHERE rbi.result_id = r.id
+          AND rbi.is_active > 0
+          AND rbi.initiative_role_id = 1
+          AND rbi.inititiative_id = ?
+      )`);
+      params.push(options.ownerInitiativeId);
+    }
+
+    const trimmedSearch = options?.search?.trim();
+    if (trimmedSearch) {
+      conditions.push(
+        'AND (r.title LIKE ? OR CAST(r.result_code AS CHAR) LIKE ?)',
+      );
+      params.push(`%${trimmedSearch}%`, `%${trimmedSearch}%`);
+    }
+
+    // The de-duplication subquery repeats the status set.
+    params.push(...MERGE_SPLIT_TARGET_STATUS_IDS);
+
+    const limit = Number.isInteger(options?.limit) ? options.limit : 50;
+    params.push(limit);
+
+    const query = `
+    SELECT
+      r.id,
+      r.result_code,
+      r.title,
+      r.status_id,
+      rs.status_name,
+      v.phase_year,
+      v.phase_name
+    FROM result r
+    INNER JOIN version v ON v.id = r.version_id
+      AND v.is_active = TRUE
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id
+    WHERE r.is_active = TRUE
+      AND r.result_type_id = ${ResultTypeEnum.INNOVATION_DEVELOPMENT}
+      AND r.status_id IN (${statusPlaceholders})
+      AND (r.is_discontinued IS NULL OR r.is_discontinued = FALSE)
+      ${conditions.join('\n      ')}
+      AND NOT EXISTS (
+        SELECT 1
+        FROM result newer
+        INNER JOIN version newer_v ON newer_v.id = newer.version_id
+          AND newer_v.is_active = TRUE
+        WHERE newer.result_code = r.result_code
+          AND newer.is_active = TRUE
+          AND newer.result_type_id = ${ResultTypeEnum.INNOVATION_DEVELOPMENT}
+          AND newer.status_id IN (${statusPlaceholders})
+          AND (newer.is_discontinued IS NULL OR newer.is_discontinued = FALSE)
+          AND newer.id > r.id
+      )
+    ORDER BY r.result_code DESC
+    LIMIT ?;
+    `;
+
+    try {
+      return await this.query(query, params);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
   async getResultsForInnovUse() {
     const query = `
     SELECT 
@@ -2650,7 +3064,10 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       v.phase_year,
       r.result_code,
       rt.name,
-      r.title
+      r.title,
+      r.description,
+      r.source,
+      r.status_id
     FROM result r
     INNER JOIN result_type rt ON r.result_type_id = rt.id
       AND rt.is_active = true
@@ -2658,8 +3075,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       AND v.is_active = true
     INNER JOIN clarisa_portfolios cp ON v.portfolio_id = cp.id
     WHERE         
-        v.phase_name = 'Reporting 2025'
-      AND v.is_active = true
+      r.status_id IN (2, 6)
       AND r.is_active = true
     UNION ALL
     SELECT 
@@ -2668,7 +3084,10 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       v.phase_year,
       r.result_code,
       rt.name,
-      r.title
+      r.title,
+      r.description,
+      r.source,
+      r.status_id
     FROM result r
     INNER JOIN result_type rt ON r.result_type_id = rt.id
       AND rt.is_active = true
@@ -2678,6 +3097,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     WHERE         
       cp.id = 2
         AND r.result_type_id IN (2, 7)
+        AND r.status_id IN (2, 6)
         AND r.is_active = true;
     `;
 
@@ -2692,11 +3112,32 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
+  /**
+   * True when the reporter asked for Intellectual Property support, which is what
+   * triggers the IP focal-point notification on submission (P2-3272 Part 3).
+   *
+   * The question that carries that request changes with the reporting phase, so the
+   * trigger has to change with it:
+   *
+   * - Up to the 2025 phase it is option 110 ("Yes, please contact me") of question
+   *   103 ("Would you like to receive support from an Intellectual Property
+   *   expert?"), matched by id as before.
+   * - From the 2026 phase those four questions are replaced by the single
+   *   consolidated one, whose "Yes" and "Not sure" options carry the request
+   *   (P2-3513). They are matched by TEXT, under their parent, because their ids
+   *   come from an AUTO_INCREMENT and differ across environments — and because
+   *   "Yes" on its own is the text of half a dozen unrelated options.
+   *
+   * Branching on the phase and not just OR-ing the two matters: a 2026 result that
+   * inherited an answer on 110 from its previous phase would otherwise send the
+   * email without anyone having answered the question the 2026 form actually shows.
+   */
   async getResultInnovationDevelopmentByResultId(
     resultId: number,
   ): Promise<boolean> {
     try {
       return await this.createQueryBuilder('r')
+        .innerJoin('version', 'v', 'v.id = r.version_id')
         .innerJoin(
           'result_answers',
           'ra',
@@ -2707,10 +3148,34 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
           'rq',
           'rq.result_question_id = ra.result_question_id',
         )
-        .where('rq.result_question_id = :questionId', { questionId: 110 }) // "Yes, please contact me"
-        .andWhere('r.is_active = true')
+        .leftJoin(
+          'result_questions',
+          'rqp',
+          'rqp.result_question_id = rq.parent_question_id',
+        )
+        .where('r.is_active = true')
         .andWhere('ra.answer_boolean = true')
         .andWhere('r.id = :resultId', { resultId })
+        .andWhere(
+          new Brackets((qb) =>
+            qb
+              .where(
+                '(v.phase_year IS NULL OR v.phase_year < :reductionYear) AND rq.result_question_id = :legacyOptionId',
+                {
+                  reductionYear: INNOVATION_DEV_FORM_REDUCTION_YEAR,
+                  legacyOptionId: LEGACY_IP_EXPERT_SUPPORT_OPTION_ID,
+                },
+              )
+              .orWhere(
+                'v.phase_year >= :reductionYear AND TRIM(rqp.question_text) = :consolidatedQuestion AND TRIM(rq.question_text) IN (:...triggerOptions)',
+                {
+                  reductionYear: INNOVATION_DEV_FORM_REDUCTION_YEAR,
+                  consolidatedQuestion: CONSOLIDATED_IPR_QUESTION_TEXT,
+                  triggerOptions: CONSOLIDATED_IPR_TRIGGER_OPTION_TEXTS,
+                },
+              ),
+          ),
+        )
         .getExists();
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -2749,8 +3214,14 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
   async getResultsByProgramAndCenters(
     programId: string,
     centerIds?: string[],
+    versionId?: string | number,
+    statusIds?: string,
   ): Promise<any[]> {
     const hasCenterFilter = centerIds && centerIds.length > 0;
+    const hasVersionFilter =
+      versionId !== undefined &&
+      versionId !== null &&
+      String(versionId).trim().length > 0;
     const joinType = hasCenterFilter ? 'INNER' : 'LEFT';
 
     const baseQuery = `
@@ -2803,31 +3274,31 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         AND rt.is_active = 1
       JOIN results_by_inititiative rbi
         ON r.id = rbi.result_id
-      AND rbi.is_active = 1
+        AND rbi.is_active = 1
       JOIN initiative_roles ir
       	ON rbi.initiative_role_id = ir.id
       JOIN clarisa_initiatives ci
         ON rbi.inititiative_id = ci.id
-      AND ci.active = 1
+        AND ci.active = 1
       LEFT JOIN results_by_projects rbp
         ON r.id = rbp.result_id
-      AND rbp.is_active = 1
+        AND rbp.is_active = 1
       LEFT JOIN clarisa_projects cp
         ON rbp.project_id = cp.id
       JOIN result_status rs 
         ON r.status_id = rs.result_status_id
       LEFT JOIN results_toc_result rtr
         ON r.id = rtr.results_id
-      AND rtr.is_active = 1
+        AND rtr.is_active = 1
       LEFT JOIN Integration_information.toc_results tr 
         ON rtr.toc_result_id = tr.id
-      AND tr.is_active = 1
+        AND tr.is_active = 1
       LEFT JOIN Integration_information.toc_work_packages twp
         ON tr.wp_id = twp.toc_id
       LEFT JOIN results_toc_result_indicators rtri
         ON rtri.results_toc_results_id = rtr.result_toc_result_id
-      AND rtri.is_active = 1
-      AND (rtri.is_not_aplicable = 0 OR rtri.is_not_aplicable IS NULL)
+        AND rtri.is_active = 1
+        AND (rtri.is_not_aplicable = 0 OR rtri.is_not_aplicable IS NULL)
       LEFT JOIN Integration_information.toc_results_indicators t_selected
         ON (
             (CONVERT(t_selected.related_node_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
@@ -2843,7 +3314,6 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.source = 'API'
         AND ci.official_code = ?
         AND r.is_active = 1
-        AND r.status_id IN (5, 6, 7) 
     `;
 
     const params: any[] = [programId];
@@ -2854,6 +3324,29 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       const placeholders = centerIds.map(() => '?').join(',');
       finalQuery += ` AND lc.center_id IN (${placeholders})`;
       params.push(...centerIds);
+    }
+
+    if (hasVersionFilter) {
+      finalQuery += ` AND r.version_id = ?`;
+      params.push(versionId);
+    }
+
+    if (
+      statusIds &&
+      statusIds.trim().length > 0 &&
+      statusIds !== 'all' &&
+      statusIds !== '*'
+    ) {
+      const parsedStatusIds = statusIds
+        .split(',')
+        .map((s) => Number(s.trim()))
+        .filter((n) => !Number.isNaN(n) && n > 0);
+      if (parsedStatusIds.length > 0) {
+        finalQuery += ` AND r.status_id IN (${parsedStatusIds.map(() => '?').join(',')})`;
+        params.push(...parsedStatusIds);
+      }
+    } else if (statusIds !== 'all' && statusIds !== '*') {
+      finalQuery += ` AND r.status_id != 4`;
     }
 
     finalQuery += `
@@ -2887,20 +3380,41 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         cp.short_name AS project_name,
         ci.id AS center_id,
         ci.acronym AS center_name,
+        ci_lead.id AS lead_center_id,
+        ci_lead.acronym AS lead_center_name,
         r.id,
         r.result_code,
+        r.source,
         r.external_submitter,
         CONCAT(u.first_name, ' ', u.last_name) AS submitter_name,
         r.result_level_id,
         r.result_type_id,
         r.title AS result_title,
         r.description AS result_description,
+        r.creation_method,
+        CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated,
         rt.name AS result_category,
-        r.status_id 
+        r.status_id,
+        r.lead_contact_person,
+        r.lead_contact_person_id,
+        r.gender_tag_level_id,
+        r.climate_change_tag_level_id,
+        r.nutrition_tag_level_id,
+        r.environmental_biodiversity_tag_level_id,
+        r.poverty_tag_level_id,
+        -- P2-3443: the External partners block of the bilateral Contributors section is stored as
+        -- results_by_institution rows (returned by the detail GET as contributingInstitutions)
+        -- plus these two flags on result. Without them the client cannot tell "no partners
+        -- declared" apart from "not answered yet", and the checkbox comes back unticked on reload.
+        r.no_applicable_partner,
+        r.is_lead_by_partner,
+        v.phase_year AS reporting_year
       FROM result r
       JOIN result_type rt
         ON r.result_type_id = rt.id
         AND rt.is_active = 1
+      LEFT JOIN version v
+        ON v.id = r.version_id
       LEFT JOIN results_by_projects rbp
         ON r.id = rbp.result_id
         AND rbp.is_active = 1
@@ -2913,7 +3427,15 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         ON rc.center_id = cc.code
       LEFT JOIN clarisa_institutions ci
         ON cc.institutionId = ci.id
-      LEFT JOIN users u 
+      LEFT JOIN results_center rc_lead
+        ON r.id = rc_lead.result_id
+        AND rc_lead.is_active = 1
+        AND rc_lead.is_leading_result = true
+      LEFT JOIN clarisa_center cc_lead
+        ON rc_lead.center_id = cc_lead.code
+      LEFT JOIN clarisa_institutions ci_lead
+        ON cc_lead.institutionId = ci_lead.id
+      LEFT JOIN users u
         ON r.external_submitter = u.id
       WHERE
         r.id = ?
@@ -2932,6 +3454,15 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
+  /**
+   * LEFT JOINs the two catalogues on purpose. Both FKs are nullable
+   * (`ResultsCapacityDevelopments.capdev_delivery_method_id` and `.capdev_term_id`), so the INNER
+   * JOINs this used to have dropped the whole row whenever the reporter had answered one of the two
+   * and not the other. The review drawer then received an empty array and rendered EVERY Capacity
+   * Sharing field blank — including the answers that were stored — so the reviewer read them as
+   * unanswered. `getInnovationDevBilateralResultById` below already LEFT JOINs its catalogues; this
+   * one is now the same shape.
+   */
   async getCapacitySharingBilateralResultById(
     resultId: number,
   ): Promise<any[]> {
@@ -2950,9 +3481,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       FROM result r
       JOIN results_capacity_developments rcd 
         ON r.id = rcd.result_id
-      JOIN capdevs_delivery_methods cdm
+      LEFT JOIN capdevs_delivery_methods cdm
         ON rcd.capdev_delivery_method_id = cdm.capdev_delivery_method_id
-      JOIN capdevs_term ct
+      LEFT JOIN capdevs_term ct
         ON rcd.capdev_term_id = ct.capdev_term_id
       WHERE
         r.id = ?
@@ -3115,6 +3646,19 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
+  /**
+   * LEFT JOINs the two catalogues on purpose, same reason as
+   * `getCapacitySharingBilateralResultById` above. Both FKs are nullable
+   * (`ResultsPolicyChanges.policy_stage_id` and `.policy_type_id`), so the INNER JOINs this used to
+   * have dropped every row whenever one of the two was unanswered — taking the implementing
+   * organizations with them, since those hang off the same result set through a LEFT JOIN. The review
+   * drawer received an empty array and rendered the whole Policy Change block blank, answers
+   * included.
+   *
+   * The green check is a separate path and is unaffected: `validation_policy_change_P25`
+   * (`1762528725798-createValidtionP25.ts:1414-1428`) reads `policy_type_id` and `policy_stage_id`
+   * straight off `results_policy_changes` and never joins the catalogues.
+   */
   async getPolicyChangeBilateralResultById(resultId: number): Promise<any[]> {
     const query = `
       SELECT 
@@ -3136,9 +3680,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         AND rbi.institution_roles_id = 4
       LEFT JOIN clarisa_institutions ci
         ON rbi.institutions_id = ci.id
-      JOIN clarisa_policy_stage cps
+      LEFT JOIN clarisa_policy_stage cps
         ON rpc.policy_stage_id = cps.id
-      JOIN clarisa_policy_type cpt
+      LEFT JOIN clarisa_policy_type cpt
         ON rpc.policy_type_id = cpt.id
       WHERE
         r.id = ?
@@ -3483,6 +4027,71 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     try {
       const results = await this.query(query, [programId, programId]);
       return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getResultsByBilateralCenter(
+    centerId: string,
+    versionId: number,
+  ): Promise<any[]> {
+    const query = `
+      SELECT
+        r.id,
+        r.result_code,
+        r.title,
+        -- P2-3152 AC6: the centre dashboard must list Project name and Description
+        -- alongside Title and Status. A correlated subquery (not a JOIN) keeps the
+        -- project lookup from multiplying rows when a result has several project links.
+        r.description,
+        (
+          SELECT COALESCE(NULLIF(TRIM(cp.full_name), ''), cp.short_name)
+          FROM results_by_projects rbp
+          INNER JOIN clarisa_projects cp
+                  ON cp.id = rbp.project_id
+          WHERE rbp.result_id = r.id
+            AND rbp.is_active = 1
+          ORDER BY rbp.is_lead DESC, rbp.id DESC
+          LIMIT 1
+        ) AS project_name,
+        rt.name  AS result_type,
+        rs.result_status_id AS status_id,
+        rs.status_name,
+        r.created_date,
+        r.version_id,
+        r.source,
+        r.creation_method,
+        CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated,
+        rc.is_leading_result
+      FROM result r
+      INNER JOIN results_center rc
+             ON rc.result_id = r.id
+            AND rc.is_active = 1
+            AND (
+              rc.center_id = ?
+              OR EXISTS (
+                SELECT 1
+                FROM clarisa_center cc
+                INNER JOIN clarisa_institutions ci ON ci.id = cc.institutionId
+                WHERE cc.code = rc.center_id
+                  AND ci.acronym = ?
+              )
+            )
+      INNER JOIN result_type rt ON rt.id = r.result_type_id AND rt.is_active = 1
+      INNER JOIN result_status rs ON rs.result_status_id = r.status_id
+      WHERE r.version_id = ?
+        AND r.source IN ('API', 'Result')
+        AND r.is_active = 1
+      ORDER BY r.created_date DESC, r.id DESC
+    `;
+
+    try {
+      return await this.query(query, [centerId, centerId, versionId]);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

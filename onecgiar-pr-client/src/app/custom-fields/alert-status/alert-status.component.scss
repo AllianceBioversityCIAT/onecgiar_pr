@@ -1,37 +1,198 @@
+// Toast-style inline alert: rounded tinted card + solid squircle icon badge on the left.
+// Overrides the global `.pr_alert` base (custom-alert.scss) within the component scope.
+
+:host {
+  display: block;
+}
+
 .pr_alert {
-  padding-left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin: 20px 10px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  box-shadow: none;
+  position: relative;
+  box-sizing: border-box;
 
-  .warning {
-    color: var(--pr-color-yellow-100);
+  // --- Icon badge (left) ---
+  .alert_badge {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    i {
+      color: var(--pr-color-white);
+      font-size: 22px;
+      line-height: 1;
+    }
   }
 
-  .info {
-    color: var(--pr-color-blue-500);
+  // --- Message text ---
+  .alert_text {
+    flex: 1;
+    min-width: 0;
+    color: var(--pr-color-secondary-400);
+    line-height: 1.45;
+
+    ::ng-deep a {
+      color: inherit;
+      font-weight: 600;
+      text-decoration: underline;
+    }
   }
 
-  .line {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 5px;
-    height: 100%;
+  // --- Severity variants ---
+  // `info` is NOT a severity: it is the explanatory note the mockup puts above a group of fields.
+  // ITR-T-5 (icon-only trigger + floating panel, post-user design feedback on ITR-T-1's shipped
+  // "quiet grey box" row): the collapsed state now shows ONLY the bare icon — no box, background,
+  // or padding around it (ITR-R-1). The surface treatment this comment used to describe living on
+  // this container now lives on `.alert_popover` (the expanded floating panel) instead, because
+  // this container itself is what's visible while collapsed and must show nothing but the icon.
+  &.info {
+    display: inline-flex;
+    align-items: flex-start;
+    margin: 0 0 20px;
+    padding: 0;
+    border: none;
+    background-color: transparent;
 
-    &.warning {
-      background-color: var(--pr-color-yellow-100);
+    // Icon-only, no wrapping "row" chrome (ITR-T-5). Kept as its own element (rather than a bare
+    // `<i>` in the button) so it still carries the same 16px/muted-color treatment as every other
+    // `.alert_badge` icon in this component instead of a one-off rule.
+    .alert_badge {
+      width: 16px;
+      height: 16px;
+      margin-top: 0;
+      border-radius: 0;
+      background-color: transparent;
+
+      i {
+        font-size: 16px;
+        color: var(--pr-text-muted);
+      }
     }
 
-    &.info {
-      background-color: var(--pr-color-blue-500);
+    // --- Collapsed trigger (info panels only, ITR-T-5) ---
+    // Icon-only: no `.alert_label`, no `.alert_chevron` (both removed — see `ITR-DD-4`). The
+    // accessible name moves to `aria-label` (`collapsedLabel()`) instead of visible text.
+    .alert_toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-radius: 4px;
+
+      &:focus-visible {
+        outline: 2px solid var(--pr-color-primary-300);
+        outline-offset: 2px;
+      }
+    }
+
+    // --- Floating expanded panel (ITR-T-5) ---
+    // CSS-anchored via `position: absolute` against `.pr_alert`'s own `position: relative`
+    // (declared once, above, for every variant) — explicitly NOT a CDK Overlay/portal, so the
+    // content stays in the DOM at all times behind `[hidden]` (`ITR-R-11`, `ITR-DD-4`). This is
+    // what stops the expanded text from pushing the rest of the form down.
+    .alert_popover {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 6px;
+      width: max-content;
+      max-width: 320px;
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.55;
+      color: var(--pr-text-secondary);
+      text-wrap: pretty;
+      background-color: var(--pr-surface-card);
+      border: 1px solid var(--pr-border);
+      border-radius: 8px;
+      box-shadow: var(--pr-shadow-2);
+      padding: 12px;
+      // Local stacking context only (anchored to this component's own `position: relative`
+      // container) — comfortably above sibling form-field content, which sets no z-index of its
+      // own nearby; well below the app's overlay-scale values (modals/toasts use 10000+, see
+      // `custom-alert.scss`, `styles.scss`).
+      z-index: 20;
+
+      // El título va en negrita dentro del propio innerHTML (`<b>…:</b>`).
+      ::ng-deep b,
+      ::ng-deep strong {
+        font-weight: 600;
+        color: var(--pr-text);
+      }
+    }
+
+    // --- Boxed, always-visible escape hatch (`[collapsible]="false"`, ITR-T-6 / `ITR-DD-5`) ---
+    // Reintroduces the ORIGINAL pre-ITR-T-1 `info` box (quiet grey card: gap 10, padding 14,
+    // radius 8, `--pr-surface-app` fill) for section-level intro notes (ITR-R-31) that opt out of
+    // the icon+popover disclosure entirely. `.alert_boxed` is bound in the template only when
+    // `status === 'info' && !collapsible`, so it never reaches the icon-only collapsed state
+    // (default `collapsible: true` never adds this class) — the two `info` presentations stay
+    // mutually exclusive by construction, not by selector cleverness.
+    &.alert_boxed {
+      display: flex;
+      gap: 10px;
+      padding: 14px;
+      margin-top: 20px;
+      border-radius: 8px;
+      background-color: var(--pr-surface-app);
+
+      .alert_badge {
+        margin-top: 2px;
+      }
+
+      .alert_text {
+        font-size: 13px;
+        font-weight: 400;
+        line-height: 1.55;
+        color: var(--pr-text-secondary);
+        text-wrap: pretty;
+
+        ::ng-deep b,
+        ::ng-deep strong {
+          font-weight: 600;
+          color: var(--pr-text);
+        }
+      }
     }
   }
 
-  .black_point {
-    position: absolute;
-    right: -4px;
-    top: -4px;
-    width: 6px;
-    height: 8px;
-    background-color: var(--pr-color-black);
-    z-index: 0;
+  &.success {
+    background-color: var(--pr-color-green-50);
+    border-color: rgba(var(--pr-color-green-rgb), 0.4);
+
+    .alert_badge {
+      background-color: var(--pr-color-green-500);
+    }
+  }
+
+  &.warning {
+    background-color: var(--pr-color-yellow-50);
+    border-color: var(--pr-color-yellow-75);
+
+    .alert_badge {
+      background-color: var(--pr-color-yellow-300);
+    }
+  }
+
+  &.error {
+    background-color: var(--pr-color-red-50);
+    border-color: var(--pr-color-red-75);
+
+    .alert_badge {
+      background-color: var(--pr-color-red-300);
+    }
   }
 }

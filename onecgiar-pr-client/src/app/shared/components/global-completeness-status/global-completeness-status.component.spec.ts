@@ -6,12 +6,17 @@ import { FilterInitWithRoleCoordAndLeadModule } from '../../../pages/init-admin-
 import { FilterByTextModule } from '../../pipes/filter-by-text.module';
 import { PrMultiSelectComponent } from '../../../custom-fields/pr-multi-select/pr-multi-select.component';
 import { PrButtonComponent } from '../../../custom-fields/pr-button/pr-button.component';
-import { TableModule } from 'primeng/table';
+import {
+  PrTableComponent,
+  PrSortIconComponent,
+  PrSortableColumnDirective,
+  PrTableHeaderDirective,
+  PrTableBodyDirective
+} from '../pr-table';
 import { ResultHistoryOfChangesModalComponent } from '../../../pages/admin-section/pages/completeness-status/components/result-history-of-changes-modal/result-history-of-changes-modal.component';
 import { FormsModule } from '@angular/forms';
 import { ListFilterByTextAndAttrPipe } from '../../../custom-fields/pr-multi-select/pipes/list-filter-by-text-and-attr.pipe';
 import { PrFieldHeaderComponent } from '../../../custom-fields/pr-field-header/pr-field-header.component';
-import { DialogModule } from 'primeng/dialog';
 import { of } from 'rxjs';
 import { ApiService } from '../../services/api/api.service';
 import { ExportTablesService } from '../../services/export-tables.service';
@@ -48,7 +53,17 @@ describe('GlobalCompletenessStatusComponent', () => {
         ListFilterByTextAndAttrPipe,
         PrFieldHeaderComponent
       ],
-      imports: [HttpClientTestingModule, FilterInitWithRoleCoordAndLeadModule, FilterByTextModule, TableModule, DialogModule, FormsModule],
+      imports: [
+        HttpClientTestingModule,
+        FilterInitWithRoleCoordAndLeadModule,
+        FilterByTextModule,
+        PrTableComponent,
+        PrSortIconComponent,
+        PrSortableColumnDirective,
+        PrTableHeaderDirective,
+        PrTableBodyDirective,
+        FormsModule
+      ],
       providers: [
         {
           provide: ApiService,

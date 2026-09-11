@@ -22,6 +22,26 @@ export class IpsrGeneralInformationComponent implements OnInit {
   fieldsManagerSE = inject(FieldsManagerService);
   getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
 
+  /**
+   * P2-3225 — Lead Contact Person is a mandatory MDS field for P25 from the 2026 phase on.
+   * Innovation Packages go through the very same green check as pooled results
+   * (`validation_general_information_P25`), so the form asks for it under the same gate.
+   */
+  get isLeadContactPersonRequired(): boolean {
+    return this.fieldsManagerSE.isLeadContactPersonMandatory2026();
+  }
+
+  /**
+   * Feeds the incomplete-fields alert. Reported complete whenever the gate is closed, so results
+   * from the 2025 cycle (and P22) are never flagged for a field that was optional back then.
+   * `lead_contact_person_data` is required alongside the name: the name alone means the typed text
+   * never resolved to an Active Directory match.
+   */
+  get isLeadContactPersonComplete(): boolean {
+    if (!this.isLeadContactPersonRequired) return true;
+    return !!this.ipsrGeneralInformationBody.lead_contact_person && !!this.ipsrGeneralInformationBody.lead_contact_person_data;
+  }
+
   constructor(
     public api: ApiService,
     public scoreSE: ScoreService,
@@ -69,6 +89,29 @@ export class IpsrGeneralInformationComponent implements OnInit {
     }
 
     this.ipsrGeneralInformationBody[fieldName] = currentArray;
+  }
+
+  /**
+   * P2-3210 — whether the "Evidence" field of one Impact Area block is rendered.
+   *
+   * The field has always existed, but only for the older portfolios: in the current one every one
+   * of the five blocks was wrapped in `@if (!isP25())`, so a score of 2 (principal) told the person
+   * to attach evidence and left them with nowhere on the form to put it. The note next to the score
+   * links to step 3 "Package and Assess", which holds the readiness/use-level evidence — a
+   * different thing. Angel (PO) settled it on 10-Sep-2026: the behaviour to add in IPSR is the one
+   * the older portfolios already have, with the field under each score in General information.
+   *
+   * - Older portfolios: unchanged — the field shows as soon as a score is picked (any of 0/1/2) and
+   *   is required only at 2, which is what those results were reported with.
+   * - Current portfolio: the field shows exactly when the score is 2 (principal), the only case the
+   *   requirement and the green check ask evidence for. A score of 0 or 1 is not asked for any.
+   *
+   * Deliberately NOT a portfolio-year gate: this is "which portfolio", not "from which phase on".
+   * The older portfolios keep their own rule, so the two cannot be collapsed into one threshold.
+   */
+  showImpactAreaEvidenceField(tagLevelId: number | string | null | undefined): boolean {
+    if (this.fieldsManagerSE.isP25()) return Number(tagLevelId) === 3;
+    return tagLevelId != null;
   }
 
   getImpactAreaFieldLabel(fieldRef: string): string {
@@ -348,40 +391,52 @@ export class IpsrGeneralInformationComponent implements OnInit {
     </ul>`;
   }
 
+  /**
+   * URL of the section where IPSR evidence is reported (step 3 "Package and Assess").
+   * Implemented as a getter so the result code and phase are read at call time
+   * (a class field initializer would freeze them as undefined).
+   */
+  get evidenceSectionUrl(): string {
+    const resultCode = this.ipsrDataControlSE.resultInnovationCode;
+    const phase = this.ipsrDataControlSE.resultInnovationPhase;
+    const phaseQueryParam = phase ? `?phase=${phase}` : '';
+    return `${environment.frontBaseUrl}ipsr/detail/${resultCode}/ipsr-innovation-use-pathway/step-3${phaseQueryParam}`;
+  }
+
   showAlerts() {
     try {
       this.api.alertsFs.show({
         status: 'success',
         title: 'sd',
-        description: `As a score of 2 has been selected, you are required to provide evidence of the Gender equality tag in the <a href="${environment.frontBaseUrl}ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/general-information" target='_blank' class="open_route">Evidence</a> section `,
+        description: `As a score of 2 has been selected, you are required to provide evidence of the Gender equality tag in the <a href="${this.evidenceSectionUrl}" target='_blank' class="open_route">Evidence</a> section `,
         querySelector: '#gender_tag_alert',
         position: 'beforeend'
       });
       this.api.alertsFs.show({
         status: 'success',
         title: 'sd',
-        description: `As a score of 2 has been selected, you are required to provide evidence of the climate change tag in the <a class="open_route" href="${environment.frontBaseUrl}ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/general-information" target='_blank'>Evidence</a> section`,
+        description: `As a score of 2 has been selected, you are required to provide evidence of the climate change tag in the <a class="open_route" href="${this.evidenceSectionUrl}" target='_blank'>Evidence</a> section`,
         querySelector: '#climate_change_tag_alert',
         position: 'beforeend'
       });
       this.api.alertsFs.show({
         status: 'success',
         title: 'sd',
-        description: `As a score of 2 has been selected, you are required to provide evidence of the Nutrition, health and food security tag in the <a class="open_route" href="${environment.frontBaseUrl}ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/general-information" target='_blank'>Evidence</a> section`,
+        description: `As a score of 2 has been selected, you are required to provide evidence of the Nutrition, health and food security tag in the <a class="open_route" href="${this.evidenceSectionUrl}" target='_blank'>Evidence</a> section`,
         querySelector: '#nutrition_tag_alert',
         position: 'beforeend'
       });
       this.api.alertsFs.show({
         status: 'success',
         title: 'sd',
-        description: `As a score of 2 has been selected, you are required to provide evidence of the Environmental health and biodiversity tag in the <a class="open_route" href="${environment.frontBaseUrl}ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/general-information" target='_blank'>Evidence</a> section`,
+        description: `As a score of 2 has been selected, you are required to provide evidence of the Environmental health and biodiversity tag in the <a class="open_route" href="${this.evidenceSectionUrl}" target='_blank'>Evidence</a> section`,
         querySelector: '#environment_tag_alert',
         position: 'beforeend'
       });
       this.api.alertsFs.show({
         status: 'success',
         title: 'sd',
-        description: `As a score of 2 has been selected, you are required to provide evidence of the Poverty reduction, livelihoods and jobs tag in the <a class="open_route" href="${environment.frontBaseUrl}ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/general-information" target='_blank'>Evidence</a> section`,
+        description: `As a score of 2 has been selected, you are required to provide evidence of the Poverty reduction, livelihoods and jobs tag in the <a class="open_route" href="${this.evidenceSectionUrl}" target='_blank'>Evidence</a> section`,
         querySelector: '#poverty_tag_alert',
         position: 'beforeend'
       });

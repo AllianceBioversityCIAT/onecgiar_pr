@@ -1,0 +1,1677 @@
+import { NgTemplateOutlet } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, computed, effect, inject, input, linkedSignal, output, signal } from '@angular/core';
+import { Clipboard } from '@angular/cdk/clipboard';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideArrowDown, lucideChevronDown, lucideCheck, lucideEllipsis, lucideInfo, lucideLink, lucideX } from '@ng-icons/lucide';
+import { PrToastService } from '../../../../../../shared/components/pr-toast/pr-toast.service';
+import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
+import {
+  PrTableComponent,
+  PrSortableColumnDirective,
+  PrSortIconComponent,
+  PrTableHeaderDirective,
+  PrTableBodyDirective,
+  PrTableEmptyDirective
+} from '../../../../../../shared/components/pr-table';
+import { buildRatio, pendingOf } from '../../reporting-burndown';
+import { HighlightSearchPipe } from '../../pipes/highlight-search.pipe';
+
+/**
+ * `__aowCode` values for the two program-level buckets (Intermediate Outcomes / 2030 Outcomes) —
+ * mirrors `INTERMEDIATE_OUTCOMES_CODE` / `OUTCOMES_2030_CODE` in `dashboard-lab.component.ts`.
+ * Duplicated (not imported) because the host is not exported and importing it here would create a
+ * circular dependency (the host already imports `ReportingIndicator`/`ReportingAowGroup` from this
+ * file). Keep both lists in sync if either sentinel value ever changes.
+ */
+const COPY_LINK_UNSUPPORTED_AOW_CODES: ReadonlySet<string> = new Set(['intermediate-outcomes', '2030-outcomes']);
+
+/** One indicator row, as `dashboard-lab.indicatorsByAow()` already produces it. */
+export interface ReportingIndicator {
+  indicator_id: number;
+  indicator_description?: string;
+  target_value_sum?: string | number;
+  actual_achieved_value_sum?: number;
+  progress_percentage?: string | number;
+  /**
+   * P2-3296 AC1 — the second reading, already carried by `GET_TocResultsByAowId`.
+   * Preliminary is Submitted + Approved; `progress_percentage` above is QAed + Approved.
+   * They OVERLAP on Approved, so they are not additive and must never be stacked.
+   */
+  preliminary_achieved_value_sum?: number;
+  preliminary_progress_percentage?: string | number;
+  unit_messurament?: string;
+  result_type_name?: string;
+  type_name?: string;
+  center_id?: string;
+  center_acronym?: string;
+  /**
+   * P2-3255 exposed every centre that holds this row's target. The scalars above are filled ONLY
+   * when exactly one centre holds it — naming one of ten as "the" centre is the misreport that
+   * ticket was about — so a shared target reads its centres from HERE, never from the scalar.
+   */
+  centers?: Array<{ center_id?: number | null; center_acronym?: string | null }>;
+  toc_result_id?: number;
+  __hlo?: string;
+  /** The ToC node this row was flattened from. Carries the node's P2-3296 AC2 roll-up. */
+  __hloNode?: { progress?: TocAchievement | null };
+  __tier?: 'output' | 'outcome';
+  __aowCode?: string;
+  /** Display name of the source AoW — used when Intermediate Outcomes is a top-level sibling. */
+  __aowName?: string;
+  /**
+   * True when this row's underlying ToC outcome node is cross-cutting (not scoped to a single AoW) —
+   * stamped by `dashboard-lab.indicatorsByAow()`'s `fromTier` for `__tier === 'outcome'` rows only,
+   * from the backend's group-level `is_aow` field (RES-R-3, RES-DD-2).
+   */
+  __isIntermediateCrosscut?: boolean;
+}
+
+/**
+ * Top-level card on the Reporting tab.
+ *
+ * ⚠️ Intermediate Outcomes and 2030 Outcomes are SIBLINGS of AoWs (same chrome level), not
+ * HLO-level children.
+ *
+ * The rest of this note used to say the design nested them under each AoW and that the owner had
+ * rejected it. Re-checked against the LIVE design on 2026-08-21 (P2-3405): `repCards` is a flat list
+ * and its `a.hasTag` branch renders exactly these sibling cards, so code and design AGREE. Kept as a
+ * warning only so nobody reads a stale note and "fixes" this by nesting them.
+ * See docs/DESIGN-DEVIATIONS.md §10.
+ */
+export type ReportingGroupKind = 'aow' | 'intermediate' | '2030';
+
+export interface ReportingAowGroup {
+  aow: { id?: number | string; code: string; name: string; progress?: number };
+  indicators: ReportingIndicator[];
+  count: number;
+  loading: boolean;
+  kind?: ReportingGroupKind;
+  /** P2-3296 AC3 — this Area of Work's achievement against its ToC targets. */
+  achievement?: TocAchievement | null;
+}
+
+/**
+ * P2-3296 — the roll-up contract, identical at every level. Computed server-side in
+ * `toc-progress-rollup.ts`, which is the ONLY place that decides whether an indicator may enter
+ * an average (it may when its target is present and greater than zero).
+ *
+ * `progress_percentage` is null when nothing was measurable — the caller must render a dash. 0%
+ * would claim no progress, when the truth is there was nothing to measure against.
+ */
+export interface TocAchievement {
+  progress_percentage: string | null;
+  preliminary_progress_percentage: string | null;
+  progress_value: number | null;
+  preliminary_value: number | null;
+  counted: number;
+  total: number;
+  indicators_counted: number;
+  indicators_total: number;
+}
+
+/** A row's workflow state, as far as the data allows. See `statusOf`. */
+export type RowStatus = 'not-started' | 'in-progress' | 'achieved' | 'overachieved';
+
+/**
+ * A flat-table row: the indicator plus the PRE-NORMALISED sort keys the table sorts on.
+ *
+ * `app-pr-table` sorts resolved values with `<` / `>` and has no comparator hook, so sorting the
+ * raw fields would compare `target_value_sum` as the STRING the API sends ("9" > "100") and would
+ * scatter the em-dash rows. The keys below are computed once per row instead: numbers for the two
+ * figures, a rank for the status, `-Infinity` for "nothing reported" so those rows group at one end
+ * of the order rather than masquerading as zero.
+ */
+export interface ReportingFlatRow extends ReportingIndicator {
+  __sortTarget: number;
+  __sortAchieved: number;
+  __sortProgress: number;
+  __sortStatus: number;
+  __statusKey: RowStatus;
+  __statusText: string;
+  __typeLabel: string;
+  __centerLabel: string;
+}
+
+/** Collapsible group under a band (or bare under Intermediate / 2030). */
+interface HloGroup {
+  key: string;
+  /** Clean HLO code badge token (e.g. HLO4, IO1, EOI2), extracted from the leading code. (RAJ-R-1, RAJ-DD-2) */
+  code?: string;
+  /** Display title — the design shows the full ToC name only (no HLO + code chrome). */
+  name: string;
+  rows: ReportingIndicator[];
+  /**
+   * P2-3296 AC2 — this Intermediate Outcome's own achievement, computed server-side and carried
+   * on the ToC node the rows were flattened from. Taken from the node rather than recomputed from
+   * `rows`, which the toolbar filters have already narrowed: the figure describes the outcome,
+   * not the current view.
+   */
+  achievement?: TocAchievement | null;
+}
+
+/**
+ * A band inside an AoW card, in the order the approved design gives them:
+ * "HIGH LEVEL OUTPUTS · N KPIs" then group rows; then "OUTCOMES · N KPIs".
+ * Intermediate / 2030 cards use a single band with `hasEyebrow: false`.
+ */
+interface IndicatorBand {
+  key: string;
+  eyebrow: string;
+  hasEyebrow: boolean;
+  groups: HloGroup[];
+}
+
+/**
+ * Reporting tab — the AoW → HLO → indicator table.
+ *
+ * Layout is the approved design, three levels of grouping: the AoW header on the card surface with
+ * a strong bottom border, the HLO header on the subtle surface with its eyebrow, name and
+ * right-aligned count, then the rows. The first level carries typographic weight and the second
+ * carries fill — they must never compete on the same variable — and there are no vertical spine
+ * lines anywhere in the tree.
+ *
+ * ⚠️ Sizes are absolute px on purpose. `html` is 12px in this app, so a rem-based Tailwind type
+ * utility renders 25% small — `text-sm` would be 10.5px, not 14px.
+ *
+ * This component is PRESENTATION ONLY. It owns no fetching and no service: the parent passes the
+ * groups `indicatorsByAow()` already computes, and every action leaves through an output. That keeps
+ * it testable without the 287-LOC EntityAowService and reusable from the Results Center later.
+ */
+@Component({
+  selector: 'app-reporting-aow-table',
+  standalone: true,
+  imports: [
+    NgIcon,
+    NgTemplateOutlet,
+    OverlayModule,
+    PrTooltipDirectiveModule,
+    PrTableComponent,
+    PrSortableColumnDirective,
+    PrSortIconComponent,
+    PrTableHeaderDirective,
+    PrTableBodyDirective,
+    PrTableEmptyDirective,
+    HighlightSearchPipe
+  ],
+  templateUrl: './reporting-aow-table.component.html',
+  styleUrls: ['./reporting-aow-table.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [provideIcons({ lucideArrowDown, lucideChevronDown, lucideCheck, lucideEllipsis, lucideInfo, lucideLink, lucideX })]
+})
+export class ReportingAowTableComponent {
+  readonly groups = input.required<ReportingAowGroup[]>();
+  /** Free-text filter, owned by the parent toolbar. Matched against the title and the indicator. */
+  readonly search = input<string>('');
+  /** `'all'` or array of RowStatus values. */
+  readonly statusFilter = input<string[], string[] | string | null | undefined>([], {
+    transform: (v: string[] | string | null | undefined): string[] => {
+      if (Array.isArray(v)) return v.filter(x => x && x !== 'all');
+      if (!v || v === 'all') return [];
+      return [v];
+    }
+  });
+  /**
+   * Whether ANY toolbar control is narrowing the list right now — search, Section, Type, Category
+   * or Status.
+   *
+   * ⚠️ This cannot be derived here. Only `search` and `statusFilter` reach this component; the
+   * Section / Type / Category filters are applied by the host while it builds `groups`, so a card
+   * emptied by Category arrives looking exactly like an Area of Work that has no planned indicators
+   * at all. Inferring from the two inputs we do have is what made the empty state claim "this area
+   * of work has no planned indicators yet" about a card that has plenty (P2-3405). The host owns the
+   * answer and passes it down.
+   */
+  readonly filtersActive = input<boolean>(false);
+  /**
+   * `grouped` = AoW (or bucket) cards with HLO/sub-group rows.
+   * `flat` = one list of every visible indicator, no card chrome.
+   */
+  readonly viewMode = input<'grouped' | 'flat'>('grouped');
+  /** Whether the current user may report — the parent passes `canReportResults()` through. */
+  readonly canReport = input<boolean>(false);
+  /**
+   * Global disclosure switch owned by the toolbar (`Expand all` / `Collapse all`, P2-3252).
+   *
+   * It moves the LEVEL DEFAULT, it does not write one entry per card: flipping it drops the user's
+   * per-card overrides (see `overrides`), so `true` opens every AoW and every sub-group at once and
+   * `false` puts the whole list back to the collapsed reading state.
+   */
+  readonly expandAll = input<boolean>(false);
+  /**
+   * Identity of the data the disclosure state belongs to — the programme code in practice.
+   * Changing it resets every override so a newly opened Science Program starts collapsed (P2-3251);
+   * the shell reuses this component across programmes, and the AoW codes are not unique between them.
+   */
+  readonly scopeKey = input<string>('');
+  /**
+   * Bumped by the host on every press of Expand all / Collapse all.
+   *
+   * `expandAll` alone cannot drive the switch: when the user has already opened every card BY HAND
+   * the host asks for the state the boolean is ALREADY in, the input never changes, and the press
+   * would do nothing while the label flipped — the dead click QA rejected. The nonce is part of the
+   * override-reset key, so a press always re-seeds the list from the level default.
+   */
+  readonly expandAllNonce = input<number>(0);
+  /**
+   * The KPI whose report surface (drawer or legacy modal) just closed, published by the host —
+   * inherited from the By-AOW cards (MRF-R-3.1): that row offers "Next pending" until the next
+   * report. `null` before the session's first report.
+   */
+  readonly lastReported = input<{ id: unknown; aowCode: string } | null>(null);
+  /**
+   * Keys of the rows the user has starred, `rowKey`-shaped, for the CURRENT programme only — the
+   * host owns the store (`ReportingFavoritesService`) and derives this set per programme
+   * (`RFI-DD-1`). This component stays presentation-only: it never injects the service.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly favoriteKeys = input<ReadonlySet<string>>(new Set<string>());
+  /**
+   * Whether the host is currently showing only favorite rows. Drives the RFI-R-2.6 empty-state
+   * copy when the programme has zero favorites.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly favoritesOnly = input<boolean>(false);
+
+  readonly openAow = output<string>();
+  readonly openRow = output<ReportingIndicator>();
+  readonly reportRow = output<ReportingIndicator>();
+  readonly openTarget = output<ReportingIndicator>();
+  readonly openAchieved = output<ReportingIndicator>();
+  /** "Copy link" row-menu action (MRF-R-5) — the host builds/copies the composite URL, this
+   * component only tells it which row. @akili-spec changes/mass-reporting-flow */
+  readonly copyLink = output<ReportingIndicator>();
+  /**
+   * Emitted by the empty state's `Clear filters` control. The host owns all five filter signals, so
+   * resetting them is its job — this component only asks.
+   */
+  readonly clearFilters = output<void>();
+  /**
+   * Announces whether EVERY visible top-level card is open right now — overrides included, not just
+   * the level default. The toolbar label is written from this, so it always describes what the next
+   * press will actually do (P2-3252).
+   */
+  readonly allOpenChange = output<boolean>();
+  /**
+   * Toggles a row's favorite state. The host owns the store and does the toggling
+   * (`ReportingFavoritesService.toggle`) — this component only names the row.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly toggleFavorite = output<ReportingIndicator>();
+  /**
+   * Emitted by the RFI-R-2.6 empty state's `Show all indicators` button — asks the host to turn
+   * `favoritesOnly` off, mirroring `clearFilters`.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  readonly exitFavoritesOnly = output<void>();
+
+  /**
+   * Disclosure = a user override on top of a level default (see `isDefaultOpenAow` /
+   * `isDefaultOpenHlo`). The reference seeds NO expanded card and EVERY expanded sub-group.
+   *
+   * Every override is dropped whenever the global Expand all / Collapse all switch flips, or when
+   * the surface moves to another programme: the level default takes over again, so one click puts
+   * the WHOLE list in the requested state instead of leaving the cards the user had touched behind
+   * (P2-3252), and AoW codes repeat across programmes (`AOW01` exists in every SP), so keeping the
+   * map would leak one programme's open cards into the next (P2-3251).
+   */
+  private readonly overrides = linkedSignal<string, ReadonlyMap<string, boolean>>({
+    source: () => `${this.scopeKey()}::${this.expandAll()}::${this.expandAllNonce()}::${this.search().trim()}`,
+    computation: () => new Map()
+  });
+  /** Row titles the user expanded past the 2-line clamp. */
+  private readonly expandedTitles = signal<ReadonlySet<number>>(new Set());
+
+  // ── Status ────────────────────────────────────────────────────────────────
+  /**
+   * The reference has a five-state workflow enum (not started / in progress / submitted / in QA /
+   * approved). The API carries no per-indicator workflow status — only `progress_percentage` — so
+   * "submitted" and "in QA" are NOT derivable and are deliberately not faked. This maps the four
+   * states the data does support, matching `aow-hlo-table`'s existing thresholds exactly so both
+   * surfaces agree.
+   */
+  statusOf(row: ReportingIndicator): RowStatus {
+    const p = this.progressOf(row);
+    if (p > 100) return 'overachieved';
+    if (p === 100) return 'achieved';
+    if (p >= 1) return 'in-progress';
+    return 'not-started';
+  }
+
+  progressOf(row: ReportingIndicator): number {
+    const raw = row?.progress_percentage;
+    if (raw === null || raw === undefined) return 0;
+    const n = parseFloat(String(raw));
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  statusLabel(row: ReportingIndicator): string {
+    return { 'not-started': 'Not started', 'in-progress': 'In progress', achieved: 'Achieved', overachieved: 'Overachieved' }[
+      this.statusOf(row)
+    ];
+  }
+
+  /**
+   * The action reflects state — `Report` when nothing is in yet, `Continue` while in
+   * progress, and `Report` when achieved or overachieved (allowing users to report additional results).
+   */
+  actionLabel(row: ReportingIndicator): string | null {
+    const s = this.statusOf(row);
+    if (s === 'in-progress') return 'Continue';
+    return 'Report';
+  }
+
+  // ── Figures ───────────────────────────────────────────────────────────────
+  /**
+   * `target_value_sum` arrives as a STRING and `unit_messurament` arrives dirty in production
+   * ('Number', 'Number\t', 'NUMBER', ' Number ', 'Percentage'…), so both are normalised here.
+   * An em dash is shown for "nothing", never a bare 0 — 0 and "not reported" are different facts.
+   */
+  figure(value: string | number | null | undefined, unit?: string): string {
+    if (value === null || value === undefined || value === '') return '—';
+    const n = typeof value === 'number' ? value : parseFloat(String(value));
+    if (!Number.isFinite(n)) return '—';
+    const pct = (unit ?? '').trim().toLowerCase().startsWith('percent');
+    const shown = Number.isInteger(n) ? String(n) : n.toFixed(1);
+    return pct ? `${shown}%` : shown;
+  }
+
+  targetText(row: ReportingIndicator): string {
+    return this.figure(row?.target_value_sum, row?.unit_messurament);
+  }
+
+  achievedText(row: ReportingIndicator): string {
+    return this.figure(row?.actual_achieved_value_sum, row?.unit_messurament);
+  }
+
+  /**
+   * True once the API actually sent an achieved figure. `null` / `undefined` mean NOTHING WAS
+   * REPORTED and render as an em dash; a literal `0` is a reported fact and renders as `0`.
+   */
+  hasAchievedValue(row: ReportingIndicator): boolean {
+    const raw = row?.actual_achieved_value_sum;
+    if (raw === null || raw === undefined || (raw as unknown) === '') return false;
+    return Number.isFinite(typeof raw === 'number' ? raw : parseFloat(String(raw)));
+  }
+
+  /**
+   * Nothing to celebrate in the Achieved cell — either no figure arrived at all, or the figure is
+   * a zero. Drives the muted colour and the design's empty-state tip,
+   * "Nothing reported yet for this indicator".
+   */
+  achievedIsEmpty(row: ReportingIndicator): boolean {
+    return !this.hasAchievedValue(row) || Number(row?.actual_achieved_value_sum) === 0;
+  }
+
+  achievedTooltip(row: ReportingIndicator): string {
+    return this.achievedIsEmpty(row) ? 'Nothing reported yet for this indicator' : '';
+  }
+
+  /**
+   * Copy for the Target-cell tooltip shown on Intermediate Outcome rows only — those rows are
+   * program-wide, never scoped to a single AoW, and the Target figure gives no hint of that
+   * without this (RES-R-1, RES-R-2, RES-AC-1, RES-AC-2).
+   */
+  readonly intermediateTargetTooltip = 'This target is not exclusive to that AoW.';
+
+  /**
+   * P2-3336 rule 1, PO 2026-09-09. The note under the Intermediate Outcomes card header. These
+   * nodes have no work package, so they belong to the Science Program and this card is now the
+   * ONLY place they appear — they used to be drawn inside every AoW card as well, which is what
+   * this line replaces. Wording is the PO's, verbatim.
+   *
+   * Inline string on purpose: nothing under `pages/result-framework-reporting/` goes through
+   * `src/app/internationalization/` (the module's own AGENTS.md says so), and every neighbouring
+   * string here is a literal too.
+   */
+  readonly intermediateBucketNote = 'These Intermediate Outcomes are not assigned to any AoW.';
+
+  /** True when the card is the Intermediate Outcomes bucket — the only card that shows the note. */
+  isIntermediateBucket(group: ReportingAowGroup): boolean {
+    return (group.kind ?? 'aow') === 'intermediate';
+  }
+
+  /** True when the row's card is the Intermediate Outcomes bucket (`group.kind === 'intermediate'`). */
+  isIntermediateRow(bucketKind: string): boolean {
+    return bucketKind === 'intermediate';
+  }
+
+  /**
+   * True when a row is a cross-cutting Intermediate Outcome, from the `__isIntermediateCrosscut`
+   * stamp `dashboard-lab.indicatorsByAow()` adds off the backend's `is_aow` field.
+   *
+   * ⚠️ P2-3336 (2026-09-09) stopped such rows from entering an `aow` card at all, so this no longer
+   * drives the Target tooltip (`RES-R-3` is superseded; `RES-R-1`, the tooltip inside the
+   * Intermediate Outcomes card, still stands and now keys off `isIntermediateRow` alone). Kept
+   * because the stamp is still produced and `hloTaxonomy()` reads it for the `IO` badge — a payload
+   * that starts flagging these differently must not silently lose that.
+   */
+  isCrossCuttingIntermediate(row: ReportingIndicator): boolean {
+    return !!row?.__isIntermediateCrosscut;
+  }
+
+  /**
+   * The secondary line under the title = the INDICATOR NAME (the design's `kpiName` on a row).
+   *
+   * An earlier pass used the category ("Knowledge product") on the belief that the API carries no
+   * short name. It does: `/api/results-framework-reporting/toc-results` sends BOTH `type_name` (the
+   * indicator name, e.g. "Number of knowledge products published and quality-assured") and
+   * `result_type_name` (the category). So `type_name` leads, with the category as the fallback for
+   * the rows where it is null.
+   */
+  indicatorNameOf(row: ReportingIndicator): string {
+    return row?.type_name || row?.result_type_name || 'Not provided';
+  }
+
+  /**
+   * Sanitises the AoW code for display: returns null for program-level outcome buckets
+   * ('intermediate-outcomes', '2030-outcomes') so they render as clean dashes instead of long labels.
+   */
+  aowCodeOf(row: ReportingIndicator): string | null {
+    const code = row?.__aowCode?.trim();
+    if (!code || COPY_LINK_UNSUPPORTED_AOW_CODES.has(code)) return null;
+    return code;
+  }
+
+  /** Meta under the title — the indicator name; in flat view the AoW code prefixes it. */
+  metaLine(row: ReportingIndicator, showAow = false): string {
+    const name = this.indicatorNameOf(row);
+    if (!showAow) return name;
+    const aow = this.aowCodeOf(row);
+    return aow ? `${aow} · ${name}` : name;
+  }
+
+  /**
+   * "Show more" only when the title actually overflows two lines (~110 chars at 15px/600).
+   * Short titles must never show a useless control.
+   */
+  needsShowMore(row: ReportingIndicator): boolean {
+    const t = (row?.indicator_description ?? '').trim();
+    return t.length > 110;
+  }
+
+  // ── Grouping ──────────────────────────────────────────────────────────────
+  /**
+   * Organisation inside a top-level card, as the approved design lays it out:
+   *
+   * - **AoW** → two bands when data exists:
+   *     HIGH LEVEL OUTPUTS · N KPIs  → collapsible ToC groups (name only)
+   *     OUTCOMES · N KPIs            → collapsible outcome groups
+   * - **Intermediate / 2030** → one band, no eyebrow (groups only). Program-level siblings
+   *   of AoWs — never nested under an AoW card.
+   */
+  bandsOf(group: ReportingAowGroup): IndicatorBand[] {
+    const kind = group.kind ?? 'aow';
+    const rows = this.visibleRows(group);
+
+    if (kind === 'aow') {
+      const hloRows = rows.filter(r => r.__tier !== 'outcome');
+      const outRows = rows.filter(r => r.__tier === 'outcome');
+      const bands: IndicatorBand[] = [];
+      if (hloRows.length) {
+        bands.push({
+          key: `${group.aow.code}::band-hlo`,
+          eyebrow: 'High level outputs',
+          hasEyebrow: true,
+          groups: this.clusterByTitle(hloRows, `${group.aow.code}::hlo`)
+        });
+      }
+      if (outRows.length) {
+        bands.push({
+          key: `${group.aow.code}::band-out`,
+          eyebrow: 'Outcomes',
+          hasEyebrow: true,
+          groups: this.clusterByTitle(outRows, `${group.aow.code}::out`)
+        });
+      }
+      return bands;
+    }
+
+    if (kind === 'intermediate') {
+      return [
+        {
+          key: 'band-io',
+          eyebrow: '',
+          hasEyebrow: false,
+          groups: this.clusterByTitle(
+            rows.map(r => ({
+              ...r,
+              // Prefer the intermediate ToC title; fall back to source AoW name.
+              __hlo: r.__hlo?.trim() || r.__aowName?.trim() || 'Intermediate outcome'
+            })),
+            'io'
+          )
+        }
+      ];
+    }
+
+    // 2030
+    return [
+      {
+        key: 'band-o30',
+        eyebrow: '',
+        hasEyebrow: false,
+        groups: this.clusterByTitle(
+          rows.map(r => ({
+            ...r,
+            __hlo: r.__hlo?.trim() || '2030 Outcomes'
+          })),
+          'o30'
+        )
+      }
+    ];
+  }
+
+  /**
+   * Helper to extract a clean HLO code token (e.g. 'HLO4', 'IO1', 'EOI2', '1.1') from an HLO group
+   * or raw string. (RAJ-R-1, RAJ-DD-2, RAH-R-2)
+   */
+  cleanHloCode(hloOrRaw: { code?: string; key?: string; name?: string } | string | null | undefined): string {
+    if (!hloOrRaw) return '';
+    if (typeof hloOrRaw === 'object' && hloOrRaw.code) return hloOrRaw.code;
+    const raw = typeof hloOrRaw === 'string' ? hloOrRaw : (hloOrRaw.name || hloOrRaw.key || '');
+    const trimmed = raw.trim();
+    const iocMatch = /^((?:I-OC|OC)\s*\d+(?:\.\d+)*)\.?/i.exec(trimmed);
+    if (iocMatch) {
+      return iocMatch[1].toUpperCase().replace(/\s+/, ' ');
+    }
+    const hloSpaceNumMatch = /^(HLO\s+\d+(?:\.\d+)*)/i.exec(trimmed);
+    if (hloSpaceNumMatch) {
+      return hloSpaceNumMatch[1].toUpperCase().replace(/\s+/, ' ');
+    }
+    const match = /^((?:HLO|HL|IO|EOI)[\w.\-]*)/i.exec(trimmed);
+    if (match) {
+      const rawCode = match[1];
+      const codeMatch = /^(HLO\d+|IO\d+|EOI\d+|HL\d+)/i.exec(rawCode);
+      return codeMatch ? codeMatch[1].toUpperCase() : rawCode.split('.')[0].toUpperCase();
+    }
+    const numMatch = /^(\d+(?:\.\d+)+)/.exec(trimmed);
+    if (numMatch) {
+      return numMatch[1];
+    }
+    return '';
+  }
+
+  /**
+   * Resolve semantic taxonomy badge ({ type: 'HLO' | 'OUTCOME' | 'OC' | 'IO' | 'I-OC', code: string })
+   * based on band, hlo key, and row metadata, preserving specific ToC taxonomy (HLO, OC, I-OC). (RAH-R-2, RAH-DD-2)
+   */
+  hloTaxonomy(hlo: any, band?: any): { type: string; code: string } {
+    let type = 'HLO';
+    const bandKey = (band?.key || '').toLowerCase();
+    const hloKey = (hlo?.key || '').toLowerCase();
+    const firstRow = hlo?.rows?.[0];
+    const rawCode = (hlo?.code || this.cleanHloCode(hlo) || '').trim();
+
+    if (
+      bandKey.includes('band-io') ||
+      hloKey.startsWith('io::') ||
+      bandKey.includes('intermediate') ||
+      firstRow?.__isIntermediateCrosscut ||
+      /^(?:I-OC|IO)/i.test(rawCode)
+    ) {
+      type = /^(?:I-OC)/i.test(rawCode) ? 'I-OC' : 'IO';
+    } else if (
+      bandKey.includes('band-out') ||
+      bandKey.includes('band-o30') ||
+      hloKey.includes('::out::') ||
+      hloKey.startsWith('o30::') ||
+      firstRow?.__tier === 'outcome' ||
+      /^(?:OC|EOI)/i.test(rawCode)
+    ) {
+      if (/^OC/i.test(rawCode)) {
+        type = 'OC';
+      } else if (/^EOI/i.test(rawCode)) {
+        type = 'EOI';
+      } else {
+        type = 'OUTCOME';
+      }
+    } else if (bandKey.includes('band-hlo') || hloKey.includes('::hlo::') || firstRow?.__tier === 'output') {
+      type = 'HLO';
+    } else if (/^(?:HLO|HL)/i.test(rawCode)) {
+      type = 'HLO';
+    }
+
+    // Strip redundant prefix from hlo.code (e.g. 'HLO 1.1' -> '1.1', 'HLO4' -> '4', 'I-OC 3.5' -> '3.5', 'OUTPUT 1.1' -> '1.1')
+    let cleanCode = rawCode.replace(/^(?:OUTPUT|OUTCOME|HLO|HL|I-OC|OC|IO|EOI)[\s.\-_:]*/i, '').trim();
+    if (!cleanCode && rawCode) {
+      cleanCode = rawCode;
+    }
+
+    return { type, code: cleanCode };
+  }
+
+  /**
+   * Cluster indicators by ToC title. Display name is the full descriptive title, as the design shows it.
+   * Leading codes like `HL04.AOW1.I01` or `1.1:` are stripped when present so the row reads as a sentence,
+   * while the standardized badge code (e.g. `HLO4`, `1.1`) is extracted for the header badge. (RAJ-R-1, RAH-R-2)
+   */
+  private clusterByTitle(rows: ReportingIndicator[], keyPrefix: string): HloGroup[] {
+    const byKey = new Map<string, HloGroup>();
+    for (const row of rows) {
+      const raw = row.__hlo?.trim() || 'Unassigned';
+      const match = /^((?:(?:HLO|HL|I-OC|OC|IO|EOI)(?:[-\s]?\d[\w.\-]*)?|\d+(?:\.\d+)+))\.?\s*[:\-–—·•]?\s*(.+)$/i.exec(raw);
+      const name = (match?.[2] || raw).replace(/^[·•\-–—:\s]+/, '').trim() || raw;
+      const rawCode = match?.[1] || '';
+      const code = this.cleanHloCode(rawCode || raw) || undefined;
+      const key = `${keyPrefix}::${raw}`;
+      if (!byKey.has(key)) {
+        // Every row of a group comes from the same ToC node, so the first one carries the group's
+        // roll-up. Grouping is by TITLE, so two nodes sharing a title would collapse into one
+        // group — that is pre-existing behaviour, and the first node's figure is used.
+        byKey.set(key, { key, code, name, rows: [], achievement: row.__hloNode?.progress ?? null });
+      }
+      byKey.get(key)!.rows.push(row);
+    }
+    return [...byKey.values()].sort((a, b) => this.compareHloGroups(a, b));
+  }
+
+  /**
+   * Sort HLO and Outcome groups by their code token numerically (e.g. HL01, HL02, HL03... I-OC 1.1, I-OC 1.2),
+   * placing coded groups first in numerical order, followed by uncoded groups sorted alphabetically by name.
+   */
+  compareHloGroups(a: { code?: string; name?: string; key?: string }, b: { code?: string; name?: string; key?: string }): number {
+    const codeA = (a.code || '').trim();
+    const codeB = (b.code || '').trim();
+    if (codeA && codeB) {
+      const cmp = codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+      if (cmp !== 0) return cmp;
+    } else if (codeA) {
+      return -1;
+    } else if (codeB) {
+      return 1;
+    }
+    const nameA = a.name || a.key || '';
+    const nameB = b.name || b.key || '';
+    return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
+  }
+
+  /** KPI count for a band header (`4 KPIs`). */
+  bandKpiCount(band: IndicatorBand): number {
+    return band.groups.reduce((n, g) => n + g.rows.length, 0);
+  }
+
+  /**
+   * Flat list of every group (all bands). Kept for tests / callers that do not need band chrome.
+   */
+  hloGroupsOf(group: ReportingAowGroup): HloGroup[] {
+    return this.bandsOf(group).flatMap(b => b.groups);
+  }
+
+  /** Flat list of every indicator that survives the toolbar filters (All indicators view). */
+  readonly flatRows = computed(() => {
+    const rows: ReportingIndicator[] = [];
+    for (const g of this.visibleGroups()) {
+      rows.push(...this.visibleRows(g));
+    }
+    return rows;
+  });
+
+  /** Whether this top-level card is a program-level bucket (not a real AoW). */
+  isBucket(group: ReportingAowGroup): boolean {
+    const kind = group.kind ?? 'aow';
+    return kind === 'intermediate' || kind === '2030';
+  }
+
+  /**
+   * Chip label in the 68px header. AoW → code (AOW01). Buckets → the short tag ("Intermediate",
+   * "2030"), exactly as the reference (:4248).
+   *
+   * The chip is deliberately NOT the full noun phrase: the group's own name renders right next to
+   * it, so "Intermediate outcomes" in both slots read as "Intermediate outcomes │ Intermediate
+   * outcomes". The chip qualifies the name, it does not repeat it.
+   */
+  headerChip(group: ReportingAowGroup): string {
+    const kind = group.kind ?? 'aow';
+    if (kind === 'intermediate') return 'Intermediate';
+    if (kind === '2030') return '2030';
+    return group.aow.code;
+  }
+
+  /**
+   * Chip colours from the design: Intermediate indigo soft, 2030 green soft. AoW keeps the
+   * brand-soft violet chip. Tokens only — see the --pr-chip-* block in styles/colors.scss for why
+   * the 2030 pair is not --pr-status-approved-*.
+   */
+  headerChipClass(group: ReportingAowGroup): string {
+    const kind = group.kind ?? 'aow';
+    if (kind === 'intermediate') {
+      return 'bg-[var(--pr-chip-intermediate-bg)] text-[var(--pr-chip-intermediate-fg)]';
+    }
+    if (kind === '2030') {
+      return 'bg-[var(--pr-chip-2030-bg)] text-[var(--pr-chip-2030-fg)]';
+    }
+    return 'bg-[var(--pr-color-primary-100)] text-[var(--pr-color-primary-400)]';
+  }
+
+  /** Local breakdown filter by Center per AoW / bucket group key. */
+  private readonly localCenterFilter = signal<Record<string, string>>({});
+  /** Local breakdown filter by Result Type per AoW / bucket group key. */
+  private readonly localTypeFilter = signal<Record<string, string>>({});
+  /** Controls collapsible state of the in-card Centers/Types filter bar per AoW. */
+  private readonly breakdownOpenMap = signal<Record<string, boolean>>({});
+
+  groupKey(group: ReportingAowGroup): string {
+    return group?.aow?.code ?? '';
+  }
+
+  isBreakdownOpen(group: ReportingAowGroup): boolean {
+    const key = this.groupKey(group);
+    return this.breakdownOpenMap()[key] ?? (!!this.selectedCenterOf(group) || !!this.selectedTypeOf(group) || true);
+  }
+
+  toggleBreakdown(group: ReportingAowGroup, event?: Event): void {
+    event?.stopPropagation();
+    const key = this.groupKey(group);
+    const curr = this.isBreakdownOpen(group);
+    this.breakdownOpenMap.update(map => ({ ...map, [key]: !curr }));
+  }
+
+  selectedCenterOf(group: ReportingAowGroup): string | null {
+    return this.localCenterFilter()[this.groupKey(group)] ?? null;
+  }
+
+  setCenterFilter(group: ReportingAowGroup, center: string | null): void {
+    const key = this.groupKey(group);
+    const curr = this.localCenterFilter();
+    if (!center || curr[key] === center) {
+      const copy = { ...curr };
+      delete copy[key];
+      this.localCenterFilter.set(copy);
+    } else {
+      this.localCenterFilter.set({ ...curr, [key]: center });
+    }
+  }
+
+  selectedTypeOf(group: ReportingAowGroup): string | null {
+    return this.localTypeFilter()[this.groupKey(group)] ?? null;
+  }
+
+  setTypeFilter(group: ReportingAowGroup, type: string | null): void {
+    const key = this.groupKey(group);
+    const curr = this.localTypeFilter();
+    if (!type || curr[key] === type) {
+      const copy = { ...curr };
+      delete copy[key];
+      this.localTypeFilter.set(copy);
+    } else {
+      this.localTypeFilter.set({ ...curr, [key]: type });
+    }
+  }
+
+  /**
+   * Every centre behind one row, in display order.
+   *
+   * A target held by N centres is ONE row (P2-3255) whose scalar `center_acronym` is deliberately
+   * null, so reading the scalar alone dropped those rows out of the chips and out of the Center
+   * filter entirely — SP-13 KPI 1.3.3 (one target, ten centres) showed no centre at all. `centers`
+   * is the list; the scalar is only a fallback for payloads that predate it.
+   */
+  centerAcronymsOf(row: ReportingIndicator): string[] {
+    const fromList = (row?.centers ?? [])
+      .map(c => c?.center_acronym?.trim())
+      .filter((c): c is string => !!c && c !== '—');
+
+    if (fromList.length > 0) return fromList;
+
+    const scalar = row?.center_acronym?.trim();
+    return scalar && scalar !== '—' ? [scalar] : [];
+  }
+
+  /**
+   * How many centre chips a row shows before collapsing the rest behind the counter. Three keeps a
+   * ten-centre row the same height as every other row; the owner asked for the overflow to be
+   * openable rather than wrapped (2026-09-09).
+   */
+  private static readonly ROW_CENTER_CHIP_LIMIT = 3;
+
+  /** Rows whose centre overflow the user opened, by `rowKey`. */
+  private readonly expandedCenterRows = signal<ReadonlySet<string>>(new Set<string>());
+
+  areRowCentersExpanded(row: ReportingIndicator): boolean {
+    return this.expandedCenterRows().has(this.rowKey(row));
+  }
+
+  toggleRowCenters(row: ReportingIndicator, event: Event): void {
+    // Nested control inside a row that is itself a button (KZ-changes--reporting-aow-jira-hierarchy-2).
+    event.stopPropagation();
+    const key = this.rowKey(row);
+    const next = new Set(this.expandedCenterRows());
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    this.expandedCenterRows.set(next);
+  }
+
+  /**
+   * The chips actually rendered on a row. `activeCenter` is the card's current Center filter: when
+   * it is one of this row's centres it is ALWAYS shown, and first — filtering by a centre that then
+   * sits hidden behind "+7 more" would leave the user staring at a row with no visible reason to
+   * be there.
+   */
+  rowCentersShown(row: ReportingIndicator, activeCenter?: string | null): string[] {
+    const all = this.centerAcronymsOf(row);
+    const limit = ReportingAowTableComponent.ROW_CENTER_CHIP_LIMIT;
+
+    // One over the limit is not worth a counter — the counter itself would take that slot.
+    if (this.areRowCentersExpanded(row) || all.length <= limit + 1) return all;
+
+    const active = activeCenter?.trim();
+    const pinned = active && all.includes(active) ? [active] : [];
+    const rest = all.filter(c => !pinned.includes(c));
+
+    return [...pinned, ...rest].slice(0, limit);
+  }
+
+  /** How many centres "+N more" stands for. 0 when every centre is on screen. */
+  rowCentersHidden(row: ReportingIndicator, activeCenter?: string | null): number {
+    return this.centerAcronymsOf(row).length - this.rowCentersShown(row, activeCenter).length;
+  }
+
+  centerCountsOf(group: ReportingAowGroup): { center: string; count: number }[] {
+    const map = new Map<string, number>();
+    for (const ind of group.indicators ?? []) {
+      // A shared target counts towards EVERY centre that holds it: each of those centres does own
+      // the KPI, which is the whole reason the chip has to come from the list and not the scalar.
+      for (const c of this.centerAcronymsOf(ind)) {
+        map.set(c, (map.get(c) ?? 0) + 1);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([center, count]) => ({ center, count }))
+      .sort((a, b) => b.count - a.count || a.center.localeCompare(b.center));
+  }
+
+  typeCountsOf(group: ReportingAowGroup): { type: string; count: number }[] {
+    const map = new Map<string, number>();
+    for (const ind of group.indicators ?? []) {
+      const t = ind.result_type_name?.trim();
+      if (t && t !== '—') {
+        map.set(t, (map.get(t) ?? 0) + 1);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
+  }
+
+  visibleCentersOf(group: ReportingAowGroup): { center: string; count: number }[] {
+    const list = this.centerCountsOf(group);
+    return list.length > 4 ? list.slice(0, 3) : list;
+  }
+
+  overflowCentersOf(group: ReportingAowGroup): { center: string; count: number }[] {
+    const list = this.centerCountsOf(group);
+    return list.length > 4 ? list.slice(3) : [];
+  }
+
+  visibleTypesOf(group: ReportingAowGroup): { type: string; count: number }[] {
+    const list = this.typeCountsOf(group);
+    return list.length > 3 ? list.slice(0, 2) : list;
+  }
+
+  overflowTypesOf(group: ReportingAowGroup): { type: string; count: number }[] {
+    const list = this.typeCountsOf(group);
+    return list.length > 3 ? list.slice(2) : [];
+  }
+
+  hasOverflowFilters(group: ReportingAowGroup): boolean {
+    return this.overflowCentersOf(group).length > 0 || this.overflowTypesOf(group).length > 0;
+  }
+
+  isOverflowCenterActive(group: ReportingAowGroup): boolean {
+    const sel = this.selectedCenterOf(group);
+    if (!sel) return false;
+    return this.overflowCentersOf(group).some(c => c.center === sel);
+  }
+
+  isOverflowTypeActive(group: ReportingAowGroup): boolean {
+    const sel = this.selectedTypeOf(group);
+    if (!sel) return false;
+    return this.overflowTypesOf(group).some(t => t.type === sel);
+  }
+
+  hasActiveOverflowFilter(group: ReportingAowGroup): boolean {
+    return this.isOverflowCenterActive(group) || this.isOverflowTypeActive(group);
+  }
+
+  activeOverflowCount(group: ReportingAowGroup): number {
+    let count = 0;
+    if (this.isOverflowCenterActive(group)) count++;
+    if (this.isOverflowTypeActive(group)) count++;
+    return count;
+  }
+
+  readonly openCardFilterKey = signal<string | null>(null);
+
+  isCardFilterOpen(group: ReportingAowGroup): boolean {
+    return this.openCardFilterKey() === this.groupKey(group);
+  }
+
+  toggleCardFilterPopover(group: ReportingAowGroup, ev: Event): void {
+    ev.stopPropagation();
+    const key = this.groupKey(group);
+    this.openCardFilterKey.update(curr => (curr === key ? null : key));
+  }
+
+  closeCardFilterPopover(): void {
+    this.openCardFilterKey.set(null);
+  }
+
+  /** Sum of target values across an HLO's rows. */
+  hloTargetSum(hlo: { rows?: ReportingIndicator[] }): string {
+    const sum = (hlo.rows ?? []).reduce((acc, row) => acc + (parseFloat(String(row?.target_value_sum ?? 0)) || 0), 0);
+    return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
+  }
+
+  /** Sum of achieved values across an HLO's rows. */
+  hloAchievedSum(hlo: { rows?: ReportingIndicator[] }): string {
+    const sum = (hlo.rows ?? []).reduce((acc, row) => acc + (parseFloat(String(row?.actual_achieved_value_sum ?? 0)) || 0), 0);
+    return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
+  }
+
+  hloJumpList(group: ReportingAowGroup): { key: string; name: string; count: number }[] {
+    const bands = this.bandsOf(group);
+    const list: { key: string; name: string; count: number }[] = [];
+    for (const band of bands) {
+      for (const g of band.groups) {
+        list.push({ key: g.key, name: g.name, count: g.rows.length });
+      }
+    }
+    return list;
+  }
+
+  jumpToHlo(hloKey: string): void {
+    if (!this.isOpen(hloKey, this.isDefaultOpenHlo())) {
+      this.toggle(hloKey, this.isDefaultOpenHlo());
+    }
+    setTimeout(() => {
+      const el = document.getElementById(`hlo-group-${hloKey}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
+  }
+
+  /** Rows surviving the toolbar filters + optional in-card breakdown filters. */
+  visibleRows(group: ReportingAowGroup): ReportingIndicator[] {
+    const q = this.search().trim().toLowerCase();
+    const status = this.statusFilter();
+    const selCenter = this.selectedCenterOf(group);
+    const selType = this.selectedTypeOf(group);
+
+    // quick/reporting-search-all-levels (2026-09-04): the search box says "indicators" but users
+    // type any level of the tree. A hit on the CARD itself (AoW code or name) keeps every row of
+    // that card — filtering its rows by the AoW's own name would empty the very card that matched.
+    const groupHit =
+      !!q && [group.aow?.code, group.aow?.name].some(v => (v ?? '').toLowerCase().includes(q));
+
+    return (group.indicators ?? []).filter(row => {
+      if (status && status.length > 0 && !status.includes(this.statusOf(row))) return false;
+      if (selCenter && !this.centerAcronymsOf(row).includes(selCenter)) return false;
+      if (selType && row.result_type_name?.trim() !== selType) return false;
+      if (!q || groupHit) return true;
+      // Every level a row belongs to is searchable: its own description and name, the category
+      // ("innovation use" only lives in `result_type_name`), the HLO / outcome node it hangs from
+      // (`__hlo`), the AoW it sits in (`__aowCode` / `__aowName`) and its Center.
+      return [
+        row.indicator_description,
+        row.__hlo,
+        this.indicatorNameOf(row),
+        row.result_type_name,
+        row.__aowCode,
+        row.__aowName,
+        // Every centre of the row, so typing "IRRI" finds a shared target IRRI holds too.
+        this.centerAcronymsOf(row).join(' ')
+      ].some(v => (v ?? '').toLowerCase().includes(q));
+    });
+  }
+
+  /**
+   * The AoW header ratio — `3 of 8 · 38%` in the reference.
+   *
+   * `done` counts KPIs with SOMETHING REPORTED, not KPIs that reached 100%. That is the only
+   * reading under which the design's own worked example adds up: 3 of 8 = 37.5%, shown as 38%.
+   * Counting completions instead produced "0 of 30 · 0%" on real data — technically true and
+   * completely useless, since almost nothing is ever at 100% mid-cycle.
+   *
+   * Counted over the UNFILTERED set on purpose: a progress figure that moves when you type in a
+   * search box is not progress, it is a coincidence. `group.indicators` is that unfiltered set —
+   * EXCEPT when the host's Only-pending toggle is on, in which case it has already been narrowed
+   * and the host stashes the pre-toggle set on `__allIndicators` (see
+   * `dashboard-lab.applyBurndownFilterAndSort`); prefer that side-channel field when present.
+   *
+   * Delegates to `buildRatio` (`reporting-burndown.ts`) so this and the By-AOW banner's
+   * `buildAowBannerStats` apply the zero-target rule identically (MRF-R-6/R-7, MRF-AC-5/AC-6).
+   *
+   * @akili-spec changes/mass-reporting-flow
+   */
+  /**
+   * P2-3296 — the achievement figures, at any level.
+   *
+   * A dash, never 0%: an indicator with no usable target (absent, or zero) is excluded from every
+   * average, and a level where nothing was measurable has no percentage to state. Nicoleta's
+   * ruling is that anything reported against a zero target is "overachieved" — a verdict, not a
+   * quantity, so it cannot enter an average.
+   */
+  achievementLabel(achievement: TocAchievement | null | undefined): string {
+    return achievement?.progress_percentage ?? '—';
+  }
+
+  preliminaryAchievementLabel(achievement: TocAchievement | null | undefined): string {
+    return achievement?.preliminary_progress_percentage ?? '—';
+  }
+
+  /**
+   * Always rendered next to the number, never tucked into a tooltip: a figure averaged over 2 of
+   * 10 indicators must not read like one averaged over all 10, and the visible fraction is what
+   * shows the team where targets are still missing.
+   */
+  achievementCoverage(achievement: TocAchievement | null | undefined): string {
+    const counted = achievement?.counted;
+    const total = achievement?.total;
+
+    if (!Number.isFinite(counted) || !Number.isFinite(total) || !total) return '';
+
+    return counted === total ? `${total} Int. outcomes` : `${counted} of ${total} Int. outcomes`;
+  }
+
+  achievementTooltip(achievement: TocAchievement | null | undefined, childNoun = 'Intermediate Outcomes'): string {
+    if (!achievement || !achievement.total) return 'Nothing has been planned here yet.';
+
+    const { counted, total, indicators_total: kpiTotal } = achievement;
+    const scope = counted === total ? `${total} ${childNoun}` : `${counted} of ${total} ${childNoun}`;
+    const kpiNote = Number.isFinite(kpiTotal) && kpiTotal > 0 ? ` ${kpiTotal} KPIs sit under those nodes.` : '';
+
+    if (!counted) {
+      return `No ${childNoun.toLowerCase()} with a measurable target yet, so no ToC achievement % is shown.${kpiNote} KPI reporting progress uses every planned KPI in the ratio above.`;
+    }
+
+    return (
+      `ToC achievement — QA ${this.achievementLabel(achievement)} and Preliminary ${this.preliminaryAchievementLabel(achievement)}, ` +
+      `averaged across ${scope}.${kpiNote} KPI reporting progress counts every planned KPI separately.`
+    );
+  }
+
+  /**
+   * P2-3296 AC1, per indicator row. An indicator whose target is absent or zero has no ratio: the
+   * ToC branch that produced `value * 100` for those is how a row reached 50,000,000%. Such a row
+   * shows the word, not a number, and stays out of every average above it.
+   */
+  hasUsableTarget(row: ReportingIndicator): boolean {
+    const target = Number(row?.target_value_sum);
+
+    return Number.isFinite(target) && target > 0;
+  }
+
+  isOverachievedWithoutTarget(row: ReportingIndicator): boolean {
+    if (this.hasUsableTarget(row)) return false;
+
+    return Number(row?.actual_achieved_value_sum ?? 0) > 0 || Number(row?.preliminary_achieved_value_sum ?? 0) > 0;
+  }
+
+  /** Preliminary as a number, for the bar width. Mirrors `progressOf` for the QA figure. */
+  preliminaryProgressOf(row: ReportingIndicator): number {
+    const raw = row?.preliminary_progress_percentage;
+    const value = typeof raw === 'string' ? Number(raw.replace('%', '')) : Number(raw);
+
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  /**
+   * Names both figures and states the overlap outright. Approved counts in BOTH — Nicoleta asked
+   * for it so W3/Bilateral results tagged to AoW HLO targets are not lost from either reading —
+   * and without saying so the two numbers look like they should add up.
+   */
+  progressTracksTooltip(row: ReportingIndicator): string {
+    return (
+      `QA ${row?.progress_percentage ?? '0%'} — results that passed quality review (QAed or Approved). ` +
+      `Preliminary ${row?.preliminary_progress_percentage ?? '0%'} — results submitted but not yet reviewed, plus Approved ones. ` +
+      'Approved results count towards both, so the two are not additive.'
+    );
+  }
+
+  /** Bar fill, clamped to 100. The printed label keeps the real figure — over-achievement is shown. */
+  barWidth(percent: number): number {
+    if (!Number.isFinite(percent) || percent <= 0) return 0;
+
+    return Math.min(percent, 100);
+  }
+
+  ratioOf(group: ReportingAowGroup): { done: number; total: number; percent: number } {
+    const { done, total, percent } = buildRatio(this.ratioBase(group));
+    return { done, total, percent };
+  }
+
+  /**
+   * `title` for the header ratio when the zero-target rule (MRF-R-7) actually excluded KPIs from
+   * its denominator — `''` renders no `title` attribute at all.
+   *
+   * @akili-spec changes/mass-reporting-flow
+   */
+  ratioTitle(group: ReportingAowGroup): string {
+    const { zeroTarget } = buildRatio(this.ratioBase(group));
+    return zeroTarget > 0 ? `excludes ${this.countLabel(zeroTarget, 'zero-target KPI')}` : '';
+  }
+
+  /**
+   * `title` for the ratio+achievement group. Below `1100px` the achievement block itself goes
+   * `max-[1100px]:sr-only` (`OSF-T-16`) — `OSF-DD-8`'s ladder ranks shedding it first, and its own
+   * text says the shed content "stays available in the row tooltip". `sr-only`, not `hidden`:
+   * the figures must not leave the accessibility tree (`OSF-R-8`), only the visual column does.
+   * This `title` is the sighted-hover fallback for the same content, carried onto the group span
+   * that stays visible at every width — the achievement block itself is 1x1px there and
+   * unreachable by a pointer, so the fallback cannot live on it (mirrors `OSF-T-12`'s "By AOW"
+   * `title`, carried on the still-visible control rather than the thing that shrank away).
+   */
+  rowTitle(group: ReportingAowGroup): string {
+    const parts = [this.ratioTitle(group)];
+    if (group.achievement) parts.push(this.achievementTooltip(group.achievement));
+    return parts.filter(Boolean).join(' ');
+  }
+
+  /**
+   * The set both ratio readings count over. `__allIndicators` is a side-channel field the host adds
+   * ONLY while Only-pending is on (`dashboard-lab.applyBurndownFilterAndSort`) — it is not on
+   * `ReportingAowGroup`'s own interface, so it is read through a local cast rather than declared.
+   *
+   * Cross-cut Intermediate-Outcome rows are dropped from the base (`__isIntermediateCrosscut`,
+   * stamped by `dashboard-lab.indicatorsByAow()` from the payload's group-level `is_aow`): the same
+   * program-level IO is repeated into EVERY AoW payload and served again by the Intermediate
+   * endpoint, so counting it inside an AoW card counts it n+1 times over the shell (KCR-R-1). It
+   * still RENDERS inside the card's Outcomes band with its cross-cut tooltip (KCR-R-7, RES-R-3) —
+   * only its contribution to this denominator changes. Applied to both readings of the base (the
+   * `__allIndicators` side-channel and `indicators`).
+   *
+   * @akili-spec changes/mass-reporting-flow
+   * @akili-spec bugfix/kpi-count-reconciliation
+   */
+  private ratioBase(group: ReportingAowGroup): ReportingIndicator[] {
+    const base = (group as { __allIndicators?: ReportingIndicator[] }).__allIndicators ?? group.indicators ?? [];
+    return base.filter(ind => ind?.__isIntermediateCrosscut !== true);
+  }
+
+  countLabel(n: number, noun = 'KPI'): string {
+    return `${n} ${noun}${n === 1 ? '' : 's'}`;
+  }
+
+  /**
+   * Default disclosure, matching the design's own seed state:
+   *
+   * ```js
+   * expandedAows: {},                       // every card starts COLLAPSED (68px header only)
+   * expandedGroups: { …every group: true }  // every sub-group starts OPEN
+   * ```
+   *
+   * So the page opens as a scannable list of card headers, and the moment a user expands one they
+   * see its rows — not a second wall of collapsed group headers. Auto-opening the first AoW (the
+   * previous behaviour) made the very first card the odd one out and pushed the rest below the fold.
+   *
+   * `expandAll()` is the only thing that lifts that seed: the toolbar's Expand all switch moves the
+   * default for every card at once (P2-3252) instead of writing an override per AoW.
+   */
+  isDefaultOpenAow(codeOrKey?: string): boolean {
+    if (this.expandAll()) return true;
+    const q = this.search().trim();
+    if (q.length >= 2) {
+      if (!codeOrKey) return true;
+      const code = codeOrKey.startsWith('aow::') ? codeOrKey.slice(5) : codeOrKey;
+      const grp = this.groups().find(g => g.aow?.code === code);
+      return grp ? this.visibleRows(grp).length > 0 : false;
+    }
+    return false;
+  }
+
+  isDefaultOpenHlo(hloOrKey?: HloGroup | string): boolean {
+    if (this.expandAll()) return true;
+    const q = this.search().trim();
+    if (q.length >= 2) {
+      if (!hloOrKey) return true;
+      if (typeof hloOrKey === 'object' && hloOrKey !== null) {
+        return (hloOrKey.rows?.length ?? 0) > 0;
+      }
+      // string key lookup
+      for (const g of this.groups()) {
+        for (const b of this.bandsOf(g)) {
+          const h = b.groups.find(group => group.key === hloOrKey);
+          if (h) return (h.rows?.length ?? 0) > 0;
+        }
+      }
+      return false;
+    }
+    return false;
+  }
+
+  /**
+   * Top-level cards with something to show. With NOTHING filtering, every card the parent built is
+   * kept (including empty AoWs). Once any of the five toolbar controls is narrowing the list, empty
+   * cards drop out so it does not fill with dead headers.
+   */
+  readonly visibleGroups = computed(() => {
+    if (!this.filtersActive() && !this.search().trim()) return this.groups();
+    return this.groups().filter(g => g.loading || this.visibleRows(g).length > 0);
+  });
+
+  // ── Disclosure ────────────────────────────────────────────────────────────
+  /** `defaultOpen` comes from the index: first-of-level is open, the rest closed. */
+  isOpen(key: string, defaultOpen = false): boolean {
+    return this.overrides().get(key) ?? defaultOpen;
+  }
+
+  toggle(key: string, defaultOpen = false, event?: MouseEvent): void {
+    const selection = window.getSelection()?.toString();
+    if (selection && selection.trim().length > 0) {
+      return;
+    }
+    const now = this.isOpen(key, defaultOpen);
+    this.overrides.update(map => new Map(map).set(key, !now));
+  }
+
+  /** Check if all HLO sub-groups in a band are expanded. */
+  isBandAllOpen(groups: HloGroup[]): boolean {
+    if (!groups?.length) return false;
+    return groups.every(hlo => this.isOpen(hlo.key, this.isDefaultOpenHlo(hlo)));
+  }
+
+  /** Toggle all HLO sub-groups in a band. */
+  toggleBand(groups: HloGroup[]): void {
+    const allOpen = this.isBandAllOpen(groups);
+    this.overrides.update(map => {
+      const next = new Map(map);
+      for (const hlo of groups) {
+        next.set(hlo.key, !allOpen);
+      }
+      return next;
+    });
+  }
+
+  /**
+   * Is the WHOLE visible list open right now? Read over the real per-card state (override first,
+   * level default second), which is what makes the toolbar label honest even after the user opened
+   * or closed cards one by one.
+   *
+   * Top-level cards only. A sub-group the user folded inside an open AoW does not turn the list
+   * "not expanded": the card is still open, and the next press must therefore collapse.
+   * An empty list is never "all open" — there would be nothing to collapse.
+   */
+  readonly allOpen = computed(() => {
+    const groups = this.visibleGroups();
+    if (!groups.length) return false;
+    return groups.every(group => this.isOpen(`aow::${group.aow.code}`, this.isDefaultOpenAow(group.aow.code)));
+  });
+
+  // ── Copy to Clipboard & Selection Guard ────────────────────────────────────
+  private readonly clipboard = inject(Clipboard);
+  private readonly toastSE = inject(PrToastService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly justCopiedKey = signal<string | null>(null);
+  private copyResetTimer: ReturnType<typeof setTimeout> | null = null;
+
+  isJustCopied(key: string): boolean {
+    return this.justCopiedKey() === key;
+  }
+
+  private markCopied(key: string, summary: string): void {
+    this.justCopiedKey.set(key);
+    if (this.copyResetTimer !== null) {
+      clearTimeout(this.copyResetTimer);
+    }
+    this.copyResetTimer = setTimeout(() => {
+      this.copyResetTimer = null;
+      this.justCopiedKey.set(null);
+    }, 1500);
+    this.toastSE.add({ key: 'globalUserNotification', severity: 'success', summary });
+  }
+
+  copyAow(group: ReportingAowGroup, event?: Event): void {
+    event?.stopPropagation();
+    event?.preventDefault();
+    const chip = this.headerChip(group);
+    const name = (group?.aow?.name ?? '').trim();
+    const text = chip ? `[${chip}] ${name}` : name;
+    if (!text) return;
+    this.clipboard.copy(text);
+    this.markCopied(`aow::${group.aow.code}`, 'Area of Work name copied');
+  }
+
+  copyHlo(hlo: HloGroup, tax?: { type: string; code: string }, event?: Event): void {
+    event?.stopPropagation();
+    event?.preventDefault();
+    const code = tax?.code ? `${tax.type ? tax.type + ' ' : ''}${tax.code}`.trim() : (hlo?.code?.trim() ?? '');
+    const name = (hlo?.name ?? '').trim();
+    const text = code ? `[${code}] ${name}` : name;
+    if (!text) return;
+    this.clipboard.copy(text);
+    this.markCopied(hlo.key, 'HLO title copied');
+  }
+
+  copyIndicatorText(row: ReportingIndicator, event?: Event): void {
+    event?.stopPropagation();
+    event?.preventDefault();
+    const aow = this.aowCodeOf(row);
+    const desc = (row?.indicator_description ?? '').trim();
+    const text = aow ? `[${aow}] ${desc}` : desc;
+    if (!text) return;
+    this.clipboard.copy(text);
+    this.markCopied(this.rowKey(row), 'Indicator title copied');
+  }
+
+  readonly copyIndicatorAction = (row: ReportingIndicator): void => {
+    this.copyIndicatorText(row);
+  };
+
+  onRowClick(row: ReportingIndicator, event?: MouseEvent): void {
+    const selection = window.getSelection()?.toString();
+    if (selection && selection.trim().length > 0) {
+      return;
+    }
+    this.openRow.emit(row);
+  }
+
+  constructor() {
+    // The host owns the toolbar, which sits ABOVE this table and cannot read into it — so the state
+    // is pushed out. `allOpen` is a computed, so this only fires when the answer actually changes.
+    effect(() => this.allOpenChange.emit(this.allOpen()));
+    this.destroyRef.onDestroy(() => {
+      if (this.copyResetTimer !== null) {
+        clearTimeout(this.copyResetTimer);
+        this.copyResetTimer = null;
+      }
+    });
+  }
+
+  isTitleExpanded(id: number): boolean {
+    return this.expandedTitles().has(id);
+  }
+
+  toggleTitle(id: number, ev: Event): void {
+    // The whole row is clickable, so a Show more click must not also open the drawer.
+    ev.stopPropagation();
+    this.expandedTitles.update(set => {
+      const next = new Set(set);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  /** Stops a cell's own action from bubbling into the row-opens-the-drawer handler. */
+  emitAndStop<T>(emitter: { emit: (v: T) => void }, value: T, ev: Event): void {
+    ev.stopPropagation();
+    emitter.emit(value);
+  }
+
+  // ── All-indicators table ──────────────────────────────────────────────────
+  private static readonly STATUS_RANK: Record<RowStatus, number> = {
+    'not-started': 0,
+    'in-progress': 1,
+    achieved: 2,
+    overachieved: 3
+  };
+
+  /** Numeric sort key for a figure. `-Infinity` = nothing reported, so those rows group together. */
+  private sortNumber(value: string | number | null | undefined): number {
+    if (value === null || value === undefined || (value as unknown) === '') return Number.NEGATIVE_INFINITY;
+    const n = typeof value === 'number' ? value : parseFloat(String(value));
+    return Number.isFinite(n) ? n : Number.NEGATIVE_INFINITY;
+  }
+
+  /**
+   * The rows the `All indicators` table renders, decorated with sort keys.
+   *
+   * Built from `flatRows()` so BOTH views answer to exactly the same filtering — the flat list is a
+   * different presentation of the same set, never a different query.
+   */
+  readonly flatTableRows = computed<ReportingFlatRow[]>(() =>
+    this.flatRows().map(row => {
+      const status = this.statusOf(row);
+      const aow = this.aowCodeOf(row);
+      return {
+        ...row,
+        __aowCode: aow ?? undefined,
+        __sortTarget: this.sortNumber(row.target_value_sum),
+        __sortAchieved: this.sortNumber(row.actual_achieved_value_sum),
+        __sortProgress: this.hasUsableTarget(row) ? this.progressOf(row) : -1,
+        __sortStatus: ReportingAowTableComponent.STATUS_RANK[status],
+        __statusKey: status,
+        __statusText: this.statusLabel(row),
+        // The `Type` column is the CATEGORY (`result_type_name`), which is what the Category filter
+        // offers. The indicator NAME (`type_name`) stays on the title block's meta line, exactly as
+        // in the grouped view — the two are different fields and the design shows both.
+        __typeLabel: row.result_type_name?.trim() || '—',
+        __centerLabel: this.centerAcronymsOf(row).join(', ') || '—'
+      };
+    })
+  );
+
+  /** Fixed fg/bg pair for an indicator's progress pill. Never recombined across states (rule 9). */
+  statusPillClass(status: RowStatus): string {
+    switch (status) {
+      case 'achieved':
+        return 'bg-[var(--pr-indicator-achieved-bg)] text-[var(--pr-indicator-achieved-fg)]';
+      case 'overachieved':
+        return 'bg-[var(--pr-indicator-overachieved-bg)] text-[var(--pr-indicator-overachieved-fg)]';
+      case 'in-progress':
+        return 'bg-[var(--pr-status-in-progress-bg)] text-[var(--pr-status-in-progress-fg)]';
+      default:
+        return 'bg-[var(--pr-status-not-started-bg)] text-[var(--pr-status-not-started-fg)]';
+    }
+  }
+
+  // ── Next pending (inherited from the By-AOW cards, MRF-R-3.1) ─────────────
+  /** Transient marker for the row "Next pending" just jumped to — cleared after ~2.6s. */
+  readonly highlightedRowKey = signal<string | null>(null);
+  private highlightTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Highlight a row by key with transient ring/background highlight for ~2.6s. */
+  highlightRow(targetKey: string): void {
+    this.highlightedRowKey.set(targetKey);
+    if (this.highlightTimer) clearTimeout(this.highlightTimer);
+    this.highlightTimer = setTimeout(() => {
+      this.highlightTimer = null;
+      this.highlightedRowKey.set(null);
+    }, 2600);
+  }
+
+  /** True for the ONE row whose report surface just closed — that row offers "Next pending". */
+  isLastReportedRow(row: ReportingIndicator): boolean {
+    const last = this.lastReported();
+    return !!last && String(last.id) === String(row.indicator_id) && (last.aowCode ?? '') === (row.__aowCode ?? '');
+  }
+
+  /**
+   * Every row the user can currently SEE, in display order — grouped mode walks the cards/bands
+   * exactly as rendered, flat mode reuses `flatRows`. `nextPendingRow` walks this list, so "next"
+   * always means "next on screen", honouring every active filter (same contract as the By-AOW
+   * card's `orderedByAowIndicators`).
+   */
+  private orderedVisibleRows(): ReportingIndicator[] {
+    if (this.viewMode() === 'flat') return this.flatRows();
+    return this.visibleGroups().flatMap(g => this.hloGroupsOf(g).flatMap(h => h.rows));
+  }
+
+  /**
+   * Next pending row after the last-reported one, wrapping once around the visible list; `null`
+   * when nothing pending is left (the template renders the "all reported" note instead, mirroring
+   * MRF-AC-3's BUT clause). Matched by id+AoW — indicator ids repeat across AoWs (MRF C-8).
+   */
+  readonly nextPendingRow = computed<ReportingIndicator | null>(() => {
+    const last = this.lastReported();
+    if (!last) return null;
+    const rows = this.orderedVisibleRows();
+    const total = rows.length;
+    if (!total) return null;
+    const isLast = (r: ReportingIndicator) =>
+      String(r.indicator_id) === String(last.id) && (r.__aowCode ?? '') === (last.aowCode ?? '');
+    const idx = rows.findIndex(isLast);
+    const start = idx === -1 ? 0 : idx + 1;
+    for (let offset = 0; offset < total; offset++) {
+      const candidate = rows[(start + offset) % total];
+      if (candidate && !isLast(candidate) && pendingOf([candidate]).length > 0) return candidate;
+    }
+    return null;
+  });
+
+  /**
+   * Jump to the next pending row: open its card + sub-group if collapsed (rows are matched by
+   * `rowKey`, never identity — the bucket bands clone their rows), then scroll + highlight, the
+   * same affordance the `?kpi=` restore gives on the By-AOW cards.
+   */
+  goToNextPending(ev: Event): void {
+    ev.stopPropagation();
+    const target = this.nextPendingRow();
+    if (!target) return;
+    const targetKey = this.rowKey(target);
+    if (this.viewMode() === 'grouped') {
+      const group = this.visibleGroups().find(g => this.visibleRows(g).some(r => this.rowKey(r) === targetKey));
+      if (group) {
+        const aowKey = `aow::${group.aow.code}`;
+        if (!this.isOpen(aowKey, this.isDefaultOpenAow(group.aow.code))) this.toggle(aowKey, this.isDefaultOpenAow(group.aow.code));
+        const hlo = this.hloGroupsOf(group).find(h => h.rows.some(r => this.rowKey(r) === targetKey));
+        if (hlo && !this.isOpen(hlo.key, this.isDefaultOpenHlo(hlo))) this.toggle(hlo.key, this.isDefaultOpenHlo(hlo));
+      }
+    }
+    this.highlightRow(targetKey);
+    // Waits for the card's 280ms disclosure animation to FINISH before scrolling — firing earlier
+    // scrolls to a position the expanding card is still pushing around (verified live: 60ms landed
+    // off-viewport).
+    setTimeout(() => {
+      // `CSS.escape` guarded — jsdom (the unit harness) does not implement the CSS global.
+      const escaped = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(targetKey) : targetKey.replace(/"/g, '\\"');
+      const el = document.querySelector(`[data-row-key="${escaped}"]`);
+      el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    }, 320);
+  }
+
+  // ── Row overflow menu ─────────────────────────────────────────────────────
+  /**
+   * Which row's `⋯` menu is open, by row key. Exactly one at a time (hard UI rule 2: never a menu
+   * on top of a menu).
+   *
+   * The menu used to be an `openRowMenu` output the host never bound, so the button was inert — it
+   * looked like a control and did nothing (P2-3405). It is handled here instead, and its two live
+   * items reuse the outputs the Target and Achieved cells already emit, so the menu opens no
+   * surface of its own and there is no second code path to keep in step.
+   */
+  private readonly openMenuKey = signal<string | null>(null);
+
+  /**
+   * CDK Connected Overlay positions: opens below the button aligned right by default,
+   * flips above if the trigger is near the bottom of the viewport or container.
+   */
+  readonly rowMenuPositions: ConnectedPosition[] = [
+    { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 4 },
+    { originX: 'end', overlayX: 'end', originY: 'top', overlayY: 'bottom', offsetY: -4 }
+  ];
+
+  closeRowMenu(): void {
+    this.openMenuKey.set(null);
+  }
+
+  rowKey(row: ReportingIndicator): string {
+    return `${row.indicator_id}::${row.center_id ?? ''}::${row.__aowCode ?? ''}`;
+  }
+
+  /**
+   * Whether `row` is starred. `rowKey` and `favoriteKeyOf` (the service's own key builder) MUST
+   * stay byte-identical (RFI-AC-14) — this component never imports the service, only the input.
+   * @akili-spec changes/reporting-favorite-indicators
+   */
+  isFavorite(row: ReportingIndicator): boolean {
+    return this.favoriteKeys().has(this.rowKey(row));
+  }
+
+  /** @akili-spec changes/reporting-favorite-indicators */
+  favoriteLabel(row: ReportingIndicator): string {
+    return this.isFavorite(row) ? 'Remove from favorites' : 'Add to favorites';
+  }
+
+  isRowMenuOpen(row: ReportingIndicator): boolean {
+    return this.openMenuKey() === this.rowKey(row);
+  }
+
+  toggleRowMenu(row: ReportingIndicator, ev: Event): void {
+    ev.stopPropagation();
+    const key = this.rowKey(row);
+    this.openInfoKey.set(null);
+    this.openMenuKey.update(current => (current === key ? null : key));
+  }
+
+  /** Run a menu item's action and close the menu, without letting the click open the row. */
+  runFromMenu<T>(emitter: { emit: (v: T) => void } | ((v: T) => void), value: T, ev: Event): void {
+    ev.stopPropagation();
+    this.openMenuKey.set(null);
+    if (typeof emitter === 'function') {
+      emitter(value);
+    } else {
+      emitter.emit(value);
+    }
+  }
+
+  /**
+   * `Copy link` is visible-but-disabled for Intermediate Outcomes / 2030 Outcomes rows — those
+   * buckets have no owning AoW for `tocAow=` to resolve back to, so the host's `kpiLink()` returns
+   * `''` for them (MRF review finding). Mirrors the `Copy indicator code` disabled pattern above.
+   */
+  canCopyLink(row: ReportingIndicator): boolean {
+    return !COPY_LINK_UNSUPPORTED_AOW_CODES.has(row.__aowCode ?? '');
+  }
+
+  // ── Card info popover ─────────────────────────────────────────────────────
+  /**
+   * Which card's ⓘ popover is open, by group code.
+   *
+   * The ⓘ was a hover-only `prTooltip` whose content was `group.aow.name` — the string printed
+   * immediately to its left, so the affordance promised information and delivered a repeat. The
+   * design specifies a click-to-open popover with a title, a body and a meta footer.
+   */
+  private readonly openInfoKey = signal<string | null>(null);
+
+  isInfoOpen(group: ReportingAowGroup): boolean {
+    return this.openInfoKey() === group.aow.code;
+  }
+
+  toggleInfo(group: ReportingAowGroup, ev: Event): void {
+    // The card header is itself a disclosure button, so this must not also expand the card.
+    ev.stopPropagation();
+    const key = group.aow.code;
+    this.openMenuKey.set(null);
+    this.openInfoKey.update(current => (current === key ? null : key));
+  }
+
+  infoBlurb(_group: ReportingAowGroup): string {
+    return 'No description available yet for this Area of Work. Coming soon.';
+  }
+
+  /**
+   * Footer line of the info popover. Everything here is derived from data already loaded — the KPI
+   * total, and for a real Area of Work the output/outcome split. The DESCRIPTION is the part the
+   * payload does not carry; the template marks that single field `Coming soon` rather than
+   * inventing prose (and specifically rather than reusing another programme's blurb).
+   */
+  infoMeta(group: ReportingAowGroup): string {
+    const total = (group.indicators ?? []).length;
+    if (this.isBucket(group)) return this.countLabel(total);
+    const outputs = (group.indicators ?? []).filter(r => r.__tier !== 'outcome').length;
+    return `${this.countLabel(total)} · ${outputs} output${outputs === 1 ? '' : 's'} · ${total - outputs} outcome${
+      total - outputs === 1 ? '' : 's'
+    }`;
+  }
+
+  // ── Dismissal (hard UI rule 4: Escape closes) ─────────────────────────────
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closeOverlays();
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.closeOverlays();
+  }
+
+  private closeOverlays(): void {
+    if (this.openMenuKey() !== null) this.openMenuKey.set(null);
+    if (this.openInfoKey() !== null) this.openInfoKey.set(null);
+    if (this.openCardFilterKey() !== null) this.openCardFilterKey.set(null);
+  }
+}

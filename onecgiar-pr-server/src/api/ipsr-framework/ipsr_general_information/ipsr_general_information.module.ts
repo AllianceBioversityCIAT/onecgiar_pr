@@ -12,6 +12,7 @@ import { AdUsersModule } from '../../ad_users';
 import { VersioningModule } from '../../versioning/versioning.module';
 import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initiative_entity_map.repository';
 import { ResultImpactAreaScoresModule } from '../../result-impact-area-scores/result-impact-area-scores.module';
+import { EvidencesRepository } from '../../results/evidences/evidences.repository';
 
 @Module({
   controllers: [IpsrGeneralInformationController],
@@ -25,6 +26,8 @@ import { ResultImpactAreaScoresModule } from '../../result-impact-area-scores/re
     IpsrRepository,
     GenderTagRepository,
     IpsrService,
+    // P2-3210 — the service now upserts the Impact Area evidence of the innovation package.
+    EvidencesRepository,
   ],
   imports: [
     forwardRef(() => VersioningModule),

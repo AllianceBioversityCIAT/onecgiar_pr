@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { ResultLevelService } from '../results/pages/result-creator/services/result-level.service';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -23,7 +23,17 @@ export class QualityAssuranceComponent implements OnInit {
   allInitiatives = [];
   clarisaQaToken = null;
   official_code = null;
-  showIframe = false;
+  // P2-3322: `selectOptionEvent()` sets this `false`, then re-enables it inside a `setTimeout` once the QA
+  // token resolves. As a plain field that delayed write notified nothing, so under zoneless change detection
+  // the iframe never appeared: the page stayed on the "Select an Initiative" placeholder until a reload.
+  // Signal-backed, the write schedules its own render. Public API unchanged: still a boolean `showIframe`.
+  private readonly _showIframe = signal<boolean>(false);
+  get showIframe(): boolean {
+    return this._showIframe();
+  }
+  set showIframe(value: boolean) {
+    this._showIframe.set(value);
+  }
   qaUrl = environment.qaUrl;
   sanitizedUrl: any = null;
 

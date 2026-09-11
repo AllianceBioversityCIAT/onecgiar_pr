@@ -2,7 +2,6 @@ import { TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { CognitoService } from './cognito.service';
-import { MessageService } from 'primeng/api';
 import { of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
@@ -12,7 +11,7 @@ describe('CognitoService', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [RouterTestingModule, HttpClientTestingModule],
-      providers: [CognitoService, MessageService]
+      providers: [CognitoService]
     });
     service = TestBed.inject(CognitoService);
   });
@@ -55,7 +54,7 @@ describe('CognitoService', () => {
 
       service.loginWithAzureAd();
 
-      expect(spy).toHaveBeenCalledWith(environment.production ? 'CGIAR-Account' : 'CGIAR-AzureAD');
+      expect(spy).toHaveBeenCalledWith(environment.production ? 'CGIAR-Account' : 'CGIAR-AzureAD', `${window.location.origin}/auth`);
       expect(service.isLoadingAzureAd()).toBe(false);
     });
 

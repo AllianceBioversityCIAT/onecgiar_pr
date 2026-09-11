@@ -14,10 +14,34 @@ import { UnmappedMQAPInstitutionDto } from '../../models/partnersBody';
 export class KnowledgeProductSelectorComponent implements OnInit {
   authorAffiliationsList: any[] = [{ part: { code: 5 } }];
 
-  resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
-  versionId = this?.api?.dataControlSE?.currentResult?.version_id;
+  /**
+   * P2-3301: same defect that was fixed in the 2026 selector. These were class-field initializers, so
+   * they were read ONCE while the component was being constructed, before `GET_resultById` had filled
+   * `currentResult`. Both froze as `undefined` and the note rendered a link to
+   * `/result/result-detail/undefined/theory-of-change?phase=undefined`, which 404s and bounces the user
+   * home with a raw "Result not found" dialog. The signal is read first because this template has no
+   * other reactive read: without it the view is never marked dirty and the stale link stays painted.
+   * The message is a getter too, otherwise it would keep the values captured at construction time.
+   */
+  get resultCode() {
+    return (
+      this.api.dataControlSE?.currentResultSignal()?.result_code ??
+      this.api.dataControlSE?.currentResult?.result_code ??
+      this.api.resultsSE?.currentResultCode
+    );
+  }
 
-  alertStatusMessage: string = `Partner organizations you collaborated with or are currently collaborating with to generate this result. </br>Please note that CGIAR Centers are not listed here. They are directly linked to <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.`;
+  get versionId() {
+    return (
+      this.api.dataControlSE?.currentResultSignal()?.version_id ??
+      this.api.dataControlSE?.currentResult?.version_id ??
+      this.api.resultsSE?.currentResultPhase
+    );
+  }
+
+  get alertStatusMessage(): string {
+    return `Partner organizations you collaborated with or are currently collaborating with to generate this result. </br>Please note that CGIAR Centers are not listed here. They are directly linked to <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.`;
+  }
 
   sourceLabel: string = '';
 

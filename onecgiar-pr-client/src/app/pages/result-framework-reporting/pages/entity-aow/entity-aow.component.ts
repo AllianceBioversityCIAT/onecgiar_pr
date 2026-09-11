@@ -17,6 +17,9 @@ export class EntityAowComponent implements OnInit {
 
   isAOWTreeOpen = signal<boolean>(true);
 
+  /** Breadcrumb root: the Science Programs listing. */
+  readonly programsListPath = '/result-framework-reporting/home';
+
   ngOnInit() {
     this.route.params.subscribe(params => {
       this.entityAowService.entityId.set(params['entityId']);

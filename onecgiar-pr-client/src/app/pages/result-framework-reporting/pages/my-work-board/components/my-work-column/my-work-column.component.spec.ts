@@ -1,0 +1,209 @@
+// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-10, MWB-T-11, MWB-T-7, MWB-R-2, R-11)
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { MyWorkColumnComponent } from './my-work-column.component';
+import { MyWorkColumn } from '../../my-work.view-model';
+import { ProgrammeResultRow } from '../../../programme-results/services/programme-results.service';
+
+function row(partial: Partial<ProgrammeResultRow> = {}): ProgrammeResultRow {
+  return {
+    id: 1,
+    code: '4712',
+    title: 'A result',
+    category: 'Knowledge product',
+    statusId: 1,
+    statusName: 'Editing',
+    resultTypeId: 6,
+    createdBy: '',
+    created: '2025-08-12T00:00:00.000Z',
+    origin: 'W1/W2',
+    center: '',
+    updated: '',
+    indicator: '',
+    section: '',
+    versionId: '36',
+    phaseName: 'Reporting 2026',
+    phaseYear: 2026,
+    submitterCode: 'SP01',
+    raw: {},
+    ...partial
+  };
+}
+
+function column(partial: Partial<MyWorkColumn> = {}): MyWorkColumn {
+  return {
+    key: 'editing',
+    label: 'Editing',
+    group: 'action',
+    rows: [],
+    ...partial
+  };
+}
+
+describe('MyWorkColumnComponent', () => {
+  let fixture: ComponentFixture<MyWorkColumnComponent>;
+  let component: MyWorkColumnComponent;
+
+  const build = async (inputs: { column: MyWorkColumn; rail?: boolean; collapsed?: boolean; collapsible?: boolean }) => {
+    await TestBed.configureTestingModule({
+      imports: [MyWorkColumnComponent],
+      providers: [provideRouter([])]
+    }).compileComponents();
+    fixture = TestBed.createComponent(MyWorkColumnComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('column', inputs.column);
+    if (inputs.rail !== undefined) fixture.componentRef.setInput('rail', inputs.rail);
+    if (inputs.collapsed !== undefined) fixture.componentRef.setInput('collapsed', inputs.collapsed);
+    if (inputs.collapsible !== undefined) fixture.componentRef.setInput('collapsible', inputs.collapsible);
+    fixture.detectChanges();
+  };
+
+  const root = () => fixture.nativeElement as HTMLElement;
+  const text = () => root().textContent ?? '';
+
+  describe('expanded (region) mode', () => {
+    it('renders the header dot, label and count, and role=region + aria-labelledby', async () => {
+      await build({ column: column({ key: 'pending', label: 'Pending review', rows: [row(), row({ code: '4701' })] }) });
+
+      const section = root().querySelector('section') as HTMLElement;
+      expect(section.getAttribute('role')).toBe('region');
+      const labelledBy = section.getAttribute('aria-labelledby');
+      expect(labelledBy).toBeTruthy();
+      expect(root().querySelector(`#${labelledBy}`)?.textContent?.trim()).toBe('Pending review');
+      expect(text()).toContain('2');
+    });
+
+    // `MWB-T-11`: the SAV contract now applies only where the viewport lock does. Below 900px the
+    // page is the scroller, so `flex-1 min-h-0 overflow-y-auto` must be behind `min-[900px]:` and
+    // the BASE state must carry none of them — a `min-height: 0` list inside an auto-height column
+    // collapses to a 0px sliver there.
+    it('gives the list flex-1 min-h-0 overflow-y-auto only at >= 900px (SAV contract, MWB-T-11)', async () => {
+      await build({ column: column({ rows: [row()] }) });
+
+      const list = root().querySelector('[data-testid="my-work-column-list"]') as HTMLElement;
+      expect(list.className).toContain('min-[900px]:flex-1');
+      expect(list.className).toContain('min-[900px]:min-h-0');
+      expect(list.className).toContain('min-[900px]:overflow-y-auto');
+      // No unprefixed copy of any of the three.
+      expect([...list.classList]).not.toContain('flex-1');
+      expect([...list.classList]).not.toContain('min-h-0');
+      expect([...list.classList]).not.toContain('overflow-y-auto');
+    });
+
+    it('gives the region its own id so the narrow-viewport jumper can target it (MWB-T-11)', async () => {
+      await build({ column: column({ key: 'submitted', label: 'Submitted', rows: [row()] }) });
+
+      const section = root().querySelector('section') as HTMLElement;
+      expect(section.id).toBe('my-work-region-submitted');
+      // …and it stays distinct from the heading id `aria-labelledby` points at.
+      expect(section.getAttribute('aria-labelledby')).toBe('my-work-column-submitted');
+    });
+
+    it('shows the per-column empty message when there are no rows', async () => {
+      await build({ column: column({ label: 'Editing', rows: [] }) });
+
+      expect(text()).toContain('Nothing in Editing yet.');
+      expect(root().querySelectorAll('app-my-work-card').length).toBe(0);
+    });
+
+    it('shows the "k ready to submit" hint only for the Editing column with ready rows', async () => {
+      await build({
+        column: column({
+          key: 'editing',
+          rows: [row({ completeness: { complete: 5, total: 5, missing: [] } }), row({ code: '4701', completeness: { complete: 2, total: 5, missing: ['evidences'] } })]
+        })
+      });
+
+      expect(text()).toContain('1 ready to submit');
+    });
+
+    it('does not show the ready hint on a non-Editing column', async () => {
+      await build({ column: column({ key: 'submitted', label: 'Submitted', rows: [row({ completeness: { complete: 5, total: 5, missing: [] } })] }) });
+
+      expect(text()).not.toContain('ready to submit');
+    });
+
+    // `MWB-T-10` (a) — the user's screenshot defect: "cuando uno abre todo no tiene cómo
+    // comprimirlo nuevamente". Only a Closed-group column is collapsible; Done/waiting/action
+    // columns never offer the control.
+    describe('collapse control (MWB-T-10)', () => {
+      it('offers a labelled collapse button with aria-expanded=true when collapsible', async () => {
+        await build({ column: column({ key: 'discontinued', label: 'Discontinued', rows: [row()] }), collapsible: true });
+
+        const collapse = root().querySelector('button[aria-label="Collapse Discontinued"]') as HTMLButtonElement;
+        expect(collapse).toBeTruthy();
+        expect(collapse.getAttribute('aria-expanded')).toBe('true');
+        expect(collapse.textContent).toContain('chevron_left');
+      });
+
+      it('emits toggle when the collapse button is clicked', async () => {
+        await build({ column: column({ key: 'discontinued', label: 'Discontinued', rows: [row()] }), collapsible: true });
+        const spy = jest.fn();
+        component.expandToggle.subscribe(spy);
+
+        (root().querySelector('button[aria-label="Collapse Discontinued"]') as HTMLButtonElement).click();
+
+        expect(spy).toHaveBeenCalledTimes(1);
+      });
+
+      it('renders no collapse control on a non-collapsible column (default)', async () => {
+        await build({
+          column: column({
+            key: 'inQa',
+            label: 'In QA',
+            group: 'done',
+            rows: [row({ statusId: 2, statusName: 'Quality Assessed' })]
+          })
+        });
+
+        expect(root().querySelector('button[aria-expanded]')).toBeNull();
+        expect(root().querySelectorAll('button[aria-label^="Collapse"]').length).toBe(0);
+      });
+    });
+  });
+
+  describe('rail (collapsed) mode', () => {
+    it('renders a 44px aria-expanded button carrying the count and the vertical label', async () => {
+      // Closed is the canonical rail column.
+      await build({
+        column: column({ key: 'discontinued', label: 'Discontinued', rows: [row(), row({ code: '2' }), row({ code: '3' }), row({ code: '4' })] }),
+        rail: true,
+        collapsed: true
+      });
+
+      const btn = root().querySelector('button') as HTMLButtonElement;
+      expect(btn).toBeTruthy();
+      expect(btn.className).toContain('w-[44px]');
+      expect(btn.getAttribute('aria-expanded')).toBe('false');
+      expect(btn.textContent).toContain('4');
+      expect(btn.textContent).toContain('Discontinued');
+      expect(root().querySelector('section')).toBeNull();
+    });
+
+    it('reflects collapsed=false as aria-expanded=true', async () => {
+      await build({ column: column(), rail: true, collapsed: false });
+
+      expect((root().querySelector('button') as HTMLButtonElement).getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('emits toggle on click', async () => {
+      await build({ column: column(), rail: true });
+      const spy = jest.fn();
+      component.expandToggle.subscribe(spy);
+
+      (root().querySelector('button') as HTMLButtonElement).click();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // `MWB-T-7` (3, 5): presence-only — the actual "does it honour prefers-reduced-motion"
+  // behaviour is a CSS media query jsdom does not evaluate; this guards that the expanded
+  // region's local `@keyframes` hook (neutralised under `prefers-reduced-motion` in the
+  // component's own SCSS, not a Tailwind class) stays on the markup.
+  it('carries the expanded region entrance-fade class (MWB-T-7)', async () => {
+    await build({ column: column({ rows: [row()] }) });
+
+    expect((root().querySelector('section') as HTMLElement).className).toContain('pr-my-work-fade');
+  });
+});

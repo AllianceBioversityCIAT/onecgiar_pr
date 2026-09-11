@@ -180,6 +180,7 @@ Read this section before touching anything under `api/results/`. For a deeper ma
   - **Lifecycle:** `result-status/`, `result-review-history/`, `result-deletion-audit/`, `result_levels/`, `result-by-level/`, `submissions/`.
   - **Type-specific data:** `results-knowledge-products/`, `knowledge_product_fair_baseline/`, `capdevs-delivery-methods/`, `capdevs-terms/`, `partner-delivery-type/`, `gender_tag_levels/`, `impact_areas_scores_components/`, `results-impact-area-indicators/`, `results-impact-area-target/`, `result-questions/`, `legacy-result/`, `legacy_indicators_locations/`, `legacy_indicators_partners/`, `linked-results/`, `intellectual_property_experts/`, `ost-melia-studies/`, `non-pooled-projects/`, `results_by_projects/`, `result-by-institutions-by-deliveries-type/`, `result-types/`, `results-validation-module/`, `results-investment-discontinued-options/`, `investment-discontinued-options/`, `results-package-centers/` *(IPSR cross-ref)*.
   - **Operational:** `admin-panel/`, `summary/` (per-type summary builders — pairs with bilateral payloads), `share-result-request/`, `years/`, `versions/`, `units-of-measure/`, `institution_roles/`, `initiative_roles/`.
+- **KP Discovery proxy:** `results-knowledge-products/cgspace-discovery/` — read-only proxy to the DSpace 7 Discovery API (search + facets) across **CGSpace, MELSpace and WorldFish**; MQAP remains the metadata source after an item is selected. Env: `CGSPACE_DISCOVERY_URL`, `MELSPACE_DISCOVERY_URL`, `WORLDFISH_DISCOVERY_URL` (each required for its repository, no in-code fallback; a missing one reports that repository as `unconfigured`, never a 5xx, and never names the variable to the client).
 - **RMQ consumer:** `reporting-metadata-export.consumer.ts` lives at this level (NOT under `shared/microservices/`). When the queue config is present, `main.ts` attaches the microservice and this consumer receives messages.
 - **Naming gotchas (preserve these — DB columns depend on them):**
   - `results_by_inititiatives/` is misspelled; do NOT rename — the entity, FK, and column names match.
@@ -673,7 +674,7 @@ If you change response shape, update [`../docs/bilateral-result-summaries.en.md`
 When you sit down to edit anything in this tree:
 
 1. Confirm the spec at `../../docs/specs/<module>/` (`requirements.md`, `design.md`, `task.md`). If missing, run `/sdd-specify` first — templates live in `../../docs/specs/general-setup/`.
-2. Cite `G#`, `US-*`, `AC-*` from `../../docs/prd.md` and the relevant workflow id (`W1..W8`) and module section from `../../docs/detailed-design/detailed-design.md`.
+2. Cite `G#`, `US-*`, `AC-*` from `../../docs/prd.md` and the relevant workflow id (`W1..W8`) and module section from `../../docs/trd/trd.md`.
 3. Implement using the folder pattern in §2.1 (or extend the right `shared/` primitive).
 4. Migration if entities changed.
 5. Tests co-located. Don't lower coverage.

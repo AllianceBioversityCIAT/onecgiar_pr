@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input, Output, EventEmitter, ElementRef, HostListener } from '@angular/core';
+import { Component, computed, ElementRef, forwardRef, HostListener, inject, input, OnDestroy, output, signal } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
@@ -16,69 +16,175 @@ import { DataControlService } from '../../shared/services/data-control.service';
   ],
   standalone: false
 })
-export class PrSelectComponent implements ControlValueAccessor {
-  @Input() optionLabel: string;
-  @Input() optionValue: string;
-  @Input() options: any;
-  @Input() placeholder: string;
-  @Input() label: string;
-  @Input() description: string;
-  @Input() readOnly: boolean;
-  @Input() isStatic: boolean;
-  @Input() required: boolean = true;
-  @Input() flagsCode: string;
-  @Input() disableOptions: any;
-  @Input() disableOptionsText: any = '';
-  @Input() disabled: any = false;
-  @Input() editable: boolean = false;
-  @Input() showPartnerAlert: boolean = false;
-  @Input() extraInformation: boolean = false;
-  @Input() indexReference: number = null;
-  @Input() noDataText: string = '';
-  @Input() fieldDisabled: boolean = false;
-  @Input() group: boolean = false;
-  @Input() groupCode: string = '';
-  @Input() groupName: string = '';
-  @Input() descInlineStyles?: string = '';
-  @Input() labelDescInlineStyles?: string = '';
-  @Input() optionsInlineStyles?: string = '';
-  @Input() overlayToBody?: boolean = false; // When true, position dropdown as fixed overlay
-  @Input() idKey?: string = '';
-  @Input() showDescriptionLabel?: boolean = false;
-  @Input() truncateSelectionText?: boolean = false;
-  @Input() inlineStylesContainer?: string = '';
-  @Input() _value: string;
-  @Input() expandSpaceOnOpen?: boolean = false; // Enable 300px expansion when open
+export class PrSelectComponent implements ControlValueAccessor, OnDestroy {
+  private static nextInstanceId = 0;
+  readonly optionLabel = input<string>();
+  readonly optionValue = input<string>();
+  readonly options = input<any>();
+  readonly placeholder = input<string>();
+  readonly label = input<string>();
+  readonly description = input<string>();
+  // P2-3061: optional info tooltip rendered next to the label (forwarded to app-pr-field-header).
+  readonly tooltip = input<string>('');
+  readonly readOnly = input<boolean>();
+  readonly isStatic = input<boolean>();
+  readonly required = input<boolean>(true);
+  readonly flagsCode = input<string>();
+  readonly disableOptions = input<any>();
+  readonly disableOptionsText = input<any>('');
+  readonly disabled = input<any>(false);
+  readonly editable = input<boolean>(false);
+  readonly showPartnerAlert = input<boolean>(false);
+  readonly extraInformation = input<boolean>(false);
+  readonly indexReference = input<number>(null);
+  readonly noDataText = input<string>('');
+  readonly fieldDisabled = input<boolean>(false);
+  readonly group = input<boolean>(false);
+  readonly groupCode = input<string>('');
+  readonly groupName = input<string>('');
+  readonly descInlineStyles = input<string>('');
+  readonly labelDescInlineStyles = input<string>('');
+  readonly overlayToBody = input<boolean>(false); // When true, position dropdown as fixed overlay
+  readonly showClear = input<boolean>(false); // When true, show a clear (×) button to reset the selection
+  readonly idKey = input<string>('');
+  readonly showDescriptionLabel = input<boolean>(false);
+  readonly truncateSelectionText = input<boolean>(false);
+  readonly inlineStylesContainer = input<string>('');
+  readonly expandSpaceOnOpen = input<boolean>(false); // Enable 300px expansion when open
+  /** Consumer-provided inline styles for the dropdown panel (used only when overlayToBody is false). */
+  readonly optionsInlineStyles = input<string>('');
+  /** Optional per-option label and tone rendered as a compact chip in the dropdown. */
+  readonly optionBadgeLabel = input<string>('');
+  readonly optionBadgeTone = input<string>('');
 
-  @Output() selectOptionEvent = new EventEmitter();
+  /** Must match `.custom_select .option` height in custom-fields.scss (30px; 50px when extraInformation). */
+  readonly virtualOptionItemSize = computed(() => (this.extraInformation() ? 50 : 30));
 
-  private _optionsIntance: any[];
+  readonly selectOptionEvent = output<any>();
+
+  private readonly elementRef = inject(ElementRef);
+  readonly rolesSE = inject(RolesService);
+  readonly dataControlSE = inject(DataControlService);
+
+  private readonly _sig = signal<any>(null);
   public fullValue: any = {};
   public searchText: string;
-  public isDropdownOpen?: boolean = false; // Track dropdown state
+  readonly isDropdownOpen = signal<boolean>(false); // Track dropdown state
+  /** Internal overlay positioning styles (no consumer binds this; kept internal). */
+  readonly overlayStyles = signal<string>('');
+  private readonly instanceId = PrSelectComponent.nextInstanceId++;
 
-  constructor(
-    public rolesSE: RolesService,
-    public dataControlSE: DataControlService,
-    private elementRef: ElementRef
-  ) {}
+  /** Unique trigger id so adjacent selects with the same optionValue do not blur each other. */
+  get triggerId(): string {
+    const key = this.idKey() || this.optionValue() || 'pr-select';
+    const index = this.indexReference();
+    return index != null ? `${key}_${index}` : `${key}_${this.instanceId}`;
+  }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
-    if (this.expandSpaceOnOpen && this.isDropdownOpen && !this.elementRef.nativeElement.contains(event.target)) {
-      this.isDropdownOpen = false;
+    if (this.expandSpaceOnOpen() && this.isDropdownOpen() && !this.elementRef.nativeElement.contains(event.target)) {
+      this.isDropdownOpen.set(false);
     }
+  }
+
+  /**
+   * A fixed overlay is positioned against the viewport, so whatever scrolls the trigger away —
+   * the window or, in the bilateral editor, the section column that scrolls on its own — leaves
+   * the panel where it was, visibly detached from its input (reported 2026-09-07 on
+   * /bilateral/:center/result/:code). The old `window:scroll` host listener never fired there:
+   * scroll events do not bubble, and that column is not the window.
+   *
+   * So while the overlay is open a CAPTURE-phase `scroll` listener on the document sees every
+   * scroll container, and the panel is re-anchored to the trigger on each one. Scrolling the
+   * option list itself is ignored — it is a scroll too, and must not move or close the panel.
+   * Once the trigger has left the viewport there is nothing to anchor to, so the panel closes.
+   */
+  private readonly onAnyScroll = (event: Event): void => {
+    if (!this.overlayToBody() || !this.overlayStyles()) return;
+    const panel: Element | null = this.elementRef.nativeElement.querySelector('.options');
+    const target = event.target as Node | null;
+    if (panel && target instanceof Node && panel.contains(target)) return;
+    this.positionOverlay();
+  };
+
+  private scrollListenerAttached = false;
+
+  private attachScrollListener(): void {
+    if (this.scrollListenerAttached) return;
+    document.addEventListener('scroll', this.onAnyScroll, true);
+    this.scrollListenerAttached = true;
+  }
+
+  private detachScrollListener(): void {
+    if (!this.scrollListenerAttached) return;
+    document.removeEventListener('scroll', this.onAnyScroll, true);
+    this.scrollListenerAttached = false;
+  }
+
+  ngOnDestroy(): void {
+    this.detachScrollListener();
+  }
+
+  /**
+   * Anchors the fixed panel under the trigger. Called on open and on every scroll while open.
+   * Closes the panel instead when the trigger is no longer inside the viewport.
+   */
+  positionOverlay(): void {
+    const triggerElement: HTMLElement | null = document.getElementById(this.triggerId);
+    if (!triggerElement) return;
+    const rect = triggerElement.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    if (rect.bottom < 0 || rect.top > viewportHeight) {
+      this.removeFocus();
+      return;
+    }
+    const top = rect.bottom + 4;
+    const left = rect.left;
+    const width = rect.width;
+    this.overlayStyles.set(`position: fixed; left: ${left}px; top: ${top}px; width: ${width}px; max-height: 300px; z-index: 10000; transform: none; bottom: auto;`);
+  }
+
+  /**
+   * Clear the fixed-overlay styles the moment focus leaves the control. Without this, blurring by
+   * clicking elsewhere on the page (the `.remove_focus` shield only covers the trigger) left the
+   * `.options` panel with `position: fixed; z-index: 10000` and `opacity: 0` — an INVISIBLE
+   * click-shield floating over whatever sat under the open panel, typically the editor's footer.
+   * The panel lives inside the focusable `<a class="field">`, so the next click on that area
+   * (e.g. Save draft) landed on the shield, re-focused the trigger through the ancestor chain and
+   * "spontaneously" reopened the dropdown instead of pressing the button.
+   *
+   * `focusout` bubbles from the search input too; the relatedTarget guard keeps focus moves WITHIN
+   * the control (trigger → search box) from collapsing the open panel. Clicking an option never
+   * blurs the trigger at all (the option divs are not focusable, so focus stays on their `<a>`
+   * ancestor), which is why this cannot break option selection.
+   */
+  @HostListener('focusout', ['$event'])
+  onFocusOut(event: FocusEvent): void {
+    if (!this.overlayToBody()) return;
+    const next = event.relatedTarget as Node | null;
+    if (next && this.elementRef.nativeElement.contains(next)) return;
+    this.overlayStyles.set('');
+    this.detachScrollListener();
   }
 
   get value(): any {
-    return this._value;
+    return this._sig();
   }
 
   set value(v: string) {
-    if (v !== this._value) {
-      this._value = v;
+    if (v !== this._sig()) {
+      this._sig.set(v);
       this.onChange(v);
     }
+  }
+
+  /** Backward-compat bridge: user-management pokes `_value` via @ViewChild to reset filters. */
+  get _value(): any {
+    return this._sig();
+  }
+  set _value(v: any) {
+    this._sig.set(v);
   }
 
   onChange(_) {}
@@ -86,7 +192,7 @@ export class PrSelectComponent implements ControlValueAccessor {
   onTouch() {}
 
   writeValue(value: any): void {
-    this._value = value;
+    this._sig.set(value);
   }
 
   registerOnChange(fn: any): void {
@@ -99,71 +205,87 @@ export class PrSelectComponent implements ControlValueAccessor {
 
   removeFocus(option?) {
     if (option?.disabled) return;
-    const triggerId = (this.idKey || this.optionValue) + '_' + (this.indexReference ?? '');
-    const element: any = document.getElementById(triggerId);
-    element.blur();
-    if (this.expandSpaceOnOpen) {
-      this.isDropdownOpen = false; // Close dropdown only if expansion is enabled
+    const element: any = document.getElementById(this.triggerId);
+    element?.blur();
+    if (this.expandSpaceOnOpen()) {
+      this.isDropdownOpen.set(false); // Close dropdown only if expansion is enabled
     }
-    if (this.overlayToBody) {
+    if (this.overlayToBody()) {
       // Reset inline styles so next open recalculates position
-      this.optionsInlineStyles = '';
+      this.overlayStyles.set('');
+      this.detachScrollListener();
     }
   }
 
   onDropdownOpen() {
-    if (this.expandSpaceOnOpen) {
-      this.isDropdownOpen = true; // Only track state if expansion is enabled
+    if (this.expandSpaceOnOpen()) {
+      this.isDropdownOpen.set(true); // Only track state if expansion is enabled
     }
-    if (this.overlayToBody) {
-      const triggerId = (this.idKey || this.optionValue) + '_' + (this.indexReference ?? '');
-      const triggerElement: any = document.getElementById(triggerId);
-      if (triggerElement) {
-        const rect = triggerElement.getBoundingClientRect();
-        const top = rect.bottom + 4;
-        const left = rect.left;
-        const width = rect.width;
-        this.optionsInlineStyles = `position: fixed; left: ${left}px; top: ${top}px; width: ${width}px; max-height: 300px; z-index: 10000; transform: none; bottom: auto;`;
-      }
+    if (this.overlayToBody()) {
+      this.positionOverlay();
+      if (this.overlayStyles()) this.attachScrollListener();
     }
   }
 
-  get optionsIntance() {
-    if (!this.options?.length) return [];
-    if (!this._optionsIntance?.length) this._optionsIntance = [...this.options];
-
-    this._optionsIntance.forEach((resp: any) => {
-      resp.disabled = false;
-      resp.selected = false;
-    });
-
-    this.disableOptions?.map(disableOption => {
-      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
-      if (itemFinded && itemFinded[this.optionValue] != this.value) itemFinded.disabled = true;
-    });
-    this.fullValue[this.optionValue] = this.value;
-
-    if (!this.value) return this._optionsIntance;
-    const id = typeof this.value == 'object' ? this.value[this.optionValue] : this.value;
-    const itemFinded = this._optionsIntance?.find(listItem => listItem[this.optionValue] == id);
-    if (!itemFinded) return this._optionsIntance;
-    itemFinded.selected = true;
-    this.fullValue[this.optionLabel] = itemFinded[this.optionLabel];
-
-    return this._optionsIntance;
+  /** Keep wheel events inside the option viewport instead of passing them to the result page. */
+  onOptionsWheel(event: WheelEvent): void {
+    event.stopPropagation();
   }
+
+  /**
+   * Options decorated with `selected`/`disabled` flags — derived from the current value and
+   * `disableOptions` over a CLONED copy, so the parent's original `options` array is never mutated.
+   */
+  readonly optionsIntance = computed<any[]>(() => {
+    const opts = this.options();
+    if (!opts?.length) return [];
+
+    const optionValue = this.optionValue();
+    const clones = opts.map((o: any) => ({ ...o, disabled: false, selected: false }));
+
+    const val = this._sig();
+    const id = val != null && typeof val === 'object' ? val[optionValue] : val;
+
+    this.disableOptions()?.forEach((disableOption: any) => {
+      const itemFinded = clones.find((listItem: any) => listItem[optionValue] == disableOption[optionValue]);
+      if (itemFinded && itemFinded[optionValue] != id) itemFinded.disabled = true;
+    });
+
+    if (id !== null && id !== undefined && id !== '') {
+      const itemFinded = clones.find((listItem: any) => listItem[optionValue] == id);
+      if (itemFinded) itemFinded.selected = true;
+    }
+
+    return clones;
+  });
+
+  /**
+   * Selectable rows for the 5-item search threshold (PSEL-R-1/2/10) — group-label rows
+   * (`option.isLabel`, used by the `group`/`groupCode` grouping feature) don't count: a
+   * grouped list with 4 real items and 2 label rows must still hide the search box.
+   */
+  readonly selectableOptionCount = computed(() => this.optionsIntance().filter((o: any) => !o?.isLabel).length);
+
+  /** PSEL-R-1/R-2: search input only earns its place once there's enough to search through. */
+  readonly showSearchInput = computed(() => this.selectableOptionCount() >= 5);
+
   onSelectOption(option) {
     if (option?.disabled) return;
     this.fullValue = option;
-    this.value = option[this.optionValue];
+    // Whole-object binding when no optionValue is provided (mirrors PrimeNG p-select without optionValue).
+    this.value = this.optionValue() ? option[this.optionValue()] : option;
     option.selected = true;
     this.selectOptionEvent.emit(option);
-    if (this.expandSpaceOnOpen) {
-      this.isDropdownOpen = false; // Close dropdown only if expansion is enabled
+    if (this.expandSpaceOnOpen()) {
+      this.isDropdownOpen.set(false); // Close dropdown only if expansion is enabled
     }
   }
 
-  labelName(value) {
-    return '';
+  /** Clears the current selection (used when `showClear` is enabled — mirrors PrimeNG `[showClear]`). */
+  clearSelection(event?: Event) {
+    event?.stopPropagation();
+    this.fullValue = null;
+    this.value = null;
+    this.selectOptionEvent.emit(null);
   }
 }

@@ -39,6 +39,7 @@ describe('VersioningController', () => {
             getNumberRresultsReplicated: jest.fn().mockResolvedValue('ok'),
             find: jest.fn().mockResolvedValue('ok'),
             getVersionOfAResult: jest.fn().mockResolvedValue('ok'),
+            getVersionsOfAResultCode: jest.fn().mockResolvedValue('ok'),
             delete: jest.fn().mockResolvedValue('ok'),
           },
         },
@@ -115,6 +116,11 @@ describe('VersioningController', () => {
   it('should call getVersionOfAResult on findVersionOfAResult', async () => {
     await controller.findVersionOfAResult('7');
     expect(service.getVersionOfAResult).toHaveBeenCalledWith(7);
+  });
+
+  it('should call getVersionsOfAResultCode on findVersionsOfAResultCode', async () => {
+    await controller.findVersionsOfAResultCode('6432');
+    expect(service.getVersionsOfAResultCode).toHaveBeenCalledWith(6432);
   });
 
   it('should call delete on remove', async () => {

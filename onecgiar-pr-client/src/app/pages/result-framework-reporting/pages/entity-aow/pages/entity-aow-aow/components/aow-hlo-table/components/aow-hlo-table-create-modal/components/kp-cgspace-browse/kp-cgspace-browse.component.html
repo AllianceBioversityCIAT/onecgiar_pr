@@ -1,0 +1,356 @@
+<div class="flex flex-col gap-4 w-full">
+  <!-- Search bar & Filters container -->
+  <div class="flex flex-col gap-3">
+  <!-- @akili-spec changes/kp-multi-repository-browse — KPM-R-1 / KPM-R-2 / KPM-DD-8: repository source strip -->
+  <div
+    class="flex flex-wrap items-center gap-x-[10px] gap-y-[8px] rounded-[10px] border border-[var(--pr-color-primary-100)] bg-[var(--pr-color-primary-25)] p-[10px]"
+    role="group"
+    aria-label="Repositories to search"
+    data-test="kp-source-strip">
+    <span class="inline-flex items-center gap-1.5 pr-1 text-[12.5px] font-semibold text-[var(--pr-color-primary-700)]">
+      <ng-icon name="lucideGlobe" class="text-[16px]" aria-hidden="true" />
+      Searching 3 CGIAR knowledge repositories
+    </span>
+
+    @for (chip of repositoryChips(); track chip.key) {
+      <button
+        type="button"
+        class="inline-flex h-[30px] items-center gap-1.5 rounded-full border px-[10px] text-[12.5px] font-semibold transition-colors"
+        [ngClass]="{
+          'bg-white border-[var(--pr-color-primary-300)] text-[var(--pr-color-primary-700)]': chip.selected && !chip.unavailable,
+          'border-dashed border-amber-400 bg-amber-50 text-amber-800': chip.unavailable,
+          'bg-white border-[var(--pr-border)] text-[var(--pr-text-secondary)] hover:border-[var(--pr-border-strong)]': !chip.selected,
+          'cursor-not-allowed opacity-90': chip.disabled,
+          'cursor-pointer': !chip.disabled
+        }"
+        [attr.aria-pressed]="chip.selected"
+        [attr.aria-disabled]="chip.disabled ? 'true' : null"
+        [attr.title]="chip.title"
+        [attr.data-test]="'kp-repo-chip-' + chip.key"
+        (click)="toggleRepository(chip.key)">
+        @if (chip.unavailable) {
+          <ng-icon name="lucideTriangleAlert" class="text-[15px]" aria-hidden="true" />
+        } @else if (chip.selected) {
+          <ng-icon name="lucideCircleCheck" class="text-[15px]" aria-hidden="true" />
+        }
+        <span>{{ chip.label }}</span>
+        @if (chip.countLabel) {
+          <span
+            class="rounded-full px-[6px] py-[1px] text-[10.5px] font-bold tabular-nums"
+            [ngClass]="chip.unavailable ? 'bg-amber-100 text-amber-800' : 'bg-[var(--pr-color-primary-100)] text-[var(--pr-color-primary-700)]'">
+            {{ chip.countLabel }}
+          </span>
+        }
+      </button>
+    }
+
+    @if (selectedRepositories().length < allRepositories.length) {
+      <button
+        type="button"
+        class="ml-auto cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-300)] hover:underline"
+        data-test="kp-select-all-repos"
+        (click)="selectAllRepositories()">
+        Select all
+      </button>
+    }
+  </div>
+
+    <!-- Free text search input -->
+    <div class="relative w-full">
+      <input
+        type="text"
+        class="w-full h-[38px] pl-9 pr-10 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[var(--pr-color-primary-300)] focus:border-[var(--pr-color-primary-300)] text-gray-800 placeholder-gray-400 font-normal transition-colors shadow-2xs"
+        placeholder="Search by title, author, or DOI across the selected repositories…"
+        [value]="query()"
+        (input)="onQueryInput($event)"
+        (keydown.enter)="$event.preventDefault(); onEnter()"
+        aria-label="Search the selected repositories" />
+      <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
+      @if (status() === 'loading') {
+        <i class="pi pi-spin pi-spinner absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+      } @else if (canSearch()) {
+        <button
+          type="button"
+          (click)="retrySearch()"
+          title="Refresh search"
+          aria-label="Refresh search"
+          class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[var(--pr-color-primary-300)] bg-transparent border-0 p-1 cursor-pointer transition-colors">
+          <i class="pi pi-refresh text-xs"></i>
+        </button>
+      }
+    </div>
+
+    <!-- Filters row -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Type Filter -->
+      <div class="relative w-44 min-w-[160px] kp-filter-type">
+        <app-pr-select
+          [options]="typeOptions()"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Filter by type"
+          [showClear]="true"
+          [truncateSelectionText]="true"
+          optionsInlineStyles="min-width: 260px;"
+          [ngModel]="selectedType()"
+          (selectOptionEvent)="onTypeSelect($event)">
+        </app-pr-select>
+        @if (loadingTypes()) {
+          <div class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center justify-center bg-white px-0.5 z-10" title="Loading types...">
+            <i class="pi pi-spin pi-spinner text-gray-400 text-xs"></i>
+          </div>
+        }
+      </div>
+
+      <!-- Center Filter -->
+      <div class="relative w-64 min-w-[210px] kp-filter-center">
+        <app-pr-select
+          [options]="centerOptions()"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Filter by center"
+          [showClear]="true"
+          [truncateSelectionText]="true"
+          optionsInlineStyles="min-width: 440px; max-width: 520px;"
+          [ngModel]="selectedCenter()"
+          (selectOptionEvent)="onCenterSelect($event)">
+        </app-pr-select>
+        @if (loadingCenters()) {
+          <div class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center justify-center bg-white px-0.5 z-10" title="Loading centers...">
+            <i class="pi pi-spin pi-spinner text-gray-400 text-xs"></i>
+          </div>
+        }
+      </div>
+
+      <!-- Year Filter: Locked chip for non-admin, editable select for admin -->
+      @if (!isAdmin()) {
+        <div
+          class="flex items-center gap-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-md text-xs font-medium border border-gray-200"
+          aria-disabled="true">
+          <span>Year: {{ phaseYear() }}</span>
+          <span class="text-gray-500 text-[11px]">(reporting cycle)</span>
+        </div>
+      } @else {
+        <div class="w-36 min-w-[130px]">
+          <app-pr-select
+            [options]="adminYearOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Filter by year"
+            [showClear]="true"
+            [ngModel]="selectedYear()"
+            (selectOptionEvent)="onYearSelect($event)">
+          </app-pr-select>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Content area for various states -->
+  <div class="relative mt-2 min-h-[160px]" [attr.aria-busy]="busy()">
+    @if (busy()) {
+      <div
+        class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-lg bg-[color-mix(in_srgb,white_82%,transparent)]"
+        role="status"
+        aria-live="polite"
+        data-test="cgspace-retrieving">
+        <i class="pi pi-spin pi-spinner text-3xl text-[var(--pr-color-primary-300)]" aria-hidden="true"></i>
+        <p class="m-0 text-sm font-semibold text-[var(--pr-color-secondary-400)]">Retrieving metadata from {{ selectingRepositoryLabel() || 'the repository' }}…</p>
+        <p class="m-0 max-w-[280px] text-center text-xs text-gray-500">Fetching the title and repository details for this item.</p>
+      </div>
+    }
+    <!-- Loading State -->
+    @if (status() === 'loading') {
+      <div class="flex flex-col items-center justify-center py-10 gap-3 text-gray-500" data-test="cgspace-loading">
+        <i class="pi pi-spin pi-spinner text-3xl text-[var(--pr-color-primary-300)]"></i>
+        <p class="text-sm font-medium">Searching the selected repositories…</p>
+      </div>
+    }
+
+    <!-- Idle State -->
+    @if (status() === 'idle') {
+      <div class="flex flex-col items-center justify-center py-10 px-4 text-center border border-dashed border-gray-200 rounded-lg bg-gray-50" data-test="cgspace-idle">
+        <i class="pi pi-search text-2xl text-gray-400 mb-2"></i>
+        @if (query().trim().length > 0 && query().trim().length < 3 && !hasActiveFilter()) {
+          <p class="text-[14.5px] text-gray-700 font-medium">Please enter at least 3 characters to search the selected repositories.</p>
+        } @else {
+          <p class="text-[15px] text-gray-700 font-medium">Search CGSpace, MELSpace and WorldFish by title, author, or DOI to find a Knowledge Product.</p>
+          <p class="text-[13px] text-gray-500 mt-1">Type at least 3 characters or select a filter above.</p>
+        }
+      </div>
+    }
+
+    <!-- Empty State -->
+    @if (status() === 'empty') {
+      <div aria-live="polite" class="flex flex-col items-center justify-center py-10 px-4 text-center border border-gray-200 rounded-lg bg-gray-50" data-test="cgspace-empty">
+        <i class="pi pi-inbox text-3xl text-gray-400 mb-2"></i>
+        <p class="text-sm text-gray-700">No items found in the selected repositories for this search. Try different terms or use <button type="button" data-test="switch-to-manual-empty" class="text-[var(--pr-color-primary-300)] hover:underline font-semibold cursor-pointer inline p-0 border-0 bg-transparent" (click)="switchToManual.emit()">Manual entry</button>.</p>
+      </div>
+    }
+
+    <!-- Error State -->
+    @if (status() === 'error') {
+      <div aria-live="polite" class="flex flex-col items-center justify-center py-8 px-6 text-center border border-red-200 rounded-xl bg-red-50/60 shadow-xs" data-test="cgspace-error">
+        <div class="size-11 rounded-full bg-red-100 flex items-center justify-center text-red-600 mb-2.5">
+          <i class="pi pi-exclamation-triangle text-xl"></i>
+        </div>
+        <h4 class="m-0 text-sm font-bold text-red-900">Repository search is temporarily unavailable</h4>
+        <p class="m-0 mt-1 text-xs text-gray-600 max-w-md leading-relaxed" data-test="cgspace-error-copy">
+          {{ selectedRepositoriesText() }} did not respond — use <button type="button" data-test="switch-to-manual-error" class="text-[var(--pr-color-primary-300)] hover:underline font-semibold cursor-pointer inline p-0 border-0 bg-transparent" (click)="switchToManual.emit()">Manual entry</button>.
+        </p>
+
+        <div class="mt-4 flex items-center gap-3">
+          <button
+            type="button"
+            data-test="cgspace-retry-btn"
+            class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[var(--pr-color-primary-300)] hover:bg-[var(--pr-color-primary-400)] rounded-lg transition-all cursor-pointer shadow-xs border-0"
+            (click)="retrySearch()">
+            <i class="pi pi-refresh text-[12px]"></i>
+            <span>Try again</span>
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Results State -->
+    @if (status() === 'results') {
+      <div class="flex flex-col gap-3">
+        <!-- Live region: result counter + partial-failure notice (KPM-R-23) -->
+        <div aria-live="polite" class="flex flex-col gap-2">
+          <div class="text-xs text-gray-500 font-medium" data-test="kp-results-counter">
+            {{ resultsCounterText() }}
+          </div>
+
+          <!-- @akili-spec changes/kp-multi-repository-browse — KPM-R-7: partial notice + per-repo retry -->
+          @if (failedSources().length && items().length) {
+            <div
+              role="status"
+              class="flex flex-col gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+              data-test="kp-partial-notice">
+              <span data-test="kp-partial-notice-copy">
+                {{ failedRepositoriesText() }} did not respond. Results below exclude {{ failedSources().length === 1 ? 'it' : 'them' }}.
+              </span>
+              <div class="flex flex-wrap gap-1.5">
+                @for (source of failedSources(); track source.repository) {
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-800 transition-colors hover:bg-amber-100 cursor-pointer"
+                    [attr.data-test]="'kp-retry-' + source.repository"
+                    (click)="retrySearch()">
+                    <ng-icon name="lucideRefreshCw" class="text-[12px]" aria-hidden="true" />
+                    Retry {{ kpRepositoryLabel(source.repository) }}
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Cards list -->
+        <div class="flex flex-col gap-3">
+          @for (item of items(); track item.uuid || item.handle || $index) {
+            <div class="border border-gray-200 rounded-xl p-4 bg-white hover:border-gray-300 shadow-sm transition-all flex flex-col gap-2">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                  <!-- @akili-spec changes/kp-multi-repository-browse — KPM-R-4 / KPM-R-5: repository badge + "Also in" -->
+                  <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+                    @if (item.repository) {
+                      <span
+                        class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                        [ngClass]="repoMeta(item.repository)?.badgeClass"
+                        [attr.data-test]="'kp-item-badge-' + item.repository">
+                        <span class="size-[7px] rounded-full" [ngClass]="repoMeta(item.repository)?.dotClass"></span>
+                        {{ kpRepositoryLabel(item.repository) }}
+                      </span>
+                    }
+                    @if (item.alsoIn && item.alsoIn.length) {
+                      @for (also of item.alsoIn; track also.repository) {
+                        <span
+                          class="inline-flex items-center gap-1 rounded-full border border-[var(--pr-border)] bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--pr-text-secondary)]"
+                          [attr.data-test]="'kp-also-in-' + also.repository">
+                          <ng-icon name="lucideSplit" class="text-[11px]" aria-hidden="true" />
+                          Also in {{ kpRepositoryLabel(also.repository) }}
+                        </span>
+                      }
+                    }
+                  </div>
+
+                  <!-- Title -->
+                  <h4 class="text-sm font-semibold text-gray-900 leading-snug">
+                    {{ item.title }}
+                  </h4>
+
+                  <!-- Meta line: type · year · authors · affiliation -->
+                  <div class="text-xs text-gray-500 mt-1">
+                    {{ formatMeta(item) }}
+                  </div>
+
+                  <!-- Country chips (up to 3) -->
+                  @if (item.countries && item.countries.length > 0) {
+                    <div class="flex flex-wrap gap-1.5 mt-2">
+                      @for (country of item.countries.slice(0, 3); track country) {
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                          {{ country }}
+                        </span>
+                      }
+                    </div>
+                  }
+
+                  <!-- Monospace handle (primary + secondary handles from item.alsoIn) -->
+                  <div class="mt-2 text-xs font-mono text-gray-500">
+                    {{ item.handle }}
+                  </div>
+                  @if (item.alsoIn && item.alsoIn.length) {
+                    @for (also of item.alsoIn; track also.repository) {
+                      <div class="mt-0.5 text-xs font-mono text-gray-400" [attr.data-test]="'kp-also-in-handle-' + also.repository">
+                        {{ also.handle }}
+                      </div>
+                    }
+                  }
+                </div>
+
+                <!-- Right actions: Use this item button & View details link -->
+                <div class="flex-shrink-0 flex flex-col items-end gap-2">
+                  <button
+                    type="button"
+                    class="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[var(--pr-color-primary-300)] hover:bg-[var(--pr-color-primary-400)] rounded-lg disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm border-0 min-w-[100px]"
+                    [disabled]="busy()"
+                    [attr.aria-label]="'Use this item: ' + item.title"
+                    (click)="onSelect(item)">
+                    @if (busy() && selectingItem() === (item.uuid || item.handle)) {
+                      <i class="pi pi-spin pi-spinner text-[13px]"></i>
+                      <span>Retrieving…</span>
+                    } @else {
+                      <span>Use this item</span>
+                    }
+                  </button>
+
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1 text-xs text-[var(--pr-color-primary-300)] hover:underline font-medium cursor-pointer bg-transparent border-0 p-0"
+                    (click)="openItemDetails(item)">
+                    View details
+                    <i class="pi pi-external-link text-[10px]"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Load More Button — iff the last response reports page.hasMore (KPM-R-20) -->
+        @if (hasMore()) {
+          <div class="flex justify-center mt-3 mb-2">
+            <button
+              type="button"
+              class="px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none cursor-pointer disabled:opacity-50"
+              [disabled]="loadingMore()"
+              (click)="loadMore()">
+              {{ loadingMore() ? 'Loading...' : 'Load more' }}
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

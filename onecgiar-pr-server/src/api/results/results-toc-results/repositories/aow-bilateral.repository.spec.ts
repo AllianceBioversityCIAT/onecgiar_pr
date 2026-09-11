@@ -60,10 +60,10 @@ describe('AoWBilateralRepository', () => {
       'PHASE-1',
     ]);
     expect(query).toContain(
-      'COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum',
+      'COALESCE(MAX(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum',
     );
     expect(query).toContain('GROUP BY');
-    expect(query).toContain('ORDER BY tr.id ASC, tri.id ASC, ci.acronym ASC');
+    expect(query).toContain('ORDER BY tr.id ASC, tri.id ASC');
     expect(query).toContain('FROM toc_test.toc_results tr');
     expect(query).toContain(
       'LEFT JOIN toc_test.toc_work_packages wp ON tr.wp_id = wp.toc_id',
@@ -75,7 +75,10 @@ describe('AoWBilateralRepository', () => {
     expect(query).toContain('JOIN toc_test.toc_result_indicator_target');
     expect(query).toContain('toc_result_indicator_target_center');
     expect(query).toContain('clarisa_institutions');
-    expect(query).toContain('ci.acronym AS center_acronym');
+    // P2-3255: the scalar `ci.acronym AS center_acronym` was replaced by the aggregated
+    // `centers_concat`. Selecting the acronym as a column was what forced it into the GROUP BY,
+    // which is what fanned one shared target out into one row per centre.
+    expect(query).toContain('AS centers_concat');
     expect(query).toContain('AND trit.target_date = ?');
     expect(query).toContain('WHERE');
     expect(query).toContain('AND tr.phase = ?');
@@ -288,15 +291,21 @@ describe('AoWBilateralRepository', () => {
       expect.stringContaining('SELECT'),
       [2025, 2025, 'SP01', 'PHASE-1', 2025, 2025, 'SP01', 'PHASE-1'],
     );
+    // P2-3296 widened the row: the QA pair is unchanged, the preliminary pair is new and
+    // reads 0 / '0%' when the fixture carries no preliminary column.
     expect(result.get(1)).toEqual({
       actual_achieved_value_sum: 15,
       progress_percentage: '75%',
+      preliminary_achieved_value_sum: 0,
+      preliminary_progress_percentage: '0%',
       target_value_sum: 20,
       work_package_acronym: null,
     });
     expect(result.get(2)).toEqual({
       actual_achieved_value_sum: 10,
       progress_percentage: '40%',
+      preliminary_achieved_value_sum: 0,
+      preliminary_progress_percentage: '0%',
       target_value_sum: 25,
       work_package_acronym: null,
     });
@@ -317,9 +326,15 @@ describe('AoWBilateralRepository', () => {
       defaultContext,
     );
 
+    // ⚠️ target 0 does NOT produce a ratio: calculateProgressPercentage falls back to
+    // `achieved * 100`, so 15 reads as 1500%. Pinned as current behaviour, not endorsed —
+    // 53 indicators sit at target 0 today, and once these figures feed an average a single
+    // mistyped value can move a whole HLO. Awaiting the PO's call before touching it.
     expect(result.get(1)).toEqual({
       actual_achieved_value_sum: 15,
       progress_percentage: '1500%',
+      preliminary_achieved_value_sum: 0,
+      preliminary_progress_percentage: '0%',
       target_value_sum: 0,
       work_package_acronym: null,
     });
@@ -342,6 +357,35 @@ describe('AoWBilateralRepository', () => {
     expect(dataSourceQueryMock).toHaveBeenCalledWith(
       expect.stringContaining('FROM toc_test.toc_results'),
       [1, 'PHASE-1'],
+    );
+    expect(result).toEqual(mockProjects);
+  });
+
+  it('should find bilateral projects by science program official code', async () => {
+    const mockProjects = [
+      {
+        toc_result_id: 1,
+        official_code: 'SP01',
+        project_id: 100,
+        project_name: 'Project A',
+      },
+      {
+        toc_result_id: 2,
+        official_code: 'SP01',
+        project_id: 100,
+        project_name: 'Project A duplicate',
+      },
+    ];
+    dataSourceQueryMock.mockResolvedValueOnce(mockProjects);
+
+    const result = await repository.findBilateralProjectsByProgramOfficialCode(
+      'SP01',
+      'PHASE-1',
+    );
+
+    expect(dataSourceQueryMock).toHaveBeenCalledWith(
+      expect.stringContaining('UPPER(TRIM(tr.official_code))'),
+      ['SP01', 'PHASE-1'],
     );
     expect(result).toEqual(mockProjects);
   });
@@ -509,6 +553,464 @@ describe('AoWBilateralRepository', () => {
           ],
         },
       ]);
+    });
+  });
+
+  /**
+   * P2-3255. A target shared by N centres was emitted as N rows, because `tritc.center_id` and
+   * `ci.acronym` sat in the GROUP BY. Every consumer that sums rows then multiplied by N: the ToC
+   * map inflated `target`, `achieved`, `done` and the indicator count all at once
+   * (`dashboard-lab.toc-map.ts:129-132`), and the achieved value was the same figure stamped onto
+   * each row by `fetchAndGroupTocResults`, not N real contributions.
+   */
+  describe('shared targets are one row, not one per centre (P2-3255)', () => {
+    const buildQuery = (options: any = {}) =>
+      (repository as any).buildTocQuery('SP13', {
+        context: defaultContext,
+        ...options,
+      });
+
+    it('does not group by centre, so one target stays one row', () => {
+      const { query } = buildQuery();
+      const groupBy = query.slice(query.indexOf('GROUP BY'));
+
+      expect(groupBy).not.toContain('tritc.center_id');
+      expect(groupBy).not.toContain('ci.acronym');
+    });
+
+    it('groups by the target identity instead', () => {
+      const { query } = buildQuery();
+      const groupBy = query.slice(query.indexOf('GROUP BY'));
+
+      // Without this, two distinct targets that happen to share a value and date collapse together.
+      expect(groupBy).toContain('trit.toc_indicator_target_id');
+    });
+
+    it('still exposes the centres, aggregated rather than fanned out', () => {
+      const { query } = buildQuery();
+      const select = query.slice(0, query.indexOf('FROM'));
+
+      expect(select).toContain('GROUP_CONCAT');
+      expect(select).toContain('centers_concat');
+    });
+
+    /**
+     * The half P2-3255 left behind. Collapsing the ROWS was only one side of it: the centre joins
+     * stay in the FROM, so the group still holds one row per centre, and `SUM(trit.target_value)`
+     * went on counting the same target once per centre. SP-13 KPI 1.3.3 (target 1, ten centres)
+     * kept reading 10 in production after the ticket shipped — same figure, new cause.
+     */
+    it('takes the target value with MAX, so the centre rows inside the group cannot inflate it', () => {
+      const { query } = buildQuery();
+      const select = query.slice(0, query.indexOf('FROM'));
+
+      expect(select).toContain(
+        'COALESCE(MAX(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum',
+      );
+      expect(select).not.toContain('SUM(CAST(trit.target_value');
+    });
+
+    it('still joins the centres it no longer groups by — which is WHY the aggregate cannot be SUM', () => {
+      const { query } = buildQuery();
+      const groupBy = query.slice(query.indexOf('GROUP BY'));
+
+      // These two facts together are the whole bug. If a later change drops the centre join, MAX
+      // and SUM become equivalent again and this test is what says the choice was never arbitrary.
+      expect(query).toContain(
+        'LEFT JOIN toc_test.toc_result_indicator_target_center tritc',
+      );
+      expect(groupBy).not.toContain('tritc.center_id');
+    });
+
+    it('does not order by a column it no longer groups by', () => {
+      const { query } = buildQuery();
+
+      // lastIndexOf, not indexOf: the FIRST `ORDER BY` in this query is the one inside
+      // GROUP_CONCAT, which is legitimate — it is what makes the concatenation deterministic.
+      // `ORDER BY ci.acronym` as the row ordering was only valid while the acronym was grouped.
+      expect(query.slice(query.lastIndexOf('ORDER BY'))).not.toContain(
+        'ci.acronym',
+      );
+    });
+  });
+
+  describe('groupTocRows centre exposure (P2-3255)', () => {
+    const rowWith = (centersConcat: string | null) => ({
+      toc_result_id: 1,
+      category: 'OUTCOME',
+      result_title: 'R',
+      related_node_id: 'N1',
+      is_aow: 1,
+      indicator_id: 'IND-1',
+      indicator_description: 'd',
+      toc_result_indicator_id: 'TRI-1',
+      indicator_related_node_id: 'N1',
+      unit_messurament: null,
+      type_value: null,
+      type_name: null,
+      location: null,
+      target_value_sum: 1,
+      actual_achieved_value_sum: 1,
+      number_target: 1,
+      target_date: '2026',
+      target_value: '1',
+      progress_percentage: '100%',
+      centers_concat: centersConcat,
+    });
+
+    const group = (rows: any[]) => (repository as any).groupTocRows(rows);
+
+    it('turns one shared-target row into one indicator carrying every centre', () => {
+      const [result] = group([rowWith('2::BIOVERSITY||3::CIAT||15::IWMI')]);
+
+      expect(result.indicators).toHaveLength(1);
+      expect(result.indicators[0].centers).toEqual([
+        { center_id: 2, center_acronym: 'BIOVERSITY' },
+        { center_id: 3, center_acronym: 'CIAT' },
+        { center_id: 15, center_acronym: 'IWMI' },
+      ]);
+    });
+
+    it('leaves the scalar centre null when the target is shared', () => {
+      const [result] = group([rowWith('2::BIOVERSITY||3::CIAT')]);
+
+      // Reporting one of several centres as "the" centre is the lie this ticket is about. Both
+      // client consumers already treat null as "no centre filter", which is the right semantics.
+      expect(result.indicators[0].center_id).toBeNull();
+      expect(result.indicators[0].center_acronym).toBeNull();
+    });
+
+    it('keeps the scalar centre when exactly one centre holds the target', () => {
+      const [result] = group([rowWith('3::CIAT')]);
+
+      expect(result.indicators[0].center_id).toBe(3);
+      expect(result.indicators[0].center_acronym).toBe('CIAT');
+    });
+
+    it('exposes the target id, which is what tells shared from individual (P2-3257)', () => {
+      const [result] = group([
+        { ...rowWith('3::CIAT'), toc_indicator_target_id: 987 },
+      ]);
+
+      expect(result.indicators[0].toc_indicator_target_id).toBe(987);
+    });
+
+    it('survives a target with no centre association at all', () => {
+      const [result] = group([rowWith(null)]);
+
+      expect(result.indicators[0].centers).toEqual([]);
+      expect(result.indicators[0].center_id).toBeNull();
+    });
+  });
+
+  /**
+   * P2-3296. The status sets were settled by Nicoleta Trifa (1-Sep-2026) and confirmed by the
+   * PO: Preliminary is Submitted + Approved — Editing is a draft and does not count until it is
+   * submitted — and Final stays QualityAssessed + Approved, the pair P2-2841 fixed. Approved
+   * deliberately counts in BOTH, because W3/Bilateral results are tagged to P/A AoW HLO targets.
+   */
+  /**
+   * The AC1 tests asserted the SQL and the contributions Map, and passed while the two
+   * preliminary fields were being dropped in `groupTocRows` — which builds the indicator from
+   * an explicit field list, so anything not named there never leaves the repository.
+   *
+   * These go through the public method and assert the payload that actually ships, which is the
+   * only place that class of bug is visible.
+   */
+  describe('P2-3296 — what actually leaves the repository', () => {
+    const rowFor = (overrides: Record<string, unknown> = {}) => ({
+      toc_result_id: 1,
+      category: 'OUTCOME',
+      result_title: 'Outcome 1',
+      related_node_id: 'node1',
+      indicator_id: 10,
+      indicator_description: 'Indicator 1',
+      toc_result_indicator_id: 'IND1',
+      indicator_related_node_id: 'ind_node1',
+      unit_messurament: 'Number',
+      type_value: 'Count',
+      type_name: 'Counter',
+      location: 'Global',
+      target_value_sum: 100,
+      number_target: '100',
+      target_date: 2025,
+      result_type_id: 1,
+      result_level_id: 3,
+      ...overrides,
+    });
+
+    const contributionFor = (overrides: Record<string, unknown> = {}) => ({
+      indicator_id: 10,
+      toc_result_indicator_id: 'node-10',
+      target_value_sum: 100,
+      actual_achieved_value_sum: 40,
+      preliminary_achieved_value_sum: 75,
+      work_package_acronym: 'AOW01',
+      ...overrides,
+    });
+
+    it('carries BOTH preliminary fields all the way into the indicator payload', async () => {
+      mockResolveContext();
+      dataSourceQueryMock
+        .mockResolvedValueOnce([rowFor()])
+        .mockResolvedValueOnce([contributionFor()]);
+
+      const result = await repository.findByCompositeCode(
+        'SP01',
+        'SP01-AOW01',
+        defaultContext,
+      );
+
+      const indicator = result[0].indicators[0];
+      expect(indicator.progress_percentage).toBe('40%');
+      expect(indicator.actual_achieved_value_sum).toBe(40);
+      // The two that were silently dropped.
+      expect(indicator.preliminary_progress_percentage).toBe('75%');
+      expect(indicator.preliminary_achieved_value_sum).toBe(75);
+    });
+
+    it('defaults the preliminary pair rather than omitting it when there are no contributions', async () => {
+      mockResolveContext();
+      dataSourceQueryMock
+        .mockResolvedValueOnce([rowFor()])
+        .mockResolvedValueOnce([]);
+
+      const result = await repository.findByCompositeCode(
+        'SP01',
+        'SP01-AOW01',
+        defaultContext,
+      );
+
+      const indicator = result[0].indicators[0];
+      expect(indicator.preliminary_achieved_value_sum).toBe(0);
+      expect(indicator.preliminary_progress_percentage).toBe('0%');
+    });
+
+    /**
+     * The wrong fix for the 1.3.3 inflation, pinned so nobody ships it: overwriting the row's
+     * target with `getIndicatorContributions`' figure. That query sums ALL of an indicator's
+     * targets for the year (SP-13 KPI 1.3.1 = 2480 over 9 per-centre targets), while a row here is
+     * ONE target — the payload emits nine of them. Stamping the total on each would trade a 10x
+     * error on one KPI for a 9-row error on every multi-target one.
+     */
+    it('keeps each row on its own target value, never the indicator-wide total', async () => {
+      mockResolveContext();
+      dataSourceQueryMock
+        .mockResolvedValueOnce([
+          rowFor({ target_value_sum: 140, toc_indicator_target_id: 563493 }),
+          rowFor({ target_value_sum: 10, toc_indicator_target_id: 563504 }),
+          rowFor({ target_value_sum: 800, toc_indicator_target_id: 563526 }),
+        ])
+        .mockResolvedValueOnce([contributionFor({ target_value_sum: 2480 })]);
+
+      const result = await repository.findByCompositeCode(
+        'SP01',
+        'SP01-AOW01',
+        defaultContext,
+      );
+
+      expect(result[0].indicators.map((i: any) => i.target_value_sum)).toEqual([
+        140, 10, 800,
+      ]);
+    });
+
+    it('attaches the AC2 roll-up to every node', async () => {
+      mockResolveContext();
+      dataSourceQueryMock
+        .mockResolvedValueOnce([rowFor()])
+        .mockResolvedValueOnce([contributionFor()]);
+
+      const result = await repository.findByCompositeCode(
+        'SP01',
+        'SP01-AOW01',
+        defaultContext,
+      );
+
+      expect(result[0].progress).toEqual(
+        expect.objectContaining({
+          progress_percentage: '40%',
+          preliminary_progress_percentage: '75%',
+          indicators_counted: 1,
+          indicators_total: 1,
+        }),
+      );
+    });
+
+    it('keeps a zero-target indicator out of the node roll-up but still returns the row', async () => {
+      mockResolveContext();
+      dataSourceQueryMock
+        .mockResolvedValueOnce([
+          rowFor(),
+          rowFor({ indicator_id: 11, target_value_sum: 0 }),
+        ])
+        .mockResolvedValueOnce([
+          contributionFor({ actual_achieved_value_sum: 100 }),
+          contributionFor({
+            indicator_id: 11,
+            target_value_sum: 0,
+            actual_achieved_value_sum: 500000,
+          }),
+        ]);
+
+      const result = await repository.findByCompositeCode(
+        'SP01',
+        'SP01-AOW01',
+        defaultContext,
+      );
+
+      // Both rows still ship — the user has to see the one missing a target.
+      expect(result[0].indicators).toHaveLength(2);
+      // ...but the node reads 100%, not 25,000,050%.
+      expect(result[0].progress?.progress_percentage).toBe('100%');
+      expect(result[0].progress?.indicators_counted).toBe(1);
+      expect(result[0].progress?.indicators_total).toBe(2);
+    });
+
+    it('reports a null percentage, not 0%, when no indicator of the node has a target', async () => {
+      mockResolveContext();
+      dataSourceQueryMock
+        .mockResolvedValueOnce([rowFor({ target_value_sum: 0 })])
+        .mockResolvedValueOnce([
+          contributionFor({
+            target_value_sum: 0,
+            actual_achieved_value_sum: 5,
+          }),
+        ]);
+
+      const result = await repository.findByCompositeCode(
+        'SP01',
+        'SP01-AOW01',
+        defaultContext,
+      );
+
+      expect(result[0].progress?.progress_percentage).toBeNull();
+      expect(result[0].progress?.indicators_counted).toBe(0);
+    });
+  });
+
+  describe('P2-3296 — preliminary and QA progress', () => {
+    it('splits the achieved sum by status inside a single pass', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([]);
+
+      await repository.getIndicatorContributions('SP01', defaultContext);
+
+      const [query] = dataSourceQueryMock.mock.calls[0];
+
+      // QA / Final keeps the production pair.
+      expect(query).toContain(
+        'SUM(CASE WHEN r.status_id IN (2, 6) THEN CAST(rit.contributing_indicator AS DECIMAL(15,2)) ELSE 0 END)',
+      );
+      // Preliminary: Submitted + Approved, no Editing.
+      expect(query).toContain(
+        'SUM(CASE WHEN r.status_id IN (3, 6) THEN CAST(rit.contributing_indicator AS DECIMAL(15,2)) ELSE 0 END)',
+      );
+      // One subquery, not two — the filter lets the union through and CASE does the split.
+      expect(query).toContain('AND r.status_id IN (2, 3, 6)');
+      expect(
+        query.match(/COALESCE\(SUM\(CASE WHEN r\.status_id/g),
+      ).toHaveLength(2);
+    });
+
+    it('never lets Editing, PendingReview, Rejected or Draft into either bar', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([]);
+
+      await repository.getIndicatorContributions('SP01', defaultContext);
+
+      const [query] = dataSourceQueryMock.mock.calls[0];
+      const statusSets = query.match(/status_id IN \(([^)]*)\)/g) ?? [];
+
+      expect(statusSets.length).toBeGreaterThan(0);
+      for (const set of statusSets) {
+        const ids = set
+          .replace(/.*\(/, '')
+          .replace(/\)/, '')
+          .split(',')
+          .map((n: string) => Number(n.trim()));
+        // 1 Editing · 5 PendingReview · 7 Rejected · 8 Draft
+        expect(ids).not.toContain(1);
+        expect(ids).not.toContain(5);
+        expect(ids).not.toContain(7);
+        expect(ids).not.toContain(8);
+      }
+    });
+
+    it('returns both figures and both percentages per indicator', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([
+        {
+          indicator_id: 11,
+          toc_result_indicator_id: 'node-11',
+          target_value_sum: 100,
+          actual_achieved_value_sum: 40,
+          preliminary_achieved_value_sum: 75,
+          work_package_acronym: 'AOW01',
+        },
+      ]);
+
+      const map = await repository.getIndicatorContributions(
+        'SP01',
+        defaultContext,
+      );
+
+      expect(map.get(11)).toEqual({
+        target_value_sum: 100,
+        actual_achieved_value_sum: 40,
+        preliminary_achieved_value_sum: 75,
+        work_package_acronym: 'AOW01',
+        progress_percentage: '40%',
+        preliminary_progress_percentage: '75%',
+      });
+    });
+
+    // Nicoleta: "for exceeding the target, pls show what's above 100%" — target 10, reported 50
+    // is 500%, not a capped 100%.
+    it('does not cap either bar at 100%', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([
+        {
+          indicator_id: 12,
+          toc_result_indicator_id: 'node-12',
+          target_value_sum: 10,
+          actual_achieved_value_sum: 50,
+          preliminary_achieved_value_sum: 30,
+          work_package_acronym: null,
+        },
+      ]);
+
+      const map = await repository.getIndicatorContributions(
+        'SP01',
+        defaultContext,
+      );
+
+      expect(map.get(12)?.progress_percentage).toBe('500%');
+      expect(map.get(12)?.preliminary_progress_percentage).toBe('300%');
+    });
+
+    // The QA pair is what production already shows. A row that predates this change — no
+    // preliminary column — must still read exactly as before rather than blowing up.
+    it('keeps the QA figures unchanged when the preliminary column is absent', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([
+        {
+          indicator_id: 13,
+          toc_result_indicator_id: 'node-13',
+          target_value_sum: 200,
+          actual_achieved_value_sum: 50,
+          work_package_acronym: 'AOW02',
+        },
+      ]);
+
+      const map = await repository.getIndicatorContributions(
+        'SP01',
+        defaultContext,
+      );
+
+      expect(map.get(13)?.actual_achieved_value_sum).toBe(50);
+      expect(map.get(13)?.progress_percentage).toBe('25%');
+      expect(map.get(13)?.preliminary_achieved_value_sum).toBe(0);
+      expect(map.get(13)?.preliminary_progress_percentage).toBe('0%');
     });
   });
 });

@@ -35,5 +35,5 @@ Frontend-only (`onecgiar-pr-client/`). The backend flag `is_aow` shipped separat
 - [x] 6.1 `npx jest src/app/pages/result-framework-reporting/pages/entity-aow` → 317 passed.
 - [x] 6.2 `npm run lint` → all files pass.
 - [x] 6.3 Browser check on `SP05/AOW06` with Playwright: main list shows the 4 AoW-exclusive Outcomes; the section below shows 7208 and 7258, each tagged; exactly **1** search input and **1** modal instance when reporting from the new section; tab still reads `Outcomes (6)`; the `/aow/unplanned` note renders.
-- [ ] 6.4 Re-verify against the real payload once `is_aow` is live on prtest (currently absent — validated via response interception).
+- [x] 6.4 Re-verified against the **real prtest payload** (2026-08-25): `is_aow` is now live. `GET /api/results-framework-reporting/toc-results?program=SP05&areaOfWork=AOW01…AOW06` returns `is_aow: false` for `toc_result_id` **7208** and **7258** in all six AoW and `true` for every other Outcome, each appearing in exactly one AoW — **no missing flags**. `GET /toc-results/intermediate-outcomes?programId=SP05` returns exactly `[7208, 7258]`, so the two sets match. Note `programId` is the program **code** (`SP05`), not the numeric id.
 - [x] 6.5 `npm run test:coverage` → 378 suites / 4012 tests passed. Statements 83.9%, branches 65.3%, functions 81.51%, lines 84.35% — all above the 50/60/60/60 thresholds.

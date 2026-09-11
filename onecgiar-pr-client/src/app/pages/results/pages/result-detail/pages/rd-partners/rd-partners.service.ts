@@ -1,8 +1,9 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, signal } from '@angular/core';
 import { InstitutionsInterface, PartnersBody, UnmappedMQAPInstitutionDto } from './models/partnersBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionMapped } from '../../../../../../shared/interfaces/institutions.interface';
 import { CenterDto } from '../../../../../../shared/interfaces/center.dto';
+import { Subscription } from 'rxjs';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 
@@ -23,34 +24,99 @@ export class RdPartnersService implements OnDestroy {
   leadPartnerId: number = null;
   leadCenterCode: string = null;
 
-  updatingLeadData: boolean = false;
+  /**
+   * P2-3322 — signal-backed flag. Every `setPossibleLead*` / `setLead*OnLoad` raises it and clears it
+   * again inside a `setTimeout(..., 25)`; that second write happens outside any Angular notification,
+   * so under zoneless change detection the Lead partner / Lead center selects stayed hidden behind
+   * `*ngIf="!rdPartnersSE.updatingLeadData"` (`rd-partners.component.html:58,70`).
+   *
+   * This replaces four `viewRefreshSE.schedule()` calls. They DID work — nothing in this page's
+   * ancestor chain is OnPush, so the root `ApplicationRef.tick()` reached this view. Two reasons to
+   * converge on the signal anyway: a root tick skips an OnPush ancestor that is not dirty, so the old
+   * approach fails silently the day one is introduced; and `tick()` cannot be exercised from a
+   * TestBed, so the behaviour could not be pinned by a test. It also matches the twin
+   * `RdContributorsAndPartnersService.updatingLeadData`, which serves the P25 and IPSR pages — the two
+   * services did the same job by different mechanisms.
+   *
+   * Public API stays a plain boolean, so the template and every caller are untouched.
+   */
+  private readonly _updatingLeadData = signal<boolean>(false);
+  get updatingLeadData(): boolean {
+    return this._updatingLeadData();
+  }
+  set updatingLeadData(value: boolean) {
+    this._updatingLeadData.set(value);
+  }
   disableLeadPartner: boolean = false;
+
+  /**
+   * Drives `[appSectionSkeleton]` for the Partners section. It lives on the service because the
+   * body it guards (`partnersBody`) does too. The service is `providedIn: 'root'`, so the
+   * component raises it again on `ngOnInit` — otherwise the second result opened would render
+   * with no skeleton. Released on `next` AND `error`.
+   */
+  readonly sectionLoading = signal(true);
+
+  /** Our own subscriptions to the shared catalogue emitters. See `ngOnDestroy`. */
+  private readonly catalogueSubs = new Subscription();
+
+  /**
+   * `UCA-T-9` rework attempt 3, Issue 1 — set by the component (in `ngOnInit`, cleared in
+   * `ngOnDestroy`) so it can re-establish its dirty-diff baseline whenever a LATE-arriving CLARISA
+   * catalogue re-runs the lead-field auto-assignment below, AFTER the component's own load-flow
+   * snapshot already ran. See the twin `RdContributorsAndPartnersService`'s identical field and the
+   * component's `reconcileLeadFieldsAfterLateCatalogue()` docstring for the full rationale.
+   *
+   * `UCA-T-9` rework attempt 4 — the callback now takes a `source` discriminator naming WHICH
+   * catalogue just emitted. Attempt 3's callback took no argument, so the component's reconciliation
+   * substituted BOTH `leadCenterCode` AND `leadPartnerId` back to baseline regardless of which
+   * catalogue fired — silently erasing a genuine concurrent edit to the field the emitting catalogue
+   * never touched (e.g. `institutions` resolving late would wrongly fold away a real, concurrent
+   * `leadCenterCode` edit too, since `centers` never re-ran). `source` lets the component substitute
+   * back only the one field the emitting catalogue could actually have changed.
+   */
+  onCatalogueDrivenLeadUpdate?: (source: 'centers' | 'institutions') => void;
 
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,
     public centersSE: CentersService
   ) {
-    this.institutionsSE?.loadedInstitutions?.subscribe(loaded => {
-      if (loaded) {
-        this.setPossibleLeadPartners(true);
-        this.setLeadPartnerOnLoad(true);
-      }
-    });
-    this.centersSE.loadedCenters.subscribe(loaded => {
-      if (loaded) {
-        this.nppCenters = this.centersSE.centersList?.map(center => {
-          return { ...center, selected: false, disabled: false };
-        });
-        this.setPossibleLeadCenters(true);
-        this.setLeadCenterOnLoad(true);
-      }
-    });
+    this.catalogueSubs.add(
+      this.institutionsSE?.loadedInstitutions?.subscribe(loaded => {
+        if (loaded) {
+          this.setPossibleLeadPartners(true);
+          this.setLeadPartnerOnLoad(true);
+          this.onCatalogueDrivenLeadUpdate?.('institutions');
+        }
+      })
+    );
+    this.catalogueSubs.add(
+      this.centersSE.loadedCenters.subscribe(loaded => {
+        if (loaded) {
+          this.nppCenters = this.centersSE.centersList?.map(center => {
+            return { ...center, selected: false, disabled: false };
+          });
+          this.setPossibleLeadCenters(true);
+          this.setLeadCenterOnLoad(true);
+          this.onCatalogueDrivenLeadUpdate?.('centers');
+        }
+      })
+    );
   }
 
+  /**
+   * P2-3554: unsubscribe OUR subscriptions, never the emitters themselves.
+   *
+   * This used to call `unsubscribe()` on `loadedInstitutions` and `loadedCenters` directly. Those are
+   * `EventEmitter`s owned by two root singletons (`institutions.service.ts:32`, `centers.service.ts:28`), so
+   * that closed the SHARED emitter for every other subscriber for the rest of the session instead of
+   * detaching this service. It is not reachable today — this service is `providedIn: 'root'`, so `ngOnDestroy`
+   * only runs when the root injector goes down — but it becomes a live bug the moment anyone provides it at
+   * component level, and the correct form costs nothing.
+   */
   ngOnDestroy(): void {
-    this.institutionsSE?.loadedInstitutions?.unsubscribe();
-    this.centersSE.loadedCenters.unsubscribe();
+    this.catalogueSubs.unsubscribe();
   }
 
   validateDeliverySelection(deliveries, deliveryId: number) {
@@ -114,7 +180,17 @@ export class RdPartnersService implements OnDestroy {
     }
   }
 
-  getSectionInformation(no_applicable_partner?: boolean, onSave: boolean = false) {
+  /**
+   * `UCA-T-9` — `onLoaded` is invoked as the LAST step of a successful load, once every
+   * synchronous mutation this method makes to `partnersBody` (and the lead-partner/lead-center
+   * bookkeeping around it) has settled. `RdPartnersComponent` uses it to snapshot the
+   * component-scoped `SectionDirtyTrackerService` at the true end of the load flow, not before —
+   * this GET has no secondary async call that mutates `partnersBody` afterwards (unlike
+   * `rd-general-information`'s discontinued-options round-trip), so this single callback point is
+   * safe. Not invoked on the error branch: a failed load never establishes a baseline, matching
+   * `rd-general-information`'s same fail-open behavior for the equivalent case.
+   */
+  getSectionInformation(no_applicable_partner?: boolean, onSave: boolean = false, onLoaded?: () => void) {
     this.api.resultsSE.GET_partnersSection().subscribe({
       next: ({ response }) => {
         this.partnersBody = response;
@@ -123,8 +199,11 @@ export class RdPartnersService implements OnDestroy {
         this.setLeadPartnerOnLoad(onSave);
         this.setPossibleLeadCenters(onSave);
         this.setLeadCenterOnLoad(onSave);
+        this.sectionLoading.set(false);
+        onLoaded?.();
       },
       error: _err => {
+        this.sectionLoading.set(false);
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
       }
     });

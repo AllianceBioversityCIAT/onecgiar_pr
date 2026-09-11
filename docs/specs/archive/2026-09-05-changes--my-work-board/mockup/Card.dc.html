@@ -1,0 +1,136 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: Poppins, "Segoe UI", Helvetica, Arial, sans-serif; color: #191524; background: #ffffff; -webkit-font-smoothing: antialiased; }
+    a { color: #6b46e5; text-decoration: none; } a:hover { color: #5733c4; }
+    .mono { font-family: "SF Mono", Menlo, Consolas, monospace; }
+  </style>
+</helmet>
+<div style="width: 760px; height: 720px; box-sizing: border-box; padding: 28px 32px; display: flex; flex-direction: column; gap: 20px; background: #ffffff;">
+  <div style="display: flex; flex-direction: column; gap: 4px;">
+    <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #9691a8;">Component</span>
+    <h2 style="margin: 0; font-size: 16px; font-weight: 700; color: #191524;">Result card, four states</h2>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start;">
+
+    <!-- Editing card with callouts -->
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 11px; font-weight: 600; color: #5d5872;">Editing — needs my action</span>
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 12px 10px; border-radius: 10px; background: #ffffff; border: 1px solid #e3e3e8; box-shadow: 0 1px 2px rgba(25,21,36,0.05);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: #9691a8;">4712</span>
+          <span style="display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 999px; background: #f5f3ff; color: #5733c4; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1;">Knowledge product</span>
+          <span style="flex: 1;"></span>
+          <span style="font-size: 11px; color: #9691a8;">W1/W2</span>
+        </div>
+        <p style="margin: 0; font-size: 13px; font-weight: 600; line-height: 1.35; color: #191524; text-wrap: pretty;">Farmer-led seed multiplication guide for drought-tolerant sorghum</p>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 11px; font-weight: 600; color: #5d5872;">2 of 5 sections</span>
+            <span style="font-size: 11px; color: #9691a8;">Created 12 Aug</span>
+          </div>
+          <div style="height: 4px; border-radius: 999px; background: #efeef3; overflow: hidden;"><div style="width: 40%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #6b6dc4, #6461bc);"></div></div>
+          <p style="margin: 0; font-size: 11px; line-height: 1.4; color: #6b6580;">Missing: Geographic location · Contributing partners · Knowledge product</p>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: flex-end;">
+          <div style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 8px; background: linear-gradient(90deg, #6b6dc4, #6461bc); color: #ffffff; font-size: 12px; font-weight: 600;">
+            <span>Continue</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px; font-size: 11px; line-height: 1.45; color: #5d5872;">
+        <div style="display: flex; gap: 8px;"><span style="width: 4px; height: 4px; margin-top: 6px; border-radius: 50%; background: #5733c4; flex: none;"></span><span>Code + category chip reuse the Results tab chip (16px, primary-50 / primary-400).</span></div>
+        <div style="display: flex; gap: 8px;"><span style="width: 4px; height: 4px; margin-top: 6px; border-radius: 50%; background: #5733c4; flex: none;"></span><span>Completeness comes from the persisted green checks: sections complete / total, missing names listed.</span></div>
+        <div style="display: flex; gap: 8px;"><span style="width: 4px; height: 4px; margin-top: 6px; border-radius: 50%; background: #5733c4; flex: none;"></span><span>Continue opens the result on the first incomplete section. No drag handle anywhere.</span></div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      <!-- Waiting card -->
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-size: 11px; font-weight: 600; color: #5d5872;">Submitted — waiting on QA</span>
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 10px; background: #ffffff; border: 1px solid #e3e3e8;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: #9691a8;">4630</span>
+            <span style="display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 999px; background: #f5f3ff; color: #5733c4; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1;">Innovation use</span>
+            <span style="flex: 1;"></span>
+            <span style="font-size: 11px; color: #9691a8;">W1/W2</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; font-weight: 500; line-height: 1.35; color: #191524; text-wrap: pretty;">Solar irrigation kit adopted by three farmer cooperatives</p>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #6b6580;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9691a8" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+              <span>Submitted 28 Aug · in QA</span>
+            </span>
+            <a href="#" style="font-size: 11px; font-weight: 600;">Open</a>
+          </div>
+        </div>
+        <p style="margin: 0; font-size: 11px; line-height: 1.45; color: #5d5872;">Lighter weight title, no completeness bar, no primary button. The timestamp replaces the progress line.</p>
+      </div>
+
+
+      <!-- Ready card -->
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-size: 11px; font-weight: 600; color: #5d5872;">Editing — all sections complete</span>
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 12px 10px; border-radius: 10px; background: #ffffff; border: 1px solid #e3e3e8; box-shadow: 0 1px 2px rgba(25,21,36,0.05);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: #9691a8;">4655</span>
+            <span style="display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 999px; background: #f5f3ff; color: #5733c4; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1;">Capacity sharing</span>
+            <span style="flex: 1;"></span>
+            <span style="font-size: 11px; color: #9691a8;">W1/W2</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; font-weight: 600; line-height: 1.35; color: #191524; text-wrap: pretty;">Training of trainers on gender-responsive extension services</p>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #047857;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>
+              <span>5 of 5 sections · ready to submit</span>
+            </span>
+            <div style="height: 4px; border-radius: 999px; background: #efeef3; overflow: hidden;"><div style="width: 100%; height: 100%; border-radius: 999px; background: #19ae58;"></div></div>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: flex-end;">
+            <div style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 8px; background: #ffffff; border: 1px solid #ddd6fe; color: #5733c4; font-size: 12px; font-weight: 600;">
+              <span>Review and submit</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5733c4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+            </div>
+          </div>
+        </div>
+        <p style="margin: 0; font-size: 11px; line-height: 1.45; color: #5d5872;">Green uses the app's approved status tokens. The button is secondary: submitting still happens inside the result.</p>
+      </div>
+
+      <!-- No completeness card -->
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-size: 11px; font-weight: 600; color: #5d5872;">Editing — completeness unknown</span>
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 12px 10px; border-radius: 10px; background: #ffffff; border: 1px solid #e3e3e8; box-shadow: 0 1px 2px rgba(25,21,36,0.05);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: #9691a8;">4390</span>
+            <span style="display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 999px; background: #f5f3ff; color: #5733c4; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1;">Innovation package</span>
+            <span style="flex: 1;"></span>
+            <span style="font-size: 11px; color: #9691a8;">W1/W2</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; font-weight: 600; line-height: 1.35; color: #191524; text-wrap: pretty;">Bundled agronomy package for smallholder maize systems</p>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 11px; color: #9691a8;">Open to check completeness</span>
+            <div style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 8px; background: linear-gradient(90deg, #6b6dc4, #6461bc); color: #ffffff; font-size: 12px; font-weight: 600;">
+              <span>Continue</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+            </div>
+          </div>
+        </div>
+        <p style="margin: 0; font-size: 11px; line-height: 1.45; color: #5d5872;">When no persisted check exists (older results, IPSR packages) the card says so instead of showing a wrong number.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

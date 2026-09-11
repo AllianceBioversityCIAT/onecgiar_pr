@@ -31,7 +31,13 @@ export class ResultsInnovationsDev {
   })
   result_object: Result;
 
-  @RelationId((rid: ResultsInnovationsDev) => rid.result_object)
+  // Writable FK column (same pattern as ResultsInnovationsUse). @RelationId is
+  // read-only and TypeORM inserts DEFAULT, which breaks NOT NULL results_id.
+  @Column({
+    name: 'results_id',
+    type: 'bigint',
+    nullable: false,
+  })
   results_id: number;
 
   @Column({

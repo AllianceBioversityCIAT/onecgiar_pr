@@ -9,6 +9,8 @@ import { ResultFieldAiState } from './entities/result-field-ai-state.entity';
 import { ResultFieldRevision } from './entities/result-field-revision.entity';
 import { Result } from '../results/entities/result.entity';
 import { ResultsInnovationsDev } from '../results/summary/entities/results-innovations-dev.entity';
+import { ResultImpactAreaScore } from '../result-impact-area-scores/entities/result-impact-area-score.entity';
+import { ImpactAreasScoresComponent } from '../results/impact_areas_scores_components/entities/impact_areas_scores_component.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
 
 @Module({
@@ -21,6 +23,8 @@ import { HandlersError } from '../../shared/handlers/error.utils';
       ResultFieldAiState,
       Result,
       ResultsInnovationsDev,
+      ResultImpactAreaScore,
+      ImpactAreasScoresComponent,
     ]),
   ],
   controllers: [AiController],

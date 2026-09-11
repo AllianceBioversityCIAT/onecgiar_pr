@@ -1,0 +1,35 @@
+// @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-1, R-1, design.md §6.1)
+//
+// Viewport lock (`sp-shell-app-viewport`, `SAV-T-4`) — unconditional, like `ProgrammeResultsComponent`
+// and `MyWorkBoardComponent`: this surface only ever serves the Bilateral review tab (unlike
+// `dashboard-lab`, which gates the class on `isProgramShell()`). `:host` lives HERE, not in an inline
+// `styles` array — Angular 21 emits `styleUrl(s)` content BEFORE inline `styles` at equal
+// specificity, so an inline `display: block` there would silently beat the mixin's flex layout
+// instead of losing to it (verified against @angular/compiler-cli; same note carried by the two
+// sibling stylesheets above).
+@use '../../../../../styles/viewport-page' as vp;
+
+:host {
+  display: block;
+  @include vp.pr-viewport-page;
+}
+
+// `BRV-R-2`: a keyboard-focused row/card must never land under the pinned toolbar + filter band
+// (WCAG 2.4.11). `--brv-pinned-h` is written onto `.custom_scroll` (the work area) by the component
+// from the pinned wrapper's OWN measured height (`ResizeObserver`, guarded for jsdom); `142px`
+// (measured, task report) is the fallback for an environment with no observer (Jest). The table's
+// row/card markup (`bilateral-review-table.component.html`) is not in this task's file list, so
+// this reaches it through the documented `::ng-deep` exception for a child component's rendered
+// DOM — same pattern `my-work-board.component.scss` already uses (client `CLAUDE.md` §5 Styling).
+//
+// Reviewer fix (attempt 2): `#workArea` below was a CSS ID selector matching a template reference
+// variable (`<div #workArea>`), which is NOT an `id` attribute — the rule never matched anything,
+// so no row/card ever carried `scroll-margin-top` (verified live: `getComputedStyle(tr)
+// .scrollMarginTop === '0px'` while `--brv-pinned-h` was correctly `172px` on the work area).
+// Scoped to `.custom_scroll` (the work area's real class) instead.
+:host ::ng-deep {
+  .custom_scroll tr,
+  .custom_scroll [data-testid='bilateral-review-card'] {
+    scroll-margin-top: var(--brv-pinned-h, 142px);
+  }
+}

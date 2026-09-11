@@ -1,13 +1,13 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { GlobalParameterCacheService } from '../cache/global-parameter-cache.service';
 import { EvidencesRepository } from '../../../api/results/evidences/evidences.repository';
 import { CreateUploadSessionDto } from 'src/api/results/evidences/dto/create-upload-session.dto';
 import { ReturnResponseUtil } from '../../utils/response.util';
 
 @Injectable()
-//TODO change console.log for logger
 export class SharePointService {
+  private readonly _logger = new Logger(SharePointService.name);
   private token = null;
   private expiresIn = null;
   private creationTime = null;
@@ -83,8 +83,24 @@ export class SharePointService {
     }
   }
 
+  /**
+   * Revokes the sharing links the app can see on the item and then issues a fresh one.
+   *
+   * 🛑 The revocation is NOT guaranteed. Measured on prtest on 9 Sep 2026 (result 9075,
+   * evidence 13081): toggling an evidence public -> confidential -> public returns the
+   * SAME two urls every time, so `createLink` is handing back permissions that already
+   * exist and neither of them is being deleted. Both an anonymous and an organization
+   * link end up living on the document at once, and switching the evidence to
+   * confidential only changes WHICH of the two we store — the anonymous one keeps
+   * serving the file. The cause of the failed delete is not established (it needs the
+   * container log or a Graph call), which is why the outcome now travels back to the
+   * caller under `revocation` instead of being discarded.
+   *
+   * The success contract is unchanged: callers read `link.webUrl` exactly as before, and
+   * this method still never throws on a revocation problem.
+   */
   async addFileAccess(fileId, convertToPublic: boolean) {
-    await this.removeAllFilePermissions(fileId);
+    const revocation = await this.removeAllFilePermissions(fileId);
 
     const token = await this.getToken();
     const driveId = await this.GPCacheSE.getParam('sp_drive_id');
@@ -102,18 +118,97 @@ export class SharePointService {
           },
         })
         .toPromise();
-      return response.data;
+      return { ...response.data, revocation };
     } catch (error) {
-      console.log(error);
+      this._logger.error(
+        `SharePoint: createLink failed for document ${fileId} (scope ${
+          convertToPublic ? 'anonymous' : 'organization'
+        }): status ${error?.response?.status} code ${
+          error?.response?.data?.error?.code
+        } - ${error?.message}`,
+      );
       return error;
+    }
+  }
+
+  /**
+   * Returns one outcome per permission it tried to delete, so the caller can tell a real
+   * revocation from a silent failure. A successful DELETE resolves the axios response
+   * (numeric `status`); a failed one resolves the Error, which has none.
+   */
+  /**
+   * Lists the sharing permissions of an item, keeping the SCOPE and telling the caller
+   * apart "there are none" from "I could not look".
+   *
+   * `getAllFilePermissions` cannot answer either question: it returns bare ids, so an
+   * `organization` link (already private) is indistinguishable from an `anonymous` one,
+   * and on a Graph failure it resolves with the Error, which reads as an empty list —
+   * i.e. it fails OPEN, reporting a file as private when it never checked.
+   */
+  private async _listSharingPermissions(fileId): Promise<{
+    read: boolean;
+    permissions: { id: string; scope: string | null }[];
+  }> {
+    const token = await this.getToken();
+    const driveId = await this.GPCacheSE.getParam('sp_drive_id');
+    const link = `${this.microsoftGraphApiUrl}/drives/${driveId}/items/${fileId}/permissions`;
+    try {
+      const response = await this.httpService
+        .get(link, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .toPromise();
+      const permissions = (response?.data?.value ?? [])
+        .filter((p) => p?.link)
+        .map((p) => ({ id: p.id, scope: p?.link?.scope ?? null }));
+      return { read: true, permissions };
+    } catch (error) {
+      this._logger.error(
+        `SharePoint: listing permissions failed for document ${fileId}: status ${
+          error?.response?.status
+        } code ${error?.response?.data?.error?.code} - ${error?.message}`,
+      );
+      return { read: false, permissions: [] };
     }
   }
 
   async removeAllFilePermissions(fileId) {
     const permissionsList = await this.getAllFilePermissions(fileId);
-    await Promise.all(
-      permissionsList.map((pId) => this.removeFilePermission(fileId, pId)),
+    const attempted = Array.isArray(permissionsList) ? permissionsList : [];
+    const results = await Promise.all(
+      attempted.map((pId) => this.removeFilePermission(fileId, pId)),
     );
+    const outcomes = results.map((result: any, index: number) => ({
+      permissionId: attempted[index],
+      ok: typeof result?.status === 'number' && result.status < 300,
+      status: result?.status ?? result?.response?.status ?? null,
+    }));
+
+    // 🥇 Trusting the DELETE is what hid this for so long. Read the permissions back:
+    // it is the only way to tell an actual revocation from one that resolved fine and
+    // changed nothing, and it distinguishes the two live hypotheses without needing the
+    // container log — `attempted: 0` means we never even saw the link we had to remove,
+    // while a surviving permission after a "successful" delete means Graph kept it.
+    const readBack = await this._listSharingPermissions(fileId);
+    // 🛑 Only ANONYMOUS survivors make a file publicly reachable. An `organization`
+    // link is already private, so counting it would refuse a save that is in fact fine.
+    const publicSurvivors = readBack.permissions.filter(
+      (p) => p.scope === 'anonymous',
+    );
+
+    return {
+      attempted: attempted.length,
+      outcomes,
+      survivors: readBack.permissions.map((p) => p.id),
+      publicSurvivors: publicSurvivors.map((p) => p.id),
+      // 🛑 Fails CLOSED on purpose: if the read-back did not happen we do not know, and
+      // "I did not check" must never be reported as "it is private".
+      verifiedPrivate: readBack.read && publicSurvivors.length === 0,
+      readBackFailed: !readBack.read,
+    };
   }
 
   async getAllFilePermissions(fileId) {
@@ -133,7 +228,13 @@ export class SharePointService {
         ?.filter((p) => p?.link?.hasOwnProperty('webUrl'))
         ?.map((p) => p.id);
     } catch (error) {
-      console.log(error);
+      // Explicit fields only: the axios error carries config.headers.Authorization,
+      // i.e. a Graph bearer token (.cursorrules).
+      this._logger.error(
+        `SharePoint: listing permissions failed for document ${fileId}: status ${
+          error?.response?.status
+        } code ${error?.response?.data?.error?.code} - ${error?.message}`,
+      );
       return error;
     }
   }
@@ -153,7 +254,11 @@ export class SharePointService {
         .toPromise();
       return response;
     } catch (error) {
-      console.log(error);
+      this._logger.error(
+        `SharePoint: could not remove permission ${permissionId} from document ${fileId} — the previous sharing link may still be live: status ${
+          error?.response?.status
+        } code ${error?.response?.data?.error?.code} - ${error?.message}`,
+      );
       return error;
     }
   }
@@ -163,9 +268,15 @@ export class SharePointService {
     return this.token;
   }
 
+  /** 60 s of margin so a token cannot expire between two calls of the same operation. */
+  private static readonly TOKEN_EXPIRY_MARGIN_SECONDS = 60;
+
   private isTokenExpired(): boolean {
     const currentTime = new Date().getTime() / 1000;
-    const tokenExpirationTime = this.creationTime + this.expiresIn;
+    const tokenExpirationTime =
+      this.creationTime +
+      this.expiresIn -
+      SharePointService.TOKEN_EXPIRY_MARGIN_SECONDS;
     return currentTime >= tokenExpirationTime;
   }
 

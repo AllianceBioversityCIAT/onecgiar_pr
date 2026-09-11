@@ -1,5 +1,5 @@
 <div class="local_container">
-  <app-alert-status [description]="openFolderText()"> </app-alert-status>
+  <app-alert-status [collapsible]="false" [description]="openFolderText()"> </app-alert-status>
 
   <div class="alert_status_container">
     <div [ngClass]="{ animate__pulse_infinite: this.requesting }">

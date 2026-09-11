@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
-import { map, Observable, firstValueFrom } from 'rxjs';
+import { catchError, map, of, throwError, Observable, firstValueFrom } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
 import { GeneralInfoBody } from '../../../pages/results/pages/result-detail/pages/rd-general-information/models/generalInfoBody';
 import { PartnersBody } from '../../../pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
@@ -11,21 +11,23 @@ import { PartnersRequestBody } from '../../../pages/results/pages/result-detail/
 import { EvidencesBody, EvidencesCreateInterface } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
 import { TheoryOfChangeBody } from '../../../pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
-import { ElasticResult, Source } from '../../interfaces/elastic.interface';
 import { KnowledgeProductSaveDto } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/knowledge-product-save.dto';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 import { UpdateUserStatus } from '../../interfaces/updateUserStatus.interface';
 import { SearchParams } from './api.service';
 import { EntityDetails } from '../../../pages/result-framework-reporting/pages/entity-details/interfaces/entity-details.interface';
 import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/extraGeographicLocationBody';
+import { BilateralApiService } from './bilateral-api.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ResultsApiService {
+  private readonly bilateralApiSE = inject(BilateralApiService);
+
   constructor(
     public http: HttpClient,
-    private saveButtonSE: SaveButtonService,
+    private readonly saveButtonSE: SaveButtonService,
     public ipsrDataControlSE: IpsrDataControlService
   ) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
@@ -35,7 +37,6 @@ export class ResultsApiService {
   currentResultId: number | string = null;
   currentResultCode: number | string = null;
   currentResultPhase: number | string = null;
-  private readonly elasticCredentials = `Basic ${btoa(environment.elastic.username + ':' + environment.elastic.password)}`;
   GET_AllResultLevel() {
     return this.http.get<any>(`${this.apiBaseUrl}levels/all`);
   }
@@ -51,6 +52,9 @@ export class ResultsApiService {
     if (searchParams) {
       if (searchParams.limit) queryParams.push(`limit=${searchParams.limit}`);
       if (searchParams.page) queryParams.push(`page=${searchParams.page}`);
+      // Encoded: titles carry spaces, ampersands and percent signs, any of which would otherwise
+      // truncate or corrupt the query string.
+      if (searchParams.title) queryParams.push(`title=${encodeURIComponent(searchParams.title)}`);
       if (searchParams.status_id) queryParams.push(`status_id=${searchParams.status_id}`);
       if (searchParams.portfolio_id) queryParams.push(`portfolio_id=${searchParams.portfolio_id}`);
       if (searchParams.result_type_id) queryParams.push(`result_type_id=${searchParams.result_type_id}`);
@@ -58,6 +62,8 @@ export class ResultsApiService {
       if (searchParams.version_id) queryParams.push(`version_id=${searchParams.version_id}`);
       if (searchParams.filter_created_by_me) queryParams.push('filter_created_by_me=true');
       if (searchParams.filter_submitted_by_me) queryParams.push('filter_submitted_by_me=true');
+      // @akili-spec changes/my-work-board (MWB-T-3, MWB-R-8)
+      if (searchParams.include_completeness) queryParams.push('include_completeness=true');
     }
 
     const qs = queryParams.length ? `?${queryParams.join('&')}` : '';
@@ -96,74 +102,6 @@ export class ResultsApiService {
       statusCode?: number;
       status?: number;
     }>(`${this.apiBaseUrl}check-title-uniqueness`, { params });
-  }
-
-  GET_FindResultsElastic(search?: string, type?: string) {
-    const body = {
-      size: 20,
-      query: {
-        bool: {
-          must: [
-            {
-              match_bool_prefix: {
-                title: {
-                  query: search ?? '',
-                  operator: 'and'
-                }
-              }
-            },
-            {
-              bool: {
-                should: [
-                  {
-                    bool: {
-                      must: [
-                        {
-                          match: {
-                            type: type ?? ''
-                          }
-                        },
-                        {
-                          match: {
-                            is_legacy: true
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    bool: {
-                      must: [
-                        {
-                          match: {
-                            is_legacy: false
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            }
-          ]
-        }
-      },
-      sort: [
-        {
-          'id.keyword': {
-            order: 'asc'
-          }
-        }
-      ]
-    };
-    const options = { headers: new HttpHeaders({ Authorization: this.elasticCredentials }) };
-    return this.http.post<ElasticResult>(`${environment.elastic.baseUrl}`, body, options).pipe(
-      map(resp =>
-        (resp?.hits?.hits ?? []).map(h => {
-          return { probability: h._score, ...h._source } as Source & { probability: number };
-        })
-      )
-    );
   }
 
   POST_resultCreateHeader(body: ResultBody, v2: boolean = false) {
@@ -226,8 +164,40 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}get/${this.currentResultId}`);
   }
 
-  GET_depthSearch(title: string) {
-    return this.http.get<any>(`${this.apiBaseUrl}get/depth-search/${title}`);
+  /**
+   * Similar-results suggestions for the result creator, served by our own backend.
+   *
+   * P2-3527: this list used to come from Elastic. That host stopped resolving and both callers
+   * swallowed the failure into an empty list, so the screen silently claimed "no similarities" for
+   * every title. `get/depth-search` is the same search on MySQL — it existed before Elastic and is
+   * still live — now with a capped, relevance-ordered page.
+   *
+   * Two contract details are normalized here so the callers and the template stay simple:
+   *  - a 404 is how the backend says "no matches"; that is an empty list, not a failed search,
+   *    and telling those two apart is what P2-3526 is about.
+   *  - MySQL bigints arrive as strings, so `version_id` is coerced to a number. Without it the
+   *    phase lookup (`phase.id === version_id`, strict) never matches and every suggestion renders
+   *    as "This result does not exist in this reporting phase" with Map-to-ToC disabled.
+   *
+   * @param title free text typed by the user
+   * @param type legacy indicator type (Innovation / Policy / OICR); narrows legacy rows only
+   * @param limit maximum suggestions; the backend defaults to 20 and caps at 50
+   */
+  GET_depthSearch(title: string, type?: string, limit?: number) {
+    const params: Record<string, string> = {};
+    if (type) params['type'] = type;
+    if (limit !== undefined && limit !== null) params['limit'] = String(limit);
+
+    return this.http.get<{ response: any[] }>(`${this.apiBaseUrl}get/depth-search/${encodeURIComponent(title ?? '')}`, { params }).pipe(
+      map(resp =>
+        (resp?.response ?? []).map(item => ({
+          ...item,
+          version_id: item?.version_id === null || item?.version_id === undefined ? null : Number(item.version_id),
+          is_legacy: Number(item?.legacy) === 1
+        }))
+      ),
+      catchError(err => (err?.status === 404 ? of([]) : throwError(() => err)))
+    );
   }
 
   GET_ostMeliaStudiesByResultId() {
@@ -252,9 +222,10 @@ export class ResultsApiService {
       .pipe(this.saveButtonSE.isSavingPipe());
   }
 
+  // Standard envelope: the section body arrives under `response`.
   GET_partnersSection() {
     return this.http
-      .get<PartnersBody>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`)
+      .get<{ response: PartnersBody }>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`)
       .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
@@ -371,6 +342,29 @@ export class ResultsApiService {
     return firstValueFrom(this.http.put<any>(link, file, options));
   }
 
+  /**
+   * Uploads ONE byte range of an existing upload session.
+   *
+   * P2-3318 — Microsoft Graph refuses any single upload request of 60 MiB or more
+   * ("the maximum bytes in any given request is less than 60 MiB",
+   * https://learn.microsoft.com/en-us/graph/api/driveitem-createuploadsession), while the evidence
+   * forms advertise and validate files up to 1 GB. `PUT_loadFileInUploadSession` sends the whole
+   * file as one request, so anything that big — a PowerPoint deck is the usual one — could never
+   * arrive. Large files come through here instead, one fragment per call, in order.
+   *
+   * Graph answers every fragment but the last with 202 and no driveItem, so only the response of
+   * the final call carries `webUrl`/`id`/`name`.
+   */
+  PUT_loadFileFragmentInUploadSession(fragment: Blob, link: string, start: number, end: number, total: number) {
+    const options = {
+      headers: new HttpHeaders({
+        'Content-Type': 'application/octet-stream',
+        'Content-Range': `bytes ${start}-${end}/${total}`
+      })
+    };
+    return firstValueFrom(this.http.put<any>(link, fragment, options));
+  }
+
   GET_loadFileInUploadSession(link) {
     return firstValueFrom(this.http.get<any>(link));
   }
@@ -385,6 +379,24 @@ export class ResultsApiService {
 
   GET_mqapValidation(handle) {
     return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/mqap?handle=${handle}`);
+  }
+
+  GET_cgspaceSearch(params: any): Observable<any> {
+    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/cgspace/search`, { params });
+  }
+
+  // @akili-spec changes/kp-multi-repository-browse — KPM-R-9 / design §6.2
+  /**
+   * Facet values for one logical name, unioned over the selected repositories.
+   * `repositories` is sent comma-joined as `repository` (the server also accepts the
+   * repeatable form); omitting it keeps the server default of all three repositories.
+   */
+  GET_cgspaceFacet(name: string, prefix?: string, size?: number, repositories?: readonly string[]): Observable<any> {
+    const params: any = {};
+    if (prefix) params.prefix = prefix;
+    if (size) params.size = size;
+    if (repositories && repositories.length > 0) params.repository = repositories.join(',');
+    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/cgspace/facets/${name}`, { params });
   }
 
   GET_resultknowledgeProducts() {
@@ -470,6 +482,33 @@ export class ResultsApiService {
 
   GET_innovationUseResults() {
     return this.http.get<any>(`${this.apiBaseUrlV2}get/innov-use-linked-results`);
+  }
+
+  /**
+   * P2-3420 / P2-3421 — QA'd Innovation Development results from past phases, portfolio-wide.
+   * Only `QaInnovationDevelopmentResultsService` calls this: one catalogue for the three W1/W2
+   * creation surfaces. Do NOT reuse `GET_innovationUseResults` here — that one feeds the wider
+   * Contributors & Partners multi-select and carries no status.
+   */
+  GET_qaInnovationDevelopmentResults() {
+    return this.http.get<any>(`${this.apiBaseUrlV2}get/qa-innovation-development-results`);
+  }
+
+  /**
+   * P2-3292 Steps 3A / 3B — the innovations offered when a reporter closes an innovation and says
+   * it merged into another one, or was split into several.
+   *
+   * 🛑 NOT `GET_qaInnovationDevelopmentResults` above, even though the names read alike. That one
+   * backs the Innovation Use link dropdown and its catalogue deliberately INCLUDES discontinued
+   * innovations, pinned to one phase. Step 3 asks for the reverse: every phase, and never a
+   * discontinued one — you cannot declare that your innovation continued inside a closed one.
+   *
+   * `search` filters server-side on purpose: the list is portfolio-wide, so shipping every
+   * innovation to the browser is what the story's "searchable" is trying to avoid.
+   */
+  GET_mergeSplitTargetInnovations(resultId: number, search?: string) {
+    const query = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
+    return this.http.get<any>(`${this.apiBaseUrlV2}get/merge-split-target-innovations/${resultId}${query}`);
   }
   GET_innovationUseP25() {
     return this.http
@@ -738,16 +777,11 @@ export class ResultsApiService {
     if (this.ipsrDataControlSE.inIpsr) {
       throw new Error('Full metadata export is only available from the Results module.');
     }
-    return this.http.post<any>(
-      `${this.apiBaseUrl}get/reporting/full-metadata-export/jobs`,
-      filtersParams
-    );
+    return this.http.post<any>(`${this.apiBaseUrl}get/reporting/full-metadata-export/jobs`, filtersParams);
   }
 
   GET_reportingFullMetadataExportJob(jobId: string) {
-    return this.http.get<any>(
-      `${this.apiBaseUrl}get/reporting/full-metadata-export/jobs/${jobId}`
-    );
+    return this.http.get<any>(`${this.apiBaseUrl}get/reporting/full-metadata-export/jobs/${jobId}`);
   }
 
   POST_AdminKPExcelReport(body) {
@@ -755,6 +789,11 @@ export class ResultsApiService {
   }
 
   PUT_updateAdminKPConfidenceLevel(body) {
+    return this.http.put<any>(`${environment.apiBaseUrl}api/global-parameters/update/variable`, body);
+  }
+
+  // @akili-spec changes/mass-reporting-flow
+  PUT_updateGlobalVariable(body: { name: string; value: string }) {
     return this.http.put<any>(`${environment.apiBaseUrl}api/global-parameters/update/variable`, body);
   }
 
@@ -839,7 +878,9 @@ export class ResultsApiService {
   }
 
   PATCH_primaryImpactAreaKrs(body) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/type-one-report/primary/primary-impact-area/create`, body);
+    return this.http
+      .patch<any>(`${environment.apiBaseUrl}api/type-one-report/primary/primary-impact-area/create`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GETallInnovations(initiativesList) {
@@ -1221,8 +1262,14 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.baseApiBaseUrlV2}results/questions/innovation-development/${this.currentResultId}`);
   }
 
-  GET_investmentDiscontinuedOptions(result_type_id) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results/investment-discontinued-options/${result_type_id}`);
+  /**
+   * P2-3292 — `phase_year` picks the reason generation: the 2026 set from the 2026 phase on, the
+   * six original ones before that. Omitting it answers the pre-P2-3292 catalogue, so callers that
+   * do not know about phases (IPSR) keep working unchanged.
+   */
+  GET_investmentDiscontinuedOptions(result_type_id, phase_year?: number) {
+    const phaseYearParam = typeof phase_year === 'number' ? `?phaseYear=${phase_year}` : '';
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/investment-discontinued-options/${result_type_id}${phaseYearParam}`);
   }
 
   GET_versioningResult() {
@@ -1231,6 +1278,15 @@ export class ResultsApiService {
         this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId
       }`
     );
+  }
+
+  /**
+   * Phases in which a result CODE exists. `GET_versioningResult()` answers the same question but
+   * needs the internal id, which is exactly what the result-detail screen does NOT have when the
+   * code/phase pair in the URL was never reported (the "no 2026 version" case).
+   */
+  GET_versioningResultByCode(resultCode: string | number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning/result/code/${resultCode}`);
   }
 
   PATCH_versioningAnnually(replicateIPSR = false) {
@@ -1311,31 +1367,44 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.releasesNotesApiUrl}/blocks/${blockId}/children`);
   }
 
-  GET_loginWithAzureAd(provider: string) {
-    return this.http.get<any>(`${environment.apiBaseUrl}auth/login/provider?provider=${provider}`);
+  GET_loginWithAzureAd(provider: string, redirectUri?: string) {
+    const params = new URLSearchParams({ provider });
+    if (redirectUri) params.set('redirectUri', redirectUri);
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/login/provider?${params.toString()}`);
   }
 
-  POST_validateCognitoCode(code: string) {
-    return this.http.post<any>(`${environment.apiBaseUrl}auth/validate/code`, { code });
+  POST_validateCognitoCode(code: string, redirectUri?: string) {
+    const body: Record<string, string> = { code };
+    if (redirectUri) body['redirectUri'] = redirectUri;
+    return this.http.post<any>(`${environment.apiBaseUrl}auth/validate/code`, body);
   }
 
   PATCH_updateUserStatus(body: UpdateUserStatus) {
     return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/change/status`, body);
   }
 
-  GET_searchUser(search?: string, cgIAR?: 'Yes' | 'No' | '', status?: 'Active' | 'Inactive' | 'Read Only' | '', entityIds?: number[]) {
+  GET_searchUser(
+    search?: string,
+    cgIAR?: 'Yes' | 'No' | '',
+    status?: 'Active' | 'Inactive' | 'Read Only' | '',
+    entityIds?: number[],
+    platformRoleIds?: number[],
+    reportingRoleIds?: number[]
+  ) {
     const queryParams: string[] = [];
 
     if (search) queryParams.push(`user=${search}`);
     if (cgIAR) queryParams.push(`cgIAR=${cgIAR}`);
     if (status) queryParams.push(`status=${status}`);
-    // Convert array of objects to array of ids if needed
 
-    if (entityIds.length) {
-      const entityIdArray =
-        Array.isArray(entityIds) && entityIds.length && typeof entityIds[0] === 'object' ? entityIds.map((item: any) => item.id) : entityIds;
-      queryParams.push(`entityIds=${entityIdArray.map(id => id.toString()).join(',')}`);
-    }
+    // The multiselects hand back either ids or whole option objects depending on the control, so both
+    // shapes are normalised before they reach the query string.
+    const toIdList = (values?: any[]): string =>
+      (values ?? []).map(value => (value && typeof value === 'object' ? value.id : value)).join(',');
+
+    if (entityIds?.length) queryParams.push(`entityIds=${toIdList(entityIds)}`);
+    if (platformRoleIds?.length) queryParams.push(`platformRoleIds=${toIdList(platformRoleIds)}`);
+    if (reportingRoleIds?.length) queryParams.push(`reportingRoleIds=${toIdList(reportingRoleIds)}`);
 
     const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
     return this.http.get<any>(`${environment.apiBaseUrl}auth/user/search${queryString}`);
@@ -1349,8 +1418,14 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
   }
 
-  GET_roles() {
-    return this.http.get<any>(`${environment.apiBaseUrl}auth/role`);
+  /**
+   * P2-2043: `levelId` selects the role level. Omitted, the server keeps answering the Initiative
+   * roles it has always answered (Lead / Co-Lead / Coordinator / Member), so every existing caller
+   * is untouched. Level 1 returns the Platform roles (Admin / Guest).
+   */
+  GET_roles(levelId?: number) {
+    const query = levelId ? `?levelId=${levelId}` : '';
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/role${query}`);
   }
   PATCH_changeUserStatus(body: any) {
     return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/change/status`, body);
@@ -1361,6 +1436,7 @@ export class ResultsApiService {
   PATCH_updateUserRoles(body: {
     email: string;
     role_assignments: { role_id: number; entity_id: number; force_swap?: boolean }[];
+    center_assignments?: { center_id: string }[];
     role_platform: number;
     first_name: string;
     last_name: string;
@@ -1379,8 +1455,12 @@ export class ResultsApiService {
   GET_impactAreasScoresComponentsAll() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/impact-areas-scores-components/all`);
   }
-  GET_ScienceProgramsProgress() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/get/science-programs/progress`);
+  GET_ScienceProgramsProgress(versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/get/science-programs/progress`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `?versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<any>(url);
   }
 
   GET_RecentActivity() {
@@ -1393,10 +1473,37 @@ export class ResultsApiService {
     );
   }
 
-  GET_TocResultsByAowId(entityId: string, aowId: string, year?: string) {
-    const queryParams: string[] = [`program=${entityId}`, `areaOfWork=${aowId}`];
+  /**
+   * @akili-spec changes/results-aow-column-filter (RAC-T-2)
+   * Each result's Area of Work scope bucket for one program at one phase — the same partition
+   * and tie-break rule the Overview's `clarisa-global-units` `scopeBuckets` uses (RAC-R-1), but
+   * without the W1/W2 source filter (the Results tab lists every source, RAC A-3). Joined
+   * client-side by `result_id` in `ProgrammeResultsService` (RAC-DD-1).
+   */
+  GET_ResultsScope(programId: string, versionId: number) {
+    return this.http.get<{
+      response: {
+        programId: string;
+        versionId: number;
+        buckets: Array<{ result_id: number | string; key: string; kind: 'aow' | 'outcome' | 'untagged'; codes: string[] }>;
+      };
+      message: string;
+      status: boolean;
+    }>(
+      `${environment.apiBaseUrl}api/results-framework-reporting/results-scope?programId=${encodeURIComponent(
+        programId
+      )}&versionId=${encodeURIComponent(String(versionId))}`
+    );
+  }
 
+  GET_TocResultsByAowId(entityId: string, aowId?: string | null, year?: string, versionId?: number) {
+    const queryParams: string[] = [`program=${entityId}`];
+
+    if (aowId) queryParams.push(`areaOfWork=${aowId}`);
     if (year) queryParams.push(`year=${year}`);
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      queryParams.push(`versionId=${encodeURIComponent(String(versionId))}`);
+    }
 
     const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
     return this.http.get<{ message: string; response: any; status: boolean }>(
@@ -1404,29 +1511,71 @@ export class ResultsApiService {
     );
   }
 
-  GET_IndicatorContributionSummary(entityId: string) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/programs/indicator-contribution-summary?program=${entityId}`);
+  GET_IndicatorContributionSummary(entityId: string, versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/programs/indicator-contribution-summary?program=${entityId}`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `&versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<any>(url);
   }
 
-  GET_2030Outcomes(entityId: string) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/2030-outcomes?programId=${entityId}`);
+  /**
+   * P2-3296 AC4 — the Science Program's ToC achievement, rolled up over its Areas of Work.
+   *
+   * Not the same as the science-program progress endpoint used elsewhere, which counts
+   * reported results by status. This one answers how far along the ToC commitments are.
+   */
+  GET_ScienceProgramTocProgress(entityId: string, versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/program-progress?programId=${entityId}`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `&versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<any>(url);
   }
 
-  GET_IntermediateOutcomes(entityId: string) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/intermediate-outcomes?programId=${entityId}`);
+  GET_2030Outcomes(entityId: string, versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/2030-outcomes?programId=${entityId}`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `&versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<any>(url);
+  }
+
+  GET_IntermediateOutcomes(entityId: string, versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/intermediate-outcomes?programId=${entityId}`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `&versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<any>(url);
   }
 
   GET_W3BilateralProjects(tocResultId: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects?tocResultId=${tocResultId}`);
   }
 
-  POST_createResult(body: any) {
-    return this.http.post<any>(`${environment.apiBaseUrl}api/results-framework-reporting/create`, body);
+  // P2-3001: full W3/Bilateral list of a Science Program (official code, e.g. SP01), bypassing the indicator-level filter.
+  GET_W3BilateralProjectsByProgram(programId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects/by-program?programId=${programId}`);
   }
 
-  GET_ExistingResultsContributors(resultTocResultId: string, tocResultIndicatorId: string) {
+  // @akili-spec changes/reporting-entry-hub
+  // "Where to report" hub (REH-R-9) — the signed-in user's centers' bilateral projects allocating
+  // to this program, active-reporting-phase only. NOT `this.apiBaseUrl` (already ends in
+  // `api/results/`) — same convention as the sibling `GET_W3BilateralProjectsByProgram` above.
+  GET_reportingEntryHubProjects(programId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/reporting-entry-hub/projects?programId=${programId}`);
+  }
+
+  POST_createResult(body: any) {
+    return this.http.post<any>(`${environment.apiBaseUrl}api/results-framework-reporting/create`, body).pipe(this.saveButtonSE.isCreatingPipe());
+  }
+
+  // @akili-spec changes/indicator-reported-results
+  // `scope` is OPT-IN (IRR-R-3 / IRR-DD-2): the server defaults to today's reviewed-only population,
+  // so the param is appended only when a caller asks for it and every existing URL stays byte-identical.
+  GET_ExistingResultsContributors(resultTocResultId: string, tocResultIndicatorId: string, scope?: 'reviewed' | 'all') {
     return this.http.get<any>(
-      `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=${resultTocResultId}&tocResultIndicatorId=${tocResultIndicatorId}`
+      `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=${resultTocResultId}&tocResultIndicatorId=${tocResultIndicatorId}${scope ? `&scope=${scope}` : ''}`
     );
   }
   // /api/results-framework-reporting/dashboard
@@ -1453,33 +1602,39 @@ export class ResultsApiService {
   }
 
   PATCH_BilateralTocMetadata(resultId: number | string, body: any) {
-    return this.http
-      .patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/toc-metadata/${resultId}`, body)
-      .pipe(this.saveButtonSE.isSavingPipe());
+    return this.bilateralApiSE.PATCH_BilateralTocMetadata(resultId, body);
   }
 
   PATCH_BilateralDataStandard(resultId: number | string, body: any) {
-    return this.http
-      .patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/data-standard/${resultId}`, body)
-      .pipe(this.saveButtonSE.isSavingPipe());
+    return this.bilateralApiSE.PATCH_BilateralDataStandard(resultId, body);
   }
 
   PATCH_BilateralResultTitle(resultId: number | string, body: any) {
-    return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/${resultId}/title`, body);
+    return this.bilateralApiSE.PATCH_BilateralResultTitle(resultId, body);
   }
 
   GET_ClarisaProjects() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/projects/get/all`);
   }
 
+  GET_bilateralProjects(centerId: string | number) {
+    return this.bilateralApiSE.GET_bilateralProjects(centerId);
+  }
+
   GET_ClarisaPortfolios() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
   }
 
-  GET_ResultToReview(programId: string, centerIds?: string[]) {
+  GET_ResultToReview(programId: string, centerIds?: string[], versionId?: string | number, statusIds?: string) {
     let url = `${environment.apiBaseUrl}api/results/by-program-and-centers?programId=${programId}`;
     if (centerIds?.length === 1) {
       url += `&centerIds=${centerIds.join(',')}`;
+    }
+    if (versionId !== undefined && versionId !== null && String(versionId).trim().length > 0) {
+      url += `&versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    if (statusIds !== undefined && statusIds !== null && String(statusIds).trim().length > 0) {
+      url += `&statusIds=${encodeURIComponent(String(statusIds))}`;
     }
 
     return this.http.get<any>(url);
@@ -1488,11 +1643,13 @@ export class ResultsApiService {
   GET_PendingReviewCount(programId: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/pending-review?programId=${programId}`);
   }
+
   GET_BilateralResultDetail(resultId: string | number) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}`);
+    return this.bilateralApiSE.GET_BilateralResultDetail(resultId);
   }
 
-  PATCH_BilateralReviewDecision(resultId: string | number, body: { decision: 'APPROVE' | 'REJECT'; justification: string }) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}/review-decision`, body);
+  /** `justification` is mandatory on REJECT and an optional reviewer comment on APPROVE (P2-3157). */
+  PATCH_BilateralReviewDecision(resultId: string | number, body: { decision: 'APPROVE' | 'REJECT'; justification?: string }) {
+    return this.bilateralApiSE.PATCH_BilateralReviewDecision(resultId, body);
   }
 }
