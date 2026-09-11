@@ -621,9 +621,9 @@ describe('FieldsManagerService', () => {
         expect(fields['[innovation-dev-info]-short_title'].useColon).toBe(true);
       });
 
-      it('should use P22 description for short_title', () => {
+      it('should use P22 tooltip for short_title', () => {
         const fields = service.fields();
-        expect(fields['[innovation-dev-info]-short_title'].description).toContain(
+        expect(fields['[innovation-dev-info]-short_title'].tooltip).toContain(
           'You do not need to specify the number of new or improved lines/varieties'
         );
       });
@@ -759,25 +759,25 @@ describe('FieldsManagerService', () => {
       expect(fields['[innovation-dev-info]-short_title'].hide).toBe(true);
     });
 
-    it('should use P22 description for short_title even when innovation', () => {
+    it('should use P22 tooltip for short_title even when innovation', () => {
       const fields = service.fields();
-      expect(fields['[innovation-dev-info]-short_title'].description).toContain(
+      expect(fields['[innovation-dev-info]-short_title'].tooltip).toContain(
         'You do not need to specify the number of new or improved lines/varieties'
       );
     });
   });
 
-  describe('P25 with non-innovation and short_title description branch', () => {
+  describe('P25 with non-innovation and short_title tooltip branch', () => {
     beforeEach(() => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25', result_type_id: 3 } as CurrentResult);
     });
 
-    it('should use P25 description for short_title (not P22 branch)', () => {
+    it('should use P25 tooltip for short_title (not P22 branch)', () => {
       const fields = service.fields();
-      expect(fields['[innovation-dev-info]-short_title'].description).toContain(
+      expect(fields['[innovation-dev-info]-short_title'].tooltip).toContain(
         'Try to develop a short name that facilitates clear communication'
       );
-      expect(fields['[innovation-dev-info]-short_title'].description).not.toContain(
+      expect(fields['[innovation-dev-info]-short_title'].tooltip).not.toContain(
         'You do not need to specify the number of new or improved lines/varieties'
       );
     });

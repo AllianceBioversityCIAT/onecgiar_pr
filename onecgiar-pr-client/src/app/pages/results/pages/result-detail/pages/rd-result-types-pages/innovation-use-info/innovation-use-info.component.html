@@ -1,4 +1,46 @@
 <div class="detail_container" [appSectionSkeleton]="sectionLoading()">
+  <!--
+    P2-3424 — the link to a QA'd Innovation Development result. OPTIONAL by PO decision (10 Sep 2026):
+    "Este campo no debería ser un MDS."
+    🛑 `[required]="false"` on BOTH controls is what makes that true, and it is not decoration: both
+    `app-pr-radio-button` and `app-pr-select` default `required` to TRUE and render
+    `<div class="pr-field" [ngClass]="{ mandatory: required, … }">`, which is exactly what
+    `DataControlService.someMandatoryFieldIncompleteResultDetail('.section_container')` scans to build
+    the "N fields missing" list. And no `appFeedbackValidation` marker here on purpose — that directive
+    is the other emitter of a scannable `.pr-field.mandatory`.
+    🛑 No `fieldRef` either: `pr-radio-button` lets `FieldsManagerService` overwrite `required` when a
+    `fieldRef` is present, so a field-manager entry would silently take this decision back.
+  -->
+  @if (showsInnovationLink()) {
+    <app-pr-radio-button
+      data-testid="iu-field-has_innovation_link"
+      [label]="innovationLinkQuestion"
+      [required]="false"
+      [options]="[
+        { value: true, label: 'Yes' },
+        { value: false, label: 'No' }
+      ]"
+      optionLabel="label"
+      [(ngModel)]="innovationUseInfoBody.has_innovation_link"
+      (ngModelChange)="onInnovationLinkChange()"
+      optionValue="value">
+    </app-pr-radio-button>
+
+    @if (innovationUseInfoBody.has_innovation_link) {
+      <app-pr-select
+        data-testid="iu-field-linked_results"
+        [options]="qaInnovationOptions"
+        [(ngModel)]="linkedInnovationId"
+        optionLabel="display"
+        optionValue="id"
+        label="Please select an Innovation Development result"
+        placeholder="Search by Innovation ID or title"
+        [showClear]="true"
+        [required]="false">
+      </app-pr-select>
+    }
+  }
+
   <app-innovation-use-form [body]="innovationUseInfoBody" [saving]="this.savingSection"></app-innovation-use-form>
 </div>
 

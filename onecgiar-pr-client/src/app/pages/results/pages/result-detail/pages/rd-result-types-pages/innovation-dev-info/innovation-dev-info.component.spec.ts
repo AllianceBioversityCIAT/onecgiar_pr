@@ -30,6 +30,7 @@ import { AddButtonComponent } from '../../../../../../../custom-fields/add-butto
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
 import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-utils.service';
 import { MegatrendsComponent } from './components/megatrends/megatrends.component';
+import { AssumptionsExaminationComponent } from './components/assumptions-examination/assumptions-examination.component';
 import { PrCheckboxComponent } from '../../../../../../../custom-fields/pr-checkbox/pr-checkbox.component';
 import { TermPipe } from '../../../../../../../internationalization/term.pipe';
 import { signal } from '@angular/core';
@@ -400,6 +401,12 @@ describe('InnovationDevInfoComponent', () => {
         DetailSectionTitleComponent,
         AddButtonComponent,
         MegatrendsComponent,
+        // P2-3642: declared so the real block renders. It is the only way to reach the hidden
+        // `appFeedbackValidation` marker it emits — the node the mandatory-field scan of
+        // `result-detail` reads — which is what AC3 ("form validation no longer requires this
+        // field") is actually about. An undeclared element would appear in the DOM but render
+        // nothing inside it.
+        AssumptionsExaminationComponent,
         // `anticipated-innovation-user` binds ngModel to it, so rendering the pre-2026 form without
         // it throws NG01203 before any assertion runs.
         PrCheckboxComponent
@@ -652,7 +659,7 @@ describe('InnovationDevInfoComponent', () => {
   describe('alertInfoText()', () => {
     it('should generate the correct alert info text', () => {
       const expectedText =
-        'Innovations are new, improved, or adapted technologies or products, capacity development tools and services, and policies or institutional arrangements with high potential to contribute to positive impacts when used at scale. Innovations may be at early stages of readiness (ideation or basic research) or at more mature stages of readiness (delivery and scaling)<br><br>The specific number of new or improved lines/ varieties can be specified under Innovation Typology.';
+        'Innovations are new, improved, or adapted technologies or products, capacity development tools and services, and policies or institutional arrangements with high potential to contribute to positive impacts when used at scale. Innovations may be at early stages of readiness (ideation and upstream research) or at more mature stages of readiness (delivery and scaling)<br><br>The specific number of new or improved lines/ varieties can be specified elsewhere.';
 
       const actualText = component.alertInfoText();
 
@@ -1090,6 +1097,72 @@ describe('InnovationDevInfoComponent', () => {
   });
 
   /**
+   * P2-3642, same epic and the same rule reaching the last block that was still on `isP25()` alone:
+   * question 136, "How have the end users/stakeholders been involved in defining assumptions and
+   * purposes of the innovations to ensure legitimacy and institutional fit?", together with the
+   * "Why?" box under it. The PO answered "Option A. Apply 2026 onward" in the ticket on 10 Sep 2026,
+   * so it rides the P2-3263 threshold like every other removal of this epic.
+   *
+   * 🛑 The gate had to be JOINED, not swapped: `isP25()` answers "which portfolio", and the P25
+   * portfolio contains the 2025 phase too. Dropping `isP25()` would resurrect the question on P22,
+   * and replacing it with the year gate alone would strip it from the 2025 phase — the exact defect
+   * P2-3641 had to fix.
+   */
+  describe('P2-3642 — the assumptions/legitimacy question and its "Why?" box', () => {
+    const render = (isP25: boolean, reduced: boolean) => {
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(isP25 as any);
+      jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(reduced as any);
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    };
+
+    /**
+     * The hidden node `appFeedbackValidation` builds — a `.pr_label` carrying the question text and
+     * a sibling `.pr-field.mandatory` — is what `DataControlService.someMandatoryFieldIncompleteResultDetail`
+     * scans to count "N fields missing". Asserting on it, and not only on the component element, is
+     * what covers AC3: form validation no longer requires this field.
+     */
+    const mandatoryMarker = (el: HTMLElement) =>
+      Array.from(el.querySelectorAll('div.pr_label')).find(node =>
+        (node.textContent ?? '').includes('end users/stakeholders been involved in defining assumptions')
+      ) ?? null;
+
+    it('renders on a 2025-phase P25 result, and still counts as a mandatory field there', () => {
+      const el = render(true, false);
+      expect(el.querySelector('app-assumptions-examination')).toBeTruthy();
+      const marker = mandatoryMarker(el);
+      expect(marker).toBeTruthy();
+      expect(marker?.parentElement?.querySelector('.pr-field.mandatory')).toBeTruthy();
+    });
+
+    it('does not render from the 2026 phase on, and stops being scanned as mandatory', () => {
+      const el = render(true, true);
+      expect(el.querySelector('app-assumptions-examination')).toBeNull();
+      expect(mandatoryMarker(el)).toBeNull();
+    });
+
+    // Unchanged behaviour, kept as a guard: the question never belonged to P22, so the joined
+    // condition must not resurrect it there. One render per test — re-rendering the same fixture
+    // with different gate values trips NG0100.
+    it('does not render outside P25 on a pre-2026 phase', () => {
+      expect(render(false, false).querySelector('app-assumptions-examination')).toBeNull();
+    });
+
+    it('does not render outside P25 from 2026 on either', () => {
+      expect(render(false, true).querySelector('app-assumptions-examination')).toBeNull();
+    });
+
+    // The negative control for the gate's scope: q1/q2 share the same "Responsible innovation and
+    // scaling" heading, and hiding the heading with the question would have gone unnoticed here
+    // without this.
+    it('keeps the rest of the "Responsible innovation and scaling" group in the 2026 form', () => {
+      const el = render(true, true);
+      expect(el.textContent).toMatch(/Responsible innovation and scaling/i);
+      expect(el.querySelector('app-stage-assessment, app-gesi-innovation-assessment')).toBeTruthy();
+    });
+  });
+
+  /**
    * P2-3272 / P2-3513, same epic P2-3243. From the 2026 phase the four Intellectual Property
    * questions are replaced by one consolidated question. Earlier phases must keep the four with
    * their stored answers — the epic's governing rule — so the two blocks are mutually exclusive
@@ -1136,6 +1209,8 @@ describe('InnovationDevInfoComponent', () => {
       expect(el.querySelector('app-scale-impact-analysis')).toBeTruthy();
       expect(el.querySelector('app-partners-policies-safeguards')).toBeTruthy();
       expect(el.querySelector('app-stage-assessment')).toBeNull();
+      // P2-3642: q3 belongs to the pre-2026 branch from now on — see the 2026 case below.
+      expect(el.querySelector('app-assumptions-examination')).toBeTruthy();
     });
 
     it('swaps in the two stage questions from the 2026 phase on', () => {
@@ -1144,8 +1219,12 @@ describe('InnovationDevInfoComponent', () => {
       expect(el.querySelector('app-scale-impact-analysis')).toBeNull();
       expect(el.querySelector('app-partners-policies-safeguards')).toBeNull();
       expect(el.querySelectorAll('app-stage-assessment')).toHaveLength(2);
-      // assumptions-examination no se toca: sigue siendo q3 en ambas fases
-      expect(el.querySelector('app-assumptions-examination')).toBeTruthy();
+      // P2-3642 superseded the original assertion here. This test used to pin
+      // "assumptions-examination no se toca: sigue siendo q3 en ambas fases", which was true of
+      // P2-3467 and is no longer true of the form: question 136 leaves the 2026 phase too. It stays
+      // as an assertion rather than being deleted so the pairing is explicit — q3 renders on the
+      // pre-2026 branch above and not on this one.
+      expect(el.querySelector('app-assumptions-examination')).toBeNull();
     });
   });
   /**
@@ -1587,6 +1666,95 @@ describe('InnovationDevInfoComponent', () => {
         expect(payload['innovation_nature_id']).toBe(1);
         expect(payload).toHaveProperty('innovatonUse');
       });
+    });
+  });
+
+  /**
+   * P2-3642 AC2 — "Removal does not affect existing saved data from prior reporting cycles".
+   *
+   * The question is a questionnaire slot, and the client echoes the GET response back on save, so
+   * the danger is the mirror image of P2-3550: not a key sent empty, but a key sent at all. The
+   * server iterates the `qN` keys PRESENT in the payload and leaves an absent slot completely
+   * alone, while `saveOptionsAndSubOptions` — reached for a slot that IS present — forces
+   * `answer_boolean = false` on every non-selected option and writes `answer_text` as it finds it.
+   * From 2026 the slot is therefore omitted, so question 136 is never written again.
+   */
+  describe('P2-3642 — the 2026 save does not carry question 136', () => {
+    const q3WithStoredAnswer = () => ({
+      radioButtonValue: '136-b',
+      options: [
+        { result_question_id: '136-a', answer_boolean: null, answer_text: null, question_text: 'No actions taken yet' },
+        {
+          result_question_id: '136-b',
+          answer_boolean: true,
+          answer_text: 'The farmer associations co-defined the assumptions in the 2025 workshop.',
+          question_text: 'Yes, the following actions have been taken:'
+        }
+      ]
+    });
+
+    beforeEach(() => {
+      jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      (component as any).innovationDevInfoBody = { innovation_nature_id: 1, innovatonUse: { organization: [] } };
+      (component as any).evidencesBody = { evidences: [] };
+      (component as any).innovationDevelopmentQuestions = {
+        responsible_innovation_and_scaling: {
+          q1: { radioButtonValue: '201', options: [{ result_question_id: '201', answer_boolean: true }] },
+          q2: { radioButtonValue: '301', options: [{ result_question_id: '301', answer_boolean: true }] },
+          q3: q3WithStoredAnswer()
+        },
+        megatrends: { radioButtonValue: '140', options: [] }
+      };
+      jest.spyOn(component as any, 'getSectionInformationp25').mockImplementation(() => undefined);
+      jest.spyOn(component as any, 'uploadPendingFiles').mockResolvedValue([]);
+    });
+
+    const capture = async (reduced: boolean): Promise<Record<string, any>> => {
+      jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(reduced as any);
+      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDevP25').mockReturnValue(of({}));
+      await component.onSaveSection();
+      expect(spy).toHaveBeenCalledTimes(1);
+      return spy.mock.calls[0][0];
+    };
+
+    /**
+     * `in`, not `toBeUndefined()`: a key present with `undefined` also disappears from the JSON
+     * body, but it is not what the server's "absent means do not call" guard reads in the tests
+     * that document it. This is the assertion that turns red if the omission is reverted.
+     */
+    it('OMITS the q3 slot from the 2026 payload', async () => {
+      const payload = await capture(true);
+      expect('q3' in payload['responsible_innovation_and_scaling']).toBe(false);
+    });
+
+    // Negative control. Without it, dropping the whole `responsible_innovation_and_scaling` group —
+    // which would stop saving the two stage questions — would pass the test above.
+    it('still carries the two stage questions of the same group, with their answers', async () => {
+      const payload = await capture(true);
+      const group = payload['responsible_innovation_and_scaling'];
+      expect(group['q1'].radioButtonValue).toBe('201');
+      expect(group['q2'].radioButtonValue).toBe('301');
+      expect(payload['megatrends'].radioButtonValue).toBe('140');
+    });
+
+    // The other negative control: the omission must not reach the phase that still shows the
+    // question, or a 2025 user could no longer edit their answer.
+    it('still sends q3, answer and "Why?" text included, on a pre-2026 phase', async () => {
+      const payload = await capture(false);
+      const q3 = payload['responsible_innovation_and_scaling']['q3'];
+      expect(q3.radioButtonValue).toBe('136-b');
+      expect(q3.options[1].answer_text).toBe('The farmer associations co-defined the assumptions in the 2025 workshop.');
+    });
+
+    // The stored answer has to survive the save in memory too: `buildSectionPayload` must build a
+    // new group object, never `delete` the key off the questionnaire the component holds — the 2025
+    // path and any later re-save read the same object.
+    it('does not mutate the questionnaire the component holds', async () => {
+      await capture(true);
+      const held = (component as any).innovationDevelopmentQuestions.responsible_innovation_and_scaling;
+      expect(held.q3.radioButtonValue).toBe('136-b');
+      expect(held.q3.options[1].answer_text).toBe('The farmer associations co-defined the assumptions in the 2025 workshop.');
     });
   });
 });

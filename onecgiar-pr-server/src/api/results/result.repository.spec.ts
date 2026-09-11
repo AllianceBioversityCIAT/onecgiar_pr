@@ -522,6 +522,59 @@ describe('ResultRepository — getResultById binds the id (P2-3498)', () => {
     queryMock.mockResolvedValueOnce([]);
     await expect(repo.getResultById(9)).resolves.toBeUndefined();
   });
+
+  /**
+   * P2-3458 — the metadata popover beside the result code asked for a `Center` and a `Created by`
+   * line; this payload carried neither, so both rows sat on a `Coming soon` tag. The PO ruled the
+   * tag out, so the two values have to arrive from here: a creator *name* (the numeric
+   * `created_by` this query already returned is unusable on screen) and the lead center.
+   *
+   * The SQL comments are stripped before asserting on purpose: otherwise these expectations could
+   * be satisfied by the prose that documents them instead of by the statement itself.
+   */
+  describe('P2-3458 — created_by_name and lead_center', () => {
+    /** The statement without its `/* … *\/` comment blocks. */
+    const sqlWithoutComments = () =>
+      String(queryMock.mock.calls[0][0]).replace(/\/\*[\s\S]*?\*\//g, '');
+
+    it('resolves the creator display name from the users table', async () => {
+      await repo.getResultById(1234);
+      const sql = sqlWithoutComments();
+
+      expect(sql).toContain('AS created_by_name');
+      expect(sql).toMatch(
+        /CONCAT\(COALESCE\(u\.first_name, ''\), ' ', COALESCE\(u\.last_name, ''\)\)/,
+      );
+      expect(sql).toMatch(/FROM\s+users u\s+WHERE\s+u\.id = r\.created_by/);
+    });
+
+    it('resolves the lead center through clarisa_center, with the definition the rest of the server uses', async () => {
+      await repo.getResultById(1234);
+      const sql = sqlWithoutComments();
+
+      expect(sql).toContain('AS lead_center');
+      // The name lives in clarisa_institutions, two hops away from results_center.
+      expect(sql).toContain(
+        'INNER JOIN clarisa_center cc ON cc.code = rc.center_id',
+      );
+      expect(sql).toContain(
+        'INNER JOIN clarisa_institutions ci2 ON ci2.id = cc.institutionId',
+      );
+      // Same lead definition as the `lead_centers` CTE of getResultsByProgramAndCenters.
+      expect(sql).toContain('rc.is_leading_result = 1 OR rc.is_primary = 1');
+      expect(sql).toContain('rc.is_active = 1');
+    });
+
+    it('keeps the center a scalar subquery, so several contributing centers cannot multiply the row', async () => {
+      await repo.getResultById(1234);
+      const sql = sqlWithoutComments();
+
+      // A `join results_center` in the FROM block would return one row per center.
+      expect(sql).toMatch(/AS lead_center\s*\nFROM/);
+      expect(sql).toContain('LIMIT 1');
+      expect(sql.slice(sql.indexOf('\nFROM'))).not.toContain('results_center');
+    });
+  });
 });
 
 /**

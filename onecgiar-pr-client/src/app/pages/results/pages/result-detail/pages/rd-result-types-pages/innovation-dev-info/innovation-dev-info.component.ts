@@ -242,7 +242,42 @@ export class InnovationDevInfoComponent {
    */
   private buildSectionPayload(): Record<string, any> {
     const { reference_materials, ...rest } = { ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions } as Record<string, any>;
-    return this.fieldsManagerSE.isInnovationReferenceMaterialsRemoved2026() ? rest : { ...rest, reference_materials };
+    const payload = this.fieldsManagerSE.isInnovationReferenceMaterialsRemoved2026() ? rest : { ...rest, reference_materials };
+    return this.fieldsManagerSE.isInnovationDevFormReduced2026() ? this.withoutRetiredAssumptionsQuestion(payload) : payload;
+  }
+
+  /**
+   * P2-3642 AC2 — "Removal does not affect existing saved data from prior reporting cycles".
+   *
+   * Question 136 is not a field of the summary: it is a questionnaire slot, and the client echoes
+   * the whole GET response back on save. Measured, key by key, what a 2026 save carries once the
+   * block stops rendering: `innovationDevelopmentQuestions` IS the GET payload, `q3` is still served
+   * for 2026 (`resolveScalingSlotsForPhase` pins `['q3', 136]` for the reduced form,
+   * `onecgiar-pr-server/.../result-questions.service.ts:529-533`), and nothing mutates it while the
+   * component is unrendered — `handleSelectionChange()` is the only writer and it lives inside
+   * `assumptions-examination`. So the key travelled back with its stored answer intact: no data was
+   * being lost today.
+   *
+   * It was still a WRITE to a question the form no longer shows, and one that only stayed harmless
+   * because the GET keeps repopulating it — the same load-bearing coincidence P2-3641 documented.
+   * The server gives a stronger guarantee for free: `_saveNestedQuestionGroup` iterates the `qN`
+   * keys PRESENT in the payload and leaves an absent slot completely alone
+   * (`.../innovation_dev/innovation_dev.service.ts:_presentQuestionSlots` / `_saveSingleQuestion`),
+   * which is exactly the contract q4 has relied on since P2-3467. So from 2026 `q3` is **omitted**,
+   * never sent empty: `saveOptionsAndSubOptions` — which would force `answer_boolean = false` on
+   * every non-selected option and null the `answer_text` of a "Why?" it was handed empty — is never
+   * called for 136 again.
+   *
+   * Destructuring, not `delete`: the key must be ABSENT from the JSON, not present as `undefined`.
+   * A new group object is built so `innovationDevelopmentQuestions` itself is never mutated — the
+   * 2025 path and a re-save after the GET must keep seeing q3.
+   */
+  private withoutRetiredAssumptionsQuestion(payload: Record<string, any>): Record<string, any> {
+    const group = payload['responsible_innovation_and_scaling'];
+    if (!group) return payload;
+
+    const { q3, ...groupWithoutQ3 } = group as Record<string, any>;
+    return { ...payload, responsible_innovation_and_scaling: groupWithoutQ3 };
   }
 
   async onSaveSection() {

@@ -103,7 +103,21 @@
       <app-scale-impact-analysis [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-scale-impact-analysis>
     }
     @if (this.fieldsManagerSE.isP25()) {
-      <app-assumptions-examination [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-assumptions-examination>
+      <!-- P2-3642: question 136 — "How have the end users/stakeholders been involved in defining
+           assumptions and purposes of the innovations…?" — and its "Why?" box leave the 2026 form.
+           Ángel answered Option A in the ticket on 10 Sep 2026 ("Apply 2026 onward"), so it rides the
+           same P2-3263 threshold as every other removal of this epic.
+           🛑 `isP25()` alone was the gate here and it is the WRONG question: it answers "which
+           portfolio", and the P25 portfolio holds the 2025 phase too — so it would have kept the
+           question in 2026, or stripped it from 2025 if it had been swapped instead of joined. Both
+           conditions stay: the block never existed before P25, and from 2026 on it is gone.
+           Nothing is deleted — a 2025-phase result still renders the question with the answer and the
+           "Why?" text already given, and the 2026 save no longer carries q3 at all (buildSectionPayload). -->
+      @if (!this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
+        <app-assumptions-examination [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-assumptions-examination>
+      }
+      <!-- P2-3467: q4 ("partners, policies and financial mechanisms") was retired with no
+           replacement. Kept as its own gate so the two blocks can diverge again. -->
       @if (!this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
         <app-partners-policies-safeguards [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-partners-policies-safeguards>
       }

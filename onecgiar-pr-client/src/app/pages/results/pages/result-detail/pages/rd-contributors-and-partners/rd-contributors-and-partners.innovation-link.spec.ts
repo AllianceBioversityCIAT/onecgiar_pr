@@ -11,48 +11,45 @@ import { RdContributorsAndPartnersService } from './rd-contributors-and-partners
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { InnovationUseResultsService } from '../../../../../../shared/services/global/innovation-use-results.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
-import { QaInnovationDevelopmentResultsService } from '../../../../../../shared/services/global/qa-innovation-development-results.service';
 
 /**
- * P2-3420 / P2-3421 — the link to a QA'd Innovation Development result, as it lives in the FULL
- * editing form (Contributors and partners), where the story asks for it to be visible and editable
- * after the result has been saved.
+ * P2-3424 — the link to a QA'd Innovation Development result LEFT this section.
  *
- * The four things that can silently go wrong, one test each:
+ * PO decision (Ángel Jarrín, 10 Sep 2026): the question is shown in the Innovation Use section and is
+ * not an MDS field. This suite is the half of that move that lives here, and it guards the two things
+ * that can silently go wrong on this side:
+ *
  * 1. The gate. Innovation use + phase 2026 onwards, and NEVER a portfolio check: prtest keeps
- *    2025-phase results inside P25, and those must keep the legacy multi-select.
- * 2. Single selection over an array payload — `linked_results` stays an array on the wire.
- * 3. A stored link whose innovation is no longer listed must NOT vanish from the select (saving the
- *    section would wipe it).
- * 4. Answering "No" clears the link, and only for this surface.
+ *    2025-phase results inside P25, and those must keep asking the question HERE.
+ * 2. The save contract. This section no longer asks the question, so it must no longer answer it —
+ *    with the keys still in the payload, a "Yes" set in the Innovation Use section would come back as
+ *    "No" on the next save from here and take the stored `linked_result` rows with it.
+ *
+ * The single-editing-surface invariant itself (the question renders in exactly one result-detail
+ * template) is asserted statically in
+ * `../rd-result-types-pages/innovation-use-info/innovation-link-editing-surface.spec.ts`.
  */
-describe('RdContributorsAndPartnersComponent — link to a QA’d Innovation Development result (P2-3420 / P2-3421)', () => {
+describe('RdContributorsAndPartnersComponent — the QA’d Innovation Development link left this section (P2-3424)', () => {
   let fixture: ComponentFixture<RdContributorsAndPartnersComponent>;
   let component: RdContributorsAndPartnersComponent;
   let currentResultSignal: any;
-  let qaInnovationsSE: any;
   let partnersBody: any;
-
-  const qaOption = (id: number, result_code: number, title: string) => ({
-    id,
-    result_code,
-    title,
-    status_id: 2,
-    phase_year: 2026,
-    acronym: 'P25',
-    display: `${result_code} - ${title}`
-  });
+  let patchSpy: jest.Mock;
 
   beforeEach(async () => {
     currentResultSignal = signal<any>({ result_type_id: 2, phase_year: 2026, portfolio: 'P25' });
-    partnersBody = { has_innovation_link: false, linked_results: [] };
-    qaInnovationsSE = {
-      options: signal([qaOption(9053, 6772, 'Test Geo1'), qaOption(8779, 6508, 'In QA')]),
-      loading: signal(false),
-      loaded: signal(false),
-      isEmpty: signal(false),
-      load: jest.fn()
+    partnersBody = {
+      has_innovation_link: false,
+      linked_results: [],
+      // `onSaveSection` reads these unconditionally.
+      institutions: [],
+      mqap_institutions: [],
+      contributing_center: [],
+      contributing_initiatives: { pending_contributing_initiatives: [], accepted_contributing_initiatives: [] },
+      no_applicable_partner: false,
+      is_lead_by_partner: false
     };
+    patchSpy = jest.fn().mockReturnValue(of({ response: {} }));
 
     await TestBed.configureTestingModule({
       declarations: [RdContributorsAndPartnersComponent],
@@ -71,7 +68,8 @@ describe('RdContributorsAndPartnersComponent — link to a QA’d Innovation Dev
             resultsSE: {
               // `ngOnInit` -> `GET_AllWithoutResults()` reads the result before listing initiatives.
               GET_resultById: jest.fn().mockReturnValue(of({ response: { portfolio: 'P25', result_type_id: 2, phase_year: 2026 } })),
-              GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] }))
+              GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] })),
+              PATCH_ContributorsPartners: patchSpy
             }
           }
         },
@@ -93,6 +91,10 @@ describe('RdContributorsAndPartnersComponent — link to a QA’d Innovation Dev
             leadCenterCode: null,
             updatingLeadData: false,
             otherCentersSelected: [],
+            otherPartnersSelected: [],
+            scienceSelected: [],
+            otherScienceSelected: [],
+            loadedAcceptedScienceIds: new Set<number>(),
             tocReferenceCenterInstitutionIds: signal<number[]>([]),
             tocReferenceSynergyInitiativeIds: signal<number[]>([]),
             loadedPendingScience: [],
@@ -105,7 +107,6 @@ describe('RdContributorsAndPartnersComponent — link to a QA’d Innovation Dev
         { provide: ResultLevelService, useValue: {} },
         { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
         { provide: FieldsManagerService, useValue: { isP25: () => true, isContributorsPartners2026: () => true, fields: signal({}) } },
-        { provide: QaInnovationDevelopmentResultsService, useValue: qaInnovationsSE },
         { provide: ChangeDetectorRef, useValue: { detectChanges: jest.fn() } }
       ]
     }).compileComponents();
@@ -115,7 +116,7 @@ describe('RdContributorsAndPartnersComponent — link to a QA’d Innovation Dev
   });
 
   describe('the gate', () => {
-    it('is on for an Innovation use result in the 2026 phase', () => {
+    it('is on for an Innovation use result in the 2026 phase — the question is asked elsewhere', () => {
       expect(component.showsQaInnovationLink()).toBe(true);
     });
 
@@ -133,100 +134,55 @@ describe('RdContributorsAndPartnersComponent — link to a QA’d Innovation Dev
       currentResultSignal.set({ result_type_id: 2, portfolio: 'P25' });
       expect(component.showsQaInnovationLink()).toBe(false);
     });
-
-    // The effect's body is asserted directly (`ensureQaInnovationCatalogue`): rendering this section
-    // just to flush one effect would drag in the whole ToC/centres mock tree for nothing.
-    it('fetches the catalogue only for the surface that uses it', () => {
-      currentResultSignal.set({ result_type_id: 7, phase_year: 2026, portfolio: 'P25' });
-      component.ensureQaInnovationCatalogue();
-      expect(qaInnovationsSE.load).not.toHaveBeenCalled();
-
-      currentResultSignal.set({ result_type_id: 2, phase_year: 2026, portfolio: 'P25' });
-      component.ensureQaInnovationCatalogue();
-      expect(qaInnovationsSE.load).toHaveBeenCalledTimes(1);
-    });
   });
 
-  describe('single selection over the array payload', () => {
-    it('reads the stored id, whether it arrives as a number or as an object', () => {
-      partnersBody.linked_results = [9053];
-      expect(component.linkedInnovationId).toBe(9053);
+  describe('the save contract', () => {
+    const savedPayload = () => patchSpy.mock.calls[0][0];
 
-      partnersBody.linked_results = [{ id: 8779 }];
-      expect(component.linkedInnovationId).toBe(8779);
-    });
-
-    it('is null when nothing is linked', () => {
+    it('drops has_innovation_link AND linked_results when the question lives in the Innovation Use section', () => {
+      partnersBody.has_innovation_link = false;
       partnersBody.linked_results = [];
-      expect(component.linkedInnovationId).toBeNull();
+
+      component.onSaveSection();
+
+      expect(patchSpy).toHaveBeenCalledTimes(1);
+      expect('has_innovation_link' in savedPayload()).toBe(false);
+      expect('linked_results' in savedPayload()).toBe(false);
     });
 
-    it('writes one id back into the array the API expects', () => {
-      component.linkedInnovationId = 9053;
-      expect(partnersBody.linked_results).toEqual([9053]);
-    });
-
-    it('replaces the previous selection instead of adding to it (single-select)', () => {
-      partnersBody.linked_results = [9053];
-      component.linkedInnovationId = 8779;
-      expect(partnersBody.linked_results).toEqual([8779]);
-    });
-
-    it('clears the array when the selection is removed', () => {
-      partnersBody.linked_results = [9053];
-      component.linkedInnovationId = null;
-      expect(partnersBody.linked_results).toEqual([]);
-    });
-  });
-
-  describe('the options offered', () => {
-    it('offers the QA’d catalogue as it comes, with "[Result ID] - [Result Title]" labels', () => {
-      expect(component.qaInnovationOptions.map(option => option.display)).toEqual(['6772 - Test Geo1', '6508 - In QA']);
-    });
-
-    it('keeps a stored link that is no longer listed, so saving the section cannot wipe it', () => {
-      partnersBody.linked_results = [7777];
-      (TestBed.inject(InnovationUseResultsService) as any).resultsList = [
-        { name: 'Innovation development', options: [{ id: 7777, result_code: 5555, title: 'Discontinued innovation' }] }
-      ];
-
-      const [first, ...rest] = component.qaInnovationOptions;
-      expect(first).toEqual(expect.objectContaining({ id: 7777, display: '5555 - Discontinued innovation' }));
-      expect(rest).toHaveLength(2);
-    });
-
-    it('still keeps it when not even the wider catalogue knows its title', () => {
-      partnersBody.linked_results = [7777];
-      expect(component.qaInnovationOptions[0].display).toBe('7777 - (linked result outside the QA’d list)');
-    });
-
-    it('does not duplicate a stored link that IS listed', () => {
-      partnersBody.linked_results = [9053];
-      expect(component.qaInnovationOptions).toHaveLength(2);
-    });
-  });
-
-  describe('answering "No"', () => {
-    it('clears the linked result', () => {
-      partnersBody.linked_results = [9053];
+    it('drops them even when the body still holds a stale answer read from this section’s GET', () => {
+      // This is the wipe the omission prevents: the GET prefers `result.has_innovation_link`, which the
+      // Innovation Use section never writes, so a "Yes" stored there arrives here as "No".
       partnersBody.has_innovation_link = false;
-      component.onQaInnovationLinkChange();
-      expect(partnersBody.linked_results).toEqual([]);
+      partnersBody.linked_results = [];
+      currentResultSignal.set({ result_type_id: 2, phase_year: 2026, portfolio: 'P25' });
+
+      component.onSaveSection();
+
+      expect('has_innovation_link' in savedPayload()).toBe(false);
+      expect('linked_results' in savedPayload()).toBe(false);
     });
 
-    it('leaves the selection alone when the answer is "Yes"', () => {
-      partnersBody.linked_results = [9053];
+    it('still SENDS both keys for a 2025-phase Innovation use result — the question is still asked here', () => {
+      currentResultSignal.set({ result_type_id: 2, phase_year: 2025, portfolio: 'P25' });
       partnersBody.has_innovation_link = true;
-      component.onQaInnovationLinkChange();
-      expect(partnersBody.linked_results).toEqual([9053]);
+      partnersBody.linked_results = [{ id: '9053' }];
+
+      component.onSaveSection();
+
+      expect(savedPayload().has_innovation_link).toBe(true);
+      expect(savedPayload().linked_results).toEqual([9053]);
     });
 
-    it('does not touch the other surfaces: Innovation development keeps its multi-selection', () => {
+    it('still sends both keys for Innovation development, which keeps its multi-select here', () => {
       currentResultSignal.set({ result_type_id: 7, phase_year: 2026, portfolio: 'P25' });
+      partnersBody.has_innovation_link = true;
       partnersBody.linked_results = [9053, 8779];
-      partnersBody.has_innovation_link = false;
-      component.onQaInnovationLinkChange();
-      expect(partnersBody.linked_results).toEqual([9053, 8779]);
+
+      component.onSaveSection();
+
+      expect(savedPayload().has_innovation_link).toBe(true);
+      expect(savedPayload().linked_results).toEqual([9053, 8779]);
     });
   });
 });

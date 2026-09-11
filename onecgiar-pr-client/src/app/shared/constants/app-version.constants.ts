@@ -11,7 +11,14 @@
  *
  * - **MAJOR** — a change that breaks how something already worked, or a release the business treats
  *   as a new stage of the product. Resets MINOR and PATCH to 0.
- * - **MINOR** — new functionality that does not break what already worked. Resets PATCH to 0.
+ * - **MINOR** — a visible change to what the form or the screen does, that does not break what
+ *   already worked. Resets PATCH to 0.
+ *
+ *   Reads as "new functionality" but is wider than that on purpose: RETIRING a field counts too.
+ *   P2-3642 was the case that exposed the gap — a question removed from the Innovation Development
+ *   form for the 2026 phase only. Nothing new was added and nothing broke (2025 keeps its form
+ *   untouched, and no data was dropped), yet QA has to be able to tell the two builds apart on
+ *   screen, which is the whole point of this number. That is MINOR, not PATCH.
  * - **PATCH** — a fix or an internal change with no new functionality.
  *
  * 🛑 The jump from `57` to `1.0.0` is deliberate and is NOT the environment going backwards. Anyone
@@ -27,4 +34,4 @@
  * this checkout at once, and two of them bumping blind leaves QA with a number that does not carry
  * the fix they were asked to verify.
  */
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.2.0';

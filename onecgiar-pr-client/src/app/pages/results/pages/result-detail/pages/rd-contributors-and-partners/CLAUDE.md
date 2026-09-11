@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-09-10 · branch qa-development-2026-ss · changes/info-tooltip-hover-reveal (`externalPartnersInfoNote`'s `app-alert-status`, `html:499`, now has `[collapsible]="false"` — boxed, always-visible, not the collapsible/hover style); prior: 2026-09-08 · quick/lead-contact-clear-button (the read-only "Lead contact person" display, P2-2911 AC2, removed from this section)
+**Verified:** 2026-09-10 · branch performance-refactor · P2-3424 (la pregunta del enlace a una Innovation Development ya evaluada **SALIÓ de esta sección**: decisión del PO de hoy — *"la opción B es la correcta… lo mejor es mostrar la información en la sección de Innovation Use. Este campo no debería ser un MDS"*. Ver § abajo); prior: 2026-09-10 · branch qa-development-2026-ss · changes/info-tooltip-hover-reveal (`externalPartnersInfoNote`'s `app-alert-status`, `html:499`, now has `[collapsible]="false"` — boxed, always-visible, not the collapsible/hover style); prior: 2026-09-08 · quick/lead-contact-clear-button (the read-only "Lead contact person" display, P2-2911 AC2, removed from this section)
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
@@ -459,3 +459,26 @@ Si añades un control obligatorio sin su hook, queda fuera de esa comprobación.
 La zoneless existe porque esta pantalla ya se rompió con el patrón hide/re-show por timer.
 ⚠️ Esta carpeta está **excluida de `collectCoverageFrom`** (`package.json`): los tests corren, pero
 no cuentan para el umbral. No te fíes del porcentaje global para saber si esto está cubierto.
+
+## P2-3424 — la pregunta del enlace a innovación QA'd ya NO vive aquí (2026-09-10)
+
+Decisión del PO en el ticket, hoy: la pregunta *"Are you reporting the use of an innovation that has
+already been reported and quality assessed?"* y su selector **se muestran en la sección Innovation
+Use**, y el campo **NO es MDS** (no bloquea el envío). Implementado en
+`../rd-result-types-pages/innovation-use-info/`.
+
+**Lo que queda en esta sección y NO hay que confundir:** la pregunta **genérica** de P2-3112 / P2-3358
+(*"Is this result linked or bundled with another CGIAR-reported result (such as innovation, KP,
+policy, etc.)?"*), que sigue viva para **el resto de tipologías** bajo `isCP2026()` y sigue siendo
+requerida. Se parecen y **comparten el mismo dato guardado**, pero son dos preguntas distintas.
+
+🛑 **Y por eso esta sección dejó de ESCRIBIR el dato cuando la rama de Innovation Use aplica**
+(`if (this.showsQaInnovationLink()) { delete sendedData.has_innovation_link; delete
+sendedData.linked_results; }`). No es cosmético: `partnersBody.has_innovation_link` se hidrata del
+GET de esta sección, que lee `result.has_innovation_link` **con preferencia** sobre
+`results_innovations_use.has_innovation_link`, y la sección de Innovation Use escribe solo el
+segundo. Un "Yes" puesto allí, seguido de cualquier guardado aquí, llegaría como "No" y se llevaría
+las filas de `linked_result` con él.
+
+⚠️ **El borrado es CONDICIONAL a propósito.** Si se hiciera siempre, los tipos no-innovación de
+P2-3112 / P2-3358 dejarían de guardar su respuesta sin un solo error en pantalla.

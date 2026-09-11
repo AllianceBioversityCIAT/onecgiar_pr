@@ -1,6 +1,6 @@
 # innovation-dev-info
 
-**Verified:** 2026-09-09 · branch performance-refactor · P2-3641 drops the "Evidence of user need/user demand" block from the 2026 form: its gate is no longer `isP25()` alone, and the evidence POST is now omitted instead of sent empty; prior: 2026-09-03 · `innovation-team-diversity/` completeness tracking.
+**Verified:** 2026-09-10 · branch performance-refactor · P2-3642 drops question 136 (end users/stakeholders in defining assumptions, with its "Why?" box) from the 2026 form and omits its `q3` slot from the save; prior: 2026-09-09 · P2-3641 (evidence of user need block + omitted evidence POST).
 
 ## What it is
 The "Innovation Development" section of the result detail. It mixes **two sources** that are easy to
@@ -28,7 +28,7 @@ confuse: fields owned by the summary (`InnovationDevInfoBody`) and a **backend-s
 | `stage-assessment/` | questionnaire (q1 and q2 from 2026) | ✅ `isInnovationDevFormReduced2026()` — P2-3467 |
 | `gesi-innovation-assessment/` | questionnaire (q1 up to 2025) | ✅ `@else` of the same gate — P2-3467 |
 | `scale-impact-analysis/` | questionnaire (q2 up to 2025) | ✅ `@else` of the same gate — P2-3467 |
-| `assumptions-examination/` | questionnaire (q3 in both phases) | ✅ `isP25()` |
+| `assumptions-examination/` | questionnaire (q3, ≤ 2025 only) | ✅ `isP25()` + `!isInnovationDevFormReduced2026()` — P2-3642 |
 | `partners-policies-safeguards/` | questionnaire (q4 up to 2025) | ✅ `isP25()` + `!isInnovationDevFormReduced2026()` — P2-3467 |
 | `intellectual-property-rights/` | questionnaire (q1..q4) | ❌ none |
 | `innovation-team-diversity/` | questionnaire (question 112, 3 levels) | ❌ none |
@@ -44,7 +44,7 @@ fixed slots. `resolveScalingSlotsForPhase` picks the table by phase year:
 | Phase | q1 | q2 | q3 | q4 |
 |---|---|---|---|---|
 | ≤ 2025 | 78 GESI | 79 risk | 136 assumptions | 137 partners |
-| ≥ 2026 | GESI stage | risk stage | 136 assumptions | **key absent** |
+| ≥ 2026 | GESI stage | risk stage | 136 assumptions — **served, but not rendered and stripped from the save** (P2-3642) | **key absent** |
 
 The two new questions are resolved **by text, not by id** (P25 ids came from AUTO_INCREMENT, so they
 differ across environments). The texts live in `innovation-dev-questions.const.ts` on the server and,
@@ -110,6 +110,15 @@ template, and the spec pins that neither ever renders alongside the other.
   call away and every 2026 result loses its evidence on the next save. `onSaveSection` therefore
   returns through `savePhaseP25SectionFields(false)` before the POST. The spec pins both directions
   — skipped in 2026, still called in 2025.
+- 🛑 **P2-3642 — question 136 is still SERVED for 2026 (`resolveScalingSlotsForPhase` pins
+  `['q3', 136]`), so hiding the block leaves the client echoing the slot back on every save.** No
+  data was lost — nothing mutates `q3` while `assumptions-examination` is unrendered — but it kept
+  writing a retired question, and only stayed harmless because the GET repopulates it.
+  `buildSectionPayload()` now **omits** the `q3` key (new group object, never `delete` on the held
+  questionnaire), which lands on the server's "absent slot = do not call" guard
+  (`_presentQuestionSlots` / `_saveSingleQuestion`) — the same contract q4 has used since P2-3467.
+  🛑 The green-check half is **not** here: 136 is a live block of `validation_innovation_dev_P25`,
+  so until **P2-3651** (Juanda) adjusts the function, no 2026 Innovation Dev result turns green.
 - ⚠️ **Orphan data in 2026, unmigrated by design:** `has_scaling_studies` / `scaling_studies_urls`
   are neither cleared nor migrated and still travel in the PATCH — per the PO ("Remove never means
   delete the data"), so the green-check AC depends entirely on the server-side SQL function.
@@ -127,10 +136,8 @@ template, and the spec pins that neither ever renders alongside the other.
   "2026 onwards" the correct gate is a `ReportingDesignYear` threshold over `phase_year` — prtest
   holds **phase-2025 results inside the P25 portfolio**, so a portfolio gate would strip the section
   from them and break the governing rule of epic P2-3243. Two gates with different meanings coexist
-  in this template: `partners-policies-safeguards` and `user-evidence` (P2-3641) carry both, and
-  **`assumptions-examination` is now the only block left on `isP25()` alone** — which is exactly
-  what P2-3642 has to change, and why that ticket cannot be shipped by hiding the block: question
-  136 is a live block of `validation_innovation_dev_P25`, so the green check would never turn.
+  in this template: `partners-policies-safeguards`, `user-evidence` (P2-3641) and
+  `assumptions-examination` (P2-3642) now carry both, and **no block is left on `isP25()` alone**.
 - ⚠️ **The ungated blocks**: hiding one "for 2026" unwrapped also removes it from earlier phases.
 - ⚠️ **Questions ARE versioned by phase even though the HTML is not:** `result_questions.version` is `enum('P22','P25')` (`result-question.entity.ts:62-67`) and the `…V2` service methods filter
   `version: 'P25'`. Adding/removing a 2026 question = **a migration over P25 rows**, never a global

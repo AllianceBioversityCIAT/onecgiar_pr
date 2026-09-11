@@ -21,6 +21,8 @@ import { extractPropertyValues } from '../../../shared/utils/array.util';
 import { ResultImpactAreaScore } from '../../result-impact-area-scores/entities/result-impact-area-score.entity';
 import { ResultImpactAreaScoresService } from '../../result-impact-area-scores/result-impact-area-scores.service';
 import { ImpactAreaNames } from '../../results/impact_areas_scores_components/enum/impact-area-names.enum';
+import { EvidencesRepository } from '../../results/evidences/evidences.repository';
+import { Evidence } from '../../results/evidences/entities/evidence.entity';
 
 @Injectable()
 export class IpsrGeneralInformationService {
@@ -38,6 +40,7 @@ export class IpsrGeneralInformationService {
     private readonly _genderTagRepository: GenderTagRepository,
     private readonly _ipsrService: IpsrService,
     private readonly _resultImpactAreaScoresService: ResultImpactAreaScoresService,
+    private readonly _evidencesRepository: EvidencesRepository,
     @Optional()
     @Inject(AdUserService)
     private readonly _adUserService?: AdUserService,
@@ -203,6 +206,8 @@ export class IpsrGeneralInformationService {
         { userId: user.id },
       );
 
+      await this.saveImpactAreaEvidences(resultId, req, user);
+
       if (req?.is_discontinued) {
         await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
           req.discontinued_options.map(
@@ -261,6 +266,100 @@ export class IpsrGeneralInformationService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * P2-3210 — the five Impact Area tags and the `evidence` column each one is flagged with.
+   *
+   * `youth_related` carries the CLIMATE evidence. The column name is inherited from the old form
+   * and does not match the label; `ipsr.repository.ts` reads it back exactly the same way
+   * (`evidence_climate_tag` ← `youth_related`) and so does the P22 endpoint. Do not "fix" the
+   * pairing — it would orphan every climate evidence already reported.
+   */
+  private static readonly IMPACT_AREA_EVIDENCE_FIELDS: {
+    payloadKey: keyof UpdateIpsrGeneralInformationDto;
+    relatedColumn: keyof Evidence;
+  }[] = [
+    { payloadKey: 'evidence_gender_tag', relatedColumn: 'gender_related' },
+    { payloadKey: 'evidence_climate_tag', relatedColumn: 'youth_related' },
+    {
+      payloadKey: 'evidence_nutrition_tag',
+      relatedColumn: 'nutrition_related',
+    },
+    {
+      payloadKey: 'evidence_environment_tag',
+      relatedColumn: 'environmental_biodiversity_related',
+    },
+    { payloadKey: 'evidence_poverty_tag', relatedColumn: 'poverty_related' },
+  ];
+
+  /**
+   * P2-3210 — writes the Impact Area evidence of an innovation package.
+   *
+   * This endpoint never did. The P22 twin
+   * (`ResultInnovationPackageService.generalInformation`) has always upserted these five rows, and
+   * the GET both portfolios share reads them back (`ipsr.repository.ts`), so the current portfolio
+   * could show an evidence but never store one: whatever the person typed was returned by the
+   * server on the next GET as `null`. That is the missing half of "the field sits hidden on the
+   * screen they came from" — making the field visible without this would have lost the typing.
+   *
+   * One deliberate difference from the P22 twin: an ABSENT key (`undefined`) is left alone instead
+   * of deactivating the row. P22 treats `undefined` like an empty string, so a caller that does not
+   * know about a tag deletes its evidence. Our client always round-trips all five keys, so the
+   * user-facing behaviour is identical, and a partial payload can no longer destroy data it never
+   * mentioned. An explicit `''`/`null` still means "the person cleared the field".
+   */
+  private async saveImpactAreaEvidences(
+    resultId: number,
+    req: UpdateIpsrGeneralInformationDto,
+    user: TokenDto,
+  ): Promise<void> {
+    for (const {
+      payloadKey,
+      relatedColumn,
+    } of IpsrGeneralInformationService.IMPACT_AREA_EVIDENCE_FIELDS) {
+      const link = req?.[payloadKey] as string | null | undefined;
+
+      // Key not sent at all: nothing was said about this tag. Never read as "delete it".
+      if (link === undefined) continue;
+
+      const existing = await this._evidencesRepository.findOne({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          [relatedColumn]: true,
+        },
+      });
+
+      if (link) {
+        if (existing) {
+          await this._evidencesRepository.update(existing.id, {
+            link,
+            last_updated_by: user.id,
+            [relatedColumn]: true,
+          });
+        } else {
+          await this._evidencesRepository.save({
+            result_id: resultId,
+            link,
+            created_by: user.id,
+            last_updated_by: user.id,
+            // `is_supplementary` defaults to NULL, and the green-check function counts only rows
+            // with `is_supplementary = 0` (`migrations/1762528725798-createValidtionP25.ts`), so a
+            // row left NULL here would store the evidence and still never turn the section green.
+            // The platform's own main-evidence path writes `false` too
+            // (`api/results/evidences/evidences.service.ts:185`).
+            is_supplementary: false,
+            [relatedColumn]: true,
+          });
+        }
+      } else if (existing) {
+        await this._evidencesRepository.update(existing.id, {
+          is_active: 0,
+          last_updated_by: user.id,
+        });
+      }
     }
   }
 

@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { NEVER, of, throwError } from 'rxjs';
@@ -544,27 +546,87 @@ describe('ResultHeaderComponent', () => {
       expect(q('[data-testid="result-header-meta-popover"]')).toBeTruthy();
     });
 
-    it('lists the five fields the design puts in this popover', async () => {
-      await build();
+    it('lists the fields the design puts in this popover, Origin no longer among them', async () => {
+      await build(undefined, () => {
+        dataControlMock.currentResult.lead_center = 'IRRI';
+        dataControlMock.currentResult.created_by_name = 'Karen Marshall';
+      });
 
       // Ya no repite Status / Level / Category / Funding: los cuatro están en la tira de
-      // identidad, a un centímetro de este botón.
-      expect(component.metaRows.map(r => r.label)).toEqual(['Center', 'Phase', 'Portfolio', 'Origin', 'Created by']);
+      // identidad, a un centímetro de este botón. `Origin` se cayó por decisión del PO
+      // (P2-3458): era el Funding Source, que ya sale en la tira.
+      expect(component.metaRows.map(r => r.label)).toEqual(['Center', 'Phase', 'Portfolio', 'Created by']);
+      expect(component.metaRows.map(r => r.label)).not.toContain('Origin');
+      expect(component.metaRows.find(r => r.label === 'Center').value).toBe('IRRI');
       expect(component.metaRows.find(r => r.label === 'Phase').value).toBe('Reporting 2026 - P25');
       expect(component.metaRows.find(r => r.label === 'Portfolio').value).toBe('P25');
+      expect(component.metaRows.find(r => r.label === 'Created by').value).toBe('Karen Marshall');
     });
 
-    it('marks as Coming soon the rows the payload cannot fill yet', async () => {
-      await build();
-
-      // Center, Origin y Created by no llegan en `GET /api/results/get/:id` — Created by sólo
-      // llega como id numérico. Se muestran marcadas en vez de ocultarse.
-      expect(component.metaRows.filter(r => r.pending).map(r => r.label)).toEqual(['Center', 'Origin', 'Created by']);
+    it('paints the two new values in the popover', async () => {
+      await build(undefined, () => {
+        dataControlMock.currentResult.lead_center = 'IRRI';
+        dataControlMock.currentResult.created_by_name = 'Karen Marshall';
+      });
 
       q('[data-testid="result-header-meta-toggle"]').click();
       fixture.detectChanges();
 
-      expect(fixture.nativeElement.querySelectorAll('[data-testid="result-header-meta-pending"]').length).toBe(3);
+      const popover = q('[data-testid="result-header-meta-popover"]');
+      expect(popover.textContent).toContain('IRRI');
+      expect(popover.textContent).toContain('Karen Marshall');
+    });
+
+    it('never announces a row it cannot fill — no Coming soon anywhere in the box (P2-3458)', async () => {
+      // `lead_center` y `created_by_name` faltan: el resultado no tiene centro líder marcado, o
+      // el usuario que lo creó ya no existe. El PO pidió que no quedara nada anunciado y vacío,
+      // así que la fila desaparece en vez de quedarse con una etiqueta.
+      await build();
+
+      expect(component.metaRows.map(r => r.label)).toEqual(['Phase', 'Portfolio']);
+
+      q('[data-testid="result-header-meta-toggle"]').click();
+      fixture.detectChanges();
+
+      const popover = q('[data-testid="result-header-meta-popover"]');
+      expect(popover.textContent).not.toContain('Coming soon');
+      expect(fixture.nativeElement.querySelectorAll('[data-testid="result-header-meta-pending"]').length).toBe(0);
+      // Y ninguna fila vacía: tantas filas como valores.
+      expect(popover.querySelectorAll('.border-b').length).toBe(2);
+    });
+
+    it('has no Coming soon branch left in the template at all (P2-3458)', () => {
+      // El filtro de `metaRows` hace inalcanzable cualquier rama vacía, pero el PO pidió que no
+      // quedara **nada** con `Coming soon` en este cuadro: se comprueba también en la plantilla,
+      // que es donde vivía la etiqueta. El comentario que la reemplaza no repite el texto, así
+      // que esta aserción no se puede satisfacer sola.
+      const template = readFileSync(join(__dirname, 'result-header.component.html'), 'utf8');
+      const popover = template.slice(
+        template.indexOf('result-header-meta-popover'),
+        template.indexOf('result-header-metadata-popout')
+      );
+
+      expect(popover.length).toBeGreaterThan(0);
+      expect(popover).not.toContain('Coming soon');
+      expect(popover).not.toContain('result-header-meta-pending');
+      expect(popover).not.toContain('row.pending');
+    });
+
+    it('drops only the row that is missing, keeping the one that arrived', async () => {
+      await build(undefined, () => {
+        dataControlMock.currentResult.created_by_name = 'Karen Marshall';
+      });
+
+      expect(component.metaRows.map(r => r.label)).toEqual(['Phase', 'Portfolio', 'Created by']);
+    });
+
+    it('treats a whitespace-only value as no value', async () => {
+      await build(undefined, () => {
+        dataControlMock.currentResult.lead_center = '   ';
+        dataControlMock.currentResult.created_by_name = '  ';
+      });
+
+      expect(component.metaRows.map(r => r.label)).toEqual(['Phase', 'Portfolio']);
     });
 
     it('pops the metadata out into the floating card', async () => {

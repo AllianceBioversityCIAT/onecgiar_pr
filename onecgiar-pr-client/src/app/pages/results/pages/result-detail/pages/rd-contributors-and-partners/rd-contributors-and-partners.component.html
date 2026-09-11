@@ -526,25 +526,23 @@
   </div>
 
   <!-- P2-3112: the linked/bundled question shows for Innovation Use/Dev (all phases) AND, in 2026+, for every other result type. -->
+  <!--
+    P2-3424 (PO decision, Ángel Jarrín, 10 Sep 2026: "lo mejor es mostrar la información en la sección
+    de Innovation Use. Este campo no debería ser un MDS"). For Innovation use from the 2026 phase the
+    question now lives in the Innovation Use section (`rd-result-types-pages/innovation-use-info`) and
+    is OPTIONAL there.
+    🛑 `!showsQaInnovationLink()` takes the WHOLE block out for those results on purpose. Dropping only
+    the 2026 branch would hand the question straight to the legacy `@if` below, which answers the very
+    same stored field (`results_innovations_use.has_innovation_link` + the `linked_result` table) — two
+    editing surfaces for one answer is exactly the defect P2-3199 removed.
+  -->
   @if (
-    this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7 || isCP2026()
+    (this.api.dataControlSE.currentResultSignal().result_type_id == 2 ||
+      this.api.dataControlSE.currentResultSignal().result_type_id == 7 ||
+      isCP2026()) &&
+    !showsQaInnovationLink()
   ) {
-    @if (showsQaInnovationLink()) {
-      <!-- P2-3420 / P2-3421: Innovation use, 2026 onwards — the story's own wording, not the generic one. -->
-      <app-pr-radio-button
-        data-testid="cp-field-has_innovation_link~qa-innovation"
-        [label]="innovationLinkQuestion"
-        [required]="true"
-        [options]="[
-          { value: true, label: 'Yes' },
-          { value: false, label: 'No' }
-        ]"
-        optionLabel="label"
-        [(ngModel)]="this.rdPartnersSE.partnersBody.has_innovation_link"
-        (ngModelChange)="onQaInnovationLinkChange()"
-        optionValue="value">
-      </app-pr-radio-button>
-    } @else if (
+    @if (
       this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7
     ) {
       <app-pr-radio-button
@@ -576,43 +574,22 @@
     }
 
     @if (this.rdPartnersSE.partnersBody.has_innovation_link && this.fieldsManagerSE.isP25()) {
-      <!--
-        P2-3420 / P2-3421 — Innovation use, phase 2026 onwards: ONE Innovation Development result,
-        picked from the QA'd catalogue (QAed, Approved, Discontinued — portfolio-wide), searchable by
-        result id and by title, shown as "[Result ID] - [Result Title]". Every other type keeps the
-        legacy all-results multi-select in the @else branch.
-      -->
-      @if (showsQaInnovationLink()) {
-        <app-pr-select
-          data-testid="cp-field-linked_results~qa-innovation"
-          [options]="qaInnovationOptions"
-          [(ngModel)]="linkedInnovationId"
-          optionLabel="display"
-          optionValue="id"
-          label="Please select an Innovation Development result"
-          placeholder="Search by Innovation ID or title"
-          [showClear]="true"
-          [required]="true">
-        </app-pr-select>
-        <div appFeedbackValidation labelText="Please select an Innovation Development result" [isComplete]="linkedInnovationId !== null"></div>
-      } @else {
-        <app-pr-multi-select
-          data-testid="cp-field-linked_results"
-          [options]="this.innovationUseResultsSE.resultsList"
-          [(ngModel)]="this.rdPartnersSE.partnersBody.linked_results"
-          optionLabel="title"
-          optionValue="id"
-          optionGroupLabel="name"
-          optionGroupChildren="options"
-          label="Please select a result"
-          placeholder="Please select a result"
-          selectedLabel="Results selected"
-          selectedOptionLabel="title"
-          [displayLabelFormatter]="formatResultLabel.bind(this)"
-          [required]="true">
-        </app-pr-multi-select>
-        <div appFeedbackValidation labelText="Please select a result" [isComplete]="!!this.rdPartnersSE.partnersBody.linked_results?.length"></div>
-      }
+      <app-pr-multi-select
+        data-testid="cp-field-linked_results"
+        [options]="this.innovationUseResultsSE.resultsList"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.linked_results"
+        optionLabel="title"
+        optionValue="id"
+        optionGroupLabel="name"
+        optionGroupChildren="options"
+        label="Please select a result"
+        placeholder="Please select a result"
+        selectedLabel="Results selected"
+        selectedOptionLabel="title"
+        [displayLabelFormatter]="formatResultLabel.bind(this)"
+        [required]="true">
+      </app-pr-multi-select>
+      <div appFeedbackValidation labelText="Please select a result" [isComplete]="!!this.rdPartnersSE.partnersBody.linked_results?.length"></div>
     }
   }
   <app-alert-status
