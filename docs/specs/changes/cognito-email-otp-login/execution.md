@@ -108,3 +108,28 @@
 - Test users left in the pool for `OTP-T-9`: `jucacar22@gmail.com` (`CONFIRMED`), `jucacar22+fcp@gmail.com` (`FORCE_CHANGE_PASSWORD`); the spike also created no other resources. Two `admin-create-user` writes (user-approved; the second after a harness permission prompt) and two `update-user-pool` writes (user-approved) are the only AWS mutations of this task.
 - Reviewer: spawned on the runbook + fixtures + doc pins (evidence review).
 
+### `OTP-T-2` — Microservice: `startEmailOtp` / `verifyEmailOtp` in `CognitoService` with error mapping (TDD)
+
+| Field | Value |
+|---|---|
+| Final status | **PASS** (attempt 1 of 3) |
+| Date | 2026-09-11 |
+| Implementer | `akili-implementer` (`sonnet`), effort `high`, skills `nestjs-expert`, `tdd`; worktree `/Users/jcadavid/Development/one-cgiar-microservices-dev-auth` branch `dev-auth-otp` (off `origin/dev-auth`) |
+| Reviewer | `akili-reviewer` (`opus`), lens checklist mode |
+| Requirements covered | `OTP-R-7` (Cognito calls, `SELECT_CHALLENGE` gate, stable codes incl. `CHALLENGE_NOT_SUPPORTED`, no raw Cognito text), `OTP-R-11`, `OTP-AC-7/8/10`, `OTP-AC-14` (microservice half) |
+
+**Attempt 1**
+
+- Files (additions only, 759 insertions / 0 deletions): `auth-microservice/src/api/auth/services/cognito/cognito.service.ts` (`startEmailOtp`, `verifyEmailOtp`, pure `mapCognitoError`, `otpException` with static `OTP_ERROR_COPY`, `logOtpOutcome`), `cognito.service.spec.ts` (+22 tests in 4 describes).
+- Red → green: `TS2339: Property 'startEmailOtp' does not exist on type 'CognitoService'` → `Tests: 78 passed, 78 total`; whole microservice suite `15 suites / 311 tests` green; eslint clean.
+- Mapping: `CodeMismatchException` → `CODE_MISMATCH`; `ExpiredCodeException` and `NotAuthorizedException` "session is expired" → `CODE_EXPIRED`; "can only be used once" → `NOT_AUTHORIZED`; attempts message / `TooManyFailedAttemptsException` → `ATTEMPTS_EXCEEDED`; `SELECT_CHALLENGE` without `EMAIL_OTP` → `CHALLENGE_NOT_SUPPORTED` (one fetch); with `EMAIL_OTP` → second `RespondToAuthChallenge` with `ClientId` + first `Session`, returns the second session; unknown-user simulated challenge → normal start; network → `UPSTREAM_ERROR` 502.
+- Implementer `Not Done / Assumptions`: `ATTEMPTS_EXCEEDED` inputs are synthetic (no lockout observed in the spike); "session is expired → `CODE_EXPIRED`" taken from the brief's explicit override. Leader: both accepted; design §4.2 amended to record the session-error mapping (Reviewer risk advisory).
+- Reviewer verdict: **PASS**. Summary: exact per-call payload/header assertions against the real `fetch`; correctly gated `SELECT_CHALLENGE` round-trip returning the second session; pure mapper whose payload can only carry stable codes and static copy; `{ tokens }` key-for-key with `authenticateWithCustomPassword`; outcome-only logs; additions-only diff (`OTP-R-10`). ADVISORY (recorded): `msg.includes('attempt')` is broad — tighten when a real sample exists; guard a challenge without `Session` locally; pin the outcome vocabulary case in the README (`OTP-T-3`); design drift fixed above.
+
+**Decisions / issues**: none. Budget: 1 Reviewer round. Gate: `auto-approved (pre-approved mode)`.
+
+### `OTP-T-1` — step 4b substitute (2026-09-11)
+
+- No sibling-tenant credentials available → behavioural smoke without credentials: `InitiateAuth USER_PASSWORD_AUTH` with a non-existent user against the **Alliance** (`633s5b…`) and **TOC** (`6mi3dm…`) app clients (secret hash computed at run time, never stored) → both `NotAuthorizedException: Incorrect username or password.` — the password flow is still served on sibling clients after the pool change; hosted-UI `/oauth2/authorize` for `PRMS-Reporting` + `CGIAR-AzureAD` → `302`. A credentialed sibling login stays on the `OTP-T-9` TEST HITL checklist.
+- Reviewer round 1 on the T-1 evidence: **FAIL** on documentation consistency (runbook placeholders from phase 1 contradicting the executed steps; fixtures README indexing non-existent files) and on 4b (now substituted above). Docs rework spawned (attempt 2); re-review pending.
+

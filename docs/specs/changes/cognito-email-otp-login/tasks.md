@@ -52,7 +52,7 @@
   - [ ] `design.md` §4.2 states the observed challenge shape; `OTP-OQ-6/7` resolved in `requirements.md`.
   - [ ] TEST pool left with `[PASSWORD, EMAIL_OTP]`; rollback rehearsed and recorded.
 
-### `OTP-T-2` — Microservice: `startEmailOtp` / `verifyEmailOtp` in `CognitoService` with error mapping (TDD)
+### [x] `OTP-T-2` — Microservice: `startEmailOtp` / `verifyEmailOtp` in `CognitoService` with error mapping (TDD)
 
 - **Type:** `server` (microservice)
 - **Description:** In a `dev-auth` worktree of `one-cgiar-microservices`: add `startEmailOtp(username)` and `verifyEmailOtp(username, code, session)` to `src/api/auth/services/cognito/cognito.service.ts`, mirroring `loginWithCustomPassword` (secret hash, `fetch` to `COGNITO_USER_POOL_URL`, `X-Amz-Target`), with `USER_AUTH` + `PREFERRED_CHALLENGE=EMAIL_OTP` and `RespondToAuthChallenge` `EMAIL_OTP` (`EMAIL_OTP_CODE`); handle a `SELECT_CHALLENGE` reply by answering `EMAIL_OTP` with `ClientId` + the incoming `Session` and returning the **new** session (`design.md` §4.2) if the spike observed it; any other challenge in place of tokens → `CHALLENGE_NOT_SUPPORTED`; add `mapCognitoError(__type, message)` → `CODE_MISMATCH | CODE_EXPIRED | ATTEMPTS_EXCEEDED | NOT_AUTHORIZED | CHALLENGE_NOT_SUPPORTED | UPSTREAM_ERROR`; no changes to existing methods or their log lines.
