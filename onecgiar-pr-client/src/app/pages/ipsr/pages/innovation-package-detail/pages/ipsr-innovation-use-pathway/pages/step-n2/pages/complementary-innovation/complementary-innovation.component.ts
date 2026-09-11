@@ -243,6 +243,17 @@ export class ComplementaryInnovationComponent implements OnInit {
     });
   }
 
+  /**
+   * P2-3674 — the forward branch must mirror `StepN2Component.routerStep()`
+   * (`step-n2.component.ts:18-24`), which is what the step's own link uses: sub-step 2.2 (Basic
+   * info) exists only for an admin, so everybody else goes straight to step 3.
+   *
+   * The `else if (isStepTwoTwo)` it replaces (P2-994, `9e3a27aa1`) left one combination with no
+   * branch at all: a NON-admin standing on sub-step 2.1, where `ngOnInit` has just set
+   * `isStepTwoTwo = false` (line 71). Neither condition held, so the save ran, the toast fired from
+   * the HTTP pipe, and the wizard simply stayed where it was — the reporter reads that as a save
+   * that went nowhere.
+   */
   navigateToStep(description: string): void {
     const baseRoute = `/ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/ipsr-innovation-use-pathway`;
     const queryParams = { queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase } };
@@ -250,7 +261,7 @@ export class ComplementaryInnovationComponent implements OnInit {
     if (description === 'next') {
       if (this.api.rolesSE.isAdmin && !this.api.isStepTwoTwo) {
         this.router.navigate([`${baseRoute}/step-2/basic-info`], queryParams);
-      } else if (this.api.isStepTwoTwo) {
+      } else {
         this.router.navigate([`${baseRoute}/step-3`], queryParams);
       }
     } else if (description === 'previous') {
