@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
-import { runInInjectionContext, EnvironmentInjector, signal } from '@angular/core';
+import { runInInjectionContext, EnvironmentInjector, signal, NO_ERRORS_SCHEMA } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { By } from '@angular/platform-browser';
 import { CPMultipleWPsContentComponent } from './multiple-wps-content.component';
 import { ResultLevelService } from '../../../../../../../../../../pages/results/pages/result-creator/services/result-level.service';
 import { FieldsManagerService } from '../../../../../../../../../../shared/services/fields-manager.service';
@@ -56,6 +58,54 @@ describe('CPMultipleWPsContentComponent', () => {
     component.outputList = signal([]);
     component.eoiList = signal([]);
     return component;
+  };
+
+  // BUG-T-1 (docs/specs/bugfix/toc-hlo-outcome-locked): renders the REAL template so the test
+  // inspects the actual bound `disabled`/`readOnly` DOM properties on the Level select, not just
+  // the component-level computed. `NO_ERRORS_SCHEMA` lets the unknown `app-pr-select` custom
+  // element through without declaring the whole custom-fields module; property/event bindings on
+  // an unrecognized element are set directly as plain DOM properties, which is exactly what we
+  // read back below.
+  const buildRenderedComponent = (isCP2026: boolean = true) => {
+    fieldsManagerMock = {
+      isContributorsPartners2026: jest.fn().mockReturnValue(isCP2026),
+      isP25: jest.fn().mockReturnValue(false),
+      activeIndicatorsLength: signal(0),
+      hasSelectedIndicator: signal(false)
+    };
+
+    TestBed.configureTestingModule({
+      declarations: [CPMultipleWPsContentComponent],
+      imports: [CommonModule],
+      schemas: [NO_ERRORS_SCHEMA],
+      providers: [
+        { provide: ResultLevelService, useValue: { currentResultLevelIdSignal: signal(undefined) } },
+        { provide: FieldsManagerService, useValue: fieldsManagerMock },
+        {
+          provide: RdContributorsAndPartnersService,
+          useValue: {
+            tocSelectionTouched: signal(false),
+            tocReferenceCenterInstitutionIds: signal([]),
+            tocReferenceSynergyInitiativeIds: signal([]),
+            tocReferencePartnerInstitutionIds: signal([]),
+            partnersBody: {}
+          }
+        },
+        { provide: TocInitiativeOutcomeListsService, useValue: { tocResultList: signal([]) } },
+        { provide: ApiService, useValue: {} },
+        { provide: RdTheoryOfChangesServicesService, useValue: {} },
+        { provide: MappedResultsModalServiceService, useValue: {} }
+      ]
+    });
+
+    const injector = TestBed.inject(EnvironmentInjector);
+    const fixture = runInInjectionContext(injector, () => TestBed.createComponent(CPMultipleWPsContentComponent));
+    const renderedComponent = fixture.componentInstance;
+    renderedComponent.activeTabSignal = signal(null);
+    renderedComponent.outcomeList = signal([]);
+    renderedComponent.outputList = signal([]);
+    renderedComponent.eoiList = signal([]);
+    return { fixture, component: renderedComponent };
   };
 
   afterEach(() => {
@@ -182,92 +232,22 @@ describe('CPMultipleWPsContentComponent', () => {
       expect(component.indicatorTypologyTooltip()).toBe('');
     });
   });
-  // P2-3235: the ToC alignment written by the Results Framework module is reflected here read-only.
-  describe('tocAlignmentReadOnly (P2-3235)', () => {
-    const alignedTab = { toc_level_id: 2, toc_result_id: 'toc-77' };
-
-    it('should lock the alignment when the tab already carries a level and a node', () => {
+  // docs/specs/bugfix/toc-hlo-outcome-locked (BUG-DD-1): P2-3235's `tocAlignmentReadOnly()` lock was
+  // reverted per an explicit PO decision — these fields go back to being an always-editable
+  // dropdown, gated only by `editable`. The computed and its 4 template bindings were deleted
+  // outright (no hardcode-false, no feature flag). See the `BUG-T-1` describe block below for the
+  // regression coverage that replaces this suite's old assertions.
+  describe('tocAlignmentReadOnly removal (docs/specs/bugfix/toc-hlo-outcome-locked)', () => {
+    it('no longer exists on the component', () => {
       buildComponent(true);
-      component.activeTabSignal.set(alignedTab);
 
-      expect(component.tocAlignmentReadOnly()).toBe(true);
+      expect((component as any).tocAlignmentReadOnly).toBeUndefined();
     });
 
-    // Ángel widened the ask past Intermediate Outcomes (level 2) on 28-Aug: HLO and 2030 Outcomes lock too.
-    it.each([
-      ['HLO / output', 1],
-      ['Intermediate Outcome', 2],
-      ['2030 Outcome / EOI', 3]
-    ])('should lock every ToC level — %s', (_label, tocLevelId) => {
-      buildComponent(true);
-      component.activeTabSignal.set({ toc_level_id: tocLevelId, toc_result_id: 'toc-77' });
+    it('the template no longer references tocAlignmentReadOnly anywhere', () => {
+      const template = readFileSync(join(__dirname, 'multiple-wps-content.component.html'), 'utf8');
 
-      expect(component.tocAlignmentReadOnly()).toBe(true);
-    });
-
-    // Locking an empty tab would leave the result unable to be aligned at all.
-    it('should stay editable when no node has been selected yet', () => {
-      buildComponent(true);
-      component.activeTabSignal.set({ toc_level_id: 2, toc_result_id: null });
-
-      expect(component.tocAlignmentReadOnly()).toBe(false);
-    });
-
-    it('should stay editable when the level is missing', () => {
-      buildComponent(true);
-      component.activeTabSignal.set({ toc_level_id: null, toc_result_id: 'toc-77' });
-
-      expect(component.tocAlignmentReadOnly()).toBe(false);
-    });
-
-    // An empty string is what a cleared dropdown writes back, and it is not an alignment.
-    it('should treat an empty string as no selection', () => {
-      buildComponent(true);
-      component.activeTabSignal.set({ toc_level_id: 2, toc_result_id: '' });
-
-      expect(component.tocAlignmentReadOnly()).toBe(false);
-    });
-
-    // The gate is the PHASE YEAR (isCP2026), never the portfolio flag (isP25).
-    it('should not lock anything outside the 2026 phase', () => {
-      buildComponent(false);
-      component.activeTabSignal.set(alignedTab);
-
-      expect(component.tocAlignmentReadOnly()).toBe(false);
-    });
-
-    it('should not lock the unplanned (No) scenario', () => {
-      buildComponent(true);
-      component.isUnplanned = true;
-      component.activeTabSignal.set(alignedTab);
-
-      expect(component.tocAlignmentReadOnly()).toBe(false);
-    });
-
-    it('should fall back to the plain activeTab when the signal has not been set', () => {
-      buildComponent(true);
-      component.activeTabSignal.set(null);
-      component.activeTab = alignedTab;
-
-      expect(component.tocAlignmentReadOnly()).toBe(true);
-    });
-  });
-
-  // P2-3235: the requirement is level-generic. A new @switch branch that forgets the lock would
-  // silently reopen Section 2 as a second writer for that level, and no class-level test would see it.
-  describe('template wiring (P2-3235)', () => {
-    const template = readFileSync(join(__dirname, 'multiple-wps-content.component.html'), 'utf8');
-
-    it('should bind readOnly on every node select and on the Level select', () => {
-      const selects = template.match(/<app-pr-select[\s\S]*?<\/app-pr-select>/g) ?? [];
-      const nodeSelects = selects.filter(block => /\[\(ngModel\)\]="activeTab\.(toc_level_id|toc_result_id)"/.test(block));
-
-      // Level + the three per-level node dropdowns.
-      expect(nodeSelects).toHaveLength(4);
-      nodeSelects.forEach(block => {
-        expect(block).toContain('[readOnly]="tocAlignmentReadOnly()"');
-        expect(block).toContain('tocAlignmentReadOnly()');
-      });
+      expect(template).not.toContain('tocAlignmentReadOnly');
     });
   });
 
@@ -408,6 +388,50 @@ describe('CPMultipleWPsContentComponent', () => {
 
       expect(input).toContain('min="0"');
       expect(input).toContain('(ngModelChange)="onContributionToTargetChange()"');
+    });
+  });
+
+  /**
+   * BUG-T-1 (docs/specs/bugfix/toc-hlo-outcome-locked): P2-3235's `tocAlignmentReadOnly()` lock is
+   * reverted per an explicit PO decision (`proposal.md` §11) — the Level/HLO/Outcome/Output
+   * selects must stay an always-editable dropdown, gated only by the pre-existing `editable` input
+   * and role-based read-only handling inside `app-pr-select`.
+   *
+   * BUG-TEST-1 renders the REAL template (`fixture.detectChanges()`) and reads the Level select's
+   * actual bound `disabled`/`readOnly` DOM properties in the exact state that used to lock them —
+   * satisfying the no-pass clause in `tasks.md` (a presence-only assertion that the computed is
+   * gone from the `.ts` source would not be enough).
+   */
+  describe('BUG-T-1 — ToC HLO/Outcome selector must stay editable', () => {
+    const lockedTab = { toc_level_id: 2, toc_result_id: 'toc-77', planned_result: true, indicators: [{ related_node_id: null, targets: [{}] }] };
+
+    it('BUG-TEST-1: the Level select is enabled and not read-only in the previously-locked state (2026, planned, ToC-mapped, editable, non-read-only)', () => {
+      const { fixture, component: rendered } = buildRenderedComponent(true);
+      rendered.editable = true;
+      rendered.isUnplanned = false;
+      rendered.activeTab = { ...lockedTab };
+      rendered.activeTabSignal.set({ ...lockedTab });
+
+      fixture.detectChanges();
+
+      const levelSelect = fixture.debugElement.query(By.css('[data-testid="cp-toc-level-select"]'));
+      expect(levelSelect).toBeTruthy();
+      expect(levelSelect.nativeElement.disabled).toBeFalsy();
+      expect(levelSelect.nativeElement.readOnly).toBeFalsy();
+    });
+
+    it('BUG-TEST-2: an editable=false section still disables the Level select, independent of the removed ToC lock (BUG-AC-2, no over-fix)', () => {
+      const { fixture, component: rendered } = buildRenderedComponent(true);
+      rendered.editable = false;
+      rendered.isUnplanned = false;
+      rendered.activeTab = { ...lockedTab };
+      rendered.activeTabSignal.set({ ...lockedTab });
+
+      fixture.detectChanges();
+
+      const levelSelect = fixture.debugElement.query(By.css('[data-testid="cp-toc-level-select"]'));
+      expect(levelSelect).toBeTruthy();
+      expect(levelSelect.nativeElement.disabled).toBeTruthy();
     });
   });
 });
