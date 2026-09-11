@@ -17,6 +17,7 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { BilateralResultsService } from '../bilateral-review/services/bilateral-results.service';
+import { ResultDeletionService } from '../../services/result-deletion.service';
 import { PrToastService } from '../../../../shared/components/pr-toast';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
@@ -710,7 +711,7 @@ describe('ProgrammeResultsComponent', () => {
 
     expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026', 'Status: Foo']);
     expect(component.isFilteredEmpty()).toBe(true);
-    expect(text()).toContain('No results match these filters.');
+    expect(text()).toContain('No results match these filters');
   });
 
   it('(c) no query params defaults to the active phase and mirrors it to the URL', () => {
@@ -995,7 +996,7 @@ describe('ProgrammeResultsComponent', () => {
       'Created by: Nobody'
     ]);
     expect(component.isFilteredEmpty()).toBe(true);
-    expect(text()).toContain('No results match these filters.');
+    expect(text()).toContain('No results match these filters');
   });
 
   it('no createdBy param leaves Created by null and today\'s chips unchanged', () => {
@@ -1473,7 +1474,7 @@ describe('ProgrammeResultsComponent', () => {
 
       expect(filterService().activeChips().map(chip => chip.label)).toContain('Section: NOPE');
       expect(component.isFilteredEmpty()).toBe(true);
-      expect(text()).toContain('No results match these filters.');
+      expect(text()).toContain('No results match these filters');
     });
   });
 
@@ -1610,6 +1611,104 @@ describe('ProgrammeResultsComponent', () => {
       component.updateResult(component.data.rows()[0]);
 
       expect(component.changePhaseModalMounted()).toBe(true);
+    });
+  });
+
+  // ── Delete result (DEL-R-1, DEL-T-2) ──────────────────────────────────────────────────
+  describe('Delete result (DEL-R-1, DEL-T-2)', () => {
+    it('does not render the Delete menu item when deleteEligibility visible is false', () => {
+      const deletionService = TestBed.inject(ResultDeletionService);
+      jest.spyOn(deletionService, 'getDeleteEligibility').mockReturnValue({
+        visible: false,
+        disabled: false,
+        tooltip: ''
+      });
+
+      component.toggleRowMenu(component.data.rows()[0], new MouseEvent('click'));
+      fixture.detectChanges();
+
+      const items = rowMenuItems().map(item => (item.textContent ?? '').replace(/\s+/g, ' ').trim());
+      expect(items).not.toContain('Delete');
+    });
+
+    it('renders enabled Delete menu item with trash icon and red text when eligible', () => {
+      const deletionService = TestBed.inject(ResultDeletionService);
+      jest.spyOn(deletionService, 'getDeleteEligibility').mockReturnValue({
+        visible: true,
+        disabled: false,
+        tooltip: ''
+      });
+
+      component.toggleRowMenu(component.data.rows()[0], new MouseEvent('click'));
+      fixture.detectChanges();
+
+      const deleteItem = rowMenuItems().find(item => item.textContent?.includes('Delete'));
+      expect(deleteItem).toBeTruthy();
+      expect(deleteItem!.className).toContain('text-[var(--pr-color-red-600)]');
+      expect(deleteItem!.querySelector('.pi-trash')).toBeTruthy();
+      expect((deleteItem as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('renders disabled Delete button with QAed tooltip when status is QAed', () => {
+      const deletionService = TestBed.inject(ResultDeletionService);
+      const qaedTooltip = 'You are not allowed to perform this action because the result is in the status "QAed".';
+      jest.spyOn(deletionService, 'getDeleteEligibility').mockReturnValue({
+        visible: true,
+        disabled: true,
+        tooltip: qaedTooltip
+      });
+
+      component.toggleRowMenu(component.data.rows()[0], new MouseEvent('click'));
+      fixture.detectChanges();
+
+      const deleteItem = rowMenuItems().find(item => item.textContent?.includes('Delete')) as HTMLButtonElement;
+      expect(deleteItem).toBeTruthy();
+      expect(deleteItem.disabled).toBe(true);
+      expect(deleteItem.className).toContain('cursor-not-allowed');
+      expect(deleteItem.getAttribute('title')).toBe(qaedTooltip);
+    });
+
+    it('calls deleteWithConfirmation and reloads data on success', () => {
+      const deletionService = TestBed.inject(ResultDeletionService);
+      jest.spyOn(deletionService, 'getDeleteEligibility').mockReturnValue({
+        visible: true,
+        disabled: false,
+        tooltip: ''
+      });
+      const loadSpy = jest.spyOn(component.data, 'load');
+      const deleteWithConfirmSpy = jest.spyOn(deletionService, 'deleteWithConfirmation').mockImplementation((row, options) => {
+        options?.onSuccess?.();
+      });
+
+      component.toggleRowMenu(component.data.rows()[0], new MouseEvent('click'));
+      fixture.detectChanges();
+
+      const deleteItem = rowMenuItems().find(item => item.textContent?.includes('Delete')) as HTMLButtonElement;
+      deleteItem.click();
+
+      expect(deleteWithConfirmSpy).toHaveBeenCalledWith(component.data.rows()[0], expect.objectContaining({
+        onSuccess: expect.any(Function)
+      }));
+      expect(loadSpy).toHaveBeenCalledWith('SP01');
+      expect(component.isMenuOpen(component.data.rows()[0])).toBe(false);
+    });
+
+    it('does not call deleteWithConfirmation when clicking disabled delete item', () => {
+      const deletionService = TestBed.inject(ResultDeletionService);
+      jest.spyOn(deletionService, 'getDeleteEligibility').mockReturnValue({
+        visible: true,
+        disabled: true,
+        tooltip: 'Not allowed'
+      });
+      const deleteWithConfirmSpy = jest.spyOn(deletionService, 'deleteWithConfirmation');
+
+      component.toggleRowMenu(component.data.rows()[0], new MouseEvent('click'));
+      fixture.detectChanges();
+
+      const deleteItem = rowMenuItems().find(item => item.textContent?.includes('Delete')) as HTMLButtonElement;
+      deleteItem.click();
+
+      expect(deleteWithConfirmSpy).not.toHaveBeenCalled();
     });
   });
 

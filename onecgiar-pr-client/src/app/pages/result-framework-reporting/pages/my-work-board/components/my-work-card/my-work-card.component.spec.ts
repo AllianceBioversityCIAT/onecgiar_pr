@@ -1,9 +1,13 @@
 // @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-R-4, R-6)
+// @akili-spec changes/delete-result-action (DEL-T-3, DEL-R-2, DEL-AC-6, DEL-AC-7)
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { Clipboard } from '@angular/cdk/clipboard';
 import { MyWorkCardComponent } from './my-work-card.component';
 import { ProgrammeResultRow } from '../../../programme-results/services/programme-results.service';
 import { SmartNavigationService } from '../../../../../../shared/services/smart-navigation.service';
+import { ResultDeletionService } from '../../../../services/result-deletion.service';
+import { PrToastService } from '../../../../../../shared/components/pr-toast';
 
 function row(partial: Partial<ProgrammeResultRow> = {}): ProgrammeResultRow {
   return {
@@ -33,11 +37,36 @@ function row(partial: Partial<ProgrammeResultRow> = {}): ProgrammeResultRow {
 describe('MyWorkCardComponent', () => {
   let fixture: ComponentFixture<MyWorkCardComponent>;
   let component: MyWorkCardComponent;
+  let mockDeletionService: { getDeleteEligibility: jest.Mock; deleteWithConfirmation: jest.Mock };
+  let mockToastService: { add: jest.Mock };
+  let mockClipboard: { copy: jest.Mock };
+
+  beforeEach(() => {
+    mockDeletionService = {
+      getDeleteEligibility: jest.fn().mockReturnValue({ visible: false, disabled: false, tooltip: '' }),
+      deleteWithConfirmation: jest.fn()
+    };
+    mockToastService = {
+      add: jest.fn()
+    };
+    mockClipboard = {
+      copy: jest.fn().mockReturnValue(true)
+    };
+  });
+
+  afterEach(() => {
+    document.querySelectorAll('.cdk-overlay-container').forEach(container => container.remove());
+  });
 
   const build = async (inputs: { row: ProgrammeResultRow; inEditingColumn?: boolean }) => {
     await TestBed.configureTestingModule({
       imports: [MyWorkCardComponent],
-      providers: [provideRouter([])]
+      providers: [
+        provideRouter([]),
+        { provide: ResultDeletionService, useValue: mockDeletionService },
+        { provide: PrToastService, useValue: mockToastService },
+        { provide: Clipboard, useValue: mockClipboard }
+      ]
     }).compileComponents();
     fixture = TestBed.createComponent(MyWorkCardComponent);
     component = fixture.componentInstance;
@@ -192,4 +221,154 @@ describe('MyWorkCardComponent', () => {
     const continueBtn = Array.from(root().querySelectorAll('button')).find(b => b.textContent?.includes('Continue')) as HTMLButtonElement;
     expect(continueBtn.className).toContain('motion-reduce:transition-none');
   });
+
+  // ── Context menu and Delete action (DEL-T-3, DEL-R-2, DEL-AC-6, DEL-AC-7, D4, D5) ──────
+  describe('context menu and delete action (DEL-T-3, DEL-R-2, DEL-AC-6, DEL-AC-7)', () => {
+    const openMenu = () => {
+      const trigger = root().querySelector('button[aria-label="More actions"]') as HTMLButtonElement;
+      trigger.click();
+      fixture.detectChanges();
+    };
+
+    const overlayItems = () => Array.from(document.querySelectorAll<HTMLElement>('.cdk-overlay-container [role="menuitem"]'));
+
+    it('renders the kebab menu trigger and opens CDK Connected Overlay in .cdk-overlay-container on body (D4)', async () => {
+      await build({ row: row() });
+
+      const trigger = root().querySelector('button[aria-label="More actions"]') as HTMLButtonElement;
+      expect(trigger).toBeTruthy();
+      expect(trigger.getAttribute('aria-haspopup')).toBe('menu');
+      expect(trigger.getAttribute('aria-expanded')).toBe('false');
+
+      openMenu();
+
+      expect(trigger.getAttribute('aria-expanded')).toBe('true');
+      const menu = document.querySelector('.cdk-overlay-container [role="menu"]');
+      expect(menu).toBeTruthy();
+      expect(menu!.className).toContain('pr-row-menu');
+    });
+
+    it('offers Download PDF with correct report href and closes menu on click', async () => {
+      await build({ row: row({ code: '4712', versionId: '36' }) });
+      openMenu();
+
+      const pdfItem = overlayItems().find(item => item.textContent?.includes('Download PDF')) as HTMLAnchorElement;
+      expect(pdfItem).toBeTruthy();
+      expect(pdfItem.getAttribute('href')).toBe('/reports/result-details/4712?phase=36');
+      expect(pdfItem.getAttribute('target')).toBe('_blank');
+
+      pdfItem.click();
+      fixture.detectChanges();
+
+      expect(component.isMenuOpen()).toBe(false);
+    });
+
+    it('offers Copy link and copies absolute URL with toast notification on click', async () => {
+      await build({ row: row({ code: '4712', versionId: '36' }) });
+      openMenu();
+
+      const copyItem = overlayItems().find(item => item.textContent?.includes('Copy link')) as HTMLButtonElement;
+      expect(copyItem).toBeTruthy();
+
+      copyItem.click();
+      fixture.detectChanges();
+
+      expect(mockClipboard.copy).toHaveBeenCalledWith(expect.stringContaining('/result/result-detail/4712/general-information?phase=36'));
+      expect(mockToastService.add).toHaveBeenCalledWith(expect.objectContaining({
+        severity: 'success',
+        summary: 'Result link copied'
+      }));
+      expect(component.isMenuOpen()).toBe(false);
+    });
+
+    it('hides Delete when deleteEligibility visible is false', async () => {
+      mockDeletionService.getDeleteEligibility.mockReturnValue({
+        visible: false,
+        disabled: false,
+        tooltip: ''
+      });
+      await build({ row: row() });
+      openMenu();
+
+      const deleteItem = overlayItems().find(item => item.textContent?.includes('Delete'));
+      expect(deleteItem).toBeUndefined();
+    });
+
+    it('renders enabled Delete item when eligible', async () => {
+      mockDeletionService.getDeleteEligibility.mockReturnValue({
+        visible: true,
+        disabled: false,
+        tooltip: ''
+      });
+      await build({ row: row() });
+      openMenu();
+
+      const deleteItem = overlayItems().find(item => item.textContent?.includes('Delete')) as HTMLButtonElement;
+      expect(deleteItem).toBeTruthy();
+      expect(deleteItem.disabled).toBe(false);
+      expect(deleteItem.className).toContain('text-[var(--pr-color-red-600)]');
+      expect(deleteItem.querySelector('.pi-trash')).toBeTruthy();
+    });
+
+    it('renders disabled Delete button with QAed / non-lead tooltip', async () => {
+      const qaedTooltip = 'You are not allowed to perform this action because the result is in the status "QAed".';
+      mockDeletionService.getDeleteEligibility.mockReturnValue({
+        visible: true,
+        disabled: true,
+        tooltip: qaedTooltip
+      });
+      await build({ row: row() });
+      openMenu();
+
+      const deleteItem = overlayItems().find(item => item.textContent?.includes('Delete')) as HTMLButtonElement;
+      expect(deleteItem).toBeTruthy();
+      expect(deleteItem.disabled).toBe(true);
+      expect(deleteItem.className).toContain('cursor-not-allowed');
+      expect(deleteItem.getAttribute('title')).toBe(qaedTooltip);
+    });
+
+    it('calls deleteWithConfirmation and emits deleted output on success (DEL-R-4, DEL-AC-7, D5)', async () => {
+      const testRow = row();
+      mockDeletionService.getDeleteEligibility.mockReturnValue({
+        visible: true,
+        disabled: false,
+        tooltip: ''
+      });
+      mockDeletionService.deleteWithConfirmation.mockImplementation((targetRow, options) => {
+        options?.onSuccess?.();
+      });
+      await build({ row: testRow });
+
+      const deletedSpy = jest.fn();
+      component.deleted.subscribe(deletedSpy);
+
+      openMenu();
+
+      const deleteItem = overlayItems().find(item => item.textContent?.includes('Delete')) as HTMLButtonElement;
+      deleteItem.click();
+      fixture.detectChanges();
+
+      expect(mockDeletionService.deleteWithConfirmation).toHaveBeenCalledWith(testRow, expect.objectContaining({
+        onSuccess: expect.any(Function)
+      }));
+      expect(deletedSpy).toHaveBeenCalledWith(testRow);
+      expect(component.isMenuOpen()).toBe(false);
+    });
+
+    it('does not trigger deleteWithConfirmation when clicking disabled Delete item', async () => {
+      mockDeletionService.getDeleteEligibility.mockReturnValue({
+        visible: true,
+        disabled: true,
+        tooltip: 'Disabled'
+      });
+      await build({ row: row() });
+      openMenu();
+
+      const deleteItem = overlayItems().find(item => item.textContent?.includes('Delete')) as HTMLButtonElement;
+      deleteItem.click();
+
+      expect(mockDeletionService.deleteWithConfirmation).not.toHaveBeenCalled();
+    });
+  });
 });
+

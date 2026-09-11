@@ -640,6 +640,26 @@
                       (click)="copyLink(row)">
                       Copy link
                     </button>
+
+                    <!-- 5 · Delete result (DEL-R-1) -->
+                    @if (deleteEligibility(row).visible) {
+                      <div class="my-[4px] h-[1px] bg-[var(--pr-border)]"></div>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        [disabled]="deleteEligibility(row).disabled"
+                        [attr.aria-disabled]="deleteEligibility(row).disabled"
+                        [title]="deleteEligibility(row).tooltip"
+                        [prTooltip]="deleteEligibility(row).disabled ? deleteEligibility(row).tooltip : null"
+                        prTooltipPosition="bottom"
+                        class="flex h-[36px] w-full items-center gap-[8px] whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-color-red-600)] transition-colors hover:bg-[var(--pr-color-red-50)]"
+                        [class.cursor-not-allowed]="deleteEligibility(row).disabled"
+                        [class.opacity-50]="deleteEligibility(row).disabled"
+                        (click)="deleteEligibility(row).disabled ? null : deleteResult(row)">
+                        <i class="pi pi-trash text-[13px]" aria-hidden="true"></i>
+                        Delete
+                      </button>
+                    }
                   </div>
                 </ng-template>
               </td>

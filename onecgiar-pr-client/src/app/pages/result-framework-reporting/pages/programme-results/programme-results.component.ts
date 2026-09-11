@@ -1,5 +1,6 @@
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   HostListener,
@@ -31,6 +32,8 @@ import {
 } from '../../../../shared/components/pr-table';
 import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
 import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
+import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
+import { ResultDeletionService, DeleteEligibility } from '../../services/result-deletion.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ChangePhaseModalModule } from '../../../../shared/components/change-phase-modal/change-phase-modal.module';
@@ -275,6 +278,7 @@ function formatDate(value: string): string {
     PrFilterSelectComponent,
     PrFilterMultiselectModule,
     ChangePhaseModalModule,
+    PrTooltipDirectiveModule,
     SpTabEmptyStateComponent,
     WhereToReportModalComponent
   ],
@@ -679,8 +683,11 @@ export class ProgrammeResultsComponent implements OnDestroy {
   private readonly clipboard = inject(Clipboard);
   private readonly toastSE = inject(PrToastService);
   private readonly smartNav = inject(SmartNavigationService);
+  private readonly cdr = inject(ChangeDetectorRef);
   /** @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1) — the My work tab's badge. */
   private readonly myWorkCountSE = inject(MyWorkCountService);
+  /** @akili-spec changes/delete-result-action (DEL-T-2, DEL-R-1, DEL-R-4) */
+  readonly deletionSE = inject(ResultDeletionService);
 
   readonly data = inject(ProgrammeResultsService);
   readonly filter = inject(ProgrammeResultsFilterService);
@@ -1417,6 +1424,21 @@ export class ProgrammeResultsComponent implements OnDestroy {
     this.dataControlSE.currentResult = result;
     this.changePhaseModalMounted.set(true);
     this.dataControlSE.chagePhaseModal = true;
+  }
+
+  // ── Delete result (DEL-T-2, DEL-R-1, DEL-R-4) ──────────────────────────────────────────
+  deleteEligibility(row: ProgrammeResultRow): DeleteEligibility {
+    return this.deletionSE.getDeleteEligibility(row);
+  }
+
+  deleteResult(row: ProgrammeResultRow): void {
+    this.closeRowMenu();
+    this.deletionSE.deleteWithConfirmation(row, {
+      onSuccess: () => {
+        this.data.load(this.programmeCode());
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   // ── Row activation ──────────────────────────────────────────────────────────────────────

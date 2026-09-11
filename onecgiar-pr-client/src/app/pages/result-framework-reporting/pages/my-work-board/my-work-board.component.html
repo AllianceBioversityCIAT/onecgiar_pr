@@ -562,7 +562,7 @@
                   <span class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-color-primary-400)]"
                     >Needs my action</span
                   >
-                  <app-my-work-column [column]="editing" />
+                  <app-my-work-column [column]="editing" (deleted)="onResultDeleted()" />
                 </div>
               }
 
@@ -572,7 +572,7 @@
                   <span class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-text-subtle)]">{{
                     first ? 'Waiting on others' : ''
                   }}</span>
-                  <app-my-work-column [column]="col" />
+                  <app-my-work-column [column]="col" (deleted)="onResultDeleted()" />
                 </div>
               }
 
@@ -583,7 +583,7 @@
                     class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-text-subtle)]"
                     >{{ first ? 'Done' : '' }}</span
                   >
-                  <app-my-work-column [column]="col" />
+                  <app-my-work-column [column]="col" (deleted)="onResultDeleted()" />
                 </div>
               }
 
@@ -607,7 +607,8 @@
                     [rail]="closedIsRail()"
                     [collapsed]="closedIsRail()"
                     [collapsible]="!closedCollapsed() && !isNarrow()"
-                    (expandToggle)="toggleClosed()" />
+                    (expandToggle)="toggleClosed()"
+                    (deleted)="onResultDeleted()" />
                 </div>
               }
             </div>

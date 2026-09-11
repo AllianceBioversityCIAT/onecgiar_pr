@@ -1,10 +1,16 @@
 // @akili-spec changes/my-work-board (MWB-T-4, MWB-R-4, R-6, design.md §6.2, §6.3, DD-6)
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+// @akili-spec changes/delete-result-action (DEL-T-3, DEL-R-2, DEL-R-4, DEL-DD-2, DEL-DD-3)
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
+import { Clipboard } from '@angular/cdk/clipboard';
 import { ProgrammeResultRow } from '../../../programme-results/services/programme-results.service';
 import { firstMissingRoute, MY_WORK_SECTION_MAP, sectionLabel } from '../../my-work-section-map';
 import { STATUS_META } from '../../../result-framework-reporting-home/status-meta';
 import { SmartNavigationService } from '../../../../../../shared/services/smart-navigation.service';
+import { PrToastService } from '../../../../../../shared/components/pr-toast';
+import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
+import { DeleteEligibility, ResultDeletionService } from '../../../../services/result-deletion.service';
 
 /** The four visual variants `MWB-R-4` names. Derived, never passed in — a caller only says
  *  whether this card sits in the Editing column (`inEditingColumn`); the card works out which of
@@ -29,7 +35,7 @@ function formatDate(value: string): string {
 @Component({
   selector: 'app-my-work-card',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, OverlayModule, PrTooltipDirectiveModule],
   templateUrl: './my-work-card.component.html',
   styleUrls: ['./my-work-card.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -37,11 +43,22 @@ function formatDate(value: string): string {
 export class MyWorkCardComponent {
   private readonly router = inject(Router);
   private readonly smartNav = inject(SmartNavigationService);
+  private readonly deletionSE = inject(ResultDeletionService);
+  private readonly clipboard = inject(Clipboard);
+  private readonly toastSE = inject(PrToastService);
 
   readonly row = input.required<ProgrammeResultRow>();
   /** Whether this card is rendered inside the Editing column — the only column that shows
    *  completeness at all (`MWB-R-4`). Every other column renders the waiting/closed shape. */
   readonly inEditingColumn = input<boolean>(false);
+  readonly deleted = output<ProgrammeResultRow>();
+
+  readonly isMenuOpen = signal<boolean>(false);
+
+  readonly menuPositions: ConnectedPosition[] = [
+    { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 4 },
+    { originX: 'end', overlayX: 'end', originY: 'top', overlayY: 'bottom', offsetY: -4 }
+  ];
 
   /** `MWB-T-3`/`MWB-T-4` forward pointer (a): ready requires a REAL denominator — `total === 0`
    *  (capped rows, IPSR packages, an all-null fold) reads as *Open to check completeness*, never
@@ -96,4 +113,41 @@ export class MyWorkCardComponent {
     this.rememberOrigin();
     this.router.navigate(['/result', 'result-detail', this.row().code, this.continueRoute()], { queryParams: this.continueQueryParams() });
   }
+
+  // ── Context Menu & Actions (DEL-T-3, DEL-DD-2, DEL-DD-3) ─────────────────────────
+  toggleMenu(event: Event): void {
+    event.stopPropagation();
+    this.isMenuOpen.update(open => !open);
+  }
+
+  closeMenu(): void {
+    this.isMenuOpen.set(false);
+  }
+
+  pdfHref(): string {
+    return `/reports/result-details/${this.row()?.code}?phase=${this.row()?.versionId}`;
+  }
+
+  copyLink(): void {
+    const commands = ['/result', 'result-detail', this.row()?.code, 'general-information'];
+    const queryParams = { phase: this.row()?.versionId };
+    const path = this.router.serializeUrl(this.router.createUrlTree(commands, { queryParams }));
+    this.clipboard.copy(`${window.location.origin}${path}`);
+    this.toastSE.add({ key: 'globalUserNotification', severity: 'success', summary: 'Result link copied' });
+    this.closeMenu();
+  }
+
+  readonly deleteEligibility = computed<DeleteEligibility>(() => {
+    return this.deletionSE.getDeleteEligibility(this.row());
+  });
+
+  deleteResult(): void {
+    this.closeMenu();
+    this.deletionSE.deleteWithConfirmation(this.row(), {
+      onSuccess: () => {
+        this.deleted.emit(this.row());
+      }
+    });
+  }
 }
+

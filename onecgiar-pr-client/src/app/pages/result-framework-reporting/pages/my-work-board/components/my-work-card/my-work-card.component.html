@@ -21,9 +21,22 @@
     <span class="inline-flex items-center whitespace-nowrap rounded-full px-[7px] py-[2px] text-[10px] font-medium" [class]="statusChipClass()">
       {{ row().statusName }}
     </span>
-    @if (row().origin) {
-      <span class="ml-auto whitespace-nowrap text-[11px] text-[var(--pr-text-subtle)]">{{ row().origin }}</span>
-    }
+    <div class="ml-auto flex items-center gap-[6px]">
+      @if (row().origin) {
+        <span class="whitespace-nowrap text-[11px] text-[var(--pr-text-subtle)]">{{ row().origin }}</span>
+      }
+      <button
+        type="button"
+        #menuTrigger="cdkOverlayOrigin"
+        cdkOverlayOrigin
+        class="flex size-[24px] items-center justify-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] transition-colors hover:bg-[var(--pr-surface-subtle-hover)] hover:text-[var(--pr-text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+        aria-label="More actions"
+        aria-haspopup="menu"
+        [attr.aria-expanded]="isMenuOpen()"
+        (click)="toggleMenu($event)">
+        <i class="pi pi-ellipsis-h text-[14px]" aria-hidden="true"></i>
+      </button>
+    </div>
   </div>
 
   <!-- Title -->
@@ -117,3 +130,56 @@
     </div>
   }
 </article>
+
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="menuTrigger"
+  [cdkConnectedOverlayOpen]="isMenuOpen()"
+  [cdkConnectedOverlayPositions]="menuPositions"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  (backdropClick)="closeMenu()"
+  (detach)="closeMenu()">
+  <div role="menu" class="pr-row-menu" (click)="$event.stopPropagation()">
+    <!-- 1 · Download PDF -->
+    <a
+      role="menuitem"
+      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] no-underline transition-colors hover:bg-[var(--pr-color-primary-50)]"
+      [href]="pdfHref()"
+      target="_blank"
+      rel="noopener noreferrer"
+      (click)="closeMenu()">
+      Download PDF
+    </a>
+
+    <!-- 2 · Copy link -->
+    <button
+      type="button"
+      role="menuitem"
+      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+      (click)="copyLink()">
+      Copy link
+    </button>
+
+    <!-- 3 · Delete result (DEL-R-2, DEL-AC-6, DEL-AC-7) -->
+    @if (deleteEligibility().visible) {
+      <div class="my-[4px] h-[1px] bg-[var(--pr-border)]"></div>
+      <button
+        type="button"
+        role="menuitem"
+        [disabled]="deleteEligibility().disabled"
+        [attr.aria-disabled]="deleteEligibility().disabled"
+        [title]="deleteEligibility().tooltip"
+        [prTooltip]="deleteEligibility().disabled ? deleteEligibility().tooltip : null"
+        prTooltipPosition="bottom"
+        class="flex h-[36px] w-full items-center gap-[8px] whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-color-red-600)] transition-colors hover:bg-[var(--pr-color-red-50)]"
+        [class.cursor-not-allowed]="deleteEligibility().disabled"
+        [class.opacity-50]="deleteEligibility().disabled"
+        (click)="deleteEligibility().disabled ? null : deleteResult()">
+        <i class="pi pi-trash text-[13px]" aria-hidden="true"></i>
+        Delete
+      </button>
+    }
+  </div>
+</ng-template>
+

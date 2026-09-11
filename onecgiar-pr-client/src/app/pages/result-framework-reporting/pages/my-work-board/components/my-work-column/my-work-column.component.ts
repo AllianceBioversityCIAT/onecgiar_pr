@@ -1,5 +1,7 @@
 // @akili-spec changes/my-work-board (MWB-T-4, MWB-T-10, MWB-T-11, MWB-R-2, R-9, R-11, design.md §6.2, §6.3, DD-7, DD-8, DD-9)
+// @akili-spec changes/delete-result-action (DEL-T-3, DEL-R-4, DEL-AC-7)
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ProgrammeResultRow } from '../../../programme-results/services/programme-results.service';
 import { MyWorkCardComponent } from '../my-work-card/my-work-card.component';
 import { MyWorkColumn, readyCount as readyCountOf } from '../../my-work.view-model';
 import { STATUS_META } from '../../../result-framework-reporting-home/status-meta';
@@ -77,6 +79,7 @@ export class MyWorkColumnComponent {
   readonly collapsed = input<boolean>(true);
   readonly collapsible = input<boolean>(false);
   readonly expandToggle = output<void>();
+  readonly deleted = output<ProgrammeResultRow>();
 
   readonly isEditing = computed(() => this.column().key === 'editing');
   readonly meta = computed(() => MY_WORK_COLUMN_META[this.column().key]);
