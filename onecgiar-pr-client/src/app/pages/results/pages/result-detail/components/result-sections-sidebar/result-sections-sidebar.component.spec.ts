@@ -59,6 +59,7 @@ describe('ResultSectionsSidebarComponent', () => {
       showUnsubmit: false,
       unsubmitDisabled: false,
       incompleteTooltip: '',
+      unsubmitTooltip: 'Use this only if you need to make corrections before QA begins.',
       showQaAssessedNotice: false,
       showInQaNotice: false,
       runAiReview: jest.fn(),
@@ -178,6 +179,20 @@ describe('ResultSectionsSidebarComponent', () => {
     expect(html().querySelector('[data-testid="result-sections-submit"]')).toBeFalsy();
     (html().querySelector('[data-testid="result-sections-unsubmit"]') as HTMLButtonElement).click();
     expect(sectionsMock.openUnsubmit).toHaveBeenCalled();
+  });
+
+  // Regression: the clarification tooltip's wrapper div sits between the button and its click
+  // handler, so a click on the button bubbles into the div. prTooltip pins itself open on ANY
+  // click on its host — without stopPropagation on the button, clicking "Unsubmit result" would
+  // also pin a tooltip in document.body at the same time the confirmation modal opens.
+  it('does not pin the clarification tooltip open when Unsubmit is clicked', async () => {
+    sectionsMock.showSubmit = false;
+    sectionsMock.showUnsubmit = true;
+    await build();
+
+    (html().querySelector('[data-testid="result-sections-unsubmit"]') as HTMLButtonElement).click();
+
+    expect(document.body.querySelector('.pr-tooltip--pinned')).toBeNull();
   });
 
   // P2-3434: a result under QA must not offer a clickable Unsubmit right above the QA notice.
