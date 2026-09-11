@@ -55,7 +55,15 @@ compute_secret_hash() {
 # Redact session/token fields before writing any response to disk.
 redact_and_save() {
   local out_file="$1"
-  jq '
+  local raw; raw="$(cat)"
+  # AWS CLI errors are plain text ("An error occurred (X) when calling ..."): wrap them as JSON so the fixture stays machine-readable.
+  if ! printf '%s' "$raw" | jq -e . >/dev/null 2>&1; then
+    raw="$(printf '%s' "$raw" | python3 -c 'import sys,json,re
+t=sys.stdin.read().strip()
+m=re.search(r"An error occurred \((\w+)\) when calling the (\w+) operation: (.*)", t, re.S)
+print(json.dumps({"__type": m.group(1), "operation": m.group(2), "message": m.group(3).strip()} if m else {"__raw": t[:500]}))')"
+  fi
+  printf '%s' "$raw" | jq '
     (.Session // empty) |= "<redacted>"
     | (.AuthenticationResult.AccessToken // empty) |= "<redacted>"
     | (.AuthenticationResult.IdToken // empty) |= "<redacted>"
@@ -76,6 +84,13 @@ cmd_start() {
     --region "$AWS_REGION")"
 
   unset secret secret_hash
+
+  # Hand the raw Session to the caller through a private file OUTSIDE the repo (never stdout, never fixtures).
+  if [ -n "${SESSION_FILE:-}" ]; then
+    umask 077
+    printf '%s' "$(echo "$response" | jq -r '.Session // empty')" > "$SESSION_FILE"
+    echo "Session written to \$SESSION_FILE ($(wc -c < "$SESSION_FILE" | tr -d ' ') chars; ChallengeName=$(echo "$response" | jq -r '.ChallengeName // "none"'))"
+  fi
 
   echo "$response" | redact_and_save "initiate-auth.email-otp.json"
   echo "Response saved (redacted) to $FIXTURES_DIR/initiate-auth.email-otp.json"
