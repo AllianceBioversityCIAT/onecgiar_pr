@@ -74,7 +74,7 @@ Performed by a **named approver**: `Juan Carlos Cadavid`, date/time: `2026-09-11
      --cli-input-json file:///tmp/input.changed.json --region us-east-1
    ```
 
-Approver for the CLI path (placeholder): `___________________`.
+Approver for the CLI path: not applicable this run — the initial toggle used the console click path (named approver in step 3 above). The CLI path itself was exercised for the rollback rehearsal (step 6), approved by the user (see step 6 below).
 
 ### 4. Export after and diff
 **Done (phase 2a).** `describe-user-pool` + `describe-user-pool-client` x10 again (read-only, same 10 `ClientId`s as phase 1) → `runbook/test-after.json` (same jq recipe as step 1, `ClientSecret` deleted from every client, sorted keys) → `runbook/test-after.normalized.json` (same volatile fields dropped: pool `EstimatedNumberOfUsers`/`CreationDate`/`LastModifiedDate`, each client `CreationDate`/`LastModifiedDate`). Verification:
@@ -97,33 +97,27 @@ Additional targeted diffs run to satisfy the phase-2a brief (all empty — zero 
 
 Sanity: `grep -c ClientSecret runbook/*.json` → 0 in all four files; `grep -rn "eyJ" runbook` → no matches.
 
-### 4b. Smoke one sibling tenant
-**[phase 2 — not run this phase]** Password login against another app's client (e.g. TOC or Alliance TEST) to prove nothing else moved. **[placeholder — result]**
+### 4b. Smoke one sibling tenant (done, substitute form)
+Without sibling credentials, ran `InitiateAuth USER_PASSWORD_AUTH` with a non-existent user against the `Alliance` and `TOC` app clients (secret hash computed at run time, never stored) — expected `NotAuthorizedException`, confirming the password flow is still served on sibling clients, unaffected by the pool-level `EMAIL_OTP` toggle. Also confirmed the hosted-UI `/oauth2/authorize` endpoint for `PRMS-Reporting` and `CGIAR-AzureAD` still answers. Exact call outcomes are recorded in `execution.md` (this runbook describes the method only, not the response bodies). A full login with a real, credentialed sibling account remains a **`OTP-T-9` TEST HITL item** (see "Not done this phase" below).
 
 ### 5. Smoke PRMS / spike observations
-**[phase 2 — not run this phase]** Using `general-client` (`6ph57qfck44f8d4jgf47if0s11`) id + secret read at run time from the local microservice `.env` (never printed) via `scripts/spike-email-otp.sh`, run `InitiateAuth` (`USER_AUTH`, `PREFERRED_CHALLENGE=EMAIL_OTP`) and `RespondToAuthChallenge` (`EMAIL_OTP`) against two TEST users — one `CONFIRMED`, one `FORCE_CHANGE_PASSWORD` — with a real mailbox. Record:
+**Done (phase 2, 2026-09-11).** Using `general-client` (`6ph57qfck44f8d4jgf47if0s11`) id + secret read at run time read at run time via `describe-user-pool-client` (never stored — see `scripts/spike-email-otp.sh`)) via `scripts/spike-email-otp.sh`, ran `InitiateAuth` (`USER_AUTH`, `PREFERRED_CHALLENGE=EMAIL_OTP`) and `RespondToAuthChallenge` (`EMAIL_OTP`) against two TEST users — one `CONFIRMED`, one `FORCE_CHANGE_PASSWORD` — with a real mailbox. Full results are recorded once, in the canonical "Spike observations (step 5, …)" table further down this file — see that section for the challenge shape, `CODE_DELIVERY_DETAILS` masking, code length, expiry, attempt limit, delivery time, the simulated-challenge shape for an unknown email, and the `FORCE_CHANGE_PASSWORD` result (feeds `OTP-OQ-7`/`OTP-OQ-8`, triggers `OTP-T-10`).
 
-| Observation | Value |
-|---|---|
-| Challenge shape returned by `InitiateAuth` | **[placeholder]** direct `EMAIL_OTP` vs `SELECT_CHALLENGE` (if `SELECT_CHALLENGE`, record the exact second `RespondToAuthChallenge` request/response with `Session`) |
-| `CODE_DELIVERY_DETAILS` masking | **[placeholder]** e.g. `j***@icrisat.org` |
-| Code length | **[placeholder]** (feeds `OTP-OQ-7`) |
-| Expiry | **[placeholder]** minutes until a retry is required (feeds `OTP-OQ-7`) |
-| Attempt limit | **[placeholder]** wrong code x N before lockout (feeds `OTP-OQ-7`) |
-| Delivery time | **[placeholder]** seconds from `InitiateAuth` to mailbox receipt (feeds `OTP-OQ-8`) |
-| Simulated challenge for an email unknown to Cognito (`PreventUserExistenceErrors=ENABLED`) | **[placeholder]** shape of the dummy session / masked destination |
-| `FORCE_CHANGE_PASSWORD` user result | **[placeholder]** `EMAIL_OTP` accepted, or `NEW_PASSWORD_REQUIRED` returned instead → triggers conditional `OTP-T-10` (`design.md` §13) |
+Notes on that table:
+- The `SELECT_CHALLENGE` branch offering `EMAIL_OTP` as one of several challenges (`design.md` §4.2) was **not observed** — the `CONFIRMED` user got a direct `EMAIL_OTP` challenge instead. That branch remains design-derived, not spike-confirmed.
+- `respond-to-auth.code-mismatch.json` and `respond-to-auth.code-mismatch.attempt-6.json` are byte-identical (`CodeMismatchException` every time) — the "×6, no lockout" claim rests on the recorded call sequence, not on any difference between the two fixture files.
+- `AdminCreateUser` → `CONFIRMED` (last row of the table below) is proven end-to-end by `OTP-T-10`'s Definition of Done (`admin-get-user` on a freshly provisioned TEST user), not by a fixture in this directory.
 
-Redacted fixtures captured under `fixtures/cognito/` (see that directory's README for the expected filenames) — **not captured this phase** (phase 1 is export/runbook/script skeleton only).
+Redacted fixtures captured under `fixtures/cognito/` — see that directory's README for the exact files present and what each one shows.
 
 ### 5b. Re-confirm `OTP-OQ-6`
 Done (phase 1, from `runbook/test-before.json`): client `6ph57qfck44f8d4jgf47if0s11` (`general-client`) lists `ALLOW_USER_AUTH`. See "Facts confirmed" above.
 
 ### 6. Rollback rehearsal (TEST only)
-**[phase 2 — not run this phase]** Set `AllowedFirstAuthFactors` back to `["PASSWORD"]` (console, same click path as step 3 — untick the box) → export → diff against `runbook/test-before.normalized.json` must show **zero** differences → re-enable (repeat step 3) before handing back to phase 2's remaining work. **[placeholder — rollback diff output]**
+**Done (2026-09-11, CLI path, approved by the user).** Rollback (`AllowedFirstAuthFactors` back to `["PASSWORD"]`) diffed clean against `test-before.normalized.json` at the pool level, then `EMAIL_OTP` was re-enabled and diffed clean against `test-after.normalized.json` across pool + all 10 clients. See "Step 6 — Rollback rehearsal (TEST, 2026-09-11, CLI path, approved by the user)" further down this file for the exact calls, evidence files and the shell word-splitting note.
 
 ### 7. PROD
-**[placeholder — blocked on `OTP-OQ-1`: which pool/account serves PROD; not in `IBD-DEV`]**. Once resolved: identical steps 1–6 on the PROD pool; PRMS allow-list (`OTP_ALLOWED_EMAIL_DOMAINS`) set last, after the PROD Cognito change is verified.
+**Blocked on `OTP-OQ-1`** — which pool/account serves PROD; not in `IBD-DEV`. Genuinely outstanding, not started. Once resolved: identical steps 1–6 on the PROD pool; PRMS allow-list (`OTP_ALLOWED_EMAIL_DOMAINS`) set last, after the PROD Cognito change is verified.
 
 ## Support runbook cross-reference
 
@@ -131,9 +125,11 @@ See `design.md` §9 for the "code not received" triage table (this runbook's spi
 
 ## Not done this phase
 
-- Steps 3 (actual toggle — HITL, user does this in the console), 4, 4b, 5 (spike calls), 6 are placeholders only. No AWS write call has been made under this runbook.
-- `fixtures/cognito/*.json` are not yet populated (phase 2, using `scripts/spike-email-otp.sh`).
-- `design.md` §4.2 and `requirements.md` `OTP-OQ-7` updates with pinned values are phase 2 (need real spike data first).
+- **Step 7 (PROD)** is blocked on `OTP-OQ-1` (which pool/account serves PROD) — genuinely outstanding, not started.
+- **Sibling credentialed login** — a real sibling account signing in end-to-end, as opposed to step 4b's substitute negative-auth probe — is parked as a **`OTP-T-9` TEST HITL checklist item**: full login with a real sibling account remains a T-9 HITL item, not a phase-1/2 spike deliverable.
+- Test users `<spike mailbox>` (`CONFIRMED`) and `<spike mailbox>+fcp` (`FORCE_CHANGE_PASSWORD`) are still live in the TEST pool for `OTP-T-9`'s HITL pass — delete via `admin-delete-user` once that HITL is done.
+
+Steps 3–6 (console toggle, sibling smoke, spike, rollback) have all been executed and recorded — see those steps above and the "Spike observations" / "Step 6" sections below. Every `update-user-pool` write made under this runbook went through the approved `--cli-input-json` recipe in step 3; the bare, unscoped form remains forbidden and was never used.
 
 ## Spike observations (step 5, 2026-09-11 — client `general-client`, TEST pool)
 
@@ -149,7 +145,7 @@ See `design.md` §9 for the "code not received" triage table (this runbook's spi
 | Delivery | < 1 min, Cognito default sender, **Gmail spam folder** | — |
 | `AdminCreateUser` without `TemporaryPassword`, `SUPPRESS`, `email_verified=true` | user lands **`CONFIRMED`** | — |
 
-Test users left in the TEST pool for the HITL: `jucacar22@gmail.com` (`CONFIRMED`), `jucacar22+fcp@gmail.com` (`FORCE_CHANGE_PASSWORD`) — delete after `OTP-T-9` (`admin-delete-user`).
+Test users left in the TEST pool for the HITL: `<spike mailbox>` (`CONFIRMED`), `<spike mailbox>+fcp` (`FORCE_CHANGE_PASSWORD`) — delete after `OTP-T-9` (`admin-delete-user`).
 
 ## Step 6 — Rollback rehearsal (TEST, 2026-09-11, CLI path, approved by the user)
 

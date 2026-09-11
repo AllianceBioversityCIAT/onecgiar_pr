@@ -88,6 +88,9 @@ cmd_start() {
   # Hand the raw Session to the caller through a private file OUTSIDE the repo (never stdout, never fixtures).
   if [ -n "${SESSION_FILE:-}" ]; then
     umask 077
+    repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+    [ -n "$repo_root" ] && case "$SESSION_FILE" in "$repo_root"/*) echo "Refusing: SESSION_FILE must not live under the repo root ($repo_root)" >&2; exit 1;; esac
+    rm -f "$SESSION_FILE"
     printf '%s' "$(echo "$response" | jq -r '.Session // empty')" > "$SESSION_FILE"
     echo "Session written to \$SESSION_FILE ($(wc -c < "$SESSION_FILE" | tr -d ' ') chars; ChallengeName=$(echo "$response" | jq -r '.ChallengeName // "none"'))"
   fi
