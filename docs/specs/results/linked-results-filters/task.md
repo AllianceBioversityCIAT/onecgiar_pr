@@ -6,7 +6,7 @@
 - **Linked spec:** `docs/specs/results/linked-results-filters/requirements.md` + `docs/specs/results/linked-results-filters/design.md`.
 - **Sprint / target phase:** Next release
 - **Owner / driver:** Platform Dev Team
-- **Status:** `not-started`
+- **Status:** `shipped` (filters + widened query + custom panel); performance fix `RES-T-LRF-4` done 2026-09-11
 
 ---
 
@@ -55,16 +55,50 @@
 ### `RES-T-LRF-3` — Render UI filters in Contributors & Partners
 
 - **Type:** `client`
-- **Description:** Add two `app-pr-multi-select` components to `rd-contributors-and-partners.component.html` for Typology and Funding Source, placed just above the existing Linked Results dropdown. Bind the existing Linked Results dropdown's `[options]` to `filteredLinkedResults`.
+- **Description:** ~~Add two `app-pr-multi-select` components~~ **Shipped as a bespoke
+  `.custom-dropdown-panel`** (search box, Typology/Portfolio/Funding Source chip groups, result list) in
+  `rd-contributors-and-partners.component.html`, toggled from the existing "Please select a result"
+  trigger. `app-pr-multi-select` was not used — the approved visual needed search + three filter groups
+  + the result rows inside one overlay, which the multi-select primitive doesn't compose. Styled with the
+  app's real design tokens in `rd-contributors-and-partners.component.scss` (`.custom-linked-results-container`
+  block) — see `design.md` §6.3 for the 2026-09-11 token-correctness fix (the panel originally used a
+  nonexistent `--pr-color-primary` var and the violet-tinted `--pr-color-neutral-*` ramp as if it were gray).
 - **Implements:** `RES-R-1`, `RES-R-2`, `RES-AC-LRF-1`, `RES-AC-LRF-2`, `RES-AC-LRF-3`
-- **Files (expected):** `onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.component.html`
+- **Files (expected):** `onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.component.html`, `.component.scss`
 - **Depends on:** `RES-T-LRF-2`
-- **Blocks:** `—`
+- **Blocks:** `RES-T-LRF-4`
 - **Estimate:** `S`
 - **Definition of done:**
   - [x] Code merged via the project commit convention.
   - [x] Lint + format clean.
-  - [x] UI tested and visually aligns with PrimeNG / `reportingTheme` patterns.
+  - [x] UI tested and visually aligns with the app's real design tokens (not PrimeNG/`reportingTheme` — both are gone from this codebase, see `onecgiar-pr-client/CLAUDE.md`).
+
+### `RES-T-LRF-4` — Fix dropdown-open performance (2026-09-11)
+
+- **Type:** `client`
+- **Description:** Opening the panel from `RES-T-LRF-3` froze the app — root-caused to four compounding
+  issues in `rd-contributors-and-partners.component.ts`/`.html`: unmemoized getters re-scanning the
+  full (thousands-of-rows) results list on every change-detection tick (`RES-PERF-1`), an O(n)
+  `.includes()` in the per-row checkbox binding (`RES-PERF-2`), no cap on rendered DOM rows
+  (`RES-PERF-3`), and no `trackBy` on any `*ngFor` combined with getters returning new array instances
+  every call, defeating Angular's diffing (`RES-PERF-4`). Fixed with component-local
+  reference-equality memoization (`flatLinkedResultsOptions`, `availableTypologies`,
+  `filteredLinkedResults`, a new `resultsById` map, a new `selectedLinkedResultIds` set), a
+  `visibleLinkedResults` getter capped at `linkedResultsRenderCap = 150` (with a truncation note when
+  more match), `trackBy` on every `*ngFor` in the panel, and `toggleResultSelection()` reassigning
+  `linked_results` to a new array (was `push`/`splice` in place) so the memo caches can detect the
+  change. No visual or payload change. Full root-cause writeup: `design.md` §8.1.
+- **Implements:** `RES-R-4` (NFR: "the frontend filtering SHOULD remain responsive")
+- **Files (expected):** `onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.component.ts`, `.component.html`, `.component.scss`
+- **Depends on:** `RES-T-LRF-3`
+- **Blocks:** `—`
+- **Estimate:** `S`
+- **Definition of done:**
+  - [x] Code merged via the project commit convention.
+  - [x] Lint + format clean (`ng lint` — all files pass).
+  - [x] `ng build --configuration development` succeeds (catches template type errors `tsc` misses).
+  - [x] Existing suites green, unchanged pass count (`rd-contributors-and-partners*` — 10 suites / 284 tests).
+  - [ ] Dedicated `RES-PERF-*` regression specs (cache invalidation, render-cap behavior) — not yet written, see `design.md` §13.
 
 ---
 
@@ -74,6 +108,7 @@
 RES-T-LRF-1 (server query update)
    └── RES-T-LRF-2 (client logic)
          └── RES-T-LRF-3 (client UI)
+               └── RES-T-LRF-4 (perf fix)
 ```
 
 ---
@@ -84,6 +119,7 @@ RES-T-LRF-1 (server query update)
 |---|---|---|---|
 | `RES-TEST-LRF-1` | unit (server) | `RES-R-3` | `onecgiar-pr-server/src/api/results/result.repository.spec.ts` |
 | `RES-TEST-LRF-2` | unit (client) | `RES-R-1`, `RES-R-2`, `RES-R-4` | `onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.component.spec.ts` |
+| `RES-TEST-LRF-3` (not written) | unit (client) | `RES-PERF-3`, `RES-PERF-4` | Same file — assert `visibleLinkedResults.length` stays at the cap when `filteredLinkedResults` exceeds it, and that toggling a selection updates `selectedLinkedResultIds` without a stale cache. |
 
 ---
 
