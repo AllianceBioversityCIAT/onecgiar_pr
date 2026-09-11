@@ -51,11 +51,16 @@
     [body]="this.generalInfoBody"
     [required]="this.isLeadContactPersonRequired()"
     [guidanceAsTooltip]="guidanceAsTooltip()"></app-lead-contact-person-field>
+  <!-- 🛑 P2-3663: complete means A NAME, with or without a directory match — the same rule the field
+       itself declares (`LeadContactPersonFieldComponent.hasSelectedContact`, whose docblock records
+       why: results reported through the W3/Bilateral API legitimately name people outside CGIAR AD,
+       and the directory link is enrichment, not the data).
+       Requiring `lead_contact_person_data` here made the two disagree, and on a result rolled over
+       from a previous phase the disagreement is a dead end: the name travels as free text, the
+       directory object does not exist, so the reporter reads "1 field missing" over a field that is
+       filled in on screen and has nothing left to fill. QA hit exactly that on result 8555. -->
   @if (this.isLeadContactPersonRequired()) {
-    <div
-      appFeedbackValidation
-      labelText="Lead contact person"
-      [isComplete]="!!this.generalInfoBody.lead_contact_person && !!this.generalInfoBody.lead_contact_person_data"></div>
+    <div appFeedbackValidation labelText="Lead contact person" [isComplete]="!!this.generalInfoBody.lead_contact_person?.trim()"></div>
   }
 
   <!-- P2-3201: the AI-assisted notification sits above the heading and covers the whole section.
