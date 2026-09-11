@@ -1,7 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { ActiveDirectoryService } from './services/active-directory.service';
+import { OtpThrottlerGuard } from './guards/otp-throttler.guard';
 import { HttpStatus } from '@nestjs/common';
 import { UserLoginDto } from './dto/login-user.dto';
 import { AuthCodeValidationDto } from './dto/auth-code-validation.dto';
@@ -96,8 +98,10 @@ describe('AuthController', () => {
     jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
+      imports: [ThrottlerModule.forRoot([{ ttl: 900000, limit: 100 }])],
       controllers: [AuthController],
       providers: [
+        OtpThrottlerGuard,
         {
           provide: AuthService,
           useValue: mockAuthService,

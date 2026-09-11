@@ -27,6 +27,7 @@ import { ActiveDirectoryService } from './services/active-directory.service';
 import { SearchThrottleMiddleware } from './Middlewares/search-throttle.middleware';
 import { UserRepository } from './modules/user/repositories/user.repository';
 import { GlobalParameterCacheModule } from '../shared/services/cache/global-parameter-cache.module';
+import { OtpThrottlerGuard } from './guards/otp-throttler.guard';
 
 @Module({
   controllers: [AuthController],
@@ -57,6 +58,7 @@ import { GlobalParameterCacheModule } from '../shared/services/cache/global-para
     Repository,
     HandlersError,
     UserRepository,
+    OtpThrottlerGuard,
   ],
   exports: [
     BcryptPasswordEncoder,

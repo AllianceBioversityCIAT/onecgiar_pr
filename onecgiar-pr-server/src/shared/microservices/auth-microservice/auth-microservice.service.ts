@@ -294,4 +294,93 @@ export class AuthMicroserviceService {
       );
     }
   }
+
+  /**
+   * Start the Center (email OTP) sign-in challenge.
+   * @param email Normalised PRMS email — used as Cognito `username`.
+   * @description POST {MS_AUTH_URL}/auth/login/otp/start (OTP-T-5, design.md §4.2, §5.1).
+   * Never logs the email (OTP-R-11, .cursorrules).
+   */
+  async startEmailOtp(email: string): Promise<{
+    challengeName?: string;
+    session: string;
+    codeDeliveryDestination?: string;
+  }> {
+    try {
+      this.logger.log('Starting email OTP challenge');
+
+      const response = await firstValueFrom(
+        this.httpService.post(
+          `${this.authMicroserviceUrl}/auth/login/otp/start`,
+          { username: email },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              auth: JSON.stringify({
+                username: this.misId,
+                password: this.misSecret,
+              }),
+            },
+          },
+        ),
+      );
+
+      return response.data;
+    } catch (error) {
+      this.logger.error('Error starting email OTP challenge');
+      throw new HttpException(
+        {
+          code: error.response?.data?.code ?? 'UPSTREAM_ERROR',
+          message: error.response?.data?.message ?? 'Failed to start email OTP',
+        },
+        error.response?.status ?? 502,
+      );
+    }
+  }
+
+  /**
+   * Verify the Center (email OTP) sign-in challenge.
+   * @param email Normalised PRMS email — used as Cognito `username`.
+   * @param code The one-time code the user submitted.
+   * @param session The session returned by `startEmailOtp` (real or decoy).
+   * @description POST {MS_AUTH_URL}/auth/login/otp/verify (OTP-T-5, design.md §4.2, §5.1).
+   * Never logs the code, session or email (OTP-R-11, .cursorrules).
+   */
+  async verifyEmailOtp(
+    email: string,
+    code: string,
+    session: string,
+  ): Promise<{ tokens: any }> {
+    try {
+      this.logger.log('Verifying email OTP challenge');
+
+      const response = await firstValueFrom(
+        this.httpService.post(
+          `${this.authMicroserviceUrl}/auth/login/otp/verify`,
+          { username: email, code, session },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              auth: JSON.stringify({
+                username: this.misId,
+                password: this.misSecret,
+              }),
+            },
+          },
+        ),
+      );
+
+      return response.data;
+    } catch (error) {
+      this.logger.error('Error verifying email OTP challenge');
+      throw new HttpException(
+        {
+          code: error.response?.data?.code ?? 'UPSTREAM_ERROR',
+          message:
+            error.response?.data?.message ?? 'Failed to verify email OTP',
+        },
+        error.response?.status ?? 502,
+      );
+    }
+  }
 }

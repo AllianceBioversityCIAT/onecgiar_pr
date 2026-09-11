@@ -2,6 +2,7 @@ import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { UserLoginDto } from './dto/login-user.dto';
 import { JwtService } from '@nestjs/jwt';
 import { env } from 'process';
+import { createHmac, randomBytes, randomInt, timingSafeEqual } from 'crypto';
 import { UserService } from './modules/user/user.service';
 import { UserRepository } from './modules/user/repositories/user.repository';
 import { HandlersError } from '../shared/handlers/error.utils';
@@ -11,14 +12,64 @@ import { AuthMicroserviceService } from '../shared/microservices/auth-microservi
 import { AuthCodeValidationDto } from './dto/auth-code-validation.dto';
 import { CompletePasswordChallengeDto } from './dto/complete-password-challenge.dto';
 import { GlobalParameterCacheService } from '../shared/services/cache/global-parameter-cache.service';
+import { OtpStartDto } from './dto/otp-start.dto';
+import { OtpVerifyDto } from './dto/otp-verify.dto';
+import { returnFormatService } from '../shared/extendsGlobalDTO/returnServices.dto';
+import {
+  normaliseOtpEmail,
+  extractOtpDomain,
+  logOtpEvent,
+} from './utils/otp-shared.util';
 
 // @akili-spec changes/cognito-email-otp-login (OTP-T-4, OTP-R-9)
 export const OTP_ALLOWED_EMAIL_DOMAINS_PARAM = 'OTP_ALLOWED_EMAIL_DOMAINS';
+
+// @akili-spec changes/cognito-email-otp-login (OTP-T-4 review pointer 1) — local TTL
+// on top of GlobalParameterCacheService's own (unbounded) cache.
+const OTP_DOMAINS_CACHE_TTL_MS = 60_000;
+
+// @akili-spec changes/cognito-email-otp-login (OTP-T-5, design.md §4.1, OTP-DD-3)
+// Neutral copy — never reveals account existence.
+const OTP_NEUTRAL_SENT_MESSAGE =
+  'If this account exists, a code has been sent.';
+const OTP_DOMAIN_NOT_ALLOWED_MESSAGE =
+  'That email domain is not enabled for this option — use your CGIAR account or the external-user option, or contact PRMSTechSupport@cgiar.org';
+const OTP_UPSTREAM_UNAVAILABLE_MESSAGE =
+  'We could not reach the sign-in service. Try again in a minute or contact support.';
+const OTP_NOT_AUTHORIZED_MESSAGE = 'Code incorrect or expired.';
+const OTP_CODE_MISMATCH_MESSAGE = 'Code incorrect. Try again.';
+const OTP_CODE_EXPIRED_MESSAGE = 'Code expired — request a new one.';
+const OTP_ATTEMPTS_EXCEEDED_MESSAGE = 'Too many attempts — request a new code.';
+
+// @akili-spec changes/cognito-email-otp-login (OTP-T-5 rework, review FAIL B-3,
+// design.md §4.1 Response row + judgment lens-B advisory (a)) — the decoy is
+// prefix-free (no more `otp:`, which was itself an existence oracle: its mere
+// presence told an attacker "unknown user" without even checking the HMAC).
+// Fixed layout: hmac(43) ‖ nonce(22) ‖ exp(13 digits) ‖ filler, base64url charset
+// only, total length jittered uniformly in [1400, 1700] (a real Cognito session
+// measured 1,543 chars on the 2026-09-11 spike).
+const OTP_DECOY_HMAC_LEN = 43; // base64url(HMAC-SHA256), no padding
+const OTP_DECOY_NONCE_LEN = 22; // base64url(16 random bytes), no padding
+const OTP_DECOY_EXP_LEN = 13; // epoch ms, zero-padded — good until year 2286
+const OTP_DECOY_FIXED_LEN =
+  OTP_DECOY_HMAC_LEN + OTP_DECOY_NONCE_LEN + OTP_DECOY_EXP_LEN; // 78
+const OTP_DECOY_MIN_TOTAL_LEN = 1400;
+const OTP_DECOY_MAX_TOTAL_LEN = 1700;
+const OTP_DECOY_TTL_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
   private readonly _logger: Logger = new Logger(AuthService.name);
   private readonly pusher: Pusher;
+  // @akili-spec changes/cognito-email-otp-login (OTP-T-4 review pointer 1)
+  private _otpAllowedDomainsLastClearedAt = 0;
+  // @akili-spec changes/cognito-email-otp-login (OTP-T-5 rework, review FAIL B-3)
+  // Read once at construction so the decoy HMAC key is never `''` — the review's
+  // finding was that `env.JWT_SKEY ?? ''` makes the decoy forgeable when
+  // JWT_SKEY is unset. Falling back to a per-process random key keeps the decoy
+  // unforgeable even then (two decoys for the same email still differ only by
+  // nonce/exp/filler, never by which process minted them being guessable).
+  private readonly _otpDecoyKey: Buffer;
 
   constructor(
     private readonly _jwtService: JwtService,
@@ -35,6 +86,9 @@ export class AuthService {
       cluster: `${env.PUSHER_APP_CLUSTER}`,
       useTLS: true,
     });
+    this._otpDecoyKey = env.JWT_SKEY
+      ? Buffer.from(env.JWT_SKEY)
+      : randomBytes(32);
   }
 
   async pusherAuth(
@@ -302,6 +356,16 @@ export class AuthService {
    * trims, lower-cases, and drops empty entries and any leading `@` (OTP-R-9, OTP-DD-5).
    */
   async getOtpAllowedDomains(): Promise<string[]> {
+    // OTP-T-4 review pointer 1: force a re-fetch when the last clear is
+    // more than 60s old, so an admin's edit is picked up without a restart.
+    const now = Date.now();
+    if (now - this._otpAllowedDomainsLastClearedAt > OTP_DOMAINS_CACHE_TTL_MS) {
+      this._globalParameterCacheService.clearCacheByKey(
+        OTP_ALLOWED_EMAIL_DOMAINS_PARAM,
+      );
+      this._otpAllowedDomainsLastClearedAt = now;
+    }
+
     const rawValue = await this._globalParameterCacheService.getParam(
       OTP_ALLOWED_EMAIL_DOMAINS_PARAM,
     );
@@ -310,10 +374,15 @@ export class AuthService {
       return [];
     }
 
-    return String(rawValue)
+    const domains = String(rawValue)
       .split(',')
       .map((domain) => domain.trim().toLowerCase().replace(/^@/, ''))
-      .filter((domain) => domain.length > 0);
+      // OTP-T-4 review pointer 2: an entry still carrying '@' after
+      // stripping one leading '@' is malformed — drop it.
+      .filter((domain) => domain.length > 0 && !domain.includes('@'));
+
+    // OTP-T-4 review pointer 3: de-duplicate.
+    return [...new Set(domains)];
   }
 
   /**
@@ -321,7 +390,7 @@ export class AuthService {
    * @description Public, read-only config for the Center (email OTP) login path;
    * the allow-list stays empty until an admin sets the global parameter (OTP-R-9).
    */
-  async getOtpConfig(): Promise<any> {
+  async getOtpConfig(): Promise<returnFormatService> {
     try {
       const domains = await this.getOtpAllowedDomains();
 
@@ -337,6 +406,353 @@ export class AuthService {
       );
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  /**
+   * POST auth/login/otp/start
+   * @description Starts the Center (email OTP) sign-in challenge. Rate limiting is
+   * enforced upstream by `OtpThrottlerGuard` (before this method ever runs), so
+   * limits behave identically for known and unknown emails (OTP-R-3, OTP-R-6).
+   * Never creates users; never logs the code, session or full email (OTP-R-11).
+   */
+  async startOtp(dto: OtpStartDto): Promise<returnFormatService> {
+    const startedAt = Date.now();
+    const email = normaliseOtpEmail(dto.email);
+    const domain = extractOtpDomain(email);
+
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-5 rework, lens-A advisory)
+    // PRMS-side failures (allow-list read, findOne) log `internal_error`, never
+    // `upstream_error` — the runbook must not blame the microservice for a local
+    // DB/cache fault. The HTTP response stays the same neutral 503 either way.
+    let allowedDomains: string[];
+    try {
+      allowedDomains = await this.getOtpAllowedDomains();
+    } catch {
+      logOtpEvent(this._logger, 'start', domain, 'internal_error', startedAt);
+      return this.otpUpstreamUnavailableResponse();
+    }
+
+    if (!allowedDomains.includes(domain)) {
+      logOtpEvent(this._logger, 'start', domain, 'denied_domain', startedAt);
+      return {
+        response: { valid: false, code: 'OTP_DOMAIN_NOT_ALLOWED' },
+        message: OTP_DOMAIN_NOT_ALLOWED_MESSAGE,
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+
+    let existingUser: any;
+    try {
+      existingUser = await this._userRepository.findOne({
+        where: { email, active: true },
+        relations: ['obj_role_by_user'],
+      });
+    } catch {
+      logOtpEvent(this._logger, 'start', domain, 'internal_error', startedAt);
+      return this.otpUpstreamUnavailableResponse();
+    }
+
+    if (!existingUser) {
+      logOtpEvent(this._logger, 'start', domain, 'denied_user', startedAt);
+      return {
+        response: {
+          sent: true,
+          session: this.buildDecoySession(email),
+          destination: this.maskDestination(email),
+        },
+        message: OTP_NEUTRAL_SENT_MESSAGE,
+        status: HttpStatus.OK,
+      };
+    }
+
+    try {
+      const msResult = await this._authMicroservice.startEmailOtp(email);
+
+      // @akili-spec changes/cognito-email-otp-login (OTP-T-5 rework, lens-A advisory)
+      // Mirrors the verify-side `!msResult?.tokens` guard — a reply without a
+      // session is an upstream contract violation, not a 200.
+      if (!msResult?.session) {
+        throw new Error('Auth microservice start reply missing session');
+      }
+
+      logOtpEvent(this._logger, 'start', domain, 'sent', startedAt);
+      return {
+        response: {
+          sent: true,
+          session: msResult.session,
+          destination: this.maskDestination(email),
+        },
+        message: OTP_NEUTRAL_SENT_MESSAGE,
+        status: HttpStatus.OK,
+      };
+    } catch {
+      logOtpEvent(this._logger, 'start', domain, 'upstream_error', startedAt);
+      return this.otpUpstreamUnavailableResponse();
+    }
+  }
+
+  private otpUpstreamUnavailableResponse(): returnFormatService {
+    return {
+      response: { valid: false, code: 'OTP_UPSTREAM_UNAVAILABLE' },
+      message: OTP_UPSTREAM_UNAVAILABLE_MESSAGE,
+      status: HttpStatus.SERVICE_UNAVAILABLE,
+    };
+  }
+
+  /**
+   * POST auth/login/otp/verify
+   * @description Verifies the Center (email OTP) challenge and, on success, reuses
+   * `createSuccessfulLoginResponse` unchanged — the same method and arguments the
+   * password path uses, including its `403 needsRoles` guard (OTP-R-5, OTP-DD-4).
+   */
+  async verifyOtp(dto: OtpVerifyDto): Promise<returnFormatService> {
+    const startedAt = Date.now();
+    const email = normaliseOtpEmail(dto.email);
+    const domain = extractOtpDomain(email);
+    const { code, session } = dto;
+
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-5 rework, review FAIL B-3,
+    // design.md §5.1/§4.1, OTP-DD-3) — decoy detection is now solely "does the
+    // HMAC over email|nonce|exp recomputed from the fixed layout verify?" (no
+    // more `otp:` prefix scan — that prefix was itself an existence oracle). A
+    // verified-but-expired decoy is OTP_NOT_AUTHORIZED; a verified, unexpired
+    // decoy answers exactly like a wrong code on a real session (OTP_CODE_MISMATCH).
+    const decoy = this.verifyDecoySession(session, email);
+    if (decoy.isDecoy) {
+      if (decoy.expired) {
+        logOtpEvent(
+          this._logger,
+          'verify',
+          domain,
+          'not_authorized',
+          startedAt,
+        );
+        return this.otpNotAuthorizedResponse();
+      }
+
+      logOtpEvent(this._logger, 'verify', domain, 'mismatch', startedAt);
+      return {
+        response: { valid: false, code: 'OTP_CODE_MISMATCH' },
+        message: OTP_CODE_MISMATCH_MESSAGE,
+        status: HttpStatus.UNAUTHORIZED,
+      };
+    }
+
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-5 rework, lens-A advisory)
+    // A findOne failure here is PRMS-side (DB/cache), not the microservice —
+    // log `internal_error` so the runbook doesn't chase Cognito for it.
+    let existingUser: any;
+    try {
+      existingUser = await this._userRepository.findOne({
+        where: { email, active: true },
+        relations: ['obj_role_by_user'],
+      });
+    } catch {
+      logOtpEvent(this._logger, 'verify', domain, 'internal_error', startedAt);
+      return this.otpUpstreamUnavailableResponse();
+    }
+
+    if (!existingUser) {
+      logOtpEvent(this._logger, 'verify', domain, 'not_authorized', startedAt);
+      return this.otpNotAuthorizedResponse();
+    }
+
+    try {
+      const msResult = await this._authMicroservice.verifyEmailOtp(
+        email,
+        code,
+        session,
+      );
+
+      if (!msResult?.tokens) {
+        logOtpEvent(
+          this._logger,
+          'verify',
+          domain,
+          'not_authorized',
+          startedAt,
+        );
+        return this.otpNotAuthorizedResponse();
+      }
+
+      await this._userRepository.updateLastLoginUserByEmail(email);
+      logOtpEvent(this._logger, 'verify', domain, 'ok', startedAt);
+
+      return this.createSuccessfulLoginResponse(existingUser, msResult.tokens);
+    } catch (error) {
+      const mapped = this.mapOtpVerifyError(error);
+      logOtpEvent(this._logger, 'verify', domain, mapped.outcome, startedAt);
+      return {
+        response: { valid: false, code: mapped.code },
+        message: mapped.message,
+        status: mapped.status,
+      };
+    }
+  }
+
+  private otpNotAuthorizedResponse(): returnFormatService {
+    return {
+      response: { valid: false, code: 'OTP_NOT_AUTHORIZED' },
+      message: OTP_NOT_AUTHORIZED_MESSAGE,
+      status: HttpStatus.UNAUTHORIZED,
+    };
+  }
+
+  private mapOtpVerifyError(error: any): {
+    code: string;
+    message: string;
+    status: HttpStatus;
+    outcome: string;
+  } {
+    const msCode = error?.response?.code;
+    switch (msCode) {
+      case 'CODE_MISMATCH':
+        return {
+          code: 'OTP_CODE_MISMATCH',
+          message: OTP_CODE_MISMATCH_MESSAGE,
+          status: HttpStatus.UNAUTHORIZED,
+          outcome: 'mismatch',
+        };
+      case 'CODE_EXPIRED':
+        return {
+          code: 'OTP_CODE_EXPIRED',
+          message: OTP_CODE_EXPIRED_MESSAGE,
+          status: HttpStatus.UNAUTHORIZED,
+          outcome: 'expired',
+        };
+      case 'ATTEMPTS_EXCEEDED':
+        return {
+          code: 'OTP_ATTEMPTS_EXCEEDED',
+          message: OTP_ATTEMPTS_EXCEEDED_MESSAGE,
+          status: HttpStatus.UNAUTHORIZED,
+          outcome: 'attempts_exceeded',
+        };
+      case 'NOT_AUTHORIZED':
+      case 'CHALLENGE_NOT_SUPPORTED':
+        return {
+          code: 'OTP_NOT_AUTHORIZED',
+          message: OTP_NOT_AUTHORIZED_MESSAGE,
+          status: HttpStatus.UNAUTHORIZED,
+          outcome: 'not_authorized',
+        };
+      default:
+        return {
+          code: 'OTP_UPSTREAM_UNAVAILABLE',
+          message: OTP_UPSTREAM_UNAVAILABLE_MESSAGE,
+          status: HttpStatus.SERVICE_UNAVAILABLE,
+          outcome: 'upstream_error',
+        };
+    }
+  }
+
+  /**
+   * `j***@icrisat.org` — masked purely from the submitted email, never from
+   * anything the microservice returns, so the shape is identical for known
+   * and unknown users (OTP-DD-3).
+   */
+  private maskDestination(email: string): string {
+    const [local, domain] = email.split('@');
+    const maskedLocal = local ? `${local[0]}***` : '***';
+    return domain ? `${maskedLocal}@${domain}` : maskedLocal;
+  }
+
+  /**
+   * HMAC-SHA256 over `email|nonce|exp`, base64url, keyed with the per-process
+   * `_otpDecoyKey` (OTP-T-5 rework, review FAIL B-3 — never `env.JWT_SKEY ?? ''`).
+   * `exp` MUST be passed as the same zero-padded 13-digit string on both build
+   * and verify — the HMAC is computed over the exact bytes of the layout.
+   */
+  private computeOtpDecoyHmac(
+    email: string,
+    nonce: string,
+    expStr: string,
+  ): string {
+    return createHmac('sha256', this._otpDecoyKey)
+      .update(`${email}|${nonce}|${expStr}`)
+      .digest('base64url');
+  }
+
+  /**
+   * Prefix-free decoy session: `hmac(43) ‖ nonce(22) ‖ exp(13 digits) ‖ filler`,
+   * base64url charset only, total length jittered uniformly in [1400, 1700]
+   * (OTP-T-5 rework, review FAIL B-3, design.md §4.1 — a real Cognito session
+   * measured 1,543 chars on the 2026-09-11 spike). No prefix means the string's
+   * mere shape is never an existence oracle — only a failed/successful HMAC
+   * recompute on verify tells decoy from real.
+   */
+  private buildDecoySession(email: string): string {
+    const nonce = randomBytes(16).toString('base64url'); // 22 chars
+    const expStr = String(Date.now() + OTP_DECOY_TTL_MS).padStart(
+      OTP_DECOY_EXP_LEN,
+      '0',
+    );
+    const hmac = this.computeOtpDecoyHmac(email, nonce, expStr); // 43 chars
+
+    const totalLen = randomInt(
+      OTP_DECOY_MIN_TOTAL_LEN,
+      OTP_DECOY_MAX_TOTAL_LEN + 1,
+    );
+    const fillerLen = Math.max(0, totalLen - OTP_DECOY_FIXED_LEN);
+    const filler = randomBytes(Math.ceil((fillerLen * 3) / 4) + 3)
+      .toString('base64url')
+      .slice(0, fillerLen);
+
+    return `${hmac}${nonce}${expStr}${filler}`;
+  }
+
+  /** Splits a candidate session into its fixed-layout segments, or `null` if too short. */
+  private parseDecoySession(
+    session: string,
+  ): { hmac: string; nonce: string; expStr: string; exp: number } | null {
+    if (typeof session !== 'string' || session.length < OTP_DECOY_FIXED_LEN) {
+      return null;
+    }
+
+    const hmac = session.slice(0, OTP_DECOY_HMAC_LEN);
+    const nonce = session.slice(
+      OTP_DECOY_HMAC_LEN,
+      OTP_DECOY_HMAC_LEN + OTP_DECOY_NONCE_LEN,
+    );
+    const expStr = session.slice(
+      OTP_DECOY_HMAC_LEN + OTP_DECOY_NONCE_LEN,
+      OTP_DECOY_FIXED_LEN,
+    );
+
+    if (!/^\d{13}$/.test(expStr)) {
+      return null;
+    }
+
+    return { hmac, nonce, expStr, exp: Number(expStr) };
+  }
+
+  /**
+   * Detects a decoy solely by recomputing and `timingSafeEqual`-comparing the
+   * HMAC over `email|nonce|exp` from the fixed layout (OTP-T-5 rework, review
+   * FAIL B-3). A real Cognito session simply fails this check (wrong length
+   * segments, or a mismatching HMAC) and is treated as real — it proceeds to
+   * the microservice exactly as before.
+   */
+  private verifyDecoySession(
+    session: string,
+    email: string,
+  ): { isDecoy: boolean; expired: boolean } {
+    const parsed = this.parseDecoySession(session);
+    if (!parsed) {
+      return { isDecoy: false, expired: false };
+    }
+
+    const expected = this.computeOtpDecoyHmac(
+      email,
+      parsed.nonce,
+      parsed.expStr,
+    );
+    const providedBuffer = Buffer.from(parsed.hmac);
+    const expectedBuffer = Buffer.from(expected);
+    const isDecoy =
+      providedBuffer.length === expectedBuffer.length &&
+      timingSafeEqual(providedBuffer, expectedBuffer);
+
+    return { isDecoy, expired: isDecoy && Date.now() > parsed.exp };
   }
 
   /**

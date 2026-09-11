@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
 import { of, throwError } from 'rxjs';
-import { HttpException } from '@nestjs/common';
+import { HttpException, Logger } from '@nestjs/common';
 import { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { AuthMicroserviceService } from './auth-microservice.service';
 
@@ -432,6 +432,156 @@ describe('AuthMicroserviceService', () => {
       await expect(service.createUser(mockUserData)).rejects.toThrowError(
         'Creation failed',
       );
+    });
+  });
+
+  // @akili-spec changes/cognito-email-otp-login (OTP-T-5, design.md §4.2, §5.2)
+  describe('startEmailOtp', () => {
+    const email = 'a@icrisat.org';
+
+    it('posts to /auth/login/otp/start with the same headers as authenticateWithCustomCredentials', async () => {
+      const mockResponse = {
+        data: {
+          challengeName: 'EMAIL_OTP',
+          session: 'cognito-session-token',
+          codeDeliveryDestination: 'j***@icrisat.org',
+        },
+      };
+      mockHttpService.post.mockReturnValueOnce(of(mockResponse));
+
+      const result = await service.startEmailOtp(email);
+
+      expect(result).toEqual(mockResponse.data);
+      expect(httpService.post).toHaveBeenCalledWith(
+        `${mockEnv.MS_AUTH_URL}/auth/login/otp/start`,
+        { username: email },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            auth: JSON.stringify({
+              username: mockEnv.MS_AUTH_USER,
+              password: mockEnv.MS_AUTH_PASSWORD,
+            }),
+          },
+        },
+      );
+    });
+
+    it('throws an HttpException carrying the microservice stable code on failure', async () => {
+      const errorResponse = {
+        response: {
+          data: { code: 'UPSTREAM_ERROR', message: 'Cognito unreachable' },
+          status: 502,
+        },
+      };
+      mockHttpService.post.mockReturnValueOnce(throwError(() => errorResponse));
+
+      await expect(service.startEmailOtp(email)).rejects.toMatchObject({
+        status: 502,
+        response: { code: 'UPSTREAM_ERROR', message: 'Cognito unreachable' },
+      });
+    });
+
+    it('falls back to UPSTREAM_ERROR when the failure carries no stable code', async () => {
+      mockHttpService.post.mockReturnValueOnce(
+        throwError(() => new Error('Network error')),
+      );
+
+      await expect(service.startEmailOtp(email)).rejects.toMatchObject({
+        status: 502,
+        response: { code: 'UPSTREAM_ERROR' },
+      });
+    });
+
+    it('never logs the email in the request or error log lines', async () => {
+      const logSpy = jest.spyOn(Logger.prototype, 'log');
+      const errorSpy = jest.spyOn(Logger.prototype, 'error');
+      mockHttpService.post.mockReturnValueOnce(
+        throwError(() => new Error('Network error')),
+      );
+
+      await expect(service.startEmailOtp(email)).rejects.toBeDefined();
+
+      const allArgs = [...logSpy.mock.calls, ...errorSpy.mock.calls].flat();
+      allArgs.forEach((arg) => {
+        expect(String(arg)).not.toContain(email);
+      });
+    });
+  });
+
+  describe('verifyEmailOtp', () => {
+    const email = 'a@icrisat.org';
+    const code = '123456';
+    const session = 'cognito-session-token';
+
+    it('posts to /auth/login/otp/verify with username, code and session', async () => {
+      const mockResponse = {
+        data: {
+          tokens: {
+            accessToken: 'access',
+            idToken: 'id',
+            refreshToken: 'refresh',
+            expiresIn: 3600,
+            tokenType: 'Bearer',
+          },
+        },
+      };
+      mockHttpService.post.mockReturnValueOnce(of(mockResponse));
+
+      const result = await service.verifyEmailOtp(email, code, session);
+
+      expect(result).toEqual(mockResponse.data);
+      expect(httpService.post).toHaveBeenCalledWith(
+        `${mockEnv.MS_AUTH_URL}/auth/login/otp/verify`,
+        { username: email, code, session },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            auth: JSON.stringify({
+              username: mockEnv.MS_AUTH_USER,
+              password: mockEnv.MS_AUTH_PASSWORD,
+            }),
+          },
+        },
+      );
+    });
+
+    it.each([
+      ['CODE_MISMATCH'],
+      ['CODE_EXPIRED'],
+      ['ATTEMPTS_EXCEEDED'],
+      ['NOT_AUTHORIZED'],
+      ['CHALLENGE_NOT_SUPPORTED'],
+    ])('passes the stable code %s through unchanged', async (code) => {
+      const errorResponse = {
+        response: {
+          data: { code, message: 'stable copy' },
+          status: 401,
+        },
+      };
+      mockHttpService.post.mockReturnValueOnce(throwError(() => errorResponse));
+
+      await expect(
+        service.verifyEmailOtp(email, '000000', session),
+      ).rejects.toMatchObject({ response: { code } });
+    });
+
+    it('never logs the code or session in the request or error log lines', async () => {
+      const logSpy = jest.spyOn(Logger.prototype, 'log');
+      const errorSpy = jest.spyOn(Logger.prototype, 'error');
+      mockHttpService.post.mockReturnValueOnce(
+        throwError(() => new Error('Network error')),
+      );
+
+      await expect(
+        service.verifyEmailOtp(email, code, session),
+      ).rejects.toBeDefined();
+
+      const allArgs = [...logSpy.mock.calls, ...errorSpy.mock.calls].flat();
+      allArgs.forEach((arg) => {
+        expect(String(arg)).not.toContain(code);
+        expect(String(arg)).not.toContain(session);
+      });
     });
   });
 });
