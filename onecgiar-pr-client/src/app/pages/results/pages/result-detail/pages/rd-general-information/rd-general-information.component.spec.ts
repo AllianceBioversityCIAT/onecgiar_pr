@@ -366,11 +366,14 @@ describe('RdGeneralInformationComponent', () => {
     });
 
     /**
-     * P2-3663 — a result rolled over from a previous phase carries the contact as free text and no
-     * directory object, because the FK did not exist when it was first reported. Counting it as
-     * missing left the reporter staring at "1 field missing" over a field that is filled in on
-     * screen, with nothing left to fill and Submit blocked. The field's own rule
-     * (`hasSelectedContact`) already said a name is enough; this is the counter agreeing with it.
+     * P2-3663 — the counter must ask for the DIRECTORY MATCH, because that is what the platform
+     * enforces: the live `validation_general_information_P25` carries
+     * `IF(v.phase_year >= 2026, r.lead_contact_person_id IS NOT NULL, TRUE)` (read from the test
+     * database on 11 Sep 2026).
+     * ⚠️ These two cases were briefly written the other way round, accepting a bare name. Measured
+     * consequence: 19 results in phase 2026+ hold a name with no directory id, and the looser rule
+     * called them complete while the platform kept rejecting them — a blocked Submit with nothing
+     * on screen to act on. Asking for the match is what surfaces it.
      */
     const contactScanField = (): HTMLElement =>
       Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[appFeedbackValidation]'))
@@ -379,11 +382,11 @@ describe('RdGeneralInformationComponent', () => {
 
     /** 🛑 El primer `detectChanges` dispara `ngOnInit` → `getSectionInformation()`, que REEMPLAZA
      *  `generalInfoBody` con la respuesta mockeada. Asignar antes de eso se pierde. */
-    const renderWithContact = (name: string) => {
+    const renderWithContact = (name: string, directoryMatch: unknown = null) => {
       mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
       fixture.detectChanges();
       component.generalInfoBody.lead_contact_person = name;
-      (component.generalInfoBody as any).lead_contact_person_data = null;
+      (component.generalInfoBody as any).lead_contact_person_data = directoryMatch;
       fixture.componentRef.changeDetectorRef.markForCheck();
       // `false` = sin `checkNoChanges`: el GET mockeado repuebla el cuerpo dentro del mismo ciclo,
       // así que la comprobación de dev ve el binding cambiar y lanza NG0100 por el artefacto.
@@ -393,13 +396,19 @@ describe('RdGeneralInformationComponent', () => {
       fixture.detectChanges(false);
     };
 
-    it('counts the contact as complete on a name alone, with no directory match', () => {
+    it('counts a name with no directory match as still missing — the platform rejects it', () => {
       renderWithContact('Zuniga, Yecksin Mauricio (Alliance Bioversity-CIAT)');
+
+      expect(contactScanField().classList.contains('complete')).toBe(false);
+    });
+
+    it('counts it as complete once the contact is matched in the directory', () => {
+      renderWithContact('Zuniga, Yecksin Mauricio (Alliance Bioversity-CIAT)', { id: 2, display_name: 'Zuniga' } as any);
 
       expect(contactScanField().classList.contains('complete')).toBe(true);
     });
 
-    it('still counts it as missing when there is no name at all', () => {
+    it('counts it as missing when there is no name at all', () => {
       renderWithContact('   ');
 
       expect(contactScanField().classList.contains('complete')).toBe(false);

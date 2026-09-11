@@ -23,6 +23,16 @@ export class PrRangeLevelComponent {
   @Input() itemTitle: string = null;
   @Input() itemDescription: string = null;
   @Input() disabled: boolean = false;
+  /**
+   * P2-3655 — opt-in requiredness marker. OFF by default so every existing caller (IPSR step-n3,
+   * bilateral, innovation-dev) keeps rendering exactly what it rendered before.
+   *
+   * This ladder had NO validation affordance of its own: an unanswered mandatory level looked
+   * identical to an answered one, so "1 field missing" in the bottom bar pointed at a field the
+   * reporter could not find on screen. It does NOT take part in the mandatory-field count — that
+   * is owned by the `appFeedbackValidation` marker the caller already renders next to the control.
+   */
+  @Input() required: boolean = false;
   @Output() selectOptionEvent = new EventEmitter<any>();
 
   public list: number[] = [];
@@ -89,6 +99,20 @@ export class PrRangeLevelComponent {
 
   get hasNarrativeFields(): boolean {
     return !!(this.itemTitle || this.itemDescription);
+  }
+
+  /**
+   * P2-3655 — true only when the caller declared the field required AND no level is selected yet.
+   * `0` is a legitimate level (the ladder starts at 0), so emptiness is null/undefined/'' only —
+   * never falsiness.
+   *
+   * Suppressed while the ladder is not operable (`disabled`, or `RolesService.readOnly`, which is
+   * what `onSelectLevel` itself checks): the marker tells the reporter to pick a level, and asking
+   * that of someone whose dots are inert is a dead end, not a hint.
+   */
+  get isRequiredAndEmpty(): boolean {
+    if (!this.required || this.disabled || this.rolesSE.readOnly) return false;
+    return this.value === null || this.value === undefined || this.value === '';
   }
 
   get selectedTitle(): string {

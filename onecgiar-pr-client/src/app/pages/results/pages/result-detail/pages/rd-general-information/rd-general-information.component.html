@@ -51,16 +51,25 @@
     [body]="this.generalInfoBody"
     [required]="this.isLeadContactPersonRequired()"
     [guidanceAsTooltip]="guidanceAsTooltip()"></app-lead-contact-person-field>
-  <!-- 🛑 P2-3663: complete means A NAME, with or without a directory match — the same rule the field
-       itself declares (`LeadContactPersonFieldComponent.hasSelectedContact`, whose docblock records
-       why: results reported through the W3/Bilateral API legitimately name people outside CGIAR AD,
-       and the directory link is enrichment, not the data).
-       Requiring `lead_contact_person_data` here made the two disagree, and on a result rolled over
-       from a previous phase the disagreement is a dead end: the name travels as free text, the
-       directory object does not exist, so the reporter reads "1 field missing" over a field that is
-       filled in on screen and has nothing left to fill. QA hit exactly that on result 8555. -->
+  <!-- 🛑 P2-3663: complete needs the DIRECTORY MATCH, not just a typed name — because that is what
+       the platform enforces. Read from the live function on 11 Sep 2026:
+       `validation_general_information_P25` contains
+       `IF(v.phase_year >= 2026, r.lead_contact_person_id IS NOT NULL, TRUE)`,
+       so from the 2026 phase a result with a name but no `lead_contact_person_id` is REJECTED and
+       its section never turns green.
+       ⚠️ This marker briefly asked only for the name (11 Sep). That was wrong and it was measured:
+       19 results in phase 2026+ carry a name with no directory id, and with the looser rule the
+       form called them complete while Submit stayed blocked with nothing on screen explaining why.
+       Asking for the match is what gives the reporter something to act on — the field is editable
+       and re-picking the person from the directory fills the id.
+       🛑 Do NOT align this with `LeadContactPersonFieldComponent.hasSelectedContact`, which accepts
+       a bare name: that rule governs whether the section can be SAVED (results arriving through the
+       W3/Bilateral API name people outside CGIAR AD), not whether it is complete. -->
   @if (this.isLeadContactPersonRequired()) {
-    <div appFeedbackValidation labelText="Lead contact person" [isComplete]="!!this.generalInfoBody.lead_contact_person?.trim()"></div>
+    <div
+      appFeedbackValidation
+      labelText="Lead contact person"
+      [isComplete]="!!this.generalInfoBody.lead_contact_person && !!this.generalInfoBody.lead_contact_person_data"></div>
   }
 
   <!-- P2-3201: the AI-assisted notification sits above the heading and covers the whole section.
