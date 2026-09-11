@@ -150,3 +150,14 @@ See `design.md` §9 for the "code not received" triage table (this runbook's spi
 | `AdminCreateUser` without `TemporaryPassword`, `SUPPRESS`, `email_verified=true` | user lands **`CONFIRMED`** | — |
 
 Test users left in the TEST pool for the HITL: `jucacar22@gmail.com` (`CONFIRMED`), `jucacar22+fcp@gmail.com` (`FORCE_CHANGE_PASSWORD`) — delete after `OTP-T-9` (`admin-delete-user`).
+
+## Step 6 — Rollback rehearsal (TEST, 2026-09-11, CLI path, approved by the user)
+
+Executed with `aws cognito-idp update-user-pool --cli-input-json file://input.json` where `input.json` was derived from `test-after.json` `.pool` per the recipe in step 3 (non-writable keys stripped; deprecated `AdminCreateUserConfig.UnusedAccountValidityDays` dropped because it conflicts with `Policies.PasswordPolicy.TemporaryPasswordValidityDays`), after a pre-flight diff against the live pool that showed **only** `Policies.SignInPolicy.AllowedFirstAuthFactors` (plus the deprecated field drop) as intended changes.
+
+| Step | Call | Live factors after | Evidence |
+|---|---|---|---|
+| 6a rollback | `AllowedFirstAuthFactors = ["PASSWORD"]` | `["PASSWORD"]` | `test-rollback.json` (pool section); `test-rollback-diff.txt` = pool-level diff vs `test-before` → **empty** |
+| 6b re-enable | `AllowedFirstAuthFactors = ["PASSWORD","EMAIL_OTP"]` | `["PASSWORD","EMAIL_OTP"]` | `test-reenabled.json` (pool + 10 clients); `test-reenabled-diff.txt` = full normalized diff vs `test-after` → **empty** |
+
+Notes: the first export attempt in 6a hit a shell word-splitting bug and did not capture the clients (only the pool) — the pool-level comparison is the rollback evidence; the re-enabled export was redone with the corrected loop and covers pool + clients. `update-user-pool` never touches app clients, and the 6b full diff proves all 10 are unchanged end-to-end. Result: **rollback and re-enable are reversible with the `--cli-input-json` recipe; no other field moved.**
