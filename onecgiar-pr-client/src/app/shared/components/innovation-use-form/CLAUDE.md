@@ -1,6 +1,6 @@
 # innovation-use-form
 
-**Verified:** 2026-09-09 · branch feat/P2-3390-bilateral-investment-tables · 7d0215b13
+**Verified:** 2026-09-11 · branch performance-refactor · 5791b85b9
 
 ## What it is
 The shared Innovation Use questionnaire: use level (0-9), narrative/actors blocks, the
@@ -52,6 +52,14 @@ The shared Innovation Use questionnaire: use level (0-9), narrative/actors block
   never turn green — a UI-only retirement does not fix that.
 - `getUseLevelIndex()` returns `-1` (not `0`) when the level is unset or the catalogue hasn't loaded.
   Comparisons must tolerate `-1`.
+- ⚠️ **The use-level ladder is mandatory but was INVISIBLE as such** (P2-3655). `innovation_use_level_id`
+  has counted towards the bottom bar all along, through the `appFeedbackValidation` marker at
+  `.html:389-392` — but `app-pr-range-level` painted no border, no asterisk and no empty state, so an
+  unanswered ladder looked identical to an answered one and "1 field missing" pointed at a field the
+  reporter could not find. Fixed by the component's own opt-in `[required]` input (`.html:386`), which
+  renders a `*` marker in `--pr-field-required-fg` while the value is null. 🛑 That marker is **purely
+  visual**: it emits no `.pr-field.mandatory` / `.pr-input.mandatory`, because this field is already
+  counted once by the directive above — adding those classes would turn "1 field missing" into "2".
 
 ## Section 7 of P2-3537 — the age-only fallback and the 50/50 split
 

@@ -3064,7 +3064,10 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       v.phase_year,
       r.result_code,
       rt.name,
-      r.title
+      r.title,
+      r.description,
+      r.source,
+      r.status_id
     FROM result r
     INNER JOIN result_type rt ON r.result_type_id = rt.id
       AND rt.is_active = true
@@ -3072,8 +3075,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       AND v.is_active = true
     INNER JOIN clarisa_portfolios cp ON v.portfolio_id = cp.id
     WHERE         
-        v.phase_name = 'Reporting 2025'
-      AND v.is_active = true
+      r.status_id IN (2, 6)
       AND r.is_active = true
     UNION ALL
     SELECT 
@@ -3082,7 +3084,10 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       v.phase_year,
       r.result_code,
       rt.name,
-      r.title
+      r.title,
+      r.description,
+      r.source,
+      r.status_id
     FROM result r
     INNER JOIN result_type rt ON r.result_type_id = rt.id
       AND rt.is_active = true
@@ -3092,6 +3097,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     WHERE         
       cp.id = 2
         AND r.result_type_id IN (2, 7)
+        AND r.status_id IN (2, 6)
         AND r.is_active = true;
     `;
 
@@ -4054,11 +4060,31 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
           LIMIT 1
         ) AS project_name,
         rt.name  AS result_type,
+        -- P2-3653. The type NAME alone cannot gate the "Update result" action: the client rule is
+        -- shared with the Results Center list, which compares the type ID (Knowledge Products are
+        -- excluded from the bilateral carry-forward). Sending the ID here is what lets that rule be
+        -- written once instead of matching catalogue strings on one side and ids on the other.
+        r.result_type_id,
         rs.result_status_id AS status_id,
         rs.status_name,
         r.created_date,
         r.version_id,
         r.source,
+        -- P2-3653. The result's primary Science Program (role 1), under the same key the Results
+        -- Center list uses (ci.official_code AS submitter), so the shared change-phase modal reads
+        -- one field regardless of which list opened it (P2-3229 AC1). Correlated subquery, not a
+        -- JOIN, for the reason project_name above gives: a result has several initiative rows and
+        -- a join would multiply this one.
+        (
+          SELECT ci.official_code
+          FROM results_by_inititiative rbi
+          INNER JOIN clarisa_initiatives ci
+                  ON ci.id = rbi.inititiative_id
+          WHERE rbi.result_id = r.id
+            AND rbi.is_active > 0
+            AND rbi.initiative_role_id = 1
+          LIMIT 1
+        ) AS submitter,
         r.creation_method,
         CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated,
         rc.is_leading_result

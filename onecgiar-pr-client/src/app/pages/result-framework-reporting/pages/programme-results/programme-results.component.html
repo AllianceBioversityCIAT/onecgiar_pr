@@ -551,8 +551,10 @@
 
               <!-- 12 · ACTIONS — sticky right, `background: inherit` so the row / hover colour
                    follows it and scrolled cells never bleed through. -->
-              <td class="pgr-td pgr-actions" [class.pgr-actions--open]="isMenuOpen(row)">
+              <td class="pgr-td pgr-actions">
                 <button
+                  #rowMenuTrigger="cdkOverlayOrigin"
+                  cdkOverlayOrigin
                   type="button"
                   class="flex size-[32px] items-center justify-center rounded-[8px] border-0 bg-transparent text-[var(--pr-text-secondary)] transition-colors hover:bg-[#f3f2f7]"
                   aria-label="More actions"
@@ -562,11 +564,24 @@
                   <ng-icon name="lucideMoreHorizontal" size="18px" strokeWidth="2" />
                 </button>
 
-                @if (isMenuOpen(row)) {
-                  <div
-                    role="menu"
-                    class="pgr-pop pgr-pop--menu absolute right-0 top-[36px] z-30 w-[248px] cursor-default rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[6px] shadow-[0_8px_24px_rgba(25,21,36,0.10)]"
-                    (click)="$event.stopPropagation()">
+                <!-- The panel is a CDK Connected Overlay, NOT a child of this cell. The table wrap
+                     is `overflow-x: auto` (the horizontal scroll the grid's min-width needs), and an
+                     overflow container clips its descendants in BOTH axes — an absolutely positioned
+                     menu was cut off at the table's bottom edge, showing only its first item. The
+                     overlay renders in `.cdk-overlay-container` on `<body>`, outside that clip, and
+                     flips above the trigger near the viewport bottom. Same pattern and same shared
+                     `.pr-row-menu` skin as `reporting-aow-table` (`src/styles/row-menu.scss`, global
+                     on purpose because overlay panels leave every component's encapsulation). -->
+                <ng-template
+                  cdkConnectedOverlay
+                  [cdkConnectedOverlayOrigin]="rowMenuTrigger"
+                  [cdkConnectedOverlayOpen]="isMenuOpen(row)"
+                  [cdkConnectedOverlayPositions]="rowMenuPositions"
+                  [cdkConnectedOverlayHasBackdrop]="true"
+                  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+                  (backdropClick)="closeRowMenu()"
+                  (detach)="onRowMenuDetach(row)">
+                  <div role="menu" class="pr-row-menu" (click)="$event.stopPropagation()">
                     <!-- 1 · Open result — the same handler as the row click. -->
                     <button
                       type="button"
@@ -626,7 +641,7 @@
                       Copy link
                     </button>
                   </div>
-                }
+                </ng-template>
               </td>
             </tr>
           </ng-template>

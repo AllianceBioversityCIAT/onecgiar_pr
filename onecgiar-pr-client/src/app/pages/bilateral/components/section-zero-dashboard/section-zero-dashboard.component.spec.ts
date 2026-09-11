@@ -5,6 +5,9 @@ import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 import { signal } from '@angular/core';
+import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
+import { BilateralContextService } from '../../services/bilateral-context.service';
+import { of } from 'rxjs';
 
 const project = (id: number, shortName: string): BilateralProject => ({
   id,
@@ -46,6 +49,8 @@ describe('SectionZeroDashboardComponent', () => {
       selectProject: jest.fn(),
       setLeadProject: jest.fn(),
       leadProjectSyncPayload: jest.fn().mockReturnValue([]),
+      applyPrimaryAssignment: jest.fn(),
+      loadResult: jest.fn(),
     };
 
     mdsTracker = {
@@ -60,6 +65,8 @@ describe('SectionZeroDashboardComponent', () => {
         { provide: BilateralCreationService, useValue: creationService },
         { provide: BilateralMdsTrackerService, useValue: mdsTracker },
         { provide: BilateralAutoSaveService, useValue: autoSave },
+        { provide: BilateralApiService, useValue: { PATCH_primaryAssignment: jest.fn().mockReturnValue(of({})) } },
+        { provide: BilateralContextService, useValue: { centerInstitutionId: signal(null) } },
       ],
     }).compileComponents();
 
@@ -115,40 +122,26 @@ describe('SectionZeroDashboardComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('.bp-result-meta')).toBeNull();
   });
-  /**
-   * P2-3518 — the W3/Bilateral project of an existing result was painted as static text, so a draft
-   * created against the wrong project could never be corrected from the UI.
-   *
-   * Every assertion below reads the RENDERED DOM on purpose: the client runs zoneless, so a spec
-   * that asserted a class property would pass with the defect still on screen.
-   */
-  /**
-   * 2026-09-05 (Juan David) — the primary W3/Bilateral project is the result's identity and must
-   * NOT be changeable from the editor. This REVERSES the P2-3518 inline picker: the field is plain
-   * text in every state, editable results included. A draft created against the wrong project is
-   * discarded and recreated, not re-pointed. Every assertion reads the RENDERED DOM on purpose:
-   * the client runs zoneless, so a spec that asserted a class property would pass with the defect
-   * still on screen.
-   */
-  describe('the primary W3/Bilateral project is never editable', () => {
+  describe('P2-3283 primary assignment editing', () => {
     const openEditableResultOn = (current: BilateralProject) => {
       (creationService.currentResultId as any).set(41);
       (creationService.selectedProject as any).set(current);
-      (creationService.isEditableByCenterUser as any).set(true);
+      (creationService.selectedPrimarySp as any).set({ programId: 1, programCode: 'SP01', allocation: '100' });
       fixture.detectChanges();
     };
 
-    it('renders the project as plain text even while the result is editable', () => {
-      openEditableResultOn(project(12, 'OLDPROJ'));
+    it('renders the staged project picker while the result is editable', () => {
+      const current = project(12, 'OLDPROJ');
+      current.sciencePrograms = [{ programId: 1, programCode: 'SP01', allocation: '100', spName: 'Program one', spShortName: 'P1' }];
+      openEditableResultOn(current);
 
       const el = fixture.nativeElement as HTMLElement;
-      expect(el.querySelector('app-bilateral-project-selector')).toBeNull();
-      expect(el.querySelector('.bp-meta-field-value--project')?.textContent).toContain('OLDPROJ full name');
+      expect(el.querySelector('app-bilateral-project-selector')).not.toBeNull();
     });
 
-    it('renders plain text once the result is no longer editable, exactly the same', () => {
+    it('renders a reviewed result as static text', () => {
       openEditableResultOn(project(12, 'OLDPROJ'));
-      (creationService.isEditableByCenterUser as any).set(false);
+      fixture.componentRef.setInput('readOnly', true);
       fixture.detectChanges();
 
       const el = fixture.nativeElement as HTMLElement;
@@ -156,10 +149,17 @@ describe('SectionZeroDashboardComponent', () => {
       expect(el.querySelector('.bp-meta-field-value--project')?.textContent).toContain('OLDPROJ full name');
     });
 
-    it('never writes to the contributors endpoint from this card', () => {
+    it('requires a program after selecting a project with multiple allocations', () => {
       openEditableResultOn(project(12, 'OLDPROJ'));
+      component.onProjectCandidate({
+        ...project(77, 'NEWPROJ'),
+        sciencePrograms: [
+          { programId: 2, programCode: 'SP02', allocation: '60', spName: 'Program two', spShortName: 'P2' },
+          { programId: 3, programCode: 'SP03', allocation: '40', spName: 'Program three', spShortName: 'P3' },
+        ],
+      });
 
-      expect(autoSave.saveContributors).not.toHaveBeenCalled();
+      expect(component.requiresPrimarySelection()).toBe(true);
     });
   });
 });

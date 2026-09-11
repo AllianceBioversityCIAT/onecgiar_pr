@@ -2,7 +2,19 @@
   class="prl"
   [class.prl--disabled]="disabled"
   [class.prl--readonly]="rolesSE.readOnly">
-  <div class="prl-track" role="radiogroup" aria-label="Level selector">
+  <!-- P2-3655: requiredness marker. Same visual language every other required field in the
+       platform already uses — the `*` painted in `--pr-field-required-fg` by `app-pr-field-header`
+       (`.required::after`) and `app-field-card` (`.fch_required`). Opt-in via [required], and shown
+       only while the ladder is unanswered, so the field stops being indistinguishable from a
+       completed one when the bottom bar says a field is missing. -->
+  @if (isRequiredAndEmpty) {
+    <p class="prl-required">
+      <span class="prl-required-asterisk" aria-hidden="true">*</span>
+      <span>Select a level. This field is required.</span>
+    </p>
+  }
+
+  <div class="prl-track" role="radiogroup" aria-label="Level selector" [attr.aria-required]="required ? 'true' : null">
     <div class="prl-track-rail" aria-hidden="true">
       <div class="prl-track-fill" [style.width.%]="progressPercent"></div>
     </div>

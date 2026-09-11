@@ -1,4 +1,4 @@
-<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()" [appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)">
   <app-alert-status [collapsible]="false" [description]="alertInfoText()"> </app-alert-status>
   <app-pr-input fieldRef="[innovation-dev-info]-long_title" [required]="false" [readOnly]="true" [ngModel]="innovationDevInfoBody?.result?.title">
   </app-pr-input>
@@ -142,6 +142,7 @@
     [required]="false"
     label="Innovation Developer"
     [description]="innovationDeveloperDescription()"
+    [tooltip]="innovationDeveloperTooltip()"
     [(ngModel)]="innovationDevInfoBody.innovation_developers">
   </app-pr-textarea>
 

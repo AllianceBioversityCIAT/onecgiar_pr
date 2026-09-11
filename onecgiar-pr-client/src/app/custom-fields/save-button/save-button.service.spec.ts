@@ -16,6 +16,81 @@ describe('SaveButtonService', () => {
     expect(service).toBeTruthy();
   });
 
+  /**
+   * P2-3659 / P2-3654 — `Next` in the result-detail wizard asks for the section to be saved and has
+   * to know how that save ended before it decides whether to move on. `isSaving` alone cannot tell
+   * "finished fine" from "failed": it is one shared flag that goes up and then down either way.
+   *
+   * These run on REAL timers on purpose: `saveAndSettle` is plain `async/await` over `setTimeout`,
+   * and zone.js's `fakeAsync` does not drain those promises — every assertion read `undefined`.
+   */
+  describe('saveAndSettle (Next waits for the save)', () => {
+    /** Wires a piped request the way every section's save does, and hands back its source. */
+    const pipedSave = () => {
+      const source = new Subject<unknown>();
+      source.pipe(service.isSavingPipe()).subscribe({ next: () => undefined, error: () => undefined });
+      return source;
+    };
+
+    const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    it('reports `saved` when the triggered save succeeds', async () => {
+      let source!: Subject<unknown>;
+      const settling = service.saveAndSettle(() => (source = pipedSave()));
+
+      await wait(60);
+      source.next({ ok: true });
+
+      await expect(settling).resolves.toBe('saved');
+    });
+
+    it('reports `failed` when the triggered save errors', async () => {
+      let source!: Subject<unknown>;
+      const settling = service.saveAndSettle(() => (source = pipedSave()));
+
+      await wait(60);
+      source.error({ status: 500 });
+
+      await expect(settling).resolves.toBe('failed');
+    });
+
+    /**
+     * A handler that returns on its own guard, or opens a confirmation modal, never reaches the
+     * network. The caller must be able to tell that apart from a rejection — treating it as a
+     * failure would make `Next` do nothing at all on those sections.
+     */
+    it('reports `not-started` when the trigger sends nothing', async () => {
+      await expect(service.saveAndSettle(() => undefined)).resolves.toBe('not-started');
+    });
+
+    /**
+     * Evidences raises and lowers the spinner by hand around its file uploads. Without the idle
+     * grace period that would hold the caller until the full save timeout.
+     */
+    it('reports `not-started` when the spinner goes up and down with no request', async () => {
+      const settling = service.saveAndSettle(() => {
+        service.showSaveSpinner();
+        service.hideSaveSpinner();
+      });
+
+      await expect(settling).resolves.toBe('not-started');
+    });
+
+    it('tells two consecutive saves apart', async () => {
+      let source!: Subject<unknown>;
+
+      const first = service.saveAndSettle(() => (source = pipedSave()));
+      await wait(60);
+      source.next({ ok: true });
+      await expect(first).resolves.toBe('saved');
+
+      const second = service.saveAndSettle(() => (source = pipedSave()));
+      await wait(60);
+      source.error({ status: 400 });
+      await expect(second).resolves.toBe('failed');
+    });
+  });
+
   describe('inFlightPipe (per-surface spinner for modals / drawers / inline actions)', () => {
     it('should not touch the flag until the caller subscribes', () => {
       const flag = signal(false);

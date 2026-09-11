@@ -21,6 +21,14 @@ import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-c
 import { CurrentResult } from '../../interfaces/current-result.interface';
 import { FieldsManagerService } from '../fields-manager.service';
 
+/**
+ * P2-3653. `ResultTypeEnum.KNOWLEDGE_PRODUCT` on the server
+ * (`shared/constants/result-type.enum.ts`). A local constant because the client has no shared
+ * ResultTypeEnum — the same choice `complementary-innovation.component.ts` and
+ * `section-geography.component.ts` already made, for the same reason.
+ */
+const RESULT_TYPE_KNOWLEDGE_PRODUCT = 6;
+
 export interface SearchParams {
   limit?: number;
   page?: number;
@@ -267,6 +275,14 @@ export class ApiService {
   canUpdateBilateral(result: CurrentResult, currentPhase: { phaseYear: number }): boolean {
     if (!this.isPastReportingPhase(result, currentPhase)) return false;
     if (result?.status_name !== 'Approved') return false;
+
+    // P2-3653. Knowledge Products are excluded from the carry-forward — CGSpace owns their
+    // metadata, so a new one is reported with its own handle. The server already refuses them;
+    // without this the user reaches a dead end after confirming. AC3 of P2-3229 sets the
+    // treatment: an ineligible result does NOT display the action, it is not shown disabled.
+    // The id, not `result_type` (the catalogue NAME), because both lists carry the id and only
+    // one of them carries a name this rule could match.
+    if (Number((result as any)?.result_type_id) === RESULT_TYPE_KNOWLEDGE_PRODUCT) return false;
 
     // ⚠️ `lead_center` in the results list is the ACRONYM (`ci2.acronym` in the list SQL), not
     // the CLARISA code. `rolesSE.validateCenterAccess` compares against `center_id`, which is

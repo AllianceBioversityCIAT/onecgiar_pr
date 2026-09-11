@@ -35,6 +35,37 @@ export class SaveButtonService {
    * already handles: spinner released, error toast shown, the user can retry.
    */
   private static readonly SAVE_TIMEOUT_MS = 60000;
+
+  /**
+   * How long {@link saveAndSettle} waits for a triggered save to actually reach the network.
+   * Most section handlers issue their PATCH synchronously (`isSavingPipe` raises the flag while
+   * the pipe is built), but three do not: evidences uploads its files first, Innovation dev info
+   * awaits its own evidence call, and Innovation use re-reads the stored link before patching.
+   */
+  private static readonly SAVE_START_WINDOW_MS = 1000;
+
+  /**
+   * Grace period after the spinner goes back down with no settled save, before
+   * {@link saveAndSettle} concludes that nothing was actually sent. Without it a handler that
+   * raises and lowers the spinner around local work (evidences does exactly that while uploading)
+   * would hold the caller until the full save timeout.
+   */
+  private static readonly SAVE_SETTLE_GRACE_MS = 500;
+
+  /** Poll step of the two waits above. */
+  private static readonly SAVE_POLL_MS = 25;
+
+  /**
+   * Monotonic count of SETTLED saves, and how the last one ended.
+   *
+   * `isSaving` alone cannot answer "did the save the user just triggered succeed?": it is a single
+   * shared flag that goes up and down, so a caller that watches it sees the same value for
+   * "finished fine" and "failed". The counter gives every settle a distinct identity, which is what
+   * {@link saveAndSettle} compares against its own baseline.
+   */
+  private readonly settledSaves = signal(0);
+  private lastSaveSucceeded = true;
+
   private creatingNavSub: Subscription | null = null;
   private creatingHoldId: any = null;
 
@@ -128,14 +159,17 @@ export class SaveButtonService {
 
   isSavingPipe<T = any>(): MonoTypeOperatorFunction<T> {
     this.showSaveSpinner();
+    const settle = this.settleOnce();
     return pipe(
       timeout({ each: SaveButtonService.SAVE_TIMEOUT_MS }),
       tap(resp => {
         this.hideSaveSpinner();
+        settle(true);
         this.customizedAlertsFeSE.show({ id: 'save-button', title: 'Section saved successfully', description: '', status: 'success', closeIn: 500 });
       }),
       catchError(err => {
         this.hideSaveSpinner();
+        settle(false);
         const detail = this.extractHttpErrorMessage(err);
         this.customizedAlertsFeSE.show({
           id: 'save-button',
@@ -152,10 +186,12 @@ export class SaveButtonService {
   isSavingPipeNextStep<T = any>(nextPrevious: string): MonoTypeOperatorFunction<T> {
     const decrip = `Redirecting to the ` + nextPrevious + ` step`;
     this.showSaveSpinner();
+    const settle = this.settleOnce();
     return pipe(
       timeout({ each: SaveButtonService.SAVE_TIMEOUT_MS }),
       tap(resp => {
         this.hideSaveSpinner();
+        settle(true);
         this.customizedAlertsFeSE.show({
           id: 'save-button',
           title: 'Section saved successfully',
@@ -166,6 +202,7 @@ export class SaveButtonService {
       }),
       catchError(err => {
         this.hideSaveSpinner();
+        settle(false);
         const detail = this.extractHttpErrorMessage(err);
         this.customizedAlertsFeSE.show({
           id: 'save-button',
@@ -195,6 +232,93 @@ export class SaveButtonService {
         return throwError(() => err);
       })
     );
+  }
+
+  /**
+   * One settle per piped request, first answer wins.
+   *
+   * 🛑 The `tap` raises the success toast AFTER recording the outcome, and `show()` reaches into the
+   * DOM (`customized-alerts-fe.service.ts` appends to `app-root`) — if it throws, RxJS routes that
+   * throw into this pipe's own `catchError`, which would then overwrite a save the server had
+   * already accepted with `failed` and strand the user on a section that saved fine.
+   */
+  private settleOnce(): (ok: boolean) => void {
+    let settled = false;
+    return (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      this.lastSaveSucceeded = ok;
+      this.settledSaves.update(count => count + 1);
+    };
+  }
+
+  /**
+   * Runs `trigger` — a handler that is expected to save — and resolves with what happened to that
+   * save, so a caller can decide whether it is safe to move on.
+   *
+   * Exists for `Next` in the result-detail wizard (P2-3659 / P2-3654): navigating away used to
+   * discard everything typed in the open section, because only `Save draft` ever issued the
+   * section's PATCH. Waiting on the outcome — instead of firing and navigating — is what keeps the
+   * user on the section when the server rejects the save, with the error toast still on screen.
+   *
+   * Returns:
+   * - `saved` — a save settled successfully;
+   * - `failed` — a save settled with an error;
+   * - `not-started` — nothing reached the network: the handler returned early on its own guard, it
+   *   opened a confirmation modal, or it only did local work. The caller should then behave exactly
+   *   as it did before this method existed. 🛑 Never report `failed` for this case: a section with
+   *   no save path of its own would otherwise trap the user in it.
+   */
+  async saveAndSettle(trigger: () => void): Promise<'saved' | 'failed' | 'not-started'> {
+    const baseline = this.settledSaves();
+    trigger();
+
+    const started = await this.waitUntil(
+      () => this.isSaving() || this.settledSaves() !== baseline,
+      SaveButtonService.SAVE_START_WINDOW_MS
+    );
+    if (!started) return 'not-started';
+
+    if (!(await this.waitForSettle(baseline))) return 'not-started';
+    return this.lastSaveSucceeded ? 'saved' : 'failed';
+  }
+
+  /**
+   * Waits for a save to settle, giving up when the spinner has been down for
+   * {@link SAVE_SETTLE_GRACE_MS} without one — a handler can raise and lower it around local work
+   * (evidences does, while uploading its files) and never issue a piped request.
+   */
+  private async waitForSettle(baseline: number): Promise<boolean> {
+    const deadline = Date.now() + SaveButtonService.SAVE_TIMEOUT_MS + SaveButtonService.SAVE_START_WINDOW_MS;
+    let idleSince: number | null = null;
+
+    while (Date.now() < deadline) {
+      if (this.settledSaves() !== baseline) return true;
+      if (this.isSaving()) {
+        idleSince = null;
+      } else {
+        idleSince ??= Date.now();
+        if (Date.now() - idleSince >= SaveButtonService.SAVE_SETTLE_GRACE_MS) return false;
+      }
+      await this.nextPoll();
+    }
+    return false;
+  }
+
+  private waitUntil(predicate: () => boolean, timeoutMs: number): Promise<boolean> {
+    const deadline = Date.now() + timeoutMs;
+    const poll = async (): Promise<boolean> => {
+      while (!predicate()) {
+        if (Date.now() >= deadline) return false;
+        await this.nextPoll();
+      }
+      return true;
+    };
+    return poll();
+  }
+
+  private nextPoll(): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, SaveButtonService.SAVE_POLL_MS));
   }
 
   /** Keeps `isSaving` on until the next navigation settles (or the safety timeout fires). */

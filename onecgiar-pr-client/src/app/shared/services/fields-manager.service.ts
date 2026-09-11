@@ -181,6 +181,12 @@ export class FieldsManagerService {
    * Threshold is centralized in {@link ReportingDesignYear}.
    */
   isIpsrStepTwoEnablerTypes2026 = computed(() => this.isPhaseYearAtLeast(ReportingDesignYear.IpsrStepTwoEnablerTypes));
+  /**
+   * True when the open result's reporting phase is 2026+ → `Next` saves the section before it
+   * navigates (P2-3659 / P2-3654). Earlier phases keep `Next` as pure navigation.
+   * Threshold is centralized in {@link ReportingDesignYear}.
+   */
+  isSectionAutoSaveOnNext2026 = computed(() => this.isPhaseYearAtLeast(ReportingDesignYear.SectionAutoSaveOnNext));
   isAnInnovation = computed(
     () => this.dataControlSE.currentResultSignal()?.result_type_id == 2 || this.dataControlSE.currentResultSignal()?.result_type_id == 7
   );

@@ -44,6 +44,16 @@ export interface BilateralCenterResult {
   /** P2-3152 AC6 — name of the W3/Bilateral project the result was reported under. */
   project_name?: string | null;
   result_type: string;
+  /**
+   * P2-3653 — `ResultTypeEnum` id. The display name above cannot gate "Update result": the rule
+   * is shared with the Results Center list, which compares ids.
+   */
+  result_type_id?: number;
+  /**
+   * P2-3653 — official code of the result's primary Science Program (role 1), under the key the
+   * change-phase modal reads (`scienceProgram` getter). Same name the Results Center list uses.
+   */
+  submitter?: string | null;
   status_id: number;
   status_name: string;
   created_date: string;
@@ -424,13 +434,26 @@ export class BilateralResultsListComponent implements OnInit {
 
   /** The shape `ApiService.canUpdateBilateral` and `app-change-phase-modal` read from `currentResult`. */
   private asCurrentResult(result: BilateralCenterResult): any {
-    const phaseYear = this.phases().find(phase => phase.id === result.version_id)?.phase_year ?? null;
+    const phase = this.phases().find(item => item.id === result.version_id);
     return {
       ...result,
       source_name: 'W3/Bilaterals',
       lead_center: this.ctx.centerAcronym(),
-      phase_year: phaseYear,
+      phase_year: phase?.phase_year ?? null,
+      // P2-3653. The modal's "From phase" reads `phase_name`, which this row does not carry — it
+      // rendered blank from this list and populated from the Results Center, breaking the "same
+      // interaction pattern" AC1 asks for. Formatted as the Results Center list formats it
+      // (`CONCAT(v.phase_name, ' - ', cp.acronym)` in result.repository.ts) so the two modals read
+      // identically; the acronym is dropped rather than faked when the phase carries no portfolio.
+      phase_name: this.phaseNameWithPortfolio(phase),
     };
+  }
+
+  /** "Reporting 2025 - P25", or just the phase name when the phase has no portfolio acronym. */
+  private phaseNameWithPortfolio(phase: Phases | undefined): string | null {
+    if (!phase?.phase_name) return null;
+    const acronym = phase.obj_portfolio?.acronym;
+    return acronym ? `${phase.phase_name} - ${acronym}` : phase.phase_name;
   }
 
   requestDelete(result: BilateralCenterResult, event: Event): void {

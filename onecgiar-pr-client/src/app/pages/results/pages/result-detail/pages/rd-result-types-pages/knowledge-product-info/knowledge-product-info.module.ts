@@ -7,6 +7,7 @@ import { CustomFieldsModule } from '../../../../../../../custom-fields/custom-fi
 import { NgCircleProgressModule } from 'ng-circle-progress';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/directives/feedback-validation-directive.module';
 import { SectionBottomBarComponent } from '../../../components/section-bottom-bar/section-bottom-bar.component';
+import { BeforeUnloadWarningDirective } from '../../../../../../../shared/directives/before-unload-warning.directive';
 
 @NgModule({
   declarations: [KnowledgeProductInfoComponent],
@@ -16,6 +17,7 @@ import { SectionBottomBarComponent } from '../../../components/section-bottom-ba
     CustomFieldsModule,
     FeedbackValidationDirectiveModule,
     NgCircleProgressModule.forRoot(),
+    BeforeUnloadWarningDirective
   ]
 })
 export class KnowledgeProductInfoModule {}

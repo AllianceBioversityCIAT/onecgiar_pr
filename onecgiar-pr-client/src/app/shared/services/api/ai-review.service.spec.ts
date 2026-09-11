@@ -97,6 +97,22 @@ describe('AiReviewService', () => {
       httpMock = TestBed.inject(HttpTestingController);
       // `isSavingPipe()` fires the global save alert, which appends into <app-root>.
       document.body.appendChild(document.createElement('app-root'));
+      // `notifySectionChanged()` now unconditionally reloads the shared result state
+      // (`CurrentResultService.GET_resultById()`, P2-confirm-submission-title-and-disclaimer) so the
+      // Confirm Submission dialog's title stays fresh after any AI Review save. That reload fans out
+      // into `ResultsApiService.GET_resultById()` (a real `HttpClient` GET) plus several other real,
+      // unmocked singleton services (roles, result-level, data-control) — none of which this suite is
+      // about. Stub the reload itself so these DAC-score tests keep asserting only
+      // `generalInformationSaved`, without leaving an unmatched HTTP request for `httpMock.verify()`
+      // to trip over.
+      jest.spyOn(service.currentResultSE, 'GET_resultById').mockImplementation(() => undefined);
+      // Injecting `CurrentResultService` also transitively constructs `ResultLevelService`
+      // (`CurrentResultService` → `ResultLevelService`, both `providedIn: 'root'`), whose
+      // constructor unconditionally fires `GET_TypeByResultLevel()` the moment the DI graph is
+      // built — i.e. during the outer `TestBed.inject(AiReviewService)` in the top-level
+      // `beforeEach`, before this block even runs. It has nothing to do with DAC scores; flush it
+      // here too so it doesn't show up as an unmatched request in this describe's `httpMock.verify()`.
+      httpMock.expectOne(req => req.url.includes('type-by-level/get/all')).flush({ response: [{ id: 3, result_type: [] }] });
     });
 
     afterEach(() => {

@@ -136,5 +136,21 @@ export const ReportingDesignYear = {
    * Gated on the reporting phase YEAR of the PACKAGE being edited, not on the portfolio and not on
    * the listed results — the ticket lists results "from all phases", it is the form that changes.
    */
-  IpsrStepTwoEnablerTypes: 2026
+  IpsrStepTwoEnablerTypes: 2026,
+
+  /**
+   * P2-3659 / P2-3654 — from the 2026 cycle, `Next` in the result-detail wizard saves the open
+   * section before moving on, instead of navigating away and leaving whatever was typed unsent.
+   * QA reproduced the loss on General information, Contributors & partners, Geographic location
+   * and Innovation Dev info of result 9142 (10 Sep 2026): every field filled through the natural
+   * `Next` flow was gone on revisit and after a hard reload, because only `Save draft` ever
+   * issued the section's PATCH.
+   *
+   * Gated on the reporting phase YEAR, not on the portfolio: prtest holds 2025-phase results
+   * inside the P25 portfolio, and the epic's governing rule is that a previous phase must behave
+   * exactly as it does today — an automatic write on a closed phase is precisely what the PO
+   * forbade ("no revalidation over records from previous phases"). An unknown year keeps the
+   * legacy behaviour for the same reason: the detail can render before the result lands.
+   */
+  SectionAutoSaveOnNext: 2026
 } as const;

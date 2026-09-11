@@ -1,4 +1,4 @@
-<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()" [appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)">
   <app-alert-status [collapsible]="false" description="Please fill in the following required fields for this indicator category."> </app-alert-status>
 
   <app-alert-status [collapsible]="false" [description]="policyTypeDescriptions()"> </app-alert-status>
@@ -7,7 +7,6 @@
     <app-pr-select
       [options]="this.policyControlListSE.policyTypesList"
       label="Policy type"
-      description="Select policy type"
       optionLabel="name"
       optionValue="id"
       placeholder="Select policy type"
@@ -33,7 +32,6 @@
       ]"
       *ngIf="innovationUseInfoBody.policy_type_id == 1"
       label="Status"
-      description="Select Status"
       optionLabel="name"
       optionValue="id"
       placeholder="Select status"
@@ -78,7 +76,6 @@
   <app-pr-select
     [options]="this.policyControlListSE.policyStages"
     label="Stage"
-    description="Select stage"
     optionLabel="full_name"
     optionValue="id"
     placeholder="Select stage"

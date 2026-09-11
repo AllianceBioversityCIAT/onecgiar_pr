@@ -1,6 +1,6 @@
 # rd-evidences
 
-**Verified:** 2026-09-08 · branch qa-development-2026-ss · 4343f19b1
+**Verified:** 2026-09-10 · branch qa-development-2026-ss · UCA-T-8 (`docs/specs/changes/unsaved-changes-alert/`); prior: 2026-09-08 · 4343f19b1
 
 ## Qué es
 Sección 4 (última) del detalle de resultado: la lista de evidencias (links o ficheros subidos a
@@ -22,44 +22,46 @@ ese tipo no tiene página propia en `rd-result-types-pages/`.
 - Hijo: `evidence-item/` — el formulario de una evidencia; se usa embebido (`[embedded]="true"`)
   dentro del modal de creación/edición, nunca suelto.
 - **P2-3262 — guidance behind ONE ⓘ, Policy change only.** `policyChangeGuidanceAsTooltip()` gates it;
-  when true the grey `app-alert-status` is not rendered and `policyChangeEvidenceGuidance()`
-  (Part 1 = `alertStatus()` + Part 2 = the policy block) is published into
-  `DataControlService.currentResultSectionGuidance`, which the result-detail shell paints next to the
-  section name. An `effect` on `currentResultSignal` republishes it (the result lands after this
-  section mounts, and changes again on a phase switch); `ngOnDestroy` clears it. The stage-specific
-  paragraph needs `policy_stage_id`, which lives in another section, so this one calls
-  `GET_policyChanges()` — once per result, only when the gate is true.
-  The copy inside `policyChangeSpecificGuidance()` is **verbatim from the requirement document**
-  (restored 28-Aug-2026): the note paragraph and the 11 bullets are quoted, not paraphrased. Only the
-  four `<strong>` group headings are the code's own. Do not "tidy" the wording, the commas or the en
-  dash — `rd-evidences.component.spec.ts` locks one bullet per group and the note paragraph.
+  when true, `policyChangeEvidenceGuidance()` is published into
+  `DataControlService.currentResultSectionGuidance` (an `effect` on `currentResultSignal`
+  republishes on result/phase change; `ngOnDestroy` clears it). Needs `policy_stage_id` from another
+  section, so it calls `GET_policyChanges()` once per result, only when the gate is true.
+  The copy inside `policyChangeSpecificGuidance()` is **verbatim from the requirement document** — do
+  not "tidy" the wording; `rd-evidences.component.spec.ts` locks it.
 
 ## Dónde se usa
-- `src/app/shared/routing/routing-data.ts:411` — ruta `evidences`, sin `portfolioAcronym`, así que
+- `src/app/shared/routing/routing-data.ts:453` — ruta `evidences`, sin `portfolioAcronym`, así que
   aparece en P22 y P25.
-- `rd-evidences.component.html:110` — `app-section-bottom-bar` con `(clickSave)="onSaveSection()"`.
+- `rd-evidences.component.html:122` — `app-section-bottom-bar` con `(clickSave)="onSaveSection()"`.
+
+## `CanComponentDeactivate` (UCA-T-8)
+
+Mismo patrón que `rd-geographic-location` (UCA-T-7): `SectionDirtyTrackerService` component-scoped.
+Ver comentarios en el propio `.ts` para el detalle — no repetido aquí (`§3 COMPONENT-DOCS.md`):
+contrato ~L38-44, snapshot de carga ~L259-265, `performSave()` ~L274-312, `onSaveSection()` ~L353-399.
+
+- Snapshot al final real de `getSectionInformation()`, y otra vez dentro del `tap` de éxito de
+  `performSave()` antes del reload — si el reload falla, la sección no queda "sucia" para siempre.
+- `EvidencesCreateInterface.file` (`model/evidencesBody.model.ts`) va EXCLUIDO del dirty-diff
+  (`dirtySnapshotTarget()`, UCA-OQ-2) — ver ese método para el porqué. Gap acotado: cambiar sólo el
+  `File` adjunto no se reporta como "sucio".
+- `canDeactivate: [UnsavedChangesGuard]` en la ruta INTERNA `{path: '', component: RdEvidencesComponent}`
+  de `rd-evidences-routing.module.ts` — NO en la entrada `evidences` de `resultDetailRouting` (esa
+  tiene `loadChildren` y ningún `component`; el guard se invoca ahí con `component: null` →
+  `TypeError` en cada navegación. Bug cross-cutting corregido — ver
+  `docs/specs/changes/unsaved-changes-alert/execution.md`).
 
 ## Trampas (⚠️ = ya rompió algo)
 - ⚠️ **`.evidence_modal` — single-scroll structure (bugfix/evidence-modal-sticky-actions, EVM-DD-2).**
-  `.evidence_modal` caps height (`max-height: 85vh`) but is `overflow-y: hidden`, NOT a scrolling
-  ancestor; `<app-evidence-item>`'s wrapper `.modal_body` (`flex:1; min-height:0; overflow-y:auto`)
-  is the ONLY scrolling element. `.modal_header`/`.buttons` are plain, non-sticky. Don't reintroduce
-  `position: sticky` here or move `overflow-y:auto` onto `.evidence_modal` — attempt 1 broke that way
-  because `.pr-dialog`'s own independent scroll ancestor made sticky react to the wrong container.
-- ⚠️ **`.evidence_modal`'s `max-height` is `min(85vh, calc(100vh - 260px))`, NOT plain `85vh`**
-  (bugfix/evidence-modal-sticky-actions). App shell sticky header (~108px, `app.component.scss` →
-  `.app-shell-header`) renders above a deeply-nested `position:fixed` dialog regardless of z-index —
-  a Chromium compositing quirk. Root cause: `pr-dialog` renders inline, not portalled to
-  `document.body`; fixing that removes the need for the cap (out of scope here). Cap keeps ≥120px
-  clearance above the mask's top edge — don't revert to plain `85vh`, regression caught live.
+  Caps height (`max-height: min(85vh, calc(100vh - 260px))` — NOT plain `85vh`, keeps ≥120px clearance
+  under the fixed app-shell header, a Chromium compositing quirk) but is `overflow-y: hidden`, NOT a
+  scrolling ancestor; `<app-evidence-item>`'s `.modal_body` is the ONLY scrolling element. Don't
+  reintroduce `position: sticky` here or move `overflow-y:auto` onto `.evidence_modal` — attempt 1
+  broke that way because `.pr-dialog`'s own scroll ancestor made sticky react to the wrong container.
 - ⚠️ **`evidencesType`'s `id`s MUST match `evidence.is_sharepoint`'s type (boolean), not `0`/`1`**
-  (bugfix/evidence-modal-sticky-actions, attempt 4, `evidence-item.component.ts`). `pr-radio-button`
-  checks an option via strict equality (`value === option[optionValue]`); a numeric `id` never
-  matches a boolean `is_sharepoint` default/value, so **neither** "Link" nor "Upload file" ever
-  showed as selected, even though `draftEvidence = { is_sharepoint: false }` already intended "Link"
-  to be the default — a real, if silent, pre-existing bug. Now `{ id: false, name: 'Link' }` /
-  `{ id: true, name: 'Upload file' }`. `cleanSource(e)`'s `if (e) / else` still works unchanged
-  (boolean truthiness matches the old numeric truthiness for 0/1 exactly).
+  (`evidence-item.component.ts`) — `pr-radio-button` checks via strict equality, so a numeric `id`
+  never matched the boolean default and neither option ever showed selected. Now `{ id: false, ... }`
+  / `{ id: true, ... }`.
 - ⚠️ **`.field_card`'s global `margin: 20px 0` (`src/styles/field-card.scss`) STACKS with
   `.evidence_fields`'s own `gap`** instead of being replaced — biggest contributor to popup scroll
   height. Fixed via a **scoped** `::ng-deep .field_card { margin: 4px 0; }` inside
@@ -95,11 +97,11 @@ ese tipo no tiene página propia en `rd-result-types-pages/`.
   (P2-3220). `onSaveSection` los convierte en una alerta explícita. La sección **sí** se guarda igual
   —el fichero también viaja en el multipart de `POST_evidences`— pero una evidencia sin `link` ni
   `sp_*` no está en SharePoint, y el usuario tiene que saberlo. No devolver a un `catch` mudo.
-- ⚠️ **`isSaving` es un latch.** Sólo lo baja `getSectionInformation()`, que únicamente corre si el
-  POST fue bien. Si el POST falla, el flag se queda en `true` y `isEvidenceUploading()` deja
-  cualquier evidencia de fichero sin link mostrando el skeleton de "subiendo" hasta que se recargue
-  la página. Arreglado en P2-3373 con un `error:` en el `subscribe` — **no lo quites**, hay dos
-  tests candado en `rd-evidences.component.spec.ts` (`describe('onSaveSection')`).
+- ⚠️ **`isSaving` es un latch** — sólo lo baja `getSectionInformation()` (corre si el POST fue bien).
+  Si el POST falla, `isEvidenceUploading()` deja el skeleton de "subiendo" hasta recargar (P2-3373).
+  Desde `UCA-T-8` el release en el camino de error vive en el `catchError` de `performSave()`, no en
+  un `.subscribe({error})`. **No quites el `this.isSaving = false` de ahí** — dos tests candado en
+  `describe('onSaveSection')` lo bloquean.
 - ⚠️ **Confirmar en el modal guarda la sección entera.** `confirmCreateEvidence()` y
   `deleteEvidenceWithConfirm()` llaman a `onSaveSection()`. Si el POST falla, la tarjeta ya está
   pintada en la lista (se hizo `unshift` antes de guardar) y parece guardada; sólo la avisa un toast

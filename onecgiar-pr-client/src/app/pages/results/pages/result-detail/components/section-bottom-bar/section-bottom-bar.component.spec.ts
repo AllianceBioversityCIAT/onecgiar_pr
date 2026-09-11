@@ -7,6 +7,7 @@ import { SaveButtonService } from '../../../../../../custom-fields/save-button/s
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { SectionBottomBarSlotService } from './section-bottom-bar-slot.service';
+import { UnsavedNavigationIntentService } from '../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
 
 describe('SectionBottomBarComponent', () => {
   let fixture: ComponentFixture<SectionBottomBarComponent>;
@@ -26,6 +27,10 @@ describe('SectionBottomBarComponent', () => {
    * scan del DOM ahora prueban lo contrario — ver el describe `completion status`.
    */
   let sectionIsDone = true;
+  /** Reporting phase year of the open result — what gates the save-on-Next behaviour. */
+  let phaseYear: number | null = null;
+  /** What the mocked `saveAndSettle` reports back. */
+  let saveOutcome: 'saved' | 'failed' | 'not-started' = 'saved';
 
   const SECTIONS = [
     { path: 'general-information', prName: 'General information' },
@@ -39,6 +44,9 @@ describe('SectionBottomBarComponent', () => {
   const build = async (url = '/result/result-detail/1234/partners?phase=7') => {
     currentUrl = url;
     buildSectionsMock();
+    // El año se fija POR CASO, despues del beforeEach que construyo el mock: publicarlo aqui es lo
+    // unico que hace que cada caso mida su propia fase y no la del anterior.
+    dataControlMock.currentResultSignal.set({ phase_year: phaseYear });
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [SectionBottomBarComponent],
@@ -84,10 +92,19 @@ describe('SectionBottomBarComponent', () => {
   beforeEach(() => {
     currentUrl = '/result/result-detail/1234/partners?phase=7';
     buildSectionsMock();
-    saveMock = { isSaving: signal(false) };
-    dataControlMock = { fieldFeedbackList: signal<string[]>([]) };
+    saveOutcome = 'saved';
+    saveMock = {
+      isSaving: signal(false),
+      // Mirrors the real contract: it runs the trigger and reports how that save ended.
+      saveAndSettle: jest.fn(async (trigger: () => void) => {
+        trigger();
+        return saveOutcome;
+      })
+    };
+    dataControlMock = { fieldFeedbackList: signal<string[]>([]), currentResultSignal: signal({ phase_year: phaseYear }) };
     rolesMock = { readOnly: false };
     sectionIsDone = true;
+    phaseYear = null;
   });
 
   describe('position', () => {
@@ -138,6 +155,68 @@ describe('SectionBottomBarComponent', () => {
       component.goNext();
 
       expect(router.navigate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('unsaved-changes silent-save intent', () => {
+    // UCA-T-5: the guard reads the intent flag synchronously as part of the SAME navigation's
+    // canDeactivate check, so `markSilent()` must happen strictly before `router.navigate` is
+    // invoked — not merely "both happened" — or the guard races the flag and shows the dialog
+    // anyway.
+    it('calls intentSE.markSilent() before router.navigate on Next', async () => {
+      await build();
+      const intentSE = TestBed.inject(UnsavedNavigationIntentService);
+      const calls: string[] = [];
+      jest.spyOn(intentSE, 'markSilent').mockImplementation(() => calls.push('markSilent'));
+      (router.navigate as jest.Mock).mockImplementation(() => {
+        calls.push('navigate');
+        return Promise.resolve(true);
+      });
+
+      q('[data-testid="section-bottom-bar-next"]').click();
+
+      expect(calls).toEqual(['markSilent', 'navigate']);
+    });
+
+    it('calls intentSE.markSilent() before router.navigate on Back', async () => {
+      await build();
+      const intentSE = TestBed.inject(UnsavedNavigationIntentService);
+      const calls: string[] = [];
+      jest.spyOn(intentSE, 'markSilent').mockImplementation(() => calls.push('markSilent'));
+      (router.navigate as jest.Mock).mockImplementation(() => {
+        calls.push('navigate');
+        return Promise.resolve(true);
+      });
+
+      q('[data-testid="section-bottom-bar-back"]').click();
+
+      expect(calls).toEqual(['markSilent', 'navigate']);
+    });
+
+    // A sidebar `routerLink` click navigates via the Router directly, never through this
+    // component's `goTo()` — it must NOT be treated as a silent-save navigation.
+    //
+    // `build()` mocks `router.navigate` (so the Next/Back tests above can assert call order
+    // without a real route table) — a mocked `navigate()` never emits a real `NavigationStart`
+    // through `router.events`, so a prior version of this test asserting against that mock proved
+    // nothing: a hypothetical implementation that called `markSilent()` from a global
+    // `router.events` subscription (instead of only inside `goTo()`) would ALSO pass, since no
+    // real router event would fire either way. Restoring the real `navigate()` here — the ONE
+    // thing this test changes versus the rest of the suite — makes the navigation genuinely walk
+    // through `router.events`, so that hypothetical implementation would actually trip the spy and
+    // this test would catch it.
+    it('does not call markSilent() for a navigation triggered from outside goTo() (e.g. a sidebar click)', async () => {
+      await build();
+      const intentSE = TestBed.inject(UnsavedNavigationIntentService);
+      const spy = jest.spyOn(intentSE, 'markSilent');
+      (router.navigate as jest.Mock).mockRestore();
+
+      // No route matches (`provideRouter([])`), so the promise settles to `false` (or rejects,
+      // depending on Router version) — either way `NavigationStart` has already gone through
+      // `router.events` by the time this resolves, which is all this test needs.
+      await router.navigate(['/result/result-detail/1234/evidences']).catch(() => undefined);
+
+      expect(spy).not.toHaveBeenCalled();
     });
   });
 
@@ -285,6 +364,163 @@ describe('SectionBottomBarComponent', () => {
       const slotSE = TestBed.inject(SectionBottomBarSlotService);
       expect(slotSE.syncSlot()).toBeTruthy();
       expect(slotSE.syncSlot()?.classList.contains('sbb-sync-slot')).toBe(true);
+    });
+  });
+
+  /**
+   * P2-3659 / P2-3654 — `Next` used to be pure navigation, so everything typed in the open section
+   * was discarded unless the user had also pressed `Save draft`. QA reproduced the loss on four
+   * sections of result 9142 (10 Sep 2026), confirmed by a hard reload.
+   */
+  describe('save on Next (P2-3659)', () => {
+    const clickNext = async () => {
+      q('[data-testid="section-bottom-bar-next"]').click();
+      await Promise.resolve();
+      await Promise.resolve();
+      fixture.detectChanges();
+    };
+
+    it('saves the section before navigating, from the 2026 phase on', async () => {
+      phaseYear = 2026;
+      await build();
+      const saved = jest.fn();
+      component.clickSave.subscribe(saved);
+
+      await clickNext();
+
+      expect(saved).toHaveBeenCalledTimes(1);
+      expect(router.navigate).toHaveBeenCalledWith(['/result/result-detail/1234/evidences'], { queryParams: { phase: 7 } });
+    });
+
+    it('stays on the section when the save failed', async () => {
+      phaseYear = 2026;
+      saveOutcome = 'failed';
+      await build();
+
+      await clickNext();
+
+      expect(saveMock.saveAndSettle).toHaveBeenCalledTimes(1);
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    /**
+     * A section whose handler never reaches the network — its own guard blocked it, or it opened a
+     * confirmation modal — must keep `Next` working exactly as it did before this behaviour existed.
+     */
+    it('navigates anyway when nothing was actually sent', async () => {
+      phaseYear = 2026;
+      saveOutcome = 'not-started';
+      await build();
+
+      await clickNext();
+
+      expect(router.navigate).toHaveBeenCalledWith(['/result/result-detail/1234/evidences'], { queryParams: { phase: 7 } });
+    });
+
+    /**
+     * 🛑 The gate is the phase YEAR, not the portfolio: prtest holds 2025-phase results inside the
+     * P25 portfolio, and an automatic write on a closed phase is what the epic's governing rule
+     * forbids.
+     */
+    it('does not save on a 2025-phase result — it only navigates', async () => {
+      phaseYear = 2025;
+      await build();
+      const saved = jest.fn();
+      component.clickSave.subscribe(saved);
+
+      await clickNext();
+
+      expect(saved).not.toHaveBeenCalled();
+      expect(saveMock.saveAndSettle).not.toHaveBeenCalled();
+      expect(router.navigate).toHaveBeenCalledWith(['/result/result-detail/1234/evidences'], { queryParams: { phase: 7 } });
+    });
+
+    it('does not save while the phase year is still unknown', async () => {
+      phaseYear = null;
+      await build();
+
+      await clickNext();
+
+      expect(saveMock.saveAndSettle).not.toHaveBeenCalled();
+      expect(router.navigate).toHaveBeenCalled();
+    });
+
+    it('does not save for a read-only user — there is no Save to trigger', async () => {
+      phaseYear = 2026;
+      rolesMock.readOnly = true;
+      await build();
+
+      await clickNext();
+
+      expect(saveMock.saveAndSettle).not.toHaveBeenCalled();
+      expect(router.navigate).toHaveBeenCalled();
+    });
+
+    it('does not save when the consumer vetoed the save', async () => {
+      phaseYear = 2026;
+      await build();
+      fixture.componentRef.setInput('disabled', true);
+      fixture.detectChanges();
+
+      await clickNext();
+
+      expect(saveMock.saveAndSettle).not.toHaveBeenCalled();
+      expect(router.navigate).toHaveBeenCalled();
+    });
+
+    it('blocks a second click while the first save is still running', async () => {
+      phaseYear = 2026;
+      let release: (value: 'saved') => void = () => undefined;
+      saveMock.saveAndSettle = jest.fn(() => new Promise(resolve => (release = resolve)));
+      await build();
+
+      q('[data-testid="section-bottom-bar-next"]').click();
+      await Promise.resolve();
+      fixture.detectChanges();
+
+      const next = q('[data-testid="section-bottom-bar-next"]') as HTMLButtonElement;
+      expect(next.disabled).toBe(true);
+      expect(next.textContent).toContain('Saving…');
+
+      next.click();
+      expect(saveMock.saveAndSettle).toHaveBeenCalledTimes(1);
+
+      release('saved');
+      await Promise.resolve();
+      await Promise.resolve();
+      fixture.detectChanges();
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+    });
+
+    /**
+     * Measured on prtest (result 9142, 11 Sep 2026): the save reloads the result, the reload resets
+     * `currentResultSignal` to `{}`, and `sections()` is EMPTY while the portfolio is unknown. The
+     * first version of this read the destination after the save and therefore went nowhere — with
+     * `saveAndSettle` reporting `saved` and no error anywhere.
+     */
+    it('still navigates when the save empties the section list while it runs', async () => {
+      phaseYear = 2026;
+      saveMock.saveAndSettle = jest.fn(async (trigger: () => void) => {
+        trigger();
+        sectionsMock.sections.set([]);
+        sectionsMock.currentIndex.set(-1);
+        return 'saved';
+      });
+      await build();
+
+      await clickNext();
+
+      expect(router.navigate).toHaveBeenCalledWith(['/result/result-detail/1234/evidences'], { queryParams: { phase: 7 } });
+    });
+
+    it('leaves Back as plain navigation', async () => {
+      phaseYear = 2026;
+      await build();
+
+      q('[data-testid="section-bottom-bar-back"]').click();
+
+      expect(saveMock.saveAndSettle).not.toHaveBeenCalled();
+      expect(router.navigate).toHaveBeenCalledWith(['/result/result-detail/1234/general-information'], { queryParams: { phase: 7 } });
     });
   });
 });

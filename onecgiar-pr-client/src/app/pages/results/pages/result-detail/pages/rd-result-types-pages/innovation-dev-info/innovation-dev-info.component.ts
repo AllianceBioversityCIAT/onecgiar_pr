@@ -1,4 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Observable, firstValueFrom, from, of } from 'rxjs';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { InnovationDevInfoBody } from './model/innovationDevInfoBody';
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
@@ -9,6 +11,8 @@ import { EvidencesBody } from '../../../../result-detail/pages/rd-evidences/mode
 import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 import { SharePointUploadService } from '../../../../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
+import { CanComponentDeactivate } from '../../../../../../../shared/guards/unsaved-changes.types';
+import { SectionDirtyTrackerService } from '../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
 
 /**
  * Guidance printed under "Innovation Developer" up to the 2025 phase. Kept verbatim — P2-3272 Part 4
@@ -23,9 +27,10 @@ const LEGACY_INNOVATION_DEVELOPER_DESCRIPTION = `Provide the full name(s), email
   selector: 'app-innovation-dev-info',
   templateUrl: './innovation-dev-info.component.html',
   styleUrls: ['./innovation-dev-info.component.scss'],
-  standalone: false
+  standalone: false,
+  providers: [SectionDirtyTrackerService]
 })
-export class InnovationDevInfoComponent {
+export class InnovationDevInfoComponent implements CanComponentDeactivate {
   innovationDevInfoBody = new InnovationDevInfoBody();
   range = 5;
   savingSection = false;
@@ -41,6 +46,34 @@ export class InnovationDevInfoComponent {
    * goes through the shared flow" was not something the code could enforce.
    */
   private readonly sharePointUploadSE = inject(SharePointUploadService);
+
+  /**
+   * `UCA-T-11` — component-scoped dirty-diff tracker (`providers: [SectionDirtyTrackerService]`
+   * on this component, same pattern as every other `CanComponentDeactivate` section in
+   * `docs/specs/changes/unsaved-changes-alert/`). The tracked value is a COMPOSITE of the three
+   * bound objects this section actually saves — `innovationDevInfoBody` (+questionnaire merged in
+   * by `buildSectionPayload()`), `innovationDevelopmentQuestions` (the questionnaire itself, loaded
+   * via a SEPARATE concurrent GET from the body) and `evidencesBody` (P25 only, its own POST) — an
+   * edit to any of the three must count as "unsaved changes" (`UCA-DD-1`).
+   *
+   * Snapshotted once at the end of EACH of the section's independent, concurrently-firing load
+   * GETs (`getSectionInformation()`'s own `next` AND `GET_questionsInnovationDevelopment()`'s
+   * `next`; `getSectionInformationp25()`'s own `next`, `GET_questionsInnovationDevelopmentP25()`'s
+   * `next` AND `getEvidenceDemandP25()`'s `next`) — NOT chained. Since none of these GETs is
+   * ordered relative to the others, whichever resolves LAST establishes the correct composite
+   * baseline (each snapshot call reads `this.*`'s CURRENT value for all three tracked objects, so a
+   * later call always captures whatever the earlier one(s) already set). Investigated and ruled
+   * out as a single "true end of load" call site: `forkJoin`-ing the GETs was out of scope
+   * (behavior-preserving refactor only, `UCA-DD-3`-style — not requested by this task).
+   *
+   * `estimates`/`assumptions-examination` (this task's named risk) were traced and found to write
+   * NOTHING into `body`/`options` — both are read-only renderers reacting solely to user clicks
+   * (`handleSelectionChange`), never to `ngOnInit`/`ngOnChanges`/an `effect()`. TWO real
+   * child-mutation risks were found in this section's subtree: `IntellectualPropertyRightsComponent`
+   * (the LEGACY, ≤2025-phase IPR renderer — see `normalizeQuestionsForDiff()` below) and
+   * `StudiesLinkComponent` (see `normalizeInnovationDevInfoBodyForDiff()` below).
+   */
+  private readonly dirtyTracker = inject(SectionDirtyTrackerService);
 
   /**
    * Drives `[appSectionSkeleton]`. TRUE from construction and NOT from "a request is in flight":
@@ -74,6 +107,16 @@ export class InnovationDevInfoComponent {
     this.fieldsManagerSE.isInnovationDeveloperAutoFilled2026() ? '' : LEGACY_INNOVATION_DEVELOPER_DESCRIPTION
   );
 
+  /**
+   * P2-3643 — explains the 2026+ auto-fill from Lead Contact Person (see applyInnovationDeveloperAutoFill()
+   * below) so users know why the field arrives pre-populated and how to override it.
+   */
+  innovationDeveloperTooltip = computed(() =>
+    this.fieldsManagerSE.isInnovationDeveloperAutoFilled2026()
+      ? "This field is prepopulated with the Lead Contact person's information. If you wish to change it, remove the existing entry and replace it with the Innovation Developer's email or full name."
+      : ''
+  );
+
   collaboratorsDescription = computed(() => {
     return `Provide the full name(s), email address and organizational affiliation(s)  of other CGIAR and/or partner colleagues that contribute to this innovation
         Names of key contributors will feature as co-authors on the Innovation Profile document in the same order as provided below. <br>
@@ -93,6 +136,9 @@ export class InnovationDevInfoComponent {
         this.applyInnovationDeveloperAutoFill();
         this.savingSection = false;
         this.sectionLoading.set(false);
+        // `UCA-T-11` — one of 3 concurrent load GETs feeding the composite snapshot; see the
+        // `dirtyTracker` docstring above for why each of the 3 snapshots independently.
+        this.dirtyTracker.snapshot(this.dirtySnapshotValue());
       },
       error: err => {
         console.error(err);
@@ -112,6 +158,8 @@ export class InnovationDevInfoComponent {
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q3);
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q4);
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.megatrends);
+      // `UCA-T-11` — see above; this is the 2nd of 3 concurrent load GETs.
+      this.dirtyTracker.snapshot(this.dirtySnapshotValue());
     });
 
     this.getEvidenceDemandP25();
@@ -127,6 +175,9 @@ export class InnovationDevInfoComponent {
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q2);
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q3);
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.megatrends);
+      // `UCA-T-11` — one of 2 concurrent load GETs (legacy path) feeding the composite snapshot;
+      // see the `dirtyTracker` docstring on this class for why each snapshots independently.
+      this.dirtyTracker.snapshot(this.dirtySnapshotValue());
     });
   }
 
@@ -141,6 +192,8 @@ export class InnovationDevInfoComponent {
         this.applyInnovationDeveloperAutoFill();
         this.savingSection = false;
         this.sectionLoading.set(false);
+        // `UCA-T-11` — the 2nd of 2 concurrent load GETs (legacy path); see above.
+        this.dirtyTracker.snapshot(this.dirtySnapshotValue());
       },
       error: err => {
         console.error(err);
@@ -153,7 +206,145 @@ export class InnovationDevInfoComponent {
   private getEvidenceDemandP25() {
     this.api.resultsSE.GET_evidenceDemandP25().subscribe(({ response }) => {
       this.evidencesBody = response ?? new EvidencesBody();
+      // `UCA-T-11` — the 3rd of 3 concurrent load GETs (P25 path); see the `dirtyTracker`
+      // docstring on this class for why each snapshots independently.
+      this.dirtyTracker.snapshot(this.dirtySnapshotValue());
     });
+  }
+
+  /** `UCA-T-11` — `CanComponentDeactivate.hasUnsavedChanges()`. */
+  hasUnsavedChanges(): boolean {
+    return this.dirtyTracker.isDirty(this.dirtySnapshotValue());
+  }
+
+  /**
+   * `UCA-T-11` — `CanComponentDeactivate.saveSection()`. Wraps the exact same save pipeline
+   * `onSaveSection()` drives (`performSave()`, below) so there is no duplicated save logic
+   * (`UCA-DD-3`); resolves `true`/`false` per `performSave()`'s own contract.
+   */
+  saveSection(): Observable<boolean> {
+    return this.performSave();
+  }
+
+  /**
+   * `UCA-T-11` — the composite value the dirty tracker snapshots/diffs. See the `dirtyTracker`
+   * docstring above for why all three bound objects are tracked together.
+   */
+  private dirtySnapshotValue(): { innovationDevInfoBody: unknown; innovationDevelopmentQuestions: unknown; evidencesBody: unknown } {
+    return {
+      innovationDevInfoBody: this.normalizeInnovationDevInfoBodyForDiff(this.innovationDevInfoBody),
+      innovationDevelopmentQuestions: this.normalizeQuestionsForDiff(this.innovationDevelopmentQuestions),
+      evidencesBody: this.normalizeEvidencesForDiff(this.evidencesBody)
+    };
+  }
+
+  /**
+   * `UCA-T-11` rework attempt 2 — a FOURTH child writer, missed by attempt 1: `StudiesLinkComponent`
+   * (`shared/components/innovation-use-form/components/studies-link/studies-link.component.ts:21-28`)
+   * seeds `scaling_studies_urls` with a placeholder `['']` in its own `ngOnInit()` whenever the array
+   * loads empty and the section is editable (`[disabled]` is not bound from this template, so it
+   * defaults `false`). Rendered whenever `isP25() && innovationDevInfoBody.has_scaling_studies &&
+   * showScalingStudiesQuestion()` (P25, readiness level >= 6, pre-2026 phase) — a real,
+   * server-confirmed empty-array case (a reporter who already answered "yes" but has not typed a
+   * study link yet), strictly AFTER this component's own load-flow snapshot(s) already ran.
+   *
+   * Same bug class as `IntellectualPropertyRightsComponent` above, and — same child component, same
+   * fix shape — as the sibling `innovation-use-info` section's `normalizeScalingStudiesUrlsForDiff()`:
+   * filters ALL blank/whitespace-only entries, not just a single trailing one, since
+   * `StudiesLinkComponent.addStudiesLink()` always collapses existing blank rows before pushing a new
+   * one, so this stays symmetric without needing to special-case position. A real typed URL is never
+   * blank, so this never hides a genuine edit; deleting every real URL still reports dirty (`[]`
+   * after normalization differs from a non-empty snapshot). Applied identically on both the snapshot
+   * side and the live side (`hasUnsavedChanges()` → `dirtySnapshotValue()`).
+   */
+  private normalizeInnovationDevInfoBodyForDiff(body: InnovationDevInfoBody | undefined | null): unknown {
+    if (!body) return body;
+    const urls = (body as any).scaling_studies_urls;
+    return {
+      ...body,
+      scaling_studies_urls: (Array.isArray(urls) ? urls : []).filter((u: unknown) => typeof u === 'string' && u.trim() !== '')
+    };
+  }
+
+  /**
+   * `UCA-T-11` — normalizes `innovationDevelopmentQuestions` for the dirty diff.
+   *
+   * `IntellectualPropertyRightsComponent` (the LEGACY, ≤2025-phase IPR renderer — rendered whenever
+   * `!isInnovationDevFormReduced2026()`) mutates the SAME `intellectual_property_rights.q1..q4`
+   * objects this component already snapshotted, in its own `ngOnInit()` AND its `@Input() set
+   * options()` — both fire during Angular's render pass, strictly AFTER the GET callback above
+   * that assigns `innovationDevelopmentQuestions` and calls `snapshot()`:
+   *   1. `ngOnInit()` unconditionally sets `q1..q4['value'] = null` — a field nothing else in the
+   *      app ever reads (`grep` confirmed: no template, service, or PATCH payload consumer reads
+   *      it) — so a freshly loaded, unedited section would report dirty on this alone.
+   *   2. The `@Input() set options()` back-fills a MISSING `qN` slot with `new Q12()`/`new Q3()`
+   *      (`ipr.q4 ??= new Q3()`) — reachable in production, not theoretical: the component's own
+   *      docstring documents a real result (id 51) whose payload omits `q4` for exactly this
+   *      legacy path.
+   * Both are the same "child mutates the tracked object after the parent's snapshot" bug class as
+   * `rd-geographic-location`/`rd-theory-of-change`'s `normalizeCountriesForDiff()`/
+   * `normalizeTocResultsForDiff()`. Re-snapshotting after the child "settles" was rejected the same
+   * way those precedents rejected it: `IntellectualPropertyRightsComponent` exposes no output that
+   * fires after its own load-time mutation (its only listener-facing method,
+   * `clearIntellectualPropertyRights()`, is user-triggered).
+   *
+   * Fix: project each `qN` slot down to only the fields the diff should actually care about
+   * (`radioButtonValue`, `options[].{result_question_id,answer_boolean,answer_text}`) — dropping
+   * the unused `value` key AND making a missing slot (`undefined`, before the child's `??=` fill)
+   * serialize IDENTICALLY to a present-but-untouched slot (`{ radioButtonValue: null, options: [] }`,
+   * after the fill). This is timing-independent: it does not matter whether `snapshot()`/`isDirty()`
+   * runs before or after the child's mutation, because both inputs project to the same output.
+   * Applied identically on both the snapshot side and the live side (`hasUnsavedChanges()` →
+   * `dirtySnapshotValue()`), so the diff stays symmetric.
+   *
+   * The whole group is projected UNCONDITIONALLY (not `ipr ? {...} : ipr`) so a payload that omits
+   * `intellectual_property_rights` entirely still normalizes to the same shape as one with all four
+   * slots present-but-empty — `projectQNode` already tolerates `undefined` via its own `q?.[...]`
+   * reads, so this closes that edge for free (Reviewer ADVISORY, attempt 1).
+   *
+   * The other three groups (`responsible_innovation_and_scaling`, `innovation_team_diversity`,
+   * `megatrends`) are NOT normalized: none of their child renderers (`stage-assessment`,
+   * `gesi-innovation-assessment`, `scale-impact-analysis`, `megatrends`, `innovation-team-diversity`,
+   * `assumptions-examination`, `partners-policies-safeguards`, `intellectual-property-considerations`)
+   * has an `ngOnInit`/`ngOnChanges`/`effect()` — all mutation in those groups happens exclusively
+   * inside a user-triggered `handleSelectionChange()`-style handler, verified by reading every one.
+   */
+  private normalizeQuestionsForDiff(questions: InnovationDevelopmentQuestions | undefined | null): unknown {
+    if (!questions) return questions;
+    const projectQNode = (q: any) => ({
+      radioButtonValue: q?.['radioButtonValue'] ?? null,
+      options: (q?.options ?? []).map((opt: any) => ({
+        result_question_id: opt?.result_question_id,
+        answer_boolean: opt?.answer_boolean ?? null,
+        answer_text: opt?.answer_text ?? null
+      }))
+    });
+    const ipr = questions.intellectual_property_rights;
+    return {
+      ...questions,
+      intellectual_property_rights: {
+        q1: projectQNode(ipr?.q1),
+        q2: projectQNode(ipr?.q2),
+        q3: projectQNode(ipr?.q3),
+        q4: projectQNode(ipr?.q4)
+      }
+    };
+  }
+
+  /**
+   * `UCA-T-11` — File/Blob exclusion for the dirty-diff, same shape as `rd-evidences`'s
+   * `dirtySnapshotTarget()` (`UCA-OQ-2`, `UCA-T-8`). `EvidencesCreateInterface.file` is a raw
+   * `File`/`Blob`, whose own enumerable properties are empty (`size`/`type`/`name` are prototype
+   * getters), so `JSON.stringify` always serializes it to `"{}"` regardless of which file is
+   * attached — excluded explicitly rather than relying on that accident. Narrow, accepted gap:
+   * swapping ONLY the attached file (same metadata) is not reported as dirty.
+   */
+  private normalizeEvidencesForDiff(evidencesBody: EvidencesBody | undefined | null): unknown {
+    if (!evidencesBody) return evidencesBody;
+    return {
+      ...evidencesBody,
+      evidences: (evidencesBody.evidences ?? []).map(({ file, ...rest }) => rest)
+    };
   }
 
   convertOrganizations(organizations) {
@@ -280,93 +471,110 @@ export class InnovationDevInfoComponent {
     return { ...payload, responsible_innovation_and_scaling: groupWithoutQ3 };
   }
 
+  /**
+   * `UCA-T-11`: still fire-and-forget for the section's own Save button — `performSave()` never
+   * throws (`catchError` resolves `false` on every failure branch), so this stays safe for a
+   * caller that does not await it.
+   */
   async onSaveSection() {
+    // `defaultValue: false` is defensive-only: `performSave()` always emits via `map(() => true)`
+    // or `catchError(() => of(false))`, so it can never complete without emitting under real
+    // `HttpClient` — this only removes the theoretical `EmptyError` case at zero behavioural cost.
+    await firstValueFrom(this.performSave(), { defaultValue: false });
+  }
+
+  /**
+   * `UCA-T-11` — the single save pipeline behind both the section's own Save action
+   * (`onSaveSection`, above) and `saveSection()` (`CanComponentDeactivate`, `UCA-DD-3`: no
+   * duplicated save logic). Exact same branching, requests and error handling as the previous
+   * `onSaveSection()`/`savePhaseP25SectionFields()` pair — only the wiring changed, from
+   * self-subscribing `void`/`async` to a single `Observable<boolean>` both callers share.
+   */
+  private performSave(): Observable<boolean> {
     this.savingSection = true;
     this.convertOrganizationsTosave();
     if (this.innovationDevInfoBody.innovation_nature_id != 12) {
       this.innovationDevInfoBody.number_of_varieties = null;
       this.innovationDevInfoBody.is_new_variety = null;
     }
+
     if (this.fieldsManagerSE.isP25()) {
       const resultId = (this.api.dataControlSE?.currentResult as any)?.result_id ?? (this.api.dataControlSE?.currentResult as any)?.id;
       (this.evidencesBody as any).result_id = resultId;
 
-      // P2-3218: this method had three failure paths and all three were silent — a console.error,
-      // the spinner off, and nothing on screen. The user pressed Save, saw the spinner stop, and
-      // walked away believing the section was stored. The same defect was fixed for the other two
-      // evidence surfaces in e014ee987 (P2-3220); this one was left out of that pass.
-      //
-      // P2-3220: the failure is still SHOWN, and now by file name, but it no longer abandons the
-      // save. The file is lost either way — the 2026 endpoint parses only `jsonData` and drops the
-      // multipart `files` (`innovation_dev.controller.ts:45-57`), so the user has to re-attach it —
-      // and throwing away everything else they typed does not bring it back. Same contract as the
-      // other two evidence surfaces: save the section, and name the files that did not make it.
       // P2-3641 AC — "Removal does not affect existing saved data from prior reporting cycles".
-      //
-      // Hiding the block is only half the ticket, and shipping only that half would DELETE data.
       // The evidence endpoint takes the WHOLE array and treats it as the new truth: an empty one
-      // deactivates every stored evidence of this type for the result
-      // (`evidences.service.ts` returns early on an empty array straight into
-      // `updateEvidences(result_id, [], …)`, which runs `UPDATE evidence SET is_active = 0`).
-      // Today `evidencesBody` survives only because the GET still repopulates it; the moment
-      // anybody tidies that call away, every 2026 result loses its stored evidence on the next save.
-      //
-      // So from 2026 the call is OMITTED, never sent empty — the same undefined-vs-value contract
-      // the MELIA study and P2-3550 already rely on. Nothing about the 2025 path changes.
+      // deactivates every stored evidence of this type for the result. So from 2026 the request is
+      // OMITTED entirely, never sent empty.
       if (this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
-        this.savePhaseP25SectionFields(false);
-        return;
+        return this.patchInnovationDevP25(false);
       }
 
-      const failedUploads = await this.uploadPendingFiles();
-      if (failedUploads.length) {
-        this.showSaveError(
-          `${failedUploads.length} file(s) could not be stored: ${failedUploads.join(', ')}`,
-          'The rest of the section is being saved, but those files are not in SharePoint. Please re-attach them and save again.'
-        );
-      }
-
-      this.api.resultsSE.POST_createEvidenceDemandP25(this.evidencesBody).subscribe({
-        next: () => this.savePhaseP25SectionFields(true),
-        error: err => {
+      // P2-3218 / P2-3220: an upload failure does not abandon the save — the file also travels in
+      // the evidence-registration POST's own payload, so the section is still stored; the user is
+      // just told, by file name, which ones did not reach SharePoint.
+      return from(this.uploadPendingFiles()).pipe(
+        switchMap(failedUploads => {
+          if (failedUploads.length) {
+            this.showSaveError(
+              `${failedUploads.length} file(s) could not be stored: ${failedUploads.join(', ')}`,
+              'The rest of the section is being saved, but those files are not in SharePoint. Please re-attach them and save again.'
+            );
+          }
+          return this.api.resultsSE.POST_createEvidenceDemandP25(this.evidencesBody);
+        }),
+        switchMap(() => this.patchInnovationDevP25(true)),
+        catchError(err => {
           console.error('[innovation-dev-info] registering the evidence failed', err);
           this.showSaveError(
             'Your evidence was not saved',
             'The files were uploaded but could not be registered against this result, so this section was not saved. Please try saving again.'
           );
           this.savingSection = false;
-        }
-      });
-    } else {
-      this.api.resultsSE.PATCH_innovationDev(this.buildSectionPayload()).subscribe({
-        next: ({ response }) => {
-          this.getSectionInformation();
-          this.savingSection = false;
-        },
-        error: err => {
-          console.error(err);
-          this.savingSection = false;
-        }
-      });
+          return of(false);
+        })
+      );
     }
+
+    return this.api.resultsSE.PATCH_innovationDev(this.buildSectionPayload()).pipe(
+      tap(() => {
+        // `UCA-T-11` — snapshot HERE, synchronously, the instant the PATCH resolves: the local
+        // bodies at this exact moment are precisely what the server just persisted, correct even
+        // before the reload below completes. Closes the same race `rd-general-information`'s
+        // rework was FAILed for: without this, `saveSection()`'s `map(() => true)` could reach
+        // `UnsavedChangesGuard` before the reload's own re-snapshot lands, or — if the reload
+        // fails — the section would stay dirty forever despite a genuinely successful save.
+        this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+        this.getSectionInformation();
+        this.savingSection = false;
+      }),
+      map(() => true),
+      catchError(err => {
+        console.error(err);
+        this.savingSection = false;
+        return of(false);
+      })
+    );
   }
 
   /**
-   * The P25 half of the section save. Extracted from `onSaveSection` so P2-3641 can reach it
-   * WITHOUT the evidence request: from the 2026 cycle that block is not rendered, and sending the
-   * request with an empty array would deactivate the stored evidence.
+   * The P25 half of the section save. Extracted from `performSave()` so P2-3641 can reach it
+   * WITHOUT the evidence request (see the comment at that call site).
    *
    * @param evidenceWasSaved whether the evidence request ran and succeeded. It only changes the
    * wording of the failure notice — telling a 2026 user "your evidence was stored" when no evidence
    * request was ever made would send them looking for something that does not exist.
    */
-  private savePhaseP25SectionFields(evidenceWasSaved: boolean): void {
-    this.api.resultsSE.PATCH_innovationDevP25(this.buildSectionPayload()).subscribe({
-      next: () => {
+  private patchInnovationDevP25(evidenceWasSaved: boolean): Observable<boolean> {
+    return this.api.resultsSE.PATCH_innovationDevP25(this.buildSectionPayload()).pipe(
+      tap(() => {
+        // `UCA-T-11` — same direct-snapshot-on-success reasoning as the legacy PATCH branch above.
+        this.dirtyTracker.snapshot(this.dirtySnapshotValue());
         this.getSectionInformationp25();
         this.savingSection = false;
-      },
-      error: err => {
+      }),
+      map(() => true),
+      catchError(err => {
         console.error('[innovation-dev-info] saving the section failed', err);
         this.showSaveError(
           'This section was not saved',
@@ -375,8 +583,9 @@ export class InnovationDevInfoComponent {
             : 'The section could not be saved. Please try saving again.'
         );
         this.savingSection = false;
-      }
-    });
+        return of(false);
+      })
+    );
   }
 
   /**

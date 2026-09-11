@@ -17,6 +17,7 @@ import { CreateCenterResultDto } from './dto/create-center-result.dto';
 import { SaveBilateralTocMappingDto } from './dto/save-bilateral-toc-mapping.dto';
 import { SaveBilateralContributorsDto } from './dto/save-bilateral-contributors.dto';
 import { ChangeCenterResultTypeDto } from './dto/change-center-result-type.dto';
+import { UpdateBilateralPrimaryAssignmentDto } from './dto/update-bilateral-primary-assignment.dto';
 
 @Controller('center')
 @ApiTags('Bilateral Center')
@@ -63,6 +64,23 @@ export class BilateralCenterController {
     @Body() dto: ChangeCenterResultTypeDto,
   ) {
     return this.bilateralCenterService.changeResultType(user, resultId, dto);
+  }
+
+  @Patch('primary-assignment/:resultId')
+  @ApiOperation({
+    summary:
+      'Atomically update the lead project and primary Science Program of an editable bilateral result',
+  })
+  async updatePrimaryAssignment(
+    @UserToken() user: TokenDto,
+    @Param('resultId') resultId: number,
+    @Body() dto: UpdateBilateralPrimaryAssignmentDto,
+  ) {
+    return this.bilateralCenterService.updatePrimaryAssignment(
+      user,
+      resultId,
+      dto,
+    );
   }
 
   @Patch('submit-for-review/:resultId')

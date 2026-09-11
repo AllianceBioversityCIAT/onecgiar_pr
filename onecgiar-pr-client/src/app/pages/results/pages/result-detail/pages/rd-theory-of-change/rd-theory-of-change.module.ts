@@ -15,6 +15,7 @@ import { TocInitiativeOutModule } from './components/shared/toc-initiative-out/t
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
 import { SectionBottomBarComponent } from '../../components/section-bottom-bar/section-bottom-bar.component';
+import { BeforeUnloadWarningDirective } from '../../../../../../shared/directives/before-unload-warning.directive';
 
 @NgModule({
   declarations: [
@@ -33,7 +34,8 @@ import { SectionBottomBarComponent } from '../../components/section-bottom-bar/s
     CustomFieldsModule,
     TocInitiativeOutModule,
     FeedbackValidationDirectiveModule,
-    TermPipe
+    TermPipe,
+    BeforeUnloadWarningDirective
   ],
   exports: [
     TocImpactSectionComponent,

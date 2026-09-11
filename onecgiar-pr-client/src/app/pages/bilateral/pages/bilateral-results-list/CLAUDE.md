@@ -1,6 +1,6 @@
 # bilateral-results-list
 
-**Verified:** 2026-09-01 · branch performance-refactor · 4c2c0c69f
+**Verified:** 2026-09-11 · branch JuanGuzman-io/p2-3653-kp-exclusion-ui · 689240e7a
 
 ## What it is
 The W3/Bilateral results table a Centre user lands on at `/bilateral/:centerAcronym`. One row per
@@ -33,6 +33,24 @@ result the centre participates in for the selected reporting phase, as lead or a
 4. a `case` in the private `cellText()` — the CSV writer, which otherwise emits an empty column.
 
 Skipping 3 renders an empty `<td>`; skipping 4 breaks only the export, silently.
+
+**Not every field is a column.** `result_type_id` and `submitter` (P2-3653) ride on the payload for
+the "Update result" rule and the confirmation modal, and are deliberately absent from
+`BILATERAL_COLUMNS` — only steps 1 and the server SELECT apply to them.
+
+## "Update result" (P2-3229, P2-3653)
+`canUpdateResult()` delegates to `ApiService.canUpdateBilateral` so this list and the Results Center
+row menu cannot drift: previous phase, Approved, **not a Knowledge Product**, user of the lead centre
+or admin. The KP condition compares `result_type_id`, not the `result_type` display name — which is
+why the server SELECT has to carry the id.
+
+`asCurrentResult()` is the adapter into the shared `app-change-phase-modal`. The modal reads fields
+this row does not have, so they are supplied here or by the payload: `phase_name` is derived from the
+row's phase and formatted as the Results Center formats it (`"Reporting 2025 - P25"`), `lead_center`
+is this centre, `phase_year` comes from the phase, and `submitter` (the primary Science Program's
+official code) arrives from the server. Adding a field to that modal means checking this adapter —
+a missing one renders blank here and populated from the Results Center, which is how P2-3653 was
+found.
 
 ## Traps (⚠️ = already broke something)
 - ⚠️ **Bump `BILATERAL_COLUMN_STORAGE_KEY` whenever a new column must be visible by default.**

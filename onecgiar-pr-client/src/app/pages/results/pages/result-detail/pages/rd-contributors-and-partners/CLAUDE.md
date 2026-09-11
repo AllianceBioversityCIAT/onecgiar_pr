@@ -1,6 +1,48 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-09-10 · branch performance-refactor · P2-3424 (la pregunta del enlace a una Innovation Development ya evaluada **SALIÓ de esta sección**: decisión del PO de hoy — *"la opción B es la correcta… lo mejor es mostrar la información en la sección de Innovation Use. Este campo no debería ser un MDS"*. Ver § abajo); prior: 2026-09-10 · branch qa-development-2026-ss · changes/info-tooltip-hover-reveal (`externalPartnersInfoNote`'s `app-alert-status`, `html:499`, now has `[collapsible]="false"` — boxed, always-visible, not the collapsible/hover style); prior: 2026-09-08 · quick/lead-contact-clear-button (the read-only "Lead contact person" display, P2-2911 AC2, removed from this section)
+**Verified:** 2026-09-11 · branch qa-development-2026-ss · bugfix/lead-center-no-toc-refs (LC-DD-6,
+result 9139 follow-up: `onLeadCenterSelected` (`service.ts`) treated ANY mapped-2026 result as the
+genuine ToC/Other(s) split — adding the "Other(s)" sentinel to `contributing_center` — even when the ToC
+brought NO reference centers at all (`tocReferenceCenterInstitutionIds()` empty). In that shape dropdown 1
+and the sentinel are never even painted (`hasReferenceCenters()` false ⇒ the note branch); the ONLY
+visible control is the second dropdown, bound to `otherCentersSelected`. So picking a Lead Center added an
+invisible-yet-persisted sentinel chip that surfaced as a confusing floating "Other(s)" chip. Fix: new
+`hasNoTocReferenceCenters()` helper; `onLeadCenterSelected` now has a THIRD branch — mapped but no ToC
+reference centers → straight into `otherCentersSelected`, no sentinel — alongside the existing
+flat/unmapped (straight into `contributing_center`) and genuine-split (otherCentersSelected + sentinel)
+branches. Tests: `rd-contributors-and-partners.service.spec.ts`, new describe "CP2026 + mapped, but ToC
+brought NO reference centers — target is otherCentersSelected, no sentinel (LC-DD-6)"; the existing
+LC-TEST-12/13/14/14b/14c fixtures were updated to set `tocReferenceCenterInstitutionIds` explicitly, since
+they model the genuine-split case and previously relied on it defaulting non-empty by accident.); prior:
+2026-09-11 · branch qa-development-2026-ss · bugfix/orphaned-toc-chips (result 9139: after
+changing the linked ToC HLO/Outcome/Output mid-session, `hasReferenceCenters()`/`hasReferenceScience()`
+could flip to `false` while `contributing_center`/`scienceSelected` still held the OLD ToC-bucket
+entries — `preselectCentersEffect`/`preselectScienceEffect` only ever ADDED newly-referenced items and
+dropped session-added (`new: true`) stale ones, never re-bucketed a PERSISTED entry that stopped
+matching. Those persisted entries (e.g. AfricaRice/Bioversity(Alliance)) stayed in the ToC array forever,
+and since the chip-rendering blocks (`html:141-157` Centers, `html:418-425` Science, pre-fix line numbers)
+were NOT gated by the same `hasReferenceCenters()`/`hasReferenceScience()` condition as their owning
+dropdown, they kept rendering as floating chips with no visible control above them once the dropdown
+flipped to the "No CGIAR Centers/Science Programs..." note. Fixed both ends: the two effects now migrate
+a stale PERSISTED entry into `otherCentersSelected`/`otherScienceSelected` instead of leaving it behind
+(a stale session-added `new: true` entry is still just dropped), and both chip blocks are now wrapped in
+the same condition that gates their dropdown, so they can never render without it. See
+`preselectCentersEffect`/`preselectScienceEffect` in `component.ts` for the reconciliation, and the
+`@if` wrapping the two `.medal_selector.selected_container` chip blocks in the template.); prior:
+2026-09-11 · branch qa-development-2026-ss · `docs/specs/results/linked-results-filters`
+`RES-T-LRF-4` (linked-results dropdown was freezing the app on open — unmemoized getters re-scanning
+the full QA'd/Approved results list on every CD tick, an O(n) `.includes()` per row in the checkbox
+binding, no render cap, no `trackBy`; fixed with reference-equality memoization caches
+(`flatLinkedResultsOptions`, `availableTypologies`, `filteredLinkedResults`, new `resultsById` map,
+new `selectedLinkedResultIds` set), a `visibleLinkedResults` getter capped at
+`linkedResultsRenderCap = 150`, and `trackBy` on every `*ngFor` in `.custom-dropdown-panel`. Also
+fixed the panel's SCSS tokens: it was using `var(--pr-color-primary, #hex)` — that bare variable
+doesn't exist, so it always silently used the hardcoded hex fallback — and `var(--pr-color-neutral-N,
+#hex)`, which IS a real token but a violet-tinted ramp (`colors.scss:58-67`), not gray; both replaced
+with the real primary/semantic tokens. See `design.md` §8.1/§6.3 in that spec for the full writeup.
+⚠️ **`toggleResultSelection()` now reassigns `partnersBody.linked_results` to a new array** (was
+`push`/`splice` in place) — this is load-bearing for the new `selectedLinkedResultIds` memo cache,
+which detects changes via `!==`; don't revert to in-place mutation there.); prior: 2026-09-10 · branch performance-refactor · P2-3424 (la pregunta del enlace a una Innovation Development ya evaluada **SALIÓ de esta sección**: decisión del PO de hoy — *"la opción B es la correcta… lo mejor es mostrar la información en la sección de Innovation Use. Este campo no debería ser un MDS"*. Ver § abajo); prior: 2026-09-10 · branch qa-development-2026-ss · changes/unsaved-changes-alert `UCA-T-9` rework attempt 4 (per-catalogue-source scoping on the attempt-3 late-catalogue reconciliation, closing a silent-erase bug in that fix itself — see the section below); prior: 2026-09-10 · `UCA-T-9` rework attempt 3 (two more real bugs closed — a late CLARISA catalogue race rewriting `leadPartnerId`/`leadCenterCode` after the snapshot, and `CPNormalSelectorComponent.preselectPartnersEffect` missing its siblings' hydration guard); prior: 2026-09-10 · `UCA-T-9` rework attempt 2 (composite dirty-diff target + child-mutation normalization, correcting attempt 1's now-false "diffed against raw `partnersBody`" claim); prior: 2026-09-10 · changes/info-tooltip-hover-reveal (`externalPartnersInfoNote`'s `app-alert-status`, `html:499`, now has `[collapsible]="false"` — boxed, always-visible, not the collapsible/hover style); prior: 2026-09-08 · quick/lead-contact-clear-button (the read-only "Lead contact person" display, P2-2911 AC2, removed from this section)
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
@@ -13,6 +55,86 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
   `GET_W3BilateralProjects`, `GET_W3BilateralProjectsByProgram`.
 - `FieldsManagerService` inyectado como `fieldsManagerSE`: labels, `hide` y `required` por
   `fieldRef`. Se combinan con computeds locales — ver la trampa de los dos caminos.
+
+## Unsaved-changes guard (`UCA-T-9`, `docs/specs/changes/unsaved-changes-alert`) — NO exception for the email side effect
+
+`RdContributorsAndPartnersComponent implements CanComponentDeactivate`:
+- `hasUnsavedChanges()` → component-scoped `SectionDirtyTrackerService` (`providers:
+  [SectionDirtyTrackerService]`, injected as `dirtyTracker`) diffed against `dirtySnapshotValue()`
+  (`component.ts`) — **NOT** raw `partnersBody` (attempt 1's claim here was wrong; see attempt-2
+  Reviewer FAIL, Issues 1 and 2, `docs/specs/changes/unsaved-changes-alert/execution.md`). Two
+  corrections layered on top of `partnersBody`:
+  1. **Normalization** (`normalizeTocResultsForDiff()`): two CHILD components
+     (`components/multiple-wps/multiple-wps.component.ts`'s `ngOnChanges()`,
+     `.../multiple-wps-content/multiple-wps-content.component.ts`'s `getIndicatorsList()`) mutate
+     `result_toc_result(s)` rows AFTER this component's own load-flow snapshot (stamping a
+     client-only `uniqueId`, mirroring `related_node_id` from `toc_results_indicator_id`, defaulting
+     `toc_progressive_narrative` `null → ''`) — a clean load reported dirty and silently fired the
+     contribution EMAIL on the next Back/Next. Stripped from the diff on both
+     `partnersBody.result_toc_result.result_toc_results` and every
+     `partnersBody.contributors_result_toc_result[i].result_toc_results`.
+  2. **Composite tracking:** `leadCenterCode`/`leadPartnerId`/`otherCentersSelected`/
+     `scienceSelected`/`otherScienceSelected`/`otherPartnersSelected`/`contributingInitiativeNew`
+     live on `RdContributorsAndPartnersService`, OUTSIDE `partnersBody`, but feed `performSave()`'s
+     PATCH — editing ONLY one of them used to leave `partnersBody` byte-identical, so Next silently
+     skipped saving it. All tracked alongside `partnersBody` as one unit now.
+  3. **`UCA-T-9` attempt 3 — late-catalogue reconciliation (was accepted as a "narrow residual gap"
+     in attempt 2; it wasn't):** `RdContributorsAndPartnersService`'s constructor subscriptions to
+     `institutionsSE.loadedInstitutions`/`centersSE.loadedCenters` can re-run
+     `setLeadPartnerOnLoad`/`setLeadCenterOnLoad` AFTER this component's own load-flow snapshot on a
+     genuine cold-entry load (`InstitutionsService` has no bootstrap prefetch). Fixed via
+     `dirtyTracker.snapshot(...)`'s new single write path, `snapshotBaseline()`, plus
+     `reconcileLeadFieldsAfterLateCatalogue()` — wired through the service's new
+     `onCatalogueDrivenLeadUpdate` callback (set in `ngOnInit`, cleared in `ngOnDestroy`). ⚠️
+     **Attempt 3's first version substituted BOTH lead fields back unconditionally on ANY late
+     emission, silently erasing a concurrent edit to whichever field the emitting catalogue did NOT
+     touch.** Attempt 4 fixed this: the callback now carries a `source: 'centers' | 'institutions'`
+     discriminator, and `reconcileLeadFieldsAfterLateCatalogue(source)` substitutes back ONLY the
+     field that catalogue can affect (`leadPartnerId` for `'institutions'`, `leadCenterCode` for
+     `'centers'`) — the other field's live value stays in the comparison, so a genuine edit to it is
+     preserved as dirty. Read the method's docstring in `component.ts` for the exact structural rule.
+- `saveSection(): Observable<boolean>` wraps `performSave()` (the exact `onSaveSection()` payload
+  assembly, unchanged — `component.ts:711` onward, "unusually involved" per the spec's own task
+  note) and resolves `true`/`false` instead of void.
+- `onSaveSection()` (the Save button) now calls `performSave().subscribe(...)` too — same call, same
+  error branch, no duplicated save logic (`UCA-DD-3`).
+- `[appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)"` on the root `.detail_container`.
+- `canDeactivate: [UnsavedChangesGuard]` lives on the INNER `{path: '', component: RdContributorsAndPartnersComponent}`
+  route in `rd-contributors-and-partners-routing.module.ts` — NOT on `resultDetailRouting`'s
+  `contributor-partners` entry (that one has `loadChildren` and no `component`; Angular invokes the
+  guard there with `component: null`, which `UnsavedChangesGuard` dereferences unguarded →
+  `TypeError` on every navigation. Cross-cutting bug, corrected — see
+  `docs/specs/changes/unsaved-changes-alert/execution.md`).
+
+🛑 **Confirmed with the user (2026-09-10, `design.md` §13): NO carve-out for the email.** Back/Next
+on a dirty section calls `saveSection()` → `performSave()` → `PATCH_ContributorsPartners` exactly
+like every other Result Detail section, even though a successful PATCH here triggers an email
+(`email_template: 'email_template_contribution'` in the payload — see `performSave()`'s `sendedData`).
+This was a deliberate design decision, not an oversight — do NOT add an `autosaveDisabled`-style
+skip for this component. A regression test
+(`rd-contributors-and-partners.component.spec.ts`, describe `CanComponentDeactivate (UCA-T-9)`,
+"clicking Next (saveSection()) on a dirty section DOES call PATCH_ContributorsPartners") asserts
+`PATCH_ContributorsPartners` is genuinely called from `saveSection()` — it exists specifically to
+catch a future accidental carve-out.
+
+### Load/save timing (mirrors `rd-general-information`'s `UCA-T-6` rework lessons)
+
+- **Load flow:** `getSectionInformation()`'s `onLoaded` callback (new 3rd param, `RdContributorsAndPartnersService`)
+  fires at the TRUE end of a successful load — after `applyTocMappingOnLoad()` and the
+  `bilateral_projects` `fullName` pass, right after `loadFilteredBilateralProjects()` is kicked off.
+  That call starts ITS OWN async GET (`GET_W3BilateralProjects`/`GET_W3BilateralProjectsByProgram`),
+  but it only ever mutates `clarisaProjectsList` / `loadingBilateralProjects` /
+  `loadedBilateralProgramId` — NEVER `partnersBody` — so, unlike `rd-general-information`'s
+  discontinued-options round-trip, there is no later async mutation of the snapshot target to race.
+  Not invoked on the error branch (fail-open, same as the twin).
+- **Save flow:** `performSave()`'s `tap` snapshots `partnersBody` DIRECTLY and synchronously the
+  instant `PATCH_ContributorsPartners` resolves — not solely via the delegated
+  `getSectionInformation(null, true, onLoaded)` reload that follows it. Closes the same race
+  `UCA-T-6`'s rework fixed: `saveSection()`'s `map(() => true)` can emit to `UnsavedChangesGuard`
+  before the reload resolves, or the reload could fail outright and leave the section dirty forever
+  despite a genuinely successful save.
+- `UCA-OQ-2`: `ContributorsAndPartnersBody` (extends `TheoryOfChangeBody`) is plain-serializable —
+  no `File`/`Blob`/circular refs — confirmed by reading the model.
 
 ## Dónde se usa
 - Ruta `result/result-detail/:id/contributor-partners?phase=<id>`. La URL con
@@ -432,6 +554,8 @@ gone is the read-only display itself, by request, not a technical constraint.
 |---|---|---|
 | `components/` | Chips y bloques de contribuidores/socios | Los dropdowns agrupados de admin tienen comportamiento propio: validar antes de cambiar bindings |
 
+⚠️ **`CPNormalSelectorComponent.preselectPartnersEffect` (`components/multiple-wps/components/normal-selector/normal-selector.component.ts`) writes `partnersBody.institutions` on load — `UCA-T-9` attempt 3, Issue 2.** Unlike its two siblings in THIS file (`preselectCentersEffect`/`preselectScienceEffect`), it had no `sectionHydratedFromToc()/tocSelectionTouched()` guard until this fix, so a late `tocReferencePartnerInstitutionIds` write (from `multiple-wps-content`'s async ToC-resolution effect) populated `institutions` on every settle, not just once per hydration — a clean load with an unselected but ToC-mapped partner list loaded dirty and silently fired the contribution email on the next Back/Next. Now gated identically to its siblings. If you add a fourth prefill effect anywhere in this tree, it needs the same guard — see `docs/specs/changes/unsaved-changes-alert/execution.md`'s `UCA-T-9` attempt-3 entry.
+
 ## Tests
 Tres suites (`*.lead-contact-person.spec.ts` — cubría P2-2911 AC2 contra el DOM renderizado — se
 eliminó el 2026-09-08 junto con el campo que probaba, ver la sección de arriba).
@@ -441,7 +565,12 @@ aparece y que el `app-pr-select` recibe el catálogo completo, y el describe `LC
 (selectOptionEvent) wiring` que dispara el output real del `app-pr-select` vía
 `triggerEventHandler` para probar la extracción `$event?.code ?? null` y el auto-sync end-to-end
 contra el servicio REAL — su fixture es flat/unmapped, así que tras `LC-DD-5` el destino
-`LC-TEST-9` es `contributing_center`, no `otherCentersSelected`), `*.service.spec.ts` (incl.
+`LC-TEST-9` es `contributing_center`, no `otherCentersSelected`; también el describe
+`RdContributorsAndPartnersComponent — CanComponentDeactivate (UCA-T-9)`, mismo rig con el servicio
+REAL — el snapshot del dirty-tracker vive del lado del cuerpo (`partnersBody`) que expone el
+servicio, no el componente, así que el describe de nivel superior con el servicio mockeado no
+puede ejercer la carrera real de timing; `GET_ContributorsPartners`/`PATCH_ContributorsPartners` se
+mockean con `delay(0)` + `fakeAsync`/`tick`, nunca `of(...)` síncrono), `*.service.spec.ts` (incl.
 `onLeadCenterSelected — target field by active UI + generalized trigger (LC-DD-5, supersedes
 LC-DD-4)` con su sub-describe CP2026-mapeado, y `applyTocMappingOnLoad — sentinel reconciliation
 fix (LC-DD-5)`) y `*.zoneless.spec.ts`.

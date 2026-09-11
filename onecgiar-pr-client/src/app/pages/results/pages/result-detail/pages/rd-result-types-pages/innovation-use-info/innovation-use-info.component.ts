@@ -1,4 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { IpsrStep1Body } from '../../../../../../ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
 import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
@@ -10,16 +12,65 @@ import {
   QaInnovationDevelopmentOption,
   QaInnovationDevelopmentResultsService
 } from '../../../../../../../shared/services/global/qa-innovation-development-results.service';
+import { CanComponentDeactivate } from '../../../../../../../shared/guards/unsaved-changes.types';
+import { SectionDirtyTrackerService } from '../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
 
 @Component({
   selector: 'app-innovation-use-info',
   templateUrl: './innovation-use-info.component.html',
   styleUrls: ['./innovation-use-info.component.scss'],
-  standalone: false
+  standalone: false,
+  providers: [SectionDirtyTrackerService]
 })
-export class InnovationUseInfoComponent {
+export class InnovationUseInfoComponent implements CanComponentDeactivate {
   innovationUseInfoBody = new IpsrStep1Body();
   savingSection = false;
+
+  /**
+   * `UCA-T-11` — component-scoped dirty-diff tracker (`providers: [SectionDirtyTrackerService]`),
+   * same pattern as `rd-general-information`/`UCA-T-6` and `rd-geographic-location`/`UCA-T-7`.
+   * Snapshotted at the true end of each load flow (`getSectionInformation()` /
+   * `getSectionInformationp25()`) and again directly inside the save flow's success branch.
+   *
+   * **Child-mutation hazard (same bug class as `UCA-T-7`'s `sub-geoscope`), investigated and
+   * neutralized via normalization, not timing:** `app-innovation-use-form` (the only child this
+   * section renders) itself renders `app-studies-link` (`*ngIf="body.has_scaling_studies &&
+   * getUseLevelIndex() >= 6 && !isScalingStudiesQuestionHidden()"`), and
+   * `StudiesLinkComponent.ngOnInit()` (`studies-link.component.ts:21-28`) pushes a placeholder
+   * empty-string row into `body.scaling_studies_urls` whenever that array is empty and the section
+   * is editable — `if (!this.disabled && this.body.scaling_studies_urls.length === 0) {
+   * this.body.scaling_studies_urls = ['']; }`. This child only mounts once the load response has
+   * set `has_innovation_link`/`has_scaling_studies`/`innovation_use_level_id` on the SAME
+   * `innovationUseInfoBody` this component already snapshotted, so its `ngOnInit` write lands on
+   * the very next change-detection pass AFTER the load flow's own `next` handler returns — i.e.
+   * strictly after any snapshot taken at the naive "end of `next`" point. A P25 result with
+   * `has_scaling_studies: true`, a use level ≥ 6, a pre-2026 phase (so the question isn't retired)
+   * and an empty stored `scaling_studies_urls` therefore reported `hasUnsavedChanges() === true`
+   * immediately after a clean, untouched load — reproduced directly against this exact scenario in
+   * this component's own spec before the fix (see the spec's `UCA-T-11` describe block).
+   *
+   * `InnovationUseFormComponent.initializeComponentProperties()` (`ngOnInit`/`ngOnChanges`) was also
+   * investigated: it writes several defaults onto the SAME bound object (`initiative_expected_investment`,
+   * `reference_materials`, `pictures`, `studies_links`, `result`, etc.), but that write happens on the
+   * child's FIRST creation — which Angular performs synchronously while building this component's own
+   * initial view, strictly BEFORE the `OnChangePortfolio` effect below has even scheduled the load GET
+   * (the effect's first run is deferred to a later microtask; the HTTP call itself is further out
+   * still). Because `innovationUseInfoBody`'s object reference is never reassigned (only mutated),
+   * Angular never re-invokes that child's `ngOnChanges` later, so this particular write cannot race a
+   * snapshot taken after the load resolves — confirmed by tracing every `ngOnInit`/`ngOnChanges` on
+   * every component this section's template renders, transitively (also checked `app-estimates-cgiar`,
+   * and the `custom-fields` controls this template binds via `[(ngModel)]` on leaf scalars — none of
+   * them declare `ngOnInit`/`ngOnChanges` that write back into the bound model).
+   *
+   * Fix: `normalizeScalingStudiesUrlsForDiff()` below, applied identically inside
+   * `dirtySnapshotValue()` (fed to both `snapshot()` and `isDirty()`), same "project the
+   * child-decoration out of the diff" shape as `rd-geographic-location`'s `normalizeCountriesForDiff()`
+   * — chosen over re-snapshotting after the child "settles" because `StudiesLinkComponent` exposes no
+   * such signal (only user-driven mutation methods) and is timing-agnostic regardless of whether the
+   * catalogue-dependent `getUseLevelIndex()` resolves before or after this component's own load.
+   */
+  private readonly dirtyTracker = inject(SectionDirtyTrackerService);
+
   constructor(
     private readonly api: ApiService,
     private readonly fieldsManagerSE: FieldsManagerService,
@@ -133,6 +184,10 @@ export class InnovationUseInfoComponent {
         this.innovationUseInfoBody.innovatonUse = response;
         this.convertOrganizations(this.innovationUseInfoBody?.innovatonUse?.organization);
         this.convertOrganizations(this.innovationUseInfoBody?.innovation_use_2030?.organization);
+        // `UCA-T-11` — true end of this load flow: everything above is synchronous, so a freshly
+        // loaded, unedited section is correctly non-dirty right here. See the `dirtyTracker` field
+        // docblock above for the child-mutation hazard this snapshot is normalized against.
+        this.dirtyTracker.snapshot(this.dirtySnapshotValue());
         this.sectionLoading.set(false);
       },
       error: err => {
@@ -197,6 +252,8 @@ export class InnovationUseInfoComponent {
         }
         this.convertOrganizations(this.innovationUseInfoBody?.innovatonUse?.organization);
         this.convertOrganizations(this.innovationUseInfoBody?.innovation_use_2030?.organization);
+        // `UCA-T-11` — true end of this load flow, same rationale as `getSectionInformation()` above.
+        this.dirtyTracker.snapshot(this.dirtySnapshotValue());
         this.sectionLoading.set(false);
       },
       error: err => {
@@ -206,9 +263,90 @@ export class InnovationUseInfoComponent {
     });
   }
 
-  onSaveSection() {
-    this.savingSection = true;
+  /** `UCA-T-11` — `CanComponentDeactivate.hasUnsavedChanges()`. */
+  hasUnsavedChanges(): boolean {
+    return this.dirtyTracker.isDirty(this.dirtySnapshotValue());
+  }
 
+  /**
+   * `UCA-T-11` — `CanComponentDeactivate.saveSection()`. Wraps the exact same save flow
+   * `onSaveSection()` drives (`performSave()`, below — `UCA-DD-3`), resolving `true`/`false`
+   * instead of void, for `UnsavedChangesGuard`.
+   */
+  saveSection(): Observable<boolean> {
+    return this.performSave().pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
+
+  /**
+   * `UCA-T-11` — the value the dirty tracker snapshots/diffs.
+   *
+   * Two normalizations, both discovered by actually rendering the real child tree in this
+   * component's own spec rather than reasoning about timing in the abstract (a synchronous
+   * `of(...)` mock had ALSO reproduced the second one below — confirming this class of race
+   * doesn't require genuine HTTP asynchrony to manifest, only a later Angular change-detection
+   * pass, which is enough on its own):
+   *
+   * 1. `scaling_studies_urls` — see the `dirtyTracker` field docblock: `app-studies-link` seeds a
+   *    placeholder empty-string row into this array from its own `ngOnInit`.
+   * 2. `KEYS_ONLY_INNOVATION_USE_FORM_DEFAULTS_ON_LOAD` below — `InnovationUseFormComponent`
+   *    .initializeComponentProperties()` (`ngOnInit`/`ngOnChanges`) unconditionally seeds SEVEN
+   *    keys (`initiative_expected_investment`, `bilateral_expected_investment`,
+   *    `institutions_expected_investment`, `reference_materials`, `pictures`, `studies_links`,
+   *    `result`) that `IpsrStep1Body` never declares — so their first write inserts a NEW property
+   *    into the tracked object, at whatever moment the child happens to run. Empirically (this
+   *    component's own spec, `CanComponentDeactivate (UCA-T-11)`), that moment can land BEFORE or
+   *    AFTER this component's own load-flow snapshot depending on nothing more than whether the
+   *    section GET resolves synchronously or is genuinely deferred — so a plain `{...body}` spread
+   *    is not just racing one known child, it is sensitive to JSON key-insertion ORDER itself.
+   *    None of these seven keys is read or written anywhere in `innovation-use-form.component.html`
+   *    (verified by grep — they are artifacts of the model class being shared with IPSR step 1,
+   *    which this host never renders), so they are excluded from the diff entirely rather than
+   *    default-matched — there is no legitimate edit this host could ever make to them.
+   */
+  private dirtySnapshotValue(): unknown {
+    const { ...rest } = this.innovationUseInfoBody as any;
+    for (const key of InnovationUseInfoComponent.KEYS_ONLY_INNOVATION_USE_FORM_DEFAULTS_ON_LOAD) {
+      delete rest[key];
+    }
+    rest.scaling_studies_urls = this.normalizeScalingStudiesUrlsForDiff(this.innovationUseInfoBody.scaling_studies_urls);
+    return rest;
+  }
+
+  /** See `dirtySnapshotValue()` above. */
+  private static readonly KEYS_ONLY_INNOVATION_USE_FORM_DEFAULTS_ON_LOAD = [
+    'initiative_expected_investment',
+    'bilateral_expected_investment',
+    'institutions_expected_investment',
+    'reference_materials',
+    'pictures',
+    'studies_links',
+    'result'
+  ] as const;
+
+  /**
+   * `UCA-T-11` — projects out `StudiesLinkComponent.ngOnInit()`'s placeholder empty-string row
+   * (`studies-link.component.ts:21-28`) from the diff. Filters ALL blank/whitespace-only entries,
+   * not just a single trailing one: `addStudiesLink()` always leaves at most one blank row (it
+   * strips existing blanks before pushing a new one), so this stays symmetric without needing to
+   * special-case "trailing" vs. "any position". A real typed URL is never blank, so this never
+   * hides a genuine edit; deleting every real URL still reports dirty (`[]` after normalization
+   * differs from a non-empty snapshot).
+   */
+  private normalizeScalingStudiesUrlsForDiff(urls: unknown): string[] {
+    return (Array.isArray(urls) ? urls : []).filter((u: unknown) => typeof u === 'string' && u.trim() !== '');
+  }
+
+  /**
+   * `UCA-T-11`: returns the save `Observable` instead of self-subscribing, so both this
+   * component's own Save action (`onSaveSection`, below) and `saveSection()` (the
+   * `CanComponentDeactivate` contract, above) drive the exact same call (`UCA-DD-3`). Folds in the
+   * P2-3199 innovation-link pre-read so both callers get the identical fresh-read-then-save
+   * behavior the original `onSaveSection()` had.
+   */
+  private performSave(): Observable<void> {
     // P2-3199: the innovation link question lives in Contributors and partners (section 2) for every
     // result this section does not ask it for. There it must re-read the current value right before
     // saving — otherwise a stale value loaded on mount would overwrite the section 2 answer and,
@@ -217,18 +355,31 @@ export class InnovationUseInfoComponent {
     // 🛑 P2-3424 — but NOT when the question lives here (Innovation use, phase 2026 onwards). Re-reading
     // then would discard the answer the user just gave in this very section: the value on screen would
     // be replaced by the one already stored, silently, with a green save toast.
-    if (this.fieldsManagerSE.isP25() && !this.showsInnovationLink()) {
-      this.api.resultsSE.GET_innovationUseP25().subscribe({
-        next: ({ response }) => this.saveSectionWith(this.innovationLinkFrom(response)),
-        error: err => {
-          console.error(err);
-          this.saveSectionWith(this.currentInnovationLink());
-        }
-      });
-      return;
-    }
+    const resolveInnovationLink: Observable<{ has_innovation_link: boolean; linked_results: number[] }> =
+      this.fieldsManagerSE.isP25() && !this.showsInnovationLink()
+        ? this.api.resultsSE.GET_innovationUseP25().pipe(
+            map(({ response }) => this.innovationLinkFrom(response)),
+            catchError(err => {
+              console.error(err);
+              return of(this.currentInnovationLink());
+            })
+          )
+        : of(this.currentInnovationLink());
 
-    this.saveSectionWith(this.currentInnovationLink());
+    return resolveInnovationLink.pipe(switchMap(innovationLink => this.saveSectionWith(innovationLink)));
+  }
+
+  onSaveSection() {
+    this.savingSection = true;
+    this.performSave().subscribe({
+      next: () => {
+        this.savingSection = false;
+      },
+      error: err => {
+        console.error(err);
+        this.savingSection = false;
+      }
+    });
   }
 
   /** Innovation link values as currently held by this section (fallback when the fresh read fails). */
@@ -253,7 +404,7 @@ export class InnovationUseInfoComponent {
     return (linkedResults || []).map((r: any) => Number(r?.id ?? r));
   }
 
-  private saveSectionWith(innovationLink: { has_innovation_link: boolean; linked_results: number[] }) {
+  private saveSectionWith(innovationLink: { has_innovation_link: boolean; linked_results: number[] }): Observable<void> {
     const { investment_programs = [], investment_bilateral = [], investment_partners = [] } = this.innovationUseInfoBody as any;
     const actors = this.innovationUseInfoBody?.innovatonUse?.actors || [];
     const measures = this.innovationUseInfoBody?.innovatonUse?.measures || [];
@@ -300,24 +451,32 @@ export class InnovationUseInfoComponent {
     };
 
     if (this.fieldsManagerSE.isP25()) {
-      this.api.resultsSE.PATCH_innovationUseP25(bodyToSend).subscribe({
-        next: resp => {
+      return this.api.resultsSE.PATCH_innovationUseP25(bodyToSend).pipe(
+        tap(() => {
+          // `UCA-T-11` (per `UCA-T-6`'s rework lesson) — snapshot HERE, synchronously, the instant
+          // the PATCH resolves, in addition to (not instead of) the reload below. `bodyToSend` (via
+          // `this.innovationUseInfoBody`, read fresh by `dirtySnapshotValue()`) is precisely what the
+          // server just persisted, so this is correct even before the reload completes — closing the
+          // same race `UCA-T-6` attempt 1 was FAILed for: `saveSection()`'s `map(() => true)` could
+          // otherwise emit to `UnsavedChangesGuard` before the reload's own re-snapshot resolves, or
+          // (if that reload fails) the section would stay dirty forever despite a genuinely
+          // successful save.
+          this.dirtyTracker.snapshot(this.dirtySnapshotValue());
           this.getSectionInformationp25();
-          this.savingSection = false;
-        }
-      });
-    } else {
-      this.api.resultsSE.PATCH_innovationUse(bodyToSend).subscribe({
-        next: resp => {
-          this.getSectionInformation();
-          this.savingSection = false;
-        },
-        error: err => {
-          console.error(err);
-          this.savingSection = false;
-        }
-      });
+        }),
+        map(() => undefined),
+        catchError(err => throwError(() => err))
+      );
     }
+
+    return this.api.resultsSE.PATCH_innovationUse(bodyToSend).pipe(
+      tap(() => {
+        this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+        this.getSectionInformation();
+      }),
+      map(() => undefined),
+      catchError(err => throwError(() => err))
+    );
   }
 
   convertOrganizations(organizations) {

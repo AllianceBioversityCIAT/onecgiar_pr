@@ -1,6 +1,32 @@
 # innovation-dev-info
 
-**Verified:** 2026-09-10 · branch performance-refactor · P2-3642 drops question 136 (end users/stakeholders in defining assumptions, with its "Why?" box) from the 2026 form and omits its `q3` slot from the save; prior: 2026-09-09 · P2-3641 (evidence of user need block + omitted evidence POST).
+**Verified:** 2026-09-11 · branch qa-development-2026-ss · UCA-T-11 rework attempt 2 (`docs/specs/changes/unsaved-changes-alert/`, execution.md); prior: 2026-09-10 · UCA-T-11 attempt 1; prior: 2026-09-10 · branch performance-refactor · P2-3642 drops question 136 (end users/stakeholders in defining assumptions, with its "Why?" box) from the 2026 form and omits its `q3` slot from the save; prior: 2026-09-09 · P2-3641 drops the "Evidence of user need/user demand" block from the 2026 form: its gate is no longer `isP25()` alone, and the evidence POST is now omitted instead of sent empty; prior: 2026-09-03 · `innovation-team-diversity/` completeness tracking.
+
+## `CanComponentDeactivate` (UCA-T-11)
+
+Same pattern as every other `rd-*` section: `SectionDirtyTrackerService` component-scoped
+(`providers:`). Tracked value is a COMPOSITE of the 3 bound objects this section saves —
+`innovationDevInfoBody`, `innovationDevelopmentQuestions` (loaded via a SEPARATE concurrent GET)
+and `evidencesBody` (P25 only) — snapshotted once at the end of EACH of the section's independent
+load GETs (not chained), so whichever resolves last sets the correct composite baseline.
+
+- ⚠️ **TWO child components mutate tracked state after the load snapshot** — see the
+  `dirtyTracker`/`dirtySnapshotValue()` docstrings in the `.ts` for the full mechanism of each:
+  `IntellectualPropertyRightsComponent` (legacy ≤2025 IPR renderer, fixed in
+  `normalizeQuestionsForDiff()`) and `StudiesLinkComponent` (seeds `scaling_studies_urls`, fixed in
+  `normalizeInnovationDevInfoBodyForDiff()`, same shape as the sibling `innovation-use-info`'s
+  `normalizeScalingStudiesUrlsForDiff()`). `estimates`/`assumptions-examination` (this task's named
+  risk) were traced and found to write NOTHING into the tracked objects — read-only,
+  user-click-driven only.
+- `evidencesBody.evidences[].file` (a raw `File`) is excluded from the diff, same as `rd-evidences`
+  (`UCA-OQ-2`).
+- `performSave()` snapshots directly on each PATCH's success `tap`, in addition to the delegated
+  reload (both the legacy and P25 branches).
+- `[appBeforeUnloadWarning]` on `.detail_container`; `canDeactivate: [UnsavedChangesGuard]` on the
+  INNER `{path: '', component: ...}` route in `innovation-dev-info-routing.module.ts` — NOT on the
+  `innovation-dev-info` entry of `rdResultTypesPages` (`loadChildren`, no `component`).
+- `UCA-OQ-2`: `InnovationDevInfoBody`/`InnovationDevelopmentQuestions` are plain JSON-safe data (no
+  `Date`/`File` at any depth) — verified against the model files, not just declared types.
 
 ## What it is
 The "Innovation Development" section of the result detail. It mixes **two sources** that are easy to

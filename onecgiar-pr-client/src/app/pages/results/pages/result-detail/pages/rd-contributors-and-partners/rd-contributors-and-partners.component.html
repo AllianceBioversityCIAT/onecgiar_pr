@@ -1,4 +1,4 @@
-<div class="detail_container" [appSectionSkeleton]="rdPartnersSE.sectionLoading()">
+<div class="detail_container" [appSectionSkeleton]="rdPartnersSE.sectionLoading()" [appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)">
   <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [collapsible]="false" [description]="alertStatusMessage"> </app-alert-status>
 
   <!-- ! Submitter: shown in ALL reporting phases. Removed in the 2026 redesign (P2-3036 Level 2) but restored by business decision (Nicoleta / Santi) — it must not be phase-gated. changePrimaryInit is still set in the service, so save is unaffected. -->
@@ -138,23 +138,30 @@
     </app-pr-multi-select>
   }
 
-  <div class="medal_selector selected_container">
-    <div class="centers chips_container">
-      <div
-        class="center pr_chip_selected"
-        [prTooltip]="this.disabledText"
-        [prTooltipDisabled]="!center.from_cgspace"
-        *ngFor="let center of this.rdPartnersSE.partnersBody.contributing_center; let i = index">
-        <div class="name" [innerHtml]="isCP2026() ? center?.acronym || center?.name : center?.name"></div>
-        <i
-          *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
-          class="material-icons-round"
-          (click)="deleteContributingCenter(i); this.rdPartnersSE.setPossibleLeadCenters(true)"
-          >cancel</i
-        >
+  <!-- bugfix: these chips render `contributing_center` — the SAME array bound to dropdown 1 above. Gated to the
+       exact cases where a control for that array is actually painted (legacy flat, unmapped-2026 flat, or the
+       2026-split dropdown 1 when the ToC brings reference centers), so a mid-session ToC change that flips
+       `hasReferenceCenters()` to false (dropdown 1 replaced by the "No CGIAR Centers..." note) can never leave
+       these chips orphaned with no visible owning field (see result 9139). -->
+  @if (!isCP2026() || this.rdPartnersSE.partnersBody.result_toc_result.planned_result === false || hasReferenceCenters()) {
+    <div class="medal_selector selected_container">
+      <div class="centers chips_container">
+        <div
+          class="center pr_chip_selected"
+          [prTooltip]="this.disabledText"
+          [prTooltipDisabled]="!center.from_cgspace"
+          *ngFor="let center of this.rdPartnersSE.partnersBody.contributing_center; let i = index">
+          <div class="name" [innerHtml]="isCP2026() ? center?.acronym || center?.name : center?.name"></div>
+          <i
+            *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
+            class="material-icons-round"
+            (click)="deleteContributingCenter(i); this.rdPartnersSE.setPossibleLeadCenters(true)"
+            >cancel</i
+          >
+        </div>
       </div>
     </div>
-  </div>
+  }
 
   <!-- P2-2998 (2026): the "Other(s)" dropdown appears AFTER the selected-centers chips (chips stay pinned under dropdown 1).
        AC4: it auto-activates when the ToC returned no reference centers, even without the user picking "Other".
@@ -415,14 +422,19 @@
       }
     }
 
-    <div class="medal_selector selected_container">
-      <div class="centers chips_container">
-        <div class="center pr_chip_selected" *ngFor="let sp of this.rdPartnersSE.scienceSelected; let i = index">
-          <div class="name" [innerHtml]="sp?.official_code || sp?.short_name"></div>
-          <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round" (click)="deleteScience(i)">cancel</i>
+    <!-- bugfix: same rationale as the Centers chips above — only show while dropdown 1 (bound to the same
+         `scienceSelected` array) is actually painted, i.e. the ToC brought reference Science Programs, so a
+         mid-session ToC change that empties `hasReferenceScience()` can't leave these chips orphaned. -->
+    @if (hasReferenceScience() && this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== false) {
+      <div class="medal_selector selected_container">
+        <div class="centers chips_container">
+          <div class="center pr_chip_selected" *ngFor="let sp of this.rdPartnersSE.scienceSelected; let i = index">
+            <div class="name" [innerHtml]="sp?.official_code || sp?.short_name"></div>
+            <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round" (click)="deleteScience(i)">cancel</i>
+          </div>
         </div>
       </div>
-    </div>
+    }
 
     <!-- P2-2929 (aligned with Centers AC4, per Santi 2026-07-03): the "Other(s)" dropdown appears when the user picks
          "Other" OR auto-activates when the ToC returned no Science Programs (empty state). -->
@@ -574,22 +586,123 @@
     }
 
     @if (this.rdPartnersSE.partnersBody.has_innovation_link && this.fieldsManagerSE.isP25()) {
-      <app-pr-multi-select
-        data-testid="cp-field-linked_results"
-        [options]="this.innovationUseResultsSE.resultsList"
-        [(ngModel)]="this.rdPartnersSE.partnersBody.linked_results"
-        optionLabel="title"
-        optionValue="id"
-        optionGroupLabel="name"
-        optionGroupChildren="options"
-        label="Please select a result"
-        placeholder="Please select a result"
-        selectedLabel="Results selected"
-        selectedOptionLabel="title"
-        [displayLabelFormatter]="formatResultLabel.bind(this)"
-        [required]="true">
-      </app-pr-multi-select>
-      <div appFeedbackValidation labelText="Please select a result" [isComplete]="!!this.rdPartnersSE.partnersBody.linked_results?.length"></div>
+        <div class="custom-linked-results-container" data-testid="cp-field-linked_results">
+          <app-pr-field-header label="Please select a result:" [required]="true"></app-pr-field-header>
+          
+          <div class="custom_select">
+            <div style="position: relative;">
+              <a class="field" tabindex="0" (click)="toggleLinkedResultsPanel()">
+                <div class="text select_placeholder">Please select a result</div>
+                <div class="icon_container"></div>
+                <i class="pi pi-chevron-down icon_dropdown"></i>
+              </a>
+
+              <div class="custom-dropdown-panel" *ngIf="isLinkedResultsPanelExpanded">
+              <div class="search-bar">
+                <i class="pi pi-search"></i>
+                <input type="text" [(ngModel)]="searchLinkedResultText" placeholder="Search by code, title, partner..." />
+                <i class="pi pi-times clear-search" *ngIf="searchLinkedResultText" (click)="searchLinkedResultText = ''"></i>
+              </div>
+
+              <div class="filter-group-title">FILTER BY RESULT TYPOLOGY</div>
+              <div class="filters-row typology-row">
+                <div *ngFor="let t of availableTypologies; trackBy: trackByName"
+                     class="filter-chip"
+                     [class.active]="selectedTypologies?.includes(t.name)"
+                     (click)="toggleTypology(t.name)">
+                  {{ t.name }}
+                </div>
+              </div>
+
+              <div class="flex-row-align">
+                <div class="left-filters">
+                  <div class="filter-group">
+                    <span class="filter-label">PORTFOLIO:</span>
+                    <div class="filter-chip-group segmented">
+                       <div class="grouped-chip" [class.active]="selectedPortfolios.length === 0" (click)="selectedPortfolios = []">All</div>
+                       <div *ngFor="let p of availablePortfolios; trackBy: trackByValue"
+                            class="grouped-chip"
+                            [class.active]="selectedPortfolios?.includes(p.value.toString())"
+                            (click)="togglePortfolio(p.value.toString())">
+                         {{ p.name }}
+                       </div>
+                    </div>
+                  </div>
+
+                  <div class="filter-group">
+                    <span class="filter-label">FUNDING SOURCE:</span>
+                    <div class="filter-chip-group spaced">
+                       <div *ngFor="let f of availableFundingSources; trackBy: trackByValue"
+                            class="filter-chip small-chip"
+                            [class.active]="selectedFundingSources?.includes(f.value)"
+                            (click)="toggleFunding(f.value)">
+                         {{ f.name }}
+                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="summary-and-reset">
+                  <span class="summary-text">Showing {{ filteredLinkedResults.length }} results</span>
+                  <a class="reset-link" (click)="resetFilters()">Reset filters</a>
+                </div>
+              </div>
+
+              <div class="results-list compact-list">
+                <div class="result-list-item"
+                     *ngFor="let r of visibleLinkedResults; trackBy: trackByResultId"
+                     (click)="toggleResultSelection(r.id)">
+
+                  <div class="item-left">
+                    <input type="checkbox"
+                           class="pr-native-check"
+                           [checked]="selectedLinkedResultIds.has(r.id)"
+                           style="pointer-events: none;">
+                  </div>
+
+                  <div class="item-right">
+                    <div class="item-header">
+                      <span class="item-code">[P{{ r.phase_year?.toString().substring(2) }} - {{ r.phase_year }}] {{ r.result_code }}</span>
+                      <span class="item-dot">·</span>
+                      <span class="item-typology">{{ r.name }}</span>
+                      <span class="item-funding-badge" *ngIf="r.source">{{ r.source }}</span>
+                      <span class="badge-linked" *ngIf="selectedLinkedResultIds.has(r.id)" style="margin-left: 8px;">Linked</span>
+                    </div>
+                    <div class="item-title">{{ r.title }}</div>
+                  </div>
+                </div>
+
+                <div class="truncation-note" *ngIf="linkedResultsTruncated">
+                  Showing the first {{ linkedResultsRenderCap }} of {{ filteredLinkedResults.length }} matches — refine your search or filters to narrow the list.
+                </div>
+              </div>
+
+              <div class="panel-footer" style="padding-top: 15px;">
+                <div class="footer-left">
+                  <span class="selection-count">{{ this.rdPartnersSE.partnersBody.linked_results?.length || 0 }} results selected</span>
+                  <a class="clear-btn" *ngIf="this.rdPartnersSE.partnersBody.linked_results?.length" (click)="clearLinkedResultsSelection()">Clear selection</a>
+                </div>
+                <div class="footer-right">
+                  <button class="close-btn" (click)="toggleLinkedResultsPanel()">Close</button>
+                </div>
+              </div>
+            </div>
+            </div>
+            
+            <div class="selected_container custom_scroll" *ngIf="this.rdPartnersSE.partnersBody.linked_results?.length">
+              <app-pr-field-header description="Results selected ({{ this.rdPartnersSE.partnersBody.linked_results.length }})"> </app-pr-field-header>
+
+              <div class="chips_container">
+                <div class="pr_chip_selected" *ngFor="let id of this.rdPartnersSE.partnersBody.linked_results; trackBy: trackByLinkedId">
+                  <div class="name" [innerHtml]="formatResultLabel(getResultById(id))"></div>
+                  <i class="material-icons-round" style="cursor: pointer; color: #f44336;" (click)="toggleResultSelection(id)">remove_circle</i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div appFeedbackValidation labelText="Please select a result" [isComplete]="!!this.rdPartnersSE.partnersBody.linked_results?.length"></div>
     }
   }
   <app-alert-status

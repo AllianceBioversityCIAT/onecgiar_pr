@@ -8,20 +8,39 @@ import { CenterDto } from '../../interfaces/center.dto';
 })
 export class CentersService {
   /**
-   * Legacy plain-array view of the CLARISA centers catalogue. Kept as-is: ~25 screens read it directly from
-   * their templates or imperatively, and none of them should change behaviour because of P2-3190.
+   * Plain-array view of the CLARISA centers catalogue, kept as the public name ~25 screens already use.
+   *
+   * P2-3678: this is no longer a field of its own — it is a getter/setter over `centers`, so both views of
+   * the catalogue can no longer disagree and, more importantly, ANY consumer that reads this name from a
+   * template or a `computed()` is now subscribed to the signal and rebuilds when the catalogue lands. That
+   * removes the whole class of defect behind P2-3190, P2-3335 and P2-3554 instead of one screen at a time.
+   *
+   * 🛑 Returns `centers()` BY REFERENCE on purpose — never a copy. Five of the eight template bindings feed
+   * `pr-select`, which derives its options in a `computed()` over the `options` input with no content
+   * comparison and renders them through `*cdkVirtualFor` without `trackBy`: a fresh array on every
+   * change-detection pass rebuilds the options every time. That is the `synchronize()` loop that froze
+   * IPSR › Contributors and is documented in `pr-multi-select.component.ts` (~line 85).
    */
-  centersList: CenterDto[] = [];
+  get centersList(): CenterDto[] {
+    return this.centers();
+  }
+
+  set centersList(value: CenterDto[]) {
+    this.centers.set(value ?? []);
+  }
 
   /**
-   * P2-3190: signal-backed view of the SAME catalogue, written together with `centersList`.
+   * P2-3190: signal-backed view of the catalogue, and since P2-3678 the ONLY place it is stored —
+   * `centersList` above is a getter/setter over this signal.
    *
-   * The catalogue resolves asynchronously, so any `computed()` that reads the plain array caches whatever
-   * was there on its first evaluation and never recomputes when the HTTP response lands (a plain array is
-   * not a reactive dependency). Under zoneless change detection nothing rescues it either. Consumers that
-   * need the list to rebuild when the catalogue arrives must read `centers()` instead of `centersList`.
+   * The catalogue resolves asynchronously. Before P2-3678 this was stored twice — a plain array plus this
+   * signal — and any `computed()` reading the plain array cached whatever was there on its first evaluation
+   * and never recomputed when the HTTP response landed, because a plain array is not a reactive dependency
+   * and zoneless change detection rescues nothing. Holding the catalogue only here is what makes that
+   * impossible to reproduce again, whichever of the two names a consumer reads.
    *
-   * Mirrors the migration already accepted in `InitiativesService` (`allInitiativesList` + `allInitiatives`).
+   * `InitiativesService` (`allInitiativesList` + `allInitiatives`) and `InstitutionsService` still keep the
+   * two-fields-in-parallel shape; this service is the first to collapse them.
    */
   readonly centers = signal<CenterDto[]>([]);
 
@@ -80,7 +99,8 @@ export class CentersService {
         )
         .subscribe({
           next: response => {
-            this.centersList = response;
+            // P2-3678: one write, one home. `centersList` is a getter/setter over this signal now, so
+            // assigning it as well would just call `centers.set` a second time with the same reference.
             this.centers.set(response);
             this.loadedCenters.emit(true);
             resolve([...response]);

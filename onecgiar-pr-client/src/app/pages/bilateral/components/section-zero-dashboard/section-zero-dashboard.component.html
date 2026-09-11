@@ -63,13 +63,20 @@
       <dl class="bp-project-fields">
         <div class="bp-meta-field bp-meta-field--project">
           <dt class="bp-meta-field-label">Project</dt>
-          <!-- Always static text (2026-09-05, Juan David): the primary W3/Bilateral project is the
-               result's identity and must NOT be changeable from the editor. This reverses the
-               P2-3518 inline picker; a draft created against the wrong project is discarded and
-               recreated instead of re-pointed. -->
-          <dd class="bp-meta-field-value bp-meta-field-value--project" [title]="project.fullName || project.shortName">
-            {{ project.fullName || project.shortName }}
-          </dd>
+          @if (canEditAssignment()) {
+            <dd class="bp-meta-field-value bp-meta-field-value--editable">
+              <app-bilateral-project-selector
+                variant="inline"
+                [deferCommit]="true"
+                [previewProject]="pendingProject()"
+                (projectSelected)="onProjectCandidate($event)">
+              </app-bilateral-project-selector>
+            </dd>
+          } @else {
+            <dd class="bp-meta-field-value bp-meta-field-value--project" [title]="project.fullName || project.shortName">
+              {{ project.fullName || project.shortName }}
+            </dd>
+          }
         </div>
         @if (project.leadCenter) {
           <div class="bp-meta-field">
@@ -77,13 +84,67 @@
             <dd class="bp-meta-field-value" [title]="project.leadCenter.name">{{ project.leadCenter.acronym }}</dd>
           </div>
         }
-        @if (creationService.selectedPrimarySp(); as primarySp) {
+        @if (assignmentPrimary(); as primarySp) {
           <div class="bp-meta-field">
             <dt class="bp-meta-field-label">Program</dt>
-            <dd class="bp-meta-field-value" [title]="primarySp.name">{{ primarySp.name || primarySp.shortName }}</dd>
+            @if (canEditAssignment()) {
+              <dd class="bp-meta-field-value bp-primary-selector-wrap">
+                <button type="button" class="bp-primary-selector" (click)="togglePrimaryOptions()">
+                  {{ primarySp.spName || primarySp.spShortName || primarySp.programCode }}
+                  <i class="material-icons-round">expand_more</i>
+                </button>
+                @if (showPrimaryOptions()) {
+                  <div class="bp-primary-options">
+                    @for (program of availablePrimaryPrograms(); track program.programId) {
+                      <button type="button" (click)="selectPrimary(program)" [class.bp-primary-option--selected]="program.programId === primarySp.programId">
+                        {{ program.programCode }} — {{ program.spName }}
+                      </button>
+                    }
+                  </div>
+                }
+                @if (noAlternativeMessage(); as message) {
+                  <p class="bp-primary-help">{{ message }}</p>
+                }
+              </dd>
+            } @else {
+              <dd class="bp-meta-field-value" [title]="primarySp.spName">{{ primarySp.spName || primarySp.spShortName }}</dd>
+            }
+          </div>
+        } @else if (canEditAssignment()) {
+          <div class="bp-meta-field">
+            <dt class="bp-meta-field-label">Program</dt>
+            <dd class="bp-meta-field-value bp-primary-selector-wrap">
+              <button type="button" class="bp-primary-selector" (click)="togglePrimaryOptions()">
+                Select Primary Science Program
+                <i class="material-icons-round">expand_more</i>
+              </button>
+              @if (showPrimaryOptions()) {
+                <div class="bp-primary-options">
+                  @for (program of availablePrimaryPrograms(); track program.programId) {
+                    <button type="button" (click)="selectPrimary(program)">
+                      {{ program.programCode }} — {{ program.spName }}
+                    </button>
+                  }
+                </div>
+              }
+            </dd>
           </div>
         }
       </dl>
+
+      @if (canEditAssignment() && (hasAssignmentChange() || requiresPrimarySelection())) {
+        <div class="bp-assignment-actions">
+          @if (requiresPrimarySelection()) {
+            <p class="bp-primary-help">Select the Primary Science Program allocated to this project.</p>
+          }
+          @if (assignmentError(); as error) {
+            <p class="bp-assignment-error">{{ error }}</p>
+          }
+          <button type="button" class="bp-assignment-save" [disabled]="isSavingAssignment() || requiresPrimarySelection()" (click)="saveAssignment()">
+            {{ isSavingAssignment() ? 'Saving...' : 'Save project and program' }}
+          </button>
+        </div>
+      }
 
       <dl class="bp-project-summary-fields">
         <div class="bp-meta-field bp-meta-field--full">

@@ -377,6 +377,12 @@ export const resultDetailRouting: PrRoute[] = [
     path: 'theory-of-change',
     underConstruction: false,
     portfolioAcronym: 'P22',
+    // `UCA-T-10` rework — `canDeactivate` moved OFF this outer node (see the cross-cutting
+    // correction in execution.md): this entry uses `loadChildren` and has no `component`, so
+    // Angular invoked the guard with `component: null`, throwing on every navigation away from
+    // this section. It now lives on the inner `{ path: '', component: X }` route inside
+    // `rd-theory-of-change-routing.module.ts`, same as `general-information`/`partners`/
+    // `contributor-partners`/`geographic-location`/`evidences`.
     loadChildren: () =>
       import('../../pages/results/pages/result-detail/pages/rd-theory-of-change/rd-theory-of-change.module').then(m => m.RdTheoryOfChangeModule)
   },
@@ -411,6 +417,17 @@ export const resultDetailRouting: PrRoute[] = [
     path: 'links-to-results',
     portfolioAcronym: 'P22',
     underConstruction: false,
+    // `UCA-T-10` rework — `canDeactivate` moved OFF this outer node for the same reason as
+    // `theory-of-change` above (see the cross-cutting correction in execution.md): this entry
+    // uses `loadChildren` and has no `component`, so the guard was invoked with `component: null`.
+    // It now lives on the inner `{ path: '', component: X }` route inside
+    // `rd-links-to-results-routing.module.ts`. `RdLinksToResultsComponent` implements
+    // `CanComponentDeactivate` by delegating to its child `app-links-to-results-global` (which owns
+    // the section body and save call — see `rd-links-to-results.component.ts`). This section does
+    // NOT render `SectionBottomBarComponent` (confirmed by reading `links-to-results-global.component.html`,
+    // which renders `app-save-button` instead), so it has no Back/Next silent-save case — the guard
+    // still applies for the Save/Discard dialog path on whatever navigation DOES reach it (sidebar
+    // clicks, browser back).
     loadChildren: () =>
       import('../../pages/results/pages/result-detail/pages/rd-links-to-results/rd-links-to-results.module').then(m => m.RdLinksToResultsModule)
   },

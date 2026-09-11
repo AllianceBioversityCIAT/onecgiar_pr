@@ -1,4 +1,4 @@
-<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()" [appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)">
   <app-alert-status [collapsible]="false" [description]="warning" *ngFor="let warning of this.knowledgeProductBody?.warnings"> </app-alert-status>
   <app-alert-status
     [collapsible]="false"

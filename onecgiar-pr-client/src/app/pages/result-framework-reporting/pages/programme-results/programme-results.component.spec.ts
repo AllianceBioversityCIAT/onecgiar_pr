@@ -386,7 +386,19 @@ describe('ProgrammeResultsComponent', () => {
 
   beforeEach(() => setup());
 
-  afterEach(() => localStorage.clear());
+  afterEach(() => {
+    localStorage.clear();
+    // The row menu is a CDK overlay: its panel lives in `.cdk-overlay-container` on <body>, which
+    // outlives `fixture.destroy()` and would leak into the next test's document queries.
+    document.querySelectorAll('.cdk-overlay-container').forEach(container => container.remove());
+  });
+
+  /**
+   * The row menu is queried through `document`, not the fixture: it is rendered by a CDK Connected
+   * Overlay outside the component's DOM, which is the whole point — the table wrap is
+   * `overflow-x: auto` and clipped an in-cell panel to its first item.
+   */
+  const rowMenuItems = () => Array.from(document.querySelectorAll<HTMLElement>('.pr-row-menu [role="menuitem"]'));
 
   // ── wiring ────────────────────────────────────────────────────────────────────────────────
   it('resolves the programme from the route and loads its results', () => {
@@ -1469,12 +1481,12 @@ describe('ProgrammeResultsComponent', () => {
     component.toggleRowMenu(component.data.rows()[0], new MouseEvent('click'));
     fixture.detectChanges();
 
-    const items = fixture.debugElement.queryAll(By.css('[role="menu"] [role="menuitem"]'));
-    const labels = items.map(item => ((item.nativeElement as HTMLElement).textContent ?? '').replace(/\s+/g, ' ').trim());
+    const items = rowMenuItems();
+    const labels = items.map(item => (item.textContent ?? '').replace(/\s+/g, ' ').trim());
     expect(labels).toEqual(['Open result', 'View indicator Coming soon', 'Download PDF', 'Copy link']);
 
     // View indicator is the ONLY one left tagged — it still has no payload to open.
-    const viewIndicator = items[1].nativeElement as HTMLButtonElement;
+    const viewIndicator = items[1] as HTMLButtonElement;
     expect(viewIndicator.disabled).toBe(true);
     expect(viewIndicator.getAttribute('aria-disabled')).toBe('true');
     expect(viewIndicator.className).toContain('cursor-not-allowed');
@@ -1482,9 +1494,9 @@ describe('ProgrammeResultsComponent', () => {
     expect(viewIndicator.textContent).toContain('Coming soon');
 
     // The three live ones are not disabled and carry no tag.
-    expect((items[0].nativeElement as HTMLButtonElement).disabled).toBe(false);
-    expect((items[2].nativeElement as HTMLAnchorElement).getAttribute('target')).toBe('_blank');
-    const copyLink = items[3].nativeElement as HTMLButtonElement;
+    expect((items[0] as HTMLButtonElement).disabled).toBe(false);
+    expect((items[2] as HTMLAnchorElement).getAttribute('target')).toBe('_blank');
+    const copyLink = items[3] as HTMLButtonElement;
     expect(copyLink.disabled).toBe(false);
     expect(copyLink.className).not.toContain('cursor-not-allowed');
     expect(copyLink.textContent).not.toContain('Coming soon');
@@ -1498,9 +1510,7 @@ describe('ProgrammeResultsComponent', () => {
     const openMenu = () => {
       component.toggleRowMenu(component.data.rows()[0], new MouseEvent('click'));
       fixture.detectChanges();
-      return fixture.debugElement
-        .queryAll(By.css('[role="menu"] [role="menuitem"]'))
-        .map(item => ((item.nativeElement as HTMLElement).textContent ?? '').replace(/\s+/g, ' ').trim());
+      return rowMenuItems().map(item => (item.textContent ?? '').replace(/\s+/g, ' ').trim());
     };
 
     it('offers Update result right after Open result when the row is eligible', () => {
@@ -1607,15 +1617,16 @@ describe('ProgrammeResultsComponent', () => {
     component.toggleRowMenu(component.data.rows()[0], new MouseEvent('click'));
     fixture.detectChanges();
 
-    const items = fixture.debugElement.queryAll(By.css('[role="menu"] [role="menuitem"]'));
+    const items = rowMenuItems();
     expect(items.length).toBe(4);
     for (const item of items) {
-      expect((item.nativeElement as HTMLElement).className).toContain('whitespace-nowrap');
+      expect(item.className).toContain('whitespace-nowrap');
     }
 
-    // The popup has to be wide enough to hold "View indicator" next to its pill.
-    const popup = fixture.debugElement.query(By.css('[role="menu"]')).nativeElement as HTMLElement;
-    expect(popup.className).toContain('w-[248px]');
+    // Width now comes from the shared `.pr-row-menu` skin (268px, `src/styles/row-menu.scss`), which
+    // is global precisely because the panel renders outside every component's encapsulation.
+    const popup = document.querySelector('[role="menu"]') as HTMLElement;
+    expect(popup.className).toContain('pr-row-menu');
   });
 
   it('copies the ABSOLUTE url of the same destination "Open result" opens (P2-3396)', () => {
@@ -1655,28 +1666,24 @@ describe('ProgrammeResultsComponent', () => {
     expect(copied).toContain(String(row.code));
   });
 
-  it('lifts the open row ABOVE the sticky actions cells below it', () => {
-    // Every td.pgr-actions is sticky at the same z-index, so without this the rows underneath paint
-    // their opaque background over the menu and their ⋯ shows through it.
+  it('renders the menu OUTSIDE the table, which is what stops the scroll container clipping it', () => {
+    // The table wrap is `overflow-x: auto`, and an overflow container clips its descendants in both
+    // axes: an in-cell panel was cut at the table's bottom edge and only its first item showed. The
+    // CDK overlay renders on <body>, so the panel is not a descendant of any actions cell.
     const [first, second] = component.data.rows();
     component.toggleRowMenu(first, new MouseEvent('click'));
     fixture.detectChanges();
 
-    const cells = fixture.debugElement.queryAll(By.css('td.pgr-actions'));
-    const openCell = cells.find(cell => (cell.nativeElement as HTMLElement).querySelector('[role="menu"]'));
-    expect(openCell).toBeTruthy();
-    expect((openCell!.nativeElement as HTMLElement).classList).toContain('pgr-actions--open');
+    const panel = document.querySelector('.pr-row-menu');
+    expect(panel).toBeTruthy();
+    expect(panel!.closest('td.pgr-actions')).toBeNull();
+    expect(panel!.closest('.cdk-overlay-container')).toBeTruthy();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.pr-row-menu')).toBeNull();
 
-    // ...and only that one.
-    expect(cells.filter(cell => (cell.nativeElement as HTMLElement).classList.contains('pgr-actions--open')).length).toBe(1);
-
-    // Closing it puts the row back on the shared level.
+    // Still exactly one menu when another row is opened.
     component.toggleRowMenu(second, new MouseEvent('click'));
     fixture.detectChanges();
-    const stillOpen = fixture.debugElement
-      .queryAll(By.css('td.pgr-actions.pgr-actions--open'))
-      .map(cell => (cell.nativeElement as HTMLElement).querySelector('[role="menu"]') !== null);
-    expect(stillOpen).toEqual([true]);
+    expect(document.querySelectorAll('.pr-row-menu').length).toBe(1);
   });
 
   it('only ever opens one row menu at a time and closes it on Escape', () => {
@@ -1735,7 +1742,7 @@ describe('ProgrammeResultsComponent', () => {
     const pdfAnchor = (() => {
       component.toggleRowMenu(component.data.rows()[0], new MouseEvent('click'));
       fixture.detectChanges();
-      return fixture.debugElement.query(By.css('a[role="menuitem"]')).nativeElement as HTMLAnchorElement;
+      return document.querySelector('.pr-row-menu a[role="menuitem"]') as HTMLAnchorElement;
     })();
     expect(pdfAnchor.getAttribute('href')).toBe('/reports/result-details/5001?phase=11');
     expect(pdfAnchor.getAttribute('rel')).toBe('noopener noreferrer');

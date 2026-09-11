@@ -1,0 +1,9 @@
+<div hlmDialogHeader>
+  <h2 hlmDialogTitle class="text-[18px]!">Unsaved changes</h2>
+  <p hlmDialogDescription class="text-[15px]! leading-[1.5]!">{{ copy }}</p>
+</div>
+
+<div hlmDialogFooter>
+  <button #saveButton type="button" hlmBtn variant="brand" class="text-[14px]! h-10! px-4!" (click)="save()">Save</button>
+  <button type="button" hlmBtn variant="outline" class="text-[14px]! h-10! px-4!" (click)="discard()">Discard</button>
+</div>

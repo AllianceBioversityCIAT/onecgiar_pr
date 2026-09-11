@@ -119,6 +119,24 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   /** Our own subscriptions to the shared catalogue emitters. See `ngOnDestroy`. */
   private readonly catalogueSubs = new Subscription();
 
+  /**
+   * `UCA-T-9` rework attempt 3, Issue 1 — set by the component (in `ngOnInit`, cleared in
+   * `ngOnDestroy`) so it can re-establish its dirty-diff baseline whenever a LATE-arriving CLARISA
+   * catalogue re-runs the lead-field auto-assignment below, AFTER the component's own load-flow
+   * snapshot already ran. See the component's `reconcileLeadFieldsAfterLateCatalogue()` docstring
+   * for why this can't just be "re-snapshot unconditionally" (would swallow a genuine concurrent
+   * user edit) — this hook only tells the component WHEN to check, the component decides whether
+   * it's actually safe to fold in.
+   *
+   * `UCA-T-9` rework attempt 4 — the callback now takes a `source` discriminator naming WHICH
+   * catalogue just emitted. Attempt 3's callback took no argument, so the component's reconciliation
+   * substituted BOTH `leadCenterCode` AND `leadPartnerId` back to baseline regardless of which
+   * catalogue fired — silently erasing a genuine concurrent edit to the field the emitting catalogue
+   * never touched. `source` lets the component substitute back only the one field the emitting
+   * catalogue could actually have changed.
+   */
+  onCatalogueDrivenLeadUpdate?: (source: 'centers' | 'institutions') => void;
+
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,
@@ -129,6 +147,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         if (loaded) {
           this.setPossibleLeadPartners(true);
           this.setLeadPartnerOnLoad(true);
+          this.onCatalogueDrivenLeadUpdate?.('institutions');
         }
       })
     );
@@ -140,6 +159,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
           });
           this.setPossibleLeadCenters(true);
           this.setLeadCenterOnLoad(true);
+          this.onCatalogueDrivenLeadUpdate?.('centers');
         }
       })
     );
@@ -393,7 +413,19 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     }
   }
 
-  getSectionInformation(no_applicable_partner?: boolean, onSave: boolean = false) {
+  /**
+   * `UCA-T-9` — `onLoaded` is invoked as the LAST step of a successful load, after every
+   * synchronous mutation this method makes to `partnersBody` (through `applyTocMappingOnLoad()`
+   * and the `bilateral_projects` `fullName` pass). `RdContributorsAndPartnersComponent` uses it to
+   * snapshot the component-scoped `SectionDirtyTrackerService` at the true end of the load flow.
+   * `loadFilteredBilateralProjects()` (called right before `onLoaded`) kicks off ITS OWN async GET,
+   * but that call only mutates `clarisaProjectsList` / `loadingBilateralProjects` /
+   * `loadedBilateralProgramId` — never `partnersBody` — so, unlike `rd-general-information`'s
+   * discontinued-options round-trip, there is no later async mutation of the snapshot target to
+   * race. Not invoked on the error branch: a failed load never establishes a baseline (fail-open,
+   * matching `rd-general-information`'s equivalent case).
+   */
+  getSectionInformation(no_applicable_partner?: boolean, onSave: boolean = false, onLoaded?: () => void) {
     this.contributingInitiativeNew = [];
     this.api.resultsSE.GET_ContributorsPartners().subscribe({
       next: ({ response }) => {
@@ -456,6 +488,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         });
 
         this.loadFilteredBilateralProjects();
+        onLoaded?.();
       },
       error: _err => {
         this.getConsumed.set(true);
@@ -639,6 +672,18 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     return !this.fieldsManagerSE.isContributorsPartners2026() || this.partnersBody.result_toc_result?.planned_result === false;
   }
 
+  // LC-DD-6 (bugfix, 2026-09-11): a MAPPED 2026 result whose ToC brought NO reference centers is a third
+  // shape — `isUnmappedOrFlat()` is false (it IS mapped), but the template never paints dropdown 1 or the
+  // sentinel chip either (`hasReferenceCenters()` false ⇒ the note branch, `component.html:99-123`); the
+  // ONLY visible centers control is the second dropdown, carrying the plain "Contributing CGIAR Centers"
+  // label and bound to `otherCentersSelected` (`component.html:172-183`). Before this fix, `onLeadCenterSelected`
+  // still added the "Other(s)" sentinel to `contributing_center` in this case — invisible while
+  // `hasReferenceCenters()` stayed false, but a real, misleading "Other(s)" chip the instant it later became
+  // true (or simply confusing state to persist). This flags exactly that shape.
+  private hasNoTocReferenceCenters(): boolean {
+    return this.tocReferenceCenterInstitutionIds().length === 0;
+  }
+
   // LC-DD-5 (docs/specs/bugfix/lead-center-full-catalog, resolves LC-GAP-1, supersedes LC-DD-4): a Lead
   // Center chosen while it is not already a Contributing Center never persists — `onSaveSection` only
   // stamps `is_leading_result` on entries already inside `contributing_center` / `otherCentersSelected`.
@@ -647,10 +692,12 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   //   2. Otherwise, remove the previously auto-added entry (if any is still present) from wherever it
   //      lives — `contributing_center` or `otherCentersSelected` — and, if that removal empties
   //      `otherCentersSelected` and the "Other(s)" sentinel was itself auto-added, strip the sentinel too.
-  //   3. Auto-add the new `code` (LC-R-15): straight into `contributing_center` when the flat/unmapped UI
-  //      is active, otherwise into `otherCentersSelected` (+ the "Other(s)" sentinel, if not already
-  //      present, tracked via `_autoAddedSentinel` so a later removal only strips a sentinel THIS
-  //      mechanism added, never one the user checked manually).
+  //   3. Auto-add the new `code` (LC-R-15 / LC-DD-6): straight into `contributing_center` when the
+  //      flat/unmapped UI is active; straight into `otherCentersSelected` with NO sentinel when the result
+  //      is mapped but the ToC brought no reference centers (LC-DD-6 — there is no dropdown 1 to reveal);
+  //      otherwise (genuine ToC/Other(s) split, real ToC centers exist) into `otherCentersSelected` + the
+  //      "Other(s)" sentinel, if not already present, tracked via `_autoAddedSentinel` so a later removal
+  //      only strips a sentinel THIS mechanism added, never one the user checked manually.
   onLeadCenterSelected(code: string | null): void {
     const union = this.getContributingCentersUnion();
 
@@ -679,6 +726,10 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       if (center) {
         if (this.isUnmappedOrFlat()) {
           this.partnersBody.contributing_center = [...(this.partnersBody.contributing_center || []), { ...center }] as any[];
+        } else if (this.hasNoTocReferenceCenters()) {
+          // LC-DD-6: no dropdown 1 / sentinel is ever painted here — land the pick directly where the
+          // ONLY visible control actually reads from, instead of adding an invisible-yet-misleading sentinel.
+          this.otherCentersSelected = [...(this.otherCentersSelected || []), { ...center }];
         } else {
           this.otherCentersSelected = [...(this.otherCentersSelected || []), { ...center }];
           const hasSentinel = (this.partnersBody.contributing_center || []).some((c: any) => c?.code === this.OTHER_CENTERS_CODE);

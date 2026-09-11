@@ -1,4 +1,6 @@
-import { Component, OnInit, inject, ChangeDetectorRef, computed, effect, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, computed, effect, signal } from '@angular/core';
+import { Observable, of, throwError } from 'rxjs';
+import { map, catchError, tap } from 'rxjs/operators';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
@@ -14,14 +16,102 @@ import {
 } from '../../../../../../shared/services/global/qa-innovation-development-results.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { filterOutAvisaInitiatives, isAvisaInitiative as checkAvisaInitiative } from '../../../../../../shared/utils/avisa-initiative.util';
+import { CanComponentDeactivate } from '../../../../../../shared/guards/unsaved-changes.types';
+import { SectionDirtyTrackerService } from '../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
 @Component({
   selector: 'app-rd-contributors-and-partners',
   templateUrl: './rd-contributors-and-partners.component.html',
   styleUrl: './rd-contributors-and-partners.component.scss',
-  standalone: false
+  standalone: false,
+  providers: [SectionDirtyTrackerService]
 })
-export class RdContributorsAndPartnersComponent implements OnInit {
+export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, CanComponentDeactivate {
   resultLevelSE = inject(ResultLevelService);
+  /**
+   * `UCA-T-9` rework (attempt 2) — component-scoped dirty-diff tracker
+   * (`providers: [SectionDirtyTrackerService]` on this component). Snapshotted at the true end of
+   * `RdContributorsAndPartnersService.getSectionInformation()`'s load flow (via its `onLoaded`
+   * callback) and again synchronously in `performSave()`'s success branch. **No exception for the
+   * email side effect** (confirmed with the user, `design.md` §13): Back/Next silently saves this
+   * section exactly like every other one despite `PATCH_ContributorsPartners` triggering an email —
+   * see `UCA-TEST` "no carve-out" below.
+   *
+   * **Attempt-1 rework note (Reviewer FAIL, Discovered Issue 1 — highest severity):** two CHILD
+   * components mutate `partnersBody`'s tracked `result_toc_results` rows AFTER this component's own
+   * load-flow snapshot, exactly the `UCA-T-7` `sub-geoscope` bug class, but here a clean load's
+   * false-dirty report silently fires the contribution EMAIL on the very next Back/Next:
+   * - `CPMultipleWPsComponent.ngOnChanges()` (`components/multiple-wps/multiple-wps.component.ts`)
+   *   stamps a client-only `tab.uniqueId = index.toString()` onto every row, on the NEXT CD pass
+   *   after the parent's synchronous snapshot — always after.
+   * - `CPMultipleWPsContentComponent.getIndicatorsList()`
+   *   (`components/multiple-wps/components/multiple-wps-content/multiple-wps-content.component.ts`,
+   *   driven by an `effect()` that re-runs once the ToC level lists resolve) writes
+   *   `activeTab.indicators[0].related_node_id = activeTab.indicators[0].toc_results_indicator_id`
+   *   and defaults `activeTab.toc_progressive_narrative` from `null` to `''` (a JSON-visible change).
+   *
+   * Fix (same normalization pattern as `UCA-T-7`'s `normalizeCountriesForDiff`, applied here as this
+   * section's own `UCA-OQ-2` exception): `normalizeTocResultsForDiff()` below strips the client-only
+   * `uniqueId`, drops `indicators[*].related_node_id` (it is ALWAYS a mirror of
+   * `toc_results_indicator_id` the instant `getIndicatorsList()` runs — `mapTocResultsIndicatorId()`
+   * is the only place a real user edit lands, and it writes `toc_results_indicator_id`, so excluding
+   * the mirror field is lossless for the diff), and normalizes `toc_progressive_narrative` (`null`
+   * and `''` treated as equal). Applied identically to `partnersBody.result_toc_result
+   * .result_toc_results` AND every `partnersBody.contributors_result_toc_result[i]
+   * .result_toc_results`, and shared by both the snapshot call sites and the live `isDirty()` check
+   * (`dirtySnapshotValue()` below) so the diff stays symmetric.
+   *
+   * **Attempt-1 rework note (Reviewer FAIL, Discovered Issue 2 — second-highest severity):**
+   * `leadCenterCode`/`leadPartnerId`/`otherCentersSelected`/`scienceSelected`/`otherScienceSelected`/
+   * `otherPartnersSelected`/`contributingInitiativeNew` all feed `performSave()`'s PATCH payload
+   * (`component.ts` `performSave()` below) but live OUTSIDE `partnersBody`, on
+   * `RdContributorsAndPartnersService` directly — editing ONLY a mandatory Lead Center/Lead Partner
+   * or Contributing Science Program selection left `partnersBody` byte-identical, so
+   * `hasUnsavedChanges()` stayed `false` and Next silently navigated away WITHOUT saving. Fix:
+   * `dirtySnapshotValue()` tracks all of these as one composite unit alongside `partnersBody`.
+   *
+   * Timing investigated (not assumed), coordinating this fix with Issue 1's, per the reviewer's
+   * explicit warning that naively adding `leadCenterCode`/`leadPartnerId` could reintroduce a fresh
+   * instance of Issue 1's bug: `RdContributorsAndPartnersService.getSectionInformation()`'s `next`
+   * handler calls `setLeadPartnerOnLoad`/`setLeadCenterOnLoad`/`runAutoAssignLeads()` SYNCHRONOUSLY,
+   * before `onLoaded?.()` fires (`rd-contributors-and-partners.service.ts:408-478`) — so by the time
+   * this component's `onLoaded` callback snapshots, both fields already reflect that load's own
+   * auto-assignment. The one residual gap is the CLARISA centres/institutions catalogue's own async
+   * re-fetch (`centersSE.getData()` in `ngOnInit`, P2-3554 recovery path): if that catalogue is
+   * still loading when this section's own GET resolves, its `loadedCenters`/`loadedInstitutions`
+   * emission (subscribed in the service constructor) can re-run `setLeadCenterOnLoad`/
+   * `setLeadPartnerOnLoad` again AFTER this snapshot. Attempt 2 originally recorded this as a narrow,
+   * pre-existing timing window that was left un-closed (accepted residual gap, same class as other
+   * non-blocking ADVISORY items elsewhere in this spec) — that framing was wrong (Reviewer FAIL,
+   * Discovered Issue 1, attempt 2): `InstitutionsService` specifically has NO bootstrap prefetch, so
+   * its GET genuinely races this section's own GET on a cold entry (hard reload / deep link), not a
+   * rare bootstrap-failure recovery path. **It IS closed now**, via
+   * `reconcileLeadFieldsAfterLateCatalogue()` below (attempt 3), with a further bug in that
+   * reconciliation itself fixed in attempt 4 (see that method's own docstring). `otherCentersSelected`/
+   * `scienceSelected`/`otherScienceSelected`/`otherPartnersSelected`/`contributingInitiativeNew` have
+   * no such catalogue-driven auto-assignment at all (only `applyTocMappingOnLoad()`, entirely
+   * synchronous, already run before `onLoaded` fires), so they carry no equivalent risk.
+   *
+   * **Attempt-2 rework note (Reviewer FAIL, Discovered Issue 1): a late CLARISA catalogue emission
+   * rewrites `leadPartnerId`/`leadCenterCode` AFTER the snapshot on a genuine cold-entry load (hard
+   * reload / deep link straight onto this section) — `InstitutionsService` specifically has NO
+   * bootstrap prefetch, so its GET races this section's own GET directly.** Fixed via
+   * `reconcileLeadFieldsAfterLateCatalogue()` below (Option A from the reviewer's remediation, chosen
+   * over deriving the lead fields from `is_leading_result` because the composite-snapshot machinery
+   * already existed and this needed no new field on `partnersBody`/the service): the service invokes
+   * `onCatalogueDrivenLeadUpdate` (wired in `ngOnInit`) every time either catalogue's `loaded*`
+   * subject fires, naming WHICH catalogue fired (attempt 4 — see below), and the component
+   * re-establishes its baseline ONLY when nothing besides that one lead field differs from the
+   * baseline — see that method's docstring for why a plain "re-snapshot unconditionally", a plain
+   * "skip if already dirty", or an unscoped (both-fields) substitution are all wrong.
+   */
+  private readonly dirtyTracker = inject(SectionDirtyTrackerService);
+  /**
+   * The exact object last passed to `dirtyTracker.snapshot(...)`, kept alongside the tracker's own
+   * (JSON-string) baseline so `reconcileLeadFieldsAfterLateCatalogue()` can structurally compare
+   * against it — the tracker itself exposes no getter for its stored baseline. Always kept in sync
+   * with the tracker via `snapshotBaseline()`, the single write path for both.
+   */
+  private lastDirtySnapshot: Record<string, unknown> | null = null;
   contributingInitiativesList = [];
   allScienceProgramsList = signal<any[]>([]);
   alertStatusMessage: string = `Partner organization or CG Center that you collaborated with or are currently collaborating with to generate this result.`;
@@ -29,6 +119,221 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   disabledText = 'To remove this center, please contact your librarian';
   innovationUseResultsSE = inject(InnovationUseResultsService);
   fieldsManagerSE = inject(FieldsManagerService);
+
+  selectedTypologies: string[] = [];
+  selectedFundingSources: string[] = [];
+  selectedPortfolios: string[] = [];
+  isLinkedResultsPanelExpanded: boolean = false;
+  searchLinkedResultText: string = '';
+
+  /**
+   * `linked-results-filters` perf refactor (2026-09-11): the dropdown became unusably slow because
+   * every getter below re-derived its result from scratch — flattening/filtering the FULL QA'd+
+   * Approved results list (thousands of rows once `RES-R-3` dropped the phase restriction) — on
+   * EVERY change-detection tick, not just when its inputs actually changed. Default (non-OnPush) CD
+   * calls template getters many times per interaction (mouse move, any sibling signal update), so a
+   * single hover could re-run an O(n) `reduce`/`filter`/`find` several times over. Two of these
+   * getters were also nested (`filteredLinkedResults` → `flatLinkedResultsOptions`, and
+   * `getResultById` called `flatLinkedResultsOptions` AGAIN per chip), multiplying the cost.
+   * Fix: reference-equality memoization caches below — cheap (`===` checks) and correct because
+   * `innovationUseResultsSE.resultsList` is reassigned wholesale exactly once (service constructor
+   * subscribe), never mutated in place, and `partnersBody.linked_results` is now also reassigned
+   * (not spliced/pushed) by `toggleResultSelection`/`clearLinkedResultsSelection` below so the
+   * selected-ids cache can detect changes the same way.
+   */
+  private _flatOptionsCacheSource: any[] | null = null;
+  private _flatOptionsCache: any[] = [];
+
+  private _resultsByIdCacheSource: any[] | null = null;
+  private _resultsById: Map<string, any> = new Map();
+
+  private _selectedIdsCacheSource: any[] | null = null;
+  private _selectedIdsCache: Set<any> = new Set();
+
+  private _filteredLinkedResultsCacheKey = '';
+  private _filteredLinkedResultsCache: any[] = [];
+
+  private _availableTypologiesCacheSource: any[] | null = null;
+  private _availableTypologiesCache: { name: string }[] = [];
+
+  /** Rows rendered in the DOM are capped — thousands of `.result-list-item` nodes created in one
+   * shot (unfiltered open, before `RES-R-3` this list was already 3900+) was the single biggest
+   * contributor to the "opening the dropdown freezes the app" report. The full match count still
+   * drives the "Showing N results" text; only the DOM render is bounded. */
+  readonly linkedResultsRenderCap = 150;
+
+  get availableTypologies() {
+    const list = this.innovationUseResultsSE.resultsList || [];
+    if (list !== this._availableTypologiesCacheSource) {
+      this._availableTypologiesCacheSource = list;
+      const types = list.map((r: any) => r.name)
+        .filter(Boolean)
+        .filter((name: string) => name !== 'Impact contribution');
+      this._availableTypologiesCache = [...new Set(types)].map(t => ({ name: t }));
+    }
+    return this._availableTypologiesCache;
+  }
+
+  get availableFundingSources() {
+    return [
+      { name: 'W1/W2', value: 'Result' },
+      { name: 'W3/Bilateral', value: 'API' }
+    ];
+  }
+
+  get availablePortfolios() {
+    return [
+      { name: 'P22', value: 'P22' },
+      { name: 'P25', value: 'P25' }
+    ];
+  }
+
+  get flatLinkedResultsOptions() {
+    const list = this.innovationUseResultsSE.resultsList || [];
+    if (list !== this._flatOptionsCacheSource) {
+      this._flatOptionsCacheSource = list;
+      this._flatOptionsCache = list.length > 0 && list[0].options ? list.reduce((acc: any[], curr: any) => acc.concat(curr.options), []) : list;
+    }
+    return this._flatOptionsCache;
+  }
+
+  /** O(1) id lookup, rebuilt only when the flattened source list actually changes. Replaces a
+   * per-call `Array.find` that used to also re-flatten the whole list first (`getResultById`
+   * previously read the un-memoized `flatLinkedResultsOptions` getter). */
+  private get resultsById(): Map<string, any> {
+    const list = this.flatLinkedResultsOptions;
+    if (list !== this._resultsByIdCacheSource) {
+      this._resultsByIdCacheSource = list;
+      this._resultsById = new Map(list.map((r: any) => [String(r.id), r]));
+    }
+    return this._resultsById;
+  }
+
+  /** O(1) membership check for the checkbox `[checked]` binding, which used to run
+   * `linked_results.includes(r.id)` — O(n) — for EVERY visible row on EVERY CD tick. */
+  get selectedLinkedResultIds(): Set<any> {
+    const list = this.rdPartnersSE.partnersBody.linked_results || [];
+    if (list !== this._selectedIdsCacheSource) {
+      this._selectedIdsCacheSource = list;
+      this._selectedIdsCache = new Set(list);
+    }
+    return this._selectedIdsCache;
+  }
+
+  get filteredLinkedResults() {
+    const list = this.flatLinkedResultsOptions;
+    const key = JSON.stringify([
+      list.length,
+      this.selectedTypologies,
+      this.selectedFundingSources,
+      this.selectedPortfolios,
+      this.searchLinkedResultText
+    ]);
+    if (key === this._filteredLinkedResultsCacheKey) {
+      return this._filteredLinkedResultsCache;
+    }
+    this._filteredLinkedResultsCacheKey = key;
+    const search = this.searchLinkedResultText?.toLowerCase() ?? '';
+    this._filteredLinkedResultsCache = list.filter((r: any) => {
+      const matchTypology = this.selectedTypologies?.length ? this.selectedTypologies.includes(r.name) : true;
+      const matchFunding = this.selectedFundingSources?.length ? this.selectedFundingSources.includes(r.source) : true;
+      const matchPortfolio = this.selectedPortfolios?.length ?
+        this.selectedPortfolios.some(p => {
+          if (p === 'P22') return r.phase_year <= 2024;
+          if (p === 'P25') return r.phase_year >= 2025;
+          return false;
+        }) : true;
+      const matchSearch = search ? r.title?.toLowerCase().includes(search) || String(r.result_code).includes(search) : true;
+      return matchTypology && matchFunding && matchPortfolio && matchSearch;
+    });
+    return this._filteredLinkedResultsCache;
+  }
+
+  /** What the template actually renders — bounded to `linkedResultsRenderCap` rows regardless of
+   * how many results match the current filters (see the cache-block docstring above). */
+  get visibleLinkedResults() {
+    return this.filteredLinkedResults.slice(0, this.linkedResultsRenderCap);
+  }
+
+  get linkedResultsTruncated(): boolean {
+    return this.filteredLinkedResults.length > this.linkedResultsRenderCap;
+  }
+
+  getResultById(id: any) {
+    return this.resultsById.get(String(id)) || null;
+  }
+
+  trackByResultId(_index: number, r: any) {
+    return r?.id;
+  }
+
+  /** For `*ngFor="let id of linked_results"`, where the item IS the id (not a result object). */
+  trackByLinkedId(_index: number, id: any) {
+    return id;
+  }
+
+  trackByName(_index: number, item: { name: string }) {
+    return item?.name;
+  }
+
+  trackByValue(_index: number, item: { value: string }) {
+    return item?.value;
+  }
+
+  toggleLinkedResultsPanel() {
+    this.isLinkedResultsPanelExpanded = !this.isLinkedResultsPanelExpanded;
+  }
+
+  toggleResultSelection(id: number) {
+    // Reassign a NEW array reference (not push/splice in place) — same convention already used by
+    // `deleteContributingCenter`/`deleteScience` in this file, and load-bearing here now: it's what
+    // lets `selectedLinkedResultIds` above detect the change via `!==` instead of re-scanning.
+    const current = this.rdPartnersSE.partnersBody.linked_results || [];
+    const idx = current.indexOf(id);
+    this.rdPartnersSE.partnersBody.linked_results = idx > -1 ? current.filter((_: any, i: number) => i !== idx) : [...current, id];
+  }
+
+  clearLinkedResultsSelection() {
+    this.rdPartnersSE.partnersBody.linked_results = [];
+  }
+
+  toggleTypology(name: string) {
+    if (!this.selectedTypologies) this.selectedTypologies = [];
+    const idx = this.selectedTypologies.indexOf(name);
+    if (idx > -1) {
+      this.selectedTypologies.splice(idx, 1);
+    } else {
+      this.selectedTypologies.push(name);
+    }
+  }
+
+  toggleFunding(value: string) {
+    if (!this.selectedFundingSources) this.selectedFundingSources = [];
+    const idx = this.selectedFundingSources.indexOf(value);
+    if (idx > -1) {
+      this.selectedFundingSources.splice(idx, 1);
+    } else {
+      this.selectedFundingSources.push(value);
+    }
+  }
+
+  resetFilters() {
+    this.searchLinkedResultText = '';
+    this.selectedTypologies = [];
+    this.selectedFundingSources = [];
+    this.selectedPortfolios = [];
+  }
+
+  togglePortfolio(value: string) {
+    if (!this.selectedPortfolios) this.selectedPortfolios = [];
+    const idx = this.selectedPortfolios.indexOf(String(value));
+    if (idx > -1) {
+      this.selectedPortfolios.splice(idx, 1);
+    } else {
+      this.selectedPortfolios.push(String(value));
+    }
+  }
+
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,
@@ -49,7 +354,11 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     // recovery point: re-ask on entering the section that needs it.
     this.centersSE.getData().catch(() => undefined);
     this.rdPartnersSE.resetState();
-    this.rdPartnersSE.getSectionInformation();
+    // `UCA-T-9` attempt 3, Issue 1: tell the service to call us back whenever a catalogue-driven lead
+    // re-assignment happens after our own load, so we can reconcile the baseline. Cleared in
+    // `ngOnDestroy` — the service is root-provided and outlives this component.
+    this.rdPartnersSE.onCatalogueDrivenLeadUpdate = source => this.reconcileLeadFieldsAfterLateCatalogue(source);
+    this.rdPartnersSE.getSectionInformation(undefined, false, () => this.snapshotBaseline());
     this.GET_AllWithoutResults();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(_resp => {
       try {
@@ -75,6 +384,13 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       }
     }, 100);
     setTimeout(() => clearInterval(checkResultsList), 5000);
+  }
+
+  /** `UCA-T-9` attempt 3, Issue 1: detach our callback from the root-provided service. */
+  ngOnDestroy(): void {
+    if (this.rdPartnersSE.onCatalogueDrivenLeadUpdate) {
+      this.rdPartnersSE.onCatalogueDrivenLeadUpdate = undefined;
+    }
   }
 
   isAvisaInitiative = computed(() => {
@@ -280,16 +596,29 @@ export class RdContributorsAndPartnersComponent implements OnInit {
 
     const current = this.rdPartnersSE.partnersBody?.contributing_center || [];
     const refIds = new Set(refs.map(c => c.institutionId));
-    // Keep everything except session-preloaded centers that no longer belong to the mapped node(s).
-    const kept = current.filter((c: any) => c.code === this.OTHER_CENTERS_CODE || !c.new || refIds.has(c.institutionId));
-    const keptIds = new Set(kept.map((c: any) => c.institutionId));
+    const sentinel = current.find((c: any) => c.code === this.OTHER_CENTERS_CODE);
+    const stillMatching = current.filter((c: any) => c.code !== this.OTHER_CENTERS_CODE && refIds.has(c.institutionId));
+    // bugfix: a real (non-sentinel) center that no longer matches the resolved ToC refs doesn't belong in this
+    // bucket any more. A session-added (`new`) one is simply dropped (never saved); a PERSISTED one is migrated
+    // into "Other(s)" instead of being left behind — leaving it here produced an orphaned chip once the ToC
+    // change also made `hasReferenceCenters()` false and the template stopped painting this bucket's dropdown
+    // (result 9139: AfricaRice/Bioversity stayed in `contributing_center`, with no visible control, after the
+    // linked ToC node changed to reference no centers).
+    const stale = current.filter((c: any) => c.code !== this.OTHER_CENTERS_CODE && !refIds.has(c.institutionId));
+    const staleToMigrate = stale.filter((c: any) => !c.new);
+    const keptIds = new Set(stillMatching.map((c: any) => c.institutionId));
     const added = refs.filter(c => !keptIds.has(c.institutionId)).map(c => ({ ...c, new: true, is_active: true }));
-    if (added.length === 0 && kept.length === current.length) return;
+    const nextReal = [...stillMatching, ...added];
+    // The sentinel only makes sense while the ToC bucket is non-empty (mirrors `applyTocMappingOnLoad`'s own rule).
+    const nextBucket = nextReal.length > 0 && sentinel ? [...nextReal, sentinel] : nextReal;
+    if (stale.length === 0 && added.length === 0 && nextBucket.length === current.length) return;
 
-    const removed = current.filter((c: any) => !kept.includes(c));
-    this.rdPartnersSE.partnersBody.contributing_center = [...kept, ...added] as any[];
+    this.rdPartnersSE.partnersBody.contributing_center = nextBucket as any[];
+    if (staleToMigrate.length > 0) {
+      this.rdPartnersSE.otherCentersSelected = [...(this.rdPartnersSE.otherCentersSelected || []), ...staleToMigrate] as any[];
+    }
     // If the reconciliation dropped the current lead center, clear it so we don't save an orphaned lead.
-    if (removed.some((c: any) => c.code === this.rdPartnersSE.leadCenterCode)) {
+    if (stale.some((c: any) => c.code === this.rdPartnersSE.leadCenterCode)) {
       this.rdPartnersSE.leadCenterCode = null;
     }
     this.rdPartnersSE.setPossibleLeadCenters(true);
@@ -433,13 +762,24 @@ export class RdContributorsAndPartnersComponent implements OnInit {
 
     const current = this.rdPartnersSE.scienceSelected || [];
     const refIds = new Set(refs.map(sp => sp.id));
-    // Keep everything except session-preloaded SP that no longer belong to the mapped node(s).
-    const kept = current.filter((sp: any) => sp.id === this.OTHER_SP_CODE || !sp.new || refIds.has(sp.id));
-    const keptIds = new Set(kept.map((sp: any) => sp.id));
+    const sentinel = current.find((sp: any) => sp.id === this.OTHER_SP_CODE);
+    const stillMatching = current.filter((sp: any) => sp.id !== this.OTHER_SP_CODE && refIds.has(sp.id));
+    // bugfix: same reconciliation as `preselectCentersEffect` above — a real (non-sentinel) SP that no longer
+    // matches the resolved ToC refs is migrated into "Other(s)" when persisted (never dropped silently), or
+    // just dropped when it was only session-added. Prevents an orphaned chip once the ToC change also makes
+    // `hasReferenceScience()` false and dropdown 1 stops being painted.
+    const stale = current.filter((sp: any) => sp.id !== this.OTHER_SP_CODE && !refIds.has(sp.id));
+    const staleToMigrate = stale.filter((sp: any) => !sp.new);
+    const keptIds = new Set(stillMatching.map((sp: any) => sp.id));
     const added = refs.filter(sp => !keptIds.has(sp.id)).map(sp => ({ ...sp, new: true, is_active: true }));
-    if (added.length === 0 && kept.length === current.length) return;
+    const nextReal = [...stillMatching, ...added];
+    const nextBucket = nextReal.length > 0 && sentinel ? [...nextReal, sentinel] : nextReal;
+    if (stale.length === 0 && added.length === 0 && nextBucket.length === current.length) return;
 
-    this.rdPartnersSE.scienceSelected = [...kept, ...added];
+    this.rdPartnersSE.scienceSelected = nextBucket;
+    if (staleToMigrate.length > 0) {
+      this.rdPartnersSE.otherScienceSelected = [...(this.rdPartnersSE.otherScienceSelected || []), ...staleToMigrate];
+    }
   });
 
   onScienceSelect(_event: any) {
@@ -591,7 +931,158 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     return !!this.rdPartnersSE.partnersBody.contributing_np_projects.find(evidence => !evidence.grant_title);
   }
 
+  /**
+   * `UCA-T-9` rework — normalizes one `result_toc_results` array before it reaches the dirty diff:
+   * strips the client-only `uniqueId` (`CPMultipleWPsComponent.ngOnChanges()`), drops the
+   * `related_node_id` mirror on each row's first indicator (always a copy of
+   * `toc_results_indicator_id` the instant `CPMultipleWPsContentComponent.getIndicatorsList()` runs —
+   * the real edit lands on `toc_results_indicator_id` via `mapTocResultsIndicatorId()`), and treats
+   * `toc_progressive_narrative: null`/`''` as equal (same `getIndicatorsList()` default). See the
+   * `UCA-T-9` rework note on `dirtyTracker`'s docstring above for the full rationale — this is this
+   * section's own `UCA-OQ-2` exception, same shape as `UCA-T-7`'s `normalizeCountriesForDiff()`.
+   */
+  private normalizeTocResultsForDiff(rows: any[] | undefined | null): any[] {
+    return (rows ?? []).map((row: any) => {
+      const { uniqueId, ...rest } = row ?? {};
+      const indicators = (rest.indicators ?? []).map((indicator: any) => {
+        const { related_node_id, ...indicatorRest } = indicator ?? {};
+        return indicatorRest;
+      });
+      return {
+        ...rest,
+        indicators,
+        toc_progressive_narrative: rest.toc_progressive_narrative ?? ''
+      };
+    });
+  }
+
+  /**
+   * `UCA-T-9` rework — the value the dirty tracker snapshots/diffs: `partnersBody` (with its two
+   * `result_toc_results` arrays normalized, see `normalizeTocResultsForDiff()` above) PLUS every
+   * field `performSave()`'s PATCH payload reads from `RdContributorsAndPartnersService` directly but
+   * that isn't part of `partnersBody` itself.
+   */
+  private dirtySnapshotValue(): Record<string, unknown> {
+    const body: any = this.rdPartnersSE.partnersBody;
+    const resultTocResult = body?.result_toc_result
+      ? { ...body.result_toc_result, result_toc_results: this.normalizeTocResultsForDiff(body.result_toc_result.result_toc_results) }
+      : body?.result_toc_result;
+    const contributorsResultTocResult = (body?.contributors_result_toc_result ?? []).map((contributor: any) => ({
+      ...contributor,
+      result_toc_results: this.normalizeTocResultsForDiff(contributor?.result_toc_results)
+    }));
+    return {
+      ...body,
+      result_toc_result: resultTocResult,
+      contributors_result_toc_result: contributorsResultTocResult,
+      leadCenterCode: this.rdPartnersSE.leadCenterCode,
+      leadPartnerId: this.rdPartnersSE.leadPartnerId,
+      otherCentersSelected: this.rdPartnersSE.otherCentersSelected,
+      otherPartnersSelected: this.rdPartnersSE.otherPartnersSelected,
+      scienceSelected: this.rdPartnersSE.scienceSelected,
+      otherScienceSelected: this.rdPartnersSE.otherScienceSelected,
+      contributingInitiativeNew: this.rdPartnersSE.contributingInitiativeNew
+    };
+  }
+
+  /**
+   * `UCA-T-9` attempt 3, Issue 1 — the single write path for both `dirtyTracker`'s baseline and
+   * `lastDirtySnapshot` (kept in sync on purpose: `SectionDirtyTrackerService` stores only a
+   * `JSON.stringify` string, with no getter, so `reconcileLeadFieldsAfterLateCatalogue()` needs its
+   * own structural copy to diff against). Replaces every direct `dirtyTracker.snapshot(...)` call.
+   *
+   * ⚠️ `value` embeds `partnersBody` (via the spread in `dirtySnapshotValue()`), which nests
+   * REFERENCES to live, mutable arrays/objects on `RdContributorsAndPartnersService.partnersBody` —
+   * a later in-place edit would otherwise silently "update" whatever `lastDirtySnapshot` last pointed
+   * at too, defeating `reconcileLeadFieldsAfterLateCatalogue()`'s whole comparison (caught by this
+   * fix's own regression test — a genuine concurrent edit was wrongly folded away as if nothing had
+   * changed). `dirtyTracker.snapshot()` is immune because it stores a `JSON.stringify` STRING, not
+   * the object — `lastDirtySnapshot` needs the same JSON round-trip to freeze it as an independent
+   * copy, matching the tracker's own established cloning mechanism.
+   */
+  private snapshotBaseline(value: Record<string, unknown> = this.dirtySnapshotValue()): void {
+    this.dirtyTracker.snapshot(value);
+    this.lastDirtySnapshot = JSON.parse(JSON.stringify(value));
+  }
+
+  /**
+   * `UCA-T-9` attempt 3, Issue 1 fix. Invoked (via `onCatalogueDrivenLeadUpdate`) every time the
+   * institutions/centers catalogue emits `loaded`, which may re-run `setLeadPartnerOnLoad`/
+   * `setLeadCenterOnLoad` and change `leadPartnerId`/`leadCenterCode` AFTER our own load-flow
+   * snapshot already ran (the cold-entry race: `InstitutionsService` has no bootstrap prefetch, so
+   * its GET can still be in flight when this section's own GET resolves).
+   *
+   * Two things that would be WRONG here, both explicitly ruled out by the Reviewer:
+   * - **Re-snapshot unconditionally.** If the user made a genuine edit in the (short) window between
+   *   the load snapshot and this catalogue emission, blindly re-snapshotting the CURRENT value would
+   *   erase that edit's dirty signal — exactly the data-loss failure this whole spec exists to catch.
+   * - **Skip whenever `isDirty()` is currently true.** The bug this fixes IS a case where the section
+   *   is (wrongly) already dirty at this exact moment — that's the whole reason this hook exists. An
+   *   "already dirty → don't touch it" rule would never fire for the one case it needs to.
+   *
+   * The correct test is structural: take the CURRENT snapshot value, swap back to whatever the
+   * stored baseline had ONLY the one field the emitting catalogue could actually have changed
+   * (`leadPartnerId` for `source === 'institutions'`, `leadCenterCode` for `source === 'centers'` —
+   * see the `source` param below), and compare THAT to the baseline. If they now match byte-for-byte,
+   * the only thing that changed since the baseline was that one lead field — safe to fold the
+   * catalogue's corrected value into a fresh baseline. If they still differ, something else (a real
+   * user edit — possibly to the OTHER lead field, the one this catalogue emission did NOT touch)
+   * changed too; leave the baseline alone so that edit stays correctly reported as dirty (this hook
+   * simply has nothing useful to do in that case — the lead-field mismatch it would have corrected is
+   * harmless noise once the section is dirty anyway).
+   *
+   * `UCA-T-9` attempt 4 fix — `source` is new. Attempt 3's version substituted BOTH `leadCenterCode`
+   * AND `leadPartnerId` back to baseline unconditionally, regardless of which catalogue emitted. That
+   * silently erased a genuine concurrent edit to the field the emitting catalogue never touched: e.g.
+   * `institutions` resolving late (and only ever affecting `leadPartnerId`) would still fold away a
+   * real, concurrent `leadCenterCode` edit, because the old code compared against a version with
+   * BOTH fields reset to baseline instead of just the one this emission could have changed. Scoping
+   * the substitution by `source` closes that — a genuine edit to the other field now correctly
+   * survives the comparison as a real diff and keeps the section dirty.
+   */
+  private reconcileLeadFieldsAfterLateCatalogue(source: 'centers' | 'institutions'): void {
+    if (!this.lastDirtySnapshot) return;
+    const current = this.dirtySnapshotValue();
+    const currentWithBaselineLeadFields = {
+      ...current,
+      ...(source === 'institutions' ? { leadPartnerId: this.lastDirtySnapshot['leadPartnerId'] } : {}),
+      ...(source === 'centers' ? { leadCenterCode: this.lastDirtySnapshot['leadCenterCode'] } : {})
+    };
+    if (JSON.stringify(currentWithBaselineLeadFields) !== JSON.stringify(this.lastDirtySnapshot)) return;
+    this.snapshotBaseline(current);
+  }
+
+  /** `UCA-T-9` — `CanComponentDeactivate.hasUnsavedChanges()`. */
+  hasUnsavedChanges(): boolean {
+    return this.dirtyTracker.isDirty(this.dirtySnapshotValue());
+  }
+
+  /**
+   * `UCA-T-9` — `CanComponentDeactivate.saveSection()`. Wraps `performSave()`'s exact PATCH call
+   * (including its email side effect on `PATCH_ContributorsPartners`) and error branch
+   * (`UCA-DD-3`, no duplicated save logic) to resolve `true`/`false` instead of void, for
+   * `UnsavedChangesGuard`. **Deliberately no carve-out** for the email: `design.md` §13 confirms
+   * Back/Next on a dirty section must save this component exactly like every other one.
+   */
+  saveSection(): Observable<boolean> {
+    return this.performSave().pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
+
   onSaveSection() {
+    this.performSave().subscribe({ error: () => {} });
+  }
+
+  /**
+   * `UCA-T-9`: returns the PATCH `Observable` instead of self-subscribing, so both this
+   * component's own Save action (`onSaveSection`, above) and `saveSection()` (the
+   * `CanComponentDeactivate` contract, below) drive the exact same call and error branch — no
+   * duplicated save logic (`UCA-DD-3`). This is the payload assembly flagged as "unusually
+   * involved" by the task — read verbatim from the pre-existing `onSaveSection`, unchanged.
+   */
+  private performSave(): Observable<void> {
     if (this.rdPartnersSE.partnersBody.no_applicable_partner) {
       this.rdPartnersSE.partnersBody.institutions = [];
       this.rdPartnersSE.otherPartnersSelected = [];
@@ -706,9 +1197,24 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       delete sendedData.linked_results;
     }
 
-    this.api.resultsSE.PATCH_ContributorsPartners(sendedData).subscribe(_resp => {
-      this.rdPartnersSE.getSectionInformation(null, true);
-    });
+    return this.api.resultsSE.PATCH_ContributorsPartners(sendedData).pipe(
+      tap(() => {
+        // `UCA-T-9` — snapshot HERE, synchronously, the instant the PATCH resolves: the local
+        // `partnersBody` at this exact instant is precisely what the server just persisted. This
+        // closes the same race `UCA-T-6`'s rework fixed — `saveSection()`'s `map(() => true)` can
+        // emit to `UnsavedChangesGuard` before the reload below (and its own re-snapshot) resolves,
+        // or the reload could fail and leave the section dirty forever despite a real save.
+        this.snapshotBaseline();
+        // Re-fetches and re-snapshots `partnersBody` with the server-normalized body once it
+        // resolves. Harmless on top of the snapshot above — refines it, doesn't undo it.
+        this.rdPartnersSE.getSectionInformation(null, true, () => this.snapshotBaseline());
+      }),
+      map(() => undefined),
+      catchError(err => {
+        console.error(err);
+        return throwError(() => err);
+      })
+    );
   }
 
   onRemoveAcceptedContributing(index: number) {
@@ -781,7 +1287,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
 
       return `${phaseInfo}${option.result_code} - ${option.name}${resultTypeInfo}${title}`;
     }
-    return option?.title || option?.name || '';
+    return option?.full_name || option?.title || option?.name || '';
   }
 
   formatBilateralProjectLabel(project: any): string {

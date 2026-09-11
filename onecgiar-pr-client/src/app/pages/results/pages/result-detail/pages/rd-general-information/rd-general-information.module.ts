@@ -13,6 +13,7 @@ import { ConfirmationKPComponent } from './components/confirmation-kp/confirmati
 import { SaveConfirmationModalComponent } from './components/save-confirmation-modal/save-confirmation-modal.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 import { SectionBottomBarComponent } from '../../components/section-bottom-bar/section-bottom-bar.component';
+import { BeforeUnloadWarningDirective } from '../../../../../../shared/directives/before-unload-warning.directive';
 
 @NgModule({
   declarations: [RdGeneralInformationComponent, ChangeResultTypeModalComponent, ConfirmationKPComponent, SaveConfirmationModalComponent],
@@ -25,6 +26,7 @@ import { SectionBottomBarComponent } from '../../components/section-bottom-bar/s
     FeedbackValidationDirectiveModule,
     PrDialogComponent,
     PdfIconModule,
+    BeforeUnloadWarningDirective,
   ]
 })
 export class RdGeneralInformationModule {}

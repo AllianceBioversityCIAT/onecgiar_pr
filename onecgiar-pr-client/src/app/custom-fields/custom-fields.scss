@@ -118,11 +118,21 @@ input::placeholder,
       opacity: 0;
       position: absolute;
       background-color: var(--pr-color-white);
-      max-height: 300px;
+      max-height: none;
       box-shadow: 0px 0px 5px var(--pr-color-neutral-1000);
       width: 100%;
       left: 0;
-      bottom: -255px;
+      /* P2-3661: anchored to the trigger, not to a fixed drop.
+         `bottom: -255px` assumed every panel was ~255px tall, which only holds when the option
+         list fills its 200px viewport AND the search box is rendered (>= 5 options). A short list
+         — "characterize this innovation" has three — paints a ~200px panel whose top then lands
+         55px BELOW the field, over the next question's label, so the options read as if they
+         belonged to that question. `top` keeps the panel glued to the field at any height; it is
+         the same pin the fixed-overlay mode already uses (`overlayStyles`, pr-select.component.ts)
+         and the same one `my-work-board` and `programme-results` had to re-declare locally to
+         escape this default. */
+      top: calc(100% + 4px);
+      bottom: auto;
       z-index: 3;
       flex-direction: column;
 

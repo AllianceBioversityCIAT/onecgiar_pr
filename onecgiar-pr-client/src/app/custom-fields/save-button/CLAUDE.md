@@ -1,6 +1,6 @@
 # save-button
 
-**Verified:** 2026-09-01 · branch performance-refactor · e1fe06b9e
+**Verified:** 2026-09-11 · branch performance-refactor · b0a177160
 
 ## What it is
 The floating bar at the bottom of every result form: the Save button, its "N alerts" missing-fields
@@ -18,6 +18,21 @@ panel, and the PDF export menu grouped beside it. One component, mounted by ~21 
 `save-button.component.html:1` gates the whole bar on `pdfSE.enabled() || !rolesSE.readOnly || editable`,
 and `:27` gates the Save half again on `!rolesSE.readOnly || editable`. The PDF menu is therefore
 reachable in read-only; Save is not.
+
+## `SaveButtonService.saveAndSettle` — how a caller learns whether the save worked
+Added for P2-3659 / P2-3654 (`Next` in the result-detail wizard has to save the open section before
+it navigates). It runs the handler and resolves `saved` / `failed` / `not-started`.
+- `isSaving()` alone cannot answer it: one shared flag goes up and back down on success AND on
+  failure. The outcome is tracked by a counter of SETTLED saves plus the last result.
+- `not-started` is a real, expected answer: a handler can return on its own guard or open a
+  confirmation modal, and three of the eleven sections reach the network asynchronously (evidences
+  uploads files first, innovation-dev-info awaits its evidence call, innovation-use re-reads the
+  stored link). 🛑 A caller must treat it as "carry on as before", never as a failure.
+- Windows: 1000 ms for the request to start, 500 ms of spinner-down grace before giving up.
+  Evidences raises and lowers the spinner by hand around its uploads — that grace is why it does
+  not hold the caller for the full 60 s save timeout.
+- One settle per pipe, first answer wins: the success toast is raised after the outcome is recorded
+  and `show()` touches the DOM, so a throw there must not turn an accepted save into `failed`.
 
 ## Traps (⚠️ = already broke something)
 - ⚠️ **`RolesService.readOnly` starts TRUE and is lowered only after an async role resolution.**

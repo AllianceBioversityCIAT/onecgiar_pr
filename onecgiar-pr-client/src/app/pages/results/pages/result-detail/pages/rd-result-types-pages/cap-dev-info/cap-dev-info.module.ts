@@ -8,9 +8,17 @@ import { SectionBottomBarComponent } from '../../../components/section-bottom-ba
 // P2-3241: `CustomFieldsModule` does NOT re-export this directive, and the organizations
 // multi-select needs it to be counted among the section's missing mandatory fields.
 import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/directives/feedback-validation-directive.module';
+import { BeforeUnloadWarningDirective } from '../../../../../../../shared/directives/before-unload-warning.directive';
 
 @NgModule({
   declarations: [CapDevInfoComponent],
-  imports: [SectionBottomBarComponent, CommonModule, CapDevInfoRoutingModule, CustomFieldsModule, FeedbackValidationDirectiveModule]
+  imports: [
+    SectionBottomBarComponent,
+    CommonModule,
+    CapDevInfoRoutingModule,
+    CustomFieldsModule,
+    FeedbackValidationDirectiveModule,
+    BeforeUnloadWarningDirective
+  ]
 })
 export class CapDevInfoModule {}
