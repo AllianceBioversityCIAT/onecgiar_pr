@@ -149,4 +149,6 @@ Reviewer adjudication worth keeping: the guard is written as a positive conditio
 
 **What remains for the spec** — `RTR-T-3` (HITL, owner-run on prtest after deploy): repair indicator `35494`, confirm the build sha contains this commit, accept a different pending contributor with Planned = No, verify the owner's indicator survives. Defect class D3 (SQL generation of `IsNull()` + plain column against MySQL) is only closed there.
 
-**Commit:** recorded in the follow-up docs commit below.
+**Commit:** `467b84789` on `JuanGuzman-io/fix-contributor-accept-owner-indicators` — `[SPEC:bugfix/contributor-accept-owner-indicators] 🔧 fix(results-toc-results): scope the indicator-attach lookup to the tab's own initiative and node`.
+
+**Gate (Approval Mode: gated):** `RTR-T-3` is HITL and depends on a prtest deploy — the run pauses here for the owner.
