@@ -11,6 +11,25 @@
   margin: 0 auto;
 }
 
+// P2-3655 — requiredness marker for an unanswered mandatory ladder.
+// Reuses the platform's ONLY required marker: the `*` in `--pr-field-required-fg` (#b42318) that
+// `pr-field-header.component.scss:1-7` (`.required::after`) and `styles/field-card.scss:66-76`
+// (`.fch_required`) already paint on every other required field. Nothing new is invented, and the
+// block is only in the DOM when the caller opted in with `[required]` and the value is still null.
+.prl-required {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 4px;
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-field-required-fg);
+}
+
+.prl-required-asterisk {
+  font-weight: 700;
+  line-height: 1;
+}
+
 .prl-track {
   position: relative;
   // Room for active ring (no transform scale — avoids visual jump).
