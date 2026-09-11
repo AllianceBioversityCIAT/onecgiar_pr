@@ -1,8 +1,9 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RdGeneralInformationComponent } from './rd-general-information.component';
 import { of, throwError } from 'rxjs';
+import { delay } from 'rxjs/operators';
 import { ApiService } from './../../../../../../shared/services/api/api.service';
 import { CustomizedAlertsFsService } from './../../../../../../shared/services/customized-alerts-fs.service';
 import { ScoreService } from './../../../../../../shared/services/global/score.service';
@@ -1568,5 +1569,139 @@ describe('RdGeneralInformationComponent', () => {
       expect(loadWith(null)).toBeNull();
       expect(loadWith(undefined)).toBeNull();
     });
+  });
+
+  /**
+   * `UCA-T-6` — `CanComponentDeactivate` wiring. `SectionDirtyTrackerService` is component-scoped
+   * (`providers: [SectionDirtyTrackerService]`), so each spec gets a fresh instance via
+   * `TestBed.createComponent` in `beforeEach` — no cross-test snapshot leakage.
+   *
+   * REWORK (attempt 2): `GET_investmentDiscontinuedOptions` is mocked with a genuine async
+   * boundary (`delay(0)`, driven with `fakeAsync`/`tick`) instead of a synchronous `of(...)`.
+   * A synchronous mock collapses the real production race — `getSectionInformation()`'s
+   * `next` handler calling `GET_investmentDiscontinuedOptions()`, whose OWN callback
+   * (`convertChecklistToDiscontinuedOptions()`) asynchronously mutates
+   * `generalInfoBody.discontinued_options` — into something that happens to pass even when the
+   * implementation snapshots too early.
+   */
+  describe('CanComponentDeactivate (UCA-T-6)', () => {
+    /**
+     * 🛑 Deliberately NOT reusing the file-level `mockGET_generalInformationByResultIdResponse` /
+     * `mockGET_investmentDiscontinuedOptionsResponse` consts here.
+     *
+     * `getSectionInformation()` assigns `this.generalInfoBody = response` — BY REFERENCE, not a
+     * clone — and `convertChecklistToDiscontinuedOptions()` then reassigns `discontinued_options`
+     * directly onto that same object. Dozens of OTHER tests earlier in this file call
+     * `getSectionInformation()` against those exact shared consts, which permanently mutates them
+     * in place (their `discontinued_options` converges to the catalogue shape). A `JSON.parse(
+     * JSON.stringify(mockGET_...))` "fresh copy" still deep-copies FROM that already-polluted
+     * source — confirmed by running this describe block both in isolation (fails, as it must,
+     * against the pre-fix code) and as part of the full suite (spuriously passed even against the
+     * pre-fix code, because the shared const's `discontinued_options` had already converged to
+     * `id: 1` by the time this describe ran). These two literals are local to this describe block
+     * and never touched by `getSectionInformation()` elsewhere, so they stay reliably distinct
+     * (`id: 3` loaded vs. `id: 1` catalogue) regardless of suite execution order.
+     */
+    const loadedDiscontinuedOptions = () => [{ investment_discontinued_option_id: 3, value: true, is_active: true }];
+    const catalogueDiscontinuedOptions = () => [
+      { investment_discontinued_option_id: 1, value: true, is_active: false, description: 'desc1' }
+    ];
+
+    beforeEach(() => {
+      mockApiService.resultsSE.GET_generalInformationByResultId = jest.fn(() =>
+        of({
+          response: {
+            phase_year: '2023',
+            is_krs: false,
+            institutions_type: [],
+            institutions: [],
+            discontinued_options: loadedDiscontinuedOptions()
+          }
+        })
+      );
+      mockApiService.resultsSE.GET_investmentDiscontinuedOptions = jest.fn(() =>
+        of({ response: catalogueDiscontinuedOptions() }).pipe(delay(0))
+      );
+    });
+
+    it('is false right after the load flow genuinely completes (including the async discontinued-options catalogue)', fakeAsync(() => {
+      component.getSectionInformation();
+      // Nothing has resolved yet: the discontinued-options GET is still in flight.
+      tick();
+
+      expect(component.hasUnsavedChanges()).toBe(false);
+    }));
+
+    /**
+     * Falsifying input: snapshotting `generalInfoBody` only once (at load) and never again after
+     * save would make this true right after load-then-edit, which is correct here — but combined
+     * with the next test would prove the save-branch snapshot never actually reset the baseline.
+     */
+    it('is true after editing a bound field', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+
+      // `getSectionInformation()` assigns `generalInfoBody = response`, and every test in this
+      // file shares the SAME `mockGET_generalInformationByResultIdResponse` object reference — so
+      // a fixed literal here could match a value a PRIOR test already left mutated onto that same
+      // object, producing a false pass. Appending guarantees an actual change regardless of order.
+      component.generalInfoBody.result_name = `${component.generalInfoBody.result_name ?? ''}-edited`;
+
+      expect(component.hasUnsavedChanges()).toBe(true);
+    }));
+
+    /**
+     * Falsifying input: snapshotting `generalInfoBody` only once (at load) and never again after a
+     * successful save would report `true` here.
+     *
+     * REWORK (attempt 2): the follow-up reload that `performSave()`'s `tap` triggers
+     * (`getSectionInformation()`) is forced to FAIL entirely — its underlying
+     * `GET_generalInformationByResultId` throws — so this test cannot pass because of the
+     * reload's own re-snapshot. The assertion runs at the exact instant `saveSection()` emits
+     * `true`, proving the DIRECT `dirtyTracker.snapshot(...)` inside `performSave()`'s `tap` is
+     * what makes it correct, not the (here failing) delegated reload.
+     */
+    it('is false right when saveSection() emits true, even when the follow-up reload fails entirely', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+      component.generalInfoBody.result_name = `${component.generalInfoBody.result_name ?? ''}-edited`;
+      expect(component.hasUnsavedChanges()).toBe(true);
+
+      mockApiService.resultsSE.GET_generalInformationByResultId.mockReturnValue(throwError(() => new Error('reload failed')));
+
+      let sawTrue = false;
+      component.saveSection().subscribe(result => {
+        sawTrue = result === true;
+        expect(component.hasUnsavedChanges()).toBe(false);
+      });
+      tick();
+
+      expect(sawTrue).toBe(true);
+    }));
+
+    /**
+     * Falsifying input: letting the underlying HTTP error propagate as an unhandled observable
+     * error (instead of resolving `false`) would break `UnsavedChangesGuard`'s `switchMap`/subscribe
+     * chain rather than cleanly blocking navigation. Also confirms the existing "don't reload a
+     * rejected save" behaviour survives the `Observable<boolean>` wrapper unchanged.
+     */
+    it('saveSection() resolves false (not throws) on a failing PATCH_generalInformation, without reloading the section', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+      const reloadSpy = jest.spyOn(component, 'getSectionInformation');
+      mockApiService.resultsSE.PATCH_generalInformation.mockReturnValue(throwError(() => new Error('save failed')));
+
+      let result: boolean | undefined;
+      let errored = false;
+      component.saveSection().subscribe({
+        next: value => (result = value),
+        error: () => (errored = true)
+      });
+      tick();
+
+      expect(errored).toBe(false);
+      expect(result).toBe(false);
+      expect(reloadSpy).not.toHaveBeenCalled();
+    }));
   });
 });

@@ -6,9 +6,17 @@ import { InnovationUseInfoComponent } from './innovation-use-info.component';
 import { CustomFieldsModule } from '../../../../../../../custom-fields/custom-fields.module';
 import { InnovationUseFormModule } from '../../../../../../../shared/components/innovation-use-form/innovation-use-form.module';
 import { SectionBottomBarComponent } from '../../../components/section-bottom-bar/section-bottom-bar.component';
+import { BeforeUnloadWarningDirective } from '../../../../../../../shared/directives/before-unload-warning.directive';
 
 @NgModule({
   declarations: [InnovationUseInfoComponent],
-  imports: [SectionBottomBarComponent, CommonModule, InnovationUseInfoRoutingModule, CustomFieldsModule, InnovationUseFormModule]
+  imports: [
+    SectionBottomBarComponent,
+    CommonModule,
+    InnovationUseInfoRoutingModule,
+    CustomFieldsModule,
+    InnovationUseFormModule,
+    BeforeUnloadWarningDirective
+  ]
 })
 export class InnovationUseInfoModule {}

@@ -6,9 +6,17 @@ import { PolicyChangeInfoComponent } from './policy-change-info.component';
 import { CustomFieldsModule } from '../../../../../../../custom-fields/custom-fields.module';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/directives/feedback-validation-directive.module';
 import { SectionBottomBarComponent } from '../../../components/section-bottom-bar/section-bottom-bar.component';
+import { BeforeUnloadWarningDirective } from '../../../../../../../shared/directives/before-unload-warning.directive';
 
 @NgModule({
   declarations: [PolicyChangeInfoComponent],
-  imports: [SectionBottomBarComponent, CommonModule, PolicyChangeInfoRoutingModule, CustomFieldsModule, FeedbackValidationDirectiveModule]
+  imports: [
+    SectionBottomBarComponent,
+    CommonModule,
+    PolicyChangeInfoRoutingModule,
+    CustomFieldsModule,
+    FeedbackValidationDirectiveModule,
+    BeforeUnloadWarningDirective
+  ]
 })
 export class PolicyChangeInfoModule {}

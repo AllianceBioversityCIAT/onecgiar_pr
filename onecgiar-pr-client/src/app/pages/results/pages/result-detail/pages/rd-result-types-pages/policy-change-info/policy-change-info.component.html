@@ -1,4 +1,4 @@
-<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()" [appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)">
   <app-alert-status [collapsible]="false" description="Please fill in the following required fields for this indicator category."> </app-alert-status>
 
   <app-alert-status [collapsible]="false" [description]="policyTypeDescriptions()"> </app-alert-status>

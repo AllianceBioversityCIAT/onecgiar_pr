@@ -45,6 +45,10 @@ describe('CPNormalSelectorComponent — catalogue arriving after first read (P2-
     const rdPartnersMock = {
       OTHER_PARTNERS_CODE: -1,
       tocReferencePartnerInstitutionIds: signal<number[]>([10]),
+      // UCA-T-9 attempt 3, Issue 2: `false` reproduces this suite's original (pre-fix, ungated)
+      // behavior for a test unrelated to the hydration guard.
+      sectionHydratedFromToc: signal<boolean>(false),
+      tocSelectionTouched: signal<boolean>(false),
       buildOtherPartnersSentinel: () => ({ institutions_id: -1, full_name: 'Other' }),
       partnersBody: { institutions: [] }
     };
@@ -162,6 +166,8 @@ describe('CPNormalSelectorComponent — partner role group DOM (PRS-R-1..3)', ()
       OTHER_PARTNERS_CODE: -1,
       toggle: 0,
       tocReferencePartnerInstitutionIds: signal<number[]>([]),
+      sectionHydratedFromToc: signal<boolean>(false),
+      tocSelectionTouched: signal<boolean>(false),
       buildOtherPartnersSentinel: () => ({ institutions_id: -1, full_name: 'Other' }),
       partnersBody: { institutions: [tocOption], no_applicable_partner: false },
       otherPartnersSelected: [otherOption],
@@ -332,6 +338,8 @@ describe('CPNormalSelectorComponent — "Other(s) External Partners" label (EPT-
       OTHER_PARTNERS_CODE: -1,
       toggle: 0,
       tocReferencePartnerInstitutionIds: signal<number[]>(opts.tocPartnerIds),
+      sectionHydratedFromToc: signal<boolean>(false),
+      tocSelectionTouched: signal<boolean>(false),
       buildOtherPartnersSentinel: () => ({ institutions_id: -1, full_name: 'Other' }),
       partnersBody: { institutions: opts.institutions, no_applicable_partner: false },
       otherPartnersSelected: [],

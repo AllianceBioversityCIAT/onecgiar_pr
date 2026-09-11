@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { InnovationDevInfoComponent } from './innovation-dev-info.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
@@ -25,6 +25,7 @@ import { FeedbackValidationDirective } from '../../../../../../../shared/directi
 import { PrFieldValidationsComponent } from '../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { of, throwError } from 'rxjs';
+import { delay } from 'rxjs/operators';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { AddButtonComponent } from '../../../../../../../custom-fields/add-button/add-button.component';
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
@@ -37,6 +38,7 @@ import { signal } from '@angular/core';
 import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 import { SharePointUploadService } from '../../../../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
+import { StudiesLinkComponent } from '../../../../../../../shared/components/innovation-use-form/components/studies-link/studies-link.component';
 
 describe('InnovationDevInfoComponent', () => {
   // P2-3220: the upload sequence moved to `SharePointUploadService`, which owns its own spec. What
@@ -409,7 +411,10 @@ describe('InnovationDevInfoComponent', () => {
         AssumptionsExaminationComponent,
         // `anticipated-innovation-user` binds ngModel to it, so rendering the pre-2026 form without
         // it throws NG01203 before any assertion runs.
-        PrCheckboxComponent
+        PrCheckboxComponent,
+        // `UCA-T-11` rework attempt 2 — must be the REAL component (not an unknown-element
+        // stand-in) so its `ngOnInit()` genuinely seeds `scaling_studies_urls`, reproducing Issue 1.
+        StudiesLinkComponent
       ],
       imports: [HttpClientTestingModule, FormsModule, TermPipe],
       providers: [
@@ -1755,6 +1760,325 @@ describe('InnovationDevInfoComponent', () => {
       const held = (component as any).innovationDevelopmentQuestions.responsible_innovation_and_scaling;
       expect(held.q3.radioButtonValue).toBe('136-b');
       expect(held.q3.options[1].answer_text).toBe('The farmer associations co-defined the assumptions in the 2025 workshop.');
+    });
+  });
+
+  /**
+   * `UCA-T-11` — this spec file renders the REAL component subtree (no `NO_ERRORS_SCHEMA`, no
+   * blanked template — every child used in the pre-2026/legacy branch, including
+   * `IntellectualPropertyRightsComponent`, is declared above), so these tests exercise the actual
+   * child-mutation timing this task investigated, not a stand-in.
+   */
+  describe('CanComponentDeactivate (UCA-T-11)', () => {
+    const cloneInnovationDevInfoBody = () => JSON.parse(JSON.stringify(mockGET_innovationDevResponse));
+    const cloneQuestions = () => JSON.parse(JSON.stringify(mockGET_questionsInnovationDevelopmentResponse));
+
+    beforeEach(() => {
+      // Neutralizes `OnChangePortfolio` (the constructor's auto-load `effect()`): with
+      // `currentResultSignal()?.portfolio` undefined, it never calls `getSectionInformation{,p25}()`
+      // on its own, so `fixture.detectChanges()` below only ever renders — it never starts a SECOND,
+      // untracked load alongside the one each test drives explicitly.
+      (component as any).dataControlSE.currentResultSignal = signal(undefined);
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(false as any);
+    });
+
+    it('hasUnsavedChanges() is false before any load', () => {
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    describe('legacy path — 2 independent concurrent load GETs, genuinely async', () => {
+      it('stays clean once both GETs resolve AND the real IntellectualPropertyRightsComponent child renders', fakeAsync(() => {
+        mockApiService.resultsSE.GET_innovationDev = () => of({ response: cloneInnovationDevInfoBody() }).pipe(delay(5));
+        mockApiService.resultsSE.GET_questionsInnovationDevelopment = () => of({ response: cloneQuestions() }).pipe(delay(0));
+
+        component.getSectionInformation();
+        tick(10);
+        // The real child instantiates here, mutating the SAME `innovationDevelopmentQuestions`
+        // object in its own `ngOnInit()`/`@Input() set options()` — strictly after both snapshots
+        // above already ran.
+        fixture.detectChanges();
+        tick();
+
+        expect(component.hasUnsavedChanges()).toBe(false);
+      }));
+
+      it('back-fills a MISSING q4 slot without going dirty (real production case: result 51 has no q4)', fakeAsync(() => {
+        const questionsWithoutQ4 = cloneQuestions();
+        delete questionsWithoutQ4.intellectual_property_rights.q4;
+        mockApiService.resultsSE.GET_innovationDev = () => of({ response: cloneInnovationDevInfoBody() }).pipe(delay(0));
+        mockApiService.resultsSE.GET_questionsInnovationDevelopment = () => of({ response: questionsWithoutQ4 }).pipe(delay(0));
+
+        component.getSectionInformation();
+        tick();
+        fixture.detectChanges();
+        tick();
+
+        // The real child's setter filled the slot in place — proves the mutation actually fired.
+        expect((component.innovationDevelopmentQuestions.intellectual_property_rights as any).q4).toBeDefined();
+        expect(component.hasUnsavedChanges()).toBe(false);
+      }));
+
+      it('still reports dirty for a real edit made after the same load', fakeAsync(() => {
+        mockApiService.resultsSE.GET_innovationDev = () => of({ response: cloneInnovationDevInfoBody() }).pipe(delay(5));
+        mockApiService.resultsSE.GET_questionsInnovationDevelopment = () => of({ response: cloneQuestions() }).pipe(delay(0));
+
+        component.getSectionInformation();
+        tick(10);
+        fixture.detectChanges();
+        tick();
+        expect(component.hasUnsavedChanges()).toBe(false);
+
+        component.innovationDevInfoBody.short_title = 'edited by the reporter';
+
+        expect(component.hasUnsavedChanges()).toBe(true);
+      }));
+    });
+
+    describe('P25 path — 3 independent concurrent load GETs, resolving out of order', () => {
+      it('stays clean once all three settle, regardless of which resolves last', fakeAsync(() => {
+        jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+        mockApiService.resultsSE.GET_innovationDevP25 = () => of({ response: cloneInnovationDevInfoBody() }).pipe(delay(15));
+        mockApiService.resultsSE.GET_questionsInnovationDevelopmentP25 = () => of({ response: cloneQuestions() }).pipe(delay(5));
+        mockApiService.resultsSE.GET_evidenceDemandP25 = () =>
+          of({ response: { evidences: [{ is_sharepoint: false, link: 'https://cgspace.example/1' }] } }).pipe(delay(10));
+
+        component.getSectionInformationp25();
+        tick(20);
+        fixture.detectChanges();
+        tick();
+
+        expect(component.hasUnsavedChanges()).toBe(false);
+      }));
+    });
+
+    describe('evidencesBody.evidences[].file exclusion (UCA-OQ-2, mirrors rd-evidences UCA-T-8)', () => {
+      beforeEach(fakeAsync(() => {
+        jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+        mockApiService.resultsSE.GET_innovationDevP25 = () => of({ response: cloneInnovationDevInfoBody() }).pipe(delay(0));
+        mockApiService.resultsSE.GET_questionsInnovationDevelopmentP25 = () => of({ response: cloneQuestions() }).pipe(delay(0));
+        mockApiService.resultsSE.GET_evidenceDemandP25 = () =>
+          of({ response: { evidences: [{ is_sharepoint: false, link: 'https://cgspace.example/1' }] } }).pipe(delay(0));
+        component.getSectionInformationp25();
+        tick();
+      }));
+
+      it('attaching a File to an existing evidence entry does NOT report dirty (narrow, accepted gap)', () => {
+        (component.evidencesBody.evidences[0] as any).file = new File(['x'], 'a.pdf');
+        expect(component.hasUnsavedChanges()).toBe(false);
+      });
+
+      it('but editing that same entry link DOES report dirty', () => {
+        component.evidencesBody.evidences[0].link = 'https://cgspace.example/2';
+        expect(component.hasUnsavedChanges()).toBe(true);
+      });
+    });
+
+    describe('performSave() snapshots synchronously on success, independent of the reload', () => {
+      /**
+       * The exact race `rd-general-information`'s rework was FAILed for: `saveSection()`'s
+       * `map(() => true)` must not depend on the delegated reload's OWN re-snapshot to already have
+       * landed. Proven here by giving the reload's GETs a real, non-zero delay and asserting
+       * `hasUnsavedChanges()` right after `saveSection()` resolves `true` — BEFORE ticking far enough
+       * for any of the reload's GETs to fire their own `next` (and therefore their own `snapshot()`
+       * call). If the direct snapshot inside the PATCH's `tap` were removed, nothing has snapshotted
+       * a clean baseline yet at that instant, and this assertion goes red.
+       */
+      it('legacy PATCH: hasUnsavedChanges() is false right when saveSection() resolves, BEFORE the delayed reload GETs fire', fakeAsync(() => {
+        mockApiService.resultsSE.GET_innovationDev = () => of({ response: cloneInnovationDevInfoBody() }).pipe(delay(0));
+        mockApiService.resultsSE.GET_questionsInnovationDevelopment = () => of({ response: cloneQuestions() }).pipe(delay(0));
+        component.getSectionInformation();
+        tick();
+        fixture.detectChanges();
+        tick();
+
+        component.innovationDevInfoBody.short_title = 'edited';
+        expect(component.hasUnsavedChanges()).toBe(true);
+
+        mockApiService.resultsSE.PATCH_innovationDev = () => of({}).pipe(delay(0));
+        // The reload's own GETs are real (non-zero) async — deliberately NOT ticked past below.
+        mockApiService.resultsSE.GET_innovationDev = () => of({ response: cloneInnovationDevInfoBody() }).pipe(delay(50));
+        mockApiService.resultsSE.GET_questionsInnovationDevelopment = () => of({ response: cloneQuestions() }).pipe(delay(50));
+
+        let resolvedTo: boolean | undefined;
+        component.saveSection().subscribe(result => (resolvedTo = result));
+        tick(0); // flushes the PATCH (delay 0) and its synchronous `tap` body only.
+
+        expect(resolvedTo).toBe(true);
+        expect(component.hasUnsavedChanges()).toBe(false);
+
+        tick(50); // drains the still-pending delayed reload GETs so fakeAsync's queue is empty.
+      }));
+
+      it('P25 PATCH: hasUnsavedChanges() is false right when saveSection() resolves, BEFORE the delayed reload GETs fire', fakeAsync(() => {
+        jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+        jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(true as any);
+        (component as any).api.dataControlSE.currentResult = { id: 1 };
+        mockApiService.resultsSE.GET_innovationDevP25 = () => of({ response: cloneInnovationDevInfoBody() }).pipe(delay(0));
+        mockApiService.resultsSE.GET_questionsInnovationDevelopmentP25 = () => of({ response: cloneQuestions() }).pipe(delay(0));
+        mockApiService.resultsSE.GET_evidenceDemandP25 = () => of({ response: { evidences: [] } }).pipe(delay(0));
+        component.getSectionInformationp25();
+        tick();
+
+        component.innovationDevInfoBody.short_title = 'edited';
+        expect(component.hasUnsavedChanges()).toBe(true);
+
+        mockApiService.resultsSE.PATCH_innovationDevP25 = () => of({}).pipe(delay(0));
+        // The reload's 3 concurrent GETs are real (non-zero) async — deliberately not ticked past.
+        mockApiService.resultsSE.GET_innovationDevP25 = () => of({ response: cloneInnovationDevInfoBody() }).pipe(delay(50));
+        mockApiService.resultsSE.GET_questionsInnovationDevelopmentP25 = () => of({ response: cloneQuestions() }).pipe(delay(50));
+        mockApiService.resultsSE.GET_evidenceDemandP25 = () => of({ response: { evidences: [] } }).pipe(delay(50));
+
+        let resolvedTo: boolean | undefined;
+        component.saveSection().subscribe(result => (resolvedTo = result));
+        tick(0);
+
+        expect(resolvedTo).toBe(true);
+        expect(component.hasUnsavedChanges()).toBe(false);
+
+        tick(50); // drains the still-pending delayed reload GETs.
+      }));
+    });
+
+    /**
+     * `UCA-T-11` rework attempt 2, Issue 1 — a FOURTH child writer missed by attempt 1:
+     * `StudiesLinkComponent.ngOnInit()` seeds `innovationDevInfoBody.scaling_studies_urls` with a
+     * placeholder `['']` after this component's own composite snapshot already ran, whenever the
+     * block renders (`isP25() && has_scaling_studies && showScalingStudiesQuestion()` — P25,
+     * readiness level >= 6, pre-2026 phase, real server-confirmed empty-array case). This suite
+     * declares the REAL `StudiesLinkComponent` (not an unknown-element stand-in), so
+     * `fixture.detectChanges()` genuinely mounts it and runs its `ngOnInit()` — the same
+     * harness-blindness trap `UCA-T-7`'s `sub-geoscope` bug was invisible to otherwise applies here.
+     */
+    describe('StudiesLinkComponent seeding scaling_studies_urls (rework attempt 2, Issue 1)', () => {
+      const readinessCatalogue = [
+        { id: 11, level: '0' },
+        { id: 17, level: '6' },
+        { id: 18, level: '7' }
+      ];
+
+      // `innovation_readiness_level_id` is itself a genuinely-tracked field: it must come back FROM
+      // the load response (so it's part of what gets snapshotted), never be poked onto
+      // `innovationDevInfoBody` after the load, or the test would fail for the wrong reason (a real
+      // edit to that field, not the placeholder-seeding bug this test exists to reproduce).
+      const level7Id = readinessCatalogue.find(l => l.level === '7')!.id;
+
+      beforeEach(() => {
+        jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+        jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(false as any);
+        component.innovationControlListSE.readinessLevelsList = readinessCatalogue as any;
+      });
+
+      it('hasUnsavedChanges() is false right after a clean P25 load, even though app-studies-link seeds a placeholder row into scaling_studies_urls', fakeAsync(() => {
+        const bodyWithScalingStudies = {
+          ...cloneInnovationDevInfoBody(),
+          has_scaling_studies: true,
+          scaling_studies_urls: [],
+          innovation_readiness_level_id: level7Id // >= 6, required for showScalingStudiesQuestion() to gate the block visible
+        };
+        mockApiService.resultsSE.GET_innovationDevP25 = () => of({ response: bodyWithScalingStudies }).pipe(delay(0));
+        mockApiService.resultsSE.GET_questionsInnovationDevelopmentP25 = () => of({ response: cloneQuestions() }).pipe(delay(0));
+        mockApiService.resultsSE.GET_evidenceDemandP25 = () => of({ response: { evidences: [] } }).pipe(delay(0));
+
+        component.getSectionInformationp25();
+        tick(10);
+        fixture.detectChanges(); // mounts the real app-studies-link, which seeds scaling_studies_urls = ['']
+        tick(0);
+        fixture.detectChanges();
+
+        // Sanity check the reproduction actually engaged the real bug path — otherwise the
+        // assertion below proves nothing (the same "harness structurally cannot evaluate this"
+        // trap this spec's history warns about).
+        expect((component.innovationDevInfoBody as any).scaling_studies_urls).toEqual(['']);
+
+        expect(component.hasUnsavedChanges()).toBe(false);
+      }));
+
+      it('hasUnsavedChanges() is true after typing a real study link, even though blank rows are normalized out', fakeAsync(() => {
+        const bodyWithScalingStudies = {
+          ...cloneInnovationDevInfoBody(),
+          has_scaling_studies: true,
+          scaling_studies_urls: [],
+          innovation_readiness_level_id: level7Id
+        };
+        mockApiService.resultsSE.GET_innovationDevP25 = () => of({ response: bodyWithScalingStudies }).pipe(delay(0));
+        mockApiService.resultsSE.GET_questionsInnovationDevelopmentP25 = () => of({ response: cloneQuestions() }).pipe(delay(0));
+        mockApiService.resultsSE.GET_evidenceDemandP25 = () => of({ response: { evidences: [] } }).pipe(delay(0));
+
+        component.getSectionInformationp25();
+        tick(10);
+        fixture.detectChanges();
+        tick(0);
+        fixture.detectChanges();
+        expect((component.innovationDevInfoBody as any).scaling_studies_urls).toEqual(['']);
+        expect(component.hasUnsavedChanges()).toBe(false);
+
+        (component.innovationDevInfoBody as any).scaling_studies_urls[0] = 'https://example.org/study';
+
+        expect(component.hasUnsavedChanges()).toBe(true);
+      }));
+    });
+
+    /**
+     * `UCA-T-11` rework attempt 2, Issue 2 — the pre-existing error tests only assert
+     * `savingSection`, never the returned boolean `UnsavedChangesGuard` actually uses.
+     */
+    describe('saveSection() resolves false on a failing PATCH (rework attempt 2, Issue 2)', () => {
+      it('legacy PATCH throws: saveSection() emits false without throwing', fakeAsync(() => {
+        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+        mockApiService.resultsSE.GET_innovationDev = () => of({ response: cloneInnovationDevInfoBody() }).pipe(delay(0));
+        mockApiService.resultsSE.GET_questionsInnovationDevelopment = () => of({ response: cloneQuestions() }).pipe(delay(0));
+        component.getSectionInformation();
+        tick();
+        fixture.detectChanges();
+        tick();
+
+        mockApiService.resultsSE.PATCH_innovationDev = () => throwError(() => new Error('patch failed'));
+
+        let resolvedTo: boolean | undefined;
+        let threw = false;
+        component.saveSection().subscribe({
+          next: result => (resolvedTo = result),
+          error: () => (threw = true)
+        });
+        tick();
+
+        expect(threw).toBe(false);
+        expect(resolvedTo).toBe(false);
+        consoleSpy.mockRestore();
+      }));
+
+      it('P25 PATCH throws: saveSection() emits false without throwing, and the save-failed alert still fires', fakeAsync(() => {
+        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+        jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+        jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(true as any);
+        (component as any).api.dataControlSE.currentResult = { id: 1 };
+        mockApiService.resultsSE.GET_innovationDevP25 = () => of({ response: cloneInnovationDevInfoBody() }).pipe(delay(0));
+        mockApiService.resultsSE.GET_questionsInnovationDevelopmentP25 = () => of({ response: cloneQuestions() }).pipe(delay(0));
+        mockApiService.resultsSE.GET_evidenceDemandP25 = () => of({ response: { evidences: [] } }).pipe(delay(0));
+        component.getSectionInformationp25();
+        tick();
+
+        mockApiService.resultsSE.PATCH_innovationDevP25 = () => throwError(() => new Error('patch failed'));
+
+        let resolvedTo: boolean | undefined;
+        let threw = false;
+        component.saveSection().subscribe({
+          next: result => (resolvedTo = result),
+          error: () => (threw = true)
+        });
+        tick();
+
+        expect(threw).toBe(false);
+        expect(resolvedTo).toBe(false);
+        expect(mockApiService.alertsFe.show).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'This section was not saved',
+            description: 'The section could not be saved. Please try saving again.',
+            status: 'error'
+          })
+        );
+        consoleSpy.mockRestore();
+      }));
     });
   });
 });

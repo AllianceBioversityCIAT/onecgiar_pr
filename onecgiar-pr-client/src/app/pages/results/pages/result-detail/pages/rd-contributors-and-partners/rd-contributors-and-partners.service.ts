@@ -119,6 +119,24 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   /** Our own subscriptions to the shared catalogue emitters. See `ngOnDestroy`. */
   private readonly catalogueSubs = new Subscription();
 
+  /**
+   * `UCA-T-9` rework attempt 3, Issue 1 — set by the component (in `ngOnInit`, cleared in
+   * `ngOnDestroy`) so it can re-establish its dirty-diff baseline whenever a LATE-arriving CLARISA
+   * catalogue re-runs the lead-field auto-assignment below, AFTER the component's own load-flow
+   * snapshot already ran. See the component's `reconcileLeadFieldsAfterLateCatalogue()` docstring
+   * for why this can't just be "re-snapshot unconditionally" (would swallow a genuine concurrent
+   * user edit) — this hook only tells the component WHEN to check, the component decides whether
+   * it's actually safe to fold in.
+   *
+   * `UCA-T-9` rework attempt 4 — the callback now takes a `source` discriminator naming WHICH
+   * catalogue just emitted. Attempt 3's callback took no argument, so the component's reconciliation
+   * substituted BOTH `leadCenterCode` AND `leadPartnerId` back to baseline regardless of which
+   * catalogue fired — silently erasing a genuine concurrent edit to the field the emitting catalogue
+   * never touched. `source` lets the component substitute back only the one field the emitting
+   * catalogue could actually have changed.
+   */
+  onCatalogueDrivenLeadUpdate?: (source: 'centers' | 'institutions') => void;
+
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,
@@ -129,6 +147,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         if (loaded) {
           this.setPossibleLeadPartners(true);
           this.setLeadPartnerOnLoad(true);
+          this.onCatalogueDrivenLeadUpdate?.('institutions');
         }
       })
     );
@@ -140,6 +159,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
           });
           this.setPossibleLeadCenters(true);
           this.setLeadCenterOnLoad(true);
+          this.onCatalogueDrivenLeadUpdate?.('centers');
         }
       })
     );
@@ -393,7 +413,19 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     }
   }
 
-  getSectionInformation(no_applicable_partner?: boolean, onSave: boolean = false) {
+  /**
+   * `UCA-T-9` — `onLoaded` is invoked as the LAST step of a successful load, after every
+   * synchronous mutation this method makes to `partnersBody` (through `applyTocMappingOnLoad()`
+   * and the `bilateral_projects` `fullName` pass). `RdContributorsAndPartnersComponent` uses it to
+   * snapshot the component-scoped `SectionDirtyTrackerService` at the true end of the load flow.
+   * `loadFilteredBilateralProjects()` (called right before `onLoaded`) kicks off ITS OWN async GET,
+   * but that call only mutates `clarisaProjectsList` / `loadingBilateralProjects` /
+   * `loadedBilateralProgramId` — never `partnersBody` — so, unlike `rd-general-information`'s
+   * discontinued-options round-trip, there is no later async mutation of the snapshot target to
+   * race. Not invoked on the error branch: a failed load never establishes a baseline (fail-open,
+   * matching `rd-general-information`'s equivalent case).
+   */
+  getSectionInformation(no_applicable_partner?: boolean, onSave: boolean = false, onLoaded?: () => void) {
     this.contributingInitiativeNew = [];
     this.api.resultsSE.GET_ContributorsPartners().subscribe({
       next: ({ response }) => {
@@ -456,6 +488,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         });
 
         this.loadFilteredBilateralProjects();
+        onLoaded?.();
       },
       error: _err => {
         this.getConsumed.set(true);

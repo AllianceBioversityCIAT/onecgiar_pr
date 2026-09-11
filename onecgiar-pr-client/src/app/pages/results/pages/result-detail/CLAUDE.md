@@ -1,6 +1,6 @@
 # result-detail
 
-**Verified:** 2026-09-11 · branch performance-refactor · 624d4a017 (P2-3659: `Next` guarda antes de navegar); prior: 2026-09-04 · qa-development-2026 · 2b7232fff (adds the one-line pointer to the shared `pr-viewport-page` mixin, spec `changes/sp-shell-app-viewport` SAV-T-6; no code change); prior: 2026-09-03 · 6963df5af
+**Verified:** 2026-09-11 · branch qa-development-2026-ss · changes/unsaved-changes-alert `UCA-T-12` (new "Unsaved-changes guard" section documenting `CanComponentDeactivate`, the routing-node fix, and the recurring child-mutation bug class); prior: 2026-09-11 · branch performance-refactor · 624d4a017 (P2-3659: `Next` guarda antes de navegar); prior: 2026-09-04 · qa-development-2026 · 2b7232fff (adds the one-line pointer to the shared `pr-viewport-page` mixin, spec `changes/sp-shell-app-viewport` SAV-T-6; no code change); prior: 2026-09-03 · 6963df5af
 
 ## Qué es
 
@@ -117,6 +117,46 @@ está excluido de Jest, su gate son los Cypress CT.
   severidad conservan su color (ver `docs/DESIGN-DEVIATIONS.md` §12).
 - `app-pr-radio-button` acepta `variant="segmented"` para escalas ordinales cortas (los scores
   0/1/2). El dígito sale de parsear `full_name`, que el backend arma como `(id-1) title`.
+
+## Unsaved-changes guard (`docs/specs/changes/unsaved-changes-alert`, `UCA-T-1`..`UCA-T-11`)
+
+Cada sección `rd-*` implementa `CanComponentDeactivate` (`shared/guards/unsaved-changes.types.ts`):
+- `hasUnsavedChanges()` compara un snapshot tomado al final del load (y otra vez, directo y
+  síncrono, dentro del `tap` de éxito del save — nunca solo vía el reload delegado) contra el
+  estado actual, vía `SectionDirtyTrackerService` (component-scoped, un `JSON.stringify` diff).
+- `saveSection(): Observable<boolean>` envuelve la llamada de guardado existente de cada sección
+  (nunca lógica duplicada — `UCA-DD-3`).
+- `UnsavedChangesGuard` (`shared/guards/unsaved-changes.guard.ts`, `providedIn: 'root'`) vive en la
+  ruta INTERNA `{path: '', component: X}` de cada sección (su propio `-routing.module.ts`) — **NUNCA**
+  en la entrada externa `resultDetailRouting`/`rdResultTypesPages` (`shared/routing/routing-data.ts`),
+  que tiene `loadChildren` y ningún `component`: ahí Angular invoca el guard con `component: null`
+  y `TypeError`ea en cada navegación. Bug cross-cutting real que rompió 5+ secciones antes de
+  corregirse — ver `docs/specs/changes/unsaved-changes-alert/execution.md`, sección "⚠️ Cross-cutting
+  correction". Regresión cubierta por
+  `rd-general-information/rd-general-information-routing.canDeactivate.spec.ts`, que itera las
+  tablas reales `resultDetailRouting`/`rdResultTypesPages`.
+- `Back`/`Next` (`section-bottom-bar.component.ts`) guardan en silencio vía
+  `UnsavedNavigationIntentService.markSilent()` (flag de un solo uso, seteado justo antes de
+  `router.navigate`). Cualquier OTRA navegación (sidebar, browser back, cambio de resultado) abre
+  el diálogo Save/Discard (`shared/components/unsaved-changes-dialog/`, sobre `hlm-dialog` — nunca
+  `app-pr-dialog`, que no tiene focus trap). `[appBeforeUnloadWarning]` (directiva compartida) cubre
+  el cierre/refresh de pestaña.
+- ⚠️ **Bug recurrente en TODA esta implementación (5+ ocurrencias, secciones distintas): un hijo
+  renderizado por la sección muta el objeto trackeado DESPUÉS del snapshot de carga** (p. ej.
+  `app-sub-geoscope` en `rd-geographic-location`, `CPMultipleWPsComponent`/`CPNormalSelectorComponent`
+  en `rd-contributors-and-partners`, `IntellectualPropertyRightsComponent`/`StudiesLinkComponent` en
+  los `rd-result-types-pages/*`). El fix nunca es "reordenar el snapshot" solo — casi siempre hace
+  falta una función `normalize*ForDiff()` que proyecte fuera del diff lo que el hijo decora, aplicada
+  simétricamente al snapshot Y al chequeo en vivo. Antes de tocar cualquier sección `rd-*`, revisa
+  si renderiza un hijo que escribe en el objeto bound — el patrón "no hay mutación secundaria" se
+  ha demostrado falso repetidas veces en este mismo código. Ver `execution.md`'s entradas `UCA-T-7`,
+  `UCA-T-9`, `UCA-T-11` para los casos reales y sus fixes.
+- **Verificación manual pendiente (`UCA-T-12`)** — los siguientes casos no se pueden probar con
+  Jest/jsdom y requieren un browser real con sesión activa (`token` + `user` en localStorage, per
+  §9 arriba): el prompt nativo `beforeunload` (dirty vs. clean); el focus trap real del diálogo
+  (Tab/Shift+Tab atrapado, Escape resuelve como Discard); el caso de falla de guardado en
+  Back/Next (queda en la sección con el error mostrado, no navega). Checklist completo en
+  `docs/specs/changes/unsaved-changes-alert/tasks.md` `UCA-T-12`.
 
 ## Pendiente (auditado contra el mockup el 24-ago-2026)
 

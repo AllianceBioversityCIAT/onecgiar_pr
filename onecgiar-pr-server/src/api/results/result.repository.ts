@@ -3064,7 +3064,10 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       v.phase_year,
       r.result_code,
       rt.name,
-      r.title
+      r.title,
+      r.description,
+      r.source,
+      r.status_id
     FROM result r
     INNER JOIN result_type rt ON r.result_type_id = rt.id
       AND rt.is_active = true
@@ -3072,8 +3075,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       AND v.is_active = true
     INNER JOIN clarisa_portfolios cp ON v.portfolio_id = cp.id
     WHERE         
-        v.phase_name = 'Reporting 2025'
-      AND v.is_active = true
+      r.status_id IN (2, 6)
       AND r.is_active = true
     UNION ALL
     SELECT 
@@ -3082,7 +3084,10 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       v.phase_year,
       r.result_code,
       rt.name,
-      r.title
+      r.title,
+      r.description,
+      r.source,
+      r.status_id
     FROM result r
     INNER JOIN result_type rt ON r.result_type_id = rt.id
       AND rt.is_active = true
@@ -3092,6 +3097,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     WHERE         
       cp.id = 2
         AND r.result_type_id IN (2, 7)
+        AND r.status_id IN (2, 6)
         AND r.is_active = true;
     `;
 

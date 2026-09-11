@@ -10,6 +10,7 @@ import { KnowledgeProductSelectorComponent } from './components/knowledge-produc
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 import { FormsModule } from '@angular/forms';
 import { SectionBottomBarComponent } from '../../components/section-bottom-bar/section-bottom-bar.component';
+import { BeforeUnloadWarningDirective } from '../../../../../../shared/directives/before-unload-warning.directive';
 
 @NgModule({
   declarations: [RdPartnersComponent, InstToInstTypesPipe, NormalSelectorComponent, KnowledgeProductSelectorComponent],
@@ -19,7 +20,8 @@ import { SectionBottomBarComponent } from '../../components/section-bottom-bar/s
     CustomFieldsModule,
     InstitutionsPipesModule,
     FeedbackValidationDirectiveModule,
-    FormsModule
+    FormsModule,
+    BeforeUnloadWarningDirective
   ],
   exports: [InstToInstTypesPipe, NormalSelectorComponent, KnowledgeProductSelectorComponent]
 })

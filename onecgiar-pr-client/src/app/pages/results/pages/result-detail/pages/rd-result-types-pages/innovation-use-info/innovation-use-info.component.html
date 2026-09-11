@@ -1,4 +1,4 @@
-<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()" [appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)">
   <!--
     P2-3424 — the link to a QA'd Innovation Development result. OPTIONAL by PO decision (10 Sep 2026):
     "Este campo no debería ser un MDS."

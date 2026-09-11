@@ -1,4 +1,4 @@
-<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()" [appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)">
   <div id="alert"></div>
   <!-- P2-3201 (point 5): inside the 2026 portfolio the question is identical for every result type, and it
        supersedes the P2-3036 (AC9) "location of benefit" variant. Earlier phases keep their current wording

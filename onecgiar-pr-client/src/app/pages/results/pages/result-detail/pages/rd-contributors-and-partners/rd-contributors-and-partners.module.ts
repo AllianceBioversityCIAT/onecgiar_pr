@@ -22,6 +22,7 @@ import {
 import { CPKnowledgeProductSelectorComponent } from './components/multiple-wps/components/knowledge-product-selector/knowledge-product-selector.component';
 import { CPNormalSelectorComponent } from './components/multiple-wps/components/normal-selector/normal-selector.component';
 import { SectionBottomBarComponent } from '../../components/section-bottom-bar/section-bottom-bar.component';
+import { BeforeUnloadWarningDirective } from '../../../../../../shared/directives/before-unload-warning.directive';
 @NgModule({
   declarations: [
     RdContributorsAndPartnersComponent,
@@ -46,7 +47,8 @@ import { SectionBottomBarComponent } from '../../components/section-bottom-bar/s
     PrSortableColumnDirective,
     PrTableHeaderDirective,
     PrTableBodyDirective,
-    JsonPipe
+    JsonPipe,
+    BeforeUnloadWarningDirective
   ],
   exports: [CPMultipleWPsComponent, CPKnowledgeProductSelectorComponent, CPNormalSelectorComponent]
 })

@@ -1196,4 +1196,120 @@ describe('RdEvidencesComponent', () => {
       expect(component.evidenceSectionComplete).toBe(true);
     });
   });
+
+  // UCA-T-8: CanComponentDeactivate (dirty tracking + saveSection()).
+  describe('CanComponentDeactivate (UCA-T-8)', () => {
+    /**
+     * 🛑 Local, test-scoped fixture — NOT the file-level `mockGET_evidencesResponse` const.
+     * `getSectionInformation()` assigns `this.evidencesBody = response` BY REFERENCE, and several
+     * tests elsewhere in this file directly mutate `component.evidencesBody.evidences`
+     * (push/splice/sort). Sharing the file-level const with this dirty-tracking suite would let
+     * another test's mutation leak into this suite's snapshot baseline (or vice-versa) depending
+     * on run order — the exact by-reference-mutation footgun `UCA-T-6` hit with its own shared
+     * fixture. A fresh object per test keeps this suite's baseline independent of the rest of the
+     * file regardless of execution order.
+     */
+    const freshEvidencesResponse = () => ({
+      result_id: 42,
+      evidences: [{ id: 1, link: 'https://existing', is_sharepoint: false, gender_related: false }],
+      gender_tag_level: '1',
+      climate_change_tag_level: '1',
+      nutrition_tag_level: '1',
+      environmental_biodiversity_tag_level: '1',
+      poverty_tag_level: '1',
+      innovation_readiness_level_id: 1
+    });
+
+    beforeEach(() => {
+      mockApiService.resultsSE.GET_evidences = jest.fn(() => of({ response: freshEvidencesResponse() }));
+      mockApiService.resultsSE.POST_evidences = jest.fn(() => of({ response: [] }));
+      mockSharePointUploadService.uploadPending.mockClear();
+      mockSharePointUploadService.uploadPending.mockResolvedValue([]);
+    });
+
+    it('is false right after the load flow completes — GET_evidences is this section\'s ENTIRE load flow (no secondary async call mutates evidencesBody afterwards, unlike rd-general-information\'s discontinued-options GET)', () => {
+      component.getSectionInformation();
+
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    /**
+     * Falsifying input: a reference-equality/never-updated snapshot would report `true` here
+     * regardless of what actually changed.
+     */
+    it('is true after editing a bound field', () => {
+      component.getSectionInformation();
+
+      component.evidencesBody.evidences[0].link = 'https://changed';
+
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    /**
+     * Falsifying input: snapshotting only via the delegated reload (`getSectionInformation()`
+     * inside `performSave()`'s `tap`) and never directly would leave this `true` whenever the
+     * reload fails — proven here by forcing `GET_evidences` to throw entirely for the reload, so
+     * only the DIRECT `dirtyTracker.snapshot(...)` synchronously inside `performSave()`'s `tap`
+     * (before the reload even starts) can make this pass. `uploadPendingFiles()` is a genuine
+     * `Promise` (`SharePointUploadService.uploadPending`), so `saveSection()`'s pipe crosses a real
+     * microtask boundary here, not a synchronous mock.
+     */
+    it('is false right when saveSection() emits true, even when the follow-up reload fails entirely', async () => {
+      component.getSectionInformation();
+      component.evidencesBody.evidences[0].link = 'https://changed';
+      expect(component.hasUnsavedChanges()).toBe(true);
+
+      mockApiService.resultsSE.GET_evidences.mockReturnValue(throwError(() => new Error('reload failed')));
+
+      const result = await firstValueFrom(component.saveSection());
+
+      expect(result).toBe(true);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    /**
+     * Falsifying input: letting the underlying HTTP error propagate as an unhandled observable
+     * error (instead of resolving `false`) would break `UnsavedChangesGuard`'s subscribe chain
+     * rather than cleanly blocking navigation.
+     */
+    it('saveSection() resolves false (not throws) on a failing POST_evidences', async () => {
+      component.getSectionInformation();
+      mockApiService.resultsSE.POST_evidences.mockReturnValue(throwError(() => new Error('save failed')));
+
+      const result = await firstValueFrom(component.saveSection());
+
+      expect(result).toBe(false);
+    });
+
+    /**
+     * UCA-OQ-2 / this task's named risk: `EvidencesCreateInterface.file` is a raw `File`, not
+     * serializable metadata. `dirtySnapshotTarget()` explicitly strips `file` from every evidence
+     * before diffing — this is a deliberate, narrow, documented gap (not silently unhandled), and
+     * this suite is what proves it's actually wired, not just commented.
+     */
+    describe('File/Blob exclusion (UCA-OQ-2)', () => {
+      it('does NOT report dirty when only the attached File changes (deliberate, documented gap)', () => {
+        component.getSectionInformation();
+        expect(component.hasUnsavedChanges()).toBe(false);
+
+        component.evidencesBody.evidences[0].file = new File(['a'], 'a.pdf');
+        expect(component.hasUnsavedChanges()).toBe(false);
+
+        // Swapping to a genuinely DIFFERENT file is still excluded — proves the exclusion is an
+        // explicit projection, not an accident of `File`'s empty `JSON.stringify()` output (which
+        // would happen to "work" for this one case but is not what the code actually relies on).
+        component.evidencesBody.evidences[0].file = new File(['b'], 'b.pdf');
+        expect(component.hasUnsavedChanges()).toBe(false);
+      });
+
+      it('DOES report dirty when a serializable field changes alongside the file', () => {
+        component.getSectionInformation();
+
+        component.evidencesBody.evidences[0].file = new File(['a'], 'a.pdf');
+        component.evidencesBody.evidences[0].link = 'https://changed';
+
+        expect(component.hasUnsavedChanges()).toBe(true);
+      });
+    });
+  });
 });

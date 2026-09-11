@@ -6,9 +6,17 @@ import { RdLinksToResultsComponent } from '../rd-links-to-results/rd-links-to-re
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { ResultsListFilterPipeModule } from '../../../results-outlet/pages/results-list/pipes/results-list-filter-pipe.module';
 import { LinksToResultsGlobalModule } from '../../../../../../shared/sections-components/links-to-results-global/links-to-results-global.module';
+import { BeforeUnloadWarningDirective } from '../../../../../../shared/directives/before-unload-warning.directive';
 
 @NgModule({
   declarations: [RdLinksToResultsComponent],
-  imports: [CommonModule, RdLinksToResultsRoutingModule, CustomFieldsModule, ResultsListFilterPipeModule, LinksToResultsGlobalModule]
+  imports: [
+    CommonModule,
+    RdLinksToResultsRoutingModule,
+    CustomFieldsModule,
+    ResultsListFilterPipeModule,
+    LinksToResultsGlobalModule,
+    BeforeUnloadWarningDirective
+  ]
 })
 export class RdLinksToResultsModule {}
