@@ -91,7 +91,7 @@ Leader ran `npx eslint <spec file> --quiet` → 6 `prettier/prettier` errors (li
 - Warning must be fixed text + numeric ids as fields (`design.md` §9); TEST-2 asserts `32278` and `54` appear and no `@`.
 - Verification includes `npx eslint "{src,apps,libs,test}/**/*.ts" --quiet` — prettier compliance is part of the gate.
 
-**Commit:** `157c84b4f` on `JuanGuzman-io/fix-contributor-accept-owner-indicators` — `[SPEC:bugfix/contributor-accept-owner-indicators] ✅ test(results-toc-results): add red regression tests for saveIndicatorsPrimarySubmitter row resolution` (spec triplet + this log committed alongside).
+**Commit:** `bdb055747` on `JuanGuzman-io/fix-contributor-accept-owner-indicators` — `[SPEC:bugfix/contributor-accept-owner-indicators] ✅ test(results-toc-results): add red regression tests for saveIndicatorsPrimarySubmitter row resolution` (spec triplet + this log committed alongside).
 
 **Gate (Approval Mode: gated):** paused for the user after PASS — continue to `RTR-T-2`, pause, or skip.
 
