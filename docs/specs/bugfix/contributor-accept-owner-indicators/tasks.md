@@ -55,7 +55,7 @@ Three tasks in `onecgiar-pr-server` only (plus one manual rollout check on prtes
 
 | Field | Value |
 |---|---|
-| Status | [ ] pending |
+| Status | [x] done — PASS 2026-09-11 (execution.md) |
 | Type | `server` |
 | Size | S |
 | Depends on | `RTR-T-1` |

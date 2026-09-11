@@ -95,3 +95,58 @@ Leader ran `npx eslint <spec file> --quiet` → 6 `prettier/prettier` errors (li
 
 **Gate (Approval Mode: gated):** paused for the user after PASS — continue to `RTR-T-2`, pause, or skip.
 
+
+### `RTR-T-2` — Correct the lookup, add the same-initiative guard and the warning
+
+| Field | Value |
+|---|---|
+| Final status | **PASS** (Reviewer, attempt 1) |
+| Date | 2026-09-11 |
+| Implementer attempts | 1 |
+| Skills assigned | `nestjs-expert`, `tdd` (green phase) — as listed in `tasks.md`; no deviation |
+| Effort | Implementer `high` (raised from the `medium` default: data-integrity path with a known type trap) · Reviewer `high` (lens checklist mode) |
+| Requirements covered | `RTR-R-1`, `RTR-R-2`, `RTR-R-3`, `RTR-R-4`, `RTR-AC-1`, `RTR-AC-2`, `RTR-AC-3`, `RTR-AC-4`; NFR *Backwards compatibility*, *Security*, *Observability*, *Data integrity*, *Performance* |
+| Gate approval | user chose "Continuar con RTR-T-2" at the T-1 gate (gated mode) |
+
+#### Attempt 1
+
+**Files changed**
+
+- `onecgiar-pr-server/src/api/results/results-toc-results/repositories/results-toc-results.repository.ts` — `+16 −4`, confined to `saveIndicatorsPrimarySubmitter` and the `typeorm` import line (`IsNull` added).
+  - Step 1: `where` now `{ result_id, initiative_ids: Number(toc?.initiative_id), toc_result_id: toc?.toc_result_id ?? IsNull(), is_active: true }`; `initiative_id` relation key removed (`RTR-DD-2`).
+  - Step 2: found-branch condition is `rtrExist && Number(rtrExist?.initiative_ids) === Number(toc?.initiative_id)`; a row of another initiative falls into the not-found branch (`RTR-DD-3`).
+  - Step 3: not-found branch keeps the existing `returnErrorRepository` early return (`RTR-DD-4`) and adds one `this._logger.warn({ className, error: 'No active result toc result row found for the tab's own initiative for result_id: …, initiative_id: …, toc_result_id: …', debug: true })` on the pre-existing `_logger` — numeric ids only, `null` node printed as `null`.
+- No spec file, entity or migration touched.
+
+**Implementer verification**
+
+| Command | Result |
+|---|---|
+| `npx jest … --testPathPattern="results-toc-results.repository"` | `Tests: 11 passed, 11 total` (RTR-TEST-1..4 green, 7 P2-3608 tests untouched) |
+| `npx jest … --testPathPattern="share-result-request\|results-toc-results\|results-package-toc-result"` | `Test Suites: 13 passed, 13 total` · `Tests: 190 passed, 190 total` — zero assertions edited (`RTR-AC-4`) |
+| `npx eslint "{src,apps,libs,test}/**/*.ts" --quiet` | non-zero: 55 `prettier/prettier` errors, all in `src/api/bilateral/bilateral-center.controller.spec.ts` and `src/api/bilateral/services/bilateral-center.service.{ts,spec.ts}` — untouched files. **Leader reproduced them on the base with the diff stashed → pre-existing on `performance-refactor`, not attributable to this task.** eslint scoped to the changed file: 0 errors |
+| `npx tsc --noEmit` | 0 errors — `initiative_ids` and `IsNull()` type-check in `FindOptionsWhere<ResultsTocResult>`; the Disqualifier's stop condition was not hit, no `as any` |
+| `npm run migration:check` | `Pending: 0` — `✅ No pending migrations found.` |
+
+**Falsification (tasks.md "Falsifying input"), run by the Implementer and restored**
+
+- Revert step 1 → `RTR-TEST-1` red: `Expected: 54, Received: undefined` at `expect(where.initiative_ids).toBe(54)`.
+- Delete step 2 → `RTR-TEST-2` red: `saveInditicatorsContributing` `Received number of calls: 1`, called with `(indicators, 42189, 32278, 9)` — the foreign-row write.
+- Final state re-verified green on all five commands.
+
+Implementer report carried no `Not Done / Assumptions`.
+
+**Reviewer verdict — `STATUS: PASS`** (no ADVISORY block)
+
+> The diff implements `RTR-T-2` steps 1–4 exactly as `tasks.md` and `design.md` §5 / `RTR-DD-1…DD-4` specify — plain-column + `IsNull()` lookup, same-initiative guard, preserved early return plus one PII-free `warn` on the existing `_logger` — confined to `saveIndicatorsPrimarySubmitter` and its import line, with no test assertion edited (`RTR-AC-4`) and no extra query (NFR *Performance*). The `design.md` §9 "ids as fields" question is adjudicated as satisfied: the event text is fixed, the ids ride in the repository's only structured-log shape, and any other form would violate the task's "touch nothing else" constraint.
+
+Reviewer adjudication worth keeping: the guard is written as a positive condition rather than a separate negative check; logically identical to `RTR-DD-3` and it routes not-found and wrong-initiative into one branch, as the design asks. The warn payload `{ className, error, debug }` mirrors the sibling `processToc` warn (`:2800-2804`) — the repository's only structured-log idiom — so `design.md` §9 is read as intent, not as a format contract overriding `tasks.md` step 3.
+
+**Decisions**
+
+- No `// @akili-spec` code comment added: the task forbids touching anything else in the method, the test block header already cites the spec path, and the commit carries the `[SPEC:…]` prefix. Traceability is satisfied without a post-PASS Leader edit.
+- The pre-existing bilateral prettier errors are out of scope (different module, not this spec's files); noted for whoever owns `src/api/bilateral/` on `performance-refactor`.
+
+**What remains for the spec** — `RTR-T-3` (HITL, owner-run on prtest after deploy): repair indicator `35494`, confirm the build sha contains this commit, accept a different pending contributor with Planned = No, verify the owner's indicator survives. Defect class D3 (SQL generation of `IsNull()` + plain column against MySQL) is only closed there.
+
+**Commit:** recorded in the follow-up docs commit below.

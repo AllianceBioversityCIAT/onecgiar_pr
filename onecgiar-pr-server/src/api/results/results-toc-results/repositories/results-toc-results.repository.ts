@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { env } from 'node:process';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, IsNull, Repository } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { indicatorResultTypeCaseSql } from '../../../../shared/constants/indicator-type-mapping.constant';
 import { ResultsTocResult } from '../entities/results-toc-result.entity';
@@ -2627,12 +2627,15 @@ select *
           const rtrExist = await this.findOne({
             where: {
               result_id: toc?.results_id || result_id,
-              initiative_id: toc?.initiative_id,
-              toc_result_id: toc?.toc_result_id,
+              initiative_ids: Number(toc?.initiative_id),
+              toc_result_id: toc?.toc_result_id ?? IsNull(),
               is_active: true,
             },
           });
-          if (rtrExist) {
+          if (
+            rtrExist &&
+            Number(rtrExist?.initiative_ids) === Number(toc?.initiative_id)
+          ) {
             await this.update(
               { result_toc_result_id: rtrExist?.result_toc_result_id },
               {
@@ -2665,6 +2668,15 @@ select *
               userId,
             );
           } else {
+            this._logger.warn({
+              className: ResultsTocResultRepository.name,
+              error: `No active result toc result row found for the tab's own initiative for result_id: ${
+                toc?.results_id || result_id
+              }, initiative_id: ${Number(toc?.initiative_id)}, toc_result_id: ${
+                toc?.toc_result_id ?? null
+              }`,
+              debug: true,
+            });
             return this._handlersError.returnErrorRepository({
               className: ResultsTocResultRepository.name,
               error: `The result toc result id ${toc?.result_toc_result_id} does not exist`,
