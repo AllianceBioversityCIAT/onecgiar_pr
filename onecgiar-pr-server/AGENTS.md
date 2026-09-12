@@ -89,6 +89,7 @@ Use this layout for new features:
 - Use custom header `auth: <JWT>`. Never use or document `Authorization: Bearer`.
 - `JwtMiddleware` applies to `/api/(.*)`, `/v2/(.*)`, `/clarisa/(.*)`, `/toc/(.*)`, `/type-one-report`.
 - Excluded from JWT: `/api/platform-report/*`, `/api/bilateral/*`.
+- `/auth/*` is outside those mounts entirely — it carries no JWT middleware, so every route there (login, and the Center email-OTP routes `GET auth/login/otp/config`, `POST auth/login/otp/start`, `POST auth/login/otp/verify`) is public and gates itself. The OTP routes gate via the `OTP_ALLOWED_EMAIL_DOMAINS` global parameter (empty = feature hidden) plus a per-email throttle (`OtpThrottlerGuard`), not a token.
 - JWT payload must contain `id` and `email`. Middleware re-signs and returns a fresh `auth` header.
 - Prefer `@UserToken()` and `@DecodedUser()` over hand-decoding JWTs.
 
