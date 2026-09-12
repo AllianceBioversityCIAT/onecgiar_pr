@@ -531,8 +531,19 @@ export class AuthService {
       }
 
       logOtpEvent(this._logger, 'verify', domain, 'mismatch', startedAt);
+      // @akili-spec changes/cognito-email-otp-login (OTP-T-13 rework 2, design.md §18.1
+      // row 10, requirements.md OTP-R-4, design.md OTP-DD-3 — corrected after the T-13
+      // Reviewer FAIL, 2026-09-11) — a real mismatch now always carries a rotated
+      // `session` (design.md §18.1 step 9), so a decoy mismatch without one was itself
+      // an oracle. Mint a fresh decoy carrying the SAME `exp` as the original (a rotated
+      // real Cognito session stays inside the start-time AuthSessionValidity window —
+      // it never extends) so both paths answer with identical key sets and copy.
       return {
-        response: { valid: false, code: 'OTP_CODE_MISMATCH' },
+        response: {
+          valid: false,
+          code: 'OTP_CODE_MISMATCH',
+          session: this.buildDecoySession(email, decoy.exp),
+        },
         message: OTP_CODE_MISMATCH_MESSAGE,
         status: HttpStatus.UNAUTHORIZED,
       };
@@ -583,7 +594,11 @@ export class AuthService {
       const mapped = this.mapOtpVerifyError(error);
       logOtpEvent(this._logger, 'verify', domain, mapped.outcome, startedAt);
       return {
-        response: { valid: false, code: mapped.code },
+        response: {
+          valid: false,
+          code: mapped.code,
+          ...(mapped.session ? { session: mapped.session } : {}),
+        },
         message: mapped.message,
         status: mapped.status,
       };
@@ -603,16 +618,30 @@ export class AuthService {
     message: string;
     status: HttpStatus;
     outcome: string;
+    session?: string;
   } {
     const msCode = error?.response?.code;
     switch (msCode) {
-      case 'CODE_MISMATCH':
+      case 'CODE_MISMATCH': {
+        // @akili-spec changes/cognito-email-otp-login (OTP-T-13, design.md §18.1
+        // steps 9-10, requirements.md §13 OTP-R-7/OTP-R-4 modified, OTP-AC-18) —
+        // the microservice rotates the Cognito `session` on a wrong code so the
+        // user can retry without requesting a new one; carry it through only
+        // when the microservice actually sent one (real path). The decoy path
+        // (`verifyDecoySession` above) never reaches this branch — it rotates
+        // its own fresh decoy session inline instead (OTP-T-13 rework 2), so
+        // both paths always answer OTP_CODE_MISMATCH with a `session`.
+        const rotatedSession = error?.response?.session;
         return {
           code: 'OTP_CODE_MISMATCH',
           message: OTP_CODE_MISMATCH_MESSAGE,
           status: HttpStatus.UNAUTHORIZED,
           outcome: 'mismatch',
+          ...(typeof rotatedSession === 'string' && rotatedSession
+            ? { session: rotatedSession }
+            : {}),
         };
+      }
       case 'CODE_EXPIRED':
         return {
           code: 'OTP_CODE_EXPIRED',
@@ -679,10 +708,16 @@ export class AuthService {
    * measured 1,543 chars on the 2026-09-11 spike). No prefix means the string's
    * mere shape is never an existence oracle — only a failed/successful HMAC
    * recompute on verify tells decoy from real.
+   *
+   * @param exp Optional epoch-ms expiry to carry over verbatim (OTP-T-13 rework 2,
+   * design.md §18.1 row 10). Used when *rotating* an existing decoy on mismatch —
+   * a real rotated Cognito session never extends its `AuthSessionValidity` window,
+   * so the rotated decoy must not either. Defaults to a fresh `now + TTL` for the
+   * original `start`-time decoy.
    */
-  private buildDecoySession(email: string): string {
+  private buildDecoySession(email: string, exp?: number): string {
     const nonce = randomBytes(16).toString('base64url'); // 22 chars
-    const expStr = String(Date.now() + OTP_DECOY_TTL_MS).padStart(
+    const expStr = String(exp ?? Date.now() + OTP_DECOY_TTL_MS).padStart(
       OTP_DECOY_EXP_LEN,
       '0',
     );
@@ -735,7 +770,7 @@ export class AuthService {
   private verifyDecoySession(
     session: string,
     email: string,
-  ): { isDecoy: boolean; expired: boolean } {
+  ): { isDecoy: boolean; expired: boolean; exp?: number } {
     const parsed = this.parseDecoySession(session);
     if (!parsed) {
       return { isDecoy: false, expired: false };
@@ -752,7 +787,14 @@ export class AuthService {
       providedBuffer.length === expectedBuffer.length &&
       timingSafeEqual(providedBuffer, expectedBuffer);
 
-    return { isDecoy, expired: isDecoy && Date.now() > parsed.exp };
+    return {
+      isDecoy,
+      expired: isDecoy && Date.now() > parsed.exp,
+      // @akili-spec changes/cognito-email-otp-login (OTP-T-13 rework 2) — surfaced so
+      // the unexpired-mismatch branch can rotate a fresh decoy carrying the SAME `exp`
+      // (never extending the decoy's lifetime past the original start-time window).
+      ...(isDecoy ? { exp: parsed.exp } : {}),
+    };
   }
 
   /**

@@ -142,10 +142,17 @@ export class CenterOtpPanelComponent {
     this.busy.set(true);
     const token = ++this.requestSeq;
 
-    this.cognito.verifyOtp(this.email(), this.code(), session, (key, serverMessage) => {
+    this.cognito.verifyOtp(this.email(), this.code(), session, (key, serverMessage, rotatedSession) => {
       if (token !== this.requestSeq) return; // `back()` already reset the panel — stale reply.
       this.busy.set(false);
       this.setError(key, serverMessage);
+
+      // OTP-T-13 (design.md §18.1 steps 9-10): a wrong code rotates the Cognito session on
+      // the real path — replace it so the retry uses the new one; a decoy mismatch never
+      // carries one, so the current (decoy) session is kept unchanged.
+      if (key === 'mismatch' && typeof rotatedSession === 'string' && rotatedSession.trim()) {
+        this.session.set(rotatedSession);
+      }
 
       // OTP_CODE_EXPIRED / OTP_ATTEMPTS_EXCEEDED: the current code can never succeed again —
       // let the user request a new one immediately instead of waiting out the cooldown.

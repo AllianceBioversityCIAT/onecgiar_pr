@@ -373,11 +373,24 @@ export class AuthMicroserviceService {
       return response.data;
     } catch (error) {
       this.logger.error('Error verifying email OTP challenge');
+      // @akili-spec changes/cognito-email-otp-login (OTP-T-13 rework 2, design.md §18.1
+      // steps 9-10, OTP-R-7 modified, Reviewer advisory 1) — on CODE_MISMATCH the
+      // microservice rotates the Cognito `session` so the client can retry without a
+      // new code. Gate strictly on `code === 'CODE_MISMATCH'` (not merely "a session
+      // string is present") — any other microservice error code carrying a stray
+      // `session` field must never surface it. Never logged (OTP-R-11 / .cursorrules).
+      const responseCode = error.response?.data?.code ?? 'UPSTREAM_ERROR';
+      const rotatedSession = error.response?.data?.session;
       throw new HttpException(
         {
-          code: error.response?.data?.code ?? 'UPSTREAM_ERROR',
+          code: responseCode,
           message:
             error.response?.data?.message ?? 'Failed to verify email OTP',
+          ...(responseCode === 'CODE_MISMATCH' &&
+          typeof rotatedSession === 'string' &&
+          rotatedSession
+            ? { session: rotatedSession }
+            : {}),
         },
         error.response?.status ?? 502,
       );

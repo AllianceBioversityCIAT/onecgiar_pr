@@ -13,8 +13,14 @@ import { environment } from '../../../environments/environment';
 /** Mapped from the server's `OTP_*` error codes; the panel owns the copy per key. */
 export type OtpErrorKey = 'domain' | 'mismatch' | 'expired' | 'attempts' | 'rate' | 'upstream' | 'needsRoles' | 'unknown';
 
-/** `serverMessage` is only passed for `unknown` keys that carry a non-empty server message. */
-export type OtpErrorCallback = (key: OtpErrorKey, serverMessage?: string) => void;
+/**
+ * `serverMessage` is only passed for `unknown` keys that carry a non-empty server message.
+ * `rotatedSession` (OTP-T-13, design.md §18.1 steps 9-10) is only passed on a `mismatch` whose
+ * body carried a rotated Cognito `session` (the real path — a decoy mismatch never rotates).
+ * Both trailing args are omitted entirely when absent so existing `toHaveBeenCalledWith(key)`
+ * assertions keep matching call arity.
+ */
+export type OtpErrorCallback = (key: OtpErrorKey, serverMessage?: string, rotatedSession?: string) => void;
 
 export interface OtpStartResult {
   session: string;
@@ -231,6 +237,20 @@ export class CognitoService {
       onError(key, serverMessage);
       return;
     }
+
+    // OTP-T-13 rework 2: a `mismatch` body can carry a rotated Cognito `session` (design.md
+    // §18.1 steps 9-10) — pass it through as the third arg only when present so calls without
+    // one keep matching a plain `toHaveBeenCalledWith(key)` assertion. Gated strictly on
+    // `key === 'mismatch'` (Reviewer advisory 2) — a `session` field on any other mapped key
+    // must never be surfaced as a rotated session.
+    if (key === 'mismatch') {
+      const rotatedSession = err?.error?.response?.session;
+      if (typeof rotatedSession === 'string' && rotatedSession.trim()) {
+        onError(key, undefined, rotatedSession);
+        return;
+      }
+    }
+
     onError(key);
   }
 

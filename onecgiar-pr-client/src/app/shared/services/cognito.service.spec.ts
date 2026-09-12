@@ -446,5 +446,51 @@ describe('CognitoService', () => {
 
       expect(onError).toHaveBeenCalledWith('needsRoles');
     });
+
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-13, design.md §18.1 steps 9-10,
+    // requirements.md §13 OTP-R-7 modified) — a mismatch body can carry a rotated Cognito
+    // `session`; the panel needs it as a third callback arg, but only when present.
+    describe('rotated session on OTP_CODE_MISMATCH (OTP-T-13)', () => {
+      it('passes the rotated session as the third argument when the body carries one', () => {
+        jest
+          .spyOn(service.authService, 'POST_otpVerify')
+          .mockReturnValue(throwError(() => ({ error: { response: { code: 'OTP_CODE_MISMATCH', session: 'rotated-session-abc' } } })));
+        const onError = jest.fn();
+
+        service.verifyOtp('a@icrisat.org', '000000', 'sess', onError);
+
+        expect(onError).toHaveBeenCalledWith('mismatch', undefined, 'rotated-session-abc');
+      });
+
+      it('keeps the existing single-argument call when the body carries no session', () => {
+        jest
+          .spyOn(service.authService, 'POST_otpVerify')
+          .mockReturnValue(throwError(() => ({ error: { response: { code: 'OTP_CODE_MISMATCH' } } })));
+        const onError = jest.fn();
+
+        service.verifyOtp('a@icrisat.org', '000000', 'sess', onError);
+
+        expect(onError).toHaveBeenCalledWith('mismatch');
+      });
+
+      it('never logs the rotated session', () => {
+        const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        jest
+          .spyOn(service.authService, 'POST_otpVerify')
+          .mockReturnValue(throwError(() => ({ status: 401, error: { response: { code: 'OTP_CODE_MISMATCH', session: 'rotated-session-abc' } } })));
+
+        service.verifyOtp('a@icrisat.org', '000000', 'sess', jest.fn());
+
+        // Reviewer advisory 3 — must land before the loop below: without it the test
+        // would pass vacuously if the service stopped logging altogether (consoleSpy
+        // never called), proving nothing about the rotated session specifically.
+        expect(consoleSpy).toHaveBeenCalled();
+
+        for (const call of consoleSpy.mock.calls) {
+          expect(JSON.stringify(call)).not.toContain('rotated-session-abc');
+        }
+        consoleSpy.mockRestore();
+      });
+    });
   });
 });

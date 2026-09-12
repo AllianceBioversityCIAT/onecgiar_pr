@@ -662,7 +662,7 @@ describe('AuthService', () => {
           unknownResult.response.session,
           'unknown@icrisat.org',
         ),
-      ).toEqual({ isDecoy: true, expired: false });
+      ).toEqual({ isDecoy: true, expired: false, exp: expect.any(Number) });
       expect(unknownResult.response.destination).toBe('u***@icrisat.org');
       expect(knownResult.response.session).toBe('cognito-real-session');
       expect(authMicroservice.startEmailOtp).toHaveBeenCalledTimes(1);
@@ -734,7 +734,7 @@ describe('AuthService', () => {
       expect(decoyA).not.toBe(decoyB);
       expect(
         (serviceWithoutSkey as any).verifyDecoySession(decoyA, 'a@icrisat.org'),
-      ).toEqual({ isDecoy: true, expired: false });
+      ).toEqual({ isDecoy: true, expired: false, exp: expect.any(Number) });
 
       if (original === undefined) {
         delete process.env.JWT_SKEY;
@@ -1064,6 +1064,168 @@ describe('AuthService', () => {
 
       expect(result.status).toBe(HttpStatus.SERVICE_UNAVAILABLE);
       expect(result.response.code).toBe('OTP_UPSTREAM_UNAVAILABLE');
+    });
+  });
+
+  // @akili-spec changes/cognito-email-otp-login (OTP-T-13, design.md §18.1 steps 9-10,
+  // requirements.md §13 OTP-R-7/OTP-R-4 modified, OTP-AC-18) — the rotated Cognito `session`
+  // the microservice attaches to a CODE_MISMATCH reply must reach the 401 payload; the decoy
+  // path (which never calls the microservice) must never carry one.
+  describe('verifyOtp — rotated session on OTP_CODE_MISMATCH (OTP-T-13)', () => {
+    it('carries the rotated session when the microservice mismatch error has one', async () => {
+      jest
+        .spyOn(userRepository, 'findOne')
+        .mockResolvedValue(mockOtpUser as any);
+      jest.spyOn(authMicroservice, 'verifyEmailOtp').mockRejectedValue({
+        status: 401,
+        response: {
+          code: 'CODE_MISMATCH',
+          message: 'stable copy',
+          session: 'rotated-cognito-session',
+        },
+      });
+
+      const result = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code: '000000',
+        session: 'cognito-real-session',
+      } as OtpVerifyDto);
+
+      expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
+      expect(result.response.code).toBe('OTP_CODE_MISMATCH');
+      expect(result.response.session).toBe('rotated-cognito-session');
+    });
+
+    it('omits the session key when the microservice mismatch error carries none', async () => {
+      jest
+        .spyOn(userRepository, 'findOne')
+        .mockResolvedValue(mockOtpUser as any);
+      jest.spyOn(authMicroservice, 'verifyEmailOtp').mockRejectedValue({
+        status: 401,
+        response: { code: 'CODE_MISMATCH', message: 'stable copy' },
+      });
+
+      const result = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code: '000000',
+        session: 'cognito-real-session',
+      } as OtpVerifyDto);
+
+      expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
+      expect(result.response.code).toBe('OTP_CODE_MISMATCH');
+      expect(result.response).not.toHaveProperty('session');
+    });
+
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-13 rework 2, design.md §18.1
+    // row 10, requirements.md OTP-R-4, design.md OTP-DD-3 — corrected after the T-13
+    // Reviewer FAIL, 2026-09-11) — the presence/absence of `session` on a mismatch was
+    // itself a user-existence oracle: a real mismatch always carries one (microservice
+    // rotation), so a decoy mismatch WITHOUT one let one `start` + one wrong `verify`
+    // classify any address. A decoy mismatch now mints a fresh decoy session, carrying
+    // the SAME `exp` as the original (never extending the lifetime past the start-time
+    // window) and the same length-jitter class as any other decoy.
+    it('a decoy mismatch mints a fresh decoy session carrying the SAME exp as the original (never an oracle)', async () => {
+      const decoy = (service as any).buildDecoySession('unknown@icrisat.org');
+      const originalCheck = (service as any).verifyDecoySession(
+        decoy,
+        'unknown@icrisat.org',
+      );
+      expect(originalCheck.isDecoy).toBe(true);
+
+      const result = await service.verifyOtp({
+        email: 'unknown@icrisat.org',
+        code: '123456',
+        session: decoy,
+      } as OtpVerifyDto);
+
+      expect(result.response.code).toBe('OTP_CODE_MISMATCH');
+      expect(result.response.session).toEqual(expect.any(String));
+      expect(result.response.session).not.toBe(decoy);
+      expect(result.response.session.length).toBeGreaterThanOrEqual(1400);
+      expect(result.response.session.length).toBeLessThanOrEqual(1700);
+
+      const rotatedCheck = (service as any).verifyDecoySession(
+        result.response.session,
+        'unknown@icrisat.org',
+      );
+      expect(rotatedCheck.isDecoy).toBe(true);
+      expect(rotatedCheck.expired).toBe(false);
+      expect(rotatedCheck.exp).toBe(originalCheck.exp);
+      expect(authMicroservice.verifyEmailOtp).not.toHaveBeenCalled();
+    });
+
+    // Reviewer remediation: byte-shape parity between the real and decoy mismatch
+    // bodies is the actual anti-oracle invariant — not merely "decoy has a session".
+    it('real mismatch and decoy mismatch bodies carry identical key sets and message (no existence oracle)', async () => {
+      jest
+        .spyOn(userRepository, 'findOne')
+        .mockResolvedValue(mockOtpUser as any);
+      jest.spyOn(authMicroservice, 'verifyEmailOtp').mockRejectedValue({
+        status: 401,
+        response: {
+          code: 'CODE_MISMATCH',
+          message: 'stable copy',
+          session: 'rotated-cognito-session',
+        },
+      });
+
+      const realResult = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code: '000000',
+        session: 'cognito-real-session',
+      } as OtpVerifyDto);
+
+      const decoy = (service as any).buildDecoySession('unknown@icrisat.org');
+      const decoyResult = await service.verifyOtp({
+        email: 'unknown@icrisat.org',
+        code: '000000',
+        session: decoy,
+      } as OtpVerifyDto);
+
+      expect(realResult.response.code).toBe('OTP_CODE_MISMATCH');
+      expect(decoyResult.response.code).toBe('OTP_CODE_MISMATCH');
+      expect(Object.keys(realResult.response).sort()).toEqual(
+        Object.keys(decoyResult.response).sort(),
+      );
+      expect(realResult.message).toBe(decoyResult.message);
+      expect(realResult.status).toBe(decoyResult.status);
+    });
+
+    it('never logs the rotated session', async () => {
+      jest
+        .spyOn(userRepository, 'findOne')
+        .mockResolvedValue(mockOtpUser as any);
+      jest.spyOn(authMicroservice, 'verifyEmailOtp').mockRejectedValue({
+        status: 401,
+        response: {
+          code: 'CODE_MISMATCH',
+          message: 'stable copy',
+          session: 'rotated-cognito-session',
+        },
+      });
+      const logSpy = jest.spyOn((service as any)._logger, 'log');
+      const warnSpy = jest.spyOn((service as any)._logger, 'warn');
+      const errorSpy = jest.spyOn((service as any)._logger, 'error');
+
+      await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code: '000000',
+        session: 'cognito-real-session',
+      } as OtpVerifyDto);
+
+      // Reviewer advisory 3 — must land before the loop below: without it the test
+      // would pass vacuously if verifyOtp stopped logging altogether (all three spies
+      // empty), proving nothing about the rotated session specifically.
+      expect(logSpy).toHaveBeenCalled();
+
+      const calls = [
+        ...logSpy.mock.calls,
+        ...warnSpy.mock.calls,
+        ...errorSpy.mock.calls,
+      ].flat();
+      calls.forEach((arg) => {
+        expect(String(arg)).not.toContain('rotated-cognito-session');
+      });
     });
   });
 

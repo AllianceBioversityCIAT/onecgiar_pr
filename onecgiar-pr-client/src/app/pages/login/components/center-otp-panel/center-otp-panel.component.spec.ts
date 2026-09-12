@@ -143,6 +143,37 @@ describe('CenterOtpPanelComponent', () => {
     expect(component.session()).toBe('sess-123');
   });
 
+  // @akili-spec changes/cognito-email-otp-login (OTP-T-13, design.md §18.1 steps 9-10,
+  // requirements.md §13 OTP-R-4 modified, OTP-AC-18) — a mismatch that carries a rotated
+  // Cognito session replaces the panel's session before the retry; one without a session
+  // (e.g. a decoy) leaves the current session untouched (covered by the test above).
+  describe('rotated session on OTP_CODE_MISMATCH (OTP-T-13)', () => {
+    it('replaces the session when the mismatch body carries a rotated one', () => {
+      jest.spyOn(authService, 'POST_otpStart').mockReturnValue(of(START_OK));
+      jest
+        .spyOn(authService, 'POST_otpVerify')
+        .mockReturnValue(
+          httpError({
+            response: { valid: false, code: 'OTP_CODE_MISMATCH', session: 'rotated-session-xyz' },
+            statusCode: 401,
+            message: 'Code incorrect. Try again.'
+          })
+        );
+
+      setEmail('a.person@icrisat.org');
+      component.sendCode();
+      fixture.detectChanges();
+      expect(component.session()).toBe('sess-123');
+
+      component.onCodeInput('000000');
+      component.verify();
+      fixture.detectChanges();
+
+      expect(statusText()).toBe('Code incorrect. Try again.');
+      expect(component.session()).toBe('rotated-session-xyz');
+    });
+  });
+
   it('shows the expired-code copy and re-enables resend immediately', () => {
     jest.spyOn(authService, 'POST_otpStart').mockReturnValue(of(START_OK));
     jest

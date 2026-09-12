@@ -584,4 +584,89 @@ describe('AuthMicroserviceService', () => {
       });
     });
   });
+
+  // @akili-spec changes/cognito-email-otp-login (OTP-T-13, design.md §18.1 steps 9-10,
+  // requirements.md §13 OTP-R-7 modified) — the microservice rotates the Cognito `session`
+  // on CODE_MISMATCH; this service must surface it (never log it) without touching any
+  // other error shape.
+  describe('verifyEmailOtp — rotated session on CODE_MISMATCH (OTP-T-13)', () => {
+    const email = 'a@icrisat.org';
+    const code = '000000';
+    const session = 'cognito-session-token';
+
+    it('includes the rotated session in the thrown payload when the microservice body carries one', async () => {
+      const rotatedSession = 'rotated-cognito-session';
+      mockHttpService.post.mockReturnValueOnce(
+        throwError(() => ({
+          response: {
+            data: {
+              code: 'CODE_MISMATCH',
+              message: 'stable copy',
+              session: rotatedSession,
+            },
+            status: 401,
+          },
+        })),
+      );
+
+      await expect(
+        service.verifyEmailOtp(email, code, session),
+      ).rejects.toMatchObject({
+        response: { code: 'CODE_MISMATCH', session: rotatedSession },
+      });
+    });
+
+    it('omits the session key entirely when the microservice body carries none', async () => {
+      mockHttpService.post.mockReturnValueOnce(
+        throwError(() => ({
+          response: {
+            data: { code: 'CODE_MISMATCH', message: 'stable copy' },
+            status: 401,
+          },
+        })),
+      );
+
+      let caught: any;
+      try {
+        await service.verifyEmailOtp(email, code, session);
+      } catch (error) {
+        caught = error;
+      }
+
+      expect(caught).toBeDefined();
+      expect(caught.response).not.toHaveProperty('session');
+    });
+
+    it('never logs the rotated session', async () => {
+      const rotatedSession = 'rotated-cognito-session';
+      const logSpy = jest.spyOn(Logger.prototype, 'log');
+      const errorSpy = jest.spyOn(Logger.prototype, 'error');
+      mockHttpService.post.mockReturnValueOnce(
+        throwError(() => ({
+          response: {
+            data: {
+              code: 'CODE_MISMATCH',
+              message: 'stable copy',
+              session: rotatedSession,
+            },
+            status: 401,
+          },
+        })),
+      );
+
+      await expect(
+        service.verifyEmailOtp(email, code, session),
+      ).rejects.toBeDefined();
+
+      // Reviewer advisory 3 — this assertion must land before the loop below: without
+      // it the test would pass vacuously if the service stopped logging altogether
+      // (both spies empty), proving nothing about the rotated session specifically.
+      expect(errorSpy).toHaveBeenCalled();
+
+      const allArgs = [...logSpy.mock.calls, ...errorSpy.mock.calls].flat();
+      allArgs.forEach((arg) => {
+        expect(String(arg)).not.toContain(rotatedSession);
+      });
+    });
+  });
 });
