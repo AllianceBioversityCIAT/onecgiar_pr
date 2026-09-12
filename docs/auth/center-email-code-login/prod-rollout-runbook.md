@@ -17,7 +17,7 @@ Step-by-step configuration of the Center (email one-time-code) login on **PROD**
 | 3 | PROD RabbitMQ broker URL (or host/user/password) + the notification queue name + the CLARISA application user/password the notification consumer validates | From DevOps |
 | 4 | PROD `EMAIL_SENDER` (expected `PRMS-No-reply@cgiar.org`) and `APP_URL` | From DevOps |
 | 5 | A controlled mailbox on an allow-listed PROD domain for the smoke test | Owner-provided |
-| 6 | Deploy mechanism for the triggers stack: a DevOps Jenkins job (proposed — see [`devops-lambdas.md`](./devops-lambdas.md)) **or** a manual `sam deploy` from a workstation with **Docker running** | Decide before step 1 |
+| 6 | Deploy mechanism for the triggers stack: a DevOps Jenkins job (proposed — see [`devops-lambdas.md`](./devops-lambdas.md)) **or** a manual `sam deploy --tags Project=PRMS Environment=prod Area=IBD Service=cognito-otp-triggers` from a workstation with **Docker running** | Decide before step 1 |
 | 7 | A named approver for each pool-level write, as on TEST | Required by `design.md` §5.4 / `OTP-DD-7` |
 
 ---
@@ -52,6 +52,9 @@ jq 'del(.UserPoolClient.ClientSecret)' prod-client-before.json > prod-client-bef
 **Checks:** `grep -c ClientSecret prod-*.json` → 0 after redaction; record `LambdaConfig`, `Policies.SignInPolicy.AllowedFirstAuthFactors`, `AuthSessionValidity` and the pool ARN.
 
 ## Step 1 — Deploy the triggers stack
+
+> Deploy in the **account and region of the PROD pool** (Cognito cannot invoke cross-account triggers). Stack `prms-cognito-otp-triggers-prod`, tagged `Project=PRMS Environment=prod Area=IBD Service=cognito-otp-triggers`.
+
 
 Stack name: **`prms-cognito-otp-triggers-prod`**.
 

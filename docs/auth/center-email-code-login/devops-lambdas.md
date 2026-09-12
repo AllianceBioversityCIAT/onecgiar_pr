@@ -6,6 +6,8 @@ They are **inert** until a pool's `LambdaConfig` points at them, and they only e
 
 ---
 
+> **Naming and tagging convention (decided 2026-09-12):** stacks are `prms-cognito-otp-triggers-test` / `prms-cognito-otp-triggers-prod`; every deploy passes `--tags Project=PRMS Environment=<test|prod> Area=IBD Service=cognito-otp-triggers` so the functions, role and log groups inherit the tags (CloudFormation propagates stack tags). **Constraint:** Cognito invokes triggers only in the same AWS account and region as the user pool — the PROD stack must be deployed in the account/region that owns the PROD pool (`OTP-OQ-1`), even if that is not IBD-DEV.
+
 ## 1. The three functions
 
 | Function (logical) | Deployed name | What it does |
