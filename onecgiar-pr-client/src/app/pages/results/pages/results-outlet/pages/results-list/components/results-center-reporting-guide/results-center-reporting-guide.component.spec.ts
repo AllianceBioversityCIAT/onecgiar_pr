@@ -6,12 +6,14 @@ import { ResultsCenterReportingGuideComponent } from './results-center-reporting
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { EntityAowService } from '../../../../../../../result-framework-reporting/pages/entity-aow/services/entity-aow.service';
 import { PlatformReportingGuideService } from '../../services/platform-reporting-guide.service';
+import { ReportingGuideService } from '../../../../../../../result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
 describe('ResultsCenterReportingGuideComponent', () => {
   let fixture: ComponentFixture<ResultsCenterReportingGuideComponent>;
   let component: ResultsCenterReportingGuideComponent;
   let guideServiceMock: Partial<PlatformReportingGuideService>;
   let apiMock: any;
+  let reportingGuideMock: { startWhereToReportTour: jest.Mock };
 
   beforeEach(async () => {
     guideServiceMock = {
@@ -24,6 +26,10 @@ describe('ResultsCenterReportingGuideComponent', () => {
       hasSpAccess: signal(false),
       hasCenterAccess: signal(false),
       selectProgram: jest.fn()
+    };
+
+    reportingGuideMock = {
+      startWhereToReportTour: jest.fn()
     };
 
     apiMock = {
@@ -54,7 +60,8 @@ describe('ResultsCenterReportingGuideComponent', () => {
             canReportResults: jest.fn().mockReturnValue(false),
             getAllDetailsData: jest.fn()
           }
-        }
+        },
+        { provide: ReportingGuideService, useValue: reportingGuideMock }
       ]
     }).compileComponents();
 
@@ -89,5 +96,20 @@ describe('ResultsCenterReportingGuideComponent', () => {
 
     expect(apiMock.resultsSE.GET_ScienceProgramTocProgress).toHaveBeenCalledWith('SP01', 36);
     expect(fixture.nativeElement.querySelector('app-reporting-entry-hub')).toBeTruthy();
+  });
+
+  it('starts the Where to report tour from the modal header (POT-T-5)', () => {
+    component.visible.set(true);
+    fixture.detectChanges();
+
+    const tourBtn = fixture.nativeElement.querySelector('[data-guide="platform-tour-wtr-trigger"]') as HTMLButtonElement;
+    expect(tourBtn).toBeTruthy();
+
+    component.startWhereToReportTour();
+    expect(reportingGuideMock.startWhereToReportTour).toHaveBeenCalledWith({
+      mode: 'guide-only',
+      showPicker: false,
+      showEmerging: true
+    });
   });
 });

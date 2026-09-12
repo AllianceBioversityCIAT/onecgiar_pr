@@ -15,7 +15,7 @@
 @let cols = visibleColumns();
 
 <div class="rc-page">
-  <header class="rc-page-header rc-hero flex-none">
+  <header class="rc-page-header rc-hero flex-none" data-guide="platform-tour-rc-hero">
     <div class="rc-page-header__text">
       <p class="rc-hero-eyebrow">PLATFORM · RESULTS CENTER</p>
       <div class="rc-title-row">
@@ -73,7 +73,17 @@
     <div class="rc-page-header__actions">
       <button
         type="button"
+        class="rc-btn rc-btn--soft rc-btn--toolbar rc-btn--outline"
+        data-guide="platform-tour-rc-trigger"
+        aria-label="Start Results Center tour"
+        (click)="startResultsCenterTour($event)">
+        <span class="material-icons-round rc-btn__icon" aria-hidden="true">explore</span>
+        Tour
+      </button>
+      <button
+        type="button"
         class="rc-btn rc-btn--soft rc-btn--toolbar"
+        data-guide="platform-tour-rc-where-to-report"
         (click)="openReportingGuide($event)">
         <span class="material-icons-round rc-btn__icon" aria-hidden="true">explore</span>
         Where to report
@@ -81,6 +91,7 @@
       <button
         type="button"
         class="rc-btn rc-btn--soft rc-btn--toolbar"
+        data-guide="platform-tour-rc-update"
         [class.rc-btn--disabled]="!activeButtons"
         [disabled]="!activeButtons"
         [attr.title]="!activeButtons ? 'To update a result, assign a role in the active portfolio.' : null"
@@ -91,7 +102,7 @@
     </div>
   </header>
 
-  <div class="rc-toolbar-row flex-none">
+  <div class="rc-toolbar-row flex-none" data-guide="platform-tour-rc-filters">
     <app-results-list-filters
       #filters
       class="rc-toolbar-row__filters"
@@ -141,6 +152,7 @@
       <button
         type="button"
         class="rc-btn rc-btn--toolbar rc-btn--primary"
+        data-guide="platform-tour-rc-export"
         [disabled]="exportDisabled(shown)"
         [attr.title]="exportTitle()"
         (click)="onExportCsv()">
@@ -170,7 +182,7 @@
       }
     </p>
 
-    <div class="table rc-table">
+    <div class="table rc-table" data-guide="platform-tour-rc-table">
     <app-pr-table
       id="resultListTable"
       #table

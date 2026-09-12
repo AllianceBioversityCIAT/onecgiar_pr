@@ -8,7 +8,7 @@
     [styleClass]="dialogStyleClass()"
     (onHide)="closeModal()">
     <div class="flex items-center justify-between border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[24px] py-[16px]">
-      <div class="flex items-center gap-[10px]">
+      <div class="flex min-w-0 items-center gap-[10px]" data-guide="platform-tour-wtr-intro">
         <span class="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[8px] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]">
           <span class="material-icons-round text-[20px]">explore</span>
         </span>
@@ -17,13 +17,24 @@
           <p class="m-0 mt-[1px] text-[12px] text-[var(--pr-text-muted)]">{{ copy.subtitle }}</p>
         </div>
       </div>
-      <button
-        type="button"
-        (click)="closeModal()"
-        aria-label="Close modal"
-        class="flex h-[32px] w-[32px] cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)] transition-colors">
-        <i class="material-icons-round text-[20px]">close</i>
-      </button>
+      <div class="flex shrink-0 items-center gap-[8px]">
+        <button
+          type="button"
+          class="flex h-[32px] cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12px] font-semibold text-[var(--pr-text-secondary)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-color-primary-50)] hover:text-[var(--pr-color-primary-600)]"
+          data-guide="platform-tour-wtr-trigger"
+          aria-label="Start Where to report tour"
+          (click)="startWhereToReportTour()">
+          <span class="material-icons-round text-[16px] text-[var(--pr-color-primary-500)]">explore</span>
+          <span class="hidden sm:inline">Tour</span>
+        </button>
+        <button
+          type="button"
+          (click)="closeModal()"
+          aria-label="Close modal"
+          class="flex h-[32px] w-[32px] cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)] transition-colors">
+          <i class="material-icons-round text-[20px]">close</i>
+        </button>
+      </div>
     </div>
 
     @if (guideService.modalMode() === 'pick-program' && !showHub()) {
@@ -40,6 +51,7 @@
         } @else {
           <div
             class="rc-guide-picker__list custom_scroll"
+            data-guide="platform-tour-wtr-picker"
             role="radiogroup"
             [attr.aria-label]="platformCopy.pickerTitle">
             @for (choice of guideService.spChoices(); track choice.code) {
@@ -81,6 +93,7 @@
         <div class="grid grid-cols-2 gap-[16px] max-[1279px]:grid-cols-1">
           <section
             aria-labelledby="rc-guide-w12"
+            data-guide="platform-tour-wtr-w12"
             class="flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[inset_4px_0_0_var(--pr-color-primary-300)]">
             <h3 id="rc-guide-w12" class="m-0 text-[15px] font-bold text-[var(--pr-text-heading)]">{{ platformCopy.w12NoSpTitle }}</h3>
             <p class="mt-[8px] text-[13px] text-[var(--pr-text-secondary)]">{{ platformCopy.w12NoSpBody }}</p>
@@ -93,6 +106,7 @@
 
             <div
               class="mt-[16px] flex flex-wrap items-center justify-between gap-[12px] rounded-[10px] border border-purple-200/80 bg-gradient-to-r from-purple-50/70 to-indigo-50/50 p-[12px]"
+              data-guide="platform-tour-wtr-emerging"
               aria-labelledby="rc-guide-emerging-title">
               <div class="flex min-w-0 items-center gap-[10px]">
                 <span class="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[8px] bg-purple-100 text-purple-700">
@@ -114,6 +128,7 @@
 
           <section
             aria-labelledby="rc-guide-w3"
+            data-guide="platform-tour-wtr-w3"
             class="flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[inset_4px_0_0_var(--pr-status-approved-fg)]">
             <h3 id="rc-guide-w3" class="m-0 text-[15px] font-bold text-[var(--pr-text-heading)]">{{ copy.w3.laneTitle }}</h3>
             @if (guideService.hasCenterAccess()) {

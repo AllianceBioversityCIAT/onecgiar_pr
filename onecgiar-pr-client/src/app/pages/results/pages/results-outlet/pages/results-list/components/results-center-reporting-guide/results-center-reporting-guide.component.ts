@@ -25,6 +25,7 @@ import {
 import { HUB_COPY } from '../../../../../../../result-framework-reporting/pages/dashboard-lab/components/reporting-entry-hub/hub-copy';
 import { PlatformReportingGuideService } from '../../services/platform-reporting-guide.service';
 import { PLATFORM_GUIDE_COPY } from './platform-guide-copy';
+import { ReportingGuideService } from '../../../../../../../result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
 @Component({
   selector: 'app-results-center-reporting-guide',
@@ -41,6 +42,7 @@ export class ResultsCenterReportingGuideComponent {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   readonly guideService = inject(PlatformReportingGuideService);
+  private readonly reportingGuideSE = inject(ReportingGuideService);
 
   readonly visible = model<boolean>(false);
   readonly copy = HUB_COPY;
@@ -114,6 +116,18 @@ export class ResultsCenterReportingGuideComponent {
 
   closeModal(): void {
     this.visible.set(false);
+  }
+
+  /** @akili-spec changes/platform-onboarding-tour (POT-T-5) */
+  startWhereToReportTour(): void {
+    if (this.guideService.catalogLoading()) return;
+
+    const mode = this.guideService.modalMode();
+    this.reportingGuideSE.startWhereToReportTour({
+      mode,
+      showPicker: this.isPickerStep(),
+      showEmerging: mode === 'guide-only' || this.canReportEmerging()
+    });
   }
 
   onPickerContinue(): void {

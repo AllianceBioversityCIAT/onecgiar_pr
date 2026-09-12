@@ -18,6 +18,7 @@ import { ResultsListFilterService } from './services/results-list-filter.service
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
 import { Component, NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { ReportingGuideService } from '../../../../../result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
 jest.useFakeTimers();
 
@@ -49,6 +50,7 @@ describe('ResultsListComponent', () => {
   let mockPhasesService: any;
   let mockResultsNotificationsService: any;
   let mockTable: any;
+  let mockReportingGuideService: { startResultsCenterTour: jest.Mock };
 
   beforeEach(async () => {
     mockApiService = {
@@ -132,6 +134,10 @@ describe('ResultsListComponent', () => {
       reset: jest.fn()
     };
 
+    mockReportingGuideService = {
+      startResultsCenterTour: jest.fn()
+    };
+
     await TestBed.configureTestingModule({
       declarations: [
         ResultsListComponent,
@@ -152,7 +158,8 @@ describe('ResultsListComponent', () => {
         { provide: ResultsListService, useValue: mockResultsListService },
         { provide: ResultsListFilterService, useValue: mockResultsListFilterService },
         { provide: PhasesService, useValue: mockPhasesService },
-        { provide: ResultsNotificationsService, useValue: mockResultsNotificationsService }
+        { provide: ResultsNotificationsService, useValue: mockResultsNotificationsService },
+        { provide: ReportingGuideService, useValue: mockReportingGuideService }
       ]
     }).compileComponents();
 
@@ -1083,6 +1090,20 @@ describe('ResultsListComponent', () => {
       expect(component.reportingGuideOpen()).toBe(false);
       component.openReportingGuide(new MouseEvent('click'));
       expect(component.reportingGuideOpen()).toBe(true);
+    });
+  });
+
+  describe('Results Center tour (POT-T-4)', () => {
+    it('exposes a Tour CTA and calls startResultsCenterTour with update permission', () => {
+      mockApiService.dataControlSE.myInitiativesListReportingByPortfolio = [{ id: 1 }];
+      fixture.detectChanges();
+
+      const tourBtn = fixture.nativeElement.querySelector('[data-guide="platform-tour-rc-trigger"]') as HTMLButtonElement;
+      expect(tourBtn).toBeTruthy();
+      expect(tourBtn.textContent).toContain('Tour');
+
+      component.startResultsCenterTour(new MouseEvent('click'));
+      expect(mockReportingGuideService.startResultsCenterTour).toHaveBeenCalledWith({ canUpdateResult: true });
     });
   });
 

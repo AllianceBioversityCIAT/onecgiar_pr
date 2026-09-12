@@ -16,6 +16,7 @@ import {
   REVIEW_RESULT_QUERY_PARAM
 } from '../../../../../result-framework-reporting/pages/bilateral-review/services/bilateral-results.service';
 import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
+import { ReportingGuideService } from '../../../../../result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
 interface ResultRoute {
   commands: unknown[];
@@ -101,6 +102,7 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   router = inject(Router);
   activatedRoute = inject(ActivatedRoute, { optional: true });
   bilateralResultsService = inject(BilateralResultsService);
+  private readonly reportingGuideSE = inject(ReportingGuideService);
 
   /** `#workArea` — sole scroller ≥900px (`changes/results-center-sp-layout`, RCS-T-1). */
   readonly workArea = viewChild<ElementRef<HTMLElement>>('workArea');
@@ -531,6 +533,16 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     this.infoOpen.set(false);
     this.columnsOpen.set(false);
     this.reportingGuideOpen.set(true);
+  }
+
+  /** @akili-spec changes/platform-onboarding-tour (POT-T-4) */
+  startResultsCenterTour(event: Event): void {
+    event.stopPropagation();
+    this.infoOpen.set(false);
+    this.columnsOpen.set(false);
+    const activeButtons =
+      this.api.dataControlSE?.myInitiativesListReportingByPortfolio?.length > 0 || this.api.rolesSE?.isAdmin;
+    this.reportingGuideSE.startResultsCenterTour({ canUpdateResult: !!activeButtons });
   }
 
   toggleInfo(event: Event): void {
