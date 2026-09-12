@@ -302,3 +302,14 @@ A PRMS user with `active = false` SHALL receive the neutral decoy at `start` and
 **Acceptance**
 - `OTP-AC-20` — GIVEN a Cognito-confirmed center user with no PRMS record, WHEN they complete the code flow, THEN a PRMS user exists with the guest role and the response equals the provider flow's first-login response; a second login reuses the record (`last_login` updated).
 - `OTP-AC-21` — an inactive PRMS user gets the same bodies as an unknown user at both steps and no email.
+
+## 15. Rev 1.4 delta — Option D (2026-09-12)
+
+**MODIFIED:** `OTP-R-32` (email from PRMS) — now sent by the PRMS server itself; `OTP-R-33`/`R-34`/`R-35` — the trigger clauses no longer apply; the code policy (6 digits CSPRNG, one code per session, 3 attempts, 5-minute validity, single use, constant-time compare) is enforced by PRMS. `OTP-R-13` — Cognito provisioning no longer required for center users (T-17 skips it). `OTP-R-8` (PROD parity) — PROD needs **no Cognito change**.
+
+**ADDED**
+### Requirement `OTP-R-37`: PRMS owns the code lifecycle
+PRMS SHALL generate, deliver, verify and consume the sign-in code without any Cognito call; the stored challenge SHALL hold only HMACs of the email and the code, never the plaintext; a challenge SHALL be usable once, for 5 minutes, with at most 3 attempts.
+### Requirement `OTP-R-38`: Session without Cognito tokens
+A successful code login SHALL produce the standard PRMS session (`token`, `user`) with `auth_tokens` absent or null; no consumer MAY depend on Cognito tokens for center users.
+**Acceptance:** `OTP-AC-22` — TEST HITL with the spike mailbox: code from "PRMS Reporting Tool", wrong ×2 → mismatch with rotated session, right → session; second use of the same code → not authorized; 3 wrong → attempts exceeded. `OTP-AC-23` — the TEST pool export after T-18 equals the 2026-09-11 morning export (`LambdaConfig {}`, `AuthSessionValidity 3`, factors `[PASSWORD]`). `OTP-AC-24` — an admin-created `@icrisat.org` user gets no Cognito record and no temporary-password email.

@@ -305,3 +305,30 @@ The user clarified the product rule: **a center user does not need a PRMS record
 Consequences: `OTP-DD-3` decoys remain for inactive users and for expired/forged sessions; unknown users are now neutralised by Cognito + the triggers instead of PRMS. Telemetry: `start` outcome `sent` for unknown-in-PRMS users (no `denied_user` at start any more; keep `denied_user` for inactive); `verify` gains outcome `provisioned` when a PRMS user is created. Runbook "code not received" row 2 changes: a missing PRMS record no longer blocks — a missing **Cognito** user does (register the user, T-10). Who creates Cognito users for center staff is unchanged (admin registration through PRMS → `/auth/register` → `CONFIRMED`), but a user created directly in Cognito can now sign in too.
 
 **Accepted residual (T-15 Reviewer):** at `verify`, an *inactive* PRMS user short-circuits to `OTP_NOT_AUTHORIZED` while an email unknown to PRMS reaches Cognito and, on a wrong code against the fake challenge, gets `OTP_CODE_MISMATCH`/`ATTEMPTS_EXCEEDED` — "inactive" vs "no account" is distinguishable; no active user is exposed; the inactive set is tiny and admin-controlled. Recorded, not fixed.
+
+## 19. Rev 4 — Option D: the code is generated, emailed and verified by PRMS (2026-09-12, user decision)
+
+**Why:** the PROD Cognito pool (`us-east-1_obEHCpsMB`) lives in an AWS account where the team has console access to Cognito only — no Lambda/CloudFormation/IAM — so Option B's triggers cannot be deployed for PROD. Verified fact that makes D possible: the PRMS API validates **only PRMS's own JWT** (`JwtMiddleware`, `JWT_SKEY`); the Cognito `auth_tokens` returned at login are consumed by nobody (client grep: none; server: only packaged into the response). Cognito is therefore not needed for a center session at all. Option D honours "do not move anything in Cognito" literally: **no pool, client or trigger change in PROD**, and TEST is returned to its original state.
+
+### 19.1 Flow (replaces §18.1 for PRMS; the microservice OTP routes and the triggers become unused)
+
+| Step | PRMS server |
+|---|---|
+| `start` | throttle → allow-list → user lookup: **inactive** → decoy (unchanged); else create an `otp_challenges` row `{ id, nonce, email_hash, code_hmac, expires_at = now + 5 min, attempts = 0, consumed_at = null }`, generate the 6-digit code with `crypto.randomInt`, **send the email through PRMS's existing pipeline** (`EmailNotificationManagementService.sendEmail`, from `EMAIL_SENDER` as "PRMS Reporting Tool", the T-11 template ported into PRMS code — subject "Your PRMS Reporting Tool sign-in code", 5-minute copy, support line), respond `200 { sent, session, destination }` — `session` built by the **same signed encoder as the decoy** (`buildDecoySession(email, exp, nonce)`): real and decoy sessions are byte-indistinguishable; the server tells them apart by the presence of the row for `nonce`. Unknown-in-PRMS users: same as active users (row + email) — first login provisions the PRMS user (T-15 rule) |
+| `verify` | parse + HMAC (`timingSafeEqual`) → not a decoy-shaped session → `OTP_NOT_AUTHORIZED`; expired → `OTP_CODE_EXPIRED` (real) / `OTP_NOT_AUTHORIZED` (decoy, unchanged); lookup row by `nonce`: **no row → decoy path** (mismatch with rotated decoy, unchanged); row `consumed_at` set → `OTP_NOT_AUTHORIZED`; `attempts >= 3` → `OTP_ATTEMPTS_EXCEEDED`; code HMAC mismatch → `attempts++`, `401 OTP_CODE_MISMATCH` + rotated session (same nonce, fresh tails/filler); match → `consumed_at = now`, T-15 auto-provision, `createSuccessfulLoginResponse(user, null)` (no Cognito tokens; `auth_tokens` omitted/null — unused downstream) |
+| Storage | new table `otp_challenges` (migration): `id` PK, `nonce` (22 chars, unique), `email_hash` (HMAC of the normalised email — never the email), `code_hmac`, `expires_at`, `attempts` tinyint, `consumed_at`, `created_at`; rows purged on read when expired > 1 h (or a daily cleanup) |
+| Rate limits | unchanged (`OtpThrottlerGuard` 5/10 per 15 min) + per-row attempts 3 |
+
+Contracts to the client, the UI, the CT and the copy are **unchanged**. Telemetry: `auth.otp.start` outcomes gain `email_failed` (queue publish failed → still neutral 200; runbook row); `auth.otp.verify` adds `consumed`. Microservice: routes/`PASSWORDLESS_DOMAINS` left in place but unused by PRMS (PR #43 promotion **not required**; the T-10 registration behaviour becomes irrelevant — see T-17).
+
+### 19.2 Registration of center users (T-17)
+
+Admin-created users whose domain is in `OTP_ALLOWED_EMAIL_DOMAINS` are **not** registered in Cognito by PRMS (`registerInCognitoIfNeeded` skipped) and receive no temporary-password email; they sign in with the code from the first day. Existing behaviour for every other domain unchanged.
+
+### 19.3 TEST parity and cleanup (T-18)
+
+After D is live in TEST: detach `LambdaConfig` (from a fresh export, writable keys), delete stack `prms-cognito-otp-triggers-test`, restore `general-client` `AuthSessionValidity` 3 → **the TEST pool returns to its 2026-09-11 morning state**. Keep the `cognito-triggers/` package in the repo as reference (README banner: not in use).
+
+### 19.4 What stays true
+
+Enumeration resistance (decoys for inactive; unknown users get a real row + email only if… — **note:** with D an unknown-in-PRMS email gets a real code email; that is desired (first-login provisioning) and is not an oracle because the response is identical for every allow-listed address). Log hygiene (`OTP-R-11`): the email is stored only as an HMAC, the code only as an HMAC.

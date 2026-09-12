@@ -9,7 +9,7 @@
 | Approval Mode | pre-approved (Phase 3 gate: `auto-approved (pre-approved mode)`). **Cognito changes, microservice deploys and PROD steps are HITL inside their tasks** |
 | Status | not-started |
 | Owner / driver | Juan Carlos Cadavid · AKILI Leader |
-| Budget (from `design.md` §14) | **15 tasks after rev 3/3.1** (`OTP-T-10` triggered; `OTP-T-11..14` added for Option B) · ~1,800 LOC incl. tests · ≤ 1 Reviewer round per task; the > 12 tasks / > 1,500 LOC tripwire **fired and was resolved by the user's Option B decision (2026-09-11)** |
+| Budget (from `design.md` §14) | **18 tasks after rev 4 (Option D)** (`OTP-T-10` triggered; `OTP-T-11..14` added for Option B) · ~1,800 LOC incl. tests · ≤ 1 Reviewer round per task; the > 12 tasks / > 1,500 LOC tripwire **fired and was resolved by the user's Option B decision (2026-09-11)** |
 | Repositories | PRMS (`onecgiar-pr-server`, `onecgiar-pr-client`, this checkout) · AUTH microservice (`/Users/jcadavid/Development/one-cgiar-microservices/auth-microservice`, branch `dev-auth`, TEST `authtest-ibd.prms.cgiar.org`) |
 
 ### Execution constraints (inherited — standing mandate 2026-09-02)
@@ -201,6 +201,27 @@
 - **Estimate:** S · ~80 LOC
 - **Verification:** `npx jest --silent --reporters=summary --forceExit src/auth`: unknown-in-PRMS start → microservice called, `sent`; inactive start → decoy, no microservice call, body deep-equals the T-5 decoy body; verify with tokens + no PRMS user → `createOrUpdateUserFromAuthProvider` called with the decoded claims, `provisioned`, response = `createSuccessfulLoginResponse` result; inactive verify → `OTP_NOT_AUTHORIZED` with the same body as unknown; existing-user verify unchanged. `tsc`; eslint. **Disqualifier:** verifying the ID token signature against Cognito (out of scope) or trusting claims other than email/names.
 - **Definition of done:** specs green; runbook updated; committed; redeployed to TEST (merge to `performance-refactor`) for the `OTP-T-9` HITL.
+
+### `OTP-T-16` — PRMS server: PRMS-owned code (challenge table, email, verify) — rev 4
+
+- **Type:** `server`
+- **Description:** migration `otp_challenges`; `OtpChallengeService` (create/find/attempt/consume, HMAC of code and email with `JWT_SKEY`-derived keys, purge); `startOtp` sends the code through `EmailNotificationManagementService.sendEmail` with the ported T-11 template (code-bundled, branding block of `user.service.ts:743-750`), session = `buildDecoySession(email, exp, nonce)`; `verifyOtp` per `design.md` §19.1; `createSuccessfulLoginResponse(user, null)`; microservice OTP client calls removed from the path (methods kept, marked unused). Contracts unchanged.
+- **Implements:** `OTP-R-37`, `OTP-R-38`, `OTP-R-32/34` (modified), `OTP-AC-22` (server half).
+- **Files:** `onecgiar-pr-server/src/migrations/<ts>-OTP-challenges.ts`, `src/auth/otp/otp-challenge.entity.ts`, `otp-challenge.service.ts` (+spec), `src/auth/otp/otp-email.template.ts` (+spec), `src/auth/auth.service.ts` (+spec), `auth.module.ts`.
+- **Depends on:** — · **Blocks:** `OTP-T-18`
+- **Estimate:** M · ~450 LOC
+- **Verification:** `npx jest --silent --reporters=summary --forceExit src/auth` (start: row created, email DTO deep-equals the expected shape with the code in HTML/text only, response identical in shape to the decoy; verify: mismatch → attempts+1 + rotated session (same nonce), 3 misses → attempts exceeded, expired, consumed → not authorized, match → consumed + provisioning + session with no Cognito tokens; decoy path unchanged; nothing logs the code/email); `npm run migration:check`; `tsc`; eslint. **Disqualifiers:** plaintext code or email stored; a session that reveals real vs decoy.
+- **Definition of done:** specs green; migration checked; committed.
+
+### `OTP-T-17` — PRMS server: skip Cognito registration for allow-listed domains
+
+- **Type:** `server` · **Estimate:** S · ~40 LOC
+- **Description:** in `UserService` registration (`registerInCognitoIfNeeded` and the temporary-password email), when the email domain is in `OTP_ALLOWED_EMAIL_DOMAINS` skip both; log outcome `otp_domain_skip_cognito`; tests. **Implements:** `OTP-AC-24`, `OTP-R-13` (modified). **Depends on:** — · **Blocks:** `OTP-T-18`.
+
+### `OTP-T-18` — TEST switch + Cognito cleanup (HITL) + docs rev
+
+- **Type:** `rollout` + `docs` · **Estimate:** S · HITL
+- **Description:** deploy PRMS to TEST (`performance-refactor`), HITL `OTP-AC-22` with the spike mailbox, then restore the TEST pool (`LambdaConfig {}`, `AuthSessionValidity 3`) from fresh exports, delete stack `prms-cognito-otp-triggers-test`, verify `OTP-AC-23`; close PR #43 as not needed (or keep for the log redaction only — user decision); update `docs/auth/center-email-code-login/*` (README, runbook → "PROD = deploy PRMS + set the parameter", DevOps doc → triggers not in use, adoption guide → other apps would call PRMS-style logic or the microservice variant), regenerate diagrams. **Implements:** `OTP-AC-23`, `OTP-R-8`. **Depends on:** `OTP-T-16`, `OTP-T-17`.
 
 ## 4. Dependency graph
 
