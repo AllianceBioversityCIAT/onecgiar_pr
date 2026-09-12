@@ -288,3 +288,17 @@ If the email cannot be queued, the trigger SHALL still return a challenge (no en
 - `OTP-AC-19` — sibling smoke (`PRMS-Reporting`/`MARLO` password login on TEST) unchanged before/after the trigger wiring.
 
 **Open questions:** `OTP-OQ-8` → **resolved (Option B)**. New `OTP-OQ-9`: broker (`MS_RMQ_HOST`) reachable from a non-VPC Lambda? (answered in `OTP-T-14`, fallback HTTP `POST /send`). `OTP-OQ-1` (PROD account) now also gates the PROD Lambdas.
+
+## 14. Rev 1.3 delta — first-login auto-provisioning (2026-09-11)
+
+**MODIFIED**
+- `OTP-R-5` — "the same session as the password path" now also means **the same first-login provisioning as the provider path**: a successful code verification for an email with no PRMS record SHALL create the PRMS user with the *guest* role and return the normal session/`needsRoles` outcome that `createSuccessfulLoginResponse` produces.
+- `OTP-R-3` — enumeration resistance for unknown users is provided by Cognito (`PreventUserExistenceErrors`) plus the `userNotFound` fake challenge of the triggers; PRMS decoys remain for **inactive** PRMS users, expired and forged sessions.
+
+**ADDED**
+### Requirement `OTP-R-36`: Inactive users never reach Cognito
+A PRMS user with `active = false` SHALL receive the neutral decoy at `start` and `OTP_NOT_AUTHORIZED` at `verify`, byte-identical to the unknown-user responses of the same step.
+
+**Acceptance**
+- `OTP-AC-20` — GIVEN a Cognito-confirmed center user with no PRMS record, WHEN they complete the code flow, THEN a PRMS user exists with the guest role and the response equals the provider flow's first-login response; a second login reuses the record (`last_login` updated).
+- `OTP-AC-21` — an inactive PRMS user gets the same bodies as an unknown user at both steps and no email.

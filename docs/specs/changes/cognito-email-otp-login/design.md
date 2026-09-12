@@ -290,3 +290,16 @@ Code lifetime = Cognito `AuthSessionValidity` of `general-client` (3 min today; 
 ### 18.4 Rejected in this pivot
 
 Option C (pool sender → SES + `CustomMessage` Lambda): pool-wide sender change for 10 apps, SES sandbox/production request, `cgiar.org` DNS outside IBD-DEV. `CustomEmailSender` trigger: replaces sending for **all** clients — violates "do not move what works".
+
+### 18.5 Rev 3.1 — first-login auto-provisioning (2026-09-11 22:05, user decision)
+
+The user clarified the product rule: **a center user does not need a PRMS record before the first login** — like the CGIAR provider flow (`validateAuthCode` → `UserService.createOrUpdateUserFromAuthProvider(userInfo)` → guest role via `createGuestRoleForUser`), the first successful sign-in creates the PRMS user with the *guest* role. `OTP-T-5`'s "PRMS user must exist" gate (decoy at `start`, `not_authorized` at `verify`) contradicted that and is replaced:
+
+| Step | Before (T-5) | After (T-15) |
+|---|---|---|
+| `start`, allow-listed domain, **no PRMS user** | decoy session, no email | call the microservice — Cognito decides. Existing Cognito user → real code email; unknown Cognito user → Cognito invokes the triggers with `userNotFound` → fake `CUSTOM_CHALLENGE`, no email (neutral by construction, `OTP-R-3` holds) |
+| `start`, PRMS user **inactive** | decoy | **decoy kept** (a deactivated account must not reach Cognito) |
+| `verify`, tokens returned, no PRMS user | `OTP_NOT_AUTHORIZED` | `createOrUpdateUserFromAuthProvider({ email, given_name?, family_name?, name? })` from the **ID-token claims** (decoded, not verified — the tokens come from our own microservice call) → guest role → `createSuccessfulLoginResponse` exactly as the provider flow (same relation reload if it does one) |
+| `verify`, PRMS user inactive | `OTP_NOT_AUTHORIZED` | unchanged (`createOrUpdateUserFromAuthProvider` throws "User is inactive" → mapped to `OTP_NOT_AUTHORIZED`, neutral) |
+
+Consequences: `OTP-DD-3` decoys remain for inactive users and for expired/forged sessions; unknown users are now neutralised by Cognito + the triggers instead of PRMS. Telemetry: `start` outcome `sent` for unknown-in-PRMS users (no `denied_user` at start any more; keep `denied_user` for inactive); `verify` gains outcome `provisioned` when a PRMS user is created. Runbook "code not received" row 2 changes: a missing PRMS record no longer blocks — a missing **Cognito** user does (register the user, T-10). Who creates Cognito users for center staff is unchanged (admin registration through PRMS → `/auth/register` → `CONFIRMED`), but a user created directly in Cognito can now sign in too.

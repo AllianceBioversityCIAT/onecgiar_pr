@@ -9,7 +9,7 @@
 | Approval Mode | pre-approved (Phase 3 gate: `auto-approved (pre-approved mode)`). **Cognito changes, microservice deploys and PROD steps are HITL inside their tasks** |
 | Status | not-started |
 | Owner / driver | Juan Carlos Cadavid · AKILI Leader |
-| Budget (from `design.md` §14) | **14 tasks after the rev 3 pivot** (`OTP-T-10` triggered; `OTP-T-11..14` added for Option B) · ~1,800 LOC incl. tests · ≤ 1 Reviewer round per task; the > 12 tasks / > 1,500 LOC tripwire **fired and was resolved by the user's Option B decision (2026-09-11)** |
+| Budget (from `design.md` §14) | **15 tasks after rev 3/3.1** (`OTP-T-10` triggered; `OTP-T-11..14` added for Option B) · ~1,800 LOC incl. tests · ≤ 1 Reviewer round per task; the > 12 tasks / > 1,500 LOC tripwire **fired and was resolved by the user's Option B decision (2026-09-11)** |
 | Repositories | PRMS (`onecgiar-pr-server`, `onecgiar-pr-client`, this checkout) · AUTH microservice (`/Users/jcadavid/Development/one-cgiar-microservices/auth-microservice`, branch `dev-auth`, TEST `authtest-ibd.prms.cgiar.org`) |
 
 ### Execution constraints (inherited — standing mandate 2026-09-02)
@@ -190,6 +190,17 @@
 - **Estimate:** S · HITL
 - **Verification:** exports diff shows only `LambdaConfig` (+ later only `AllowedFirstAuthFactors` back to `[PASSWORD]`); smoke evidence with redacted log lines in `execution.md`. **Input that fails it:** no email within 60 s → `PRODUCT_BUG`, do not tick. **Disqualifier:** a pool update without the before-export.
 - **Definition of done:** Option B live in TEST; `EMAIL_OTP` factor reverted; evidence recorded.
+
+### `OTP-T-15` — PRMS server: first-login auto-provisioning on the OTP path (rev 3.1)
+
+- **Type:** `server`
+- **Description:** `startOtp`: drop the "no PRMS user → decoy" branch; keep the decoy for `active = false`; unknown-in-PRMS emails go to the microservice. `verifyOtp`: after `msResult.tokens`, decode the ID token claims (no signature check needed — the microservice call is ours) and call `UserService.createOrUpdateUserFromAuthProvider({ email, given_name, family_name, name })`; inactive → `OTP_NOT_AUTHORIZED`; then `createSuccessfulLoginResponse(user, tokens)` exactly as `validateAuthCode` does (same `last_login` update and relation handling). Outcomes: `start` `sent` for unknown-in-PRMS, `denied_user` only for inactive; `verify` `provisioned` on creation. Runbook row 2 + `OTP-R-*` references updated.
+- **Implements:** `OTP-R-5` (modified), `OTP-R-3` (modified), `OTP-R-36`, `OTP-AC-20`, `OTP-AC-21`; `design.md` §18.5.
+- **Files (expected):** `onecgiar-pr-server/src/auth/auth.service.ts` (+spec), `runbook/cognito-email-otp.md`.
+- **Depends on:** `OTP-T-14` · **Blocks:** `OTP-T-9`
+- **Estimate:** S · ~80 LOC
+- **Verification:** `npx jest --silent --reporters=summary --forceExit src/auth`: unknown-in-PRMS start → microservice called, `sent`; inactive start → decoy, no microservice call, body deep-equals the T-5 decoy body; verify with tokens + no PRMS user → `createOrUpdateUserFromAuthProvider` called with the decoded claims, `provisioned`, response = `createSuccessfulLoginResponse` result; inactive verify → `OTP_NOT_AUTHORIZED` with the same body as unknown; existing-user verify unchanged. `tsc`; eslint. **Disqualifier:** verifying the ID token signature against Cognito (out of scope) or trusting claims other than email/names.
+- **Definition of done:** specs green; runbook updated; committed; redeployed to TEST (merge to `performance-refactor`) for the `OTP-T-9` HITL.
 
 ## 4. Dependency graph
 
