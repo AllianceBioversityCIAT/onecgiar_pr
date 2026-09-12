@@ -347,3 +347,13 @@ Per the Shared-File Write Discipline (`.agents/implementer.md`, root `CLAUDE.md`
 ```
 
 Sources: `design.md` §2.1, §4.1, §5.1, §13; `requirements.md` `OTP-R-8`, `OTP-R-9`; `onecgiar-pr-server/src/auth/auth.module.ts`, `auth.controller.ts`, `guards/otp-throttler.guard.ts`; `onecgiar-pr-server/src/migrations/1788730000000-OTP-allowed-email-domains.ts`; the current `docs/trd/trd.md` §7 (line ~437, `AWS Cognito` row) and §8 (line ~459, `Authentication` bullet).
+
+### `OTP-T-9` — docs half done (2026-09-11 19:50); HITL halves wait for Option B
+
+- Implementer (`sonnet`, `cognitive-doc-design`): runbook "code not received" triage (6 rows; corrected two brief assumptions against code — outcome name is `denied_user`; a `FORCE_CHANGE_PASSWORD` user surfaces as `503 OTP_UPSTREAM_UNAVAILABLE` at `start`, since `startOtp` has one generic catch), `onecgiar-pr-server/src/CLAUDE.md` §3.1 + `AGENTS.md` auth bullets, pending TRD rows (§7 Integration Points, §8 Authentication) appended here. `docs/trd/trd.md` untouched. Commit `b3028c434`. Reviewer round deferred to the task's final round (docs describe the deployed EMAIL_OTP mechanism and will be re-synced when B ships). `OTP-T-9` → `[~]`.
+
+### Rev 3 execution — wave 1 (2026-09-11 19:52)
+
+- `OTP-T-11` (Implementer `opus`, effort `high`): new package `one-cgiar-microservices/cognito-triggers/`.
+- `OTP-T-12` (Implementer `sonnet`, effort `high`): `CognitoService` → `CUSTOM_AUTH`; mismatch body gains `session`.
+- `OTP-T-13` (Implementer `sonnet`, effort `medium`): PRMS server/client carry the rotated session (contract fixed by `design.md` §18.1 step 10; started against that contract in parallel with T-12).
