@@ -41,6 +41,16 @@ import { GlobalParameterRepository } from '../../../api/global-parameter/reposit
 import { ClarisaCentersRepository } from '../../../clarisa/clarisa-centers/clarisa-centers.repository';
 import { ClarisaCenter } from '../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { RoleLevelId } from '../role/role-level-id.enum';
+import { GlobalParameterCacheService } from '../../../shared/services/cache/global-parameter-cache.service';
+import { parseOtpAllowedDomains } from '../../utils/otp-shared.util';
+
+// @akili-spec changes/cognito-email-otp-login (OTP-T-17, design.md §19.2,
+// requirements.md OTP-AC-24) — same global-parameter key `AuthService`'s
+// `getOtpAllowedDomains()` reads. Kept as a local constant instead of
+// importing it from `auth.service.ts` to avoid a module-file circular import
+// (`auth.service.ts` already imports `UserService`); `AuthService` is not
+// imported here either, for the same reason.
+const OTP_ALLOWED_EMAIL_DOMAINS_PARAM = 'OTP_ALLOWED_EMAIL_DOMAINS';
 
 @Injectable()
 export class UserService {
@@ -63,6 +73,7 @@ export class UserService {
     private readonly _versionRepository: VersionRepository,
     private readonly _globalParametersRepository: GlobalParameterRepository,
     private readonly clarisaCentersRepository: ClarisaCentersRepository,
+    private readonly _globalParameterCacheService: GlobalParameterCacheService,
 
     @InjectDataSource()
     private readonly dataSource: DataSource,
@@ -108,12 +119,26 @@ export class UserService {
         }
       } else {
         await this.handleNonCgiarUser(createUserDto);
-        const cognitoSendsEmail = await this.registerInCognitoIfNeeded(
-          createUserDto,
-          options?.skipAllEmails,
-        );
-        if (!options?.skipAllEmails && cognitoSendsEmail === false) {
+
+        // @akili-spec changes/cognito-email-otp-login (OTP-T-17, design.md
+        // §19.2, requirements.md OTP-AC-24) — a center user whose email
+        // domain is allow-listed for the PRMS-handled OTP sign-in must not
+        // be registered in Cognito nor receive the temporary-password /
+        // welcome email; the PRMS user + roles are still created below.
+        const domain = createUserDto.email?.split('@').pop()?.toLowerCase();
+        const otpAllowedDomains = await this.getOtpAllowedDomainsSafe();
+
+        if (domain && otpAllowedDomains.includes(domain)) {
+          this._logger.log('otp_domain_skip_cognito');
           shouldSendConfirmationEmail = false;
+        } else {
+          const cognitoSendsEmail = await this.registerInCognitoIfNeeded(
+            createUserDto,
+            options?.skipAllEmails,
+          );
+          if (!options?.skipAllEmails && cognitoSendsEmail === false) {
+            shouldSendConfirmationEmail = false;
+          }
         }
       }
 
@@ -198,6 +223,25 @@ export class UserService {
       );
     }
     createUserDto.role_platform = 2;
+  }
+
+  /**
+   * Center path (email OTP) allow-list, read for the admin-registration guard
+   * (OTP-T-17). Reads `OTP_ALLOWED_EMAIL_DOMAINS` straight through
+   * `GlobalParameterCacheService` (no bespoke cache, same parsing rule as
+   * `AuthService.getOtpAllowedDomains()` via `parseOtpAllowedDomains`).
+   * An empty or unreadable parameter is treated as "no allow-list" — never
+   * throws, so a cache/DB hiccup cannot block admin user creation.
+   */
+  private async getOtpAllowedDomainsSafe(): Promise<string[]> {
+    try {
+      const rawValue = await this._globalParameterCacheService.getParam(
+        OTP_ALLOWED_EMAIL_DOMAINS_PARAM,
+      );
+      return parseOtpAllowedDomains(rawValue);
+    } catch {
+      return [];
+    }
   }
 
   private async registerInCognitoIfNeeded(
