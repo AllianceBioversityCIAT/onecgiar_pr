@@ -29,9 +29,9 @@ Two hardening items recorded in `docs/specs/changes/cognito-email-otp-login/desi
 | # | Item | Where | Status |
 |---|---|---|---|
 | 1 | Decoy session: fill the unused trailing bits of each base64url segment with randomness and add a domain-separation byte between the exp-mask HMAC and the decoy-auth HMAC — removes the ~1/256 decoy-vs-real charset classifier (§13 (l)) | PRMS server `src/auth/auth.service.ts` (`encodeOtpSegment`, tagged HMACs) | **done** — PRMS commit `998737f14` (2026-09-12), deployed to TEST via `performance-refactor` |
-| 2 | Unknown-user destination mask (§13 (m)): the AUTH microservice derives `codeDeliveryDestination` **locally from the request username** and ignores Cognito's `ChallengeParameters.destination` (for unknown users Cognito substitutes the username, so the trigger cannot produce a matching mask — verified live on TEST 2026-09-12) | `auth-microservice/src/api/auth/services/cognito/cognito.service.ts` + spec; deploy `dev-auth`/`main-auth` | **in progress** |
+| 2 | Unknown-user destination mask (§13 (m)): the AUTH microservice derives `codeDeliveryDestination` **locally from the request username** and ignores Cognito's `ChallengeParameters.destination` (for unknown users Cognito substitutes the username, so the trigger cannot produce a matching mask — verified live on TEST 2026-09-12) | `auth-microservice/src/api/auth/services/cognito/cognito.service.ts` (`maskEmail`) | **done** — microservice `5a758fd` + triggers `76868c0` (PR #42, merged 2026-09-12); verified live on TEST: known and unknown users return identical keys, mask and session length |
 
-Do not proceed to Step 0 until both are merged and deployed to TEST; record their commits in `execution.md`.
+Both fixes are merged, deployed to TEST and verified (2026-09-12). **No pre-PROD code blocker remains** — only the prerequisites above (PROD account/pool, client, broker credentials).
 
 ## Step 0 — Before-export of the pool and the client
 
