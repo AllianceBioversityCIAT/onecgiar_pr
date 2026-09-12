@@ -63,7 +63,7 @@
 - **Verification:** `npm test -- cognito.service` — asserts the exact `fetch` body/headers per call (`AuthFlow: 'USER_AUTH'`, `AuthParameters.PREFERRED_CHALLENGE: 'EMAIL_OTP'`, `SECRET_HASH` present; `ChallengeName: 'EMAIL_OTP'`, `ChallengeResponses.EMAIL_OTP_CODE`, `Session`), the `SELECT_CHALLENGE` branch (second call carries `ClientId` and the first `Session`; the returned session is the second reply's), the `CHALLENGE_NOT_SUPPORTED` branch, each fixture error `__type` → stable code, and that every logger call stringified contains no code/session/token/username. **Input that fails it:** send `ChallengeName: 'SMS_MFA'` → assertion fails; pass `error.message` through → mapping test fails. **Disqualifiers:** tests that mock the service's own methods instead of `fetch`; asserting only `toHaveBeenCalled()` without inspecting the body.
 - **Definition of done:** red → green evidence; spec green; lint clean; existing `cognito.service.spec.ts` cases untouched and green.
 
-### [~] `OTP-T-3` — Microservice: orchestration, routes, DTOs, Swagger; deploy to TEST
+### [x] `OTP-T-3` — Microservice: orchestration, routes, DTOs, Swagger; deploy to TEST
 
 - **Type:** `server` (microservice) + `rollout`
 - **Description:** `AuthService.startEmailOtp(dto)` / `verifyEmailOtp(dto)` shaping `{ challengeName, session, codeDeliveryDestination? }` and `{ tokens }` (same object as `authenticateWithCustomPassword`); `AuthController` `@Post('login/otp/start')`, `@Post('login/otp/verify')` with Swagger and the same guards/interceptors as `login/custom`; `EmailOtpStartDto`, `EmailOtpVerifyDto`; `otp.start`/`otp.verify` outcome logs (never username/code/session/tokens); README endpoint table. **No edit to existing methods or log lines** (`OTP-R-10`; the pre-existing `${tokens}` log is a separate hygiene change). Then **HITL**: PR to `dev-auth`, deploy to `authtest-ibd.prms.cgiar.org` per the microservice's pipeline; smoke `POST /auth/login/otp/start` with the TEST user → `challengeName: EMAIL_OTP`.
@@ -140,7 +140,7 @@
 - **Verification:** HITL checklist all ticked with evidence; PROD diff equals the TEST diff (same single field). **Input that fails it:** code never arrives in TEST → `PRODUCT_BUG` (delivery/quota), do not tick. **Disqualifier:** screenshots without the redacted `auth.otp.*` log lines; a PROD step without the before-export.
 - **Definition of done:** guides updated; TRD row pending; TEST evidence recorded; PROD parity done or explicitly parked with its blocker.
 
-### [~] `OTP-T-10` — Provisioning adjustment so center users land `CONFIRMED` (**triggered by the spike 2026-09-11 — now mandatory**)
+### [x] `OTP-T-10` — Provisioning adjustment so center users land `CONFIRMED` (**triggered by the spike 2026-09-11 — now mandatory**)
 
 - **Type:** `server` (microservice)
 - **Description:** The spike showed a `FORCE_CHANGE_PASSWORD` user is offered `SELECT_CHALLENGE [PASSWORD_SRP, PASSWORD]` and no `EMAIL_OTP`, while a user created **without a temporary password** (`MessageAction: SUPPRESS`, `email_verified=true`) lands `CONFIRMED` and gets `EMAIL_OTP` directly. In the microservice `createUser` (`/auth/register`): **when the email domain is in a `PASSWORDLESS_DOMAINS` env list**, call `AdminCreateUser` without `TemporaryPassword`, with `MessageAction: SUPPRESS` and `email_verified=true`, and skip the welcome-password email; all other domains keep today's temporary-password flow byte-identical. Document the env var (TEST value: `cifor-icraf.org,icrisat.org`).

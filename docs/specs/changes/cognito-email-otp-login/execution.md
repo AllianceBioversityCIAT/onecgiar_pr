@@ -294,3 +294,18 @@
 - Reviewer round 1 (`opus`): items 1, 2, 4–8 PASS (real components + real `CognitoService`; stub shapes match `login.component.ts:86`, `cognito.service.ts:200-201/239-247`; `aria-live` + `inputmode`/`autocomplete` per viewport; scoping defensible — `OTP-AC-15` reads "Center path … controls ≥ 24 px"; px-only single-property fixes; no secrets; no `cy.wait`). **FAIL** (verbatim):
   > `assertEffectiveWidth` is now tautological and can never fail. `const effective = clientWidth + (innerWidth - clientWidth)` reduces to `innerWidth`, and in Cypress `window.innerWidth` **is** the requested `cy.viewport` width by construction — unaffected by a scrollbar gutter and by a root `zoom`. So the guard the exemplar built to catch the `zoom: var(--pr-font-scale)` trap (`bilateral-review.cy.ts:11-21`) no longer catches it. **Violated Rule:** `tasks.md` § `OTP-T-8` disqualifier "measured `clientWidth` off by > 4 px from the request". **Remediation:** assert `getComputedStyle(documentElement).zoom === '1'`; `innerWidth - clientWidth` ≤ 17 (scrollbar gutter); `clientWidth` closeTo `expected - gutter` ± 4.
 - ADVISORY: scoping comment lists `otp-email`/`otp-send` which are not rendered at the code step; a11y test titled `OTP-R-6` should cite `OTP-R-14` / §6.3; `.global-link` follow-up must be filed, not only commented.
+
+### `OTP-T-3` deploy half + `OTP-T-10` live proof — **complete** (2026-09-11 19:31–19:33, TEST, user-supplied TEST MIS credentials kept in a 0600 scratchpad file outside the repo, never printed)
+
+| Call (`auth` header = TEST MIS) | Result |
+|---|---|
+| `POST /auth/login/otp/start` `{ username: <unknown @icrisat.org> }` | **201** `{ challengeName: "EMAIL_OTP", session: <1587 chars>, codeDeliveryDestination: "s***@i***" }` — simulated challenge, no mail (`PreventUserExistenceErrors`) |
+| `POST /auth/login/otp/start` `{}` | **400** `{ statusCode, message: ["username must be an email", …], error: "Bad Request", path, timestamp }` (route-local filter, pipe active) |
+| `POST /auth/login/otp/verify` `{ username, code: "123456", session: <bogus> }` | **401** `{ statusCode: 401, code: "CODE_MISMATCH", message: "Code incorrect. Try again.", path, timestamp }` — **stable `code` on the wire** (round-1 gate, live) |
+| control `POST /auth/login/custom` `{}` | **400** `{ statusCode, message: "Bad Request Exception", path, timestamp }` — global filter unchanged |
+| `POST /auth/register` `<fake prms-otp-smoke-t10@icrisat.org>` (template with `{{tempPassword}}`) | **201** `{ message: "User registered successfully", userSub, temporaryPassword: <redacted, stale key>, emailSent: false }` |
+| `aws cognito-idp admin-get-user` (IBD-DEV, pool `us-east-1_o9y9Yq5pO`) | `UserStatus: CONFIRMED`, `Enabled: true`, `email_verified: true` → **`OTP-T-10` DoD met** |
+| cleanup `admin-delete-user` | smoke user deleted (`UserNotFoundException` on re-read) |
+
+- Note for `OTP-T-9`: `/auth/register` validates `welcome_html_template` contains `{{tempPassword}}` **before** the passwordless-domain gate (400 otherwise) — PRMS's real template satisfies it; the microservice still skips the email (`emailSent: false`). `codeDeliveryDestination` masking is Cognito's (`s***@i***`), not ours.
+- Status: `OTP-T-3` → `[x]`; `OTP-T-10` → `[x]`. Gate: `auto-approved (pre-approved mode)`.
