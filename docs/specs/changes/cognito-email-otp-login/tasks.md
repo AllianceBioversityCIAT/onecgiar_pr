@@ -171,7 +171,7 @@
 - **Verification:** `npx jest cognito.service auth.otp-routes` + full suite green; request-level test asserts the mismatch body carries `code` **and** `session`; `tsc`; eslint. **Input that fails it:** treating the wrong-code reply as success → tokens test fails. **Disqualifier:** logging the rotated session.
 - **Definition of done:** suite green; README updated; committed on `dev-auth-otp`.
 
-### `OTP-T-13` — PRMS server + client: carry the rotated session on `OTP_CODE_MISMATCH`
+### [x] `OTP-T-13` — PRMS server + client: carry the rotated session on `OTP_CODE_MISMATCH`
 
 - **Type:** `server` + `client`
 - **Description:** `auth.service.ts` `mapOtpVerifyError`: when the microservice body has `code: CODE_MISMATCH` and a `session`, include `session` in the 401 payload (decoy path unchanged — decoys never rotate). Client `CognitoService.verifyOtp` passes `err.error.response.session` to the panel; `CenterOtpPanelComponent` replaces `session` before the retry. Specs for both.
@@ -184,7 +184,7 @@
 ### `OTP-T-14` — TEST rollout of Option B (HITL): deploy triggers, wire the pool, smoke, roll back `EMAIL_OTP`
 
 - **Type:** `rollout` (HITL, IBD-DEV profile, user approves each cloud step)
-- **Description:** (1) `sam deploy` (or the README's CLI equivalent) of `cognito-triggers` to IBD-DEV us-east-1 with TEST env (queue + sender); (2) verify broker reachability with one invocation (`OTP-OQ-9`; fallback HTTP `POST /send`); (3) wire `LambdaConfig` on pool `us-east-1_o9y9Yq5pO` **via console or `--cli-input-json` from a fresh before-export** (never a bare `update-user-pool`), grant invoke permissions; (4) raise `general-client` `AuthSessionValidity` 3 → 5 min; (5) deploy `dev-auth-otp` (T-12) to `authtest-ibd`; (6) smoke with the spike mailbox: code from "PRMS Reporting Tool", inbox not spam, wrong ×2 + right → tokens, 3 wrong → `ATTEMPTS_EXCEEDED`; (7) sibling smoke (`OTP-AC-19`); (8) roll back the T-1 `EMAIL_OTP` factor per the runbook and re-run the sibling smoke; before/after exports in `runbook/`.
+- **Description:** (0) **pre-HITL hardening (code, PRMS server):** base64url-encode the decoy `exp` (removes the 13-digit fixed-offset fingerprint, `design.md` §13 (a)) and treat a `CODE_MISMATCH` reply without `session` as `OTP_UPSTREAM_UNAVAILABLE` (contract violation, not a user path) — both with tests; (1) `sam deploy` (or the README's CLI equivalent) of `cognito-triggers` to IBD-DEV us-east-1 with TEST env (queue + sender); (2) verify broker reachability with one invocation (`OTP-OQ-9`; fallback HTTP `POST /send`); (3) wire `LambdaConfig` on pool `us-east-1_o9y9Yq5pO` **via console or `--cli-input-json` from a fresh before-export** (never a bare `update-user-pool`), grant invoke permissions; (4) raise `general-client` `AuthSessionValidity` 3 → 5 min; (5) deploy `dev-auth-otp` (T-12) to `authtest-ibd`; (6) smoke with the spike mailbox: code from "PRMS Reporting Tool", inbox not spam, wrong ×2 + right → tokens, 3 wrong → `ATTEMPTS_EXCEEDED`; (7) sibling smoke (`OTP-AC-19`); (8) roll back the T-1 `EMAIL_OTP` factor per the runbook and re-run the sibling smoke; before/after exports in `runbook/`.
 - **Implements:** `OTP-R-32`, `OTP-R-33`, `OTP-AC-17`, `OTP-AC-18`, `OTP-AC-19`.
 - **Depends on:** `OTP-T-11`, `OTP-T-12` · **Blocks:** `OTP-T-9`
 - **Estimate:** S · HITL
