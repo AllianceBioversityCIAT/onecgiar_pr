@@ -1,3 +1,5 @@
+> **Historical (2026-09-12).** This runbook documents the Cognito-based mechanisms (EMAIL_OTP spike, then CUSTOM_AUTH triggers) that were built and verified in TEST and then **retired** in favour of Option D (PRMS-owned code, design §19). The live operations guide is `docs/auth/center-email-code-login/README.md` (triage table §9) and `prod-rollout-runbook.md`. The TEST pool was restored to its original state (no triggers, `AuthSessionValidity 3`, factors `[PASSWORD]`).
+
 # Cognito TEST runbook — enable `EMAIL_OTP`
 
 Pool `us-east-1_o9y9Yq5pO` (TEST, `us-east-1`). Source of truth for facts below: `runbook/test-before.json` (captured 2026-09-11, read-only `describe-user-pool` + `describe-user-pool-client` x10, secrets stripped).
